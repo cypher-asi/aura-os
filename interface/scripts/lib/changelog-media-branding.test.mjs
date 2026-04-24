@@ -11,6 +11,7 @@ import {
   calculateBrandedCanvas,
   createBrandedMediaSvg,
   readPngDimensionsFromFile,
+  wrapTextForSvg,
 } from "./changelog-media-branding.mjs";
 
 function writePng(filePath, width, height) {
@@ -72,4 +73,15 @@ test("createBrandedMediaSvg wraps the raw screenshot without scaling it", () => 
   assert.match(svg, /AURA CHANGELOG/);
   assert.match(svg, /data:image\/png;base64,/);
   assert.match(svg, /GPT-5.5 available/);
+  assert.match(svg, /<tspan x="/);
+});
+
+test("wrapTextForSvg caps long marketing copy to bounded lines", () => {
+  const lines = wrapTextForSvg(
+    "Open the chat model picker in the ChatInputBar and capture the dropdown showing GPT-5.5 listed as an available model option.",
+    { fontSize: 26, maxWidth: 620, maxLines: 2 },
+  );
+
+  assert.equal(lines.length, 2);
+  assert.match(lines.at(-1), /\.\.\.$/);
 });
