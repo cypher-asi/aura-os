@@ -47,6 +47,8 @@ This is the operating plan for the clean changelog media pipeline. Keep this fil
 - A branded asset must pass structural layout checks before it is considered publish-ready.
 - The final branded PNG must pass the same independent vision gate as the raw screenshot before it can publish.
 - If CI only knows the public frontend URL, the evaluator should resolve the API origin from explicit env first, then from the deployed frontend bundle, before falling back to the frontend origin.
+- Planner, Browser Use, and vision judge models must stay Opus-tier for production media. Non-Opus model overrides block publishing instead of silently lowering quality.
+- Failed, pending, rejected, or missing media must not create HTML, Markdown, JSON image placeholders, or empty image cards. They are omitted entirely.
 
 ## Implemented Safeguards
 
@@ -55,6 +57,8 @@ This is the operating plan for the clean changelog media pipeline. Keep this fil
 - Candidate caps preserve coverage by moving lower-priority media candidates into explicit skipped records.
 - Browser Use runs only after Anthropic classifies an entry as desktop, visual, sitemap-backed, and worth a screenshot.
 - Raw screenshots, branded media cards, and final branded PNG previews all have separate quality gates.
+- The evaluator writes `publishable-media-manifest.json`, which includes only assets that passed every gate. Future gh-pages publishing must copy/render only this manifest.
+- The manifest recovery policy is `omit-media-entirely`: a failed candidate leaves no broken image, no placeholder card, and no stale asset reference.
 
 ## What To Improve Next
 

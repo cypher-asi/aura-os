@@ -103,6 +103,49 @@ async function looksLikeAuraApiOrigin(origin, fetchImpl = fetch) {
   return contentType.includes("application/json") && response.status !== 404;
 }
 
+function isOpusQualityModel(model) {
+  return /^claude[-_]opus(?:[-_.]|$)/i.test(String(model || "").trim());
+}
+
+export function assessMediaModelQuality({
+  anthropicModel,
+  browserUseModel,
+  visionJudgeModel,
+  visionJudge = true,
+} = {}) {
+  const checks = [
+    {
+      name: "planner-model",
+      model: anthropicModel,
+      ok: isOpusQualityModel(anthropicModel),
+      reason: "Anthropic media planning must use an Opus-tier model.",
+    },
+    {
+      name: "browser-use-model",
+      model: browserUseModel,
+      ok: isOpusQualityModel(browserUseModel),
+      reason: "Browser Use navigation/capture must use an Opus-tier model.",
+    },
+  ];
+  if (visionJudge) {
+    checks.push({
+      name: "vision-judge-model",
+      model: visionJudgeModel,
+      ok: isOpusQualityModel(visionJudgeModel),
+      reason: "Raw and branded media vision review must use an Opus-tier model.",
+    });
+  }
+  const concerns = checks
+    .filter((check) => !check.ok)
+    .map((check) => `${check.reason} Current ${check.name}: ${check.model || "unset"}.`);
+  return {
+    ok: concerns.length === 0,
+    status: concerns.length === 0 ? "accepted" : "blocked",
+    checks,
+    concerns,
+  };
+}
+
 export async function discoverCaptureApiBaseUrlFromFrontend({ baseUrl, fetchImpl = fetch } = {}) {
   const appOrigin = normalizeOrigin(baseUrl);
   if (!appOrigin) return "";
@@ -227,6 +270,52 @@ function publicMediaCaption(candidate) {
     return cleaned;
   }
   return "A focused product update in Aura, shown directly in the desktop experience.";
+}
+
+export function buildPublishableMediaManifest({ captureResults = [] } = {}) {
+  const assets = [];
+  for (const entry of Array.isArray(captureResults) ? captureResults : []) {
+    const asset = entry?.branding?.asset;
+    const preview = asset?.preview;
+    const candidate = entry?.candidate || {};
+    if (!entry?.publishReady) continue;
+    if (entry.status !== "accepted" || entry.captureAccepted !== true) continue;
+    if (entry.qualityGate?.ok !== true || entry.visionGate?.ok !== true) continue;
+    if (entry.branding?.status !== "created" || entry.branding?.quality?.ok !== true) continue;
+    if (entry.brandedVisionGate?.ok !== true) continue;
+    if (!preview?.path || preview.format !== "png" || !fs.existsSync(preview.path)) continue;
+
+    assets.push({
+      entryId: candidate.entryId || null,
+      title: candidate.title || null,
+      publicCaption: publicMediaCaption(candidate),
+      source: {
+        provider: entry.provider || "browser-use-cloud",
+        rawScreenshotPath: entry.result?.screenshot?.path || null,
+        brandedSvgPath: asset.path || null,
+        brandedPngPath: preview.path,
+      },
+      dimensions: preview.dimensions || null,
+      bytes: preview.bytes || null,
+      gates: {
+        rawQuality: entry.qualityGate.status,
+        rawVision: entry.visionGate.status,
+        brandedQuality: entry.branding.quality.status,
+        brandedVision: entry.brandedVisionGate.status,
+      },
+    });
+  }
+  return {
+    schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    assets,
+    recoveryPolicy: {
+      publishOnlyListedAssets: true,
+      failedOrMissingMediaBehavior: "omit-media-entirely",
+      placeholderHtmlAllowed: false,
+      pendingMediaMetadataAllowed: false,
+    },
+  };
 }
 
 async function createBrandingArtifact({ candidate, screenshot, outputDir }) {
@@ -396,6 +485,12 @@ export async function runChangelogMediaEvaluation({
   if (!apiKey) {
     throw new Error("ANTHROPIC_API_KEY is required for media plan evaluation.");
   }
+  const modelQualityGate = assessMediaModelQuality({
+    anthropicModel,
+    browserUseModel,
+    visionJudgeModel,
+    visionJudge,
+  });
 
   fs.mkdirSync(outputDir, { recursive: true });
   writeJson(path.join(outputDir, "aura-navigation-sitemap.json"), sitemap);
@@ -450,6 +545,9 @@ export async function runChangelogMediaEvaluation({
     const blockers = [];
     if (!runBrowserUse) blockers.push("Browser Use execution disabled by --plan-only.");
     if (!browserUseKeyAvailable) blockers.push("BROWSER_USE_API_KEY is not available.");
+    if (runBrowserUse && !modelQualityGate.ok) {
+      blockers.push(...modelQualityGate.concerns);
+    }
     if (!baseUrl) blockers.push("Base URL is missing; pass --base-url or set AURA_DEMO_SCREENSHOT_BASE_URL.");
     if (requireCaptureSecret && !captureAuthAvailable) {
       blockers.push("Capture secret is missing; set AURA_CHANGELOG_CAPTURE_SECRET or AURA_CAPTURE_MODE_SECRET.");
@@ -618,6 +716,9 @@ export async function runChangelogMediaEvaluation({
     }
   }
 
+  const publishableMedia = buildPublishableMediaManifest({ captureResults });
+  writeJson(path.join(outputDir, "publishable-media-manifest.json"), publishableMedia);
+
   const report = {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
@@ -627,7 +728,9 @@ export async function runChangelogMediaEvaluation({
     models: {
       anthropic: anthropicModel,
       browserUse: browserUseModel,
+      visionJudge: visionJudgeModel,
     },
+    modelQualityGate,
     browserUseRunOptions: {
       timeoutMs: browserUseTimeoutMs,
       intervalMs: browserUseIntervalMs,
@@ -660,7 +763,9 @@ export async function runChangelogMediaEvaluation({
       brandedVisionAccepted: captureResults.filter((entry) => entry.brandedVisionGate?.ok).length,
       brandedVisionRejected: captureResults.filter((entry) => entry.brandedVisionGate?.status === "rejected").length,
       publishReady: captureResults.filter((entry) => entry.publishReady).length,
+      publishableMediaAssets: publishableMedia.assets.length,
     },
+    publishableMedia,
     selectionCoverage: planning.coverage,
     plannerAttemptCount: planning.attempts.length,
     mediaPlan: planning.plan,
@@ -730,7 +835,12 @@ export async function main(argv = process.argv.slice(2)) {
     apiBaseUrl: report.apiBaseUrl,
     counts: report.counts,
     env: report.env,
+    modelQualityGate: report.modelQualityGate,
     browserUseRunOptions: report.browserUseRunOptions,
+    publishableMedia: {
+      assetCount: report.publishableMedia.assets.length,
+      recoveryPolicy: report.publishableMedia.recoveryPolicy,
+    },
     selectionCoverage: report.selectionCoverage,
     plannerAttemptCount: report.plannerAttemptCount,
     candidates: report.mediaPlan.candidates.map((candidate) => ({

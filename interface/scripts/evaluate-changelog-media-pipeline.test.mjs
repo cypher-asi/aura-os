@@ -7,6 +7,8 @@ import test from "node:test";
 import { PNG } from "pngjs";
 
 import {
+  assessMediaModelQuality,
+  buildPublishableMediaManifest,
   discoverCaptureApiBaseUrlFromFrontend,
   preflightCaptureAuth,
   resolveCaptureApiBaseUrl,
@@ -38,6 +40,71 @@ test("resolveCaptureApiBaseUrl prefers explicit API origins", async () => {
   });
 
   assert.equal(resolved, "https://api.example.com");
+});
+
+test("assessMediaModelQuality blocks non-Opus models from producing publishable media", () => {
+  const gate = assessMediaModelQuality({
+    anthropicModel: "claude-sonnet-4-6",
+    browserUseModel: "claude-opus-4.6",
+    visionJudgeModel: "claude-haiku-4-5",
+  });
+
+  assert.equal(gate.ok, false);
+  assert.equal(gate.status, "blocked");
+  assert.ok(gate.concerns.some((concern) => concern.includes("planner")));
+  assert.ok(gate.concerns.some((concern) => concern.includes("vision")));
+});
+
+test("buildPublishableMediaManifest omits failed media instead of creating placeholders", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-manifest-"));
+  const pngPath = path.join(tempDir, "branded.png");
+  writeStructuredPng(pngPath, 160, 90);
+
+  const manifest = buildPublishableMediaManifest({
+    captureResults: [
+      {
+        candidate: {
+          entryId: "ready",
+          title: "Ready media",
+          publicCaption: "Ready media is safe to publish.",
+        },
+        status: "accepted",
+        provider: "browser-use-cloud",
+        captureAccepted: true,
+        publishReady: true,
+        qualityGate: { ok: true, status: "accepted" },
+        visionGate: { ok: true, status: "accepted" },
+        branding: {
+          status: "created",
+          quality: { ok: true, status: "accepted" },
+          asset: {
+            path: path.join(tempDir, "branded.svg"),
+            preview: {
+              path: pngPath,
+              format: "png",
+              dimensions: { width: 160, height: 90 },
+              bytes: fs.statSync(pngPath).size,
+            },
+          },
+        },
+        brandedVisionGate: { ok: true, status: "accepted" },
+        result: { screenshot: { path: path.join(tempDir, "raw.png") } },
+      },
+      {
+        candidate: { entryId: "failed", title: "Failed media" },
+        status: "rejected",
+        captureAccepted: false,
+        publishReady: false,
+        branding: { status: "blocked" },
+      },
+    ],
+  });
+
+  assert.equal(manifest.assets.length, 1);
+  assert.equal(manifest.assets[0].entryId, "ready");
+  assert.equal(manifest.recoveryPolicy.publishOnlyListedAssets, true);
+  assert.equal(manifest.recoveryPolicy.failedOrMissingMediaBehavior, "omit-media-entirely");
+  assert.equal(manifest.recoveryPolicy.placeholderHtmlAllowed, false);
 });
 
 test("discoverCaptureApiBaseUrlFromFrontend finds the API origin used by the deployed app bundle", async () => {
@@ -213,8 +280,12 @@ test("runChangelogMediaEvaluation plans media and blocks capture when Browser Us
 
     assert.equal(report.counts.plannedCandidates, 1);
     assert.equal(report.counts.captureBlocked, 1);
+    assert.equal(report.counts.publishableMediaAssets, 0);
+    assert.deepEqual(report.publishableMedia.assets, []);
+    assert.equal(report.publishableMedia.recoveryPolicy.placeholderHtmlAllowed, false);
     assert.match(report.captureResults[0].blockers[0], /BROWSER_USE_API_KEY/);
     assert.equal(fs.existsSync(path.join(tempDir, "out", "evaluation-report.json")), true);
+    assert.equal(fs.existsSync(path.join(tempDir, "out", "publishable-media-manifest.json")), true);
   } finally {
     globalThis.fetch = originalFetch;
     if (previousAnthropic === undefined) delete process.env.ANTHROPIC_API_KEY;
@@ -367,6 +438,9 @@ test("runChangelogMediaEvaluation creates branded media only after quality and v
     assert.equal(report.counts.brandingCreated, 1);
     assert.equal(report.counts.brandedVisionAccepted, 1);
     assert.equal(report.counts.publishReady, 1);
+    assert.equal(report.counts.publishableMediaAssets, 1);
+    assert.equal(report.publishableMedia.assets.length, 1);
+    assert.equal(report.publishableMedia.assets[0].entryId, "entry-1");
     assert.equal(report.browserUseRunOptions.timeoutMs, 123456);
     assert.equal(report.browserUseRunOptions.intervalMs, 3456);
     assert.equal(capturedBrowserUseArgs.timeoutMs, 123456);
@@ -375,6 +449,7 @@ test("runChangelogMediaEvaluation creates branded media only after quality and v
     assert.equal(branding.status, "created");
     assert.equal(fs.existsSync(branding.asset.path), true);
     assert.equal(fs.existsSync(branding.asset.preview.path), true);
+    assert.equal(report.publishableMedia.assets[0].source.brandedPngPath, branding.asset.preview.path);
     assert.equal(branding.asset.preview.format, "png");
     assert.equal(branding.asset.embeddedScreenshot.scale, 1);
     assert.equal(report.captureResults[0].brandedVisionGate.status, "accepted");
