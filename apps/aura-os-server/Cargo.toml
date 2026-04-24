@@ -48,8 +48,10 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 dirs = { workspace = true }
 base64 = { workspace = true }
+blake3 = { workspace = true }
 dashmap = { workspace = true }
 dotenvy = "0.15"
+hex = { workspace = true }
 hostname = "0.4"
 local-ip-address = "0.6"
 uuid = { workspace = true }

@@ -18,6 +18,8 @@ use crate::error::{ApiError, ApiResult};
 use crate::state::{AppState, CachedSession};
 
 const CAPTURE_ACCESS_TOKEN_PREFIX: &str = "aura-capture:";
+const CAPTURE_ACCESS_TOKEN_VERSION: &str = "v1";
+const CAPTURE_ACCESS_TOKEN_MAX_AGE_SECS: i64 = 30 * 60;
 const PRIMARY_CAPTURE_SECRET_ENV: &str = "AURA_CHANGELOG_CAPTURE_SECRET";
 const LEGACY_CAPTURE_SECRET_ENV: &str = "AURA_CAPTURE_MODE_SECRET";
 const MIN_CAPTURE_SECRET_LEN: usize = 24;
@@ -56,6 +58,60 @@ fn constant_time_eq(left: &str, right: &str) -> bool {
 
 pub(crate) fn is_capture_access_token(token: &str) -> bool {
     token.starts_with(CAPTURE_ACCESS_TOKEN_PREFIX)
+}
+
+fn capture_token_key(secret: &str) -> [u8; 32] {
+    *blake3::hash(secret.as_bytes()).as_bytes()
+}
+
+fn capture_token_signature(secret: &str, payload: &str) -> String {
+    let key = capture_token_key(secret);
+    hex::encode(blake3::keyed_hash(&key, payload.as_bytes()).as_bytes())
+}
+
+fn mint_capture_access_token(secret: &str) -> String {
+    let payload = format!(
+        "{CAPTURE_ACCESS_TOKEN_VERSION}:{}:{}",
+        Utc::now().timestamp(),
+        uuid::Uuid::new_v4()
+    );
+    let signature = capture_token_signature(secret, &payload);
+    format!("{CAPTURE_ACCESS_TOKEN_PREFIX}{payload}:{signature}")
+}
+
+fn validate_capture_access_token(token: &str, secret: &str) -> bool {
+    let Some(unsigned) = token.strip_prefix(CAPTURE_ACCESS_TOKEN_PREFIX) else {
+        return false;
+    };
+    let parts = unsigned.split(':').collect::<Vec<_>>();
+    if parts.len() != 4 || parts[0] != CAPTURE_ACCESS_TOKEN_VERSION {
+        return false;
+    }
+
+    let Ok(created_at) = parts[1].parse::<i64>() else {
+        return false;
+    };
+    let now = Utc::now().timestamp();
+    if created_at > now + 120 {
+        return false;
+    }
+    let age_secs = now.saturating_sub(created_at);
+    if age_secs > CAPTURE_ACCESS_TOKEN_MAX_AGE_SECS {
+        return false;
+    }
+
+    if uuid::Uuid::parse_str(parts[2]).is_err() {
+        return false;
+    }
+
+    let payload = format!("{}:{}:{}", parts[0], parts[1], parts[2]);
+    let expected_signature = capture_token_signature(secret, &payload);
+    constant_time_eq(parts[3], &expected_signature)
+}
+
+pub(crate) fn capture_session_from_access_token(token: &str) -> Option<ZeroAuthSession> {
+    let secret = configured_capture_secret()?;
+    validate_capture_access_token(token, &secret).then(|| build_capture_session(token.to_owned()))
 }
 
 fn parse_uuid(value: &str) -> uuid::Uuid {
@@ -235,7 +291,7 @@ pub(crate) async fn create_capture_session(
         return Err(ApiError::unauthorized("invalid capture session secret"));
     }
 
-    let access_token = format!("{CAPTURE_ACCESS_TOKEN_PREFIX}{}", uuid::Uuid::new_v4());
+    let access_token = mint_capture_access_token(&expected_secret);
     let session = build_capture_session(access_token.clone());
     state.validation_cache.insert(
         access_token,
@@ -254,7 +310,12 @@ pub(crate) async fn create_capture_session(
 
 #[cfg(test)]
 mod tests {
-    use super::{constant_time_eq, is_capture_access_token};
+    use super::{
+        capture_session_from_access_token, constant_time_eq, is_capture_access_token,
+        mint_capture_access_token, validate_capture_access_token, PRIMARY_CAPTURE_SECRET_ENV,
+    };
+
+    const TEST_SECRET: &str = "capture-secret-with-enough-entropy";
 
     #[test]
     fn capture_token_prefix_is_explicit() {
@@ -267,5 +328,17 @@ mod tests {
         assert!(constant_time_eq("same-secret", "same-secret"));
         assert!(!constant_time_eq("same-secret", "same-secreu"));
         assert!(!constant_time_eq("same-secret", "same-secret-longer"));
+    }
+
+    #[test]
+    fn signed_capture_tokens_are_statelessly_validated() {
+        std::env::set_var(PRIMARY_CAPTURE_SECRET_ENV, TEST_SECRET);
+        let token = mint_capture_access_token(TEST_SECRET);
+
+        assert!(validate_capture_access_token(&token, TEST_SECRET));
+        assert!(!validate_capture_access_token(&token, "different-secret"));
+        assert!(capture_session_from_access_token(&token).is_some());
+
+        std::env::remove_var(PRIMARY_CAPTURE_SECRET_ENV);
     }
 }
