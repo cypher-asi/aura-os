@@ -1,9 +1,8 @@
 .root {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--color-border, #2a2a2a);
+  gap: 2px;
+  padding: 4px 6px;
   background: var(--color-bg-subtle, #141414);
 }
 
@@ -11,8 +10,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--radius-sm, 4px);
   border: none;
   background: transparent;
@@ -31,20 +30,49 @@
   cursor: default;
 }
 
+.navButton:disabled:hover {
+  background: transparent;
+  color: var(--color-text-muted, #9a9a9a);
+}
+
 .inputWrap {
   position: relative;
   flex: 1 1 auto;
   display: flex;
   align-items: center;
+  height: 28px;
+  margin: 0 4px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: var(--color-bg, #1a1a1a);
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.inputWrap:focus-within {
+  border-color: var(--color-accent, #4c8bf5);
+  background: var(--color-bg, #0f0f0f);
+}
+
+.inputIcon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted, #9a9a9a);
+  pointer-events: none;
 }
 
 .input {
   flex: 1 1 auto;
-  height: 28px;
-  padding: 0 64px 0 10px;
-  border-radius: var(--radius-md, 6px);
-  border: 1px solid var(--color-border, #2a2a2a);
-  background: var(--color-bg, #0f0f0f);
+  height: 100%;
+  padding: 0 60px 0 30px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
   color: var(--color-text, #ededed);
   font-size: 12px;
   font-family: var(--font-sans, system-ui);
@@ -52,12 +80,13 @@
 
 .input:focus {
   outline: none;
-  border-color: var(--color-accent, #4c8bf5);
 }
 
 .inputActions {
   position: absolute;
   right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -69,7 +98,7 @@
   justify-content: center;
   width: 22px;
   height: 22px;
-  border-radius: var(--radius-sm, 4px);
+  border-radius: 999px;
   border: none;
   background: transparent;
   color: var(--color-text-muted, #9a9a9a);
@@ -78,7 +107,7 @@
 
 .actionButton:hover {
   color: var(--color-text, #ededed);
-  background: var(--color-bg-hover, #1e1e1e);
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.08));
 }
 
 .actionButton[aria-pressed="true"] {

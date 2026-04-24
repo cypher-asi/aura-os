@@ -4,8 +4,9 @@ import {
   ArrowRight,
   RefreshCw,
   ChevronDown,
-  Pin,
-  PinOff,
+  Star,
+  Lock,
+  Globe,
 } from "lucide-react";
 import type { DetectedUrl } from "../../api/browser";
 import styles from "./BrowserAddressBar.module.css";
@@ -138,6 +139,13 @@ export function BrowserAddressBar({
         <RefreshCw size={14} />
       </button>
       <div className={styles.inputWrap}>
+        <span className={styles.inputIcon} aria-hidden="true">
+          {draft.startsWith("https://") ? (
+            <Lock size={12} />
+          ) : (
+            <Globe size={12} />
+          )}
+        </span>
         <input
           ref={inputRef}
           className={styles.input}
@@ -159,7 +167,7 @@ export function BrowserAddressBar({
             aria-label={isPinned ? "Unpin URL" : "Pin as default"}
             title={isPinned ? "Unpin URL" : "Pin as default"}
           >
-            {isPinned ? <PinOff size={13} /> : <Pin size={13} />}
+            <Star size={13} fill={isPinned ? "currentColor" : "none"} />
           </button>
           <button
             type="button"
