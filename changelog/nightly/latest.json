@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-24T11:19:11.245Z",
+  "generatedAt": "2026-04-24T18:48:05.126Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.371.1",
+  "version": "0.1.0-nightly.372.1",
   "date": "2026-04-24",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.371.1",
-  "lastIncludedSha": "36a29c577e5c6804bf89adf7092e62e2dda4bee6",
-  "previousProcessedSha": "9b716b4c5788798046f6f26a575cbc30eacbd3d2",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.372.1",
+  "lastIncludedSha": "916e38bbf83f0defba37869fc495e9d0e4cd9f2d",
+  "previousProcessedSha": "36a29c577e5c6804bf89adf7092e62e2dda4bee6",
   "commitShas": [
     "888afbe54b40663a072507842a7e01418d213479",
     "ff509bbaad88ca49ca6db28c3f157cb409d71a38",
@@ -18,10 +18,11 @@
     "1fd2c56e3a21c05a700e8917d825c5cd59f26fad",
     "a3be62e637dd8354ce1fb42228a562757e982f90",
     "9b716b4c5788798046f6f26a575cbc30eacbd3d2",
-    "36a29c577e5c6804bf89adf7092e62e2dda4bee6"
+    "36a29c577e5c6804bf89adf7092e62e2dda4bee6",
+    "916e38bbf83f0defba37869fc495e9d0e4cd9f2d"
   ],
-  "rawCommitCount": 7,
-  "filteredCommitCount": 7,
+  "rawCommitCount": 8,
+  "filteredCommitCount": 8,
   "rawCommits": [
     {
       "sha": "888afbe54b40663a072507842a7e01418d213479",
@@ -426,9 +427,53 @@
         "Other",
         "Docs"
       ]
+    },
+    {
+      "sha": "916e38bbf83f0defba37869fc495e9d0e4cd9f2d",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-24T14:35:22-04:00",
+      "subject": "Add Fireworks open model pricing coverage",
+      "body": "",
+      "parents": [
+        "36a29c577e5c6804bf89adf7092e62e2dda4bee6"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop.rs",
+        "interface/scripts/lib/benchmark-pricing.mjs",
+        "interface/src/constants/models.ts",
+        "interface/src/lib/benchmark-pricing.test.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 305,
+        "deletions": 1
+      },
+      "committedAtMs": 1777055722000,
+      "cleanSubject": "Add Fireworks open model pricing coverage",
+      "keywords": [
+        "fireworks",
+        "open",
+        "model",
+        "pricing",
+        "coverage"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/scripts/lib",
+        "interface/src/constants",
+        "interface/src/lib"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 2,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -437,36 +482,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11438698
+          "sizeBytes": 11438726
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.371.1",
+      "version": "0.1.0-nightly.372.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.371.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.372.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 35317554
+          "sizeBytes": 35299046
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.371.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.372.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.371.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.372.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 102500856
+          "sizeBytes": 102484472
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.371.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.372.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -476,29 +521,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.371.1",
+      "version": "0.1.0-nightly.372.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.371.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.372.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 31699559
+          "sizeBytes": 31723866
         },
         {
-          "name": "Aura_0.1.0-nightly.371.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.372.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.371.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.372.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 31510080
+          "sizeBytes": 31534949
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.371.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.372.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -508,29 +553,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.371.1",
+      "version": "0.1.0-nightly.372.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.371.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.372.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33311745
+          "sizeBytes": 33309893
         },
         {
-          "name": "Aura_0.1.0-nightly.371.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.372.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.371.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.372.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33170297
+          "sizeBytes": 33139363
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.371.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.372.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -540,17 +585,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.371.1",
+      "version": "0.1.0-nightly.372.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.371.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.372.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 23882764
+          "sizeBytes": 23880397
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.371.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.372.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -559,63 +604,96 @@
     }
   ],
   "rendered": {
-    "title": "Changelog media pipeline rebuilt around Browser Use",
-    "intro": "Today's nightly is almost entirely a rewrite of how Aura produces release changelog media. The old screenshot publishing stack — thousands of lines of workflows, seeds, and demo agent scaffolding — was retired in favor of a leaner Browser Use planning pipeline with hard quality and branding gates, a split-host capture flow, and signed stateless capture tokens on the server.",
+    "title": "Changelog media pipeline reset and Fireworks pricing coverage",
+    "intro": "Today's nightly tears out the old screenshot-publishing stack and replaces it with a leaner Browser Use planning pipeline gated by hard quality checks, then closes the day by broadening dev-loop cost accounting to Fireworks-hosted open models.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:34 AM",
         "started_at": "2026-04-24T09:34:25.000Z",
         "ended_at": "2026-04-24T11:04:19.000Z",
-        "title": "Changelog media pipeline rebuilt on Browser Use planning",
-        "summary": "The legacy screenshot publishing workflows and demo seed scaffolding were removed and replaced with an Anthropic-planned, Browser Use-driven capture pipeline gated by explicit quality and branding checks.",
+        "title": "Changelog media pipeline rebuilt around Browser Use",
+        "summary": "The sprawling demo-screenshot pipeline was removed and replaced with a smaller Browser Use planning flow, then hardened through the morning with auth, quality, branding, and split-host fixes.",
         "items": [
           {
-            "text": "Retired the old changelog media publishing stack — four GitHub workflows (publish, retry, sync history, and media publishing), the 2,100-line publish-changelog-media script, demo agent brief/seed planners, and the produce-agent-demo-screenshots pipeline — in favor of a focused Browser Use planning flow with a new CaptureLoginView entry point and refreshed env configuration (ANTHROPIC_API_KEY, BROWSER_USE_API_KEY, AURA_CHANGELOG_CAPTURE_SECRET).",
+            "text": "Retired the legacy changelog media publishing stack, deleting the publish, retry, and history-sync workflows along with thousands of lines of demo screenshot seeding and runner code, and replaced it with an Anthropic-planned Browser Use trial plus a new CaptureLoginView entry point.",
             "commit_shas": [
               "888afbe54b40663a072507842a7e01418d213479"
             ],
             "confidence": "high"
           },
           {
-            "text": "Introduced hard quality and branding gates: captures must pass structural proof checks and an Anthropic vision judge before an SVG branding card is generated, and the documented policy now treats the raw product screenshot as the proof that cannot be cropped, zoomed, or regenerated.",
+            "text": "Rebuilt capture authentication as stateless, signed tokens: short-lived BLAKE3-keyed access tokens (30-minute max age, versioned payloads) are now minted and validated server-side, and the auth guard transparently resolves them into capture sessions.",
+            "commit_shas": [
+              "a3be62e637dd8354ce1fb42228a562757e982f90",
+              "888afbe54b40663a072507842a7e01418d213479"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added hard publish gates for captured media: an Anthropic vision judge, structural quality checks, and a deterministic SVG branding step that wraps — rather than regenerates — the real product screenshot, with failures surfaced as explicit blocked/ready-but-not-run states.",
             "commit_shas": [
               "ff509bbaad88ca49ca6db28c3f157cb409d71a38",
+              "9b716b4c5788798046f6f26a575cbc30eacbd3d2",
               "36a29c577e5c6804bf89adf7092e62e2dda4bee6"
             ],
             "confidence": "high"
           },
           {
-            "text": "Fixed the split-host capture entry so Browser Use can open the deployed frontend while talking to a separately hosted aura-os-server — buildCaptureLoginUrl and the preflight now carry an apiBaseUrl, and AURA_DEMO_SCREENSHOT_API_URL is documented for split deployments.",
+            "text": "Fixed capture entry for split frontend/API deployments by threading an optional AURA_DEMO_SCREENSHOT_API_URL through the login URL, preflight, and Browser Use task, and switched runs to use seeded capture sessions carried in a redacted URL fragment so secrets never leak into task logs.",
             "commit_shas": [
-              "e7b602e4d46a22e9500212977b09f33b0506b409"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Made capture auth stateless for automated media runs: the server now mints and validates signed, time-bounded capture access tokens (blake3-keyed, 30-minute lifetime, v1-prefixed) and the Browser Use task can carry a seeded capture session in a redacted URL fragment instead of prompting for a secret.",
-            "commit_shas": [
-              "a3be62e637dd8354ce1fb42228a562757e982f90",
+              "e7b602e4d46a22e9500212977b09f33b0506b409",
               "1fd2c56e3a21c05a700e8917d825c5cd59f26fad"
             ],
             "confidence": "high"
           },
           {
-            "text": "Bounded Browser Use runs with explicit timeout, polling interval, and cost caps (default 10-minute timeout, 2s interval) and taught the branding card to wrap long titles and subtitles within the layout so generated SVGs never overflow or truncate silently.",
+            "text": "Bounded Browser Use runs with explicit timeout, polling interval, and cost-cap options (defaulting to 10 minutes) so release CI can no longer hang on a runaway agent session.",
             "commit_shas": [
-              "36a29c577e5c6804bf89adf7092e62e2dda4bee6",
-              "9b716b4c5788798046f6f26a575cbc30eacbd3d2"
+              "36a29c577e5c6804bf89adf7092e62e2dda4bee6"
             ],
             "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "11:35 AM",
+        "started_at": "2026-04-24T18:35:22.000Z",
+        "ended_at": "2026-04-24T18:35:22.000Z",
+        "title": "Fireworks-hosted open models priced in the dev loop",
+        "summary": "The server-side usage cost estimator now understands Kimi, DeepSeek, and GPT-OSS models served through Fireworks, so dev-loop spend reporting stays accurate for open-weights routes.",
+        "items": [
+          {
+            "text": "Expanded the default fee schedule from 7 to 15 models, adding per-token input, output, and cache rates for kimi-k2p6 and k2p5 (including turbo and thinking variants), kimi-k2-instruct-0905, deepseek-v3p2, and gpt-oss-120b.",
+            "commit_shas": [
+              "916e38bbf83f0defba37869fc495e9d0e4cd9f2d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Taught the pricing model-id normalizer to strip accounts/fireworks/models/ and accounts/fireworks/routers/ prefixes and to map Aura-branded aliases (aura-kimi-k2-6, aura-kimi-k2-5, aura-deepseek-v3-2, aura-oss-120b) onto their underlying Fireworks IDs so billing matches regardless of how the model is referenced.",
+            "commit_shas": [
+              "916e38bbf83f0defba37869fc495e9d0e4cd9f2d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Surfaced the same Fireworks pricing table to the interface benchmark tooling and model constants so client-side cost comparisons stay in lockstep with the server.",
+            "commit_shas": [
+              "916e38bbf83f0defba37869fc495e9d0e4cd9f2d"
+            ],
+            "confidence": "medium"
           }
         ]
       }
     ],
     "highlights": [
-      "Retired the old changelog media publishing stack for a Browser Use planning pipeline",
-      "Hard quality and branding gates now block weak or unbranded captures",
-      "Stateless, signed capture tokens unblock Browser Use runs against real Aura"
+      "Legacy demo screenshot stack retired in favor of Browser Use planning",
+      "Capture auth rebuilt around signed, short-lived stateless tokens",
+      "Quality, branding, and cost gates now guard every media run",
+      "Dev-loop pricing now covers Kimi, DeepSeek, and GPT-OSS on Fireworks"
     ],
-    "raw_commit_count": 7
+    "raw_commit_count": 8
   }
 }

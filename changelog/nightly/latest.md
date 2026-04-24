@@ -1,25 +1,34 @@
-# Changelog media pipeline rebuilt around Browser Use
+# Changelog media pipeline reset and Fireworks pricing coverage
 
 - Date: `2026-04-24`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.371.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.371.1
+- Version: `0.1.0-nightly.372.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.372.1
 
-Today's nightly is almost entirely a rewrite of how Aura produces release changelog media. The old screenshot publishing stack — thousands of lines of workflows, seeds, and demo agent scaffolding — was retired in favor of a leaner Browser Use planning pipeline with hard quality and branding gates, a split-host capture flow, and signed stateless capture tokens on the server.
+Today's nightly tears out the old screenshot-publishing stack and replaces it with a leaner Browser Use planning pipeline gated by hard quality checks, then closes the day by broadening dev-loop cost accounting to Fireworks-hosted open models.
 
-## 2:34 AM — Changelog media pipeline rebuilt on Browser Use planning
+## 2:34 AM — Changelog media pipeline rebuilt around Browser Use
 
-The legacy screenshot publishing workflows and demo seed scaffolding were removed and replaced with an Anthropic-planned, Browser Use-driven capture pipeline gated by explicit quality and branding checks.
+The sprawling demo-screenshot pipeline was removed and replaced with a smaller Browser Use planning flow, then hardened through the morning with auth, quality, branding, and split-host fixes.
 
-- Retired the old changelog media publishing stack — four GitHub workflows (publish, retry, sync history, and media publishing), the 2,100-line publish-changelog-media script, demo agent brief/seed planners, and the produce-agent-demo-screenshots pipeline — in favor of a focused Browser Use planning flow with a new CaptureLoginView entry point and refreshed env configuration (ANTHROPIC_API_KEY, BROWSER_USE_API_KEY, AURA_CHANGELOG_CAPTURE_SECRET). (`888afbe`)
-- Introduced hard quality and branding gates: captures must pass structural proof checks and an Anthropic vision judge before an SVG branding card is generated, and the documented policy now treats the raw product screenshot as the proof that cannot be cropped, zoomed, or regenerated. (`ff509bb`, `36a29c5`)
-- Fixed the split-host capture entry so Browser Use can open the deployed frontend while talking to a separately hosted aura-os-server — buildCaptureLoginUrl and the preflight now carry an apiBaseUrl, and AURA_DEMO_SCREENSHOT_API_URL is documented for split deployments. (`e7b602e`)
-- Made capture auth stateless for automated media runs: the server now mints and validates signed, time-bounded capture access tokens (blake3-keyed, 30-minute lifetime, v1-prefixed) and the Browser Use task can carry a seeded capture session in a redacted URL fragment instead of prompting for a secret. (`a3be62e`, `1fd2c56`)
-- Bounded Browser Use runs with explicit timeout, polling interval, and cost caps (default 10-minute timeout, 2s interval) and taught the branding card to wrap long titles and subtitles within the layout so generated SVGs never overflow or truncate silently. (`36a29c5`, `9b716b4`)
+- Retired the legacy changelog media publishing stack, deleting the publish, retry, and history-sync workflows along with thousands of lines of demo screenshot seeding and runner code, and replaced it with an Anthropic-planned Browser Use trial plus a new CaptureLoginView entry point. (`888afbe`)
+- Rebuilt capture authentication as stateless, signed tokens: short-lived BLAKE3-keyed access tokens (30-minute max age, versioned payloads) are now minted and validated server-side, and the auth guard transparently resolves them into capture sessions. (`a3be62e`, `888afbe`)
+- Added hard publish gates for captured media: an Anthropic vision judge, structural quality checks, and a deterministic SVG branding step that wraps — rather than regenerates — the real product screenshot, with failures surfaced as explicit blocked/ready-but-not-run states. (`ff509bb`, `9b716b4`, `36a29c5`)
+- Fixed capture entry for split frontend/API deployments by threading an optional AURA_DEMO_SCREENSHOT_API_URL through the login URL, preflight, and Browser Use task, and switched runs to use seeded capture sessions carried in a redacted URL fragment so secrets never leak into task logs. (`e7b602e`, `1fd2c56`)
+- Bounded Browser Use runs with explicit timeout, polling interval, and cost-cap options (defaulting to 10 minutes) so release CI can no longer hang on a runaway agent session. (`36a29c5`)
+
+## 11:35 AM — Fireworks-hosted open models priced in the dev loop
+
+The server-side usage cost estimator now understands Kimi, DeepSeek, and GPT-OSS models served through Fireworks, so dev-loop spend reporting stays accurate for open-weights routes.
+
+- Expanded the default fee schedule from 7 to 15 models, adding per-token input, output, and cache rates for kimi-k2p6 and k2p5 (including turbo and thinking variants), kimi-k2-instruct-0905, deepseek-v3p2, and gpt-oss-120b. (`916e38b`)
+- Taught the pricing model-id normalizer to strip accounts/fireworks/models/ and accounts/fireworks/routers/ prefixes and to map Aura-branded aliases (aura-kimi-k2-6, aura-kimi-k2-5, aura-deepseek-v3-2, aura-oss-120b) onto their underlying Fireworks IDs so billing matches regardless of how the model is referenced. (`916e38b`)
+- Surfaced the same Fireworks pricing table to the interface benchmark tooling and model constants so client-side cost comparisons stay in lockstep with the server. (`916e38b`)
 
 ## Highlights
 
-- Retired the old changelog media publishing stack for a Browser Use planning pipeline
-- Hard quality and branding gates now block weak or unbranded captures
-- Stateless, signed capture tokens unblock Browser Use runs against real Aura
+- Legacy demo screenshot stack retired in favor of Browser Use planning
+- Capture auth rebuilt around signed, short-lived stateless tokens
+- Quality, branding, and cost gates now guard every media run
+- Dev-loop pricing now covers Kimi, DeepSeek, and GPT-OSS on Fireworks
 

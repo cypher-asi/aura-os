@@ -2,18 +2,19 @@
   {
     "date": "2026-04-24",
     "channel": "nightly",
-    "version": "0.1.0-nightly.371.1",
-    "title": "Changelog media pipeline rebuilt around Browser Use",
-    "intro": "Today's nightly is almost entirely a rewrite of how Aura produces release changelog media. The old screenshot publishing stack — thousands of lines of workflows, seeds, and demo agent scaffolding — was retired in favor of a leaner Browser Use planning pipeline with hard quality and branding gates, a split-host capture flow, and signed stateless capture tokens on the server.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.372.1",
+    "title": "Changelog media pipeline reset and Fireworks pricing coverage",
+    "intro": "Today's nightly tears out the old screenshot-publishing stack and replaces it with a leaner Browser Use planning pipeline gated by hard quality checks, then closes the day by broadening dev-loop cost accounting to Fireworks-hosted open models.",
+    "entryCount": 2,
     "highlights": [
-      "Retired the old changelog media publishing stack for a Browser Use planning pipeline",
-      "Hard quality and branding gates now block weak or unbranded captures",
-      "Stateless, signed capture tokens unblock Browser Use runs against real Aura"
+      "Legacy demo screenshot stack retired in favor of Browser Use planning",
+      "Capture auth rebuilt around signed, short-lived stateless tokens",
+      "Quality, branding, and cost gates now guard every media run",
+      "Dev-loop pricing now covers Kimi, DeepSeek, and GPT-OSS on Fireworks"
     ],
-    "rawCommitCount": 7,
-    "generatedAt": "2026-04-24T11:19:11.245Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.371.1",
+    "rawCommitCount": 8,
+    "generatedAt": "2026-04-24T18:48:05.126Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.372.1",
     "path": "history/2026-04-24.json"
   },
   {
