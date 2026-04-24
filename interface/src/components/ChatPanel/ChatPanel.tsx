@@ -410,7 +410,7 @@ export function ChatPanel({
           projects={projects}
           selectedProjectId={selectedProjectId}
           onProjectChange={onProjectChange}
-          isVisible
+          isVisible={historyResolved}
           isCentered={isThreadEmpty}
           contextUsage={contextUsage}
           onNewSession={onNewSession}
