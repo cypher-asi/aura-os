@@ -45,8 +45,12 @@ const mockActiveApp = {
 
 const demoProject = {
   project_id: "proj-1",
+  org_id: "org-1",
   name: "Demo Project",
   description: "Test project",
+  current_status: "active",
+  created_at: "2025-01-01T00:00:00Z",
+  updated_at: "2025-01-01T00:00:00Z",
 };
 const projectAgentFixtures = [
   { agent_instance_id: "agent-inst-1", name: "Project agent", role: "Build with me" },
@@ -140,6 +144,12 @@ vi.mock("../../stores/project-action-store", () => ({
   useProjectActions: () => null,
 }));
 
+vi.mock("../../api/client", () => ({
+  api: {
+    listProjects: vi.fn(async () => [demoProject]),
+  },
+}));
+
 vi.mock("../../hooks/use-aura-capabilities", () => ({
   useAuraCapabilities: () => ({
     isMobileClient: true,
@@ -218,6 +228,7 @@ vi.mock("../../utils/mobileNavigation", () => ({
   getProjectAgentInstanceIdFromPathname: (pathname: string) => pathname.match(/\/agents\/([^/]+)/)?.[1] ?? null,
   isProjectSubroute: (pathname: string) => pathname.startsWith("/projects/proj-1/"),
   projectAgentRoute: (id: string) => `/projects/${id}/agent`,
+  projectAgentsRoute: (id: string) => `/projects/${id}/agents`,
   projectAgentChatRoute: (projectId: string, agentInstanceId: string) => `/projects/${projectId}/agents/${agentInstanceId}`,
   projectAgentDetailsRoute: (projectId: string, agentInstanceId: string) => `/projects/${projectId}/agents/${agentInstanceId}/details`,
   projectFilesRoute: (id: string) => `/projects/${id}/files`,
@@ -252,6 +263,15 @@ vi.mock("../../apps/agents/MobileAgentLibraryView", () => ({
 vi.mock("../../apps/agents/MobileAgentDetailsView", () => ({
   MobileAgentDetailsView: () => <div data-testid="mobile-agent-details-view" />,
 }));
+vi.mock("../../apps/profile/ProfileMainPanel", () => ({
+  ProfileMainPanel: () => <div>Profile settings destination</div>,
+}));
+vi.mock("../../apps/feed/FeedMainPanel", () => ({
+  FeedMainPanel: () => <div>Feed settings destination</div>,
+}));
+vi.mock("../../apps/feedback/FeedbackMainPanel", () => ({
+  FeedbackMainPanel: () => <div>Feedback settings destination</div>,
+}));
 const mockSidekickState = { closePreview: vi.fn() };
 type SidekickState = typeof mockSidekickState;
 vi.mock("../../stores/sidekick-store", () => ({
@@ -275,6 +295,7 @@ function renderMobile(path: InitialEntry | InitialEntry[] = "/projects") {
         <Route element={<MobileShell />}>
           <Route path="/projects/organization" element={<div>Organization workspace</div>} />
           <Route path="/projects/:projectId/agent" element={<div>Project agent redirect</div>} />
+          <Route path="/projects/:projectId/agents" element={<div>Project agents roster</div>} />
           <Route path="/projects/:projectId/agents/create" element={<div>Create remote agent</div>} />
           <Route path="/projects/:projectId/agents/attach" element={<div>Attach remote agent</div>} />
           <Route path="/projects/:projectId/agents/:agentInstanceId/details" element={<div>Project agent details</div>} />
@@ -316,10 +337,10 @@ describe("MobileShell", () => {
     expect(screen.getByTestId("main-panel")).toBeInTheDocument();
   });
 
-  it("renders project bottom navigation with files included", () => {
+  it("renders project tabs with files included", () => {
     renderMobile("/projects/proj-1/agent");
     expect(screen.getByRole("button", { name: "Open project navigation for Demo Project" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { pressed: true, name: /Agent/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { pressed: true, name: /Agents/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { pressed: false, name: /Tasks/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { pressed: false, name: /Execution/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { pressed: false, name: /Files/i })).toBeInTheDocument();
@@ -344,12 +365,12 @@ describe("MobileShell", () => {
 
   it("renders the global navigation trigger on global routes", () => {
     renderMobile("/feed");
-    expect(screen.getByRole("button", { name: "Open apps" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open project navigation" })).toBeInTheDocument();
   });
 
-  it("renders account button", () => {
+  it("omits the workspace/settings action from project chrome", () => {
     renderMobile();
-    expect(screen.getByRole("button", { name: "Open workspace" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open workspace" })).not.toBeInTheDocument();
   });
 
   it("shows a back button on standalone mobile agent details routes", () => {
@@ -389,12 +410,11 @@ describe("MobileShell", () => {
     expect(screen.queryByTestId("main-panel")).not.toBeInTheDocument();
   });
 
-  it("routes the mobile account button to the organization workspace", async () => {
-    const user = userEvent.setup();
-    renderMobile();
+  it("keeps organization workspace reachable as a route without project topbar chrome", async () => {
+    renderMobile("/projects/organization");
 
-    await user.click(screen.getByRole("button", { name: "Open workspace" }));
     expect(await screen.findByText("Organization workspace")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open workspace" })).not.toBeInTheDocument();
   });
 
   it("shows a direct back-to-project action on the workspace route", async () => {
@@ -413,33 +433,8 @@ describe("MobileShell", () => {
     expect(screen.getByTestId("update-banner")).toBeInTheDocument();
   });
 
-  it("opens a project-agent action sheet with create and attach paths", async () => {
-    const user = userEvent.setup();
-
+  it("keeps add-project-agent actions out of the chat top bar", () => {
     renderMobile("/projects/proj-1/agents/agent-inst-1");
-
-    await user.click(screen.getByRole("button", { name: "Add project agent" }));
-
-    expect(screen.getByRole("dialog", { name: "Add Project Agent" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Create Remote Agent/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Attach Existing Agent/i })).toBeInTheDocument();
-    expect(screen.queryByText(/Create stays remote-only on mobile/i)).not.toBeInTheDocument();
-  });
-
-  it("lets people close the add-project-agent sheet from its close control", async () => {
-    const user = userEvent.setup();
-
-    renderMobile("/projects/proj-1/agents/agent-inst-1");
-
-    await user.click(screen.getByRole("button", { name: "Add project agent" }));
-    const dialog = screen.getByRole("dialog", { name: "Add Project Agent" });
-    await user.click(within(dialog).getByRole("button", { name: "Close add project agent sheet" }));
-
-    expect(screen.queryByRole("dialog", { name: "Add Project Agent" })).not.toBeInTheDocument();
-  });
-
-  it("hides the add-project-agent action on attach management routes", () => {
-    renderMobile("/projects/proj-1/agents/attach");
 
     expect(screen.queryByRole("button", { name: "Add project agent" })).not.toBeInTheDocument();
   });
@@ -455,24 +450,24 @@ describe("MobileShell", () => {
     expect(screen.getByRole("button", { name: "Host settings" })).toBeInTheDocument();
   });
 
-  it("navigates the mobile agent tab back to the last agent chat", async () => {
+  it("navigates the mobile agent tab back to the agents roster", async () => {
     const user = userEvent.setup();
     renderMobile("/projects/proj-1/work");
 
-    await user.click(screen.getByRole("button", { name: /agent/i }));
+    await user.click(screen.getByRole("button", { name: /agents/i }));
 
-    expect(await screen.findByText("Project agent chat")).toBeInTheDocument();
+    expect(await screen.findByText("Project agents roster")).toBeInTheDocument();
   });
 
-  it("hides bottom nav when a drawer is open", () => {
+  it("hides project tabs when a drawer is open", () => {
     drawers.navOpen = true;
     renderMobile("/projects/proj-1/agent");
-    expect(screen.queryByRole("navigation", { name: "Primary mobile navigation" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Project sections" })).not.toBeInTheDocument();
   });
 
-  it("hides bottom nav on the attach-existing route", () => {
+  it("hides project tabs on the attach-existing route", () => {
     renderMobile("/projects/proj-1/agents/attach");
-    expect(screen.queryByRole("navigation", { name: "Primary mobile navigation" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Project sections" })).not.toBeInTheDocument();
   });
 
   it("keeps project drawer focused on switching agents and projects", () => {
@@ -486,7 +481,9 @@ describe("MobileShell", () => {
     expect(screen.queryByRole("button", { name: /open details for project agent/i })).not.toBeInTheDocument();
     expect(screen.queryByText("Recent projects")).not.toBeInTheDocument();
     expect(screen.queryByText("Other projects")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Agent" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Alpha Team/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open Demo Project" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Agents" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Tasks" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Execution" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Process" })).not.toBeInTheDocument();
@@ -500,19 +497,27 @@ describe("MobileShell", () => {
     expect(screen.queryByRole("button", { name: /project agent/i })).not.toBeInTheDocument();
   });
 
-  it("keeps the phone app switcher focused on app-level destinations", () => {
-    drawers.appOpen = true;
-    renderMobile("/projects/proj-1/agent");
-
-    expect(screen.queryByRole("button", { name: "Organization" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Return to project" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Account settings" })).not.toBeInTheDocument();
-  });
-
   it("shows overlay backdrop when drawer is open", () => {
     drawers.navOpen = true;
     renderMobile();
     expect(screen.getByRole("button", { name: "Close drawer" })).toBeInTheDocument();
+  });
+
+  it("pushes settings destinations inside the mobile settings sheet with a back affordance", async () => {
+    drawers.accountOpen = true;
+    const user = userEvent.setup();
+
+    renderMobile("/projects/proj-1/agents");
+
+    await user.click(screen.getByRole("button", { name: /Profile/ }));
+
+    expect(await screen.findByText("Profile settings destination")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Back to Settings" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Back to Settings" }));
+
+    expect(screen.getByRole("button", { name: /Leaderboard/ })).toBeInTheDocument();
+    expect(screen.queryByText("Profile settings destination")).not.toBeInTheDocument();
   });
 
   it("calls closeDrawers when backdrop is clicked", async () => {
@@ -529,7 +534,7 @@ describe("MobileShell", () => {
     const user = userEvent.setup();
     renderMobile("/projects/proj-1/work");
 
-    expect(within(screen.getByTestId("drawer-untitled")).getByText("Demo Project")).toBeInTheDocument();
+    expect(within(screen.getByTestId("drawer-untitled")).getAllByText("Demo Project")[0]).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Back to project" }));
     expect(drawers.setNavOpen).toHaveBeenCalledWith(false);
