@@ -6,6 +6,7 @@ import { StreamingBubble } from "../StreamingBubble";
 import {
   useStreamEvents,
   useIsStreaming,
+  useIsWriting,
   useStreamingText,
   useThinkingText,
   useThinkingDurationMs,
@@ -18,8 +19,10 @@ import { useTaskOutput } from "../../stores/event-store/index";
 import { useTaskOutputView } from "../../hooks/use-task-output-view";
 import { useProjectActions } from "../../stores/project-action-store";
 import { useCooldownStatus, cooldownLabel } from "../../hooks/use-cooldown-status";
+import { getStreamingPhaseLabel } from "../../utils/streaming";
 import type { DisplaySessionEvent, ToolCallEntry } from "../../types/stream";
 import type { Task } from "../../types";
+import { CookingIndicator } from "../CookingIndicator";
 import styles from "../Preview/Preview.module.css";
 
 /* ------------------------------------------------------------------ */
@@ -189,6 +192,7 @@ export function TaskOutputSection({
 }: TaskOutputSectionProps) {
   const events = useStreamEvents(streamKey);
   const isStreaming = useIsStreaming(streamKey);
+  const isWriting = useIsWriting(streamKey);
   const streamingText = useStreamingText(streamKey);
   const thinkingText = useThinkingText(streamKey);
   const thinkingDurationMs = useThinkingDurationMs(streamKey);
@@ -215,6 +219,16 @@ export function TaskOutputSection({
   const hasStreamContent = events.length > 0 || hasLiveContent;
   const hasFallback = !hasStreamContent && !!fallbackText;
   const hasContent = hasStreamContent || hasFallback;
+  const streamingPhaseLabel =
+    isActive && hasLiveContent
+      ? getStreamingPhaseLabel({
+          streamingText,
+          thinkingText,
+          toolCalls: activeToolCalls,
+          progressText,
+          isWriting,
+        })
+      : null;
 
   // Pin the parent scroll container to the bottom when the tail of the
   // stream grows. CSS `overflow-anchor: auto` on the scroll container
@@ -316,7 +330,14 @@ export function TaskOutputSection({
             thinkingDurationMs={thinkingDurationMs}
             timeline={timeline}
             progressText={progressText}
+            isWriting={isWriting}
+            showPhaseIndicator={false}
           />
+        )}
+        {streamingPhaseLabel && (
+          <div className={styles.previewStreamingIndicator} aria-live="polite">
+            <CookingIndicator label={streamingPhaseLabel} />
+          </div>
         )}
       </div>
     </GroupCollapsible>

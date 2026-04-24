@@ -88,7 +88,12 @@ vi.mock("../MessageBubble", () => ({
 }));
 
 vi.mock("../StreamingBubble", () => ({
-  StreamingBubble: () => <div data-testid="streaming-bubble" />,
+  StreamingBubble: ({ showPhaseIndicator }: { showPhaseIndicator?: boolean }) => (
+    <div
+      data-testid="streaming-bubble"
+      data-show-phase-indicator={String(showPhaseIndicator)}
+    />
+  ),
 }));
 
 vi.mock("../Preview/Preview.module.css", () => ({
@@ -141,6 +146,19 @@ describe("TaskOutputSection", () => {
 
     expect(screen.queryByTestId("streaming-bubble")).not.toBeInTheDocument();
     expect(screen.queryByText("Waiting for agent output…")).not.toBeInTheDocument();
+  });
+
+  it("pins the streaming phase indicator outside the live streaming bubble", () => {
+    streamState.isStreaming = true;
+    streamState.streamingText = "Working through the task";
+
+    render(<TaskOutputSection isActive streamKey="task:1" />);
+
+    expect(screen.getByTestId("streaming-bubble")).toHaveAttribute(
+      "data-show-phase-indicator",
+      "false",
+    );
+    expect(screen.getByText("Cooking...")).toBeInTheDocument();
   });
 
   it("shows cooldown countdown instead of 'Waiting for agent output…' while paused", () => {

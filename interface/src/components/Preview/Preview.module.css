@@ -377,6 +377,19 @@
   padding: 0 var(--space-3);
 }
 
+.previewStreamingIndicator {
+  position: sticky;
+  bottom: var(--sidekick-fade-height, 72px);
+  z-index: 2;
+  display: flex;
+  justify-content: flex-start;
+  pointer-events: none;
+}
+
+.previewStreamingIndicator > * {
+  padding: var(--space-2) 0 0;
+}
+
 .streamProgress {
   padding: 0;
   opacity: 0.6;
