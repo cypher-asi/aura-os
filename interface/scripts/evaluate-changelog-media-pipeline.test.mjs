@@ -107,6 +107,51 @@ test("buildPublishableMediaManifest omits failed media instead of creating place
   assert.equal(manifest.recoveryPolicy.placeholderHtmlAllowed, false);
 });
 
+test("buildPublishableMediaManifest requires accepted vision, not skipped vision", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-manifest-"));
+  const pngPath = path.join(tempDir, "branded.png");
+  writeStructuredPng(pngPath, 160, 90);
+  const commonEntry = {
+    status: "accepted",
+    provider: "browser-use-cloud",
+    captureAccepted: true,
+    publishReady: true,
+    qualityGate: { ok: true, status: "accepted" },
+    branding: {
+      status: "created",
+      quality: { ok: true, status: "accepted" },
+      asset: {
+        path: path.join(tempDir, "branded.svg"),
+        preview: {
+          path: pngPath,
+          format: "png",
+          dimensions: { width: 160, height: 90 },
+          bytes: fs.statSync(pngPath).size,
+        },
+      },
+    },
+  };
+
+  const manifest = buildPublishableMediaManifest({
+    captureResults: [
+      {
+        ...commonEntry,
+        candidate: { entryId: "raw-skipped", title: "Raw skipped" },
+        visionGate: { ok: true, status: "skipped" },
+        brandedVisionGate: { ok: true, status: "accepted" },
+      },
+      {
+        ...commonEntry,
+        candidate: { entryId: "branded-skipped", title: "Branded skipped" },
+        visionGate: { ok: true, status: "accepted" },
+        brandedVisionGate: { ok: true, status: "skipped" },
+      },
+    ],
+  });
+
+  assert.equal(manifest.assets.length, 0);
+});
+
 test("discoverCaptureApiBaseUrlFromFrontend finds the API origin used by the deployed app bundle", async () => {
   const requests = [];
   const resolved = await discoverCaptureApiBaseUrlFromFrontend({
@@ -326,7 +371,7 @@ test("runChangelogMediaEvaluation creates branded media only after quality and v
     },
   }));
   const screenshotPath = path.join(tempDir, "browser-use.png");
-  writeStructuredPng(screenshotPath, 1400, 800);
+  writeStructuredPng(screenshotPath, 1920, 1080);
 
   const previousAnthropic = process.env.ANTHROPIC_API_KEY;
   const previousBrowserUse = process.env.BROWSER_USE_API_KEY;
@@ -414,7 +459,7 @@ test("runChangelogMediaEvaluation creates branded media only after quality and v
         },
         screenshot: {
           path: screenshotPath,
-          dimensions: { width: 1400, height: 800 },
+          dimensions: { width: 1920, height: 1080 },
         },
         messages: [],
       };
@@ -453,6 +498,143 @@ test("runChangelogMediaEvaluation creates branded media only after quality and v
     assert.equal(branding.asset.preview.format, "png");
     assert.equal(branding.asset.embeddedScreenshot.scale, 1);
     assert.equal(report.captureResults[0].brandedVisionGate.status, "accepted");
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previousAnthropic === undefined) delete process.env.ANTHROPIC_API_KEY;
+    else process.env.ANTHROPIC_API_KEY = previousAnthropic;
+    if (previousBrowserUse === undefined) delete process.env.BROWSER_USE_API_KEY;
+    else process.env.BROWSER_USE_API_KEY = previousBrowserUse;
+    if (previousCaptureSecret === undefined) delete process.env.AURA_CHANGELOG_CAPTURE_SECRET;
+    else process.env.AURA_CHANGELOG_CAPTURE_SECRET = previousCaptureSecret;
+  }
+});
+
+test("runChangelogMediaEvaluation does not publish when vision judge is disabled", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-eval-"));
+  const changelogPath = path.join(tempDir, "latest.json");
+  fs.writeFileSync(changelogPath, JSON.stringify({
+    rawCommits: [
+      {
+        sha: "abc123456789",
+        subject: "feat(chat): add GPT-5.5 model picker option",
+        files: ["interface/src/components/ChatInputBar/ChatInputBar.tsx"],
+      },
+    ],
+    rendered: {
+      entries: [
+        {
+          batch_id: "entry-1",
+          title: "GPT-5.5 available in the chat model picker",
+          summary: "Users can choose GPT-5.5 in chat.",
+          items: [
+            {
+              text: "Added GPT-5.5 to the model picker.",
+              commit_shas: ["abc123456789"],
+              changed_files: ["interface/src/components/ChatInputBar/ChatInputBar.tsx"],
+            },
+          ],
+        },
+      ],
+    },
+  }));
+  const screenshotPath = path.join(tempDir, "browser-use.png");
+  writeStructuredPng(screenshotPath, 1920, 1080);
+
+  const previousAnthropic = process.env.ANTHROPIC_API_KEY;
+  const previousBrowserUse = process.env.BROWSER_USE_API_KEY;
+  const previousCaptureSecret = process.env.AURA_CHANGELOG_CAPTURE_SECRET;
+  process.env.ANTHROPIC_API_KEY = "test-key";
+  process.env.BROWSER_USE_API_KEY = "browser-use-test-key";
+  process.env.AURA_CHANGELOG_CAPTURE_SECRET = "capture-secret-with-enough-entropy";
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({
+    ok: true,
+    async json() {
+      return {
+        content: [
+          {
+            type: "tool_use",
+            name: "submit_changelog_media_plan",
+            input: {
+              candidates: [
+                {
+                  entryId: "entry-1",
+                  title: "GPT-5.5 available in the chat model picker",
+                  shouldCapture: true,
+                  reason: "The model picker option is visible desktop UI.",
+                  targetAppId: "agents",
+                  targetPath: "/agents",
+                  proofGoal: "Open the chat model picker and show GPT-5.5.",
+                  publicCaption: "GPT-5.5 is now available directly from the chat model picker.",
+                  confidence: 0.91,
+                  changedFiles: ["interface/src/components/ChatInputBar/ChatInputBar.tsx"],
+                },
+              ],
+              skipped: [],
+            },
+          },
+        ],
+      };
+    },
+  });
+
+  try {
+    const report = await runChangelogMediaEvaluation({
+      changelogFile: changelogPath,
+      outputDir: path.join(tempDir, "out"),
+      baseUrl: "https://example.com",
+      maxCandidates: 1,
+      visionJudge: false,
+      preflightCaptureAuthImpl: async () => ({ ok: true, concerns: [], loginStatus: 200, sessionStatus: 201 }),
+      requestCaptureSessionImpl: async () => ({
+        ok: true,
+        sessionStatus: 201,
+        concerns: [],
+        session: {
+          user_id: "capture-demo-user",
+          display_name: "Aura Capture",
+          primary_zid: "0://aura-capture",
+          zero_wallet: "0x0000000000000000000000000000000000000000",
+          wallets: [],
+          is_zero_pro: true,
+          is_access_granted: true,
+          access_token: "aura-capture:test-token",
+          created_at: "2026-04-24T00:00:00Z",
+          validated_at: "2026-04-24T00:00:00Z",
+        },
+      }),
+      runBrowserUseTaskImpl: async () => ({
+        ok: true,
+        provider: "browser-use-cloud",
+        output: {
+          shouldCapture: true,
+          targetAppId: "agents",
+          targetPath: "/agents",
+          proofSurface: "chat model picker",
+          proofVisible: true,
+          visibleProof: ["GPT-5.5 is visible in the chat model picker."],
+          screenshotDescription: "Aura desktop chat screen with the model picker open.",
+          desktopLayoutVisible: true,
+          mobileLayoutVisible: false,
+          concerns: [],
+        },
+        screenshot: {
+          path: screenshotPath,
+          dimensions: { width: 1920, height: 1080 },
+        },
+        messages: [],
+      }),
+    });
+
+    assert.equal(report.counts.captureAccepted, 1);
+    assert.equal(report.counts.brandingCreated, 1);
+    assert.equal(report.captureResults[0].visionGate.status, "skipped");
+    assert.equal(report.captureResults[0].brandedVisionGate.status, "skipped");
+    assert.equal(report.captureResults[0].publishReady, false);
+    assert.equal(report.counts.publishReady, 0);
+    assert.equal(report.counts.publishableMediaAssets, 0);
+    assert.deepEqual(report.publishableMedia.assets, []);
   } finally {
     globalThis.fetch = originalFetch;
     if (previousAnthropic === undefined) delete process.env.ANTHROPIC_API_KEY;

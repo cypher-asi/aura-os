@@ -55,7 +55,7 @@ test("createBrandedMediaSvg wraps the raw screenshot without scaling it", () => 
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-branding-"));
   const screenshotPath = path.join(tempDir, "screenshot.png");
   const outputPath = path.join(tempDir, "branded.svg");
-  writePng(screenshotPath, 640, 360);
+  writePng(screenshotPath, 1920, 1080);
 
   const asset = createBrandedMediaSvg({
     screenshotPath,
@@ -66,8 +66,8 @@ test("createBrandedMediaSvg wraps the raw screenshot without scaling it", () => 
 
   assert.equal(fs.existsSync(outputPath), true);
   assert.equal(asset.embeddedScreenshot.scale, 1);
-  assert.equal(asset.embeddedScreenshot.renderedWidth, 640);
-  assert.equal(asset.embeddedScreenshot.renderedHeight, 360);
+  assert.equal(asset.embeddedScreenshot.renderedWidth, 1920);
+  assert.equal(asset.embeddedScreenshot.renderedHeight, 1080);
   assert.ok(asset.layout.titleLines > 0 && asset.layout.titleLines <= asset.layout.maxTitleLines);
   assert.equal(asset.layout.subtitleLines, 1);
   assert.ok(Math.abs(asset.layout.aspectRatio - (16 / 9)) < 0.02);
@@ -84,7 +84,7 @@ test("assessBrandedMediaAsset rejects canvas and layout regressions", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-branding-"));
   const screenshotPath = path.join(tempDir, "screenshot.png");
   const outputPath = path.join(tempDir, "branded.svg");
-  writePng(screenshotPath, 640, 360);
+  writePng(screenshotPath, 1920, 1080);
 
   const asset = createBrandedMediaSvg({
     screenshotPath,
@@ -98,7 +98,7 @@ test("assessBrandedMediaAsset rejects canvas and layout regressions", () => {
     layout: {
       ...asset.layout,
       titleLines: 3,
-      screenshot: { x: 700, y: 700, width: 640, height: 360 },
+      screenshot: { x: 700, y: 700, width: 1920, height: 1080 },
     },
   });
 
@@ -113,7 +113,7 @@ test("createBrandedMediaPngPreview renders a judgeable PNG from the SVG card", a
   const screenshotPath = path.join(tempDir, "screenshot.png");
   const svgPath = path.join(tempDir, "branded.svg");
   const pngPath = path.join(tempDir, "branded.png");
-  writePng(screenshotPath, 640, 360);
+  writePng(screenshotPath, 1920, 1080);
 
   const asset = createBrandedMediaSvg({
     screenshotPath,
@@ -128,6 +128,25 @@ test("createBrandedMediaPngPreview renders a judgeable PNG from the SVG card", a
   assert.equal(asset.preview.dimensions.width, asset.dimensions.width);
   assert.equal(asset.preview.dimensions.height, asset.dimensions.height);
   assert.equal(assessBrandedMediaAsset(asset).ok, true);
+});
+
+test("assessBrandedMediaAsset rejects low-resolution embedded proof", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-branding-"));
+  const screenshotPath = path.join(tempDir, "screenshot.png");
+  const outputPath = path.join(tempDir, "branded.svg");
+  writePng(screenshotPath, 1536, 608);
+
+  const asset = createBrandedMediaSvg({
+    screenshotPath,
+    outputPath,
+    title: "GPT-5.5 available in the chat model picker",
+    subtitle: "GPT-5.5 is now available directly from the chat model picker.",
+  });
+  const report = assessBrandedMediaAsset(asset);
+
+  assert.equal(report.ok, false);
+  assert.ok(report.concerns.some((concern) => concern.includes("below production readability minimum")));
+  assert.ok(report.concerns.some((concern) => concern.includes("too small")));
 });
 
 test("wrapTextForSvg caps long marketing copy to bounded lines", () => {

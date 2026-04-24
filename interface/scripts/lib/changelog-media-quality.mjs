@@ -9,6 +9,13 @@ const BAD_PROOF_PATTERNS = [
   /\b(?:placeholder|empty)\s+(?:screen|page|state)\b/i,
   /\b(?:mobile|ios|android|hamburger|bottom nav)\s+(?:layout|ui|screen|navigation|surface)\b/i,
 ];
+
+export const PRODUCTION_MEDIA_QUALITY_POLICY = Object.freeze({
+  minRawWidth: 1920,
+  minRawHeight: 1080,
+  minRawPixels: 1920 * 1080,
+  minVisionScore: 0.9,
+});
 const VISION_QUALITY_TOOL = {
   name: "submit_changelog_media_quality",
   description: "Submit a strict quality judgment for an Aura changelog media image.",
@@ -155,6 +162,18 @@ export function assessChangelogMediaQuality({
   const concerns = [...new Set(desktopEvaluation?.concerns || [])];
   const { concerns: screenshotConcerns, metrics } = readScreenshotMetrics(screenshot);
   concerns.push(...screenshotConcerns);
+  if (metrics?.ok) {
+    if (metrics.width < PRODUCTION_MEDIA_QUALITY_POLICY.minRawWidth || metrics.height < PRODUCTION_MEDIA_QUALITY_POLICY.minRawHeight) {
+      concerns.push(
+        `Screenshot is below production readability minimum (${metrics.width}x${metrics.height}; minimum ${PRODUCTION_MEDIA_QUALITY_POLICY.minRawWidth}x${PRODUCTION_MEDIA_QUALITY_POLICY.minRawHeight}).`,
+      );
+    }
+    if ((metrics.width * metrics.height) < PRODUCTION_MEDIA_QUALITY_POLICY.minRawPixels) {
+      concerns.push(
+        `Screenshot has too few source pixels for readable changelog media (${metrics.width * metrics.height}; minimum ${PRODUCTION_MEDIA_QUALITY_POLICY.minRawPixels}).`,
+      );
+    }
+  }
 
   const evidenceText = normalizeText([
     parsedOutput?.screenshotDescription,
@@ -223,10 +242,11 @@ export function buildVisionJudgePrompt({ candidate, stage = "raw" } = {}) {
     "- It shows desktop Aura product UI, not mobile UI.",
     "- It is not a login, loading, placeholder, empty, or error page.",
     "- The screenshot visibly proves the changelog entry.",
-    "- Text and important UI are readable at normal changelog display size.",
+    "- Text and important UI are crisp and readable at normal changelog display size, without opening the full-size image.",
+    "- Reject soft, compressed, pixelated, tiny, or low-resolution product UI even when the right screen is technically visible.",
     "- The primary proof for the claim is easy to find without zooming or hunting around the image.",
     "- Nothing important is clipped.",
-    "- For branded assets, the real product screenshot remains clear and unaltered.",
+    "- For branded assets, the real product screenshot remains clear, unaltered, and large enough to be the hero of the card.",
     "- For branded assets, title/caption copy is public-facing and does not read like an internal instruction.",
     "- For branded assets, branding supports the proof instead of making the product evidence feel tiny or incidental.",
     "",
@@ -347,10 +367,12 @@ export async function judgeChangelogMediaWithAnthropic({
     ? judgment.visibleProof.map((entry) => String(entry || "").trim()).filter(Boolean)
     : [];
   const score = Number(judgment.score);
-  const ok = Boolean(judgment.pass === true && score >= 0.72 && visibleProof.length > 0);
+  const ok = Boolean(judgment.pass === true && score >= PRODUCTION_MEDIA_QUALITY_POLICY.minVisionScore && visibleProof.length > 0);
   const concerns = [];
   if (judgment.pass !== true) concerns.push("Vision judge rejected the image.");
-  if (!Number.isFinite(score) || score < 0.72) concerns.push(`Vision judge score is too low (${Number.isFinite(score) ? score : "missing"}).`);
+  if (!Number.isFinite(score) || score < PRODUCTION_MEDIA_QUALITY_POLICY.minVisionScore) {
+    concerns.push(`Vision judge score is too low (${Number.isFinite(score) ? score : "missing"}; minimum ${PRODUCTION_MEDIA_QUALITY_POLICY.minVisionScore}).`);
+  }
   if (visibleProof.length === 0) concerns.push("Vision judge did not provide visible proof.");
 
   return {

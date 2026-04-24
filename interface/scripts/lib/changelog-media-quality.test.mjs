@@ -46,7 +46,7 @@ test("measurePngQuality detects visual structure", () => {
 test("assessChangelogMediaQuality accepts structured desktop proof", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-quality-"));
   const screenshotPath = path.join(tempDir, "desktop.png");
-  writePng(screenshotPath, 160, 90, (x, y) => ((x + y) % 24 < 12 ? [18, 24, 38] : [238, 242, 248]));
+  writePng(screenshotPath, 1920, 1080, (x, y) => ((x + y) % 48 < 24 ? [18, 24, 38] : [238, 242, 248]));
 
   const report = assessChangelogMediaQuality({
     desktopEvaluation: {
@@ -63,7 +63,7 @@ test("assessChangelogMediaQuality accepts structured desktop proof", () => {
     },
     screenshot: {
       path: screenshotPath,
-      dimensions: { width: 160, height: 90 },
+      dimensions: { width: 1920, height: 1080 },
     },
     candidate: {
       targetAppId: "agents",
@@ -78,7 +78,7 @@ test("assessChangelogMediaQuality accepts structured desktop proof", () => {
 test("assessChangelogMediaQuality does not reject normal input placeholder copy", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-quality-"));
   const screenshotPath = path.join(tempDir, "desktop-placeholder-text.png");
-  writePng(screenshotPath, 160, 90, (x, y) => ((x + y) % 24 < 12 ? [18, 24, 38] : [238, 242, 248]));
+  writePng(screenshotPath, 1920, 1080, (x, y) => ((x + y) % 48 < 24 ? [18, 24, 38] : [238, 242, 248]));
 
   const report = assessChangelogMediaQuality({
     desktopEvaluation: {
@@ -98,7 +98,7 @@ test("assessChangelogMediaQuality does not reject normal input placeholder copy"
     },
     screenshot: {
       path: screenshotPath,
-      dimensions: { width: 160, height: 90 },
+      dimensions: { width: 1920, height: 1080 },
     },
     candidate: {
       targetAppId: "agents",
@@ -108,6 +108,38 @@ test("assessChangelogMediaQuality does not reject normal input placeholder copy"
 
   assert.equal(report.ok, true);
   assert.deepEqual(report.concerns, []);
+});
+
+test("assessChangelogMediaQuality rejects low-resolution proof even when semantics pass", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-quality-"));
+  const screenshotPath = path.join(tempDir, "low-resolution.png");
+  writePng(screenshotPath, 1536, 608, (x, y) => ((x + y) % 48 < 24 ? [18, 24, 38] : [238, 242, 248]));
+
+  const report = assessChangelogMediaQuality({
+    desktopEvaluation: {
+      ok: true,
+      concerns: [],
+      parsedOutput: {
+        shouldCapture: true,
+        targetAppId: "agents",
+        targetPath: "/agents",
+        proofVisible: true,
+        visibleProof: ["GPT-5.5 is visible in the model picker."],
+        screenshotDescription: "Aura desktop chat screen with model picker dropdown open.",
+      },
+    },
+    screenshot: {
+      path: screenshotPath,
+      dimensions: { width: 1536, height: 608 },
+    },
+    candidate: {
+      targetAppId: "agents",
+      targetPath: "/agents",
+    },
+  });
+
+  assert.equal(report.ok, false);
+  assert.ok(report.concerns.some((concern) => concern.includes("below production readability minimum")));
 });
 
 test("assessChangelogMediaQuality rejects weak or unrelated proof", () => {
@@ -156,6 +188,7 @@ test("buildVisionJudgePrompt defines an independent strict review", () => {
 
   assert.match(prompt, /independent quality judge/);
   assert.match(prompt, /not a login, loading, placeholder, empty, or error page/);
+  assert.match(prompt, /pixelated/);
   assert.match(prompt, /easy to find without zooming/);
   assert.match(prompt, /public-facing/);
   assert.match(prompt, /Return strict JSON/);
@@ -207,4 +240,45 @@ test("judgeChangelogMediaWithAnthropic requires strict vision proof", async () =
   assert.equal(requestBody.tool_choice.name, "submit_changelog_media_quality");
   assert.equal(requestBody.messages[0].content[1].type, "image");
   assert.equal(requestBody.messages[0].content[1].source.media_type, "image/png");
+});
+
+test("judgeChangelogMediaWithAnthropic rejects marginal vision scores", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-quality-"));
+  const screenshotPath = path.join(tempDir, "desktop.png");
+  writePng(screenshotPath, 160, 90, (x, y) => ((x + y) % 24 < 12 ? [18, 24, 38] : [238, 242, 248]));
+
+  const report = await judgeChangelogMediaWithAnthropic({
+    apiKey: "test-key",
+    imagePath: screenshotPath,
+    candidate: {
+      entryId: "entry-1",
+      title: "GPT-5.5 available in the model picker",
+      proofGoal: "Show GPT-5.5 in the picker.",
+    },
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      async text() {
+        return JSON.stringify({
+          content: [
+            {
+              type: "tool_use",
+              name: "submit_changelog_media_quality",
+              input: {
+                pass: true,
+                score: 0.82,
+                reasons: ["The correct screen is visible, but text is soft."],
+                visibleProof: ["GPT-5.5 is present."],
+                rejectionCategory: null,
+              },
+            },
+          ],
+        });
+      },
+    }),
+  });
+
+  assert.equal(report.ok, false);
+  assert.equal(report.status, "rejected");
+  assert.ok(report.concerns.some((concern) => concern.includes("minimum 0.9")));
 });

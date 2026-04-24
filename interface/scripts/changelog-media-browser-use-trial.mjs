@@ -10,8 +10,8 @@ import { loadLocalEnv } from "./lib/load-local-env.mjs";
 export const DEFAULT_BROWSER_USE_MODEL = "claude-opus-4.6";
 export const DEFAULT_BROWSER_USE_TIMEOUT_MS = 10 * 60 * 1000;
 export const DEFAULT_BROWSER_USE_INTERVAL_MS = 2 * 1000;
-const DEFAULT_DESKTOP_VIEWPORT = Object.freeze({ width: 1920, height: 1080 });
-const DEFAULT_MIN_DESKTOP_VIEWPORT = Object.freeze({ width: 1366, height: 600 });
+const DEFAULT_DESKTOP_VIEWPORT = Object.freeze({ width: 2560, height: 1440 });
+const DEFAULT_MIN_DESKTOP_VIEWPORT = Object.freeze({ width: 1920, height: 1080 });
 
 const BROWSER_USE_CAPTURE_OUTPUT_SCHEMA = {
   type: "object",
@@ -347,7 +347,8 @@ export function buildBrowserUseTask({
       `- First open ${captureAuth.loginUrl}.`,
       "- This URL contains a temporary seeded capture session in the URL fragment; do not copy it into the page and do not print it.",
       "- Wait until the Aura desktop shell is visible before looking for the target feature.",
-      "- If a capture access key form appears instead, return shouldCapture=false because automatic capture authentication failed.",
+      "- If a capture access key form appears instead, type the Browser Use sensitive secret placeholder `<secret>captureSecret</secret>` into the field labelled `Capture access key`, submit it, and wait for the Aura desktop shell.",
+      "- Never print, summarize, or reveal the capture secret.",
       "",
     ]
     : captureAuth?.enabled
@@ -389,7 +390,7 @@ export function buildBrowserUseTask({
     "- For small proof surfaces such as menus, model pickers, buttons, or status chips, open the relevant popover/dialog and keep it visible. Do not enlarge it artificially.",
     "- Do not change browser zoom, crop, stylize, or re-render the screenshot. The captured pixels must be real Aura product UI.",
     "- Prefer crisp native Browser Use screenshots over any generated or transformed image. Text readability must come from preserving the original PNG quality, not from zooming.",
-    "- If the proof is blurry, compressed, clipped, or mostly empty, return shouldCapture=false instead of sending a weak image.",
+    "- If the browser cannot produce at least the minimum acceptable screenshot size, or if the proof is blurry, compressed, clipped, or mostly empty, return shouldCapture=false instead of sending a weak image.",
     "",
     "Final response:",
     "Return JSON only with: shouldCapture, targetAppId, targetPath, proofSurface, proofVisible, visibleProof, screenshotDescription, desktopLayoutVisible, mobileLayoutVisible, concerns.",
@@ -427,10 +428,12 @@ async function downloadLastScreenshot(messages, outputDir, sessionScreenshotUrl 
 export function buildBrowserUseRunOptions({
   model,
   profileId,
+  sessionId,
   enableRecording,
   maxCostUsd,
   useOutputSchema,
   sensitiveData,
+  keepAlive,
   timeoutMs = DEFAULT_BROWSER_USE_TIMEOUT_MS,
   intervalMs = DEFAULT_BROWSER_USE_INTERVAL_MS,
 } = {}) {
@@ -442,6 +445,8 @@ export function buildBrowserUseRunOptions({
     skills: false,
     agentmail: false,
     ...(useOutputSchema ? { outputSchema: BROWSER_USE_CAPTURE_OUTPUT_SCHEMA } : {}),
+    ...(sessionId ? { sessionId } : {}),
+    ...(typeof keepAlive === "boolean" ? { keepAlive } : {}),
     ...(profileId ? { profileId } : {}),
     ...(enableRecording ? { enableRecording: true } : {}),
     ...(maxCostUsd ? { maxCostUsd } : {}),
@@ -470,67 +475,89 @@ export async function runBrowserUseTask({
   const { BrowserUse } = await import("browser-use-sdk/v3");
   const client = new BrowserUse({ apiKey });
   const messages = [];
+  let configuredSession = null;
+  if (desktopViewport?.width && desktopViewport?.height) {
+    configuredSession = await client.sessions.create({
+      ...(profileId ? { profileId } : {}),
+      browserScreenWidth: desktopViewport.width,
+      browserScreenHeight: desktopViewport.height,
+      keepAlive: true,
+      enableRecording: Boolean(enableRecording),
+    });
+  }
   const runOptions = buildBrowserUseRunOptions({
     model,
-    profileId,
+    profileId: configuredSession ? "" : profileId,
+    sessionId: configuredSession?.id || "",
     enableRecording,
     maxCostUsd,
     useOutputSchema,
     sensitiveData,
+    keepAlive: configuredSession ? false : undefined,
     timeoutMs,
     intervalMs,
   });
-  const run = client.run(task, runOptions);
+  try {
+    const run = client.run(task, runOptions);
 
-  for await (const message of run) {
-    messages.push({
-      id: message.id || null,
-      role: message.role || null,
-      type: message.type || null,
-      summary: redactCaptureLoginSecrets(message.summary || ""),
-      screenshot_url: message.screenshot_url || message.screenshotUrl || null,
-      data: redactCaptureLoginSecrets(message.data || null),
-    });
-  }
+    for await (const message of run) {
+      messages.push({
+        id: message.id || null,
+        role: message.role || null,
+        type: message.type || null,
+        summary: redactCaptureLoginSecrets(message.summary || ""),
+        screenshot_url: message.screenshot_url || message.screenshotUrl || null,
+        data: redactCaptureLoginSecrets(message.data || null),
+      });
+    }
 
-  const result = run.result;
-  const screenshot = await downloadLastScreenshot(
-    messages,
-    outputDir,
-    result?.screenshotUrl || result?.screenshot_url || null,
-  );
-  const parsedResultOutput = parseBrowserUseOutput(result?.output);
-  const recoveredOutput = parsedResultOutput
-    ? result?.output
-    : extractStructuredOutputFromMessages(messages) || inferNoCaptureFromMessages(messages);
-  let recordings = [];
-  if (enableRecording && result?.id && client.sessions?.waitForRecording) {
-    recordings = await client.sessions.waitForRecording(result.id).catch((error) => [{
-      error: error instanceof Error ? error.message : String(error),
-    }]);
+    const result = run.result;
+    const screenshot = await downloadLastScreenshot(
+      messages,
+      outputDir,
+      result?.screenshotUrl || result?.screenshot_url || null,
+    );
+    const parsedResultOutput = parseBrowserUseOutput(result?.output);
+    const recoveredOutput = parsedResultOutput
+      ? result?.output
+      : extractStructuredOutputFromMessages(messages) || inferNoCaptureFromMessages(messages);
+    let recordings = [];
+    if (enableRecording && result?.id && client.sessions?.waitForRecording) {
+      recordings = await client.sessions.waitForRecording(result.id).catch((error) => [{
+        error: error instanceof Error ? error.message : String(error),
+      }]);
+    }
+    return {
+      ok: true,
+      provider: "browser-use-cloud",
+      model,
+      profileId: profileId || null,
+      runOptions: {
+        timeoutMs,
+        intervalMs,
+        maxCostUsd: maxCostUsd || null,
+        outputSchema: Boolean(useOutputSchema),
+        configuredSession: Boolean(configuredSession),
+        browserScreenWidth: configuredSession ? desktopViewport.width : null,
+        browserScreenHeight: configuredSession ? desktopViewport.height : null,
+      },
+      requestedDesktopViewport: desktopViewport,
+      screenshotSource: screenshot?.url === (result?.screenshotUrl || result?.screenshot_url || null)
+        ? "session-screenshot-url"
+        : "message-screenshot-url",
+      sessionId: run.sessionId || result?.sessionId || result?.session_id || configuredSession?.id || null,
+      output: recoveredOutput ?? result?.output ?? null,
+      rawOutput: result?.output ?? null,
+      messages,
+      screenshot,
+      recordings,
+    };
+  } finally {
+    if (configuredSession?.id) {
+      await client.sessions.stop(configuredSession.id).catch(() => null);
+      await client.sessions.delete(configuredSession.id).catch(() => null);
+    }
   }
-  return {
-    ok: true,
-    provider: "browser-use-cloud",
-    model,
-    profileId: profileId || null,
-    runOptions: {
-      timeoutMs,
-      intervalMs,
-      maxCostUsd: maxCostUsd || null,
-      outputSchema: Boolean(useOutputSchema),
-    },
-    requestedDesktopViewport: desktopViewport,
-    screenshotSource: screenshot?.url === (result?.screenshotUrl || result?.screenshot_url || null)
-      ? "session-screenshot-url"
-      : "message-screenshot-url",
-    sessionId: run.sessionId || result?.sessionId || result?.session_id || null,
-    output: recoveredOutput ?? result?.output ?? null,
-    rawOutput: result?.output ?? null,
-    messages,
-    screenshot,
-    recordings,
-  };
 }
 
 export async function main(argv = process.argv.slice(2)) {

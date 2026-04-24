@@ -25,6 +25,14 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+const PRODUCTION_BRANDED_MEDIA_POLICY = Object.freeze({
+  minEmbeddedWidth: 1920,
+  minEmbeddedHeight: 1080,
+  minEmbeddedAreaRatio: 0.5,
+  minEmbeddedWidthRatio: 0.72,
+  minEmbeddedHeightRatio: 0.48,
+});
+
 function addEllipsis(value, maxChars) {
   if (value.length <= maxChars) {
     return value.endsWith("...") ? value : `${value}...`;
@@ -300,6 +308,31 @@ export function assessBrandedMediaAsset(asset) {
     if (screenshotFrame.y + screenshotFrame.height > asset.dimensions.height) {
       concerns.push("Branded media screenshot overflows the canvas height.");
     }
+    const canvasArea = asset.dimensions.width * asset.dimensions.height;
+    const screenshotArea = screenshotFrame.width * screenshotFrame.height;
+    const areaRatio = canvasArea > 0 ? screenshotArea / canvasArea : 0;
+    const widthRatio = asset.dimensions.width > 0 ? screenshotFrame.width / asset.dimensions.width : 0;
+    const heightRatio = asset.dimensions.height > 0 ? screenshotFrame.height / asset.dimensions.height : 0;
+    if (areaRatio < PRODUCTION_BRANDED_MEDIA_POLICY.minEmbeddedAreaRatio) {
+      concerns.push(
+        `Branded media makes the product screenshot too small (${areaRatio.toFixed(2)} canvas area; minimum ${PRODUCTION_BRANDED_MEDIA_POLICY.minEmbeddedAreaRatio}).`,
+      );
+    }
+    if (widthRatio < PRODUCTION_BRANDED_MEDIA_POLICY.minEmbeddedWidthRatio) {
+      concerns.push(
+        `Branded media product screenshot is too narrow on the card (${widthRatio.toFixed(2)} canvas width; minimum ${PRODUCTION_BRANDED_MEDIA_POLICY.minEmbeddedWidthRatio}).`,
+      );
+    }
+    if (heightRatio < PRODUCTION_BRANDED_MEDIA_POLICY.minEmbeddedHeightRatio) {
+      concerns.push(
+        `Branded media product screenshot is too short on the card (${heightRatio.toFixed(2)} canvas height; minimum ${PRODUCTION_BRANDED_MEDIA_POLICY.minEmbeddedHeightRatio}).`,
+      );
+    }
+  }
+  if (asset?.embeddedScreenshot?.width < PRODUCTION_BRANDED_MEDIA_POLICY.minEmbeddedWidth || asset?.embeddedScreenshot?.height < PRODUCTION_BRANDED_MEDIA_POLICY.minEmbeddedHeight) {
+    concerns.push(
+      `Branded media source screenshot is below production readability minimum (${asset?.embeddedScreenshot?.width || 0}x${asset?.embeddedScreenshot?.height || 0}; minimum ${PRODUCTION_BRANDED_MEDIA_POLICY.minEmbeddedWidth}x${PRODUCTION_BRANDED_MEDIA_POLICY.minEmbeddedHeight}).`,
+    );
   }
   if (asset?.embeddedScreenshot?.scale !== 1) {
     concerns.push("Branded media changed the product screenshot scale.");

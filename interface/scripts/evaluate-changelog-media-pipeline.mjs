@@ -281,8 +281,9 @@ export function buildPublishableMediaManifest({ captureResults = [] } = {}) {
     if (!entry?.publishReady) continue;
     if (entry.status !== "accepted" || entry.captureAccepted !== true) continue;
     if (entry.qualityGate?.ok !== true || entry.visionGate?.ok !== true) continue;
+    if (entry.visionGate?.status !== "accepted") continue;
     if (entry.branding?.status !== "created" || entry.branding?.quality?.ok !== true) continue;
-    if (entry.brandedVisionGate?.ok !== true) continue;
+    if (entry.brandedVisionGate?.ok !== true || entry.brandedVisionGate?.status !== "accepted") continue;
     if (!preview?.path || preview.format !== "png" || !fs.existsSync(preview.path)) continue;
 
     assets.push({
@@ -637,7 +638,7 @@ export async function runChangelogMediaEvaluation({
       desktopViewport: contract.desktopCapturePolicy.viewport,
       maxCostUsd,
       useOutputSchema: true,
-      sensitiveData: captureAuth.enabled && !captureAuth.autoSession ? { captureSecret } : null,
+      sensitiveData: captureAuth.enabled ? { captureSecret } : null,
       timeoutMs: browserUseTimeoutMs,
       intervalMs: browserUseIntervalMs,
     });
@@ -688,20 +689,22 @@ export async function runChangelogMediaEvaluation({
         stage: "branded",
       })
       : {
-        ok: branding.status === "created" && branding.quality?.ok && !visionJudge,
+        ok: false,
         status: branding.status === "created" ? "skipped" : "blocked",
-        concerns: branding.status === "created"
-          ? []
+        concerns: branding.status === "created" && !visionJudge
+          ? ["Branded vision judge is required for publishable media."]
           : ["Branded vision judge skipped because no accepted branded asset was created."],
         judgment: null,
       };
+    const rawVisionAccepted = visionGate.ok === true && visionGate.status === "accepted";
+    const brandedVisionAccepted = brandedVisionGate.ok === true && brandedVisionGate.status === "accepted";
     const summary = {
       candidate,
       status: captureAccepted ? "accepted" : "rejected",
       provider: "browser-use-cloud",
       model: browserUseModel,
       captureAccepted,
-      publishReady: Boolean(captureAccepted && branding.status === "created" && branding.quality?.ok && brandedVisionGate.ok),
+      publishReady: Boolean(captureAccepted && rawVisionAccepted && branding.status === "created" && branding.quality?.ok && brandedVisionAccepted),
       result,
       desktopEvaluation,
       qualityGate,

@@ -8,8 +8,8 @@ const DEFAULT_APP_LIMIT = 24;
 const MAX_COMMIT_LOG_CHARS = 6000;
 const DESKTOP_CAPTURE_POLICY = Object.freeze({
   target: "desktop-web-product-ui",
-  viewport: { width: 1920, height: 1080 },
-  minimumViewport: { width: 1366, height: 600 },
+  viewport: { width: 2560, height: 1440 },
+  minimumViewport: { width: 1920, height: 1080 },
   rejectIfVisible: [
     "mobile responsive layout",
     "native iOS or Android surface",

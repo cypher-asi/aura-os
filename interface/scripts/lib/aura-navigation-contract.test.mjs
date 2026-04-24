@@ -37,7 +37,7 @@ test("buildAuraNavigationContract ranks changed app files as likely targets", as
   assert.equal(contract.likelyApps[0]?.id, "agents");
   assert.ok(contract.apps.some((app) => app.id === "agents"));
   assert.equal(contract.mediaEligibility.shouldAttemptCapture, true);
-  assert.equal(contract.desktopCapturePolicy.viewport.width, 1920);
+  assert.equal(contract.desktopCapturePolicy.viewport.width, 2560);
   assert.match(contract.rules.join(" "), /Never capture mobile/);
 });
 
@@ -53,8 +53,8 @@ test("buildAuraNavigationContract rejects mobile-only media candidates", async (
   assert.equal(contract.mediaEligibility.shouldAttemptCapture, false);
   assert.match(contract.mediaEligibility.reason, /mobile-only/);
   assert.deepEqual(contract.desktopCapturePolicy.minimumViewport, {
-    width: 1366,
-    height: 600,
+    width: 1920,
+    height: 1080,
   });
 });
 
