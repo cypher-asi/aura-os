@@ -1,81 +1,75 @@
-# AURA 3D studio lands, with a hardened nightly release pipeline
+# AURA 3D debuts alongside a hardened nightly release pipeline
 
 - Date: `2026-04-23`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.363.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.363.1
+- Version: `0.1.0-nightly.364.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.364.1
 
-Today's nightly introduces AURA 3D, a new in-app studio for generating images and turning them into 3D models inside a live WebGL viewer. Alongside the new app, the team shipped artifact persistence so 3D work survives across sessions, patched a Windows updater handoff bug, and tightened the nightly release and changelog media pipelines end to end.
+Today's nightly introduces AURA 3D, a new image-to-3D studio built on three.js, backed by artifact persistence and project-scoped navigation. Alongside it, the team shipped broad reliability work on the changelog media pipeline, the nightly release workflow, and the Windows desktop updater.
 
-## 9:17 AM — Nightly release pipeline and changelog media proofing
+## 9:17 AM — GPT-5.5 support and a smarter changelog media proofer
 
-The nightly release workflow and the automated changelog media pipeline were hardened with retries, recovery paths, and smarter proof-screenshot selection, and GPT-5.5 was added to the chat model picker.
+GPT-5.5 lands in the chat model picker while the release pipeline gains a stricter AI-driven screenshot proofer and a recoverable nightly prune/gh-pages flow.
 
 <!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-1-nightly-release-prune-gh-pages-recovery-and-gpt-5-5-in-the-picke","batchId":"entry-1","slug":"nightly-release-prune-gh-pages-recovery-and-gpt-5-5-in-the-picke","alt":"Nightly release prune, gh-pages recovery, and GPT-5.5 in the picker screenshot","status":"published","assetPath":"assets/changelog/nightly/0.1.0-nightly.362.1/entry-1-nightly-release-prune-gh-pages-recovery-and-gpt-5-5-in-the-picke.png"} -->
 ![Nightly release prune, gh-pages recovery, and GPT-5.5 in the picker screenshot](../../assets/changelog/nightly/0.1.0-nightly.362.1/entry-1-nightly-release-prune-gh-pages-recovery-and-gpt-5-5-in-the-picke.png)
 <!-- AURA_CHANGELOG_MEDIA:END entry-1-nightly-release-prune-gh-pages-recovery-and-gpt-5-5-in-the-picke -->
 
-- Nightly releases now prune old assets through a retryable script that tolerates missing releases, and a new workflow keeps changelog media history in sync with the latest published entries. (`a7eb25a`, `ac61ac3`, `d81834c`)
-- Added a gh-pages republish recovery workflow with a retrying commit script so transient push failures no longer strand changelog updates. (`ca9eaa8`)
-- Reworked AI-driven changelog media proofing to pick between raw contextual screenshots and branded cards, reject release/CI/backend-only work, and preserve crisper, larger proof frames. (`8ef3f5b`, `2217600`, `43ac905`, `a0f9f63`, `4c104ae`, `60f4bab`)
-- Added GPT-5.5 to the chat model picker with updated pricing metadata, and surfaced ZERO Pro status alongside usage in server responses. (`d9d82e9`, `b2847a4`)
+- Added GPT-5.5 to the chat model picker and benchmark pricing tables, with the new model wired through the dev loop handler. (`d9d82e9`)
+- Reported ZERO Pro status alongside usage in network responses so clients can reflect entitlement state. (`b2847a4`)
+- Hardened the nightly release workflow: asset pruning now retries via a dedicated script that tolerates missing nightly assets, and a new gh-pages republish recovery workflow plus history-media sync job keep the changelog site self-healing. (`a7eb25a`, `ac61ac3`, `ca9eaa8`, `d81834c`)
+- Upgraded the AI changelog media proofer to prompt version 4 with stricter classification, new raw-contextual vs branded-card presentation modes, and tighter heuristics that reject backend-only, maintenance-only, and desktop-updater entries from screenshot capture. (`8ef3f5b`, `60f4bab`, `2217600`, `43ac905`, `a0f9f63`, `4c104ae`)
 
-## 5:11 PM — AURA 3D app: image generation, WebGL viewer, and 3D flow
+## 5:11 PM — AURA 3D studio: image-to-model flow with WebGL viewer
 
-A brand-new AURA 3D app shipped behind an initial feature flag, covering image generation, a Three.js-based WebGL model viewer, and an end-to-end prompt → image → 3D model flow.
+A new AURA 3D app joins the registry, combining streamed image generation, a Three.js-based 3D viewer, and project-aware navigation.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-2-aura-3d-app-image-generation-webgl-viewer-and-3d-flow","batchId":"entry-2","slug":"aura-3d-app-image-generation-webgl-viewer-and-3d-flow","alt":"AURA 3D app: image generation, WebGL viewer, and 3D flow screenshot"} -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-2-aura-3d-studio-image-to-model-flow-with-webgl-viewer","batchId":"entry-2","slug":"aura-3d-studio-image-to-model-flow-with-webgl-viewer","alt":"AURA 3D studio: image-to-model flow with WebGL viewer screenshot"} -->
 <!-- AURA_CHANGELOG_MEDIA:PENDING -->
-<!-- AURA_CHANGELOG_MEDIA:END entry-2-aura-3d-app-image-generation-webgl-viewer-and-3d-flow -->
+<!-- AURA_CHANGELOG_MEDIA:END entry-2-aura-3d-studio-image-to-model-flow-with-webgl-viewer -->
 
-- Introduced AURA 3D as a new app in the registry at /3d, initially scaffolded with an Imagine/Generate/Tokenize studio layout, a left nav for asset history, and a Zustand store. (`1b20985`)
-- Replaced the tab scaffold with a single-page image generation flow: SSE image streaming with style-lock prompts, a ChatInputBar-style model selector, and Images/Models sidekick panels for asset management. (`90887d5`)
-- Added a Three.js WebGL viewer with a 4-light rig, GLTF auto-center/scale loader, full lifecycle cleanup, and grid/wireframe/texture toggles, wired to a Tripo-backed 3D generation SSE stream that auto-uses the generated image as its source. (`8b2b861`)
-- Added a project selector dropdown to the left nav and gated the whole app behind a VITE_ENABLE_AURA_3D flag, with store unit tests covering state transitions, generation completion, and error handling. (`9cb954d`)
+- Scaffolded a new AURA 3D app at /3d in the app registry with a Box icon, Zustand store, and three.js added as a dependency for the upcoming WebGL viewer. (`1b20985`)
+- Replaced the early tab stubs with a unified image-generation flow: an SSE-driven image stream with style-locked prompts, a sidekick panel with Images and Models tabs, and a ChatInputBar-style model selector. (`90887d5`)
+- Added a full WebGL viewer built on a 4-light Three.js scene with GLTF auto-center/scale loading, lifecycle cleanup, and grid, wireframe, and texture toggles, plus a Tripo-backed 3D generation SSE stream that auto-populates from the generated image. (`8b2b861`)
+- Introduced a project selector dropdown in the left nav (initially gated behind a VITE_ENABLE_AURA_3D flag) along with store unit tests covering generation completion, asset selection, and error paths. (`9cb954d`)
 
-## 5:11 PM — Generation SSE proxy handles data-only frames
+## 5:11 PM — Generation SSE proxy tolerates data-only frames
 
-Fixed a silent drop of upstream generation events in the server's SSE proxy.
+The aura-os-server generation proxy no longer drops events when upstream omits the event: line.
 
-- The generation proxy now extracts the event type from the JSON data field when aura-router sends data-only SSE frames without a separate event line, so start/progress/completed events are no longer dropped. (`e0d60fd`)
+- Fixed the generation handler to extract the event type from the JSON data field when aura-router emits data-only SSE frames, unblocking end-to-end image and 3D generation streams. (`e0d60fd`)
 
-## 5:11 PM — AURA 3D layout polish: tabs, lightbox, and project tree nav
+## 5:11 PM — AURA 3D polish: persistence, project tree nav, and GA rollout
 
-AURA 3D's layout moved to an Image/3D Model tab structure with a lightbox preview and a project tree nav matching the Projects app.
+Follow-up work on AURA 3D adds artifact persistence end to end, aligns the left nav with the Projects app, and removes the feature flag to ship the app to everyone.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-4-aura-3d-layout-polish-tabs-lightbox-and-project-tree-nav","batchId":"entry-4","slug":"aura-3d-layout-polish-tabs-lightbox-and-project-tree-nav","alt":"AURA 3D layout polish: tabs, lightbox, and project tree nav screenshot"} -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-4-aura-3d-polish-persistence-project-tree-nav-and-ga-rollout","batchId":"entry-4","slug":"aura-3d-polish-persistence-project-tree-nav-and-ga-rollout","alt":"AURA 3D polish: persistence, project tree nav, and GA rollout screenshot"} -->
 <!-- AURA_CHANGELOG_MEDIA:PENDING -->
-<!-- AURA_CHANGELOG_MEDIA:END entry-4-aura-3d-layout-polish-tabs-lightbox-and-project-tree-nav -->
+<!-- AURA_CHANGELOG_MEDIA:END entry-4-aura-3d-polish-persistence-project-tree-nav-and-ga-rollout -->
 
-- Added an IMAGE section with a click-to-expand lightbox (backdrop and X-button close), a 50/50 split with the 3D Model section, and centered empty states. (`ddb0b7e`)
-- Switched from a horizontal split to Image and 3D Model tabs based on feedback, and reused LeftMenuTree for the left nav to stay consistent with the Projects app. (`5f41de6`, `9250ebf`)
+- Reworked the main panel with an IMAGE header, click-to-expand lightbox preview, a 50/50 image-vs-model split, and eventually an Image/3D Model tab layout driven by feedback. (`ddb0b7e`, `5f41de6`)
+- Replaced the custom project dropdown with LeftMenuTree so AURA 3D's left nav now matches the Projects app, showing images and models as prefixed children under the active project. (`9250ebf`, `6229c31`)
+- Added end-to-end artifact persistence: new StorageProjectArtifact types and client methods in aura-os-storage, JWT-authenticated proxy routes at /api/projects/:id/artifacts, a frontend artifacts API, and store wiring that loads artifacts on project select and links models to source images via parentId. (`d3ad5ec`, `f3dc0ae`, `e204d4c`, `5df2a3b`)
+- Removed the VITE_ENABLE_AURA_3D feature flag so AURA 3D is always visible in the app registry, and required an active project before the prompt input and Generate 3D button become usable. (`6bbc5df`, `e204d4c`)
 
-## 5:11 PM — AURA 3D project artifacts now persist and AURA 3D ships unflagged
+## 7:00 PM — Windows auto-update handoff and changelog capture hardening
 
-3D projects gained backend-persisted artifacts with a parent-child chain linking images to their derived models, and AURA 3D is now always on.
+A focused fix restores the Windows updater handoff while the changelog media capture pipeline gets a major reliability overhaul.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-5-aura-3d-project-artifacts-now-persist-and-aura-3d-ships-unflagge","batchId":"entry-5","slug":"aura-3d-project-artifacts-now-persist-and-aura-3d-ships-unflagge","alt":"AURA 3D project artifacts now persist and AURA 3D ships unflagged screenshot"} -->
-<!-- AURA_CHANGELOG_MEDIA:PENDING -->
-<!-- AURA_CHANGELOG_MEDIA:END entry-5-aura-3d-project-artifacts-now-persist-and-aura-3d-ships-unflagge -->
+- Fixed the Windows updater handoff in the desktop app, with supporting updates to the desktop-validate workflow and the local auto-update smoke script. (`bb28191`)
+- Substantially hardened the changelog media capture pipeline, adding screenshot quality checks, a seed planner, navigation lessons, and a richer demo-agent brief that rejects maintenance-only, backend-only, and non-renderable entries from screenshot capture. (`0b64b22`)
+- Taught the publisher to clear stale media paths after a capture failure so a broken run no longer leaves stale screenshots referenced by downstream steps. (`9941234`)
 
-- Added a project artifact backend in aura-os-storage and aura-os-server with list/create/get/delete proxy routes under /api/projects/:id/artifacts, plus a fix moving those routes into project_routes to resolve an axum trie 404. (`d3ad5ec`, `5df2a3b`)
-- Wired artifact persistence into the AURA 3D store: selecting a project loads its saved images and models, style-lock suffixes are stripped for display, and parentId chains link models back to their source images across the generation flow. (`f3dc0ae`, `e204d4c`)
-- Polished the left nav, sidekick thumbnails, and viewer controls, gated prompt input and Generate 3D behind a project selection, and cycled progress messages during generation. (`6229c31`, `e204d4c`)
-- Removed the VITE_ENABLE_AURA_3D feature flag so the AURA 3D app is now always visible in the registry. (`6bbc5df`)
+## 10:32 PM — Stricter quality gates on changelog screenshots
 
-## 7:00 PM — Windows updater handoff fix and changelog capture resilience
+A final pass tightens the quality gates that decide whether a generated screenshot is good enough to publish.
 
-A Windows desktop auto-update handoff bug was fixed, and the changelog media capture pipeline was made substantially more resilient.
-
-- Fixed the Windows updater handoff in the desktop shell, with accompanying tweaks to the desktop validation workflow and the local auto-update smoke script. (`bb28191`)
-- Hardened the changelog media capture pipeline with expanded screenshot quality and seed planning logic, a navigation-lessons knowledge base, and tighter heuristics that skip subtle maintenance, backend-only features, and desktop-only updater changes as non-visual proofs. (`0b64b22`)
-- Stale media paths are now cleared when a capture fails, preventing broken screenshots from leaking into the published changelog. (`9941234`)
+- Raised the bar on changelog media quality gates across the daily changelog generator, publisher, and agent demo screenshot producer so borderline captures are rejected before they reach the site. (`7291956`)
 
 ## Highlights
 
-- New AURA 3D app with image → 3D model flow and WebGL viewer
-- 3D projects, images, and models now persist across sessions
-- Windows desktop updater handoff fixed
+- AURA 3D studio ships with image + WebGL model generation
 - GPT-5.5 available in the chat model picker
-- Nightly release and changelog media pipelines hardened
+- Nightly release prune and gh-pages sync now self-heal
+- Windows updater handoff fixed for desktop auto-update
 
