@@ -213,16 +213,24 @@
   line-height: 1.45;
 }
 
-.closeButton {
+.cancelButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  min-height: 40px;
+  padding: 0 4px 0 12px;
   border: 0;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--color-text-secondary) 10%, transparent);
+  background: transparent;
   color: var(--color-text);
+  font-size: 0.9rem;
+  font-weight: 720;
+  letter-spacing: -0.01em;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cancelButton:active {
+  transform: translateY(1px);
 }
 
 .actionChoices {

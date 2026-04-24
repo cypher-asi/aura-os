@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Text } from "@cypher-asi/zui";
-import { ArrowLeft, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { api } from "../../api/client";
 import { PanelSearch } from "../PanelSearch";
 import { useSidebarSearch } from "../../hooks/use-sidebar-search";
@@ -95,7 +95,6 @@ export function ProjectNavigationDrawerContent() {
   const location = useLocation();
   const closePreview = useSidekickStore((s) => s.closePreview);
   const closeDrawers = useMobileDrawerStore((s) => s.closeDrawers);
-  const setNavOpen = useMobileDrawerStore((s) => s.setNavOpen);
   const currentProjectId = getProjectIdFromPathname(location.pathname);
   const mobileDestination = getMobileProjectDestination(location.pathname);
   const [projectsByOrgId, setProjectsByOrgId] = useState<Record<string, Project[]>>({});
@@ -276,14 +275,6 @@ export function ProjectNavigationDrawerContent() {
   return (
     <div className={`${styles.mobileDrawerContent} ${styles.mobileProjectDrawerContent}`}>
       <div className={styles.mobileProjectDrawerTopbar}>
-        <button
-          type="button"
-          className={styles.mobileProjectDrawerBackButton}
-          aria-label="Back to project"
-          onClick={() => setNavOpen(false)}
-        >
-          <ArrowLeft size={18} />
-        </button>
         <div className={styles.mobileProjectDrawerTopbarTitle}>
           {currentProject?.name ?? "Projects"}
         </div>
@@ -292,11 +283,10 @@ export function ProjectNavigationDrawerContent() {
         <div className={styles.mobileDrawerHeaderBar}>
           <div>
             <div className={styles.mobileDrawerHeaderTitle}>Switch project</div>
-            <div className={styles.mobileDrawerHeaderSubtitle}>Organizations and project spaces</div>
           </div>
         </div>
         <PanelSearch
-          placeholder="Search orgs or projects..."
+          placeholder="Search projects..."
           value={query}
           onChange={setQuery}
         />

@@ -354,13 +354,15 @@ describe("MobileShell", () => {
     expect(screen.getByRole("button", { name: "Open project navigation for Demo Project" })).toBeInTheDocument();
   });
 
-  it("lets the project title button close the project drawer", async () => {
+  it("keeps project drawers free of nested back navigation", async () => {
     const user = userEvent.setup();
     drawers.navOpen = true;
     renderMobile("/projects/proj-1/work");
 
-    await user.click(screen.getByRole("button", { name: "Back to project" }));
-    expect(drawers.setNavOpen).toHaveBeenCalledWith(false);
+    expect(screen.queryByRole("button", { name: "Back to project" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Close drawer" }));
+    expect(drawers.closeDrawers).toHaveBeenCalledOnce();
   });
 
   it("renders the global navigation trigger on global routes", () => {
@@ -529,15 +531,15 @@ describe("MobileShell", () => {
     expect(drawers.closeDrawers).toHaveBeenCalledOnce();
   });
 
-  it("uses the top bar back button as the primary project drawer close action", async () => {
+  it("uses the backdrop as the primary project drawer close action", async () => {
     drawers.navOpen = true;
     const user = userEvent.setup();
     renderMobile("/projects/proj-1/work");
 
     expect(within(screen.getByTestId("drawer-untitled")).getAllByText("Demo Project")[0]).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Back to project" }));
-    expect(drawers.setNavOpen).toHaveBeenCalledWith(false);
+    await user.click(screen.getByRole("button", { name: "Close drawer" }));
+    expect(drawers.closeDrawers).toHaveBeenCalledOnce();
   });
 
   it("keeps the project drawer focused on projects even when multiple agents are attached", () => {

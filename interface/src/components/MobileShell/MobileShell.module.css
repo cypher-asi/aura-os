@@ -510,37 +510,16 @@
   z-index: 3;
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 52px;
-  padding: 4px 14px 8px;
+  min-height: 48px;
+  padding: 4px 18px 8px;
   border-bottom: 1px solid color-mix(in srgb, var(--color-border) 42%, transparent);
   background: var(--color-bg);
-}
-
-.mobileProjectDrawerBackButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  min-height: 40px;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--color-text-secondary) 10%, transparent);
-  color: var(--color-text);
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.mobileProjectDrawerBackButton:hover,
-.mobileProjectDrawerBackButton:focus-visible {
-  background: color-mix(in srgb, var(--color-text-secondary) 18%, transparent);
 }
 
 .mobileProjectDrawerTopbarTitle {
   min-width: 0;
   color: var(--color-text);
-  font-size: 1rem;
+  font-size: 1.02rem;
   font-weight: 700;
   letter-spacing: -0.01em;
   white-space: nowrap;
@@ -577,13 +556,6 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-
-.mobileDrawerHeaderSubtitle {
-  margin-top: 3px;
-  color: var(--color-text-muted);
-  font-size: 0.78rem;
-  line-height: 1.35;
 }
 
 .mobileDrawerDoneButton {

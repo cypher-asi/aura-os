@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, Text } from "@cypher-asi/zui";
-import { Link2, Plus, Sparkles, X } from "lucide-react";
+import { Link2, Plus, Sparkles } from "lucide-react";
 import { Avatar } from "../../components/Avatar";
 import { selectOverlayDrawerOpen, useMobileDrawerStore } from "../../stores/mobile-drawer-store";
 import { useProjectsListStore } from "../../stores/projects-list-store";
@@ -171,11 +171,11 @@ export function ProjectAgentsView() {
               </div>
               <button
                 type="button"
-                className={styles.closeButton}
-                aria-label="Close add agent options"
+                className={styles.cancelButton}
+                aria-label="Cancel add agent"
                 onClick={() => setActionSheetOpen(false)}
               >
-                <X size={18} />
+                Cancel
               </button>
             </div>
             <div className={styles.actionChoices}>

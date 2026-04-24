@@ -345,7 +345,7 @@ test("capture mobile root and project drawer", async ({ page, browserName }, tes
   });
 
   await page.getByRole("button", { name: "Open project navigation", exact: true }).click();
-  await expect(page.getByPlaceholder("Search orgs or projects...")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByPlaceholder("Search projects...")).toBeVisible({ timeout: 10000 });
   const drawerBox = await page.locator('[class*="mobileNavDrawer"]').first().boundingBox();
   const viewport = page.viewportSize();
   expect(drawerBox).not.toBeNull();

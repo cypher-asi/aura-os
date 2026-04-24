@@ -257,7 +257,7 @@ test("mobile root uses project drawer plus the six-tab project navigation", asyn
   await expect(page.getByRole("button", { name: "Projects", exact: true })).toHaveCount(0);
 
   await openProjectDrawer(page);
-  await expect(page.getByPlaceholder("Search orgs or projects...")).toBeVisible();
+  await expect(page.getByPlaceholder("Search projects...")).toBeVisible();
   const projectNavigation = page.getByRole("tree", { name: "Project navigation" });
   await expect(projectNavigation.getByRole("button", { name: /Test Org/i })).toBeVisible();
   await expect(projectNavigation.getByRole("button", { name: "Open Demo Project" })).toBeVisible();
@@ -1006,7 +1006,7 @@ test("mobile drawer scales across organization project spaces", async ({ page })
 
   await expect(page.getByText("Agents", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Switch project", { exact: true })).toBeVisible();
-  await expect(page.getByText("Organizations and project spaces", { exact: true })).toBeVisible();
+  await expect(page.getByText("Organizations and project spaces", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("tree", { name: "Project navigation" }).getByRole("button", { name: /Test Org/i })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open Project Atlas" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open Design System" })).toBeVisible();
