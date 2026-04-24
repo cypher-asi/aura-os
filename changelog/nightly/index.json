@@ -2,19 +2,20 @@
   {
     "date": "2026-04-23",
     "channel": "nightly",
-    "version": "0.1.0-nightly.360.1",
+    "version": "0.1.0-nightly.361.1",
     "title": "AURA 3D studio debuts alongside nightly release hardening",
-    "intro": "Today's nightly ships the first end-to-end cut of AURA 3D — a new studio for generating images and turning them into textured 3D models inside a WebGL viewer — along with a meaningful round of hardening for the nightly release pipeline and changelog media tooling. Desktop builds landed across macOS, Windows, and Linux.",
+    "intro": "A big day for Aura: a brand-new AURA 3D app landed end-to-end, going from an empty scaffold to a working image-to-3D studio with WebGL preview, project-linked persistence, and polished navigation. In parallel, the release pipeline got meaningfully sturdier — nightly asset pruning, changelog media history, and the Windows updater handoff all saw targeted fixes.",
     "entryCount": 6,
     "highlights": [
-      "New AURA 3D app: image → 3D model flow with WebGL viewer",
-      "Artifact persistence wires generations to projects",
-      "GPT-5.5 model available in chat",
-      "Nightly release pruning and gh-pages recovery hardened"
+      "AURA 3D app shipped with image→3D generation and WebGL viewer",
+      "Artifacts now persist per project and survive reloads",
+      "Nightly release pruning and changelog media sync hardened",
+      "Windows auto-update handoff fixed",
+      "GPT-5.5 available in the model picker"
     ],
-    "rawCommitCount": 25,
-    "generatedAt": "2026-04-24T01:06:16.089Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.360.1",
+    "rawCommitCount": 26,
+    "generatedAt": "2026-04-24T02:16:48.789Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.361.1",
     "path": "history/2026-04-23.json"
   },
   {

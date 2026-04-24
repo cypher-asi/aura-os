@@ -2,80 +2,74 @@
 
 - Date: `2026-04-23`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.360.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.360.1
+- Version: `0.1.0-nightly.361.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.361.1
 
-Today's nightly ships the first end-to-end cut of AURA 3D — a new studio for generating images and turning them into textured 3D models inside a WebGL viewer — along with a meaningful round of hardening for the nightly release pipeline and changelog media tooling. Desktop builds landed across macOS, Windows, and Linux.
+A big day for Aura: a brand-new AURA 3D app landed end-to-end, going from an empty scaffold to a working image-to-3D studio with WebGL preview, project-linked persistence, and polished navigation. In parallel, the release pipeline got meaningfully sturdier — nightly asset pruning, changelog media history, and the Windows updater handoff all saw targeted fixes.
 
-## 9:17 AM — Nightly asset pruning and gh-pages recovery hardening
+## 9:17 AM — Nightly release pruning, changelog media sync, and GPT-5.5 model
 
-The nightly release workflow got a more resilient asset-cleanup path and a dedicated recovery route for changelog media publishing.
+Release infrastructure got a substantial reliability pass, the AI-assisted changelog media pipeline grew stricter proofing, and GPT-5.5 joined the model selector.
 
-- Replaced the inline nightly asset cleanup with a retrying prune script that tolerates missing releases and missing assets, so nightly runs no longer fail on transient GitHub API hiccups or a deleted nightly tag. (`a7eb25a`, `ac61ac3`)
-- Added a Sync Release Changelog Media History workflow plus a gh-pages republish recovery workflow, giving the team a repeatable way to reconcile changelog media to gh-pages after a failed publish. (`a7eb25a`, `ca9eaa8`)
-- Reworked changelog media publishing to sync into dated history entries and tightened the framing and readability of generated media cards. (`d81834c`, `2217600`, `43ac905`)
+- Replaced inline asset pruning in the nightly workflow with a retry-aware script that tolerates missing releases and missing assets, and added a new workflow plus sync script to keep changelog media history in step with the latest entries. (`a7eb25a`, `ac61ac3`, `d81834c`)
+- Added a dedicated gh-pages republish recovery workflow backed by a retrying commit helper, giving the team a safety net when changelog publishes fail to push. (`ca9eaa8`)
+- Tightened the AI changelog media pipeline with a stricter tool-based inference step (prompt v4), sharper framing, crisper preserved screenshots, and larger branded proof cards. (`8ef3f5b`, `2217600`, `43ac905`, `a0f9f63`, `4c104ae`)
+- Added GPT-5.5 to the model registry and chat input selector, and started reporting ZERO Pro status alongside usage from the dev loop. (`d9d82e9`, `b2847a4`)
 
-## 11:43 AM — GPT-5.5 support and sharper AI-driven changelog proofs
+## 5:11 PM — AURA 3D app debuts with image-to-3D generation and WebGL viewer
 
-Chat gained a new top-tier model option while the automated changelog-media pipeline got a stricter proofing pass with crisper, larger proof screenshots.
+A new AURA 3D studio app was scaffolded, wired to live generation streams, and given a full Three.js-based viewer, all gated behind a feature flag for early testing.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-gpt-5-5-in-the-model-picker-and-zero-pro-usage-reporting","batchId":"entry-2","slug":"gpt-5-5-in-the-model-picker-and-zero-pro-usage-reporting","alt":"GPT-5.5 in the model picker and ZERO Pro usage reporting screenshot","status":"published","assetPath":"assets/changelog/nightly/0.1.0-nightly.356.1/entry-gpt-5-5-in-the-model-picker-and-zero-pro-usage-reporting.png"} -->
-![GPT-5.5 in the model picker and ZERO Pro usage reporting screenshot](../../assets/changelog/nightly/0.1.0-nightly.356.1/entry-gpt-5-5-in-the-model-picker-and-zero-pro-usage-reporting.png)
-<!-- AURA_CHANGELOG_MEDIA:END entry-gpt-5-5-in-the-model-picker-and-zero-pro-usage-reporting -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-2-aura-3d-app-debuts-with-image-to-3d-generation-and-webgl-viewer","batchId":"entry-2","slug":"aura-3d-app-debuts-with-image-to-3d-generation-and-webgl-viewer","alt":"AURA 3D app debuts with image-to-3D generation and WebGL viewer screenshot"} -->
+<!-- AURA_CHANGELOG_MEDIA:PENDING -->
+<!-- AURA_CHANGELOG_MEDIA:END entry-2-aura-3d-app-debuts-with-image-to-3d-generation-and-webgl-viewer -->
 
-- Added GPT-5.5 as a selectable model in the chat input bar, with matching benchmark pricing entries and server-side dev loop handling. (`d9d82e9`)
-- Introduced a tool-driven media inference pass (prompt v4) that decides which changelog entries actually warrant a screenshot, rejecting CI, backend-only, and non-visual work instead of producing weak proofs. (`8ef3f5b`)
-- Preserved crisp, higher-resolution proof screenshots and enlarged the branded proof cards so published changelog media reads clearly at final size. (`a0f9f63`, `4c104ae`)
-- Server now reports ZERO Pro status alongside usage on the dev loop handler so downstream clients can reflect entitlement state. (`b2847a4`)
+- Introduced a new AURA 3D app in the registry at /3d with a Box icon, left-nav asset history, and a Zustand-backed store, pulling in Three.js as a dependency for the upcoming viewer. (`1b20985`)
+- Replaced the initial tab stubs with a single-page image generation flow backed by an SSE stream, a style-locked prompt, and a sidekick panel for browsing generated Images and Models. (`90887d5`)
+- Added a Three.js WebGLViewer with a 4-light rig, GLTF loading with auto-center/scale, lifecycle cleanup, and toggles for grid, wireframe, and texture, wired to a Tripo-backed 3D generation stream that auto-picks up the generated source image. (`8b2b861`)
+- Added a project selector in the left nav, gated the app behind the VITE_ENABLE_AURA_3D flag, and locked in store behavior with a suite of unit tests covering generation, selection, and error states. (`9cb954d`)
 
-## 5:11 PM — AURA 3D app: image-to-model studio takes shape
+## 5:11 PM — SSE proxy now accepts data-only generation frames
 
-A brand new AURA 3D app landed, moving from a tab scaffold to a working image generation flow and a WebGL-backed 3D viewer gated behind a feature flag.
+Fixed a silent dropout where the Aura router's data-only SSE frames were being discarded by the proxy.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-3-aura-3d-app-debuts-with-image-generation-and-webgl-viewer","batchId":"entry-3","slug":"aura-3d-app-debuts-with-image-generation-and-webgl-viewer","alt":"AURA 3D app debuts with image generation and WebGL viewer screenshot","status":"published","assetPath":"assets/changelog/nightly/0.1.0-nightly.359.1/entry-3-aura-3d-app-debuts-with-image-generation-and-webgl-viewer.png"} -->
-![AURA 3D app debuts with image generation and WebGL viewer screenshot](../../assets/changelog/nightly/0.1.0-nightly.359.1/entry-3-aura-3d-app-debuts-with-image-generation-and-webgl-viewer.png)
-<!-- AURA_CHANGELOG_MEDIA:END entry-3-aura-3d-app-debuts-with-image-generation-and-webgl-viewer -->
+- The generation proxy now derives the event type from the JSON data field when an upstream frame omits the event: line, so start/progress/completion events from aura-router reach the client instead of being silently dropped. (`e0d60fd`)
 
-- Scaffolded AURA 3D at /3d in the app registry with a Box-icon entry, Zustand store, and initial Imagine/Generate/Tokenize tab layout, and pulled in three.js for the upcoming viewer. (`1b20985`)
-- Replaced the tab stubs with a single-page image generation flow driven by an SSE stream and a style-locked prompt, plus a sidekick panel with Images and Models tabs for asset management. (`90887d5`)
-- Added a Three.js WebGL viewer with a 4-light rig, GLTF auto-center/scale loader, grid/wireframe/texture toggles, and wired a Tripo-backed 3D generation SSE stream that auto-populates the source image from the image step. (`8b2b861`)
-- Added a project selector dropdown in the left nav, gated the whole app behind VITE_ENABLE_AURA_3D, and backed the store with nine unit tests covering state transitions, completion, selection, and error handling. (`9cb954d`)
+## 5:11 PM — AURA 3D layout moves to tabs with a project-tree left nav
 
-## 5:11 PM — Generation proxy now handles data-only SSE frames
+Based on early feedback, the 3D studio switched from a stacked split to Image/3D Model tabs and adopted the shared LeftMenuTree for project navigation.
 
-Fixed a silent drop in the generation proxy when upstream sent SSE frames without an explicit event line.
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-4-aura-3d-layout-moves-to-tabs-with-a-project-tree-left-nav","batchId":"entry-4","slug":"aura-3d-layout-moves-to-tabs-with-a-project-tree-left-nav","alt":"AURA 3D layout moves to tabs with a project-tree left nav screenshot"} -->
+<!-- AURA_CHANGELOG_MEDIA:PENDING -->
+<!-- AURA_CHANGELOG_MEDIA:END entry-4-aura-3d-layout-moves-to-tabs-with-a-project-tree-left-nav -->
 
-- The aura-os-server generation handler now extracts the event type from the JSON data field when the upstream router emits data-only SSE frames, so start/progress/completed events no longer get silently dropped. (`e0d60fd`)
+- Replaced the 50/50 horizontal split with Image and 3D Model tabs in the main panel, and swapped the custom project dropdown for the shared LeftMenuTree so navigation matches the Projects app. (`5f41de6`, `9250ebf`)
+- Added an IMAGE section header with a click-to-expand lightbox for generated images, including backdrop and X-button close, before the layout shift to tabs superseded the headers. (`ddb0b7e`)
 
-## 5:11 PM — AURA 3D layout switches to tabs and project-tree navigation
+## 5:11 PM — 3D artifacts persist per project and the studio comes out of flag gating
 
-Based on feedback, the studio layout moved from a vertical split to Image/3D Model tabs and adopted the shared Projects-app left menu tree.
+AURA 3D gained end-to-end artifact persistence, a polished nav and sidekick, parent-linked image-to-model chains, and was promoted out of feature-flag gating.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-5-aura-3d-adopts-tab-layout-and-projects-style-left-nav","batchId":"entry-5","slug":"aura-3d-adopts-tab-layout-and-projects-style-left-nav","alt":"AURA 3D adopts tab layout and Projects-style left nav screenshot","status":"published","assetPath":"assets/changelog/nightly/0.1.0-nightly.359.1/entry-5-aura-3d-adopts-tab-layout-and-projects-style-left-nav.png"} -->
-![AURA 3D adopts tab layout and Projects-style left nav screenshot](../../assets/changelog/nightly/0.1.0-nightly.359.1/entry-5-aura-3d-adopts-tab-layout-and-projects-style-left-nav.png)
-<!-- AURA_CHANGELOG_MEDIA:END entry-5-aura-3d-adopts-tab-layout-and-projects-style-left-nav -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-5-3d-artifacts-persist-per-project-and-the-studio-comes-out-of-fla","batchId":"entry-5","slug":"3d-artifacts-persist-per-project-and-the-studio-comes-out-of-fla","alt":"3D artifacts persist per project and the studio comes out of flag gating screenshot"} -->
+<!-- AURA_CHANGELOG_MEDIA:PENDING -->
+<!-- AURA_CHANGELOG_MEDIA:END entry-5-3d-artifacts-persist-per-project-and-the-studio-comes-out-of-fla -->
 
-- Replaced the horizontal image/model split with Image and 3D Model tabs and removed the redundant section headers, giving the studio a more familiar app-shell layout. (`5f41de6`, `ddb0b7e`)
-- Swapped the custom project dropdown for LeftMenuTree so AURA 3D's left nav matches the Projects app, with generated images appearing as children under the active project. (`9250ebf`, `5f41de6`)
-- Added a click-to-expand lightbox for generated images with backdrop and X-button close, plus a centered empty state and IMAGE section header for parity with the 3D MODEL section. (`ddb0b7e`)
+- Added a project artifacts backend in aura-os-storage with list/create/get/delete, exposed via JWT-authenticated proxy routes under /api/projects/:id/artifacts, and fixed a router trie conflict that was making GET return 404 while OPTIONS passed. (`d3ad5ec`, `5df2a3b`)
+- Wired artifact persistence into the 3D store so selecting a project loads its saved images and models, stripping the style-lock suffix for display and linking models to source images via sourceImageId/parentId. (`f3dc0ae`, `e204d4c`)
+- Polished the studio surface: left nav shows images and models as icon-prefixed children under each project, sidekick panels use a thumbnail grid with section headings, viewer controls became icon toggles, Generate 3D hides once a model is loaded, and progress messages cycle during generation. (`6229c31`)
+- Enforced project selection before generation is allowed and removed the VITE_ENABLE_AURA_3D flag, making AURA 3D visible to everyone by default. (`e204d4c`, `6bbc5df`)
 
-## 5:11 PM — Artifact persistence and general availability for AURA 3D
+## 7:00 PM — Windows desktop updater handoff fix
 
-AURA 3D now persists generated images and models to aura-storage, links models back to their source image, and is turned on for everyone.
+Late-day desktop fix restored reliable auto-update handoff on Windows, with validation tightened in CI and local smoke scripts.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-6-aura-3d-ships-artifact-persistence-and-goes-on-by-default","batchId":"entry-6","slug":"aura-3d-ships-artifact-persistence-and-goes-on-by-default","alt":"AURA 3D ships artifact persistence and goes on by default screenshot","status":"published","assetPath":"assets/changelog/nightly/0.1.0-nightly.359.1/entry-6-aura-3d-ships-artifact-persistence-and-goes-on-by-default.png"} -->
-![AURA 3D ships artifact persistence and goes on by default screenshot](../../assets/changelog/nightly/0.1.0-nightly.359.1/entry-6-aura-3d-ships-artifact-persistence-and-goes-on-by-default.png)
-<!-- AURA_CHANGELOG_MEDIA:END entry-6-aura-3d-ships-artifact-persistence-and-goes-on-by-default -->
-
-- Added a project artifacts backend in aura-os-storage and aura-os-server with list/create/get/delete endpoints at /api/projects/:id/artifacts, and resolved a router trie conflict that was causing GETs to 404 while OPTIONS passed. (`d3ad5ec`, `5df2a3b`)
-- Wired the store to load a project's artifacts on selection, captured the image artifact ID from the SSE completed event, and passed it as parentId so generated 3D models link back to their source image. (`f3dc0ae`, `e204d4c`)
-- Polished the studio shell: images and models now show under each project with icons in the left nav, sidekick panels use a thumbnail grid with headings, viewer controls became icon toggles, and the Generate 3D button hides once a model is loaded. (`6229c31`)
-- Removed the VITE_ENABLE_AURA_3D feature flag so AURA 3D is now always available in the app registry, and disabled prompt input until a project is selected. (`6bbc5df`, `e204d4c`)
+- Fixed the Windows updater handoff in the desktop app and updated the desktop-validate workflow, local auto-update smoke script, and CI verifier to catch regressions earlier. (`bb28191`)
 
 ## Highlights
 
-- New AURA 3D app: image → 3D model flow with WebGL viewer
-- Artifact persistence wires generations to projects
-- GPT-5.5 model available in chat
-- Nightly release pruning and gh-pages recovery hardened
+- AURA 3D app shipped with image→3D generation and WebGL viewer
+- Artifacts now persist per project and survive reloads
+- Nightly release pruning and changelog media sync hardened
+- Windows auto-update handoff fixed
+- GPT-5.5 available in the model picker
 

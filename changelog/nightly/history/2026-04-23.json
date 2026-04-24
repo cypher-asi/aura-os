@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-24T01:06:16.089Z",
+  "generatedAt": "2026-04-24T02:16:48.789Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.360.1",
+  "version": "0.1.0-nightly.361.1",
   "date": "2026-04-23",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.360.1",
-  "lastIncludedSha": "5df2a3bbad60dda8e457e3ad3fc43393071efc22",
-  "previousProcessedSha": "6bbc5df633a78980e2ceff5e9aaa5d71a440c681",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.361.1",
+  "lastIncludedSha": "bb28191d781dddab14d43ce9ef84bc3928bca5e5",
+  "previousProcessedSha": "5df2a3bbad60dda8e457e3ad3fc43393071efc22",
   "commitShas": [
     "d81834cdcc4667bd4b48a5a93b9fab280313e1a4",
     "a7eb25a2b1472bcd917e359463ed33b3e2393bdf",
@@ -36,10 +36,11 @@
     "6229c317033a63933457beee68ef56e3358d235c",
     "e204d4cdd3cdc5fbf1670ac54bb0eac90d64fc38",
     "6bbc5df633a78980e2ceff5e9aaa5d71a440c681",
-    "5df2a3bbad60dda8e457e3ad3fc43393071efc22"
+    "5df2a3bbad60dda8e457e3ad3fc43393071efc22",
+    "bb28191d781dddab14d43ce9ef84bc3928bca5e5"
   ],
-  "rawCommitCount": 25,
-  "filteredCommitCount": 25,
+  "rawCommitCount": 26,
+  "filteredCommitCount": 26,
   "rawCommits": [
     {
       "sha": "d81834cdcc4667bd4b48a5a93b9fab280313e1a4",
@@ -1123,6 +1124,50 @@
       "areas": [
         "Other"
       ]
+    },
+    {
+      "sha": "bb28191d781dddab14d43ce9ef84bc3928bca5e5",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-23T22:00:42-04:00",
+      "subject": "Fix Windows updater handoff",
+      "body": "",
+      "parents": [
+        "5df2a3bbad60dda8e457e3ad3fc43393071efc22"
+      ],
+      "files": [
+        ".github/workflows/desktop-validate.yml",
+        "apps/aura-os-desktop/src/main.rs",
+        "apps/aura-os-desktop/src/updater.rs",
+        "infra/scripts/release/desktop-local-auto-update-smoke.mjs",
+        "scripts/ci/verify-desktop.mjs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 64,
+        "deletions": 28
+      },
+      "committedAtMs": 1776996042000,
+      "cleanSubject": "Fix Windows updater handoff",
+      "keywords": [
+        "windows",
+        "updater",
+        "handoff"
+      ],
+      "fileGroups": [
+        ".github/workflows/desktop-validate.yml",
+        "apps/aura-os-desktop/src",
+        "infra/scripts/release",
+        "scripts/ci/verify-desktop.mjs"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop",
+        "Release Infrastructure",
+        "Other"
+      ]
     }
   ],
   "batchCount": 6,
@@ -1134,36 +1179,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11425927
+          "sizeBytes": 11425947
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.360.1",
+      "version": "0.1.0-nightly.361.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.360.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.361.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 35314344
+          "sizeBytes": 35312808
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.360.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.361.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.360.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.361.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 102504952
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.360.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.361.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -1173,29 +1218,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.360.1",
+      "version": "0.1.0-nightly.361.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.360.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.361.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 31705710
+          "sizeBytes": 31701687
         },
         {
-          "name": "Aura_0.1.0-nightly.360.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.361.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.360.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.361.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 31518754
+          "sizeBytes": 31516555
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.360.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.361.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1205,29 +1250,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.360.1",
+      "version": "0.1.0-nightly.361.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.360.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.361.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33272203
+          "sizeBytes": 33273443
         },
         {
-          "name": "Aura_0.1.0-nightly.360.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.361.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.360.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.361.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33113585
+          "sizeBytes": 33115270
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.360.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.361.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1237,17 +1282,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.360.1",
+      "version": "0.1.0-nightly.361.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.360.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.361.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 23891320
+          "sizeBytes": 23886594
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.360.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.361.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -1257,38 +1302,48 @@
   ],
   "rendered": {
     "title": "AURA 3D studio debuts alongside nightly release hardening",
-    "intro": "Today's nightly ships the first end-to-end cut of AURA 3D — a new studio for generating images and turning them into textured 3D models inside a WebGL viewer — along with a meaningful round of hardening for the nightly release pipeline and changelog media tooling. Desktop builds landed across macOS, Windows, and Linux.",
+    "intro": "A big day for Aura: a brand-new AURA 3D app landed end-to-end, going from an empty scaffold to a working image-to-3D studio with WebGL preview, project-linked persistence, and polished navigation. In parallel, the release pipeline got meaningfully sturdier — nightly asset pruning, changelog media history, and the Windows updater handoff all saw targeted fixes.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "9:17 AM",
         "started_at": "2026-04-23T16:17:50.000Z",
-        "ended_at": "2026-04-23T17:32:36.000Z",
-        "title": "Nightly asset pruning and gh-pages recovery hardening",
-        "summary": "The nightly release workflow got a more resilient asset-cleanup path and a dedicated recovery route for changelog media publishing.",
+        "ended_at": "2026-04-23T21:24:40.000Z",
+        "title": "Nightly release pruning, changelog media sync, and GPT-5.5 model",
+        "summary": "Release infrastructure got a substantial reliability pass, the AI-assisted changelog media pipeline grew stricter proofing, and GPT-5.5 joined the model selector.",
         "items": [
           {
-            "text": "Replaced the inline nightly asset cleanup with a retrying prune script that tolerates missing releases and missing assets, so nightly runs no longer fail on transient GitHub API hiccups or a deleted nightly tag.",
+            "text": "Replaced inline asset pruning in the nightly workflow with a retry-aware script that tolerates missing releases and missing assets, and added a new workflow plus sync script to keep changelog media history in step with the latest entries.",
             "commit_shas": [
               "a7eb25a2b1472bcd917e359463ed33b3e2393bdf",
-              "ac61ac34f8980288b3c0de16c352756ddedd6e04"
+              "ac61ac34f8980288b3c0de16c352756ddedd6e04",
+              "d81834cdcc4667bd4b48a5a93b9fab280313e1a4"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a Sync Release Changelog Media History workflow plus a gh-pages republish recovery workflow, giving the team a repeatable way to reconcile changelog media to gh-pages after a failed publish.",
+            "text": "Added a dedicated gh-pages republish recovery workflow backed by a retrying commit helper, giving the team a safety net when changelog publishes fail to push.",
             "commit_shas": [
-              "a7eb25a2b1472bcd917e359463ed33b3e2393bdf",
               "ca9eaa8fb4a3b1df4078df4ceb0afe950e134c1d"
             ],
             "confidence": "high"
           },
           {
-            "text": "Reworked changelog media publishing to sync into dated history entries and tightened the framing and readability of generated media cards.",
+            "text": "Tightened the AI changelog media pipeline with a stricter tool-based inference step (prompt v4), sharper framing, crisper preserved screenshots, and larger branded proof cards.",
             "commit_shas": [
-              "d81834cdcc4667bd4b48a5a93b9fab280313e1a4",
+              "8ef3f5b112074f816d23447682da93e87fef84ad",
               "22176006f737cb85f2bd007721b53a6bbadc8fe9",
-              "43ac90589c9453a4ca3c2fb905beaebcc908d051"
+              "43ac90589c9453a4ca3c2fb905beaebcc908d051",
+              "a0f9f6329a5d4db4020b4ca26e451548a418d579",
+              "4c104aec8e24f34c0db42cdbfa910c4db0a278ac"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added GPT-5.5 to the model registry and chat input selector, and started reporting ZERO Pro status alongside usage from the dev loop.",
+            "commit_shas": [
+              "d9d82e95311696c35325481a60190321f4501d7c",
+              "b2847a4249d5ccc8714d1a1f54a4239bfb37f525"
             ],
             "confidence": "high"
           }
@@ -1297,17 +1352,18 @@
           "requested": false,
           "status": "skipped",
           "score": -8,
-          "reason": "Entirely CI/release workflow and script hardening (nightly prune, gh-pages republish, changelog media history sync). No user-visible product surface; a static screenshot cannot prove retry logic or workflow resilience.",
+          "reason": "Primarily release infrastructure, CI workflow hardening, and changelog media tooling. The only user-facing bit (GPT-5.5 in the model selector) is a subtle dropdown entry that would look identical to any other model row and isn't a durable product surface worth a screenshot.",
           "reasons": [
-            "Entirely CI/release workflow and script hardening (nightly prune, gh-pages republish, changelog media history sync). No user-visible product surface; a static screenshot cannot prove retry logic or workflow resilience.",
-            "entry only touches release or infrastructure files",
-            "entry language only weakly hints at a visible product surface",
+            "Primarily release infrastructure, CI workflow hardening, and changelog media tooling. The only user-facing bit (GPT-5.5 in the model selector) is a subtle dropdown entry that would look identical to any other model row and isn't a durable product surface worth a screenshot.",
+            "entry touches interface source files",
+            "entry language points to a visible product surface",
             "entry language points to runtime or infrastructure plumbing rather than a stable screen",
-            "entry language points to release plumbing rather than a product screen"
+            "entry language points to release plumbing rather than a product screen",
+            "UI files are only a small slice of a larger backend-heavy batch"
           ],
-          "slotId": "entry-1-nightly-asset-pruning-and-gh-pages-recovery-hardening",
-          "slug": "nightly-asset-pruning-and-gh-pages-recovery-hardening",
-          "alt": "Nightly asset pruning and gh-pages recovery hardening screenshot",
+          "slotId": "entry-1-nightly-release-pruning-changelog-media-sync-and-gpt-5-5-model",
+          "slug": "nightly-release-pruning-changelog-media-sync-and-gpt-5-5-model",
+          "alt": "Nightly release pruning, changelog media sync, and GPT-5.5 model screenshot",
           "files": [
             ".github/workflows/release-nightly.yml",
             ".github/workflows/sync-release-changelog-media-history.yml",
@@ -1315,11 +1371,24 @@
             "infra/scripts/release/prune-release-assets-with-retry.test.mjs",
             "infra/scripts/release/sync-changelog-history-media.mjs",
             "infra/scripts/release/sync-changelog-history-media.test.mjs",
+            "infra/scripts/release/publish-changelog-media.mjs",
+            "infra/scripts/release/publish-changelog-media.test.mjs",
             ".github/workflows/republish-gh-pages.yml",
             "infra/scripts/release/commit-gh-pages-with-retry.sh",
             "infra/scripts/release/commit-gh-pages-with-retry.test.mjs",
-            "infra/scripts/release/publish-changelog-media.mjs",
-            "infra/scripts/release/publish-changelog-media.test.mjs"
+            "infra/scripts/release/generate-daily-changelog.mjs",
+            "infra/scripts/release/generate-daily-changelog.test.mjs",
+            "interface/scripts/lib/demo-agent-brief.mjs",
+            "interface/scripts/lib/demo-agent-brief.test.mjs",
+            "interface/scripts/produce-agent-demo-screenshots.mjs",
+            "interface/src/components/ChatInputBar/ChatInputBar.tsx",
+            "interface/scripts/lib/demo-screenshot-runner.mjs",
+            "interface/scripts/lib/demo-screenshot-seeds.mjs",
+            "apps/aura-os-server/src/handlers/dev_loop.rs",
+            "interface/scripts/lib/benchmark-pricing.mjs",
+            "interface/src/constants/models.test.ts",
+            "interface/src/constants/models.ts",
+            "interface/src/lib/benchmark-pricing.test.ts"
           ],
           "inferenceSource": "anthropic",
           "inferenceCategory": "release_infra",
@@ -1327,128 +1396,40 @@
           "proofSurface": "",
           "captureHint": "",
           "visibleProof": [],
-          "storyTitle": "Nightly asset pruning and gh-pages recovery hardening"
+          "storyTitle": "Nightly release pruning, changelog media sync, and GPT-5.5 model"
         }
       },
       {
         "batch_id": "entry-2",
-        "time_label": "11:43 AM",
-        "started_at": "2026-04-23T18:43:18.000Z",
-        "ended_at": "2026-04-23T21:24:40.000Z",
-        "title": "GPT-5.5 support and sharper AI-driven changelog proofs",
-        "summary": "Chat gained a new top-tier model option while the automated changelog-media pipeline got a stricter proofing pass with crisper, larger proof screenshots.",
-        "items": [
-          {
-            "text": "Added GPT-5.5 as a selectable model in the chat input bar, with matching benchmark pricing entries and server-side dev loop handling.",
-            "commit_shas": [
-              "d9d82e95311696c35325481a60190321f4501d7c"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Introduced a tool-driven media inference pass (prompt v4) that decides which changelog entries actually warrant a screenshot, rejecting CI, backend-only, and non-visual work instead of producing weak proofs.",
-            "commit_shas": [
-              "8ef3f5b112074f816d23447682da93e87fef84ad"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Preserved crisp, higher-resolution proof screenshots and enlarged the branded proof cards so published changelog media reads clearly at final size.",
-            "commit_shas": [
-              "a0f9f6329a5d4db4020b4ca26e451548a418d579",
-              "4c104aec8e24f34c0db42cdbfa910c4db0a278ac"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Server now reports ZERO Pro status alongside usage on the dev loop handler so downstream clients can reflect entitlement state.",
-            "commit_shas": [
-              "b2847a4249d5ccc8714d1a1f54a4239bfb37f525"
-            ],
-            "confidence": "medium"
-          }
-        ],
-        "media": {
-          "requested": true,
-          "status": "published",
-          "score": 6,
-          "reason": "The GPT-5.5 model addition surfaces in the ChatInputBar model picker dropdown — a single screenshot of the open model selector can clearly prove the new option. Other items (media proofing pipeline, ZERO Pro status reporting) are backend/tooling and not screenshot-worthy.",
-          "reasons": [
-            "The GPT-5.5 model addition surfaces in the ChatInputBar model picker dropdown — a single screenshot of the open model selector can clearly prove the new option. Other items (media proofing pipeline, ZERO Pro status reporting) are backend/tooling and not screenshot-worthy.",
-            "entry touches interface source files",
-            "entry language points to a visible product surface",
-            "entry language points to runtime or infrastructure plumbing rather than a stable screen",
-            "entry language points to release plumbing rather than a product screen",
-            "UI files are only a small slice of a larger backend-heavy batch"
-          ],
-          "slotId": "entry-gpt-5-5-in-the-model-picker-and-zero-pro-usage-reporting",
-          "slug": "gpt-5-5-in-the-model-picker-and-zero-pro-usage-reporting",
-          "alt": "GPT-5.5 in the model picker and ZERO Pro usage reporting screenshot",
-          "files": [
-            "apps/aura-os-server/src/handlers/dev_loop.rs",
-            "interface/scripts/lib/benchmark-pricing.mjs",
-            "interface/src/components/ChatInputBar/ChatInputBar.tsx",
-            "interface/src/constants/models.test.ts",
-            "interface/src/constants/models.ts",
-            "interface/src/lib/benchmark-pricing.test.ts",
-            "infra/scripts/release/generate-daily-changelog.mjs",
-            "infra/scripts/release/generate-daily-changelog.test.mjs",
-            "infra/scripts/release/publish-changelog-media.mjs",
-            "infra/scripts/release/publish-changelog-media.test.mjs",
-            "interface/scripts/lib/demo-agent-brief.mjs",
-            "interface/scripts/lib/demo-agent-brief.test.mjs",
-            "interface/scripts/produce-agent-demo-screenshots.mjs",
-            "interface/scripts/lib/demo-screenshot-runner.mjs",
-            "interface/scripts/lib/demo-screenshot-seeds.mjs",
-            "crates/aura-os-network/src/types.rs"
-          ],
-          "inferenceSource": "anthropic",
-          "inferenceCategory": "product_surface",
-          "inferenceConfidence": "medium",
-          "proofSurface": "ChatInputBar model selector dropdown open showing GPT-5.5 as a selectable option",
-          "captureHint": "Open the chat input bar, click the model dropdown so the list is expanded, and capture with GPT-5.5 visible (ideally highlighted/selected) alongside neighboring model entries",
-          "visibleProof": [
-            "GPT-5.5",
-            "model selector"
-          ],
-          "storyTitle": "GPT-5.5 in the Chat Input Model Picker",
-          "assetPath": "assets/changelog/nightly/0.1.0-nightly.356.1/entry-gpt-5-5-in-the-model-picker-and-zero-pro-usage-reporting.png",
-          "screenshotSource": "openai-polish",
-          "updatedAt": "2026-04-23T19:40:14.822Z",
-          "preservedFromSlotId": "entry-gpt-5-5-in-the-model-picker-and-zero-pro-usage-reporting"
-        }
-      },
-      {
-        "batch_id": "entry-3",
         "time_label": "5:11 PM",
         "started_at": "2026-04-24T00:11:29.000Z",
         "ended_at": "2026-04-24T00:11:29.000Z",
-        "title": "AURA 3D app: image-to-model studio takes shape",
-        "summary": "A brand new AURA 3D app landed, moving from a tab scaffold to a working image generation flow and a WebGL-backed 3D viewer gated behind a feature flag.",
+        "title": "AURA 3D app debuts with image-to-3D generation and WebGL viewer",
+        "summary": "A new AURA 3D studio app was scaffolded, wired to live generation streams, and given a full Three.js-based viewer, all gated behind a feature flag for early testing.",
         "items": [
           {
-            "text": "Scaffolded AURA 3D at /3d in the app registry with a Box-icon entry, Zustand store, and initial Imagine/Generate/Tokenize tab layout, and pulled in three.js for the upcoming viewer.",
+            "text": "Introduced a new AURA 3D app in the registry at /3d with a Box icon, left-nav asset history, and a Zustand-backed store, pulling in Three.js as a dependency for the upcoming viewer.",
             "commit_shas": [
               "1b20985c6fd324f02cf3d3936853c7dc7f2bfbf4"
             ],
             "confidence": "high"
           },
           {
-            "text": "Replaced the tab stubs with a single-page image generation flow driven by an SSE stream and a style-locked prompt, plus a sidekick panel with Images and Models tabs for asset management.",
+            "text": "Replaced the initial tab stubs with a single-page image generation flow backed by an SSE stream, a style-locked prompt, and a sidekick panel for browsing generated Images and Models.",
             "commit_shas": [
               "90887d5e6901cd30242f1556edf484931a272f66"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a Three.js WebGL viewer with a 4-light rig, GLTF auto-center/scale loader, grid/wireframe/texture toggles, and wired a Tripo-backed 3D generation SSE stream that auto-populates the source image from the image step.",
+            "text": "Added a Three.js WebGLViewer with a 4-light rig, GLTF loading with auto-center/scale, lifecycle cleanup, and toggles for grid, wireframe, and texture, wired to a Tripo-backed 3D generation stream that auto-picks up the generated source image.",
             "commit_shas": [
               "8b2b86106661908e76fb607f1e3ec285e51d6290"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a project selector dropdown in the left nav, gated the whole app behind VITE_ENABLE_AURA_3D, and backed the store with nine unit tests covering state transitions, completion, selection, and error handling.",
+            "text": "Added a project selector in the left nav, gated the app behind the VITE_ENABLE_AURA_3D flag, and locked in store behavior with a suite of unit tests covering generation, selection, and error states.",
             "commit_shas": [
               "9cb954d96651fc44e65f2f4b498bf49ad8e20ffd"
             ],
@@ -1457,19 +1438,19 @@
         ],
         "media": {
           "requested": true,
-          "status": "published",
+          "status": "pending",
           "score": 8,
-          "reason": "Brand-new AURA 3D app with a visible studio layout (Imagine/Generate/Tokenize tabs, left nav, image generation flow, WebGL 3D viewer). Highly screenshot-worthy — a single capture of the studio clearly proves the new surface.",
+          "reason": "Introduces a brand-new AURA 3D app with a WebGL viewer, image-to-3D flow, sidekick panels, and left nav. This is a major new user-visible product surface that a single screenshot can clearly prove.",
           "reasons": [
-            "Brand-new AURA 3D app with a visible studio layout (Imagine/Generate/Tokenize tabs, left nav, image generation flow, WebGL 3D viewer). Highly screenshot-worthy — a single capture of the studio clearly proves the new surface.",
+            "Introduces a brand-new AURA 3D app with a WebGL viewer, image-to-3D flow, sidekick panels, and left nav. This is a major new user-visible product surface that a single screenshot can clearly prove.",
             "entry touches interface source files",
             "entry language points to a visible product surface",
             "entry language includes light config-style vocabulary",
             "most changed files point at UI-facing surfaces"
           ],
-          "slotId": "entry-3-aura-3d-app-debuts-with-image-generation-and-webgl-viewer",
-          "slug": "aura-3d-app-debuts-with-image-generation-and-webgl-viewer",
-          "alt": "AURA 3D app debuts with image generation and WebGL viewer screenshot",
+          "slotId": "entry-2-aura-3d-app-debuts-with-image-to-3d-generation-and-webgl-viewer",
+          "slug": "aura-3d-app-debuts-with-image-to-3d-generation-and-webgl-viewer",
+          "alt": "AURA 3D app debuts with image-to-3D generation and WebGL viewer screenshot",
           "files": [
             "interface/package-lock.json",
             "interface/package.json",
@@ -1499,30 +1480,26 @@
           "inferenceSource": "anthropic",
           "inferenceCategory": "product_surface",
           "inferenceConfidence": "high",
-          "proofSurface": "AURA 3D app at /3d showing the studio layout with left nav, image generation area, and 3D WebGL viewer",
-          "captureHint": "Navigate to /3d with feature flag enabled, generate or load a sample image and 3D model, capture the full app shell with left nav, image panel, and WebGL viewer visible",
+          "proofSurface": "AURA 3D app at /3d showing the image generation area and the Three.js WebGL 3D model viewer with a loaded/generated model",
+          "captureHint": "Open the AURA 3D app with VITE_ENABLE_AURA_3D enabled; generate or load a sample image and 3D model so both the image preview and the WebGL viewer are populated, with the left-nav asset history and sidekick Images/Models tabs visible",
           "visibleProof": [
             "AURA 3D",
-            "3D Model",
-            "Imagine"
+            "Images",
+            "Models"
           ],
-          "storyTitle": "AURA 3D — Image Generation & WebGL Model Viewer",
-          "assetPath": "assets/changelog/nightly/0.1.0-nightly.359.1/entry-3-aura-3d-app-debuts-with-image-generation-and-webgl-viewer.png",
-          "screenshotSource": "capture-proof",
-          "updatedAt": "2026-04-24T00:50:09.329Z",
-          "preservedFromSlotId": "entry-3-aura-3d-app-debuts-with-image-generation-and-webgl-viewer"
+          "storyTitle": "AURA 3D app debuts with image-to-3D generation and WebGL viewer"
         }
       },
       {
-        "batch_id": "entry-4",
+        "batch_id": "entry-3",
         "time_label": "5:11 PM",
         "started_at": "2026-04-24T00:11:29.000Z",
         "ended_at": "2026-04-24T00:11:29.000Z",
-        "title": "Generation proxy now handles data-only SSE frames",
-        "summary": "Fixed a silent drop in the generation proxy when upstream sent SSE frames without an explicit event line.",
+        "title": "SSE proxy now accepts data-only generation frames",
+        "summary": "Fixed a silent dropout where the Aura router's data-only SSE frames were being discarded by the proxy.",
         "items": [
           {
-            "text": "The aura-os-server generation handler now extracts the event type from the JSON data field when the upstream router emits data-only SSE frames, so start/progress/completed events no longer get silently dropped.",
+            "text": "The generation proxy now derives the event type from the JSON data field when an upstream frame omits the event: line, so start/progress/completion events from aura-router reach the client instead of being silently dropped.",
             "commit_shas": [
               "e0d60fd1e0c96e21ce2719b4f50ee3afaf75f5bb"
             ],
@@ -1533,73 +1510,64 @@
           "requested": false,
           "status": "skipped",
           "score": -8,
-          "reason": "Backend SSE proxy fix in generation.rs to parse event type from JSON data field. No visible UI change; a screenshot cannot prove that previously-dropped events now flow through.",
+          "reason": "Backend SSE proxy fix in a Rust handler. No visible UI change; a screenshot cannot prove that data-only frames are now parsed.",
           "reasons": [
-            "Backend SSE proxy fix in generation.rs to parse event type from JSON data field. No visible UI change; a screenshot cannot prove that previously-dropped events now flow through.",
-            "entry only touches release or infrastructure files",
-            "entry language points to release plumbing rather than a product screen"
+            "Backend SSE proxy fix in a Rust handler. No visible UI change; a screenshot cannot prove that data-only frames are now parsed.",
+            "entry only touches release or infrastructure files"
           ],
-          "slotId": "entry-4-generation-proxy-now-handles-data-only-sse-frames",
-          "slug": "generation-proxy-now-handles-data-only-sse-frames",
-          "alt": "Generation proxy now handles data-only SSE frames screenshot",
+          "slotId": "entry-3-sse-proxy-now-accepts-data-only-generation-frames",
+          "slug": "sse-proxy-now-accepts-data-only-generation-frames",
+          "alt": "SSE proxy now accepts data-only generation frames screenshot",
           "files": [
             "apps/aura-os-server/src/handlers/generation.rs"
           ],
           "inferenceSource": "anthropic",
-          "inferenceCategory": "backend_only",
+          "inferenceCategory": "reliability_nonvisual",
           "inferenceConfidence": "high",
           "proofSurface": "",
           "captureHint": "",
           "visibleProof": [],
-          "storyTitle": "Generation proxy now handles data-only SSE frames"
+          "storyTitle": "SSE proxy now accepts data-only generation frames"
         }
       },
       {
-        "batch_id": "entry-5",
+        "batch_id": "entry-4",
         "time_label": "5:11 PM",
         "started_at": "2026-04-24T00:11:29.000Z",
         "ended_at": "2026-04-24T00:11:29.000Z",
-        "title": "AURA 3D layout switches to tabs and project-tree navigation",
-        "summary": "Based on feedback, the studio layout moved from a vertical split to Image/3D Model tabs and adopted the shared Projects-app left menu tree.",
+        "title": "AURA 3D layout moves to tabs with a project-tree left nav",
+        "summary": "Based on early feedback, the 3D studio switched from a stacked split to Image/3D Model tabs and adopted the shared LeftMenuTree for project navigation.",
         "items": [
           {
-            "text": "Replaced the horizontal image/model split with Image and 3D Model tabs and removed the redundant section headers, giving the studio a more familiar app-shell layout.",
+            "text": "Replaced the 50/50 horizontal split with Image and 3D Model tabs in the main panel, and swapped the custom project dropdown for the shared LeftMenuTree so navigation matches the Projects app.",
             "commit_shas": [
               "5f41de62372083e46f83b169fbb66fc1aaebc59c",
-              "ddb0b7e59d74ed0929d9636b57af922f0211e7b0"
+              "9250ebf5c6e1a0b4629bcbf449901579585af270"
             ],
             "confidence": "high"
           },
           {
-            "text": "Swapped the custom project dropdown for LeftMenuTree so AURA 3D's left nav matches the Projects app, with generated images appearing as children under the active project.",
-            "commit_shas": [
-              "9250ebf5c6e1a0b4629bcbf449901579585af270",
-              "5f41de62372083e46f83b169fbb66fc1aaebc59c"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Added a click-to-expand lightbox for generated images with backdrop and X-button close, plus a centered empty state and IMAGE section header for parity with the 3D MODEL section.",
+            "text": "Added an IMAGE section header with a click-to-expand lightbox for generated images, including backdrop and X-button close, before the layout shift to tabs superseded the headers.",
             "commit_shas": [
               "ddb0b7e59d74ed0929d9636b57af922f0211e7b0"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           }
         ],
         "media": {
           "requested": true,
-          "status": "published",
-          "score": 8,
-          "reason": "Visible layout overhaul of AURA 3D: Image / 3D Model tabs replace the split, LeftMenuTree project nav, lightbox preview, and IMAGE/3D MODEL section headers. A single screenshot clearly shows the new tabbed shell and tree nav.",
+          "status": "pending",
+          "score": 6,
+          "reason": "A clear layout change in the AURA 3D app: tabs (Image / 3D Model) replacing the stacked split, plus the shared LeftMenuTree project nav. This is durable and visible in one screenshot. The lightbox item is transient, but the tab layout + tree nav is a stable proof surface.",
           "reasons": [
-            "Visible layout overhaul of AURA 3D: Image / 3D Model tabs replace the split, LeftMenuTree project nav, lightbox preview, and IMAGE/3D MODEL section headers. A single screenshot clearly shows the new tabbed shell and tree nav.",
+            "A clear layout change in the AURA 3D app: tabs (Image / 3D Model) replacing the stacked split, plus the shared LeftMenuTree project nav. This is durable and visible in one screenshot. The lightbox item is transient, but the tab layout + tree nav is a stable proof surface.",
             "entry touches interface source files",
             "entry language points to a visible product surface",
             "most changed files point at UI-facing surfaces"
           ],
-          "slotId": "entry-5-aura-3d-adopts-tab-layout-and-projects-style-left-nav",
-          "slug": "aura-3d-adopts-tab-layout-and-projects-style-left-nav",
-          "alt": "AURA 3D adopts tab layout and Projects-style left nav screenshot",
+          "slotId": "entry-4-aura-3d-layout-moves-to-tabs-with-a-project-tree-left-nav",
+          "slug": "aura-3d-layout-moves-to-tabs-with-a-project-tree-left-nav",
+          "alt": "AURA 3D layout moves to tabs with a project-tree left nav screenshot",
           "files": [
             "interface/src/apps/aura3d/Aura3DMainPanel/Aura3DMainPanel.module.css",
             "interface/src/apps/aura3d/Aura3DMainPanel/Aura3DMainPanel.tsx",
@@ -1616,31 +1584,26 @@
           ],
           "inferenceSource": "anthropic",
           "inferenceCategory": "product_surface",
-          "inferenceConfidence": "high",
-          "proofSurface": "AURA 3D studio with Image / 3D Model tab bar active and LeftMenuTree project navigation in left sidebar",
-          "captureHint": "Open AURA 3D with a project selected and images generated so the left tree shows project with child images; capture with the Image tab active showing IMAGE header and tab bar",
+          "inferenceConfidence": "medium",
+          "proofSurface": "AURA 3D main panel showing Image / 3D Model tab bar with LeftMenuTree project navigation on the left",
+          "captureHint": "Open AURA 3D with at least one project expanded in the left tree and the Image tab active in the main panel",
           "visibleProof": [
             "Image",
-            "3D Model",
-            "IMAGE"
+            "3D Model"
           ],
-          "storyTitle": "AURA 3D – Tab Layout & Projects-Style Left Nav",
-          "assetPath": "assets/changelog/nightly/0.1.0-nightly.359.1/entry-5-aura-3d-adopts-tab-layout-and-projects-style-left-nav.png",
-          "screenshotSource": "capture-proof",
-          "updatedAt": "2026-04-24T00:54:15.668Z",
-          "preservedFromSlotId": "entry-5-aura-3d-adopts-tab-layout-and-projects-style-left-nav"
+          "storyTitle": "AURA 3D layout moves to tabs with a project-tree left nav"
         }
       },
       {
-        "batch_id": "entry-6",
+        "batch_id": "entry-5",
         "time_label": "5:11 PM",
         "started_at": "2026-04-24T00:11:29.000Z",
         "ended_at": "2026-04-24T00:52:25.000Z",
-        "title": "Artifact persistence and general availability for AURA 3D",
-        "summary": "AURA 3D now persists generated images and models to aura-storage, links models back to their source image, and is turned on for everyone.",
+        "title": "3D artifacts persist per project and the studio comes out of flag gating",
+        "summary": "AURA 3D gained end-to-end artifact persistence, a polished nav and sidekick, parent-linked image-to-model chains, and was promoted out of feature-flag gating.",
         "items": [
           {
-            "text": "Added a project artifacts backend in aura-os-storage and aura-os-server with list/create/get/delete endpoints at /api/projects/:id/artifacts, and resolved a router trie conflict that was causing GETs to 404 while OPTIONS passed.",
+            "text": "Added a project artifacts backend in aura-os-storage with list/create/get/delete, exposed via JWT-authenticated proxy routes under /api/projects/:id/artifacts, and fixed a router trie conflict that was making GET return 404 while OPTIONS passed.",
             "commit_shas": [
               "d3ad5ecf67ecab64803b34d81ee9fe6882d1f49a",
               "5df2a3bbad60dda8e457e3ad3fc43393071efc22"
@@ -1648,7 +1611,7 @@
             "confidence": "high"
           },
           {
-            "text": "Wired the store to load a project's artifacts on selection, captured the image artifact ID from the SSE completed event, and passed it as parentId so generated 3D models link back to their source image.",
+            "text": "Wired artifact persistence into the 3D store so selecting a project loads its saved images and models, stripping the style-lock suffix for display and linking models to source images via sourceImageId/parentId.",
             "commit_shas": [
               "f3dc0aece3e5aec5246ed7751690683896a6733b",
               "e204d4cdd3cdc5fbf1670ac54bb0eac90d64fc38"
@@ -1656,37 +1619,37 @@
             "confidence": "high"
           },
           {
-            "text": "Polished the studio shell: images and models now show under each project with icons in the left nav, sidekick panels use a thumbnail grid with headings, viewer controls became icon toggles, and the Generate 3D button hides once a model is loaded.",
+            "text": "Polished the studio surface: left nav shows images and models as icon-prefixed children under each project, sidekick panels use a thumbnail grid with section headings, viewer controls became icon toggles, Generate 3D hides once a model is loaded, and progress messages cycle during generation.",
             "commit_shas": [
               "6229c317033a63933457beee68ef56e3358d235c"
             ],
             "confidence": "high"
           },
           {
-            "text": "Removed the VITE_ENABLE_AURA_3D feature flag so AURA 3D is now always available in the app registry, and disabled prompt input until a project is selected.",
+            "text": "Enforced project selection before generation is allowed and removed the VITE_ENABLE_AURA_3D flag, making AURA 3D visible to everyone by default.",
             "commit_shas": [
-              "6bbc5df633a78980e2ceff5e9aaa5d71a440c681",
-              "e204d4cdd3cdc5fbf1670ac54bb0eac90d64fc38"
+              "e204d4cdd3cdc5fbf1670ac54bb0eac90d64fc38",
+              "6bbc5df633a78980e2ceff5e9aaa5d71a440c681"
             ],
             "confidence": "high"
           }
         ],
         "media": {
           "requested": true,
-          "status": "published",
-          "score": 6,
-          "reason": "Visible polish: sidekick thumbnail grid with headings, icon toggle viewer controls, images/models under projects in left nav with icons, and AURA 3D now always available (no flag). A single screenshot of the polished studio can prove the sidekick grid + left-nav tree with artifacts. Backend artifact API is not visible but the UI consequences are.",
+          "status": "pending",
+          "score": 8,
+          "reason": "Significant user-visible polish: left nav shows images and models as children under projects, sidekick uses a thumbnail grid with section headings, viewer has icon toggles, and the app is no longer flag-gated (visible to everyone). One screenshot of a project with saved artifacts can prove persistence + polish.",
           "reasons": [
-            "Visible polish: sidekick thumbnail grid with headings, icon toggle viewer controls, images/models under projects in left nav with icons, and AURA 3D now always available (no flag). A single screenshot of the polished studio can prove the sidekick grid + left-nav tree with artifacts. Backend artifact API is not visible but the UI consequences are.",
+            "Significant user-visible polish: left nav shows images and models as children under projects, sidekick uses a thumbnail grid with section headings, viewer has icon toggles, and the app is no longer flag-gated (visible to everyone). One screenshot of a project with saved artifacts can prove persistence + polish.",
             "entry touches interface source files",
             "entry language points to a visible product surface",
             "entry language includes light config-style vocabulary",
             "entry language points to release plumbing rather than a product screen",
             "most changed files point at UI-facing surfaces"
           ],
-          "slotId": "entry-6-aura-3d-ships-artifact-persistence-and-goes-on-by-default",
-          "slug": "aura-3d-ships-artifact-persistence-and-goes-on-by-default",
-          "alt": "AURA 3D ships artifact persistence and goes on by default screenshot",
+          "slotId": "entry-5-3d-artifacts-persist-per-project-and-the-studio-comes-out-of-fla",
+          "slug": "3d-artifacts-persist-per-project-and-the-studio-comes-out-of-fla",
+          "alt": "3D artifacts persist per project and the studio comes out of flag gating screenshot",
           "files": [
             "apps/aura-os-server/src/handlers/mod.rs",
             "apps/aura-os-server/src/handlers/project_artifacts.rs",
@@ -1715,28 +1678,71 @@
           ],
           "inferenceSource": "anthropic",
           "inferenceCategory": "product_surface",
-          "inferenceConfidence": "medium",
-          "proofSurface": "AURA 3D studio showing left-nav project tree with image/model child artifacts and sidekick thumbnail grid panel",
-          "captureHint": "With a project containing generated images and a loaded 3D model, capture the full app with left nav tree expanded (showing artifact icons under project), sidekick panel open with Images thumbnail grid, and viewer icon toggles visible",
+          "inferenceConfidence": "high",
+          "proofSurface": "AURA 3D studio with a selected project in the LeftMenuTree showing persisted image and model children, sidekick thumbnail grid, and the WebGL viewer with icon toggle controls",
+          "captureHint": "Select a project that has previously generated images and a 3D model so the tree shows icon-prefixed image/model children, the sidekick shows the thumbnail grid with section headings, and the viewer shows the loaded model with grid/wireframe/texture icon toggles",
           "visibleProof": [
+            "AURA 3D",
             "Images",
-            "Models",
-            "AURA 3D"
+            "Models"
           ],
-          "storyTitle": "AURA 3D — Artifact Persistence & Always-On Workspace",
-          "assetPath": "assets/changelog/nightly/0.1.0-nightly.359.1/entry-6-aura-3d-ships-artifact-persistence-and-goes-on-by-default.png",
-          "screenshotSource": "capture-proof",
-          "updatedAt": "2026-04-24T00:59:09.315Z",
-          "preservedFromSlotId": "entry-6-aura-3d-ships-artifact-persistence-and-goes-on-by-default"
+          "storyTitle": "3D artifacts persist per project and the studio comes out of flag gating"
+        }
+      },
+      {
+        "batch_id": "entry-6",
+        "time_label": "7:00 PM",
+        "started_at": "2026-04-24T02:00:42.000Z",
+        "ended_at": "2026-04-24T02:00:42.000Z",
+        "title": "Windows desktop updater handoff fix",
+        "summary": "Late-day desktop fix restored reliable auto-update handoff on Windows, with validation tightened in CI and local smoke scripts.",
+        "items": [
+          {
+            "text": "Fixed the Windows updater handoff in the desktop app and updated the desktop-validate workflow, local auto-update smoke script, and CI verifier to catch regressions earlier.",
+            "commit_shas": [
+              "bb28191d781dddab14d43ce9ef84bc3928bca5e5"
+            ],
+            "confidence": "high"
+          }
+        ],
+        "media": {
+          "requested": false,
+          "status": "skipped",
+          "score": -8,
+          "reason": "Windows updater handoff fix plus CI verifier updates. No UI surface changes; behavior is only observable during an update handoff and cannot be proven in a single static screenshot.",
+          "reasons": [
+            "Windows updater handoff fix plus CI verifier updates. No UI surface changes; behavior is only observable during an update handoff and cannot be proven in a single static screenshot.",
+            "entry touches desktop shell code",
+            "entry language points to a visible product surface",
+            "entry language points to release plumbing rather than a product screen"
+          ],
+          "slotId": "entry-6-windows-desktop-updater-handoff-fix",
+          "slug": "windows-desktop-updater-handoff-fix",
+          "alt": "Windows desktop updater handoff fix screenshot",
+          "files": [
+            ".github/workflows/desktop-validate.yml",
+            "apps/aura-os-desktop/src/main.rs",
+            "apps/aura-os-desktop/src/updater.rs",
+            "infra/scripts/release/desktop-local-auto-update-smoke.mjs",
+            "scripts/ci/verify-desktop.mjs"
+          ],
+          "inferenceSource": "anthropic",
+          "inferenceCategory": "reliability_nonvisual",
+          "inferenceConfidence": "high",
+          "proofSurface": "",
+          "captureHint": "",
+          "visibleProof": [],
+          "storyTitle": "Windows desktop updater handoff fix"
         }
       }
     ],
     "highlights": [
-      "New AURA 3D app: image → 3D model flow with WebGL viewer",
-      "Artifact persistence wires generations to projects",
-      "GPT-5.5 model available in chat",
-      "Nightly release pruning and gh-pages recovery hardened"
+      "AURA 3D app shipped with image→3D generation and WebGL viewer",
+      "Artifacts now persist per project and survive reloads",
+      "Nightly release pruning and changelog media sync hardened",
+      "Windows auto-update handoff fixed",
+      "GPT-5.5 available in the model picker"
     ],
-    "raw_commit_count": 25
+    "raw_commit_count": 26
   }
 }
