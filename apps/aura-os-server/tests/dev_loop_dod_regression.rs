@@ -547,6 +547,164 @@ fn gate_emits_generic_no_build_when_no_policy_denial() {
 }
 
 // ---------------------------------------------------------------------------
+// DoD gate: kernel-policy-denial diagnostic must cover ALL four DoD axes
+// (build, test, fmt, lint), not just missing-build. Motivating incident:
+// task 1.0 "Initialise Rust workspace" (409fa99a-274b-4cea-88ef-23cbc506ce93)
+// where `run_command` was denied with the newer `requires allow_shell=true`
+// string, `build_steps` was nonzero (auto-triggered signal), and the gate
+// rejected at `!has_test`. The DoD retry tier then treated the generic
+// "no test step was run" message as retryable and burned two retries
+// against a wall no reprompt could move.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn gate_emits_policy_denial_for_missing_test_when_run_command_denied() {
+    // Build=1 but test=0 with a run_command denial. The incident path:
+    // the harness surfaced auto-triggered build evidence so the gate
+    // sailed past `!has_build`, then rejected at `!has_test`. The
+    // upgrade must still fire because the *underlying* cause is the
+    // same harness lock-down, not a forgetful agent.
+    let reason = tsp::completion_validation_reason_with_tool_call_failures(
+        "edited one Rust file",
+        &["apps/aura-os-server/src/lib.rs"],
+        /* build */ 1,
+        /* test */ 0,
+        /* fmt */ 0,
+        /* lint */ 0,
+        0,
+        &[(
+            "run_command",
+            "Tool 'run_command' is not allowed by the active policy",
+        )],
+    )
+    .expect("gate should fire when test axis is missing");
+
+    assert!(
+        reason.contains("run_command is denied by kernel policy"),
+        "expected kernel-policy-denial diagnostic at the test axis, got: {reason}"
+    );
+    assert!(
+        !reason.contains("no test step was run"),
+        "policy-denial must replace the generic no-test message, got: {reason}"
+    );
+}
+
+#[test]
+fn gate_emits_policy_denial_for_missing_fmt_when_run_command_denied() {
+    // Rust change, build + test satisfied, fmt axis missing. The
+    // pre-fix gate would have emitted the generic no-fmt message and
+    // the retry tier would have classified it as `missing_fmt` and
+    // retried — uselessly, because run_command is denied.
+    let reason = tsp::completion_validation_reason_with_tool_call_failures(
+        "edited one Rust file",
+        &["apps/aura-os-server/src/lib.rs"],
+        /* build */ 1,
+        /* test */ 1,
+        /* fmt */ 0,
+        /* lint */ 1,
+        0,
+        &[(
+            "run_command",
+            "Tool 'run_command' is not allowed by the active policy",
+        )],
+    )
+    .expect("gate should fire when fmt axis is missing");
+
+    assert!(
+        reason.contains("run_command is denied by kernel policy"),
+        "expected kernel-policy-denial diagnostic at the fmt axis, got: {reason}"
+    );
+    assert!(
+        !reason.contains("no format check was run"),
+        "policy-denial must replace the generic no-fmt message, got: {reason}"
+    );
+}
+
+#[test]
+fn gate_emits_policy_denial_for_missing_lint_when_run_command_denied() {
+    // Rust change, all axes but lint satisfied. Same reasoning as the
+    // fmt case above.
+    let reason = tsp::completion_validation_reason_with_tool_call_failures(
+        "edited one Rust file",
+        &["apps/aura-os-server/src/lib.rs"],
+        /* build */ 1,
+        /* test */ 1,
+        /* fmt */ 1,
+        /* lint */ 0,
+        0,
+        &[(
+            "run_command",
+            "Tool 'run_command' is not allowed by the active policy",
+        )],
+    )
+    .expect("gate should fire when lint axis is missing");
+
+    assert!(
+        reason.contains("run_command is denied by kernel policy"),
+        "expected kernel-policy-denial diagnostic at the lint axis, got: {reason}"
+    );
+    assert!(
+        !reason.contains("no lint check was run"),
+        "policy-denial must replace the generic no-lint message, got: {reason}"
+    );
+}
+
+#[test]
+fn gate_recognises_requires_allow_shell_as_policy_denial() {
+    // The exact denial string the harness emitted during task 1.0
+    // "Initialise Rust workspace" — captured verbatim so a future
+    // change to the denial wording here is caught immediately.
+    // The pre-fix gate's substring match ("is not allowed") missed
+    // this entirely and let the generic no-test message through.
+    let reason = tsp::completion_validation_reason_with_tool_call_failures(
+        "edited one Rust file",
+        &["zero-sdk/src/lib.rs"],
+        /* build */ 4,
+        /* test */ 0,
+        /* fmt */ 0,
+        /* lint */ 0,
+        0,
+        &[(
+            "run_command",
+            "'shell_script' requires allow_shell=true (per-call or in ToolConfig)",
+        )],
+    )
+    .expect("gate should fire — build satisfied but test axis still missing");
+
+    assert!(
+        reason.contains("run_command is denied by kernel policy"),
+        "requires-allow_shell denial must still surface the policy-denial diagnostic, got: {reason}"
+    );
+}
+
+#[test]
+fn dod_classifier_rejects_policy_denial_triggered_at_non_build_axis() {
+    // End-to-end pin: when the gate emits the policy-denial reason
+    // because the *test* axis failed (not just build), the DoD retry
+    // classifier must still return None so the retry tier doesn't
+    // burn attempts against the lock-down.
+    let reason = tsp::completion_validation_reason_with_tool_call_failures(
+        "edited one Rust file",
+        &["zero-sdk/src/lib.rs"],
+        /* build */ 1,
+        /* test */ 0,
+        /* fmt */ 0,
+        /* lint */ 0,
+        0,
+        &[(
+            "run_command",
+            "'shell_script' requires allow_shell=true (per-call or in ToolConfig)",
+        )],
+    )
+    .expect("policy-denied test-axis failure must fail the gate");
+    assert_eq!(
+        tsp::classify_dod_remediation_kind(&reason),
+        None,
+        "policy-denial reason (test axis) must not classify as DoD remediation; got: {reason}"
+    );
+}
+
+// ---------------------------------------------------------------------------
 // Per-tool-call infra-retry budget (server-retry-budget)
 // ---------------------------------------------------------------------------
 //

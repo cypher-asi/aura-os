@@ -997,6 +997,44 @@ impl CompletionGateReport {
 ///    four-gate Definition of Done. Non-Rust source languages don't
 ///    currently get this treatment; we'll add them once the harness
 ///    reliably emits format/lint evidence for them.
+/// Stable diagnostic string returned by the DoD gate when a verification
+/// axis is missing *and* the task's `tool_call_failures` show that every
+/// attempt to invoke `run_command` was rejected by the kernel tool-policy
+/// gate. Pulled out as a constant so both the gate and the tests pin the
+/// exact wording — the prose is consulted by the DoD-retry classifier,
+/// which deliberately rejects this reason (another turn can't flip the
+/// harness lock-down) and falls through to terminal failure with an
+/// actionable message for the operator.
+pub(crate) const RUN_COMMAND_POLICY_DENIED_REASON: &str =
+    "run_command is denied by kernel policy -- check that the harness is not running with AURA_STRICT_MODE=1 or ENABLE_CMD_TOOLS=false";
+
+/// True when the cached task's `tool_call_failures` history shows at
+/// least one `run_command` invocation that the kernel's tool-policy gate
+/// rejected. The match is deliberately broad: the harness has emitted at
+/// least three distinct denial strings over time (`is not allowed by the
+/// active policy`, `requires allow_shell=true …`, `enable_cmd_tools=…`
+/// / `AURA_STRICT_MODE=1` style lock-downs), and all of them mean the
+/// same thing for the DoD gate: another turn cannot possibly produce a
+/// build/test/fmt/lint step because the tool itself is disabled.
+///
+/// Case-insensitive so harness authors can rephrase the denial without
+/// invalidating the gate. If you add a new denial pattern, extend
+/// [`gate_recognises_requires_allow_shell_as_policy_denial`] and friends
+/// in `dev_loop_dod_regression.rs` so the regression surface stays pinned.
+fn run_command_denied_by_policy(cached: &CachedTaskOutput) -> bool {
+    cached.tool_call_failures.iter().any(|f| {
+        if f.tool_name != "run_command" {
+            return false;
+        }
+        let lower = f.reason.to_ascii_lowercase();
+        lower.contains("is not allowed")
+            || lower.contains("requires allow_shell")
+            || lower.contains("enable_cmd_tools")
+            || lower.contains("aura_strict_mode")
+            || lower.contains("tool policy")
+    })
+}
+
 fn completion_validation_failure_reason(cached: &CachedTaskOutput) -> Option<&'static str> {
     // Empty-path writes only fail the gate when the agent *never*
     // recovered. If any real file change landed, the misfire is
@@ -1028,24 +1066,23 @@ fn completion_validation_failure_reason(cached: &CachedTaskOutput) -> Option<&'s
 
     let paths = classify_changed_paths(&cached.files_changed);
 
+    // If *any* of the four DoD axes would fail AND every run_command
+    // attempt was denied by the kernel tool-policy gate, surface the
+    // real cause instead of the axis-specific "no X step was run"
+    // message. `run_command` is on by default now, so the only way
+    // this fires is a deliberate lock-down (`AURA_STRICT_MODE=1` or
+    // `ENABLE_CMD_TOOLS=false` on the harness, or a newer denial
+    // string like `requires allow_shell=true`). The DoD-retry tier
+    // rejects this reason and falls through to terminal failure, so
+    // we don't burn retries re-prompting the agent to run a tool
+    // that's been taken away from it.
+    let gate_blocked_on_source = paths.has_source && (!has_build || !has_test);
+    let gate_blocked_on_rust = paths.has_rust && (!has_fmt || !has_lint);
+    if (gate_blocked_on_source || gate_blocked_on_rust) && run_command_denied_by_policy(cached) {
+        return Some(RUN_COMMAND_POLICY_DENIED_REASON);
+    }
+
     if paths.has_source && !has_build {
-        // If the automaton never got to run a build step because
-        // `run_command` itself was denied by the kernel tool-policy
-        // gate, surface the real cause instead of the generic "no
-        // build" message. `run_command` is on by default now, so the
-        // only way this fires is a deliberate lock-down:
-        // `AURA_STRICT_MODE=1` or `ENABLE_CMD_TOOLS=false` on the
-        // harness. Name both in the diagnostic so the operator knows
-        // exactly which knob to flip.
-        if cached
-            .tool_call_failures
-            .iter()
-            .any(|f| f.tool_name == "run_command" && f.reason.contains("is not allowed"))
-        {
-            return Some(
-                "run_command is denied by kernel policy -- check that the harness is not running with AURA_STRICT_MODE=1 or ENABLE_CMD_TOOLS=false",
-            );
-        }
         return Some(
             "Task modified source code but no build/compile step was run (Definition of Done: cargo build or equivalent must pass before task_done)",
         );
