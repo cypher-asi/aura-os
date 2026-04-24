@@ -133,6 +133,7 @@
   scrollbar-width: none;
   display: flex;
   flex-direction: column;
+  padding-bottom: var(--sidekick-fade-height, 72px);
 }
 
 .tabContent::-webkit-scrollbar {
