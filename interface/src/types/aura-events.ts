@@ -42,6 +42,26 @@ export enum EventType {
   ToolCallSnapshot      = "tool_call_snapshot",
   ToolCall              = "tool_call",
   ToolResult            = "tool_result",
+  /**
+   * Emitted by aura-harness (see `AgentLoopEvent::ToolCallRetrying`
+   * in crates/aura-agent/src/events/mod.rs) when its internal
+   * streaming-retry-with-backoff loop is about to re-request the
+   * current `tool_use` from the provider. The UI uses this to
+   * render a live "Write retrying (n/8)..." state on the tool card
+   * that owns the `tool_use_id`.
+   */
+  ToolCallRetrying      = "tool_call_retrying",
+  /**
+   * Emitted by aura-harness (see `AgentLoopEvent::ToolCallFailed`)
+   * once the streaming-retry budget is exhausted and the tool call
+   * is terminally failed from the harness's perspective. The server
+   * routes the same event through its per-task
+   * `TOOL_CALL_RETRY_BUDGET` (apps/aura-os-server/src/handlers/dev_loop.rs)
+   * before it reaches the UI, so seeing this event in the UI means
+   * both retry ladders gave up. Renders as a red failure badge with
+   * the classified reason inline.
+   */
+  ToolCallFailed        = "tool_call_failed",
   TokenUsage            = "token_usage",
   Done                  = "done",
 
@@ -232,6 +252,32 @@ export type AuraEvent = AuraEventBase & (
       name: string;
       result: string;
       is_error: boolean;
+    } }
+  | { type: EventType.ToolCallRetrying; content: {
+      message_id?: string;
+      /** Harness-side `tool_use_id`; must match the `id` on the
+       *  originating ToolCallStarted / ToolCallSnapshot so the UI can
+       *  locate the tool card to annotate. */
+      tool_use_id: string;
+      tool_name: string;
+      /** 1-indexed attempt number that is about to start. */
+      attempt: number;
+      /** Total retry budget (default 8; see
+       *  `AURA_LLM_MAX_RETRIES` on the harness side). */
+      max_attempts: number;
+      /** Backoff delay before this attempt, in milliseconds. */
+      delay_ms: number;
+      /** Classifier-produced reason string the harness is
+       *  retrying (`provider 5xx` / `429` / `stream aborted` / etc.). */
+      reason: string;
+      task_id?: string;
+    } }
+  | { type: EventType.ToolCallFailed; content: {
+      message_id?: string;
+      tool_use_id: string;
+      tool_name: string;
+      reason: string;
+      task_id?: string;
     } }
   | { type: EventType.TokenUsage; content: {
       message_id?: string;

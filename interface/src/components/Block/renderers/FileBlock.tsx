@@ -143,21 +143,25 @@ export function FileBlock({ entry, defaultExpanded }: FileBlockProps) {
           ? "Read failed"
           : "Tool call failed";
 
-  // --- Retry status stub ----------------------------------------------------
+  // --- Retry status --------------------------------------------------------
   //
-  // Reserved for a future `ToolCallRetrying` handler. The autonomous harness
-  // does not yet emit a structured retry event, so we fish the optional
-  // `retry_attempt` / `retry_max` fields out of the tool input bag when the
-  // call is still pending. Once `ToolCallRetrying` lands we will route those
-  // fields onto `ToolCallEntry` directly and drop this opportunistic read.
-  const rawRetryAttempt = entry.input.retry_attempt;
-  const rawRetryMax = entry.input.retry_max;
+  // Retry state is now propagated as first-class fields on
+  // `ToolCallEntry` from the `ToolCallRetrying` / `ToolCallFailed`
+  // reducers (see `hooks/stream/handlers.ts`). While `retrying` is
+  // true the card title reads "<phase> retrying (n/max)…"; once a
+  // fresh `ToolCallSnapshot` arrives the reducer clears `retrying`
+  // but preserves `retryAttempt`/`retryMax` so a later failure can
+  // still report "retried N/max".
   const retryAttempt =
-    typeof rawRetryAttempt === "number" && rawRetryAttempt > 0
-      ? rawRetryAttempt
+    typeof entry.retryAttempt === "number" && entry.retryAttempt > 0
+      ? entry.retryAttempt
       : null;
   const retryMax =
-    typeof rawRetryMax === "number" && rawRetryMax > 0 ? rawRetryMax : null;
+    typeof entry.retryMax === "number" && entry.retryMax > 0
+      ? entry.retryMax
+      : null;
+  const isRetrying = entry.retrying === true;
+  const retryExhausted = entry.retryExhausted === true;
 
   // Coarse classifier: if the failure reason in `entry.result` smells like a
   // transient upstream hiccup, swap the bare "Write failed" title for an
@@ -166,12 +170,23 @@ export function FileBlock({ entry, defaultExpanded }: FileBlockProps) {
     entry.isError && typeof entry.result === "string" ? entry.result : "";
   const hasTransientUpstreamHint =
     /stream terminated|internal server error|\b5\d{2}\b|upstream/i.test(resultStr);
-  const failedTitleWithReason = hasTransientUpstreamHint
-    ? `${failedTitle} - transient upstream 5xx`
-    : failedTitle;
+  const failedTitleWithReason = (() => {
+    if (retryExhausted && retryAttempt != null) {
+      const max = retryMax ?? "?";
+      return `${failedTitle} - retried ${retryAttempt}/${max}`;
+    }
+    if (hasTransientUpstreamHint) {
+      return `${failedTitle} - transient upstream 5xx`;
+    }
+    return failedTitle;
+  })();
 
   const pendingTitle = (() => {
     const base = TOOL_PHASE_LABELS[entry.name] ?? "Working...";
+    if (isRetrying && retryAttempt != null) {
+      const max = retryMax ?? "?";
+      return `${base} retrying (${retryAttempt}/${max})...`;
+    }
     if (retryAttempt != null) {
       const max = retryMax ?? "?";
       return `${base} (retry ${retryAttempt}/${max})`;

@@ -11,6 +11,8 @@ export const EVENT_LABELS: Record<EventType, string> = {
   [EventType.ToolCallSnapshot]: "Tool",
   [EventType.ToolCall]: "Tool",
   [EventType.ToolResult]: "Tool",
+  [EventType.ToolCallRetrying]: "Tool",
+  [EventType.ToolCallFailed]: "Tool",
   [EventType.TokenUsage]: "Token",
   [EventType.Done]: "Message",
   [EventType.AgentInstanceUpdated]: "Agent",

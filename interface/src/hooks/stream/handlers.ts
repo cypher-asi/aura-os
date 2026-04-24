@@ -9,6 +9,8 @@ import type {
   ToolCallSnapshotInfo,
   ToolCallInfo,
   ToolResultInfo,
+  ToolCallRetryingInfo,
+  ToolCallFailedInfo,
 } from "../../api/streams";
 import type { SessionEvent, ChatContentBlock } from "../../types";
 import { extractToolCalls, extractArtifactRefs } from "../../utils/chat-history";
@@ -526,10 +528,136 @@ export function handleToolCallSnapshot(
         ...tc,
         name: info.name,
         input: { ...tc.input, ...info.input },
+        // A fresh snapshot means bytes are flowing again, so any
+        // previous streaming-retry banner should disappear. We
+        // intentionally keep `retryAttempt`/`retryMax`/`retryReason`
+        // so a later `ToolCallFailed` can still report "retried N/max".
+        retrying: false,
       }
       : tc,
   );
   setters.setActiveToolCalls([...refs.toolCalls.current]);
+}
+
+/**
+ * Handler for {@link EventType.ToolCallRetrying}. Finds the live
+ * tool-call entry by `tool_use_id` and flips it into "retrying" state
+ * so {@link FileBlock} (and any future renderer) can render
+ * "Writing retrying (n/max)…" while the harness's next attempt is
+ * still pending bytes.
+ *
+ * If we haven't seen a `ToolCallStarted` for this id yet (out-of-order
+ * arrival across the IPC + SSE pipeline), we synthesize a pending
+ * placeholder so the badge isn't lost. Subsequent snapshot/result
+ * events will fold their data into the same entry via the normal
+ * find-by-id path.
+ */
+export function handleToolCallRetrying(
+  refs: StreamRefs,
+  setters: StreamSetters,
+  info: ToolCallRetryingInfo,
+): void {
+  const idx = refs.toolCalls.current.findIndex((tc) => tc.id === info.id);
+  if (idx === -1) {
+    refs.toolCalls.current = [
+      ...refs.toolCalls.current,
+      {
+        id: info.id,
+        name: info.name,
+        input: {},
+        pending: true,
+        started: true,
+        retrying: true,
+        retryAttempt: info.attempt,
+        retryMax: info.max_attempts,
+        retryReason: info.reason,
+      },
+    ];
+    const alreadyInTimeline = refs.timeline.current.some(
+      (item) => item.kind === "tool" && item.toolCallId === info.id,
+    );
+    if (!alreadyInTimeline) {
+      refs.timeline.current.push({ kind: "tool", toolCallId: info.id, id: nextTimelineId() });
+      syncDisplayedTimeline(refs, setters);
+    }
+    setters.setActiveToolCalls([...refs.toolCalls.current]);
+    return;
+  }
+
+  refs.toolCalls.current = refs.toolCalls.current.map((tc, i) =>
+    i === idx
+      ? {
+        ...tc,
+        retrying: true,
+        retryAttempt: info.attempt,
+        retryMax: info.max_attempts,
+        retryReason: info.reason,
+      }
+      : tc,
+  );
+  setters.setActiveToolCalls([...refs.toolCalls.current]);
+}
+
+/**
+ * Handler for {@link EventType.ToolCallFailed}. Marks the tool call
+ * terminally failed (both `retrying` cleared and `retryExhausted`
+ * latched), synthesizes an error `result` from the classified reason,
+ * and propagates the state into any already-saved events the same
+ * way {@link resolveToolCallInEvents} does for normal tool results.
+ */
+export function handleToolCallFailed(
+  refs: StreamRefs,
+  setters: StreamSetters,
+  info: ToolCallFailedInfo,
+): void {
+  const reasonText = info.reason?.trim() || "upstream tool call failed";
+  const result = `Tool call failed after retries: ${reasonText}`;
+  const idx = refs.toolCalls.current.findIndex((tc) => tc.id === info.id);
+  if (idx !== -1) {
+    refs.toolCalls.current = refs.toolCalls.current.map((tc, i) =>
+      i === idx
+        ? {
+          ...tc,
+          pending: false,
+          started: false,
+          isError: true,
+          retrying: false,
+          retryExhausted: true,
+          retryReason: reasonText,
+          result,
+        }
+        : tc,
+    );
+    setters.setActiveToolCalls([...refs.toolCalls.current]);
+  }
+
+  setters.setEvents((prev) => {
+    let changed = false;
+    const next = prev.map((evt) => {
+      if (!evt.toolCalls) return evt;
+      const savedIdx = evt.toolCalls.findIndex((tc) => tc.id === info.id);
+      if (savedIdx === -1) return evt;
+      changed = true;
+      return {
+        ...evt,
+        toolCalls: evt.toolCalls.map((tc, i) =>
+          i === savedIdx
+            ? {
+                ...tc,
+                pending: false,
+                started: false,
+                isError: true,
+                retrying: false,
+                retryExhausted: true,
+                retryReason: reasonText,
+                result,
+              }
+            : tc,
+        ),
+      };
+    });
+    return changed ? next : prev;
+  });
 }
 
 export function handleToolCall(
@@ -606,7 +734,14 @@ export function handleToolResult(
     resolvedId = refs.toolCalls.current[targetIndex].id;
     refs.toolCalls.current = refs.toolCalls.current.map((tc, idx) =>
       idx === targetIndex
-        ? { ...tc, result: info.result, isError: info.is_error, pending: false, started: false }
+        ? {
+            ...tc,
+            result: info.result,
+            isError: info.is_error,
+            pending: false,
+            started: false,
+            retrying: false,
+          }
         : tc,
     );
   }

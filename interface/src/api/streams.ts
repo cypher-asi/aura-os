@@ -54,6 +54,36 @@ export interface ToolCallSnapshotInfo {
   input: Record<string, unknown>;
 }
 
+/**
+ * Carries an in-flight streaming-retry attempt notification from
+ * aura-harness out to the UI. `id` matches the live `tool_use_id`
+ * on an existing {@link ToolCallEntry}; reducers find that entry
+ * and flip `retrying=true` / `retryAttempt` / `retryMax` /
+ * `retryReason` for the "Write retrying (n/8)…" header state.
+ */
+export interface ToolCallRetryingInfo {
+  id: string;
+  name: string;
+  attempt: number;
+  max_attempts: number;
+  delay_ms: number;
+  reason: string;
+}
+
+/**
+ * Terminal harness-side failure for a tool call. Emitted after the
+ * harness exhausted its internal streaming-retry budget and the
+ * server's per-task `TOOL_CALL_RETRY_BUDGET` also gave up on
+ * restarting the run; see
+ * `apps/aura-os-server/src/handlers/dev_loop.rs`. The UI uses this
+ * to flip the card into a terminal failed state with a red header.
+ */
+export interface ToolCallFailedInfo {
+  id: string;
+  name: string;
+  reason: string;
+}
+
 /* ── StreamEventHandler — single-callback replacement ────────────── */
 
 export interface StreamEventHandler {

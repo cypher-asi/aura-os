@@ -49,6 +49,32 @@ export interface ToolCallEntry {
   isError?: boolean;
   pending: boolean;
   started?: boolean;
+  /**
+   * `true` while the harness is between streaming-retry attempts for
+   * this tool call. Set to `true` on every `ToolCallRetrying` event
+   * from aura-harness and cleared back to `false` by the next
+   * successful `ToolCallSnapshot` / `ToolResult`, or latched off by a
+   * terminal `ToolCallFailed`. Renderers (see
+   * `components/Block/renderers/FileBlock.tsx`) switch the card
+   * title to "… retrying (n/max)…" while this is set.
+   */
+  retrying?: boolean;
+  /** 1-indexed attempt number carried on the latest ToolCallRetrying. */
+  retryAttempt?: number;
+  /** Total retry budget for this tool call (harness default: 8). */
+  retryMax?: number;
+  /** Classified reason the last retry was scheduled for (e.g.
+   *  "upstream_529_overloaded", "stream_aborted_mid_tool_use"). */
+  retryReason?: string;
+  /**
+   * Set to `true` when aura-harness emits `ToolCallFailed` for this
+   * `tool_use_id` *and* the server-side
+   * `TOOL_CALL_RETRY_BUDGET` has also been exhausted — i.e. both
+   * retry ladders gave up. Used by renderers to prefix the failure
+   * title with "retried N/max — " so users understand the full
+   * recovery history, not just the last stream abort.
+   */
+  retryExhausted?: boolean;
 }
 
 /* ------------------------------------------------------------------ */

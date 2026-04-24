@@ -16,6 +16,8 @@ import {
   handleToolCallStarted,
   handleToolCallSnapshot,
   handleToolResult,
+  handleToolCallRetrying,
+  handleToolCallFailed,
   handleAssistantTurnBoundary,
   resolveAbandonedPendingToolCalls,
   finalizeStream,
@@ -147,6 +149,56 @@ function handleToolResultEvent(e: AuraEvent): void {
     name: (c.name as string) ?? "unknown",
     result: (c.result as string) ?? "",
     is_error: (c.is_error as boolean) ?? false,
+  });
+}
+
+/**
+ * Route a `ToolCallRetrying` event (from aura-harness, see
+ * `AgentLoopEvent::ToolCallRetrying`) into the per-task stream
+ * reducers so any live tool card with the matching `tool_use_id`
+ * flips into its "Writing retrying (n/max)…" state. Out-of-order
+ * deliveries are tolerated — the reducer will create a pending
+ * placeholder entry if the start event hasn't arrived yet.
+ */
+function handleToolCallRetryingEvent(
+  e: AuraEventOfType<EventType.ToolCallRetrying>,
+): void {
+  const c = e.content;
+  const taskId = c.task_id ?? undefined;
+  if (!taskId) return;
+  const rawId = typeof c.tool_use_id === "string" ? c.tool_use_id.trim() : "";
+  if (!rawId) return;
+  const { refs, setters } = contextForTask(taskId);
+  handleToolCallRetrying(refs, setters, {
+    id: rawId,
+    name: (typeof c.tool_name === "string" && c.tool_name) || "unknown",
+    attempt: c.attempt,
+    max_attempts: c.max_attempts,
+    delay_ms: c.delay_ms,
+    reason: c.reason ?? "",
+  });
+}
+
+/**
+ * Route a terminal `ToolCallFailed` event into the reducers. Reaching
+ * the UI means both the harness-side streaming retry budget and the
+ * server-side `TOOL_CALL_RETRY_BUDGET` gave up; the reducer marks the
+ * card red and latches `retryExhausted` so the renderer can surface
+ * "retried N/max — <reason>" instead of just "retrying…".
+ */
+function handleToolCallFailedEvent(
+  e: AuraEventOfType<EventType.ToolCallFailed>,
+): void {
+  const c = e.content;
+  const taskId = c.task_id ?? undefined;
+  if (!taskId) return;
+  const rawId = typeof c.tool_use_id === "string" ? c.tool_use_id.trim() : "";
+  if (!rawId) return;
+  const { refs, setters } = contextForTask(taskId);
+  handleToolCallFailed(refs, setters, {
+    id: rawId,
+    name: (typeof c.tool_name === "string" && c.tool_name) || "unknown",
+    reason: c.reason ?? "",
   });
 }
 
@@ -411,6 +463,8 @@ export function bootstrapTaskStreamSubscriptions(): void {
     subscribe(EventType.ToolUseStart, handleToolUseStartEvent),
     subscribe(EventType.ToolCallSnapshot, handleToolCallSnapshotEvent),
     subscribe(EventType.ToolResult, handleToolResultEvent),
+    subscribe(EventType.ToolCallRetrying, handleToolCallRetryingEvent),
+    subscribe(EventType.ToolCallFailed, handleToolCallFailedEvent),
     subscribe(EventType.AssistantMessageEnd, handleAssistantMessageEndEvent),
     subscribe(EventType.Progress, handleProgressEvent),
     subscribe(EventType.GitCommitted, handleGitCommittedEvent),
