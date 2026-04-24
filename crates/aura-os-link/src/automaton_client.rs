@@ -4,15 +4,81 @@
 //! subscribing to their event streams — used by `dev_loop.rs` instead of the
 //! old chat-session-based approach.
 
+use std::sync::Arc;
+
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
+use tokio::task::AbortHandle;
 use tokio::time::Duration;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tracing::{info, warn};
 
 use crate::runner::automaton_event_kinds::DONE;
 use aura_protocol::{InstalledIntegration, InstalledTool};
+
+/// Handle that keeps the harness WebSocket connection opened by
+/// [`AutomatonClient::connect_event_stream`] alive for as long as it is
+/// held, and closes it when cancelled or dropped.
+///
+/// The WebSocket reader spawned by `connect_event_stream` is a detached
+/// `tokio::spawn` that owns both halves of the WS stream. Without an
+/// explicit handle callers had no way to shut it down on restart or
+/// stop, so every re-subscribe (infra retry, adopt-on-conflict, stop
+/// loop) leaked one socket. The harness's per-node WS semaphore
+/// (capped at 128 in `aura-node`) therefore filled up, causing
+/// `503 Service Unavailable` on every subsequent `/stream/automaton/:id`
+/// upgrade.
+///
+/// `WsReaderHandle` closes the loop by:
+/// * [`cancel`](Self::cancel): explicit abort for call sites that know
+///   the reader is no longer wanted (e.g. the `stop_loop` path).
+/// * [`Drop`](Drop): safety net so a handle dropped on the floor still
+///   tears down its reader task, letting the harness release its
+///   permit. Aborting an already-finished task is a no-op.
+///
+/// Cloning is cheap (`Arc` on the inner state) and all clones share the
+/// same underlying reader; the reader is only aborted when the last
+/// clone is dropped or any clone explicitly calls `cancel`. Every
+/// `cancel` is idempotent.
+#[derive(Clone)]
+pub struct WsReaderHandle {
+    inner: Arc<WsReaderInner>,
+}
+
+struct WsReaderInner {
+    abort: AbortHandle,
+}
+
+impl WsReaderHandle {
+    fn new(abort: AbortHandle) -> Self {
+        Self {
+            inner: Arc::new(WsReaderInner { abort }),
+        }
+    }
+
+    /// Abort the spawned WebSocket reader task, dropping its owned
+    /// stream halves so TCP closes and the harness releases the
+    /// corresponding `ws_slots` permit.
+    pub fn cancel(&self) {
+        self.inner.abort.abort();
+    }
+}
+
+impl Drop for WsReaderInner {
+    fn drop(&mut self) {
+        // Safety net: if every `WsReaderHandle` clone is dropped
+        // without an explicit `cancel`, still abort so we don't leak
+        // the harness-side permit for the lifetime of the automaton.
+        self.abort.abort();
+    }
+}
+
+impl std::fmt::Debug for WsReaderHandle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WsReaderHandle").finish_non_exhaustive()
+    }
+}
 
 const GENERIC_MILESTONE_EVENT_TYPES: &[&str] =
     &["milestone", "sync_milestone", "git_sync_milestone"];
@@ -345,8 +411,13 @@ impl AutomatonClient {
     }
 
     /// Connect to the automaton event WebSocket and forward events to a broadcast channel.
-    /// Returns the broadcast sender (for sharing with other consumers) and spawns
-    /// a background task that reads from the WebSocket.
+    /// Returns the broadcast sender plus a [`WsReaderHandle`]; keep the
+    /// handle alive for as long as you want events to flow, and drop /
+    /// [`cancel`](WsReaderHandle::cancel) it to close the underlying
+    /// WebSocket (which releases the harness's WS slot).
+    ///
+    /// Spawns a background task that reads from the WebSocket and
+    /// forwards parsed events to the returned `broadcast::Sender`.
     ///
     /// After a successful WS handshake a brief liveness probe waits for the first
     /// message or error.  If the connection is reset immediately (e.g. the harness
@@ -359,7 +430,7 @@ impl AutomatonClient {
         &self,
         automaton_id: &str,
         event_stream_url: Option<&str>,
-    ) -> anyhow::Result<broadcast::Sender<serde_json::Value>> {
+    ) -> anyhow::Result<(broadcast::Sender<serde_json::Value>, WsReaderHandle)> {
         let url = self.resolve_event_stream_url(automaton_id, event_stream_url);
         info!(automaton_id, %url, "Connecting to automaton event stream");
 
@@ -419,7 +490,12 @@ impl AutomatonClient {
             Err(_) => {}
         }
 
-        tokio::spawn(async move {
+        let reader = tokio::spawn(async move {
+            // Keep the writer half owned by the reader task so the TCP
+            // connection stays open for the harness to send on. When
+            // the reader task is aborted (via `WsReaderHandle::cancel`
+            // or `Drop`) tokio drops both halves, which closes TCP and
+            // lets the harness release its `ws_slots` permit.
             let _keep_write = _write;
             if let Some(event) = buffered_event {
                 let is_done = event.get("type").and_then(|t| t.as_str()) == Some(DONE);
@@ -458,13 +534,106 @@ impl AutomatonClient {
             info!(automaton_id = %aid, "Automaton event stream ended");
         });
 
-        Ok(broadcast_tx)
+        let handle = WsReaderHandle::new(reader.abort_handle());
+        Ok((broadcast_tx, handle))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{normalize_automaton_event, AutomatonStartResult};
+    use super::{normalize_automaton_event, AutomatonStartResult, WsReaderHandle};
+    use std::sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    };
+
+    /// Spawns a task that never completes on its own, returns a
+    /// [`WsReaderHandle`] wired to its `AbortHandle`, and an
+    /// [`Arc<AtomicBool>`] that flips to `true` if the task runs its
+    /// `Drop` guard (i.e. was aborted). Lets the tests assert
+    /// aborted-vs-still-running without racing a time-based sleep.
+    async fn spawn_cancel_probe() -> (WsReaderHandle, Arc<AtomicBool>) {
+        struct AbortFlag(Arc<AtomicBool>);
+        impl Drop for AbortFlag {
+            fn drop(&mut self) {
+                self.0.store(true, Ordering::SeqCst);
+            }
+        }
+
+        let flag = Arc::new(AtomicBool::new(false));
+        let task_flag = flag.clone();
+        let task = tokio::spawn(async move {
+            let _guard = AbortFlag(task_flag);
+            // Hold until aborted.
+            loop {
+                tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+            }
+        });
+        // Yield so the task is actually scheduled before we return.
+        tokio::task::yield_now().await;
+        (WsReaderHandle::new(task.abort_handle()), flag)
+    }
+
+    #[tokio::test]
+    async fn ws_reader_handle_cancel_aborts_spawned_task() {
+        let (handle, flag) = spawn_cancel_probe().await;
+        assert!(!flag.load(Ordering::SeqCst));
+        handle.cancel();
+        // Give tokio a chance to run the abort.
+        for _ in 0..10 {
+            if flag.load(Ordering::SeqCst) {
+                break;
+            }
+            tokio::task::yield_now().await;
+        }
+        assert!(
+            flag.load(Ordering::SeqCst),
+            "cancel() should have aborted the spawned reader task"
+        );
+    }
+
+    #[tokio::test]
+    async fn ws_reader_handle_drop_aborts_spawned_task() {
+        let (handle, flag) = spawn_cancel_probe().await;
+        assert!(!flag.load(Ordering::SeqCst));
+        drop(handle);
+        for _ in 0..10 {
+            if flag.load(Ordering::SeqCst) {
+                break;
+            }
+            tokio::task::yield_now().await;
+        }
+        assert!(
+            flag.load(Ordering::SeqCst),
+            "dropping the last WsReaderHandle should abort the spawned reader task"
+        );
+    }
+
+    #[tokio::test]
+    async fn ws_reader_handle_clone_keeps_task_alive_until_last_drop() {
+        let (handle, flag) = spawn_cancel_probe().await;
+        let clone = handle.clone();
+        drop(handle);
+        // The clone still holds the Arc — the inner `AbortHandle`
+        // must not have been dropped yet, so the task keeps running.
+        tokio::task::yield_now().await;
+        tokio::task::yield_now().await;
+        assert!(
+            !flag.load(Ordering::SeqCst),
+            "cloned WsReaderHandle must keep the reader alive when other clones drop"
+        );
+        drop(clone);
+        for _ in 0..10 {
+            if flag.load(Ordering::SeqCst) {
+                break;
+            }
+            tokio::task::yield_now().await;
+        }
+        assert!(
+            flag.load(Ordering::SeqCst),
+            "dropping the last clone should abort the spawned reader task"
+        );
+    }
 
     #[test]
     fn automaton_start_result_accepts_ws_url_alias() {

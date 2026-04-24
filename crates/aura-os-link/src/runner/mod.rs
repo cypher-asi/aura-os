@@ -21,7 +21,9 @@ pub use automaton_event_kinds::{
     normalize_process_tool_type_field,
 };
 
-use crate::{AutomatonClient, AutomatonStartError, AutomatonStartParams, AutomatonStartResult};
+use crate::{
+    AutomatonClient, AutomatonStartError, AutomatonStartParams, AutomatonStartResult, WsReaderHandle,
+};
 
 const MAX_COLLECTED_OUTPUT_TEXT_CHARS: usize = 16_000;
 const MAX_COLLECTED_TEXT_BLOCK_CHARS: usize = 4_000;
@@ -202,13 +204,24 @@ pub enum RunStartError {
 ///
 /// `stream_retries` is the number of **additional** attempts after the first;
 /// pass `0` for a single attempt, `2` for three total attempts, etc.
+///
+/// Returns a [`WsReaderHandle`] alongside the broadcast sender; the
+/// caller must keep the handle alive for as long as events should flow
+/// and drop / cancel it to release the harness's WS slot.
 pub async fn start_and_connect(
     client: &AutomatonClient,
     params: AutomatonStartParams,
     stream_retries: u32,
-) -> Result<(AutomatonStartResult, broadcast::Sender<serde_json::Value>), RunStartError> {
+) -> Result<
+    (
+        AutomatonStartResult,
+        broadcast::Sender<serde_json::Value>,
+        WsReaderHandle,
+    ),
+    RunStartError,
+> {
     let result = client.start(params).await?;
-    let tx = connect_with_retries(
+    let (tx, ws_handle) = connect_with_retries(
         client,
         &result.automaton_id,
         Some(&result.event_stream_url),
@@ -219,7 +232,7 @@ pub async fn start_and_connect(
         attempts: stream_retries + 1,
         message,
     })?;
-    Ok((result, tx))
+    Ok((result, tx, ws_handle))
 }
 
 /// Connect to an automaton event stream, retrying on failure.
@@ -229,12 +242,16 @@ pub async fn start_and_connect(
 /// default stream path — used when adopting an existing automaton whose
 /// start-time URL is no longer available (e.g. after recovering from a
 /// `Conflict` on restart).
+///
+/// Returns a [`WsReaderHandle`] alongside the broadcast sender; the
+/// caller must keep the handle alive for as long as events should flow
+/// and drop / cancel it to release the harness's WS slot.
 pub async fn connect_with_retries(
     client: &AutomatonClient,
     automaton_id: &str,
     event_stream_url: Option<&str>,
     retries: u32,
-) -> Result<broadcast::Sender<serde_json::Value>, String> {
+) -> Result<(broadcast::Sender<serde_json::Value>, WsReaderHandle), String> {
     let total_attempts = retries + 1;
     let mut last_err = String::new();
     for attempt in 0..total_attempts {
@@ -250,7 +267,7 @@ pub async fn connect_with_retries(
             .connect_event_stream(automaton_id, event_stream_url)
             .await
         {
-            Ok(tx) => return Ok(tx),
+            Ok(pair) => return Ok(pair),
             Err(e) => {
                 warn!(
                     %automaton_id, attempt,

@@ -73,7 +73,12 @@ async fn execute_single_automaton(
     let authed_client = automaton_client
         .clone()
         .with_auth(token.map(|s| s.to_string()));
-    let (start_result, events_tx) = match start_and_connect(
+    // The `_ws_handle` stays in scope for the entire node execution so
+    // the harness's WS slot is held only while this process node is
+    // streaming. It's aborted on drop when we return (success or
+    // error), which closes the socket and frees the slot. See
+    // `aura_os_link::WsReaderHandle`.
+    let (start_result, events_tx, _ws_handle) = match start_and_connect(
         &authed_client,
         AutomatonStartParams {
             project_id: project_id.to_string(),

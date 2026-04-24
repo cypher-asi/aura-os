@@ -31,6 +31,11 @@ struct DecomposedSubtaskWorkspacePrep {
 struct SubtaskAutomatonConnection {
     session_id: String,
     events_tx: broadcast::Sender<serde_json::Value>,
+    /// Keeps the harness WS slot held for the duration of this sub-task.
+    /// Dropped when the connection struct is dropped, closing the
+    /// underlying socket so the harness releases its slot. See
+    /// [`aura_os_link::WsReaderHandle`].
+    _ws_handle: WsReaderHandle,
 }
 
 fn log_finalize_subtask_session_failure(
@@ -97,7 +102,7 @@ async fn start_decomposed_subtask_automaton_stream(
     args: &DecomposedSubtaskWorkerArgs,
     workspace_path: &str,
     session_id: &str,
-) -> Result<broadcast::Sender<serde_json::Value>, ProcessError> {
+) -> Result<(broadcast::Sender<serde_json::Value>, WsReaderHandle), ProcessError> {
     let authed_ac = args
         .automaton_client
         .clone()
@@ -119,7 +124,7 @@ async fn start_decomposed_subtask_automaton_stream(
     )
     .await
     {
-        Ok((_start_result, events_tx)) => Ok(events_tx),
+        Ok((_start_result, events_tx, ws_handle)) => Ok((events_tx, ws_handle)),
         Err(e) => {
             log_finalize_subtask_session_failure(
                 finalize_process_task_session(
@@ -159,12 +164,13 @@ async fn connect_decomposed_subtask_automaton(
     )
     .await?;
 
-    let events_tx =
+    let (events_tx, ws_handle) =
         start_decomposed_subtask_automaton_stream(args, workspace_path, &session_id).await?;
 
     Ok(SubtaskAutomatonConnection {
         session_id,
         events_tx,
+        _ws_handle: ws_handle,
     })
 }
 

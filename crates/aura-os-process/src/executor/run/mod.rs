@@ -29,7 +29,7 @@ use aura_os_link::automaton_event_kinds::TEXT_DELTA;
 use aura_os_link::{
     collect_automaton_events, is_process_progress_broadcast_event, is_process_stream_forward_event,
     normalize_process_tool_type_field, start_and_connect, AutomatonClient, AutomatonStartParams,
-    CollectedOutput, RunCompletion,
+    CollectedOutput, RunCompletion, WsReaderHandle,
 };
 use aura_os_orgs::OrgService;
 use aura_os_storage::{

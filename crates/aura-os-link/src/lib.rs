@@ -9,6 +9,7 @@ mod ws_bridge;
 
 pub use automaton_client::{
     AutomatonClient, AutomatonStartError, AutomatonStartParams, AutomatonStartResult,
+    WsReaderHandle,
 };
 pub use harness::{
     build_remote_handshake, build_session_init, HarnessLink, HarnessSession, SessionConfig,

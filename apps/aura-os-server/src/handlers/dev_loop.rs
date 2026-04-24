@@ -11,7 +11,9 @@ use tracing::{info, warn};
 use aura_os_core::{
     AgentInstanceId, HarnessMode, ProjectId, SessionId, SpecId, TaskId, TaskStatus,
 };
-use aura_os_link::{connect_with_retries, AutomatonStartError, AutomatonStartParams};
+use aura_os_link::{
+    connect_with_retries, AutomatonStartError, AutomatonStartParams, WsReaderHandle,
+};
 use aura_os_network::{NetworkClient, ReportUsageRequest};
 use aura_os_sessions::{CreateSessionParams, UpdateContextUsageParams};
 use aura_os_storage::StorageTaskFileChangeSummary;
@@ -2661,6 +2663,15 @@ struct ForwardParams {
     /// infra-transient failure (stream closed without a terminal event, or
     /// an `error` event with no accompanying `task_failed`). Consumed on use.
     retry: Option<TransientRetryContext>,
+    /// Keeps the harness WebSocket slot held for the duration of the
+    /// forwarder task. Moved into the spawned task so every exit path
+    /// (normal end, infra-retry swap, stop-loop abort, panic unwind)
+    /// drops the handle and releases the slot; without this the
+    /// detached WS reader spawned by
+    /// [`aura_os_link::AutomatonClient::connect_event_stream`] would
+    /// outlive the forwarder, keep the socket open, and exhaust the
+    /// harness's 128-slot global `ws_slots` semaphore.
+    ws_reader_handle: WsReaderHandle,
     /// Cleared (`store(false)`) when the forwarder terminates for any
     /// reason. `start_loop` reads this on adoption to detect whether a
     /// live forwarder is already attached to the active automaton and
@@ -2830,7 +2841,7 @@ async fn restart_with_infra_backoff(
     initial_failure: Option<InfraFailureClass>,
     initial_retry_after: Option<Duration>,
     ctx: &TransientRetryContext,
-) -> Result<tokio::sync::broadcast::Sender<serde_json::Value>, String> {
+) -> Result<(tokio::sync::broadcast::Sender<serde_json::Value>, WsReaderHandle), String> {
     let mut retry_reason = reason.to_string();
     let mut pending_pause = initial_failure.map(|failure| (failure, retry_reason.clone()));
     let mut pending_hint = initial_retry_after;
@@ -2859,7 +2870,7 @@ async fn restart_with_infra_backoff(
         )
         .await
         {
-            Ok(tx) => return Ok(tx),
+            Ok(pair) => return Ok(pair),
             Err(error) => {
                 if let Some(failure) = classify_infra_failure(&error) {
                     retry_reason = error.clone();
@@ -3039,7 +3050,7 @@ async fn try_restart_automaton(
     task_id: &str,
     reason: &str,
     ctx: &TransientRetryContext,
-) -> Result<tokio::sync::broadcast::Sender<serde_json::Value>, String> {
+) -> Result<(tokio::sync::broadcast::Sender<serde_json::Value>, WsReaderHandle), String> {
     // Axis 5: record this restart as a retry attempt so UI and run bundles
     // can see the ladder of transient failures instead of a single opaque
     // `task_retrying` event. `bump_retry_attempt` returns 1 on the *first*
@@ -3081,7 +3092,7 @@ async fn try_restart_automaton(
             }
             Err(e) => return Err(format!("automaton start failed: {e}")),
         };
-    let tx = connect_with_retries(
+    let (tx, ws_handle) = connect_with_retries(
         ctx.automaton_client.as_ref(),
         &automaton_id,
         event_stream_url.as_deref(),
@@ -3089,7 +3100,7 @@ async fn try_restart_automaton(
     )
     .await
     .map_err(|e| format!("event stream reconnect failed: {e}"))?;
-    Ok(tx)
+    Ok((tx, ws_handle))
 }
 
 /// Outcome of [`attempt_infra_retry`]. Callers branch on this instead of
@@ -3098,9 +3109,13 @@ async fn try_restart_automaton(
 enum InfraRetryOutcome {
     /// The reason classified as transient, a retry context was available,
     /// and the automaton restarted successfully. The caller should swap
-    /// its broadcast receiver for `new_rx` and `continue` its event loop.
+    /// its broadcast receiver for `new_rx`, replace its stored
+    /// `WsReaderHandle` with `new_ws_handle` (the previous handle's
+    /// drop closes the old WS so the harness releases its slot), and
+    /// `continue` its event loop.
     Retried {
         new_rx: tokio::sync::broadcast::Receiver<serde_json::Value>,
+        new_ws_handle: WsReaderHandle,
     },
     /// Either the reason didn't classify as an infra transient, or the
     /// retry budget was already exhausted. Caller should fall through to
@@ -3177,8 +3192,9 @@ async fn attempt_infra_retry(
         )
         .await
         {
-            Ok(new_tx) => InfraRetryOutcome::Retried {
+            Ok((new_tx, new_ws_handle)) => InfraRetryOutcome::Retried {
                 new_rx: new_tx.subscribe(),
+                new_ws_handle,
             },
             Err(restart_err) => {
                 warn!(
@@ -3208,6 +3224,14 @@ async fn attempt_infra_retry(
 /// event broadcast, mapping `AutomatonEvent` types to the app's domain events.
 /// Also accumulates task output in the in-memory cache and persists to storage
 /// on task completion.
+//
+// `unused_assignments` is suppressed because `_ws_reader_handle` is held
+// exclusively for its `Drop` side effect: each reassignment during an
+// infra-retry drops the previous handle, which closes the stale WS and
+// releases the harness's `ws_slots` permit. The compiler doesn't count
+// `Drop` as a "read" of the overwritten value, so every assignment
+// looks unused despite being the whole point of the swap.
+#[allow(unused_assignments)]
 fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
     let ForwardParams {
         automaton_events_tx,
@@ -3227,6 +3251,7 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
         router_url,
         http_client,
         retry,
+        ws_reader_handle,
         alive,
         loop_log,
         orbit_capacity_guard,
@@ -3245,6 +3270,16 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
         // `start_loop` never sees a stale "alive" marker for a dead
         // forwarder.
         let _alive_guard = ForwarderAliveGuard(alive);
+        // Owned by the forwarder task so the harness WS slot is
+        // released on every exit path. Replaced on infra-retry
+        // (see `InfraRetryOutcome::Retried`) so a successful restart
+        // cancels the previous connection instead of stacking a new
+        // one on top. Prefixed with `_` because it is used solely for
+        // its `Drop` side effect (the compiler doesn't count
+        // `Drop::drop` as a "read"); see the
+        // `#[allow(unused_assignments)]` on the function for the
+        // matching reassignment story.
+        let mut _ws_reader_handle: WsReaderHandle = ws_reader_handle;
         // Re-bind as mutable inside the async block so we can both
         // `rx.recv().await` (needs &mut self) and swap in a fresh
         // subscription on retry.
@@ -3963,17 +3998,26 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                     )
                                     .await;
                                     match outcome {
-                                        InfraRetryOutcome::Retried { new_rx } => {
+                                        InfraRetryOutcome::Retried {
+                                            new_rx,
+                                            new_ws_handle,
+                                        } => {
                                             // Retry ladder owns the
                                             // terminal state now: swap
-                                            // the receiver, clear
-                                            // per-turn state, and
-                                            // restart the outer event
-                                            // loop without emitting a
+                                            // the receiver, replace the
+                                            // WS reader handle (the
+                                            // previous handle's drop
+                                            // closes the stale socket
+                                            // so the harness releases
+                                            // its slot), clear per-
+                                            // turn state, and restart
+                                            // the outer event loop
+                                            // without emitting a
                                             // rollback, persisting
                                             // failure metadata, or
                                             // transitioning the task.
                                             rx = new_rx;
+                                            _ws_reader_handle = new_ws_handle;
                                             terminal_seen = false;
                                             session_status = "completed";
                                             current_task_id = None;
@@ -4400,8 +4444,17 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                             )
                                             .await
                                             {
-                                                Ok(new_tx) => {
+                                                Ok((new_tx, new_ws_handle)) => {
                                                     rx = new_tx.subscribe();
+                                                    // Drop the prior WS
+                                                    // reader so the
+                                                    // harness releases
+                                                    // its slot;
+                                                    // otherwise every
+                                                    // infra retry
+                                                    // leaks one WS
+                                                    // connection.
+                                                    _ws_reader_handle = new_ws_handle;
                                                     terminal_seen = false;
                                                     session_status = "completed";
                                                     // `task_reset_to_ready` intentionally stays
@@ -4735,8 +4788,13 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                     )
                                     .await
                                     {
-                                        Ok(new_tx) => {
+                                        Ok((new_tx, new_ws_handle)) => {
                                             rx = new_tx.subscribe();
+                                            // Close the previous WS so
+                                            // the harness releases its
+                                            // slot before we subscribe
+                                            // to the new stream.
+                                            _ws_reader_handle = new_ws_handle;
                                             // Retry cleared the terminal
                                             // state for the next attempt.
                                             terminal_seen = false;
@@ -4880,10 +4938,19 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             )
                             .await
                             {
-                                InfraRetryOutcome::Retried { new_rx } => {
+                                InfraRetryOutcome::Retried {
+                                    new_rx,
+                                    new_ws_handle,
+                                } => {
                                     tool_call_retry_count
                                         .insert(retry_tid.clone(), prior + 1);
                                     rx = new_rx;
+                                    // Replace the WS handle so the old
+                                    // socket closes and the harness
+                                    // releases its slot; otherwise
+                                    // every `tool_call_failed` retry
+                                    // leaks one WS connection.
+                                    _ws_reader_handle = new_ws_handle;
                                     terminal_seen = false;
                                     session_status = "completed";
                                     continue;
@@ -5091,8 +5158,12 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                 )
                                 .await
                                 {
-                                    Ok(new_tx) => {
+                                    Ok((new_tx, new_ws_handle)) => {
                                         rx = new_tx.subscribe();
+                                        // Release the closed socket's
+                                        // harness slot before the new
+                                        // stream takes its place.
+                                        _ws_reader_handle = new_ws_handle;
                                         session_status = "completed";
                                         continue;
                                     }
@@ -5535,11 +5606,11 @@ pub(crate) async fn start_loop(
         )
         .await;
 
-    let events_tx = match automaton_client
+    let (events_tx, ws_reader_handle) = match automaton_client
         .connect_event_stream(&automaton_id, event_stream_url.as_deref())
         .await
     {
-        Ok(tx) => tx,
+        Ok(pair) => pair,
         Err(e) => {
             // If start succeeded but event-stream attach failed, proactively stop
             // the spawned automaton so we don't leak an untracked loop that
@@ -5671,6 +5742,7 @@ pub(crate) async fn start_loop(
             start_params: start_params.clone(),
             restart_budget: None,
         }),
+        ws_reader_handle,
         alive: forwarder_alive.clone(),
         loop_log: state.loop_log.clone(),
         orbit_capacity_guard: state.orbit_capacity_guard.clone(),
@@ -6201,7 +6273,7 @@ pub(crate) async fn run_single_task(
     // Connect to the event stream as early as possible to minimise the window
     // between automaton start and WS attach.  Retry a few times because the
     // harness may reset the connection if the automaton isn't ready yet.
-    let events_tx =
+    let stream_pair =
         connect_with_retries(&automaton_client, &automaton_id, Some(&event_stream_url), 2)
             .await
             .ok();
@@ -6245,7 +6317,7 @@ pub(crate) async fn run_single_task(
             .await;
     }
 
-    if let Some(events_tx) = events_tx {
+    if let Some((events_tx, ws_reader_handle)) = stream_pair {
         // Start a debug bundle for single-task runs too so the Debug
         // UI can replay them alongside dev-loop runs.
         state
@@ -6300,6 +6372,7 @@ pub(crate) async fn run_single_task(
                 start_params,
                 restart_budget: Some(SINGLE_TASK_RESTART_BUDGET),
             }),
+            ws_reader_handle,
             alive: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
             loop_log: state.loop_log.clone(),
             orbit_capacity_guard: state.orbit_capacity_guard.clone(),
