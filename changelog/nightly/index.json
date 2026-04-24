@@ -2,20 +2,20 @@
   {
     "date": "2026-04-23",
     "channel": "nightly",
-    "version": "0.1.0-nightly.362.1",
-    "title": "AURA 3D lands: image-to-model studio with persistent projects",
-    "intro": "Today's nightly introduces AURA 3D, a new in-app studio that turns a prompt into an image and then into a WebGL-viewable 3D model, with project-scoped history wired to the storage backend. Alongside it, the nightly release pipeline got meaningfully sturdier — from smarter asset pruning to tighter screenshot proofing — and a Windows updater handoff bug was fixed.",
+    "version": "0.1.0-nightly.363.1",
+    "title": "AURA 3D studio lands, with a hardened nightly release pipeline",
+    "intro": "Today's nightly introduces AURA 3D, a new in-app studio for generating images and turning them into 3D models inside a live WebGL viewer. Alongside the new app, the team shipped artifact persistence so 3D work survives across sessions, patched a Windows updater handoff bug, and tightened the nightly release and changelog media pipelines end to end.",
     "entryCount": 6,
     "highlights": [
-      "AURA 3D app: prompt → image → WebGL 3D model",
-      "Artifacts persist per project via aura-storage",
-      "GPT-5.5 available in the model picker",
-      "Windows auto-updater handoff fixed",
-      "Nightly release + changelog media pipelines hardened"
+      "New AURA 3D app with image → 3D model flow and WebGL viewer",
+      "3D projects, images, and models now persist across sessions",
+      "Windows desktop updater handoff fixed",
+      "GPT-5.5 available in the chat model picker",
+      "Nightly release and changelog media pipelines hardened"
     ],
-    "rawCommitCount": 29,
-    "generatedAt": "2026-04-24T04:09:33.162Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.362.1",
+    "rawCommitCount": 30,
+    "generatedAt": "2026-04-24T04:57:07.188Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.363.1",
     "path": "history/2026-04-23.json"
   },
   {
