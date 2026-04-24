@@ -43,6 +43,56 @@ function isEnabled(value) {
   return ["1", "true", "yes", "on"].includes(String(value || "").trim().toLowerCase());
 }
 
+function getScreenshotDeviceScaleFactor() {
+  const configured = Number(process.env.AURA_DEMO_SCREENSHOT_DEVICE_SCALE_FACTOR || 2);
+  if (!Number.isFinite(configured) || configured < 1) {
+    return 2;
+  }
+  return Math.min(3, Math.max(1, configured));
+}
+
+async function applyScreenshotDeviceScaleFactor(page, viewport) {
+  const deviceScaleFactor = getScreenshotDeviceScaleFactor();
+  if (deviceScaleFactor <= 1) {
+    return {
+      attempted: false,
+      applied: false,
+      deviceScaleFactor: 1,
+      reason: "disabled",
+    };
+  }
+
+  try {
+    const session = await page.context().newCDPSession(page);
+    await session.send("Emulation.setDeviceMetricsOverride", {
+      width: Math.round(viewport.width),
+      height: Math.round(viewport.height),
+      deviceScaleFactor,
+      mobile: false,
+    });
+    return {
+      attempted: true,
+      applied: true,
+      deviceScaleFactor,
+      reason: null,
+    };
+  } catch (error) {
+    return {
+      attempted: true,
+      applied: false,
+      deviceScaleFactor,
+      reason: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+async function takeProofScreenshot(page, options = {}) {
+  return page.screenshot({
+    scale: "device",
+    ...options,
+  });
+}
+
 function slugify(value) {
   return String(value || "")
     .toLowerCase()
@@ -134,6 +184,41 @@ async function writeJson(filePath, value) {
   await fs.writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
 
+async function readJsonIfExists(filePath) {
+  if (!filePath) {
+    return null;
+  }
+  const source = await fs.readFile(filePath, "utf8").catch(() => "");
+  if (!source.trim()) {
+    return null;
+  }
+  try {
+    return JSON.parse(source);
+  } catch {
+    return null;
+  }
+}
+
+function resolveNavigationLessonsMemoryPath(args, channel) {
+  const configured = String(args["navigation-lessons-path"] || process.env.AURA_DEMO_NAVIGATION_LESSONS_PATH || "").trim();
+  if (configured) {
+    return path.resolve(configured);
+  }
+  return path.resolve(process.cwd(), "output", "demo-screenshots", "navigation-lessons", `${slugify(channel || "nightly") || "nightly"}.json`);
+}
+
+function shouldAutoWriteNavigationLesson(args) {
+  return isEnabled(args["auto-write-navigation-lesson"] || process.env.AURA_DEMO_AUTO_WRITE_NAVIGATION_LESSON);
+}
+
+function getNavigationLessonMemoryLimit() {
+  const configured = Number(process.env.AURA_DEMO_NAVIGATION_LESSON_LIMIT || 80);
+  if (!Number.isFinite(configured) || configured <= 0) {
+    return 80;
+  }
+  return Math.min(200, Math.max(10, Math.floor(configured)));
+}
+
 async function readChangedFiles(args) {
   const inline = normalizeArray(args["changed-file"]);
   const filePath = args["changed-files-file"] ? path.resolve(String(args["changed-files-file"])) : null;
@@ -164,6 +249,195 @@ function clipText(value, maxLength) {
     return text;
   }
   return `${text.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
+function extractNavigationLessonKeywords(values, limit = 14) {
+  const stopwords = new Set([
+    "with",
+    "from",
+    "that",
+    "this",
+    "into",
+    "visible",
+    "before",
+    "after",
+    "proof",
+    "screen",
+    "surface",
+    "change",
+    "changes",
+  ]);
+  return Array.from(new Set(
+    normalizeArray(values, 80)
+      .flatMap((value) => String(value || "").toLowerCase().split(/[^a-z0-9.]+/g))
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 3 && token.length <= 28 && !stopwords.has(token)),
+  )).slice(0, limit);
+}
+
+function deriveNavigationLessonGlob(filePath) {
+  const normalized = String(filePath || "").replace(/\\/g, "/");
+  const appMatch = normalized.match(/^(interface\/src\/apps\/[^/]+)\//);
+  if (appMatch) {
+    return `${appMatch[1]}/**`;
+  }
+  const componentMatch = normalized.match(/^(interface\/src\/components\/[^/]+)\//);
+  if (componentMatch) {
+    return `${componentMatch[1]}/**`;
+  }
+  if (/^interface\/src\/views\/[^/]+\//.test(normalized)) {
+    return normalized.replace(/^(interface\/src\/views\/[^/]+)\/.*$/, "$1/**");
+  }
+  return normalized;
+}
+
+function buildAutoNavigationLesson(summary) {
+  const phases = Array.isArray(summary?.phases) ? summary.phases : [];
+  const contract = summary?.navigationContract ?? {};
+  const targetAppId = String(contract.targetAppId || summary?.targetAppId || "").trim();
+  const primarySurface = String(contract.primarySurface || "").trim();
+  const changedFiles = normalizeArray(summary?.changedFiles, 20);
+  const qualityScores = phases
+    .map((phase) => phase?.quality)
+    .filter(Boolean);
+  const hasStrongQuality = qualityScores.some((quality) => quality.ok === true && Number(quality.score || 0) >= 80);
+  const proofOk = phases.length > 0 && phases.every((phase) => phase?.skipped || phase?.proofRequirementsOk !== false);
+  const requiredStateOk = phases.length > 0 && phases.every((phase) => phase?.skipped || phase?.requiredUiStateOk !== false);
+  const forbiddenOk = phases.every((phase) => !normalizeArray(phase?.forbiddenPhraseMatches, 6).length);
+
+  if (!summary?.ok) {
+    return { lesson: null, reason: "capture did not pass" };
+  }
+  if (!targetAppId || !primarySurface) {
+    return { lesson: null, reason: "missing target app or primary surface" };
+  }
+  if (changedFiles.length === 0) {
+    return { lesson: null, reason: "missing changed-file evidence" };
+  }
+  if (!proofOk || !requiredStateOk || !forbiddenOk) {
+    return { lesson: null, reason: "proof, required-state, or forbidden-screen checks were not clean" };
+  }
+  if (!hasStrongQuality) {
+    return { lesson: null, reason: "no screenshot phase reached the auto-learning quality threshold" };
+  }
+
+  const keywords = extractNavigationLessonKeywords([
+    summary.storyTitle,
+    summary.story,
+    primarySurface,
+    ...(contract.expectedVisibleLabels ?? []),
+    ...(summary.validationSignals ?? []),
+  ]);
+  const changedFileGlobs = Array.from(new Set(changedFiles.map(deriveNavigationLessonGlob))).slice(0, 8);
+  const id = `auto-${slugify(targetAppId)}-${slugify(primarySurface) || "surface"}`;
+  const generatedAt = summary.generatedAt || new Date().toISOString();
+
+  return {
+    lesson: {
+      id,
+      description: `Auto-learned navigation path for ${summary.targetAppLabel || targetAppId}: ${primarySurface}.`,
+      match: {
+        keywords,
+        changedFileGlobs,
+      },
+      navigation: {
+        targetAppId,
+        surface: primarySurface,
+        requiredUiSignals: normalizeArray(contract.requiredUiSignals, 6),
+        steps: normalizeArray(contract.navigationSteps, 6),
+        forbiddenPhrases: normalizeArray(contract.forbiddenScreens, 8),
+        captureMode: contract.captureMode || "surface-proof",
+      },
+      metadata: {
+        source: "auto-navigation-learning",
+        status: "auto-promoted",
+        firstSeenAt: generatedAt,
+        lastSeenAt: generatedAt,
+        observations: 1,
+        lastStory: clipText(summary.story || summary.storyTitle || "", 240),
+        lastOutputDir: summary.outputDir || null,
+        lastQualityScore: Math.max(...qualityScores.map((quality) => Number(quality.score || 0))),
+      },
+    },
+    reason: "eligible",
+  };
+}
+
+async function mergeAutoNavigationLesson(filePath, candidateLesson) {
+  await ensureDirectory(path.dirname(filePath));
+  const current = await readJsonIfExists(filePath) || { schemaVersion: 1, lessons: [] };
+  const lessons = Array.isArray(current.lessons) ? current.lessons : [];
+  const index = lessons.findIndex((lesson) => lesson?.id === candidateLesson.id);
+  const generatedAt = candidateLesson.metadata?.lastSeenAt || new Date().toISOString();
+
+  if (index >= 0) {
+    const existing = lessons[index];
+    lessons[index] = {
+      ...existing,
+      description: existing.description || candidateLesson.description,
+      match: {
+        keywords: Array.from(new Set([
+          ...normalizeArray(existing.match?.keywords, 40),
+          ...normalizeArray(candidateLesson.match?.keywords, 40),
+        ])).slice(0, 20),
+        changedFileGlobs: Array.from(new Set([
+          ...normalizeArray(existing.match?.changedFileGlobs, 40),
+          ...normalizeArray(candidateLesson.match?.changedFileGlobs, 40),
+        ])).slice(0, 12),
+      },
+      navigation: {
+        ...candidateLesson.navigation,
+        ...existing.navigation,
+      },
+      metadata: {
+        ...(existing.metadata ?? {}),
+        source: existing.metadata?.source || "auto-navigation-learning",
+        status: existing.metadata?.status || "auto-promoted",
+        firstSeenAt: existing.metadata?.firstSeenAt || generatedAt,
+        lastSeenAt: generatedAt,
+        observations: Number(existing.metadata?.observations || 0) + 1,
+        lastStory: candidateLesson.metadata?.lastStory || existing.metadata?.lastStory || null,
+        lastOutputDir: candidateLesson.metadata?.lastOutputDir || existing.metadata?.lastOutputDir || null,
+        lastQualityScore: candidateLesson.metadata?.lastQualityScore ?? existing.metadata?.lastQualityScore ?? null,
+      },
+    };
+  } else {
+    lessons.push(candidateLesson);
+  }
+
+  const limit = getNavigationLessonMemoryLimit();
+  const trimmedLessons = lessons
+    .sort((left, right) => {
+      const leftPinned = left.metadata?.pinned === true ? 1 : 0;
+      const rightPinned = right.metadata?.pinned === true ? 1 : 0;
+      if (leftPinned !== rightPinned) {
+        return rightPinned - leftPinned;
+      }
+      const observationDelta = Number(right.metadata?.observations || 0) - Number(left.metadata?.observations || 0);
+      if (observationDelta !== 0) {
+        return observationDelta;
+      }
+      return String(right.metadata?.lastSeenAt || "").localeCompare(String(left.metadata?.lastSeenAt || ""))
+        || String(left.id).localeCompare(String(right.id));
+    })
+    .slice(0, limit)
+    .sort((left, right) => String(left.id).localeCompare(String(right.id)));
+  await writeJson(filePath, {
+    schemaVersion: Number(current.schemaVersion || 1),
+    updatedAt: generatedAt,
+    retention: {
+      maxLessons: limit,
+      strategy: "Keep pinned lessons first, then the most-observed and most-recent auto-learned lessons.",
+    },
+    lessons: trimmedLessons,
+  });
+
+  return {
+    written: true,
+    action: index >= 0 ? "updated" : "created",
+    lessonId: candidateLesson.id,
+    path: filePath,
+  };
 }
 
 function toTitleCase(value) {
@@ -259,6 +533,42 @@ const EARLY_STOP_REASON = "proof-achieved";
 const MAIN_PANEL_SELECTOR = '[data-agent-surface="main-panel"]';
 const SIDEKICK_HEADER_SELECTOR = '[data-agent-surface="sidekick-header"], [aria-label="Sidekick header"]';
 const SIDEKICK_PANEL_SELECTOR = '[data-agent-surface="sidekick-panel"], [aria-label="Sidekick panel"]';
+const PROOF_SURFACE_SELECTOR = [
+  "[data-agent-surface]",
+  "[role='dialog']",
+  "[role='menu']",
+  "[role='listbox']",
+  "[role='tabpanel']",
+  "[data-radix-popper-content-wrapper]",
+].join(", ");
+const UI_SIGNAL_TARGETS = {
+  chatComposerVisible: {
+    targets: ["chat-input-bar"],
+    selectors: ['[data-agent-surface="chat-input-bar"]', '[data-testid="chat-input-bar"]'],
+  },
+  feedbackThreadVisible: {
+    targets: ["feedback-thread"],
+    selectors: ['[data-agent-surface="feedback-thread"]'],
+  },
+  modelPickerVisible: {
+    targets: ["model-picker"],
+    selectors: ['[data-agent-surface="model-picker"]'],
+    anchors: ['[data-agent-action="open-model-picker"]'],
+    proofCrop: {
+      top: 64,
+      right: 64,
+      bottom: 120,
+      left: 260,
+      minWidth: 860,
+      minHeight: 720,
+      preserveBoundsAspectRatio: true,
+    },
+  },
+  sidekickVisible: {
+    targets: ["sidekick-panel"],
+    selectors: [SIDEKICK_PANEL_SELECTOR],
+  },
+};
 
 async function firstVisibleBox(candidates) {
   for (const candidate of candidates) {
@@ -344,72 +654,129 @@ function getLargeProofCropSize(viewport) {
   };
 }
 
+function uniqueStrings(values) {
+  return [...new Set(
+    values
+      .map((value) => String(value || "").trim())
+      .filter(Boolean),
+  )];
+}
+
+function getUiSignalTargetConfigs(requiredUiSignals = []) {
+  return normalizeArray(requiredUiSignals)
+    .map((signal) => UI_SIGNAL_TARGETS[signal])
+    .filter(Boolean);
+}
+
+function getUiSignalSelectors(requiredUiSignals = []) {
+  return uniqueStrings(getUiSignalTargetConfigs(requiredUiSignals)
+    .flatMap((target) => target.selectors || []));
+}
+
+function getUiSignalAnchorSelectors(requiredUiSignals = []) {
+  return uniqueStrings(getUiSignalTargetConfigs(requiredUiSignals)
+    .flatMap((target) => target.anchors || []));
+}
+
+function getUiSignalTargetNames(requiredUiSignals = []) {
+  return uniqueStrings(getUiSignalTargetConfigs(requiredUiSignals)
+    .flatMap((target) => target.targets || []));
+}
+
 async function findUiSignalProofClip(page, viewport, requiredUiSignals = []) {
   const normalizedSignals = normalizeArray(requiredUiSignals);
-  const needsModelPicker = normalizedSignals.includes("modelPickerVisible");
-  const needsChatComposer = normalizedSignals.includes("chatComposerVisible");
+  const signalTargets = getUiSignalTargetConfigs(normalizedSignals);
 
-  if (needsModelPicker) {
-    const modelPicker = page.locator('[data-agent-surface="model-picker"]').first();
-    const modelTrigger = page.locator('[data-agent-action="open-model-picker"]').first();
-    const chatInputBar = page.locator('[data-agent-surface="chat-input-bar"], [data-testid="chat-input-bar"]').first();
-    const [pickerBox, triggerBox, chatInputBarBox] = await Promise.all([
-      modelPicker.boundingBox().catch(() => null),
-      modelTrigger.boundingBox().catch(() => null),
-      chatInputBar.boundingBox().catch(() => null),
-    ]);
-
-    if (isVisibleBox(pickerBox) && isVisibleBox(triggerBox) && isVisibleBox(chatInputBarBox)) {
-      const pickerCluster = unionBounds([pickerBox, triggerBox]);
-      const leftInset = Math.min(420, Math.max(260, chatInputBarBox.width * 0.36));
-      const bounds = {
-        x: Math.max(chatInputBarBox.x, pickerCluster.x - leftInset),
-        y: Math.max(0, pickerCluster.y - 56),
-        width: Math.min(
-          viewport.width,
-          (chatInputBarBox.x + chatInputBarBox.width + 24),
-        ) - Math.max(chatInputBarBox.x, pickerCluster.x - leftInset),
-        height: Math.min(
-          viewport.height,
-          (chatInputBarBox.y + chatInputBarBox.height + 44),
-        ) - Math.max(0, pickerCluster.y - 56),
-      };
-      const clip = buildClipFromBounds(bounds, viewport, 0, {
-        minWidth: Math.min(viewport.width, 1120),
-        minHeight: Math.min(viewport.height, 640),
-      });
-      return {
-        kind: "surface-union",
-        targets: ["chat-input-bar", "model-picker"],
-        clip,
-      };
+  for (const target of signalTargets) {
+    const locators = (target.selectors || []).map((selector) => page.locator(selector).first());
+    const anchors = (target.anchors || []).map((selector) => page.locator(selector).first());
+    const boxes = [];
+    for (const locator of [...locators, ...anchors]) {
+      const box = await locator.boundingBox().catch(() => null);
+      if (isVisibleBox(box)) {
+        boxes.push(box);
+      }
+    }
+    if (boxes.length === 0) {
+      continue;
     }
 
-    return null;
-  }
-
-  if (needsChatComposer) {
-    const chatInputBar = page.locator('[data-agent-surface="chat-input-bar"], [data-testid="chat-input-bar"]').first();
-    const chatInputBarBox = await chatInputBar.boundingBox().catch(() => null);
-    if (isVisibleBox(chatInputBarBox)) {
-      const clip = buildClipFromBounds(chatInputBarBox, viewport, {
-        top: 80,
-        right: 24,
-        bottom: 40,
-        left: 24,
-      }, {
-        minWidth: Math.min(viewport.width, 1240),
-        minHeight: Math.min(viewport.height, 700),
-      });
-      return {
-        kind: "surface-union",
-        targets: ["chat-input-bar"],
-        clip,
-      };
-    }
+    const bounds = unionBounds(boxes);
+    const crop = target.proofCrop;
+    const isSmallProof = !crop && (Boolean(target.smallProof)
+      || (bounds.width < 720 && bounds.height < 560)
+      || ((bounds.width * bounds.height) / Math.max(1, viewport.width * viewport.height) < 0.18));
+    const clip = buildClipFromBounds(bounds, viewport, crop ? {
+      top: crop.top,
+      right: crop.right,
+      bottom: crop.bottom,
+      left: crop.left,
+    } : isSmallProof ? {
+      top: 12,
+      right: 24,
+      bottom: 12,
+      left: 24,
+    } : {
+      top: 80,
+      right: 24,
+      bottom: 40,
+      left: 24,
+    }, {
+      preserveBoundsAspectRatio: crop ? Boolean(crop.preserveBoundsAspectRatio) : isSmallProof,
+      minWidth: Math.min(viewport.width, crop?.minWidth ?? (isSmallProof ? 320 : 1240)),
+      minHeight: Math.min(viewport.height, crop?.minHeight ?? (isSmallProof ? 240 : 700)),
+    });
+    return {
+      kind: "surface-union",
+      targets: target.targets || [],
+      clip,
+    };
   }
 
   return null;
+}
+
+async function findContextClipFromText(page, viewport, textBox) {
+  if (!isVisibleBox(textBox)) {
+    return null;
+  }
+
+  const surfaceBox = isVisibleBox(textBox.surfaceBox) ? textBox.surfaceBox : null;
+  let proofWindow = surfaceBox || textBox;
+  const viewportArea = Math.max(1, viewport.width * viewport.height);
+  const surfaceCoverage = surfaceBox
+    ? (surfaceBox.width * surfaceBox.height) / viewportArea
+    : 1;
+  const isSmallProof = surfaceBox
+    ? surfaceCoverage <= 0.28 || surfaceBox.width <= 820 || surfaceBox.height <= 620
+    : textBox.width <= 820 || textBox.height <= 620;
+  if (surfaceBox && isSmallProof) {
+    const y = Math.max(surfaceBox.y, textBox.y - 72);
+    const bottom = Math.min(
+      surfaceBox.y + surfaceBox.height,
+      textBox.y + textBox.height + 150,
+    );
+    proofWindow = {
+      x: surfaceBox.x,
+      y,
+      width: surfaceBox.width,
+      height: bottom - y,
+    };
+  }
+  if (!isVisibleBox(proofWindow)) {
+    return null;
+  }
+
+  return buildClipFromBounds(proofWindow, viewport, {
+    top: isSmallProof ? 12 : 28,
+    right: isSmallProof ? 24 : 28,
+    bottom: isSmallProof ? 12 : 28,
+    left: isSmallProof ? 24 : 28,
+  }, {
+    preserveBoundsAspectRatio: isSmallProof,
+    minWidth: Math.min(viewport.width, isSmallProof ? 260 : getLargeProofCropSize(viewport).width),
+    minHeight: Math.min(viewport.height, isSmallProof ? 220 : getLargeProofCropSize(viewport).height),
+  });
 }
 
 function buildClipFromBounds(bounds, viewport, padding = 24, options = {}) {
@@ -434,12 +801,14 @@ function buildClipFromBounds(bounds, viewport, padding = 24, options = {}) {
   const centerX = padded.x + (padded.width / 2);
   const centerY = padded.y + (padded.height / 2);
 
-  if (width / height < TARGET_SCREENSHOT_ASPECT_RATIO) {
-    width = Math.min(viewport.width, Math.max(width, height * TARGET_SCREENSHOT_ASPECT_RATIO));
-    height = width / TARGET_SCREENSHOT_ASPECT_RATIO;
-  } else {
-    height = Math.min(viewport.height, Math.max(height, width / TARGET_SCREENSHOT_ASPECT_RATIO));
-    width = height * TARGET_SCREENSHOT_ASPECT_RATIO;
+  if (!options.preserveBoundsAspectRatio) {
+    if (width / height < TARGET_SCREENSHOT_ASPECT_RATIO) {
+      width = Math.min(viewport.width, Math.max(width, height * TARGET_SCREENSHOT_ASPECT_RATIO));
+      height = width / TARGET_SCREENSHOT_ASPECT_RATIO;
+    } else {
+      height = Math.min(viewport.height, Math.max(height, width / TARGET_SCREENSHOT_ASPECT_RATIO));
+      width = height * TARGET_SCREENSHOT_ASPECT_RATIO;
+    }
   }
 
   width = Math.min(viewport.width, width);
@@ -536,6 +905,269 @@ async function findTextLocatorFocusBox(page, focusPhrases = []) {
   }
 
   return null;
+}
+
+async function applyFocusedProofZoom(page, { requiredUiSignals = [], focusPhrases = [] } = {}) {
+  if (normalizeArray(requiredUiSignals).includes("modelPickerVisible")) {
+    return { applied: false, reason: "skip-dropdown-proof-zoom" };
+  }
+
+  const signalSelectors = getUiSignalSelectors(requiredUiSignals);
+  const anchorSelectors = getUiSignalAnchorSelectors(requiredUiSignals);
+  const phrases = normalizeArray(focusPhrases, 12)
+    .map((entry) => String(entry || "").trim())
+    .filter((entry) => entry.length >= 3);
+
+  return page.evaluate(({ selectors, anchors, candidatePhrases, proofSurfaceSelector }) => {
+    const normalize = (value) => String(value || "").toLowerCase().replace(/\s+/g, " ").trim();
+    const isVisibleNode = (node) => {
+      if (!(node instanceof HTMLElement)) {
+        return false;
+      }
+      const style = window.getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      return style.display !== "none"
+        && style.visibility !== "hidden"
+        && Number(style.opacity || 1) > 0.05
+        && rect.width > 0
+        && rect.height > 0;
+    };
+    const normalizedPhrases = candidatePhrases.map(normalize).filter(Boolean);
+    const candidates = new Set();
+    for (const selector of selectors) {
+      for (const node of document.querySelectorAll(selector)) {
+        if (node instanceof HTMLElement) {
+          candidates.add(node);
+        }
+      }
+    }
+    for (const root of document.querySelectorAll(proofSurfaceSelector)) {
+      if (!(root instanceof HTMLElement) || !isVisibleNode(root)) {
+        continue;
+      }
+      const text = normalize(root.innerText || root.textContent || "");
+      if (normalizedPhrases.some((phrase) => text.includes(phrase))) {
+        candidates.add(root);
+      }
+    }
+
+    const viewportArea = Math.max(1, window.innerWidth * window.innerHeight);
+    let best = null;
+    for (const node of candidates) {
+      if (!isVisibleNode(node)) {
+        continue;
+      }
+      const rect = node.getBoundingClientRect();
+      const area = rect.width * rect.height;
+      const coverage = area / viewportArea;
+      const text = normalize(node.innerText || node.textContent || "");
+      const containsPhrase = normalizedPhrases.length === 0
+        ? false
+        : normalizedPhrases.some((phrase) => text.includes(phrase));
+      const smallEnoughToZoom = coverage <= 0.24 && (rect.width <= 760 || rect.height <= 620);
+      if (!smallEnoughToZoom) {
+        continue;
+      }
+      const signalBonus = selectors.some((selector) => {
+        try {
+          return node.matches(selector);
+        } catch {
+          return false;
+        }
+      }) ? 900 : 0;
+      const score = signalBonus + (containsPhrase ? 1800 : 0) - area / 100;
+      if (!best || score > best.score) {
+        best = { node, rect, score, containsPhrase };
+      }
+    }
+
+    if (!best) {
+      return { applied: false, reason: "no-small-proof-surface" };
+    }
+
+    const node = best.node;
+    if (node.dataset.auraProofZoomApplied === "true") {
+      return {
+        applied: true,
+        reason: "already-applied",
+        scale: Number(node.dataset.auraProofZoomScale || 1),
+      };
+    }
+
+    const rect = best.rect;
+    const scale = rect.width < 380 || rect.height < 300 ? 1.7 : 1.35;
+    node.dataset.auraProofZoomApplied = "true";
+    node.dataset.auraProofZoomScale = String(scale);
+    node.dataset.auraProofZoomPreviousTransform = node.style.transform || "";
+    node.dataset.auraProofZoomPreviousTransformOrigin = node.style.transformOrigin || "";
+    node.dataset.auraProofZoomPreviousZIndex = node.style.zIndex || "";
+    node.dataset.auraProofZoomPreviousWillChange = node.style.willChange || "";
+    node.style.transformOrigin = "top left";
+    node.style.transform = `${node.style.transform || ""} scale(${scale})`.trim();
+    node.style.zIndex = "2147483647";
+    node.style.willChange = "transform";
+
+    const anchorNodes = [];
+    for (const selector of anchors) {
+      for (const anchor of document.querySelectorAll(selector)) {
+        if (anchor instanceof HTMLElement && isVisibleNode(anchor)) {
+          anchorNodes.push(anchor.getBoundingClientRect().toJSON?.() || {
+            x: anchor.getBoundingClientRect().x,
+            y: anchor.getBoundingClientRect().y,
+            width: anchor.getBoundingClientRect().width,
+            height: anchor.getBoundingClientRect().height,
+          });
+        }
+      }
+    }
+
+    return {
+      applied: true,
+      reason: "applied",
+      scale,
+      target: node.getAttribute("data-agent-surface") || node.getAttribute("role") || "proof-surface",
+      anchorCount: anchorNodes.length,
+    };
+  }, {
+    selectors: signalSelectors,
+    anchors: anchorSelectors,
+    candidatePhrases: phrases,
+    proofSurfaceSelector: PROOF_SURFACE_SELECTOR,
+  }).catch((error) => ({
+    applied: false,
+    reason: error instanceof Error ? error.message : String(error),
+  }));
+}
+
+async function resetFocusedProofZoom(page) {
+  return page.evaluate(() => {
+    let resetCount = 0;
+    for (const node of document.querySelectorAll("[data-aura-proof-zoom-applied='true']")) {
+      if (!(node instanceof HTMLElement)) {
+        continue;
+      }
+      node.style.transform = node.dataset.auraProofZoomPreviousTransform || "";
+      node.style.transformOrigin = node.dataset.auraProofZoomPreviousTransformOrigin || "";
+      node.style.zIndex = node.dataset.auraProofZoomPreviousZIndex || "";
+      node.style.willChange = node.dataset.auraProofZoomPreviousWillChange || "";
+      delete node.dataset.auraProofZoomApplied;
+      delete node.dataset.auraProofZoomScale;
+      delete node.dataset.auraProofZoomPreviousTransform;
+      delete node.dataset.auraProofZoomPreviousTransformOrigin;
+      delete node.dataset.auraProofZoomPreviousZIndex;
+      delete node.dataset.auraProofZoomPreviousWillChange;
+      resetCount += 1;
+    }
+    return resetCount;
+  }).catch(() => 0);
+}
+
+async function findProofTextBoxWithinSurfaces(page, focusPhrases = [], requiredUiSignals = []) {
+  const phrases = normalizeArray(focusPhrases, 12)
+    .map((entry) => String(entry || "").trim())
+    .filter((entry) => entry.length >= 3)
+    .sort((left, right) => right.length - left.length);
+
+  if (phrases.length === 0) {
+    return null;
+  }
+
+  return page.evaluate(({ candidatePhrases, signalSelectors, proofSurfaceSelector }) => {
+    const normalize = (value) => String(value || "").toLowerCase().replace(/\s+/g, " ").trim();
+    const isVisibleNode = (node) => {
+      if (!(node instanceof HTMLElement)) {
+        return false;
+      }
+      const style = window.getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      return style.display !== "none"
+        && style.visibility !== "hidden"
+        && Number(style.opacity || 1) > 0.05
+        && rect.width > 0
+        && rect.height > 0;
+    };
+    const normalizedPhrases = candidatePhrases.map(normalize).filter(Boolean);
+    const roots = new Set();
+    for (const selector of signalSelectors) {
+      for (const node of document.querySelectorAll(selector)) {
+        if (node instanceof HTMLElement) {
+          roots.add(node);
+        }
+      }
+    }
+    for (const node of document.querySelectorAll(proofSurfaceSelector)) {
+      if (node instanceof HTMLElement) {
+        roots.add(node);
+      }
+    }
+    roots.add(document.body);
+
+    const surfaceName = (surface) =>
+      surface?.getAttribute?.("data-agent-surface")
+      || surface?.getAttribute?.("aria-label")
+      || surface?.getAttribute?.("role")
+      || "proof-surface";
+
+    let best = null;
+    for (const root of roots) {
+      if (!isVisibleNode(root)) {
+        continue;
+      }
+      const rootSurface = root.closest?.(proofSurfaceSelector) || root;
+      const rootRect = rootSurface.getBoundingClientRect();
+      const rootArea = Math.max(1, rootRect.width * rootRect.height);
+      for (const node of [root, ...root.querySelectorAll("*")]) {
+        if (!isVisibleNode(node)) {
+          continue;
+        }
+        const text = normalize(node.innerText || node.textContent || "");
+        const matchedPhrase = normalizedPhrases.find((phrase) => text.includes(phrase));
+        if (!matchedPhrase) {
+          continue;
+        }
+        const rect = node.getBoundingClientRect();
+        const area = rect.width * rect.height;
+        if (area < 80) {
+          continue;
+        }
+        const surface = node.closest(proofSurfaceSelector) || rootSurface;
+        const surfaceRect = surface.getBoundingClientRect();
+        const inSignalSurface = signalSelectors.some((selector) => {
+          try {
+            return surface.matches(selector) || node.matches(selector) || Boolean(node.closest(selector));
+          } catch {
+            return false;
+          }
+        });
+        const surfaceArea = Math.max(1, surfaceRect.width * surfaceRect.height);
+        const signalBonus = inSignalSurface ? 1800 : 0;
+        const smallSurfaceBonus = surfaceArea <= rootArea * 0.55 ? 500 : 0;
+        const score = signalBonus + smallSurfaceBonus + (matchedPhrase.length * 1000) - area - surfaceArea / 100;
+        if (!best || score > best.score) {
+          best = {
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height,
+            phrase: matchedPhrase,
+            score,
+            targetName: surfaceName(surface),
+            surfaceBox: {
+              x: surfaceRect.x,
+              y: surfaceRect.y,
+              width: surfaceRect.width,
+              height: surfaceRect.height,
+            },
+          };
+        }
+      }
+    }
+    return best;
+  }, {
+    candidatePhrases: phrases,
+    signalSelectors: getUiSignalSelectors(requiredUiSignals),
+    proofSurfaceSelector: PROOF_SURFACE_SELECTOR,
+  }).catch(() => null);
 }
 
 async function findTextFocusedSurfaceBox(page, focusPhrases = []) {
@@ -689,6 +1321,11 @@ function shouldIncludeCompanionSurface(primaryBox, companionBox, viewport) {
 async function captureProofScreenshot(page, outputPath = null, focusPhrases = [], options = {}) {
   const viewport = page.viewportSize() ?? DEFAULT_DEMO_VIEWPORT;
   const largeProofCrop = getLargeProofCropSize(viewport);
+  const requiredUiSignals = normalizeArray(options.requiredUiSignals);
+  if (requiredUiSignals.includes("modelPickerVisible")) {
+    await resetFocusedProofZoom(page);
+  }
+  const proofZoom = await applyFocusedProofZoom(page, { requiredUiSignals, focusPhrases });
   const dialogShot = await firstVisibleBox([
     { kind: "dialog", locator: page.getByRole("dialog"), padding: 24 },
     { kind: "agent-editor", locator: page.locator('[data-agent-surface="agent-editor"]'), padding: 24 },
@@ -697,7 +1334,7 @@ async function captureProofScreenshot(page, outputPath = null, focusPhrases = []
 
   if (dialogShot) {
     const clip = await unionClip(page, [dialogShot.locator], dialogShot.padding);
-    await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
+    await takeProofScreenshot(page, { ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
     return {
       kind: dialogShot.kind,
       targets: [dialogShot.kind],
@@ -714,7 +1351,18 @@ async function captureProofScreenshot(page, outputPath = null, focusPhrases = []
   const agentChatPanel = page.locator('[data-agent-surface="agent-chat-panel"]').first();
   const agentDetailPanel = page.locator('[data-agent-surface="agent-detail-panel"]').first();
   const notesEditor = page.locator('[data-agent-surface="notes-editor"]').first();
-  const requiresSidekick = normalizeArray(options.requiredUiSignals).includes("sidekickVisible");
+  const requiresSidekick = requiredUiSignals.includes("sidekickVisible");
+
+  if (requiredUiSignals.includes("modelPickerVisible")) {
+    const uiSignalProof = await findUiSignalProofClip(page, viewport, ["modelPickerVisible"]);
+    if (uiSignalProof?.clip) {
+      await takeProofScreenshot(page, { ...(outputPath ? { path: outputPath } : {}), clip: uiSignalProof.clip });
+      return {
+        ...uiSignalProof,
+        proofZoom,
+      };
+    }
+  }
 
   if (requiresSidekick) {
     const requiredTargets = [];
@@ -743,7 +1391,7 @@ async function captureProofScreenshot(page, outputPath = null, focusPhrases = []
 
     if (sidekickPanelShot && requiredTargets.length > 0) {
       const clip = await unionClip(page, requiredTargets.map((target) => target.locator), 24);
-      await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
+      await takeProofScreenshot(page, { ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
       return {
         kind: "surface-union",
         targets: requiredTargets.map((target) => target.targetName),
@@ -752,25 +1400,41 @@ async function captureProofScreenshot(page, outputPath = null, focusPhrases = []
     }
   }
 
+  const textLocatorBox = await findTextLocatorFocusBox(page, focusPhrases);
+  const proofTextBox = await findProofTextBoxWithinSurfaces(page, focusPhrases, requiredUiSignals);
+  if (isVisibleBox(proofTextBox)) {
+    const contextClip = await findContextClipFromText(page, viewport, proofTextBox);
+    if (contextClip) {
+      await takeProofScreenshot(page, { ...(outputPath ? { path: outputPath } : {}), clip: contextClip });
+      return {
+        kind: "surface-union",
+        targets: uniqueStrings([proofTextBox.targetName, ...getUiSignalTargetNames(requiredUiSignals)]),
+        clip: contextClip,
+        proofZoom,
+      };
+    }
+  }
+
   const uiSignalProof = await findUiSignalProofClip(page, viewport, options.requiredUiSignals);
   if (uiSignalProof?.clip) {
-    await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: uiSignalProof.clip });
+    await takeProofScreenshot(page, { ...(outputPath ? { path: outputPath } : {}), clip: uiSignalProof.clip });
     return uiSignalProof;
   }
 
-  const textLocatorBox = await findTextLocatorFocusBox(page, focusPhrases);
   if (isVisibleBox(textLocatorBox)) {
-    const clip = buildClipFromBounds(textLocatorBox, viewport, 36, {
+    const contextClip = await findContextClipFromText(page, viewport, textLocatorBox);
+    const clip = contextClip ?? buildClipFromBounds(textLocatorBox, viewport, 36, {
       minWidth: largeProofCrop.width,
       minHeight: largeProofCrop.height,
     });
     const coverage = clipCoverageForViewport(viewport, clip);
     if (coverage === null || coverage >= 0.08) {
-      await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
+      await takeProofScreenshot(page, { ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
       return {
-        kind: "body-focus",
-        targets: [],
+        kind: contextClip ? "surface-union" : "body-focus",
+        targets: contextClip ? getUiSignalTargetNames(requiredUiSignals) : [],
         clip,
+        proofZoom,
       };
     }
   }
@@ -781,7 +1445,7 @@ async function captureProofScreenshot(page, outputPath = null, focusPhrases = []
       minWidth: largeProofCrop.width,
       minHeight: largeProofCrop.height,
     });
-    await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
+    await takeProofScreenshot(page, { ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
     return {
       kind: textFocusedBox.targetName ? "main-panel-focus" : "body-focus",
       targets: textFocusedBox.targetName ? [textFocusedBox.targetName] : [],
@@ -799,7 +1463,7 @@ async function captureProofScreenshot(page, outputPath = null, focusPhrases = []
 
   if (focusedSurface) {
     const clip = await unionClip(page, [focusedSurface.locator], focusedSurface.padding);
-    await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
+    await takeProofScreenshot(page, { ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
     return {
       kind: focusedSurface.kind,
       targets: [focusedSurface.kind],
@@ -849,7 +1513,7 @@ async function captureProofScreenshot(page, outputPath = null, focusPhrases = []
     }
 
     const clip = await unionClip(page, screenshotTargets.map((target) => target.locator), 24);
-    await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
+    await takeProofScreenshot(page, { ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
     return {
       kind: screenshotTargets.length > 1 ? "surface-union" : "main-panel-focus",
       targets: screenshotTargets.map((target) => target.targetName),
@@ -874,7 +1538,7 @@ async function captureProofScreenshot(page, outputPath = null, focusPhrases = []
 
   if (visibleTargets.length > 0) {
     const clip = await unionClip(page, visibleTargets.map((target) => target.locator), 24);
-    await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
+    await takeProofScreenshot(page, { ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
     return {
       kind: "surface-union",
       targets: visibleTargets.map((target) => target.kind),
@@ -882,7 +1546,7 @@ async function captureProofScreenshot(page, outputPath = null, focusPhrases = []
     };
   }
 
-  await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), fullPage: true });
+  await takeProofScreenshot(page, { ...(outputPath ? { path: outputPath } : {}), fullPage: true });
   return {
     kind: "full-page",
     targets: ["body"],
@@ -1052,20 +1716,46 @@ function escapeRegex(value) {
 async function maybeVisible(locator) {
   const count = await locator.count().catch(() => 0);
   if (!count) return false;
-  return locator.first().isVisible().catch(() => false);
+  for (let index = 0; index < Math.min(count, 20); index += 1) {
+    if (await locator.nth(index).isVisible().catch(() => false)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 async function maybeClick(locator) {
-  if (!await maybeVisible(locator)) {
-    return false;
+  const count = await locator.count().catch(() => 0);
+  for (let index = 0; index < Math.min(count, 20); index += 1) {
+    const candidate = locator.nth(index);
+    if (!await candidate.isVisible().catch(() => false)) {
+      continue;
+    }
+    await candidate.click({ force: true });
+    return true;
   }
-  await locator.first().click({ force: true });
-  return true;
+  return false;
+}
+
+async function firstVisibleLocator(locator, limit = 20) {
+  const count = await locator.count().catch(() => 0);
+  for (let index = 0; index < Math.min(count, limit); index += 1) {
+    const candidate = locator.nth(index);
+    if (!await candidate.isVisible().catch(() => false)) {
+      continue;
+    }
+    const box = await candidate.boundingBox().catch(() => null);
+    if (box && box.width > 0 && box.height > 0) {
+      return candidate;
+    }
+  }
+  return null;
 }
 
 async function collectVisibleModelOptionLabels(page) {
-  const modelPicker = page.locator('[data-agent-surface="model-picker"]').first();
-  const optionLocator = modelPicker.locator('button, [role="menuitem"], [role="option"]');
+  const optionLocator = page.locator(
+    '[data-agent-surface="model-picker"] button, [data-agent-surface="model-picker"] [role="menuitem"], [data-agent-surface="model-picker"] [role="option"]',
+  );
   const count = await optionLocator.count().catch(() => 0);
   const labels = [];
   for (let index = 0; index < Math.min(count, 24); index += 1) {
@@ -1084,10 +1774,115 @@ async function collectVisibleModelOptionLabels(page) {
   return labels;
 }
 
+async function getModelPickerDomState(page) {
+  return page.evaluate(() => {
+    const isVisible = (node) => {
+      if (!node || !(node instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      return style.display !== "none"
+        && style.visibility !== "hidden"
+        && Number(style.opacity || 1) > 0.05
+        && rect.width > 0
+        && rect.height > 0;
+    };
+    const triggerSelectors = [
+      '[data-agent-surface="chat-input-bar"] [data-agent-action="open-model-picker"]',
+      '[data-agent-action="open-model-picker"]',
+      '[data-agent-surface="chat-input-bar"] button[aria-haspopup="menu"]',
+    ];
+    const triggers = triggerSelectors
+      .flatMap((selector) => Array.from(document.querySelectorAll(selector)))
+      .filter((node, index, nodes) => nodes.indexOf(node) === index)
+      .filter(isVisible);
+    const menus = Array.from(document.querySelectorAll('[data-agent-surface="model-picker"]'))
+      .filter(isVisible);
+    const labels = menus.flatMap((menu) =>
+      Array.from(menu.querySelectorAll('button, [role="menuitem"], [role="option"]'))
+        .filter(isVisible)
+        .map((node) => String(node.textContent || "").replace(/\s+/g, " ").trim())
+        .filter(Boolean),
+    );
+    return {
+      triggerVisible: triggers.length > 0,
+      triggerText: String(triggers[0]?.textContent || "").replace(/\s+/g, " ").trim() || null,
+      expanded: triggers.some((node) =>
+        String(node.getAttribute("aria-expanded") || "").toLowerCase() === "true"),
+      menuVisible: menus.length > 0,
+      labels,
+    };
+  }).catch(() => ({
+    triggerVisible: false,
+    triggerText: null,
+    expanded: false,
+    menuVisible: false,
+    labels: [],
+  }));
+}
+
+async function clickVisibleModelPickerTrigger(page) {
+  return page.evaluate(() => {
+    const isVisible = (node) => {
+      if (!node || !(node instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      return style.display !== "none"
+        && style.visibility !== "hidden"
+        && Number(style.opacity || 1) > 0.05
+        && rect.width > 0
+        && rect.height > 0;
+    };
+    const candidates = [
+      ...document.querySelectorAll('[data-agent-surface="chat-input-bar"] [data-agent-action="open-model-picker"]'),
+      ...document.querySelectorAll('[data-agent-action="open-model-picker"]'),
+      ...document.querySelectorAll('[data-agent-surface="chat-input-bar"] button[aria-haspopup="menu"]'),
+    ].filter((node, index, nodes) => nodes.indexOf(node) === index)
+      .filter(isVisible);
+    const trigger = candidates[0];
+    if (!trigger || !(trigger instanceof HTMLElement)) {
+      return { clicked: false, reason: "no-visible-trigger" };
+    }
+    trigger.click();
+    return {
+      clicked: true,
+      text: String(trigger.textContent || "").replace(/\s+/g, " ").trim(),
+    };
+  }).catch((error) => ({ clicked: false, reason: error?.message || "dom-click-failed" }));
+}
+
+async function clickVisibleShowAllModels(page) {
+  return page.evaluate(() => {
+    const isVisible = (node) => {
+      if (!node || !(node instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      return style.display !== "none"
+        && style.visibility !== "hidden"
+        && Number(style.opacity || 1) > 0.05
+        && rect.width > 0
+        && rect.height > 0;
+    };
+    const button = Array.from(document.querySelectorAll('[data-agent-surface="model-picker"] button, button'))
+      .find((node) => isVisible(node) && /show all models/i.test(String(node.textContent || "")));
+    if (!button || !(button instanceof HTMLElement)) {
+      return false;
+    }
+    button.click();
+    return true;
+  }).catch(() => false);
+}
+
 async function ensureModelPickerVisible(page, requiredPhrases = []) {
-  const trigger = page.locator('[data-agent-action="open-model-picker"]').first();
-  const menu = page.locator('[data-agent-surface="model-picker"]').first();
-  if (!await maybeVisible(trigger)) {
+  const trigger = await firstVisibleLocator(
+    page.locator(
+      [
+        '[data-agent-surface="chat-input-bar"] [data-agent-action="open-model-picker"]',
+        '[data-agent-action="open-model-picker"]',
+        '[data-agent-surface="chat-input-bar"] button[aria-haspopup="menu"]',
+      ].join(", "),
+    ),
+  );
+  if (!trigger) {
     return false;
   }
 
@@ -1096,7 +1891,8 @@ async function ensureModelPickerVisible(page, requiredPhrases = []) {
     .filter(Boolean);
 
   const menuContainsRequiredPhrase = async () => {
-    const labels = await collectVisibleModelOptionLabels(page);
+    const state = await getModelPickerDomState(page);
+    const labels = state.labels.length ? state.labels : await collectVisibleModelOptionLabels(page);
     if (!labels.length) {
       return false;
     }
@@ -1109,35 +1905,51 @@ async function ensureModelPickerVisible(page, requiredPhrases = []) {
   };
 
   const expandIfNeeded = async () => {
-    const showAllButton = page.getByRole("button", { name: /show all models/i }).first();
-    if (await maybeVisible(showAllButton)) {
+    if (await clickVisibleShowAllModels(page)) {
+      await waitForUiCheckpoint(page);
+      return;
+    }
+    const showAllButton = await firstVisibleLocator(page.getByRole("button", { name: /show all models/i }));
+    if (showAllButton) {
       await showAllButton.click({ force: true });
       await waitForUiCheckpoint(page);
     }
   };
 
   const triggerExpanded = async () =>
-    String(await trigger.getAttribute("aria-expanded").catch(() => "") || "").toLowerCase() === "true";
+    (await getModelPickerDomState(page)).expanded
+    || String(await trigger.getAttribute("aria-expanded").catch(() => "") || "").toLowerCase() === "true";
 
   if (!await triggerExpanded()) {
-    await trigger.click({ force: true });
+    const clicked = await clickVisibleModelPickerTrigger(page);
+    if (!clicked.clicked) {
+      await trigger.click({ force: true });
+    }
     await waitForUiCheckpoint(page);
   }
 
   await expandIfNeeded();
 
-  let menuVisible = await maybeVisible(menu);
+  let domState = await getModelPickerDomState(page);
+  let menuVisible = domState.menuVisible || await maybeVisible(page.locator('[data-agent-surface="model-picker"]'));
   let phraseVisible = await menuContainsRequiredPhrase();
 
   if (!menuVisible || (normalizedRequiredPhrases.length > 0 && !phraseVisible)) {
-    await trigger.click({ force: true }).catch(() => {});
+    const clicked = await clickVisibleModelPickerTrigger(page);
+    if (!clicked.clicked) {
+      await trigger.click({ force: true }).catch(() => {});
+    }
     await waitForUiCheckpoint(page);
     if (!await triggerExpanded()) {
-      await trigger.click({ force: true }).catch(() => {});
+      const clickedAgain = await clickVisibleModelPickerTrigger(page);
+      if (!clickedAgain.clicked) {
+        await trigger.click({ force: true }).catch(() => {});
+      }
       await waitForUiCheckpoint(page);
     }
     await expandIfNeeded();
-    menuVisible = await maybeVisible(menu);
+    domState = await getModelPickerDomState(page);
+    menuVisible = domState.menuVisible || await maybeVisible(page.locator('[data-agent-surface="model-picker"]'));
     phraseVisible = await menuContainsRequiredPhrase();
   }
 
@@ -1149,6 +1961,8 @@ async function ensureRequiredUiSignalsVisible(page, phase) {
   if (!requiredUiSignals.includes("modelPickerVisible")) {
     return;
   }
+
+  await resetFocusedProofZoom(page);
 
   const requiredPhrases = normalizeArray(
     Array.isArray(phase?.proofRequirements)
@@ -2634,6 +3448,9 @@ const profileId = String(args.profile || "agent-shell-explorer").trim();
 const outputRoot = path.resolve(args["output-dir"] || path.join(process.cwd(), "output", "demo-screenshots"));
 const profile = getDemoScreenshotProfile(profileId);
 const changedFiles = await readChangedFiles(args);
+const navigationLessonsMemoryPath = resolveNavigationLessonsMemoryPath(args, channel);
+const autoWriteNavigationLesson = shouldAutoWriteNavigationLesson(args);
+process.env.AURA_DEMO_NAVIGATION_LESSONS_PATH = navigationLessonsMemoryPath;
 
 if (!prompt && !args.changelog) {
   throw new Error("Pass either --prompt or --changelog so the agent has a story to demonstrate.");
@@ -2723,6 +3540,7 @@ try {
   const page = await context.newPage();
   const viewport = seededProfile.viewport ?? DEFAULT_DEMO_VIEWPORT;
   await page.setViewportSize(viewport);
+  const screenshotScale = await applyScreenshotDeviceScaleFactor(page, viewport);
 
   page.on("console", (message) => {
     consoleMessages.push(`[${message.type()}] ${message.text()}`);
@@ -2840,6 +3658,9 @@ try {
     briefConfidence: seededBrief.confidence,
     desktopOnly: seededBrief.desktopOnly !== false,
     rationale: seededBrief.rationale,
+    navigationContract: seededBrief.navigationContract ?? null,
+    matchedNavigationLessons: seededBrief.matchedNavigationLessons ?? [],
+    uiSurfaceIndex: seededBrief.uiSurfaceIndex ?? null,
     successChecklist: seededBrief.successChecklist,
     setupPlan: seededBrief.setupPlan ?? [],
     validationSignals: seededBrief.validationSignals ?? [],
@@ -2849,6 +3670,7 @@ try {
     changedFiles,
     source: changelog?.source ?? (prompt ? "prompt" : null),
     stagehandCacheMode,
+    screenshotScale,
     excludedAgentTools,
     seedPlanStatus: seedPlan.status,
     seedPlanStrategy: seedPlan.strategy,
@@ -2880,6 +3702,7 @@ try {
       actionCount: phase.actionCount,
       screenshot: phase.screenshot,
       currentUrl: phase.currentUrl,
+      visibleText: phase.visibleText,
       validationSignals: phase.validationSignals,
       validationMatches: phase.validationMatches,
       proofRequirements: phase.proofRequirements,
@@ -2906,11 +3729,58 @@ try {
     historyLength: Array.isArray(history) ? history.length : 0,
     stagehandLogCount: stagehandLogs.length,
   };
+  const autoLessonCandidate = buildAutoNavigationLesson(summary);
+  let navigationLessonWrite = {
+    enabled: autoWriteNavigationLesson,
+    path: navigationLessonsMemoryPath,
+    written: false,
+    action: "skipped",
+    lessonId: autoLessonCandidate.lesson?.id ?? null,
+    reason: autoLessonCandidate.reason,
+  };
+
+  if (autoWriteNavigationLesson && autoLessonCandidate.lesson) {
+    navigationLessonWrite = {
+      enabled: true,
+      ...(await mergeAutoNavigationLesson(navigationLessonsMemoryPath, autoLessonCandidate.lesson)),
+      reason: autoLessonCandidate.reason,
+    };
+  }
+  summary.navigationLearning = {
+    memoryPath: navigationLessonsMemoryPath,
+    autoWriteEnabled: autoWriteNavigationLesson,
+    candidateLesson: autoLessonCandidate.lesson,
+    write: navigationLessonWrite,
+  };
 
   await writeJson(path.join(outputDir, "agent-history.json"), history);
   await writeJson(path.join(outputDir, "agent-phases.json"), phaseResults);
   await writeJson(path.join(outputDir, "stagehand-logs.json"), stagehandLogs);
   await writeJson(path.join(outputDir, "production-summary.json"), summary);
+  await writeJson(path.join(outputDir, "navigation-learning-event.json"), {
+    schemaVersion: 1,
+    generatedAt: summary.generatedAt,
+    outcome: summary.ok ? "passed" : "failed",
+    story: summary.story,
+    changedFiles: summary.changedFiles,
+    targetAppId: summary.targetAppId,
+    navigationContract: summary.navigationContract,
+    matchedNavigationLessons: summary.matchedNavigationLessons,
+    proofRequirementsOk: summary.phases?.every((phase) => phase.proofRequirementsOk !== false) ?? null,
+    requiredUiStateOk: summary.phases?.every((phase) => phase.requiredUiStateOk !== false) ?? null,
+    candidateLesson: autoLessonCandidate.lesson,
+    navigationLessonWrite,
+    qualityScores: (summary.phases ?? []).map((phase) => ({
+      id: phase.id,
+      score: phase.quality?.score ?? null,
+      ok: phase.quality?.ok ?? null,
+    })),
+    promoteToLessonsWhen: [
+      "The screenshot clearly proves a recurring navigation pattern.",
+      "The rule is app/surface-level, not one-off content.",
+      "The lesson improves future inference without hardcoding a feature-specific script.",
+    ],
+  });
   await writeText(path.join(outputDir, "console.log"), `${consoleMessages.join("\n")}\n`);
 
   console.log(JSON.stringify(summary, null, 2));

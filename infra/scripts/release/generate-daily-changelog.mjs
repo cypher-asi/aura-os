@@ -218,6 +218,11 @@ function collectEntryCommitShas(entry) {
 
 function inferEntryMediaHeuristic(entry, commitLookup, { batchId = resolveEntryBatchId(entry) } = {}) {
   const files = collectEntryCommitFiles(entry, commitLookup);
+  const commitSubjectsHaystack = collectEntryCommitShas(entry)
+    .map((sha) => commitLookup.get(sha)?.subject)
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
   const headlineHaystack = [
     entry?.title,
     entry?.summary,
@@ -230,11 +235,18 @@ function inferEntryMediaHeuristic(entry, commitLookup, { batchId = resolveEntryB
   const uiFacingFileCount = countMatching(files, isUiFacingFile);
   const hasUiFacingFile = uiFacingFileCount > 0;
   const hasInterfaceSourceFile = files.some((file) => file.startsWith("interface/src/"));
+  const hasRenderableInterfaceFile = files.some((file) => (
+    file.startsWith("interface/src/apps/") ||
+    file.startsWith("interface/src/components/") ||
+    file.startsWith("interface/src/pages/") ||
+    file.startsWith("interface/src/routes/") ||
+    file.startsWith("interface/src/views/")
+  ));
   const hasDesktopShellFile = files.some((file) => file.startsWith("apps/aura-os-desktop/src/"));
   const onlyInfraFiles = files.length > 0 && files.every(isInfraOnlyFile);
-  const hasHeadlineUiSurfaceKeyword = /(feedback|agent|chat|notes|editor|panel|board|thread|modal|launcher|screen|window|settings|feed|timeline|preview|toolbar|sidekick|debug app|task panel|message bubble)/.test(headlineHaystack);
+  const hasHeadlineUiSurfaceKeyword = /(feedback|agent|chat|notes|editor|panel|board|thread|modal|launcher|screen|\bwindow\b|settings|feed|timeline|preview|toolbar|sidekick|debug app|task panel|message bubble)/.test(headlineHaystack);
   const uiFacingRatio = files.length > 0 ? uiFacingFileCount / files.length : 0;
-  const hasSpecificUiSurfaceKeyword = /(feedback|agent|chat|notes|editor|panel|board|thread|modal|launcher|screen|window|settings|feed|timeline|preview|toolbar|sidekick|debug app|task panel|message bubble)/.test(textHaystack);
+  const hasSpecificUiSurfaceKeyword = /(feedback|agent|chat|notes|editor|panel|board|thread|modal|launcher|screen|\bwindow\b|settings|feed|timeline|preview|toolbar|sidekick|debug app|task panel|message bubble)/.test(textHaystack);
   const hasGenericUiKeyword = /(desktop|app|tab|skill|model)/.test(textHaystack);
   const hasMicroUiKeyword = /(picker|dropdown|selector|menu|option|toggle|switch|checkbox|radio|chip|popover|tooltip|dialog|modal|composer|input bar|permission|permissions)/.test(textHaystack)
     || files.some((file) => /(ChatInputBar|Dropdown|Selector|Modal|Popover|Tooltip|Permission|Settings)/i.test(file));
@@ -244,7 +256,39 @@ function inferEntryMediaHeuristic(entry, commitLookup, { batchId = resolveEntryB
   const hasHeadlineStrongInfraKeyword = /(runtime config|harness|plumbing|pipeline|recovery|heuristic|analyzer|domain event|broadcast|ingestion|preflight|kill switch|retry budget|task state|server handler)/.test(headlineHaystack);
   const hasWeakInfraKeyword = /(config|environment|env\b|flag|toggle|token|secret)/.test(textHaystack);
   const hasReleaseKeyword = /(release|workflow|artifact|packaging|notariz|build|ci|linux|android|ios submit|code sign)/.test(textHaystack);
+  const hasMaintenanceSubject = /(?:^|\s)(fix|style|refactor|chore|test|ci|build)(?:\(|:)/.test(commitSubjectsHaystack);
+  const hasFeatureSubject = /(?:^|\s)feat(?:\(|:)/.test(commitSubjectsHaystack);
+  const hasLiteralProofKeyword = /(copied label|real command|running [`']?undefined|login with zero pro|model picker|model selector|project selector|webgl viewer|image generation flow|sidekick panels|tab layout|lightbox|leftmenutree|live runs|gpt-5\.5)/.test(textHaystack);
+  const hasSubtleFixKeyword = /(align|alignment|spacing|border|width|bold|jitter|crowd|scroll|resize|stable|stability|fallback|cooldown|auth|redirect|bootstrap|decode|base64|token|inset|edge|edges|refresh|recover|restart|conflict|overflow)/.test(textHaystack);
+  const hasMajorFeatureText = /(new app|scaffold|launch|visual overhaul|full-screen|two-column|webgl viewer|3d viewer|generation flow|project selector|model selector|model picker|dropdown|picker|lightbox|webgl|3d|aura 3d|feedback app|notes editor)/.test(textHaystack);
+  const hasProofableVisualIntent = hasSpecificUiSurfaceKeyword
+    || hasMicroUiKeyword
+    || hasLargeSurfaceKeyword
+    || hasMajorFeatureText
+    || /\b(add|show|surface|confirm|remember|live|visual|layout|title|label|real command)\b/.test(textHaystack);
   const isBackendHeavyMixedBatch = hasUiFacingFile && files.length >= 6 && uiFacingRatio < 0.35;
+  const isSubtleMaintenanceChange = hasMaintenanceSubject
+    && !hasFeatureSubject
+    && hasSubtleFixKeyword
+    && !hasMajorFeatureText;
+  const isMaintenanceWithoutLiteralProof = hasMaintenanceSubject
+    && !hasFeatureSubject
+    && !hasLiteralProofKeyword
+    && !hasMajorFeatureText;
+  const touchesBackendOrSupportCode = files.some((file) => (
+    file.startsWith("apps/aura-os-server/") ||
+    file.startsWith("interface/src/api/") ||
+    file.startsWith("interface/src/hooks/") ||
+    file.startsWith("interface/src/stores/") ||
+    file.startsWith("interface/src/utils/")
+  ));
+  const isFeatureWithoutClearHeadlineSurface = hasFeatureSubject
+    && touchesBackendOrSupportCode
+    && !hasHeadlineUiSurfaceKeyword
+    && !hasMajorFeatureText;
+  const isDesktopOnlyNonBrowserProof = hasDesktopShellFile
+    && !hasInterfaceSourceFile
+    && /(windows|updater|auto-updater|nsis|handoff)/.test(textHaystack);
 
   let score = 0;
   const reasons = [];
@@ -279,6 +323,26 @@ function inferEntryMediaHeuristic(entry, commitLookup, { batchId = resolveEntryB
     score -= 2;
     reasons.push("entry language points to release plumbing rather than a product screen");
   }
+  if (isSubtleMaintenanceChange) {
+    score -= 4;
+    reasons.push("fallback classifier treats subtle maintenance fixes as non-media unless a durable product surface is explicit");
+  }
+  if (isMaintenanceWithoutLiteralProof) {
+    score -= 3;
+    reasons.push("fallback classifier skips maintenance commits unless the visible proof is explicit");
+  }
+  if (isFeatureWithoutClearHeadlineSurface) {
+    score -= 3;
+    reasons.push("fallback classifier skips feature commits whose headline does not identify a clear visual surface");
+  }
+  if (hasInterfaceSourceFile && !hasRenderableInterfaceFile) {
+    score -= 2;
+    reasons.push("interface changes are support code without a directly renderable screen component");
+  }
+  if (isDesktopOnlyNonBrowserProof) {
+    score -= 4;
+    reasons.push("desktop-only updater changes are not reliable Browserbase screenshot targets");
+  }
   if (uiFacingRatio >= 0.5 && hasUiFacingFile) {
     score += 2;
     reasons.push("most changed files point at UI-facing surfaces");
@@ -297,16 +361,21 @@ function inferEntryMediaHeuristic(entry, commitLookup, { batchId = resolveEntryB
       isBackendHeavyMixedBatch
       && (!hasHeadlineUiSurfaceKeyword || uiFacingRatio < 0.2)
     )
+    && !isSubtleMaintenanceChange
+    && !isMaintenanceWithoutLiteralProof
+    && !isFeatureWithoutClearHeadlineSurface
+    && !isDesktopOnlyNonBrowserProof
     && (
       (files.length === 0 && hasSpecificUiSurfaceKeyword && !hasHeadlineStrongInfraKeyword && !hasReleaseKeyword)
       || (
         hasInterfaceSourceFile
+        && hasRenderableInterfaceFile
         && hasSpecificUiSurfaceKeyword
         && (!isBackendHeavyMixedBatch || hasHeadlineUiSurfaceKeyword)
         && (!hasHeadlineStrongInfraKeyword || hasHeadlineUiSurfaceKeyword)
       )
       || (hasDesktopShellFile && hasSpecificUiSurfaceKeyword && !hasHeadlineStrongInfraKeyword)
-      || (hasUiFacingFile && score >= 5 && (!hasHeadlineStrongInfraKeyword || hasHeadlineUiSurfaceKeyword))
+      || (hasUiFacingFile && hasRenderableInterfaceFile && hasProofableVisualIntent && score >= 5 && (!hasHeadlineStrongInfraKeyword || hasHeadlineUiSurfaceKeyword))
     );
   const slug = slugify(entry?.title || batchId || "entry");
   const slotId = `${batchId || "entry"}-${slug || "media"}`;

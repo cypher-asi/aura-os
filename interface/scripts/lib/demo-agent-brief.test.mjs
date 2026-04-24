@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -117,9 +119,69 @@ test("buildDemoAgentBrief adds grounded model-picker proof rules for named model
   assert.ok(brief.proofRequirements.some((entry) => entry.anyOf.includes("GPT-5.5")));
   assert.ok(brief.requiredUiSignals.includes("chatComposerVisible"));
   assert.ok(brief.requiredUiSignals.includes("modelPickerVisible"));
+  assert.equal(brief.navigationContract.primarySurface, "chat input model picker");
+  assert.equal(brief.navigationContract.captureMode, "contextual-proof");
+  assert.ok(brief.navigationContract.expectedVisibleLabels.includes("GPT-5.5"));
+  assert.ok(brief.matchedNavigationLessons.some((lesson) => lesson.id === "chat-model-picker-visible-option"));
+  assert.equal(brief.matchedNavigationLessons.some((lesson) => lesson.id === "agent-skills-tab-proof"), false);
+  assert.match(brief.proofInstruction, /Navigation contract/i);
 
   if (previous) {
     process.env.ANTHROPIC_API_KEY = previous;
+  }
+});
+
+test("buildDemoAgentBrief loads runtime navigation lessons from persistent media memory", async () => {
+  const previousKey = process.env.ANTHROPIC_API_KEY;
+  const previousLessonsPath = process.env.AURA_DEMO_NAVIGATION_LESSONS_PATH;
+  delete process.env.ANTHROPIC_API_KEY;
+
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-navigation-lessons-"));
+  const lessonsPath = path.join(tempDir, "navigation-lessons.json");
+  fs.writeFileSync(lessonsPath, `${JSON.stringify({
+    schemaVersion: 1,
+    lessons: [
+      {
+        id: "auto-billing-settings-proof",
+        description: "Billing identity changes should show the Team Settings billing panel.",
+        match: {
+          keywords: ["zerobillingmemory", "billing", "identity"],
+          changedFileGlobs: ["interface/src/components/OrgSettingsBilling/**"],
+        },
+        navigation: {
+          targetAppId: "settings",
+          surface: "team settings billing panel",
+          requiredUiSignals: [],
+          steps: ["Open Settings.", "Open Team Settings.", "Show the billing panel."],
+          forbiddenPhrases: ["Free plan mismatch"],
+          captureMode: "surface-proof",
+        },
+      },
+    ],
+  }, null, 2)}\n`);
+  process.env.AURA_DEMO_NAVIGATION_LESSONS_PATH = lessonsPath;
+
+  try {
+    const brief = await buildDemoAgentBrief({
+      prompt: "zerobillingmemory billing identity is now locked to the account.",
+      changedFiles: ["interface/src/components/OrgSettingsBilling/OrgSettingsBilling.tsx"],
+    });
+
+    assert.ok(brief.matchedNavigationLessons.some((lesson) => lesson.id === "auto-billing-settings-proof"));
+    assert.equal(brief.navigationContract.primarySurface, "team settings billing panel");
+    assert.ok(brief.navigationContract.navigationSteps.some((step) => /billing panel/i.test(step)));
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+    if (previousKey) {
+      process.env.ANTHROPIC_API_KEY = previousKey;
+    } else {
+      delete process.env.ANTHROPIC_API_KEY;
+    }
+    if (previousLessonsPath) {
+      process.env.AURA_DEMO_NAVIGATION_LESSONS_PATH = previousLessonsPath;
+    } else {
+      delete process.env.AURA_DEMO_NAVIGATION_LESSONS_PATH;
+    }
   }
 });
 
@@ -159,6 +221,8 @@ test("buildDemoAgentBrief adds modal-specific proof rules for deleting a skill",
   assert.ok(brief.setupPlan.some((entry) => /create exactly one demo skill/i.test(entry)));
   assert.ok(brief.interactionInstruction.includes("Delete skill confirmation dialog"));
   assert.ok(brief.forbiddenPhrases.includes("No skills yet"));
+  assert.equal(brief.navigationContract.primarySurface, "agent skills tab");
+  assert.ok(brief.matchedNavigationLessons.some((lesson) => lesson.id === "agent-skills-tab-proof"));
 
   if (previous) {
     process.env.ANTHROPIC_API_KEY = previous;
@@ -233,6 +297,9 @@ test("buildDemoAgentBrief requires process run output proof for output-block sto
   assert.ok(brief.proofRequirements.some((entry) => entry.anyOf.includes("Node Events")));
   assert.ok(brief.proofRequirements.some((entry) => entry.anyOf.includes("Completed Task Output")));
   assert.ok(brief.forbiddenPhrases.includes("No output persisted for this node"));
+  assert.equal(brief.navigationContract.primarySurface, "process run detail sidekick");
+  assert.ok(brief.navigationContract.navigationSteps.some((entry) => /run detail|node events|output sidekick/i.test(entry)));
+  assert.ok(brief.matchedNavigationLessons.some((lesson) => lesson.id === "process-run-output-sidekick"));
 
   if (previous) {
     process.env.ANTHROPIC_API_KEY = previous;
@@ -290,26 +357,30 @@ test("buildDemoAgentBrief keeps fallback proof signals when Anthropic returns em
   const previousKey = process.env.ANTHROPIC_API_KEY;
   const previousFetch = global.fetch;
   process.env.ANTHROPIC_API_KEY = "test-key";
+  let requestBody = "";
 
-  global.fetch = async () => ({
-    ok: true,
-    json: async () => ({
-      content: [{
-        type: "text",
-        text: JSON.stringify({
-          title: "GPT-5.5 picker",
-          story: "GPT-5.5 is now available from the chat input model picker.",
-          targetAppId: "agents",
-          confidence: "high",
-          validationSignals: [],
-          proofRequirements: [],
-          requiredUiSignals: [],
-          forbiddenPhrases: [],
-          desktopOnly: true,
-        }),
-      }],
-    }),
-  });
+  global.fetch = async (_url, options) => {
+    requestBody = String(options?.body || "");
+    return {
+      ok: true,
+      json: async () => ({
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            title: "GPT-5.5 picker",
+            story: "GPT-5.5 is now available from the chat input model picker.",
+            targetAppId: "agents",
+            confidence: "high",
+            validationSignals: [],
+            proofRequirements: [],
+            requiredUiSignals: [],
+            forbiddenPhrases: [],
+            desktopOnly: true,
+          }),
+        }],
+      }),
+    };
+  };
 
   try {
     const brief = await buildDemoAgentBrief({
@@ -326,6 +397,9 @@ test("buildDemoAgentBrief keeps fallback proof signals when Anthropic returns em
     assert.ok(brief.proofRequirements.some((entry) => entry.anyOf.includes("GPT-5.5")));
     assert.ok(brief.requiredUiSignals.includes("chatComposerVisible"));
     assert.ok(brief.requiredUiSignals.includes("modelPickerVisible"));
+    assert.match(requestBody, /UI surface index/);
+    assert.match(requestBody, /Matched learned navigation lessons/);
+    assert.match(requestBody, /Deterministic navigation contract/);
   } finally {
     global.fetch = previousFetch;
     if (previousKey) {

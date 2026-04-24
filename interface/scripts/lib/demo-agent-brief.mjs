@@ -4,6 +4,8 @@ import { promises as fs } from "node:fs";
 import { listDemoAgentApps } from "./demo-agent-app-catalog.mjs";
 import { resolveDemoChangedFilePath } from "./demo-repo-paths.mjs";
 
+const NAVIGATION_LESSONS_PATH = new URL("./changelog-media-navigation-lessons.json", import.meta.url);
+
 function clipText(value, maxLength) {
   const text = String(value || "").trim();
   if (text.length <= maxLength) {
@@ -845,7 +847,10 @@ async function analyzeChangedFile(filePath, apps) {
   }
 
   const absolutePath = resolveDemoChangedFilePath(normalizedPath);
-  const source = await fs.readFile(absolutePath, "utf8").catch(() => "");
+  const isProductInterfaceSource = normalizedPath.startsWith("interface/src/");
+  const source = isProductInterfaceSource
+    ? await fs.readFile(absolutePath, "utf8").catch(() => "")
+    : "";
   const uiStrings = extractUiStrings(source);
   const routeHints = extractRouteHints(source);
   const dataAgentSurfaces = extractDataAgentValues(source, "data-agent-surface", 8);
@@ -917,6 +922,7 @@ async function analyzeChangedFile(filePath, apps) {
 
   return {
     filePath: normalizedPath,
+    productInterfaceSource: isProductInterfaceSource,
     surfaceLabel,
     uiStrings: uiStrings.slice(0, 16),
     routeHints: routeHints.slice(0, 6),
@@ -970,6 +976,244 @@ async function buildChangedFileEvidence(changedFiles, apps) {
   };
 }
 
+async function readNavigationLessonsFile(filePath) {
+  const source = await fs.readFile(filePath, "utf8").catch(() => "");
+  if (!source.trim()) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(source);
+    return (Array.isArray(parsed?.lessons) ? parsed.lessons : [])
+      .filter((lesson) => lesson && typeof lesson === "object" && lesson.id)
+      .slice(0, 80);
+  } catch {
+    return [];
+  }
+}
+
+function resolveRuntimeNavigationLessonPaths() {
+  const configured = String(process.env.AURA_DEMO_NAVIGATION_LESSONS_PATH || "").trim();
+  if (!configured) {
+    return [];
+  }
+
+  return configured
+    .split(path.delimiter)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+async function loadNavigationLessons() {
+  const lessonGroups = await Promise.all([
+    readNavigationLessonsFile(NAVIGATION_LESSONS_PATH),
+    ...resolveRuntimeNavigationLessonPaths().map((lessonPath) => readNavigationLessonsFile(lessonPath)),
+  ]);
+  const byId = new Map();
+  for (const lesson of lessonGroups.flat()) {
+    if (!lesson?.id || byId.has(lesson.id)) {
+      continue;
+    }
+    byId.set(lesson.id, lesson);
+  }
+  return [...byId.values()].slice(0, 120);
+}
+
+function globToRegExp(glob) {
+  const escaped = String(glob || "")
+    .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+    .replace(/\*\*/g, "§DOUBLE_STAR§")
+    .replace(/\*/g, "[^/]*")
+    .replace(/§DOUBLE_STAR§/g, ".*");
+  return new RegExp(`^${escaped}$`, "i");
+}
+
+function matchGlob(filePath, glob) {
+  const normalizedPath = String(filePath || "").replace(/\\/g, "/");
+  return globToRegExp(glob).test(normalizedPath);
+}
+
+function matchNavigationLessons({ story, changedFiles = [], changedFileEvidence = null, targetAppId = null, lessons = [] } = {}) {
+  const storyTerms = tokenize([
+    story,
+    ...((changedFileEvidence?.files ?? []).flatMap((fileInfo) => [
+      fileInfo.surfaceLabel,
+      ...(fileInfo.uiStrings ?? []),
+      ...(fileInfo.dataAgentSurfaces ?? []),
+      ...(fileInfo.dataAgentActions ?? []),
+      ...(fileInfo.componentNames ?? []),
+    ])),
+  ]);
+  const normalizedFiles = normalizeArray([
+    ...(Array.isArray(changedFiles) ? changedFiles : []),
+    ...((changedFileEvidence?.files ?? []).map((fileInfo) => fileInfo.filePath)),
+  ], 24);
+
+  return lessons
+    .map((lesson) => {
+      const lessonKeywords = normalizeArray(lesson?.match?.keywords, 16);
+      const globs = normalizeArray(lesson?.match?.changedFileGlobs, 16);
+      const keywordHits = lessonKeywords.filter((keyword) => storyTerms.has(String(keyword).toLowerCase()));
+      const fileHits = normalizedFiles.filter((filePath) => globs.some((glob) => matchGlob(filePath, glob)));
+      const targetMatch = targetAppId && lesson?.navigation?.targetAppId === targetAppId;
+      const evidenceScore = normalizedFiles.length > 0
+        ? (fileHits.length > 0 ? (fileHits.length * 12) + (keywordHits.length * 5) : 0)
+        : (keywordHits.length * 5);
+      if (evidenceScore <= 0) {
+        return null;
+      }
+      const score = evidenceScore + (targetMatch ? 6 : 0);
+      return {
+        id: lesson.id,
+        description: lesson.description,
+        score,
+        keywordHits,
+        fileHits,
+        navigation: {
+          targetAppId: sanitizeVisibleProofPhrases([lesson?.navigation?.targetAppId], 1)[0] || lesson?.navigation?.targetAppId || null,
+          surface: sanitizeVisibleProofPhrases([lesson?.navigation?.surface], 1)[0] || lesson?.navigation?.surface || null,
+          requiredUiSignals: normalizeArray(lesson?.navigation?.requiredUiSignals, 4),
+          steps: normalizeArray(lesson?.navigation?.steps, 5),
+          forbiddenPhrases: normalizeArray(lesson?.navigation?.forbiddenPhrases, 5),
+          captureMode: sanitizeVisibleProofPhrases([lesson?.navigation?.captureMode], 1)[0] || lesson?.navigation?.captureMode || "surface-proof",
+        },
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => right.score - left.score || left.id.localeCompare(right.id))
+    .slice(0, 5);
+}
+
+function buildUiSurfaceIndex({ apps, changedFileEvidence = null, targetAppId = null }) {
+  const targetApps = targetAppId
+    ? apps.filter((app) => app.id === targetAppId)
+    : apps.slice(0, 6);
+  const files = (changedFileEvidence?.files ?? []).map((fileInfo) => ({
+    filePath: fileInfo.filePath,
+    surfaceLabel: fileInfo.surfaceLabel,
+    uiStrings: sanitizeVisibleProofPhrases(fileInfo.uiStrings ?? [], 8),
+    dataAgentSurfaces: normalizeArray(fileInfo.dataAgentSurfaces, 8),
+    dataAgentActions: normalizeArray(fileInfo.dataAgentActions, 8),
+    dataAgentFields: normalizeArray(fileInfo.dataAgentFields, 8),
+    componentNames: normalizeArray(fileInfo.componentNames, 8),
+    routeHints: normalizeArray(fileInfo.routeHints, 6),
+    appMatches: normalizeArray((fileInfo.appMatches ?? []).map((entry) => entry.appId), 4),
+  }));
+
+  const appSurfaces = targetApps.map((app) => ({
+    appId: app.id,
+    label: app.label,
+    entryPath: app.entryPath,
+    routeHints: normalizeArray(app.sourceContext?.routeHints, 8),
+    surfaces: normalizeArray(app.sourceContext?.surfaces, 12),
+    actions: normalizeArray(app.sourceContext?.actions, 12),
+    fields: normalizeArray(app.sourceContext?.fields, 8),
+    ariaLabels: sanitizeVisibleProofPhrases(app.sourceContext?.ariaLabels ?? [], 16),
+    createLabels: sanitizeVisibleProofPhrases(app.sourceContext?.createLabels ?? [], 8),
+  }));
+
+  return {
+    targetAppId: targetAppId || null,
+    appSurfaces,
+    changedFiles: files,
+    likelySurfaces: sanitizeVisibleProofPhrases([
+      ...files.map((fileInfo) => fileInfo.surfaceLabel),
+      ...files.flatMap((fileInfo) => fileInfo.uiStrings),
+      ...appSurfaces.flatMap((app) => app.surfaces),
+      ...appSurfaces.flatMap((app) => app.ariaLabels),
+    ], 16),
+  };
+}
+
+function buildNavigationContract({
+  story,
+  targetApp,
+  confidence,
+  setupPlan = [],
+  surfaceHints = [],
+  validationSignals = [],
+  proofRequirements = [],
+  requiredUiSignals = [],
+  forbiddenPhrases = [],
+  matchedNavigationLessons = [],
+  changedFileEvidence = null,
+  uiSurfaceIndex = null,
+} = {}) {
+  const primaryLesson = matchedNavigationLessons[0] ?? null;
+  const lessonNavigation = primaryLesson?.navigation ?? {};
+  const expectedVisibleLabels = sanitizeVisibleProofPhrases([
+    ...validationSignals,
+    ...proofRequirements.flatMap((entry) => entry?.anyOf ?? []),
+    ...surfaceHints,
+    lessonNavigation.surface,
+  ], 12);
+  const requiredSignals = normalizeArray([
+    ...requiredUiSignals,
+    ...(lessonNavigation.requiredUiSignals ?? []),
+  ], 6);
+  const forbiddenScreens = normalizeArray([
+    ...forbiddenPhrases,
+    ...(lessonNavigation.forbiddenPhrases ?? []),
+    "empty state",
+    "selection prompt",
+    "placeholder route",
+  ], 10);
+  const steps = normalizeArray([
+    ...(lessonNavigation.steps ?? []),
+    ...setupPlan,
+    targetApp ? `Stay inside the ${targetApp.label} app unless the live UI clearly proves a different app is correct.` : null,
+    expectedVisibleLabels.length > 0 ? `Before capture, verify readable visible proof labels: ${expectedVisibleLabels.slice(0, 5).join("; ")}.` : null,
+  ], 9);
+  const captureMode = lessonNavigation.captureMode
+    || (requiredSignals.some((signal) => /picker|composer/i.test(signal)) ? "contextual-proof" : "surface-proof");
+
+  return {
+    schemaVersion: 1,
+    targetAppId: targetApp?.id ?? null,
+    targetAppLabel: targetApp?.label ?? null,
+    startPath: targetApp?.entryPath ?? "/desktop",
+    confidence,
+    primarySurface: lessonNavigation.surface || surfaceHints[0] || uiSurfaceIndex?.likelySurfaces?.[0] || null,
+    captureMode,
+    expectedVisibleLabels,
+    requiredUiSignals: requiredSignals,
+    forbiddenScreens,
+    navigationSteps: steps,
+    correctionPlan: [
+      "If the current screen is an empty state or selector prompt, choose one visible seeded row/card/item before capture.",
+      "If required proof labels are missing, make one constrained UI correction such as opening the relevant tab, dropdown, detail row, or sidekick.",
+      "If the correction still fails, stop on the best visible proof surface and let the quality gate fail rather than wandering.",
+    ],
+    evidence: {
+      story: clipText(story, 220),
+      changedFiles: normalizeArray((changedFileEvidence?.files ?? []).map((fileInfo) => fileInfo.filePath), 8),
+      surfaceHints: normalizeArray(surfaceHints, 8),
+      lessonIds: matchedNavigationLessons.map((lesson) => lesson.id),
+    },
+  };
+}
+
+function formatNavigationContractInstruction(contract, matchedNavigationLessons = []) {
+  if (!contract) {
+    return "";
+  }
+
+  const lessonLine = matchedNavigationLessons.length > 0
+    ? `Relevant learned navigation lessons: ${matchedNavigationLessons.map((lesson) => `${lesson.id}: ${lesson.description}`).join(" ")}`
+    : null;
+  return [
+    "Navigation contract:",
+    contract.targetAppLabel ? `Target app: ${contract.targetAppLabel}.` : null,
+    contract.primarySurface ? `Likely proof surface: ${contract.primarySurface}.` : null,
+    contract.captureMode ? `Capture mode: ${contract.captureMode}.` : null,
+    contract.expectedVisibleLabels?.length ? `Readable labels required before capture: ${contract.expectedVisibleLabels.slice(0, 6).join("; ")}.` : null,
+    contract.requiredUiSignals?.length ? `Required UI states: ${contract.requiredUiSignals.join(", ")}.` : null,
+    contract.forbiddenScreens?.length ? `Wrong-screen clues to avoid: ${contract.forbiddenScreens.slice(0, 6).join("; ")}.` : null,
+    contract.navigationSteps?.length ? `Navigation steps: ${contract.navigationSteps.slice(0, 5).join(" ")}` : null,
+    lessonLine,
+  ].filter(Boolean).join(" ");
+}
+
 function buildSurfaceHints(targetAppId, changedFileEvidence) {
   const matchingFiles = (changedFileEvidence?.files ?? []).filter((fileInfo) =>
     (fileInfo.appMatches ?? []).some((entry) => entry.appId === targetAppId),
@@ -981,7 +1225,7 @@ function buildSurfaceHints(targetAppId, changedFileEvidence) {
   ], 8);
 }
 
-function fallbackBrief({ prompt, changelogDoc, changedFiles, apps, changedFileEvidence }) {
+function fallbackBrief({ prompt, changelogDoc, changedFiles, apps, changedFileEvidence, navigationLessons = [] }) {
   const story = buildStoryText({ prompt, changelogDoc, changedFiles });
   const storyTerms = tokenize([story]);
   const scoredApps = apps
@@ -1022,12 +1266,47 @@ function fallbackBrief({ prompt, changelogDoc, changedFiles, apps, changedFileEv
     surfaceHints,
     changedFileEvidence,
   });
+  const matchedNavigationLessons = matchNavigationLessons({
+    story,
+    changedFiles,
+    changedFileEvidence,
+    targetAppId: targetApp?.id,
+    lessons: navigationLessons,
+  });
+  const mergedRequiredUiSignals = normalizeArray([
+    ...proofRules.requiredUiSignals,
+    ...matchedNavigationLessons.flatMap((lesson) => lesson.navigation?.requiredUiSignals ?? []),
+  ], 6);
+  const mergedForbiddenPhrases = normalizeArray([
+    ...proofRules.forbiddenPhrases,
+    ...matchedNavigationLessons.flatMap((lesson) => lesson.navigation?.forbiddenPhrases ?? []),
+  ], 8);
   const validationInstruction = buildValidationInstruction({
     story,
     targetApp,
     surfaceHints,
     validationSignals,
   });
+  const uiSurfaceIndex = buildUiSurfaceIndex({
+    apps,
+    changedFileEvidence,
+    targetAppId: targetApp?.id,
+  });
+  const navigationContract = buildNavigationContract({
+    story,
+    targetApp,
+    confidence,
+    setupPlan,
+    surfaceHints,
+    validationSignals,
+    proofRequirements: proofRules.proofRequirements,
+    requiredUiSignals: mergedRequiredUiSignals,
+    forbiddenPhrases: mergedForbiddenPhrases,
+    matchedNavigationLessons,
+    changedFileEvidence,
+    uiSurfaceIndex,
+  });
+  const navigationInstruction = formatNavigationContractInstruction(navigationContract, matchedNavigationLessons);
 
   return {
     title: clipText(prompt || changelogDoc?.rendered?.title || "Aura agent capture", 84),
@@ -1046,16 +1325,20 @@ function fallbackBrief({ prompt, changelogDoc, changedFiles, apps, changedFileEv
     setupInstruction: [
       phases.openAppInstruction,
       setupPlan.length > 0 ? `Setup plan: ${setupPlan.join(" ")}` : null,
+      navigationInstruction,
       "This run is desktop-only. Do not try to switch to mobile shells or mobile-only layouts.",
     ].filter(Boolean).join(" "),
     openAppInstruction: phases.openAppInstruction,
-    proofInstruction: phases.proofInstruction,
+    proofInstruction: [phases.proofInstruction, navigationInstruction].filter(Boolean).join(" "),
     validationSignals,
     proofRequirements: proofRules.proofRequirements,
-    requiredUiSignals: proofRules.requiredUiSignals,
-    forbiddenPhrases: proofRules.forbiddenPhrases,
-    validationInstruction,
-    interactionInstruction: phases.interactionInstruction,
+    requiredUiSignals: mergedRequiredUiSignals,
+    forbiddenPhrases: mergedForbiddenPhrases,
+    validationInstruction: [validationInstruction, navigationInstruction].filter(Boolean).join(" "),
+    interactionInstruction: [phases.interactionInstruction, navigationInstruction].filter(Boolean).join(" "),
+    navigationContract,
+    uiSurfaceIndex,
+    matchedNavigationLessons,
     generator: "fallback",
     scoredApps: scoredApps.map((entry) => ({
       appId: entry.app.id,
@@ -1129,7 +1412,7 @@ function validateBrief(candidate, fallback, apps) {
       ...(Array.isArray(fallback.requiredUiSignals) ? fallback.requiredUiSignals : []),
       ...proofRules.requiredUiSignals,
     ],
-    4,
+    6,
   );
   const forbiddenPhrases = normalizeArray(
     [
@@ -1139,6 +1422,32 @@ function validateBrief(candidate, fallback, apps) {
     ],
     6,
   );
+  const uiSurfaceIndex = buildUiSurfaceIndex({
+    apps,
+    changedFileEvidence: fallback.changedFileEvidence,
+    targetAppId: targetApp?.id,
+  });
+  const matchedNavigationLessons = Array.isArray(fallback.matchedNavigationLessons)
+    ? fallback.matchedNavigationLessons
+    : [];
+  const navigationContract = buildNavigationContract({
+    story: candidate.story || fallback.story,
+    targetApp,
+    confidence: ["high", "medium", "low"].includes(candidate.confidence) ? candidate.confidence : fallback.confidence,
+    setupPlan,
+    surfaceHints,
+    validationSignals,
+    proofRequirements,
+    requiredUiSignals,
+    forbiddenPhrases,
+    matchedNavigationLessons,
+    changedFileEvidence: fallback.changedFileEvidence,
+    uiSurfaceIndex,
+  });
+  const candidateContractInstruction = candidate.navigationContract && typeof candidate.navigationContract === "object"
+    ? formatNavigationContractInstruction(candidate.navigationContract, [])
+    : "";
+  const navigationInstruction = formatNavigationContractInstruction(navigationContract, matchedNavigationLessons);
 
   return {
     title: clipText(candidate.title || fallback.title, 84),
@@ -1153,30 +1462,49 @@ function validateBrief(candidate, fallback, apps) {
     setupPlan,
     systemPrompt: clipText(candidate.systemPrompt || fallback.systemPrompt, 700),
     setupInstruction: clipText(
-      candidate.setupInstruction
-      || [
-        phases.openAppInstruction,
-        setupPlan.length > 0 ? `Setup plan: ${setupPlan.join(" ")}` : null,
-        "This run is desktop-only. Do not try to switch to mobile shells or mobile-only layouts.",
+      [
+        candidate.setupInstruction
+        || [
+          phases.openAppInstruction,
+          setupPlan.length > 0 ? `Setup plan: ${setupPlan.join(" ")}` : null,
+          "This run is desktop-only. Do not try to switch to mobile shells or mobile-only layouts.",
+        ].filter(Boolean).join(" "),
+        candidateContractInstruction,
+        navigationInstruction,
       ].filter(Boolean).join(" "),
-      700,
+      1000,
     ),
     openAppInstruction: clipText(candidate.openAppInstruction || phases.openAppInstruction, 600),
-    proofInstruction: clipText(candidate.proofInstruction || phases.proofInstruction, 700),
+    proofInstruction: clipText([
+      candidate.proofInstruction || phases.proofInstruction,
+      candidateContractInstruction,
+      navigationInstruction,
+    ].filter(Boolean).join(" "), 1000),
     validationSignals,
     proofRequirements,
     requiredUiSignals,
     forbiddenPhrases,
     validationInstruction: clipText(
-      candidate.validationInstruction || buildValidationInstruction({
-        story: candidate.story || fallback.story,
-        targetApp,
-        surfaceHints,
-        validationSignals,
-      }),
-      700,
+      [
+        candidate.validationInstruction || buildValidationInstruction({
+          story: candidate.story || fallback.story,
+          targetApp,
+          surfaceHints,
+          validationSignals,
+        }),
+        candidateContractInstruction,
+        navigationInstruction,
+      ].filter(Boolean).join(" "),
+      1000,
     ),
-    interactionInstruction: clipText(candidate.interactionInstruction || phases.interactionInstruction, 600),
+    interactionInstruction: clipText([
+      candidate.interactionInstruction || phases.interactionInstruction,
+      candidateContractInstruction,
+      navigationInstruction,
+    ].filter(Boolean).join(" "), 1000),
+    navigationContract,
+    uiSurfaceIndex,
+    matchedNavigationLessons,
     generator: candidate.__salvaged ? "anthropic-salvaged" : "anthropic",
     scoredApps: fallback.scoredApps,
     changedFileEvidence: fallback.changedFileEvidence,
@@ -1199,7 +1527,7 @@ async function generateAnthropicBrief({ prompt, changelogDoc, changedFiles, apps
     },
     body: JSON.stringify({
       model,
-      max_tokens: 900,
+      max_tokens: 1200,
       temperature: 0.1,
       messages: [{
         role: "user",
@@ -1210,7 +1538,8 @@ async function generateAnthropicBrief({ prompt, changelogDoc, changedFiles, apps
           "The runner disables direct goto navigation. Plan around visible app controls, tabs, launchers, and labeled rows instead of URL jumps.",
           "For tiny UI changes like menus, pickers, selectors, settings rows, or small dialogs, prefer a contextual proof screen that keeps the parent surface visible instead of an isolated widget crop.",
           "If the proof text would otherwise be too small, prefer zooming the real UI state before capture over losing context.",
-          "Return JSON only with keys: title, story, targetAppId, confidence, rationale, successChecklist, setupPlan, systemPrompt, setupInstruction, openAppInstruction, proofInstruction, validationSignals, proofRequirements, requiredUiSignals, forbiddenPhrases, validationInstruction, interactionInstruction, desktopOnly.",
+          "Use the navigation contract and learned lessons as hard guidance unless they conflict with stronger changed-file evidence.",
+          "Return JSON only with keys: title, story, targetAppId, confidence, rationale, successChecklist, setupPlan, systemPrompt, setupInstruction, openAppInstruction, proofInstruction, validationSignals, proofRequirements, requiredUiSignals, forbiddenPhrases, validationInstruction, interactionInstruction, navigationContract, desktopOnly.",
           "Only use a targetAppId from the supplied app catalog, or null if uncertain.",
           "Favor the clearest user-visible proof screen over generic app overviews.",
           "If the story introduces a named model, menu option, or labeled product choice, include that exact visible label in validationSignals and proofRequirements.",
@@ -1233,6 +1562,15 @@ async function generateAnthropicBrief({ prompt, changelogDoc, changedFiles, apps
           "",
           "Changed-file evidence:",
           JSON.stringify(fallback.changedFileEvidence, null, 2),
+          "",
+          "UI surface index:",
+          JSON.stringify(fallback.uiSurfaceIndex, null, 2),
+          "",
+          "Matched learned navigation lessons:",
+          JSON.stringify(fallback.matchedNavigationLessons, null, 2),
+          "",
+          "Deterministic navigation contract:",
+          JSON.stringify(fallback.navigationContract, null, 2),
           "",
           "Available apps (derived from source registry):",
           JSON.stringify(summarizeAppsForPrompt(apps), null, 2),
@@ -1258,8 +1596,16 @@ async function generateAnthropicBrief({ prompt, changelogDoc, changedFiles, apps
 
 export async function buildDemoAgentBrief({ prompt = "", changelogDoc = null, changedFiles = [] } = {}) {
   const apps = await listDemoAgentApps();
+  const navigationLessons = await loadNavigationLessons();
   const changedFileEvidence = await buildChangedFileEvidence(changedFiles, apps);
-  const fallback = fallbackBrief({ prompt, changelogDoc, changedFiles, apps, changedFileEvidence });
+  const fallback = fallbackBrief({
+    prompt,
+    changelogDoc,
+    changedFiles,
+    apps,
+    changedFileEvidence,
+    navigationLessons,
+  });
 
   try {
     const generated = await generateAnthropicBrief({

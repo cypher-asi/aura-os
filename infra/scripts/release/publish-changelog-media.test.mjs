@@ -8,6 +8,7 @@ import test from "node:test";
 
 import {
   allowLocalFallbackOnBrowserbaseQuota,
+  assertSelectedScreenshotReadableEnough,
   buildEntryPrompt,
   composeBrandedScreenshotCard,
   buildRetryCorrectionGuidance,
@@ -21,6 +22,7 @@ import {
   mergePublishedMedia,
   normalizeOpenAIJudgeScore,
   parseArgs,
+  requestOpenAIBackground,
   resolveTargetChangelogDocs,
   replaceChangelogMediaBlock,
   resolveAssetPath,
@@ -209,6 +211,7 @@ test("buildEntryPrompt turns a changelog entry into a capture brief", () => {
   assert.match(prompt, /Visible proof to keep on screen: Feedback; Comments/);
   assert.match(prompt, /Capture guidance: Open a feedback thread and keep the comments column visible\./);
   assert.match(prompt, /leave the clearest proof visible/);
+  assert.match(prompt, /Never publish a screenshot that still says 'Your generated image will appear here'/);
 });
 
 test("buildEntryPrompt uses contextual proof guidance for micro-ui entries", () => {
@@ -343,6 +346,46 @@ test("normalizeOpenAIJudgeScore accepts accidental 0-10 judge scales", () => {
   assert.equal(normalizeOpenAIJudgeScore(""), 0);
 });
 
+test("requestOpenAIBackground falls back when the preferred image edit model is unsupported", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-openai-fallback-"));
+  const screenshotPath = path.join(rootDir, "screenshot.png");
+  writeSolidPng(screenshotPath, 16, 16, [20, 120, 150, 255]);
+  const originalFetch = globalThis.fetch;
+  const previousModel = process.env.AURA_CHANGELOG_MEDIA_OPENAI_IMAGE_MODEL;
+  const calls = [];
+  process.env.AURA_CHANGELOG_MEDIA_OPENAI_IMAGE_MODEL = "gpt-image-2";
+  globalThis.fetch = async (_url, options) => {
+    const requestedModel = options.body.get("model");
+    calls.push(requestedModel);
+    if (requestedModel === "gpt-image-2") {
+      return new Response(JSON.stringify({ error: { message: "Unsupported model: gpt-image-2" } }), { status: 400 });
+    }
+    return new Response(JSON.stringify({
+      model: requestedModel,
+      data: [{ b64_json: Buffer.from("png").toString("base64") }],
+    }), { status: 200 });
+  };
+
+  try {
+    const result = await requestOpenAIBackground({
+      apiKey: "sk-test",
+      screenshotPath,
+      prompt: "Create a branded Aura background.",
+    });
+    assert.deepEqual(calls, ["gpt-image-2", "gpt-image-1.5"]);
+    assert.equal(result.model, "gpt-image-1.5");
+    assert.equal(result.requestedModel, "gpt-image-1.5");
+    assert.equal(result.fallbackErrors.length, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previousModel === undefined) {
+      delete process.env.AURA_CHANGELOG_MEDIA_OPENAI_IMAGE_MODEL;
+    } else {
+      process.env.AURA_CHANGELOG_MEDIA_OPENAI_IMAGE_MODEL = previousModel;
+    }
+  }
+});
+
 test("composeBrandedScreenshotCard keeps output as a valid branded PNG", () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-card-"));
   const backgroundPath = path.join(rootDir, "background.png");
@@ -441,6 +484,153 @@ test("composeBrandedScreenshotCard safely enlarges the proof image inside the br
   assert.ok(redBounds.height > 90, `expected screenshot to grow inside the card, got ${redBounds.height}px`);
   assert.ok(redBounds.width <= 320, `expected screenshot upscale to stay bounded, got ${redBounds.width}px`);
   assert.ok(redBounds.height <= 180, `expected screenshot upscale to stay bounded, got ${redBounds.height}px`);
+});
+
+test("assertSelectedScreenshotReadableEnough rejects source proofs that are too small for readable text", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-readable-source-"));
+  const screenshotPath = path.join(rootDir, "tiny-proof.png");
+  writeSolidPng(screenshotPath, 180, 120, [240, 32, 32, 255]);
+
+  assert.throws(() => assertSelectedScreenshotReadableEnough({
+    repoDir: repoRoot,
+    entry: {
+      media: {
+        requested: true,
+        presentationMode: "raw_contextual",
+      },
+    },
+    selectedScreenshot: {
+      path: screenshotPath,
+      source: "capture-proof",
+    },
+    summary: {},
+  }), /too small for readable changelog media/);
+});
+
+test("assertSelectedScreenshotReadableEnough rejects generated-product placeholders before publishing", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-empty-placeholder-"));
+  const screenshotPath = path.join(rootDir, "placeholder-proof.png");
+  writeSolidPng(screenshotPath, 1200, 800, [12, 24, 40, 255]);
+
+  assert.throws(() => assertSelectedScreenshotReadableEnough({
+    repoDir: repoRoot,
+    entry: {
+      media: {
+        requested: true,
+        presentationMode: "branded_card",
+      },
+    },
+    selectedScreenshot: {
+      path: screenshotPath,
+      source: "capture-proof",
+    },
+    summary: {
+      phases: [
+        {
+          id: "capture-proof",
+          visibleText: "/test org Search Demo Project Image 3D Model Your generated image will appear here",
+        },
+      ],
+    },
+  }), /generated-product placeholder text/);
+});
+
+test("assertSelectedScreenshotReadableEnough accepts dense contextual proof crops", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-readable-source-pass-"));
+  const screenshotPath = path.join(rootDir, "contextual-proof.png");
+  writeSolidPng(screenshotPath, 300, 220, [240, 32, 32, 255]);
+
+  const report = assertSelectedScreenshotReadableEnough({
+    repoDir: repoRoot,
+    entry: {
+      media: {
+        requested: true,
+        presentationMode: "raw_contextual",
+      },
+    },
+    selectedScreenshot: {
+      path: screenshotPath,
+      source: "capture-proof",
+    },
+    summary: {},
+  });
+
+  assert.equal(report.width, 300);
+  assert.equal(report.height, 220);
+});
+
+test("composeBrandedScreenshotCard gives contextual proof captures a larger readable footprint", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-contextual-proof-"));
+  const backgroundPath = path.join(rootDir, "background.png");
+  const screenshotPath = path.join(rootDir, "screenshot.png");
+  const outputPath = path.join(rootDir, "branded.png");
+  writeSolidPng(backgroundPath, 320, 213, [3, 8, 22, 255]);
+  writeSolidPng(screenshotPath, 160, 90, [240, 32, 32, 255]);
+  const previousUpscale = process.env.AURA_CHANGELOG_MEDIA_MAX_SCREENSHOT_UPSCALE;
+  delete process.env.AURA_CHANGELOG_MEDIA_MAX_SCREENSHOT_UPSCALE;
+
+  try {
+    composeBrandedScreenshotCard({
+      repoDir: repoRoot,
+      backgroundPath,
+      screenshotPath,
+      outputPath,
+      presentationMode: "raw_contextual",
+    });
+  } finally {
+    if (previousUpscale === undefined) {
+      delete process.env.AURA_CHANGELOG_MEDIA_MAX_SCREENSHOT_UPSCALE;
+    } else {
+      process.env.AURA_CHANGELOG_MEDIA_MAX_SCREENSHOT_UPSCALE = previousUpscale;
+    }
+  }
+
+  const requireFromInterface = createRequire(path.join(repoRoot, "interface", "package.json"));
+  const { PNG } = requireFromInterface("pngjs");
+  const output = PNG.sync.read(fs.readFileSync(outputPath));
+  const redBounds = findColorBounds(output, ([r, g, b, a]) => a > 0 && r >= 220 && g <= 80 && b <= 80);
+
+  assert.ok(redBounds);
+  assert.ok(redBounds.width >= 500, `expected contextual proof screenshot to be materially larger, got ${redBounds.width}px`);
+  assert.ok(redBounds.height >= 280, `expected contextual proof screenshot to be materially taller, got ${redBounds.height}px`);
+});
+
+test("composeBrandedScreenshotCard trims empty margins around contextual micro-ui proof", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-contextual-trim-"));
+  const backgroundPath = path.join(rootDir, "background.png");
+  const screenshotPath = path.join(rootDir, "screenshot.png");
+  const outputPath = path.join(rootDir, "branded.png");
+  writeSolidPng(backgroundPath, 320, 213, [3, 8, 22, 255]);
+
+  const requireFromInterface = createRequire(path.join(repoRoot, "interface", "package.json"));
+  const { PNG } = requireFromInterface("pngjs");
+  const screenshot = new PNG({ width: 1600, height: 900 });
+  for (let y = 0; y < screenshot.height; y += 1) {
+    for (let x = 0; x < screenshot.width; x += 1) {
+      const index = ((y * screenshot.width) + x) * 4;
+      const insideProof = x >= 1100 && x < 1230 && y >= 360 && y < 500;
+      screenshot.data[index] = insideProof ? 240 : 5;
+      screenshot.data[index + 1] = insideProof ? 32 : 7;
+      screenshot.data[index + 2] = insideProof ? 32 : 10;
+      screenshot.data[index + 3] = 255;
+    }
+  }
+  fs.writeFileSync(screenshotPath, PNG.sync.write(screenshot));
+
+  composeBrandedScreenshotCard({
+    repoDir: repoRoot,
+    backgroundPath,
+    screenshotPath,
+    outputPath,
+    presentationMode: "raw_contextual",
+  });
+
+  const output = PNG.sync.read(fs.readFileSync(outputPath));
+  const redBounds = findColorBounds(output, ([r, g, b, a]) => a > 0 && r >= 220 && g <= 80 && b <= 80);
+
+  assert.ok(redBounds);
+  assert.ok(redBounds.width >= 650, `expected contextual proof to be zoomed after empty-margin trim, got ${redBounds.width}px`);
+  assert.ok(redBounds.height >= 650, `expected contextual proof to be zoomed after empty-margin trim, got ${redBounds.height}px`);
 });
 
 test("composeBrandedScreenshotCard keeps a safety inset so product edges are not clipped by the frame", () => {
@@ -998,7 +1188,139 @@ test("publish script fixture mode keeps workflow green when OpenAI polish partia
   assert.equal(fs.existsSync(path.join(pagesDir, latestDoc.rendered.entries[0].media.assetPath)), true);
 });
 
-test("publish script fixture mode falls back to the raw proof screenshot when the polished card loses the proof", () => {
+test("publish script fixture mode still brands raw_contextual proof screenshots", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-fixture-raw-contextual-"));
+  const repoDir = path.join(rootDir, "repo");
+  const pagesDir = path.join(rootDir, "pages");
+  fs.mkdirSync(repoDir, { recursive: true });
+  writeFixtureChangelog({ pagesDir });
+
+  for (const filePath of [
+    path.join(pagesDir, "changelog", "nightly", "latest.json"),
+    path.join(pagesDir, "changelog", "nightly", "history", "2026-04-22.json"),
+  ]) {
+    const doc = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    doc.rendered.entries[0].media.presentationMode = "raw_contextual";
+    fs.writeFileSync(filePath, `${JSON.stringify(doc, null, 2)}\n`);
+  }
+
+  const screenshotPath = path.join(rootDir, "feedback-proof.png");
+  writeSolidPng(screenshotPath, 320, 180, [20, 120, 150, 255]);
+  const polishedPath = path.join(rootDir, "feedback-proof-branded.png");
+  writeSolidPng(polishedPath, 320, 213, [4, 16, 36, 255]);
+  const fixtureResultsPath = path.join(rootDir, "fixture-results.json");
+  fs.writeFileSync(fixtureResultsPath, `${JSON.stringify({
+    "entry-1-feedback-board": {
+      ok: true,
+      storyTitle: "Feedback board proof",
+      phases: [
+        {
+          id: "capture-proof",
+          success: true,
+          screenshot: { path: screenshotPath },
+        },
+      ],
+      screenshots: [{ path: screenshotPath }],
+      polishedScreenshot: {
+        path: polishedPath,
+        provider: "fixture",
+        model: "fixture-image-model",
+        judgeModel: "fixture-judge-model",
+        score: 94,
+      },
+    },
+    "entry-2-agent-create": {
+      ok: false,
+      inspectorUrl: "https://browserbase.example/session/failure",
+      sessionId: "fixture-failure",
+    },
+  }, null, 2)}\n`);
+
+  const result = runPublishMediaFixture({ pagesDir, repoDir, fixtureResultsPath });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+
+  const latestDoc = JSON.parse(fs.readFileSync(path.join(pagesDir, "changelog", "nightly", "latest.json"), "utf8"));
+  assert.equal(latestDoc.rendered.entries[0].media.presentationMode, "raw_contextual");
+  assert.equal(latestDoc.rendered.entries[0].media.status, "published");
+  assert.equal(latestDoc.rendered.entries[0].media.screenshotSource, "openai-polish");
+  assert.equal(latestDoc.rendered.entries[0].media.originalScreenshotSource, "capture-proof");
+  assert.equal(latestDoc.rendered.entries[0].media.polishProvider, "fixture");
+});
+
+test("publish script accepts publishable polish when the judge boolean contradicts its score", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-fixture-polish-score-"));
+  const repoDir = path.join(rootDir, "repo");
+  const pagesDir = path.join(rootDir, "pages");
+  fs.mkdirSync(repoDir, { recursive: true });
+  writeFixtureChangelog({ pagesDir });
+
+  const screenshotPath = path.join(rootDir, "feedback-proof.png");
+  writeSolidPng(screenshotPath, 320, 180, [20, 120, 150, 255]);
+  const polishedPath = path.join(rootDir, "feedback-proof-branded.png");
+  writeSolidPng(polishedPath, 320, 213, [4, 16, 36, 255]);
+  const agentScreenshotPath = path.join(rootDir, "agent-proof.png");
+  writeSolidPng(agentScreenshotPath, 320, 180, [120, 48, 210, 255]);
+  const agentPolishedPath = path.join(rootDir, "agent-proof-branded.png");
+  writeSolidPng(agentPolishedPath, 320, 213, [14, 26, 48, 255]);
+  const fixtureResultsPath = path.join(rootDir, "fixture-results.json");
+  fs.writeFileSync(fixtureResultsPath, `${JSON.stringify({
+    "entry-1-feedback-board": {
+      ok: true,
+      storyTitle: "Feedback board proof",
+      phases: [
+        {
+          id: "capture-proof",
+          success: true,
+          screenshot: { path: screenshotPath },
+        },
+      ],
+      screenshots: [{ path: screenshotPath }],
+      polishedScreenshot: {
+        path: polishedPath,
+        provider: "fixture",
+        model: "fixture-image-model",
+        judgeModel: "fixture-judge-model",
+        judge: {
+          passed: false,
+          proofVisible: true,
+          score: 75,
+          reasons: ["proof is visible and readable"],
+          concerns: ["minor framing concern"],
+          missingProof: [],
+        },
+      },
+    },
+    "entry-2-agent-create": {
+      ok: true,
+      storyTitle: "Agent creation proof",
+      phases: [
+        {
+          id: "capture-proof",
+          success: true,
+          screenshot: { path: agentScreenshotPath },
+        },
+      ],
+      screenshots: [{ path: agentScreenshotPath }],
+      polishedScreenshot: {
+        path: agentPolishedPath,
+        provider: "fixture",
+        model: "fixture-image-model",
+        judgeModel: "fixture-judge-model",
+        score: 91,
+      },
+    },
+  }, null, 2)}\n`);
+
+  const result = runPublishMediaFixture({ pagesDir, repoDir, fixtureResultsPath });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+
+  const latestDoc = JSON.parse(fs.readFileSync(path.join(pagesDir, "changelog", "nightly", "latest.json"), "utf8"));
+  assert.equal(latestDoc.rendered.entries[0].media.status, "published");
+  assert.equal(latestDoc.rendered.entries[0].media.polishFallbackReason, "");
+  assert.equal(latestDoc.rendered.entries[0].media.polishScore, 75);
+});
+
+test("publish script fixture mode does not publish raw proof when branded polish loses the proof", () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-fixture-polish-fallback-"));
   const repoDir = path.join(rootDir, "repo");
   const pagesDir = path.join(rootDir, "pages");
@@ -1009,6 +1331,10 @@ test("publish script fixture mode falls back to the raw proof screenshot when th
   writeSolidPng(screenshotPath, 320, 180, [20, 120, 150, 255]);
   const polishedPath = path.join(rootDir, "feedback-proof-branded.png");
   writeSolidPng(polishedPath, 320, 213, [4, 16, 36, 255]);
+  const agentScreenshotPath = path.join(rootDir, "agent-proof.png");
+  writeSolidPng(agentScreenshotPath, 320, 180, [30, 100, 150, 255]);
+  const agentPolishedPath = path.join(rootDir, "agent-proof-branded.png");
+  writeSolidPng(agentPolishedPath, 320, 213, [4, 16, 36, 255]);
   const fixtureResultsPath = path.join(rootDir, "fixture-results.json");
   fs.writeFileSync(fixtureResultsPath, `${JSON.stringify({
     "entry-1-feedback-board": {
@@ -1039,9 +1365,24 @@ test("publish script fixture mode falls back to the raw proof screenshot when th
       },
     },
     "entry-2-agent-create": {
-      ok: false,
-      inspectorUrl: "https://browserbase.example/session/failure",
-      sessionId: "fixture-failure",
+      ok: true,
+      storyTitle: "Agent creation proof",
+      phases: [
+        {
+          id: "capture-proof",
+          success: true,
+          screenshot: { path: agentScreenshotPath },
+        },
+      ],
+      screenshots: [{ path: agentScreenshotPath }],
+      polishedScreenshot: {
+        path: agentPolishedPath,
+        provider: "fixture",
+        model: "fixture-image-model",
+        judgeModel: "fixture-judge-model",
+        score: 94,
+      },
+      sessionId: "fixture-success",
     },
   }, null, 2)}\n`);
 
@@ -1052,15 +1393,20 @@ test("publish script fixture mode falls back to the raw proof screenshot when th
   const summary = JSON.parse(fs.readFileSync(summaryPath, "utf8"));
   assert.equal(summary.workflowOutcome, "partial");
   assert.equal(summary.shouldFailWorkflow, false);
-  assert.equal(summary.results[0].status, "published");
-  assert.equal(summary.results[0].screenshotSource, "capture-proof");
-  assert.equal(summary.results[0].polishFallbackReason, "openai_polish_quality_gate");
+  assert.equal(summary.results[0].status, "failed");
+  assert.equal(summary.results[0].failureClass, "openai_polish");
+  assert.match(summary.results[0].error, /OpenAI branded media judge rejected/);
+  assert.equal(summary.results[1].status, "published");
+  assert.equal(summary.results[1].screenshotSource, "openai-polish");
+  assert.equal(summary.results[1].polishFallbackReason, null);
 
   const latestDoc = JSON.parse(fs.readFileSync(path.join(pagesDir, "changelog", "nightly", "latest.json"), "utf8"));
-  assert.equal(latestDoc.rendered.entries[0].media.status, "published");
-  assert.equal(latestDoc.rendered.entries[0].media.screenshotSource, "capture-proof");
-  assert.equal(latestDoc.rendered.entries[0].media.polishFallbackReason, "openai_polish_quality_gate");
-  assert.equal(fs.existsSync(path.join(pagesDir, latestDoc.rendered.entries[0].media.assetPath)), true);
+  assert.equal(latestDoc.rendered.entries[0].media.status, "failed");
+  assert.equal(latestDoc.rendered.entries[0].media.assetPath || "", "");
+  assert.equal(latestDoc.rendered.entries[0].media.failureClass, "openai_polish");
+  assert.equal(latestDoc.rendered.entries[1].media.status, "published");
+  assert.equal(latestDoc.rendered.entries[1].media.screenshotSource, "openai-polish");
+  assert.equal(fs.existsSync(path.join(pagesDir, latestDoc.rendered.entries[1].media.assetPath)), true);
 });
 
 test("publish script fixture mode fails when every attempted media slot fails", () => {

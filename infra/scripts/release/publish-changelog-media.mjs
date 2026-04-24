@@ -11,6 +11,16 @@ const MEDIA_BEGIN_PREFIX = "<!-- AURA_CHANGELOG_MEDIA:BEGIN ";
 const OPENAI_IMAGE_EDIT_URL = "https://api.openai.com/v1/images/edits";
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const OPENAI_POLISH_SOURCE = "openai-polish";
+const UNPUBLISHABLE_EMPTY_STATE_PHRASES = [
+  "Your generated image will appear here",
+  "Generated images will appear here",
+  "Your generated model will appear here",
+  "Generated models will appear here",
+  "Your generated asset will appear here",
+  "Generated assets will appear here",
+  "No generated images yet",
+  "No generated models yet",
+];
 
 function parseArgs(argv) {
   const args = {};
@@ -33,6 +43,14 @@ function parseArgs(argv) {
 
 function sanitizeText(value) {
   return String(value || "").replace(/\r\n/g, "\n").trim();
+}
+
+function normalizeTextForMediaGate(value) {
+  return sanitizeText(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9.]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function isEnabled(value, defaultValue = false) {
@@ -93,6 +111,17 @@ function clipText(value, maxLength = 800) {
     return text;
   }
   return `${text.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
+function collectUnpublishableEmptyStateMatches(value) {
+  const normalizedVisible = normalizeTextForMediaGate(value);
+  if (!normalizedVisible) {
+    return [];
+  }
+  return UNPUBLISHABLE_EMPTY_STATE_PHRASES.filter((phrase) => {
+    const normalizedPhrase = normalizeTextForMediaGate(phrase);
+    return normalizedPhrase && normalizedVisible.includes(normalizedPhrase);
+  });
 }
 
 function normalizeEnvChoice(value, fallback) {
@@ -221,6 +250,7 @@ function buildEntryPrompt(entry) {
     retryGuidance,
     "Open the most relevant product surface for this changelog entry and leave the clearest proof visible for the final changelog screenshot.",
     "Avoid placeholder routes, empty states, settings-only screens, and generic landing views.",
+    "Never publish a screenshot that still says 'Your generated image will appear here', 'Generated images will appear here', or a similar generated-product placeholder.",
   ].filter(Boolean);
 
   return storyParts.join(" ");
@@ -268,31 +298,51 @@ function buildOpenAIPolishPrompt(entry, summary) {
     "Create a premium Aura-branded abstract background for a changelog media card.",
     "The input image is a real Aura product screenshot and must be used only as visual context for palette and mood.",
     "Do not recreate, redraw, imitate, or include product UI, app chrome, readable UI text, fake screenshots, devices, people, logos, or watermarks in the generated background.",
+    "Do not create a central product card, phone, laptop, browser window, screenshot frame, or dark rectangle; our renderer adds the real screenshot and all framing after this step.",
     "Leave the composition suitable for a real screenshot to be overlaid in the center by our deterministic renderer.",
-    "Keep the central field dark, quiet, and low-contrast so the real screenshot can remain the dominant element. Push any energy, grids, and orbital details toward the outer edges.",
+    "Keep the central field open, dark, quiet, and low-contrast so the real screenshot can remain the dominant element. Push any energy, grids, and orbital details toward the outer edges.",
     "Visual direction: deep black graphite base, subtle cyan/teal energy, soft glass glow, restrained grid or orbital lines, modern high-trust AI product launch feel.",
     `Changelog title: ${title}`,
     story ? `Story context: ${story}` : "",
   ].filter(Boolean).join("\n");
 }
 
+function isVisualConceptHint(value) {
+  const text = sanitizeText(value);
+  const normalized = text.toLowerCase();
+  if (!normalized || /\d/.test(normalized)) {
+    return false;
+  }
+  return /\b(app|bar|board|card|composer|dialog|dropdown|editor|feed|form|menu|modal|panel|pane|picker|row|screen|selector|settings|sidebar|surface|tab|timeline|view|widget)\b/.test(normalized);
+}
+
 function buildOpenAIJudgePrompt(entry, summary) {
   const title = sanitizeText(entry?.title || summary?.storyTitle || "Aura changelog update");
   const proofSurface = sanitizeText(entry?.media?.proofSurface);
+  const presentationMode = sanitizeText(entry?.media?.presentationMode).toLowerCase();
   const visibleProof = Array.isArray(entry?.media?.visibleProof)
     ? entry.media.visibleProof.map((value) => sanitizeText(value)).filter(Boolean).slice(0, 6)
     : [];
+  const literalProof = visibleProof.filter((value) => !isVisualConceptHint(value));
+  const visualConceptHints = visibleProof.filter((value) => isVisualConceptHint(value));
   return [
     "You are the final visual quality gate for Aura changelog media.",
     "Review this final branded image and return JSON only.",
     "Browserbase already validated the raw screenshot before this image was composed, but you must verify that the final branded card still preserves the proof surface.",
     "Pass only if the real product screenshot is clearly visible, readable enough for a changelog, framed professionally, and not obscured by the brand treatment.",
-    "Fail if the screenshot is too small to understand, effectively unreadable, visually dominated by background, clipped at the edges, contains obvious hallucinated UI as the main proof, or loses the expected proof surface.",
+    "Fail if the screenshot is too small to understand, effectively unreadable, blurry, visually dominated by background, clipped at the edges, contains obvious hallucinated UI as the main proof, or loses the expected proof surface.",
+    "Fail if the final image shows generated-product placeholder text like 'Your generated image will appear here' instead of real feature proof.",
+    "Judge readability at normal changelog-page card size, not only by zooming into the raw 4K image. User-facing UI labels and proof text should be readable in the published card.",
     "Aura is intentionally a dark product UI; do not fail only because the interface uses a dark theme when the product context and target surface remain visible.",
+    presentationMode === "raw_contextual"
+      ? "This is raw_contextual micro-UI proof: close zooms of dropdowns, model pickers, menus, selector rows, and text-heavy widgets are expected and preferred. A tight dropdown proof with a visible trigger row is acceptable. Do not require a broad full-app view when the target UI text and enough anchoring context remain visible."
+      : "",
+    "Treat surface names such as chat composer, model picker, dropdown, sidebar, panel, or settings as visual concepts, not literal text that must be present in the screenshot. Only exact user-facing labels, model names, or copied UI strings should count as missing proof text.",
     "Score must be an integer from 0 to 100, where 70 means publishable and 90 means excellent. Do not use a 0 to 10 scale.",
     `Changelog title: ${title}`,
     proofSurface ? `Expected proof surface: ${proofSurface}` : "",
-    visibleProof.length ? `Expected visible proof phrases or labels: ${visibleProof.join("; ")}` : "",
+    literalProof.length ? `Expected literal proof labels: ${literalProof.join("; ")}` : "",
+    visualConceptHints.length ? `Visual concept hints, not literal required text: ${visualConceptHints.join("; ")}` : "",
   ].filter(Boolean).join("\n");
 }
 
@@ -329,12 +379,36 @@ function getOutputCardSize() {
   );
 }
 
-function getMaxBrandedScreenshotUpscale() {
-  const candidate = Number(process.env.AURA_CHANGELOG_MEDIA_MAX_SCREENSHOT_UPSCALE || 2);
+function getMaxBrandedScreenshotUpscale(presentationMode = "") {
+  const normalizedMode = sanitizeText(presentationMode).toLowerCase();
+  const fallback = normalizedMode === "raw_contextual" ? 9.5 : 2;
+  const candidate = Number(process.env.AURA_CHANGELOG_MEDIA_MAX_SCREENSHOT_UPSCALE || fallback);
   if (!Number.isFinite(candidate) || candidate < 1) {
     return 1;
   }
-  return Math.min(candidate, 3);
+  return Math.min(candidate, normalizedMode === "raw_contextual" ? 12 : 6);
+}
+
+function parsePositiveIntegerEnv(name, fallback) {
+  const value = Number.parseInt(process.env[name] || "", 10);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function getReadableScreenshotMinimums(presentationMode = "") {
+  const normalizedMode = sanitizeText(presentationMode).toLowerCase();
+  if (normalizedMode === "raw_contextual") {
+    return {
+      minWidth: parsePositiveIntegerEnv("AURA_CHANGELOG_MEDIA_MIN_CONTEXTUAL_SOURCE_WIDTH", 240),
+      minHeight: parsePositiveIntegerEnv("AURA_CHANGELOG_MEDIA_MIN_CONTEXTUAL_SOURCE_HEIGHT", 180),
+      minArea: parsePositiveIntegerEnv("AURA_CHANGELOG_MEDIA_MIN_CONTEXTUAL_SOURCE_AREA", 50_000),
+    };
+  }
+
+  return {
+    minWidth: parsePositiveIntegerEnv("AURA_CHANGELOG_MEDIA_MIN_SOURCE_WIDTH", 720),
+    minHeight: parsePositiveIntegerEnv("AURA_CHANGELOG_MEDIA_MIN_SOURCE_HEIGHT", 405),
+    minArea: parsePositiveIntegerEnv("AURA_CHANGELOG_MEDIA_MIN_SOURCE_AREA", 291_600),
+  };
 }
 
 function getOpenAIJudgeModel() {
@@ -346,7 +420,7 @@ function getOpenAIApiKey() {
 }
 
 function shouldUseBrandedPolish(entry) {
-  return sanitizeText(entry?.media?.presentationMode).toLowerCase() !== "raw_contextual";
+  return Boolean(entry?.media?.requested);
 }
 
 function buildOpenAIError(message, code = "OPENAI_POLISH_FAILED", details = {}) {
@@ -354,6 +428,57 @@ function buildOpenAIError(message, code = "OPENAI_POLISH_FAILED", details = {}) 
   error.code = code;
   Object.assign(error, details);
   return error;
+}
+
+function collectSelectedScreenshotVisibleTexts({ selectedScreenshot, summary }) {
+  const source = sanitizeText(selectedScreenshot?.source);
+  const texts = [];
+  const pushText = (sourceLabel, value) => {
+    const text = sanitizeText(value);
+    if (text && !texts.some((entry) => entry.text === text)) {
+      texts.push({ source: sourceLabel, text });
+    }
+  };
+
+  if (source === "repair") {
+    pushText("repair", summary?.repair?.visibleText);
+  }
+
+  const phases = Array.isArray(summary?.phases) ? summary.phases : [];
+  if (source) {
+    const phase = phases.find((candidate) => sanitizeText(candidate?.id) === source);
+    pushText(`phase:${source}`, phase?.visibleText);
+  }
+
+  if (texts.length === 0) {
+    pushText("summary", summary?.visibleText);
+  }
+  return texts;
+}
+
+function assertSelectedScreenshotHasNoBrokenPlaceholder({ selectedScreenshot, summary }) {
+  const matches = collectSelectedScreenshotVisibleTexts({ selectedScreenshot, summary })
+    .flatMap((entry) =>
+      collectUnpublishableEmptyStateMatches(entry.text).map((phrase) => ({
+        source: entry.source,
+        phrase,
+      })));
+
+  if (matches.length === 0) {
+    return;
+  }
+
+  throw buildOpenAIError(
+    [
+      "Selected proof screenshot contains generated-product placeholder text and must not be published.",
+      `Matched placeholder phrase(s): ${matches.map((entry) => `${entry.source}: ${entry.phrase}`).join("; ")}.`,
+      "Capture a real generated result, selected item, persisted artifact, or another concrete proof surface before publishing media.",
+    ].join(" "),
+    "SCREENSHOT_EMPTY_PLACEHOLDER_GATE_FAILED",
+    {
+      emptyStateMatches: matches,
+    },
+  );
 }
 
 async function assertOpenAIResponseOk(response, context) {
@@ -368,15 +493,13 @@ async function assertOpenAIResponseOk(response, context) {
   );
 }
 
-async function requestOpenAIBackground({ apiKey, screenshotPath, prompt }) {
-  if (!apiKey) {
-    throw buildOpenAIError(
-      "OPENAI_API_KEY is required to generate branded changelog media.",
-      "OPENAI_API_KEY_MISSING",
-    );
-  }
+function isOpenAIUnsupportedImageModelResponse(status, body) {
+  return status === 400
+    && /\b(model|gpt-image)\b/i.test(body)
+    && /\b(unsupported|not supported|not exist|does not exist|invalid|unknown)\b/i.test(body);
+}
 
-  const imageModel = getOpenAIImageModel();
+function buildOpenAIImageEditForm({ imageModel, screenshotPath, prompt }) {
   const form = new FormData();
   form.append("model", imageModel);
   form.append("prompt", prompt);
@@ -392,32 +515,113 @@ async function requestOpenAIBackground({ apiKey, screenshotPath, prompt }) {
     new Blob([fs.readFileSync(screenshotPath)], { type: "image/png" }),
     "aura-product-screenshot.png",
   );
+  return form;
+}
 
-  const response = await fetch(OPENAI_IMAGE_EDIT_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: form,
-  });
-  await assertOpenAIResponseOk(response, "OpenAI image polish");
-
-  const json = await response.json();
-  const b64 = json?.data?.[0]?.b64_json;
-  if (!b64) {
-    throw buildOpenAIError("OpenAI image polish response did not include b64_json output.");
+async function requestOpenAIBackground({ apiKey, screenshotPath, prompt }) {
+  if (!apiKey) {
+    throw buildOpenAIError(
+      "OPENAI_API_KEY is required to generate branded changelog media.",
+      "OPENAI_API_KEY_MISSING",
+    );
   }
 
-  return {
-    b64,
-    model: sanitizeText(json?.model || imageModel),
-    prompt,
-  };
+  const modelCandidates = unique([getOpenAIImageModel(), "gpt-image-1.5", "gpt-image-1"]);
+  const fallbackErrors = [];
+  for (const imageModel of modelCandidates) {
+    const response = await fetch(OPENAI_IMAGE_EDIT_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: buildOpenAIImageEditForm({ imageModel, screenshotPath, prompt }),
+    });
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      if (
+        imageModel !== modelCandidates.at(-1)
+        && isOpenAIUnsupportedImageModelResponse(response.status, body)
+      ) {
+        fallbackErrors.push(`${imageModel}: ${clipText(body, 220)}`);
+        continue;
+      }
+      throw buildOpenAIError(
+        `OpenAI image polish failed with status ${response.status}${body ? `: ${clipText(body, 500)}` : ""}`,
+        response.status === 401 || response.status === 403 ? "OPENAI_AUTH_FAILED" : "OPENAI_POLISH_FAILED",
+      );
+    }
+
+    const json = await response.json();
+    const b64 = json?.data?.[0]?.b64_json;
+    if (!b64) {
+      throw buildOpenAIError("OpenAI image polish response did not include b64_json output.");
+    }
+
+    return {
+      b64,
+      model: sanitizeText(json?.model || imageModel),
+      requestedModel: imageModel,
+      fallbackErrors,
+      prompt,
+    };
+  }
+
+  throw buildOpenAIError("OpenAI image polish could not find a supported image edit model.");
 }
 
 function loadPng(repoDir) {
   const requireFromInterface = createRequire(path.join(repoDir, "interface", "package.json"));
   return requireFromInterface("pngjs").PNG;
+}
+
+function readPngDimensions(repoDir, filePath) {
+  const PNG = loadPng(repoDir);
+  const image = PNG.sync.read(fs.readFileSync(filePath));
+  return {
+    width: image.width,
+    height: image.height,
+    area: image.width * image.height,
+  };
+}
+
+function assertSelectedScreenshotReadableEnough({ repoDir, entry, selectedScreenshot, summary }) {
+  assertSelectedScreenshotHasNoBrokenPlaceholder({ selectedScreenshot, summary });
+  if (summary?.polishedScreenshot) {
+    return null;
+  }
+  const screenshotPath = selectedScreenshot?.path;
+  if (!screenshotPath || !fs.existsSync(screenshotPath)) {
+    return null;
+  }
+
+  const presentationMode = sanitizeText(entry?.media?.presentationMode || "");
+  const minimums = getReadableScreenshotMinimums(presentationMode);
+  const dimensions = readPngDimensions(repoDir, screenshotPath);
+  const passes = dimensions.width >= minimums.minWidth
+    && dimensions.height >= minimums.minHeight
+    && dimensions.area >= minimums.minArea;
+  if (passes) {
+    return {
+      ...dimensions,
+      minimums,
+    };
+  }
+
+  throw buildOpenAIError(
+    [
+      `Source proof screenshot is too small for readable changelog media: ${dimensions.width}x${dimensions.height}.`,
+      `Minimum for ${presentationMode || "branded_card"} is ${minimums.minWidth}x${minimums.minHeight} and ${minimums.minArea} pixels.`,
+      "Capture a tighter or higher-density proof before OpenAI polish instead of publishing unreadable text.",
+    ].join(" "),
+    "SCREENSHOT_READABILITY_GATE_FAILED",
+    {
+      sourceScreenshot: {
+        ...dimensions,
+        minimums,
+        path: screenshotPath,
+      },
+    },
+  );
 }
 
 function roundedRectContains(x, y, width, height, radius, px, py) {
@@ -465,12 +669,14 @@ function drawRoundedRect(image, x, y, width, height, radius, rgba) {
   }
 }
 
-function drawRoundedImage(dest, source, x, y, width, height, radius) {
+function drawRoundedImage(dest, source, x, y, width, height, radius, options = {}) {
   const targetWidth = Math.max(1, Math.floor(width));
   const targetHeight = Math.max(1, Math.floor(height));
   const scaleX = source.width / targetWidth;
   const scaleY = source.height / targetHeight;
   const directCopy = source.width === targetWidth && source.height === targetHeight;
+  const crispUpscale = options.interpolation === "crisp"
+    && (targetWidth > source.width || targetHeight > source.height);
 
   const sample = (sourceX, sourceY) => {
     const clampedX = Math.max(0, Math.min(source.width - 1, sourceX));
@@ -492,6 +698,18 @@ function drawRoundedImage(dest, source, x, y, width, height, radius) {
     });
   };
 
+  const nearestSample = (sourceX, sourceY) => {
+    const clampedX = Math.max(0, Math.min(source.width - 1, Math.round(sourceX)));
+    const clampedY = Math.max(0, Math.min(source.height - 1, Math.round(sourceY)));
+    const sourceIndex = ((clampedY * source.width) + clampedX) * 4;
+    return [
+      source.data[sourceIndex],
+      source.data[sourceIndex + 1],
+      source.data[sourceIndex + 2],
+      source.data[sourceIndex + 3],
+    ];
+  };
+
   for (let targetY = 0; targetY < targetHeight; targetY += 1) {
     for (let targetX = 0; targetX < targetWidth; targetX += 1) {
       const destX = Math.floor(x + targetX);
@@ -509,7 +727,9 @@ function drawRoundedImage(dest, source, x, y, width, height, radius) {
             source.data[srcIndex + 3],
           ];
         })()
-        : sample(((targetX + 0.5) * scaleX) - 0.5, ((targetY + 0.5) * scaleY) - 0.5);
+        : crispUpscale
+          ? nearestSample(((targetX + 0.5) * scaleX) - 0.5, ((targetY + 0.5) * scaleY) - 0.5)
+          : sample(((targetX + 0.5) * scaleX) - 0.5, ((targetY + 0.5) * scaleY) - 0.5);
       blendPixel(dest, destX, destY, rgba);
     }
   }
@@ -537,21 +757,157 @@ function drawFrameBorder(image, x, y, width, height, radius, rgba) {
   }
 }
 
-function composeBrandedScreenshotCard({ repoDir, backgroundPath, screenshotPath, outputPath }) {
+function findContextualProofBounds(image) {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (let y = 0; y < image.height; y += 1) {
+    for (let x = 0; x < image.width; x += 1) {
+      const index = ((y * image.width) + x) * 4;
+      const r = image.data[index];
+      const g = image.data[index + 1];
+      const b = image.data[index + 2];
+      const a = image.data[index + 3];
+      if (a === 0) {
+        continue;
+      }
+      const luma = (0.2126 * r) + (0.7152 * g) + (0.0722 * b);
+      const chroma = Math.max(r, g, b) - Math.min(r, g, b);
+      if (luma <= 26 && chroma <= 18) {
+        continue;
+      }
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
+  }
+
+  if (!Number.isFinite(minX) || !Number.isFinite(minY)) {
+    return null;
+  }
+
+  const contentWidth = maxX - minX + 1;
+  const contentHeight = maxY - minY + 1;
+  const contentCoverage = (contentWidth * contentHeight) / Math.max(1, image.width * image.height);
+  if (contentCoverage >= 0.88) {
+    return null;
+  }
+
+  const padding = Math.max(18, Math.round(Math.min(image.width, image.height) * 0.07));
+  const x = Math.max(0, minX - padding);
+  const y = Math.max(0, minY - padding);
+  return {
+    x,
+    y,
+    width: Math.min(image.width, maxX + padding + 1) - x,
+    height: Math.min(image.height, maxY + padding + 1) - y,
+  };
+}
+
+function cropPng(PNG, source, bounds) {
+  if (!bounds?.width || !bounds?.height) {
+    return source;
+  }
+  const cropped = new PNG({ width: bounds.width, height: bounds.height });
+  for (let y = 0; y < bounds.height; y += 1) {
+    for (let x = 0; x < bounds.width; x += 1) {
+      const sourceIndex = (((bounds.y + y) * source.width) + bounds.x + x) * 4;
+      const targetIndex = ((y * bounds.width) + x) * 4;
+      cropped.data[targetIndex] = source.data[sourceIndex];
+      cropped.data[targetIndex + 1] = source.data[sourceIndex + 1];
+      cropped.data[targetIndex + 2] = source.data[sourceIndex + 2];
+      cropped.data[targetIndex + 3] = source.data[sourceIndex + 3];
+    }
+  }
+  return cropped;
+}
+
+const PIXEL_FONT_5X7 = {
+  A: ["01110", "10001", "10001", "11111", "10001", "10001", "10001"],
+  R: ["11110", "10001", "10001", "11110", "10100", "10010", "10001"],
+  U: ["10001", "10001", "10001", "10001", "10001", "10001", "01110"],
+};
+
+function drawPixelText(image, text, x, y, scale, rgba, gap = 1) {
+  let cursorX = x;
+  const cell = Math.max(1, Math.round(scale));
+  const spacing = Math.max(1, Math.round(cell * gap));
+  for (const character of String(text || "").toUpperCase()) {
+    if (character === " ") {
+      cursorX += cell * 4;
+      continue;
+    }
+    const glyph = PIXEL_FONT_5X7[character];
+    if (!glyph) {
+      cursorX += cell * 4;
+      continue;
+    }
+    for (let row = 0; row < glyph.length; row += 1) {
+      for (let column = 0; column < glyph[row].length; column += 1) {
+        if (glyph[row][column] !== "1") {
+          continue;
+        }
+        drawRoundedRect(
+          image,
+          cursorX + (column * cell),
+          y + (row * cell),
+          cell,
+          cell,
+          Math.max(1, Math.round(cell * 0.18)),
+          rgba,
+        );
+      }
+    }
+    cursorX += (glyph[0].length * cell) + spacing;
+  }
+}
+
+function drawAuraBranding(image, x, y, scale) {
+  const cell = Math.max(4, Math.round(scale));
+  const shelfWidth = Math.round(cell * 55);
+  const shelfHeight = Math.round(cell * 11.5);
+  drawRoundedRect(image, x - (cell * 2), y - (cell * 1.8), shelfWidth, shelfHeight, Math.round(cell * 4), [2, 8, 18, 182]);
+  drawRoundedRect(image, x - cell, y - (cell * 0.8), shelfWidth - (cell * 2), 2, 1, [100, 230, 255, 70]);
+  for (let index = 0; index < 3; index += 1) {
+    drawRoundedRect(
+      image,
+      x + (index * cell * 3.7),
+      y + (cell * 1.6),
+      cell * 1.7,
+      cell * 1.7,
+      Math.round(cell),
+      index === 0 ? [0, 229, 185, 230] : [90, 205, 255, 170],
+    );
+  }
+  drawPixelText(image, "AURA", x + Math.round(cell * 14.5), y, cell, [227, 250, 255, 232], 1.15);
+  drawRoundedRect(image, x + Math.round(cell * 41), y + Math.round(cell * 3.4), cell * 9.5, Math.max(2, Math.round(cell * 0.8)), Math.round(cell * 0.4), [124, 228, 255, 95]);
+}
+
+function composeBrandedScreenshotCard({ repoDir, backgroundPath, screenshotPath, outputPath, presentationMode = "" }) {
   const PNG = loadPng(repoDir);
   const backgroundSource = PNG.sync.read(fs.readFileSync(backgroundPath));
-  const screenshot = PNG.sync.read(fs.readFileSync(screenshotPath));
+  let screenshot = PNG.sync.read(fs.readFileSync(screenshotPath));
   const outputSize = getOutputCardSize();
   const background = new PNG({ width: outputSize.width, height: outputSize.height });
   drawRoundedImage(background, backgroundSource, 0, 0, outputSize.width, outputSize.height, 0);
+  const normalizedMode = sanitizeText(presentationMode).toLowerCase();
+  const isContextualProof = normalizedMode === "raw_contextual";
+  if (isContextualProof) {
+    screenshot = cropPng(PNG, screenshot, findContextualProofBounds(screenshot));
+  }
   const screenshotAspect = screenshot.width / Math.max(1, screenshot.height);
-  const maxCardWidth = Math.round(background.width * 0.965);
-  const maxCardHeight = Math.round(background.height * 0.91);
-  const screenshotInset = Math.max(20, Math.min(32, Math.round(Math.min(background.width, background.height) * 0.009)));
+  const maxCardWidth = Math.round(background.width * (isContextualProof ? 0.982 : 0.972));
+  const maxCardHeight = Math.round(background.height * (isContextualProof ? 0.93 : 0.915));
+  const screenshotInset = Math.max(
+    isContextualProof ? 14 : 20,
+    Math.min(isContextualProof ? 24 : 32, Math.round(Math.min(background.width, background.height) * (isContextualProof ? 0.006 : 0.009))),
+  );
   const maxScreenshotWidth = Math.max(1, maxCardWidth - (screenshotInset * 2));
   const maxScreenshotHeight = Math.max(1, maxCardHeight - (screenshotInset * 2));
   const screenshotScale = Math.min(
-    getMaxBrandedScreenshotUpscale(),
+    getMaxBrandedScreenshotUpscale(normalizedMode),
     maxScreenshotWidth / Math.max(1, screenshot.width),
     maxScreenshotHeight / Math.max(1, screenshot.height),
   );
@@ -572,16 +928,22 @@ function composeBrandedScreenshotCard({ repoDir, backgroundPath, screenshotPath,
   drawRoundedRect(background, cardX - 10, cardY - 10, cardWidth + 20, cardHeight + 20, outerRadius + 2, [2, 6, 15, 218]);
   drawRoundedRect(background, cardX, cardY, cardWidth, cardHeight, outerRadius, [4, 9, 18, 246]);
   drawRoundedRect(background, screenshotX - 2, screenshotY - 2, screenshotWidth + 4, screenshotHeight + 4, screenshotRadius + 2, [120, 228, 255, 42]);
-  drawRoundedImage(background, screenshot, screenshotX, screenshotY, screenshotWidth, screenshotHeight, screenshotRadius);
+  drawRoundedImage(
+    background,
+    screenshot,
+    screenshotX,
+    screenshotY,
+    screenshotWidth,
+    screenshotHeight,
+    screenshotRadius,
+    { interpolation: isContextualProof ? "crisp" : "smooth" },
+  );
   drawFrameBorder(background, screenshotX, screenshotY, screenshotWidth, screenshotHeight, screenshotRadius, [115, 226, 255, 88]);
 
   // Deterministic Aura accent marks. These keep branding consistent without asking
   // the image model to render text or recreate product UI.
   const accentY = Math.max(48, cardY - 88);
-  for (let index = 0; index < 3; index += 1) {
-    drawRoundedRect(background, cardX + (index * 34), accentY, 18, 18, 9, index === 0 ? [0, 229, 185, 220] : [90, 205, 255, 160]);
-  }
-  drawRoundedRect(background, cardX + 126, accentY + 7, 240, 6, 3, [130, 230, 255, 85]);
+  drawAuraBranding(background, cardX + 34, accentY - 10, Math.max(6, Math.round(background.width / 420)));
 
   ensureDir(path.dirname(outputPath));
   fs.writeFileSync(outputPath, PNG.sync.write(background));
@@ -614,6 +976,16 @@ function normalizeOpenAIJudgeScore(score) {
     return Math.round(numericScore * 10);
   }
   return Math.max(0, Math.min(100, Math.round(numericScore)));
+}
+
+function normalizeJudgeTextArray(value) {
+  return Array.isArray(value) ? value.map(sanitizeText).filter(Boolean) : [];
+}
+
+function isOpenAIJudgePublishable(judge) {
+  return Boolean(judge?.proofVisible)
+    && Number(judge?.score || 0) >= 70
+    && normalizeJudgeTextArray(judge?.missingProof).length === 0;
 }
 
 async function judgePolishedImage({ apiKey, imagePath, entry, summary }) {
@@ -671,14 +1043,18 @@ async function judgePolishedImage({ apiKey, imagePath, entry, summary }) {
   const text = extractOpenAIResponseText(json);
   const judgement = JSON.parse(text);
   const score = normalizeOpenAIJudgeScore(judgement.score);
-  return {
-    passed: Boolean(judgement.passed) && Boolean(judgement.proofVisible) && score >= 70,
+  const normalizedJudge = {
+    modelPassed: Boolean(judgement.passed),
     score,
-    reasons: Array.isArray(judgement.reasons) ? judgement.reasons.map(sanitizeText).filter(Boolean) : [],
-    concerns: Array.isArray(judgement.concerns) ? judgement.concerns.map(sanitizeText).filter(Boolean) : [],
-    missingProof: Array.isArray(judgement.missingProof) ? judgement.missingProof.map(sanitizeText).filter(Boolean) : [],
+    reasons: normalizeJudgeTextArray(judgement.reasons),
+    concerns: normalizeJudgeTextArray(judgement.concerns),
+    missingProof: normalizeJudgeTextArray(judgement.missingProof),
     proofVisible: Boolean(judgement.proofVisible),
     model: getOpenAIJudgeModel(),
+  };
+  return {
+    ...normalizedJudge,
+    passed: isOpenAIJudgePublishable(normalizedJudge),
   };
 }
 
@@ -698,13 +1074,15 @@ async function polishSelectedScreenshot({ repoDir, entry, summary, selectedScree
     };
     const normalizedFixtureJudge = {
       ...fixtureJudge,
+      modelPassed: fixtureJudge.modelPassed ?? Boolean(fixtureJudge.passed),
       proofVisible: fixtureJudge.proofVisible !== false,
       score: normalizeOpenAIJudgeScore(fixtureJudge.score ?? fixturePolish.score ?? 100),
-      reasons: Array.isArray(fixtureJudge.reasons) ? fixtureJudge.reasons.map(sanitizeText).filter(Boolean) : [],
-      concerns: Array.isArray(fixtureJudge.concerns) ? fixtureJudge.concerns.map(sanitizeText).filter(Boolean) : [],
-      missingProof: Array.isArray(fixtureJudge.missingProof) ? fixtureJudge.missingProof.map(sanitizeText).filter(Boolean) : [],
+      reasons: normalizeJudgeTextArray(fixtureJudge.reasons),
+      concerns: normalizeJudgeTextArray(fixtureJudge.concerns),
+      missingProof: normalizeJudgeTextArray(fixtureJudge.missingProof),
     };
-    if (!(Boolean(normalizedFixtureJudge.passed) && normalizedFixtureJudge.proofVisible && normalizedFixtureJudge.score >= 70)) {
+    normalizedFixtureJudge.passed = isOpenAIJudgePublishable(normalizedFixtureJudge);
+    if (!normalizedFixtureJudge.passed) {
       throw buildOpenAIError(
         `OpenAI branded media judge rejected ${slotId} with score ${normalizedFixtureJudge.score}: ${normalizedFixtureJudge.concerns.join("; ") || normalizedFixtureJudge.missingProof.join("; ") || "no details"}`,
         "OPENAI_POLISH_QUALITY_GATE",
@@ -742,6 +1120,7 @@ async function polishSelectedScreenshot({ repoDir, entry, summary, selectedScree
     backgroundPath,
     screenshotPath: selectedScreenshot.path,
     outputPath: polishedPath,
+    presentationMode: entry?.media?.presentationMode,
   });
 
   const judge = await judgePolishedImage({
@@ -1016,6 +1395,9 @@ function classifyMediaFailure(error) {
   if (/OPENAI_|OpenAI|branded media|polish/i.test(output)) {
     return "openai_polish";
   }
+  if (/SCREENSHOT_READABILITY|too small for readable changelog media|readable text/i.test(output)) {
+    return "quality_gate";
+  }
   if (isBrowserbaseConcurrencyError(output)) {
     return "browserbase_concurrency";
   }
@@ -1030,10 +1412,6 @@ function classifyMediaFailure(error) {
   }
 
   return "capture_error";
-}
-
-function shouldFallbackToRawProof(error) {
-  return error?.code === "OPENAI_POLISH_QUALITY_GATE";
 }
 
 function shouldPublishEntryMedia(entry, pagesDir, { refreshExisting = false } = {}) {
@@ -1101,6 +1479,7 @@ function findProductionSummary(outputRoot) {
 
 function runScreenshotCapture({
   repoDir,
+  pagesDir,
   previewUrl,
   provider,
   channel,
@@ -1131,6 +1510,7 @@ function runScreenshotCapture({
   const interfaceDir = path.join(repoDir, "interface");
   const baseRunRoot = path.join(interfaceDir, "output", "demo-screenshots", "publish-changelog-media");
   const runStamp = `${slotId}-${Date.now()}`;
+  const navigationLessonsPath = path.join(pagesDir, "assets", "changelog", channel, "navigation-lessons.json");
 
   const runCaptureAttempt = (captureProvider) => {
     const runRoot = path.join(baseRunRoot, `${runStamp}-${captureProvider}`);
@@ -1167,7 +1547,11 @@ function runScreenshotCapture({
             cwd: interfaceDir,
             stdio: "pipe",
             encoding: "utf8",
-            env: process.env,
+            env: {
+              ...process.env,
+              AURA_DEMO_NAVIGATION_LESSONS_PATH: navigationLessonsPath,
+              AURA_DEMO_AUTO_WRITE_NAVIGATION_LESSON: isEnabled(process.env.AURA_CHANGELOG_MEDIA_AUTO_WRITE_NAVIGATION_LESSONS, true) ? "1" : "0",
+            },
             maxBuffer: 10 * 1024 * 1024,
           });
           const summaryPath = findProductionSummary(runRoot);
@@ -1254,6 +1638,7 @@ async function publishEntryMedia({
   const changedFiles = collectEntryChangedFiles(doc, entry);
   const summary = runScreenshotCapture({
     repoDir,
+    pagesDir,
     previewUrl,
     provider,
     channel: doc.channel,
@@ -1274,6 +1659,12 @@ async function publishEntryMedia({
   if (!selectedScreenshot?.path || !fs.existsSync(selectedScreenshot.path)) {
     throw new Error(`No publishable screenshot was produced for ${entry.media.slotId}`);
   }
+  assertSelectedScreenshotReadableEnough({
+    repoDir,
+    entry,
+    selectedScreenshot,
+    summary,
+  });
   let polishedScreenshot;
   if (!shouldUseBrandedPolish(entry)) {
     polishedScreenshot = {
@@ -1281,29 +1672,13 @@ async function publishEntryMedia({
       originalScreenshotSource: selectedScreenshot.source,
     };
   } else {
-    try {
-      polishedScreenshot = await polishSelectedScreenshot({
-        repoDir,
-        entry,
-        summary,
-        selectedScreenshot,
-        slotId: entry.media.slotId,
-      });
-    } catch (error) {
-      if (!shouldFallbackToRawProof(error)) {
-        throw error;
-      }
-      polishedScreenshot = {
-        ...selectedScreenshot,
-        polishProvider: "openai",
-        polishModel: "",
-        polishJudgeModel: sanitizeText(error?.polishJudge?.model || getOpenAIJudgeModel()),
-        polishScore: error?.polishJudge?.score ?? null,
-        polishJudge: error?.polishJudge || null,
-        polishFallbackReason: "openai_polish_quality_gate",
-        originalScreenshotSource: selectedScreenshot.source,
-      };
-    }
+    polishedScreenshot = await polishSelectedScreenshot({
+      repoDir,
+      entry,
+      summary,
+      selectedScreenshot,
+      slotId: entry.media.slotId,
+    });
   }
 
   const assetPath = resolveAssetPath({
@@ -1589,6 +1964,11 @@ async function main() {
         status: "failed",
         failureClass,
         error: String(error),
+        polishJudgeModel: sanitizeText(error?.polishJudge?.model || ""),
+        polishScore: error?.polishJudge?.score ?? null,
+        polishConcerns: error?.polishJudge?.concerns || null,
+        polishMissingProof: error?.polishJudge?.missingProof || null,
+        sourceScreenshot: error?.sourceScreenshot || null,
         outputDir: error?.captureSummary?.outputDir || error?.captureRunRoot || null,
         inspectorUrl: error?.captureSummary?.inspectorUrl || null,
         sessionId: error?.captureSummary?.sessionId || null,
@@ -1629,6 +2009,7 @@ async function main() {
 
 export {
   allowLocalFallbackOnBrowserbaseQuota,
+  assertSelectedScreenshotReadableEnough,
   buildEntryPrompt,
   evaluateWorkflowOutcome,
   buildAbortRemainingError,
@@ -1646,6 +2027,7 @@ export {
   mergePublishedMedia,
   normalizeOpenAIJudgeScore,
   parseArgs,
+  requestOpenAIBackground,
   resolveTargetChangelogDocs,
   replaceChangelogMediaBlock,
   resolveAssetPath,

@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "lessons": [
+    {
+      "id": "chat-model-picker-visible-option",
+      "description": "Model/version changes are best proven from the chat composer model picker with the exact model label visible.",
+      "match": {
+        "keywords": ["model", "models", "picker", "dropdown", "selector", "gpt"],
+        "changedFileGlobs": ["interface/src/components/ChatInputBar/**", "interface/src/constants/models.ts"]
+      },
+      "navigation": {
+        "targetAppId": "agents",
+        "surface": "chat input model picker",
+        "requiredUiSignals": ["chatComposerVisible", "modelPickerVisible"],
+        "steps": [
+          "Open or keep the Agents app visible.",
+          "Focus the chat composer area.",
+          "Open the model picker dropdown and keep it open.",
+          "Verify the exact model/version label is visible before capture."
+        ],
+        "forbiddenPhrases": ["Select an agent to start", "No agents yet"],
+        "captureMode": "contextual-proof"
+      }
+    },
+    {
+      "id": "agent-skills-tab-proof",
+      "description": "Agent skill changes should land on the selected agent's Skills tab or the delete-skill confirmation if the story asks for deletion.",
+      "match": {
+        "keywords": ["skill", "skills", "tool", "tools"],
+        "changedFileGlobs": ["interface/src/apps/agents/**/SkillsTab.tsx", "interface/src/api/*skill*"]
+      },
+      "navigation": {
+        "targetAppId": "agents",
+        "surface": "agent skills tab",
+        "requiredUiSignals": [],
+        "steps": [
+          "Open or keep the Agents app visible.",
+          "Select a seeded agent if the app asks for one.",
+          "Open the Skills or My Skills tab.",
+          "For delete stories, create one demo skill if empty, then open the delete confirmation dialog."
+        ],
+        "forbiddenPhrases": ["No skills yet"],
+        "captureMode": "surface-proof"
+      }
+    },
+    {
+      "id": "process-run-output-sidekick",
+      "description": "Process output, run, and event changes need the process sidekick/run detail visible, not only the workflow canvas.",
+      "match": {
+        "keywords": ["process", "run", "event", "output", "node", "timeline", "build"],
+        "changedFileGlobs": ["interface/src/apps/process/**"]
+      },
+      "navigation": {
+        "targetAppId": "process",
+        "surface": "process run detail sidekick",
+        "requiredUiSignals": ["sidekickVisible"],
+        "steps": [
+          "Open or keep the Processes app visible.",
+          "Select a seeded process.",
+          "Open the run detail, node events, or output sidekick surface.",
+          "Expand the relevant event/output row if the proof text is hidden."
+        ],
+        "forbiddenPhrases": ["No runs yet", "No events for this run", "No output persisted for this node"],
+        "captureMode": "surface-proof"
+      }
+    },
+    {
+      "id": "feedback-thread-proof",
+      "description": "Feedback changes with comments, votes, or triage should show the selected feedback thread, not the empty board or selector prompt.",
+      "match": {
+        "keywords": ["feedback", "comment", "comments", "vote", "idea", "thread", "triage"],
+        "changedFileGlobs": ["interface/src/apps/feedback/**"]
+      },
+      "navigation": {
+        "targetAppId": "feedback",
+        "surface": "feedback thread",
+        "requiredUiSignals": ["feedbackThreadVisible"],
+        "steps": [
+          "Open or keep the Feedback app visible.",
+          "Select the seeded feedback item that best matches the story.",
+          "Keep the thread/comments area visible before capture."
+        ],
+        "forbiddenPhrases": ["Select a feedback item to view comments", "No comments yet"],
+        "captureMode": "surface-proof"
+      }
+    },
+    {
+      "id": "notes-editor-proof",
+      "description": "Notes changes should show the selected note editor with the seeded note title/content visible.",
+      "match": {
+        "keywords": ["note", "notes", "editor", "document", "toc"],
+        "changedFileGlobs": ["interface/src/apps/notes/**"]
+      },
+      "navigation": {
+        "targetAppId": "notes",
+        "surface": "notes editor",
+        "requiredUiSignals": [],
+        "steps": [
+          "Open or keep the Notes app visible.",
+          "Select the seeded note that matches the story.",
+          "Keep the editor title and body visible before capture."
+        ],
+        "forbiddenPhrases": ["No note selected", "Select a note"],
+        "captureMode": "surface-proof"
+      }
+    }
+  ]
+}

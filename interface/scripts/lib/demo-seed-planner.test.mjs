@@ -122,6 +122,38 @@ test("applyDemoSeedPlanToBrief promotes seeded entities into validation signals 
   assert.ok(patched.proofRequirements.some((entry) => entry.anyOf.includes("0 commits")));
 });
 
+test("applyDemoSeedPlanToBrief does not force seeded context into already-specific proof shots", () => {
+  const brief = {
+    title: "Model picker",
+    story: "Show GPT-5.5 in the chat input model picker.",
+    targetAppId: "agents",
+    startPath: "/agents/agent-ceo",
+    successChecklist: ["Model picker is visible"],
+    setupPlan: [],
+    validationSignals: ["GPT-5.5"],
+    proofRequirements: [{ label: "named model option", anyOf: ["GPT-5.5"] }],
+    requiredUiSignals: ["chatComposerVisible", "modelPickerVisible"],
+    forbiddenPhrases: [],
+    systemPrompt: "Base prompt",
+    openAppInstruction: "Open Agents",
+    proofInstruction: "Show the model picker",
+    interactionInstruction: "Keep the dropdown visible",
+  };
+  const seedPlan = {
+    startPath: "/agents/agent-ceo",
+    seededEntities: [{ type: "agent", agentId: "agent-ceo", name: "Aura CEO", source: "baseline" }],
+    instructionPatch: {
+      validationSignals: ["Aura CEO"],
+    },
+  };
+
+  const patched = applyDemoSeedPlanToBrief(brief, seedPlan);
+
+  assert.ok(patched.validationSignals.includes("Aura CEO"));
+  assert.ok(patched.proofRequirements.some((entry) => entry.anyOf.includes("GPT-5.5")));
+  assert.equal(patched.proofRequirements.some((entry) => entry.anyOf.includes("Aura CEO")), false);
+});
+
 test("feedback story stays runtime-ready without extra preseed patching", async () => {
   const brief = {
     title: "Create feedback",

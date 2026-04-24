@@ -410,6 +410,219 @@ test("inferEntryMediaHeuristic defaults micro-ui stories to raw contextual scree
   assert.equal(media.presentationMode, "raw_contextual");
 });
 
+test("inferEntryMediaHeuristic skips subtle maintenance fixes during provider fallback", () => {
+  const media = inferEntryMediaHeuristic(
+    {
+      batch_id: "entry-1",
+      title: "Sidekick tabs no longer overflow",
+      summary: "The debug sidekick tab bar received a small overflow and spacing fix.",
+      items: [
+        {
+          text: "Fix sidekick tab overflow and stabilize the tab spacing.",
+          commit_shas: ["abc1234"],
+        },
+      ],
+    },
+    new Map([
+      [
+        "abc1234",
+        {
+          subject: "fix(debug): prevent sidekick tab overflow",
+          files: ["interface/src/apps/debug/components/DebugSidekick.tsx"],
+        },
+      ],
+    ]),
+  );
+
+  assert.equal(media.requested, false);
+  assert.match(media.reasons.join(" "), /subtle maintenance fixes/);
+});
+
+test("inferEntryMediaHeuristic still requests durable feature surfaces during provider fallback", () => {
+  const media = inferEntryMediaHeuristic(
+    {
+      batch_id: "entry-1",
+      title: "AURA 3D launches in the app registry",
+      summary: "A new AURA 3D app appears in the sidebar with a project selector and WebGL viewer.",
+      items: [
+        {
+          text: "Open the AURA 3D app and show the sidebar entry, project selector, and viewer.",
+          commit_shas: ["abc1234"],
+        },
+      ],
+    },
+    new Map([
+      [
+        "abc1234",
+        {
+          subject: "feat(aura3d): scaffold app registry and viewer",
+          files: [
+            "interface/src/apps/aura3d/Aura3DMainPanel.tsx",
+            "interface/src/apps/appRegistry.ts",
+          ],
+        },
+      ],
+    ]),
+  );
+
+  assert.equal(media.requested, true);
+  assert.equal(media.presentationMode, "branded_card");
+});
+
+test("inferEntryMediaHeuristic skips interface support code without a renderable proof surface", () => {
+  const media = inferEntryMediaHeuristic(
+    {
+      batch_id: "entry-1",
+      title: "AURA 3D artifact persistence",
+      summary: "AURA 3D artifacts are persisted through the API and store.",
+      items: [
+        {
+          text: "Persist generated artifacts in store and API helpers.",
+          commit_shas: ["abc1234"],
+        },
+      ],
+    },
+    new Map([
+      [
+        "abc1234",
+        {
+          subject: "feat(aura3d): add artifact persistence to store",
+          files: [
+            "interface/src/api/artifacts.ts",
+            "interface/src/stores/aura3d-store.ts",
+          ],
+        },
+      ],
+    ]),
+  );
+
+  assert.equal(media.requested, false);
+  assert.match(media.reasons.join(" "), /support code/);
+});
+
+test("inferEntryMediaHeuristic does not treat Windows updater text as a browser screenshot surface", () => {
+  const media = inferEntryMediaHeuristic(
+    {
+      batch_id: "entry-1",
+      title: "Windows updater handoff",
+      summary: "The desktop updater now hands off to NSIS reliably.",
+      items: [
+        {
+          text: "Fix Windows updater handoff in the desktop shell.",
+          commit_shas: ["abc1234"],
+        },
+      ],
+    },
+    new Map([
+      [
+        "abc1234",
+        {
+          subject: "fix(desktop): make Windows auto-updater hand off to NSIS reliably",
+          files: [
+            "apps/aura-os-desktop/src/main.rs",
+            "apps/aura-os-desktop/src/updater.rs",
+          ],
+        },
+      ],
+    ]),
+  );
+
+  assert.equal(media.requested, false);
+  assert.match(media.reasons.join(" "), /desktop-only updater/);
+});
+
+test("inferEntryMediaHeuristic skips ambiguous maintenance UI fixes without explicit proof text", () => {
+  const media = inferEntryMediaHeuristic(
+    {
+      batch_id: "entry-1",
+      title: "Decode base64 stdout in command blocks",
+      summary: "Command and read_file blocks decode base64 output before rendering.",
+      items: [
+        {
+          text: "Fix command block decoding for stdout and read_file envelopes.",
+          commit_shas: ["abc1234"],
+        },
+      ],
+    },
+    new Map([
+      [
+        "abc1234",
+        {
+          subject: "fix(ui): decode base64 stdout in command and read_file blocks",
+          files: [
+            "interface/src/components/Block/renderers/CommandBlock.tsx",
+            "interface/src/components/Block/renderers/FileBlock.tsx",
+            "interface/src/utils/format.ts",
+          ],
+        },
+      ],
+    ]),
+  );
+
+  assert.equal(media.requested, false);
+  assert.match(media.reasons.join(" "), /maintenance commits/);
+});
+
+test("inferEntryMediaHeuristic keeps maintenance fixes when the visible proof is explicit", () => {
+  const media = inferEntryMediaHeuristic(
+    {
+      batch_id: "entry-1",
+      title: "Build/Test Verification shows the real command",
+      summary: "Build/Test Verification now shows the real command instead of Running `undefined`.",
+      items: [
+        {
+          text: "Show the real command in the verification panel.",
+          commit_shas: ["abc1234"],
+        },
+      ],
+    },
+    new Map([
+      [
+        "abc1234",
+        {
+          subject: "fix(interface): show real command instead of 'Running `undefined`' in Build/Test Verification",
+          files: ["interface/src/components/VerificationStepItem/VerificationStepItem.tsx"],
+        },
+      ],
+    ]),
+  );
+
+  assert.equal(media.requested, true);
+});
+
+test("inferEntryMediaHeuristic skips feature commits whose headline is not a clear screen target", () => {
+  const media = inferEntryMediaHeuristic(
+    {
+      batch_id: "entry-1",
+      title: "Billing email follows account identity",
+      summary: "The billing email is locked to the ZERO account identity.",
+      items: [
+        {
+          text: "Team Settings uses the ZERO auth identity for billing email state.",
+          commit_shas: ["abc1234"],
+        },
+      ],
+    },
+    new Map([
+      [
+        "abc1234",
+        {
+          subject: "feat(billing): lock billing email to ZERO account identity",
+          files: [
+            "apps/aura-os-server/src/handlers/orgs.rs",
+            "interface/src/api/orgs.ts",
+            "interface/src/components/OrgSettingsBilling/OrgSettingsBilling.tsx",
+            "interface/src/hooks/useOrgSettingsData.ts",
+          ],
+        },
+      ],
+    ]),
+  );
+
+  assert.equal(media.requested, false);
+  assert.match(media.reasons.join(" "), /headline/);
+});
+
 test("buildMediaPlaceholderBlock emits hidden markers only for requested slots", () => {
   const placeholderLines = buildMediaPlaceholderBlock({
     batch_id: "entry-1",

@@ -141,6 +141,58 @@ test("assessDemoScreenshotQuality fails when a required UI state or forbidden pl
   assert.ok(report.hardFailures.some((check) => check.name === "forbidden-proof-phrase"));
 });
 
+test("assessDemoScreenshotQuality rejects generated-product placeholder screens", () => {
+  const report = assessDemoScreenshotQuality({
+    phaseId: "validate-proof",
+    viewport: { width: 1600, height: 1000 },
+    screenshot: {
+      kind: "surface-union",
+      clip: { x: 120, y: 80, width: 1240, height: 720 },
+    },
+    visibleText: "/test org Search Demo Project Image 3D Model Your generated image will appear here",
+    validationMatches: ["Image", "3D Model"],
+    minSignalMatches: 1,
+    routeMatched: true,
+    activeAppMatched: true,
+    uiSignals: {
+      placeholderVisible: false,
+      emptyStateVisible: false,
+      mobileLayoutVisible: false,
+      errorTextVisible: false,
+    },
+  });
+
+  assert.equal(report.ok, false);
+  assert.ok(report.hardFailures.some((check) => check.name === "empty-product-placeholder"));
+  assert.deepEqual(report.derived.unpublishableEmptyStateMatches, ["Your generated image will appear here"]);
+});
+
+test("assessDemoScreenshotQuality rejects generic product chrome without substantive proof", () => {
+  const report = assessDemoScreenshotQuality({
+    phaseId: "validate-proof",
+    viewport: { width: 1600, height: 1000 },
+    screenshot: {
+      kind: "surface-union",
+      clip: { x: 120, y: 80, width: 1240, height: 720 },
+    },
+    visibleText: "/test org Search Demo Project Image 3D Model",
+    validationMatches: ["Image", "3D Model"],
+    minSignalMatches: 1,
+    routeMatched: true,
+    activeAppMatched: true,
+    uiSignals: {
+      placeholderVisible: false,
+      emptyStateVisible: false,
+      mobileLayoutVisible: false,
+      errorTextVisible: false,
+    },
+  });
+
+  assert.equal(report.ok, false);
+  assert.ok(report.hardFailures.some((check) => check.name === "substantive-product-proof"));
+  assert.equal(report.derived.substantiveProductProofText, false);
+});
+
 test("assessDemoScreenshotQuality accepts required sidekick proof when the sidekick signal is visible", () => {
   const report = assessDemoScreenshotQuality({
     phaseId: "validate-proof",

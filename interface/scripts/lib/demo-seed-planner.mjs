@@ -1308,6 +1308,10 @@ export function applyDemoSeedPlanToBrief(brief, seedPlan) {
     return brief;
   }
 
+  const existingProofRequirements = Array.isArray(brief.proofRequirements) ? brief.proofRequirements : [];
+  const seedProofRequirements = existingProofRequirements.length > 0
+    ? []
+    : deriveSeedPlanProofRequirements(seedPlan);
   const checklist = Array.isArray(seedPlan.instructionPatch?.successChecklist) && seedPlan.instructionPatch.successChecklist.length > 0
     ? seedPlan.instructionPatch.successChecklist
     : brief.successChecklist;
@@ -1325,8 +1329,8 @@ export function applyDemoSeedPlanToBrief(brief, seedPlan) {
       ...(Array.isArray(brief.validationSignals) ? brief.validationSignals : []),
     ], 10),
     proofRequirements: mergeProofRequirements([
-      ...(Array.isArray(brief.proofRequirements) ? brief.proofRequirements : []),
-      ...deriveSeedPlanProofRequirements(seedPlan),
+      ...existingProofRequirements,
+      ...seedProofRequirements,
     ], 8),
     requiredUiSignals: normalizeArray([
       ...(Array.isArray(brief.requiredUiSignals) ? brief.requiredUiSignals : []),
