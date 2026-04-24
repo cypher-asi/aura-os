@@ -2,8 +2,9 @@ use async_trait::async_trait;
 use tokio::sync::{broadcast, mpsc};
 
 use aura_protocol::{
-    AgentPermissionsWire, ConversationMessage, InboundMessage, InstalledIntegration,
-    IntentClassifierSpec, OutboundMessage, SessionInit, SessionProviderConfig,
+    AgentPermissionsWire, AgentToolPermissionsWire, ConversationMessage, InboundMessage,
+    InstalledIntegration, IntentClassifierSpec, OutboundMessage, SessionInit,
+    SessionProviderConfig,
 };
 
 #[derive(Default)]
@@ -14,6 +15,8 @@ pub struct SessionConfig {
     pub max_turns: Option<u32>,
     pub workspace: Option<String>,
     pub agent_id: Option<String>,
+    /// Originating end-user id for harness-side tool defaults.
+    pub user_id: Option<String>,
     /// Human-readable display name for the remote agent.
     /// When omitted the swarm harness falls back to `agent_id`.
     pub agent_name: Option<String>,
@@ -41,6 +44,8 @@ pub struct SessionConfig {
     /// Optional per-turn intent classifier. CEO-style agents populate
     /// this so the harness narrows the visible tool set each turn.
     pub intent_classifier: Option<IntentClassifierSpec>,
+    /// Optional per-agent tool permission override stamped onto this session.
+    pub tool_permissions: Option<AgentToolPermissionsWire>,
 }
 
 pub struct HarnessSession {
@@ -91,9 +96,11 @@ pub fn build_session_init(cfg: &SessionConfig) -> SessionInit {
         aura_session_id: cfg.aura_session_id.clone(),
         aura_org_id: cfg.aura_org_id.clone(),
         agent_id: cfg.agent_id.clone(),
+        user_id: cfg.user_id.clone().unwrap_or_default(),
         provider_config: cfg.provider_config.clone(),
         intent_classifier: cfg.intent_classifier.clone(),
         agent_permissions: cfg.agent_permissions.clone(),
+        tool_permissions: cfg.tool_permissions.clone(),
     }
 }
 

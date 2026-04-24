@@ -568,6 +568,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "aura-os-harness"
+version = "0.1.0"
+dependencies = [
+ "aura-os-link",
+ "aura-protocol",
+ "base64",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-tungstenite 0.29.0",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "aura-os-ide"
 version = "0.1.0"
 dependencies = [
@@ -693,6 +710,7 @@ dependencies = [
  "aura-os-billing",
  "aura-os-browser",
  "aura-os-core",
+ "aura-os-harness",
  "aura-os-integrations",
  "aura-os-link",
  "aura-os-network",

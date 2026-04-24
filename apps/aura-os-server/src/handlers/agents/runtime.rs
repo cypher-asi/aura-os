@@ -23,6 +23,7 @@ use aura_os_link::{
     SessionConfig, SessionProviderConfig, SessionReady, SessionUsage, TextDelta, ToolInfo,
     UserMessage,
 };
+use aura_protocol::ToolStateWire;
 
 use crate::dto::{AgentRuntimeTestResponse, SendChatRequest};
 use crate::error::{ApiError, ApiResult};
@@ -369,6 +370,7 @@ async fn external_project_tool_infos(state: &AppState, agent: &Agent, jwt: &str)
         .map(|tool| ToolInfo {
             name: tool.name.clone(),
             description: tool.description.clone(),
+            effective_state: ToolStateWire::On,
         })
         .collect::<Vec<_>>();
 
@@ -380,6 +382,7 @@ async fn external_project_tool_infos(state: &AppState, agent: &Agent, jwt: &str)
                 .map(|tool| ToolInfo {
                     name: tool.name,
                     description: tool.description,
+                    effective_state: ToolStateWire::On,
                 }),
         );
     }

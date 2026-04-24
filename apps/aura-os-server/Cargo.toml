@@ -17,6 +17,7 @@ aura-os-agents = { path = "../../crates/aura-os-agents" }
 aura-os-auth = { path = "../../crates/aura-os-auth" }
 aura-os-tasks = { path = "../../crates/aura-os-tasks" }
 aura-os-sessions = { path = "../../crates/aura-os-sessions" }
+aura-os-harness = { path = "../../crates/aura-os-harness" }
 aura-os-link = { path = "../../crates/aura-os-link" }
 aura-os-terminal = { path = "../../crates/aura-os-terminal" }
 aura-os-browser = { path = "../../crates/aura-os-browser" }

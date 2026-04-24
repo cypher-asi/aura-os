@@ -525,8 +525,7 @@ fn publish_assistant_turn_progress_event(
 /// publishes for a single turn. Tuned to balance UI responsiveness
 /// after a refresh against history-API request load — on the order
 /// of two refetches per second is enough to feel "live".
-const ASSISTANT_TURN_PROGRESS_THROTTLE: std::time::Duration =
-    std::time::Duration::from_millis(400);
+const ASSISTANT_TURN_PROGRESS_THROTTLE: std::time::Duration = std::time::Duration::from_millis(400);
 
 pub(crate) fn spawn_chat_persist_task(
     rx: tokio::sync::broadcast::Receiver<HarnessOutbound>,
@@ -857,7 +856,8 @@ pub(crate) fn spawn_chat_persist_task(
                         | HarnessOutbound::GenerationProgress(_)
                         | HarnessOutbound::GenerationPartialImage(_)
                         | HarnessOutbound::GenerationCompleted(_)
-                        | HarnessOutbound::GenerationError(_) => {}
+                        | HarnessOutbound::GenerationError(_)
+                        | HarnessOutbound::ToolApprovalPrompt(_) => {}
                     }
 
                     // Throttled live-progress heartbeat. The client uses this
@@ -880,11 +880,7 @@ pub(crate) fn spawn_chat_persist_task(
                             }
                         };
                         if should_publish && !message_id.is_empty() {
-                            publish_assistant_turn_progress_event(
-                                &event_bus,
-                                &ctx,
-                                &message_id,
-                            );
+                            publish_assistant_turn_progress_event(&event_bus, &ctx, &message_id);
                             last_progress_at = Some(now);
                         }
                     }
@@ -2485,7 +2481,7 @@ async fn open_harness_chat_stream(
 pub(crate) async fn send_agent_event_stream(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
-    crate::state::AuthSession(_auth_session): crate::state::AuthSession,
+    crate::state::AuthSession(auth_session): crate::state::AuthSession,
     Path(agent_id): Path<AgentId>,
     Json(body): Json<SendChatRequest>,
 ) -> ApiResult<SseResponse> {
@@ -2739,6 +2735,7 @@ pub(crate) async fn send_agent_event_stream(
             project_state_snapshot.as_deref(),
         )),
         agent_id: Some(agent_id.to_string()),
+        user_id: Some(auth_session.user_id.clone()),
         agent_name: Some(agent.name.clone()),
         model: model.clone(),
         token: Some(jwt.clone()),
@@ -2803,6 +2800,7 @@ pub(crate) async fn list_events(
 pub(crate) async fn send_event_stream(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
+    crate::state::AuthSession(auth_session): crate::state::AuthSession,
     Path((project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
     Json(body): Json<SendChatRequest>,
 ) -> ApiResult<SseResponse> {
@@ -3009,6 +3007,7 @@ pub(crate) async fn send_event_stream(
     let config = SessionConfig {
         system_prompt: Some(system_prompt),
         agent_id: Some(instance.agent_id.to_string()),
+        user_id: Some(auth_session.user_id.clone()),
         agent_name: Some(instance.name.clone()),
         model: model.clone(),
         token: Some(jwt),
