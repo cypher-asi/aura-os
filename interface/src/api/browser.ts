@@ -120,6 +120,21 @@ export interface NavState {
   loading: boolean;
 }
 
+/**
+ * Main-frame navigation failure. The browser backend emits this when the
+ * top-level document load fails (DNS resolution error, connection refused,
+ * TLS failure, …) so the client can render an Aura-branded error page
+ * instead of the default Chromium one.
+ */
+export interface NavError {
+  /** URL the browser was trying to reach when the load failed. */
+  url: string;
+  /** Short error description, typically a Chromium `net::ERR_*` code. */
+  error_text: string;
+  /** Chromium `net_error` numeric code (e.g. `-105`), when known. */
+  code?: number | null;
+}
+
 export type BrowserClientMsg =
   | { type: "navigate"; url: string }
   | { type: "back" }
@@ -155,6 +170,7 @@ export type BrowserClientMsg =
 
 export type BrowserServerTextEvent =
   | { type: "nav"; nav: NavState }
+  | { type: "nav_error"; error: NavError }
   | { type: "exit"; code: number };
 
 export function isBrowserServerTextEvent(
@@ -165,6 +181,12 @@ export function isBrowserServerTextEvent(
   if (type === "nav") {
     const nav = (value as { nav?: unknown }).nav;
     return Boolean(nav && typeof nav === "object");
+  }
+  if (type === "nav_error") {
+    const err = (value as { error?: unknown }).error;
+    if (!err || typeof err !== "object") return false;
+    const { url, error_text } = err as { url?: unknown; error_text?: unknown };
+    return typeof url === "string" && typeof error_text === "string";
   }
   if (type === "exit") return true;
   return false;

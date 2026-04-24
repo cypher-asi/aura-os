@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import type { BrowserWorkerInMsg } from "../../workers/browser-frame-worker";
 import type { BrowserClientMsg } from "../../api/browser";
 import {
@@ -29,6 +29,12 @@ export interface BrowserViewportProps {
    * viewport is otherwise input-agnostic.
    */
   onClientMsg?: (msg: BrowserClientMsg) => void;
+  /**
+   * Optional overlay rendered above the screencast canvas. The viewport
+   * stays input-agnostic; overlays opt into their own pointer handling.
+   * Typical uses are navigation-error panels and blocking modals.
+   */
+  overlay?: ReactNode;
 }
 
 function createWorker(): Worker | null {
@@ -45,6 +51,7 @@ export function BrowserViewport({
   width,
   height,
   onClientMsg,
+  overlay,
 }: BrowserViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const workerRef = useRef<Worker | null>(null);
@@ -261,6 +268,7 @@ export function BrowserViewport({
         onKeyUp={handleKeyUp}
       />
       {placeholder && <div className={styles.placeholder}>{placeholder}</div>}
+      {overlay}
     </div>
   );
 }

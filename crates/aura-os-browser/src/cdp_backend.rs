@@ -40,6 +40,9 @@ use chromiumoxide::cdp::browser_protocol::input::{
     DispatchKeyEventParams, DispatchKeyEventType, DispatchMouseEventParams, DispatchMouseEventType,
     MouseButton as CdpMouseButton,
 };
+use chromiumoxide::cdp::browser_protocol::network::{
+    EventLoadingFailed, EventRequestWillBeSent, ResourceType,
+};
 use chromiumoxide::cdp::browser_protocol::page::{
     EnableParams as PageEnableParams, EventFrameNavigated, EventFrameStartedLoading,
     EventFrameStoppedLoading, EventLoadEventFired, EventScreencastFrame,
@@ -59,7 +62,9 @@ use url::Url;
 use crate::backend::BrowserBackend;
 use crate::config::SpawnOptions;
 use crate::error::Error;
-use crate::protocol::{ClientMsg, MouseButton, MouseEventKind, NavState, ServerEvent};
+use crate::protocol::{
+    net_error_code, ClientMsg, MouseButton, MouseEventKind, NavError, NavState, ServerEvent,
+};
 use crate::session::SessionId;
 
 const DISPATCH_CHANNEL_CAP: usize = 32;
@@ -481,10 +486,33 @@ async fn run_session_loop(
             return;
         }
     };
+    // `Network.requestWillBeSent` is emitted for every subresource; the
+    // main-frame navigation is identified below by matching
+    // `type == Document` and `request_id == loader_id`.
+    let mut request_stream = match page.event_listener::<EventRequestWillBeSent>().await {
+        Ok(s) => s,
+        Err(err) => {
+            warn!(%id, %err, "requestWillBeSent subscribe failed; nav error overlay disabled");
+            let _ = events.send(ServerEvent::Exit { code: 1 }).await;
+            return;
+        }
+    };
+    let mut loading_failed_stream = match page.event_listener::<EventLoadingFailed>().await {
+        Ok(s) => s,
+        Err(err) => {
+            warn!(%id, %err, "loadingFailed subscribe failed; nav error overlay disabled");
+            let _ = events.send(ServerEvent::Exit { code: 1 }).await;
+            return;
+        }
+    };
 
     let mut seq: u32 = 0;
     let mut pending_acks: VecDeque<PendingFrame> = VecDeque::new();
     let mut tracker = NavTracker::default();
+    // Last main-frame document request we've seen. When `loadingFailed`
+    // fires for this request we turn it into a [`NavError`] so the client
+    // can render its in-app overlay.
+    let mut pending_main_nav: Option<PendingMainNav> = None;
 
     loop {
         tokio::select! {
@@ -563,6 +591,49 @@ async fn run_session_loop(
                 let state = build_nav_state(&page, &tracker).await;
                 let _ = events.send(ServerEvent::Nav(state)).await;
             }
+            maybe_req = request_stream.next() => {
+                if let Some(req) = maybe_req {
+                    if is_main_frame_navigation(&req) {
+                        pending_main_nav = Some(PendingMainNav {
+                            request_id: req.request_id.inner().clone(),
+                            url: req.request.url.clone(),
+                        });
+                    }
+                }
+            }
+            maybe_fail = loading_failed_stream.next() => {
+                if let Some(fail) = maybe_fail {
+                    let failed_id = fail.request_id.inner().as_str();
+                    let matched = pending_main_nav
+                        .as_ref()
+                        .map(|p| p.request_id.as_str() == failed_id)
+                        .unwrap_or(false);
+                    if matched {
+                        let pending = pending_main_nav
+                            .take()
+                            .expect("matched above");
+                        // Only surface Document failures as nav errors;
+                        // subresource failures are expected and should not
+                        // hide the page. EventLoadingFailed's type is not
+                        // optional so we match directly.
+                        let is_document = matches!(fail.r#type, ResourceType::Document);
+                        // Treat user-cancelled navigations (e.g. the user
+                        // typed a new URL while one was in flight) as a
+                        // no-op; Chromium marks these with `canceled`.
+                        let canceled = fail.canceled.unwrap_or(false);
+                        if is_document && !canceled {
+                            let code = net_error_code(&fail.error_text);
+                            let _ = events
+                                .send(ServerEvent::NavError(NavError {
+                                    url: pending.url.clone(),
+                                    error_text: fail.error_text.clone(),
+                                    code,
+                                }))
+                                .await;
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -580,6 +651,31 @@ async fn run_session_loop(
 struct PendingFrame {
     client_seq: u32,
     cdp_session_id: i64,
+}
+
+/// The most recent main-frame document request we've observed on the
+/// CDP Network domain. We only keep one at a time: Chromium cancels the
+/// previous main-frame request whenever a new one starts, so the older
+/// entry is never the one that'll end up in [`EventLoadingFailed`].
+#[derive(Debug, Clone)]
+struct PendingMainNav {
+    request_id: String,
+    url: String,
+}
+
+/// Identify a `Network.requestWillBeSent` event as a top-level
+/// navigation.
+///
+/// Chromium marks main-document navigations by making `request_id` and
+/// `loader_id` equal and setting the resource type to `Document`. Iframe
+/// navigations fail this check because they have a distinct `loader_id`.
+fn is_main_frame_navigation(event: &EventRequestWillBeSent) -> bool {
+    let is_document = event
+        .r#type
+        .as_ref()
+        .map(|t| matches!(t, ResourceType::Document))
+        .unwrap_or(false);
+    is_document && event.request_id.inner() == event.loader_id.inner()
 }
 
 async fn drain_acks_up_to(page: &Page, queue: &mut VecDeque<PendingFrame>, client_seq: u32) {

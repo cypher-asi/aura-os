@@ -4,12 +4,14 @@ import {
   triggerBrowserDetect,
   updateProjectBrowserSettings,
   type DetectedUrl,
+  type NavError,
   type NavState,
   type ProjectBrowserSettings,
 } from "../../api/browser";
 import { useBrowser } from "../../hooks/use-browser";
 import { useBrowserPanelStore } from "../../stores/browser-panel-store";
 import { BrowserAddressBar } from "../BrowserAddressBar";
+import { BrowserErrorOverlay } from "../BrowserErrorOverlay";
 import { BrowserViewport } from "../BrowserViewport";
 import type { BrowserWorkerInMsg } from "../../workers/browser-frame-worker";
 import styles from "./BrowserInstance.module.css";
@@ -70,6 +72,7 @@ export function BrowserInstance({
 
   const workerRef = useRef<Worker | null>(null);
   const [nav, setNav] = useState<NavState | null>(null);
+  const [navError, setNavError] = useState<NavError | null>(null);
   const [recentDetected, setRecentDetected] = useState<DetectedUrl[]>([]);
   const [spawnError, setSpawnError] = useState<string | null>(null);
 
@@ -96,6 +99,16 @@ export function BrowserInstance({
 
   const handleNav = useCallback((state: NavState) => {
     setNav(state);
+    // A successful navigation (loading=true) signals recovery from any
+    // prior failure: clear the overlay so the new page can paint. A
+    // subsequent `NavError` will re-open it.
+    if (state.loading) {
+      setNavError(null);
+    }
+  }, []);
+
+  const handleNavError = useCallback((err: NavError) => {
+    setNavError(err);
   }, []);
 
   const browser = useBrowser({
@@ -104,6 +117,7 @@ export function BrowserInstance({
     projectId,
     onFrame: handleFrame,
     onNav: handleNav,
+    onNavError: handleNavError,
     onSpawned: (resp) => {
       setServerId(clientId, resp.id);
       setSpawnError(null);
@@ -223,6 +237,14 @@ export function BrowserInstance({
               : browser.spawning
                 ? "Starting browser session…"
                 : "Connecting…"
+        }
+        overlay={
+          navError ? (
+            <BrowserErrorOverlay
+              error={navError}
+              onReload={() => browser.send({ type: "reload" })}
+            />
+          ) : null
         }
       />
     </div>

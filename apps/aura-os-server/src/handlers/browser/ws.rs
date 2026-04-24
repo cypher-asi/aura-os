@@ -11,7 +11,8 @@ use tokio::sync::mpsc;
 use tracing::{debug, info, warn};
 
 use aura_os_browser::{
-    encode_frame_header, ClientMsg, FrameHeader, NavState, ServerEvent, SessionId, FRAME_HEADER_LEN,
+    encode_frame_header, ClientMsg, FrameHeader, NavError, NavState, ServerEvent, SessionId,
+    FRAME_HEADER_LEN,
 };
 use aura_os_core::ProjectId;
 
@@ -199,6 +200,10 @@ async fn forward_server_event(
             send_nav(socket, &nav).await;
             true
         }
+        ServerEvent::NavError(err) => {
+            send_nav_error(socket, &err).await;
+            true
+        }
         ServerEvent::Exit { code } => {
             let payload = serde_json::json!({ "type": "exit", "code": code });
             let _ = socket.send(Message::Text(payload.to_string())).await;
@@ -218,5 +223,10 @@ async fn send_frame(socket: &mut WebSocket, seq: u32, width: u16, height: u16, j
 
 async fn send_nav(socket: &mut WebSocket, nav: &NavState) {
     let payload = serde_json::json!({ "type": "nav", "nav": nav });
+    let _ = socket.send(Message::Text(payload.to_string())).await;
+}
+
+async fn send_nav_error(socket: &mut WebSocket, err: &NavError) {
+    let payload = serde_json::json!({ "type": "nav_error", "error": err });
     let _ = socket.send(Message::Text(payload.to_string())).await;
 }

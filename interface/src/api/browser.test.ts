@@ -60,9 +60,35 @@ describe("isBrowserServerTextEvent", () => {
     expect(isBrowserServerTextEvent({ type: "exit", code: 0 })).toBe(true);
   });
 
+  it("accepts a nav_error event", () => {
+    expect(
+      isBrowserServerTextEvent({
+        type: "nav_error",
+        error: {
+          url: "http://example.invalid/",
+          error_text: "net::ERR_NAME_NOT_RESOLVED",
+          code: -105,
+        },
+      }),
+    ).toBe(true);
+  });
+
+  it("accepts a nav_error event without numeric code", () => {
+    expect(
+      isBrowserServerTextEvent({
+        type: "nav_error",
+        error: { url: "http://a", error_text: "net::ERR_FAILED" },
+      }),
+    ).toBe(true);
+  });
+
   it("rejects garbage", () => {
     expect(isBrowserServerTextEvent(null)).toBe(false);
     expect(isBrowserServerTextEvent({ type: "other" })).toBe(false);
     expect(isBrowserServerTextEvent({ type: "nav" })).toBe(false);
+    expect(isBrowserServerTextEvent({ type: "nav_error" })).toBe(false);
+    expect(
+      isBrowserServerTextEvent({ type: "nav_error", error: { url: "x" } }),
+    ).toBe(false);
   });
 });

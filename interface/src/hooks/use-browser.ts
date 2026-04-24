@@ -7,6 +7,7 @@ import {
   killBrowser,
   spawnBrowser,
   type BrowserClientMsg,
+  type NavError,
   type NavState,
   type SpawnBrowserResponse,
 } from "../api/browser";
@@ -20,6 +21,7 @@ export interface UseBrowserOptions {
   height: number;
   onFrame?: (frame: { seq: number; width: number; height: number; jpeg: Uint8Array }) => void;
   onNav?: (nav: NavState) => void;
+  onNavError?: (error: NavError) => void;
   onExit?: (code: number) => void;
   onSpawned?: (spawn: SpawnBrowserResponse) => void;
   onError?: (err: Error) => void;
@@ -77,6 +79,8 @@ export function useBrowser(opts: UseBrowserOptions): UseBrowserReturn {
         if (!isBrowserServerTextEvent(parsed)) return;
         if (parsed.type === "nav") {
           optsRef.current.onNav?.(parsed.nav);
+        } else if (parsed.type === "nav_error") {
+          optsRef.current.onNavError?.(parsed.error);
         } else {
           optsRef.current.onExit?.(parsed.code);
         }
