@@ -15,6 +15,7 @@ import {
 } from "./lib/perf/startup-perf";
 import { initWebVitalsLite } from "./lib/perf/web-vitals-lite";
 import { installPreloadRecovery } from "./lib/preload-recovery";
+import { installNativeTitlebarDrag } from "./lib/native-titlebar-drag";
 import { syncQueryHostOriginToStorage } from "./lib/host-config";
 import { signalDesktopReady } from "./lib/desktop-ready";
 import { awaitInitialShellAppReady } from "./lib/boot-shell";
@@ -26,6 +27,10 @@ import { bootstrapProcessStreamSubscriptions } from "./stores/process-stream-boo
 // API clients) so a `?host=` bootstrap param wins over stale localStorage.
 syncQueryHostOriginToStorage();
 installPreloadRecovery();
+// -webkit-app-region: drag works in WebView2 on Windows but is ignored by
+// WKWebView (macOS) and WebKitGTK (Linux). Install a JS fallback that
+// routes titlebar pointerdown into the existing native-drag IPC.
+installNativeTitlebarDrag();
 // Earlier builds mirrored chat transcripts into localStorage as an IDB
 // fallback; on long runs that blew the ~5 MB quota and spammed the console
 // with `QuotaExceededError`. Clean the stale mirrors out on boot.
