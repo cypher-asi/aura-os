@@ -58,8 +58,8 @@ export function GroupCollapsible({
             <span className={styles.label}>{displayLabel}</span>
             {count !== undefined && <span className={styles.count}>{count}</span>}
           </span>
-          {stats && <div className={styles.stats}>{stats}</div>}
         </button>
+        {stats && <div className={styles.stats}>{stats}</div>}
         <ButtonCollapsible
           className={styles.toggle}
           isCollapsed={isCollapsed}
