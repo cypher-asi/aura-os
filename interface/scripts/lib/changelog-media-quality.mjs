@@ -2,7 +2,13 @@ import fs from "node:fs";
 
 import { PNG } from "pngjs";
 
-const BAD_PROOF_PATTERN = /\b(?:404|not found|login|log in|sign in|auth(?:entication)? required|loading|spinner|placeholder|empty state|error page|mobile|ios|android|hamburger|bottom nav)\b/i;
+const BAD_PROOF_PATTERNS = [
+  /\b(?:404|not found|error page)\b/i,
+  /\b(?:login|log in|sign in|auth(?:entication)? required)\s+(?:screen|page|form|wall|required|needed)\b/i,
+  /\b(?:loading|spinner)\s+(?:screen|page|state|indicator)\b/i,
+  /\b(?:placeholder|empty)\s+(?:screen|page|state)\b/i,
+  /\b(?:mobile|ios|android|hamburger|bottom nav)\s+(?:layout|ui|screen|navigation|surface)\b/i,
+];
 const VISION_QUALITY_TOOL = {
   name: "submit_changelog_media_quality",
   description: "Submit a strict quality judgment for an Aura changelog media image.",
@@ -155,7 +161,7 @@ export function assessChangelogMediaQuality({
     parsedOutput?.visibleProof,
     parsedOutput?.concerns,
   ]);
-  if (BAD_PROOF_PATTERN.test(evidenceText)) {
+  if (BAD_PROOF_PATTERNS.some((pattern) => pattern.test(evidenceText))) {
     concerns.push("Browser proof text mentions login, loading, error, mobile, or placeholder UI.");
   }
 
@@ -218,8 +224,11 @@ export function buildVisionJudgePrompt({ candidate, stage = "raw" } = {}) {
     "- It is not a login, loading, placeholder, empty, or error page.",
     "- The screenshot visibly proves the changelog entry.",
     "- Text and important UI are readable at normal changelog display size.",
+    "- The primary proof for the claim is easy to find without zooming or hunting around the image.",
     "- Nothing important is clipped.",
     "- For branded assets, the real product screenshot remains clear and unaltered.",
+    "- For branded assets, title/caption copy is public-facing and does not read like an internal instruction.",
+    "- For branded assets, branding supports the proof instead of making the product evidence feel tiny or incidental.",
     "",
     "Return strict JSON with: pass, score, reasons, visibleProof, rejectionCategory.",
   ].join("\n");

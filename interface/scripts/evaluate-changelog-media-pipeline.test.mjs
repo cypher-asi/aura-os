@@ -7,12 +7,15 @@ import test from "node:test";
 import { PNG } from "pngjs";
 
 import {
+  discoverCaptureApiBaseUrlFromFrontend,
   preflightCaptureAuth,
+  resolveCaptureApiBaseUrl,
   runChangelogMediaEvaluation,
 } from "./evaluate-changelog-media-pipeline.mjs";
 
 function fakeResponse({ status, headers = {}, body = "" }) {
   return {
+    ok: status >= 200 && status < 300,
     status,
     headers: {
       get(name) {
@@ -24,6 +27,57 @@ function fakeResponse({ status, headers = {}, body = "" }) {
     },
   };
 }
+
+test("resolveCaptureApiBaseUrl prefers explicit API origins", async () => {
+  const resolved = await resolveCaptureApiBaseUrl({
+    baseUrl: "https://frontend.example.com",
+    apiBaseUrl: "https://api.example.com/some/path",
+    fetchImpl: async () => {
+      throw new Error("explicit API URL should not need discovery");
+    },
+  });
+
+  assert.equal(resolved, "https://api.example.com");
+});
+
+test("discoverCaptureApiBaseUrlFromFrontend finds the API origin used by the deployed app bundle", async () => {
+  const requests = [];
+  const resolved = await discoverCaptureApiBaseUrlFromFrontend({
+    baseUrl: "https://frontend.example.com",
+    fetchImpl: async (url) => {
+      requests.push(String(url));
+      if (String(url) === "https://frontend.example.com") {
+        return fakeResponse({
+          status: 200,
+          headers: { "content-type": "text/html" },
+          body: '<script type="module" src="/assets/host-config.js"></script>',
+        });
+      }
+      if (String(url) === "https://frontend.example.com/assets/host-config.js") {
+        return fakeResponse({
+          status: 200,
+          headers: { "content-type": "application/javascript" },
+          body: 'const api = "https://api.example.com";',
+        });
+      }
+      if (String(url) === "https://api.example.com/api/auth/session") {
+        return fakeResponse({
+          status: 401,
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ error: "missing authorization token" }),
+        });
+      }
+      return fakeResponse({ status: 404, body: "not found" });
+    },
+  });
+
+  assert.equal(resolved, "https://api.example.com");
+  assert.deepEqual(requests, [
+    "https://frontend.example.com",
+    "https://frontend.example.com/assets/host-config.js",
+    "https://api.example.com/api/auth/session",
+  ]);
+});
 
 function writeStructuredPng(filePath, width = 160, height = 90) {
   const png = new PNG({ width, height });
@@ -136,6 +190,7 @@ test("runChangelogMediaEvaluation plans media and blocks capture when Browser Us
                   targetAppId: "agents",
                   targetPath: "/agents",
                   proofGoal: "Open the chat model picker and show GPT-5.5.",
+                  publicCaption: "GPT-5.5 is now available directly from the chat model picker.",
                   confidence: 0.91,
                   changedFiles: ["interface/src/apps/agents/components/AgentChat/ChatInputBar.tsx"],
                 },
@@ -229,6 +284,7 @@ test("runChangelogMediaEvaluation creates branded media only after quality and v
                   targetAppId: "agents",
                   targetPath: "/agents",
                   proofGoal: "Open the chat model picker and show GPT-5.5.",
+                  publicCaption: "GPT-5.5 is now available directly from the chat model picker.",
                   confidence: 0.91,
                   changedFiles: ["interface/src/components/ChatInputBar/ChatInputBar.tsx"],
                 },
@@ -309,6 +365,7 @@ test("runChangelogMediaEvaluation creates branded media only after quality and v
     assert.equal(report.counts.captureAccepted, 1);
     assert.equal(report.counts.visionAccepted, 1);
     assert.equal(report.counts.brandingCreated, 1);
+    assert.equal(report.counts.brandedVisionAccepted, 1);
     assert.equal(report.counts.publishReady, 1);
     assert.equal(report.browserUseRunOptions.timeoutMs, 123456);
     assert.equal(report.browserUseRunOptions.intervalMs, 3456);
@@ -317,7 +374,10 @@ test("runChangelogMediaEvaluation creates branded media only after quality and v
     const branding = report.captureResults[0].branding;
     assert.equal(branding.status, "created");
     assert.equal(fs.existsSync(branding.asset.path), true);
+    assert.equal(fs.existsSync(branding.asset.preview.path), true);
+    assert.equal(branding.asset.preview.format, "png");
     assert.equal(branding.asset.embeddedScreenshot.scale, 1);
+    assert.equal(report.captureResults[0].brandedVisionGate.status, "accepted");
   } finally {
     globalThis.fetch = originalFetch;
     if (previousAnthropic === undefined) delete process.env.ANTHROPIC_API_KEY;

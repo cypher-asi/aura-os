@@ -26,6 +26,7 @@ import {
 } from "./changelog-media-browser-use-trial.mjs";
 import {
   assessBrandedMediaAsset,
+  createBrandedMediaPngPreview,
   createBrandedMediaSvg,
 } from "./lib/changelog-media-branding.mjs";
 import {
@@ -58,6 +59,97 @@ function isDisabled(value) {
 function parsePositiveInteger(value, fallback) {
   const parsed = Number.parseInt(String(value || ""), 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function normalizeOrigin(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return "";
+  }
+}
+
+function uniqueOrigins(values) {
+  return [...new Set(values.map(normalizeOrigin).filter(Boolean))];
+}
+
+function extractLinkedScriptPaths(html) {
+  return [...String(html || "").matchAll(/(?:src|href)=["']([^"']+\.js)["']/gi)]
+    .map((match) => match[1])
+    .filter(Boolean)
+    .slice(0, 40);
+}
+
+function extractHttpOrigins(body) {
+  return uniqueOrigins([...String(body || "").matchAll(/https?:\/\/[^\s"'`<>)\\]+/gi)].map((match) => match[0]));
+}
+
+async function fetchText(url, fetchImpl = fetch) {
+  const response = await fetchImpl(url).catch(() => null);
+  if (!response?.ok || typeof response.text !== "function") return "";
+  return response.text();
+}
+
+async function looksLikeAuraApiOrigin(origin, fetchImpl = fetch) {
+  if (!origin) return false;
+  const response = await fetchImpl(new URL("/api/auth/session", origin).toString(), {
+    method: "GET",
+    headers: { accept: "application/json" },
+  }).catch(() => null);
+  if (!response) return false;
+  const contentType = response.headers?.get?.("content-type") || "";
+  return contentType.includes("application/json") && response.status !== 404;
+}
+
+export async function discoverCaptureApiBaseUrlFromFrontend({ baseUrl, fetchImpl = fetch } = {}) {
+  const appOrigin = normalizeOrigin(baseUrl);
+  if (!appOrigin) return "";
+  const html = await fetchText(appOrigin, fetchImpl);
+  const linkedScripts = extractLinkedScriptPaths(html);
+  const scriptOrigins = [];
+
+  for (const scriptPath of linkedScripts) {
+    const scriptUrl = new URL(scriptPath, appOrigin).toString();
+    const scriptBody = await fetchText(scriptUrl, fetchImpl);
+    scriptOrigins.push(...extractHttpOrigins(scriptBody));
+  }
+
+  const candidateOrigins = uniqueOrigins([
+    ...extractHttpOrigins(html),
+    ...scriptOrigins,
+  ]).filter((origin) => origin !== appOrigin);
+
+  for (const origin of candidateOrigins) {
+    if (await looksLikeAuraApiOrigin(origin, fetchImpl)) {
+      return origin;
+    }
+  }
+
+  return "";
+}
+
+export async function resolveCaptureApiBaseUrl({
+  baseUrl,
+  apiBaseUrl = "",
+  fetchImpl = fetch,
+} = {}) {
+  const explicit = normalizeOrigin(apiBaseUrl);
+  if (explicit) return explicit;
+
+  const envApiUrl = normalizeOrigin(
+    process.env.AURA_DEMO_SCREENSHOT_API_URL
+      || process.env.AURA_CAPTURE_API_BASE_URL
+      || process.env.VITE_API_URL
+      || "",
+  );
+  if (envApiUrl) return envApiUrl;
+
+  const discovered = await discoverCaptureApiBaseUrlFromFrontend({ baseUrl, fetchImpl });
+  if (discovered) return discovered;
+
+  return normalizeOrigin(baseUrl);
 }
 
 function resolveInputPath(filePath) {
@@ -124,7 +216,20 @@ function buildBlockedBrandingDecision({ captureAccepted, screenshot }) {
   };
 }
 
-function createBrandingArtifact({ candidate, screenshot, outputDir }) {
+function publicMediaCaption(candidate) {
+  const raw = String(candidate?.publicCaption || candidate?.summary || candidate?.reason || "").trim();
+  const cleaned = raw
+    .replace(/\b(?:capture|open|show|screenshot|proof|browser use)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,.])/g, "$1")
+    .trim();
+  if (cleaned.length >= 28) {
+    return cleaned;
+  }
+  return "A focused product update in Aura, shown directly in the desktop experience.";
+}
+
+async function createBrandingArtifact({ candidate, screenshot, outputDir }) {
   if (!screenshot?.path) {
     return {
       status: "blocked",
@@ -136,7 +241,11 @@ function createBrandingArtifact({ candidate, screenshot, outputDir }) {
       screenshotPath: screenshot.path,
       outputPath: path.join(outputDir, "branded-media-card.svg"),
       title: candidate?.title || "Aura product update",
-      subtitle: candidate?.proofGoal || "Aura changelog proof",
+      subtitle: publicMediaCaption(candidate),
+    });
+    asset.preview = await createBrandedMediaPngPreview({
+      svgPath: asset.path,
+      outputPath: path.join(outputDir, "branded-media-card.png"),
     });
     const quality = assessBrandedMediaAsset(asset);
     return {
@@ -262,6 +371,7 @@ export async function runChangelogMediaEvaluation({
   browserUseModel = DEFAULT_BROWSER_USE_MODEL,
   browserUseTimeoutMs = DEFAULT_BROWSER_USE_TIMEOUT_MS,
   browserUseIntervalMs = DEFAULT_BROWSER_USE_INTERVAL_MS,
+  entryChunkSize = 20,
   maxCostUsd = "",
   enableRecording = false,
   strictCapture = false,
@@ -271,6 +381,7 @@ export async function runChangelogMediaEvaluation({
   requestCaptureSessionImpl = requestCaptureSession,
   runBrowserUseTaskImpl = runBrowserUseTask,
   visionJudgeImpl = judgeChangelogMediaWithAnthropic,
+  resolveCaptureApiBaseUrlImpl = resolveCaptureApiBaseUrl,
 } = {}) {
   const resolvedChangelogFile = resolveInputPath(changelogFile);
   if (!resolvedChangelogFile) {
@@ -297,9 +408,11 @@ export async function runChangelogMediaEvaluation({
     commitLog,
     changedFiles,
     maxCandidates,
+    entryChunkSize,
   });
   writeJson(path.join(outputDir, "media-plan.raw.json"), planning.rawPlan);
   writeJson(path.join(outputDir, "media-plan.json"), planning.plan);
+  writeJson(path.join(outputDir, "media-plan-forced-skips.json"), planning.forcedSkipped || []);
   writeJson(path.join(outputDir, "media-plan-coverage.json"), planning.coverage);
   writeJson(path.join(outputDir, "media-plan-attempts.json"), planning.attempts.map((attempt) => ({
     attempt: attempt.attempt,
@@ -309,6 +422,9 @@ export async function runChangelogMediaEvaluation({
 
   const browserUseKeyAvailable = Boolean(process.env.BROWSER_USE_API_KEY?.trim());
   const openAiAvailable = Boolean(process.env.OPENAI_API_KEY?.trim());
+  const resolvedApiBaseUrl = baseUrl
+    ? await resolveCaptureApiBaseUrlImpl({ baseUrl, apiBaseUrl })
+    : normalizeOrigin(apiBaseUrl);
   const captureSecret = String(
     process.env.AURA_CHANGELOG_CAPTURE_SECRET
       || process.env.AURA_CAPTURE_MODE_SECRET
@@ -316,7 +432,7 @@ export async function runChangelogMediaEvaluation({
   ).trim();
   const captureAuthAvailable = Boolean(captureSecret);
   const capturePreflight = runBrowserUse && browserUseKeyAvailable && baseUrl && captureAuthAvailable
-    ? await preflightCaptureAuthImpl({ baseUrl, apiBaseUrl, captureSecret })
+    ? await preflightCaptureAuthImpl({ baseUrl, apiBaseUrl: resolvedApiBaseUrl, captureSecret })
     : null;
   const captureResults = [];
 
@@ -366,7 +482,7 @@ export async function runChangelogMediaEvaluation({
     }
 
     const captureSessionResult = captureAuthAvailable && blockers.length === 0
-      ? await requestCaptureSessionImpl({ baseUrl, apiBaseUrl, captureSecret })
+      ? await requestCaptureSessionImpl({ baseUrl, apiBaseUrl: resolvedApiBaseUrl, captureSecret })
       : null;
     if (captureSessionResult && !captureSessionResult.ok) {
       blockers.push(...captureSessionResult.concerns.map((concern) => `Capture session mint failed: ${concern}`));
@@ -400,7 +516,7 @@ export async function runChangelogMediaEvaluation({
         loginUrl: buildCaptureLoginUrl(
           baseUrl,
           candidate.targetPath || contract.likelyApps?.[0]?.path || "/desktop",
-          apiBaseUrl,
+          resolvedApiBaseUrl,
           captureSessionResult?.session || null,
         ),
         autoSession: Boolean(captureSessionResult?.session),
@@ -456,7 +572,7 @@ export async function runChangelogMediaEvaluation({
       };
     const captureAccepted = Boolean(qualityGate.ok && visionGate.ok);
     const branding = captureAccepted
-      ? createBrandingArtifact({
+      ? await createBrandingArtifact({
         candidate,
         screenshot: result.screenshot,
         outputDir: candidateDir,
@@ -465,18 +581,35 @@ export async function runChangelogMediaEvaluation({
         captureAccepted,
         screenshot: result.screenshot,
       });
+    const brandedVisionGate = branding.status === "created" && branding.asset?.path && visionJudge
+      ? await visionJudgeImpl({
+        apiKey,
+        model: visionJudgeModel,
+        imagePath: branding.asset.preview?.path || branding.asset.path,
+        candidate,
+        stage: "branded",
+      })
+      : {
+        ok: branding.status === "created" && branding.quality?.ok && !visionJudge,
+        status: branding.status === "created" ? "skipped" : "blocked",
+        concerns: branding.status === "created"
+          ? []
+          : ["Branded vision judge skipped because no accepted branded asset was created."],
+        judgment: null,
+      };
     const summary = {
       candidate,
       status: captureAccepted ? "accepted" : "rejected",
       provider: "browser-use-cloud",
       model: browserUseModel,
       captureAccepted,
-      publishReady: Boolean(captureAccepted && branding.status === "created" && branding.quality?.ok),
+      publishReady: Boolean(captureAccepted && branding.status === "created" && branding.quality?.ok && brandedVisionGate.ok),
       result,
       desktopEvaluation,
       qualityGate,
       visionGate,
       branding,
+      brandedVisionGate,
     };
     writeJson(path.join(candidateDir, "capture-summary.json"), summary);
     captureResults.push(summary);
@@ -490,7 +623,7 @@ export async function runChangelogMediaEvaluation({
     generatedAt: new Date().toISOString(),
     changelogFile: resolvedChangelogFile,
     baseUrl: baseUrl || null,
-    apiBaseUrl: apiBaseUrl || null,
+    apiBaseUrl: resolvedApiBaseUrl || null,
     models: {
       anthropic: anthropicModel,
       browserUse: browserUseModel,
@@ -516,6 +649,7 @@ export async function runChangelogMediaEvaluation({
       plannerMissingEntries: planning.coverage.missing.length,
       plannerDuplicateEntries: planning.coverage.duplicate.length,
       plannerUnknownEntries: planning.coverage.unknown.length,
+      plannerForcedSkips: planning.forcedSkipped?.length || 0,
       captureAccepted: captureResults.filter((entry) => entry.captureAccepted).length,
       captureRejected: captureResults.filter((entry) => entry.status === "rejected").length,
       captureBlocked: captureResults.filter((entry) => entry.status === "blocked").length,
@@ -523,6 +657,8 @@ export async function runChangelogMediaEvaluation({
       visionRejected: captureResults.filter((entry) => entry.visionGate?.status === "rejected").length,
       brandingCreated: captureResults.filter((entry) => entry.branding?.status === "created").length,
       brandingReadyButNotRun: captureResults.filter((entry) => entry.branding?.status === "ready-but-not-run").length,
+      brandedVisionAccepted: captureResults.filter((entry) => entry.brandedVisionGate?.ok).length,
+      brandedVisionRejected: captureResults.filter((entry) => entry.brandedVisionGate?.status === "rejected").length,
       publishReady: captureResults.filter((entry) => entry.publishReady).length,
     },
     selectionCoverage: planning.coverage,
@@ -543,6 +679,7 @@ export async function runChangelogMediaEvaluation({
       qualityGate: entry.qualityGate || null,
       visionGate: entry.visionGate || null,
       branding: entry.branding || null,
+      brandedVisionGate: entry.brandedVisionGate || null,
     })),
   };
   writeJson(path.join(outputDir, "evaluation-report.json"), report);
@@ -577,6 +714,10 @@ export async function main(argv = process.argv.slice(2)) {
       DEFAULT_BROWSER_USE_INTERVAL_MS,
     ),
     maxCostUsd: args["max-cost-usd"] || process.env.BROWSER_USE_MAX_COST_USD || "",
+    entryChunkSize: parsePositiveInteger(
+      args["entry-chunk-size"] || process.env.CHANGELOG_MEDIA_ENTRY_CHUNK_SIZE,
+      20,
+    ),
     enableRecording: isEnabled(args["enable-recording"] || process.env.BROWSER_USE_ENABLE_RECORDING),
     strictCapture: isEnabled(args.strict),
     visionJudge: !isDisabled(args["vision-judge"] ?? process.env.CHANGELOG_MEDIA_VISION_JUDGE ?? "true"),
@@ -608,6 +749,7 @@ export async function main(argv = process.argv.slice(2)) {
       concerns: entry.concerns,
       vision: entry.visionGate?.status || null,
       branding: entry.branding?.status || null,
+      brandedVision: entry.brandedVisionGate?.status || null,
     })),
   }, null, 2));
   return report;

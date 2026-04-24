@@ -116,6 +116,7 @@ export async function main(argv = process.argv.slice(2)) {
     deriveCommitLogFromChangelog(changelog),
   ].filter(Boolean).join("\n\n");
   const maxCandidates = Number.parseInt(String(args["max-candidates"] || process.env.CHANGELOG_MEDIA_MAX_CANDIDATES || "3"), 10) || 3;
+  const entryChunkSize = Number.parseInt(String(args["entry-chunk-size"] || process.env.CHANGELOG_MEDIA_ENTRY_CHUNK_SIZE || "20"), 10) || 20;
   const model = String(
     args.model
       || process.env.CHANGELOG_MEDIA_ANTHROPIC_MODEL
@@ -159,6 +160,7 @@ export async function main(argv = process.argv.slice(2)) {
     commitLog,
     changedFiles,
     maxCandidates,
+    entryChunkSize,
   });
   fs.writeFileSync(path.join(outputDir, "anthropic-media-planner-prompt.md"), `${result.prompt}\n`, "utf8");
   writeJson(path.join(outputDir, "media-plan.raw.json"), result.rawPlan);
@@ -173,6 +175,7 @@ export async function main(argv = process.argv.slice(2)) {
     model,
     candidateCount: result.plan.candidates.length,
     skippedCount: result.plan.skipped.length,
+    forcedSkippedCount: result.forcedSkipped?.length || 0,
     coverage: result.coverage,
     attemptCount: result.attempts.length,
     outputDir,

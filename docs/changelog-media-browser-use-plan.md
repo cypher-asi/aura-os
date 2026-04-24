@@ -45,11 +45,19 @@ This is the operating plan for the clean changelog media pipeline. Keep this fil
 - Generated imagery must not rewrite product text, invent UI, hide proof, or compensate for a weak capture.
 - Long titles and subtitles must wrap inside bounded layout regions before media can publish.
 - A branded asset must pass structural layout checks before it is considered publish-ready.
+- The final branded PNG must pass the same independent vision gate as the raw screenshot before it can publish.
+- If CI only knows the public frontend URL, the evaluator should resolve the API origin from explicit env first, then from the deployed frontend bundle, before falling back to the frontend origin.
+
+## Implemented Safeguards
+
+- Planner calls are chunked so large changelogs are classified completely instead of dropping entries from an oversized prompt.
+- Omitted entries get a focused rescue pass; if still omitted, they are safely skipped and recorded instead of being sent to Browser Use.
+- Candidate caps preserve coverage by moving lower-priority media candidates into explicit skipped records.
+- Browser Use runs only after Anthropic classifies an entry as desktop, visual, sitemap-backed, and worth a screenshot.
+- Raw screenshots, branded media cards, and final branded PNG previews all have separate quality gates.
 
 ## What To Improve Next
 
 - Expand generated sitemap coverage by adding stable `data-agent-*` proof handles to real product surfaces.
-- Use Anthropic media planning before Browser Use calls.
-- Persist the generated sitemap and media plan as CI artifacts for debugging.
-- Run Browser Use only on the media plan candidates.
 - Investigate Browser Use-native high-resolution final screenshot capture without falling back to Playwright.
+- Wire publish/backfill only after the Browser Use path keeps passing broad inference audits and live UI/UX quality review.

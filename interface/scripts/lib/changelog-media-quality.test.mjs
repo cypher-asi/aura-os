@@ -75,6 +75,41 @@ test("assessChangelogMediaQuality accepts structured desktop proof", () => {
   assert.deepEqual(report.concerns, []);
 });
 
+test("assessChangelogMediaQuality does not reject normal input placeholder copy", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-quality-"));
+  const screenshotPath = path.join(tempDir, "desktop-placeholder-text.png");
+  writePng(screenshotPath, 160, 90, (x, y) => ((x + y) % 24 < 12 ? [18, 24, 38] : [238, 242, 248]));
+
+  const report = assessChangelogMediaQuality({
+    desktopEvaluation: {
+      ok: true,
+      concerns: [],
+      parsedOutput: {
+        shouldCapture: true,
+        targetAppId: "agents",
+        targetPath: "/agents/33333333-3333-4333-8333-333333333333",
+        proofVisible: true,
+        visibleProof: [
+          "GPT-5.5 is visible in the model picker.",
+          "ChatInputBar is visible with placeholder text.",
+        ],
+        screenshotDescription: "Aura desktop chat screen with model picker dropdown open.",
+      },
+    },
+    screenshot: {
+      path: screenshotPath,
+      dimensions: { width: 160, height: 90 },
+    },
+    candidate: {
+      targetAppId: "agents",
+      targetPath: "/agents",
+    },
+  });
+
+  assert.equal(report.ok, true);
+  assert.deepEqual(report.concerns, []);
+});
+
 test("assessChangelogMediaQuality rejects weak or unrelated proof", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-quality-"));
   const screenshotPath = path.join(tempDir, "flat.png");
@@ -121,6 +156,8 @@ test("buildVisionJudgePrompt defines an independent strict review", () => {
 
   assert.match(prompt, /independent quality judge/);
   assert.match(prompt, /not a login, loading, placeholder, empty, or error page/);
+  assert.match(prompt, /easy to find without zooming/);
+  assert.match(prompt, /public-facing/);
   assert.match(prompt, /Return strict JSON/);
 });
 

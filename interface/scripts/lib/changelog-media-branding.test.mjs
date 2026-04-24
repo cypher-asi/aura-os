@@ -9,6 +9,7 @@ import { PNG } from "pngjs";
 import {
   assessBrandedMediaAsset,
   calculateBrandedCanvas,
+  createBrandedMediaPngPreview,
   createBrandedMediaSvg,
   readPngDimensionsFromFile,
   wrapTextForSvg,
@@ -105,6 +106,28 @@ test("assessBrandedMediaAsset rejects canvas and layout regressions", () => {
   assert.ok(report.concerns.some((concern) => concern.includes("16:9")));
   assert.ok(report.concerns.some((concern) => concern.includes("title layout")));
   assert.ok(report.concerns.some((concern) => concern.includes("overflows the canvas width")));
+});
+
+test("createBrandedMediaPngPreview renders a judgeable PNG from the SVG card", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-branding-"));
+  const screenshotPath = path.join(tempDir, "screenshot.png");
+  const svgPath = path.join(tempDir, "branded.svg");
+  const pngPath = path.join(tempDir, "branded.png");
+  writePng(screenshotPath, 640, 360);
+
+  const asset = createBrandedMediaSvg({
+    screenshotPath,
+    outputPath: svgPath,
+    title: "GPT-5.5 available in the chat model picker",
+    subtitle: "GPT-5.5 is now available directly from the chat model picker.",
+  });
+  asset.preview = await createBrandedMediaPngPreview({ svgPath, outputPath: pngPath });
+
+  assert.equal(fs.existsSync(pngPath), true);
+  assert.equal(asset.preview.format, "png");
+  assert.equal(asset.preview.dimensions.width, asset.dimensions.width);
+  assert.equal(asset.preview.dimensions.height, asset.dimensions.height);
+  assert.equal(assessBrandedMediaAsset(asset).ok, true);
 });
 
 test("wrapTextForSvg caps long marketing copy to bounded lines", () => {

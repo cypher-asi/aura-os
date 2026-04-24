@@ -1,4 +1,5 @@
 const DEFAULT_MAX_CANDIDATES = 3;
+const DEFAULT_ENTRY_CHUNK_SIZE = 20;
 const MAX_PROMPT_CHARS = 52000;
 
 export const CHANGELOG_MEDIA_PLAN_TOOL = {
@@ -22,6 +23,7 @@ export const CHANGELOG_MEDIA_PLAN_TOOL = {
             "targetAppId",
             "targetPath",
             "proofGoal",
+            "publicCaption",
             "confidence",
             "changedFiles",
           ],
@@ -33,6 +35,7 @@ export const CHANGELOG_MEDIA_PLAN_TOOL = {
             targetAppId: { type: ["string", "null"] },
             targetPath: { type: ["string", "null"] },
             proofGoal: { type: ["string", "null"] },
+            publicCaption: { type: ["string", "null"] },
             confidence: { type: "number", minimum: 0, maximum: 1 },
             changedFiles: { type: "array", items: { type: "string" } },
           },
@@ -59,6 +62,7 @@ export const CHANGELOG_MEDIA_PLAN_TOOL = {
                 "test-only",
                 "not-visually-provable",
                 "too-ambiguous",
+                "candidate-limit",
               ],
             },
           },
@@ -137,11 +141,13 @@ export function buildMediaPlannerPrompt({
     "- If an entry mixes a visible desktop product feature with infra/release work, classify it by the visible desktop product feature and make the proofGoal focus only on that feature.",
     "- Return at most the requested number of candidates.",
     "- Candidate screenshots must be desktop web product UI only.",
-    "- Skip mobile-only, native app, Android, iOS, backend-only, infra-only, release pipeline, dependency, test-only, docs-only, refactor-only, and invisible bug-fix changes.",
+    "- Skip login, auth, sign-in, onboarding, mobile-only, native app, Android, iOS, backend-only, infra-only, release pipeline, dependency, test-only, docs-only, refactor-only, and invisible bug-fix changes.",
     "- Skip entries that are not meaningfully provable in one static desktop screenshot.",
     "- Prefer high-confidence product features that can be located from the generated sitemap and changed files.",
     "- Do not invent routes or product states that are not supported by the sitemap or commit context.",
+    "- Candidates must include a targetAppId and targetPath from the sitemap. If no sitemap target exists, skip the entry.",
     "- Browser Use should receive fewer, better candidates. Be conservative.",
+    "- For each candidate, write publicCaption as a customer-facing changelog sentence. Do not use internal instructions like capture, open, show, screenshot, proof, or Browser Use.",
     "",
     `Candidate limit: ${maxCandidates}`,
     "",
@@ -169,7 +175,7 @@ function clampConfidence(value) {
 }
 
 export function normalizeMediaPlan(plan, { maxCandidates = DEFAULT_MAX_CANDIDATES } = {}) {
-  const candidates = (Array.isArray(plan?.candidates) ? plan.candidates : [])
+  const normalizedCandidates = (Array.isArray(plan?.candidates) ? plan.candidates : [])
     .filter((candidate) => candidate?.shouldCapture === true)
     .map((candidate, index) => ({
       entryId: normalizeString(candidate.entryId || `candidate-${index + 1}`),
@@ -179,12 +185,37 @@ export function normalizeMediaPlan(plan, { maxCandidates = DEFAULT_MAX_CANDIDATE
       targetAppId: normalizeString(candidate.targetAppId) || null,
       targetPath: normalizeString(candidate.targetPath) || null,
       proofGoal: normalizeString(candidate.proofGoal) || null,
+      publicCaption: normalizeString(candidate.publicCaption) || null,
       confidence: clampConfidence(candidate.confidence),
       changedFiles: unique(candidate.changedFiles || []),
     }))
-    .filter((candidate) => candidate.title && candidate.reason && candidate.confidence >= 0.55)
-    .sort((left, right) => right.confidence - left.confidence || left.title.localeCompare(right.title))
-    .slice(0, maxCandidates);
+    .filter((candidate) => candidate.title && candidate.reason);
+
+  const candidatesById = new Map();
+  for (const candidate of normalizedCandidates) {
+    const previous = candidatesById.get(candidate.entryId);
+    if (!previous || candidate.confidence > previous.confidence) {
+      candidatesById.set(candidate.entryId, candidate);
+    }
+  }
+  const uniqueCandidates = [...candidatesById.values()];
+  const eligibleCandidates = uniqueCandidates
+    .filter((candidate) => candidate.confidence >= 0.55 && candidate.targetAppId && candidate.targetPath)
+    .sort((left, right) => right.confidence - left.confidence || left.title.localeCompare(right.title));
+  const candidates = eligibleCandidates.slice(0, maxCandidates);
+  const selectedCandidateIds = new Set(candidates.map((candidate) => candidate.entryId));
+  const candidateFallbackSkips = uniqueCandidates
+    .filter((candidate) => !selectedCandidateIds.has(candidate.entryId))
+    .map((candidate) => ({
+      entryId: candidate.entryId,
+      title: candidate.title,
+      reason: !candidate.targetAppId || !candidate.targetPath
+        ? "Planner did not provide a sitemap-backed target app and path."
+        : candidate.confidence < 0.55
+        ? `Planner confidence ${candidate.confidence.toFixed(2)} is below the capture threshold.`
+        : "Candidate was lower priority than the selected media budget.",
+      category: !candidate.targetAppId || !candidate.targetPath || candidate.confidence < 0.55 ? "too-ambiguous" : "candidate-limit",
+    }));
 
   const skipped = (Array.isArray(plan?.skipped) ? plan.skipped : [])
     .map((entry, index) => ({
@@ -194,12 +225,18 @@ export function normalizeMediaPlan(plan, { maxCandidates = DEFAULT_MAX_CANDIDATE
       category: normalizeString(entry.category) || "too-ambiguous",
     }))
     .filter((entry) => entry.title && entry.reason);
+  const skippedById = new Map();
+  for (const entry of [...skipped, ...candidateFallbackSkips]) {
+    if (!selectedCandidateIds.has(entry.entryId) && !skippedById.has(entry.entryId)) {
+      skippedById.set(entry.entryId, entry);
+    }
+  }
 
   return {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
     candidates,
-    skipped,
+    skipped: [...skippedById.values()],
   };
 }
 
@@ -229,6 +266,34 @@ export function validateMediaPlanCoverage(plan, changelogEntries = []) {
   };
 }
 
+function completePlanCoverage(plan, changelogEntries = []) {
+  const coverage = validateMediaPlanCoverage(plan, changelogEntries);
+  if (coverage.missing.length === 0) {
+    return {
+      plan,
+      forcedSkipped: [],
+    };
+  }
+  const entriesById = new Map((Array.isArray(changelogEntries) ? changelogEntries : [])
+    .map((entry) => [normalizeString(entry.entryId), entry]));
+  const forcedSkipped = coverage.missing.map((entryId) => {
+    const entry = entriesById.get(entryId);
+    return {
+      entryId,
+      title: normalizeString(entry?.title) || entryId,
+      reason: "Planner omitted this entry after retries, so it was safely skipped instead of being sent to Browser Use.",
+      category: "too-ambiguous",
+    };
+  });
+  return {
+    plan: {
+      ...plan,
+      skipped: [...(plan?.skipped || []), ...forcedSkipped],
+    },
+    forcedSkipped,
+  };
+}
+
 export function parseAnthropicMediaPlanResponse(response) {
   const toolUse = response?.content?.find((part) => part?.type === "tool_use" && part?.name === CHANGELOG_MEDIA_PLAN_TOOL.name);
   if (toolUse?.input) {
@@ -245,7 +310,22 @@ export function parseAnthropicMediaPlanResponse(response) {
   return JSON.parse(match[0]);
 }
 
-export async function planChangelogMediaWithAnthropic({
+function chunkArray(values, chunkSize) {
+  const chunks = [];
+  for (let index = 0; index < values.length; index += chunkSize) {
+    chunks.push(values.slice(index, index + chunkSize));
+  }
+  return chunks;
+}
+
+function mergePlans(plans, { maxCandidates = DEFAULT_MAX_CANDIDATES } = {}) {
+  return normalizeMediaPlan({
+    candidates: plans.flatMap((plan) => plan?.candidates || []),
+    skipped: plans.flatMap((plan) => plan?.skipped || []),
+  }, { maxCandidates });
+}
+
+async function planChangelogMediaChunkWithAnthropic({
   apiKey,
   model = "claude-opus-4-7",
   changelogEntries,
@@ -254,10 +334,8 @@ export async function planChangelogMediaWithAnthropic({
   changedFiles = [],
   maxCandidates = DEFAULT_MAX_CANDIDATES,
   fetchImpl = fetch,
+  chunkLabel = "",
 } = {}) {
-  if (!apiKey) {
-    throw new Error("ANTHROPIC_API_KEY is required to plan changelog media.");
-  }
   const attempts = [];
   let retryInstruction = "";
   for (let attempt = 1; attempt <= 2; attempt += 1) {
@@ -267,7 +345,10 @@ export async function planChangelogMediaWithAnthropic({
       commitLog,
       changedFiles,
       maxCandidates,
-      retryInstruction,
+      retryInstruction: [
+        chunkLabel ? `Planning chunk: ${chunkLabel}.` : "",
+        retryInstruction,
+      ].filter(Boolean).join("\n\n"),
     });
     const response = await fetchImpl("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -321,5 +402,92 @@ export async function planChangelogMediaWithAnthropic({
     plan: last.plan,
     coverage: last.coverage,
     attempts,
+  };
+}
+
+export async function planChangelogMediaWithAnthropic({
+  apiKey,
+  model = "claude-opus-4-7",
+  changelogEntries,
+  sitemap,
+  commitLog = "",
+  changedFiles = [],
+  maxCandidates = DEFAULT_MAX_CANDIDATES,
+  entryChunkSize = DEFAULT_ENTRY_CHUNK_SIZE,
+  fetchImpl = fetch,
+} = {}) {
+  if (!apiKey) {
+    throw new Error("ANTHROPIC_API_KEY is required to plan changelog media.");
+  }
+  const entries = Array.isArray(changelogEntries) ? changelogEntries : [];
+  const chunkSize = Math.max(1, Number.parseInt(String(entryChunkSize || DEFAULT_ENTRY_CHUNK_SIZE), 10) || DEFAULT_ENTRY_CHUNK_SIZE);
+  const chunks = chunkArray(entries, chunkSize);
+  const chunkResults = [];
+
+  for (const [index, chunk] of chunks.entries()) {
+    chunkResults.push(await planChangelogMediaChunkWithAnthropic({
+      apiKey,
+      model,
+      changelogEntries: chunk,
+      sitemap,
+      commitLog,
+      changedFiles,
+      maxCandidates,
+      fetchImpl,
+      chunkLabel: chunks.length > 1 ? `${index + 1} of ${chunks.length}` : "",
+    }));
+  }
+
+  let incompletePlan = mergePlans(chunkResults.map((result) => result.plan), { maxCandidates });
+  let incompleteCoverage = validateMediaPlanCoverage(incompletePlan, entries);
+  if (incompleteCoverage.missing.length > 0) {
+    const entriesById = new Map(entries.map((entry) => [normalizeString(entry.entryId), entry]));
+    const rescueEntries = incompleteCoverage.missing
+      .map((entryId) => entriesById.get(entryId))
+      .filter(Boolean);
+    for (const [index, chunk] of chunkArray(rescueEntries, 5).entries()) {
+      chunkResults.push(await planChangelogMediaChunkWithAnthropic({
+        apiKey,
+        model,
+        changelogEntries: chunk,
+        sitemap,
+        commitLog,
+        changedFiles,
+        maxCandidates,
+        fetchImpl,
+        chunkLabel: `rescue ${index + 1}`,
+      }));
+    }
+    incompletePlan = mergePlans(chunkResults.map((result) => result.plan), { maxCandidates });
+    incompleteCoverage = validateMediaPlanCoverage(incompletePlan, entries);
+  }
+  const completion = completePlanCoverage(incompletePlan, entries);
+  const plan = completion.plan;
+  const coverage = validateMediaPlanCoverage(plan, entries);
+  const attempts = chunkResults.flatMap((result, chunkIndex) => result.attempts.map((attempt) => ({
+    ...attempt,
+    chunk: chunkIndex + 1,
+  })));
+  const prompt = chunkResults.map((result, index) => [
+    chunks.length > 1 ? `# Chunk ${index + 1}` : "",
+    result.prompt,
+  ].filter(Boolean).join("\n\n")).join("\n\n---\n\n");
+  const rawPlan = chunks.length > 1
+    ? {
+      chunks: chunkResults.map((result, index) => ({
+        chunk: index + 1,
+        rawPlan: result.rawPlan,
+        coverage: result.coverage,
+      })),
+    }
+    : chunkResults[0]?.rawPlan || { candidates: [], skipped: [] };
+
+  return {
+    prompt,
+    rawPlan,
+    plan,
+    coverage,
+    attempts,
+    forcedSkipped: completion.forcedSkipped,
   };
 }

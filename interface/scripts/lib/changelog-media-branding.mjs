@@ -248,6 +248,28 @@ ${renderTextLines({
   };
 }
 
+export async function createBrandedMediaPngPreview({ svgPath, outputPath } = {}) {
+  if (!svgPath) {
+    throw new Error("svgPath is required.");
+  }
+  if (!outputPath) {
+    throw new Error("outputPath is required.");
+  }
+  const sharp = (await import("sharp")).default;
+  const info = await sharp(svgPath)
+    .png({ compressionLevel: 9 })
+    .toFile(outputPath);
+  return {
+    path: outputPath,
+    format: "png",
+    dimensions: {
+      width: info.width,
+      height: info.height,
+    },
+    bytes: info.size,
+  };
+}
+
 export function assessBrandedMediaAsset(asset) {
   const concerns = [];
   if (!asset?.path || !fs.existsSync(asset.path)) {
@@ -287,6 +309,17 @@ export function assessBrandedMediaAsset(asset) {
   }
   if (asset?.embeddedScreenshot?.height !== asset?.embeddedScreenshot?.renderedHeight) {
     concerns.push("Branded media changed the product screenshot height.");
+  }
+  if (asset?.preview) {
+    if (!asset.preview.path || !fs.existsSync(asset.preview.path)) {
+      concerns.push("Branded media PNG preview was not created.");
+    }
+    if (asset.preview.format !== "png") {
+      concerns.push("Branded media preview is not a PNG.");
+    }
+    if (asset.preview.dimensions?.width !== asset?.dimensions?.width || asset.preview.dimensions?.height !== asset?.dimensions?.height) {
+      concerns.push("Branded media PNG preview dimensions do not match the SVG canvas.");
+    }
   }
   return {
     ok: concerns.length === 0,
