@@ -285,6 +285,9 @@ pub(crate) async fn generate_3d_stream(
     if let Some(project_id) = &body.project_id {
         payload["projectId"] = json!(project_id);
     }
+    if let Some(parent_id) = &body.parent_id {
+        payload["parentId"] = json!(parent_id);
+    }
 
     proxy_sse_stream(&url, &jwt, payload, "3d").await
 }

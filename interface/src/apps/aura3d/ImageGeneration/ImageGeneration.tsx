@@ -7,6 +7,7 @@ import { PromptInput } from "../PromptInput";
 import styles from "./ImageGeneration.module.css";
 
 export function ImageGeneration() {
+  const selectedProjectId = useAura3DStore((s) => s.selectedProjectId);
   const imaginePrompt = useAura3DStore((s) => s.imaginePrompt);
   const setImaginePrompt = useAura3DStore((s) => s.setImaginePrompt);
   const imagineModel = useAura3DStore((s) => s.imagineModel);
@@ -61,6 +62,7 @@ export function ImageGeneration() {
               if (event.content.imageUrl) {
                 completeImageGeneration({
                   id: `img-${Date.now()}`,
+                  artifactId: event.content.artifactId,
                   prompt,
                   imageUrl: event.content.imageUrl,
                   originalUrl: event.content.originalUrl ?? event.content.imageUrl,
@@ -82,10 +84,12 @@ export function ImageGeneration() {
         },
       },
       controller.signal,
+      selectedProjectId ?? undefined,
     );
   }, [
     imaginePrompt,
     imagineModel,
+    selectedProjectId,
     setGeneratingImage,
     setImageProgress,
     setPartialImageData,
@@ -109,6 +113,8 @@ export function ImageGeneration() {
         onChange={setImaginePrompt}
         onSubmit={handleGenerate}
         isLoading={isGeneratingImage}
+        disabled={!selectedProjectId}
+        placeholder={selectedProjectId ? "Describe your 3D asset..." : "Select a project first"}
         selectedModel={imagineModel}
         onModelChange={setImagineModel}
       />
