@@ -1438,7 +1438,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 8,
           "reason": "Introduces a brand-new AURA 3D app with a WebGL viewer, image-to-3D flow, sidekick panels, and left nav. This is a major new user-visible product surface that a single screenshot can clearly prove.",
           "reasons": [
@@ -1487,7 +1487,17 @@
             "Images",
             "Models"
           ],
-          "storyTitle": "AURA 3D app debuts with image-to-3D generation and WebGL viewer"
+          "storyTitle": "AURA 3D — Image-to-3D Generation with WebGL Viewer",
+          "batchId": "entry-2",
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.361.1/entry-2-aura-3d-app-debuts-with-image-to-3d-generation-and-webgl-viewer.png",
+          "screenshotSource": "capture-proof",
+          "originalScreenshotSource": "capture-proof",
+          "polishProvider": "openai",
+          "polishModel": "",
+          "polishJudgeModel": "gpt-4.1-mini",
+          "polishScore": 100,
+          "polishFallbackReason": "openai_polish_quality_gate",
+          "updatedAt": "2026-04-24T02:28:17.246Z"
         }
       },
       {
@@ -1556,7 +1566,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 6,
           "reason": "A clear layout change in the AURA 3D app: tabs (Image / 3D Model) replacing the stacked split, plus the shared LeftMenuTree project nav. This is durable and visible in one screenshot. The lightbox item is transient, but the tab layout + tree nav is a stable proof surface.",
           "reasons": [
@@ -1591,7 +1601,17 @@
             "Image",
             "3D Model"
           ],
-          "storyTitle": "AURA 3D layout moves to tabs with a project-tree left nav"
+          "storyTitle": "AURA 3D – Image / 3D Model tab bar with LeftMenuTree project navigation",
+          "batchId": "entry-4",
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.361.1/entry-4-aura-3d-layout-moves-to-tabs-with-a-project-tree-left-nav.png",
+          "screenshotSource": "openai-polish",
+          "originalScreenshotSource": "capture-proof",
+          "polishProvider": "openai",
+          "polishModel": "gpt-image-2",
+          "polishJudgeModel": "gpt-4.1-mini",
+          "polishScore": 80,
+          "polishFallbackReason": "",
+          "updatedAt": "2026-04-24T02:32:24.060Z"
         }
       },
       {
@@ -1636,7 +1656,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 8,
           "reason": "Significant user-visible polish: left nav shows images and models as children under projects, sidekick uses a thumbnail grid with section headings, viewer has icon toggles, and the app is no longer flag-gated (visible to everyone). One screenshot of a project with saved artifacts can prove persistence + polish.",
           "reasons": [
@@ -1686,7 +1706,17 @@
             "Images",
             "Models"
           ],
-          "storyTitle": "3D artifacts persist per project and the studio comes out of flag gating"
+          "storyTitle": "AURA 3D – Artifact Persistence & Studio Promotion Out of Flag Gating",
+          "batchId": "entry-5",
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.361.1/entry-5-3d-artifacts-persist-per-project-and-the-studio-comes-out-of-fla.png",
+          "screenshotSource": "capture-proof",
+          "originalScreenshotSource": "capture-proof",
+          "polishProvider": "openai",
+          "polishModel": "",
+          "polishJudgeModel": "gpt-4.1-mini",
+          "polishScore": 30,
+          "polishFallbackReason": "openai_polish_quality_gate",
+          "updatedAt": "2026-04-24T02:38:05.650Z"
         }
       },
       {
