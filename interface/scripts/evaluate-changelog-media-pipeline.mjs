@@ -16,6 +16,8 @@ import { resolveDemoRepoPath } from "./lib/demo-repo-paths.mjs";
 import { loadLocalEnv } from "./lib/load-local-env.mjs";
 import {
   DEFAULT_BROWSER_USE_MODEL,
+  DEFAULT_BROWSER_USE_INTERVAL_MS,
+  DEFAULT_BROWSER_USE_TIMEOUT_MS,
   buildBrowserUseTask,
   buildCaptureLoginUrl,
   evaluateDesktopCapture,
@@ -51,6 +53,11 @@ function isEnabled(value) {
 
 function isDisabled(value) {
   return ["0", "false", "no", "off"].includes(String(value || "").trim().toLowerCase());
+}
+
+function parsePositiveInteger(value, fallback) {
+  const parsed = Number.parseInt(String(value || ""), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 function resolveInputPath(filePath) {
@@ -253,6 +260,8 @@ export async function runChangelogMediaEvaluation({
   requireCaptureSecret = true,
   anthropicModel = "claude-opus-4-7",
   browserUseModel = DEFAULT_BROWSER_USE_MODEL,
+  browserUseTimeoutMs = DEFAULT_BROWSER_USE_TIMEOUT_MS,
+  browserUseIntervalMs = DEFAULT_BROWSER_USE_INTERVAL_MS,
   maxCostUsd = "",
   enableRecording = false,
   strictCapture = false,
@@ -415,6 +424,8 @@ export async function runChangelogMediaEvaluation({
       maxCostUsd,
       useOutputSchema: true,
       sensitiveData: captureAuth.enabled && !captureAuth.autoSession ? { captureSecret } : null,
+      timeoutMs: browserUseTimeoutMs,
+      intervalMs: browserUseIntervalMs,
     });
     const desktopEvaluation = evaluateDesktopCapture({
       output: result.output,
@@ -484,6 +495,11 @@ export async function runChangelogMediaEvaluation({
       anthropic: anthropicModel,
       browserUse: browserUseModel,
     },
+    browserUseRunOptions: {
+      timeoutMs: browserUseTimeoutMs,
+      intervalMs: browserUseIntervalMs,
+      maxCostUsd: maxCostUsd || null,
+    },
     env: {
       anthropicAvailable: true,
       browserUseAvailable: browserUseKeyAvailable,
@@ -552,6 +568,14 @@ export async function main(argv = process.argv.slice(2)) {
     requireCaptureSecret: !isEnabled(args["allow-unauthenticated"]),
     anthropicModel: String(args["anthropic-model"] || process.env.CHANGELOG_MEDIA_ANTHROPIC_MODEL || "claude-opus-4-7").trim(),
     browserUseModel: String(args["browser-use-model"] || process.env.BROWSER_USE_MODEL || DEFAULT_BROWSER_USE_MODEL).trim(),
+    browserUseTimeoutMs: parsePositiveInteger(
+      args["browser-use-timeout-ms"] || process.env.BROWSER_USE_TIMEOUT_MS,
+      DEFAULT_BROWSER_USE_TIMEOUT_MS,
+    ),
+    browserUseIntervalMs: parsePositiveInteger(
+      args["browser-use-interval-ms"] || process.env.BROWSER_USE_INTERVAL_MS,
+      DEFAULT_BROWSER_USE_INTERVAL_MS,
+    ),
     maxCostUsd: args["max-cost-usd"] || process.env.BROWSER_USE_MAX_COST_USD || "",
     enableRecording: isEnabled(args["enable-recording"] || process.env.BROWSER_USE_ENABLE_RECORDING),
     strictCapture: isEnabled(args.strict),
@@ -565,6 +589,7 @@ export async function main(argv = process.argv.slice(2)) {
     apiBaseUrl: report.apiBaseUrl,
     counts: report.counts,
     env: report.env,
+    browserUseRunOptions: report.browserUseRunOptions,
     selectionCoverage: report.selectionCoverage,
     plannerAttemptCount: report.plannerAttemptCount,
     candidates: report.mediaPlan.candidates.map((candidate) => ({

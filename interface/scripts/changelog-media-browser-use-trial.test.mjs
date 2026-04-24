@@ -3,6 +3,9 @@ import test from "node:test";
 
 import {
   DEFAULT_BROWSER_USE_MODEL,
+  DEFAULT_BROWSER_USE_INTERVAL_MS,
+  DEFAULT_BROWSER_USE_TIMEOUT_MS,
+  buildBrowserUseRunOptions,
   buildBrowserUseTask,
   buildCaptureLoginUrl,
   evaluateDesktopCapture,
@@ -141,6 +144,24 @@ test("buildBrowserUseTask includes the desktop-only contract", () => {
   assert.match(task, /Do not change browser zoom/);
   assert.doesNotMatch(task, /zoom up to/i);
   assert.match(task, /Return JSON only/);
+});
+
+test("buildBrowserUseRunOptions bounds Browser Use execution and disables nonessential tools", () => {
+  const options = buildBrowserUseRunOptions({
+    model: DEFAULT_BROWSER_USE_MODEL,
+    maxCostUsd: "1.50",
+    useOutputSchema: true,
+    sensitiveData: { captureSecret: "secret-value" },
+  });
+
+  assert.equal(options.timeout, DEFAULT_BROWSER_USE_TIMEOUT_MS);
+  assert.equal(options.interval, DEFAULT_BROWSER_USE_INTERVAL_MS);
+  assert.equal(options.enableScheduledTasks, false);
+  assert.equal(options.skills, false);
+  assert.equal(options.agentmail, false);
+  assert.equal(options.maxCostUsd, "1.50");
+  assert.deepEqual(options.sensitiveData, { captureSecret: "secret-value" });
+  assert.equal(typeof options.outputSchema, "object");
 });
 
 test("buildBrowserUseTask uses Browser Use sensitive data placeholders for capture auth", () => {

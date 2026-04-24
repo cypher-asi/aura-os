@@ -67,6 +67,9 @@ test("createBrandedMediaSvg wraps the raw screenshot without scaling it", () => 
   assert.equal(asset.embeddedScreenshot.scale, 1);
   assert.equal(asset.embeddedScreenshot.renderedWidth, 640);
   assert.equal(asset.embeddedScreenshot.renderedHeight, 360);
+  assert.ok(asset.layout.titleLines > 0 && asset.layout.titleLines <= asset.layout.maxTitleLines);
+  assert.equal(asset.layout.subtitleLines, 1);
+  assert.ok(Math.abs(asset.layout.aspectRatio - (16 / 9)) < 0.02);
   assert.equal(assessBrandedMediaAsset(asset).ok, true);
 
   const svg = fs.readFileSync(outputPath, "utf8");
@@ -74,6 +77,34 @@ test("createBrandedMediaSvg wraps the raw screenshot without scaling it", () => 
   assert.match(svg, /data:image\/png;base64,/);
   assert.match(svg, /GPT-5.5 available/);
   assert.match(svg, /<tspan x="/);
+});
+
+test("assessBrandedMediaAsset rejects canvas and layout regressions", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-branding-"));
+  const screenshotPath = path.join(tempDir, "screenshot.png");
+  const outputPath = path.join(tempDir, "branded.svg");
+  writePng(screenshotPath, 640, 360);
+
+  const asset = createBrandedMediaSvg({
+    screenshotPath,
+    outputPath,
+    title: "GPT-5.5 available in the chat model picker",
+    subtitle: "Open the picker and show the model option.",
+  });
+  const report = assessBrandedMediaAsset({
+    ...asset,
+    dimensions: { width: 1000, height: 1000 },
+    layout: {
+      ...asset.layout,
+      titleLines: 3,
+      screenshot: { x: 700, y: 700, width: 640, height: 360 },
+    },
+  });
+
+  assert.equal(report.ok, false);
+  assert.ok(report.concerns.some((concern) => concern.includes("16:9")));
+  assert.ok(report.concerns.some((concern) => concern.includes("title layout")));
+  assert.ok(report.concerns.some((concern) => concern.includes("overflows the canvas width")));
 });
 
 test("wrapTextForSvg caps long marketing copy to bounded lines", () => {

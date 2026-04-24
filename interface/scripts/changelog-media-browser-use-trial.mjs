@@ -8,6 +8,8 @@ import { buildAuraNavigationContract } from "./lib/aura-navigation-contract.mjs"
 import { loadLocalEnv } from "./lib/load-local-env.mjs";
 
 export const DEFAULT_BROWSER_USE_MODEL = "claude-opus-4.6";
+export const DEFAULT_BROWSER_USE_TIMEOUT_MS = 10 * 60 * 1000;
+export const DEFAULT_BROWSER_USE_INTERVAL_MS = 2 * 1000;
 const DEFAULT_DESKTOP_VIEWPORT = Object.freeze({ width: 1920, height: 1080 });
 const DEFAULT_MIN_DESKTOP_VIEWPORT = Object.freeze({ width: 1366, height: 600 });
 
@@ -422,6 +424,31 @@ async function downloadLastScreenshot(messages, outputDir, sessionScreenshotUrl 
   };
 }
 
+export function buildBrowserUseRunOptions({
+  model,
+  profileId,
+  enableRecording,
+  maxCostUsd,
+  useOutputSchema,
+  sensitiveData,
+  timeoutMs = DEFAULT_BROWSER_USE_TIMEOUT_MS,
+  intervalMs = DEFAULT_BROWSER_USE_INTERVAL_MS,
+} = {}) {
+  return {
+    model,
+    timeout: timeoutMs,
+    interval: intervalMs,
+    enableScheduledTasks: false,
+    skills: false,
+    agentmail: false,
+    ...(useOutputSchema ? { outputSchema: BROWSER_USE_CAPTURE_OUTPUT_SCHEMA } : {}),
+    ...(profileId ? { profileId } : {}),
+    ...(enableRecording ? { enableRecording: true } : {}),
+    ...(maxCostUsd ? { maxCostUsd } : {}),
+    ...(sensitiveData && Object.keys(sensitiveData).length > 0 ? { sensitiveData } : {}),
+  };
+}
+
 export async function runBrowserUseTask({
   task,
   model,
@@ -432,6 +459,8 @@ export async function runBrowserUseTask({
   maxCostUsd,
   useOutputSchema,
   sensitiveData,
+  timeoutMs = DEFAULT_BROWSER_USE_TIMEOUT_MS,
+  intervalMs = DEFAULT_BROWSER_USE_INTERVAL_MS,
 }) {
   const apiKey = process.env.BROWSER_USE_API_KEY?.trim();
   if (!apiKey) {
@@ -441,17 +470,17 @@ export async function runBrowserUseTask({
   const { BrowserUse } = await import("browser-use-sdk/v3");
   const client = new BrowserUse({ apiKey });
   const messages = [];
-  const run = client.run(task, {
+  const runOptions = buildBrowserUseRunOptions({
     model,
-    enableScheduledTasks: false,
-    skills: false,
-    agentmail: false,
-    ...(useOutputSchema ? { outputSchema: BROWSER_USE_CAPTURE_OUTPUT_SCHEMA } : {}),
-    ...(profileId ? { profileId } : {}),
-    ...(enableRecording ? { enableRecording: true } : {}),
-    ...(maxCostUsd ? { maxCostUsd } : {}),
-    ...(sensitiveData && Object.keys(sensitiveData).length > 0 ? { sensitiveData } : {}),
+    profileId,
+    enableRecording,
+    maxCostUsd,
+    useOutputSchema,
+    sensitiveData,
+    timeoutMs,
+    intervalMs,
   });
+  const run = client.run(task, runOptions);
 
   for await (const message of run) {
     messages.push({
@@ -485,6 +514,12 @@ export async function runBrowserUseTask({
     provider: "browser-use-cloud",
     model,
     profileId: profileId || null,
+    runOptions: {
+      timeoutMs,
+      intervalMs,
+      maxCostUsd: maxCostUsd || null,
+      outputSchema: Boolean(useOutputSchema),
+    },
     requestedDesktopViewport: desktopViewport,
     screenshotSource: screenshot?.url === (result?.screenshotUrl || result?.screenshot_url || null)
       ? "session-screenshot-url"
@@ -530,6 +565,14 @@ export async function main(argv = process.argv.slice(2)) {
   const strictCapture = isEnabled(args.strict || process.env.BROWSER_USE_STRICT_CAPTURE);
   const useOutputSchema = !isDisabled(args["use-output-schema"] ?? process.env.BROWSER_USE_OUTPUT_SCHEMA ?? "true");
   const maxCostUsd = args["max-cost-usd"] || process.env.BROWSER_USE_MAX_COST_USD || "";
+  const timeoutMs = parsePositiveInteger(
+    args["browser-use-timeout-ms"] || process.env.BROWSER_USE_TIMEOUT_MS,
+    DEFAULT_BROWSER_USE_TIMEOUT_MS,
+  );
+  const intervalMs = parsePositiveInteger(
+    args["browser-use-interval-ms"] || process.env.BROWSER_USE_INTERVAL_MS,
+    DEFAULT_BROWSER_USE_INTERVAL_MS,
+  );
   const desktopViewport = {
     width: parsePositiveInteger(args["desktop-width"] || process.env.BROWSER_USE_DESKTOP_WIDTH, DEFAULT_DESKTOP_VIEWPORT.width),
     height: parsePositiveInteger(args["desktop-height"] || process.env.BROWSER_USE_DESKTOP_HEIGHT, DEFAULT_DESKTOP_VIEWPORT.height),
@@ -572,6 +615,8 @@ export async function main(argv = process.argv.slice(2)) {
       captureAuthEnabled: captureAuth.enabled,
       strictCapture,
       useOutputSchema,
+      browserUseTimeoutMs: timeoutMs,
+      browserUseIntervalMs: intervalMs,
       baseUrl,
       prompt,
       changedFiles,
@@ -613,6 +658,12 @@ export async function main(argv = process.argv.slice(2)) {
       provider: "browser-use-cloud",
       model,
       profileId: profileId || null,
+      runOptions: {
+        timeoutMs,
+        intervalMs,
+        maxCostUsd: maxCostUsd || null,
+        outputSchema: Boolean(useOutputSchema),
+      },
       captureAuthEnabled: captureAuth.enabled,
       output,
       rawOutput: null,
@@ -654,6 +705,8 @@ export async function main(argv = process.argv.slice(2)) {
     maxCostUsd,
     useOutputSchema,
     sensitiveData: captureAuth.enabled ? { captureSecret } : null,
+    timeoutMs,
+    intervalMs,
   });
   const desktopEvaluation = evaluateDesktopCapture({
     output: result.output,

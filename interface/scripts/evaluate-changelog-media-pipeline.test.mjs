@@ -208,6 +208,7 @@ test("runChangelogMediaEvaluation creates branded media only after quality and v
   process.env.ANTHROPIC_API_KEY = "test-key";
   process.env.BROWSER_USE_API_KEY = "browser-use-test-key";
   process.env.AURA_CHANGELOG_CAPTURE_SECRET = "capture-secret-with-enough-entropy";
+  let capturedBrowserUseArgs = null;
 
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => ({
@@ -265,7 +266,11 @@ test("runChangelogMediaEvaluation creates branded media only after quality and v
           validated_at: "2026-04-24T00:00:00Z",
         },
       }),
-      runBrowserUseTaskImpl: async () => ({
+      browserUseTimeoutMs: 123456,
+      browserUseIntervalMs: 3456,
+      runBrowserUseTaskImpl: async (args) => {
+        capturedBrowserUseArgs = args;
+        return {
         ok: true,
         provider: "browser-use-cloud",
         output: {
@@ -285,7 +290,8 @@ test("runChangelogMediaEvaluation creates branded media only after quality and v
           dimensions: { width: 1400, height: 800 },
         },
         messages: [],
-      }),
+      };
+      },
       visionJudgeImpl: async () => ({
         ok: true,
         status: "accepted",
@@ -304,6 +310,10 @@ test("runChangelogMediaEvaluation creates branded media only after quality and v
     assert.equal(report.counts.visionAccepted, 1);
     assert.equal(report.counts.brandingCreated, 1);
     assert.equal(report.counts.publishReady, 1);
+    assert.equal(report.browserUseRunOptions.timeoutMs, 123456);
+    assert.equal(report.browserUseRunOptions.intervalMs, 3456);
+    assert.equal(capturedBrowserUseArgs.timeoutMs, 123456);
+    assert.equal(capturedBrowserUseArgs.intervalMs, 3456);
     const branding = report.captureResults[0].branding;
     assert.equal(branding.status, "created");
     assert.equal(fs.existsSync(branding.asset.path), true);

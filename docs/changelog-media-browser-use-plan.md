@@ -34,17 +34,22 @@ This is the operating plan for the clean changelog media pipeline. Keep this fil
 - Use Browser Use Agent with `claude-opus-4.6` by default.
 - Use structured output for capture decisions.
 - Use `sensitiveData` for capture auth secrets.
+- Bound Browser Use runs with an explicit timeout and cost cap. The SDK default can wait for hours, which is not acceptable for release CI.
 - Do not crop, zoom, stylize, or re-render the product screenshot.
 - Preserve native Browser Use screenshot pixels.
 
-## Current Quality Investigation
+## Quality Policy
 
-Browser Use Agent session screenshots may not expose explicit screen-size control in the v3 session API. Browser Use Browser sessions do expose `browserScreenWidth` and `browserScreenHeight`, but direct browser control requires a separate integration path. Until we prove a high-quality Browser Use-native capture path, the pipeline must treat screenshot quality as a hard publish gate.
+- The product screenshot is the proof. It must remain real Aura UI at native scale.
+- Branding is a deterministic SVG presentation card around the screenshot, not a generated replacement for the UI.
+- Generated imagery must not rewrite product text, invent UI, hide proof, or compensate for a weak capture.
+- Long titles and subtitles must wrap inside bounded layout regions before media can publish.
+- A branded asset must pass structural layout checks before it is considered publish-ready.
 
 ## What To Improve Next
 
 - Expand generated sitemap coverage by adding stable `data-agent-*` proof handles to real product surfaces.
-- Add Anthropic media planning before Browser Use calls.
+- Use Anthropic media planning before Browser Use calls.
 - Persist the generated sitemap and media plan as CI artifacts for debugging.
 - Run Browser Use only on the media plan candidates.
 - Investigate Browser Use-native high-resolution final screenshot capture without falling back to Playwright.

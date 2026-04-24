@@ -85,9 +85,9 @@ function renderTextLines({ lines, x, y, lineHeight, attributes }) {
     return "";
   }
   const tspans = lines
-    .map((line, index) => `    <tspan x="${x}" y="${y + (index * lineHeight)}">${escapeXml(line)}</tspan>`)
+    .map((line, index) => `    <tspan x="${x}" dy="${index === 0 ? 0 : lineHeight}">${escapeXml(line)}</tspan>`)
     .join("\n");
-  return `  <text ${attributes}>\n${tspans}\n  </text>`;
+  return `  <text x="${x}" y="${y}" ${attributes}>\n${tspans}\n  </text>`;
 }
 
 export function calculateBrandedCanvas(screenshotDimensions, { headerHeight } = {}) {
@@ -195,8 +195,6 @@ export function createBrandedMediaSvg({
   </defs>
   <rect width="100%" height="100%" fill="url(#aura-bg)"/>
   <rect width="100%" height="100%" fill="url(#aura-glow)"/>
-  <circle cx="${Math.round(canvas.width * 0.84)}" cy="${Math.round(canvas.height * 0.18)}" r="${Math.round(canvas.width * 0.22)}" fill="#38bdf8" opacity="0.08"/>
-  <circle cx="${Math.round(canvas.width * 0.12)}" cy="${Math.round(canvas.height * 0.82)}" r="${Math.round(canvas.width * 0.18)}" fill="#f8fafc" opacity="0.04"/>
   <text x="${canvas.label.x}" y="${canvas.label.y}" fill="#94a3b8" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="${labelFontSize}" font-weight="700" letter-spacing="4">${labelText}</text>
 ${renderTextLines({
     lines: titleLines,
@@ -229,6 +227,15 @@ ${renderTextLines({
       width: canvas.width,
       height: canvas.height,
     },
+    layout: {
+      aspectRatio: canvas.width / canvas.height,
+      labelLines: 1,
+      titleLines: titleLines.length,
+      subtitleLines: subtitleLines.length,
+      maxTitleLines: 2,
+      maxSubtitleLines: 2,
+      screenshot: canvas.screenshot,
+    },
     embeddedScreenshot: {
       path: screenshotPath,
       width: dimensions.width,
@@ -245,6 +252,32 @@ export function assessBrandedMediaAsset(asset) {
   const concerns = [];
   if (!asset?.path || !fs.existsSync(asset.path)) {
     concerns.push("Branded media asset was not created.");
+  }
+  if (!asset?.dimensions?.width || !asset?.dimensions?.height) {
+    concerns.push("Branded media asset is missing canvas dimensions.");
+  } else {
+    const aspectRatio = asset.dimensions.width / asset.dimensions.height;
+    if (Math.abs(aspectRatio - (16 / 9)) > 0.02) {
+      concerns.push("Branded media canvas is not close to a 16:9 presentation ratio.");
+    }
+  }
+  if (asset?.layout?.titleLines > asset?.layout?.maxTitleLines) {
+    concerns.push("Branded media title layout exceeds the allowed line count.");
+  }
+  if (asset?.layout?.subtitleLines > asset?.layout?.maxSubtitleLines) {
+    concerns.push("Branded media subtitle layout exceeds the allowed line count.");
+  }
+  const screenshotFrame = asset?.layout?.screenshot;
+  if (screenshotFrame && asset?.dimensions) {
+    if (screenshotFrame.x < 0 || screenshotFrame.y < 0) {
+      concerns.push("Branded media screenshot is positioned outside the canvas.");
+    }
+    if (screenshotFrame.x + screenshotFrame.width > asset.dimensions.width) {
+      concerns.push("Branded media screenshot overflows the canvas width.");
+    }
+    if (screenshotFrame.y + screenshotFrame.height > asset.dimensions.height) {
+      concerns.push("Branded media screenshot overflows the canvas height.");
+    }
   }
   if (asset?.embeddedScreenshot?.scale !== 1) {
     concerns.push("Branded media changed the product screenshot scale.");
