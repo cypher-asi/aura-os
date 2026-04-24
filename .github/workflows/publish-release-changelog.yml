@@ -265,6 +265,24 @@ jobs:
         run: |
           cat "pages/changelog/${{ steps.metadata.outputs.channel }}/latest.md" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Plan changelog media candidates
+        if: steps.release-check.outputs.released == 'true'
+        continue-on-error: true
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        shell: bash
+        run: |
+          node repo/interface/scripts/plan-changelog-media.mjs \
+            --changelog-file "pages/changelog/${{ steps.metadata.outputs.channel }}/latest.json" \
+            --output-dir changelog-media-plan
+
+      - name: Upload changelog media plan
+        if: steps.release-check.outputs.released == 'true' && hashFiles('changelog-media-plan/media-plan-summary.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog-media-plan
+          path: changelog-media-plan
+
       - name: Write changelog publish metadata
         if: steps.release-check.outputs.released == 'true'
         shell: bash
@@ -309,34 +327,14 @@ jobs:
             "Update ${{ steps.metadata.outputs.channel }} changelog for ${{ steps.metadata.outputs.version }}" \
             "changelog/${{ steps.metadata.outputs.channel }}"
 
-      - name: Dispatch changelog media publish
+      - name: Note changelog media capture is disabled
         if: steps.release-check.outputs.released == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          DEFAULT_DEPLOY_WAIT_MINUTES: ${{ vars.AURA_CHANGELOG_MEDIA_DEPLOY_WAIT_MINUTES }}
         shell: bash
         run: |
-          deploy_wait_minutes="$DEFAULT_DEPLOY_WAIT_MINUTES"
-          if [[ -z "$deploy_wait_minutes" ]]; then
-            deploy_wait_minutes="5"
-          fi
-
-          if ! [[ "$deploy_wait_minutes" =~ ^[0-9]+$ ]]; then
-            echo "AURA_CHANGELOG_MEDIA_DEPLOY_WAIT_MINUTES must be an integer number of minutes, got: $deploy_wait_minutes" >&2
-            exit 1
-          fi
-
-          payload="$(jq -n \
-            --arg ref "main" \
-            --arg channel "${{ steps.metadata.outputs.channel }}" \
-            --arg version "${{ steps.metadata.outputs.version }}" \
-            --arg date "$(jq -er '.date' "pages/changelog/${{ steps.metadata.outputs.channel }}/latest.json")" \
-            --arg provider "browserbase" \
-            --arg profile "" \
-            --arg head_sha "${{ steps.trigger.outputs.head_sha }}" \
-            --arg deploy_wait_minutes "$deploy_wait_minutes" \
-            '{ref: $ref, inputs: {channel: $channel, version: $version, date: $date, provider: $provider, profile: $profile, head_sha: $head_sha, deploy_wait_minutes: $deploy_wait_minutes}}')"
-
-          gh api "repos/${{ github.repository }}/actions/workflows/publish-release-changelog-media.yml/dispatches" \
-            --method POST \
-            --input - <<<"$payload"
+          {
+            echo "## Changelog Media"
+            echo ""
+            echo "Automatic screenshot publishing is intentionally disabled while the Browser Use Cloud capture path is evaluated."
+            echo "The Anthropic media planner ran before Browser Use and uploaded its plan as a workflow artifact when planning succeeded."
+            echo "The changelog has been published without media placeholders or gh-pages asset mutations."
+          } >> "$GITHUB_STEP_SUMMARY"

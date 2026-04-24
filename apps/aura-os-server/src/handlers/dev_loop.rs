@@ -1891,29 +1891,26 @@ async fn try_restart_automaton(
             "reason": reason,
         }),
     );
-    let (automaton_id, event_stream_url) = match ctx
-        .automaton_client
-        .start(ctx.start_params.clone())
-        .await
-    {
-        Ok(r) => (r.automaton_id, Some(r.event_stream_url)),
-        Err(AutomatonStartError::Conflict(existing_id)) => {
-            match resolve_start_conflict(
-                ctx.automaton_client.as_ref(),
-                existing_id,
-                &ctx.start_params,
-            )
-            .await?
-            {
-                ConflictResolution::Fresh {
-                    automaton_id,
-                    event_stream_url,
-                } => (automaton_id, Some(event_stream_url)),
-                ConflictResolution::Adopt { automaton_id } => (automaton_id, None),
+    let (automaton_id, event_stream_url) =
+        match ctx.automaton_client.start(ctx.start_params.clone()).await {
+            Ok(r) => (r.automaton_id, Some(r.event_stream_url)),
+            Err(AutomatonStartError::Conflict(existing_id)) => {
+                match resolve_start_conflict(
+                    ctx.automaton_client.as_ref(),
+                    existing_id,
+                    &ctx.start_params,
+                )
+                .await?
+                {
+                    ConflictResolution::Fresh {
+                        automaton_id,
+                        event_stream_url,
+                    } => (automaton_id, Some(event_stream_url)),
+                    ConflictResolution::Adopt { automaton_id } => (automaton_id, None),
+                }
             }
-        }
-        Err(e) => return Err(format!("automaton start failed: {e}")),
-    };
+            Err(e) => return Err(format!("automaton start failed: {e}")),
+        };
     let tx = connect_with_retries(
         ctx.automaton_client.as_ref(),
         &automaton_id,
@@ -2426,11 +2423,9 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                     &cached,
                                 )
                                 .await;
-                                let gate_reason =
-                                    completion_validation_failure_reason(&cached);
+                                let gate_reason = completion_validation_failure_reason(&cached);
                                 let mut gate_report = CompletionGateReport::from_cached(&cached);
-                                gate_report.failure_reason =
-                                    gate_reason.map(|r| r.to_string());
+                                gate_report.failure_reason = gate_reason.map(|r| r.to_string());
                                 if let Ok(payload) = serde_json::to_value(&gate_report) {
                                     let mut payload = payload;
                                     if let Some(obj) = payload.as_object_mut() {
@@ -2531,10 +2526,9 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             // NOT reset it to `ready`, and do NOT pause
                             // the loop. Transition to `done` and surface
                             // a `git_push_failed` event to the UI.
-                            if let (Some(tid), Some(reason)) = (
-                                tid.as_ref(),
-                                failure_reason.as_ref(),
-                            ) {
+                            if let (Some(tid), Some(reason)) =
+                                (tid.as_ref(), failure_reason.as_ref())
+                            {
                                 if classify_infra_failure(reason)
                                     == Some(InfraFailureClass::GitPushTimeout)
                                 {
@@ -2544,9 +2538,8 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                         let req = aura_os_storage::TransitionTaskRequest {
                                             status: "done".to_string(),
                                         };
-                                        if let Err(error) = storage_client
-                                            .transition_task(tid, jwt, &req)
-                                            .await
+                                        if let Err(error) =
+                                            storage_client.transition_task(tid, jwt, &req).await
                                         {
                                             warn!(
                                                 task_id = %tid,
@@ -2783,9 +2776,8 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                         let bridge = aura_os_storage::TransitionTaskRequest {
                                             status: "in_progress".to_string(),
                                         };
-                                        if let Err(error) = storage_client
-                                            .transition_task(tid, jwt, &bridge)
-                                            .await
+                                        if let Err(error) =
+                                            storage_client.transition_task(tid, jwt, &bridge).await
                                         {
                                             warn!(task_id = %tid, %error, "Failed to bridge ready->in_progress before terminal failure");
                                         }
@@ -5300,7 +5292,10 @@ mod tests {
             modify_summary("crates/foo/src/lib.rs"),
         ];
         let c = classify_changed_paths(&mixed);
-        assert!(c.has_rust && c.has_source, "mixed set must see the Rust file");
+        assert!(
+            c.has_rust && c.has_source,
+            "mixed set must see the Rust file"
+        );
 
         let cargo_lock = vec![modify_summary("Cargo.lock")];
         let c = classify_changed_paths(&cargo_lock);
@@ -5314,10 +5309,7 @@ mod tests {
     fn completion_gate_report_snapshots_all_inputs() {
         let cached = CachedTaskOutput {
             live_output: "hello".into(),
-            files_changed: vec![
-                modify_summary("src/lib.rs"),
-                modify_summary("README.md"),
-            ],
+            files_changed: vec![modify_summary("src/lib.rs"), modify_summary("README.md")],
             build_steps: vec![serde_json::json!({"ok": true})],
             test_steps: vec![serde_json::json!({"ok": true})],
             format_steps: vec![],

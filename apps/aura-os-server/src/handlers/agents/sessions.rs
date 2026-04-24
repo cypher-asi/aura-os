@@ -8,6 +8,7 @@ use aura_os_core::{AgentId, AgentInstanceId, ProjectId, Session, SessionEvent, S
 use aura_os_sessions::storage_session_to_session;
 use aura_os_storage::StorageClient;
 
+use crate::capture_auth::{demo_agent_id, demo_agent_instance_id, is_capture_access_token};
 use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::state::{AppState, AuthJwt};
 
@@ -397,6 +398,13 @@ pub(crate) async fn get_agent_context_usage(
     AuthJwt(jwt): AuthJwt,
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<Json<ContextUsageResponse>> {
+    if is_capture_access_token(&jwt) && agent_id == demo_agent_id() {
+        return Ok(Json(ContextUsageResponse {
+            context_utilization: 0.34,
+            estimated_context_tokens: Some(33_280),
+        }));
+    }
+
     let storage = state.require_storage_client()?;
     let agent_id_str = agent_id.to_string();
     let matching = find_matching_project_agents(&state, storage, &jwt, &agent_id_str).await;
@@ -452,6 +460,13 @@ pub(crate) async fn get_instance_context_usage(
     AuthJwt(jwt): AuthJwt,
     Path((_project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
 ) -> ApiResult<Json<ContextUsageResponse>> {
+    if is_capture_access_token(&jwt) && agent_instance_id == demo_agent_instance_id() {
+        return Ok(Json(ContextUsageResponse {
+            context_utilization: 0.34,
+            estimated_context_tokens: Some(33_280),
+        }));
+    }
+
     let storage = state.require_storage_client()?;
     let sessions = storage
         .list_sessions(&agent_instance_id.to_string(), &jwt)

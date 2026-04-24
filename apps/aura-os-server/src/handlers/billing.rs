@@ -2,8 +2,9 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::Json;
 
-use aura_os_core::{BillingAccount, OrgId, TransactionsResponse};
+use aura_os_core::{BillingAccount, CreditBalance, OrgId, TransactionsResponse};
 
+use crate::capture_auth::is_capture_access_token;
 use crate::dto::CreateCreditCheckoutRequest;
 use crate::error::{ApiError, ApiResult};
 use crate::state::{AppState, AuthJwt};
@@ -112,6 +113,15 @@ pub(crate) async fn get_credit_balance(
     AuthJwt(jwt): AuthJwt,
     Path(_org_id): Path<OrgId>,
 ) -> ApiResult<Json<serde_json::Value>> {
+    if is_capture_access_token(&jwt) {
+        let balance = CreditBalance {
+            balance_cents: 50_000,
+            plan: "Capture Demo".into(),
+            balance_formatted: "$500.00".into(),
+        };
+        return Ok(Json(serde_json::to_value(balance).unwrap_or_default()));
+    }
+
     let balance = state
         .billing_client
         .get_balance(&jwt)

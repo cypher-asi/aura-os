@@ -22,6 +22,7 @@ const BOOT_AUTH_GLOBAL_KEY = "__AURA_BOOT_AUTH__";
  * the injected boot global and the localStorage mirror.
  */
 const FORCE_LOGGED_OUT_KEY = "aura-force-logged-out";
+const CAPTURE_ACCESS_TOKEN_PREFIX = "aura-capture:";
 
 interface BootInjectedAuth {
   isLoggedIn: boolean;
@@ -213,6 +214,10 @@ export function getStoredSession(): AuthSession | null {
  */
 export function isLoggedInSync(): boolean {
   return Boolean(cachedSession?.access_token);
+}
+
+export function isCaptureAuthSession(session: AuthSession | null = cachedSession): boolean {
+  return Boolean(session?.access_token?.startsWith(CAPTURE_ACCESS_TOKEN_PREFIX));
 }
 
 export async function hydrateStoredAuth(): Promise<AuthSession | null> {

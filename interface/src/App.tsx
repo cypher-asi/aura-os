@@ -5,6 +5,7 @@ import { useAppUIStore } from "./stores/app-ui-store";
 import { RequireAuth } from "./components/RequireAuth";
 import { AppShell } from "./components/AppShell";
 import { LoginView } from "./views/LoginView";
+import { CaptureLoginView } from "./views/CaptureLoginView";
 import { apps } from "./apps/registry";
 import { getInitialShellPath } from "./utils/last-app-path";
 import { getLastApp } from "./utils/storage";
@@ -75,6 +76,10 @@ function ShellOutletSuspense() {
  */
 const shellAppRoutes = apps.flatMap((app) => app.routes);
 
+function isCaptureLoginRoute(): boolean {
+  return typeof window !== "undefined" && window.location.pathname === "/capture-login";
+}
+
 function renderRoutes(routes: typeof shellAppRoutes): React.ReactNode {
   return routes.map((route, index) => {
     const key = route.path ?? (route.index ? `index-${index}` : String(index));
@@ -111,13 +116,18 @@ export default function App() {
     let active = true;
 
     void (async () => {
+      let shouldRestoreSession = true;
       try {
+        if (isCaptureLoginRoute() && !isLoggedInSync()) {
+          shouldRestoreSession = false;
+          return;
+        }
         await hydrateStoredAuth();
         await bootstrapNativeTestAuth();
       } catch (error) {
         console.error("Native test auth bootstrap failed", error);
       } finally {
-        if (active) {
+        if (active && shouldRestoreSession) {
           await restoreSession();
         }
       }
@@ -135,6 +145,7 @@ export default function App() {
           path="login"
           element={showShell ? <Navigate to="/" replace /> : <LoginView />}
         />
+        <Route path="capture-login" element={<CaptureLoginView />} />
         <Route
           path="ide"
           element={

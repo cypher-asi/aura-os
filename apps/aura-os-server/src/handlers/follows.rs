@@ -6,6 +6,7 @@ use chrono::{DateTime, Utc};
 use aura_os_core::*;
 use aura_os_network::NetworkFollow;
 
+use crate::capture_auth::is_capture_access_token;
 use crate::dto::{FollowCheckResponse, FollowRequest};
 use crate::error::{map_network_error, ApiResult};
 use crate::state::{AppState, AuthJwt};
@@ -71,6 +72,10 @@ pub(crate) async fn list_follows(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
 ) -> ApiResult<Json<Vec<Follow>>> {
+    if is_capture_access_token(&jwt) {
+        return Ok(Json(Vec::new()));
+    }
+
     let client = state.require_network_client()?;
     let net_follows = client.list_follows(&jwt).await.map_err(map_network_error)?;
     let follows: Vec<Follow> = net_follows.iter().map(follow_from_network).collect();

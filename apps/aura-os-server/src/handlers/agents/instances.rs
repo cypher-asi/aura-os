@@ -9,6 +9,9 @@ use aura_os_core::{
     Agent, AgentId, AgentInstance, AgentInstanceId, AgentRuntimeConfig, AgentStatus, ProjectId,
 };
 
+use crate::capture_auth::{
+    demo_agent_instance, demo_agent_instance_id, demo_project_id, is_capture_access_token,
+};
 use crate::dto::{CreateAgentInstanceRequest, UpdateAgentInstanceRequest};
 use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::handlers::projects_helpers::ensure_canonical_workspace_dir;
@@ -236,6 +239,13 @@ pub(crate) async fn list_agent_instances(
     AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Vec<AgentInstance>>> {
+    if is_capture_access_token(&jwt) {
+        if project_id == demo_project_id() {
+            return Ok(Json(vec![demo_agent_instance()]));
+        }
+        return Ok(Json(Vec::new()));
+    }
+
     let storage = state.require_storage_client()?;
     let storage_agents = storage
         .list_project_agents(&project_id.to_string(), &jwt)
@@ -271,6 +281,10 @@ pub(crate) async fn get_agent_instance(
     AuthJwt(jwt): AuthJwt,
     Path((_project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
 ) -> ApiResult<Json<AgentInstance>> {
+    if is_capture_access_token(&jwt) && agent_instance_id == demo_agent_instance_id() {
+        return Ok(Json(demo_agent_instance()));
+    }
+
     let storage = state.require_storage_client()?;
     let storage_agent = storage
         .get_project_agent(&agent_instance_id.to_string(), &jwt)

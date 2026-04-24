@@ -10,11 +10,12 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
+use crate::capture_auth;
 use crate::handlers::{
     agent_bootstrap, agent_tools, agents, auth, billing, browser, debug_runs, dev_loop, feed,
     feedback, files, follows, generation, harness_proxy, leaderboard, log, marketplace, notes,
-    org_tools, orgs, process, project_artifacts, project_stats, projects, remote_files, remote_terminal, specs, swarm,
-    system, tasks, terminal, users, ws,
+    org_tools, orgs, process, project_artifacts, project_stats, projects, remote_files,
+    remote_terminal, specs, swarm, system, tasks, terminal, users, ws,
 };
 use crate::state::AppState;
 
@@ -112,7 +113,7 @@ pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathB
                     axum::http::header::CACHE_CONTROL,
                     HeaderValue::from_static("no-cache"),
                 ))
-                .service(ServeDir::new(&dir).not_found_service(ServeFile::new(index)));
+                .service(ServeDir::new(&dir).fallback(ServeFile::new(index)));
             api_router.fallback_service(serve)
         }
         None => api_router,
@@ -124,6 +125,10 @@ fn auth_routes() -> Router<AppState> {
         .route("/api/auth/login", post(auth::login))
         .route("/api/auth/register", post(auth::register))
         .route("/api/auth/logout", post(auth::logout))
+        .route(
+            "/api/capture/session",
+            post(capture_auth::create_capture_session),
+        )
         .route(
             "/api/auth/request-password-reset",
             post(auth::request_password_reset),

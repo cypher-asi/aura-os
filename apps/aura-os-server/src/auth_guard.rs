@@ -10,6 +10,7 @@ use tracing::warn;
 use aura_os_auth::AuthError;
 use aura_os_core::ZeroAuthSession;
 
+use crate::capture_auth::is_capture_access_token;
 use crate::error::ApiError;
 use crate::state::{
     persist_zero_auth_session, AppState, AuthJwt, AuthSession, AuthZeroProMeta, CachedSession,
@@ -115,6 +116,13 @@ async fn resolve_session_from_jwt(
     jwt: &str,
     allow_validation_cache: bool,
 ) -> Result<(ZeroAuthSession, Option<String>), (StatusCode, Json<ApiError>)> {
+    if is_capture_access_token(jwt) {
+        if let Some((session, zp)) = get_cached_session(state, jwt) {
+            return Ok((session, zp));
+        }
+        return Err(ApiError::unauthorized("capture session expired"));
+    }
+
     if allow_validation_cache {
         if let Some((session, zp)) = get_cached_session(state, jwt) {
             return Ok((session, zp));
@@ -151,7 +159,9 @@ pub(crate) async fn require_verified_session(
         !(req.method() == axum::http::Method::POST && req.uri().path() == "/api/auth/validate");
     let (session, zero_pro_refresh_error) =
         resolve_session_from_jwt(&state, &token, allow_validation_cache).await?;
-    persist_zero_auth_session(&state.store, &session);
+    if !is_capture_access_token(&token) {
+        persist_zero_auth_session(&state.store, &session);
+    }
 
     enforce_zero_pro(&state, &session)?;
 

@@ -22,6 +22,11 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify({ email }),
     }),
+  createCaptureSession: (secret: string) =>
+    apiFetch<AuthSession>("/api/capture/session", {
+      method: "POST",
+      body: JSON.stringify({ secret }),
+    }),
   redeemAccessCode: (code: string) =>
     apiFetch<{ code: string; maxUses: number; useCount: number }>("/api/auth/redeem-access-code", {
       method: "POST",
