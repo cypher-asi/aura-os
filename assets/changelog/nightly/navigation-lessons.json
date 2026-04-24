@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-04-24T07:05:32.721Z",
+  "updatedAt": "2026-04-24T07:25:46.729Z",
   "retention": {
     "maxLessons": 80,
     "strategy": "Keep pinned lessons first, then the most-observed and most-recent auto-learned lessons."
@@ -24,7 +24,11 @@
           "interface.",
           "chatinputbar",
           "updated",
-          "alongside"
+          "alongside",
+          "picker.",
+          "pricing",
+          "and",
+          "server"
         ],
         "changedFileGlobs": [
           ".github/workflows/release-nightly.yml",
@@ -70,10 +74,10 @@
         "source": "auto-navigation-learning",
         "status": "auto-promoted",
         "firstSeenAt": "2026-04-24T07:05:32.721Z",
-        "lastSeenAt": "2026-04-24T07:05:32.721Z",
-        "observations": 1,
-        "lastStory": "GPT-5.5 was added as a selectable model in the chat interface. The ChatInputBar model picker was updated alongside models.ts to include GPT-5.5 with correct pricing and server-side routing. This is the primary user-visible change from this…",
-        "lastOutputDir": "/home/runner/work/aura-os/aura-os/repo/interface/output/demo-screenshots/publish-changelog-media/entry-1-nightly-release-pruning-gh-pages-recovery-and-gpt-5-5-in-the-pic-1777014263046-browserbase/nightly-gpt-5-5-now-selectable-in-the-chat-model-picker-agents-20260424T070450",
+        "lastSeenAt": "2026-04-24T07:25:46.729Z",
+        "observations": 2,
+        "lastStory": "GPT-5.5 was added as a selectable model in the chat model picker. Pricing and server-side routing were updated to match, and ZERO Pro status is reported alongside usage. The proof surface is the ChatInputBar model picker dropdown open insi…",
+        "lastOutputDir": "/home/runner/work/aura-os/aura-os/repo/interface/output/demo-screenshots/publish-changelog-media/entry-1-nightly-release-pruning-gh-pages-recovery-and-gpt-5-5-in-the-pic-1777015476799-browserbase/nightly-gpt-5-5-now-selectable-in-the-chat-model-picker-agents-20260424T072504",
         "lastQualityScore": 95
       }
     }
