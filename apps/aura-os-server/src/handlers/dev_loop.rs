@@ -278,6 +278,32 @@ pub(crate) fn is_truncation_failure_for_tests(reason: &str) -> bool {
     classify_failure(reason) == FailureClass::Truncation
 }
 
+/// Decide whether a `tool_call_failed` event with the given `reason`
+/// and the given number of already-consumed retries for this task
+/// should trigger another [`attempt_infra_retry`] call.
+///
+/// Returns `true` when:
+///   * `classify_infra_failure(reason)` classifies the failure as
+///     infra-transient (provider 5xx / rate limit / stream aborted /
+///     push timeout / etc.), AND
+///   * the per-task counter `prior_count` is strictly below
+///     [`TOOL_CALL_RETRY_BUDGET`].
+///
+/// Pure function of the inputs; exposed via
+/// [`crate::phase7_test_support::tool_call_failed_should_retry`] so
+/// regressions on the classifier wiring or the budget can be pinned
+/// without replaying the full forwarder.
+pub(crate) fn tool_call_failed_should_retry_for_tests(reason: &str, prior_count: u32) -> bool {
+    prior_count < TOOL_CALL_RETRY_BUDGET && classify_infra_failure(reason).is_some()
+}
+
+/// Expose [`TOOL_CALL_RETRY_BUDGET`] to the integration test harness
+/// so assertions can pin "budget == 8" without re-declaring the
+/// constant in each test file.
+pub(crate) const fn tool_call_retry_budget_for_tests() -> u32 {
+    TOOL_CALL_RETRY_BUDGET
+}
+
 /// Map the dev-loop's reason-string classifier onto the reconciler's
 /// broader [`crate::reconciler::FailureClass`] vocabulary. Lets the
 /// task-output API and future background reconciler reuse one
@@ -2664,6 +2690,31 @@ struct TransientRetryContext {
 /// identified the error as transient.
 const SINGLE_TASK_RESTART_BUDGET: u32 = 3;
 
+/// Per-task server-side restart budget for harness-emitted
+/// `tool_call_failed` events whose reason classifies as an infra
+/// transient (`classify_infra_failure`).
+///
+/// Wire contract: the harness emits `tool_call_failed` only after its
+/// own in-stream retry loop (default 8 via `AURA_LLM_MAX_RETRIES`)
+/// exhausts — i.e. the provider gave 5xx / overloaded / 429 / aborted
+/// the stream mid-`tool_use` at least eight times in a row. This
+/// budget is the *second* line of defence: the server resets the
+/// affected task and restarts the automaton, which tears a fresh
+/// streaming request against Anthropic. 8 is sized to match the
+/// harness-side budget, so the worst case caps out at 8 × 8 = 64
+/// total provider attempts across the full recovery ladder before
+/// the task_failed path takes over.
+///
+/// Independent from [`SINGLE_TASK_RESTART_BUDGET`] in spirit, but
+/// shares the same [`TransientRetryContext::restart_budget`]; a
+/// single-task run is therefore effectively capped at
+/// `min(TOOL_CALL_RETRY_BUDGET, SINGLE_TASK_RESTART_BUDGET)` here.
+/// That is intentional — a user-triggered one-shot "Run" should not
+/// absorb up to 8 invisible restarts without surfacing anything to
+/// the UI. Loop runs (restart_budget = None) are capped by this
+/// constant alone.
+const TOOL_CALL_RETRY_BUDGET: u32 = 8;
+
 fn take_retry_context(retry: &mut Option<TransientRetryContext>) -> Option<TransientRetryContext> {
     let ctx = retry.as_mut()?;
     match ctx.restart_budget.as_mut() {
@@ -3186,6 +3237,18 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
         let mut terminal_seen = false;
         // Retry context is consumed according to its local restart budget.
         let mut retry = retry;
+        // Per-task `tool_call_failed` -> infra-retry counter. The
+        // harness-side retry budget (see harness-retry-streaming in
+        // commit 9174501) already swallowed 8 provider 5xx / aborted
+        // streams before this event ever reached us, so the server
+        // treats each incoming `tool_call_failed` as one "fresh
+        // stream" attempt against the provider, capped at
+        // [`TOOL_CALL_RETRY_BUDGET`]. Separate from `retry.restart_budget`
+        // so a dev-loop (unlimited base budget) still has a firm
+        // upper bound on tool-call-driven restarts and can't loop
+        // indefinitely against a permanently-broken upstream.
+        let mut tool_call_retry_count: std::collections::HashMap<String, u32> =
+            std::collections::HashMap::new();
         // Last transient-looking failure observed during this turn (an
         // `error` event or `task_failed` whose reason classified as
         // `InfraFailureClass::*`). Captured so that if the harness later
@@ -3238,6 +3301,11 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                         .and_then(|t| t.as_str())
                         .unwrap_or("unknown");
                     let is_work = is_work_event_type(event_type);
+                    // Per-iteration retry intent captured by the
+                    // `tool_call_failed` cache arm and consumed *after*
+                    // the event has been broadcast to the UI. See
+                    // [`TOOL_CALL_RETRY_BUDGET`] for rationale.
+                    let mut pending_tool_call_retry: Option<(String, String)> = None;
 
                     // Keep trying to discover the active task_id until it is known.
                     // Some harness streams emit deltas before task_started, and if
@@ -3521,11 +3589,13 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                     // with `AURA_AUTONOMOUS_DEV_LOOP=1` /
                                     // `AURA_ALLOW_RUN_COMMAND=1`) from
                                     // genuine "automaton never ran a
-                                    // build" failures. The harness side
-                                    // doesn't yet emit this event; until
-                                    // it does, the vec stays empty and
-                                    // the generic DoD rejection reasons
-                                    // remain the default.
+                                    // build" failures. The harness emits
+                                    // this event once its internal
+                                    // streaming-retry budget (8) is
+                                    // exhausted; server tries one more
+                                    // fresh stream via `attempt_infra_retry`,
+                                    // capped per task by
+                                    // [`TOOL_CALL_RETRY_BUDGET`].
                                     let tool_name = event
                                         .get("tool_name")
                                         .and_then(|v| v.as_str())
@@ -3540,6 +3610,19 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                         .or_else(|| event.get("message").and_then(|v| v.as_str()))
                                         .unwrap_or("")
                                         .to_string();
+                                    // Breadcrumb so the completion-gate
+                                    // path recovers this reason if the
+                                    // harness later emits a spurious
+                                    // `task_completed` for the same turn.
+                                    if classify_infra_failure(&reason).is_some() {
+                                        last_transient_reason = Some(reason.clone());
+                                    }
+                                    // Queue an attempt_infra_retry for
+                                    // after the broadcast. The arm runs
+                                    // inside the cache-mutex scope, which
+                                    // must not be held across the await
+                                    // inside `attempt_infra_retry`.
+                                    pending_tool_call_retry = Some((tid.clone(), reason.clone()));
                                     entry
                                         .tool_call_failures
                                         .push(ToolCallFailureEntry { tool_name, reason });
@@ -4666,6 +4749,76 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                     };
 
                     let _ = app_broadcast.send(forwarded.clone());
+
+                    // Per-tool-call infra-retry dispatch. Runs after the
+                    // event has been broadcast to the UI so the "Write
+                    // retrying (n/8)…" card can land before the
+                    // automaton restarts. Gated on:
+                    //   1. reason classifies as infra transient
+                    //      (`classify_infra_failure` non-None)
+                    //   2. per-task counter is below
+                    //      [`TOOL_CALL_RETRY_BUDGET`]
+                    //   3. `TransientRetryContext` is present and has
+                    //      remaining `restart_budget` (consumed by
+                    //      `take_retry_context` inside
+                    //      `attempt_infra_retry`).
+                    // `Retried` swaps in the fresh broadcast
+                    // subscription and falls through via `continue` so
+                    // the new task_started lands cleanly; anything else
+                    // falls through to the normal event-completion
+                    // tail and lets the subsequent `task_failed`
+                    // pathway handle final disposition.
+                    if let Some((retry_tid, retry_reason)) = pending_tool_call_retry.take() {
+                        let prior = *tool_call_retry_count.get(&retry_tid).unwrap_or(&0);
+                        if prior < TOOL_CALL_RETRY_BUDGET
+                            && classify_infra_failure(&retry_reason).is_some()
+                        {
+                            match attempt_infra_retry(
+                                &app_broadcast,
+                                &automaton_registry,
+                                task_service.as_ref(),
+                                &loop_log,
+                                &mut retry,
+                                project_id,
+                                agent_instance_id,
+                                &retry_tid,
+                                &retry_reason,
+                                None,
+                            )
+                            .await
+                            {
+                                InfraRetryOutcome::Retried { new_rx } => {
+                                    tool_call_retry_count
+                                        .insert(retry_tid.clone(), prior + 1);
+                                    rx = new_rx;
+                                    terminal_seen = false;
+                                    session_status = "completed";
+                                    continue;
+                                }
+                                InfraRetryOutcome::NotClassified => {
+                                    // Classifier said transient but the
+                                    // retry context was already drained
+                                    // (e.g. single-task restart budget
+                                    // exhausted). Fall through.
+                                }
+                                InfraRetryOutcome::RetryFailed { .. } => {
+                                    warn!(
+                                        task_id = %retry_tid,
+                                        reason = %retry_reason,
+                                        prior_attempts = prior,
+                                        "tool_call_failed infra-retry could not restart automaton; falling through to task_failed path"
+                                    );
+                                }
+                            }
+                        } else if prior >= TOOL_CALL_RETRY_BUDGET {
+                            warn!(
+                                task_id = %retry_tid,
+                                reason = %retry_reason,
+                                budget = TOOL_CALL_RETRY_BUDGET,
+                                "per-task tool_call_failed retry budget exhausted; deferring to task_failed path"
+                            );
+                        }
+                    }
 
                     if let (Some(session_id), Some((task_id, checkpoint, sync_state))) =
                         (current_session_id_string.as_deref(), sync_progress)
