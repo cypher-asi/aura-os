@@ -54,6 +54,13 @@ impl RunCompletion {
     pub fn is_success(&self) -> bool {
         matches!(self, Self::Done(_))
     }
+
+    pub fn failure_message(&self) -> Option<&str> {
+        match self {
+            Self::Failed { message, .. } => Some(message.as_str()),
+            Self::Done(_) | Self::Timeout(_) | Self::StreamClosed(_) => None,
+        }
+    }
 }
 
 /// Consume events from an automaton broadcast channel, collecting output,

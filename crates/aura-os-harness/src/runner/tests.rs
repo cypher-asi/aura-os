@@ -165,3 +165,35 @@ async fn collect_automaton_events_captures_flat_git_failure() {
     );
     assert_eq!(output.git_milestones[0].branch.as_deref(), Some("main"));
 }
+
+#[tokio::test]
+async fn collect_automaton_events_exposes_task_failed_message() {
+    let (tx, rx) = broadcast::channel(16);
+    tx.send(serde_json::json!({
+        "type": "task_failed",
+        "reason": "Insufficient credits: Anthropic API error: 402 Payment Required",
+    }))
+    .unwrap();
+    tx.send(serde_json::json!({ "type": "done" })).unwrap();
+
+    let completion = collect_automaton_events(rx, Duration::from_secs(1), |_evt, _ty| {}).await;
+
+    assert_eq!(
+        completion.failure_message(),
+        Some("Insufficient credits: Anthropic API error: 402 Payment Required")
+    );
+}
+
+#[tokio::test]
+async fn collect_automaton_events_exposes_error_message() {
+    let (tx, rx) = broadcast::channel(16);
+    tx.send(serde_json::json!({
+        "type": "error",
+        "message": "INSUFFICIENT_CREDITS",
+    }))
+    .unwrap();
+
+    let completion = collect_automaton_events(rx, Duration::from_secs(1), |_evt, _ty| {}).await;
+
+    assert_eq!(completion.failure_message(), Some("INSUFFICIENT_CREDITS"));
+}

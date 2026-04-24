@@ -567,6 +567,38 @@ fn rate_limit_reason_triggers_tool_call_retry() {
 }
 
 #[test]
+fn insufficient_credits_reason_is_terminal_not_retryable() {
+    let reason = "agent execution error: LLM error: kernel reason_streaming error: reasoner error: Insufficient credits: Anthropic API error: 402 Payment Required - {\"error\":{\"code\":\"INSUFFICIENT_CREDITS\",\"message\":\"Insufficient credits: balance=4, required=5\"}}";
+    assert!(
+        tsp::is_insufficient_credits_failure(reason),
+        "exact provider 402 insufficient-credits reason must be classified"
+    );
+    assert!(
+        !tsp::tool_call_failed_should_retry(reason, 0),
+        "credits exhaustion must stop the loop instead of entering infra retry"
+    );
+    assert!(
+        !tsp::should_restart_on_error_event(reason),
+        "credits exhaustion must not restart the automaton"
+    );
+}
+
+#[test]
+fn insufficient_credits_classifier_covers_api_code_forms() {
+    for reason in [
+        "upstream returned payment_required",
+        "body code=insufficient_credits",
+        "402 Payment Required",
+        "Insufficient credits: balance=0",
+    ] {
+        assert!(
+            tsp::is_insufficient_credits_failure(reason),
+            "credits classifier missed '{reason}'"
+        );
+    }
+}
+
+#[test]
 fn budget_exhaustion_stops_tool_call_retry_even_for_transient_reason() {
     // Once the per-task counter hits the budget the forwarder must
     // let the event fall through to the normal task_failed path,

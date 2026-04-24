@@ -36,6 +36,15 @@ pub(crate) fn is_rate_limited_failure_for_tests(reason: &str) -> bool {
         || reason.contains("overloaded")
 }
 
+pub(crate) fn is_insufficient_credits_failure_for_tests(reason: &str) -> bool {
+    let reason = reason.to_ascii_lowercase();
+    reason.contains("insufficient credits")
+        || reason.contains("insufficient_credits")
+        || reason.contains("payment_required")
+        || reason.contains("402 payment required")
+        || (reason.contains("402") && reason.contains("payment required"))
+}
+
 pub(crate) fn is_git_push_timeout_failure_for_tests(reason: &str) -> bool {
     let reason = reason.to_ascii_lowercase();
     reason.contains("git")

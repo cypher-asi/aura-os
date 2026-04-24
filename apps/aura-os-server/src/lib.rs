@@ -137,6 +137,13 @@ pub mod phase7_test_support {
         crate::handlers::dev_loop::is_rate_limited_failure_for_tests(reason)
     }
 
+    /// True when `reason` indicates the provider rejected work because the
+    /// account has no remaining credits. This is terminal for dev loops:
+    /// retrying or moving to the next task only burns build/setup time.
+    pub fn is_insufficient_credits_failure(reason: &str) -> bool {
+        crate::handlers::dev_loop::is_insufficient_credits_failure_for_tests(reason)
+    }
+
     /// True when `reason` is recognized as a post-commit `git push`
     /// timeout. This is the non-fatal infra path: the task can still be
     /// marked done because the commit already exists locally.

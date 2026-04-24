@@ -1,12 +1,17 @@
-use std::sync::atomic::Ordering;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
 use tokio::sync::broadcast;
+use tracing::warn;
 
 use aura_os_core::{AgentInstanceId, ProjectId};
-use aura_os_harness::collect_automaton_events;
+use aura_os_harness::{collect_automaton_events, AutomatonClient};
 
 use crate::state::{AppState, CachedTaskOutput};
 
+use super::signals::is_insufficient_credits_failure_for_tests;
 use super::types::ForwarderContext;
 
 pub(crate) fn emit_domain_event(
@@ -44,11 +49,30 @@ pub(super) fn spawn_event_forwarder(ctx: ForwarderContext) -> tokio::task::Abort
         } = ctx;
         let rx = events_tx.subscribe();
         let fallback_task_id = task_id.clone();
+        let credit_stop_requested = Arc::new(AtomicBool::new(false));
+        let stop_automaton_id = automaton_id.clone();
         let completion = collect_automaton_events(rx, timeout, |event, event_type| {
             let state = state.clone();
             let event = event.clone();
             let event_type = event_type.to_string();
             let fallback_task_id = fallback_task_id.clone();
+            let credit_stop_requested = credit_stop_requested.clone();
+            let stop_automaton_id = stop_automaton_id.clone();
+            if insufficient_credits_event_message(&event_type, &event).is_some()
+                && credit_stop_requested
+                    .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+                    .is_ok()
+            {
+                let state = state.clone();
+                tokio::spawn(async move {
+                    stop_automaton_for_credit_exhaustion(
+                        &state,
+                        agent_instance_id,
+                        &stop_automaton_id,
+                    )
+                    .await;
+                });
+            }
             tokio::spawn(async move {
                 record_event_side_effects(
                     &state,
@@ -64,19 +88,49 @@ pub(super) fn spawn_event_forwarder(ctx: ForwarderContext) -> tokio::task::Abort
         .await;
         alive.store(false, Ordering::SeqCst);
         remove_matching_registry_entry(&state, agent_instance_id, &automaton_id).await;
+        let insufficient_credits_reason = completion
+            .failure_message()
+            .filter(|message| is_insufficient_credits_failure_for_tests(message));
         emit_domain_event(
             &state.event_broadcast,
-            if completion.is_success() {
+            if insufficient_credits_reason.is_some() || completion.is_success() {
                 "loop_finished"
             } else {
                 "task_failed"
             },
             project_id,
             agent_instance_id,
-            serde_json::json!({}),
+            insufficient_credits_reason.map_or_else(
+                || serde_json::json!({}),
+                |reason| {
+                    serde_json::json!({
+                        "outcome": "insufficient_credits",
+                        "reason": reason,
+                    })
+                },
+            ),
         );
     });
     handle.abort_handle()
+}
+
+async fn stop_automaton_for_credit_exhaustion(
+    state: &AppState,
+    agent_instance_id: AgentInstanceId,
+    automaton_id: &str,
+) {
+    let base_url = {
+        let reg = state.automaton_registry.lock().await;
+        reg.get(&agent_instance_id)
+            .filter(|entry| entry.automaton_id == automaton_id)
+            .map(|entry| entry.harness_base_url.clone())
+    };
+    let Some(base_url) = base_url else {
+        return;
+    };
+    if let Err(error) = AutomatonClient::new(&base_url).stop(automaton_id).await {
+        warn!(%automaton_id, %error, "failed to stop automaton after credits were exhausted");
+    }
 }
 
 async fn remove_matching_registry_entry(
@@ -192,6 +246,39 @@ fn event_text(event: &serde_json::Value) -> Option<&str> {
         .get("text")
         .or_else(|| event.get("delta"))
         .and_then(|value| value.as_str())
+}
+
+fn insufficient_credits_event_message(
+    event_type: &str,
+    event: &serde_json::Value,
+) -> Option<String> {
+    if !matches!(event_type, "task_failed" | "error") {
+        return None;
+    }
+    let text = event_failure_text(event);
+    if !is_insufficient_credits_failure_for_tests(&text) {
+        return None;
+    }
+    Some(event_message(event))
+}
+
+fn event_message(event: &serde_json::Value) -> String {
+    first_string(event, &["reason", "message", "error", "code"])
+        .map(str::to_string)
+        .unwrap_or_else(|| "Automaton execution failed".to_string())
+}
+
+fn event_failure_text(event: &serde_json::Value) -> String {
+    ["reason", "message", "error", "code"]
+        .iter()
+        .filter_map(|key| event.get(*key).and_then(|value| value.as_str()))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn first_string<'a>(value: &'a serde_json::Value, keys: &[&str]) -> Option<&'a str> {
+    keys.iter()
+        .find_map(|key| value.get(*key).and_then(serde_json::Value::as_str))
 }
 
 pub(super) async fn seed_task_output(
