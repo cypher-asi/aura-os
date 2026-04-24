@@ -6,6 +6,7 @@
 //! new node API.
 
 pub mod client;
+pub mod session;
 
 pub use aura_os_link::{
     automaton_event_kinds, build_remote_handshake, build_session_init, collect_automaton_events,
@@ -27,3 +28,4 @@ pub use client::{
     bearer_headers, GetHeadResponse, HarnessClient, HarnessClientError, HarnessProbeResult,
     HarnessTxKind, SubmitTxResponse,
 };
+pub use session::{SessionBridge, SessionBridgeError, SessionBridgeStarted, SessionBridgeTurn};

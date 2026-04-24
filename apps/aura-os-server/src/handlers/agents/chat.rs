@@ -77,6 +77,17 @@ const HISTORY_RECENT_TURNS: usize = 2;
 /// context bloat regressions surface without needing user bug reports.
 const CONVERSATION_HISTORY_WARN_BYTES: usize = 64 * 1024;
 
+fn harness_delegation_enabled() -> bool {
+    std::env::var("AURA_HARNESS_DELEGATION")
+        .map(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or(false)
+}
+
 /// Truncate a string to at most `max_bytes` bytes on a UTF-8 char
 /// boundary and append a marker noting the original length. A no-op
 /// when `s.len() <= max_bytes`.
@@ -95,9 +106,10 @@ use aura_os_core::{
     AgentId, AgentInstanceId, AgentPermissions, ChatContentBlock, ChatRole, HarnessMode, OrgId,
     ProjectId, SessionEvent, Spec, Task,
 };
+use aura_os_harness::{SessionBridge, SessionBridgeError, SessionBridgeStarted, SessionBridgeTurn};
 use aura_os_link::{
     ConversationMessage, HarnessInbound, HarnessOutbound, InstalledTool, MessageAttachment,
-    SessionConfig, SessionUsage, UserMessage,
+    SessionConfig, SessionUsage,
 };
 use aura_os_storage::StorageClient;
 
@@ -2316,6 +2328,105 @@ pub(crate) async fn get_or_create_chat_session(
     Ok((true, rx, commands_tx))
 }
 
+async fn get_or_create_delegated_chat_session(
+    state: &AppState,
+    key: &str,
+    harness_mode: HarnessMode,
+    session_config: SessionConfig,
+    requested_model: Option<String>,
+    turn: SessionBridgeTurn,
+) -> ApiResult<(
+    bool,
+    tokio::sync::broadcast::Receiver<aura_os_link::HarnessOutbound>,
+    tokio::sync::mpsc::UnboundedSender<HarnessInbound>,
+)> {
+    {
+        let mut reg = state.chat_sessions.lock().await;
+        if let Some(session) = reg.get(key) {
+            if session.is_alive() {
+                let model_changed = match (&session.model, &requested_model) {
+                    (Some(current), Some(requested)) => current != requested,
+                    (None, Some(_)) => true,
+                    _ => false,
+                };
+                if model_changed {
+                    info!(
+                        key,
+                        "Model changed; closing existing delegated chat session"
+                    );
+                    reg.remove(key);
+                } else {
+                    SessionBridge::send_user_message(&session.commands_tx, turn)
+                        .map_err(map_session_bridge_error)?;
+                    return Ok((
+                        false,
+                        session.events_tx.subscribe(),
+                        session.commands_tx.clone(),
+                    ));
+                }
+            }
+        }
+    }
+
+    let harness = state.harness_for(harness_mode);
+    let session_agent_id = session_config.agent_id.clone();
+    let started = SessionBridge::open_and_send_user_message(harness, session_config, turn)
+        .await
+        .map_err(map_session_bridge_start_error(key, harness_mode))?;
+    insert_delegated_chat_session(state, key, requested_model, session_agent_id, started).await
+}
+
+async fn insert_delegated_chat_session(
+    state: &AppState,
+    key: &str,
+    requested_model: Option<String>,
+    session_agent_id: Option<String>,
+    started: SessionBridgeStarted,
+) -> ApiResult<(
+    bool,
+    tokio::sync::broadcast::Receiver<aura_os_link::HarnessOutbound>,
+    tokio::sync::mpsc::UnboundedSender<HarnessInbound>,
+)> {
+    let rx = started.events_rx;
+    let commands_tx = started.commands_tx.clone();
+    let mut reg = state.chat_sessions.lock().await;
+    reg.insert(
+        key.to_string(),
+        ChatSession {
+            session_id: started.session.session_id,
+            commands_tx: started.session.commands_tx,
+            events_tx: started.session.events_tx,
+            model: requested_model,
+            agent_id: session_agent_id,
+        },
+    );
+    Ok((true, rx, commands_tx))
+}
+
+fn map_session_bridge_start_error(
+    key: &str,
+    harness_mode: HarnessMode,
+) -> impl FnOnce(SessionBridgeError) -> (StatusCode, Json<ApiError>) + '_ {
+    move |err| {
+        warn!(
+            session_key = key,
+            ?harness_mode,
+            error = %err,
+            "Failed to open delegated harness chat session"
+        );
+        map_session_bridge_error(err)
+    }
+}
+
+fn map_session_bridge_error(err: SessionBridgeError) -> (StatusCode, Json<ApiError>) {
+    match err {
+        SessionBridgeError::Open(message) => map_harness_session_startup_error(&message),
+        SessionBridgeError::Send(message) => {
+            ApiError::internal(format!("sending user message: {message}"))
+        }
+    }
+}
+
 fn map_harness_session_startup_error(message: &str) -> (StatusCode, Json<ApiError>) {
     let normalized = message.to_ascii_lowercase();
 
@@ -2431,24 +2542,38 @@ async fn open_harness_chat_stream(
     let persist_snapshot: Option<(String, String)> =
         Some((ctx.session_id.clone(), ctx.project_id.clone()));
 
-    let (is_new, rx, commands_tx) = get_or_create_chat_session(
-        state,
-        session_key,
-        harness_mode,
-        session_config,
-        requested_model,
-    )
-    .await?;
+    let turn = SessionBridgeTurn {
+        content: user_content,
+        tool_hints: None,
+        attachments: dto_attachments_to_protocol(&attachments),
+    };
+    let (is_new, rx) = if harness_delegation_enabled() {
+        let (is_new, rx, _) = get_or_create_delegated_chat_session(
+            state,
+            session_key,
+            harness_mode,
+            session_config,
+            requested_model,
+            turn,
+        )
+        .await?;
+        (is_new, rx)
+    } else {
+        let (is_new, rx, commands_tx) = get_or_create_chat_session(
+            state,
+            session_key,
+            harness_mode,
+            session_config,
+            requested_model,
+        )
+        .await?;
+        commands_tx
+            .send(HarnessInbound::UserMessage(turn.user_message()))
+            .map_err(|e| ApiError::internal(format!("sending user message: {e}")))?;
+        (is_new, rx)
+    };
 
     let persist_rx = rx.resubscribe();
-
-    commands_tx
-        .send(HarnessInbound::UserMessage(UserMessage {
-            content: user_content,
-            tool_hints: None,
-            attachments: dto_attachments_to_protocol(&attachments),
-        }))
-        .map_err(|e| ApiError::internal(format!("sending user message: {e}")))?;
 
     // Fan out the now-persisted user turn onto the local WebSocket event
     // bus so the UI can live-refresh the target agent's chat panel when
@@ -2529,6 +2654,7 @@ pub(crate) async fn send_agent_event_stream(
     }
 
     let force_new = body.new_session.unwrap_or(false);
+    let delegation_enabled = harness_delegation_enabled();
 
     // `setup_agent_chat_persistence` and the history loader both need
     // the set of project agents bound to this agent id. Previously
@@ -2635,8 +2761,8 @@ pub(crate) async fn send_agent_event_stream(
     // slice. Previously each of those helpers called
     // `integrations_for_org_with_token` independently, doubling the
     // upstream round-trip on every chat message.
-    let org_integrations = match agent.org_id.as_ref() {
-        Some(org_id) => Some(
+    let org_integrations = match (delegation_enabled, agent.org_id.as_ref()) {
+        (false, Some(org_id)) => Some(
             crate::handlers::agents::workspace_tools::integrations_for_org_with_token(
                 &state,
                 org_id,
@@ -2644,7 +2770,7 @@ pub(crate) async fn send_agent_event_stream(
             )
             .await,
         ),
-        None => None,
+        _ => None,
     };
 
     // Populate the dispatcher's permissions cache with the bundle the
@@ -2692,33 +2818,41 @@ pub(crate) async fn send_agent_event_stream(
     // `agent_instance_chat` — where the binding is part of the
     // instance record — this handler is also used for non-project
     // chats, so the splice is gated on a project id being resolvable.
-    let normalized_perms = {
-        let base = agent
-            .permissions
-            .clone()
-            .normalized_for_identity(&agent.name, Some(agent.role.as_str()));
+    let base_perms = agent
+        .permissions
+        .clone()
+        .normalized_for_identity(&agent.name, Some(agent.role.as_str()));
+    let normalized_perms = if delegation_enabled {
+        base_perms
+    } else {
         match effective_project_id.as_deref() {
-            Some(pid) => base.with_project_self_caps(pid),
-            None => base,
+            Some(pid) => base_perms.with_project_self_caps(pid),
+            None => base_perms,
         }
     };
-    state
-        .permissions_cache
-        .insert(agent_id.to_string(), normalized_perms.clone());
+    if !delegation_enabled {
+        state
+            .permissions_cache
+            .insert(agent_id.to_string(), normalized_perms.clone());
+    }
 
-    let installed_tools = build_session_installed_tools_with_integrations(
-        &state,
-        agent.org_id.as_ref(),
-        &normalized_perms,
-        &jwt,
-        "agent_chat",
-        &agent_id.to_string(),
-        &agent.machine_type,
-        Some(body.content.as_str()),
-        org_integrations.as_deref(),
-        effective_project_id.as_deref(),
-    )
-    .await?;
+    let installed_tools = if delegation_enabled {
+        None
+    } else {
+        build_session_installed_tools_with_integrations(
+            &state,
+            agent.org_id.as_ref(),
+            &normalized_perms,
+            &jwt,
+            "agent_chat",
+            &agent_id.to_string(),
+            &agent.machine_type,
+            Some(body.content.as_str()),
+            org_integrations.as_deref(),
+            effective_project_id.as_deref(),
+        )
+        .await?
+    };
     let installed_integrations = match (agent.org_id.as_ref(), org_integrations.as_ref()) {
         (Some(_), Some(ints)) => {
             let installed =
@@ -2847,6 +2981,7 @@ pub(crate) async fn send_event_stream(
 
     let session_key = format!("instance:{agent_instance_id}");
     let force_new = body.new_session.unwrap_or(false);
+    let delegation_enabled = harness_delegation_enabled();
     let persist_ctx =
         setup_project_chat_persistence(&state, &project_id, &agent_instance_id, &jwt, force_new)
             .await;
@@ -2911,8 +3046,8 @@ pub(crate) async fn send_event_stream(
                 .and_then(|resolved| resolved.metadata.default_model.clone())
                 .filter(|value| !value.trim().is_empty())
         });
-    let org_integrations = match instance.org_id.as_ref() {
-        Some(org_id) => Some(
+    let org_integrations = match (delegation_enabled, instance.org_id.as_ref()) {
+        (false, Some(org_id)) => Some(
             crate::handlers::agents::workspace_tools::integrations_for_org_with_token(
                 &state,
                 org_id,
@@ -2920,7 +3055,7 @@ pub(crate) async fn send_event_stream(
             )
             .await,
         ),
-        None => None,
+        _ => None,
     };
 
     // Prefer the parent agent's **current** permissions bundle over
@@ -2972,28 +3107,38 @@ pub(crate) async fn send_event_stream(
     // re-verify project membership via the session JWT on every real
     // API call — the cap gate was a redundant first-pass filter for
     // the one project the instance is bound to.
-    let normalized_instance_perms = effective_permissions
+    let base_instance_perms = effective_permissions
         .clone()
-        .normalized_for_identity(&instance.name, Some(instance.role.as_str()))
-        .with_project_self_caps(&pid_str);
-    state.permissions_cache.insert(
-        agent_instance_id.to_string(),
-        normalized_instance_perms.clone(),
-    );
+        .normalized_for_identity(&instance.name, Some(instance.role.as_str()));
+    let normalized_instance_perms = if delegation_enabled {
+        base_instance_perms
+    } else {
+        base_instance_perms.with_project_self_caps(&pid_str)
+    };
+    if !delegation_enabled {
+        state.permissions_cache.insert(
+            agent_instance_id.to_string(),
+            normalized_instance_perms.clone(),
+        );
+    }
 
-    let installed_tools = build_session_installed_tools_with_integrations(
-        &state,
-        instance.org_id.as_ref(),
-        &normalized_instance_perms,
-        &jwt,
-        "instance_chat",
-        &agent_instance_id.to_string(),
-        &instance.machine_type,
-        Some(body.content.as_str()),
-        org_integrations.as_deref(),
-        Some(pid_str.as_str()),
-    )
-    .await?;
+    let installed_tools = if delegation_enabled {
+        None
+    } else {
+        build_session_installed_tools_with_integrations(
+            &state,
+            instance.org_id.as_ref(),
+            &normalized_instance_perms,
+            &jwt,
+            "instance_chat",
+            &agent_instance_id.to_string(),
+            &instance.machine_type,
+            Some(body.content.as_str()),
+            org_integrations.as_deref(),
+            Some(pid_str.as_str()),
+        )
+        .await?
+    };
     let installed_integrations = match (instance.org_id.as_ref(), org_integrations.as_ref()) {
         (Some(_), Some(ints)) => {
             let installed =
