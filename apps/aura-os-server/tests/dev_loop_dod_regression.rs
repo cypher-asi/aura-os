@@ -481,10 +481,10 @@ fn reset_rearms_project_push_stuck_for_next_streak() {
 
 // ---------------------------------------------------------------------------
 // DoD gate: specific diagnostic for kernel-policy-denied `run_command`.
-// `run_command` is on by default now, so this fires only when the
-// harness is deliberately locked down (`AURA_STRICT_MODE=1` /
-// `ENABLE_CMD_TOOLS=false`). The gate should surface that root cause
-// instead of the misleading "no build step was run" message.
+// `run_command` is on for the standard external harness runtime, so this
+// fires only when the effective command policy is disabled or
+// misconfigured. The gate should surface that root cause instead of the
+// misleading "no build step was run" message.
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -507,12 +507,12 @@ fn gate_emits_policy_denial_diagnostic_when_run_command_denied() {
     .expect("gate should fire when no build step ran");
 
     assert!(
-        reason.contains("run_command is denied by kernel policy"),
-        "expected kernel-policy-denial diagnostic, got: {reason}"
+        reason.contains("run_command is denied by harness command policy"),
+        "expected harness-command-policy diagnostic, got: {reason}"
     );
     assert!(
-        reason.contains("AURA_STRICT_MODE=1") && reason.contains("ENABLE_CMD_TOOLS=false"),
-        "diagnostic must name both lock-down knobs so the operator knows which to flip, got: {reason}"
+        reason.contains("/health") && reason.contains("run_command_enabled=true"),
+        "diagnostic must point at the external harness health policy, got: {reason}"
     );
     assert!(
         !reason.contains("no build/compile step was run"),
@@ -541,13 +541,13 @@ fn gate_emits_generic_no_build_when_no_policy_denial() {
         "expected generic no-build message when policy denial is absent, got: {reason}"
     );
     assert!(
-        !reason.contains("run_command is denied by kernel policy"),
+        !reason.contains("run_command is denied by harness command policy"),
         "policy-denial diagnostic must not fire without a matching tool_call_failures entry, got: {reason}"
     );
 }
 
 // ---------------------------------------------------------------------------
-// DoD gate: kernel-policy-denial diagnostic must cover ALL four DoD axes
+// DoD gate: command-policy-denial diagnostic must cover ALL four DoD axes
 // (build, test, fmt, lint), not just missing-build. Motivating incident:
 // task 1.0 "Initialise Rust workspace" (409fa99a-274b-4cea-88ef-23cbc506ce93)
 // where `run_command` was denied with the newer `requires allow_shell=true`
@@ -580,8 +580,8 @@ fn gate_emits_policy_denial_for_missing_test_when_run_command_denied() {
     .expect("gate should fire when test axis is missing");
 
     assert!(
-        reason.contains("run_command is denied by kernel policy"),
-        "expected kernel-policy-denial diagnostic at the test axis, got: {reason}"
+        reason.contains("run_command is denied by harness command policy"),
+        "expected harness-command-policy diagnostic at the test axis, got: {reason}"
     );
     assert!(
         !reason.contains("no test step was run"),
@@ -611,8 +611,8 @@ fn gate_emits_policy_denial_for_missing_fmt_when_run_command_denied() {
     .expect("gate should fire when fmt axis is missing");
 
     assert!(
-        reason.contains("run_command is denied by kernel policy"),
-        "expected kernel-policy-denial diagnostic at the fmt axis, got: {reason}"
+        reason.contains("run_command is denied by harness command policy"),
+        "expected harness-command-policy diagnostic at the fmt axis, got: {reason}"
     );
     assert!(
         !reason.contains("no format check was run"),
@@ -640,8 +640,8 @@ fn gate_emits_policy_denial_for_missing_lint_when_run_command_denied() {
     .expect("gate should fire when lint axis is missing");
 
     assert!(
-        reason.contains("run_command is denied by kernel policy"),
-        "expected kernel-policy-denial diagnostic at the lint axis, got: {reason}"
+        reason.contains("run_command is denied by harness command policy"),
+        "expected harness-command-policy diagnostic at the lint axis, got: {reason}"
     );
     assert!(
         !reason.contains("no lint check was run"),
@@ -672,7 +672,7 @@ fn gate_recognises_requires_allow_shell_as_policy_denial() {
     .expect("gate should fire — build satisfied but test axis still missing");
 
     assert!(
-        reason.contains("run_command is denied by kernel policy"),
+        reason.contains("run_command is denied by harness command policy"),
         "requires-allow_shell denial must still surface the policy-denial diagnostic, got: {reason}"
     );
 }
@@ -704,13 +704,12 @@ fn gate_recognises_binary_allowlist_denial_as_policy_denial() {
     .expect("gate should fire — binary_allowlist denial blocks every axis");
 
     assert!(
-        reason.contains("run_command is denied by kernel policy"),
+        reason.contains("run_command is denied by harness command policy"),
         "binary_allowlist denial must surface the policy-denial diagnostic, got: {reason}"
     );
     assert!(
-        reason.contains("AURA_ALLOWED_COMMANDS") || reason.contains("binary_allowlist"),
-        "policy-denial diagnostic must mention the AURA_ALLOWED_COMMANDS / \
-         binary_allowlist knob so operators can actually fix it, got: {reason}"
+        reason.contains("binary_allowlist") && reason.contains("/health"),
+        "policy-denial diagnostic must mention the health-reported binary_allowlist, got: {reason}"
     );
 }
 
@@ -737,7 +736,7 @@ fn gate_recognises_binary_allowlist_denial_at_test_axis() {
     .expect("gate should fire — test axis still missing");
 
     assert!(
-        reason.contains("run_command is denied by kernel policy"),
+        reason.contains("run_command is denied by harness command policy"),
         "binary_allowlist denial at test axis must surface the policy-denial diagnostic, got: {reason}"
     );
 }
@@ -1029,7 +1028,7 @@ fn dod_classifier_rejects_non_remediable_reasons() {
         "baseline activity reasons must not classify as DoD remediation; got: {baseline}"
     );
 
-    // The `run_command` kernel-policy-denial upgrade is also not
+    // The `run_command` command-policy-denial upgrade is also not
     // retryable: another turn hits the same policy wall.
     let policy = tsp::completion_validation_reason_with_tool_call_failures(
         "edited one Rust file",

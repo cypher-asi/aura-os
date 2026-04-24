@@ -153,36 +153,12 @@ Aura OS data directory, and the host-run harness can read those paths directly.
 Use `docker` only when the harness has access to the same workspace tree via a
 compatible mount strategy.
 
-For benchmark runs, the harness also needs command tools enabled so generated
-projects can execute their real `build` and `test` commands. The stack now
-defaults to enabling them with a configurable allowlist:
-
-```bash
-AURA_STACK_HARNESS_ENABLE_CMD_TOOLS=true
-AURA_STACK_HARNESS_ALLOWED_COMMANDS=npm,node,npx,pnpm,bun,cargo,python,python3,pytest,go,git
-AURA_STACK_HARNESS_ALLOW_SHELL=true
-```
-
-`AURA_STACK_HARNESS_ALLOW_SHELL` propagates to the harness as
-`AURA_ALLOW_SHELL=1` and `AURA_STACK_HARNESS_ALLOWED_COMMANDS` as
-`AURA_ALLOWED_COMMANDS`. **Both** are required for the autonomous
-dev loop:
-
-- `AURA_ALLOW_SHELL=1` opens the shell path; the agent emits
-  `run_command({ command: "cargo check ..." })` and the harness
-  aliases that to `shell_script`, which only executes when
-  `allow_shell` is true.
-- `AURA_ALLOWED_COMMANDS=...` populates
-  `ToolConfig::binary_allowlist`. The harness now fails closed
-  when `enable_commands: true` and the list is empty, rejecting
-  every exec with `forbidden: command execution requires a
-  non-empty binary_allowlist; configure ToolConfig::binary_allowlist`.
-  This reverses the older "empty == all allowed" convention for
-  the binary allow-list specifically.
-
-The companion `ToolConfig::allowed_shell_scripts` list stays empty
-by default, which still means "any script allowed"; populate it
-only if you need to pin a specific set of scripts.
+For benchmark runs, the harness must expose the standard autonomous-agent
+command policy so generated projects can execute their real `build` and
+`test` commands. The policy is selected by the harness runtime in code rather
+than by stack env vars; confirm `/health` reports `run_command_enabled: true`,
+`shell_enabled: true`, and a non-empty `binary_allowlist` before running a
+dev-loop benchmark.
 
 ## Bring the stack up
 

@@ -87,14 +87,6 @@ if [[ "$service" == "harness" ]]; then
   export AURA_STORAGE_URL="$(stack_resolved_url storage)"
   export ORBIT_URL="$(stack_resolved_url orbit)"
   export AURA_LLM_ROUTING="$AURA_STACK_HARNESS_LLM_ROUTING"
-  export ENABLE_CMD_TOOLS="$AURA_STACK_HARNESS_ENABLE_CMD_TOOLS"
-  export ALLOWED_COMMANDS="$AURA_STACK_HARNESS_ALLOWED_COMMANDS"
-  # `AURA_ALLOW_SHELL=1` opens the shell path that the autonomous
-  # dev loop depends on (see common.sh for context). Without it the
-  # harness rejects every `run_command({ command: ... })` call.
-  if [[ "$AURA_STACK_HARNESS_ALLOW_SHELL" == "true" ]]; then
-    export AURA_ALLOW_SHELL="1"
-  fi
   export RUST_LOG="$AURA_STACK_HARNESS_LOG_LEVEL"
   mkdir -p "$AURA_DATA_DIR"
 fi

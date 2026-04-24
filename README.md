@@ -146,28 +146,7 @@ LOCAL_HARNESS_URL=http://127.0.0.1:3404 cargo run -p aura-os-desktop -- --extern
 
 With `--external-harness` the desktop binary refuses to start if `LOCAL_HARNESS_URL` is unset or `/health` is unreachable, and will not spawn the bundled local harness sidecar. The runtime config surfaces this as `AURA_DESKTOP_EXTERNAL_HARNESS=1` so the UI can reflect that the harness is externally managed.
 
-When using an external harness, start it with **both** `AURA_ALLOW_SHELL=1` and `AURA_ALLOWED_COMMANDS=...` so the autonomous dev loop can invoke `run_command({ command: "cargo check ..." })`. The bundled local sidecar already sets both for you; external deployments need them explicitly. Example:
-
-```bash
-AURA_ALLOW_SHELL=1 \
-AURA_ALLOWED_COMMANDS=cargo,rustc,rustfmt,cargo-clippy,cargo-fmt,git,sh,bash,pwsh,cmd,ls,dir,where,node,npm,npx,pnpm,yarn,python,python3,pip,uv \
-cargo run -p aura-node -- --bind 127.0.0.1:3404
-```
-
-PowerShell equivalent:
-
-```powershell
-$env:AURA_ALLOW_SHELL = "1"
-$env:AURA_ALLOWED_COMMANDS = "cargo,rustc,rustfmt,cargo-clippy,cargo-fmt,git,sh,bash,pwsh,cmd,ls,dir,where,node,npm,npx,pnpm,yarn,python,python3,pip,uv"
-cargo run -p aura-node -- --bind 127.0.0.1:3404
-```
-
-Two independent policy gates need to be open for the DoD verification commands to execute:
-
-- **`AURA_ALLOW_SHELL=1`** opens the shell-script path so the harness accepts `run_command({ command: "cargo check ..." })`. Without it the harness rejects every call with `'shell_script' requires allow_shell=true`.
-- **`AURA_ALLOWED_COMMANDS=...`** populates `ToolConfig::binary_allowlist`. Without it the harness fails closed with `forbidden: command execution requires a non-empty binary_allowlist; configure ToolConfig::binary_allowlist`. (Previous docs claimed "empty allowlist = all allowed" — that was the old behaviour and has since been reversed in `aura-tools`: an empty `binary_allowlist` combined with `enable_commands: true` now always denies, so operators have to enumerate the binaries they trust.)
-
-With either gate closed, the Definition-of-Done gate will treat the resulting non-zero exit as a build failure and `task_done` calls from the automaton will be blocked. `ToolConfig::allowed_shell_scripts` still follows the "empty allowlist = any script allowed" convention; populate it explicitly only if you need to pin a specific set of scripts.
+The standard external harness runtime selects its command execution policy in code rather than through env-based command switches. Its `/health` response should report `run_command_enabled: true`, `shell_enabled: true`, and a non-empty `binary_allowlist`; if any of those are missing or disabled, restart the harness with the current autonomous-agent runtime policy before starting the dev loop.
 
 ### Run mobile web
 

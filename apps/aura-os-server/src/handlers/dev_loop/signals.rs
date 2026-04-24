@@ -158,7 +158,7 @@ fn is_run_command_policy_denial_reason(reason: &str) -> bool {
 }
 
 fn run_command_policy_denial_message() -> String {
-    "run_command is denied by kernel policy; verification commands cannot run. Check AURA_STRICT_MODE=1, ENABLE_CMD_TOOLS=false, AURA_ALLOWED_COMMANDS, or ToolConfig::binary_allowlist before retrying.".to_string()
+    "run_command is denied by harness command policy; verification commands cannot run. Check the external harness /health response for run_command_enabled=true, shell_enabled=true, and a non-empty binary_allowlist, then restart the harness before retrying.".to_string()
 }
 
 #[allow(clippy::too_many_arguments)]

@@ -61,12 +61,6 @@ services:
       AURA_LISTEN_ADDR: "0.0.0.0:8080"
       AURA_DATA_DIR: /data
       AURA_LLM_ROUTING: "${AURA_STACK_HARNESS_LLM_ROUTING:-proxy}"
-      ENABLE_CMD_TOOLS: "${AURA_STACK_HARNESS_ENABLE_CMD_TOOLS:-true}"
-      ALLOWED_COMMANDS: "${AURA_STACK_HARNESS_ALLOWED_COMMANDS:-npm,node,npx,pnpm,bun,cargo,python,python3,pytest,go,git}"
-      # Opens the shell path that the autonomous dev loop needs;
-      # the harness aliases `run_command({ command: ... })` to
-      # `shell_script`, which only runs when allow_shell is true.
-      AURA_ALLOW_SHELL: "${AURA_STACK_HARNESS_ALLOW_SHELL:-true}"
       AURA_NETWORK_URL: "${AURA_STACK_HARNESS_NETWORK_URL:-}"
       AURA_STORAGE_URL: "${AURA_STACK_HARNESS_STORAGE_URL:-}"
       ORBIT_URL: "${AURA_STACK_HARNESS_ORBIT_URL:-}"

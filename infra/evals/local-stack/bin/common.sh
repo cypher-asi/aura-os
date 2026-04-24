@@ -71,14 +71,6 @@ stack_load_env() {
   export AURA_STACK_HARNESS_LOG_LEVEL="${AURA_STACK_HARNESS_LOG_LEVEL:-info}"
 
   export AURA_STACK_HARNESS_LLM_ROUTING="${AURA_STACK_HARNESS_LLM_ROUTING:-proxy}"
-  export AURA_STACK_HARNESS_ENABLE_CMD_TOOLS="${AURA_STACK_HARNESS_ENABLE_CMD_TOOLS:-true}"
-  export AURA_STACK_HARNESS_ALLOWED_COMMANDS="${AURA_STACK_HARNESS_ALLOWED_COMMANDS:-npm,node,npx,pnpm,bun,cargo,python,python3,pytest,go,git}"
-  # Enabling the shell path is required for the autonomous dev loop,
-  # which emits `run_command({ command: "cargo check ..." })`. The
-  # harness aliases `command` to `shell_script`, and that path only
-  # opens when `AURA_ALLOW_SHELL=1`. Default to on so eval runs don't
-  # trip the `'shell_script' requires allow_shell=true` gate.
-  export AURA_STACK_HARNESS_ALLOW_SHELL="${AURA_STACK_HARNESS_ALLOW_SHELL:-true}"
   export AURA_STACK_AURA_ROUTER_JWT="${AURA_STACK_AURA_ROUTER_JWT:-}"
   export AURA_STACK_ANTHROPIC_API_KEY="${AURA_STACK_ANTHROPIC_API_KEY:-}"
   export AURA_STACK_ANTHROPIC_MODEL="${AURA_STACK_ANTHROPIC_MODEL:-claude-opus-4-6}"
