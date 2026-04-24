@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { splitByCodeFences } from "../utils/text-normalize";
+import { trimIncompleteToolMarkerTail } from "../utils/tool-markers";
 
 /**
  * Detects whether the tail of `text` contains an incomplete markdown
@@ -20,6 +21,7 @@ export function getStreamSafeContent(text: string, isStreaming: boolean): string
   safe = trimIncompleteHeading(safe);
   safe = trimUnclosedEmphasis(safe);
   safe = trimLoneTrailingEmphasisMarkers(safe);
+  safe = trimIncompleteToolMarkerTail(safe);
 
   return safe;
 }

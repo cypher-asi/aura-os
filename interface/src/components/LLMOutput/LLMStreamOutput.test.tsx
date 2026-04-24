@@ -79,4 +79,18 @@ describe("LLMStreamOutput", () => {
     );
     expect(screen.queryByText("Cooking")).not.toBeInTheDocument();
   });
+
+  it("renders textual read/list tool markers through the shared block registry", () => {
+    render(
+      <LLMStreamOutput
+        isStreaming={false}
+        text={"[tool: read(src/db.rs) -> ok]\n[tool: list(src) -> ok]"}
+      />,
+    );
+
+    expect(screen.getByText("db.rs")).toBeInTheDocument();
+    expect(screen.getByText("Read")).toBeInTheDocument();
+    expect(screen.getByText("List files")).toBeInTheDocument();
+    expect(screen.queryByText(/\[tool:/)).not.toBeInTheDocument();
+  });
 });
