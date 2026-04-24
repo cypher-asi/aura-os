@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
 import { useAuthStore } from "./stores/auth-store";
 import { useAppUIStore } from "./stores/app-ui-store";
@@ -76,8 +76,12 @@ function ShellOutletSuspense() {
  */
 const shellAppRoutes = apps.flatMap((app) => app.routes);
 
-function isCaptureLoginRoute(): boolean {
-  return typeof window !== "undefined" && window.location.pathname === "/capture-login";
+function isCaptureLoginRoute(location: { pathname: string; search: string }): boolean {
+  if (location.pathname === "/capture-login") {
+    return true;
+  }
+  const params = new URLSearchParams(location.search);
+  return params.get("capture-login") === "1" || params.get("captureMode") === "login";
 }
 
 function renderRoutes(routes: typeof shellAppRoutes): React.ReactNode {
@@ -118,7 +122,7 @@ export default function App() {
     void (async () => {
       let shouldRestoreSession = true;
       try {
-        if (isCaptureLoginRoute() && !isLoggedInSync()) {
+        if (isCaptureLoginRoute(window.location) && !isLoggedInSync()) {
           shouldRestoreSession = false;
           return;
         }
@@ -140,41 +144,57 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <AppRoutes showShell={showShell} />
+    </BrowserRouter>
+  );
+}
+
+function AppRoutes({ showShell }: { showShell: boolean }) {
+  const location = useLocation();
+
+  if (isCaptureLoginRoute(location)) {
+    return (
       <Routes>
-        <Route
-          path="login"
-          element={showShell ? <Navigate to="/" replace /> : <LoginView />}
-        />
-        <Route path="capture-login" element={<CaptureLoginView />} />
-        <Route
-          path="ide"
-          element={
-            <Suspense fallback={null}>
-              <IdeView />
-            </Suspense>
-          }
-        />
-        {showShell ? (
-          <Route element={<RequireAuth />}>
-            <Route
-              path="invite/:token"
-              element={
-                <Suspense fallback={null}>
-                  <InviteAcceptView />
-                </Suspense>
-              }
-            />
-            <Route element={<AppShell />}>
-              <Route element={<ShellOutletSuspense />}>
-                <Route index element={<LastAppRedirect />} />
-                {renderRoutes(shellAppRoutes)}
-              </Route>
+        <Route path="*" element={<CaptureLoginView />} />
+      </Routes>
+    );
+  }
+
+  return (
+    <Routes>
+      <Route
+        path="login"
+        element={showShell ? <Navigate to="/" replace /> : <LoginView />}
+      />
+      <Route path="capture-login" element={<CaptureLoginView />} />
+      <Route
+        path="ide"
+        element={
+          <Suspense fallback={null}>
+            <IdeView />
+          </Suspense>
+        }
+      />
+      {showShell ? (
+        <Route element={<RequireAuth />}>
+          <Route
+            path="invite/:token"
+            element={
+              <Suspense fallback={null}>
+                <InviteAcceptView />
+              </Suspense>
+            }
+          />
+          <Route element={<AppShell />}>
+            <Route element={<ShellOutletSuspense />}>
+              <Route index element={<LastAppRedirect />} />
+              {renderRoutes(shellAppRoutes)}
             </Route>
           </Route>
-        ) : (
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        )}
-      </Routes>
-    </BrowserRouter>
+        </Route>
+      ) : (
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      )}
+    </Routes>
   );
 }

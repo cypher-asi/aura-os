@@ -101,9 +101,13 @@ function isDisabled(value) {
   return ["0", "false", "no", "off"].includes(String(value || "").trim().toLowerCase());
 }
 
-export function buildCaptureLoginUrl(baseUrl, returnTo = "/desktop") {
-  const url = new URL("/capture-login", baseUrl);
+export function buildCaptureLoginUrl(baseUrl, returnTo = "/desktop", apiBaseUrl = "") {
+  const url = new URL("/", baseUrl);
+  url.searchParams.set("capture-login", "1");
   url.searchParams.set("returnTo", returnTo.startsWith("/") ? returnTo : "/desktop");
+  if (apiBaseUrl) {
+    url.searchParams.set("host", new URL(apiBaseUrl).origin);
+  }
   return url.toString();
 }
 
@@ -471,6 +475,12 @@ export async function main(argv = process.argv.slice(2)) {
   if (!baseUrl) {
     throw new Error("Pass --base-url or set AURA_DEMO_SCREENSHOT_BASE_URL.");
   }
+  const apiBaseUrl = String(
+    args["api-base-url"]
+      || process.env.AURA_DEMO_SCREENSHOT_API_URL
+      || process.env.AURA_CAPTURE_API_BASE_URL
+      || "",
+  ).trim();
 
   const outputDir = path.resolve(args["output-dir"] || path.join(process.cwd(), "output", "browser-use-changelog-media-trial"));
   const model = String(args.model || process.env.BROWSER_USE_MODEL || DEFAULT_BROWSER_USE_MODEL).trim();
@@ -499,7 +509,7 @@ export async function main(argv = process.argv.slice(2)) {
   const captureAuth = captureSecret
     ? {
       enabled: true,
-      loginUrl: buildCaptureLoginUrl(baseUrl, contract.likelyApps?.[0]?.path || "/desktop"),
+      loginUrl: buildCaptureLoginUrl(baseUrl, contract.likelyApps?.[0]?.path || "/desktop", apiBaseUrl),
     }
     : { enabled: false, loginUrl: null };
   const task = buildBrowserUseTask({

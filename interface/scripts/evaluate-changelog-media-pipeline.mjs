@@ -147,7 +147,7 @@ function createBrandingArtifact({ candidate, screenshot, outputDir }) {
   }
 }
 
-export async function preflightCaptureAuth({ baseUrl, captureSecret, fetchImpl = fetch } = {}) {
+export async function preflightCaptureAuth({ baseUrl, apiBaseUrl = "", captureSecret, fetchImpl = fetch } = {}) {
   const concerns = [];
   if (!baseUrl) {
     return {
@@ -162,8 +162,7 @@ export async function preflightCaptureAuth({ baseUrl, captureSecret, fetchImpl =
     };
   }
 
-  const loginUrl = new URL("/capture-login", baseUrl);
-  loginUrl.searchParams.set("returnTo", "/desktop");
+  const loginUrl = buildCaptureLoginUrl(baseUrl, "/desktop", apiBaseUrl);
   const loginResponse = await fetchImpl(loginUrl.toString(), {
     method: "GET",
     redirect: "manual",
@@ -174,7 +173,8 @@ export async function preflightCaptureAuth({ baseUrl, captureSecret, fetchImpl =
     concerns.push(`Capture login route returned HTTP ${loginResponse.status}; expected a successful SPA route.`);
   }
 
-  const sessionResponse = await fetchImpl(new URL("/api/capture/session", baseUrl).toString(), {
+  const sessionBaseUrl = apiBaseUrl || baseUrl;
+  const sessionResponse = await fetchImpl(new URL("/api/capture/session", sessionBaseUrl).toString(), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ secret: captureSecret }),
@@ -212,6 +212,7 @@ export async function runChangelogMediaEvaluation({
   changelogFile,
   outputDir,
   baseUrl,
+  apiBaseUrl = "",
   maxCandidates = 3,
   runBrowserUse = true,
   requireCaptureSecret = true,
@@ -270,7 +271,7 @@ export async function runChangelogMediaEvaluation({
   ).trim();
   const captureAuthAvailable = Boolean(captureSecret);
   const capturePreflight = runBrowserUse && browserUseKeyAvailable && baseUrl && captureAuthAvailable
-    ? await preflightCaptureAuthImpl({ baseUrl, captureSecret })
+    ? await preflightCaptureAuthImpl({ baseUrl, apiBaseUrl, captureSecret })
     : null;
   const captureResults = [];
 
@@ -322,7 +323,11 @@ export async function runChangelogMediaEvaluation({
     const captureAuth = captureAuthAvailable
       ? {
         enabled: true,
-        loginUrl: buildCaptureLoginUrl(baseUrl, candidate.targetPath || contract.likelyApps?.[0]?.path || "/desktop"),
+        loginUrl: buildCaptureLoginUrl(
+          baseUrl,
+          candidate.targetPath || contract.likelyApps?.[0]?.path || "/desktop",
+          apiBaseUrl,
+        ),
       }
       : { enabled: false, loginUrl: null };
     const task = buildBrowserUseTask({
@@ -407,6 +412,7 @@ export async function runChangelogMediaEvaluation({
     generatedAt: new Date().toISOString(),
     changelogFile: resolvedChangelogFile,
     baseUrl: baseUrl || null,
+    apiBaseUrl: apiBaseUrl || null,
     models: {
       anthropic: anthropicModel,
       browserUse: browserUseModel,
@@ -468,6 +474,12 @@ export async function main(argv = process.argv.slice(2)) {
     changelogFile: args["changelog-file"],
     outputDir,
     baseUrl: String(args["base-url"] || process.env.AURA_DEMO_SCREENSHOT_BASE_URL || "").trim(),
+    apiBaseUrl: String(
+      args["api-base-url"]
+        || process.env.AURA_DEMO_SCREENSHOT_API_URL
+        || process.env.AURA_CAPTURE_API_BASE_URL
+        || "",
+    ).trim(),
     maxCandidates: Number.parseInt(String(args["max-candidates"] || "3"), 10) || 3,
     runBrowserUse: !isEnabled(args["plan-only"]),
     requireCaptureSecret: !isEnabled(args["allow-unauthenticated"]),
@@ -482,6 +494,8 @@ export async function main(argv = process.argv.slice(2)) {
   console.log(JSON.stringify({
     ok: true,
     outputDir,
+    baseUrl: report.baseUrl,
+    apiBaseUrl: report.apiBaseUrl,
     counts: report.counts,
     env: report.env,
     selectionCoverage: report.selectionCoverage,

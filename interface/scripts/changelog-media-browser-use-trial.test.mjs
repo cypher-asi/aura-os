@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   DEFAULT_BROWSER_USE_MODEL,
   buildBrowserUseTask,
+  buildCaptureLoginUrl,
   evaluateDesktopCapture,
   extractStructuredOutputFromMessages,
   inferNoCaptureFromMessages,
@@ -142,6 +143,7 @@ test("buildBrowserUseTask includes the desktop-only contract", () => {
 });
 
 test("buildBrowserUseTask uses Browser Use sensitive data placeholders for capture auth", () => {
+  const loginUrl = buildCaptureLoginUrl("https://example.com", "/agents", "https://api.example.com");
   const task = buildBrowserUseTask({
     baseUrl: "https://example.com",
     story: "Show GPT-5.5 in the model picker.",
@@ -151,11 +153,13 @@ test("buildBrowserUseTask uses Browser Use sensitive data placeholders for captu
     },
     captureAuth: {
       enabled: true,
-      loginUrl: "https://example.com/capture-login?returnTo=%2Fagents",
+      loginUrl,
     },
   });
 
   assert.match(task, /Capture authentication:/);
+  assert.match(task, /capture-login=1/);
+  assert.match(task, /host=https%3A%2F%2Fapi\.example\.com/);
   assert.match(task, /<secret>captureSecret<\/secret>/);
   assert.doesNotMatch(task, /capture-secret-with-enough-entropy/);
 });

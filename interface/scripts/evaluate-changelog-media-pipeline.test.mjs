@@ -41,12 +41,13 @@ function writeStructuredPng(filePath, width = 160, height = 90) {
   fs.writeFileSync(filePath, PNG.sync.write(png));
 }
 
-test("preflightCaptureAuth requires a live capture-login route and capture token JSON", async () => {
+test("preflightCaptureAuth requires a live capture entry route and capture token JSON", async () => {
   const report = await preflightCaptureAuth({
     baseUrl: "https://example.com",
+    apiBaseUrl: "https://api.example.com",
     captureSecret: "capture-secret-with-enough-entropy",
     fetchImpl: async (url) => {
-      if (String(url).includes("/capture-login")) {
+      if (String(url).includes("capture-login=1")) {
         return fakeResponse({ status: 404, body: "Not Found" });
       }
       return fakeResponse({ status: 200, body: "" });
@@ -62,9 +63,10 @@ test("preflightCaptureAuth requires a live capture-login route and capture token
 test("preflightCaptureAuth accepts the deployed capture contract shape", async () => {
   const report = await preflightCaptureAuth({
     baseUrl: "https://example.com",
+    apiBaseUrl: "https://api.example.com",
     captureSecret: "capture-secret-with-enough-entropy",
     fetchImpl: async (url) => {
-      if (String(url).includes("/capture-login")) {
+      if (String(url).includes("capture-login=1")) {
         return fakeResponse({ status: 200, headers: { "content-type": "text/html" }, body: "<html></html>" });
       }
       return fakeResponse({
