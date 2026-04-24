@@ -2,18 +2,20 @@
   {
     "date": "2026-04-23",
     "channel": "nightly",
-    "version": "0.1.0-nightly.358.1",
-    "title": "GPT-5.5 support lands alongside a nightly release pipeline overhaul",
-    "intro": "Today's nightly pairs a meaningful product addition — GPT-5.5 selectable in chat with full pricing coverage — with a substantial hardening pass on the release pipeline, from asset pruning and gh-pages recovery to sharper, aspect-correct changelog proof imagery.",
-    "entryCount": 2,
+    "version": "0.1.0-nightly.359.1",
+    "title": "AURA 3D studio lands, GPT-5.5 arrives, and nightly release pipeline hardens",
+    "intro": "A big day for Aura: a brand-new AURA 3D app went from scaffold to a polished image-to-3D studio with a Three.js viewer, artifact persistence, and project-scoped history. Alongside it, GPT-5.5 support landed in chat, the nightly release and changelog-media pipelines got meaningfully more resilient, and a lingering SSE proxy bug that silently dropped generation events was fixed.",
+    "entryCount": 6,
     "highlights": [
-      "GPT-5.5 available in the chat model picker with full fee schedule",
-      "Nightly release pruning and gh-pages republish are now retry-safe",
-      "Changelog proof screenshots render crisper with true aspect ratios"
+      "New AURA 3D app: image generation + Three.js WebGL viewer",
+      "GPT-5.5 model available in chat",
+      "Artifact persistence links generated images to 3D models",
+      "Nightly release pruning and gh-pages recovery hardened",
+      "SSE proxy now handles data-only generation frames"
     ],
-    "rawCommitCount": 11,
-    "generatedAt": "2026-04-23T21:38:45.694Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.358.1",
+    "rawCommitCount": 24,
+    "generatedAt": "2026-04-24T00:38:50.338Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.359.1",
     "path": "history/2026-04-23.json"
   },
   {
