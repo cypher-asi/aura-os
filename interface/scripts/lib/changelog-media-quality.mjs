@@ -7,6 +7,7 @@ const BAD_PROOF_PATTERNS = [
   /\b(?:login|log in|sign in|auth(?:entication)? required)\s+(?:screen|page|form|wall|required|needed)\b/i,
   /\b(?:loading|spinner)\s+(?:screen|page|state|indicator)\b/i,
   /\b(?:placeholder|empty)\s+(?:screen|page|state)\b/i,
+  /\b(?:will appear here|pick a project|select a run|select an? .+ to see details|no (?:runs|items|results|projects|images|models) found)\b/i,
   /\b(?:mobile|ios|android|hamburger|bottom nav)\s+(?:layout|ui|screen|navigation|surface)\b/i,
 ];
 

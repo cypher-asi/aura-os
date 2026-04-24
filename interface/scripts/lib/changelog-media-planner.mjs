@@ -153,6 +153,7 @@ export function buildMediaPlannerPrompt({
     "- Candidate screenshots must be desktop web product UI only.",
     "- Skip login, auth, sign-in, onboarding, mobile-only, native app, Android, iOS, backend-only, infra-only, release pipeline, dependency, test-only, docs-only, refactor-only, and invisible bug-fix changes.",
     "- Skip entries that are not meaningfully provable in one static desktop screenshot.",
+    "- Skip entries whose only likely proof is a default/empty state such as 'will appear here', 'pick a project', 'select a run', or an otherwise unseeded list/detail view.",
     "- Prefer high-confidence product features that can be located from the generated sitemap and changed files.",
     "- Do not invent routes or product states that are not supported by the sitemap or commit context.",
     "- Candidates must include a targetAppId and targetPath from the sitemap. If no sitemap target exists, skip the entry.",

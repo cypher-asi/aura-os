@@ -176,6 +176,41 @@ test("assessChangelogMediaQuality rejects weak or unrelated proof", () => {
   assert.ok(report.concerns.some((concern) => concern.includes("expected agents")));
 });
 
+test("assessChangelogMediaQuality rejects generic empty-state proof copy", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-quality-"));
+  const screenshotPath = path.join(tempDir, "empty-state.png");
+  writePng(screenshotPath, 1920, 1080, (x, y) => ((x + y) % 48 < 24 ? [18, 24, 38] : [238, 242, 248]));
+
+  const report = assessChangelogMediaQuality({
+    desktopEvaluation: {
+      ok: true,
+      concerns: [],
+      parsedOutput: {
+        shouldCapture: true,
+        targetAppId: "debug",
+        targetPath: "/debug",
+        proofVisible: true,
+        visibleProof: [
+          "Pick a project on the left to browse its runs.",
+          "Select a run to see details.",
+        ],
+        screenshotDescription: "Debug empty state.",
+      },
+    },
+    screenshot: {
+      path: screenshotPath,
+      dimensions: { width: 1920, height: 1080 },
+    },
+    candidate: {
+      targetAppId: "debug",
+      targetPath: "/debug",
+    },
+  });
+
+  assert.equal(report.ok, false);
+  assert.ok(report.concerns.some((concern) => concern.includes("placeholder UI")));
+});
+
 test("buildVisionJudgePrompt defines an independent strict review", () => {
   const prompt = buildVisionJudgePrompt({
     candidate: {

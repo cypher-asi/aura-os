@@ -49,6 +49,7 @@ test("buildMediaPlannerPrompt keeps Browser Use behind a conservative Anthropic 
   assert.match(prompt, /targetAppId and targetPath from the sitemap/);
   assert.match(prompt, /Every changelog entry must appear exactly once/);
   assert.match(prompt, /mixes a visible desktop product feature/);
+  assert.match(prompt, /default\/empty state/);
   assert.match(prompt, /Browser Use should receive fewer, better candidates/);
   assert.match(prompt, /publicCaption/);
   assert.doesNotMatch(prompt, /Browserbase|Stagehand|Playwright/);
