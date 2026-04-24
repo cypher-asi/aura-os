@@ -25,6 +25,26 @@ describe("extractToolCalls", () => {
     });
   });
 
+  it("normalizes stringified JSON tool input", () => {
+    const blocks: ChatContentBlock[] = [
+      { type: "tool_use", id: "c1", name: "submit_plan", input: "{\"approach\":\"fix it\"}" },
+    ];
+    const result = extractToolCalls(blocks)!;
+
+    expect(result[0].input).toEqual({ approach: "fix it" });
+    expect(result[0].input).not.toHaveProperty("0");
+  });
+
+  it("preserves malformed string tool input without character keys", () => {
+    const blocks: ChatContentBlock[] = [
+      { type: "tool_use", id: "c1", name: "submit_plan", input: "not json" },
+    ];
+    const result = extractToolCalls(blocks)!;
+
+    expect(result[0].input).toEqual({ raw_input: "not json" });
+    expect(result[0].input).not.toHaveProperty("0");
+  });
+
   it("pairs tool_use with its tool_result", () => {
     const blocks: ChatContentBlock[] = [
       { type: "tool_use", id: "c1", name: "read_file", input: {} },

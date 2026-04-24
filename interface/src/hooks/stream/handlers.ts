@@ -22,6 +22,7 @@ import type {
   StreamRefs,
   StreamSetters,
 } from "../../types/stream";
+import { normalizeToolInput } from "../../utils/tool-input";
 
 export type FinalizeStreamReason = "completed" | "failed" | "disconnected";
 
@@ -499,6 +500,7 @@ export function handleToolCallSnapshot(
   setters: StreamSetters,
   info: ToolCallSnapshotInfo,
 ): void {
+  const input = normalizeToolInput(info.input);
   const idx = refs.toolCalls.current.findIndex((tc) => tc.id === info.id);
   if (idx === -1) {
     refs.toolCalls.current = [
@@ -506,7 +508,7 @@ export function handleToolCallSnapshot(
       {
         id: info.id,
         name: info.name,
-        input: info.input,
+        input,
         pending: true,
         started: true,
       },
@@ -527,7 +529,7 @@ export function handleToolCallSnapshot(
       ? {
         ...tc,
         name: info.name,
-        input: { ...tc.input, ...info.input },
+        input: { ...normalizeToolInput(tc.input), ...input },
         // A fresh snapshot means bytes are flowing again, so any
         // previous streaming-retry banner should disappear. We
         // intentionally keep `retryAttempt`/`retryMax`/`retryReason`
@@ -665,14 +667,15 @@ export function handleToolCall(
   setters: StreamSetters,
   info: ToolCallInfo,
 ): void {
+  const input = normalizeToolInput(info.input);
   const existingIdx = refs.toolCalls.current.findIndex((tc) => tc.id === info.id);
   if (existingIdx !== -1) {
     const existing = refs.toolCalls.current[existingIdx];
     const existingMarkdown = typeof existing.input.markdown_contents === "string"
       ? (existing.input.markdown_contents as string)
       : "";
-    const incomingMarkdown = typeof info.input.markdown_contents === "string"
-      ? (info.input.markdown_contents as string)
+    const incomingMarkdown = typeof input.markdown_contents === "string"
+      ? (input.markdown_contents as string)
       : undefined;
     let mergedMarkdown = existingMarkdown;
     if (incomingMarkdown !== undefined) {
@@ -682,7 +685,7 @@ export function handleToolCall(
         mergedMarkdown = existingMarkdown + incomingMarkdown;
       }
     }
-    const mergedInput: Record<string, unknown> = { ...existing.input, ...info.input };
+    const mergedInput: Record<string, unknown> = { ...normalizeToolInput(existing.input), ...input };
     if (incomingMarkdown !== undefined) {
       mergedInput.markdown_contents = mergedMarkdown;
     }
@@ -695,7 +698,7 @@ export function handleToolCall(
     const entry: ToolCallEntry = {
       id: info.id,
       name: info.name,
-      input: info.input,
+      input,
       pending: true,
     };
     refs.toolCalls.current = [...refs.toolCalls.current, entry];

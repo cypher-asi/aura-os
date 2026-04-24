@@ -4,10 +4,10 @@ use std::path::PathBuf;
 use std::process::Stdio;
 use std::time::Duration;
 
+use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::HeaderValue;
 use axum::response::sse::{Event, KeepAlive, Sse};
-use axum::Json;
 use serde_json::Value;
 use tokio::fs;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
@@ -28,12 +28,13 @@ use aura_protocol::ToolStateWire;
 use crate::dto::{AgentRuntimeTestResponse, SendChatRequest};
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::chat::{
-    setup_agent_chat_persistence, spawn_chat_persist_task, SseResponse, SseStream,
+    SseResponse, SseStream, setup_agent_chat_persistence, spawn_chat_persist_task,
 };
 use crate::handlers::agents::workspace_tools::{
-    active_workspace_tools, control_plane_api_base_url as workspace_control_plane_api_base_url,
+    WorkspaceToolSourceKind, active_workspace_tools,
+    control_plane_api_base_url as workspace_control_plane_api_base_url,
     installed_workspace_app_tools, installed_workspace_integrations_for_org_with_token,
-    shared_workspace_tools, workspace_tool, WorkspaceToolSourceKind,
+    shared_workspace_tools, workspace_tool,
 };
 use crate::handlers::projects_helpers::resolve_project_workspace_path_for_machine;
 use crate::handlers::sse::harness_event_to_sse;
@@ -811,7 +812,7 @@ async fn run_external_adapter_prompt(
         other => {
             return Err(ApiError::bad_request(format!(
                 "unsupported external adapter `{other}`"
-            )))
+            )));
         }
     };
 
@@ -1993,12 +1994,24 @@ fn codex_tool_content_text(result: Option<&Value>) -> String {
         .unwrap_or_else(|| "{}".to_string())
 }
 
-fn codex_tool_call_payload(event: &Value, id: &str, name: &str) -> Option<Value> {
-    let mut input = event
-        .get("item")
-        .and_then(|item| item.get("arguments"))
-        .cloned()
-        .unwrap_or_else(|| serde_json::json!({}));
+fn normalize_tool_call_input(input: Value) -> Value {
+    match input {
+        Value::Object(_) => input,
+        Value::String(text) => {
+            let trimmed = text.trim();
+            if !trimmed.is_empty() {
+                if let Ok(parsed @ Value::Object(_)) = serde_json::from_str::<Value>(trimmed) {
+                    return parsed;
+                }
+            }
+            serde_json::json!({ "raw_input": text })
+        }
+        Value::Null => serde_json::json!({}),
+        other => serde_json::json!({ "raw_input": other }),
+    }
+}
+
+fn normalize_markdown_contents_alias(input: &mut Value) {
     if let Some(object) = input.as_object_mut() {
         if let Some(markdown_contents) = object.get("markdownContents").cloned() {
             object
@@ -2006,6 +2019,17 @@ fn codex_tool_call_payload(event: &Value, id: &str, name: &str) -> Option<Value>
                 .or_insert(markdown_contents);
         }
     }
+}
+
+fn codex_tool_call_payload(event: &Value, id: &str, name: &str) -> Option<Value> {
+    let mut input = normalize_tool_call_input(
+        event
+            .get("item")
+            .and_then(|item| item.get("arguments"))
+            .cloned()
+            .unwrap_or_else(|| serde_json::json!({})),
+    );
+    normalize_markdown_contents_alias(&mut input);
     Some(serde_json::json!({
         "id": id,
         "name": name,
@@ -2053,17 +2077,13 @@ fn claude_tool_call_payload(event: &Value, id: &str, name: &str) -> Option<Value
             block.get("type") == Some(&Value::String("tool_use".to_string()))
                 && block.get("id").and_then(Value::as_str) == Some(id)
         })?;
-    let mut input = block
-        .get("input")
-        .cloned()
-        .unwrap_or_else(|| serde_json::json!({}));
-    if let Some(object) = input.as_object_mut() {
-        if let Some(markdown_contents) = object.get("markdownContents").cloned() {
-            object
-                .entry("markdown_contents".to_string())
-                .or_insert(markdown_contents);
-        }
-    }
+    let mut input = normalize_tool_call_input(
+        block
+            .get("input")
+            .cloned()
+            .unwrap_or_else(|| serde_json::json!({})),
+    );
+    normalize_markdown_contents_alias(&mut input);
     Some(serde_json::json!({
         "id": id,
         "name": name,
@@ -2253,12 +2273,13 @@ async fn build_external_prompt(
 #[cfg(test)]
 mod tests {
     use super::{
-        claude_tool_results, claude_tool_use_starts, codex_tool_result, codex_tool_use_start,
-        codex_turn_usage, harness_upstream_provider_family, parse_cursor_output,
-        parse_gemini_output, parse_opencode_output,
+        claude_tool_call_payload, claude_tool_results, claude_tool_use_starts,
+        codex_tool_call_payload, codex_tool_result, codex_tool_use_start, codex_turn_usage,
+        harness_upstream_provider_family, parse_cursor_output, parse_gemini_output,
+        parse_opencode_output,
     };
     use crate::handlers::agents::workspace_tools::{
-        shared_workspace_tools, WorkspaceToolSourceKind,
+        WorkspaceToolSourceKind, shared_workspace_tools,
     };
     use serde_json::json;
     use std::collections::{HashMap, HashSet};
@@ -2297,6 +2318,64 @@ mod tests {
         assert_eq!(result_msg.name, "create_spec");
         assert_eq!(result_msg.result, "{\"spec_id\":\"spec-1\"}");
         assert!(!result_msg.is_error);
+    }
+
+    #[test]
+    fn codex_tool_call_payload_normalizes_stringified_arguments() {
+        let event = json!({
+            "type": "item.started",
+            "item": {
+                "id": "item_1",
+                "type": "mcp_tool_call",
+                "tool": "submit_plan",
+                "arguments": "{\"approach\":\"fix it\",\"files_to_modify\":[\"a.ts\"]}"
+            }
+        });
+
+        let payload = codex_tool_call_payload(&event, "item_1", "submit_plan").expect("payload");
+
+        assert_eq!(payload["input"]["approach"], "fix it");
+        assert_eq!(payload["input"]["files_to_modify"][0], "a.ts");
+        assert!(payload["input"].get("0").is_none());
+    }
+
+    #[test]
+    fn codex_tool_call_payload_preserves_malformed_string_arguments() {
+        let event = json!({
+            "type": "item.started",
+            "item": {
+                "id": "item_1",
+                "type": "mcp_tool_call",
+                "tool": "submit_plan",
+                "arguments": "not json"
+            }
+        });
+
+        let payload = codex_tool_call_payload(&event, "item_1", "submit_plan").expect("payload");
+
+        assert_eq!(payload["input"]["raw_input"], "not json");
+        assert!(payload["input"].get("0").is_none());
+    }
+
+    #[test]
+    fn claude_tool_call_payload_normalizes_stringified_input() {
+        let event = json!({
+            "message": {
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "toolu_1",
+                        "name": "submit_plan",
+                        "input": "{\"approach\":\"fix it\"}"
+                    }
+                ]
+            }
+        });
+
+        let payload = claude_tool_call_payload(&event, "toolu_1", "submit_plan").expect("payload");
+
+        assert_eq!(payload["input"]["approach"], "fix it");
+        assert!(payload["input"].get("0").is_none());
     }
 
     #[test]
@@ -2457,14 +2536,20 @@ mod tests {
     #[test]
     fn workspace_tool_registry_tracks_source_kinds() {
         let tools = shared_workspace_tools();
-        assert!(tools
-            .iter()
-            .any(|tool| tool.source_kind == WorkspaceToolSourceKind::AuraNative));
-        assert!(tools
-            .iter()
-            .any(|tool| tool.source_kind == WorkspaceToolSourceKind::AppProvider));
-        assert!(!tools
-            .iter()
-            .any(|tool| tool.source_kind == WorkspaceToolSourceKind::Mcp));
+        assert!(
+            tools
+                .iter()
+                .any(|tool| tool.source_kind == WorkspaceToolSourceKind::AuraNative)
+        );
+        assert!(
+            tools
+                .iter()
+                .any(|tool| tool.source_kind == WorkspaceToolSourceKind::AppProvider)
+        );
+        assert!(
+            !tools
+                .iter()
+                .any(|tool| tool.source_kind == WorkspaceToolSourceKind::Mcp)
+        );
     }
 }

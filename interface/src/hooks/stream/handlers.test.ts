@@ -503,6 +503,37 @@ describe("stream/handlers", () => {
       expect(refs.toolCalls.current[0].input).toEqual({ cmd: "ls" });
     });
 
+    it("normalizes stringified JSON input before storing it", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      handleToolCall(refs, setters, {
+        id: "tc1",
+        name: "submit_plan",
+        input: "{\"approach\":\"fix it\",\"files_to_modify\":[\"a.ts\"]}" as unknown as Record<string, unknown>,
+      });
+
+      expect(refs.toolCalls.current[0].input).toEqual({
+        approach: "fix it",
+        files_to_modify: ["a.ts"],
+      });
+      expect(refs.toolCalls.current[0].input).not.toHaveProperty("0");
+    });
+
+    it("preserves malformed string input without spreading characters", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      handleToolCall(refs, setters, {
+        id: "tc1",
+        name: "submit_plan",
+        input: "not json" as unknown as Record<string, unknown>,
+      });
+
+      expect(refs.toolCalls.current[0].input).toEqual({ raw_input: "not json" });
+      expect(refs.toolCalls.current[0].input).not.toHaveProperty("0");
+    });
+
     it("updates existing started entry", () => {
       const refs = makeRefs();
       const setters = makeSetters();
@@ -536,6 +567,21 @@ describe("stream/handlers", () => {
       });
       expect(refs.toolCalls.current[0].input).toEqual({ title: "Spec 1" });
       expect(setters.calls.setActiveToolCalls).toBeDefined();
+    });
+
+    it("normalizes stringified snapshot input before merging", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      handleToolCallStarted(refs, setters, { id: "tc1", name: "submit_plan" });
+      handleToolCallSnapshot(refs, setters, {
+        id: "tc1",
+        name: "submit_plan",
+        input: "{\"approach\":\"fix it\"}" as unknown as Record<string, unknown>,
+      });
+
+      expect(refs.toolCalls.current[0].input).toEqual({ approach: "fix it" });
+      expect(refs.toolCalls.current[0].input).not.toHaveProperty("0");
     });
 
     it("supports incremental snapshot growth for create_spec markdown", () => {

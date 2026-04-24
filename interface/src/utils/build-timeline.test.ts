@@ -118,6 +118,26 @@ describe("buildTimelineWithToolCalls", () => {
     });
   });
 
+  it("normalizes stringified JSON tool input from content blocks", () => {
+    const blocks: ChatContentBlock[] = [
+      { type: "tool_use", id: "t1", name: "submit_plan", input: "{\"approach\":\"fix it\"}" },
+    ];
+    const result = buildTimelineWithToolCalls(blocks);
+
+    expect(result.toolCalls[0].input).toEqual({ approach: "fix it" });
+    expect(result.toolCalls[0].input).not.toHaveProperty("0");
+  });
+
+  it("preserves malformed string tool input without character keys", () => {
+    const blocks: ChatContentBlock[] = [
+      { type: "tool_use", id: "t1", name: "submit_plan", input: "not json" },
+    ];
+    const result = buildTimelineWithToolCalls(blocks);
+
+    expect(result.toolCalls[0].input).toEqual({ raw_input: "not json" });
+    expect(result.toolCalls[0].input).not.toHaveProperty("0");
+  });
+
   it("extracts tool calls with empty input from process blocks", () => {
     const blocks: ProcessEventContentBlock[] = [
       { type: "tool_use", id: "t1", name: "edit_file" },

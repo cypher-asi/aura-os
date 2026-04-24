@@ -1,5 +1,6 @@
 import type { ChatContentBlock, ProcessEventContentBlock } from "../types";
 import type { TimelineItem, ToolCallEntry } from "../types/stream";
+import { normalizeToolInput } from "./tool-input";
 
 let _btlId = 0;
 function nextId(): string {
@@ -59,9 +60,7 @@ export function buildTimelineWithToolCalls(
     } else if (block.type === "tool_use") {
       const toolId = ("id" in block ? block.id : undefined) ?? `tool-${timeline.length}`;
       if (!toolId) continue;
-      const input = ("input" in block && block.input != null)
-        ? (block.input as Record<string, unknown>)
-        : {};
+      const input = normalizeToolInput("input" in block ? block.input : undefined);
       const entry: ToolCallEntry = {
         id: toolId,
         name: ("name" in block ? block.name : undefined) ?? "",
