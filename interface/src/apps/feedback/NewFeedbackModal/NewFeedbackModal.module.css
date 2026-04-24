@@ -4,6 +4,22 @@
   gap: var(--space-3);
 }
 
+.mobileModal {
+  border: 0;
+  box-shadow: none;
+  background:
+    radial-gradient(circle at 18% -8%, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 34%),
+    var(--color-bg);
+}
+
+.mobileContent {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+}
+
 .fieldGroup {
   display: flex;
   flex-direction: column;
@@ -67,6 +83,16 @@
 }
 
 @media (max-width: 640px) {
+  .formColumn {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+  }
+
+  .bodyInput {
+    min-height: min(34dvh, 260px);
+  }
+
   .selectsRow {
     flex-direction: column;
     gap: var(--space-2);
