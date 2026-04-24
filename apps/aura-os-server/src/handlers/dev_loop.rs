@@ -1072,6 +1072,141 @@ fn completion_validation_failure_reason(cached: &CachedTaskOutput) -> Option<&'s
     None
 }
 
+/// Category of Definition-of-Done gate failure that is actionable by
+/// re-prompting the agent with a specific follow-up command.
+///
+/// Only verification-evidence gaps (missing build/test/fmt/lint) are
+/// represented here — empty-path writes and baseline-activity failures
+/// are structural and aren't improved by another turn with the same
+/// agent, so they deliberately return `None` from
+/// [`classify_dod_remediation_kind`] and fall through to the normal
+/// terminal-failure path.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum DoDRemediationKind {
+    /// Source changed but no `cargo build` (or equivalent) step ran.
+    MissingBuild,
+    /// Source changed but no `cargo test` (or equivalent) step ran.
+    MissingTest,
+    /// Rust source changed but no `cargo fmt --check` step ran.
+    MissingFmt,
+    /// Rust source changed but no `cargo clippy` step ran.
+    MissingLint,
+}
+
+impl DoDRemediationKind {
+    /// Stable, lower-snake-case label used on domain-event payloads and
+    /// test-support returns. Kept stable so UI consumers and log
+    /// aggregators can pattern-match without re-synthesising from the
+    /// prose `reason` string.
+    pub(crate) fn label(self) -> &'static str {
+        match self {
+            DoDRemediationKind::MissingBuild => "missing_build",
+            DoDRemediationKind::MissingTest => "missing_test",
+            DoDRemediationKind::MissingFmt => "missing_fmt",
+            DoDRemediationKind::MissingLint => "missing_lint",
+        }
+    }
+
+    /// Human-readable name of the DoD axis that failed, suitable for
+    /// inlining in a follow-up prompt. Deliberately language-neutral
+    /// — the retry tier does not try to second-guess the workspace's
+    /// build tooling (cargo vs pnpm vs pytest vs …); it names the
+    /// axis in prose and lets the gate's own `reason` string (which
+    /// already says "cargo build or equivalent must pass") carry the
+    /// concrete-command guidance.
+    pub(crate) fn axis_description(self) -> &'static str {
+        match self {
+            DoDRemediationKind::MissingBuild => "build step",
+            DoDRemediationKind::MissingTest => "test step",
+            DoDRemediationKind::MissingFmt => "format check",
+            DoDRemediationKind::MissingLint => "lint check",
+        }
+    }
+}
+
+/// Classify a DoD-gate failure reason into a [`DoDRemediationKind`] so
+/// the retry path can build a precisely-targeted follow-up prompt.
+///
+/// Returns `None` for reasons that are not retryable via a single
+/// verification-command prompt (unrecovered empty-path writes, baseline
+/// "no activity" rejections, kernel-policy denials). Those fall through
+/// to the existing terminal-failure path.
+///
+/// Matches against substrings the sibling `completion_validation_failure_reason`
+/// already produces, rather than introducing a structured return type,
+/// so the existing `Option<&'static str>` API and every on-the-wire
+/// `task_completion_gate` payload stay identical.
+pub(crate) fn classify_dod_remediation_kind(reason: &str) -> Option<DoDRemediationKind> {
+    if reason.contains("no build/compile step was run") {
+        return Some(DoDRemediationKind::MissingBuild);
+    }
+    if reason.contains("no test step was run") {
+        return Some(DoDRemediationKind::MissingTest);
+    }
+    if reason.contains("no format check was run") {
+        return Some(DoDRemediationKind::MissingFmt);
+    }
+    if reason.contains("no lint check was run") {
+        return Some(DoDRemediationKind::MissingLint);
+    }
+    None
+}
+
+/// Build the short, deterministic follow-up note the DoD retry path
+/// writes into `UpdateTaskRequest::execution_notes` so the agent sees
+/// *exactly* which DoD axis it missed and what to do next.
+///
+/// Deliberately language-neutral: the gate's own `previous_reason`
+/// already names the canonical command for the workspace's dominant
+/// language ("cargo build or equivalent must pass" on the Rust path,
+/// etc.), so this prompt echoes that reason rather than hard-coding a
+/// specific tool chain. Picking cargo for every retry would lie to the
+/// agent on a TypeScript, Python, or mixed-language task whose gate
+/// rejection is equally legitimate but whose canonical command is
+/// `pnpm build`, `pytest`, `make test`, etc. — the agent knows its
+/// own workspace and can pick the right command as long as the note
+/// tells it *which axis* failed and that a real `run_command` call is
+/// required.
+///
+/// Single-paragraph and ≤ ~600 chars: the note is surfaced verbatim in
+/// the next turn's system-level context and should read as actionable
+/// feedback rather than a wall of text. The leading
+/// `[aura-dod-retry attempt=N axis=...]` marker is parseable so UI and
+/// run-bundle consumers can distinguish DoD-remediation notes from
+/// free-form operator-authored notes.
+pub(crate) fn build_dod_followup_prompt(
+    kind: DoDRemediationKind,
+    attempt: u32,
+    previous_reason: &str,
+) -> String {
+    let attempt = attempt.max(1);
+    let trimmed = previous_reason.trim();
+    let short = if trimmed.len() > 240 {
+        let mut out = String::with_capacity(241);
+        for ch in trimmed.chars() {
+            if out.len() + ch.len_utf8() > 240 {
+                break;
+            }
+            out.push(ch);
+        }
+        out.push('…');
+        out
+    } else {
+        trimmed.to_string()
+    };
+    format!(
+        "[aura-dod-retry attempt={attempt} axis={label}] The Definition-of-Done gate rejected the \
+         previous task_completed for a missing {axis}: {short}. Before emitting task_completed \
+         again, run the workspace's canonical {axis} via the run_command tool (the command \
+         depends on the project's tool chain — for example cargo for Rust, pnpm/npm for JS/TS, \
+         pytest/go test/equivalent elsewhere), fix any fallout it surfaces, and only then re-call \
+         task_done. Do not skip this — the gate will reject the next completion without a real \
+         tool_call record of the missing step.",
+        label = kind.label(),
+        axis = kind.axis_description(),
+    )
+}
+
 fn clear_project_cooldown(project_id: ProjectId) {
     let key = project_id.to_string();
     let mut guard = match project_cooldowns().lock() {
@@ -1137,6 +1272,67 @@ fn current_remediation_count(task_id: &str) -> u32 {
         Err(poisoned) => poisoned.into_inner(),
     };
     *guard.get(task_id).unwrap_or(&0)
+}
+
+/// Upper bound on how many times a single task can be bounced through
+/// the Definition-of-Done remediation retry before the dev loop gives
+/// up and transitions to `failed`.
+///
+/// Intentionally smaller than [`MAX_RETRIES_PER_TASK`] because each DoD
+/// retry is a full extra provider turn, so a runaway loop here is more
+/// expensive than a Phase 3 truncation remediation. Two attempts is
+/// enough to cover the common case (agent forgot one of the four
+/// verification steps on the first try, fixes it on the next) without
+/// letting a task where the agent is fundamentally confused burn
+/// through tokens.
+const MAX_DOD_RETRIES_PER_TASK: u32 = 2;
+
+/// Module-local counter for Definition-of-Done retry attempts, keyed by
+/// task id. Distinct from [`remediation_retry_counts`] (Phase 3 shape
+/// decisions) and [`retry_attempt_counts`] (infra-transient restarts)
+/// because the three ladders run independently and a task can in
+/// principle consume a slot on each before transitioning to `failed`.
+///
+/// Not persisted — a server restart resets the budget, which is the
+/// safe default (see the matching rationale on `remediation_retry_counts`).
+fn dod_retry_counts() -> &'static std::sync::Mutex<std::collections::HashMap<String, u32>> {
+    static COUNTS: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, u32>>> =
+        std::sync::OnceLock::new();
+    COUNTS.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
+}
+
+/// Increment the DoD retry counter for `task_id` and return the
+/// post-increment value. First retry returns `1`; every subsequent
+/// retry returns `n + 1`.
+fn bump_dod_count(task_id: &str) -> u32 {
+    let mut guard = match dod_retry_counts().lock() {
+        Ok(g) => g,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    let entry = guard.entry(task_id.to_string()).or_insert(0);
+    *entry = entry.saturating_add(1);
+    *entry
+}
+
+/// Read the current DoD retry count without mutating it. Callers use
+/// this to pre-check the budget before calling the restart machinery.
+fn current_dod_count(task_id: &str) -> u32 {
+    let guard = match dod_retry_counts().lock() {
+        Ok(g) => g,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    *guard.get(task_id).unwrap_or(&0)
+}
+
+/// Forget the DoD retry counter for `task_id`. Called on terminal
+/// states so a manual re-run starts from `1` instead of inheriting a
+/// stale count from an earlier incident.
+fn clear_dod_count(task_id: &str) {
+    let mut guard = match dod_retry_counts().lock() {
+        Ok(g) => g,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    guard.remove(task_id);
 }
 
 // ==========================================================================
@@ -1346,6 +1542,43 @@ pub(crate) fn is_rate_limited_failure_for_tests(reason: &str) -> bool {
 /// Test-only predicate over [`classify_infra_failure`].
 pub(crate) fn is_git_push_timeout_failure_for_tests(reason: &str) -> bool {
     classify_infra_failure(reason) == Some(InfraFailureClass::GitPushTimeout)
+}
+
+/// Test-only: classify a DoD-gate failure reason into the label a
+/// [`DoDRemediationKind`] would carry, or `None` when the reason is not
+/// retryable via verification-command follow-up.
+///
+/// Returns the [`DoDRemediationKind::label`] string rather than the
+/// enum itself so integration tests outside this crate don't need the
+/// enum re-exported.
+pub(crate) fn classify_dod_remediation_kind_for_tests(reason: &str) -> Option<&'static str> {
+    classify_dod_remediation_kind(reason).map(|kind| kind.label())
+}
+
+/// Test-only: build the same follow-up prompt text the DoD retry path
+/// writes into `execution_notes`. Exposes the internal helper so the
+/// exact string produced for each remediation kind can be asserted on
+/// without spinning up the automaton.
+pub(crate) fn build_dod_followup_prompt_for_tests(
+    kind_label: &str,
+    attempt: u32,
+    previous_reason: &str,
+) -> Option<String> {
+    let kind = match kind_label {
+        "missing_build" => DoDRemediationKind::MissingBuild,
+        "missing_test" => DoDRemediationKind::MissingTest,
+        "missing_fmt" => DoDRemediationKind::MissingFmt,
+        "missing_lint" => DoDRemediationKind::MissingLint,
+        _ => return None,
+    };
+    Some(build_dod_followup_prompt(kind, attempt, previous_reason))
+}
+
+/// Test-only: expose the DoD retry budget constant so regressions can
+/// pin it without duplicating the numeric literal.
+#[must_use]
+pub(crate) const fn max_dod_retries_per_task_for_tests() -> u32 {
+    MAX_DOD_RETRIES_PER_TASK
 }
 
 pub(crate) fn completion_validation_failure_reason_for_tests(
@@ -3220,6 +3453,180 @@ async fn attempt_infra_retry(
     }
 }
 
+/// Outcome of [`attempt_dod_retry`]. Mirrors [`InfraRetryOutcome`] so
+/// the forwarder can branch on the two retry tiers with identical
+/// shape.
+enum DoDRetryOutcome {
+    /// The gate reason mapped to a verification-evidence gap, the
+    /// budget had slots, and the automaton restarted successfully with
+    /// the follow-up note persisted to `execution_notes`. Caller must
+    /// swap `rx` for `new_rx`, replace its `WsReaderHandle` with
+    /// `new_ws_handle`, and `continue` the outer event loop — the DoD
+    /// ladder now owns the terminal state for this task.
+    Retried {
+        new_rx: tokio::sync::broadcast::Receiver<serde_json::Value>,
+        new_ws_handle: WsReaderHandle,
+    },
+    /// The reason did not classify as a verification-evidence gap
+    /// ([`classify_dod_remediation_kind`] returned `None`). Caller
+    /// should fall through to the existing terminal-failure handling.
+    NotApplicable,
+    /// The reason classified but the per-task DoD retry budget was
+    /// already exhausted ([`MAX_DOD_RETRIES_PER_TASK`]). Caller should
+    /// fall through to terminal-failure handling so the task surfaces
+    /// as `failed` instead of looping forever.
+    BudgetExhausted,
+    /// The reason classified and budget had slots, but either
+    /// persisting the follow-up note, resetting the task, or restarting
+    /// the automaton itself failed. Caller should fall through to
+    /// terminal-failure handling. `task_reset_to_ready` mirrors
+    /// [`InfraRetryOutcome::RetryFailed`] so the caller can bridge the
+    /// `ready → in_progress → failed` transition aura-storage requires.
+    RetryFailed { task_reset_to_ready: bool },
+}
+
+/// Definition-of-Done remediation retry: re-engage the agent with a
+/// targeted follow-up prompt after the DoD gate rejects `task_completed`
+/// for a missing verification command (build / test / fmt / lint).
+///
+/// This sits *between* the infra-retry ladder and the terminal-failure
+/// path: if [`attempt_infra_retry`] returned `NotClassified` (no 5xx,
+/// no rate limit, no provider transient), but the gate reason is still
+/// actionable by re-prompting the agent to run the missing command,
+/// this function consumes one slot from the DoD retry budget and kicks
+/// off another automaton turn with the follow-up note written to
+/// `execution_notes`.
+///
+/// The motivating failure was task 4.5 "Implement incoming message
+/// handler" (id `a96689c0-a0e1-472b-a9e8-288402854f9a`): the agent
+/// edited three Rust files and emitted `task_done` without running
+/// `cargo build`. The gate correctly rejected the completion; before
+/// this retry tier existed, the dev loop transitioned straight to
+/// `failed` despite the fix being a single command away.
+#[allow(clippy::too_many_arguments)]
+async fn attempt_dod_retry(
+    app_broadcast: &tokio::sync::broadcast::Sender<serde_json::Value>,
+    automaton_registry: &AutomatonRegistry,
+    task_service: &TaskService,
+    loop_log: &crate::loop_log::LoopLogWriter,
+    storage_client: Option<&std::sync::Arc<aura_os_storage::StorageClient>>,
+    jwt: Option<&str>,
+    retry: &mut Option<TransientRetryContext>,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+    task_id: &str,
+    reason: &str,
+) -> DoDRetryOutcome {
+    let Some(kind) = classify_dod_remediation_kind(reason) else {
+        return DoDRetryOutcome::NotApplicable;
+    };
+    if current_dod_count(task_id) >= MAX_DOD_RETRIES_PER_TASK {
+        warn!(
+            task_id = %task_id,
+            remediation_kind = kind.label(),
+            "Skipping DoD retry: task has reached MAX_DOD_RETRIES_PER_TASK"
+        );
+        return DoDRetryOutcome::BudgetExhausted;
+    }
+    let Some(ctx) = take_retry_context(retry) else {
+        // Caller's restart_budget is exhausted; the infra-retry tier
+        // already consumed it. Fall through to terminal handling.
+        return DoDRetryOutcome::BudgetExhausted;
+    };
+
+    let attempt = bump_dod_count(task_id);
+    let prompt = build_dod_followup_prompt(kind, attempt, reason);
+    loop_log
+        .on_json_event(
+            project_id,
+            agent_instance_id,
+            &serde_json::json!({
+                "type": "debug.dod_retry",
+                "task_id": task_id,
+                "reason": reason,
+                "remediation_kind": kind.label(),
+                "attempt": attempt,
+            }),
+        )
+        .await;
+
+    // Persist the follow-up note so the agent's next turn can surface
+    // it via `execution_notes`. Done *before* we flip the task back to
+    // `ready` so the note is in place by the time the automaton picks
+    // the task up again.
+    if let (Some(storage_client), Some(jwt)) = (storage_client, jwt) {
+        let update = aura_os_storage::UpdateTaskRequest {
+            execution_notes: Some(prompt.clone()),
+            ..Default::default()
+        };
+        if let Err(error) = storage_client.update_task(task_id, jwt, &update).await {
+            warn!(
+                task_id = %task_id,
+                %error,
+                "Failed to persist DoD retry follow-up note"
+            );
+            return DoDRetryOutcome::RetryFailed {
+                task_reset_to_ready: false,
+            };
+        }
+    }
+
+    emit_domain_event(
+        app_broadcast,
+        "task_dod_retry",
+        project_id,
+        agent_instance_id,
+        serde_json::json!({
+            "task_id": task_id.to_string(),
+            "reason": reason,
+            "attempt": attempt,
+            "remediation_kind": kind.label(),
+        }),
+    );
+
+    match reset_task_for_infra_retry(task_service, project_id, task_id).await {
+        Ok(()) => match restart_with_infra_backoff(
+            app_broadcast,
+            automaton_registry,
+            project_id,
+            agent_instance_id,
+            task_id,
+            reason,
+            // DoD retries are not infra-transient; skip the cooldown pause.
+            None,
+            None,
+            &ctx,
+        )
+        .await
+        {
+            Ok((new_tx, new_ws_handle)) => DoDRetryOutcome::Retried {
+                new_rx: new_tx.subscribe(),
+                new_ws_handle,
+            },
+            Err(restart_err) => {
+                warn!(
+                    task_id = %task_id,
+                    %restart_err,
+                    "DoD retry could not restart automaton"
+                );
+                DoDRetryOutcome::RetryFailed {
+                    task_reset_to_ready: true,
+                }
+            }
+        },
+        Err(reset_err) => {
+            warn!(
+                task_id = %task_id,
+                %reset_err,
+                "DoD retry classified, but task reset failed"
+            );
+            DoDRetryOutcome::RetryFailed {
+                task_reset_to_ready: false,
+            }
+        }
+    }
+}
+
 /// Forward automaton events from the harness WebSocket to the app's global
 /// event broadcast, mapping `AutomatonEvent` types to the app's domain events.
 /// Also accumulates task output in the in-memory cache and persists to storage
@@ -3870,6 +4277,12 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             // instead of inheriting this run's count.
                             if let Some(ref tid) = current_task_id {
                                 clear_retry_attempt(tid);
+                                // The DoD ladder has its own budget (see
+                                // `MAX_DOD_RETRIES_PER_TASK`) but the same
+                                // reset-on-success policy applies: a later
+                                // manual rerun should not inherit a stale
+                                // count that silently disables remediation.
+                                clear_dod_count(tid);
                             }
                             // Clear the registry's active task pointer so
                             // `GET /loop/status` stops reporting the task
@@ -4033,9 +4446,80 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                         }
                                         InfraRetryOutcome::NotClassified => {
                                             // Non-infra gate failure —
-                                            // fall through to the
-                                            // existing terminal handling
-                                            // below.
+                                            // try the DoD retry tier
+                                            // before falling through
+                                            // to terminal handling.
+                                            // The DoD reason itself
+                                            // (not `retry_reason`,
+                                            // which may have been
+                                            // rewritten from
+                                            // `last_transient_reason`)
+                                            // is what the classifier
+                                            // needs to pattern-match
+                                            // against.
+                                            let dod_outcome = attempt_dod_retry(
+                                                &app_broadcast,
+                                                &automaton_registry,
+                                                task_service.as_ref(),
+                                                loop_log.as_ref(),
+                                                storage_client.as_ref(),
+                                                jwt.as_deref(),
+                                                &mut retry,
+                                                project_id,
+                                                agent_instance_id,
+                                                tid,
+                                                reason,
+                                            )
+                                            .await;
+                                            match dod_outcome {
+                                                DoDRetryOutcome::Retried {
+                                                    new_rx,
+                                                    new_ws_handle,
+                                                } => {
+                                                    // Same contract as
+                                                    // `InfraRetryOutcome::Retried`:
+                                                    // the retry tier
+                                                    // now owns terminal
+                                                    // state. Critically,
+                                                    // the commit
+                                                    // rollback below
+                                                    // must NOT fire —
+                                                    // the next turn's
+                                                    // commit will
+                                                    // replace this one
+                                                    // on a successful
+                                                    // retry, so emitting
+                                                    // `git_commit_rolled_back`
+                                                    // now would lie to
+                                                    // the UI about a
+                                                    // commit that is
+                                                    // still reachable.
+                                                    rx = new_rx;
+                                                    _ws_reader_handle = new_ws_handle;
+                                                    terminal_seen = false;
+                                                    session_status = "completed";
+                                                    current_task_id = None;
+                                                    last_synced_task_id = None;
+                                                    last_transient_reason = None;
+                                                    sync_registry_task_id(
+                                                        automaton_registry.clone(),
+                                                        agent_instance_id,
+                                                        None,
+                                                    )
+                                                    .await;
+                                                    continue;
+                                                }
+                                                DoDRetryOutcome::NotApplicable
+                                                | DoDRetryOutcome::BudgetExhausted => {
+                                                    // Fall through to
+                                                    // terminal handling.
+                                                }
+                                                DoDRetryOutcome::RetryFailed {
+                                                    task_reset_to_ready,
+                                                } => {
+                                                    gate_retry_reset = task_reset_to_ready;
+                                                }
+                                            }
                                         }
                                         InfraRetryOutcome::RetryFailed {
                                             task_reset_to_ready,
@@ -4494,6 +4978,7 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             // manual retry of the same task id.
                             if let Some(ref tid) = tid {
                                 clear_retry_attempt(tid);
+                                clear_dod_count(tid);
                             }
                             // Clear the registry's active task pointer so
                             // `GET /loop/status` stops reporting the task

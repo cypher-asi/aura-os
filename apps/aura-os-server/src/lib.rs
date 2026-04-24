@@ -361,6 +361,49 @@ pub mod phase7_test_support {
         crate::handlers::dev_loop::classify_push_failure_for_tests(reason)
     }
 
+    /// Test-only: classify a Definition-of-Done gate failure reason
+    /// into a stable `remediation_kind` label
+    /// (`"missing_build" | "missing_test" | "missing_fmt" | "missing_lint"`),
+    /// or `None` when the reason is not retryable via a single
+    /// verification-command follow-up (unrecovered empty-path writes,
+    /// baseline "no activity", kernel-policy denials).
+    ///
+    /// Mirrors the classifier the dev loop consults inside
+    /// `attempt_dod_retry` so a regression in the pattern-matching
+    /// surface is caught without standing up a live automaton.
+    pub fn classify_dod_remediation_kind(reason: &str) -> Option<&'static str> {
+        crate::handlers::dev_loop::classify_dod_remediation_kind_for_tests(reason)
+    }
+
+    /// Test-only: build the exact follow-up prompt string the DoD retry
+    /// path writes into `execution_notes` for a given
+    /// `remediation_kind` label. Returns `None` for unknown labels so
+    /// a typo in the test is surfaced immediately.
+    ///
+    /// The output format is a deliberately-stable single paragraph
+    /// starting with `[aura-dod-retry attempt=N]` and ending with the
+    /// canonical verification command; downstream consumers
+    /// (UI, run-bundle viewers) may pattern-match on the marker.
+    pub fn build_dod_followup_prompt(
+        kind_label: &str,
+        attempt: u32,
+        previous_reason: &str,
+    ) -> Option<String> {
+        crate::handlers::dev_loop::build_dod_followup_prompt_for_tests(
+            kind_label,
+            attempt,
+            previous_reason,
+        )
+    }
+
+    /// Test-only: the per-task upper bound on Definition-of-Done retry
+    /// attempts. Surfaced so regressions can pin the constant without
+    /// hard-coding the numeric literal.
+    #[must_use]
+    pub const fn max_dod_retries_per_task() -> u32 {
+        crate::handlers::dev_loop::max_dod_retries_per_task_for_tests()
+    }
+
     /// Test-only: exercise the per-project push-failure counter.
     /// Bumps the streak `n` times on a fresh project id and returns a
     /// vector of `project_push_stuck`-emission booleans. Exactly one

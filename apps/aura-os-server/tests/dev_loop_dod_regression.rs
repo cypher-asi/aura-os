@@ -663,3 +663,288 @@ fn push_timeout_reason_is_eligible_for_tool_call_retry() {
         "git push timeout reason must retry"
     );
 }
+
+// ---------------------------------------------------------------------------
+// DoD remediation retry — classifier + follow-up prompt
+//
+// Pins the behaviour introduced after task 4.5 ("Implement incoming
+// message handler", id a96689c0-a0e1-472b-a9e8-288402854f9a) failed
+// because the agent emitted `task_done` without running `cargo build`.
+// The gate correctly rejected the completion, but there was no retry
+// tier between the infra-transient ladder and terminal failure, so the
+// task transitioned straight to `failed` despite the fix being a
+// single verification command away. The DoD retry tier closes that gap
+// by re-engaging the agent with a targeted follow-up prompt.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn dod_classifier_maps_missing_build_reason() {
+    // Exact reason string the gate emits for a source change without
+    // a build step. The 4.5 regression depended on this bucket.
+    let reason = tsp::completion_validation_reason(
+        "implementation complete",
+        &["crates/zero-sdk/src/messaging/direct/handler.rs"],
+        /* build */ 0,
+        /* test */ 1,
+        /* fmt */ 1,
+        /* clippy */ 1,
+    )
+    .expect("source change without build must fail the gate");
+    assert_eq!(
+        tsp::classify_dod_remediation_kind(&reason),
+        Some("missing_build"),
+        "a `no build step` reason must map to missing_build; got: {reason}"
+    );
+}
+
+#[test]
+fn dod_classifier_maps_missing_test_reason() {
+    let reason = tsp::completion_validation_reason(
+        "implementation complete",
+        &["crates/zero-sdk/src/messaging/direct/handler.rs"],
+        1,
+        0,
+        1,
+        1,
+    )
+    .expect("source change without test must fail the gate");
+    assert_eq!(
+        tsp::classify_dod_remediation_kind(&reason),
+        Some("missing_test"),
+        "a `no test step` reason must map to missing_test; got: {reason}"
+    );
+}
+
+#[test]
+fn dod_classifier_maps_missing_fmt_and_lint_reasons() {
+    let no_fmt = tsp::completion_validation_reason(
+        "implementation complete",
+        &["crates/zero-sdk/src/messaging/direct/handler.rs"],
+        1,
+        1,
+        0,
+        1,
+    )
+    .expect("Rust edit without fmt must fail the gate");
+    assert_eq!(
+        tsp::classify_dod_remediation_kind(&no_fmt),
+        Some("missing_fmt"),
+    );
+
+    let no_lint = tsp::completion_validation_reason(
+        "implementation complete",
+        &["crates/zero-sdk/src/messaging/direct/handler.rs"],
+        1,
+        1,
+        1,
+        0,
+    )
+    .expect("Rust edit without clippy must fail the gate");
+    assert_eq!(
+        tsp::classify_dod_remediation_kind(&no_lint),
+        Some("missing_lint"),
+    );
+}
+
+#[test]
+fn dod_classifier_rejects_non_remediable_reasons() {
+    // Unrecovered empty-path writes and baseline "no activity"
+    // failures are structural — another turn with the same agent
+    // won't fix them. They must fall through to terminal handling,
+    // not bounce through the DoD retry tier.
+    let empty_path = tsp::completion_validation_reason_with_empty_path_writes(
+        "",
+        &[],
+        1,
+        1,
+        1,
+        1,
+        /* empty-path writes */ 2,
+    )
+    .expect("unrecovered empty-path writes must fail the gate");
+    assert_eq!(
+        tsp::classify_dod_remediation_kind(&empty_path),
+        None,
+        "empty-path-write reasons must not classify as DoD remediation; got: {empty_path}"
+    );
+
+    let baseline = tsp::completion_validation_reason("", &[], 0, 0, 0, 0)
+        .expect("baseline no-activity must fail the gate");
+    assert_eq!(
+        tsp::classify_dod_remediation_kind(&baseline),
+        None,
+        "baseline activity reasons must not classify as DoD remediation; got: {baseline}"
+    );
+
+    // The `run_command` kernel-policy-denial upgrade is also not
+    // retryable: another turn hits the same policy wall.
+    let policy = tsp::completion_validation_reason_with_tool_call_failures(
+        "edited one Rust file",
+        &["apps/aura-os-server/src/lib.rs"],
+        0,
+        0,
+        0,
+        0,
+        0,
+        &[(
+            "run_command",
+            "Tool 'run_command' is not allowed by the active policy",
+        )],
+    )
+    .expect("policy-denied run must fail the gate");
+    assert_eq!(
+        tsp::classify_dod_remediation_kind(&policy),
+        None,
+        "policy-denial reasons must not classify as DoD remediation; got: {policy}"
+    );
+}
+
+#[test]
+fn dod_followup_prompt_echoes_gate_reason_verbatim() {
+    // The gate's own reason string is the authoritative piece of
+    // feedback: it already names the canonical command ("cargo build
+    // or equivalent must pass" on the Rust path, etc.) and was written
+    // by the gate author with language neutrality in mind. The retry
+    // follow-up must carry that text forward so the agent sees the
+    // exact rejection it has to address.
+    let reason = tsp::completion_validation_reason(
+        "implementation complete",
+        &["crates/zero-sdk/src/messaging/direct/handler.rs"],
+        0,
+        1,
+        1,
+        1,
+    )
+    .expect("source change without build must fail the gate");
+    let prompt = tsp::build_dod_followup_prompt("missing_build", 1, &reason)
+        .expect("known kind must return a prompt");
+    // Pick a distinctive substring from the reason so a cosmetic
+    // tweak to the prompt scaffolding doesn't silently drop the
+    // passthrough.
+    let needle = "no build/compile step was run";
+    assert!(
+        prompt.contains(needle),
+        "prompt must echo the gate reason substring `{needle}`; got: {prompt}"
+    );
+}
+
+#[test]
+fn dod_followup_prompt_does_not_hardcode_cargo_for_non_rust_reasons() {
+    // A TypeScript-only edit produces a gate reason that says "cargo
+    // build or equivalent must pass" — still Rust-scented on the
+    // "equivalent" clause, but not an instruction to run cargo in a
+    // TS workspace. The retry prompt must not promote that hint into
+    // a directive: we want the scaffolding text itself to stay
+    // language-neutral and let the agent pick the workspace's real
+    // command (pnpm, npm, make, etc.).
+    //
+    // Pass a previous reason that does NOT mention cargo at all to
+    // simulate a future gate iteration with a fully language-neutral
+    // message, and assert the scaffolding adds no cargo command of
+    // its own.
+    let prompt = tsp::build_dod_followup_prompt(
+        "missing_build",
+        1,
+        "Task modified source code but no build/compile step was run",
+    )
+    .expect("known kind must return a prompt");
+    // The scaffolding is allowed to list cargo as *one example* among
+    // several tool chains, but must not tell the agent to run a
+    // specific cargo command verbatim. Any of the canonical cargo
+    // invocations appearing as a standalone directive would be a
+    // regression.
+    for forbidden in [
+        "cargo build --workspace --all-targets",
+        "cargo test --workspace --all-features",
+        "cargo fmt --all -- --check",
+        "cargo clippy --workspace --all-targets -- -D warnings",
+    ] {
+        assert!(
+            !prompt.contains(forbidden),
+            "prompt must not inject the cargo command `{forbidden}` when the gate reason \
+             doesn't; got: {prompt}"
+        );
+    }
+    // Positive assertion: the prompt should still tell the agent to
+    // use `run_command` to re-run the missing step, just without
+    // prescribing the binary.
+    assert!(
+        prompt.contains("run_command"),
+        "prompt must instruct the agent to invoke the verification step via run_command; got: {prompt}"
+    );
+}
+
+#[test]
+fn dod_followup_prompt_names_the_missing_axis_in_prose() {
+    // Each remediation kind must surface the axis label in prose so
+    // UI consumers and the agent can tell at a glance which gate
+    // check failed without having to parse the full reason. The axis
+    // label is also encoded in the `[aura-dod-retry attempt=N axis=...]`
+    // marker for machine consumption.
+    let expectations = [
+        ("missing_build", "build step"),
+        ("missing_test", "test step"),
+        ("missing_fmt", "format check"),
+        ("missing_lint", "lint check"),
+    ];
+    for (kind, axis) in expectations {
+        let prompt = tsp::build_dod_followup_prompt(kind, 2, "previous gate reason")
+            .expect("known kind must return a prompt");
+        assert!(
+            prompt.contains(axis),
+            "prompt for {kind} must name the axis `{axis}` in prose; got: {prompt}"
+        );
+        let marker = format!("[aura-dod-retry attempt=2 axis={kind}]");
+        assert!(
+            prompt.contains(&marker),
+            "prompt must carry the stable marker `{marker}`; got: {prompt}"
+        );
+    }
+}
+
+#[test]
+fn dod_followup_prompt_truncates_oversized_previous_reason() {
+    // A pathological previous reason (e.g. a provider error dump)
+    // must not bloat the prompt beyond a handful of lines. The
+    // implementation caps the included reason and appends an ellipsis
+    // so the prompt stays predictable across retries.
+    let huge = "x".repeat(4096);
+    let prompt = tsp::build_dod_followup_prompt("missing_build", 2, &huge)
+        .expect("known kind must return a prompt");
+    assert!(
+        prompt.contains("…"),
+        "oversized previous reason must be truncated with an ellipsis; got: {prompt}"
+    );
+    // Defensive upper bound: prompt stays well below 1 KB so it
+    // doesn't eat the next turn's context budget. 900 is generous
+    // given the fixed scaffolding is ~300 chars plus the 240-char
+    // reason budget.
+    assert!(
+        prompt.len() < 900,
+        "prompt must stay compact after truncation; got {} bytes",
+        prompt.len()
+    );
+}
+
+#[test]
+fn dod_followup_prompt_rejects_unknown_kind_label() {
+    // A typo in the kind label must surface as `None` instead of
+    // silently producing a misleading prompt — the retry path relies
+    // on the classifier returning a known variant.
+    assert!(tsp::build_dod_followup_prompt("missing_foo", 1, "whatever").is_none());
+}
+
+#[test]
+fn dod_retry_budget_is_positive_and_bounded() {
+    // Pins the budget so an accidental zeroing silently disables the
+    // whole retry tier, and so a runaway bump above 8 is caught too.
+    let budget = tsp::max_dod_retries_per_task();
+    assert!(
+        budget > 0,
+        "MAX_DOD_RETRIES_PER_TASK must be positive or the whole tier is dead"
+    );
+    assert!(
+        budget <= 8,
+        "MAX_DOD_RETRIES_PER_TASK must stay bounded to avoid runaway token spend; got {budget}"
+    );
+}
