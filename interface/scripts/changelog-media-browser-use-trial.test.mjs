@@ -10,6 +10,7 @@ import {
   inferNoCaptureFromMessages,
   parseBrowserUseOutput,
   readPngDimensions,
+  redactCaptureLoginSecrets,
 } from "./changelog-media-browser-use-trial.mjs";
 
 function pngHeader(width, height) {
@@ -162,4 +163,38 @@ test("buildBrowserUseTask uses Browser Use sensitive data placeholders for captu
   assert.match(task, /host=https%3A%2F%2Fapi\.example\.com/);
   assert.match(task, /<secret>captureSecret<\/secret>/);
   assert.doesNotMatch(task, /capture-secret-with-enough-entropy/);
+});
+
+test("buildCaptureLoginUrl can carry a redacted automatic capture session", () => {
+  const session = {
+    user_id: "capture-demo-user",
+    display_name: "Aura Capture",
+    profile_image: "",
+    primary_zid: "0://aura-capture",
+    zero_wallet: "0x0000000000000000000000000000000000000000",
+    wallets: [],
+    access_token: "aura-capture:secret-token",
+    created_at: "2026-04-24T00:00:00Z",
+    validated_at: "2026-04-24T00:00:00Z",
+  };
+  const loginUrl = buildCaptureLoginUrl("https://example.com", "/agents", "https://api.example.com", session);
+  const task = buildBrowserUseTask({
+    baseUrl: "https://example.com",
+    story: "Show GPT-5.5 in the model picker.",
+    contract: {
+      mediaEligibility: { shouldAttemptCapture: true },
+      likelyApps: [{ id: "agents", path: "/agents" }],
+    },
+    captureAuth: {
+      enabled: true,
+      loginUrl,
+      autoSession: true,
+    },
+  });
+
+  assert.match(loginUrl, /#captureSession=/);
+  assert.match(task, /temporary seeded capture session/);
+  assert.doesNotMatch(task, /<secret>captureSecret<\/secret>/);
+  assert.doesNotMatch(redactCaptureLoginSecrets(task), /secret-token/);
+  assert.match(redactCaptureLoginSecrets(task), /captureSession=<redacted>/);
 });

@@ -101,12 +101,38 @@ function isDisabled(value) {
   return ["0", "false", "no", "off"].includes(String(value || "").trim().toLowerCase());
 }
 
-export function buildCaptureLoginUrl(baseUrl, returnTo = "/desktop", apiBaseUrl = "") {
+function encodeCaptureSession(session) {
+  if (!session) return "";
+  return Buffer.from(JSON.stringify(session), "utf8").toString("base64url");
+}
+
+export function redactCaptureLoginSecrets(value) {
+  if (typeof value === "string") {
+    return value.replace(/captureSession=[A-Za-z0-9_-]+/g, "captureSession=<redacted>");
+  }
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactCaptureLoginSecrets(entry));
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, redactCaptureLoginSecrets(entry)]),
+    );
+  }
+  return value;
+}
+
+export function buildCaptureLoginUrl(baseUrl, returnTo = "/desktop", apiBaseUrl = "", captureSession = null) {
   const url = new URL("/", baseUrl);
   url.searchParams.set("capture-login", "1");
   url.searchParams.set("returnTo", returnTo.startsWith("/") ? returnTo : "/desktop");
   if (apiBaseUrl) {
     url.searchParams.set("host", new URL(apiBaseUrl).origin);
+  }
+  const encodedCaptureSession = encodeCaptureSession(captureSession);
+  if (encodedCaptureSession) {
+    const hash = new URLSearchParams();
+    hash.set("captureSession", encodedCaptureSession);
+    url.hash = hash.toString();
   }
   return url.toString();
 }
@@ -313,7 +339,16 @@ export function buildBrowserUseTask({
   minDesktopViewport = DEFAULT_MIN_DESKTOP_VIEWPORT,
   captureAuth = null,
 }) {
-  const captureAuthLines = captureAuth?.enabled
+  const captureAuthLines = captureAuth?.enabled && captureAuth.autoSession
+    ? [
+      "Capture authentication:",
+      `- First open ${captureAuth.loginUrl}.`,
+      "- This URL contains a temporary seeded capture session in the URL fragment; do not copy it into the page and do not print it.",
+      "- Wait until the Aura desktop shell is visible before looking for the target feature.",
+      "- If a capture access key form appears instead, return shouldCapture=false because automatic capture authentication failed.",
+      "",
+    ]
+    : captureAuth?.enabled
     ? [
       "Capture authentication:",
       `- First open ${captureAuth.loginUrl}.`,
@@ -423,9 +458,9 @@ export async function runBrowserUseTask({
       id: message.id || null,
       role: message.role || null,
       type: message.type || null,
-      summary: message.summary || "",
+      summary: redactCaptureLoginSecrets(message.summary || ""),
       screenshot_url: message.screenshot_url || message.screenshotUrl || null,
-      data: message.data || null,
+      data: redactCaptureLoginSecrets(message.data || null),
     });
   }
 
@@ -510,6 +545,7 @@ export async function main(argv = process.argv.slice(2)) {
     ? {
       enabled: true,
       loginUrl: buildCaptureLoginUrl(baseUrl, contract.likelyApps?.[0]?.path || "/desktop", apiBaseUrl),
+      autoSession: false,
     }
     : { enabled: false, loginUrl: null };
   const task = buildBrowserUseTask({
@@ -523,7 +559,7 @@ export async function main(argv = process.argv.slice(2)) {
 
   fs.mkdirSync(outputDir, { recursive: true });
   writeJson(path.join(outputDir, "navigation-contract.json"), contract);
-  fs.writeFileSync(path.join(outputDir, "browser-use-task.md"), `${task}\n`, "utf8");
+  fs.writeFileSync(path.join(outputDir, "browser-use-task.md"), `${redactCaptureLoginSecrets(task)}\n`, "utf8");
 
   if (isEnabled(args["dry-run"])) {
     const summary = {

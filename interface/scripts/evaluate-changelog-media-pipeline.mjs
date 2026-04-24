@@ -19,6 +19,7 @@ import {
   buildBrowserUseTask,
   buildCaptureLoginUrl,
   evaluateDesktopCapture,
+  redactCaptureLoginSecrets,
   runBrowserUseTask,
 } from "./changelog-media-browser-use-trial.mjs";
 import {
@@ -147,7 +148,7 @@ function createBrandingArtifact({ candidate, screenshot, outputDir }) {
   }
 }
 
-export async function preflightCaptureAuth({ baseUrl, apiBaseUrl = "", captureSecret, fetchImpl = fetch } = {}) {
+export async function requestCaptureSession({ baseUrl, apiBaseUrl = "", captureSecret, fetchImpl = fetch } = {}) {
   const concerns = [];
   if (!baseUrl) {
     return {
@@ -160,17 +161,6 @@ export async function preflightCaptureAuth({ baseUrl, apiBaseUrl = "", captureSe
       ok: false,
       concerns: ["Capture secret is missing."],
     };
-  }
-
-  const loginUrl = buildCaptureLoginUrl(baseUrl, "/desktop", apiBaseUrl);
-  const loginResponse = await fetchImpl(loginUrl.toString(), {
-    method: "GET",
-    redirect: "manual",
-  }).catch((error) => ({ error }));
-  if (loginResponse.error) {
-    concerns.push(`Capture login preflight failed: ${loginResponse.error.message || loginResponse.error}`);
-  } else if (loginResponse.status < 200 || loginResponse.status >= 400) {
-    concerns.push(`Capture login route returned HTTP ${loginResponse.status}; expected a successful SPA route.`);
   }
 
   const sessionBaseUrl = apiBaseUrl || baseUrl;
@@ -198,13 +188,58 @@ export async function preflightCaptureAuth({ baseUrl, apiBaseUrl = "", captureSe
     if (!body?.access_token || !String(body.access_token).startsWith("aura-capture:")) {
       concerns.push("Capture session route did not return an aura-capture access token.");
     }
+    return {
+      ok: concerns.length === 0,
+      sessionStatus: sessionResponse.status || null,
+      concerns,
+      session: concerns.length === 0 ? body : null,
+    };
+  }
+
+  return {
+    ok: concerns.length === 0,
+    sessionStatus: sessionResponse.status || null,
+    concerns,
+    session: null,
+  };
+}
+
+export async function preflightCaptureAuth({ baseUrl, apiBaseUrl = "", captureSecret, fetchImpl = fetch } = {}) {
+  const concerns = [];
+  if (!baseUrl) {
+    return {
+      ok: false,
+      concerns: ["Base URL is missing."],
+    };
+  }
+
+  const loginUrl = buildCaptureLoginUrl(baseUrl, "/desktop", apiBaseUrl);
+  const loginResponse = await fetchImpl(loginUrl.toString(), {
+    method: "GET",
+    redirect: "manual",
+  }).catch((error) => ({ error }));
+  if (loginResponse.error) {
+    concerns.push(`Capture login preflight failed: ${loginResponse.error.message || loginResponse.error}`);
+  } else if (loginResponse.status < 200 || loginResponse.status >= 400) {
+    concerns.push(`Capture login route returned HTTP ${loginResponse.status}; expected a successful SPA route.`);
+  }
+
+  const sessionResult = await requestCaptureSession({
+    baseUrl,
+    apiBaseUrl,
+    captureSecret,
+    fetchImpl,
+  });
+  if (!sessionResult.ok) {
+    concerns.push(...sessionResult.concerns);
   }
 
   return {
     ok: concerns.length === 0,
     loginStatus: loginResponse.status || null,
-    sessionStatus: sessionResponse.status || null,
+    sessionStatus: sessionResult.sessionStatus || null,
     concerns,
+    sessionAvailable: Boolean(sessionResult.session?.access_token),
   };
 }
 
@@ -224,6 +259,7 @@ export async function runChangelogMediaEvaluation({
   visionJudge = true,
   visionJudgeModel = anthropicModel,
   preflightCaptureAuthImpl = preflightCaptureAuth,
+  requestCaptureSessionImpl = requestCaptureSession,
   runBrowserUseTaskImpl = runBrowserUseTask,
   visionJudgeImpl = judgeChangelogMediaWithAnthropic,
 } = {}) {
@@ -320,6 +356,35 @@ export async function runChangelogMediaEvaluation({
       continue;
     }
 
+    const captureSessionResult = captureAuthAvailable && blockers.length === 0
+      ? await requestCaptureSessionImpl({ baseUrl, apiBaseUrl, captureSecret })
+      : null;
+    if (captureSessionResult && !captureSessionResult.ok) {
+      blockers.push(...captureSessionResult.concerns.map((concern) => `Capture session mint failed: ${concern}`));
+    }
+    if (blockers.length > 0) {
+      const skipped = {
+        candidate,
+        status: "blocked",
+        blockers,
+        capturePreflight,
+        captureAccepted: false,
+        publishReady: false,
+        qualityGate: {
+          ok: false,
+          status: "blocked",
+          concerns: blockers,
+        },
+        branding: buildBlockedBrandingDecision({
+          captureAccepted: false,
+          screenshot: null,
+        }),
+      };
+      writeJson(path.join(candidateDir, "capture-summary.json"), skipped);
+      captureResults.push(skipped);
+      continue;
+    }
+
     const captureAuth = captureAuthAvailable
       ? {
         enabled: true,
@@ -327,7 +392,9 @@ export async function runChangelogMediaEvaluation({
           baseUrl,
           candidate.targetPath || contract.likelyApps?.[0]?.path || "/desktop",
           apiBaseUrl,
+          captureSessionResult?.session || null,
         ),
+        autoSession: Boolean(captureSessionResult?.session),
       }
       : { enabled: false, loginUrl: null };
     const task = buildBrowserUseTask({
@@ -336,7 +403,7 @@ export async function runChangelogMediaEvaluation({
       contract,
       captureAuth,
     });
-    fs.writeFileSync(path.join(candidateDir, "browser-use-task.md"), `${task}\n`, "utf8");
+    fs.writeFileSync(path.join(candidateDir, "browser-use-task.md"), `${redactCaptureLoginSecrets(task)}\n`, "utf8");
 
     const result = await runBrowserUseTaskImpl({
       task,
@@ -347,7 +414,7 @@ export async function runChangelogMediaEvaluation({
       desktopViewport: contract.desktopCapturePolicy.viewport,
       maxCostUsd,
       useOutputSchema: true,
-      sensitiveData: captureAuth.enabled ? { captureSecret } : null,
+      sensitiveData: captureAuth.enabled && !captureAuth.autoSession ? { captureSecret } : null,
     });
     const desktopEvaluation = evaluateDesktopCapture({
       output: result.output,
