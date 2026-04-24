@@ -51,6 +51,11 @@
   overflow: hidden;
   flex-shrink: 1;
   min-width: 0;
+  /* When the pinned-agents strip is the last child of `.left`, its right edge
+     sits at the pill's rounded right corner (20px). Match that radius so the
+     rectangular overflow clip doesn't square off the rounded end. */
+  border-top-right-radius: 20px;
+  border-bottom-right-radius: 20px;
 }
 
 .favoriteBtn {
@@ -80,6 +85,15 @@
 .favoriteBtnOpen:hover {
   background: color-mix(in srgb, var(--color-text-secondary) 66%, transparent);
   border-radius: 3px;
+}
+
+/* Last pinned agent sits flush against the left pill's rounded right corner;
+   round its right side to match so hover/open backgrounds blend with the pill. */
+.favoriteBtn:last-child,
+.favoriteBtnOpen:last-child,
+.favoriteBtnOpen:last-child:hover {
+  border-top-right-radius: 20px;
+  border-bottom-right-radius: 20px;
 }
 
 .openIndicator {
