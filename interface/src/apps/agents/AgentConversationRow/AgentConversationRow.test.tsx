@@ -112,6 +112,21 @@ describe("AgentConversationRow", () => {
     expect(screen.getByText("Open this agent")).toBeInTheDocument();
   });
 
+  it("strips emojis from the last message preview", () => {
+    render(
+      <AgentConversationRow
+        agent={baseAgent}
+        lastMessage={{ ...lastMessage, content: "All systems go! \u2705 I'm ready \uD83D\uDE80" } as DisplaySessionEvent}
+        isSelected={false}
+        onClick={() => {}}
+        onContextMenu={() => {}}
+        onMouseEnter={() => {}}
+      />,
+    );
+
+    expect(screen.getByText("All systems go! I'm ready")).toBeInTheDocument();
+  });
+
   it("prefers personality over last message in metadata-only mode", () => {
     render(
       <AgentConversationRow

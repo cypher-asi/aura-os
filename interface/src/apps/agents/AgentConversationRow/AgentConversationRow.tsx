@@ -1,5 +1,6 @@
 import { Pin } from "lucide-react";
 import { formatChatTime } from "../../../utils/format";
+import { stripEmojis } from "../../../utils/text-normalize";
 import type { Agent } from "../../../types";
 import { isSuperAgent } from "../../../types/permissions";
 import type { DisplaySessionEvent } from "../../../types/stream";
@@ -39,7 +40,7 @@ export function AgentConversationRow({
   const agentRole = stripMarkdown(agent.role ?? "");
   const agentDescription = stripMarkdown(agent.personality ?? "");
   const messagePreview = lastMessage
-    ? `${lastMessage.role === "user" ? "You: " : ""}${stripMarkdown(lastMessage.content)}`
+    ? `${lastMessage.role === "user" ? "You: " : ""}${stripMarkdown(stripEmojis(lastMessage.content)).trim()}`
     : "";
   const fallback = agentRole || "Open this agent";
   const preview = showMetadataOnly
