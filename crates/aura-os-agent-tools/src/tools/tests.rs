@@ -509,6 +509,37 @@ mod tests {
     }
 
     #[test]
+    fn test_create_spec_schema_does_not_require_project_id() {
+        // Regression pin for commit 13acee22. Project-scoped tools
+        // used to list `project_id` in their `required` array, which
+        // forced the LLM to thread the id through every call on a
+        // project-bound chat session. The harness / dispatcher now
+        // inject `project_id` from the session's `X-Aura-Project-Id`
+        // header, so it must stay OUT of `required` (otherwise strict
+        // schema-validating providers reject the tool call before we
+        // get to inject) but IN `properties` (so cross-project tool
+        // invocations can still pass it explicitly).
+        let tool = crate::tools::spec_tools::CreateSpecTool;
+        let schema = tool.parameters_schema();
+
+        assert!(
+            schema["properties"]["project_id"].is_object(),
+            "create_spec schema must still advertise `project_id` in properties \
+             so cross-project callers can override the header-injected default"
+        );
+
+        let required = schema["required"]
+            .as_array()
+            .expect("create_spec schema must have a `required` array");
+        assert!(
+            required.iter().all(|v| v != "project_id"),
+            "create_spec schema must NOT list `project_id` in `required` — the \
+             dispatcher injects it from the X-Aura-Project-Id header; listing \
+             it as required regresses single-project chat sessions. Got: {required:?}"
+        );
+    }
+
+    #[test]
     fn test_create_task_requires_spec_id() {
         let tool = crate::tools::task_tools::CreateTaskTool;
         let schema = tool.parameters_schema();

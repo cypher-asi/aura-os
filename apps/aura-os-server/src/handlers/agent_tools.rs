@@ -197,31 +197,7 @@ pub(crate) async fn dispatch_agent_tool(
         ));
     }
 
-    // Inject the session-bound `project_id` from the
-    // `X-Aura-Project-Id` header if the LLM omitted it. Project-
-    // scoped tools (spec/task/project/log) historically required the
-    // LLM to thread `project_id` through every call even though the
-    // instance session has exactly one binding; the header-based
-    // fallback lets the server resolve it deterministically and
-    // keeps capability checks like
-    // `CapabilityRequirement::WriteProjectFromArg("project_id")`
-    // working without a schema change.
-    if let Some(pid) = headers
-        .get(PROJECT_ID_HEADER)
-        .and_then(|v| v.to_str().ok())
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-    {
-        if let Some(obj) = args.as_object_mut() {
-            if !obj.contains_key("project_id") {
-                obj.insert("project_id".to_string(), Value::String(pid.to_string()));
-            }
-        } else if args.is_null() {
-            let mut obj = serde_json::Map::new();
-            obj.insert("project_id".to_string(), Value::String(pid.to_string()));
-            args = Value::Object(obj);
-        }
-    }
+    inject_project_id_from_header(&mut args, &headers);
 
     let user_id = auth_session.user_id.as_str();
     let org_id = resolve_org_id(&headers, &state, &jwt, user_id).await;
@@ -476,6 +452,52 @@ pub(crate) async fn dispatch_agent_tool(
     }
 }
 
+/// Inject the session-bound `project_id` from the
+/// `X-Aura-Project-Id` header into the tool arguments if — and only
+/// if — the args did not already carry one. Project-scoped tools
+/// (`create_spec`, `create_task`, `list_specs`, ...) historically
+/// required the LLM to thread `project_id` through every call even
+/// though an instance session has exactly one binding; the header-
+/// based fallback lets the server resolve it deterministically and
+/// keeps capability checks like
+/// `CapabilityRequirement::WriteProjectFromArg("project_id")` working
+/// without a schema change.
+///
+/// Rules:
+/// - Header missing / blank → no-op (the tool's capability check will
+///   still fail the way it always has; no silent success).
+/// - Args already contain `project_id` → the EXISTING value wins. The
+///   header is a fallback, not an override, so the LLM can target a
+///   different project by explicitly passing one (e.g. cross-project
+///   tooling invoked from a project-bound session).
+/// - Args are `Value::Null` (no body on the request) → promote to an
+///   object carrying just `project_id` so the capability check sees
+///   it before touching `.as_object()`.
+///
+/// Module-scope helper rather than inlined in `dispatch_agent_tool`
+/// so the four branches above can be unit-tested directly without
+/// spinning up the router.
+pub(crate) fn inject_project_id_from_header(args: &mut Value, headers: &HeaderMap) {
+    let Some(pid) = headers
+        .get(PROJECT_ID_HEADER)
+        .and_then(|v| v.to_str().ok())
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    else {
+        return;
+    };
+
+    if let Some(obj) = args.as_object_mut() {
+        if !obj.contains_key("project_id") {
+            obj.insert("project_id".to_string(), Value::String(pid.to_string()));
+        }
+    } else if args.is_null() {
+        let mut obj = serde_json::Map::new();
+        obj.insert("project_id".to_string(), Value::String(pid.to_string()));
+        *args = Value::Object(obj);
+    }
+}
+
 /// Resolve the org id the tool should run under.
 ///
 /// Resolution order:
@@ -696,6 +718,127 @@ fn org_id_option(org_id: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use axum::http::{HeaderMap, HeaderValue};
+    use serde_json::{json, Value};
+
+    use super::inject_project_id_from_header;
+
+    // -----------------------------------------------------------------
+    // inject_project_id_from_header — regression coverage for the
+    // def464a6 / 13acee22 fix. A project-bound chat session stamps
+    // `X-Aura-Project-Id` on every cross-agent tool call (see
+    // `aura_os_agent_tools::ceo::stamp_agent_tool_auth`); the
+    // dispatcher is responsible for surfacing that id to the capability
+    // check as `args.project_id` so the LLM doesn't have to thread it
+    // through manually. Without the tests below a future refactor
+    // could silently re-break `create_spec` / `create_task` on every
+    // project-instance chat.
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn inject_project_id_adds_to_empty_object_when_header_present() {
+        // LLM emitted `{}` on a project-bound session. The dispatcher
+        // must fill in `project_id` from the header before the
+        // capability check runs, so
+        // `CapabilityRequirement::WriteProjectFromArg("project_id")`
+        // succeeds without the tool schema requiring the arg.
+        let mut headers = HeaderMap::new();
+        headers.insert("x-aura-project-id", HeaderValue::from_static("proj-777"));
+        let mut args = json!({});
+
+        inject_project_id_from_header(&mut args, &headers);
+
+        assert_eq!(
+            args.get("project_id").and_then(Value::as_str),
+            Some("proj-777"),
+            "header-supplied project_id must be injected when args omit it"
+        );
+    }
+
+    #[test]
+    fn inject_project_id_promotes_null_body_to_object() {
+        // Request body was absent entirely (e.g. a tool with no args
+        // at all); `dispatch_agent_tool` starts with `Value::Null`.
+        // The helper must still surface `project_id` so the capability
+        // check has something to key on.
+        let mut headers = HeaderMap::new();
+        headers.insert("x-aura-project-id", HeaderValue::from_static("proj-42"));
+        let mut args = Value::Null;
+
+        inject_project_id_from_header(&mut args, &headers);
+
+        assert!(args.is_object(), "null body must be promoted to an object");
+        assert_eq!(
+            args.get("project_id").and_then(Value::as_str),
+            Some("proj-42"),
+            "header-supplied project_id must be present after null promotion"
+        );
+    }
+
+    #[test]
+    fn inject_project_id_preserves_explicit_arg_over_header() {
+        // Header injection is a FALLBACK, not an override. If the
+        // LLM (or a deliberate cross-project tool invocation) passed
+        // `project_id` in the body, we must not clobber it — doing so
+        // would silently redirect writes back to the session-bound
+        // project and lose data.
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "x-aura-project-id",
+            HeaderValue::from_static("session-proj"),
+        );
+        let mut args = json!({ "project_id": "explicit-proj", "title": "x" });
+
+        inject_project_id_from_header(&mut args, &headers);
+
+        assert_eq!(
+            args.get("project_id").and_then(Value::as_str),
+            Some("explicit-proj"),
+            "existing project_id in args must win over the header value"
+        );
+        assert_eq!(
+            args.get("title").and_then(Value::as_str),
+            Some("x"),
+            "unrelated fields must be preserved"
+        );
+    }
+
+    #[test]
+    fn inject_project_id_noop_when_header_absent() {
+        // No header and no arg — the downstream capability check
+        // (`WriteProjectFromArg("project_id")`) must still fail the
+        // way it always has. The helper itself is a no-op; we assert
+        // that `project_id` stays absent so a future implementation
+        // can't accidentally synthesize a default value and silently
+        // succeed.
+        let headers = HeaderMap::new();
+        let mut args = json!({});
+
+        inject_project_id_from_header(&mut args, &headers);
+
+        assert!(
+            args.get("project_id").is_none(),
+            "no header + no arg must leave project_id unset"
+        );
+    }
+
+    #[test]
+    fn inject_project_id_ignores_blank_header() {
+        // A whitespace-only header is treated as absent; same logic as
+        // `extract_agent_id` / `resolve_org_id`. Prevents a
+        // misconfigured harness from turning a blank string into a
+        // literal `project_id = ""` that the storage layer would then
+        // 404 on.
+        let mut headers = HeaderMap::new();
+        headers.insert("x-aura-project-id", HeaderValue::from_static("   "));
+        let mut args = json!({});
+
+        inject_project_id_from_header(&mut args, &headers);
+
+        assert!(
+            args.get("project_id").is_none(),
+            "blank header must be treated as absent"
+        );
+    }
 
     #[test]
     fn header_parsing_extracts_org_id() {
