@@ -101,7 +101,90 @@ pub(crate) async fn register(
         },
     );
 
+    // Fire-and-forget: grant signup + referral credits via z-billing
+    let user_id = result.session.user_id.clone();
+    let inviter_user_id = req.inviter_user_id.clone();
+    tokio::spawn(async move {
+        grant_credits_on_signup(&user_id, inviter_user_id.as_deref()).await;
+    });
+
     Ok(Json(AuthSessionResponse::from_auth_result(result)))
+}
+
+/// Grant signup credits (and referral credits if applicable) to a newly
+/// registered user. Runs as a fire-and-forget background task so it
+/// doesn't block the registration response.
+async fn grant_credits_on_signup(user_id: &str, inviter_user_id: Option<&str>) {
+    let billing_url = std::env::var("Z_BILLING_URL")
+        .unwrap_or_else(|_| "https://z-billing.onrender.com".to_string());
+    let api_key = match std::env::var("Z_BILLING_API_KEY") {
+        Ok(key) => key,
+        Err(_) => {
+            tracing::warn!("Z_BILLING_API_KEY not set, skipping signup credit grant");
+            return;
+        }
+    };
+
+    let client = reqwest::Client::new();
+
+    // 1. Signup grant
+    match client
+        .post(format!("{billing_url}/v1/credits/signup-grant"))
+        .header("x-api-key", &api_key)
+        .header("x-service-name", "aura-os-server")
+        .json(&serde_json::json!({ "user_id": user_id }))
+        .send()
+        .await
+    {
+        Ok(resp) if resp.status().is_success() => {
+            tracing::info!(user_id = %user_id, "Signup credit grant issued");
+        }
+        Ok(resp) => {
+            tracing::warn!(user_id = %user_id, status = %resp.status(), "Signup grant failed");
+        }
+        Err(e) => {
+            tracing::warn!(user_id = %user_id, error = %e, "Failed to reach z-billing for signup grant");
+        }
+    }
+
+    // 2. Referral grant (only if user entered an invite code, not the default)
+    if let Some(inviter_id) = inviter_user_id {
+        match client
+            .post(format!("{billing_url}/v1/credits/referral-grant"))
+            .header("x-api-key", &api_key)
+            .header("x-service-name", "aura-os-server")
+            .json(&serde_json::json!({
+                "inviter_user_id": inviter_id,
+                "invitee_user_id": user_id,
+            }))
+            .send()
+            .await
+        {
+            Ok(resp) if resp.status().is_success() => {
+                tracing::info!(
+                    user_id = %user_id,
+                    inviter_id = %inviter_id,
+                    "Referral credit grant issued"
+                );
+            }
+            Ok(resp) => {
+                tracing::warn!(
+                    user_id = %user_id,
+                    inviter_id = %inviter_id,
+                    status = %resp.status(),
+                    "Referral grant failed"
+                );
+            }
+            Err(e) => {
+                tracing::warn!(
+                    user_id = %user_id,
+                    inviter_id = %inviter_id,
+                    error = %e,
+                    "Failed to reach z-billing for referral grant"
+                );
+            }
+        }
+    }
 }
 
 pub(crate) async fn validate_invite_code(
