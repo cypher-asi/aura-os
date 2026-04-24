@@ -419,18 +419,15 @@ fn stage_installer_bytes(data_dir: &Path, version: &str, bytes: &[u8]) -> Result
 }
 
 #[cfg(target_os = "windows")]
-fn spawn_windows_installer(installer_path: &Path) -> Result<u32, String> {
+fn spawn_windows_installer_with_flags(
+    installer_path: &Path,
+    creation_flags: u32,
+) -> std::io::Result<std::process::Child> {
     use std::os::windows::process::CommandExt;
     use std::process::Stdio;
 
-    // Creation flags for the detached install child. Breaking away from any
-    // enclosing Job Object (wry/WebView2 can place the host process inside
-    // one) is what actually keeps the installer alive once Aura exits.
-    const DETACHED_PROCESS: u32 = 0x0000_0008;
-    const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x0100_0000;
-    const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
-
-    let child = std::process::Command::new(installer_path)
+    let mut command = std::process::Command::new(installer_path);
+    command
         // `/P` enables passive mode in cargo-packager's NSIS template
         // (small progress window, no user interaction). `/R` asks the
         // installer to restart Aura once install completes.
@@ -438,14 +435,48 @@ fn spawn_windows_installer(installer_path: &Path) -> Result<u32, String> {
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
-        .creation_flags(DETACHED_PROCESS | CREATE_BREAKAWAY_FROM_JOB | CREATE_NEW_PROCESS_GROUP)
-        .spawn()
-        .map_err(|e| {
-            format!(
-                "failed to spawn installer {}: {e}",
-                installer_path.display()
-            )
-        })?;
+        .creation_flags(creation_flags);
+
+    if let Some(stage_dir) = installer_path.parent() {
+        command.current_dir(stage_dir);
+    }
+
+    command.spawn()
+}
+
+#[cfg(target_os = "windows")]
+fn spawn_windows_installer(installer_path: &Path) -> Result<u32, String> {
+    // Creation flags for the detached install child. Breaking away from any
+    // enclosing Job Object (wry/WebView2 can place the host process inside
+    // one) is what actually keeps the installer alive once Aura exits. Some
+    // Windows hosts disallow breakaway; retry without that flag so non-job
+    // launches still work.
+    const DETACHED_PROCESS: u32 = 0x0000_0008;
+    const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x0100_0000;
+    const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
+
+    let base_flags = DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP;
+    let child = match spawn_windows_installer_with_flags(
+        installer_path,
+        base_flags | CREATE_BREAKAWAY_FROM_JOB,
+    ) {
+        Ok(child) => child,
+        Err(primary_error) => {
+            warn!(
+                error = %primary_error,
+                installer = %installer_path.display(),
+                "failed to spawn Windows installer with job breakaway; retrying without breakaway"
+            );
+            spawn_windows_installer_with_flags(installer_path, base_flags).map_err(
+                |fallback_error| {
+                    format!(
+                        "failed to spawn installer {} with breakaway ({primary_error}) or fallback ({fallback_error})",
+                        installer_path.display(),
+                    )
+                },
+            )?
+        }
+    };
     Ok(child.id())
 }
 
@@ -491,13 +522,6 @@ fn perform_update_install(state: &UpdateState) -> Result<Option<String>, String>
         let installer_path = stage_installer_bytes(state.data_dir.as_ref(), &version, &bytes)?;
         drop(bytes);
 
-        // Ask the main event loop to drop sidecars (local harness, Vite
-        // dev server) and exit before the installer races with file
-        // locks. `trigger_shutdown` posts a UserEvent that the main
-        // thread handles asynchronously; give it a short beat to run.
-        state.trigger_shutdown();
-        std::thread::sleep(Duration::from_millis(750));
-
         let pid = spawn_windows_installer(&installer_path)?;
         info!(
             pid,
@@ -505,6 +529,12 @@ fn perform_update_install(state: &UpdateState) -> Result<Option<String>, String>
             new_version = %version,
             "spawned detached Windows installer; exiting Aura for handoff"
         );
+        // Sidecars are stopped synchronously by the `InstallUpdate` event before
+        // this worker starts. Spawn the detached installer before posting the
+        // final shutdown signal; otherwise the main event loop can terminate the
+        // process before this thread reaches `spawn_windows_installer`.
+        state.trigger_shutdown();
+        std::thread::sleep(Duration::from_millis(250));
         // Release our own file handles on the install tree so the
         // installer can overwrite binaries cleanly.
         std::process::exit(0);

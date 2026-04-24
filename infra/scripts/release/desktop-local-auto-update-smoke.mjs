@@ -404,8 +404,8 @@ async function main() {
     child.stdout.pipe(stdout);
     child.stderr.pipe(stderr);
 
-    const readyState = await waitForDesktopReady(baseUrl, Math.min(options.timeoutMs, 120000));
-    await triggerImmediateRecheck(baseUrl, readyState.channel || options.channel);
+    await waitForDesktopReady(baseUrl, Math.min(options.timeoutMs, 120000));
+    await triggerImmediateRecheck(baseUrl, options.channel);
 
     const startedAt = Date.now();
     while (Date.now() - startedAt < options.timeoutMs) {

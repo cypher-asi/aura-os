@@ -2144,8 +2144,9 @@ fn handle_user_event(
             }
         }
         UserEvent::InstallUpdate { state } => {
-            // Stop the managed sidecar before launching the installer so the
-            // update does not have to replace an in-use helper binary.
+            // Stop managed sidecars before launching the installer so the
+            // update does not have to replace in-use helper binaries.
+            stop_managed_frontend_dev_server(managed_frontend_dev_server);
             stop_managed_local_harness(managed_local_harness);
             if let Err(error) = updater::start_install(state) {
                 warn!(error = %error, "failed to start updater install");
