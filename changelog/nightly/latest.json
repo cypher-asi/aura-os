@@ -1570,8 +1570,8 @@
           }
         ],
         "media": {
-          "requested": true,
-          "status": "published",
+          "requested": false,
+          "status": "skipped",
           "score": 6,
           "reason": "GPT-5.5 appears in the chat model picker - a small, text-heavy dropdown UI that's easily provable in one screenshot. The rest of the entry is release infra/backend and not visual.",
           "reasons": [
@@ -1585,7 +1585,7 @@
           "slotId": "entry-1-nightly-release-prune-gh-pages-recovery-and-gpt-5-5-in-the-picke",
           "slug": "nightly-release-prune-gh-pages-recovery-and-gpt-5-5-in-the-picke",
           "alt": "Nightly release prune, gh-pages recovery, and GPT-5.5 in the picker screenshot",
-          "presentationMode": "raw_contextual",
+          "presentationMode": "none",
           "files": [
             "apps/aura-os-server/src/handlers/dev_loop.rs",
             "interface/scripts/lib/benchmark-pricing.mjs",
@@ -1621,11 +1621,7 @@
             "GPT-5.5",
             "Model picker"
           ],
-          "storyTitle": "GPT-5.5 now selectable in the chat input model picker",
-          "assetPath": "assets/changelog/nightly/0.1.0-nightly.362.1/entry-1-nightly-release-prune-gh-pages-recovery-and-gpt-5-5-in-the-picke.png",
-          "screenshotSource": "openai-polish",
-          "updatedAt": "2026-04-24T04:14:49.480Z",
-          "preservedFromSlotId": "entry-1-nightly-release-prune-gh-pages-recovery-and-gpt-5-5-in-the-picke"
+          "storyTitle": "GPT-5.5 now selectable in the chat input model picker"
         }
       },
       {

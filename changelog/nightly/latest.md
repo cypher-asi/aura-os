@@ -11,9 +11,6 @@ Today's nightly introduces AURA 3D, a new image-to-3D studio built on three.js, 
 
 GPT-5.5 lands in the chat model picker while the release pipeline gains a stricter AI-driven screenshot proofer and a recoverable nightly prune/gh-pages flow.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-1-nightly-release-prune-gh-pages-recovery-and-gpt-5-5-in-the-picke","batchId":"entry-1","slug":"nightly-release-prune-gh-pages-recovery-and-gpt-5-5-in-the-picke","alt":"Nightly release prune, gh-pages recovery, and GPT-5.5 in the picker screenshot","status":"published","assetPath":"assets/changelog/nightly/0.1.0-nightly.362.1/entry-1-nightly-release-prune-gh-pages-recovery-and-gpt-5-5-in-the-picke.png"} -->
-![Nightly release prune, gh-pages recovery, and GPT-5.5 in the picker screenshot](../../assets/changelog/nightly/0.1.0-nightly.362.1/entry-1-nightly-release-prune-gh-pages-recovery-and-gpt-5-5-in-the-picke.png)
-<!-- AURA_CHANGELOG_MEDIA:END entry-1-nightly-release-prune-gh-pages-recovery-and-gpt-5-5-in-the-picke -->
 
 - Added GPT-5.5 to the chat model picker and benchmark pricing tables, with the new model wired through the dev loop handler. (`d9d82e9`)
 - Reported ZERO Pro status alongside usage in network responses so clients can reflect entitlement state. (`b2847a4`)
@@ -24,9 +21,6 @@ GPT-5.5 lands in the chat model picker while the release pipeline gains a strict
 
 A new AURA 3D app joins the registry, combining streamed image generation, a Three.js-based 3D viewer, and project-aware navigation.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-2-aura-3d-studio-image-to-model-flow-with-webgl-viewer","batchId":"entry-2","slug":"aura-3d-studio-image-to-model-flow-with-webgl-viewer","alt":"AURA 3D studio: image-to-model flow with WebGL viewer screenshot"} -->
-<!-- AURA_CHANGELOG_MEDIA:PENDING -->
-<!-- AURA_CHANGELOG_MEDIA:END entry-2-aura-3d-studio-image-to-model-flow-with-webgl-viewer -->
 
 - Scaffolded a new AURA 3D app at /3d in the app registry with a Box icon, Zustand store, and three.js added as a dependency for the upcoming WebGL viewer. (`1b20985`)
 - Replaced the early tab stubs with a unified image-generation flow: an SSE-driven image stream with style-locked prompts, a sidekick panel with Images and Models tabs, and a ChatInputBar-style model selector. (`90887d5`)
@@ -43,9 +37,6 @@ The aura-os-server generation proxy no longer drops events when upstream omits t
 
 Follow-up work on AURA 3D adds artifact persistence end to end, aligns the left nav with the Projects app, and removes the feature flag to ship the app to everyone.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-4-aura-3d-polish-persistence-project-tree-nav-and-ga-rollout","batchId":"entry-4","slug":"aura-3d-polish-persistence-project-tree-nav-and-ga-rollout","alt":"AURA 3D polish: persistence, project tree nav, and GA rollout screenshot"} -->
-<!-- AURA_CHANGELOG_MEDIA:PENDING -->
-<!-- AURA_CHANGELOG_MEDIA:END entry-4-aura-3d-polish-persistence-project-tree-nav-and-ga-rollout -->
 
 - Reworked the main panel with an IMAGE header, click-to-expand lightbox preview, a 50/50 image-vs-model split, and eventually an Image/3D Model tab layout driven by feedback. (`ddb0b7e`, `5f41de6`)
 - Replaced the custom project dropdown with LeftMenuTree so AURA 3D's left nav now matches the Projects app, showing images and models as prefixed children under the active project. (`9250ebf`, `6229c31`)
