@@ -109,10 +109,11 @@ pub(crate) async fn register(
     // organic signups.
     let user_id = result.session.user_id.clone();
     let inviter_user_id = result.inviter_user_id.clone();
+    let is_zero_pro = result.session.is_zero_pro;
     let used_default_invite = is_default_invite_code(&req.invite_code);
     tokio::spawn(async move {
         let referral_inviter = if used_default_invite { None } else { inviter_user_id.as_deref() };
-        grant_credits_on_signup(&user_id, referral_inviter).await;
+        grant_credits_on_signup(&user_id, referral_inviter, is_zero_pro).await;
     });
 
     Ok(Json(AuthSessionResponse::from_auth_result(result)))
@@ -128,7 +129,7 @@ fn is_default_invite_code(code: &str) -> bool {
 /// Grant signup credits (and referral credits if applicable) to a newly
 /// registered user. Runs as a fire-and-forget background task so it
 /// doesn't block the registration response.
-async fn grant_credits_on_signup(user_id: &str, inviter_user_id: Option<&str>) {
+async fn grant_credits_on_signup(user_id: &str, inviter_user_id: Option<&str>, is_zero_pro: bool) {
     let billing_url = std::env::var("Z_BILLING_URL")
         .unwrap_or_else(|_| "https://z-billing.onrender.com".to_string());
     let api_key = match std::env::var("Z_BILLING_API_KEY") {
@@ -146,7 +147,7 @@ async fn grant_credits_on_signup(user_id: &str, inviter_user_id: Option<&str>) {
         .post(format!("{billing_url}/v1/credits/signup-grant"))
         .header("x-api-key", &api_key)
         .header("x-service-name", "aura-os-server")
-        .json(&serde_json::json!({ "user_id": user_id }))
+        .json(&serde_json::json!({ "user_id": user_id, "is_zero_pro": is_zero_pro }))
         .send()
         .await
     {
