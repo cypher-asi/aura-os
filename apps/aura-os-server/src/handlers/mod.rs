@@ -1,5 +1,4 @@
 pub(crate) mod agent_bootstrap;
-pub(crate) mod agent_tools;
 pub(crate) mod agents;
 pub(crate) mod auth;
 pub(crate) mod billing;

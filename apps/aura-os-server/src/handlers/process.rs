@@ -534,7 +534,6 @@ pub(crate) async fn trigger_process(
         .map_err(|_| ApiError::bad_request("invalid process ID"))?;
 
     let run = state
-        .agent_runtime
         .process_executor
         .trigger_with_auth(&process_id, ProcessRunTrigger::Manual, Some(&jwt))
         .await
@@ -743,7 +742,6 @@ pub(crate) async fn cancel_run(
         .map_err(|_| ApiError::bad_request("invalid run ID"))?;
 
     state
-        .agent_runtime
         .process_executor
         .cancel_run(&process_id, &run_id, Some(&jwt))
         .await

@@ -19,6 +19,9 @@
 //! The serde representation is byte-identical to
 //! `aura_protocol::AgentPermissionsWire`, so JSON round-trips between
 //! the harness wire and this local type are transparent.
+//!
+//! TODO(Phase 7): collapse this native mirror into protocol/domain DTOs
+//! once agent records no longer persist `AgentPermissions` directly.
 
 use serde::{Deserialize, Serialize};
 
@@ -192,17 +195,13 @@ impl AgentPermissions {
     ///
     /// # Why
     ///
-    /// `build_cross_agent_tools` in `aura-os-agent-tools` filters the
-    /// session's `installed_tools` manifest through
-    /// `permissions_satisfy_requirements`: project-scoped tools
-    /// (`get_project`, `list_specs`, `create_spec`, `create_task`,
-    /// `run_task`, …) require at least *some* project grant. When a
-    /// non-CEO agent is persisted with an empty `capabilities` list
-    /// (common for fresh agents whose permissions column was never
-    /// populated), every one of those tools is dropped from the
-    /// manifest shipped to the harness. The harness then denies each
-    /// call with `"Tool 'X' is not allowed"` because its kernel policy
-    /// defaults to `allow_unlisted = false`.
+    /// Harness-side domain tools require at least *some* project grant
+    /// for project-scoped operations (`get_project`, `list_specs`,
+    /// `create_spec`, `create_task`, `run_task`, …). When a non-CEO
+    /// agent is persisted with an empty `capabilities` list (common for
+    /// fresh agents whose permissions column was never populated), the
+    /// harness denies those calls because its kernel policy defaults to
+    /// `allow_unlisted = false`.
     ///
     /// Calling this helper at chat-open time — when we already know
     /// the agent is bound to `project_id` and the session's JWT will

@@ -77,17 +77,6 @@ const HISTORY_RECENT_TURNS: usize = 2;
 /// context bloat regressions surface without needing user bug reports.
 const CONVERSATION_HISTORY_WARN_BYTES: usize = 64 * 1024;
 
-fn harness_delegation_enabled() -> bool {
-    std::env::var("AURA_HARNESS_DELEGATION")
-        .map(|value| {
-            matches!(
-                value.trim().to_ascii_lowercase().as_str(),
-                "1" | "true" | "yes" | "on"
-            )
-        })
-        .unwrap_or(false)
-}
-
 /// Truncate a string to at most `max_bytes` bytes on a UTF-8 char
 /// boundary and append a marker noting the original length. A no-op
 /// when `s.len() <= max_bytes`.
@@ -133,19 +122,10 @@ use super::runtime::{
 
 /// Build the `installed_tools` payload for a harness chat session.
 ///
-/// Concatenates workspace + trusted-MCP tools (org-scoped, may be empty)
-/// with the cross-agent tools derived from `permissions`, then funnels
-/// the combined list through [`dedupe_and_log_installed_tools`] so the
-/// contract "no two tools share a name" is enforced in one place and
-/// the final shipped list is visible in logs for every session.
-///
-/// The Anthropic Messages API (and every other LLM provider we front)
-/// rejects the whole request with a `400 Bad Request { "tools: Tool
-/// names must be unique." }` the moment the same tool name appears
-/// twice in `tools[]`, so any collision here would 400 every turn of
-/// the session. First-occurrence wins — that keeps workspace /
-/// integration tools (org-specific endpoints + auth) ahead of any
-/// identically-named cross-agent tool.
+/// Phase 3 removes the legacy cross-agent dispatcher. Domain
+/// operations now remain reachable to the harness through its own
+/// delegated domain API, so the server only contributes workspace and
+/// integration tools here.
 #[allow(dead_code)]
 #[allow(clippy::too_many_arguments)]
 async fn build_session_installed_tools(
@@ -178,14 +158,14 @@ async fn build_session_installed_tools(
 async fn build_session_installed_tools_with_integrations(
     state: &AppState,
     org_id: Option<&OrgId>,
-    permissions: &AgentPermissions,
+    _permissions: &AgentPermissions,
     jwt: &str,
     context: &'static str,
     agent_id: &str,
     machine_type: &str,
-    user_message: Option<&str>,
+    _user_message: Option<&str>,
     integrations: Option<&[aura_os_core::OrgIntegration]>,
-    project_id: Option<&str>,
+    _project_id: Option<&str>,
 ) -> ApiResult<Option<Vec<InstalledTool>>> {
     let mut tools = if let Some(org_id) = org_id {
         match integrations {
@@ -200,60 +180,7 @@ async fn build_session_installed_tools_with_integrations(
     } else {
         Vec::new()
     };
-    tools.extend(
-        aura_os_agent_tools::ceo::build_cross_agent_tools_for_message(permissions, user_message),
-    );
-
-    // `build_cross_agent_tools` emits endpoints as the bare path
-    // `/api/agent_tools/:name` with `ToolAuth::None`. The harness
-    // executes an `InstalledTool` by issuing a raw `reqwest` POST to
-    // `tool.endpoint` and attaching headers derived from `tool.auth`
-    // in a separate process, which fails in two distinct ways without
-    // intervention:
-    //   1. Bare path → `builder error: relative URL without a base`
-    //      before the request ever leaves reqwest.
-    //   2. `ToolAuth::None` → the dispatcher's `AuthJwt` extractor
-    //      returns 401 `{"error":"missing authorization"}`.
-    // Both are fatal on the first tool call, so stamp the session
-    // credentials (JWT + org id) on every cross-agent entry and then
-    // absolutise the path before the list is shipped to the harness.
-    // Order matters: stamping expects relative endpoints, so it runs
-    // before `absolutize_agent_tool_endpoints`.
-    let org_id_str = org_id.map(|id| id.to_string());
-    aura_os_agent_tools::ceo::stamp_agent_tool_auth(
-        &mut tools,
-        jwt,
-        org_id_str.as_deref(),
-        Some(agent_id),
-        project_id,
-    );
-    // Resolve the URL stamped onto cross-agent endpoints. When the
-    // harness runs off-box (swarm pod / remote container) we refuse
-    // to ship a loopback fallback — the harness will POST into its
-    // own loopback and fail every cross-agent tool with
-    // `connection refused`. Surface a named error so the operator
-    // sees the real misconfig at session-init time instead of the
-    // downstream `os error 10061` from the harness.
-    let remote = crate::handlers::agents::harness_target::harness_target_is_remote(machine_type);
-    let base_url = match aura_os_integrations::control_plane_api_base_url_or_error(remote) {
-        Ok(url) => url,
-        Err(aura_os_integrations::ControlPlaneBaseUrlError::MissingForRemoteHarness {
-            fallback_url,
-        }) => {
-            error!(
-                agent_id = %agent_id,
-                context,
-                fallback_url = %fallback_url,
-                "refusing to ship loopback control-plane URL to remote harness; \
-                 set AURA_SERVER_BASE_URL (or reuse VITE_API_URL) to the server's public URL"
-            );
-            return Err(ApiError::internal(format!(
-                "AURA_SERVER_BASE_URL (or VITE_API_URL) must be set when the harness runs off-box; \
-                 refusing to ship `{fallback_url}` to the harness"
-            )));
-        }
-    };
-    aura_os_agent_tools::ceo::absolutize_agent_tool_endpoints(&mut tools, &base_url);
+    let _ = (jwt, machine_type);
 
     dedupe_and_log_installed_tools(context, agent_id, &mut tools);
 
@@ -2259,75 +2186,6 @@ pub(crate) async fn list_agent_events_paginated(
     }))
 }
 
-pub(crate) async fn get_or_create_chat_session(
-    state: &AppState,
-    key: &str,
-    harness_mode: HarnessMode,
-    session_config: SessionConfig,
-    requested_model: Option<String>,
-) -> ApiResult<(
-    bool,
-    tokio::sync::broadcast::Receiver<aura_os_link::HarnessOutbound>,
-    tokio::sync::mpsc::UnboundedSender<HarnessInbound>,
-)> {
-    {
-        let mut reg = state.chat_sessions.lock().await;
-        if let Some(session) = reg.get(key) {
-            if session.is_alive() {
-                let model_changed = match (&session.model, &requested_model) {
-                    (Some(current), Some(requested)) => current != requested,
-                    (None, Some(_)) => true,
-                    _ => false,
-                };
-                if model_changed {
-                    info!(key, "Model changed; closing existing chat session");
-                    reg.remove(key);
-                } else {
-                    let rx = session.events_tx.subscribe();
-                    return Ok((false, rx, session.commands_tx.clone()));
-                }
-            }
-        }
-    }
-
-    let harness = state.harness_for(harness_mode);
-    // Snapshot `agent_id` before the config moves into `open_session`
-    // so we can tag the resulting `ChatSession`. The registry uses
-    // this back-reference to invalidate live sessions when the agent's
-    // permissions change — see `handlers::agents::crud::update_agent`
-    // for the consumer side.
-    let session_agent_id = session_config.agent_id.clone();
-    let session = harness.open_session(session_config).await.map_err(|e| {
-        let error_message = e.to_string();
-        warn!(
-            session_key = key,
-            ?harness_mode,
-            error = %error_message,
-            "Failed to open harness chat session"
-        );
-        map_harness_session_startup_error(&error_message)
-    })?;
-
-    let rx = session.events_tx.subscribe();
-    let commands_tx = session.commands_tx.clone();
-
-    {
-        let mut reg = state.chat_sessions.lock().await;
-        reg.insert(
-            key.to_string(),
-            ChatSession {
-                session_id: session.session_id,
-                commands_tx: session.commands_tx,
-                events_tx: session.events_tx,
-                model: requested_model,
-                agent_id: session_agent_id,
-            },
-        );
-    }
-
-    Ok((true, rx, commands_tx))
-}
-
 async fn get_or_create_delegated_chat_session(
     state: &AppState,
     key: &str,
@@ -2547,31 +2405,15 @@ async fn open_harness_chat_stream(
         tool_hints: None,
         attachments: dto_attachments_to_protocol(&attachments),
     };
-    let (is_new, rx) = if harness_delegation_enabled() {
-        let (is_new, rx, _) = get_or_create_delegated_chat_session(
-            state,
-            session_key,
-            harness_mode,
-            session_config,
-            requested_model,
-            turn,
-        )
-        .await?;
-        (is_new, rx)
-    } else {
-        let (is_new, rx, commands_tx) = get_or_create_chat_session(
-            state,
-            session_key,
-            harness_mode,
-            session_config,
-            requested_model,
-        )
-        .await?;
-        commands_tx
-            .send(HarnessInbound::UserMessage(turn.user_message()))
-            .map_err(|e| ApiError::internal(format!("sending user message: {e}")))?;
-        (is_new, rx)
-    };
+    let (is_new, rx, _) = get_or_create_delegated_chat_session(
+        state,
+        session_key,
+        harness_mode,
+        session_config,
+        requested_model,
+        turn,
+    )
+    .await?;
 
     let persist_rx = rx.resubscribe();
 
@@ -2654,8 +2496,6 @@ pub(crate) async fn send_agent_event_stream(
     }
 
     let force_new = body.new_session.unwrap_or(false);
-    let delegation_enabled = harness_delegation_enabled();
-
     // `setup_agent_chat_persistence` and the history loader both need
     // the set of project agents bound to this agent id. Previously
     // each called `find_matching_project_agents` independently, which
@@ -2761,8 +2601,8 @@ pub(crate) async fn send_agent_event_stream(
     // slice. Previously each of those helpers called
     // `integrations_for_org_with_token` independently, doubling the
     // upstream round-trip on every chat message.
-    let org_integrations = match (delegation_enabled, agent.org_id.as_ref()) {
-        (false, Some(org_id)) => Some(
+    let org_integrations = match agent.org_id.as_ref() {
+        Some(org_id) => Some(
             crate::handlers::agents::workspace_tools::integrations_for_org_with_token(
                 &state,
                 org_id,
@@ -2770,7 +2610,7 @@ pub(crate) async fn send_agent_event_stream(
             )
             .await,
         ),
-        _ => None,
+        None => None,
     };
 
     // Populate the dispatcher's permissions cache with the bundle the
@@ -2822,37 +2662,24 @@ pub(crate) async fn send_agent_event_stream(
         .permissions
         .clone()
         .normalized_for_identity(&agent.name, Some(agent.role.as_str()));
-    let normalized_perms = if delegation_enabled {
-        base_perms
-    } else {
-        match effective_project_id.as_deref() {
-            Some(pid) => base_perms.with_project_self_caps(pid),
-            None => base_perms,
-        }
+    let normalized_perms = match effective_project_id.as_deref() {
+        Some(pid) => base_perms.with_project_self_caps(pid),
+        None => base_perms,
     };
-    if !delegation_enabled {
-        state
-            .permissions_cache
-            .insert(agent_id.to_string(), normalized_perms.clone());
-    }
 
-    let installed_tools = if delegation_enabled {
-        None
-    } else {
-        build_session_installed_tools_with_integrations(
-            &state,
-            agent.org_id.as_ref(),
-            &normalized_perms,
-            &jwt,
-            "agent_chat",
-            &agent_id.to_string(),
-            &agent.machine_type,
-            Some(body.content.as_str()),
-            org_integrations.as_deref(),
-            effective_project_id.as_deref(),
-        )
-        .await?
-    };
+    let installed_tools = build_session_installed_tools_with_integrations(
+        &state,
+        agent.org_id.as_ref(),
+        &normalized_perms,
+        &jwt,
+        "agent_chat",
+        &agent_id.to_string(),
+        &agent.machine_type,
+        Some(body.content.as_str()),
+        org_integrations.as_deref(),
+        effective_project_id.as_deref(),
+    )
+    .await?;
     let installed_integrations = match (agent.org_id.as_ref(), org_integrations.as_ref()) {
         (Some(_), Some(ints)) => {
             let installed =
@@ -2981,7 +2808,6 @@ pub(crate) async fn send_event_stream(
 
     let session_key = format!("instance:{agent_instance_id}");
     let force_new = body.new_session.unwrap_or(false);
-    let delegation_enabled = harness_delegation_enabled();
     let persist_ctx =
         setup_project_chat_persistence(&state, &project_id, &agent_instance_id, &jwt, force_new)
             .await;
@@ -3046,8 +2872,8 @@ pub(crate) async fn send_event_stream(
                 .and_then(|resolved| resolved.metadata.default_model.clone())
                 .filter(|value| !value.trim().is_empty())
         });
-    let org_integrations = match (delegation_enabled, instance.org_id.as_ref()) {
-        (false, Some(org_id)) => Some(
+    let org_integrations = match instance.org_id.as_ref() {
+        Some(org_id) => Some(
             crate::handlers::agents::workspace_tools::integrations_for_org_with_token(
                 &state,
                 org_id,
@@ -3055,7 +2881,7 @@ pub(crate) async fn send_event_stream(
             )
             .await,
         ),
-        _ => None,
+        None => None,
     };
 
     // Prefer the parent agent's **current** permissions bundle over
@@ -3110,35 +2936,21 @@ pub(crate) async fn send_event_stream(
     let base_instance_perms = effective_permissions
         .clone()
         .normalized_for_identity(&instance.name, Some(instance.role.as_str()));
-    let normalized_instance_perms = if delegation_enabled {
-        base_instance_perms
-    } else {
-        base_instance_perms.with_project_self_caps(&pid_str)
-    };
-    if !delegation_enabled {
-        state.permissions_cache.insert(
-            agent_instance_id.to_string(),
-            normalized_instance_perms.clone(),
-        );
-    }
+    let normalized_instance_perms = base_instance_perms.with_project_self_caps(&pid_str);
 
-    let installed_tools = if delegation_enabled {
-        None
-    } else {
-        build_session_installed_tools_with_integrations(
-            &state,
-            instance.org_id.as_ref(),
-            &normalized_instance_perms,
-            &jwt,
-            "instance_chat",
-            &agent_instance_id.to_string(),
-            &instance.machine_type,
-            Some(body.content.as_str()),
-            org_integrations.as_deref(),
-            Some(pid_str.as_str()),
-        )
-        .await?
-    };
+    let installed_tools = build_session_installed_tools_with_integrations(
+        &state,
+        instance.org_id.as_ref(),
+        &normalized_instance_perms,
+        &jwt,
+        "instance_chat",
+        &agent_instance_id.to_string(),
+        &instance.machine_type,
+        Some(body.content.as_str()),
+        org_integrations.as_deref(),
+        Some(pid_str.as_str()),
+    )
+    .await?;
     let installed_integrations = match (instance.org_id.as_ref(), org_integrations.as_ref()) {
         (Some(_), Some(ints)) => {
             let installed =
@@ -3607,57 +3419,6 @@ mod tests {
         );
         assert!(recent_rendered.contains("[truncated 12000 bytes]"));
         assert!(recent_rendered.len() < 4_000);
-    }
-
-    #[tokio::test]
-    async fn ceo_preset_installed_tools_are_unique_after_dedupe() {
-        // Regression: the CEO cross-agent manifest and the shared
-        // workspace tool manifest both emit `list_specs`, `create_spec`,
-        // `list_tasks`, `get_project`, `start_dev_loop`, etc. Without
-        // dedupe the combined list 400s Anthropic with
-        // `"tools: Tool names must be unique."` on every turn.
-        // This test exercises the full CEO wiring (real workspace
-        // manifest via `installed_workspace_app_tools` + real CEO
-        // cross-agent manifest) and pins the invariant that the final
-        // shipped list has unique names.
-        use crate::handlers::agents::tool_dedupe::dedupe_installed_tools_by_name;
-        use crate::handlers::agents::workspace_tools::installed_workspace_app_tools;
-
-        let store_dir = tempfile::tempdir().unwrap();
-        let store_path = store_dir.path().join("store");
-        let state = crate::build_app_state(&store_path).expect("build app state");
-        let org_id = OrgId::new();
-
-        let mut tools = installed_workspace_app_tools(&state, &org_id, "jwt-123").await;
-        tools.extend(aura_os_agent_tools::ceo::build_cross_agent_tools(
-            &AgentPermissions::ceo_preset(),
-        ));
-
-        let had_any_cross_agent_name = tools.iter().any(|t| t.name == "send_to_agent");
-        assert!(
-            had_any_cross_agent_name,
-            "sanity check: CEO cross-agent tools must be present before dedupe"
-        );
-
-        let duplicates = dedupe_installed_tools_by_name(&mut tools);
-
-        let names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
-        let unique_count = names
-            .iter()
-            .copied()
-            .collect::<std::collections::HashSet<_>>()
-            .len();
-        assert_eq!(
-            names.len(),
-            unique_count,
-            "CEO-preset tool list must be unique post-dedupe; dropped duplicates were: {duplicates:?}; final names: {names:?}"
-        );
-
-        // First-occurrence-wins is covered in
-        // `tool_dedupe::tests::dedupe_keeps_first_occurrence_and_drops_later_duplicates`.
-        // Here we only pin the most user-visible CEO invariant: the
-        // combined workspace + cross-agent list has no duplicate names
-        // so Anthropic won't 400 on session open.
     }
 
     fn spec(title: &str, order_index: u32) -> Spec {

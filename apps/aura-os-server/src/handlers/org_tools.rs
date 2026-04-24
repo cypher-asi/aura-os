@@ -179,7 +179,7 @@ async fn dispatch_app_provider_tool(
     if let Some(method) = trusted_integration_method_by_tool(tool_name) {
         let integration = resolve_org_integration(state, org_id, &method.provider, args).await?;
         return execute_trusted_integration_tool(
-            &state.agent_runtime.http_client,
+            &state.http_client,
             kind,
             &integration.secret,
             integration.metadata.provider_config.as_ref(),
@@ -299,7 +299,7 @@ async fn github_list_repos(state: &AppState, org_id: &OrgId, args: &Value) -> Ap
             .ok_or_else(|| ApiError::internal("github provider base url missing"))?
     );
     let response = provider_json_request(
-        &state.agent_runtime.http_client,
+        &state.http_client,
         state,
         reqwest::Method::GET,
         &url,
@@ -338,7 +338,7 @@ async fn github_create_issue(state: &AppState, org_id: &OrgId, args: &Value) -> 
             .ok_or_else(|| ApiError::internal("github provider base url missing"))?
     );
     let response = provider_json_request(
-        &state.agent_runtime.http_client,
+        &state.http_client,
         state,
         reqwest::Method::POST,
         &url,
@@ -415,7 +415,7 @@ async fn slack_list_channels(state: &AppState, org_id: &OrgId, args: &Value) -> 
             .expect("slack provider contract must declare a base url")
     );
     let response = provider_json_request(
-        &state.agent_runtime.http_client,
+        &state.http_client,
         state,
         reqwest::Method::GET,
         &url,
@@ -451,7 +451,7 @@ async fn slack_post_message(state: &AppState, org_id: &OrgId, args: &Value) -> A
             .expect("slack provider contract must declare a base url")
     );
     let response = provider_json_request(
-        &state.agent_runtime.http_client,
+        &state.http_client,
         state,
         reqwest::Method::POST,
         &url,
@@ -480,7 +480,7 @@ async fn notion_search_pages(state: &AppState, org_id: &OrgId, args: &Value) -> 
             .expect("notion provider contract must declare a base url")
     );
     let response = provider_json_request(
-        &state.agent_runtime.http_client,
+        &state.http_client,
         state,
         reqwest::Method::POST,
         &url,
@@ -522,7 +522,7 @@ async fn notion_create_page(state: &AppState, org_id: &OrgId, args: &Value) -> A
             .expect("notion provider contract must declare a base url")
     );
     let response = provider_json_request(
-        &state.agent_runtime.http_client,
+        &state.http_client,
         state,
         reqwest::Method::POST,
         &url,
@@ -593,7 +593,7 @@ async fn brave_search(
         }
     }
     let response = provider_json_request(
-        &state.agent_runtime.http_client,
+        &state.http_client,
         state,
         reqwest::Method::GET,
         url.as_str(),
@@ -670,7 +670,7 @@ async fn freepik_list_icons(state: &AppState, org_id: &OrgId, args: &Value) -> A
         headers.insert("Accept-Language", value);
     }
     let response = provider_json_request(
-        &state.agent_runtime.http_client,
+        &state.http_client,
         state,
         reqwest::Method::GET,
         url.as_str(),
@@ -716,7 +716,7 @@ async fn freepik_improve_prompt(
         payload["language"] = Value::String(language);
     }
     let response = provider_json_request(
-        &state.agent_runtime.http_client,
+        &state.http_client,
         state,
         reqwest::Method::POST,
         &format!(
@@ -748,7 +748,7 @@ async fn buffer_list_profiles(state: &AppState, org_id: &OrgId, args: &Value) ->
     )
     .map_err(ApiError::bad_request)?;
     let response = provider_json_request(
-        &state.agent_runtime.http_client,
+        &state.http_client,
         state,
         reqwest::Method::GET,
         url.as_str(),
@@ -785,7 +785,7 @@ async fn buffer_create_update(state: &AppState, org_id: &OrgId, args: &Value) ->
     )
     .map_err(ApiError::bad_request)?;
     let response = provider_form_request(
-        &state.agent_runtime.http_client,
+        &state.http_client,
         reqwest::Method::POST,
         url.as_str(),
         vec![
@@ -832,7 +832,7 @@ async fn apify_list_actors(state: &AppState, org_id: &OrgId, args: &Value) -> Ap
         );
     }
     let response = provider_json_request(
-        &state.agent_runtime.http_client,
+        &state.http_client,
         state,
         reqwest::Method::GET,
         url.as_str(),
@@ -865,7 +865,7 @@ async fn apify_run_actor(state: &AppState, org_id: &OrgId, args: &Value) -> ApiR
         payload = json!({});
     }
     let response = provider_json_request(
-        &state.agent_runtime.http_client,
+        &state.http_client,
         state,
         reqwest::Method::POST,
         &format!(
@@ -898,7 +898,7 @@ async fn metricool_list_brands(state: &AppState, org_id: &OrgId, args: &Value) -
         false,
     )?;
     let response = provider_json_request(
-        &state.agent_runtime.http_client,
+        &state.http_client,
         state,
         reqwest::Method::GET,
         url.as_str(),
@@ -933,7 +933,7 @@ async fn metricool_list_posts(state: &AppState, org_id: &OrgId, args: &Value) ->
         true,
     )?;
     let response = provider_json_request(
-        &state.agent_runtime.http_client,
+        &state.http_client,
         state,
         reqwest::Method::GET,
         url.as_str(),
@@ -966,7 +966,7 @@ async fn mailchimp_list_audiences(
     let integration = resolve_org_integration(state, org_id, "mailchimp", args).await?;
     let base_url = mailchimp_base_url(&integration)?;
     let response = provider_json_request(
-        &state.agent_runtime.http_client,
+        &state.http_client,
         state,
         reqwest::Method::GET,
         &format!("{base_url}/lists"),
@@ -999,7 +999,7 @@ async fn mailchimp_list_campaigns(
     let integration = resolve_org_integration(state, org_id, "mailchimp", args).await?;
     let base_url = mailchimp_base_url(&integration)?;
     let response = provider_json_request(
-        &state.agent_runtime.http_client,
+        &state.http_client,
         state,
         reqwest::Method::GET,
         &format!("{base_url}/campaigns"),
@@ -1031,7 +1031,7 @@ async fn resend_list_domains(state: &AppState, org_id: &OrgId, args: &Value) -> 
     let base_url = app_provider_base_url(AppProviderKind::Resend)
         .expect("resend provider contract must declare a base url");
     let response = provider_json_request(
-        &state.agent_runtime.http_client,
+        &state.http_client,
         state,
         reqwest::Method::GET,
         &format!("{base_url}/domains"),
@@ -1100,7 +1100,7 @@ async fn resend_send_email(state: &AppState, org_id: &OrgId, args: &Value) -> Ap
     }
 
     let response = provider_json_request(
-        &state.agent_runtime.http_client,
+        &state.http_client,
         state,
         reqwest::Method::POST,
         &format!("{base_url}/emails"),
@@ -1509,7 +1509,7 @@ async fn linear_graphql(
     let url = app_provider_base_url(AppProviderKind::Linear)
         .expect("linear provider contract must declare a base url");
     let response = provider_json_request(
-        &state.agent_runtime.http_client,
+        &state.http_client,
         state,
         reqwest::Method::POST,
         &url,

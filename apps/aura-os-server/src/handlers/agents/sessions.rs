@@ -288,15 +288,10 @@ pub(crate) async fn summarize_session(
     let sid = session_id.to_string();
     info!(%session_id, "Session summary generation requested");
 
-    let summary = generate_session_summary(
-        storage,
-        &state.agent_runtime.http_client,
-        &state.agent_runtime.router_url,
-        &jwt,
-        &sid,
-    )
-    .await
-    .map_err(|e| ApiError::internal(format!("summarizing session: {e}")))?;
+    let summary =
+        generate_session_summary(storage, &state.http_client, &state.router_url, &jwt, &sid)
+            .await
+            .map_err(|e| ApiError::internal(format!("summarizing session: {e}")))?;
 
     info!(%session_id, summary_len = summary.len(), "Session summary generated");
 

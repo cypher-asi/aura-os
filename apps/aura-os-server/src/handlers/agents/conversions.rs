@@ -27,7 +27,7 @@ pub(crate) fn get_user_id(session: &ZeroAuthSession) -> String {
 /// for agents, so `NetworkAgent.permissions` deserializes to the default
 /// (empty) [`AgentPermissions`] via `#[serde(default)]`. When the rest of
 /// the server reads that record, callers like [`build_cross_agent_tools`]
-/// (aura-os-agent-runtime) and the Permissions sidekick toggles key off
+/// (the former in-process agent runtime) and the Permissions sidekick toggles key off
 /// [`AgentPermissions::is_ceo_preset`] — so a CEO with an empty bundle
 /// ends up with zero cross-agent tools installed and every capability
 /// toggle rendered as "off", even though the agent is clearly the CEO.
@@ -43,10 +43,10 @@ pub(crate) fn get_user_id(session: &ZeroAuthSession) -> String {
 /// other read-time converter in `aura-os-agents::network_agent_to_core`
 /// can't drift apart — both now route through the same `aura-os-core`
 /// helper. The classifier fix-up stays here because it pulls the
-/// canonical spec from `aura-os-agent-runtime`, which sits above
+/// canonical spec from the former in-process agent runtime, which sat above
 /// `aura-os-agents` in the crate graph.
 ///
-/// [`build_cross_agent_tools`]: aura_os_agent_runtime::ceo::build_cross_agent_tools
+/// [`build_cross_agent_tools`]: crate::handlers::agents::workspace_tools
 fn effective_permissions_and_classifier(
     net: &NetworkAgent,
 ) -> (AgentPermissions, Option<IntentClassifierSpec>) {
@@ -62,7 +62,7 @@ fn effective_permissions_and_classifier(
         );
         // CEO agents no longer ship an IntentClassifierSpec — the CEO
         // cross-agent tool list is a static allowlist (see
-        // `aura_os_agent_runtime::ceo::CEO_CORE_TOOLS`). Preserve whatever
+        // the old CEO core-tool allowlist). Preserve whatever
         // the network record carries (typically `None`) so legacy
         // deployments that still have a stored classifier don't have it
         // retroactively clobbered by the read-time repair path.

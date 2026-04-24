@@ -118,12 +118,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "arrayref"
-version = "0.3.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76a2e8124351fda1ef8aaaa3bbd7ebbcb486bbcd4225aca0aa0d84bb2db8fecb"
-
-[[package]]
 name = "arrayvec"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -384,78 +378,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "aura-os-agent-runtime"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "aura-os-agent-templates",
- "aura-os-agents",
- "aura-os-billing",
- "aura-os-core",
- "aura-os-link",
- "aura-os-network",
- "aura-os-orgs",
- "aura-os-process",
- "aura-os-projects",
- "aura-os-sessions",
- "aura-os-storage",
- "aura-os-store",
- "aura-os-tasks",
- "aura-protocol",
- "blake3",
- "chrono",
- "dashmap",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 1.0.69",
- "tokio",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "aura-os-agent-templates"
-version = "0.1.0"
-dependencies = [
- "aura-os-core",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "aura-os-agent-tools"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "aura-os-agent-runtime",
- "aura-os-agent-templates",
- "aura-os-agents",
- "aura-os-billing",
- "aura-os-core",
- "aura-os-link",
- "aura-os-network",
- "aura-os-orgs",
- "aura-os-process",
- "aura-os-projects",
- "aura-os-sessions",
- "aura-os-storage",
- "aura-os-store",
- "aura-os-tasks",
- "aura-protocol",
- "chrono",
- "futures-util",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "tracing",
- "uuid",
-]
-
-[[package]]
 name = "aura-os-agents"
 version = "0.1.0"
 dependencies = [
@@ -704,9 +626,6 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "aura-loop-log-schema",
- "aura-os-agent-runtime",
- "aura-os-agent-templates",
- "aura-os-agent-tools",
  "aura-os-agents",
  "aura-os-auth",
  "aura-os-billing",
@@ -1026,20 +945,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7eff00be299a18769011411c9def0d827e8f2d7bf0c3dbf53633147a8867fd1f"
 dependencies = [
  "no_std_io2",
-]
-
-[[package]]
-name = "blake3"
-version = "1.8.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d2d5991425dfd0785aed03aedcf0b321d61975c9b5b3689c774a2610ae0b51e"
-dependencies = [
- "arrayref",
- "arrayvec",
- "cc",
- "cfg-if",
- "constant_time_eq",
- "cpufeatures 0.3.0",
 ]
 
 [[package]]
@@ -1376,12 +1281,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "constant_time_eq"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d52eff69cd5e647efe296129160853a42795992097e8af39800e1060caeea9b"
-
-[[package]]
 name = "cookie"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1446,15 +1345,6 @@ name = "cpufeatures"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "59ed5838eebb26a2bb2e58f6d5b5316989ae9d08bab10e0e6d103e656d1b0280"
-dependencies = [
- "libc",
-]
-
-[[package]]
-name = "cpufeatures"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b2a41393f66f16b0823bb79094d54ac5fbd34ab292ddafb9a0456ac9f87d201"
 dependencies = [
  "libc",
 ]
@@ -5055,7 +4945,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3bf829a2d51ab4a5ddf1352d8470c140cadc8301b2ae1789db023f01cedd6ba"
 dependencies = [
  "cfg-if",
- "cpufeatures 0.2.17",
+ "cpufeatures",
  "digest",
 ]
 
@@ -5066,7 +4956,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7507d819769d01a365ab707794a4084392c824f54a7a6a7862f8c3d0892b283"
 dependencies = [
  "cfg-if",
- "cpufeatures 0.2.17",
+ "cpufeatures",
  "digest",
 ]
 

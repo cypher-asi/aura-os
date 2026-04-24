@@ -451,8 +451,7 @@ fn legacy_org_integration_tool_manifest_entries() -> &'static [OrgIntegrationToo
 
 /// Base URL the aura-os-server advertises for self-callbacks.
 ///
-/// Used to stamp cross-agent tool endpoints (see
-/// [`aura_os_agent_tools::ceo::absolutize_agent_tool_endpoints`]) so the
+/// Used to stamp server-contributed tool endpoints so the
 /// harness — which executes `InstalledTool` calls from a separate process
 /// or host (e.g. `aura-swarm` on Render) — can reach the server at a
 /// publicly routable URL rather than loopback.

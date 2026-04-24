@@ -82,7 +82,7 @@ open https://YOUR-SERVICE.onrender.com
 
 ## Troubleshooting
 
-- `external tool callback unreachable: http://127.0.0.1:<port>/api/agent_tools/...` — the server is handing remote harnesses a loopback URL because neither `VITE_API_URL` nor the optional `AURA_SERVER_BASE_URL` override is set. Set `VITE_API_URL` to the service's public https URL (e.g. `https://YOUR-SERVICE.onrender.com`) and redeploy; this also fixes the frontend bundle in the same build.
+- `external tool callback unreachable: http://127.0.0.1:<port>/...` — the server is handing remote harnesses a loopback URL because neither `VITE_API_URL` nor the optional `AURA_SERVER_BASE_URL` override is set. Set `VITE_API_URL` to the service's public https URL (e.g. `https://YOUR-SERVICE.onrender.com`) and redeploy; this also fixes the frontend bundle in the same build.
 
 ## Orbit ENOSPC runbook
 

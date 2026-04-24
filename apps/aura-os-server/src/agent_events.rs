@@ -1,4 +1,5 @@
 use std::sync::Arc;
+
 use tokio::sync::{broadcast, Mutex};
 use tracing::{debug, warn};
 
@@ -51,11 +52,6 @@ impl AgentEventListener {
         });
     }
 
-    pub async fn drain_events(&self) -> Vec<AgentEvent> {
-        let mut buf = self.events.lock().await;
-        std::mem::take(&mut *buf)
-    }
-
     pub async fn peek_events(&self) -> Vec<AgentEvent> {
         self.events.lock().await.clone()
     }
@@ -92,18 +88,17 @@ fn classify_event(value: &serde_json::Value) -> Option<AgentEvent> {
         }
         "agent_error" | "agent_instance_updated" => {
             let status = value.get("status").and_then(|s| s.as_str()).unwrap_or("");
-            if status == "error" {
-                let name = value
-                    .get("agent_name")
-                    .and_then(|n| n.as_str())
-                    .unwrap_or("unknown");
-                (
-                    "agent_error".to_string(),
-                    format!("Agent '{name}' encountered an error"),
-                )
-            } else {
+            if status != "error" {
                 return None;
             }
+            let name = value
+                .get("agent_name")
+                .and_then(|n| n.as_str())
+                .unwrap_or("unknown");
+            (
+                "agent_error".to_string(),
+                format!("Agent '{name}' encountered an error"),
+            )
         }
         "git_committed" | "git_pushed" => {
             let project = value
@@ -119,26 +114,8 @@ fn classify_event(value: &serde_json::Value) -> Option<AgentEvent> {
             "budget_alert".to_string(),
             "Credit balance is running low".to_string(),
         ),
-        "process_run_started" => {
-            let pid = value
-                .get("process_id")
-                .and_then(|p| p.as_str())
-                .unwrap_or("unknown");
-            (
-                event_type.to_string(),
-                format!("Process run started: {pid}"),
-            )
-        }
-        "process_run_completed" => {
-            let pid = value
-                .get("process_id")
-                .and_then(|p| p.as_str())
-                .unwrap_or("unknown");
-            (
-                event_type.to_string(),
-                format!("Process run completed: {pid}"),
-            )
-        }
+        "process_run_started" => process_summary(value, event_type, "Process run started"),
+        "process_run_completed" => process_summary(value, event_type, "Process run completed"),
         "process_node_executed" => {
             let node_type = value
                 .get("node_type")
@@ -162,4 +139,12 @@ fn classify_event(value: &serde_json::Value) -> Option<AgentEvent> {
         timestamp: now,
         data: value.clone(),
     })
+}
+
+fn process_summary(value: &serde_json::Value, event_type: &str, label: &str) -> (String, String) {
+    let pid = value
+        .get("process_id")
+        .and_then(|p| p.as_str())
+        .unwrap_or("unknown");
+    (event_type.to_string(), format!("{label}: {pid}"))
 }

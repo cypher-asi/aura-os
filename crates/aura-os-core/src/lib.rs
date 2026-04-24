@@ -22,7 +22,7 @@ pub use entities::*;
 pub use enums::{
     AgentStatus, ArtifactType, ChatRole, HarnessMode, OrchestrationStatus, OrgRole,
     ProcessEventStatus, ProcessNodeType, ProcessRunStatus, ProcessRunTrigger, ProjectStatus,
-    SessionStatus, StepStatus, TaskStatus, ToolDomain,
+    SessionStatus, StepStatus, TaskStatus,
 };
 pub use helpers::{extract_fenced_json, fuzzy_search_replace, parse_dt};
 pub use ids::{

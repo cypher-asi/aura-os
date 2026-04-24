@@ -117,7 +117,7 @@ fn validate_control_plane_base_url_config() {
             warn!(
                 fallback_url = %fallback_url,
                 "AURA_SERVER_BASE_URL (and VITE_API_URL fallback) are unset but the harness target appears to be off-box; \
-                 cross-agent tool callbacks will attempt to reach `{fallback_url}` and fail. \
+                 server-contributed tool callbacks will attempt to reach `{fallback_url}` and fail. \
                  Set AURA_SERVER_BASE_URL (or reuse VITE_API_URL) to the server's public URL."
             );
             if std::env::var("AURA_STRICT_CONFIG").as_deref() == Ok("1") {
@@ -128,9 +128,7 @@ fn validate_control_plane_base_url_config() {
     }
 }
 
-/// Heuristic mirror of
-/// [`aura_os_server::handlers::agents::harness_target::harness_target_is_remote`]
-/// without having access to a live agent's `machine_type`. Returns
+/// Heuristic used before we have access to a live agent's `machine_type`. Returns
 /// `true` when the process-level configuration suggests harness
 /// sessions will reach a non-loopback target. Intentionally kept crude
 /// — false positives cost a log line at boot, false negatives would

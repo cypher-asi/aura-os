@@ -11,7 +11,7 @@ use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::handlers::{
-    agent_bootstrap, agent_tools, agents, auth, billing, browser, debug_runs, dev_loop, feed,
+    agent_bootstrap, agents, auth, billing, browser, debug_runs, dev_loop, feed,
     feedback, files, follows, generation, harness_proxy, leaderboard, log, marketplace, notes,
     org_tools, orgs, process, project_artifacts, project_stats, projects, remote_files, remote_terminal, specs, swarm,
     system, tasks, terminal, users, ws,
@@ -566,15 +566,6 @@ fn agent_bootstrap_routes() -> Router<AppState> {
         .route(
             "/api/super-agent/events",
             get(agent_bootstrap::list_pending_events),
-        )
-        // Dispatcher that lets a harness-hosted agent execute
-        // cross-agent tools (spawn_agent, control_agent, etc.) in
-        // process. Gated per-agent by `AgentPermissions::capabilities`
-        // at `send_agent_event_stream` build time — this route merely
-        // resolves the tool by name.
-        .route(
-            "/api/agent_tools/:name",
-            post(agent_tools::dispatch_agent_tool),
         )
         // Non-blocking harness reachability probe for the agent
         // editor's Local/Cloud toggle.

@@ -1,3 +1,4 @@
+pub mod agent_events;
 mod app_builder;
 mod auth_guard;
 mod billing_bridge;
@@ -13,6 +14,7 @@ pub mod orbit_guard;
 
 pub mod loop_log;
 
+pub(crate) mod orchestration_store;
 pub(crate) mod persistence;
 pub(crate) mod reconciler;
 pub(crate) mod router;

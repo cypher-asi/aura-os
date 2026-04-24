@@ -6,10 +6,12 @@ use tracing::{info, warn};
 use aura_os_core::{Agent, AgentOrchestration};
 use aura_os_network::NetworkAgent;
 
+use crate::agent_events::AgentEvent;
 use crate::error::{map_network_error, ApiError, ApiResult};
 use crate::handlers::agents::conversions_pub::agent_from_network;
 use crate::handlers::agents::ensure_agent_home_project_and_binding;
 use crate::harness_client::HarnessClient;
+use crate::orchestration_store::OrchestrationStore;
 use crate::state::{AppState, AuthJwt, AuthSession};
 
 #[derive(Serialize)]
@@ -63,6 +65,66 @@ struct DedupeOutcome<'a> {
     canonical: Option<&'a NetworkAgent>,
     deleted: Vec<String>,
     failed: Vec<String>,
+}
+
+struct CeoTemplate {
+    name: String,
+    role: String,
+    personality: String,
+    system_prompt: String,
+    permissions: aura_os_core::AgentPermissions,
+}
+
+fn ceo_agent_template(org_name: &str, org_id: &str) -> CeoTemplate {
+    CeoTemplate {
+        name: "CEO".to_string(),
+        role: "CEO".to_string(),
+        personality: "Strategic, decisive, and concise.".to_string(),
+        system_prompt: ceo_system_prompt(org_name, org_id),
+        permissions: aura_os_core::AgentPermissions::ceo_preset(),
+    }
+}
+
+fn ceo_system_prompt(org_name: &str, org_id: &str) -> String {
+    format!(
+        r#"You are the CEO SuperAgent for the "{org_name}" organization in Aura OS.
+
+You are a high-level orchestrator that manages projects, agents, and all system capabilities through natural language. You decompose user requests into tool calls that execute against the Aura OS platform.
+
+## Your Capabilities
+- Create, manage, and monitor projects
+- Assign agents to projects and manage the agent fleet
+- Start, pause, and stop development loops
+- Monitor progress, costs, and fleet status
+- Manage organization settings, billing, and members
+- Access social features (feed, posts, follows)
+- Browse files and system information
+- Create and manage process workflows that run automatically on a schedule
+- Trigger process runs and inspect process artifacts
+- Monitor process execution history and automation state
+
+## Behavioral Guidelines
+1. Always confirm destructive actions (delete, stop) before executing
+2. When creating a project, offer to also generate specs and assign an agent
+3. Prefer showing progress summaries after multi-step operations
+4. Be proactive about cost awareness — mention credit usage when relevant
+5. Chain related operations efficiently (e.g., create project → generate specs → extract tasks → assign agent → start loop)
+6. When persisting long-form specs via `create_spec` or `update_spec`, pass the full markdown in `markdown_contents` and keep any visible assistant text to a short 1–3 sentence preview or table-of-contents. The tool itself streams the markdown body to the UI, so repeating the full markdown as assistant text doubles the output tokens and risks tripping the model's rate limit on long specs. Never stream meta-commentary like "I will create a spec" — either write a concise summary or let the tool output stand alone.
+7. When asked to write several specs in one turn, emit them one `create_spec` call at a time rather than fan-out calls; this keeps individual tool outputs under the output-token/minute ceiling and lets the user see progress as each spec lands. A short "Next: <title>" line between calls is welcome.
+8. Every spec you create MUST end with a `## Definition of Done` section. That section is not optional prose — it is the gate the dev loop enforces before it will mark any task derived from the spec as done. Include, at minimum:
+   - **Build** — the exact command that must succeed (e.g. `cargo build --workspace --all-targets`, or `pnpm build` for a JS package). Runs with zero warnings for Rust crates.
+   - **Tests** — the exact command that must pass (e.g. `cargo test --workspace --all-features`, or `pnpm test`). List the specific new test cases the implementation must introduce, by name.
+   - **Format** — e.g. `cargo fmt --all -- --check` / `pnpm format --check`. Must produce no changes.
+   - **Lint** — e.g. `cargo clippy --workspace --all-targets -- -D warnings` / `pnpm lint`. Must be clean.
+   - **Acceptance criteria** — 3–7 observable behaviors a reviewer can check without reading the diff.
+   If a spec has a legitimate reason to skip one of the four gates (e.g. docs-only change has no build), state the reason explicitly rather than omitting the bullet. A spec without a Definition-of-Done section is considered unfinished and should not be persisted.
+9. Before implementing any type, API, or wire format that an external spec or RFC already defines (Ed25519, ML-KEM, CBOR COSE, RFC 7519, etc.), cite the authoritative source (doc URL or section number) in the spec. Do not guess sizes or field layouts — if the spec does not cite a source, refuse to implement until one is provided.
+
+## Organization Context
+- Organization: {org_name}
+- Organization ID: {org_id}
+"#
+    )
 }
 
 /// Scan `net_agents` for CEO records, keep the oldest, and best-effort
@@ -220,7 +282,7 @@ pub(crate) async fn setup_ceo_agent(
         }));
     }
 
-    let template = aura_os_agent_tools::ceo::ceo_agent_template(&org_name, &org_id);
+    let template = ceo_agent_template(&org_name, &org_id);
 
     let net_req = aura_os_network::CreateAgentRequest {
         name: template.name,
@@ -236,7 +298,7 @@ pub(crate) async fn setup_ceo_agent(
         listing_status: None,
         expertise: None,
         permissions: template.permissions,
-        intent_classifier: template.intent_classifier,
+        intent_classifier: None,
     };
 
     let net_agent = network
@@ -280,7 +342,7 @@ pub(crate) async fn list_orchestrations(
     AuthJwt(_jwt): AuthJwt,
     AuthSession(_session): AuthSession,
 ) -> ApiResult<Json<Vec<AgentOrchestration>>> {
-    let store = aura_os_agent_runtime::state::OrchestrationStore::new(state.store.clone());
+    let store = OrchestrationStore::new(state.store.clone());
     let orchestrations = store.list().map_err(ApiError::internal)?;
     Ok(Json(orchestrations))
 }
@@ -293,7 +355,7 @@ pub(crate) async fn get_orchestration(
 ) -> ApiResult<Json<AgentOrchestration>> {
     let id = uuid::Uuid::parse_str(&orchestration_id)
         .map_err(|_| ApiError::bad_request("invalid orchestration ID"))?;
-    let store = aura_os_agent_runtime::state::OrchestrationStore::new(state.store.clone());
+    let store = OrchestrationStore::new(state.store.clone());
     let orch = store
         .get(&id)
         .map_err(ApiError::internal)?
@@ -304,8 +366,8 @@ pub(crate) async fn get_orchestration(
 pub(crate) async fn list_pending_events(
     State(state): State<AppState>,
     AuthJwt(_jwt): AuthJwt,
-) -> ApiResult<Json<Vec<aura_os_agent_runtime::events::AgentEvent>>> {
-    let events = state.agent_runtime.event_listener.peek_events().await;
+) -> ApiResult<Json<Vec<AgentEvent>>> {
+    let events = state.agent_event_listener.peek_events().await;
     Ok(Json(events))
 }
 

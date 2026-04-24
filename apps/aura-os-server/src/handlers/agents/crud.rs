@@ -1117,11 +1117,6 @@ pub(crate) async fn update_agent(
     //   `SessionConfig::agent_id`) so we can resolve all affected
     //   sessions from a single in-memory sweep instead of a per-key
     //   storage round-trip.
-    // * The dispatcher's `permissions_cache` entry for this agent.
-    //   This is what guarantees correctness even if a session slipped
-    //   past the sweep: the next tool call re-loads permissions and
-    //   re-runs `check_capabilities` against the fresh bundle.
-    //
     // Best-effort: lock contention failures are silently dropped
     // rather than failing the update — the worst case is a stale
     // session that will self-correct on the next `reset_*_session`
@@ -1140,8 +1135,6 @@ pub(crate) async fn update_agent(
             reg.remove(&key);
         }
     }
-    state.permissions_cache.remove(&target_agent_id);
-
     Ok(Json(agent))
 }
 

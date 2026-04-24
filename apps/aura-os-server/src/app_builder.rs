@@ -11,9 +11,9 @@ use aura_os_billing::BillingClient;
 use aura_os_integrations::IntegrationsClient;
 use aura_os_link::{local_harness_base_url, HarnessLink, LocalHarness, SwarmHarness};
 
+use crate::agent_events::AgentEventListener;
 use crate::harness_gateway::HarnessHttpGateway;
 use crate::loop_log::LoopLogWriter;
-use aura_os_agent_runtime::AgentRuntimeService;
 use aura_os_network::{NetworkClient, OrbitClient};
 use aura_os_orgs::OrgService;
 use aura_os_projects::ProjectService;
@@ -97,6 +97,33 @@ fn spawn_health_checks(
 
 fn env_opt(key: &str) -> Option<String> {
     std::env::var(key).ok().filter(|s| !s.trim().is_empty())
+}
+
+fn build_local_http_client() -> reqwest::Client {
+    reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(3))
+        .build()
+        .expect("failed to build local HTTP client")
+}
+
+fn spawn_process_scheduler(
+    process_executor: Arc<aura_os_process::ProcessExecutor>,
+    storage_client: &Option<Arc<StorageClient>>,
+) {
+    let Some(storage_client) = storage_client.clone() else {
+        info!("Process scheduler disabled: aura-storage is not configured");
+        return;
+    };
+    if !storage_client.has_internal_token() {
+        info!("Process scheduler disabled: AURA_STORAGE_INTERNAL_TOKEN is not configured");
+        return;
+    }
+    let process_sched = Arc::new(aura_os_process::ProcessScheduler::new(
+        process_executor,
+        Some(storage_client),
+    ));
+    process_sched.spawn();
+    info!("Process scheduler spawned");
 }
 
 /// Build the [`aura_os_browser::BrowserManager`] using the real Chromium
@@ -397,11 +424,7 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
     let router_url = std::env::var("AURA_ROUTER_URL")
         .unwrap_or_else(|_| "https://aura-router.onrender.com".to_string());
     let local_server_base_url = resolve_local_server_base_url();
-    // Build the tool registry + process executor outside the runtime so
-    // Tier D's slim `aura-os-agent-runtime` doesn't need to pull in
-    // tool-implementation deps. Tools live in `aura-os-agent-tools`; the
-    // `ProcessExecutor` is owned by the server because it depends on the
-    // data directory + storage client.
+    let http_client = build_local_http_client();
     let process_executor = Arc::new(aura_os_process::ProcessExecutor::new(
         event_broadcast.clone(),
         data_dir.clone(),
@@ -412,38 +435,14 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         storage_client.clone(),
         domain.task_service.clone(),
         router_url.clone(),
-        reqwest::Client::new(),
+        http_client.clone(),
     ));
-    let tool_registry = {
-        let mut registry = aura_os_agent_tools::build_registry();
-        aura_os_agent_tools::register_process_tools(&mut registry, process_executor.clone());
-        Arc::new(registry)
-    };
-    let agent_runtime = Arc::new(
-        AgentRuntimeService::new(
-            tool_registry,
-            process_executor,
-            router_url,
-            domain.project_service.clone(),
-            domain.agent_service.clone(),
-            domain.agent_instance_service.clone(),
-            domain.task_service.clone(),
-            domain.session_service.clone(),
-            core.org_service.clone(),
-            core.billing_client.clone(),
-            automaton_client.clone(),
-            network_client.clone(),
-            storage_client.clone(),
-            orbit_client.clone(),
-            store.clone(),
-            event_broadcast.clone(),
-            domain.local_harness.clone(),
-        )
-        .with_local_server_base_url(local_server_base_url),
-    );
+    let _local_server_base_url = local_server_base_url;
 
     // Spawn scheduled process execution.
-    agent_runtime.spawn_scheduler();
+    spawn_process_scheduler(process_executor.clone(), &storage_client);
+    let agent_event_listener = Arc::new(AgentEventListener::new(100));
+    agent_event_listener.spawn(event_broadcast.subscribe());
 
     spawn_health_checks(&storage_client, &network_client, &integrations_client);
     if let Some(ref client) = network_client {
@@ -461,11 +460,6 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         validation_cache.clone(),
         event_broadcast.clone(),
     );
-
-    // Emit the active cross-agent tool policy mode once at startup
-    // so operators can confirm the env flag landed before any traffic
-    // hits the dispatcher.
-    crate::handlers::agent_tools::log_active_policy_mode();
 
     Ok(AppState {
         data_dir,
@@ -502,9 +496,11 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         orbit_capacity_guard,
         validation_cache,
         agent_discovery_cache: Arc::new(dashmap::DashMap::new()),
-        agent_runtime,
+        router_url,
+        http_client,
+        process_executor,
+        agent_event_listener,
         loop_log,
-        permissions_cache: aura_os_agent_runtime::policy::PermissionsCache::new(),
     })
 }
 

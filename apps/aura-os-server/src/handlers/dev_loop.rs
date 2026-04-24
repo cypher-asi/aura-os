@@ -6384,8 +6384,8 @@ pub(crate) async fn start_loop(
         session_service: state.session_service.clone(),
         agent_instance_service: state.agent_instance_service.clone(),
         usage_reporting,
-        router_url: state.agent_runtime.router_url.clone(),
-        http_client: state.agent_runtime.http_client.clone(),
+        router_url: state.router_url.clone(),
+        http_client: state.http_client.clone(),
         // Dev loop already handles retries via its own task scheduler; the
         // outer loop will pick the task up again if it was reset.
         retry: Some(TransientRetryContext {
@@ -7006,8 +7006,8 @@ pub(crate) async fn run_single_task(
             session_service: state.session_service.clone(),
             agent_instance_service: state.agent_instance_service.clone(),
             usage_reporting,
-            router_url: state.agent_runtime.router_url.clone(),
-            http_client: state.agent_runtime.http_client.clone(),
+            router_url: state.router_url.clone(),
+            http_client: state.http_client.clone(),
             // Allow a small number of automatic restarts of the automaton
             // on infra-transient failures (stream closed without terminal
             // event, `error` event with no accompanying `task_failed`, and

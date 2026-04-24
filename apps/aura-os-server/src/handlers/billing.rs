@@ -176,7 +176,6 @@ mod tests {
     use tokio::net::TcpListener;
     use tokio::sync::{broadcast, Mutex};
 
-    use aura_os_agent_runtime::AgentRuntimeService;
     use aura_os_agents::{AgentInstanceService, AgentService};
     use aura_os_auth::AuthService;
     use aura_os_billing::BillingClient;
@@ -290,30 +289,8 @@ mod tests {
             router_url.clone(),
             reqwest::Client::new(),
         ));
-        let tool_registry = {
-            let mut registry = aura_os_agent_tools::build_registry();
-            aura_os_agent_tools::register_process_tools(&mut registry, process_executor.clone());
-            Arc::new(registry)
-        };
-        let agent_runtime = Arc::new(AgentRuntimeService::new(
-            tool_registry,
-            process_executor,
-            router_url,
-            project_service.clone(),
-            agent_service.clone(),
-            agent_instance_service.clone(),
-            task_service.clone(),
-            session_service.clone(),
-            org_service.clone(),
-            billing_client.clone(),
-            automaton_client.clone(),
-            None,
-            None,
-            None,
-            store.clone(),
-            event_broadcast.clone(),
-            local_harness.clone(),
-        ));
+        let agent_event_listener = Arc::new(crate::agent_events::AgentEventListener::new(100));
+        agent_event_listener.spawn(event_broadcast.subscribe());
 
         (
             AppState {
@@ -351,11 +328,13 @@ mod tests {
                 orbit_capacity_guard: Arc::new(crate::orbit_guard::OrbitCapacityGuard::new()),
                 validation_cache: Arc::new(dashmap::DashMap::new()),
                 agent_discovery_cache: Arc::new(dashmap::DashMap::new()),
-                agent_runtime,
+                router_url,
+                http_client: reqwest::Client::new(),
+                process_executor,
+                agent_event_listener,
                 loop_log: Arc::new(crate::loop_log::LoopLogWriter::new(
                     store_dir.path().join("loop_logs"),
                 )),
-                permissions_cache: aura_os_agent_runtime::policy::PermissionsCache::new(),
             },
             store_dir,
         )

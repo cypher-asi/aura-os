@@ -18,9 +18,9 @@ use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, ZeroAuthSession};
 use aura_os_integrations::IntegrationsClient;
 use aura_os_link::{AutomatonClient, HarnessInbound, HarnessLink, HarnessOutbound};
 
+use crate::agent_events::AgentEventListener;
 use crate::harness_gateway::HarnessHttpGateway;
 use crate::loop_log::LoopLogWriter;
-use aura_os_agent_runtime::AgentRuntimeService;
 use aura_os_browser::BrowserManager;
 use aura_os_network::NetworkClient;
 use aura_os_orgs::OrgService;
@@ -508,19 +508,15 @@ pub struct AppState {
     /// chat opens and sidebar preview prefetches. See
     /// [`CachedAgentDiscovery`] for details.
     pub agent_discovery_cache: AgentDiscoveryCache,
-    pub agent_runtime: Arc<AgentRuntimeService>,
+    pub router_url: String,
+    pub http_client: reqwest::Client,
+    pub process_executor: Arc<aura_os_process::ProcessExecutor>,
+    pub agent_event_listener: Arc<AgentEventListener>,
     /// Filesystem logger for the dev automation loop. Every active
     /// automaton gets a run bundle on disk containing the full event
     /// stream, per-category debug channels, and task outputs; the Debug
     /// UI app and `aura-run-analyze` read from the same directory.
     pub loop_log: Arc<LoopLogWriter>,
-    /// Session-open permissions cache consulted by the cross-agent tool
-    /// dispatcher. Populated in `chat.rs` when a harness session is
-    /// opened for an agent / agent-instance so the dispatcher can answer
-    /// capability checks without a round-trip to aura-network. See
-    /// [`aura_os_agent_runtime::policy::PermissionsCache`] for the TTL
-    /// and lookup semantics.
-    pub permissions_cache: aura_os_agent_runtime::policy::PermissionsCache,
 }
 
 impl AppState {

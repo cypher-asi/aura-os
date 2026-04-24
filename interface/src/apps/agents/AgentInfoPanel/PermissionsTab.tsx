@@ -258,9 +258,8 @@ function ActiveHarnessToolsSection({
               {data.missing_registrations.join(", ")}
             </Text>
             <Text size="xs" variant="muted">
-              These names are declared by the agent's capabilities but the
-              server's <code>/api/agent_tools/:name</code> dispatcher has no
-              handler with this exact name, so calls to them will fail.
+              These legacy names are not available through the current
+              harness-delegated tool surface, so calls to them will fail.
             </Text>
           </div>
         </div>

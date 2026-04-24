@@ -97,23 +97,6 @@ pub enum StepStatus {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum ToolDomain {
-    Project,
-    Spec,
-    Task,
-    Agent,
-    Execution,
-    Org,
-    Billing,
-    Social,
-    Monitoring,
-    System,
-    Generation,
-    Process,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub enum ArtifactType {
     Report,
     Document,

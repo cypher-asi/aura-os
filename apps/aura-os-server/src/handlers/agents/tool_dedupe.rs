@@ -351,11 +351,10 @@ mod tests {
     #[test]
     fn strip_harness_native_does_not_drop_server_only_system_tool_names() {
         // Regression: a previous version of this list wrongly included
-        // `browse_files` and `get_environment_info`, names that are
-        // defined only in `aura-os-agent-templates::ceo_tool_manifest`
-        // and NOT in the harness catalog. Stripping them silently
-        // removed real capability from the model's schema. Keep them
-        // off the native list.
+        // `browse_files` and `get_environment_info`, names that were
+        // historically server-only and NOT in the harness catalog.
+        // Stripping them silently removed real capability from the
+        // model's schema. Keep them off the native list.
         let mut tools = vec![
             tool_named("browse_files"),
             tool_named("get_environment_info"),

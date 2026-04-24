@@ -394,9 +394,6 @@ mod tests {
             .unwrap(),
         );
         let (event_broadcast, _) = tokio::sync::broadcast::channel(16);
-        let local_harness: Arc<dyn aura_os_link::HarnessLink> = Arc::new(
-            aura_os_link::LocalHarness::new("http://localhost:8080".to_string()),
-        );
         let router_url = "http://localhost:9998".to_string();
         let agent_service_arc = Arc::new(aura_os_agents::AgentService::new(store.clone(), None));
         let task_service_arc = Arc::new(aura_os_tasks::TaskService::new(store.clone(), None));
@@ -415,39 +412,8 @@ mod tests {
             router_url.clone(),
             reqwest::Client::new(),
         ));
-        let tool_registry = {
-            let mut registry = aura_os_agent_tools::build_registry();
-            aura_os_agent_tools::register_process_tools(&mut registry, process_executor.clone());
-            Arc::new(registry)
-        };
-        let agent_runtime = Arc::new(aura_os_agent_runtime::AgentRuntimeService::new(
-            tool_registry,
-            process_executor,
-            router_url,
-            Arc::new(aura_os_projects::ProjectService::new(store.clone())),
-            agent_service_arc,
-            Arc::new(aura_os_agents::AgentInstanceService::new(
-                store.clone(),
-                None,
-                Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
-                None,
-            )),
-            task_service_arc,
-            Arc::new(aura_os_sessions::SessionService::new(
-                store.clone(),
-                0.8,
-                200_000,
-            )),
-            org_service_arc,
-            Arc::new(aura_os_billing::BillingClient::new()),
-            automaton_client_arc,
-            None,
-            None,
-            None,
-            store.clone(),
-            event_broadcast.clone(),
-            local_harness,
-        ));
+        let agent_event_listener = Arc::new(crate::agent_events::AgentEventListener::new(100));
+        agent_event_listener.spawn(event_broadcast.subscribe());
 
         AppState {
             data_dir: std::env::temp_dir(),
@@ -495,11 +461,13 @@ mod tests {
             ),
             validation_cache: cache,
             agent_discovery_cache: Arc::new(dashmap::DashMap::new()),
-            agent_runtime,
+            router_url,
+            http_client: reqwest::Client::new(),
+            process_executor,
+            agent_event_listener,
             loop_log: Arc::new(crate::loop_log::LoopLogWriter::new(
                 std::env::temp_dir().join(format!("aura-test-loop-{}-{id}", std::process::id())),
             )),
-            permissions_cache: aura_os_agent_runtime::policy::PermissionsCache::new(),
         }
     }
 
