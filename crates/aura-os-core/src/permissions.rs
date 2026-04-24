@@ -182,6 +182,58 @@ impl AgentPermissions {
             self
         }
     }
+
+    /// Splice `ReadProject { id: project_id }` and
+    /// `WriteProject { id: project_id }` into this bundle *iff* it
+    /// doesn't already satisfy the corresponding
+    /// `CapabilityRequirement::ReadProjectFromArg` /
+    /// `WriteProjectFromArg` gate for `project_id` (via an exact grant
+    /// or a `ReadAllProjects` / `WriteAllProjects` wildcard).
+    ///
+    /// # Why
+    ///
+    /// `build_cross_agent_tools` in `aura-os-agent-tools` filters the
+    /// session's `installed_tools` manifest through
+    /// `permissions_satisfy_requirements`: project-scoped tools
+    /// (`get_project`, `list_specs`, `create_spec`, `create_task`,
+    /// `run_task`, …) require at least *some* project grant. When a
+    /// non-CEO agent is persisted with an empty `capabilities` list
+    /// (common for fresh agents whose permissions column was never
+    /// populated), every one of those tools is dropped from the
+    /// manifest shipped to the harness. The harness then denies each
+    /// call with `"Tool 'X' is not allowed"` because its kernel policy
+    /// defaults to `allow_unlisted = false`.
+    ///
+    /// Calling this helper at chat-open time — when we already know
+    /// the agent is bound to `project_id` and the session's JWT will
+    /// re-verify project membership on every downstream aura-storage /
+    /// aura-network call — closes that gap without weakening the
+    /// capability gate: the splice only grants self-project access,
+    /// not arbitrary ids.
+    #[must_use]
+    pub fn with_project_self_caps(mut self, project_id: &str) -> Self {
+        let has_read = self.capabilities.iter().any(|c| match c {
+            Capability::ReadProject { id } | Capability::WriteProject { id } => id == project_id,
+            Capability::ReadAllProjects | Capability::WriteAllProjects => true,
+            _ => false,
+        });
+        let has_write = self.capabilities.iter().any(|c| match c {
+            Capability::WriteProject { id } => id == project_id,
+            Capability::WriteAllProjects => true,
+            _ => false,
+        });
+        if !has_read {
+            self.capabilities.push(Capability::ReadProject {
+                id: project_id.to_string(),
+            });
+        }
+        if !has_write {
+            self.capabilities.push(Capability::WriteProject {
+                id: project_id.to_string(),
+            });
+        }
+        self
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -382,6 +434,93 @@ mod tests {
         let preset = AgentPermissions::ceo_preset();
         let same = preset.clone().normalized_for_identity("CEO", Some("CEO"));
         assert_eq!(same, preset);
+    }
+
+    #[test]
+    fn with_project_self_caps_splices_both_read_and_write_for_empty_bundle() {
+        let perms = AgentPermissions::empty().with_project_self_caps("proj-42");
+        assert!(perms.capabilities.contains(&Capability::ReadProject {
+            id: "proj-42".into(),
+        }));
+        assert!(perms.capabilities.contains(&Capability::WriteProject {
+            id: "proj-42".into(),
+        }));
+    }
+
+    #[test]
+    fn with_project_self_caps_is_noop_for_matching_grant() {
+        // Agent already has the exact grant — splice must not duplicate.
+        let existing = AgentPermissions {
+            scope: AgentScope::default(),
+            capabilities: vec![
+                Capability::ReadProject {
+                    id: "proj-42".into(),
+                },
+                Capability::WriteProject {
+                    id: "proj-42".into(),
+                },
+            ],
+        };
+        let after = existing.clone().with_project_self_caps("proj-42");
+        assert_eq!(after, existing);
+    }
+
+    #[test]
+    fn with_project_self_caps_is_noop_for_wildcard_holder() {
+        // CEO preset holds ReadAllProjects + WriteAllProjects wildcards;
+        // the splice must treat those as satisfying both halves and
+        // leave the bundle untouched so we don't pollute the CEO
+        // manifest with exact-id grants it doesn't need.
+        let preset = AgentPermissions::ceo_preset();
+        let after = preset.clone().with_project_self_caps("proj-42");
+        assert_eq!(after, preset);
+    }
+
+    #[test]
+    fn with_project_self_caps_adds_write_when_only_read_present() {
+        // Agent has ReadProject for the bound project but no write
+        // grant — splice must add the write half without duplicating
+        // the read half.
+        let before = AgentPermissions {
+            scope: AgentScope::default(),
+            capabilities: vec![Capability::ReadProject {
+                id: "proj-42".into(),
+            }],
+        };
+        let after = before.with_project_self_caps("proj-42");
+        assert_eq!(
+            after
+                .capabilities
+                .iter()
+                .filter(|c| matches!(c, Capability::ReadProject { id } if id == "proj-42"))
+                .count(),
+            1
+        );
+        assert!(after.capabilities.contains(&Capability::WriteProject {
+            id: "proj-42".into(),
+        }));
+    }
+
+    #[test]
+    fn with_project_self_caps_does_not_satisfy_other_projects() {
+        // ReadProject for proj-a must not be considered as covering
+        // proj-b — splicing for proj-b should add both halves.
+        let before = AgentPermissions {
+            scope: AgentScope::default(),
+            capabilities: vec![Capability::WriteProject {
+                id: "proj-a".into(),
+            }],
+        };
+        let after = before.with_project_self_caps("proj-b");
+        assert!(after.capabilities.contains(&Capability::ReadProject {
+            id: "proj-b".into(),
+        }));
+        assert!(after.capabilities.contains(&Capability::WriteProject {
+            id: "proj-b".into(),
+        }));
+        assert!(after.capabilities.contains(&Capability::WriteProject {
+            id: "proj-a".into(),
+        }));
     }
 
     #[test]

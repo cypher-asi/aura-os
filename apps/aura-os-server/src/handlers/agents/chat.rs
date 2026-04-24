@@ -2570,10 +2570,30 @@ pub(crate) async fn send_agent_event_stream(
     // source for `list_agents` / `get_fleet_status`). Normalising
     // here means session-open and dispatch agree on the bundle
     // post-CEO-promotion.
-    let normalized_perms = agent
-        .permissions
-        .clone()
-        .normalized_for_identity(&agent.name, Some(agent.role.as_str()));
+    // When the caller binds the turn to a project via `body.project_id`,
+    // splice the self-project `ReadProject` / `WriteProject` caps into
+    // the agent's normalized bundle so project-scoped tools
+    // (`get_project`, `list_specs`, `create_spec`, `create_task`,
+    // `run_task`, …) survive the `permissions_satisfy_requirements`
+    // filter in `build_cross_agent_tools`. Without this splice, a
+    // non-CEO agent whose persisted `capabilities` column is empty
+    // would ship an `installed_tools` manifest missing all of those,
+    // and the harness kernel (fail-closed `allow_unlisted = false`)
+    // would deny each call with `"Tool 'X' is not allowed"`. Unlike
+    // `agent_instance_chat` — where the binding is part of the
+    // instance record — this handler is also used for non-project
+    // chats, so the splice is gated on `body.project_id` being
+    // present.
+    let normalized_perms = {
+        let base = agent
+            .permissions
+            .clone()
+            .normalized_for_identity(&agent.name, Some(agent.role.as_str()));
+        match body.project_id.as_deref() {
+            Some(pid) if !pid.is_empty() => base.with_project_self_caps(pid),
+            _ => base,
+        }
+    };
     state
         .permissions_cache
         .insert(agent_id.to_string(), normalized_perms.clone());
@@ -2825,9 +2845,26 @@ pub(crate) async fn send_event_stream(
     // reads the raw header value and must find an entry under that
     // string. Stamping the template `agent_id` here would silently
     // miss every project-agent-instance tool call.
+    //
+    // `with_project_self_caps` is unconditional here because an
+    // instance is by construction bound to `pid_str`. Without the
+    // splice, a non-CEO agent whose `capabilities` column is empty
+    // (the common case for fresh / non-preset agents) fails the
+    // `ReadProjectFromArg` / `WriteProjectFromArg` gate in
+    // `build_cross_agent_tools`, which silently drops
+    // `get_project` / `list_specs` / `create_spec` / `create_task` /
+    // `run_task` / ... from the shipped manifest. The harness kernel
+    // policy then denies each call with `"Tool 'X' is not allowed"`
+    // because `allow_unlisted = false` is the fail-closed default.
+    // Granting self-project caps here is not a privilege escalation:
+    // the downstream aura-network / aura-storage handlers already
+    // re-verify project membership via the session JWT on every real
+    // API call — the cap gate was a redundant first-pass filter for
+    // the one project the instance is bound to.
     let normalized_instance_perms = effective_permissions
         .clone()
-        .normalized_for_identity(&instance.name, Some(instance.role.as_str()));
+        .normalized_for_identity(&instance.name, Some(instance.role.as_str()))
+        .with_project_self_caps(&pid_str);
     state.permissions_cache.insert(
         agent_instance_id.to_string(),
         normalized_instance_perms.clone(),
@@ -2876,7 +2913,19 @@ pub(crate) async fn send_event_stream(
         )?,
         installed_tools,
         installed_integrations,
-        agent_permissions: (&effective_permissions).into(),
+        // Ship the *spliced* bundle to the harness, not the raw
+        // `effective_permissions`. If we shipped the pre-splice bundle
+        // here the kernel's capability check would reject calls whose
+        // tool survived the manifest filter (which uses the spliced
+        // bundle), since the manifest gate and the per-call gate
+        // would disagree on whether `ReadProject { id: pid_str }` is
+        // granted. Keeping both sides aligned on
+        // `normalized_instance_perms` makes the kernel's first-pass
+        // manifest filter and its per-call `holds_capability` check
+        // consistent, which is the invariant the harness relies on to
+        // avoid "tool was in `installed_tools` but denied at call time"
+        // surprises.
+        agent_permissions: (&normalized_instance_perms).into(),
         intent_classifier: instance.intent_classifier.clone(),
         ..Default::default()
     };

@@ -236,6 +236,65 @@ mod tests {
     }
 
     #[test]
+    fn empty_bundle_spliced_with_project_self_caps_ships_project_tools() {
+        // Regression for the "Tool 'get_project' / 'list_specs' /
+        // 'create_spec' is not allowed" failures seen when a project-
+        // bound chat session opened for a non-CEO agent whose
+        // persisted `capabilities` column was empty. The chat
+        // handlers now call
+        // [`AgentPermissions::with_project_self_caps`] with the bound
+        // project id before passing the bundle to
+        // `build_session_tool_names`; this test locks in that the
+        // spliced bundle does indeed surface every project-scoped
+        // tool the error reports referenced.
+        let spliced = AgentPermissions::empty().with_project_self_caps("proj-42");
+        let tools = build_session_tools(&spliced, &[]);
+        let names = tool_names(&tools);
+        for required in [
+            "get_project",
+            "list_specs",
+            "get_spec",
+            "create_spec",
+            "update_spec",
+            "delete_spec",
+            "list_tasks",
+            "create_task",
+            "update_project",
+        ] {
+            assert!(
+                names.contains(&required),
+                "spliced bundle must include `{required}`; got {names:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn with_project_self_caps_is_scoped_to_bound_project() {
+        // The splice grants access to `proj-42` only — tools gated on
+        // `proj-other` should still be filtered out if a tool checks
+        // a different project. We exercise this through the normal
+        // filter: a bundle spliced for `proj-42` that's asked to act
+        // against `proj-other` won't bypass the runtime capability
+        // gate (enforced at tool-call time by the harness), but the
+        // manifest should still list the tool since manifest-level
+        // filtering only checks whether *any* satisfying grant
+        // exists. This test documents the current design: the splice
+        // is a session-open safety net, not a per-call authorisation.
+        let spliced = AgentPermissions::empty().with_project_self_caps("proj-42");
+        assert!(
+            spliced.capabilities.contains(&Capability::ReadProject {
+                id: "proj-42".into()
+            })
+        );
+        assert!(
+            !spliced.capabilities.contains(&Capability::ReadProject {
+                id: "proj-other".into()
+            }),
+            "splice must not leak access to unrelated projects"
+        );
+    }
+
+    #[test]
     fn session_tool_descriptions_are_not_empty() {
         // Regression guard for the "InstalledTool schema empty" bug:
         // every shipped tool must carry the canonical description +
