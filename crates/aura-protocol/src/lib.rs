@@ -46,6 +46,8 @@ pub enum InboundMessage {
     Cancel,
     /// Respond to an approval request.
     ApprovalResponse(ApprovalResponse),
+    /// Respond to a live tool approval prompt.
+    ToolApprovalResponse(ToolApprovalResponse),
     /// Request image or 3D generation.
     GenerationRequest(GenerationRequest),
 }
@@ -113,6 +115,9 @@ pub struct SessionInit {
     /// skills are installed for this agent.
     #[serde(default)]
     pub agent_id: Option<String>,
+    /// Originating end-user id for resolving and persisting tool defaults.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub user_id: Option<String>,
     /// Optional per-session provider override for BYOK/runtime isolation.
     #[serde(default)]
     pub provider_config: Option<SessionProviderConfig>,
@@ -311,6 +316,35 @@ pub struct ApprovalResponse {
     pub tool_use_id: String,
     pub approved: bool,
 }
+
+/// User decision for a live tool approval prompt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "typescript", derive(TS), ts(export))]
+pub enum ToolApprovalDecision {
+    #[serde(rename = "on")]
+    On,
+    #[serde(rename = "off")]
+    Off,
+}
+
+/// Scope for remembering a live tool approval decision.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "typescript", derive(TS), ts(export))]
+#[serde(rename_all = "snake_case")]
+pub enum ToolApprovalRemember {
+    Once,
+    Session,
+    Forever,
+}
+
+/// Payload for `tool_approval_response`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "typescript", derive(TS), ts(export))]
+pub struct ToolApprovalResponse {
+    pub request_id: String,
+    pub decision: ToolApprovalDecision,
+    pub remember: ToolApprovalRemember,
+}
 /// Payload for `generation_request`.
 ///
 /// Fields are mode-dependent:
@@ -361,6 +395,8 @@ pub enum OutboundMessage {
     ToolCallSnapshot(ToolCallSnapshot),
     /// Result of a tool execution.
     ToolResult(ToolResultMsg),
+    /// Ask the client to approve or deny a live tool call.
+    ToolApprovalPrompt(ToolApprovalPrompt),
     /// End of an assistant message (turn complete).
     AssistantMessageEnd(AssistantMessageEnd),
     /// An error occurred.
@@ -451,6 +487,17 @@ pub struct ToolResultMsg {
     pub is_error: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_use_id: Option<String>,
+}
+
+/// Payload for `tool_approval_prompt`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "typescript", derive(TS), ts(export))]
+pub struct ToolApprovalPrompt {
+    pub request_id: String,
+    pub tool_name: String,
+    pub args: serde_json::Value,
+    pub agent_id: String,
+    pub remember_options: Vec<ToolApprovalRemember>,
 }
 
 /// Payload for `assistant_message_end`.
