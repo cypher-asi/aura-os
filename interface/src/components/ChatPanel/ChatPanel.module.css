@@ -219,13 +219,13 @@
   opacity: 0;
 }
 
-/* Queue section — sits above the input area */
+/* Queue section — sits above the input area and the cooking indicator */
 .queueSection {
   position: absolute;
   bottom: 80px;
   left: 0;
   right: 0;
-  z-index: 11;
+  z-index: 12;
   padding: 0 var(--space-3);
   pointer-events: auto;
 }
