@@ -145,6 +145,7 @@ async fn build_session_installed_tools(
     agent_id: &str,
     machine_type: &str,
     user_message: Option<&str>,
+    project_id: Option<&str>,
 ) -> ApiResult<Option<Vec<InstalledTool>>> {
     build_session_installed_tools_with_integrations(
         state,
@@ -156,6 +157,7 @@ async fn build_session_installed_tools(
         machine_type,
         user_message,
         None,
+        project_id,
     )
     .await
 }
@@ -171,6 +173,7 @@ async fn build_session_installed_tools_with_integrations(
     machine_type: &str,
     user_message: Option<&str>,
     integrations: Option<&[aura_os_core::OrgIntegration]>,
+    project_id: Option<&str>,
 ) -> ApiResult<Option<Vec<InstalledTool>>> {
     let mut tools = if let Some(org_id) = org_id {
         match integrations {
@@ -210,6 +213,7 @@ async fn build_session_installed_tools_with_integrations(
         jwt,
         org_id_str.as_deref(),
         Some(agent_id),
+        project_id,
     );
     // Resolve the URL stamped onto cross-agent endpoints. When the
     // harness runs off-box (swarm pod / remote container) we refuse
@@ -2631,6 +2635,7 @@ pub(crate) async fn send_agent_event_stream(
         &agent.machine_type,
         Some(body.content.as_str()),
         org_integrations.as_deref(),
+        effective_project_id.as_deref(),
     )
     .await?;
     let installed_integrations = match (agent.org_id.as_ref(), org_integrations.as_ref()) {
@@ -2903,6 +2908,7 @@ pub(crate) async fn send_event_stream(
         &instance.machine_type,
         Some(body.content.as_str()),
         org_integrations.as_deref(),
+        Some(pid_str.as_str()),
     )
     .await?;
     let installed_integrations = match (instance.org_id.as_ref(), org_integrations.as_ref()) {

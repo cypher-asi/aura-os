@@ -186,6 +186,7 @@ pub fn stamp_agent_tool_auth(
     jwt: &str,
     org_id: Option<&str>,
     agent_id: Option<&str>,
+    project_id: Option<&str>,
 ) {
     if jwt.is_empty() {
         return;
@@ -226,6 +227,19 @@ pub fn stamp_agent_tool_auth(
             let trimmed = aid.trim();
             if !trimmed.is_empty() {
                 headers.insert("x-aura-agent-id".to_string(), trimmed.to_string());
+            }
+        }
+        // Stamp the session's bound project id so the dispatcher can
+        // inject it into tool args when the LLM omits `project_id`.
+        // Project-scoped tools (`create_spec`, `create_task`,
+        // `list_specs`, …) historically required the LLM to thread
+        // `project_id` through every call even though the session
+        // has exactly one binding; the header lifts that obligation
+        // and lets the dispatcher fall back to the session value.
+        if let Some(pid) = project_id {
+            let trimmed = pid.trim();
+            if !trimmed.is_empty() {
+                headers.insert("x-aura-project-id".to_string(), trimmed.to_string());
             }
         }
         tool.auth = ToolAuth::Headers { headers };
@@ -669,7 +683,13 @@ mod tests {
         let mut tools = build_cross_agent_tools(&AgentPermissions::ceo_preset());
         assert!(tools.iter().all(|t| matches!(t.auth, ToolAuth::None)));
 
-        stamp_agent_tool_auth(&mut tools, "jwt-abc", Some("org-42"), Some("agent-007"));
+        stamp_agent_tool_auth(
+            &mut tools,
+            "jwt-abc",
+            Some("org-42"),
+            Some("agent-007"),
+            Some("proj-777"),
+        );
 
         for tool in &tools {
             match &tool.auth {
@@ -684,6 +704,12 @@ mod tests {
                         headers.get("x-aura-org-id").map(String::as_str),
                         Some("org-42"),
                         "`{}` must carry the session org id",
+                        tool.name
+                    );
+                    assert_eq!(
+                        headers.get("x-aura-project-id").map(String::as_str),
+                        Some("proj-777"),
+                        "`{}` must carry the session project id",
                         tool.name
                     );
                 }
@@ -703,7 +729,7 @@ mod tests {
         // tool callable and defers to the handler's "default" org
         // fallback.
         let mut tools = build_cross_agent_tools(&AgentPermissions::ceo_preset());
-        stamp_agent_tool_auth(&mut tools, "jwt-abc", None, None);
+        stamp_agent_tool_auth(&mut tools, "jwt-abc", None, None, None);
 
         let send_to_agent = tools
             .iter()
@@ -728,7 +754,7 @@ mod tests {
         // dispatcher to see a present-but-blank header and is strictly
         // worse than the `None` fallback to `"default"`.
         let mut tools = build_cross_agent_tools(&AgentPermissions::ceo_preset());
-        stamp_agent_tool_auth(&mut tools, "jwt-abc", Some("   "), None);
+        stamp_agent_tool_auth(&mut tools, "jwt-abc", Some("   "), None, None);
         let any = tools.first().expect("manifest must be non-empty");
         match &any.auth {
             ToolAuth::Headers { headers } => {
@@ -776,7 +802,13 @@ mod tests {
                 metadata: std::collections::HashMap::new(),
             },
         ];
-        stamp_agent_tool_auth(&mut tools, "jwt-abc", Some("org-42"), Some("agent-007"));
+        stamp_agent_tool_auth(
+            &mut tools,
+            "jwt-abc",
+            Some("org-42"),
+            Some("agent-007"),
+            None,
+        );
 
         // Workspace tool preserved.
         match &tools[0].auth {
@@ -805,7 +837,7 @@ mod tests {
         // behind a generic auth failure. Preserve the original
         // `ToolAuth::None` so the failure mode stays visible.
         let mut tools = build_cross_agent_tools(&AgentPermissions::ceo_preset());
-        stamp_agent_tool_auth(&mut tools, "", Some("org-42"), None);
+        stamp_agent_tool_auth(&mut tools, "", Some("org-42"), None, None);
         assert!(tools.iter().all(|t| matches!(t.auth, ToolAuth::None)));
     }
 
@@ -817,7 +849,13 @@ mod tests {
         // absolute form of the cross-agent dispatcher URL.
         let mut tools = build_cross_agent_tools(&AgentPermissions::ceo_preset());
         absolutize_agent_tool_endpoints(&mut tools, "http://127.0.0.1:3100");
-        stamp_agent_tool_auth(&mut tools, "jwt-abc", Some("org-42"), Some("agent-007"));
+        stamp_agent_tool_auth(
+            &mut tools,
+            "jwt-abc",
+            Some("org-42"),
+            Some("agent-007"),
+            None,
+        );
         assert!(tools
             .iter()
             .all(|t| matches!(t.auth, ToolAuth::Headers { .. })));

@@ -61,6 +61,18 @@ const ORG_ID_HEADER: &str = "x-aura-org-id";
 /// capability bundle on every tool call.
 const AGENT_ID_HEADER: &str = "x-aura-agent-id";
 
+/// `X-Aura-Project-Id` header stamped by
+/// [`aura_os_agent_tools::ceo::stamp_agent_tool_auth`] carrying the
+/// session's bound project id. When a project-scoped tool
+/// (`create_spec`, `create_task`, `list_specs`, ...) is called
+/// without `project_id` in its JSON arguments, the dispatcher
+/// injects this header value before the capability check so the
+/// LLM doesn't have to thread `project_id` through every call in a
+/// single-project session. Mirrors the session_project_id fallback
+/// the harness's [`aura_tools::domain_tools::DomainToolExecutor`]
+/// performs for the direct-DomainApi dispatch path.
+const PROJECT_ID_HEADER: &str = "x-aura-project-id";
+
 /// `permit_decision` values persisted in the audit log. String
 /// literals rather than an enum so the schema maps 1:1 to a future
 /// `agent_tool_invocations` storage table without a `FromStr` dance.
@@ -178,11 +190,37 @@ pub(crate) async fn dispatch_agent_tool(
         .get(&tool_name)
         .ok_or_else(|| ApiError::not_found(format!("unknown agent tool: {tool_name}")))?;
 
-    let args = body.map(|Json(v)| v).unwrap_or(Value::Null);
+    let mut args = body.map(|Json(v)| v).unwrap_or(Value::Null);
     if !matches!(&args, Value::Object(_) | Value::Null) {
         return Err(ApiError::bad_request(
             "tool arguments must be a JSON object".to_string(),
         ));
+    }
+
+    // Inject the session-bound `project_id` from the
+    // `X-Aura-Project-Id` header if the LLM omitted it. Project-
+    // scoped tools (spec/task/project/log) historically required the
+    // LLM to thread `project_id` through every call even though the
+    // instance session has exactly one binding; the header-based
+    // fallback lets the server resolve it deterministically and
+    // keeps capability checks like
+    // `CapabilityRequirement::WriteProjectFromArg("project_id")`
+    // working without a schema change.
+    if let Some(pid) = headers
+        .get(PROJECT_ID_HEADER)
+        .and_then(|v| v.to_str().ok())
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        if let Some(obj) = args.as_object_mut() {
+            if !obj.contains_key("project_id") {
+                obj.insert("project_id".to_string(), Value::String(pid.to_string()));
+            }
+        } else if args.is_null() {
+            let mut obj = serde_json::Map::new();
+            obj.insert("project_id".to_string(), Value::String(pid.to_string()));
+            args = Value::Object(obj);
+        }
     }
 
     let user_id = auth_session.user_id.as_str();
