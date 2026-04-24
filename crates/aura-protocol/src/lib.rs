@@ -23,7 +23,7 @@
 //! see `aura_core::AgentPermissions::contains` on the harness side.
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 
 #[cfg(feature = "typescript")]
@@ -116,8 +116,7 @@ pub struct SessionInit {
     #[serde(default)]
     pub agent_id: Option<String>,
     /// Originating end-user id for resolving and persisting tool defaults.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub user_id: Option<String>,
+    pub user_id: String,
     /// Optional per-session provider override for BYOK/runtime isolation.
     #[serde(default)]
     pub provider_config: Option<SessionProviderConfig>,
@@ -135,6 +134,31 @@ pub struct SessionInit {
     /// unconditionally against these grants. See the module-level
     /// "Agent permissions model" section for details.
     pub agent_permissions: AgentPermissionsWire,
+    /// Optional per-agent tool override stamped onto this session. `None`
+    /// means the harness should load the persisted agent override, if any;
+    /// an empty map means "explicitly inherit the user default".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tool_permissions: Option<AgentToolPermissionsWire>,
+}
+
+/// Wire-compatible tri-state tool permission value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "typescript", derive(TS), ts(export))]
+pub enum ToolStateWire {
+    #[serde(rename = "on")]
+    On,
+    #[serde(rename = "off")]
+    Off,
+    #[serde(rename = "ask")]
+    Ask,
+}
+
+/// Wire-compatible mirror of `aura_core::AgentToolPermissions`.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "typescript", derive(TS), ts(export))]
+pub struct AgentToolPermissionsWire {
+    #[serde(default)]
+    pub per_tool: BTreeMap<String, ToolStateWire>,
 }
 
 /// Wire-compatible mirror of `aura_core::AgentPermissions`.
@@ -430,6 +454,12 @@ pub struct SessionReady {
 pub struct ToolInfo {
     pub name: String,
     pub description: String,
+    #[serde(default = "default_tool_state_on")]
+    pub effective_state: ToolStateWire,
+}
+
+const fn default_tool_state_on() -> ToolStateWire {
+    ToolStateWire::On
 }
 
 /// Minimal skill info surfaced in `session_ready`.
