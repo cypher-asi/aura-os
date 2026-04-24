@@ -84,7 +84,7 @@ interface AuthState {
   restoreSession: () => Promise<void>;
   refreshSession: () => Promise<AuthSession>;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, inviteCode: string, inviterUserId?: string) => Promise<void>;
+  register: (email: string, password: string, name: string, inviteCode: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -216,8 +216,8 @@ export const useAuthStore = create<AuthState>()((set) => ({
     await startRealtimeForSession(session);
   },
 
-  register: async (email: string, password: string, name: string, inviteCode: string, inviterUserId?: string) => {
-    const session = await authApi.register(email, password, name, inviteCode, inviterUserId);
+  register: async (email: string, password: string, name: string, inviteCode: string) => {
+    const session = await authApi.register(email, password, name, inviteCode);
     await setStoredAuth(session);
     set({
       user: sessionToUser(session),

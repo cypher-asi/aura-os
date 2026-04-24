@@ -7,13 +7,13 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
-  register: (email: string, password: string, name: string, inviteCode: string, inviterUserId?: string) =>
+  register: (email: string, password: string, name: string, inviteCode: string) =>
     apiFetch<AuthSession>("/api/auth/register", {
       method: "POST",
-      body: JSON.stringify({ email, password, name, invite_code: inviteCode, inviter_user_id: inviterUserId }),
+      body: JSON.stringify({ email, password, name, invite_code: inviteCode }),
     }),
   validateInviteCode: (code: string) =>
-    apiFetch<{ valid: boolean; inviterUserId?: string }>(`/api/invite/${encodeURIComponent(code)}/validate`, {
+    apiFetch<{ valid: boolean }>(`/api/invite/${encodeURIComponent(code)}/validate`, {
       method: "POST",
     }),
   getSession: () => apiFetch<AuthSession>("/api/auth/session"),

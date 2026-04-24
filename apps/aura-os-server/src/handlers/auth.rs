@@ -101,14 +101,28 @@ pub(crate) async fn register(
         },
     );
 
-    // Fire-and-forget: grant signup + referral credits via z-billing
+    // Fire-and-forget: grant signup + referral credits via z-billing.
+    // The inviter comes from the zos-api finalize response (not from the
+    // frontend request), so we don't need a separate zos-api change.
+    // Only grant referral credits if the user entered a real invite code
+    // (not the system default), to avoid granting referral bonuses for
+    // organic signups.
     let user_id = result.session.user_id.clone();
-    let inviter_user_id = req.inviter_user_id.clone();
+    let inviter_user_id = result.inviter_user_id.clone();
+    let used_default_invite = is_default_invite_code(&req.invite_code);
     tokio::spawn(async move {
-        grant_credits_on_signup(&user_id, inviter_user_id.as_deref()).await;
+        let referral_inviter = if used_default_invite { None } else { inviter_user_id.as_deref() };
+        grant_credits_on_signup(&user_id, referral_inviter).await;
     });
 
     Ok(Json(AuthSessionResponse::from_auth_result(result)))
+}
+
+/// Check if the invite code is the system default (organic signup, no referral).
+fn is_default_invite_code(code: &str) -> bool {
+    let default = std::env::var("DEFAULT_INVITE_CODE")
+        .unwrap_or_else(|_| "domw-jh4cz8".to_string());
+    code.eq_ignore_ascii_case(&default)
 }
 
 /// Grant signup credits (and referral credits if applicable) to a newly

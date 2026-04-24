@@ -171,22 +171,20 @@ export function useLoginForm() {
       } else {
         const trimmedCode = inviteCode.trim();
         let finalCode = trimmedCode;
-        let inviterUserId: string | undefined;
 
         if (trimmedCode) {
-          // Validate the user-entered invite code
+          // Validate the user-entered invite code before submitting
           const result = await authApi.validateInviteCode(trimmedCode);
           if (!result.valid) {
             setError("Invalid invite code");
             return;
           }
-          inviterUserId = result.inviterUserId;
         } else {
           // Use default invite code when none provided
           finalCode = import.meta.env.VITE_DEFAULT_INVITE_CODE ?? "domw-jh4cz8";
         }
 
-        await register(email, password, name.trim(), finalCode, inviterUserId);
+        await register(email, password, name.trim(), finalCode);
       }
       await refreshStatus();
       navigate(from, { replace: true });

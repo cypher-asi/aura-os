@@ -321,7 +321,6 @@ pub(crate) struct AuthRegisterRequest {
     pub password: String,
     pub name: String,
     pub invite_code: String,
-    pub inviter_user_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
