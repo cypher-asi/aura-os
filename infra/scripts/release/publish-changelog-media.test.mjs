@@ -549,6 +549,61 @@ test("assertSelectedScreenshotReadableEnough rejects source proofs that are too 
   }), /too small for readable changelog media/);
 });
 
+test("assertSelectedScreenshotReadableEnough rejects one-x contextual crops before 4K composition", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-one-x-contextual-"));
+  const screenshotPath = path.join(rootDir, "model-picker-one-x.png");
+  writeSolidPng(screenshotPath, 860, 720, [240, 32, 32, 255]);
+
+  assert.throws(() => assertSelectedScreenshotReadableEnough({
+    repoDir: repoRoot,
+    entry: {
+      media: {
+        requested: true,
+        presentationMode: "raw_contextual",
+      },
+    },
+    selectedScreenshot: {
+      path: screenshotPath,
+      source: "capture-proof",
+    },
+    summary: {},
+  }), /too small for readable changelog media/);
+});
+
+test("assertSelectedScreenshotReadableEnough rejects tiny contextual content inside a large capture", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-tiny-contextual-content-"));
+  const screenshotPath = path.join(rootDir, "tiny-content.png");
+  const requireFromInterface = createRequire(path.join(repoRoot, "interface", "package.json"));
+  const { PNG } = requireFromInterface("pngjs");
+  const screenshot = new PNG({ width: 1600, height: 900 });
+  for (let y = 0; y < screenshot.height; y += 1) {
+    for (let x = 0; x < screenshot.width; x += 1) {
+      const index = ((y * screenshot.width) + x) * 4;
+      const insideProof = x >= 1100 && x < 1230 && y >= 360 && y < 500;
+      screenshot.data[index] = insideProof ? 240 : 5;
+      screenshot.data[index + 1] = insideProof ? 32 : 7;
+      screenshot.data[index + 2] = insideProof ? 32 : 10;
+      screenshot.data[index + 3] = 255;
+    }
+  }
+  fs.writeFileSync(screenshotPath, PNG.sync.write(screenshot));
+
+  assert.throws(() => assertSelectedScreenshotReadableEnough({
+    repoDir: repoRoot,
+    entry: {
+      media: {
+        requested: true,
+        presentationMode: "raw_contextual",
+      },
+    },
+    selectedScreenshot: {
+      path: screenshotPath,
+      source: "capture-proof",
+    },
+    summary: {},
+  }), /Contextual proof content is too small/);
+});
+
 test("assertSelectedScreenshotReadableEnough rejects generated-product placeholders before publishing", () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-empty-placeholder-"));
   const screenshotPath = path.join(rootDir, "placeholder-proof.png");
@@ -580,7 +635,7 @@ test("assertSelectedScreenshotReadableEnough rejects generated-product placehold
 test("assertSelectedScreenshotReadableEnough accepts dense contextual proof crops", () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-readable-source-pass-"));
   const screenshotPath = path.join(rootDir, "contextual-proof.png");
-  writeSolidPng(screenshotPath, 300, 220, [240, 32, 32, 255]);
+  writeSolidPng(screenshotPath, 1400, 800, [240, 32, 32, 255]);
 
   const report = assertSelectedScreenshotReadableEnough({
     repoDir: repoRoot,
@@ -597,8 +652,8 @@ test("assertSelectedScreenshotReadableEnough accepts dense contextual proof crop
     summary: {},
   });
 
-  assert.equal(report.width, 300);
-  assert.equal(report.height, 220);
+  assert.equal(report.width, 1400);
+  assert.equal(report.height, 800);
 });
 
 test("composeBrandedScreenshotCard gives contextual proof captures a larger readable footprint", () => {
@@ -607,7 +662,7 @@ test("composeBrandedScreenshotCard gives contextual proof captures a larger read
   const screenshotPath = path.join(rootDir, "screenshot.png");
   const outputPath = path.join(rootDir, "branded.png");
   writeSolidPng(backgroundPath, 320, 213, [3, 8, 22, 255]);
-  writeSolidPng(screenshotPath, 160, 90, [240, 32, 32, 255]);
+  writeSolidPng(screenshotPath, 1600, 900, [240, 32, 32, 255]);
   const previousUpscale = process.env.AURA_CHANGELOG_MEDIA_MAX_SCREENSHOT_UPSCALE;
   delete process.env.AURA_CHANGELOG_MEDIA_MAX_SCREENSHOT_UPSCALE;
 
@@ -633,8 +688,8 @@ test("composeBrandedScreenshotCard gives contextual proof captures a larger read
   const redBounds = findColorBounds(output, ([r, g, b, a]) => a > 0 && r >= 220 && g <= 80 && b <= 80);
 
   assert.ok(redBounds);
-  assert.ok(redBounds.width >= 500, `expected contextual proof screenshot to be materially larger, got ${redBounds.width}px`);
-  assert.ok(redBounds.height >= 280, `expected contextual proof screenshot to be materially taller, got ${redBounds.height}px`);
+  assert.ok(redBounds.width >= 3400, `expected contextual proof screenshot to dominate the card, got ${redBounds.width}px`);
+  assert.ok(redBounds.height >= 1900, `expected contextual proof screenshot to be tall enough for dense UI, got ${redBounds.height}px`);
 });
 
 test("composeBrandedScreenshotCard trims empty margins around contextual micro-ui proof", () => {
@@ -650,7 +705,7 @@ test("composeBrandedScreenshotCard trims empty margins around contextual micro-u
   for (let y = 0; y < screenshot.height; y += 1) {
     for (let x = 0; x < screenshot.width; x += 1) {
       const index = ((y * screenshot.width) + x) * 4;
-      const insideProof = x >= 1100 && x < 1230 && y >= 360 && y < 500;
+      const insideProof = x >= 900 && x < 1500 && y >= 250 && y < 650;
       screenshot.data[index] = insideProof ? 240 : 5;
       screenshot.data[index + 1] = insideProof ? 32 : 7;
       screenshot.data[index + 2] = insideProof ? 32 : 10;

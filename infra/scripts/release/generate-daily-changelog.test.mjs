@@ -725,6 +725,61 @@ test("preserveExistingPublishedMedia prevents rerenders from downgrading existin
   assert.equal(preserved.entries[0].media.preservedFromSlotId, "entry-1-feedback-board");
 });
 
+test("preserveExistingPublishedMedia does not keep stale screenshots for entries inference now skips", () => {
+  const rendered = {
+    entries: [
+      {
+        batch_id: "entry-1",
+        title: "Nightly release pipeline and changelog media proofing",
+        items: [
+          {
+            text: "Release pipeline internals were hardened.",
+            commit_shas: ["new1234"],
+          },
+        ],
+        media: {
+          requested: false,
+          status: "skipped",
+          score: -8,
+          slotId: "entry-1-nightly-release-pipeline-and-changelog-media-proofing",
+          slug: "nightly-release-pipeline-and-changelog-media-proofing",
+          presentationMode: "none",
+          reason: "Release tooling change, not a stable product screen.",
+        },
+      },
+    ],
+  };
+  const existingDoc = {
+    rendered: {
+      entries: [
+        {
+          batch_id: "entry-1",
+          title: "GPT-5.5 now selectable in the chat input model picker",
+          items: [
+            {
+              text: "GPT-5.5 appears in the model picker.",
+              commit_shas: ["old1234"],
+            },
+          ],
+          media: {
+            requested: true,
+            status: "published",
+            slotId: "entry-1-nightly-release-pipeline-and-changelog-media-proofing",
+            slug: "nightly-release-pipeline-and-changelog-media-proofing",
+            alt: "GPT-5.5 model picker screenshot",
+            assetPath: "assets/changelog/nightly/0.1.0-nightly.362.1/entry-1-nightly-release-pipeline-and-changelog-media-proofing.png",
+          },
+        },
+      ],
+    },
+  };
+
+  const preserved = preserveExistingPublishedMedia(rendered, [existingDoc]);
+  assert.equal(preserved.entries[0].media.status, "skipped");
+  assert.equal(preserved.entries[0].media.requested, false);
+  assert.equal(preserved.entries[0].media.assetPath, undefined);
+});
+
 test("preserveExistingPublishedMedia does not carry batch media to unrelated regenerated entries", () => {
   const rendered = {
     entries: [

@@ -691,6 +691,13 @@ function isPublishedMedia(media) {
   return media?.status === "published" && Boolean(sanitizeText(media?.assetPath));
 }
 
+function canPreserveMediaForCurrentInference(media) {
+  if (!media?.requested) {
+    return false;
+  }
+  return sanitizeText(media.presentationMode || "").toLowerCase() !== "none";
+}
+
 function normalizeTitleTokens(value) {
   return sanitizeText(value)
     .toLowerCase()
@@ -769,6 +776,10 @@ function preserveExistingPublishedMedia(rendered, existingDocs = []) {
     ...rendered,
     entries: (Array.isArray(rendered?.entries) ? rendered.entries : []).map((entry, index) => {
       const inferredMedia = entry?.media;
+      if (!canPreserveMediaForCurrentInference(inferredMedia)) {
+        return entry;
+      }
+
       const slotPrevious = lookup.bySlotId.get(sanitizeText(inferredMedia?.slotId));
       const batchPrevious = lookup.byBatchId.get(resolveEntryBatchId(entry, index));
       const previous = slotPrevious

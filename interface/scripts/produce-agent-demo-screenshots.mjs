@@ -44,9 +44,9 @@ function isEnabled(value) {
 }
 
 function getScreenshotDeviceScaleFactor() {
-  const configured = Number(process.env.AURA_DEMO_SCREENSHOT_DEVICE_SCALE_FACTOR || 2);
+  const configured = Number(process.env.AURA_DEMO_SCREENSHOT_DEVICE_SCALE_FACTOR || 3);
   if (!Number.isFinite(configured) || configured < 1) {
-    return 2;
+    return 3;
   }
   return Math.min(3, Math.max(1, configured));
 }
@@ -559,8 +559,8 @@ const UI_SIGNAL_TARGETS = {
       right: 64,
       bottom: 120,
       left: 260,
-      minWidth: 860,
-      minHeight: 720,
+      minWidth: 1200,
+      minHeight: 760,
       preserveBoundsAspectRatio: true,
     },
   },

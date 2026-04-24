@@ -381,12 +381,15 @@ function getOutputCardSize() {
 
 function getMaxBrandedScreenshotUpscale(presentationMode = "") {
   const normalizedMode = sanitizeText(presentationMode).toLowerCase();
-  const fallback = normalizedMode === "raw_contextual" ? 9.5 : 2;
-  const candidate = Number(process.env.AURA_CHANGELOG_MEDIA_MAX_SCREENSHOT_UPSCALE || fallback);
+  const fallback = normalizedMode === "raw_contextual" ? 2.25 : 2;
+  const modeSpecificValue = normalizedMode === "raw_contextual"
+    ? process.env.AURA_CHANGELOG_MEDIA_MAX_CONTEXTUAL_SCREENSHOT_UPSCALE
+    : "";
+  const candidate = Number(modeSpecificValue || process.env.AURA_CHANGELOG_MEDIA_MAX_SCREENSHOT_UPSCALE || fallback);
   if (!Number.isFinite(candidate) || candidate < 1) {
     return 1;
   }
-  return Math.min(candidate, normalizedMode === "raw_contextual" ? 12 : 6);
+  return Math.min(candidate, normalizedMode === "raw_contextual" ? 3 : 6);
 }
 
 function parsePositiveIntegerEnv(name, fallback) {
@@ -398,16 +401,24 @@ function getReadableScreenshotMinimums(presentationMode = "") {
   const normalizedMode = sanitizeText(presentationMode).toLowerCase();
   if (normalizedMode === "raw_contextual") {
     return {
-      minWidth: parsePositiveIntegerEnv("AURA_CHANGELOG_MEDIA_MIN_CONTEXTUAL_SOURCE_WIDTH", 240),
-      minHeight: parsePositiveIntegerEnv("AURA_CHANGELOG_MEDIA_MIN_CONTEXTUAL_SOURCE_HEIGHT", 180),
-      minArea: parsePositiveIntegerEnv("AURA_CHANGELOG_MEDIA_MIN_CONTEXTUAL_SOURCE_AREA", 50_000),
+      minWidth: parsePositiveIntegerEnv("AURA_CHANGELOG_MEDIA_MIN_CONTEXTUAL_SOURCE_WIDTH", 1200),
+      minHeight: parsePositiveIntegerEnv("AURA_CHANGELOG_MEDIA_MIN_CONTEXTUAL_SOURCE_HEIGHT", 675),
+      minArea: parsePositiveIntegerEnv("AURA_CHANGELOG_MEDIA_MIN_CONTEXTUAL_SOURCE_AREA", 810_000),
     };
   }
 
   return {
-    minWidth: parsePositiveIntegerEnv("AURA_CHANGELOG_MEDIA_MIN_SOURCE_WIDTH", 720),
-    minHeight: parsePositiveIntegerEnv("AURA_CHANGELOG_MEDIA_MIN_SOURCE_HEIGHT", 405),
-    minArea: parsePositiveIntegerEnv("AURA_CHANGELOG_MEDIA_MIN_SOURCE_AREA", 291_600),
+    minWidth: parsePositiveIntegerEnv("AURA_CHANGELOG_MEDIA_MIN_SOURCE_WIDTH", 1600),
+    minHeight: parsePositiveIntegerEnv("AURA_CHANGELOG_MEDIA_MIN_SOURCE_HEIGHT", 900),
+    minArea: parsePositiveIntegerEnv("AURA_CHANGELOG_MEDIA_MIN_SOURCE_AREA", 1_440_000),
+  };
+}
+
+function getContextualProofContentMinimums() {
+  return {
+    minWidth: parsePositiveIntegerEnv("AURA_CHANGELOG_MEDIA_MIN_CONTEXTUAL_CONTENT_WIDTH", 720),
+    minHeight: parsePositiveIntegerEnv("AURA_CHANGELOG_MEDIA_MIN_CONTEXTUAL_CONTENT_HEIGHT", 400),
+    minArea: parsePositiveIntegerEnv("AURA_CHANGELOG_MEDIA_MIN_CONTEXTUAL_CONTENT_AREA", 288_000),
   };
 }
 
@@ -600,28 +611,63 @@ function assertSelectedScreenshotReadableEnough({ repoDir, entry, selectedScreen
   const passes = dimensions.width >= minimums.minWidth
     && dimensions.height >= minimums.minHeight
     && dimensions.area >= minimums.minArea;
-  if (passes) {
-    return {
-      ...dimensions,
-      minimums,
-    };
+  if (!passes) {
+    throw buildOpenAIError(
+      [
+        `Source proof screenshot is too small for readable changelog media: ${dimensions.width}x${dimensions.height}.`,
+        `Minimum for ${presentationMode || "branded_card"} is ${minimums.minWidth}x${minimums.minHeight} and ${minimums.minArea} pixels.`,
+        "Capture a tighter or higher-density proof before OpenAI polish instead of publishing unreadable text.",
+      ].join(" "),
+      "SCREENSHOT_READABILITY_GATE_FAILED",
+      {
+        sourceScreenshot: {
+          ...dimensions,
+          minimums,
+          path: screenshotPath,
+        },
+      },
+    );
   }
 
-  throw buildOpenAIError(
-    [
-      `Source proof screenshot is too small for readable changelog media: ${dimensions.width}x${dimensions.height}.`,
-      `Minimum for ${presentationMode || "branded_card"} is ${minimums.minWidth}x${minimums.minHeight} and ${minimums.minArea} pixels.`,
-      "Capture a tighter or higher-density proof before OpenAI polish instead of publishing unreadable text.",
-    ].join(" "),
-    "SCREENSHOT_READABILITY_GATE_FAILED",
-    {
-      sourceScreenshot: {
-        ...dimensions,
-        minimums,
-        path: screenshotPath,
-      },
-    },
-  );
+  if (sanitizeText(presentationMode).toLowerCase() === "raw_contextual") {
+    const PNG = loadPng(repoDir);
+    const image = PNG.sync.read(fs.readFileSync(screenshotPath));
+    const contentBounds = findContextualProofBounds(image);
+    if (contentBounds) {
+      const contentMinimums = getContextualProofContentMinimums();
+      const contentArea = contentBounds.width * contentBounds.height;
+      const contentPasses = contentBounds.width >= contentMinimums.minWidth
+        && contentBounds.height >= contentMinimums.minHeight
+        && contentArea >= contentMinimums.minArea;
+      if (!contentPasses) {
+        throw buildOpenAIError(
+          [
+            `Contextual proof content is too small for readable changelog media: ${contentBounds.width}x${contentBounds.height}.`,
+            `Minimum contextual proof content is ${contentMinimums.minWidth}x${contentMinimums.minHeight} and ${contentMinimums.minArea} pixels.`,
+            "Capture a larger proof crop or zoom the target UI before 4K composition.",
+          ].join(" "),
+          "SCREENSHOT_CONTEXTUAL_CONTENT_GATE_FAILED",
+          {
+            sourceScreenshot: {
+              ...dimensions,
+              minimums,
+              path: screenshotPath,
+            },
+            contextualContent: {
+              ...contentBounds,
+              area: contentArea,
+              minimums: contentMinimums,
+            },
+          },
+        );
+      }
+    }
+  }
+
+  return {
+    ...dimensions,
+    minimums,
+  };
 }
 
 function roundedRectContains(x, y, width, height, radius, px, py) {
@@ -936,7 +982,7 @@ function composeBrandedScreenshotCard({ repoDir, backgroundPath, screenshotPath,
     screenshotWidth,
     screenshotHeight,
     screenshotRadius,
-    { interpolation: isContextualProof ? "crisp" : "smooth" },
+    { interpolation: "smooth" },
   );
   drawFrameBorder(background, screenshotX, screenshotY, screenshotWidth, screenshotHeight, screenshotRadius, [115, 226, 255, 88]);
 
