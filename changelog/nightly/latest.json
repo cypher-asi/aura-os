@@ -1667,7 +1667,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "failed",
           "score": 8,
           "reason": "A brand new AURA 3D app with image generation flow, WebGL 3D viewer, sidekick panel, and project nav is a substantial user-visible product surface that's clearly provable in one screenshot.",
           "reasons": [
@@ -1718,7 +1718,11 @@
             "Images",
             "Models"
           ],
-          "storyTitle": "AURA 3D studio: image-to-model flow with WebGL viewer"
+          "storyTitle": "AURA 3D studio: image-to-model flow with WebGL viewer",
+          "updatedAt": "2026-04-24T06:06:14.999Z",
+          "error": "Error: Screenshot capture did not produce a passing summary for entry-2-aura-3d-studio-image-to-model-flow-with-webgl-viewer",
+          "failureClass": "quality_gate",
+          "retryInstruction": "Retry correction pass: Previous failure class: quality_gate. Previous error summary: Error: Screenshot capture did not produce a passing summary for entry-2-aura-3d-studio-image-to-model-flow-with-webgl-viewer. The previous screenshot failed the quality gate. Do not stop on an empty state, generic overview, placeholder route, or loosely framed full desktop. Complete one visible correction: select a concrete row/tab/item, open the relevant detail surface, and leave the story-specific proof text centered."
         }
       },
       {
@@ -1807,7 +1811,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "failed",
           "score": 8,
           "reason": "Visible reshape of AURA 3D: new IMAGE header, Image/3D Model tabs, LeftMenuTree project nav with artifacts as children, lightbox preview. All easily shown in one screenshot, and GA rollout means it's visible to everyone.",
           "reasons": [
@@ -1858,7 +1862,11 @@
             "3D Model",
             "AURA 3D"
           ],
-          "storyTitle": "AURA 3D polish: persistence, project tree nav, and GA rollout"
+          "storyTitle": "AURA 3D polish: persistence, project tree nav, and GA rollout",
+          "updatedAt": "2026-04-24T06:11:04.116Z",
+          "error": "Error: Screenshot capture did not produce a passing summary for entry-4-aura-3d-polish-persistence-project-tree-nav-and-ga-rollout",
+          "failureClass": "openai_polish",
+          "retryInstruction": "Retry correction pass: Previous failure class: openai_polish. Previous error summary: Error: Screenshot capture did not produce a passing summary for entry-4-aura-3d-polish-persistence-project-tree-nav-and-ga-rollout. The previous run captured a proof screenshot but failed the mandatory OpenAI branded polish stage. Capture the clearest, most readable screenshot possible so the polish stage can frame it without hiding the feature. Avoid sparse or tiny proof surfaces; keep the important UI centered and readable before polish."
         }
       },
       {
