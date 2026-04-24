@@ -107,7 +107,7 @@
         "expect": {
           "urlMatches": "/projects/proj-1/agents/agent-inst-1$",
           "visibleRoles": [
-            { "role": "button", "name": "Open apps", "exact": true },
+            { "role": "button", "name": "Open project navigation", "exact": false },
             { "role": "button", "name": "Agent", "exact": true },
             { "role": "button", "name": "Execution", "exact": true },
             { "role": "button", "name": "Stats", "exact": true }
