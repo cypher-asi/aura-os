@@ -73,6 +73,7 @@
     "rehype-highlight": "^7.0.2",
     "remark-gfm": "^4.0.1",
     "tiptap-markdown": "^0.9.0",
+    "three": "^0.174.0",
     "zustand": "^5.0.12"
   },
   "overrides": {
@@ -89,6 +90,7 @@
     "@types/node": "^24.12.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/three": "^0.174.0",
     "@vitejs/plugin-react": "^6.0.0",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",

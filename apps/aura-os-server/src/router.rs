@@ -13,7 +13,7 @@ use tower_http::trace::TraceLayer;
 use crate::handlers::{
     agent_bootstrap, agent_tools, agents, auth, billing, browser, debug_runs, dev_loop, feed,
     feedback, files, follows, generation, harness_proxy, leaderboard, log, marketplace, notes,
-    org_tools, orgs, process, project_stats, projects, remote_files, remote_terminal, specs, swarm,
+    org_tools, orgs, process, project_artifacts, project_stats, projects, remote_files, remote_terminal, specs, swarm,
     system, tasks, terminal, users, ws,
 };
 use crate::state::AppState;
@@ -607,6 +607,17 @@ fn process_routes() -> Router<AppState> {
             get(process::list_run_artifacts),
         )
         .route("/api/process-artifacts/:id", get(process::get_artifact))
+        // Project artifacts (images, 3D models)
+        .route(
+            "/api/projects/:project_id/artifacts",
+            get(project_artifacts::list_project_artifacts)
+                .post(project_artifacts::create_project_artifact),
+        )
+        .route(
+            "/api/artifacts/:artifact_id",
+            get(project_artifacts::get_project_artifact)
+                .delete(project_artifacts::delete_project_artifact),
+        )
         .route(
             "/api/process-folders",
             get(process::list_folders).post(process::create_folder),

@@ -164,6 +164,16 @@ async fn proxy_sse_stream(
                         }
                     }
 
+                    // When the upstream sends `data: {"type":"..."}` without
+                    // a separate `event:` line, extract the type from the JSON.
+                    if event_type.is_empty() && !data.is_empty() {
+                        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&data) {
+                            if let Some(t) = parsed.get("type").and_then(|v| v.as_str()) {
+                                event_type = t.to_string();
+                            }
+                        }
+                    }
+
                     if !event_type.is_empty() && !data.is_empty() {
                         let evt = translate_router_event(&event_type, &data, mode_static);
                         return Some((Ok(evt), (stream, buffer, false)));
@@ -274,6 +284,9 @@ pub(crate) async fn generate_3d_stream(
     }
     if let Some(project_id) = &body.project_id {
         payload["projectId"] = json!(project_id);
+    }
+    if let Some(parent_id) = &body.parent_id {
+        payload["parentId"] = json!(parent_id);
     }
 
     proxy_sse_stream(&url, &jwt, payload, "3d").await

@@ -240,10 +240,12 @@ export function generate3dStream(
   handler: StreamEventHandler = { onEvent: () => {}, onError: () => {} },
   signal?: AbortSignal,
   projectId?: string,
+  parentId?: string,
 ) {
   const body: Record<string, unknown> = { image_url: imageUrl };
   if (prompt) body.prompt = prompt;
   if (projectId) body.projectId = projectId;
+  if (parentId) body.parentId = parentId;
   return streamSSE<string>(
     `${BASE_URL}/api/generate/3d/stream`,
     {

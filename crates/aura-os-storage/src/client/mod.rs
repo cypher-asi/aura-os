@@ -2,6 +2,7 @@ mod events;
 mod logs;
 mod processes;
 mod project_agents;
+mod project_artifacts;
 mod sessions;
 mod specs;
 mod stats;

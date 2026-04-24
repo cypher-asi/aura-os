@@ -642,6 +642,7 @@ export type AuraEvent = AuraEventBase & (
       mode: "image" | "3d";
       imageUrl?: string;
       originalUrl?: string;
+      artifactId?: string;
       glbUrl?: string;
       polyCount?: number;
       meta?: Record<string, unknown>;
