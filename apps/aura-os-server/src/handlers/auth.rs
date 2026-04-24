@@ -221,7 +221,7 @@ pub(crate) async fn validate_invite_code(
 
     let client = reqwest::Client::new();
     let resp = client
-        .post(format!("https://zosapi.zero.tech/api/invite/{code}/validate"))
+        .post(format!("https://zosapi.zero.tech/invite/{code}/validate"))
         .send()
         .await
         .map_err(|e| ApiError::bad_gateway(format!("invite validation failed: {e}")))?;
@@ -249,7 +249,7 @@ pub(crate) async fn get_my_invite_code(
 ) -> ApiResult<Json<serde_json::Value>> {
     let client = reqwest::Client::new();
     let resp = client
-        .post("https://zosapi.zero.tech/api/invite")
+        .post("https://zosapi.zero.tech/invite")
         .bearer_auth(&jwt)
         .send()
         .await

@@ -96,7 +96,10 @@ export function OrgSettingsRewards() {
           <div className={styles.rowInfo}>
             <span className={styles.rowLabel}>Daily Credits</span>
             <span className={styles.rowDescription}>
-              Earned on first use each day{isZeroPro ? " (ZERO Pro boost)" : ""}
+              Earned on first use each day
+              {isZeroPro
+                ? " (ZERO Pro boost)"
+                : " (400/day with ZERO Pro)"}
             </span>
           </div>
           <div className={styles.rowControl}>
@@ -110,6 +113,9 @@ export function OrgSettingsRewards() {
             <span className={styles.rowLabel}>Referral Bonus</span>
             <span className={styles.rowDescription}>
               Earned when someone signs up with your invite code
+              {isZeroPro
+                ? " (ZERO Pro boost)"
+                : " (7,500 with ZERO Pro)"}
             </span>
           </div>
           <div className={styles.rowControl}>
