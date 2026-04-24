@@ -2,19 +2,19 @@
   {
     "date": "2026-04-24",
     "channel": "nightly",
-    "version": "0.1.0-nightly.372.1",
-    "title": "Changelog media pipeline reset and Fireworks pricing coverage",
-    "intro": "Today's nightly tears out the old screenshot-publishing stack and replaces it with a leaner Browser Use planning pipeline gated by hard quality checks, then closes the day by broadening dev-loop cost accounting to Fireworks-hosted open models.",
-    "entryCount": 2,
+    "version": "0.1.0-nightly.373.1",
+    "title": "Browser Use takes over changelog media capture",
+    "intro": "Today's nightly is dominated by a ground-up rebuild of how Aura produces changelog media: the old screenshot pipeline is gone, replaced by a Browser Use–driven flow guarded by quality, branding, and auth gates. The server side also picked up Fireworks-hosted open model pricing so Kimi, DeepSeek, and GPT-OSS usage is now billable alongside the existing Anthropic and OpenAI lineup.",
+    "entryCount": 3,
     "highlights": [
-      "Legacy demo screenshot stack retired in favor of Browser Use planning",
-      "Capture auth rebuilt around signed, short-lived stateless tokens",
-      "Quality, branding, and cost gates now guard every media run",
-      "Dev-loop pricing now covers Kimi, DeepSeek, and GPT-OSS on Fireworks"
+      "Legacy demo screenshot pipeline replaced with Browser Use planning",
+      "New quality, branding, and high-res gates for changelog media",
+      "Seeded capture sessions and stateless capture auth for CI runs",
+      "Fireworks open model pricing (Kimi, DeepSeek, GPT-OSS) wired into billing"
     ],
-    "rawCommitCount": 8,
-    "generatedAt": "2026-04-24T18:48:05.126Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.372.1",
+    "rawCommitCount": 13,
+    "generatedAt": "2026-04-24T19:08:04.697Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.373.1",
     "path": "history/2026-04-24.json"
   },
   {
