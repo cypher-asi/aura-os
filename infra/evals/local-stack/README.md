@@ -164,14 +164,25 @@ AURA_STACK_HARNESS_ALLOW_SHELL=true
 ```
 
 `AURA_STACK_HARNESS_ALLOW_SHELL` propagates to the harness as
-`AURA_ALLOW_SHELL=1`. It is required for the autonomous dev loop:
-the agent emits `run_command({ command: "cargo check ..." })` and
-the harness aliases that to the `shell_script` path, which only
-executes when `allow_shell` is true. The companion
-`ToolConfig::allowed_shell_scripts` list stays empty by default,
-which now means "any script allowed" (matching the empty-allowlist
-convention shared with `command_allowlist` / `binary_allowlist`);
-populate it only if you need to pin a specific set of scripts.
+`AURA_ALLOW_SHELL=1` and `AURA_STACK_HARNESS_ALLOWED_COMMANDS` as
+`AURA_ALLOWED_COMMANDS`. **Both** are required for the autonomous
+dev loop:
+
+- `AURA_ALLOW_SHELL=1` opens the shell path; the agent emits
+  `run_command({ command: "cargo check ..." })` and the harness
+  aliases that to `shell_script`, which only executes when
+  `allow_shell` is true.
+- `AURA_ALLOWED_COMMANDS=...` populates
+  `ToolConfig::binary_allowlist`. The harness now fails closed
+  when `enable_commands: true` and the list is empty, rejecting
+  every exec with `forbidden: command execution requires a
+  non-empty binary_allowlist; configure ToolConfig::binary_allowlist`.
+  This reverses the older "empty == all allowed" convention for
+  the binary allow-list specifically.
+
+The companion `ToolConfig::allowed_shell_scripts` list stays empty
+by default, which still means "any script allowed"; populate it
+only if you need to pin a specific set of scripts.
 
 ## Bring the stack up
 

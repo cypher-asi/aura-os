@@ -678,6 +678,101 @@ fn gate_recognises_requires_allow_shell_as_policy_denial() {
 }
 
 #[test]
+fn gate_recognises_binary_allowlist_denial_as_policy_denial() {
+    // The exact denial string the harness emits when
+    // `enable_commands: true` but `ToolConfig::binary_allowlist` is
+    // empty — the fail-closed path added in `aura-tools` (see
+    // `check_binary_allowlist` in
+    // `aura-harness/crates/aura-tools/src/fs_tools/cmd/mod.rs`). The
+    // pre-fix gate's substring match didn't cover `binary_allowlist`,
+    // so this denial masqueraded as a generic "no build step was run"
+    // failure and the DoD retry tier burned attempts on it.
+    let reason = tsp::completion_validation_reason_with_tool_call_failures(
+        "edited one Rust file",
+        &["zero-identity/src/lib.rs"],
+        /* build */ 0,
+        /* test */ 0,
+        /* fmt */ 0,
+        /* lint */ 0,
+        0,
+        &[(
+            "run_command",
+            "forbidden: command execution requires a non-empty \
+             binary_allowlist; configure ToolConfig::binary_allowlist",
+        )],
+    )
+    .expect("gate should fire — binary_allowlist denial blocks every axis");
+
+    assert!(
+        reason.contains("run_command is denied by kernel policy"),
+        "binary_allowlist denial must surface the policy-denial diagnostic, got: {reason}"
+    );
+    assert!(
+        reason.contains("AURA_ALLOWED_COMMANDS") || reason.contains("binary_allowlist"),
+        "policy-denial diagnostic must mention the AURA_ALLOWED_COMMANDS / \
+         binary_allowlist knob so operators can actually fix it, got: {reason}"
+    );
+}
+
+#[test]
+fn gate_recognises_binary_allowlist_denial_at_test_axis() {
+    // Same denial but the build axis happens to be satisfied (e.g.
+    // harness-emitted auto-triggered build evidence). Gate must still
+    // route through the policy-denial path rather than falling into
+    // the missing-test generic message.
+    let reason = tsp::completion_validation_reason_with_tool_call_failures(
+        "edited one Rust file",
+        &["zero-identity/src/lib.rs"],
+        /* build */ 1,
+        /* test */ 0,
+        /* fmt */ 0,
+        /* lint */ 0,
+        0,
+        &[(
+            "run_command",
+            "forbidden: command execution requires a non-empty \
+             binary_allowlist; configure ToolConfig::binary_allowlist",
+        )],
+    )
+    .expect("gate should fire — test axis still missing");
+
+    assert!(
+        reason.contains("run_command is denied by kernel policy"),
+        "binary_allowlist denial at test axis must surface the policy-denial diagnostic, got: {reason}"
+    );
+}
+
+#[test]
+fn dod_classifier_rejects_binary_allowlist_policy_denial() {
+    // Complements `dod_classifier_rejects_policy_denial_triggered_at_
+    // non_build_axis` for the binary_allowlist flavour: another turn
+    // cannot fix an empty allowlist, so the DoD retry classifier must
+    // refuse to classify this reason and let the task fail terminally
+    // with the actionable diagnostic.
+    let reason = tsp::completion_validation_reason_with_tool_call_failures(
+        "edited one Rust file",
+        &["zero-identity/src/lib.rs"],
+        /* build */ 0,
+        /* test */ 0,
+        /* fmt */ 0,
+        /* lint */ 0,
+        0,
+        &[(
+            "run_command",
+            "forbidden: command execution requires a non-empty \
+             binary_allowlist; configure ToolConfig::binary_allowlist",
+        )],
+    )
+    .expect("policy-denied run must fail the gate");
+    assert_eq!(
+        tsp::classify_dod_remediation_kind(&reason),
+        None,
+        "binary_allowlist policy-denial reason must not classify as DoD \
+         remediation; got: {reason}"
+    );
+}
+
+#[test]
 fn dod_classifier_rejects_policy_denial_triggered_at_non_build_axis() {
     // End-to-end pin: when the gate emits the policy-denial reason
     // because the *test* axis failed (not just build), the DoD retry

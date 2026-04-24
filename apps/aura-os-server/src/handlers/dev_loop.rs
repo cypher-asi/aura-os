@@ -1106,7 +1106,7 @@ impl CompletionGateReport {
 /// harness lock-down) and falls through to terminal failure with an
 /// actionable message for the operator.
 pub(crate) const RUN_COMMAND_POLICY_DENIED_REASON: &str =
-    "run_command is denied by kernel policy -- check that the harness is not running with AURA_STRICT_MODE=1 or ENABLE_CMD_TOOLS=false";
+    "run_command is denied by kernel policy -- check that the harness has AURA_ALLOW_SHELL=1 set, a non-empty AURA_ALLOWED_COMMANDS list (binary_allowlist), and is not running with AURA_STRICT_MODE=1 or ENABLE_CMD_TOOLS=false";
 
 /// True when the cached task's `tool_call_failures` history shows at
 /// least one `run_command` invocation that the kernel's tool-policy gate
@@ -1132,6 +1132,15 @@ fn run_command_denied_by_policy(cached: &CachedTaskOutput) -> bool {
             || lower.contains("enable_cmd_tools")
             || lower.contains("aura_strict_mode")
             || lower.contains("tool policy")
+            // `aura-tools` fail-closed path when `enable_commands: true`
+            // but `ToolConfig::binary_allowlist` is empty. Full message:
+            //   "forbidden: command execution requires a non-empty
+            //    binary_allowlist; configure ToolConfig::binary_allowlist"
+            // Matching on "binary_allowlist" alone is enough — every
+            // denial the harness emits for this gate mentions it, and
+            // no non-denial error does.
+            || lower.contains("binary_allowlist")
+            || lower.contains("binary allowlist")
     })
 }
 

@@ -850,16 +850,39 @@ fn maybe_spawn_local_harness_sidecar(data_dir: &Path) -> Option<Child> {
     }
 
     let mut command = Command::new(&harness_binary);
-    // Bundled sidecar: `run_command` is on by default in aura-node
-    // now, so we only need to opt into shell fan-out (still gated
-    // separately because `sh`/`bash`/`pwsh` fan-out is a distinct
-    // blast-radius concern). `AURA_ALLOWED_COMMANDS` is deliberately
-    // left unset so the empty `binary_allowlist` keeps its "all
-    // binaries allowed" semantics for the autonomous dev loop.
+    // Bundled sidecar env. `run_command` is on by default in
+    // aura-node, but `aura-tools` now fails closed when
+    // `enable_commands == true` and `binary_allowlist` is empty
+    // (the "empty == all allowed" convention was removed from the
+    // binary allow-list specifically — see `aura-harness/crates/
+    // aura-tools/src/fs_tools/cmd/mod.rs::check_binary_allowlist`).
+    // Without a populated list, every DoD verification command
+    // (`cargo build` / `test` / `fmt` / `clippy`) is rejected with
+    // `"forbidden: command execution requires a non-empty
+    // binary_allowlist"` and the dev loop can't finish a task.
+    //
+    // Apply a default allow-list that covers the DoD verification
+    // commands for every language we currently support end-to-end
+    // (Rust primary; Node/Python as they appear in task specs).
+    // Operators who want to narrow this can pre-set
+    // `AURA_ALLOWED_COMMANDS` in the parent environment, in which
+    // case `Command::spawn` inherits it and the explicit `env()`
+    // call below is skipped. `AURA_ALLOW_SHELL` is still opt-in
+    // and stays separately gated — the shell interpreter is a
+    // distinct blast-radius concern from individual binary execs.
+    const DEFAULT_ALLOWED_COMMANDS: &str = concat!(
+        "cargo,rustc,rustfmt,cargo-clippy,cargo-fmt,",
+        "git,sh,bash,pwsh,cmd,ls,dir,where,",
+        "node,npm,npx,pnpm,yarn,",
+        "python,python3,pip,uv"
+    );
     command
         .env("AURA_LISTEN_ADDR", &listen_addr)
         .env("AURA_DATA_DIR", &harness_data_dir)
         .env("AURA_ALLOW_SHELL", "1");
+    if std::env::var_os("AURA_ALLOWED_COMMANDS").is_none() {
+        command.env("AURA_ALLOWED_COMMANDS", DEFAULT_ALLOWED_COMMANDS);
+    }
     configure_background_child(&mut command, &harness_data_dir.join("sidecar.log"));
 
     if let Some(orbit_url) = env_string("ORBIT_URL").or_else(|| env_string("ORBIT_BASE_URL")) {
