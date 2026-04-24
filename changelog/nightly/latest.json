@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-24T19:08:04.697Z",
+  "generatedAt": "2026-04-24T21:11:45.129Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.373.1",
+  "version": "0.1.0-nightly.375.1",
   "date": "2026-04-24",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.373.1",
-  "lastIncludedSha": "0ae7018cae4c495701a2fc3ee909579f151074a6",
-  "previousProcessedSha": "916e38bbf83f0defba37869fc495e9d0e4cd9f2d",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.375.1",
+  "lastIncludedSha": "dd65db9dfdeb24141f60b5bab966752b54ae24a4",
+  "previousProcessedSha": "0ae7018cae4c495701a2fc3ee909579f151074a6",
   "commitShas": [
     "888afbe54b40663a072507842a7e01418d213479",
     "ff509bbaad88ca49ca6db28c3f157cb409d71a38",
@@ -23,10 +23,12 @@
     "36ca8bb3bc141fd0735c1dac5ea2b5df923413f4",
     "d2bd4beb584cde7593941416e78a0e4f0111cf78",
     "24208c688c1a9dca28051ff193e32c85e4ec7a1b",
-    "45351266085d051ff86ea89baaec5388be36c22f"
+    "45351266085d051ff86ea89baaec5388be36c22f",
+    "9e377b590455f455c962b3ffbab856a3671cb708",
+    "dd65db9dfdeb24141f60b5bab966752b54ae24a4"
   ],
-  "rawCommitCount": 13,
-  "filteredCommitCount": 12,
+  "rawCommitCount": 15,
+  "filteredCommitCount": 14,
   "rawCommits": [
     {
       "sha": "888afbe54b40663a072507842a7e01418d213479",
@@ -722,9 +724,106 @@
       "fileGroups": [],
       "primaryArea": "Other",
       "areas": []
+    },
+    {
+      "sha": "9e377b590455f455c962b3ffbab856a3671cb708",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-24T16:49:30-04:00",
+      "subject": "Add DeepSeek direct pricing support",
+      "body": "",
+      "parents": [
+        "0ae7018cae4c495701a2fc3ee909579f151074a6"
+      ],
+      "files": [
+        "apps/aura-os-server/src/capture_auth.rs",
+        "apps/aura-os-server/src/handlers/agents/runtime.rs",
+        "apps/aura-os-server/src/handlers/dev_loop.rs",
+        "interface/scripts/lib/benchmark-pricing.mjs",
+        "interface/scripts/lib/harness-session-runner.mjs",
+        "interface/scripts/run-live-benchmark-api.mjs",
+        "interface/src/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/constants/models.test.ts",
+        "interface/src/constants/models.ts",
+        "interface/src/lib/benchmark-pricing.test.ts",
+        "interface/src/lib/benchmark-usage.test.ts",
+        "interface/src/lib/benchmark-usage.ts"
+      ],
+      "stats": {
+        "fileCount": 12,
+        "insertions": 355,
+        "deletions": 76
+      },
+      "committedAtMs": 1777063770000,
+      "cleanSubject": "Add DeepSeek direct pricing support",
+      "keywords": [
+        "deepseek",
+        "direct",
+        "pricing",
+        "support"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/scripts/lib",
+        "interface/scripts/run-live-benchmark-api.mjs",
+        "interface/src/components",
+        "interface/src/constants",
+        "interface/src/lib"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "dd65db9dfdeb24141f60b5bab966752b54ae24a4",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-24T16:58:01-04:00",
+      "subject": "Remove Fireworks DeepSeek V3.2 model",
+      "body": "",
+      "parents": [
+        "9e377b590455f455c962b3ffbab856a3671cb708"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/runtime.rs",
+        "apps/aura-os-server/src/handlers/dev_loop.rs",
+        "interface/scripts/lib/benchmark-pricing.mjs",
+        "interface/src/constants/models.ts",
+        "interface/src/lib/benchmark-pricing.test.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 1,
+        "deletions": 39
+      },
+      "committedAtMs": 1777064281000,
+      "cleanSubject": "Remove Fireworks DeepSeek V3.2 model",
+      "keywords": [
+        "remove",
+        "fireworks",
+        "deepseek",
+        "model"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/scripts/lib",
+        "interface/src/constants",
+        "interface/src/lib"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface"
+      ]
     }
   ],
-  "batchCount": 3,
+  "batchCount": 4,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -733,36 +832,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11438710
+          "sizeBytes": 11438694
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.373.1",
+      "version": "0.1.0-nightly.375.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.373.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.375.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 35294886
+          "sizeBytes": 35293242
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.373.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.375.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.373.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.375.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 102484472
+          "sizeBytes": 102468088
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.373.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.375.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -772,29 +871,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.373.1",
+      "version": "0.1.0-nightly.375.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.373.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.375.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 31724653
+          "sizeBytes": 31724497
         },
         {
-          "name": "Aura_0.1.0-nightly.373.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.375.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.373.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.375.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 31533299
+          "sizeBytes": 31536078
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.373.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.375.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -804,29 +903,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.373.1",
+      "version": "0.1.0-nightly.375.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.373.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.375.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33315530
+          "sizeBytes": 33324684
         },
         {
-          "name": "Aura_0.1.0-nightly.373.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.375.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.373.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.375.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33142994
+          "sizeBytes": 33144160
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.373.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.375.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -836,17 +935,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.373.1",
+      "version": "0.1.0-nightly.375.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.373.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.375.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 23871311
+          "sizeBytes": 23879880
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.373.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.375.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -855,8 +954,8 @@
     }
   ],
   "rendered": {
-    "title": "Browser Use takes over changelog media capture",
-    "intro": "Today's nightly is dominated by a ground-up rebuild of how Aura produces changelog media: the old screenshot pipeline is gone, replaced by a Browser Use–driven flow guarded by quality, branding, and auth gates. The server side also picked up Fireworks-hosted open model pricing so Kimi, DeepSeek, and GPT-OSS usage is now billable alongside the existing Anthropic and OpenAI lineup.",
+    "title": "Browser Use rebuild of changelog media and DeepSeek pricing support",
+    "intro": "Today's nightly replaces the old screenshot pipeline with a Browser Use–driven changelog media system gated by independent quality and branding checks, and broadens model pricing coverage with new DeepSeek direct support and Fireworks open-model rates. Desktop builds for Mac, Windows, and Linux shipped alongside these changes.",
     "entries": [
       {
         "batch_id": "entry-1",
@@ -864,43 +963,38 @@
         "started_at": "2026-04-24T09:34:25.000Z",
         "ended_at": "2026-04-24T12:02:56.000Z",
         "title": "Changelog media pipeline rebuilt on Browser Use",
-        "summary": "The legacy demo-screenshot stack was deleted in favor of an Anthropic-planned, Browser Use–driven capture flow with strict quality and branding gates.",
+        "summary": "The legacy screenshot pipeline was torn out and replaced with a Browser Use–first media system backed by seeded capture sessions and multi-stage quality gates.",
         "items": [
           {
-            "text": "Retired the old media publishing stack — removing the publish/retry/sync media workflows, the Playwright demo seeder, and thousands of lines of produce-agent-demo-screenshots scaffolding — and replaced it with a focused Browser Use planning flow plus a new CaptureLoginView for authenticated capture sessions.",
+            "text": "Retired the old Browserbase-based screenshot workflows and their supporting demo-agent seeding code, replacing them with a Browser Use planning trial, an Aura navigation contract, and a new capture-login view; the server now exposes a dedicated capture_auth path so automated runs can authenticate without leaking secrets.",
             "commit_shas": [
-              "888afbe54b40663a072507842a7e01418d213479"
+              "888afbe54b40663a072507842a7e01418d213479",
+              "a3be62e637dd8354ce1fb42228a562757e982f90"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added first-class quality and branding gates: an Anthropic vision judge for raw screenshots, deterministic SVG branded media cards, and structural layout checks that a branded asset must pass before it can publish.",
+            "text": "Added independent branding and quality gates — raw screenshots, branded SVG cards, and final branded PNGs each pass their own structural and vision checks before anything is considered publish-ready.",
             "commit_shas": [
               "ff509bbaad88ca49ca6db28c3f157cb409d71a38",
-              "9b716b4c5788798046f6f26a575cbc30eacbd3d2"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Hardened Browser Use runs with explicit timeouts, cost caps, and interval controls so release CI can no longer hang for hours on a stuck agent, and codified a quality policy that forbids cropping, zooming, or regenerating product UI.",
-            "commit_shas": [
-              "36a29c577e5c6804bf89adf7092e62e2dda4bee6"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Taught the planner to chunk large changelogs, rescue omitted entries, and skip low-priority candidates safely, and bumped the desktop capture viewport to 2560×1440 (min 1920×1080) for sharper proofs — backed by a sharp-powered image toolchain.",
-            "commit_shas": [
+              "36a29c577e5c6804bf89adf7092e62e2dda4bee6",
               "36ca8bb3bc141fd0735c1dac5ea2b5df923413f4"
             ],
             "confidence": "high"
           },
           {
-            "text": "Introduced stateless capture auth on the Aura server and seeded capture sessions encoded in the login URL fragment, so Browser Use agents can reach the desktop shell without ever seeing or logging the capture secret.",
+            "text": "Media runs now use seeded capture sessions passed through the URL fragment, with captureSession values redacted from task prompts and Browser Use message logs so secrets never land in artifacts.",
             "commit_shas": [
-              "a3be62e637dd8354ce1fb42228a562757e982f90",
               "1fd2c56e3a21c05a700e8917d825c5cd59f26fad",
               "e7b602e4d46a22e9500212977b09f33b0506b409"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Hardened the planner so large changelogs are chunked instead of truncated, omitted entries get a rescue pass, and lower-priority candidates are recorded as explicit skips rather than silently dropped; added sharp for real image processing in branding.",
+            "commit_shas": [
+              "36ca8bb3bc141fd0735c1dac5ea2b5df923413f4",
+              "9b716b4c5788798046f6f26a575cbc30eacbd3d2"
             ],
             "confidence": "high"
           }
@@ -911,11 +1005,11 @@
         "time_label": "5:09 AM",
         "started_at": "2026-04-24T12:09:13.000Z",
         "ended_at": "2026-04-24T12:09:13.000Z",
-        "title": "Safe handoff from capture to publish",
-        "summary": "A small but deliberate addition that formalizes when a branded asset is allowed to cross from evaluation into the publish step.",
+        "title": "Safer publish handoff for media runs",
+        "summary": "A documented handoff step ensures media is only handed to publish after passing the full evaluator chain.",
         "items": [
           {
-            "text": "Documented and wired a safe publish handoff in the changelog media evaluator, so branded outputs only move forward once both the raw screenshot and the final branded PNG have cleared their independent quality gates.",
+            "text": "Extended the evaluator with a safe publish handoff stage and documented the gate in the Browser Use plan, so media only advances to publish after capture, branding, and vision checks all succeed.",
             "commit_shas": [
               "d2bd4beb584cde7593941416e78a0e4f0111cf78"
             ],
@@ -928,27 +1022,59 @@
         "time_label": "9:45 AM",
         "started_at": "2026-04-24T16:45:12.000Z",
         "ended_at": "2026-04-24T18:53:18.000Z",
-        "title": "Publish pipeline rewired and Fireworks pricing lands",
-        "summary": "The afternoon brought the new publish workflow online and extended server-side usage pricing to Fireworks-hosted open models.",
+        "title": "Higher-resolution capture and Fireworks open-model pricing",
+        "summary": "The media pipeline moved to 2560×1440 captures with a real publish script, and the server's fee schedule grew to cover Fireworks-hosted open models.",
         "items": [
           {
-            "text": "Reintroduced the Publish Release Changelog Media workflow as a downstream of Publish Release Changelog, gated on upstream success and driven by published metadata artifacts, alongside a new publish-changelog-media script and high-resolution capture helper.",
+            "text": "Bumped the desktop capture viewport to 2560×1440 (1920×1080 minimum), taught the Browser Use task to handle capture-secret prompts via sensitive-data placeholders, and reintroduced a proper publish-release-changelog-media workflow that chains off the changelog publish run with artifact-based metadata.",
+            "commit_shas": [
+              "24208c688c1a9dca28051ff193e32c85e4ec7a1b",
+              "45351266085d051ff86ea89baaec5388be36c22f"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added a high-resolution capture library and a real publish-changelog-media script with tests, wiring the evaluator, planner, and branding stages into a single end-to-end publishing path.",
             "commit_shas": [
               "45351266085d051ff86ea89baaec5388be36c22f"
             ],
             "confidence": "high"
           },
           {
-            "text": "Tightened the media quality gates further with additional branding, navigation-contract, and evaluator checks so weak or malformed candidates are rejected before they reach the publish stage.",
+            "text": "Expanded the server fee schedule from 7 to 15 models, adding pricing for Kimi K2.5/K2.6 (including turbo and thinking variants), Kimi K2 Instruct 0905, DeepSeek V3.2, and GPT-OSS 120B, and taught model-ID normalization to handle Fireworks account and router prefixes.",
             "commit_shas": [
-              "24208c688c1a9dca28051ff193e32c85e4ec7a1b"
+              "916e38bbf83f0defba37869fc495e9d0e4cd9f2d"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-4",
+        "time_label": "1:49 PM",
+        "started_at": "2026-04-24T20:49:30.000Z",
+        "ended_at": "2026-04-24T20:58:01.000Z",
+        "title": "DeepSeek direct provider support",
+        "summary": "DeepSeek is now a first-class provider family with its own API key, default model, and usage accounting, while the older Fireworks-hosted DeepSeek V3.2 entry was retired from the model list.",
+        "items": [
+          {
+            "text": "Added DeepSeek as a recognized provider family with DEEPSEEK_API_KEY wiring, a deepseek-v4-flash default, and provider-family routing that distinguishes aura-deepseek-v4 direct models from the Fireworks-hosted aura-deepseek-v3-2 path.",
+            "commit_shas": [
+              "9e377b590455f455c962b3ffbab856a3671cb708"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added server-side pricing coverage for Fireworks-hosted Kimi K2 (p5, p6, turbo, thinking, instruct-0905), DeepSeek V3.2, and GPT-OSS-120B, including aura-* aliases and `accounts/fireworks/models|routers/` prefix normalization, so usage cost estimation now matches these models end to end.",
+            "text": "Taught usage extraction to accept DeepSeek-style prompt_tokens, completion_tokens, and prompt_cache_hit/miss fields so benchmark pricing and token accounting work against DeepSeek's native API shape.",
             "commit_shas": [
-              "916e38bbf83f0defba37869fc495e9d0e4cd9f2d"
+              "9e377b590455f455c962b3ffbab856a3671cb708"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Removed the Fireworks-hosted DeepSeek V3.2 model from the public model list now that direct DeepSeek access is available.",
+            "commit_shas": [
+              "dd65db9dfdeb24141f60b5bab966752b54ae24a4"
             ],
             "confidence": "high"
           }
@@ -956,11 +1082,11 @@
       }
     ],
     "highlights": [
-      "Legacy demo screenshot pipeline replaced with Browser Use planning",
-      "New quality, branding, and high-res gates for changelog media",
-      "Seeded capture sessions and stateless capture auth for CI runs",
-      "Fireworks open model pricing (Kimi, DeepSeek, GPT-OSS) wired into billing"
+      "Changelog media pipeline rebuilt around Browser Use planning",
+      "Independent vision, branding, and layout gates before any media publishes",
+      "DeepSeek added as a first-class pricing and provider family",
+      "Fireworks open models (Kimi K2, DeepSeek V3.2, GPT-OSS 120B) now priced"
     ],
-    "raw_commit_count": 12
+    "raw_commit_count": 14
   }
 }

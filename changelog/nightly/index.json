@@ -2,19 +2,19 @@
   {
     "date": "2026-04-24",
     "channel": "nightly",
-    "version": "0.1.0-nightly.373.1",
-    "title": "Browser Use takes over changelog media capture",
-    "intro": "Today's nightly is dominated by a ground-up rebuild of how Aura produces changelog media: the old screenshot pipeline is gone, replaced by a Browser Use–driven flow guarded by quality, branding, and auth gates. The server side also picked up Fireworks-hosted open model pricing so Kimi, DeepSeek, and GPT-OSS usage is now billable alongside the existing Anthropic and OpenAI lineup.",
-    "entryCount": 3,
+    "version": "0.1.0-nightly.375.1",
+    "title": "Browser Use rebuild of changelog media and DeepSeek pricing support",
+    "intro": "Today's nightly replaces the old screenshot pipeline with a Browser Use–driven changelog media system gated by independent quality and branding checks, and broadens model pricing coverage with new DeepSeek direct support and Fireworks open-model rates. Desktop builds for Mac, Windows, and Linux shipped alongside these changes.",
+    "entryCount": 4,
     "highlights": [
-      "Legacy demo screenshot pipeline replaced with Browser Use planning",
-      "New quality, branding, and high-res gates for changelog media",
-      "Seeded capture sessions and stateless capture auth for CI runs",
-      "Fireworks open model pricing (Kimi, DeepSeek, GPT-OSS) wired into billing"
+      "Changelog media pipeline rebuilt around Browser Use planning",
+      "Independent vision, branding, and layout gates before any media publishes",
+      "DeepSeek added as a first-class pricing and provider family",
+      "Fireworks open models (Kimi K2, DeepSeek V3.2, GPT-OSS 120B) now priced"
     ],
-    "rawCommitCount": 13,
-    "generatedAt": "2026-04-24T19:08:04.697Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.373.1",
+    "rawCommitCount": 15,
+    "generatedAt": "2026-04-24T21:11:45.129Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.375.1",
     "path": "history/2026-04-24.json"
   },
   {
