@@ -282,6 +282,18 @@ pub(crate) async fn retry_task(
             _ => ApiError::internal(format!("fetching task for retry: {e}")),
         })?;
     let task = storage_task_to_task(current).map_err(ApiError::internal)?;
+
+    // Idempotent on `ready`. The UI surfaces a "Retry" button for any
+    // task the user perceives as stopped, and the dev-loop frequently
+    // resets tasks to `ready` itself (infra-retry ladder, bridge from
+    // the terminal-failure handler, etc.). Without this short-circuit
+    // the subsequent `validate_transition(Ready, Ready)` rejects the
+    // request as `ready → ready` and the user sees a 400 for a state
+    // that's already "ready to run".
+    if matches!(task.status, TaskStatus::Ready) {
+        return Ok(Json(task));
+    }
+
     TaskService::validate_transition(task.status, TaskStatus::Ready)
         .map_err(|e| ApiError::bad_request(format!("validating task retry: {e}")))?;
 
@@ -1440,6 +1452,33 @@ mod tests {
             response.recommended_action.is_none(),
             "no sync state and no terminal failure should produce a noop → field omitted; got {:?}",
             response.recommended_action,
+        );
+    }
+
+    /// Regression for the `ready → ready` 400s: the retry endpoint has to
+    /// short-circuit when the task is already in `Ready`, because the
+    /// underlying state machine rejects that transition. The dev-loop's
+    /// infra-retry ladder can leave a task in `ready` (with the UI still
+    /// showing it as stopped), and hitting `/retry` from the UI in that
+    /// state previously returned a misleading "validating task retry"
+    /// 400. The handler now returns the current task unchanged; this
+    /// test pins the underlying state-machine invariant so the
+    /// short-circuit is understood as required, not decorative.
+    #[test]
+    fn retry_on_already_ready_task_must_short_circuit() {
+        use aura_os_tasks::TaskService;
+
+        assert!(
+            TaskService::validate_transition(TaskStatus::Ready, TaskStatus::Ready).is_err(),
+            "ready -> ready must remain illegal; the retry handler's idempotent short-circuit is the only reason /retry works on a ready task"
+        );
+        assert!(
+            TaskService::validate_transition(TaskStatus::Failed, TaskStatus::Ready).is_ok(),
+            "failed -> ready must stay legal so the non-idempotent retry path still works"
+        );
+        assert!(
+            TaskService::validate_transition(TaskStatus::Blocked, TaskStatus::Ready).is_ok(),
+            "blocked -> ready must stay legal so retry from the blocked state still works"
         );
     }
 }

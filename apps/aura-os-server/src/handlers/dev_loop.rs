@@ -6270,6 +6270,34 @@ async fn persist_task_failure_reason(
     if let Err(error) = storage_client.update_task(task_id, jwt, &update).await {
         warn!(%task_id, %error, "Failed to persist task failure reason");
     }
+
+    // Fetch current status so we can honour the aura-storage state
+    // machine: it rejects a direct `ready → failed` (only
+    // `in_progress → failed` is legal), and `→ failed` on an already
+    // terminal task (failed/done). Without this check the fallback
+    // path produced the "Invalid status transition: 'ready' → 'failed'"
+    // warnings seen when the forwarder restart loop exhausted for a
+    // task the infra-retry ladder had just reset to `ready`.
+    let current_status: Option<String> = match storage_client.get_task(task_id, jwt).await {
+        Ok(t) => t.status,
+        Err(error) => {
+            warn!(%task_id, %error, "Failed to read current task status before marking Failed");
+            None
+        }
+    };
+    match current_status.as_deref() {
+        Some("failed") | Some("done") => return,
+        Some("ready") => {
+            let bridge = aura_os_storage::TransitionTaskRequest {
+                status: "in_progress".to_string(),
+            };
+            if let Err(error) = storage_client.transition_task(task_id, jwt, &bridge).await {
+                warn!(%task_id, %error, "Failed to bridge ready->in_progress before connect-failure terminal transition");
+            }
+        }
+        _ => {}
+    }
+
     let transition = aura_os_storage::TransitionTaskRequest {
         status: "failed".to_string(),
     };
