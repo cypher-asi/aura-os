@@ -249,6 +249,17 @@ fn project_routes() -> Router<AppState> {
             "/api/projects/:project_id/stats",
             get(project_stats::get_project_stats),
         )
+        // Project artifacts (images, 3D models)
+        .route(
+            "/api/projects/:project_id/artifacts",
+            get(project_artifacts::list_project_artifacts)
+                .post(project_artifacts::create_project_artifact),
+        )
+        .route(
+            "/api/artifacts/:artifact_id",
+            get(project_artifacts::get_project_artifact)
+                .delete(project_artifacts::delete_project_artifact),
+        )
         .route("/api/list-directory", post(files::list_directory))
         .route("/api/read-file", post(files::read_file))
         .route("/api/file-preview", get(files::preview_file))
@@ -607,17 +618,6 @@ fn process_routes() -> Router<AppState> {
             get(process::list_run_artifacts),
         )
         .route("/api/process-artifacts/:id", get(process::get_artifact))
-        // Project artifacts (images, 3D models)
-        .route(
-            "/api/projects/:project_id/artifacts",
-            get(project_artifacts::list_project_artifacts)
-                .post(project_artifacts::create_project_artifact),
-        )
-        .route(
-            "/api/artifacts/:artifact_id",
-            get(project_artifacts::get_project_artifact)
-                .delete(project_artifacts::delete_project_artifact),
-        )
         .route(
             "/api/process-folders",
             get(process::list_folders).post(process::create_folder),
