@@ -1245,7 +1245,7 @@ struct ModelRates {
     cache_read: f64,
 }
 
-fn default_fee_schedule() -> [(&'static str, ModelRates); 7] {
+fn default_fee_schedule() -> [(&'static str, ModelRates); 15] {
     [
         (
             "gpt-5.5",
@@ -1281,6 +1281,78 @@ fn default_fee_schedule() -> [(&'static str, ModelRates); 7] {
                 output: 1.25,
                 cache_write: 0.20,
                 cache_read: 0.02,
+            },
+        ),
+        (
+            "kimi-k2p6",
+            ModelRates {
+                input: 0.95,
+                output: 4.0,
+                cache_write: 0.95,
+                cache_read: 0.16,
+            },
+        ),
+        (
+            "kimi-k2p6-turbo",
+            ModelRates {
+                input: 2.0,
+                output: 8.0,
+                cache_write: 2.0,
+                cache_read: 0.3,
+            },
+        ),
+        (
+            "kimi-k2p5",
+            ModelRates {
+                input: 0.6,
+                output: 3.0,
+                cache_write: 0.6,
+                cache_read: 0.1,
+            },
+        ),
+        (
+            "kimi-k2p5-turbo",
+            ModelRates {
+                input: 0.99,
+                output: 4.94,
+                cache_write: 0.99,
+                cache_read: 0.16,
+            },
+        ),
+        (
+            "kimi-k2-thinking",
+            ModelRates {
+                input: 0.6,
+                output: 2.5,
+                cache_write: 0.6,
+                cache_read: 0.3,
+            },
+        ),
+        (
+            "kimi-k2-instruct-0905",
+            ModelRates {
+                input: 0.6,
+                output: 2.5,
+                cache_write: 0.6,
+                cache_read: 0.3,
+            },
+        ),
+        (
+            "deepseek-v3p2",
+            ModelRates {
+                input: 0.56,
+                output: 1.68,
+                cache_write: 0.56,
+                cache_read: 0.28,
+            },
+        ),
+        (
+            "gpt-oss-120b",
+            ModelRates {
+                input: 0.15,
+                output: 0.6,
+                cache_write: 0.15,
+                cache_read: 0.01,
             },
         ),
         (
@@ -1346,12 +1418,22 @@ fn normalize_pricing_model_id(model: &str) -> String {
     if let Some(rest) = normalized.strip_prefix("openai/") {
         return rest.to_string();
     }
+    if let Some(rest) = normalized.strip_prefix("accounts/fireworks/models/") {
+        return rest.to_string();
+    }
+    if let Some(rest) = normalized.strip_prefix("accounts/fireworks/routers/") {
+        return rest.to_string();
+    }
 
     for (aura_id, model_id) in [
         ("aura-gpt-5-5", "gpt-5.5"),
         ("aura-gpt-5-4", "gpt-5.4"),
         ("aura-gpt-5-4-mini", "gpt-5.4-mini"),
         ("aura-gpt-5-4-nano", "gpt-5.4-nano"),
+        ("aura-kimi-k2-6", "kimi-k2p6"),
+        ("aura-kimi-k2-5", "kimi-k2p5"),
+        ("aura-deepseek-v3-2", "deepseek-v3p2"),
+        ("aura-oss-120b", "gpt-oss-120b"),
     ] {
         if normalized == aura_id {
             return model_id.to_string();
@@ -4745,6 +4827,68 @@ mod tests {
 
         assert!((exact - versioned).abs() < 1e-9);
         assert!((exact - 3.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn estimate_usage_cost_matches_kimi_model_ids() {
+        let aura = estimate_usage_cost_usd("aura-kimi-k2-6", 1_000_000, 500_000, 0, 0);
+        let fireworks = estimate_usage_cost_usd(
+            "accounts/fireworks/models/kimi-k2p6",
+            1_000_000,
+            500_000,
+            0,
+            0,
+        );
+
+        assert!((aura - fireworks).abs() < 1e-9);
+        assert!((aura - 2.95).abs() < 1e-9);
+    }
+
+    #[test]
+    fn estimate_usage_cost_matches_kimi_router_model_ids() {
+        let cost = estimate_usage_cost_usd(
+            "accounts/fireworks/routers/kimi-k2p6-turbo",
+            1_000_000,
+            500_000,
+            0,
+            0,
+        );
+
+        assert!((cost - 6.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn estimate_usage_cost_covers_visible_fireworks_models() {
+        for (aura_model, fireworks_model, expected_cost) in [
+            ("aura-kimi-k2-5", "accounts/fireworks/models/kimi-k2p5", 2.1),
+            (
+                "aura-kimi-k2-6",
+                "accounts/fireworks/models/kimi-k2p6",
+                2.95,
+            ),
+            (
+                "aura-deepseek-v3-2",
+                "accounts/fireworks/models/deepseek-v3p2",
+                1.4,
+            ),
+            (
+                "aura-oss-120b",
+                "accounts/fireworks/models/gpt-oss-120b",
+                0.45,
+            ),
+        ] {
+            let aura_cost = estimate_usage_cost_usd(aura_model, 1_000_000, 500_000, 0, 0);
+            let fireworks_cost = estimate_usage_cost_usd(fireworks_model, 1_000_000, 500_000, 0, 0);
+
+            assert!(
+                (aura_cost - fireworks_cost).abs() < 1e-9,
+                "{aura_model} and {fireworks_model} should share pricing"
+            );
+            assert!(
+                (aura_cost - expected_cost).abs() < 1e-9,
+                "{aura_model} expected cost mismatch"
+            );
+        }
     }
 
     #[test]
