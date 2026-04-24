@@ -1417,7 +1417,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 8,
           "reason": "Brand-new AURA 3D app with a WebGL viewer, image generation flow, and sidekick panels is a clearly visible, screenshot-friendly product surface.",
           "reasons": [
@@ -1466,7 +1466,17 @@
             "Images",
             "Models"
           ],
-          "storyTitle": "AURA 3D app debuts with image generation and WebGL viewer"
+          "storyTitle": "AURA 3D — Image Generation & WebGL Model Viewer",
+          "batchId": "entry-3",
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.359.1/entry-3-aura-3d-app-debuts-with-image-generation-and-webgl-viewer.png",
+          "screenshotSource": "capture-proof",
+          "originalScreenshotSource": "capture-proof",
+          "polishProvider": "openai",
+          "polishModel": "",
+          "polishJudgeModel": "gpt-4.1-mini",
+          "polishScore": 30,
+          "polishFallbackReason": "openai_polish_quality_gate",
+          "updatedAt": "2026-04-24T00:50:09.329Z"
         }
       },
       {
@@ -1542,7 +1552,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 6,
           "reason": "Layout reshape of AURA 3D: new Image/3D Model tabs, LeftMenuTree-based project nav, IMAGE header, and lightbox preview are all obvious in a single screenshot of the updated workspace.",
           "reasons": [
@@ -1579,7 +1589,17 @@
             "3D Model",
             "IMAGE"
           ],
-          "storyTitle": "AURA 3D adopts tab layout and Projects-style left nav"
+          "storyTitle": "AURA 3D – Tab Layout & Projects-Style Left Nav",
+          "batchId": "entry-5",
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.359.1/entry-5-aura-3d-adopts-tab-layout-and-projects-style-left-nav.png",
+          "screenshotSource": "capture-proof",
+          "originalScreenshotSource": "capture-proof",
+          "polishProvider": "openai",
+          "polishModel": "",
+          "polishJudgeModel": "gpt-4.1-mini",
+          "polishScore": 0,
+          "polishFallbackReason": "openai_polish_quality_gate",
+          "updatedAt": "2026-04-24T00:54:15.668Z"
         }
       },
       {
@@ -1622,7 +1642,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 6,
           "reason": "Visible polish to AURA 3D: icon-based viewer controls, thumbnail grid sidekick panels, left nav showing images and models under projects, and the app now always enabled. These UI states are provable in one screenshot. Backend artifact endpoints are non-visual but the persisted artifacts showing in nav/sidekick is the visible proof.",
           "reasons": [
@@ -1671,7 +1691,17 @@
             "AURA 3D",
             "Models"
           ],
-          "storyTitle": "AURA 3D ships artifact persistence and goes on by default"
+          "storyTitle": "AURA 3D — Artifact Persistence & Always-On Workspace",
+          "batchId": "entry-6",
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.359.1/entry-6-aura-3d-ships-artifact-persistence-and-goes-on-by-default.png",
+          "screenshotSource": "capture-proof",
+          "originalScreenshotSource": "capture-proof",
+          "polishProvider": "openai",
+          "polishModel": "",
+          "polishJudgeModel": "gpt-4.1-mini",
+          "polishScore": 20,
+          "polishFallbackReason": "openai_polish_quality_gate",
+          "updatedAt": "2026-04-24T00:59:09.315Z"
         }
       }
     ],
