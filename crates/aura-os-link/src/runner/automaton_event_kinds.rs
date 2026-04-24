@@ -9,6 +9,7 @@ pub const THINKING_DELTA: &str = "thinking_delta";
 pub const TOOL_USE_START: &str = "tool_use_start";
 pub const TOOL_CALL_STARTED: &str = "tool_call_started";
 pub const TOOL_CALL_SNAPSHOT: &str = "tool_call_snapshot";
+pub const TOOL_CALL_COMPLETED: &str = "tool_call_completed";
 pub const TOOL_RESULT: &str = "tool_result";
 
 pub const TOKEN_USAGE: &str = "token_usage";
@@ -54,6 +55,7 @@ pub fn is_process_stream_forward_event(evt_type: &str) -> bool {
             | TOOL_USE_START
             | TOOL_CALL_STARTED
             | TOOL_CALL_SNAPSHOT
+            | TOOL_CALL_COMPLETED
             | TOOL_RESULT
     )
 }

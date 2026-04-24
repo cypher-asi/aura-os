@@ -2130,12 +2130,22 @@ fn is_empty_path_write_event(event_type: &str, event: &serde_json::Value) -> boo
     if event_type != "tool_call_completed" {
         return false;
     }
-    let name = event.get("name").and_then(|v| v.as_str());
-    if !matches!(name, Some("write_file") | Some("edit_file")) {
+    let name = event.get("name").and_then(|v| v.as_str()).unwrap_or("");
+    let input = event.get("input");
+    is_empty_path_write(name, input)
+}
+
+/// Pure check over a `(tool_name, input)` pair — shared between the
+/// native `tool_call_completed` path and the `tool_result` + cached
+/// `tool_call_snapshot` fallback. Only reports `true` for
+/// `write_file` / `edit_file` with a missing or whitespace-only
+/// `path` so the DoD gate's empty-path counter stays a single signal
+/// regardless of which event shape the harness emits.
+fn is_empty_path_write(name: &str, input: Option<&serde_json::Value>) -> bool {
+    if !matches!(name, "write_file" | "edit_file") {
         return false;
     }
-    let path = event
-        .get("input")
+    let path = input
         .and_then(|input| input.get("path"))
         .and_then(serde_json::Value::as_str)
         .map(str::trim)
@@ -2163,21 +2173,39 @@ fn successful_write_event_path(
     if event_type != "tool_call_completed" {
         return None;
     }
-    if event
+    let is_error = event
         .get("is_error")
         .and_then(serde_json::Value::as_bool)
-        .unwrap_or(false)
-    {
+        .unwrap_or(false);
+    let name = event.get("name").and_then(|v| v.as_str())?;
+    let input = event.get("input");
+    successful_write_from_name_input(name, input, is_error)
+}
+
+/// Core `(name, input, is_error)` → `(path, op)` classifier shared by:
+/// - the native `tool_call_completed` handler
+///   ([`successful_write_event_path`]), and
+/// - the version-skew fallback that pairs `tool_result` with a cached
+///   `tool_call_snapshot` for harnesses that don't yet emit
+///   `tool_call_completed`.
+///
+/// Both code paths feed into [`record_successful_write`] so
+/// `CachedTaskOutput::files_changed` accumulates the same file list
+/// regardless of which event shape the harness emitted.
+fn successful_write_from_name_input(
+    name: &str,
+    input: Option<&serde_json::Value>,
+    is_error: bool,
+) -> Option<(String, &'static str)> {
+    if is_error {
         return None;
     }
-    let name = event.get("name").and_then(|v| v.as_str())?;
     let op = match name {
         "write_file" | "edit_file" => "modify",
         "delete_file" => "delete",
         _ => return None,
     };
-    let path = event
-        .get("input")
+    let path = input
         .and_then(|input| input.get("path"))
         .and_then(serde_json::Value::as_str)
         .map(str::trim)
@@ -3634,6 +3662,82 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                             entry.output_tokens = output_tokens;
                                             entry.total_input_tokens += input_tokens;
                                             entry.total_output_tokens += output_tokens;
+                                        }
+                                    }
+                                }
+                                "tool_call_snapshot" => {
+                                    // Cache the (name, input) pair keyed
+                                    // by `tool_use_id` so the paired
+                                    // `tool_result` arm below can recover
+                                    // the write path on harnesses that
+                                    // don't emit the authoritative
+                                    // `tool_call_completed` frame. The
+                                    // snapshot's input is the fully-
+                                    // parsed JSON value by the time this
+                                    // forwarder sees it, not the partial
+                                    // streaming form.
+                                    if let (Some(id), Some(name)) = (
+                                        event.get("id").and_then(|v| v.as_str()),
+                                        event.get("name").and_then(|v| v.as_str()),
+                                    ) {
+                                        let input = event
+                                            .get("input")
+                                            .cloned()
+                                            .unwrap_or(serde_json::Value::Null);
+                                        entry.tool_input_snapshots.insert(
+                                            id.to_string(),
+                                            crate::state::ToolInputSnapshotEntry {
+                                                name: name.to_string(),
+                                                input,
+                                            },
+                                        );
+                                    }
+                                }
+                                "tool_result" => {
+                                    // Version-skew fallback: a `tool_result`
+                                    // carries `is_error` but no input, and
+                                    // older harnesses never emit the
+                                    // paired `tool_call_completed`. Join
+                                    // by `tool_use_id` against the cached
+                                    // `tool_call_snapshot` to recover the
+                                    // same `(path, op)` the native path
+                                    // would have produced, so the DoD
+                                    // gate's `files_changed` count stays
+                                    // correct across harness versions.
+                                    let tool_use_id = event
+                                        .get("tool_use_id")
+                                        .or_else(|| event.get("id"))
+                                        .and_then(|v| v.as_str())
+                                        .unwrap_or("");
+                                    let is_error = event
+                                        .get("is_error")
+                                        .and_then(|v| v.as_bool())
+                                        .unwrap_or(false);
+                                    if !tool_use_id.is_empty() {
+                                        if let Some(snap) =
+                                            entry.tool_input_snapshots.remove(tool_use_id)
+                                        {
+                                            if is_empty_path_write(
+                                                &snap.name,
+                                                Some(&snap.input),
+                                            ) {
+                                                entry.empty_path_writes = entry
+                                                    .empty_path_writes
+                                                    .saturating_add(1);
+                                            }
+                                            if let Some((path, op)) =
+                                                successful_write_from_name_input(
+                                                    &snap.name,
+                                                    Some(&snap.input),
+                                                    is_error,
+                                                )
+                                            {
+                                                record_successful_write(
+                                                    &mut entry.files_changed,
+                                                    path,
+                                                    op,
+                                                );
+                                            }
                                         }
                                     }
                                 }
@@ -7518,6 +7622,67 @@ mod tests {
             "input": {"path": "src/lib.rs"},
         });
         assert!(successful_write_event_path("tool_call_started", &non_completion).is_none());
+    }
+
+    #[test]
+    fn successful_write_from_name_input_recovers_from_snapshot_and_result() {
+        // Version-skew regression: harnesses that only emit
+        // `tool_call_snapshot` + `tool_result` (no authoritative
+        // `tool_call_completed`) must still populate `files_changed`
+        // via the fallback join on `tool_use_id`. The inner classifier
+        // is the shared truth both paths funnel through.
+        let input = serde_json::json!({"path": "crates/foo/src/lib.rs"});
+        let (path, op) = successful_write_from_name_input("write_file", Some(&input), false)
+            .expect("successful write via fallback must be recorded");
+        assert_eq!(path, "crates/foo/src/lib.rs");
+        assert_eq!(op, "modify");
+
+        assert!(
+            successful_write_from_name_input("write_file", Some(&input), true).is_none(),
+            "tool_result with is_error=true must not count"
+        );
+
+        let empty_input = serde_json::json!({"path": "   "});
+        assert!(
+            successful_write_from_name_input("write_file", Some(&empty_input), false).is_none(),
+            "empty/whitespace path must not count as a successful write"
+        );
+
+        let delete_input = serde_json::json!({"path": "docs/legacy.md"});
+        let (path, op) =
+            successful_write_from_name_input("delete_file", Some(&delete_input), false)
+                .expect("delete_file via fallback must record a delete op");
+        assert_eq!(path, "docs/legacy.md");
+        assert_eq!(op, "delete");
+
+        assert!(
+            successful_write_from_name_input("read_file", Some(&input), false).is_none(),
+            "non-mutating tool names must not count"
+        );
+    }
+
+    #[test]
+    fn is_empty_path_write_helper_shared_by_native_and_fallback_paths() {
+        // The helper is called from two call-sites with slightly
+        // different inputs: the native `tool_call_completed` path
+        // passes the whole event JSON, and the fallback path passes
+        // the cached snapshot's (name, input). Both must agree on
+        // which calls are "empty path" so the DoD gate sees a single
+        // empty_path_writes counter regardless of event shape.
+        let empty = serde_json::json!({"path": ""});
+        assert!(is_empty_path_write("write_file", Some(&empty)));
+        assert!(is_empty_path_write("edit_file", Some(&empty)));
+        assert!(!is_empty_path_write("delete_file", Some(&empty)));
+        // `None` input is treated the same as a missing `path` field
+        // — the native path already did this via
+        // `event.get("input").and_then(...)` returning `None`, and
+        // the fallback path preserves the same semantics so empty-
+        // path misfires from either event shape get counted.
+        assert!(is_empty_path_write("write_file", None));
+        assert!(!is_empty_path_write("read_file", None));
+
+        let good = serde_json::json!({"path": "src/lib.rs"});
+        assert!(!is_empty_path_write("write_file", Some(&good)));
     }
 
     #[test]

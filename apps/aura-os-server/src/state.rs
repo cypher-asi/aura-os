@@ -373,6 +373,31 @@ pub struct CachedTaskOutput {
     /// don't yet emit `tool_call_failed`, leaving the generic DoD reasons
     /// as the default.
     pub tool_call_failures: Vec<ToolCallFailureEntry>,
+    /// Pending `tool_call_snapshot` inputs keyed by `tool_use_id`,
+    /// consumed when the paired `tool_result` arrives.
+    ///
+    /// Acts as the version-skew fallback for the DoD gate: harness
+    /// versions that pre-date the `tool_call_completed` emission still
+    /// only send `tool_call_snapshot` (carries the input) and
+    /// `tool_result` (carries the error flag). Joining them by id gives
+    /// the gate the same `(path, op, is_error)` signal that a native
+    /// `tool_call_completed` would.
+    ///
+    /// Entries are removed when the matching `tool_result` is
+    /// processed. Snapshots without a matching result (e.g. the stream
+    /// died mid-call) are harmless — they just pin a small amount of
+    /// memory until the task output cache is dropped.
+    pub tool_input_snapshots: HashMap<String, ToolInputSnapshotEntry>,
+}
+
+/// Cached `(name, input)` pair from a `tool_call_snapshot` event,
+/// awaiting the paired `tool_result` so the DoD gate can recover the
+/// file-change path on harness versions that don't emit the
+/// authoritative `tool_call_completed` frame.
+#[derive(Clone, Debug, Default)]
+pub struct ToolInputSnapshotEntry {
+    pub name: String,
+    pub input: serde_json::Value,
 }
 
 /// One entry in [`CachedTaskOutput::tool_call_failures`]: the tool that

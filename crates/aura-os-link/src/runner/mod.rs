@@ -13,7 +13,7 @@ use tracing::warn;
 
 use automaton_event_kinds::{
     is_usage_totals_event, DONE, ERROR, TASK_COMPLETED, TASK_FAILED, TEXT_DELTA,
-    TOOL_CALL_SNAPSHOT, TOOL_CALL_STARTED, TOOL_RESULT, TOOL_USE_START,
+    TOOL_CALL_COMPLETED, TOOL_CALL_SNAPSHOT, TOOL_CALL_STARTED, TOOL_RESULT, TOOL_USE_START,
 };
 
 pub use automaton_event_kinds::{
@@ -350,7 +350,14 @@ where
                             "input": serde_json::Value::Null,
                         }));
                     }
-                    TOOL_CALL_SNAPSHOT => {
+                    TOOL_CALL_SNAPSHOT | TOOL_CALL_COMPLETED => {
+                        // `tool_call_completed` carries the authoritative
+                        // (non-partial) input and supersedes any earlier
+                        // `tool_call_snapshot` for the same id. Both
+                        // frames use the same upsert logic: find the
+                        // matching `tool_use` block by id and overwrite
+                        // its name/input, or push a new one when the
+                        // stream skipped the start event.
                         let id = evt.get("id").and_then(|v| v.as_str()).unwrap_or("");
                         let name = evt.get("name").and_then(|v| v.as_str()).unwrap_or("");
                         let input = evt
