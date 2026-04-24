@@ -21,6 +21,14 @@ import {
   evaluateDesktopCapture,
   runBrowserUseTask,
 } from "./changelog-media-browser-use-trial.mjs";
+import {
+  assessBrandedMediaAsset,
+  createBrandedMediaSvg,
+} from "./lib/changelog-media-branding.mjs";
+import {
+  assessChangelogMediaQuality,
+  judgeChangelogMediaWithAnthropic,
+} from "./lib/changelog-media-quality.mjs";
 
 function parseArgs(argv) {
   const args = {};
@@ -38,6 +46,10 @@ function parseArgs(argv) {
 
 function isEnabled(value) {
   return ["1", "true", "yes", "on"].includes(String(value || "").trim().toLowerCase());
+}
+
+function isDisabled(value) {
+  return ["0", "false", "no", "off"].includes(String(value || "").trim().toLowerCase());
 }
 
 function resolveInputPath(filePath) {
@@ -90,25 +102,49 @@ function deriveCommitLogFromChangelog(changelog) {
     .join("\n");
 }
 
-function buildBrandingDecision({ captureAccepted, screenshot, openAiAvailable }) {
+function buildBlockedBrandingDecision({ captureAccepted, screenshot }) {
   if (!captureAccepted) {
     return {
       status: "blocked",
       reason: "Branding is blocked until a relevant, publishable Browser Use screenshot passes proof gates.",
     };
   }
-  if (!openAiAvailable) {
-    return {
-      status: "ready-but-not-run",
-      reason: "Screenshot passed proof gates, but OPENAI_API_KEY is not available in this environment.",
-      inputPath: screenshot?.path || null,
-    };
-  }
   return {
-    status: "ready",
-    reason: "Screenshot passed proof gates and can be handed to the branding step.",
+    status: "ready-but-not-run",
+    reason: "Screenshot passed proof gates, but the branding step was not invoked.",
     inputPath: screenshot?.path || null,
   };
+}
+
+function createBrandingArtifact({ candidate, screenshot, outputDir }) {
+  if (!screenshot?.path) {
+    return {
+      status: "blocked",
+      reason: "No accepted screenshot is available for branding.",
+    };
+  }
+  try {
+    const asset = createBrandedMediaSvg({
+      screenshotPath: screenshot.path,
+      outputPath: path.join(outputDir, "branded-media-card.svg"),
+      title: candidate?.title || "Aura product update",
+      subtitle: candidate?.proofGoal || "Aura changelog proof",
+    });
+    const quality = assessBrandedMediaAsset(asset);
+    return {
+      status: quality.ok ? "created" : "rejected",
+      reason: quality.ok
+        ? "Created a branded SVG wrapper while preserving the raw product screenshot at native pixel size."
+        : "Branded asset failed structural quality checks.",
+      asset,
+      quality,
+    };
+  } catch (error) {
+    return {
+      status: "failed",
+      reason: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 export async function preflightCaptureAuth({ baseUrl, captureSecret, fetchImpl = fetch } = {}) {
@@ -184,6 +220,11 @@ export async function runChangelogMediaEvaluation({
   maxCostUsd = "",
   enableRecording = false,
   strictCapture = false,
+  visionJudge = true,
+  visionJudgeModel = anthropicModel,
+  preflightCaptureAuthImpl = preflightCaptureAuth,
+  runBrowserUseTaskImpl = runBrowserUseTask,
+  visionJudgeImpl = judgeChangelogMediaWithAnthropic,
 } = {}) {
   const resolvedChangelogFile = resolveInputPath(changelogFile);
   if (!resolvedChangelogFile) {
@@ -229,7 +270,7 @@ export async function runChangelogMediaEvaluation({
   ).trim();
   const captureAuthAvailable = Boolean(captureSecret);
   const capturePreflight = runBrowserUse && browserUseKeyAvailable && baseUrl && captureAuthAvailable
-    ? await preflightCaptureAuth({ baseUrl, captureSecret })
+    ? await preflightCaptureAuthImpl({ baseUrl, captureSecret })
     : null;
   const captureResults = [];
 
@@ -262,10 +303,15 @@ export async function runChangelogMediaEvaluation({
         blockers,
         capturePreflight,
         captureAccepted: false,
-        branding: buildBrandingDecision({
+        publishReady: false,
+        qualityGate: {
+          ok: false,
+          status: "blocked",
+          concerns: blockers,
+        },
+        branding: buildBlockedBrandingDecision({
           captureAccepted: false,
           screenshot: null,
-          openAiAvailable,
         }),
       };
       writeJson(path.join(candidateDir, "capture-summary.json"), skipped);
@@ -287,7 +333,7 @@ export async function runChangelogMediaEvaluation({
     });
     fs.writeFileSync(path.join(candidateDir, "browser-use-task.md"), `${task}\n`, "utf8");
 
-    const result = await runBrowserUseTask({
+    const result = await runBrowserUseTaskImpl({
       task,
       model: browserUseModel,
       outputDir: candidateDir,
@@ -304,20 +350,50 @@ export async function runChangelogMediaEvaluation({
       mediaEligibility: contract.mediaEligibility,
       minDesktopViewport: contract.desktopCapturePolicy.minimumViewport,
     });
-    const captureAccepted = desktopEvaluation.ok;
+    const qualityGate = assessChangelogMediaQuality({
+      desktopEvaluation,
+      output: result.output,
+      screenshot: result.screenshot,
+      candidate,
+      stage: "raw",
+    });
+    const visionGate = qualityGate.ok && visionJudge
+      ? await visionJudgeImpl({
+        apiKey,
+        model: visionJudgeModel,
+        imagePath: result.screenshot?.path,
+        candidate,
+        stage: "raw",
+      })
+      : {
+        ok: qualityGate.ok,
+        status: visionJudge ? "blocked" : "skipped",
+        concerns: qualityGate.ok ? [] : ["Vision judge skipped because deterministic quality failed."],
+        judgment: null,
+      };
+    const captureAccepted = Boolean(qualityGate.ok && visionGate.ok);
+    const branding = captureAccepted
+      ? createBrandingArtifact({
+        candidate,
+        screenshot: result.screenshot,
+        outputDir: candidateDir,
+      })
+      : buildBlockedBrandingDecision({
+        captureAccepted,
+        screenshot: result.screenshot,
+      });
     const summary = {
       candidate,
       status: captureAccepted ? "accepted" : "rejected",
       provider: "browser-use-cloud",
       model: browserUseModel,
       captureAccepted,
+      publishReady: Boolean(captureAccepted && branding.status === "created" && branding.quality?.ok),
       result,
       desktopEvaluation,
-      branding: buildBrandingDecision({
-        captureAccepted,
-        screenshot: result.screenshot,
-        openAiAvailable,
-      }),
+      qualityGate,
+      visionGate,
+      branding,
     };
     writeJson(path.join(candidateDir, "capture-summary.json"), summary);
     captureResults.push(summary);
@@ -354,8 +430,11 @@ export async function runChangelogMediaEvaluation({
       captureAccepted: captureResults.filter((entry) => entry.captureAccepted).length,
       captureRejected: captureResults.filter((entry) => entry.status === "rejected").length,
       captureBlocked: captureResults.filter((entry) => entry.status === "blocked").length,
-      brandingReady: captureResults.filter((entry) => entry.branding?.status === "ready").length,
+      visionAccepted: captureResults.filter((entry) => entry.visionGate?.ok).length,
+      visionRejected: captureResults.filter((entry) => entry.visionGate?.status === "rejected").length,
+      brandingCreated: captureResults.filter((entry) => entry.branding?.status === "created").length,
       brandingReadyButNotRun: captureResults.filter((entry) => entry.branding?.status === "ready-but-not-run").length,
+      publishReady: captureResults.filter((entry) => entry.publishReady).length,
     },
     selectionCoverage: planning.coverage,
     plannerAttemptCount: planning.attempts.length,
@@ -365,9 +444,15 @@ export async function runChangelogMediaEvaluation({
       title: entry.candidate?.title || null,
       status: entry.status,
       captureAccepted: entry.captureAccepted,
+      publishReady: Boolean(entry.publishReady),
       blockers: entry.blockers || [],
-      concerns: entry.desktopEvaluation?.concerns || [],
+      concerns: [
+        ...(entry.qualityGate?.concerns || entry.desktopEvaluation?.concerns || []),
+        ...(entry.visionGate?.concerns || []),
+      ],
       screenshot: entry.result?.screenshot || null,
+      qualityGate: entry.qualityGate || null,
+      visionGate: entry.visionGate || null,
       branding: entry.branding || null,
     })),
   };
@@ -391,6 +476,8 @@ export async function main(argv = process.argv.slice(2)) {
     maxCostUsd: args["max-cost-usd"] || process.env.BROWSER_USE_MAX_COST_USD || "",
     enableRecording: isEnabled(args["enable-recording"] || process.env.BROWSER_USE_ENABLE_RECORDING),
     strictCapture: isEnabled(args.strict),
+    visionJudge: !isDisabled(args["vision-judge"] ?? process.env.CHANGELOG_MEDIA_VISION_JUDGE ?? "true"),
+    visionJudgeModel: String(args["vision-judge-model"] || process.env.CHANGELOG_MEDIA_VISION_JUDGE_MODEL || args["anthropic-model"] || process.env.CHANGELOG_MEDIA_ANTHROPIC_MODEL || "claude-opus-4-7").trim(),
   });
   console.log(JSON.stringify({
     ok: true,
@@ -410,8 +497,10 @@ export async function main(argv = process.argv.slice(2)) {
       entryId: entry.entryId,
       status: entry.status,
       captureAccepted: entry.captureAccepted,
+      publishReady: entry.publishReady,
       blockers: entry.blockers,
       concerns: entry.concerns,
+      vision: entry.visionGate?.status || null,
       branding: entry.branding?.status || null,
     })),
   }, null, 2));
