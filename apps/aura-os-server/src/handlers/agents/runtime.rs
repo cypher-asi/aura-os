@@ -552,7 +552,6 @@ fn harness_upstream_provider_family(model: Option<&str>) -> Option<String> {
     {
         Some("deepseek".to_string())
     } else if model.starts_with("aura-kimi")
-        || model.starts_with("aura-deepseek")
         || model.starts_with("aura-oss")
         || model.starts_with("aura-qwen")
     {
@@ -2389,10 +2388,6 @@ mod tests {
         assert_eq!(
             harness_upstream_provider_family(Some("deepseek/deepseek-v4-flash")),
             Some("deepseek".to_string())
-        );
-        assert_eq!(
-            harness_upstream_provider_family(Some("aura-deepseek-v3-2")),
-            Some("fireworks".to_string())
         );
         assert_eq!(
             harness_upstream_provider_family(Some("unknown-model")),

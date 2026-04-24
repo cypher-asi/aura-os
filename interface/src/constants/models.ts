@@ -89,12 +89,6 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     mode: "chat",
   },
   {
-    id: "aura-deepseek-v3-2",
-    label: "DeepSeek V3.2",
-    tier: "sonnet",
-    mode: "chat",
-  },
-  {
     id: "aura-oss-120b",
     label: "GPT-OSS 120B",
     tier: "haiku",
@@ -152,12 +146,10 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "deepseek-v4-flash": "aura-deepseek-v4-flash",
   "deepseek/deepseek-v4-pro": "aura-deepseek-v4-pro",
   "deepseek/deepseek-v4-flash": "aura-deepseek-v4-flash",
-  "aura-deepseek-v3-2": "aura-deepseek-v3-2",
   "aura-oss-120b": "aura-oss-120b",
   "aura-qwen2-5-coder-7b": "aura-qwen2-5-coder-7b",
   "accounts/fireworks/models/kimi-k2p5": "aura-kimi-k2-5",
   "accounts/fireworks/models/kimi-k2p6": "aura-kimi-k2-6",
-  "accounts/fireworks/models/deepseek-v3p2": "aura-deepseek-v3-2",
   "accounts/fireworks/models/gpt-oss-120b": "aura-oss-120b",
   "accounts/fireworks/models/qwen2p5-coder-7b": "aura-qwen2-5-coder-7b",
 };

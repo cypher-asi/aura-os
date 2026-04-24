@@ -149,12 +149,6 @@ const FIREWORKS_MODEL_PRICING_PER_MTOK = {
     cacheWrite: 0.6,
     cacheRead: 0.3,
   },
-  "deepseek-v3p2": {
-    input: 0.56,
-    output: 1.68,
-    cacheWrite: 0.56,
-    cacheRead: 0.28,
-  },
   "gpt-oss-120b": {
     input: 0.15,
     output: 0.6,
@@ -204,7 +198,6 @@ function normalizeModelKey(model) {
   const auraFireworksModels = {
     "aura-kimi-k2-6": "kimi-k2p6",
     "aura-kimi-k2-5": "kimi-k2p5",
-    "aura-deepseek-v3-2": "deepseek-v3p2",
     "aura-oss-120b": "gpt-oss-120b",
   };
   if (auraFireworksModels[unprefixed]) return auraFireworksModels[unprefixed];
@@ -228,7 +221,6 @@ function inferProvider(model, provider) {
     return "deepseek";
   }
   if (
-    modelKey.startsWith("deepseek") ||
     modelKey.startsWith("kimi") ||
     modelKey.startsWith("gpt-oss")
   ) {

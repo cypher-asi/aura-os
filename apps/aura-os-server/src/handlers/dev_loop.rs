@@ -1256,7 +1256,7 @@ struct ModelRates {
     cache_read: f64,
 }
 
-fn default_fee_schedule() -> [(&'static str, ModelRates); 16] {
+fn default_fee_schedule() -> [(&'static str, ModelRates); 15] {
     [
         (
             "gpt-5.4",
@@ -1337,15 +1337,6 @@ fn default_fee_schedule() -> [(&'static str, ModelRates); 16] {
                 output: 2.5,
                 cache_write: 0.6,
                 cache_read: 0.3,
-            },
-        ),
-        (
-            "deepseek-v3p2",
-            ModelRates {
-                input: 0.56,
-                output: 1.68,
-                cache_write: 0.56,
-                cache_read: 0.28,
             },
         ),
         (
@@ -1456,7 +1447,6 @@ fn normalize_pricing_model_id(model: &str) -> String {
         ("aura-kimi-k2-5", "kimi-k2p5"),
         ("aura-deepseek-v4-pro", "deepseek-v4-pro"),
         ("aura-deepseek-v4-flash", "deepseek-v4-flash"),
-        ("aura-deepseek-v3-2", "deepseek-v3p2"),
         ("aura-oss-120b", "gpt-oss-120b"),
     ] {
         if normalized == aura_id {
@@ -4926,11 +4916,6 @@ mod tests {
                 "aura-kimi-k2-6",
                 "accounts/fireworks/models/kimi-k2p6",
                 2.95,
-            ),
-            (
-                "aura-deepseek-v3-2",
-                "accounts/fireworks/models/deepseek-v3p2",
-                1.4,
             ),
             (
                 "aura-oss-120b",

@@ -117,11 +117,9 @@ describe("benchmark pricing", () => {
   it.each([
     ["aura-kimi-k2-5", "kimi-k2p5", 0.6, 0.1, 3],
     ["aura-kimi-k2-6", "kimi-k2p6", 0.95, 0.16, 4],
-    ["aura-deepseek-v3-2", "deepseek-v3p2", 0.56, 0.28, 1.68],
     ["aura-oss-120b", "gpt-oss-120b", 0.15, 0.01, 0.6],
     ["accounts/fireworks/models/kimi-k2p5", "kimi-k2p5", 0.6, 0.1, 3],
     ["accounts/fireworks/models/kimi-k2p6", "kimi-k2p6", 0.95, 0.16, 4],
-    ["accounts/fireworks/models/deepseek-v3p2", "deepseek-v3p2", 0.56, 0.28, 1.68],
     ["accounts/fireworks/models/gpt-oss-120b", "gpt-oss-120b", 0.15, 0.01, 0.6],
   ])(
     "resolves explicit Fireworks pricing for %s",
