@@ -1089,6 +1089,53 @@ pub(crate) async fn delete_task(
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
+// ---------------------------------------------------------------------------
+// Flat-path aliases for harness clients
+// ---------------------------------------------------------------------------
+//
+// `aura-storage` exposes flat task routes (`/api/tasks/:id`,
+// `/api/tasks/:id/transition`) and the harness's `HttpDomainApi` calls
+// those URLs directly when `AURA_OS_SERVER_URL` is set. The handlers
+// above all discard `_project_id` and forward straight to the storage
+// client, so the flat aliases below just unpack `Path<TaskId>` and
+// re-dispatch through the same nested handlers (using `ProjectId::nil()`
+// as a placeholder). Keeps the side-effect surface (auth middleware,
+// error mapping, future SSE hooks) identical across both paths.
+
+pub(crate) async fn get_task_flat(
+    state: State<AppState>,
+    jwt: AuthJwt,
+    Path(task_id): Path<TaskId>,
+) -> ApiResult<Json<Task>> {
+    get_task(state, jwt, Path((ProjectId::nil(), task_id))).await
+}
+
+pub(crate) async fn update_task_flat(
+    state: State<AppState>,
+    jwt: AuthJwt,
+    Path(task_id): Path<TaskId>,
+    body: Json<UpdateTaskBody>,
+) -> ApiResult<Json<Task>> {
+    update_task(state, jwt, Path((ProjectId::nil(), task_id)), body).await
+}
+
+pub(crate) async fn delete_task_flat(
+    state: State<AppState>,
+    jwt: AuthJwt,
+    Path(task_id): Path<TaskId>,
+) -> ApiResult<axum::http::StatusCode> {
+    delete_task(state, jwt, Path((ProjectId::nil(), task_id))).await
+}
+
+pub(crate) async fn transition_task_flat(
+    state: State<AppState>,
+    jwt: AuthJwt,
+    Path(task_id): Path<TaskId>,
+    body: Json<TransitionTaskRequest>,
+) -> ApiResult<Json<Task>> {
+    transition_task(state, jwt, Path((ProjectId::nil(), task_id)), body).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

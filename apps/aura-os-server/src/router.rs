@@ -278,6 +278,16 @@ fn spec_routes() -> Router<AppState> {
                 .put(specs::update_spec)
                 .delete(specs::delete_spec),
         )
+        // Flat aliases that mirror aura-storage's `/api/specs/:id` route.
+        // The harness's `HttpDomainApi` calls these directly when
+        // `AURA_OS_SERVER_URL` is configured, so without these the
+        // dev loop's `get_spec` lookups 404 immediately.
+        .route(
+            "/api/specs/:spec_id",
+            get(specs::get_spec_flat)
+                .put(specs::update_spec_flat)
+                .delete(specs::delete_spec_flat),
+        )
 }
 
 fn task_routes() -> Router<AppState> {
@@ -315,6 +325,22 @@ fn task_routes() -> Router<AppState> {
         .route(
             "/api/projects/:project_id/tasks/:task_id/output",
             get(tasks::get_task_output),
+        )
+        // Flat aliases that mirror aura-storage's task routes. The
+        // harness's `HttpDomainApi` calls `/api/tasks/:id`,
+        // `/api/tasks/:id/transition`, etc. directly when
+        // `AURA_OS_SERVER_URL` is set; without these aliases every
+        // dev-loop `get_task` / `transition_task` 404s and the loop
+        // wedges itself into a "failed → failed" cycle.
+        .route(
+            "/api/tasks/:task_id/transition",
+            post(tasks::transition_task_flat),
+        )
+        .route(
+            "/api/tasks/:task_id",
+            get(tasks::get_task_flat)
+                .put(tasks::update_task_flat)
+                .delete(tasks::delete_task_flat),
         )
 }
 

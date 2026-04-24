@@ -396,6 +396,84 @@ pub(crate) async fn delete_spec(
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
+// ---------------------------------------------------------------------------
+// Flat-path aliases for harness clients
+// ---------------------------------------------------------------------------
+//
+// `aura-storage` exposes `/api/specs/:id` directly and the harness's
+// `HttpDomainApi` calls those flat URLs when `AURA_OS_SERVER_URL` is set.
+// `get_spec` ignores `_project_id` entirely, so the flat alias just
+// re-dispatches with `ProjectId::nil()`. `update_spec` / `delete_spec`
+// still rely on `project_id` for on-disk mirroring (and, for delete, the
+// "block if tasks exist" guard) — we recover it from the stored spec
+// record before delegating, so the harness path keeps the same checks
+// even though the URL no longer carries it.
+
+pub(crate) async fn get_spec_flat(
+    state: State<AppState>,
+    jwt: AuthJwt,
+    Path(spec_id): Path<SpecId>,
+) -> ApiResult<Json<Spec>> {
+    get_spec(state, jwt, Path((ProjectId::nil(), spec_id))).await
+}
+
+async fn lookup_spec_project_id(
+    state: &AppState,
+    jwt: &str,
+    spec_id: &SpecId,
+) -> ApiResult<ProjectId> {
+    let storage = state.require_storage_client()?;
+    let spec = storage
+        .get_spec(&spec_id.to_string(), jwt)
+        .await
+        .map_err(|e| match &e {
+            aura_os_storage::StorageError::Server { status: 404, .. } => {
+                ApiError::not_found("spec not found")
+            }
+            _ => ApiError::internal(format!("fetching spec for project lookup: {e}")),
+        })?;
+    let pid_str = spec
+        .project_id
+        .ok_or_else(|| ApiError::internal("spec has no project_id"))?;
+    pid_str
+        .parse::<ProjectId>()
+        .map_err(|e| ApiError::internal(format!("invalid project_id on spec: {e}")))
+}
+
+pub(crate) async fn update_spec_flat(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path(spec_id): Path<SpecId>,
+    Query(params): Query<SpecQueryParams>,
+    body: Json<UpdateSpecBody>,
+) -> ApiResult<Json<Spec>> {
+    let project_id = lookup_spec_project_id(&state, &jwt, &spec_id).await?;
+    update_spec(
+        State(state),
+        AuthJwt(jwt),
+        Path((project_id, spec_id)),
+        Query(params),
+        body,
+    )
+    .await
+}
+
+pub(crate) async fn delete_spec_flat(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path(spec_id): Path<SpecId>,
+    Query(params): Query<SpecQueryParams>,
+) -> ApiResult<axum::http::StatusCode> {
+    let project_id = lookup_spec_project_id(&state, &jwt, &spec_id).await?;
+    delete_spec(
+        State(state),
+        AuthJwt(jwt),
+        Path((project_id, spec_id)),
+        Query(params),
+    )
+    .await
+}
+
 const SSE_NO_BUFFERING_HEADERS: [(&str, HeaderValue); 1] =
     [("X-Accel-Buffering", HeaderValue::from_static("no"))];
 
