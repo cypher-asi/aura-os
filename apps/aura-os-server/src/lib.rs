@@ -157,6 +157,23 @@ pub mod phase7_test_support {
         crate::handlers::dev_loop::looks_like_unclassified_transient_for_tests(reason)
     }
 
+    /// True when `reason` is a terminal agent-side anti-waste signal
+    /// from the harness (consecutive-error guard, "appears stuck",
+    /// "stopping to prevent waste"). The error-event handler uses this
+    /// to skip the restart path because restarting a harness that has
+    /// already decided to stop just tight-loops on a WS reconnect.
+    pub fn is_agent_stuck_terminal_signal(reason: &str) -> bool {
+        crate::handlers::dev_loop::is_agent_stuck_terminal_signal_for_tests(reason)
+    }
+
+    /// True when an `error`-event reason from the harness should
+    /// trigger an automaton restart. Restart iff the reason is
+    /// actually transient (classified or unclassified-transient
+    /// heuristic) **and** is not a terminal agent-stuck signal.
+    pub fn should_restart_on_error_event(reason: &str) -> bool {
+        crate::handlers::dev_loop::should_restart_on_error_event_for_tests(reason)
+    }
+
     /// Run the Definition-of-Done gate against a synthetic task-output
     /// summary. Returns the rejection reason when the completion would
     /// be rewritten to `task_failed`, `None` when the completion would

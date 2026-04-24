@@ -480,6 +480,106 @@ fn looks_like_unclassified_transient(reason: &str) -> bool {
     HINTS.iter().any(|h| lower.contains(h))
 }
 
+/// True when `reason` is a **terminal agent-side** signal emitted by the
+/// harness to indicate the agent itself has given up (consecutive
+/// tool-call failures, heuristic loop detection, explicit anti-waste
+/// guards).
+///
+/// The observed pattern from the incident that motivated this helper:
+///
+/// > `"CRITICAL: All tool calls have returned errors for 5 consecutive
+/// > iterations. The agent appears stuck. Stopping to prevent waste."`
+///
+/// These signals are **deterministic from the server's perspective** —
+/// restarting the automaton just reconnects to the same stuck state
+/// (the harness replays the last terminal event to new subscribers on
+/// the WS stream) or, worse, re-runs the exact same prompt that the
+/// harness already diagnosed as non-productive. Either way the restart
+/// is pure waste.
+///
+/// The error-event handler uses this to short-circuit the
+/// [`take_retry_context`] / [`restart_with_infra_backoff`] path and
+/// go straight to `synthesize_task_failed`, so the dev loop's outer
+/// task scheduler can advance to the next task (or halt) instead of
+/// tight-looping on a WebSocket reconnect against a harness that has
+/// already decided to stop.
+///
+/// Matching is case-insensitive substring. Patterns are deliberately
+/// chosen to co-occur with the harness's anti-waste vocabulary while
+/// not matching routine tool errors:
+///
+/// - `"appears stuck"` / `"is stuck"` — explicit stuck phrasing
+/// - `"consecutive iterations"` / `"consecutive errors"` /
+///   `"consecutive failures"` — N-in-a-row guards
+/// - `"stopping to prevent waste"` / `"stopping to conserve"` —
+///   the anti-waste verb phrase
+/// - `"critical:"` + `"stopping"` — the harness's convention for
+///   terminal errors it wants the outer loop to respect
+fn is_agent_stuck_terminal_signal(reason: &str) -> bool {
+    let lower = reason.to_ascii_lowercase();
+    const STUCK_MARKERS: &[&str] = &[
+        "appears stuck",
+        "is stuck",
+        "consecutive iterations",
+        "consecutive errors",
+        "consecutive failures",
+        "stopping to prevent waste",
+        "stopping to conserve",
+    ];
+    if STUCK_MARKERS.iter().any(|m| lower.contains(m)) {
+        return true;
+    }
+    // Conservative fallback: the harness prefixes its terminal
+    // anti-waste signals with `"CRITICAL:"` and includes the word
+    // `"stopping"` in the same reason. Requiring both keeps this from
+    // matching mere logging that happens to use `"CRITICAL:"` for
+    // other errors.
+    lower.contains("critical:") && lower.contains("stopping")
+}
+
+/// Decide whether an `error`-event from the harness should trigger an
+/// automaton restart, or whether the task should be failed immediately.
+///
+/// Pure function of the reason string — no I/O, no state — so the
+/// error-event handler can consult it before touching
+/// [`take_retry_context`] and the regression test
+/// `error_event_gate_rejects_agent_stuck` can pin the decision matrix
+/// without having to replay the full forwarder.
+///
+/// Restart iff the reason is actually transient *and* is not a
+/// terminal agent-stuck signal. Concretely:
+///
+/// ```text
+/// should_restart =
+///     !is_agent_stuck_terminal_signal(reason)
+///     && (classify_infra_failure(reason).is_some()
+///         || looks_like_unclassified_transient(reason))
+/// ```
+///
+/// The `!is_agent_stuck_terminal_signal` precondition is applied even
+/// when the reason also happens to look transient — the harness's
+/// anti-waste verdict wins over any substring overlap.
+fn should_restart_on_error_event(reason: &str) -> bool {
+    if is_agent_stuck_terminal_signal(reason) {
+        return false;
+    }
+    classify_infra_failure(reason).is_some() || looks_like_unclassified_transient(reason)
+}
+
+/// Test-only accessor for [`is_agent_stuck_terminal_signal`]. Exposed
+/// through [`crate::phase7_test_support`] so regression tests can pin
+/// the incident string + reasonable variants without widening the
+/// visibility of the raw helper.
+pub(crate) fn is_agent_stuck_terminal_signal_for_tests(reason: &str) -> bool {
+    is_agent_stuck_terminal_signal(reason)
+}
+
+/// Test-only accessor for [`should_restart_on_error_event`]. Exposed
+/// through [`crate::phase7_test_support`].
+pub(crate) fn should_restart_on_error_event_for_tests(reason: &str) -> bool {
+    should_restart_on_error_event(reason)
+}
+
 fn infra_failure_label(class: InfraFailureClass) -> &'static str {
     match class {
         InfraFailureClass::ProviderRateLimited => "provider_rate_limited",
@@ -5295,8 +5395,28 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                 last_transient_reason = Some(reason.clone());
                             }
                             session_status = "failed";
+                            // Gate the restart path on whether the
+                            // reason is actually transient. Without
+                            // this, any harness error event with
+                            // `restart_budget: None` (dev loop) drives
+                            // a tight reconnect loop: the conflict
+                            // resolver adopts the same live automaton,
+                            // the harness replays its terminal event
+                            // to the new WS subscriber, and we land
+                            // back here. Agent-stuck signals (anti-
+                            // waste guard firing) are doubly bad
+                            // because restarting the same prompt
+                            // would just recreate the stuck state.
+                            // `should_restart_on_error_event` applies
+                            // both filters in one place.
+                            let should_restart = should_restart_on_error_event(&reason);
                             if let Some(tid) = current_task_id.clone() {
-                                if let Some(ctx) = take_retry_context(&mut retry) {
+                                let restart_ctx = if should_restart {
+                                    take_retry_context(&mut retry)
+                                } else {
+                                    None
+                                };
+                                if let Some(ctx) = restart_ctx {
                                     match restart_with_infra_backoff(
                                         &app_broadcast,
                                         &automaton_registry,

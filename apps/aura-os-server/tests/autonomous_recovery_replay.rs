@@ -426,6 +426,150 @@ fn completion_gate_failure_routes_tracked_transient_reason_to_retry() {
 }
 
 #[test]
+fn agent_stuck_classifier_recognises_harness_anti_waste_signal() {
+    // Verbatim reason from the incident that motivated this classifier.
+    // Coming out of terminal 3 running `cargo run -p aura-os-desktop
+    // -- --external-harness`, the harness emitted this on its
+    // automaton event stream and the os-server proceeded to reconnect
+    // in a ~1.3s tight loop (17 cycles in one captured log window,
+    // one WebSocket re-subscribe each). The loop only breaks if the
+    // classifier recognises this reason as a terminal agent-side
+    // signal and the error-event handler skips `take_retry_context`
+    // instead of adopting the same stuck live automaton again.
+    let incident = "CRITICAL: All tool calls have returned errors for 5 \
+                    consecutive iterations. The agent appears stuck. \
+                    Stopping to prevent waste.";
+    assert!(
+        aura_os_server::phase7_test_support::is_agent_stuck_terminal_signal(incident),
+        "verbatim harness anti-waste signal from the d12b2cc3 incident \
+         must classify as terminal — otherwise the os-server tight-loops \
+         on WS reconnects while the harness replays the same error event",
+    );
+
+    // Reasonable variants — mixed case, different phrasing within the
+    // same anti-waste vocabulary. All must classify as terminal.
+    for reason in [
+        "critical: all tool calls have returned errors for 5 consecutive iterations",
+        "CRITICAL: Agent is stuck. Stopping.",
+        "Agent appears stuck after 10 consecutive errors",
+        "harness: stopping to prevent waste of API credits",
+        "Stopping to conserve budget — 8 consecutive failures",
+    ] {
+        assert!(
+            aura_os_server::phase7_test_support::is_agent_stuck_terminal_signal(reason),
+            "{reason:?} should classify as agent-stuck terminal — uses the \
+             harness's anti-waste vocabulary and must short-circuit the restart",
+        );
+    }
+}
+
+#[test]
+fn agent_stuck_classifier_rejects_normal_errors() {
+    // These are routine failure reasons that the restart / retry path
+    // SHOULD still handle via the normal infra-transient classifier
+    // or via the unclassified-transient heuristic. Mis-classifying any
+    // of them as agent-stuck would strand real retryable failures on
+    // the terminal `synthesize_task_failed` path.
+    for reason in [
+        "LLM error: stream terminated with error: Internal server error",
+        "tool_call_failed: write_file returned permission denied",
+        "compile error: cannot find type `Foo` in module `bar`",
+        "git push failed: remote storage exhausted",
+        "task reached implementation phase but no file operations completed",
+        "rate limit exceeded (429)",
+        "socket hang up",
+    ] {
+        assert!(
+            !aura_os_server::phase7_test_support::is_agent_stuck_terminal_signal(reason),
+            "{reason:?} is NOT an agent-stuck signal — classifier must not \
+             swallow legit transient / remediable reasons",
+        );
+    }
+}
+
+#[test]
+fn error_event_gate_matrix_restart_only_on_actual_transients() {
+    // Decision matrix for `should_restart_on_error_event`. Centralises
+    // the full "when do we reconnect vs. fail the task immediately"
+    // contract in one pinning test so regressions are obvious.
+    let cases: &[(&str, bool, &str)] = &[
+        // ── Agent-stuck signals: never restart, even if the reason
+        //    also happens to include transient-looking keywords
+        //    (`!is_agent_stuck_terminal_signal` wins).
+        (
+            "CRITICAL: All tool calls have returned errors for 5 consecutive \
+             iterations. The agent appears stuck. Stopping to prevent waste.",
+            false,
+            "verbatim incident reason — terminal agent-stuck signal",
+        ),
+        (
+            "CRITICAL: Agent is stuck after provider error. Stopping.",
+            false,
+            "agent-stuck + provider-error overlap must still be treated as \
+             terminal; the harness already gave up",
+        ),
+        // ── Classified infra transients: restart, this is the whole
+        //    point of the retry ladder.
+        (
+            "LLM error: stream terminated with error: Internal server error",
+            true,
+            "provider 5xx / stream abort — must restart",
+        ),
+        (
+            "rate limited: 429 too many requests",
+            true,
+            "provider rate limit — must restart after cooldown",
+        ),
+        (
+            "git push timed out after 60s",
+            true,
+            "git push timeout — must restart (push is retried by the harness)",
+        ),
+        // ── Unclassified-transient heuristic: restart, this is the
+        //    `debug.retry_miss` safety net for provider-side blips
+        //    the main classifier missed.
+        (
+            "tls handshake failure while streaming response",
+            true,
+            "unclassified transient (TLS) — must still restart via the \
+             `looks_like_unclassified_transient` safety net",
+        ),
+        (
+            "socket hang up",
+            true,
+            "unclassified transient (socket) — safety net restart",
+        ),
+        // ── Unclassified, non-transient: do NOT restart. Without this
+        //    gate, arbitrary tool errors with `restart_budget: None`
+        //    drive the tight reconnect loop.
+        (
+            "write_file returned permission denied",
+            false,
+            "tool-level error — deterministic, restart is pure waste",
+        ),
+        (
+            "compile error: cannot find type `Foo` in module `bar`",
+            false,
+            "compile error — deterministic, restart is pure waste",
+        ),
+        (
+            "task reached implementation phase but no file operations completed",
+            false,
+            "decomposition hint — handled by remediation path, not by restart",
+        ),
+    ];
+
+    for (reason, expected_restart, context) in cases {
+        let actual = aura_os_server::phase7_test_support::should_restart_on_error_event(reason);
+        assert_eq!(
+            actual, *expected_restart,
+            "should_restart_on_error_event({reason:?}) returned {actual}, \
+             expected {expected_restart} — {context}",
+        );
+    }
+}
+
+#[test]
 fn preflight_decomposition_flags_full_implementation_description() {
     let hit = aura_os_server::phase7_test_support::preflight_decomposition_reason(
         "Implement NeuralKey",
