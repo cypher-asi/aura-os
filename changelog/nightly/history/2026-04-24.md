@@ -1,25 +1,24 @@
-# Changelog media pipeline rebuilt on Browser Use
+# Changelog media pipeline rebuilt around Browser Use
 
 - Date: `2026-04-24`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.368.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.368.1
+- Version: `0.1.0-nightly.370.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.370.1
 
-Today's nightly retires the old screenshot publishing stack and replaces it with a leaner Browser Use-driven capture pipeline. The work spans a large infrastructure swap, new quality and branding gates, a fix for split-host deployments, and safer seeded capture sessions — all landing in one early-morning batch alongside standard Desktop builds for Mac, Windows, and Linux.
+Today's nightly is almost entirely an infrastructure day: the old screenshot-publishing pipeline was torn out and replaced with a new Browser Use–driven capture flow, backed by a redesigned capture login entry point, signed stateless capture tokens on the server, and quality and branding gates that decide when a screenshot is actually ready to ship.
 
-## 2:34 AM — Browser Use replaces the legacy changelog media pipeline
+## 2:34 AM — Browser Use replaces the Browserbase screenshot pipeline
 
-The changelog media stack was rebuilt around Browser Use planning, new proof gates, split-host support, and seeded capture sessions.
+The changelog media system was rebuilt from the ground up: legacy publishing workflows and demo seed tooling were removed and replaced with a Browser Use planning flow, a seeded capture login entry point, signed stateless capture tokens, and new quality and branding gates.
 
-- Retired the old Browserbase-based screenshot publishing stack — including the publish, retry, and history-sync GitHub workflows and roughly 20k lines of demo-agent and seed-planner code — in favor of a smaller Browser Use planning pipeline driven by Anthropic candidate selection, with a new capture-auth server module and CaptureLoginView on the frontend. (`888afbe`)
-- Added quality and branding gates to the media pipeline so screenshots must clear automated proof checks (including an Anthropic vision judge) before an OpenAI-backed branding step wraps them in a branded SVG card without resampling the raw product pixels. (`ff509bb`)
-- Fixed capture for deployments where the frontend and aura-os-server live on different hosts: the capture-login entry now runs from the app root with a `host` parameter and a new `AURA_DEMO_SCREENSHOT_API_URL` env var, and preflight posts to the correct API origin. (`e7b602e`)
-- Media runs can now hand Browser Use a short-lived, URL-fragment-encoded capture session instead of a shared secret form, and all task logs and transcripts are scrubbed through a new `redactCaptureLoginSecrets` pass so seeded tokens never leak into artifacts. (`1fd2c56`)
+- Retired the Browserbase-based changelog media stack — including the publish, retry, and history-sync GitHub workflows and roughly 20k lines of demo seed, screenshot runner, and publish-media scripts — in favor of a leaner Browser Use planning pipeline with a new CaptureLoginView and Anthropic-driven candidate selection. (`888afbe`)
+- Added quality and branding gates that judge captured screenshots (including an optional Anthropic vision judge) and only produce a branded SVG media card once a shot passes proof checks, so the pipeline can mark runs publish-ready instead of shipping weak captures. (`ff509bb`, `9b716b4`)
+- Taught the capture flow to handle split frontend and API hosts via a new AURA_DEMO_SCREENSHOT_API_URL, and to boot Browser Use straight into an authenticated desktop using a seeded capture session passed through the login URL fragment, with the secret redacted from logs and task prompts. (`e7b602e`, `1fd2c56`)
+- Hardened capture authentication on aura-os-server with versioned, BLAKE3-signed access tokens that expire after 30 minutes and are validated statelessly by the auth guard, removing the need for a server-side session store during media runs. (`a3be62e`)
 
 ## Highlights
 
-- Browser Use replaces the legacy screenshot pipeline
-- New quality and branding gates guard changelog media
-- Split-host frontend/API deployments now capture correctly
-- Seeded, redacted capture sessions replace shared secrets
+- Old Browserbase screenshot pipeline replaced with Browser Use planning
+- Stateless, signed capture access tokens for media runs
+- Quality and branding gates now decide when media is publish-ready
 
