@@ -244,6 +244,29 @@ pub(crate) async fn validate_invite_code(
     Ok(Json(body))
 }
 
+pub(crate) async fn get_my_invite_code(
+    AuthJwt(jwt): AuthJwt,
+) -> ApiResult<Json<serde_json::Value>> {
+    let client = reqwest::Client::new();
+    let resp = client
+        .post("https://zosapi.zero.tech/api/invite")
+        .bearer_auth(&jwt)
+        .send()
+        .await
+        .map_err(|e| ApiError::bad_gateway(format!("invite fetch failed: {e}")))?;
+
+    if !resp.status().is_success() {
+        return Err(ApiError::bad_gateway("Failed to fetch invite code"));
+    }
+
+    let body: serde_json::Value = resp
+        .json()
+        .await
+        .map_err(|e| ApiError::bad_gateway(format!("invite response parse failed: {e}")))?;
+
+    Ok(Json(body))
+}
+
 pub(crate) async fn import_access_token(
     State(state): State<AppState>,
     Json(req): Json<ImportAccessTokenRequest>,

@@ -17,6 +17,10 @@ pub(super) fn auth_routes() -> Router<AppState> {
         .route(
             "/api/auth/request-password-reset",
             post(auth::request_password_reset),
+        )
+        .route(
+            "/api/invite/:code/validate",
+            post(auth::validate_invite_code),
         );
 
     if auth::auth_token_import_enabled() {
@@ -34,4 +38,5 @@ pub(super) fn protected_auth_routes() -> Router<AppState> {
         .route("/api/auth/session", get(auth::get_session))
         .route("/api/auth/validate", post(auth::validate))
         .route("/api/auth/jwt-issuer", get(auth::get_jwt_issuer))
+        .route("/api/invite/me", post(auth::get_my_invite_code))
 }

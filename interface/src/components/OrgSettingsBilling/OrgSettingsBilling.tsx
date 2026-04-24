@@ -20,7 +20,7 @@ interface Props {
   onRetryBalance: () => void;
 }
 
-const PRESETS = [5, 10, 25, 50];
+const PRESETS = [25, 50, 100, 250];
 const MIN_USD = 1;
 const MAX_USD = 1000;
 
@@ -76,7 +76,7 @@ export function OrgSettingsBilling({
             </span>
           </div>
           <div className={styles.rowControl}>
-            <span className={styles.roleBadge}>{billing?.plan ?? "pro"}</span>
+            <span className={styles.roleBadge}>{billing?.plan ?? "free"}</span>
           </div>
         </div>
         {isAdminOrOwner && (
