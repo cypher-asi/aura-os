@@ -280,15 +280,15 @@ function MobileRemoteFilePreview({
         setState({
           loading: false,
           content: null,
-          error: result.error ?? "Could not load this remote file.",
+          error: getRemoteFileErrorDescription(),
         });
       })
-      .catch((error) => {
+      .catch(() => {
         if (cancelled) return;
         setState({
           loading: false,
           content: null,
-          error: error instanceof Error ? error.message : "Could not load this remote file.",
+          error: getRemoteFileErrorDescription(),
         });
       });
 
@@ -359,4 +359,8 @@ function isMobilePreviewableTextFile(path: string): boolean {
     /\.(txt|md|markdown|json|yml|yaml|toml|ini|cfg|conf|env|log|csv|ts|tsx|js|jsx|mjs|cjs|css|scss|html|xml|sh|bash|zsh|py|go|rs|java|kt|swift|sql)$/.test(lower)
     || !lower.includes(".")
   );
+}
+
+function getRemoteFileErrorDescription(): string {
+  return "This remote file is temporarily unavailable. Try again in a moment.";
 }
