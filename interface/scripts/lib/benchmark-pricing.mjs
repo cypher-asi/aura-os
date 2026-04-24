@@ -118,9 +118,71 @@ const OPENAI_MODEL_PRICING_PER_MTOK = {
   },
 };
 
+const FIREWORKS_MODEL_PRICING_PER_MTOK = {
+  "kimi-k2p6": {
+    input: 0.95,
+    output: 4.0,
+    cacheWrite: 0.95,
+    cacheRead: 0.16,
+  },
+  "kimi-k2p6-turbo": {
+    input: 2.0,
+    output: 8.0,
+    cacheWrite: 2.0,
+    cacheRead: 0.3,
+  },
+  "kimi-k2p5": {
+    input: 0.6,
+    output: 3.0,
+    cacheWrite: 0.6,
+    cacheRead: 0.1,
+  },
+  "kimi-k2p5-turbo": {
+    input: 0.99,
+    output: 4.94,
+    cacheWrite: 0.99,
+    cacheRead: 0.16,
+  },
+  "kimi-k2-thinking": {
+    input: 0.6,
+    output: 2.5,
+    cacheWrite: 0.6,
+    cacheRead: 0.3,
+  },
+  "kimi-k2-instruct-0905": {
+    input: 0.6,
+    output: 2.5,
+    cacheWrite: 0.6,
+    cacheRead: 0.3,
+  },
+  "deepseek-v3p2": {
+    input: 0.56,
+    output: 1.68,
+    cacheWrite: 0.56,
+    cacheRead: 0.28,
+  },
+  "gpt-oss-120b": {
+    input: 0.15,
+    output: 0.6,
+    cacheWrite: 0.15,
+    cacheRead: 0.01,
+  },
+};
+
 function normalizeModelKey(model) {
   const modelKey = typeof model === "string" ? model.trim().toLowerCase() : "";
   const unprefixed = modelKey.startsWith("openai/") ? modelKey.slice("openai/".length) : modelKey;
+  const fireworksModel = unprefixed.match(/^accounts\/fireworks\/models\/(.+)$/);
+  if (fireworksModel) return fireworksModel[1];
+  const fireworksRouter = unprefixed.match(/^accounts\/fireworks\/routers\/(.+)$/);
+  if (fireworksRouter) return fireworksRouter[1];
+  const auraFireworksModels = {
+    "aura-kimi-k2-6": "kimi-k2p6",
+    "aura-kimi-k2-5": "kimi-k2p5",
+    "aura-deepseek-v3-2": "deepseek-v3p2",
+    "aura-oss-120b": "gpt-oss-120b",
+  };
+  if (auraFireworksModels[unprefixed]) return auraFireworksModels[unprefixed];
   const auraGptMatch = unprefixed.match(/^aura-gpt-(\d+)-(\d+)(.*)$/);
   if (auraGptMatch) {
     return `gpt-${auraGptMatch[1]}.${auraGptMatch[2]}${auraGptMatch[3]}`;
@@ -132,6 +194,13 @@ function inferProvider(model, provider) {
   if (typeof provider === "string" && provider.trim()) return provider.trim().toLowerCase();
   const modelKey = normalizeModelKey(model);
   if (modelKey.startsWith("claude")) return "anthropic";
+  if (
+    modelKey.startsWith("deepseek") ||
+    modelKey.startsWith("kimi") ||
+    modelKey.startsWith("gpt-oss")
+  ) {
+    return "fireworks";
+  }
   if (modelKey.startsWith("gpt") || modelKey.startsWith("o1") || modelKey.startsWith("o3")) {
     return "openai";
   }
@@ -184,6 +253,29 @@ function findOpenAIPricing(modelKey) {
   };
 }
 
+function findFireworksPricing(modelKey) {
+  const exactMatch = FIREWORKS_MODEL_PRICING_PER_MTOK[modelKey];
+  if (exactMatch) {
+    return {
+      model: modelKey,
+      source: "fireworks-pricing",
+      ...exactMatch,
+    };
+  }
+
+  const partialEntry = Object.entries(FIREWORKS_MODEL_PRICING_PER_MTOK).find(([candidate]) =>
+    modelKey.startsWith(candidate) || candidate.startsWith(modelKey),
+  );
+  if (!partialEntry) return null;
+
+  const [matchedModel, pricing] = partialEntry;
+  return {
+    model: matchedModel,
+    source: "fireworks-pricing-family-match",
+    ...pricing,
+  };
+}
+
 export function resolvePricing(model, provider) {
   const inferredProvider = inferProvider(model, provider);
   const modelKey = normalizeModelKey(model);
@@ -199,6 +291,16 @@ export function resolvePricing(model, provider) {
 
   if (inferredProvider === "openai") {
     const pricing = findOpenAIPricing(modelKey);
+    if (pricing) {
+      return {
+        provider: inferredProvider,
+        ...pricing,
+      };
+    }
+  }
+
+  if (inferredProvider === "fireworks") {
+    const pricing = findFireworksPricing(modelKey);
     if (pricing) {
       return {
         provider: inferredProvider,

@@ -134,6 +134,8 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "o4-mini": "aura-o4-mini",
   "aura-kimi-k2-5": "aura-kimi-k2-5",
   "aura-kimi-k2-6": "aura-kimi-k2-6",
+  "kimi-k2p5": "aura-kimi-k2-5",
+  "kimi-k2p6": "aura-kimi-k2-6",
   "aura-deepseek-v3-2": "aura-deepseek-v3-2",
   "aura-oss-120b": "aura-oss-120b",
   "aura-qwen2-5-coder-7b": "aura-qwen2-5-coder-7b",
