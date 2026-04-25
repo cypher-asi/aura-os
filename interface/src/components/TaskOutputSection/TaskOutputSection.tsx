@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useCallback, useLayoutEffect, useState, type RefObject } from "react";
 import { GroupCollapsible } from "@cypher-asi/zui";
 import { ClipboardCopy, Check, Loader2 } from "lucide-react";
@@ -254,6 +255,8 @@ export function TaskOutputSection({
     if (!scrollRef || !isActive || !isAutoFollowing || !hasLiveContent) return;
     const el = scrollRef.current;
     if (!el) return;
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distFromBottom <= 1) return;
     el.scrollTop = el.scrollHeight;
   }, [
     scrollRef,

@@ -1,6 +1,7 @@
 import { renderHook } from "@testing-library/react";
 import { useTaskOutputHydration } from "./use-task-output-hydration";
 import type { Task } from "../types";
+import { useEventStore } from "../stores/event-store";
 
 vi.mock("../api/client", () => ({
   api: {
@@ -37,6 +38,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
 
 describe("useTaskOutputHydration", () => {
   beforeEach(() => {
+    useEventStore.setState({ taskOutputs: {} });
     vi.mocked(api.getTaskOutput).mockReset().mockResolvedValue({ output: "", build_steps: [], test_steps: [], git_steps: [] });
   });
 
@@ -66,6 +68,19 @@ describe("useTaskOutputHydration", () => {
     );
 
     expect(seed).toHaveBeenCalledWith("t-1", "inline output", undefined, undefined);
+    expect(api.getTaskOutput).not.toHaveBeenCalled();
+  });
+
+  it("skips inline hydration when the event store already has matching output", () => {
+    useEventStore.getState().seedTaskOutput("t-1", "inline output");
+    const seed = vi.fn();
+    const task = makeTask({ live_output: "inline output" });
+
+    renderHook(() =>
+      useTaskOutputHydration("p-1", task, true, false, "", seed),
+    );
+
+    expect(seed).not.toHaveBeenCalled();
     expect(api.getTaskOutput).not.toHaveBeenCalled();
   });
 

@@ -36,6 +36,8 @@ export function useScrollAnchorV2(
   const guardedScrollToBottom = useCallback(() => {
     const el = ref.current;
     if (!el) return;
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distFromBottom <= 1) return;
     guardRef.current = true;
     el.scrollTop = el.scrollHeight;
     requestAnimationFrame(() => {

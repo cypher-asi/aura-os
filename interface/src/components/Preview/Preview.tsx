@@ -204,11 +204,12 @@ export function PreviewContent() {
     const el = bodyRef.current;
     if (!el) return;
     if (!shouldAutoScroll) {
-      setIsAutoFollowing(true);
+      setIsAutoFollowing((prev) => (prev ? prev : true));
       return;
     }
     const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    setIsAutoFollowing(distFromBottom < FOLLOW_THRESHOLD_PX);
+    const next = distFromBottom < FOLLOW_THRESHOLD_PX;
+    setIsAutoFollowing((prev) => (prev === next ? prev : next));
   }, [shouldAutoScroll]);
 
   return (

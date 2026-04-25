@@ -72,6 +72,25 @@ describe("event-store", () => {
     expect(output.text).toBe("Build output...");
   });
 
+  it("seedTaskOutput skips identical output writes", () => {
+    const storeListener = vi.fn();
+    const unsubscribe = useEventStore.subscribe(storeListener);
+
+    useEventStore.getState().seedTaskOutput("task-same", "Build output...", [
+      { kind: "passed", command: "cargo check", timestamp: 123 },
+    ]);
+    const firstOutputs = useEventStore.getState().taskOutputs;
+    expect(storeListener).toHaveBeenCalledTimes(1);
+
+    useEventStore.getState().seedTaskOutput("task-same", "Build output...", [
+      { kind: "passed", command: "cargo check", timestamp: 456 },
+    ]);
+
+    expect(storeListener).toHaveBeenCalledTimes(1);
+    expect(useEventStore.getState().taskOutputs).toBe(firstOutputs);
+    unsubscribe();
+  });
+
   it("seedTaskOutput does not overwrite existing output when new text is a prefix of stored text", () => {
     useEventStore.getState().seedTaskOutput("task-2", "Hello world");
     useEventStore.getState().seedTaskOutput("task-2", "Hello");

@@ -1,6 +1,11 @@
 import { useEffect } from "react";
 import { api } from "../api/client";
-import type { BuildStep, TestStep, GitStep } from "../stores/event-store/index";
+import {
+  getTaskOutput,
+  type BuildStep,
+  type TestStep,
+  type GitStep,
+} from "../stores/event-store/index";
 import { hydrateTaskOutputOnce } from "../stores/task-output-hydration-cache";
 import type { Task } from "../types";
 
@@ -141,6 +146,22 @@ function mapGitSteps(steps: PersistedGitStepShape[]): GitStep[] {
   }));
 }
 
+function hasInlineHydrationAlready(
+  taskId: string,
+  liveOutput: string,
+  buildSteps: BuildStep[] | undefined,
+  testSteps: TestStep[] | undefined,
+): boolean {
+  const existing = getTaskOutput(taskId);
+  const hasLiveOutput =
+    !liveOutput || existing.text === liveOutput || existing.text.includes(liveOutput);
+  const hasBuildSteps =
+    !buildSteps?.length || existing.buildSteps.length > 0;
+  const hasTestSteps =
+    !testSteps?.length || existing.testSteps.length > 0;
+  return hasLiveOutput && hasBuildSteps && hasTestSteps;
+}
+
 /**
  * Hydrates task output from persisted data (inline on the task) or by
  * fetching from the API when needed.
@@ -173,8 +194,16 @@ export function useTaskOutputHydration(
 
     if (!(isTerminal || isActive || task.status === "in_progress")) return;
 
-    if (task.live_output || persistedBuildSteps?.length || persistedTestSteps?.length) {
-      seedTaskOutput(task.task_id, task.live_output, persistedBuildSteps, persistedTestSteps);
+    const liveOutput = task.live_output ?? "";
+    if (liveOutput || persistedBuildSteps?.length || persistedTestSteps?.length) {
+      if (!hasInlineHydrationAlready(
+        task.task_id,
+        liveOutput,
+        persistedBuildSteps,
+        persistedTestSteps,
+      )) {
+        seedTaskOutput(task.task_id, liveOutput, persistedBuildSteps, persistedTestSteps);
+      }
       return;
     }
 

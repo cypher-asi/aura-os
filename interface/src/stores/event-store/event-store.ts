@@ -93,6 +93,21 @@ export const EMPTY_OUTPUT: TaskOutputEntry = { text: "", fileOps: [], buildSteps
 export const subscribers = new Map<EventType, Set<EventCallback>>();
 const taskOutputListeners = new Map<string, Set<TaskOutputListener>>();
 
+function sameJsonValue(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function sameTaskOutputEntry(a: TaskOutputEntry | undefined, b: TaskOutputEntry): boolean {
+  if (!a) return false;
+  return (
+    a.text === b.text &&
+    sameJsonValue(a.fileOps, b.fileOps) &&
+    sameJsonValue(a.buildSteps, b.buildSteps) &&
+    sameJsonValue(a.testSteps, b.testSteps) &&
+    sameJsonValue(a.gitSteps, b.gitSteps)
+  );
+}
+
 interface EventState {
   connected: boolean;
   lastEventAt: number | null;
@@ -157,6 +172,7 @@ export const useEventStore = create<EventState>()((set, get) => ({
       testSteps: finalTestSteps,
       gitSteps: seededGitSteps,
     };
+    if (sameTaskOutputEntry(existing, entry)) return;
     if (entry.text) persistTaskOutputText(taskId, entry.text, projectId);
     set({ taskOutputs: { ...taskOutputs, [taskId]: entry } });
     notifyTaskOutputListeners(taskId);
