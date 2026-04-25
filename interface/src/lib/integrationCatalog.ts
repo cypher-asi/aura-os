@@ -26,14 +26,7 @@ export interface IntegrationDefinition {
   configFields?: IntegrationConfigField[];
 }
 
-export const MODEL_RUNTIME_ADAPTERS = [
-  "aura_harness",
-  "claude_code",
-  "codex",
-  "gemini_cli",
-  "opencode",
-  "cursor",
-] as const;
+export const MODEL_RUNTIME_ADAPTERS = ["aura_harness"] as const;
 
 export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
   {
@@ -51,53 +44,12 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "anthropic",
     label: "Anthropic",
     kind: "workspace_connection",
-    description: "Workspace-level Anthropic credentials for Claude Code and multi-provider local runtimes.",
+    description: "Workspace-level Anthropic credentials so Aura can call Claude on the workspace's behalf.",
     secretLabel: "Anthropic API Key",
     secretPlaceholder: "Paste the Anthropic API key",
     authHint: "Use a shared Anthropic key when the workspace should provide Claude access.",
     supportsDefaultModel: true,
-    runtimeCompatibleAdapters: ["claude_code", "opencode"],
-  },
-  {
-    id: "openai",
-    label: "OpenAI",
-    kind: "workspace_connection",
-    description: "Workspace-level OpenAI credentials for Codex and multi-provider runtimes.",
-    secretLabel: "OpenAI API Key",
-    secretPlaceholder: "Paste the OpenAI API key",
-    authHint: "Use a workspace OpenAI key when Codex or a multi-provider runtime should inherit it.",
-    supportsDefaultModel: true,
-    runtimeCompatibleAdapters: ["codex", "opencode"],
-  },
-  {
-    id: "google_gemini",
-    label: "Google Gemini",
-    kind: "workspace_connection",
-    description: "Workspace-level Gemini credentials for Gemini CLI and multi-provider runtimes.",
-    secretLabel: "Gemini API Key",
-    secretPlaceholder: "Paste the Gemini API key",
-    supportsDefaultModel: true,
-    runtimeCompatibleAdapters: ["gemini_cli", "opencode"],
-  },
-  {
-    id: "xai",
-    label: "xAI",
-    kind: "workspace_connection",
-    description: "Workspace-level Grok access for multi-provider runtimes.",
-    secretLabel: "xAI API Key",
-    secretPlaceholder: "Paste the xAI API key",
-    supportsDefaultModel: true,
-    runtimeCompatibleAdapters: ["opencode"],
-  },
-  {
-    id: "openrouter",
-    label: "OpenRouter",
-    kind: "workspace_connection",
-    description: "Workspace-level model routing for open-weight and mixed-provider runtime execution.",
-    secretLabel: "OpenRouter API Key",
-    secretPlaceholder: "Paste the OpenRouter API key",
-    supportsDefaultModel: true,
-    runtimeCompatibleAdapters: ["opencode"],
+    runtimeCompatibleAdapters: ["aura_harness"],
   },
   {
     id: "github",
@@ -301,53 +253,25 @@ export function getIntegrationLabel(provider: string): string {
   return getIntegrationDefinition(provider)?.label ?? provider;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function getAdapterLabel(adapterType: string): string {
-  switch (adapterType) {
-    case "claude_code":
-      return "Claude Code";
-    case "codex":
-      return "Codex";
-    case "gemini_cli":
-      return "Gemini CLI";
-    case "opencode":
-      return "OpenCode";
-    case "cursor":
-      return "Cursor";
-    case "aura_harness":
-    default:
-      return "Aura";
-  }
-}
-
-export function getLocalAuthLabel(adapterType: string): string {
-  switch (adapterType) {
-    case "claude_code":
-      return "Claude Code CLI";
-    case "codex":
-      return "Codex CLI";
-    case "gemini_cli":
-      return "Gemini CLI";
-    case "opencode":
-      return "OpenCode CLI";
-    case "cursor":
-      return "Cursor CLI";
-    default:
-      return "Local CLI";
-  }
+  // External CLI adapters are no longer supported. The argument is kept so
+  // call sites can pass through whatever `adapter_type` they have without
+  // branching, but the label is constant.
+  return "Aura";
 }
 
 export function getConnectionAuthLabel(adapterType: string): string {
   const providers = runtimeAuthProvidersForAdapter(adapterType);
   if (providers.length === 1) {
     const label = getIntegrationLabel(providers[0]);
-    return label === "Google Gemini" ? "Gemini API" : `${label} API`;
+    return `${label} API`;
   }
   return "Workspace Connection";
 }
 
 function formatProviderAuthLabel(provider: string): string {
-  const label = getIntegrationLabel(provider);
-  return label === "Google Gemini" ? "Gemini" : label;
+  return getIntegrationLabel(provider);
 }
 
 export function getConnectionAuthHint(adapterType: string): string {
@@ -405,10 +329,6 @@ export function runtimeAuthProvidersForAdapter(adapterType: string): string[] {
 
 export function supportsOrgIntegrationAuth(adapterType: string): boolean {
   return runtimeAuthProvidersForAdapter(adapterType).length > 0;
-}
-
-export function supportsLocalCliAuth(adapterType: string): boolean {
-  return adapterType !== "aura_harness";
 }
 
 export function filterRuntimeCompatibleIntegrations(

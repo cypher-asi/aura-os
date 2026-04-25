@@ -97,7 +97,7 @@ use aura_os_core::{
 };
 use aura_os_harness::{
     ConversationMessage, HarnessInbound, HarnessOutbound, InstalledTool, MessageAttachment,
-    SessionConfig, SessionUsage,
+    SessionConfig,
 };
 use aura_os_harness::{SessionBridge, SessionBridgeError, SessionBridgeStarted, SessionBridgeTurn};
 use aura_os_storage::StorageClient;
@@ -113,7 +113,6 @@ use crate::state::{AppState, AuthJwt, CachedAgentDiscovery, ChatSession, AGENT_D
 use super::conversions::events_to_session_history;
 use super::runtime::{
     build_harness_provider_config, effective_model, resolve_integration, resolve_integration_ref,
-    send_external_agent_event_stream,
 };
 
 // ---------------------------------------------------------------------------
@@ -895,47 +894,6 @@ pub(crate) fn spawn_chat_persist_task(
                 content_blocks = content_blocks.len(),
                 "Synthesized assistant_message_end after broadcast channel closed early"
             );
-        }
-    });
-}
-
-pub(crate) fn persist_external_agent_turn(ctx: &ChatPersistCtx, text: &str, usage: &SessionUsage) {
-    let ctx = ctx.clone();
-    let text = text.to_string();
-    let usage = usage.clone();
-    tokio::spawn(async move {
-        let text_block = text.clone();
-        let req = aura_os_storage::CreateSessionEventRequest {
-            session_id: Some(ctx.session_id.clone()),
-            user_id: None,
-            agent_id: Some(ctx.project_agent_id.clone()),
-            sender: Some("agent".to_string()),
-            project_id: Some(ctx.project_id.clone()),
-            org_id: None,
-            event_type: "assistant_message_end".to_string(),
-            content: Some(serde_json::json!({
-                "message_id": uuid::Uuid::new_v4().to_string(),
-                "text": text,
-                "thinking": serde_json::Value::Null,
-                "content_blocks": [{
-                    "type": "text",
-                    "text": text_block
-                }],
-                "usage": usage,
-                "files_changed": {
-                    "created": [],
-                    "modified": [],
-                    "deleted": []
-                },
-                "stop_reason": "end_turn"
-            })),
-        };
-        if let Err(e) = ctx
-            .storage
-            .create_event(&ctx.session_id, &ctx.jwt, &req)
-            .await
-        {
-            warn!(error = %e, "Failed to persist external agent message");
         }
     });
 }
@@ -2492,8 +2450,10 @@ pub(crate) async fn send_agent_event_stream(
     info!(%agent_id, action = ?body.action, "Agent message stream requested");
 
     if agent.adapter_type != "aura_harness" {
-        info!(%agent_id, adapter = %agent.adapter_type, "Routing direct agent chat through external runtime");
-        return send_external_agent_event_stream(&state, &jwt, &agent, body).await;
+        return Err(ApiError::bad_request(format!(
+            "adapter `{}` is no longer supported; only `aura_harness` agents can be chatted with",
+            agent.adapter_type
+        )));
     }
 
     let force_new = body.new_session.unwrap_or(false);

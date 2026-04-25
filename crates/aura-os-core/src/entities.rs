@@ -181,15 +181,14 @@ fn default_org_integration_enabled() -> bool {
 }
 
 pub fn effective_auth_source(
-    adapter_type: &str,
+    _adapter_type: &str,
     auth_source: Option<&str>,
     integration_id: Option<&str>,
 ) -> String {
     match auth_source.map(str::trim).filter(|value| !value.is_empty()) {
         Some(value) => value.to_string(),
-        None if adapter_type == "aura_harness" => "aura_managed".to_string(),
         None if integration_id.is_some() => "org_integration".to_string(),
-        None => "local_cli_auth".to_string(),
+        None => "aura_managed".to_string(),
     }
 }
 

@@ -150,34 +150,6 @@ function normalizeManagedModelId(modelId?: string | null): string | null {
 }
 
 export const DEFAULT_MODEL = AVAILABLE_MODELS[0];
-export const CODEX_MODELS: ModelOption[] = [
-  { id: "codex", label: "Codex", tier: "sonnet", mode: "chat" },
-];
-
-export const GEMINI_MODELS: ModelOption[] = [
-  { id: "auto", label: "Auto", tier: "sonnet", mode: "chat" },
-  { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", tier: "opus", mode: "chat" },
-  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", tier: "sonnet", mode: "chat" },
-  { id: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite", tier: "haiku", mode: "chat" },
-  { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash", tier: "sonnet", mode: "chat" },
-  { id: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash Lite", tier: "haiku", mode: "chat" },
-];
-
-export const OPENCODE_MODELS: ModelOption[] = [
-  { id: "openai/gpt-5.2-codex", label: "openai/gpt-5.2-codex", tier: "sonnet", mode: "chat" },
-  { id: "openai/gpt-5.5", label: "openai/gpt-5.5", tier: "opus", mode: "chat" },
-  { id: "openai/gpt-5.4", label: "openai/gpt-5.4", tier: "opus", mode: "chat" },
-  { id: "openai/gpt-5.2", label: "openai/gpt-5.2", tier: "sonnet", mode: "chat" },
-  { id: "openai/gpt-5.1-codex-max", label: "openai/gpt-5.1-codex-max", tier: "opus", mode: "chat" },
-  { id: "openai/gpt-5.1-codex-mini", label: "openai/gpt-5.1-codex-mini", tier: "haiku", mode: "chat" },
-];
-
-export const CURSOR_MODELS: ModelOption[] = [
-  { id: "auto", label: "auto", tier: "sonnet", mode: "chat" },
-  { id: "gpt-5.3-codex", label: "gpt-5.3-codex", tier: "opus", mode: "chat" },
-  { id: "sonnet-4.6", label: "sonnet-4.6", tier: "opus", mode: "chat" },
-  { id: "gemini-3-pro", label: "gemini-3-pro", tier: "opus", mode: "chat" },
-];
 
 export function getModelsForMode(mode: GenerationMode): ModelOption[] {
   return AVAILABLE_MODELS.filter((m) => m.mode === mode);
@@ -200,19 +172,12 @@ function storageKey(adapterType?: string): string {
   return `aura-selected-model:${adapterType ?? "default"}`;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function availableModelsForAdapter(adapterType?: string): ModelOption[] {
-  switch (adapterType) {
-    case "codex":
-      return CODEX_MODELS;
-    case "gemini_cli":
-      return GEMINI_MODELS;
-    case "opencode":
-      return OPENCODE_MODELS;
-    case "cursor":
-      return CURSOR_MODELS;
-    default:
-      return AVAILABLE_MODELS;
-  }
+  // The `adapterType` argument is preserved on the public signature so call
+  // sites do not need to change. External CLI adapters are no longer
+  // supported, so every adapter resolves to the same Aura-managed list.
+  return AVAILABLE_MODELS;
 }
 
 export function defaultModelForAdapter(

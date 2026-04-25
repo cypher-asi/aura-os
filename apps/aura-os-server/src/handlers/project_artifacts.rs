@@ -15,9 +15,10 @@ fn require_storage_client(
     state: &AppState,
 ) -> Result<&std::sync::Arc<aura_os_storage::StorageClient>, (axum::http::StatusCode, Json<ApiError>)>
 {
-    state.storage_client.as_ref().ok_or_else(|| {
-        ApiError::service_unavailable("aura-storage not configured")
-    })
+    state
+        .storage_client
+        .as_ref()
+        .ok_or_else(|| ApiError::service_unavailable("aura-storage not configured"))
 }
 
 #[derive(Deserialize)]

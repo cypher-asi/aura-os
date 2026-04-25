@@ -123,8 +123,8 @@ pub async fn safe_transition(
     let current_task = storage_task_to_task(current_storage).map_err(TaskError::ParseError)?;
     let current = current_task.status;
 
-    let hops = compute_bridge(current, target)
-        .ok_or(TaskError::IllegalTransition { current, target })?;
+    let hops =
+        compute_bridge(current, target).ok_or(TaskError::IllegalTransition { current, target })?;
 
     if hops.is_empty() {
         return Ok(current_task);
@@ -165,14 +165,7 @@ mod tests {
         (Blocked, Ready),
     ];
 
-    const CANONICAL_STATES: &[TaskStatus] = &[
-        Pending,
-        Ready,
-        InProgress,
-        Done,
-        Failed,
-        Blocked,
-    ];
+    const CANONICAL_STATES: &[TaskStatus] = &[Pending, Ready, InProgress, Done, Failed, Blocked];
 
     #[test]
     fn idempotent_on_same_state() {
@@ -252,7 +245,10 @@ mod tests {
     fn regression_edges_that_400_today() {
         // The four edges whose 400s drove this module's creation.
         // Each must now produce a valid multi-hop bridge.
-        assert_eq!(compute_bridge(Ready, Failed), Some(vec![InProgress, Failed]));
+        assert_eq!(
+            compute_bridge(Ready, Failed),
+            Some(vec![InProgress, Failed])
+        );
         assert_eq!(compute_bridge(Ready, Done), Some(vec![InProgress, Done]));
         assert_eq!(compute_bridge(InProgress, Ready), Some(vec![Failed, Ready]));
         assert_eq!(

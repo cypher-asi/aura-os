@@ -204,15 +204,6 @@ describe("ChatInputBar", () => {
     expect(screen.getByText("GPT-OSS 120B")).toBeInTheDocument();
   });
 
-  it("shows a fixed codex model without opening a dropdown", async () => {
-    const user = userEvent.setup();
-    mockSelectedModel = "codex";
-    render(<ChatInputBar {...makeProps({ adapterType: "codex" })} />);
-
-    await user.click(screen.getByText("Codex"));
-    expect(screen.queryByText("Kimi K2.6")).not.toBeInTheDocument();
-  });
-
   it("renders attachment previews", () => {
     const attachment: AttachmentItem = {
       id: "a1",

@@ -265,11 +265,7 @@ function resolveAgentRuntimeConfig(scenario) {
     authSource:
       process.env.AURA_EVAL_AGENT_AUTH_SOURCE?.trim()
       || template.authSource
-      || (adapterType === "aura_harness"
-        ? "aura_managed"
-        : integrationProvider
-          ? "org_integration"
-          : "local_cli_auth"),
+      || (integrationProvider ? "org_integration" : "aura_managed"),
     integrationProvider,
     integrationName:
       process.env.AURA_EVAL_AGENT_INTEGRATION_NAME?.trim()

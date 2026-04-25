@@ -8,15 +8,11 @@ const mockLoadPersistedModel = vi.fn(
 const mockHasAgentScopedModel = vi.fn((_agentId: string) => false);
 
 vi.mock("../constants/models", () => ({
-  availableModelsForAdapter: (adapterType?: string) =>
-    adapterType === "codex"
-      ? [{ id: "codex", label: "Codex", tier: "sonnet", mode: "chat" }]
-      : [
-          { id: "claude-opus-4-6", label: "Opus 4.6", tier: "opus", mode: "chat" },
-          { id: "claude-sonnet-4-6", label: "Sonnet 4.6", tier: "sonnet", mode: "chat" },
-        ],
-  defaultModelForAdapter: (adapterType?: string) =>
-    adapterType === "codex" ? "codex" : "claude-opus-4-6",
+  availableModelsForAdapter: (_adapterType?: string) => [
+    { id: "claude-opus-4-6", label: "Opus 4.6", tier: "opus", mode: "chat" },
+    { id: "claude-sonnet-4-6", label: "Sonnet 4.6", tier: "sonnet", mode: "chat" },
+  ],
+  defaultModelForAdapter: (_adapterType?: string) => "claude-opus-4-6",
   loadPersistedModel: (
     adapterType?: string,
     defaultModel?: string | null,

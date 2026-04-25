@@ -113,16 +113,6 @@ describe("useAgentEditorForm", () => {
     expect(result.current.environment).toBe("local_host");
   });
 
-  it("defaults external adapters to local CLI auth", () => {
-    const { result } = renderHook(() =>
-      useAgentEditorForm(true, makeAgent({ adapter_type: "claude_code", environment: "local_host", auth_source: "local_cli_auth" }), vi.fn(), vi.fn()),
-    );
-
-    expect(result.current.adapterType).toBe("claude_code");
-    expect(result.current.authSource).toBe("local_cli_auth");
-    expect(result.current.showAdvancedRuntime).toBe(true);
-  });
-
   it("keeps narrow desktop layouts on local_host when the client is not mobile", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isMobileClient: false });
 
@@ -212,7 +202,6 @@ describe("useAgentEditorForm", () => {
     );
 
     act(() => {
-      result.current.setAdapterType("claude_code");
       result.current.setAuthSource("org_integration");
       result.current.setIntegrationId("int-anthropic");
       result.current.setDefaultModel("claude-opus-4-6");

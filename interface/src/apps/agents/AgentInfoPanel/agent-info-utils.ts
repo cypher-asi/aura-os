@@ -2,7 +2,6 @@ import type { Session } from "../../../types";
 import {
   getAdapterLabel,
   getConnectionAuthLabel,
-  getLocalAuthLabel,
 } from "../../../lib/integrationCatalog";
 
 export type AnnotatedSession = Session & {
@@ -22,8 +21,6 @@ export function formatAuthSourceLabel(
   switch (authSource) {
     case "org_integration":
       return getConnectionAuthLabel(adapterType ?? "aura_harness");
-    case "local_cli_auth":
-      return getLocalAuthLabel(adapterType ?? "aura_harness");
     case "aura_managed":
     default:
       return "Managed by Aura";

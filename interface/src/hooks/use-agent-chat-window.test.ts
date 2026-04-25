@@ -32,8 +32,8 @@ vi.mock("./use-agent-chat-meta", () => ({
     agentName: "Test Agent",
     machineType: "local",
     templateAgentId: "template-1",
-    adapterType: "codex",
-    defaultModel: "gpt-5.4",
+    adapterType: "aura_harness",
+    defaultModel: "aura-gpt-5-4",
   })),
 }));
 
@@ -116,8 +116,8 @@ describe("useAgentChatWindow", () => {
     expect(result.current.agentName).toBe("Test Agent");
     expect(result.current.machineType).toBe("local");
     expect(result.current.templateAgentId).toBe("template-1");
-    expect(result.current.adapterType).toBe("codex");
-    expect(result.current.defaultModel).toBe("gpt-5.4");
+    expect(result.current.adapterType).toBe("aura_harness");
+    expect(result.current.defaultModel).toBe("aura-gpt-5-4");
     expect(result.current.agentId).toBe("agent-1");
     expect(result.current.emptyMessage).toBeUndefined();
     expect(result.current.errorMessage).toBeNull();

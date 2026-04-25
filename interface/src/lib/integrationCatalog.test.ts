@@ -2,7 +2,6 @@ import {
   getIntegrationDefinition,
   getConnectionAuthHint,
   getConnectionAuthLabel,
-  getLocalAuthLabel,
   integrationSections,
 } from "./integrationCatalog";
 
@@ -11,25 +10,13 @@ describe("integrationCatalog auth labels", () => {
     vi.unstubAllEnvs();
   });
 
-  it("uses provider-specific API labels for single-provider runtimes", () => {
-    expect(getConnectionAuthLabel("claude_code")).toBe("Anthropic API");
-    expect(getConnectionAuthLabel("codex")).toBe("OpenAI API");
-    expect(getConnectionAuthLabel("gemini_cli")).toBe("Gemini API");
+  it("uses provider-specific API labels for the aura harness adapter", () => {
+    expect(getConnectionAuthLabel("aura_harness")).toBe("Anthropic API");
+    expect(getConnectionAuthHint("aura_harness")).toContain("Anthropic");
   });
 
-  it("uses workspace connection wording for multi-provider runtimes", () => {
-    expect(getConnectionAuthLabel("opencode")).toBe("Workspace Connection");
-    expect(getConnectionAuthHint("opencode")).toContain("Anthropic");
-    expect(getConnectionAuthHint("opencode")).toContain("OpenAI");
-    expect(getConnectionAuthHint("opencode")).toContain("Gemini");
-    expect(getConnectionAuthHint("opencode")).toContain("xAI");
-    expect(getConnectionAuthHint("opencode")).toContain("OpenRouter");
-  });
-
-  it("keeps local auth labels explicit about the runtime", () => {
-    expect(getLocalAuthLabel("claude_code")).toBe("Claude Code CLI");
-    expect(getLocalAuthLabel("codex")).toBe("Codex CLI");
-    expect(getLocalAuthLabel("opencode")).toBe("OpenCode CLI");
+  it("falls back to workspace connection wording for unknown adapters", () => {
+    expect(getConnectionAuthLabel("legacy_unknown")).toBe("Workspace Connection");
   });
 
   it("keeps work-app integrations in the Apps section", () => {
@@ -62,11 +49,10 @@ describe("integrationCatalog auth labels", () => {
 
     expect(connectionIds.has("aura_proxy")).toBe(false);
     expect(connectionIds.has("anthropic")).toBe(true);
-    expect(connectionIds.has("openai")).toBe(true);
     expect(getIntegrationDefinition("aura_proxy")?.kind).toBe("workspace_connection");
   });
 
-  it("shows the full connection provider list when the feature flag is enabled", () => {
+  it("shows the connection provider list when the feature flag is enabled", () => {
     vi.stubEnv("VITE_ENABLE_SETTINGS_PROVIDER_SELECTION", "true");
 
     const connections = integrationSections().find((section) => section.id === "workspace_connection");
@@ -74,6 +60,5 @@ describe("integrationCatalog auth labels", () => {
 
     expect(connectionIds.has("aura_proxy")).toBe(false);
     expect(connectionIds.has("anthropic")).toBe(true);
-    expect(connectionIds.has("openai")).toBe(true);
   });
 });

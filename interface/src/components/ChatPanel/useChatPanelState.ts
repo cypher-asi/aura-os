@@ -160,7 +160,7 @@ export function useChatPanelState({
           : commands.some((c) => c.id === "generate_3d")
             ? ("3d" as GenerationMode)
             : undefined);
-      const runtimeModel = adapterType === "codex" ? null : selectedModel;
+      const runtimeModel = selectedModel;
       setAttachments([]);
       setCommands([]);
 
@@ -186,7 +186,6 @@ export function useChatPanelState({
       }
     },
     [
-      adapterType,
       buildApiAttachments,
       commands,
       isStreaming,
@@ -221,7 +220,7 @@ export function useChatPanelState({
         onSendRef.current(
           next.content,
           next.action,
-          adapterType === "codex" ? null : selectedModelRef.current,
+          selectedModelRef.current,
           next.attachments,
           next.commands,
           selectedProjectIdRef.current,

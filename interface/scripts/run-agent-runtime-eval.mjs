@@ -18,26 +18,21 @@ if (!accessToken) {
   throw new Error("Set AURA_EVAL_ACCESS_TOKEN before running the runtime adapter eval.");
 }
 
-const adapterType = process.env.AURA_RUNTIME_EVAL_ADAPTER?.trim() || "aura_harness";
-const environment = process.env.AURA_RUNTIME_EVAL_ENVIRONMENT?.trim()
-  || (adapterType === "aura_harness" ? "local_host" : "local_host");
+const adapterType = "aura_harness";
+const environment = process.env.AURA_RUNTIME_EVAL_ENVIRONMENT?.trim() || "local_host";
 const defaultModel = process.env.AURA_RUNTIME_EVAL_MODEL?.trim() || "";
 const prompt = process.env.AURA_RUNTIME_EVAL_PROMPT?.trim()
   || "Reply with exactly `hello from runtime eval` and stop.";
-const runChatValidation = process.env.AURA_RUNTIME_EVAL_CHAT === "1"
-  || ["codex", "claude_code"].includes(adapterType);
+const runChatValidation = process.env.AURA_RUNTIME_EVAL_CHAT === "1";
 const chatTimeoutMs = Number.parseInt(process.env.AURA_RUNTIME_EVAL_CHAT_TIMEOUT_MS ?? "45000", 10);
 const useProjectChat = process.env.AURA_RUNTIME_EVAL_PROJECT_CHAT === "1";
 
 function inferProvider() {
-  if (adapterType === "claude_code") return "anthropic";
-  if (adapterType === "codex") return "openai";
   return "";
 }
 
 const requestedAuthSource = process.env.AURA_RUNTIME_EVAL_AUTH_SOURCE?.trim() || "";
-const authSource = requestedAuthSource
-  || (adapterType === "aura_harness" ? "aura_managed" : "local_cli_auth");
+const authSource = requestedAuthSource || "aura_managed";
 const integrationProvider = authSource === "org_integration"
   ? (process.env.AURA_RUNTIME_EVAL_PROVIDER?.trim() || inferProvider())
   : (process.env.AURA_RUNTIME_EVAL_PROVIDER?.trim() || "");

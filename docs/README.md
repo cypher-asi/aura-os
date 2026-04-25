@@ -14,8 +14,6 @@ This folder keeps the documents that are still useful for current architecture, 
 - [Aura Evals](./aura-evals.md) - current eval lanes, fixtures, measurement surfaces, and local commands.
 - [Aura Evals Strategy](./aura-evals-strategy.md) - broader evaluation design, layering, and long-term direction.
 - [Harness Fixture Evals](./harness-fixture-evals.md) - fixture-backed harness regression pattern and operating rules.
-- [External Agent Benchmark Adapters](./external-agent-benchmark-adapters.md) - cross-agent benchmark adapter design.
-- [External Agent Benchmark Findings](./external-agent-benchmark-findings.md) - latest comparison results and caveats.
 
 ## Deployment
 

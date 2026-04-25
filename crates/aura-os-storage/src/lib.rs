@@ -10,9 +10,6 @@ pub use client::StorageClient;
 pub use error::StorageError;
 pub use types::{
     CreateLogEntryRequest,
-    // Project artifact types
-    CreateProjectArtifactRequest,
-    StorageProjectArtifact,
     // Process types
     CreateProcessArtifactRequest,
     CreateProcessConnectionRequest,
@@ -22,6 +19,8 @@ pub use types::{
     CreateProcessRequest,
     CreateProcessRunRequest,
     CreateProjectAgentRequest,
+    // Project artifact types
+    CreateProjectArtifactRequest,
     CreateSessionEventRequest,
     CreateSessionRequest,
     CreateSpecRequest,
@@ -36,6 +35,7 @@ pub use types::{
     StorageProcessNodeConnection,
     StorageProcessRun,
     StorageProjectAgent,
+    StorageProjectArtifact,
     StorageSession,
     StorageSessionEvent,
     StorageSpec,

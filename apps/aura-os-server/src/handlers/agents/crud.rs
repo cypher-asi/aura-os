@@ -39,7 +39,6 @@ fn ensure_supported_agent_name(name: &str) -> ApiResult<()> {
 }
 
 fn normalize_environment(
-    adapter_type: &str,
     environment: Option<String>,
     machine_type: Option<String>,
 ) -> ApiResult<String> {
@@ -49,11 +48,7 @@ fn normalize_environment(
     });
 
     match resolved.as_str() {
-        "local_host" => Ok(resolved),
-        "swarm_microvm" if adapter_type == "aura_harness" => Ok(resolved),
-        "swarm_microvm" => Err(ApiError::bad_request(format!(
-            "adapter `{adapter_type}` currently supports only local_host"
-        ))),
+        "local_host" | "swarm_microvm" => Ok(resolved),
         _ => Err(ApiError::bad_request(format!(
             "unsupported environment `{resolved}`"
         ))),
@@ -69,35 +64,22 @@ fn build_runtime_config(
     machine_type: Option<String>,
 ) -> ApiResult<AgentRuntimeConfig> {
     let adapter_type = adapter_type.unwrap_or_else(|| "aura_harness".to_string());
-    match adapter_type.as_str() {
-        "aura_harness" | "claude_code" | "codex" | "gemini_cli" | "opencode" | "cursor" => {}
-        other => {
-            return Err(ApiError::bad_request(format!(
-                "unsupported adapter `{other}`"
-            )))
-        }
+    if adapter_type != "aura_harness" {
+        return Err(ApiError::bad_request(format!(
+            "unsupported adapter `{adapter_type}`; only `aura_harness` is supported"
+        )));
     }
 
-    let environment = normalize_environment(&adapter_type, environment, machine_type)?;
+    let environment = normalize_environment(environment, machine_type)?;
     let auth_source = effective_auth_source(
         &adapter_type,
         auth_source.as_deref(),
         integration_id.as_deref(),
     );
 
-    match (adapter_type.as_str(), auth_source.as_str()) {
-        ("aura_harness", "aura_managed" | "org_integration") => {}
-        (
-            "claude_code" | "codex" | "gemini_cli" | "opencode",
-            "local_cli_auth" | "org_integration",
-        ) => {}
-        ("cursor", "local_cli_auth") => {}
-        ("aura_harness", other) => {
-            return Err(ApiError::bad_request(format!(
-                "adapter `{adapter_type}` does not support auth source `{other}`"
-            )))
-        }
-        (_, other) => {
+    match auth_source.as_str() {
+        "aura_managed" | "org_integration" => {}
+        other => {
             return Err(ApiError::bad_request(format!(
                 "adapter `{adapter_type}` does not support auth source `{other}`"
             )))
@@ -1185,22 +1167,6 @@ mod tests {
     }
 
     #[test]
-    fn cli_defaults_to_local_cli_auth_without_integration() {
-        let config = build_runtime_config(
-            Some("claude_code".to_string()),
-            Some("local_host".to_string()),
-            None,
-            None,
-            None,
-            Some("local".to_string()),
-        )
-        .expect("runtime config");
-
-        assert_eq!(config.auth_source, "local_cli_auth");
-        assert_eq!(config.integration_id, None);
-    }
-
-    #[test]
     fn aura_harness_accepts_org_integration_auth() {
         let config = build_runtime_config(
             Some("aura_harness".to_string()),
@@ -1217,77 +1183,24 @@ mod tests {
     }
 
     #[test]
-    fn integration_attachment_implies_org_integration_for_cli_adapters() {
-        let config = build_runtime_config(
-            Some("codex".to_string()),
-            Some("local_host".to_string()),
-            None,
-            Some("int-openai".to_string()),
-            None,
-            Some("local".to_string()),
-        )
-        .expect("runtime config");
-
-        assert_eq!(config.auth_source, "org_integration");
-        assert_eq!(config.integration_id.as_deref(), Some("int-openai"));
-    }
-
-    #[test]
-    fn gemini_cli_supports_org_integration() {
-        let config = build_runtime_config(
-            Some("gemini_cli".to_string()),
-            Some("local_host".to_string()),
-            None,
-            Some("int-gemini".to_string()),
-            Some("gemini-2.5-pro".to_string()),
-            Some("local".to_string()),
-        )
-        .expect("runtime config");
-
-        assert_eq!(config.auth_source, "org_integration");
-        assert_eq!(config.integration_id.as_deref(), Some("int-gemini"));
-        assert_eq!(config.default_model.as_deref(), Some("gemini-2.5-pro"));
-    }
-
-    #[test]
-    fn opencode_supports_org_integration_for_multi_provider_connections() {
-        let config = build_runtime_config(
-            Some("opencode".to_string()),
-            Some("local_host".to_string()),
-            None,
-            Some("int-openrouter".to_string()),
-            Some("openrouter/openai/gpt-4.1-mini".to_string()),
-            Some("local".to_string()),
-        )
-        .expect("runtime config");
-
-        assert_eq!(config.auth_source, "org_integration");
-        assert_eq!(config.integration_id.as_deref(), Some("int-openrouter"));
-        assert_eq!(
-            config.default_model.as_deref(),
-            Some("openrouter/openai/gpt-4.1-mini")
-        );
-    }
-
-    #[test]
-    fn cursor_allows_only_local_cli_auth() {
+    fn external_adapters_are_rejected() {
         let error = build_runtime_config(
-            Some("cursor".to_string()),
+            Some("claude_code".to_string()),
             Some("local_host".to_string()),
-            Some("org_integration".to_string()),
-            Some("int-openai".to_string()),
+            None,
+            None,
             None,
             Some("local".to_string()),
         )
-        .expect_err("cursor org integration should fail");
+        .expect_err("external adapters should be rejected");
 
-        assert!(format!("{error:?}").contains("does not support auth source"));
+        assert!(format!("{error:?}").contains("only `aura_harness` is supported"));
     }
 
     #[test]
     fn org_integration_requires_integration_id() {
         let error = build_runtime_config(
-            Some("claude_code".to_string()),
+            Some("aura_harness".to_string()),
             Some("local_host".to_string()),
             Some("org_integration".to_string()),
             None,

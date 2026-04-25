@@ -698,10 +698,10 @@ fn parse_cli_args() -> DesktopCliArgs {
 enum ExternalHarnessPolicy {
     /// Harness confirmed the command policy needed by the dev loop. Safe to proceed.
     RunCommandEnabled,
-    /// Harness confirmed a disabled or incomplete command policy. Warn — the
-    /// autonomous dev loop will fail to run cargo/git/test commands — but let
-    /// the desktop boot anyway.
-    RunCommandDisabled,
+    /// Harness confirmed a disabled or incomplete command policy. This is
+    /// incompatible with the autonomous dev loop, so startup must stop before
+    /// the first agent turn fails on `run_command`.
+    IncompleteCommandPolicy,
     /// Health probe succeeded but the field is missing — this is a
     /// pre-policy-disclosure harness (older than the /health schema
     /// bump). Warn but proceed, matching the existing "unknown is
@@ -726,19 +726,19 @@ fn classify_external_harness_policy(response: Option<&serde_json::Value>) -> Ext
         return ExternalHarnessPolicy::UnknownLegacyHarness;
     };
     if !run_command_enabled {
-        return ExternalHarnessPolicy::RunCommandDisabled;
+        return ExternalHarnessPolicy::IncompleteCommandPolicy;
     }
 
     let Some(shell_enabled) = json.get("shell_enabled").and_then(|v| v.as_bool()) else {
         return ExternalHarnessPolicy::UnknownLegacyHarness;
     };
     if !shell_enabled {
-        return ExternalHarnessPolicy::RunCommandDisabled;
+        return ExternalHarnessPolicy::IncompleteCommandPolicy;
     }
 
     match json.get("binary_allowlist").and_then(|v| v.as_array()) {
         Some(list) if !list.is_empty() => ExternalHarnessPolicy::RunCommandEnabled,
-        Some(_) => ExternalHarnessPolicy::RunCommandDisabled,
+        Some(_) => ExternalHarnessPolicy::IncompleteCommandPolicy,
         None => ExternalHarnessPolicy::UnknownLegacyHarness,
     }
 }
@@ -749,9 +749,10 @@ fn classify_external_harness_policy(response: Option<&serde_json::Value>) -> Ext
 /// of silently coming up and surfacing as a 20-second tool-callback timeout
 /// the first time an agent tries to act.
 ///
-/// This check is strictly diagnostic: we still fetch `/health` and emit a
-/// warning when the harness advertises `run_command_enabled=false`, but we no
-/// longer refuse to boot so mixed-version external harnesses remain usable.
+/// This check fails fast when `/health` advertises an incomplete command
+/// policy. Older harnesses that do not publish the policy fields still warn and
+/// proceed, but an explicit `run_command_enabled=false`, `shell_enabled=false`,
+/// or empty `binary_allowlist` is not usable for the autonomous dev loop.
 fn enforce_external_harness_or_exit() {
     let Some(url) = env_string("LOCAL_HARNESS_URL").map(|v| v.trim_end_matches('/').to_string())
     else {
@@ -775,15 +776,20 @@ fn enforce_external_harness_or_exit() {
         ExternalHarnessPolicy::RunCommandEnabled => {
             info!(url = %url, "external harness policy check: run_command enabled");
         }
-        ExternalHarnessPolicy::RunCommandDisabled => {
+        ExternalHarnessPolicy::IncompleteCommandPolicy => {
             warn!(
                 url = %url,
                 "external harness reports an incomplete command policy on /health. \
-                 Continuing, but the autonomous dev loop will not be able to run \
-                 cargo/git/test commands. Restart the harness with the standard \
-                 autonomous agent ToolConfig policy, or upgrade it if it still \
-                 depends on removed command env switches."
+                 Refusing to start because the autonomous dev loop requires \
+                 run_command, shell_script support, and a non-empty binary_allowlist."
             );
+            eprintln!(
+                "--external-harness connected to {url}, but that harness reports an incomplete \
+                 command policy on /health. Restart it with the dev-loop ToolConfig profile \
+                 (`ToolConfig::for_autonomous_dev_loop()`), or update AURA_HARNESS_BIN / \
+                 LOCAL_HARNESS_URL to point at a current aura-node."
+            );
+            std::process::exit(2);
         }
         ExternalHarnessPolicy::UnknownLegacyHarness => {
             warn!(
@@ -1726,10 +1732,9 @@ mod tests {
 
     #[test]
     fn classify_policy_treats_explicit_false_as_disabled() {
-        // A harness with a disabled command policy is still a legitimate
-        // deployment shape. We classify it as `RunCommandDisabled` so the
-        // desktop can log a warning, but no longer refuse to boot (see
-        // `enforce_external_harness_or_exit`).
+        // A harness with a disabled command policy may be valid for other
+        // embedders, but it is incompatible with the desktop dev loop. The
+        // startup path treats this classification as fatal.
         let body = serde_json::json!({
             "status": "ok",
             "version": "0.1.0",
@@ -1739,14 +1744,14 @@ mod tests {
         });
         assert_eq!(
             classify_external_harness_policy(Some(&body)),
-            ExternalHarnessPolicy::RunCommandDisabled
+            ExternalHarnessPolicy::IncompleteCommandPolicy
         );
     }
 
     #[test]
     fn classify_policy_treats_missing_field_as_legacy_harness() {
         // Older aura-runtime builds that don't yet publish the policy
-        // fields on /health must be allowed through with a warning —
+        // fields on /health are still allowed through with a warning -
         // mixed-version fleets must keep working.
         let body = serde_json::json!({
             "status": "ok",
@@ -1769,7 +1774,7 @@ mod tests {
         });
         assert_eq!(
             classify_external_harness_policy(Some(&body)),
-            ExternalHarnessPolicy::RunCommandDisabled
+            ExternalHarnessPolicy::IncompleteCommandPolicy
         );
     }
 

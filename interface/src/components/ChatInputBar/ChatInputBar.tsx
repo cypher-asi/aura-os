@@ -306,10 +306,9 @@ export const ChatInputBar = memo(
       : selectedCommands.some((c) => c.id === "generate_3d")
         ? "3d"
         : "chat";
-    // In chat mode, let the adapter (codex/gemini/opencode/cursor/default) drive
-    // the available model list. In image/3d mode, use the mode-filtered model
-    // list which is the same across adapters (adapter-specific models are
-    // chat-only today).
+    // In chat mode, let the (only) `aura_harness` adapter drive the available
+    // model list. In image/3d mode, use the mode-filtered model list (image/3d
+    // generation is provider-agnostic today).
     const modelsForMode =
       generationMode === "chat"
         ? availableModelsForAdapter(adapterType)

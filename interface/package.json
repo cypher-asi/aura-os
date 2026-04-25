@@ -34,7 +34,6 @@
     "test:evals:workflow": "playwright test tests/e2e/evals/workflow-e2e.spec.ts",
     "test:evals:benchmark": "playwright test tests/e2e/evals/live-benchmark.spec.ts",
     "test:demo-screenshots": "node --test ./scripts/lib/demo-screenshot-*.test.mjs",
-    "test:evals:project-parity": "node ./scripts/run-project-control-plane-parity-eval.mjs",
     "test:mcp-smoke": "node ./scripts/test-dynamic-mcp-sidecar.mjs",
     "test:evals:report": "node ./scripts/summarize-evals.mjs",
     "test:evals:compare": "node ./scripts/compare-evals.mjs",

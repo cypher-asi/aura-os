@@ -9,8 +9,6 @@ import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { getAgentNameValidationMessage } from "../../lib/agentNameValidation";
 import {
   runtimeAuthProvidersForAdapter,
-  supportsLocalCliAuth,
-  supportsOrgIntegrationAuth,
 } from "../../lib/integrationCatalog";
 import { useOrgStore } from "../../stores/org-store";
 import {
@@ -79,10 +77,9 @@ interface AgentEditorFormResult {
   handleChangeImage: () => void;
 }
 
-function defaultAuthSource(adapterType: string, integrationId?: string | null): string {
+function defaultAuthSource(_adapterType: string, integrationId?: string | null): string {
   if (integrationId?.trim()) return "org_integration";
-  if (adapterType === "aura_harness") return "aura_managed";
-  return "local_cli_auth";
+  return "aura_managed";
 }
 
 function defaultEnvironmentForContext(restrictCreateToAuraRuntimes: boolean): string {
@@ -90,7 +87,6 @@ function defaultEnvironmentForContext(restrictCreateToAuraRuntimes: boolean): st
 }
 
 function isDefaultCreateRuntime(
-  adapterType: string,
   environment: string,
   authSource: string,
   integrationId: string,
@@ -98,7 +94,6 @@ function isDefaultCreateRuntime(
   restrictCreateToAuraRuntimes: boolean,
 ): boolean {
   return (
-    adapterType === "aura_harness" &&
     environment === defaultEnvironmentForContext(restrictCreateToAuraRuntimes) &&
     authSource === "aura_managed" &&
     !integrationId.trim() &&
@@ -122,7 +117,12 @@ export function useAgentEditorForm(
   const [personality, setPersonality] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [icon, setIcon] = useState("");
-  const [adapterType, setAdapterType] = useState("aura_harness");
+  const adapterType = "aura_harness";
+  const setAdapterType = useCallback((_v: string) => {
+    // External adapters are no longer supported; the agent editor now hard-
+    // codes the adapter type to `aura_harness`. Keep the setter as a no-op so
+    // pre-existing call sites (and tests) continue to type-check.
+  }, []);
   const [environment, setEnvironment] = useState(defaultEnvironmentForContext(restrictCreateToAuraRuntimes));
   const [authSource, setAuthSource] = useState("aura_managed");
   const [showAdvancedRuntime, setShowAdvancedRuntime] = useState(false);
@@ -136,7 +136,6 @@ export function useAgentEditorForm(
   const [nameError, setNameError] = useState("");
   const [cropOpen, setCropOpen] = useState(false);
   const [rawImageSrc, setRawImageSrc] = useState("");
-  const rememberedIntegrationIdsRef = useRef<Record<string, string>>({});
   const requestedIntegrationsOrgIdRef = useRef<string | null>(null);
   const { inputRef: nameRef, initialFocusRef } = useModalInitialFocus<HTMLInputElement>();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -157,9 +156,8 @@ export function useAgentEditorForm(
       setRole(isSuperAgentByPerms(agent) ? "" : agent.role);
       setPersonality(agent.personality); setSystemPrompt(agent.system_prompt);
       setIcon(agent.icon ?? "");
-      setAdapterType(agent.adapter_type ?? "aura_harness");
       setEnvironment(agent.environment ?? (agent.machine_type === "remote" ? "swarm_microvm" : "local_host"));
-      setAuthSource(agent.auth_source ?? defaultAuthSource(agent.adapter_type ?? "aura_harness", agent.integration_id));
+      setAuthSource(agent.auth_source ?? defaultAuthSource("aura_harness", agent.integration_id));
       setIntegrationId(agent.integration_id ?? "");
       setDefaultModel(agent.default_model ?? "");
       setLocalWorkspacePath(agent.local_workspace_path ?? "");
@@ -167,9 +165,8 @@ export function useAgentEditorForm(
       setListingStatus(agent.listing_status ?? listingStatusFromTags(agent.tags));
       setShowAdvancedRuntime(
         !isDefaultCreateRuntime(
-          agent.adapter_type ?? "aura_harness",
           agent.environment ?? (agent.machine_type === "remote" ? "swarm_microvm" : "local_host"),
-          agent.auth_source ?? defaultAuthSource(agent.adapter_type ?? "aura_harness", agent.integration_id),
+          agent.auth_source ?? defaultAuthSource("aura_harness", agent.integration_id),
           agent.integration_id ?? "",
           agent.default_model ?? "",
           restrictCreateToAuraRuntimes,
@@ -177,7 +174,6 @@ export function useAgentEditorForm(
       );
     } else {
       setName(""); setRole(""); setPersonality(""); setSystemPrompt(""); setIcon("");
-      setAdapterType("aura_harness");
       setEnvironment(defaultEnvironmentForContext(restrictCreateToAuraRuntimes));
       setAuthSource("aura_managed");
       setShowAdvancedRuntime(false);
@@ -193,10 +189,6 @@ export function useAgentEditorForm(
   useEffect(() => {
     if (!restrictCreateToAuraRuntimes) {
       return;
-    }
-
-    if (adapterType !== "aura_harness") {
-      setAdapterType("aura_harness");
     }
 
     if (authSource !== "aura_managed") {
@@ -215,7 +207,6 @@ export function useAgentEditorForm(
       setEnvironment(defaultEnvironmentForContext(restrictCreateToAuraRuntimes));
     }
   }, [
-    adapterType,
     authSource,
     defaultModel,
     environment,
@@ -227,7 +218,6 @@ export function useAgentEditorForm(
     if (
       !showAdvancedRuntime &&
       !isDefaultCreateRuntime(
-        adapterType,
         environment,
         authSource,
         integrationId,
@@ -238,7 +228,6 @@ export function useAgentEditorForm(
       setShowAdvancedRuntime(true);
     }
   }, [
-    adapterType,
     authSource,
     defaultModel,
     environment,
@@ -276,27 +265,13 @@ export function useAgentEditorForm(
       return;
     }
 
-    const allowedAuthSources = adapterType === "aura_harness"
-      ? ["aura_managed", "org_integration"]
-      : [
-          ...(supportsLocalCliAuth(adapterType) ? ["local_cli_auth"] : []),
-          ...(supportsOrgIntegrationAuth(adapterType) ? ["org_integration"] : []),
-        ];
-
-    if (adapterType !== "aura_harness") {
-      setEnvironment("local_host");
+    // Only `aura_managed` and `org_integration` are supported now that the
+    // external CLI adapters have been removed.
+    const allowedAuthSources = ["aura_managed", "org_integration"] as const;
+    if (!allowedAuthSources.includes(authSource as (typeof allowedAuthSources)[number])) {
+      setAuthSource("aura_managed");
     }
-
-    if (!allowedAuthSources.includes(authSource)) {
-      setAuthSource(allowedAuthSources[0]);
-    }
-  }, [adapterType, authSource, restrictCreateToAuraRuntimes]);
-
-  useEffect(() => {
-    if (!restrictCreateToAuraRuntimes && authSource === "org_integration" && integrationId) {
-      rememberedIntegrationIdsRef.current[adapterType] = integrationId;
-    }
-  }, [adapterType, authSource, integrationId, restrictCreateToAuraRuntimes]);
+  }, [authSource, restrictCreateToAuraRuntimes]);
 
   useEffect(() => {
     if (restrictCreateToAuraRuntimes || authSource !== "org_integration") {
@@ -313,10 +288,7 @@ export function useAgentEditorForm(
     }
     const selected = integrations.find((integration) => integration.integration_id === integrationId);
     if (!selected || !requiredProviders.has(selected.provider)) {
-      const remembered = rememberedIntegrationIdsRef.current[adapterType];
-      const fallback = integrations.find((integration) => (
-        integration.integration_id === remembered && requiredProviders.has(integration.provider)
-      )) ?? integrations.find((integration) => requiredProviders.has(integration.provider));
+      const fallback = integrations.find((integration) => requiredProviders.has(integration.provider));
       setIntegrationId(fallback?.integration_id ?? "");
     }
   }, [adapterType, authSource, integrationId, integrations, restrictCreateToAuraRuntimes]);
@@ -378,9 +350,7 @@ export function useAgentEditorForm(
     setNameError(""); setSaving(true); setError("");
     try {
       const trimmedName = name.trim();
-      const machineType = adapterType === "aura_harness"
-        ? environment === "swarm_microvm" ? "remote" : "local"
-        : "local";
+      const machineType = environment === "swarm_microvm" ? "remote" : "local";
       // `role` is a free-text display label. We preserve the existing role on
       // super-agents (so their chosen title stays) and never inject any system
       // tags (`host_mode:*`, `preset:*`, `migration:*`) on save. User-facing
@@ -451,7 +421,7 @@ export function useAgentEditorForm(
         personality: personality.trim(),
         system_prompt: systemPrompt.trim(),
         icon: icon || (agent?.icon ? null : undefined),
-        machine_type: !agent && restrictCreateToAuraRuntimes && adapterType === "aura_harness" ? "remote" : machineType,
+        machine_type: !agent && restrictCreateToAuraRuntimes ? "remote" : machineType,
         adapter_type: adapterType,
         environment,
         auth_source: authSource,

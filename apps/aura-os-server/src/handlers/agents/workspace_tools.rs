@@ -1,6 +1,4 @@
 use std::collections::HashMap;
-use std::collections::HashSet;
-use std::sync::OnceLock;
 
 use aura_os_integrations::{
     app_provider_contract_by_tool, app_provider_contracts, app_provider_runtime_auth,
@@ -8,14 +6,13 @@ use aura_os_integrations::{
     installed_tool_runtime_execution_for_provider,
     installed_workspace_app_tools as build_installed_workspace_app_tools,
     installed_workspace_integrations as build_installed_workspace_integrations,
-    org_integration_tool_manifest_entries, TRUSTED_INTEGRATION_RUNTIME_METADATA_KEY,
+    TRUSTED_INTEGRATION_RUNTIME_METADATA_KEY,
 };
 use futures_util::stream::{self, StreamExt};
-use serde::Deserialize;
 use serde_json::Value;
 use tracing::warn;
 
-use aura_os_core::{Agent, OrgId, OrgIntegration, OrgIntegrationKind};
+use aura_os_core::{OrgId, OrgIntegration, OrgIntegrationKind};
 use aura_os_harness::{
     InstalledIntegration, InstalledTool, InstalledToolRuntimeIntegration, ToolAuth,
 };
@@ -25,14 +22,6 @@ use crate::handlers::trusted_mcp::{
     MCP_TOOL_NAME_METADATA_KEY, TOOL_SOURCE_KIND_METADATA_KEY, TOOL_TRUST_CLASS_METADATA_KEY,
 };
 use crate::state::AppState;
-
-#[allow(dead_code)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum WorkspaceToolSourceKind {
-    AuraNative,
-    AppProvider,
-    Mcp,
-}
 
 const TRUSTED_MCP_DISCOVERY_CONCURRENCY: usize = 4;
 
@@ -52,155 +41,6 @@ pub(crate) struct InstalledWorkspaceToolWarning {
     pub(crate) integration_id: String,
     pub(crate) integration_name: String,
     pub(crate) provider: String,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct WorkspaceToolManifestEntry {
-    name: String,
-    provider: Option<String>,
-    description: String,
-    prompt_signature: String,
-    input_schema: Value,
-    saved_event: Option<String>,
-    saved_payload_key: Option<String>,
-}
-
-#[allow(dead_code)]
-#[derive(Clone, Debug)]
-pub(crate) struct WorkspaceToolDefinition {
-    pub(crate) name: String,
-    pub(crate) provider: Option<String>,
-    pub(crate) description: String,
-    pub(crate) prompt_signature: String,
-    pub(crate) input_schema: Value,
-    pub(crate) saved_event: Option<String>,
-    pub(crate) saved_payload_key: Option<String>,
-    pub(crate) source_kind: WorkspaceToolSourceKind,
-    #[allow(dead_code)]
-    pub(crate) source_id: String,
-}
-
-fn load_manifest_entries(
-    entries: &[WorkspaceToolManifestEntry],
-    label: &str,
-    source_kind: WorkspaceToolSourceKind,
-    source_id: &str,
-) -> Vec<WorkspaceToolDefinition> {
-    entries
-        .iter()
-        .cloned()
-        .map(|tool| {
-            assert!(
-                tool.input_schema.is_object(),
-                "{label} workspace tool `{}` must declare an object input schema",
-                tool.name
-            );
-            WorkspaceToolDefinition {
-                name: tool.name,
-                provider: tool.provider,
-                description: tool.description,
-                prompt_signature: tool.prompt_signature,
-                input_schema: tool.input_schema,
-                saved_event: tool.saved_event,
-                saved_payload_key: tool.saved_payload_key,
-                source_kind,
-                source_id: source_id.to_string(),
-            }
-        })
-        .collect()
-}
-
-pub(crate) fn shared_workspace_tools() -> &'static [WorkspaceToolDefinition] {
-    static TOOLS: OnceLock<Vec<WorkspaceToolDefinition>> = OnceLock::new();
-    TOOLS.get_or_init(|| {
-        let mut tools = Vec::new();
-        let project_entries: Vec<WorkspaceToolManifestEntry> =
-            serde_json::from_str(include_str!(concat!(
-                env!("CARGO_MANIFEST_DIR"),
-                "/../../infra/shared/project-control-plane-tools.json"
-            )))
-            .expect("workspace tool manifest should parse");
-        tools.extend(load_manifest_entries(
-            &project_entries,
-            "aura native",
-            WorkspaceToolSourceKind::AuraNative,
-            "aura_project_control_plane",
-        ));
-        let integration_entries = org_integration_tool_manifest_entries()
-            .iter()
-            .cloned()
-            .map(|entry| WorkspaceToolManifestEntry {
-                name: entry.name,
-                provider: entry.provider,
-                description: entry.description,
-                prompt_signature: entry.prompt_signature,
-                input_schema: entry.input_schema,
-                saved_event: None,
-                saved_payload_key: None,
-            })
-            .collect::<Vec<_>>();
-        tools.extend(load_manifest_entries(
-            &integration_entries,
-            "app provider",
-            WorkspaceToolSourceKind::AppProvider,
-            "builtin_app_providers",
-        ));
-        tools
-    })
-}
-
-pub(crate) fn workspace_tool(name: &str) -> Option<&'static WorkspaceToolDefinition> {
-    shared_workspace_tools()
-        .iter()
-        .find(|tool| tool.name == name)
-}
-
-async fn available_workspace_integration_providers_for_org(
-    state: &AppState,
-    org_id: &OrgId,
-) -> HashSet<String> {
-    integrations_for_org(state, org_id)
-        .await
-        .into_iter()
-        .filter(|integration| {
-            integration.has_secret
-                && integration.enabled
-                && matches!(
-                    integration.kind,
-                    aura_os_core::OrgIntegrationKind::WorkspaceIntegration
-                )
-        })
-        .map(|integration| integration.provider)
-        .collect()
-}
-
-pub(crate) async fn active_workspace_tools_for_org(
-    state: &AppState,
-    org_id: &OrgId,
-) -> Vec<&'static WorkspaceToolDefinition> {
-    let available_providers =
-        available_workspace_integration_providers_for_org(state, org_id).await;
-    shared_workspace_tools()
-        .iter()
-        .filter(|tool| {
-            tool.provider
-                .as_deref()
-                .map(|provider| available_providers.contains(provider))
-                .unwrap_or(true)
-        })
-        .collect()
-}
-
-pub(crate) async fn active_workspace_tools<'a>(
-    state: &'a AppState,
-    agent: &'a Agent,
-) -> Vec<&'static WorkspaceToolDefinition> {
-    let Some(org_id) = agent.org_id.as_ref() else {
-        return Vec::new();
-    };
-
-    active_workspace_tools_for_org(state, org_id).await
 }
 
 pub(crate) fn control_plane_api_base_url() -> String {
@@ -1089,59 +929,6 @@ mod tests {
 
         let secret = load_integration_secret(&state, &org_id, &integration, Some("jwt-123")).await;
         assert_eq!(secret, Some("canonical-remote-secret".to_string()));
-    }
-
-    #[tokio::test]
-    async fn active_workspace_tools_for_org_prefers_canonical_provider_list() {
-        let store_dir = tempfile::tempdir().unwrap();
-        let store_path = store_dir.path().join("store");
-        let mut state = crate::build_app_state(&store_path).expect("build app state");
-        let org_id = OrgId::new();
-
-        state
-            .org_service
-            .upsert_integration(
-                &org_id,
-                Some("local-brave"),
-                "Local Disabled Brave".to_string(),
-                "brave_search".to_string(),
-                OrgIntegrationKind::WorkspaceIntegration,
-                None,
-                None,
-                Some(false),
-                IntegrationSecretUpdate::Set("local-shadow-secret".to_string()),
-            )
-            .expect("save local shadow");
-
-        let canonical = OrgIntegration {
-            integration_id: "canonical-brave".to_string(),
-            org_id,
-            name: "Canonical Brave".to_string(),
-            provider: "brave_search".to_string(),
-            kind: OrgIntegrationKind::WorkspaceIntegration,
-            default_model: None,
-            provider_config: None,
-            has_secret: true,
-            enabled: true,
-            secret_last4: Some("1234".to_string()),
-            created_at: chrono::Utc::now(),
-            updated_at: chrono::Utc::now(),
-        };
-        let base_url =
-            start_mock_integrations_server(vec![canonical], Some("canonical-remote-secret")).await;
-        state.integrations_client = Some(Arc::new(IntegrationsClient::with_base_url(
-            &base_url,
-            "internal-token",
-        )));
-
-        let tools = active_workspace_tools_for_org(&state, &org_id).await;
-        let tool_names = tools
-            .iter()
-            .map(|tool| tool.name.as_str())
-            .collect::<Vec<_>>();
-
-        assert!(tool_names.contains(&"brave_search_web"));
-        assert!(tool_names.contains(&"brave_search_news"));
     }
 
     #[tokio::test]

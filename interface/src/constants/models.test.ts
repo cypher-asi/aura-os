@@ -85,10 +85,13 @@ describe("model persistence", () => {
     expect(loadPersistedModel("default", "gpt-5.5")).toBe("aura-gpt-5-5");
   });
 
-  it("ignores an agent value that isn't valid for the adapter", () => {
-    persistModel("codex", "codex", "agent-codex");
-    // The codex model id is invalid for the default adapter's model list,
-    // so loadPersistedModel should fall through to the default.
-    expect(loadPersistedModel("default", null, "agent-codex")).not.toBe("codex");
+  it("ignores a stored agent value that isn't a known model", () => {
+    persistModel("not-a-real-model", "default", "agent-bogus");
+    // An invalid model id stored under the agent-scoped key should be
+    // ignored and `loadPersistedModel` should fall through to the
+    // adapter default.
+    expect(loadPersistedModel("default", null, "agent-bogus")).not.toBe(
+      "not-a-real-model",
+    );
   });
 });
