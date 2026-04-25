@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { Modal, Button, Toggle, Spinner } from "@cypher-asi/zui";
 import { useModalInitialFocus } from "../../../../hooks/use-modal-initial-focus";
-import { tasksApi } from "../../../../api/tasks";
+import { tasksApi } from "../../../../shared/api/tasks";
 import { useKanbanStore } from "../../stores/kanban-store";
 import { useProjectActions } from "../../../../stores/project-action-store";
 import { useProjectsListStore } from "../../../../stores/projects-list-store";

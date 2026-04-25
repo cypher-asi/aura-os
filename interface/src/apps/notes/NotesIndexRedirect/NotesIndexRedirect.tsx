@@ -6,7 +6,7 @@ import {
 } from "../../../stores/notes-store";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
 import { getLastNote } from "../../../utils/storage";
-import type { NotesTreeNode } from "../../../api/notes";
+import type { NotesTreeNode } from "../../../shared/api/notes";
 
 function findFirstNoteRelPath(nodes: NotesTreeNode[]): string | null {
   for (const node of nodes) {

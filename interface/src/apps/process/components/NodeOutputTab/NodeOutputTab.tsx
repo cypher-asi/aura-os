@@ -7,7 +7,7 @@ import type {
   ProcessArtifact,
   ProcessRun,
 } from "../../../../shared/types";
-import { processApi } from "../../../../api/process";
+import { processApi } from "../../../../shared/api/process";
 import { useProcessStore } from "../../stores/process-store";
 import { useProcessSidekickStore } from "../../stores/process-sidekick-store";
 import { PinnedOutputField, PinOutputButton } from "../PinnedOutput";

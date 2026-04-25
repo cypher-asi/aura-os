@@ -1,4 +1,4 @@
-import { apiFetch } from "./core";
+import { apiFetch } from "../shared/api/core";
 import type { MarketplaceAgent } from "../apps/marketplace/marketplace-types";
 import type { MarketplaceTrendingSort } from "../apps/marketplace/marketplace-trending";
 

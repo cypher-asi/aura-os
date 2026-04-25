@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import type { CommentDto } from "../../api/social";
+import type { CommentDto } from "../../shared/api/social";
 
 vi.mock("../../api/client", () => ({
   api: {

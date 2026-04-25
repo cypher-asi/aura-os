@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import type { BrowserWorkerInMsg } from "../../workers/browser-frame-worker";
-import type { BrowserClientMsg } from "../../api/browser";
+import type { BrowserClientMsg } from "../../shared/api/browser";
 import {
   BLOCKED_KEY_COMBOS,
   buildMouseMsg,

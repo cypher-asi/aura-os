@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useQueries, type Query } from "@tanstack/react-query";
 import { api } from "../../api/client";
-import type { DebugRunMetadata, DebugRunsResponse } from "../../api/debug";
+import type { DebugRunMetadata, DebugRunsResponse } from "../../shared/api/debug";
 
 /**
  * Batch fetch runs for a set of project ids — typically the currently

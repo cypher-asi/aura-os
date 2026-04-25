@@ -4,7 +4,7 @@ import { Pin } from "lucide-react";
 import { Text } from "@cypher-asi/zui";
 import type { ProcessNode, ProcessEvent } from "../../../../shared/types";
 import type { ProcessNodeType } from "../../../../shared/types/enums";
-import { processApi } from "../../../../api/process";
+import { processApi } from "../../../../shared/api/process";
 import { useProcessStore } from "../../stores/process-store";
 import { useAgentStore } from "../../../agents/stores";
 import { Avatar } from "../../../../components/Avatar";

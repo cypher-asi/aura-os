@@ -7,7 +7,7 @@ import {
   type NavError,
   type NavState,
   type ProjectBrowserSettings,
-} from "../../api/browser";
+} from "../../shared/api/browser";
 import { useBrowser } from "../../hooks/use-browser";
 import { useBrowserPanelStore } from "../../stores/browser-panel-store";
 import { BrowserAddressBar } from "../BrowserAddressBar";

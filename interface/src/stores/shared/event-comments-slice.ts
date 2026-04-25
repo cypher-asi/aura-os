@@ -1,5 +1,5 @@
 import { api } from "../../api/client";
-import type { CommentDto } from "../../api/social";
+import type { CommentDto } from "../../shared/api/social";
 
 /* ── Shared types ── */
 

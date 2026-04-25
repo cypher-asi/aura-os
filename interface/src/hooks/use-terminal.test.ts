@@ -36,14 +36,14 @@ class MockWS {
   static readonly CLOSED = 3;
 }
 
-vi.mock("../api/terminal", () => ({
+vi.mock("../shared/api/terminal", () => ({
   spawnTerminal: vi.fn().mockResolvedValue({ id: "term-1", shell: "bash" }),
   killTerminal: vi.fn().mockResolvedValue(undefined),
   terminalWsUrl: vi.fn((id: string) => `ws://test/ws/terminal/${id}`),
   remoteTerminalWsUrl: vi.fn((id: string) => `ws://test/ws/agents/${id}/terminal`),
 }));
 
-import { spawnTerminal, killTerminal } from "../api/terminal";
+import { spawnTerminal, killTerminal } from "../shared/api/terminal";
 
 describe("useTerminal", () => {
   let origWS: typeof WebSocket;

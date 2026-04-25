@@ -1,4 +1,4 @@
-import type { HarnessSkill, HarnessSkillActivation, HarnessSkillInstallation } from "../shared/types";
+import type { HarnessSkill, HarnessSkillActivation, HarnessSkillInstallation } from "../types";
 import { apiFetch } from "./core";
 
 export interface MySkillEntry {

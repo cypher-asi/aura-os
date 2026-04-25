@@ -6,7 +6,7 @@ import {
   type MarketplaceTrendingSort,
 } from "../marketplace-trending";
 import { api } from "../../../api/client";
-import { ApiClientError } from "../../../api/core";
+import { ApiClientError } from "../../../shared/api/core";
 
 /**
  * Marketplace UI state. In Phase 2 `refresh()` calls `api.marketplace.list()`

@@ -8,7 +8,7 @@ import {
   Lock,
   Globe,
 } from "lucide-react";
-import type { DetectedUrl } from "../../api/browser";
+import type { DetectedUrl } from "../../shared/api/browser";
 import styles from "./BrowserAddressBar.module.css";
 
 export interface BrowserAddressBarProps {

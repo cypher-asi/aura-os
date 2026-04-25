@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 import { api } from "../api/client";
-import type { LoopsFilter } from "../api/loop";
+import type { LoopsFilter } from "../shared/api/loop";
 import {
   isLoopActivityActive,
   type LoopActivityPayload,

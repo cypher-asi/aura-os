@@ -1,4 +1,4 @@
-import type { RemoteVmState } from "../shared/types"
+import type { RemoteVmState } from "../types"
 import type { DirEntry } from "./desktop"
 import { apiFetch } from "./core"
 

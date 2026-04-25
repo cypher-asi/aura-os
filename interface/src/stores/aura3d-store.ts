@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { artifactsApi, type ProjectArtifact } from "../api/artifacts";
+import { artifactsApi, type ProjectArtifact } from "../shared/api/artifacts";
 
 export type Aura3DTab = "image" | "3d";
 

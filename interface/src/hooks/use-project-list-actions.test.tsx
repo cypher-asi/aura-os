@@ -2,7 +2,7 @@ import { renderHook, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
-import { ApiClientError } from "../api/core";
+import { ApiClientError } from "../shared/api/core";
 import { useProjectListActions } from "./use-project-list-actions";
 import { CREATE_AGENT_CHAT_HANDOFF } from "../utils/chat-handoff";
 

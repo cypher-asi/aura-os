@@ -58,7 +58,7 @@ vi.mock("../../stores/process-sidekick-store", () => ({
   useProcessSidekickStore: (selector: (state: typeof sidekickStoreState) => unknown) => selector(sidekickStoreState),
 }));
 
-vi.mock("../../../../api/process", () => ({
+vi.mock("../../../../shared/api/process", () => ({
   processApi: {
     listRunEvents: (...args: unknown[]) => mockListRunEvents(...args),
     listRunArtifacts: (...args: unknown[]) => mockListRunArtifacts(...args),

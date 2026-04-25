@@ -11,7 +11,7 @@ import type {
   ToolResultInfo,
   ToolCallRetryingInfo,
   ToolCallFailedInfo,
-} from "../../api/streams";
+} from "../../shared/api/streams";
 import type { SessionEvent, ChatContentBlock } from "../../shared/types";
 import { extractToolCalls, extractArtifactRefs } from "../../utils/chat-history";
 import type {

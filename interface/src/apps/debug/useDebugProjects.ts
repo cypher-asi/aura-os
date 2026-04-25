@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
-import type { DebugProjectSummary } from "../../api/debug";
+import type { DebugProjectSummary } from "../../shared/api/debug";
 
 export interface DebugProjectsData {
   projects: DebugProjectSummary[];

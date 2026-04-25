@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { create } from "zustand";
 import type { Task, ProjectId, TaskStatus } from "../../../shared/types";
-import { tasksApi } from "../../../api/tasks";
+import { tasksApi } from "../../../shared/api/tasks";
 
 interface ProjectTaskCache {
   tasks: Task[];

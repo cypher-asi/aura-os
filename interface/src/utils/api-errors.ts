@@ -1,4 +1,4 @@
-import { ApiClientError } from "../api/core";
+import { ApiClientError } from "../shared/api/core";
 
 /** Messages the upstream sends that carry no useful information on their own. */
 const OPAQUE_UPSTREAM_MESSAGE_PATTERN = /^an internal error occurred\.?$/i;

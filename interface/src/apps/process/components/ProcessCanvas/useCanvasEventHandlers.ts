@@ -3,7 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 import type { Connection, Node, Edge } from "@xyflow/react";
 import type { ProcessNode, ProcessNodeConnection, ProcessRun } from "../../../../shared/types";
 import type { ProcessNodeType } from "../../../../shared/types/enums";
-import { processApi } from "../../../../api/process";
+import { processApi } from "../../../../shared/api/process";
 import { useProcessSidekickStore } from "../../stores/process-sidekick-store";
 import {
   snap,

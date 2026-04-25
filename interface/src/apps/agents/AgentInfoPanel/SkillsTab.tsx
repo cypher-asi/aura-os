@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Text, Button, ButtonMore, Modal } from "@cypher-asi/zui";
 import { Zap, Loader2, Plus, Trash2, ChevronDown, ChevronRight, FilePlus2, Store } from "lucide-react";
 import { api } from "../../../api/client";
-import type { MySkillEntry, SkillInstalledAgentRef } from "../../../api/harness-skills";
+import type { MySkillEntry, SkillInstalledAgentRef } from "../../../shared/api/harness-skills";
 import { useAgentSidekickStore } from "../stores/agent-sidekick-store";
 import { CreateSkillModal } from "./CreateSkillModal";
 import { SkillShopModal } from "../../../components/SkillShopModal";

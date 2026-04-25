@@ -1,7 +1,7 @@
-import { authHeaders, getStoredJwt } from "../lib/auth-token";
-import { resolveApiUrl, resolveWsUrl } from "../lib/host-config";
+import { authHeaders, getStoredJwt } from "../../lib/auth-token";
+import { resolveApiUrl, resolveWsUrl } from "../../lib/host-config";
 import { ApiClientError } from "./core";
-import type { ApiError } from "../shared/types";
+import type { ApiError } from "../types";
 
 // ---------------------------------------------------------------------------
 // DTOs shared with aura-os-server's /api/browser endpoints.

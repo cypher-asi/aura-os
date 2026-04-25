@@ -10,7 +10,7 @@ import {
   type NavError,
   type NavState,
   type SpawnBrowserResponse,
-} from "../api/browser";
+} from "../shared/api/browser";
 
 export interface UseBrowserOptions {
   /** Whether to kick off the spawn automatically on mount. Defaults to true. */

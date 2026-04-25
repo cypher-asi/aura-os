@@ -5,7 +5,7 @@
  */
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { desktopApi } from "../../api/desktop";
+import { desktopApi } from "../../shared/api/desktop";
 import { preloadAppForPathname, resolveActiveApp } from "../../stores/app-store";
 import { useAppUIStore } from "../../stores/app-ui-store";
 import { sanitizeRestorePath } from "../../utils/last-app-path";

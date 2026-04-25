@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { ProjectBrowserSettings } from "../api/browser";
+import type { ProjectBrowserSettings } from "../shared/api/browser";
 
 const MAX_INSTANCES = 4;
 

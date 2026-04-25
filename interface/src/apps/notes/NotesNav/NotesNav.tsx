@@ -20,7 +20,7 @@ import {
   useNotesStore,
   type NotesProjectTree,
 } from "../../../stores/notes-store";
-import type { NotesTreeNode } from "../../../api/notes";
+import type { NotesTreeNode } from "../../../shared/api/notes";
 import {
   folderIdFor,
   noteIdFor,

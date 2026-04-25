@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { LoopStatusResponse } from "../api/loop";
+import type { LoopStatusResponse } from "../shared/api/loop";
 
 /**
  * Per-project set of task ids the server reports as currently streaming.

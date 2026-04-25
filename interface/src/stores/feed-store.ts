@@ -16,7 +16,7 @@ export {
 } from "./shared/event-comments-slice";
 import type { FeedAuthor, FeedComment } from "./shared/event-comments-slice";
 import { api } from "../api/client";
-import type { FeedEventDto } from "../api/social";
+import type { FeedEventDto } from "../shared/api/social";
 import { buildCommitActivityFromEvents } from "../lib/commitActivity";
 import type { AuraEvent } from "../shared/types/aura-events";
 import { EventType } from "../shared/types/aura-events";

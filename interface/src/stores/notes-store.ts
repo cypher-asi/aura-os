@@ -5,7 +5,7 @@ import type {
   NoteFrontmatter,
   NotesComment,
   NotesTreeNode,
-} from "../api/notes";
+} from "../shared/api/notes";
 import { useAuthStore } from "./auth-store";
 import { clearLastNote, setLastNote } from "../utils/storage";
 

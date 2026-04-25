@@ -16,7 +16,7 @@ vi.mock("../../../../stores/event-store/index", () => ({
     selector({ connected: true })),
 }));
 
-vi.mock("../../../../api/process", () => ({
+vi.mock("../../../../shared/api/process", () => ({
   processApi: {
     listRunEvents: vi.fn(),
   },

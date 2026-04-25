@@ -7,8 +7,8 @@ import type {
   ProcessRun,
   ProcessEvent,
   ProcessArtifact,
-} from "../shared/types";
-import type { ProcessNodeType } from "../shared/types/enums";
+} from "../types";
+import type { ProcessNodeType } from "../types/enums";
 
 export interface CreateProcessRequest {
   name: string;

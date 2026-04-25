@@ -4,7 +4,7 @@
  * shared across components in the Debug app.
  */
 
-import type { DebugChannel } from "../../api/debug";
+import type { DebugChannel } from "../../shared/api/debug";
 
 /**
  * A parsed line from any `*.jsonl` channel. `event` keeps the raw

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
-import type { DesktopUpdateStatusResponse } from "../../api/desktop";
+import type { DesktopUpdateStatusResponse } from "../../shared/api/desktop";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 
 const POLL_INTERVAL = 5_000;

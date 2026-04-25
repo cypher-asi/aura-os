@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../../api/client";
-import type { LoopStatusResponse } from "../../api/loop";
+import type { LoopStatusResponse } from "../../shared/api/loop";
 import { useEventStore } from "../../stores/event-store/index";
 import { useChatUI } from "../../stores/chat-ui-store";
 import { projectChatHistoryKey } from "../../stores/chat-history-store";

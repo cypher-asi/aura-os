@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import type { ProcessNode } from "../../../../shared/types";
-import { processApi } from "../../../../api/process";
+import { processApi } from "../../../../shared/api/process";
 import { useProcessStore } from "../../stores/process-store";
 import { useProcessSidekickStore } from "../../stores/process-sidekick-store";
 import { useAgentStore } from "../../../agents/stores";

@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import { ArrowRight, ArrowLeft, Trash2 } from "lucide-react";
 import { Text, Menu } from "@cypher-asi/zui";
 import type { ProcessNode } from "../../../../shared/types";
-import { processApi } from "../../../../api/process";
+import { processApi } from "../../../../shared/api/process";
 import { useProcessStore } from "../../stores/process-store";
 import { useProcessSidekickStore } from "../../stores/process-sidekick-store";
 import { EmptyState } from "../../../../components/EmptyState";

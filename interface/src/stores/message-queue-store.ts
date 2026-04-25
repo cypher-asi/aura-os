@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
-import type { ChatAttachment } from "../api/streams";
+import type { ChatAttachment } from "../shared/api/streams";
 
 export interface QueuedMessage {
   id: string;

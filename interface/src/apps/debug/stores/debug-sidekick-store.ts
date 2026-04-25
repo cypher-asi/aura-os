@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { DebugChannel } from "../../../api/debug";
+import type { DebugChannel } from "../../../shared/api/debug";
 import {
   createSidekickSlice,
   persistActiveTab,

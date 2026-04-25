@@ -8,7 +8,7 @@ import { MessageQueue } from "../MessageQueue";
 import { OverlayScrollbar } from "../OverlayScrollbar";
 import { ChatStreamingIndicator } from "./ChatStreamingIndicator";
 import { useChatPanelState } from "./useChatPanelState";
-import type { ChatAttachment } from "../../api/streams";
+import type { ChatAttachment } from "../../shared/api/streams";
 import type { Project } from "../../shared/types";
 import type { GenerationMode } from "../../constants/models";
 import type { DisplaySessionEvent } from "../../shared/types/stream";

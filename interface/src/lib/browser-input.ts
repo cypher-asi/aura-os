@@ -14,7 +14,7 @@ import type {
   BrowserClientMsg,
   MouseButton,
   MouseEventKind,
-} from "../api/browser";
+} from "../shared/api/browser";
 
 /** Bitmask bits that CDP's `Input.dispatchKeyEvent.modifiers` expects. */
 export const CDP_MOD_ALT = 1;

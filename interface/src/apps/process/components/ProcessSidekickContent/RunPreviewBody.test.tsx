@@ -76,7 +76,7 @@ vi.mock("../../../../stores/event-store/index", () => ({
   useEventStore: useEventStoreMock,
 }));
 
-vi.mock("../../../../api/process", () => ({
+vi.mock("../../../../shared/api/process", () => ({
   processApi: {
     listRunArtifacts: (...args: unknown[]) => mockListRunArtifacts(...args),
     listRunEvents: (...args: unknown[]) => mockListRunEvents(...args),

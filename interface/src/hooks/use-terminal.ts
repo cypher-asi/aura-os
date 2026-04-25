@@ -4,7 +4,7 @@ import {
   killTerminal,
   terminalWsUrl,
   remoteTerminalWsUrl,
-} from "../api/terminal";
+} from "../shared/api/terminal";
 
 export interface UseTerminalOptions {
   cols?: number;

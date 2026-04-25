@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
-import type { DebugRunMetadata } from "../../api/debug";
+import type { DebugRunMetadata } from "../../shared/api/debug";
 import type { ProjectId } from "../../shared/types";
 
 interface Result {

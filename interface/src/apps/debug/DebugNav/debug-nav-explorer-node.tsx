@@ -3,7 +3,7 @@ import { Bug, Circle, Activity } from "lucide-react";
 import type {
   DebugRunMetadata,
   DebugRunStatus,
-} from "../../../api/debug";
+} from "../../../shared/api/debug";
 import type { ExplorerNodeWithSuffix } from "../../../lib/zui-compat";
 import styles from "./DebugNav.module.css";
 

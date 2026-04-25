@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { NavError } from "../../api/browser";
+import type { NavError } from "../../shared/api/browser";
 import styles from "./BrowserErrorOverlay.module.css";
 
 export interface BrowserErrorOverlayProps {

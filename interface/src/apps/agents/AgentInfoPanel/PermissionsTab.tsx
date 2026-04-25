@@ -5,7 +5,7 @@ import { api } from "../../../api/client";
 import type {
   AgentInstalledToolsDiagnostic,
   InstalledToolDiagnosticRow,
-} from "../../../api/agents";
+} from "../../../shared/api/agents";
 import { getApiErrorMessage } from "../../../utils/api-errors";
 import { useAgentStore } from "../stores";
 import { useProjectsListStore } from "../../../stores/projects-list-store";

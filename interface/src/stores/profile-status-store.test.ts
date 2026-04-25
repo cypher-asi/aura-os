@@ -58,7 +58,7 @@ vi.mock("../api/client", () => ({
 }));
 
 import { useProfileStatusStore } from "./profile-status-store";
-import { ApiClientError } from "../api/core";
+import { ApiClientError } from "../shared/api/core";
 
 beforeEach(() => {
   useProfileStatusStore.setState({ statuses: {}, machineTypes: {} });

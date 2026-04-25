@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import type { FeedEventDto } from "../api/social";
+import type { FeedEventDto } from "../shared/api/social";
 
 const { mockApi } = vi.hoisted(() => ({
   mockApi: {

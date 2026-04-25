@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { Text } from "@cypher-asi/zui";
-import type { DebugRunMetadata, DebugRunStatus } from "../../../../api/debug";
+import type { DebugRunMetadata, DebugRunStatus } from "../../../../shared/api/debug";
 import { api } from "../../../../api/client";
 import type { ProjectId } from "../../../../shared/types";
 import { useDebugRunMetadata } from "../../useDebugRunMetadata";

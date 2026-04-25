@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Task } from "../../../shared/types";
-import { tasksApi } from "../../../api/tasks";
+import { tasksApi } from "../../../shared/api/tasks";
 import { useKanbanStore } from "./kanban-store";
 
-vi.mock("../../../api/tasks", () => ({
+vi.mock("../../../shared/api/tasks", () => ({
   tasksApi: {
     listTasks: vi.fn(),
   },

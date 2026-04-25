@@ -28,7 +28,7 @@ vi.mock("../../../api/client", () => ({
   },
 }));
 
-vi.mock("../../../api/core", async () => {
+vi.mock("../../../shared/api/core", async () => {
   const mod = await import("../../../api/client");
   return { ApiClientError: mod.ApiClientError };
 });

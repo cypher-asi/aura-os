@@ -3,7 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { Text } from "@cypher-asi/zui";
 import { useProcessStore } from "../../stores/process-store";
 import { useEventStore } from "../../../../stores/event-store/index";
-import { processApi } from "../../../../api/process";
+import { processApi } from "../../../../shared/api/process";
 import { formatTokensCompact as formatTokens } from "../../../../utils/format";
 import { EmptyState } from "../../../../components/EmptyState";
 import type { ProcessEvent } from "../../../../shared/types";

@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import type { DesktopUpdateStatusResponse } from "../../api/desktop";
+import type { DesktopUpdateStatusResponse } from "../../shared/api/desktop";
 
 const mockGetUpdateStatus = vi.fn();
 const mockInstallUpdate = vi.fn();

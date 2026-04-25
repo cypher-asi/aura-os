@@ -8,8 +8,8 @@ import {
   isLoggedInSync,
   setStoredAuth,
 } from "../lib/auth-token";
-import { authApi } from "../api/auth";
-import { ApiClientError } from "../api/core";
+import { authApi } from "../shared/api/auth";
+import { ApiClientError } from "../shared/api/core";
 import { disconnectEventSocket, scheduleDeferredEventSocketConnect } from "./event-store";
 import { markAuthRestoreComplete } from "../lib/perf/startup-perf";
 

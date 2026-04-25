@@ -46,7 +46,7 @@ vi.hoisted(() => {
   }
 });
 
-vi.mock("../api/auth", () => ({
+vi.mock("../shared/api/auth", () => ({
   authApi: mockApi,
 }));
 
@@ -56,7 +56,7 @@ vi.mock("../api/client", () => ({
   },
 }));
 
-vi.mock("../api/core", () => ({
+vi.mock("../shared/api/core", () => ({
   ApiClientError: class ApiClientError extends Error {
     status: number;
     constructor(status: number, body: { error: string }) {
@@ -86,7 +86,7 @@ const sessionWithZeroProError: AuthSession = {
 };
 
 import { useAuthStore } from "./auth-store";
-import { ApiClientError } from "../api/core";
+import { ApiClientError } from "../shared/api/core";
 import { clearStoredAuth } from "../lib/auth-token";
 
 function expectedUser(session: AuthSession): ZeroUser {

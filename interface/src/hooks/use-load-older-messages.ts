@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { agentTemplatesApi } from "../api/agents";
+import { agentTemplatesApi } from "../shared/api/agents";
 import { buildDisplayEvents } from "../utils/build-display-messages";
 import { useMessageStore } from "../stores/message-store";
 import { useChatViewStore, useThreadView } from "../stores/chat-view-store";

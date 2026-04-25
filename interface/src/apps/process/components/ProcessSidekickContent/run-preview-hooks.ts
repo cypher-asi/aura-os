@@ -4,7 +4,7 @@ import { useProcessStore } from "../../stores/process-store";
 import { useProcessSidekickStore } from "../../stores/process-sidekick-store";
 import { useEventStore } from "../../../../stores/event-store/index";
 import { EventType } from "../../../../shared/types/aura-events";
-import { processApi } from "../../../../api/process";
+import { processApi } from "../../../../shared/api/process";
 import type {
   ProcessArtifact,
   ProcessEvent,

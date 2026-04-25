@@ -1,6 +1,6 @@
-import type { ApiError } from "../shared/types";
-import { authHeaders } from "../lib/auth-token";
-import { resolveApiUrl } from "../lib/host-config";
+import type { ApiError } from "../types";
+import { authHeaders } from "../../lib/auth-token";
+import { resolveApiUrl } from "../../lib/host-config";
 
 export class ApiClientError extends Error {
   status: number;

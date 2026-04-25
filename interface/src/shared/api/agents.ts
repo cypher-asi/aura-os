@@ -10,7 +10,7 @@ import type {
   SessionEvent,
   Task,
   AgentOrchestration,
-} from "../shared/types";
+} from "../types";
 import { apiFetch } from "./core";
 import { sendAgentEventStream, sendEventStream } from "./streams";
 

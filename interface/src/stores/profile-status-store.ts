@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { api } from "../api/client";
-import { ApiClientError } from "../api/core";
+import { ApiClientError } from "../shared/api/core";
 import { useEventStore } from "./event-store";
 import { useAuthStore } from "./auth-store";
 import { useSidekickStore } from "./sidekick-store";

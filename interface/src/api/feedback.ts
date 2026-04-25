@@ -1,4 +1,4 @@
-import { apiFetch } from "./core";
+import { apiFetch } from "../shared/api/core";
 import type {
   FeedbackCategory,
   FeedbackProduct,

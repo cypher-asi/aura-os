@@ -4,12 +4,12 @@ export {
   isAgentBusyError,
   dispatchInsufficientCredits,
   INSUFFICIENT_CREDITS_EVENT,
-} from "./core";
+} from "../shared/api/core";
 
 export type {
   SpecGenStreamCallbacks,
   StreamEventHandler,
-} from "./streams";
+} from "../shared/api/streams";
 
 export type {
   CreateProjectRequest,
@@ -18,29 +18,29 @@ export type {
   OrbitCollaborator,
   ImportedProjectFile,
   CreateImportedProjectRequest,
-} from "./projects";
-export { STANDALONE_AGENT_HISTORY_LIMIT } from "./agents";
+} from "../shared/api/projects";
+export { STANDALONE_AGENT_HISTORY_LIMIT } from "../shared/api/agents";
 
-export type { DirEntry } from "./desktop";
-export type { LoopStatusResponse } from "./loop";
+export type { DirEntry } from "../shared/api/desktop";
+export type { LoopStatusResponse } from "../shared/api/loop";
 
-import { authApi } from "./auth";
-import { projectsApi } from "./projects";
-import { tasksApi } from "./tasks";
-import { agentTemplatesApi, agentInstancesApi, sessionsApi, superAgentApi } from "./agents";
-import { orgsApi } from "./orgs";
-import { desktopApi } from "./desktop";
-import { loopApi } from "./loop";
-import { followsApi, usersApi, profilesApi, feedApi, leaderboardApi, platformStatsApi, usageApi, activityApi } from "./social";
+import { authApi } from "../shared/api/auth";
+import { projectsApi } from "../shared/api/projects";
+import { tasksApi } from "../shared/api/tasks";
+import { agentTemplatesApi, agentInstancesApi, sessionsApi, superAgentApi } from "../shared/api/agents";
+import { orgsApi } from "../shared/api/orgs";
+import { desktopApi } from "../shared/api/desktop";
+import { loopApi } from "../shared/api/loop";
+import { followsApi, usersApi, profilesApi, feedApi, leaderboardApi, platformStatsApi, usageApi, activityApi } from "../shared/api/social";
 import { feedbackApi } from "./feedback";
-import { environmentApi } from "./environment";
-import { swarmApi } from "./swarm";
-import { processApi } from "./process";
-import { memoryApi } from "./memory";
-import { harnessSkillsApi } from "./harness-skills";
-import { notesApi } from "./notes";
+import { environmentApi } from "../shared/api/environment";
+import { swarmApi } from "../shared/api/swarm";
+import { processApi } from "../shared/api/process";
+import { memoryApi } from "../shared/api/memory";
+import { harnessSkillsApi } from "../shared/api/harness-skills";
+import { notesApi } from "../shared/api/notes";
 import { marketplaceApi } from "./marketplace";
-import { debugApi } from "./debug";
+import { debugApi } from "../shared/api/debug";
 
 export const api = {
   auth: authApi,

@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { ResponsiveMainLane } from "../../../../components/ResponsiveMainLane";
 import { useProcessStore } from "../../stores/process-store";
 import { useProcessSidekickStore } from "../../stores/process-sidekick-store";
-import { processApi } from "../../../../api/process";
+import { processApi } from "../../../../shared/api/process";
 import { ProcessCanvas } from "../ProcessCanvas";
 import type { ReactNode } from "react";
 import { useProcessMainPanelLiveEvents } from "./useProcessMainPanelLiveEvents";

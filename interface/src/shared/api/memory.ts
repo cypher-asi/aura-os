@@ -5,7 +5,7 @@ import type {
   MemoryProcedure,
   MemorySnapshot,
   MemoryStats,
-} from "../shared/types";
+} from "../types";
 import { apiFetch } from "./core";
 
 export const memoryApi = {

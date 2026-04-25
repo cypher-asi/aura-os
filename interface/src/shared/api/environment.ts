@@ -1,4 +1,4 @@
-import type { EnvironmentInfo } from "../shared/types";
+import type { EnvironmentInfo } from "../types";
 import { apiFetch } from "./core";
 
 export interface WorkspaceDefaults {

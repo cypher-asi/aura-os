@@ -1,5 +1,5 @@
 import { useCallback, type KeyboardEventHandler, type MouseEventHandler } from "react";
-import { processApi } from "../../../../api/process";
+import { processApi } from "../../../../shared/api/process";
 import { api } from "../../../../api/client";
 import { LAST_PROCESS_ID_KEY, useProcessStore } from "../../stores/process-store";
 import type { Project } from "../../../../shared/types";
