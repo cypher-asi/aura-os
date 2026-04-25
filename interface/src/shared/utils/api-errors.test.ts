@@ -1,4 +1,4 @@
-import { ApiClientError } from "../shared/api/core";
+import { ApiClientError } from "../api/core";
 import {
   getApiErrorDetails,
   getApiErrorMessage,

@@ -7,8 +7,8 @@ import { TaskStatusIcon } from "../TaskStatusIcon";
 import { Avatar } from "../Avatar";
 import { useAvatarState } from "../../hooks/use-avatar-state";
 import { useProjectActions } from "../../stores/project-action-store";
-import { toBullets, formatTokens, formatRelativeTime } from "../../utils/format";
-import { extractErrorMessage } from "../../utils/extract-error-message";
+import { toBullets, formatTokens, formatRelativeTime } from "../../shared/utils/format";
+import { extractErrorMessage } from "../../shared/utils/extract-error-message";
 import type { Task, AgentInstance } from "../../shared/types";
 import styles from "../Preview/Preview.module.css";
 

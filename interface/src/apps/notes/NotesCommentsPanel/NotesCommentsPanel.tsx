@@ -8,7 +8,7 @@ import {
   useNoteComments,
   useNotesStore,
 } from "../../../stores/notes-store";
-import { timeAgo } from "../../../utils/format";
+import { timeAgo } from "../../../shared/utils/format";
 import styles from "./NotesCommentsPanel.module.css";
 
 export function NotesCommentsPanel() {

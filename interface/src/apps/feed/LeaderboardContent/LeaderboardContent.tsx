@@ -2,7 +2,7 @@ import { useEffect, useMemo } from "react";
 import { Text } from "@cypher-asi/zui";
 import { Avatar } from "../../../components/Avatar";
 import { useLeaderboard, useLeaderboardStore } from "../../../stores/leaderboard-store";
-import { formatTokens, formatCurrency } from "../../../utils/format";
+import { formatTokens, formatCurrency } from "../../../shared/utils/format";
 import styles from "./LeaderboardContent.module.css";
 
 export function LeaderboardContent() {

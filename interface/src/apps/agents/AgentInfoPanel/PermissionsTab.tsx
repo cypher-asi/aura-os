@@ -6,7 +6,7 @@ import type {
   AgentInstalledToolsDiagnostic,
   InstalledToolDiagnosticRow,
 } from "../../../shared/api/agents";
-import { getApiErrorMessage } from "../../../utils/api-errors";
+import { getApiErrorMessage } from "../../../shared/utils/api-errors";
 import { useAgentStore } from "../stores";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
 import { useOrgStore } from "../../../stores/org-store";

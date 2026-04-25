@@ -74,7 +74,7 @@ vi.mock("../LogPreview", () => ({
   LogPreview: () => <div data-testid="log-preview" />,
 }));
 
-vi.mock("../../utils/format", () => ({
+vi.mock("../../shared/utils/format", () => ({
   formatRelativeTime: (d: string) => `relative(${d})`,
 }));
 

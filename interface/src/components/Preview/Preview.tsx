@@ -10,7 +10,7 @@ import { TaskPreview } from "../TaskPreview";
 import { RunTaskButton } from "../RunTaskButton";
 import { SessionPreview } from "../SessionPreview";
 import { LogPreview } from "../LogPreview";
-import { formatRelativeTime } from "../../utils/format";
+import { formatRelativeTime } from "../../shared/utils/format";
 import type { PreviewItem } from "../../stores/sidekick-store";
 import type { Spec } from "../../shared/types";
 import styles from "./Preview.module.css";

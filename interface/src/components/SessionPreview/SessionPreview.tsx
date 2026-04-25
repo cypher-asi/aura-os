@@ -4,7 +4,7 @@ import { api } from "../../api/client";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { useProjectActions } from "../../stores/project-action-store";
 import { TaskStatusIcon } from "../TaskStatusIcon";
-import { formatRelativeTime, formatTokens } from "../../utils/format";
+import { formatRelativeTime, formatTokens } from "../../shared/utils/format";
 import { StatusBadge } from "../StatusBadge";
 import type { Task, Session } from "../../shared/types";
 import styles from "../Preview/Preview.module.css";

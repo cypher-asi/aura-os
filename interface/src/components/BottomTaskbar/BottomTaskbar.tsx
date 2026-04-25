@@ -12,7 +12,7 @@ import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useActiveApp } from "../../hooks/use-active-app";
 import { useAppUIStore } from "../../stores/app-ui-store";
 import { getTaskbarAppsCollapsed, setTaskbarAppsCollapsed } from "../../utils/storage";
-import { formatCredits } from "../../utils/format";
+import { formatCredits } from "../../shared/utils/format";
 import { AppNavRail, TaskbarIconButton, TASKBAR_ICON_SIZE } from "../AppNavRail";
 import { useCreditBalance } from "../CreditsBadge/useCreditBalance";
 import { FavoriteAgentsStrip } from "./FavoriteAgentsStrip";

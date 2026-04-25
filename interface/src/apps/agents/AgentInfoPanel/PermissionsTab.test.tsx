@@ -57,7 +57,7 @@ vi.mock("../../../api/client", () => ({
   },
 }));
 
-vi.mock("../../../utils/api-errors", () => ({
+vi.mock("../../../shared/utils/api-errors", () => ({
   getApiErrorMessage: (err: unknown) =>
     err instanceof Error ? err.message : String(err),
 }));

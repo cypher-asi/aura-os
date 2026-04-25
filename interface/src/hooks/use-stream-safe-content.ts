@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { splitByCodeFences } from "../utils/text-normalize";
+import { splitByCodeFences } from "../shared/utils/text-normalize";
 import { trimIncompleteToolMarkerTail } from "../utils/tool-markers";
 
 /**

@@ -6,7 +6,7 @@ import { EntityCard } from "../../../components/EntityCard";
 import { FollowEditButton } from "../../../components/FollowEditButton";
 import { useLeaderboard, useLeaderboardStore } from "../../../stores/leaderboard-store";
 import { useAuth } from "../../../stores/auth-store";
-import { formatTokens, formatCurrency } from "../../../utils/format";
+import { formatTokens, formatCurrency } from "../../../shared/utils/format";
 import { api } from "../../../api/client";
 import styles from "./LeaderboardSidekick.module.css";
 

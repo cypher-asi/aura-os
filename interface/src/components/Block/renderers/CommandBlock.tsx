@@ -1,6 +1,6 @@
 import { Terminal } from "lucide-react";
 import type { ToolCallEntry } from "../../../shared/types/stream";
-import { decodeCapturedOutput } from "../../../utils/format";
+import { decodeCapturedOutput } from "../../../shared/utils/format";
 import { Block } from "../Block";
 import styles from "./renderers.module.css";
 

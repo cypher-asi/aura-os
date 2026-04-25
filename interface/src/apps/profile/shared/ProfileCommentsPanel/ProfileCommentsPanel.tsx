@@ -7,7 +7,7 @@ import {
   useProfileCommentsForEvent,
   useProfileStore,
 } from "../../../../stores/profile-store";
-import { timeAgo } from "../../../../utils/format";
+import { timeAgo } from "../../../../shared/utils/format";
 import styles from "./ProfileCommentsPanel.module.css";
 
 interface ProfileCommentsPanelProps {

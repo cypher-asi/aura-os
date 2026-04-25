@@ -8,7 +8,7 @@ import {
   type ProjectLayoutBundle,
 } from "../queries/project-queries";
 import type { ProjectId, Spec } from "../shared/types";
-import { getApiErrorDetails, getApiErrorMessage } from "../utils/api-errors";
+import { getApiErrorDetails, getApiErrorMessage } from "../shared/utils/api-errors";
 
 export interface UseDeleteSpecResult {
   deleteTarget: Spec | null;

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 import { Check, Copy } from "lucide-react";
-import { copyToClipboard } from "../../utils/clipboard";
+import { copyToClipboard } from "../../shared/utils/clipboard";
 import styles from "./CopyButton.module.css";
 
 interface CopyButtonProps {

@@ -1,5 +1,5 @@
 import { useCreditBalance } from "./useCreditBalance";
-import { formatCredits } from "../../utils/format";
+import { formatCredits } from "../../shared/utils/format";
 import styles from "./CreditsBadge.module.css";
 
 export { CREDITS_UPDATED_EVENT } from "./useCreditBalance";

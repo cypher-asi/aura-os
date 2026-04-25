@@ -1,7 +1,7 @@
 import { FileText } from "lucide-react";
 import type { ToolCallEntry } from "../../../shared/types/stream";
 import { useHighlightedHtml } from "../../../hooks/use-highlighted-html";
-import { specFilename } from "../../../utils/format";
+import { specFilename } from "../../../shared/utils/format";
 import { CopyButton } from "../../CopyButton";
 import { Block } from "../Block";
 import blockStyles from "../Block.module.css";

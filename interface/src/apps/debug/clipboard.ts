@@ -5,7 +5,7 @@
  * and keeps `downloadBlob` co-located with the run-export flow.
  */
 
-export { copyToClipboard } from "../../utils/clipboard";
+export { copyToClipboard } from "../../shared/utils/clipboard";
 
 export function downloadBlob(blob: Blob, fileName: string): void {
   const url = URL.createObjectURL(blob);

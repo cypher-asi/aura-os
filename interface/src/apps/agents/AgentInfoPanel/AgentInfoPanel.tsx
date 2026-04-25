@@ -7,7 +7,7 @@ import { AgentOrchestrationDashboard } from "../../../components/AgentOrchestrat
 import { AgentEditorModal } from "../../../components/AgentEditorModal";
 import { PreviewOverlay } from "../../../components/PreviewOverlay";
 import { api } from "../../../api/client";
-import { getApiErrorDetails, getApiErrorMessage } from "../../../utils/api-errors";
+import { getApiErrorDetails, getApiErrorMessage } from "../../../shared/utils/api-errors";
 import { useSelectedAgent, useAgentStore } from "../stores";
 import { useAgentSidekickStore } from "../stores/agent-sidekick-store";
 import { useShallow } from "zustand/react/shallow";

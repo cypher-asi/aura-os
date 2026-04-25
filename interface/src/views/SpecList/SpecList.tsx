@@ -9,7 +9,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useProjectActions } from "../../stores/project-action-store";
 import { useDelayedEmpty } from "../../hooks/use-delayed-empty";
 import { mergeById, compareSpecs } from "../../utils/collections";
-import { filterExplorerNodes } from "../../utils/filterExplorerNodes";
+import { filterExplorerNodes } from "../../shared/utils/filterExplorerNodes";
 import { Explorer } from "@cypher-asi/zui";
 import { EmptyState } from "../../components/EmptyState";
 import type { ExplorerNode } from "@cypher-asi/zui";

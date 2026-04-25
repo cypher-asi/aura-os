@@ -3,7 +3,7 @@ import type { ProjectId, Session } from "../../shared/types";
 import { StatusBadge } from "../../components/StatusBadge";
 import { Panel, Badge, Text, Item } from "@cypher-asi/zui";
 import { ChevronDown } from "lucide-react";
-import { formatRelativeTime } from "../../utils/format";
+import { formatRelativeTime } from "../../shared/utils/format";
 import { Select } from "../../components/Select";
 import { useAgentStatusBarData } from "./useAgentStatusBarData";
 import styles from "./AgentStatusBar.module.css";

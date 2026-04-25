@@ -5,7 +5,7 @@ import { queryClient } from "../lib/query-client";
 import { mergeAgentIntoProjectAgents, projectQueryKeys } from "../queries/project-queries";
 import { useChatHandoffStore } from "../stores/chat-handoff-store";
 import { clearLastAgentIf } from "../utils/storage";
-import { getApiErrorDetails, getApiErrorMessage } from "../utils/api-errors";
+import { getApiErrorDetails, getApiErrorMessage } from "../shared/utils/api-errors";
 import {
   createAgentChatHandoffState,
   projectAgentHandoffTarget,

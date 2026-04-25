@@ -9,7 +9,7 @@ import {
   useFeedbackComments,
   useFeedbackItem,
 } from "../../../stores/feedback-store";
-import { timeAgo } from "../../../utils/format";
+import { timeAgo } from "../../../shared/utils/format";
 import styles from "./FeedbackSidekickPanel.module.css";
 
 export function FeedbackSidekickPanel() {

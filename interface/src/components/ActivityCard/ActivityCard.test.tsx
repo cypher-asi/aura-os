@@ -23,7 +23,7 @@ vi.mock("../Avatar", () => ({
   ),
 }));
 
-vi.mock("../../utils/format", () => ({
+vi.mock("../../shared/utils/format", () => ({
   timeAgo: () => "2d ago",
 }));
 

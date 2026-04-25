@@ -4,7 +4,7 @@ import { Text } from "@cypher-asi/zui";
 import { useProcessStore } from "../../stores/process-store";
 import { useEventStore } from "../../../../stores/event-store/index";
 import { processApi } from "../../../../shared/api/process";
-import { formatTokensCompact as formatTokens } from "../../../../utils/format";
+import { formatTokensCompact as formatTokens } from "../../../../shared/utils/format";
 import { EmptyState } from "../../../../components/EmptyState";
 import type { ProcessEvent } from "../../../../shared/types";
 import { useElapsedTime, formatDuration, EMPTY_RUNS, EMPTY_NODES } from "./process-sidekick-utils";

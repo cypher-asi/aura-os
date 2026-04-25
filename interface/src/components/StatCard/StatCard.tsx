@@ -1,5 +1,5 @@
 import { Text } from "@cypher-asi/zui";
-import { formatCompact } from "../../utils/format";
+import { formatCompact } from "../../shared/utils/format";
 import styles from "../../views/aura.module.css";
 import mobileStyles from "../../views/StatsDashboard/StatsDashboard.module.css";
 

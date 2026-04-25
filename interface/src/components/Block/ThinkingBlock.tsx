@@ -1,7 +1,7 @@
 import { Brain } from "lucide-react";
 import { Block } from "./Block";
-import { stripEmojis } from "../../utils/text-normalize";
-import { formatDuration } from "../../utils/format";
+import { stripEmojis } from "../../shared/utils/text-normalize";
+import { formatDuration } from "../../shared/utils/format";
 import styles from "./ThinkingBlock.module.css";
 
 interface ThinkingBlockProps {

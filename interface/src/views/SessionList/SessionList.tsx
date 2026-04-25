@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { Explorer } from "@cypher-asi/zui";
 import { useDelayedEmpty } from "../../hooks/use-delayed-empty";
-import { filterExplorerNodes } from "../../utils/filterExplorerNodes";
+import { filterExplorerNodes } from "../../shared/utils/filterExplorerNodes";
 import { EmptyState } from "../../components/EmptyState";
 import { api } from "../../api/client";
 import { useProjectActions } from "../../stores/project-action-store";

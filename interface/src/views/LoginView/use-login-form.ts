@@ -7,7 +7,7 @@ import {
   getTargetHostOrigin,
   requiresExplicitHostOrigin,
 } from "../../lib/host-config";
-import { getAuthErrorMessage } from "../../utils/api-errors";
+import { getAuthErrorMessage } from "../../shared/utils/api-errors";
 import { authApi } from "../../shared/api/auth";
 import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useShallow } from "zustand/react/shallow";

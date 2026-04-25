@@ -1,7 +1,7 @@
 import { createElement, useState } from "react";
 import { Button, Text } from "@cypher-asi/zui";
 import { Bot, Briefcase } from "lucide-react";
-import { formatCompact, formatCurrency } from "../../../utils/format";
+import { formatCompact, formatCurrency } from "../../../shared/utils/format";
 import { MARKETPLACE_EXPERTISE } from "../marketplace-expertise";
 import type { MarketplaceAgent } from "../marketplace-types";
 import styles from "./AgentTalentCard.module.css";

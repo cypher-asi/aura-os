@@ -7,7 +7,7 @@ import { api } from "../../api/client"
 import { ApiClientError } from "../../shared/api/core"
 import type { RemoteVmState } from "../../shared/types"
 import type { LifecycleAction } from "../../shared/api/swarm"
-import { getApiErrorMessage } from "../../utils/api-errors"
+import { getApiErrorMessage } from "../../shared/utils/api-errors"
 import { VmStatusBadge } from "../VmStatusBadge"
 import styles from "./AgentEnvironment.module.css"
 

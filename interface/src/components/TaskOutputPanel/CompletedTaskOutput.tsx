@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Check, X as XIcon, AlertTriangle, CircleDashed, ChevronRight } from "lucide-react";
 import { useTaskOutputPanelStore, type PanelTaskStatus } from "../../stores/task-output-panel-store";
 import { useTaskOutputView } from "../../hooks/use-task-output-view";
-import { extractErrorMessage } from "../../utils/extract-error-message";
+import { extractErrorMessage } from "../../shared/utils/extract-error-message";
 import { MessageBubble } from "../MessageBubble";
 import { LLMOutput } from "../LLMOutput";
 import styles from "./TaskOutputPanel.module.css";

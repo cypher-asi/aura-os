@@ -9,7 +9,7 @@ import { GitStepItem } from "../GitStepItem";
 import { TaskMetaSection } from "../TaskMetaSection";
 import { TaskFilesSection } from "../TaskFilesSection";
 import { TaskOutputSection } from "../TaskOutputSection";
-import { toBullets } from "../../utils/format";
+import { toBullets } from "../../shared/utils/format";
 import { useTaskPreviewData, useRunTaskData } from "./useTaskPreviewData";
 import styles from "../Preview/Preview.module.css";
 

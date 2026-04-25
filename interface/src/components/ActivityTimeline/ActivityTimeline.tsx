@@ -5,7 +5,7 @@ import {
   normalizeMidSentenceBreaks,
   flattenListIndentation,
   normalizeLooseStrongEmphasis,
-} from "../../utils/text-normalize";
+} from "../../shared/utils/text-normalize";
 import { ThinkingBlock, isAutoExpandedTool, renderToolBlock } from "../Block";
 import { SegmentedContent } from "../SegmentedContent";
 import styles from "./ActivityTimeline.module.css";

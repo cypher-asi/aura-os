@@ -3,7 +3,7 @@ import { Modal, Button, Input } from "@cypher-asi/zui";
 import { useBuyCreditsData } from "./useBuyCreditsData";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { NATIVE_BILLING_MESSAGE } from "../../lib/billing";
-import { formatCredits } from "../../utils/format";
+import { formatCredits } from "../../shared/utils/format";
 import styles from "./BuyCreditsModal.module.css";
 
 interface Props {

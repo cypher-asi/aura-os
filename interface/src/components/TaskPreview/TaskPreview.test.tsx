@@ -122,7 +122,7 @@ vi.mock("../TaskOutputSection", () => ({
   TaskOutputSection: () => <div data-testid="task-output" />,
 }));
 
-vi.mock("../../utils/format", () => ({ toBullets: (s: string) => s }));
+vi.mock("../../shared/utils/format", () => ({ toBullets: (s: string) => s }));
 vi.mock("../../utils/derive-activity", () => ({
   deriveActivity: () => [],
   computeIterationStats: () => null,

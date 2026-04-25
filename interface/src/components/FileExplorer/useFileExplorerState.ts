@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, useRef, createElement } from "react";
 import { api, type DirEntry } from "../../api/client";
-import { filterExplorerNodes } from "../../utils/filterExplorerNodes";
+import { filterExplorerNodes } from "../../shared/utils/filterExplorerNodes";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { Folder, File, FolderOpen, FolderOutput } from "lucide-react";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";

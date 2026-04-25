@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { Copy, Check } from "lucide-react";
 import { useProcessSidekickStore } from "../../stores/process-sidekick-store";
-import { formatTokensCompact as formatTokens, formatCost } from "../../../../utils/format";
+import { formatTokensCompact as formatTokens, formatCost } from "../../../../shared/utils/format";
 import { StreamingBubble } from "../../../../components/StreamingBubble";
 import { MessageBubble } from "../../../../components/MessageBubble";
 import { useProcessNodeStream } from "../../../../hooks/use-process-node-stream";

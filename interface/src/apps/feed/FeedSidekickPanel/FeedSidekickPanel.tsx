@@ -9,7 +9,7 @@ import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
 import { LeaderboardSidekick } from "../LeaderboardSidekick";
 import { useFeed } from "../../../stores/feed-store";
 import { useAuth } from "../../../stores/auth-store";
-import { timeAgo } from "../../../utils/format";
+import { timeAgo } from "../../../shared/utils/format";
 import styles from "./FeedSidekickPanel.module.css";
 
 function ProfilePanel() {

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { MessageSquare } from "lucide-react";
 import type { FeedEvent, FeedComment } from "../../stores/feed-store";
 import { Avatar } from "../Avatar";
-import { timeAgo } from "../../utils/format";
+import { timeAgo } from "../../shared/utils/format";
 import styles from "./ActivityCard.module.css";
 
 const MAX_VISIBLE_COMMITS = 3;

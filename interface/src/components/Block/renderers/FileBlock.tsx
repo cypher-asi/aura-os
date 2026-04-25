@@ -4,7 +4,7 @@ import type { ToolCallEntry } from "../../../shared/types/stream";
 import { langFromPath } from "../../../ide/lang";
 import { useHighlightedHtml } from "../../../hooks/use-highlighted-html";
 import { TOOL_PHASE_LABELS } from "../../../constants/tools";
-import { decodeCapturedOutput } from "../../../utils/format";
+import { decodeCapturedOutput } from "../../../shared/utils/format";
 import { CopyButton } from "../../CopyButton";
 import { Block } from "../Block";
 import blockStyles from "../Block.module.css";

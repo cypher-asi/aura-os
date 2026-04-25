@@ -23,8 +23,8 @@ vi.mock("../api/client", () => ({
   },
 }));
 
-vi.mock("../utils/format", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("../utils/format")>();
+vi.mock("../shared/utils/format", async (importOriginal) => {
+  const orig = await importOriginal<typeof import("../shared/utils/format")>();
   return { ...orig, formatTime: vi.fn(() => "12:00:00") };
 });
 

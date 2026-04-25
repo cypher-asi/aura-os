@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import Cropper from "react-easy-crop";
 import type { Area } from "react-easy-crop";
 import { Modal, Button } from "@cypher-asi/zui";
-import { getCroppedImageDataUrl } from "../../utils/crop-image";
+import { getCroppedImageDataUrl } from "../../shared/utils/crop-image";
 import styles from "./ImageCropModal.module.css";
 
 interface ImageCropModalProps {

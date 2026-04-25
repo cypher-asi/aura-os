@@ -1,6 +1,6 @@
 import { Pin } from "lucide-react";
-import { formatChatTime } from "../../../utils/format";
-import { stripEmojis } from "../../../utils/text-normalize";
+import { formatChatTime } from "../../../shared/utils/format";
+import { stripEmojis } from "../../../shared/utils/text-normalize";
 import type { Agent } from "../../../shared/types";
 import { isSuperAgent } from "../../../shared/types/permissions";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";

@@ -1,6 +1,6 @@
 import type { MouseEvent } from "react";
 import { ChevronDown, ChevronUp, MessageSquare } from "lucide-react";
-import { timeAgo } from "../../../utils/format";
+import { timeAgo } from "../../../shared/utils/format";
 import {
   categoryLabel,
   statusLabel,
