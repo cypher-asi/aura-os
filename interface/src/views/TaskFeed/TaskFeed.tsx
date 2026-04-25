@@ -1,4 +1,4 @@
-import type { ProjectId } from "../../types";
+import type { ProjectId } from "../../shared/types";
 import { TaskStatusIcon } from "../../components/TaskStatusIcon";
 import { Panel, Heading, Item } from "@cypher-asi/zui";
 import { EmptyState } from "../../components/EmptyState";

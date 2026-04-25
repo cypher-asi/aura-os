@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { api } from "../../api/client";
-import type { Spec, Task, TaskStatus } from "../../types";
-import { EventType } from "../../types/aura-events";
+import type { Spec, Task, TaskStatus } from "../../shared/types";
+import { EventType } from "../../shared/types/aura-events";
 import { useProjectActions } from "../../stores/project-action-store";
 import { useEventStore } from "../../stores/event-store/index";
 import { useSidekickStore } from "../../stores/sidekick-store";

@@ -1,9 +1,9 @@
 import { Pin } from "lucide-react";
 import { formatChatTime } from "../../../utils/format";
 import { stripEmojis } from "../../../utils/text-normalize";
-import type { Agent } from "../../../types";
-import { isSuperAgent } from "../../../types/permissions";
-import type { DisplaySessionEvent } from "../../../types/stream";
+import type { Agent } from "../../../shared/types";
+import { isSuperAgent } from "../../../shared/types/permissions";
+import type { DisplaySessionEvent } from "../../../shared/types/stream";
 import { Avatar } from "../../../components/Avatar";
 import { LoopProgress } from "../../../components/LoopProgress";
 import { useAvatarState } from "../../../hooks/use-avatar-state";

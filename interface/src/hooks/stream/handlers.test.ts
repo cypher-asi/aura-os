@@ -30,7 +30,7 @@ import {
   dispatchInsufficientCredits,
   isInsufficientCreditsError,
 } from "../../api/client";
-import type { StreamRefs, StreamSetters, ToolCallEntry } from "../../types/stream";
+import type { StreamRefs, StreamSetters, ToolCallEntry } from "../../shared/types/stream";
 
 function makeRefs(): StreamRefs {
   return {

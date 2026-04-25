@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react"
 import { FolderGit2 } from "lucide-react"
-import type { Project } from "../../types"
+import type { Project } from "../../shared/types"
 import { usePushStuck } from "../../stores/event-store/event-store"
 import styles from "./OrbitStatusIndicator.module.css"
 

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
-import type { AuthSession, ZeroUser } from "../types";
+import type { AuthSession, ZeroUser } from "../shared/types";
 import {
   endLocalSession,
   getStoredSession,

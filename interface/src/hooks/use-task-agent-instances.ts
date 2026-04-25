@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "../api/client";
-import type { AgentInstance, Task } from "../types";
+import type { AgentInstance, Task } from "../shared/types";
 
 /**
  * Fetches the assigned and completed-by agent instances for a task.

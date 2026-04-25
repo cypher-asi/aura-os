@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "../../api/client";
-import type { Agent, AgentInstance } from "../../types";
+import type { Agent, AgentInstance } from "../../shared/types";
 import { useProfileStatusStore } from "../../stores/profile-status-store";
 import { useOrgStore } from "../../stores/org-store";
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Modal, Button } from "@cypher-asi/zui";
-import type { Process, Project } from "../../../../types";
+import type { Process, Project } from "../../../../shared/types";
 import { processApi } from "../../../../api/process";
 import { projectsApi } from "../../../../api/projects";
 import { useProcessStore } from "../../stores/process-store";

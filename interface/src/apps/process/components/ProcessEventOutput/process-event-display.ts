@@ -1,5 +1,5 @@
-import type { ProcessEvent } from "../../../../types";
-import type { DisplaySessionEvent } from "../../../../types/stream";
+import type { ProcessEvent } from "../../../../shared/types";
+import type { DisplaySessionEvent } from "../../../../shared/types/stream";
 import {
   contentBlocksToTimeline,
   formatOutputContent,

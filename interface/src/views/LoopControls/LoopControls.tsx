@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { ProjectId } from "../../types";
+import type { ProjectId } from "../../shared/types";
 import { Button, ModalConfirm } from "@cypher-asi/zui";
 import { Play, Pause, Square } from "lucide-react";
 import styles from "./LoopControls.module.css";

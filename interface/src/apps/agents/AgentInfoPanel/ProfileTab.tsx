@@ -21,8 +21,8 @@ import {
   formatAuthSourceLabel,
   formatRunsOnLabel,
 } from "./agent-info-utils";
-import type { Agent, HarnessSkill, HarnessSkillInstallation } from "../../../types";
-import { isSuperAgent } from "../../../types/permissions";
+import type { Agent, HarnessSkill, HarnessSkillInstallation } from "../../../shared/types";
+import { isSuperAgent } from "../../../shared/types/permissions";
 import styles from "./AgentInfoPanel.module.css";
 
 export interface ProfileTabProps {

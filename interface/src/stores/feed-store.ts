@@ -18,10 +18,10 @@ import type { FeedAuthor, FeedComment } from "./shared/event-comments-slice";
 import { api } from "../api/client";
 import type { FeedEventDto } from "../api/social";
 import { buildCommitActivityFromEvents } from "../lib/commitActivity";
-import type { AuraEvent } from "../types/aura-events";
-import { EventType } from "../types/aura-events";
-export type { FeedFilter } from "../types/filters";
-import type { FeedFilter } from "../types/filters";
+import type { AuraEvent } from "../shared/types/aura-events";
+import { EventType } from "../shared/types/aura-events";
+export type { FeedFilter } from "../shared/types/filters";
+import type { FeedFilter } from "../shared/types/filters";
 
 function isUuid(s: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);

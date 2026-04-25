@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import type { Project, ProjectId } from "../../types";
+import type { Project, ProjectId } from "../../shared/types";
 import { useEffect } from "react";
 
 let autoSelectDefaultIds = false;

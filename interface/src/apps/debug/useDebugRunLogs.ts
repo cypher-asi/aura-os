@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { DebugChannel } from "../../api/debug";
-import type { ProjectId } from "../../types";
+import type { ProjectId } from "../../shared/types";
 import type { DebugLogEntry } from "./types";
 
 interface Params {

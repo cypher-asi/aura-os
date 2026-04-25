@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback, type RefObject } from "react";
 import { useEventStore } from "../stores/event-store/index";
-import type { AuraEvent } from "../types/aura-events";
-import { EventType } from "../types/aura-events";
+import type { AuraEvent } from "../shared/types/aura-events";
+import { EventType } from "../shared/types/aura-events";
 import { formatTime } from "../utils/format";
 import { LOG_MAX_LINES } from "../constants";
 import { api } from "../api/client";

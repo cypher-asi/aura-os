@@ -1,4 +1,4 @@
-import type { ToolCallEntry, TimelineItem } from "../../types/stream";
+import type { ToolCallEntry, TimelineItem } from "../../shared/types/stream";
 import { LLMStreamOutput } from "../LLMOutput";
 import styles from "../MessageBubble/MessageBubble.module.css";
 

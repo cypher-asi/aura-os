@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { ProcessEvent } from "../../../../types";
+import type { ProcessEvent } from "../../../../shared/types";
 import { EventTimelineItem } from "./EventTimelineItem";
 
 vi.mock("@cypher-asi/zui", () => ({

@@ -1,7 +1,7 @@
 import { Check } from "lucide-react";
 import { SkillIcon } from "./SkillIcon";
 import { SecurityBadge } from "./SecurityBadge";
-import type { SkillShopCatalogEntry } from "../../types";
+import type { SkillShopCatalogEntry } from "../../shared/types";
 import styles from "./SkillShopModal.module.css";
 
 interface SkillShopCardProps {

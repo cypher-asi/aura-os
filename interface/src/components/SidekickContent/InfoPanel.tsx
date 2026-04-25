@@ -4,7 +4,7 @@ import { ArrowLeft, GitBranch } from "lucide-react";
 import { OverlayScrollbar } from "../OverlayScrollbar";
 import { StatusBadge } from "../StatusBadge";
 import { api } from "../../api/client";
-import type { Project } from "../../types";
+import type { Project } from "../../shared/types";
 import styles from "../Sidekick/Sidekick.module.css";
 
 interface InfoPanelProps {

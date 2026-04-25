@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Panel, Heading, Text } from "@cypher-asi/zui";
 import { useLogStream, EVENT_LABELS } from "../../hooks/use-log-stream";
 import type { LogEntry } from "../../hooks/use-log-stream";
-import type { AuraEvent } from "../../types/aura-events";
+import type { AuraEvent } from "../../shared/types/aura-events";
 import styles from "./LogPanel.module.css";
 
 const TYPE_CATEGORY: Record<string, string> = {

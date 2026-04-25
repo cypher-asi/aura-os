@@ -1,7 +1,7 @@
 import { Button } from "@cypher-asi/zui";
 import { Copy, Trash2 } from "lucide-react";
 import { EmptyState } from "../EmptyState";
-import type { OrgInvite } from "../../types";
+import type { OrgInvite } from "../../shared/types";
 import styles from "../OrgSettingsPanel/OrgSettingsPanel.module.css";
 
 interface Props {

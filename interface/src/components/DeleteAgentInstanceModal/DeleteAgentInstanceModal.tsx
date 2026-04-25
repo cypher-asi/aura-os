@@ -1,5 +1,5 @@
 import { Modal, Button } from "@cypher-asi/zui";
-import type { AgentInstance } from "../../types";
+import type { AgentInstance } from "../../shared/types";
 import styles from "../ProjectList/ProjectList.module.css";
 
 interface DeleteAgentInstanceModalProps {

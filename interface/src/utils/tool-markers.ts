@@ -1,4 +1,4 @@
-import type { TimelineItem, ToolCallEntry } from "../types/stream";
+import type { TimelineItem, ToolCallEntry } from "../shared/types/stream";
 
 type ToolMarkerStatus = "ok" | "error";
 

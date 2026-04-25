@@ -96,8 +96,8 @@ vi.mock("../../../stores/org-store", () => ({
 }));
 
 import { PermissionsTab } from "./PermissionsTab";
-import type { Agent } from "../../../types";
-import type { AgentPermissions } from "../../../types/permissions-wire";
+import type { Agent } from "../../../shared/types";
+import type { AgentPermissions } from "../../../shared/types/permissions-wire";
 
 function makeAgent(overrides: Partial<Agent> = {}): Agent {
   return {
@@ -121,7 +121,7 @@ function makeAgent(overrides: Partial<Agent> = {}): Agent {
 }
 
 // Must mirror `CEO_CORE_CAPABILITY_TYPES` in
-// `interface/src/types/permissions-wire.ts` so `hasAllCoreCapabilities`
+// `interface/src/shared/types/permissions-wire.ts` so `hasAllCoreCapabilities`
 // considers this bundle a full CEO preset — if it drifts out of sync,
 // `canEdit` flips to true and the switches in this suite stop being
 // disabled.

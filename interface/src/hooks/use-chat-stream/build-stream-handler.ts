@@ -3,8 +3,8 @@ import { api } from "../../api/client";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { useProjectActions } from "../../stores/project-action-store";
 import type { StreamEventHandler } from "../../api/streams";
-import type { AuraEvent } from "../../types/aura-events";
-import { EventType } from "../../types/aura-events";
+import type { AuraEvent } from "../../shared/types/aura-events";
+import { EventType } from "../../shared/types/aura-events";
 
 import {
   useStreamCore,

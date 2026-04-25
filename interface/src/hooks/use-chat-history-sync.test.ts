@@ -1,5 +1,5 @@
 import { renderHook, waitFor } from "@testing-library/react";
-import type { DisplaySessionEvent } from "../types/stream";
+import type { DisplaySessionEvent } from "../shared/types/stream";
 
 type EventCallback = (event: { content?: Record<string, unknown> }) => void;
 

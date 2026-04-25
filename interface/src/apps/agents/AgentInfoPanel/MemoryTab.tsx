@@ -6,7 +6,7 @@ import type { MenuItem } from "@cypher-asi/zui";
 import { api, ApiClientError } from "../../../api/client";
 import { useIsStreaming } from "../../../hooks/stream/hooks";
 import { useAgentSidekickStore } from "../stores/agent-sidekick-store";
-import type { Agent, MemorySnapshot } from "../../../types";
+import type { Agent, MemorySnapshot } from "../../../shared/types";
 import styles from "./AgentInfoPanel.module.css";
 
 type MemoryFilter = "all" | "facts" | "events" | "procedures";

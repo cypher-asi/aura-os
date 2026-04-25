@@ -3,7 +3,7 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import {
   Zap, Play, GitBranch, FileOutput, Timer, Merge, Pin, MessageSquare, Workflow, Repeat, Layers,
 } from "lucide-react";
-import type { ProcessNodeType } from "../../../../types/enums";
+import type { ProcessNodeType } from "../../../../shared/types/enums";
 import { useAgentStore } from "../../../agents/stores";
 import { Avatar } from "../../../../components/Avatar";
 

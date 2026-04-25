@@ -3,7 +3,7 @@ import { useLocation, useParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { useChatHandoffStore } from "../../stores/chat-handoff-store";
-import type { AgentInstance } from "../../types";
+import type { AgentInstance } from "../../shared/types";
 import { useAppUIStore } from "../../stores/app-ui-store";
 import { useActiveAppId } from "../../hooks/use-active-app";
 import { useLoopStatus } from "../../hooks/use-loop-status";

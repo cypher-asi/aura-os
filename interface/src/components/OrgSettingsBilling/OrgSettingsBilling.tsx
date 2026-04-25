@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Input, Button } from "@cypher-asi/zui";
-import type { OrgBilling, CreditBalance } from "../../types";
+import type { OrgBilling, CreditBalance } from "../../shared/types";
 import type { CheckoutPollingStatus } from "../../hooks/use-checkout-polling";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { NATIVE_BILLING_MESSAGE } from "../../lib/billing";

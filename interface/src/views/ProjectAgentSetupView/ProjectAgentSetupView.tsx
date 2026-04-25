@@ -12,7 +12,7 @@ import { useProjectsListStore } from "../../stores/projects-list-store";
 import { useOrgStore } from "../../stores/org-store";
 import { queryClient } from "../../lib/query-client";
 import { projectQueryKeys } from "../../queries/project-queries";
-import type { Agent, AgentInstance } from "../../types";
+import type { Agent, AgentInstance } from "../../shared/types";
 import { createAgentChatHandoffState } from "../../utils/chat-handoff";
 import { projectAgentAttachRoute, projectAgentChatRoute, projectAgentCreateRoute, projectAgentRoute, projectRootPath } from "../../utils/mobileNavigation";
 import { setLastAgent, setLastProject } from "../../utils/storage";

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Task } from "../../../types";
+import type { Task } from "../../../shared/types";
 import { tasksApi } from "../../../api/tasks";
 import { useKanbanStore } from "./kanban-store";
 

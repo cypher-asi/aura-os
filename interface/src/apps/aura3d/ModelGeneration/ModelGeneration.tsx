@@ -3,7 +3,7 @@ import { Box, Grid3x3, Triangle, Paintbrush } from "lucide-react";
 import { Button, Spinner } from "@cypher-asi/zui";
 import { useAura3DStore } from "../../../stores/aura3d-store";
 import { generate3dStream } from "../../../api/streams";
-import { EventType } from "../../../types/aura-events";
+import { EventType } from "../../../shared/types/aura-events";
 import { EmptyState } from "../../../components/EmptyState";
 import { WebGLViewer } from "../WebGLViewer";
 import styles from "./ModelGeneration.module.css";

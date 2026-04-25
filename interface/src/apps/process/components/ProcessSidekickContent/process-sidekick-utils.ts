@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { ProcessRun, ProcessNode, ProcessNodeConnection } from "../../../../types";
+import type { ProcessRun, ProcessNode, ProcessNodeConnection } from "../../../../shared/types";
 
 export const EMPTY_RUNS: ProcessRun[] = [];
 export const EMPTY_NODES: ProcessNode[] = [];

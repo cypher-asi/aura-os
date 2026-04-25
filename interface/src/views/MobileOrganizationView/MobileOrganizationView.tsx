@@ -14,7 +14,7 @@ import { useOrgStore } from "../../stores/org-store";
 import { getRecentProjects, useProjectsListStore } from "../../stores/projects-list-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useModalInitialFocus } from "../../hooks/use-modal-initial-focus";
-import type { Org } from "../../types";
+import type { Org } from "../../shared/types";
 import {
   projectAgentChatRoute,
   projectAgentCreateRoute,

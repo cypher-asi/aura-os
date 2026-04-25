@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { LLMStreamOutput } from "./LLMStreamOutput";
-import type { TimelineItem, ToolCallEntry } from "../../types/stream";
+import type { TimelineItem, ToolCallEntry } from "../../shared/types/stream";
 
 vi.mock("../../utils/streaming", () => ({
   getStreamingPhaseLabel: ({ thinkingText, toolCalls, streamingText, isWriting }: {

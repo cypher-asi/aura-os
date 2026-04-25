@@ -1,5 +1,5 @@
 import type { useSidekickStore } from "../../stores/sidekick-store";
-import type { DisplaySessionEvent, ToolCallEntry } from "../../types/stream";
+import type { DisplaySessionEvent, ToolCallEntry } from "../../shared/types/stream";
 import { orderIndexFromTitle } from "../../utils/collections";
 
 type SidekickState = ReturnType<typeof useSidekickStore.getState>;

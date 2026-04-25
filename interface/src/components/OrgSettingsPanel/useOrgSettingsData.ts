@@ -5,7 +5,7 @@ import { useAuth } from "../../stores/auth-store";
 import { useBillingStore } from "../../stores/billing-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { api, ApiClientError } from "../../api/client";
-import type { OrgBilling, OrgInvite, OrgRole } from "../../types";
+import type { OrgBilling, OrgInvite, OrgRole } from "../../shared/types";
 import { useCheckoutPolling } from "../../hooks/use-checkout-polling";
 import { CREDITS_UPDATED_EVENT } from "../CreditsBadge";
 import { NATIVE_BILLING_MESSAGE } from "../../lib/billing";

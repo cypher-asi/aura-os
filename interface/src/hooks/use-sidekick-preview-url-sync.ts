@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import { useSidekickStore } from "../stores/sidekick-store";
-import type { Spec, Task } from "../types";
+import type { Spec, Task } from "../shared/types";
 
 /**
  * Query parameter that encodes the currently-open sidekick preview item

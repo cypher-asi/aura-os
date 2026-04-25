@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { MemoryFact, MemoryEvent, MemoryProcedure, HarnessSkill, HarnessSkillInstallation } from "../../../types";
+import type { MemoryFact, MemoryEvent, MemoryProcedure, HarnessSkill, HarnessSkillInstallation } from "../../../shared/types";
 import { createSidekickSlice, type SidekickSliceState } from "../../../stores/shared/sidekick-slice";
 import { AGENT_SIDEKICK_ACTIVE_TAB_KEY } from "../../../constants";
 

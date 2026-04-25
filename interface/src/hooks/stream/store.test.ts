@@ -1,4 +1,4 @@
-import type { DisplaySessionEvent } from "../../types/stream";
+import type { DisplaySessionEvent } from "../../shared/types/stream";
 import {
   useStreamStore,
   streamMetaMap,

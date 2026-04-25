@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useEventStore } from "../stores/event-store/index";
 import { parseEventContent } from "../shared/utils/event-content";
-import { EventType } from "../types/aura-events";
+import { EventType } from "../shared/types/aura-events";
 import {
   useStreamCore,
   handleTextDelta,

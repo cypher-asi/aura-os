@@ -14,7 +14,7 @@ import {
 import { taskStreamKey } from "../stores/task-stream-bootstrap";
 import { seedStreamEventsFromCache } from "./stream/store";
 import { useStreamEvents } from "./stream/hooks";
-import type { DisplaySessionEvent } from "../types/stream";
+import type { DisplaySessionEvent } from "../shared/types/stream";
 
 /* ------------------------------------------------------------------ */
 /*  Unified task output view                                           */

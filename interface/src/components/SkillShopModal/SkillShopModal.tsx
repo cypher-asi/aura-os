@@ -6,7 +6,7 @@ import { SkillShopDetail, type SkillInstallPermissions } from "./SkillShopDetail
 import { OsFilterBar } from "./OsFilterBar";
 import { api } from "../../api/client";
 import catalogData from "../../data/skill-shop-catalog.json";
-import type { SkillCategory, SkillOS, SkillShopCatalogEntry } from "../../types";
+import type { SkillCategory, SkillOS, SkillShopCatalogEntry } from "../../shared/types";
 import styles from "./SkillShopModal.module.css";
 
 const catalog = catalogData as SkillShopCatalogEntry[];

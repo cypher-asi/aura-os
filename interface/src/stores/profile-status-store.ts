@@ -4,7 +4,7 @@ import { ApiClientError } from "../api/core";
 import { useEventStore } from "./event-store";
 import { useAuthStore } from "./auth-store";
 import { useSidekickStore } from "./sidekick-store";
-import { EventType } from "../types/aura-events";
+import { EventType } from "../shared/types/aura-events";
 
 const REMOTE_POLL_MS = 30_000;
 

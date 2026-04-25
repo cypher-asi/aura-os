@@ -9,7 +9,7 @@ import {
   useSidekickItemContextMenu,
 } from "../../../components/SidekickItemContextMenu";
 import type { ExplorerNodeWithSuffix } from "../../../lib/zui-compat";
-import type { Agent } from "../../../types";
+import type { Agent } from "../../../shared/types";
 import viewStyles from "../../../views/aura.module.css";
 import styles from "./AgentInfoPanel.module.css";
 

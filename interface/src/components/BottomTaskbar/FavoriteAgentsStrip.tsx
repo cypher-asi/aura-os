@@ -8,7 +8,7 @@ import { useFavoriteAgents, useAgentStore } from "../../apps/agents/stores";
 import { useAvatarState } from "../../hooks/use-avatar-state";
 import { useProfileStatusStore } from "../../stores/profile-status-store";
 import { selectIsWindowOpen, useDesktopWindowStore } from "../../stores/desktop-window-store";
-import type { Agent } from "../../types";
+import type { Agent } from "../../shared/types";
 import styles from "./BottomTaskbar.module.css";
 
 const unfavoriteMenuItems: MenuItem[] = [

@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { Node } from "@xyflow/react";
-import type { ProcessNode, ProcessNodeConnection } from "../../../../types";
+import type { ProcessNode, ProcessNodeConnection } from "../../../../shared/types";
 import { processApi } from "../../../../api/process";
 import { snap, GRID } from "./process-canvas-utils";
 import type { CanvasCommand } from "./useCanvasHistory";

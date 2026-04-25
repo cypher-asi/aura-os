@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Agent, AgentInstance, Project } from "../types";
+import type { Agent, AgentInstance, Project } from "../shared/types";
 import { queryClient } from "../lib/query-client";
 import {
   dedupeProjects,

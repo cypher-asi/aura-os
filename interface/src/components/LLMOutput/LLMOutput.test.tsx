@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { LLMOutput } from "./LLMOutput";
-import type { TimelineItem, ToolCallEntry } from "../../types/stream";
+import type { TimelineItem, ToolCallEntry } from "../../shared/types/stream";
 
 describe("LLMOutput", () => {
   it("returns null when no content, tools, thinking, or timeline", () => {

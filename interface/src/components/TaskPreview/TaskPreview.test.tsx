@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import type { Task, TaskId, ProjectId, SpecId, TaskStatus } from "../../types";
+import type { Task, TaskId, ProjectId, SpecId, TaskStatus } from "../../shared/types";
 
 vi.mock("@cypher-asi/zui", () => ({
   Button: ({ children, title, disabled, onClick, icon, style }: {

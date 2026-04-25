@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Spec, Task } from "../../types";
-import type { DisplaySessionEvent } from "../../types/stream";
+import type { Spec, Task } from "../../shared/types";
+import type { DisplaySessionEvent } from "../../shared/types/stream";
 import {
   clearAllPendingArtifacts,
   dropPendingByTitle,

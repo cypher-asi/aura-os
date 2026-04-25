@@ -1,5 +1,5 @@
 import { FileText } from "lucide-react";
-import type { ToolCallEntry } from "../../../types/stream";
+import type { ToolCallEntry } from "../../../shared/types/stream";
 import { useHighlightedHtml } from "../../../hooks/use-highlighted-html";
 import { specFilename } from "../../../utils/format";
 import { CopyButton } from "../../CopyButton";

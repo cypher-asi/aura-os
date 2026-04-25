@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
-import type { ProcessRun } from "../../../../types";
+import type { ProcessRun } from "../../../../shared/types";
 import { RunPreviewBody } from "./RunPreviewBody";
 
 const {

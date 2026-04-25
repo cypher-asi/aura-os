@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AgentInstance } from "../../types";
+import type { AgentInstance } from "../../shared/types";
 import { api } from "../../api/client";
 import { setLastAgent, setLastProject } from "../../utils/storage";
 import { useProjectsListStore } from "../../stores/projects-list-store";

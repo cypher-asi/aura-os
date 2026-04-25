@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { ArtifactRef, TimelineItem, ToolCallEntry } from "../../types/stream";
+import type { ArtifactRef, TimelineItem, ToolCallEntry } from "../../shared/types/stream";
 import { expandToolMarkersInTimeline } from "../../utils/tool-markers";
 import { ActivityTimeline } from "../ActivityTimeline";
 import styles from "./LLMOutput.module.css";

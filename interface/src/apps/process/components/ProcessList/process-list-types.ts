@@ -1,4 +1,4 @@
-import type { Project } from "../../../../types";
+import type { Project } from "../../../../shared/types";
 import type { InlineRenameTarget } from "../../../../components/InlineRenameInput";
 import { useProcessStore } from "../../stores/process-store";
 import { useProjectsListStore } from "../../../../stores/projects-list-store";

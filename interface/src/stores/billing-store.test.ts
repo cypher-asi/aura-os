@@ -4,7 +4,7 @@ import type {
   CreditTransaction,
   BillingAccount,
   CheckoutSessionResponse,
-} from "../types";
+} from "../shared/types";
 
 const { mockApi } = vi.hoisted(() => {
   const mockApi = {

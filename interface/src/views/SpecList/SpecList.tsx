@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { api } from "../../api/client";
-import type { Spec } from "../../types";
-import type { AuraEvent } from "../../types/aura-events";
-import { EventType } from "../../types/aura-events";
+import type { Spec } from "../../shared/types";
+import type { AuraEvent } from "../../shared/types/aura-events";
+import { EventType } from "../../shared/types/aura-events";
 import { useEventStore } from "../../stores/event-store/index";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { useShallow } from "zustand/react/shallow";

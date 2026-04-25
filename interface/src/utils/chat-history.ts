@@ -1,5 +1,5 @@
-import type { ChatContentBlock } from "../types";
-import type { ToolCallEntry, ArtifactRef } from "../types/stream";
+import type { ChatContentBlock } from "../shared/types";
+import type { ToolCallEntry, ArtifactRef } from "../shared/types/stream";
 import { normalizeToolInput } from "./tool-input";
 
 export function extractToolCalls(blocks: ChatContentBlock[]): ToolCallEntry[] | undefined {

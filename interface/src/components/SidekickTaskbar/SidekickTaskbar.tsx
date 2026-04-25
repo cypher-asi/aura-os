@@ -29,7 +29,7 @@ import {
   selectProjectActivity,
   useLoopActivityStore,
 } from "../../stores/loop-activity-store";
-import { isLoopActivityActive } from "../../types/aura-events";
+import { isLoopActivityActive } from "../../shared/types/aura-events";
 import styles from "../Sidekick/Sidekick.module.css";
 
 export function SidekickTaskbar() {

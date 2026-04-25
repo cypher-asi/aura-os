@@ -1,4 +1,4 @@
-import type { ProcessRun } from "../../../../types";
+import type { ProcessRun } from "../../../../shared/types";
 import {
   StatCard,
   SectionHeader,

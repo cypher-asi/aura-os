@@ -1,5 +1,5 @@
 import { extractToolCalls, extractArtifactRefs } from "./chat-history";
-import type { ChatContentBlock } from "../types";
+import type { ChatContentBlock } from "../shared/types";
 
 describe("extractToolCalls", () => {
   it("returns undefined when no tool_use blocks exist", () => {

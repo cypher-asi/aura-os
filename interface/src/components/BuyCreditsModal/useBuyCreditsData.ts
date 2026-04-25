@@ -5,7 +5,7 @@ import { useCheckoutPolling } from "../../hooks/use-checkout-polling";
 import { CREDITS_UPDATED_EVENT } from "../CreditsBadge/useCreditBalance";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { NATIVE_BILLING_MESSAGE } from "../../lib/billing";
-import type { CreditBalance } from "../../types";
+import type { CreditBalance } from "../../shared/types";
 
 interface BuyCreditsData {
   balance: CreditBalance | null;

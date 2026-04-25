@@ -1,8 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { api } from "../api/client";
 import { useEventStore } from "../stores/event-store/index";
-import { EventType } from "../types/aura-events";
-import type { CreditBalance } from "../types";
+import { EventType } from "../shared/types/aura-events";
+import type { CreditBalance } from "../shared/types";
 
 export type CheckoutPollingStatus = "idle" | "polling" | "success" | "timeout";
 

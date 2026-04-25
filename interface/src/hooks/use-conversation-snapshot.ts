@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useStreamEvents } from "./stream/hooks";
 import { useMessageStore } from "../stores/message-store";
-import type { DisplaySessionEvent } from "../types/stream";
+import type { DisplaySessionEvent } from "../shared/types/stream";
 
 function contentBlocksMatch(
   first: DisplaySessionEvent["contentBlocks"],

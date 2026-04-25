@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { EventType } from "../../types/aura-events";
+import { EventType } from "../../shared/types/aura-events";
 import { useTaskListData } from "./useTaskListData";
 
 type SubscribeCallback = (event: { content: Record<string, unknown>; project_id?: string }) => void;

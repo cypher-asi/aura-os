@@ -11,7 +11,7 @@ import { useProjectsListStore } from "../stores/projects-list-store";
 import { useContextUsage, useContextUsageStore } from "../stores/context-usage-store";
 import { useHydrateContextUtilization } from "./use-hydrate-context-utilization";
 import type { ChatPanelProps } from "../components/ChatPanel";
-import type { AgentInstance, Project } from "../types";
+import type { AgentInstance, Project } from "../shared/types";
 
 const AGENT_PROJECT_KEY_PREFIX = "aura-agent-project:";
 const EMPTY_PROJECTS: Project[] = [];

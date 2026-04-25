@@ -1,5 +1,5 @@
-import type { ProjectId } from "../types";
-import type { LoopActivityPayload, LoopIdPayload, LoopKind } from "../types/aura-events";
+import type { ProjectId } from "../shared/types";
+import type { LoopActivityPayload, LoopIdPayload, LoopKind } from "../shared/types/aura-events";
 import { apiFetch } from "./core";
 
 export interface ActiveLoopTask {

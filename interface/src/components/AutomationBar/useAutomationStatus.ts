@@ -7,8 +7,8 @@ import { useChatUI } from "../../stores/chat-ui-store";
 import { projectChatHistoryKey } from "../../stores/chat-history-store";
 import { useTaskOutputPanelStore } from "../../stores/task-output-panel-store";
 import { useLiveTaskIdsStore } from "../../stores/live-task-ids-store";
-import type { ProjectId } from "../../types";
-import { EventType } from "../../types/aura-events";
+import type { ProjectId } from "../../shared/types";
+import { EventType } from "../../shared/types/aura-events";
 
 /**
  * Seed the Run panel store with "active" rows for any tasks the

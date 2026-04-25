@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { buildDisplayEvents } from "../utils/build-display-messages";
-import type { SessionEvent } from "../types";
-import type { DisplaySessionEvent } from "../types/stream";
+import type { SessionEvent } from "../shared/types";
+import type { DisplaySessionEvent } from "../shared/types/stream";
 
 export interface ChatHistoryData {
   events: DisplaySessionEvent[];

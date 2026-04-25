@@ -6,7 +6,7 @@ import type { MySkillEntry, SkillInstalledAgentRef } from "../../../api/harness-
 import { useAgentSidekickStore } from "../stores/agent-sidekick-store";
 import { CreateSkillModal } from "./CreateSkillModal";
 import { SkillShopModal } from "../../../components/SkillShopModal";
-import type { Agent, HarnessSkill, HarnessSkillInstallation } from "../../../types";
+import type { Agent, HarnessSkill, HarnessSkillInstallation } from "../../../shared/types";
 import styles from "./SkillsTab.module.css";
 
 interface SkillsTabProps {

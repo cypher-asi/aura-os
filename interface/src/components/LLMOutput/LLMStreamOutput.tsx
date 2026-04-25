@@ -1,4 +1,4 @@
-import type { ArtifactRef, ToolCallEntry, TimelineItem } from "../../types/stream";
+import type { ArtifactRef, ToolCallEntry, TimelineItem } from "../../shared/types/stream";
 import { getStreamingPhaseLabel } from "../../utils/streaming";
 import { CookingIndicator } from "../CookingIndicator";
 import { LLMOutput } from "./LLMOutput";

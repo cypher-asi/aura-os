@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
-import type { ProjectId } from "../../../../types";
+import type { ProjectId } from "../../../../shared/types";
 import { EmptyState } from "../../../../components/EmptyState";
 import {
   channelForTab,

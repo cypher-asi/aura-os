@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { EventType } from "../../types/aura-events";
+import { EventType } from "../../shared/types/aura-events";
 import { useMobileTasks } from "./useMobileTasks";
 
 type SubscribeCallback = (event: { content: Record<string, unknown>; project_id?: string }) => void;

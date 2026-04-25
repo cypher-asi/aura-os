@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import type { ProjectId } from "../../../../types";
+import type { ProjectId } from "../../../../shared/types";
 import { EmptyState } from "../../../../components/EmptyState";
 import { useDebugRunMetadata } from "../../useDebugRunMetadata";
 import previewStyles from "../../../../components/Preview/Preview.module.css";

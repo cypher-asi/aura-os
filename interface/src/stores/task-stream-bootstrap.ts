@@ -1,5 +1,5 @@
-import { EventType } from "../types/aura-events";
-import type { AuraEvent, AuraEventOfType } from "../types/aura-events";
+import { EventType } from "../shared/types/aura-events";
+import type { AuraEvent, AuraEventOfType } from "../shared/types/aura-events";
 import { useEventStore, getTaskOutput } from "./event-store/index";
 import { parseEventContent } from "../shared/utils/event-content";
 import {
@@ -25,7 +25,7 @@ import {
 } from "../hooks/stream/handlers";
 import { useTaskOutputPanelStore } from "./task-output-panel-store";
 import { useTaskStatusStore } from "./task-status-store";
-import type { StreamRefs, StreamSetters } from "../types/stream";
+import type { StreamRefs, StreamSetters } from "../shared/types/stream";
 import type { MutableRefObject } from "react";
 
 /* ------------------------------------------------------------------ */

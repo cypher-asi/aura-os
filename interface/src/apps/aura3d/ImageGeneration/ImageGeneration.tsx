@@ -1,7 +1,7 @@
 import { useCallback, useRef } from "react";
 import { useAura3DStore, STYLE_LOCK_SUFFIX } from "../../../stores/aura3d-store";
 import { generateImageStream } from "../../../api/streams";
-import { EventType } from "../../../types/aura-events";
+import { EventType } from "../../../shared/types/aura-events";
 import { ImagePreview } from "../ImagePreview";
 import { PromptInput } from "../PromptInput";
 import styles from "./ImageGeneration.module.css";

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Pencil, Pin } from "lucide-react";
 import { Button, Text } from "@cypher-asi/zui";
-import type { ProcessNode } from "../../../../types";
-import type { ProcessNodeType } from "../../../../types/enums";
+import type { ProcessNode } from "../../../../shared/types";
+import type { ProcessNodeType } from "../../../../shared/types/enums";
 import { useProcessSidekickStore } from "../../stores/process-sidekick-store";
 import { useAgentStore } from "../../../agents/stores";
 import styles from "../../../../components/Preview/Preview.module.css";

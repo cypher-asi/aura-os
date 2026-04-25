@@ -7,7 +7,7 @@ import {
   projectQueryKeys,
   type ProjectLayoutBundle,
 } from "../queries/project-queries";
-import type { ProjectId, Spec } from "../types";
+import type { ProjectId, Spec } from "../shared/types";
 
 export interface UseRenameSpecResult {
   /**

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import type { Follow } from "../types";
+import type { Follow } from "../shared/types";
 
 const { mockApi } = vi.hoisted(() => ({
   mockApi: {

@@ -1,6 +1,6 @@
 import { List, Search, FolderSearch, FolderOpen } from "lucide-react";
 import type { ReactNode } from "react";
-import type { ToolCallEntry } from "../../../types/stream";
+import type { ToolCallEntry } from "../../../shared/types/stream";
 import { TOOL_LABELS } from "../../../constants/tools";
 import { decodeCapturedOutput, summarizeInput } from "../../../utils/format";
 import { Block } from "../Block";

@@ -13,8 +13,8 @@ import {
   chatHistoryQueryOptions,
 } from "../queries/chat-history-queries";
 import { useMessageStore } from "./message-store";
-import type { SessionEvent } from "../types";
-import type { DisplaySessionEvent } from "../types/stream";
+import type { SessionEvent } from "../shared/types";
+import type { DisplaySessionEvent } from "../shared/types/stream";
 
 type FetchStatus = "idle" | "loading" | "ready" | "error";
 

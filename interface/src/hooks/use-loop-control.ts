@@ -4,7 +4,7 @@ import { api } from "../api/client";
 import { useEventStore } from "../stores/event-store/index";
 import { useChatUI } from "../stores/chat-ui-store";
 import { projectChatHistoryKey } from "../stores/chat-history-store";
-import { EventType, type AuraEvent } from "../types/aura-events";
+import { EventType, type AuraEvent } from "../shared/types/aura-events";
 import { getLastAgent } from "../utils/storage";
 
 interface LoopControlResult {

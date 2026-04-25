@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Modal, Button, Input, Spinner, Text } from "@cypher-asi/zui";
 import { api, type OrbitCollaborator } from "../../api/client";
-import type { Project } from "../../types";
+import type { Project } from "../../shared/types";
 import {
   joinWorkspacePath,
   useWorkspaceRoot,

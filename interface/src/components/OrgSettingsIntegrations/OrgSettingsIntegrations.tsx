@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Button, Input, Text } from "@cypher-asi/zui";
-import type { OrgIntegration } from "../../types";
+import type { OrgIntegration } from "../../shared/types";
 import {
   getIntegrationConfigFields,
   getIntegrationDefinition,

@@ -31,7 +31,7 @@ vi.hoisted(() => {
   }
 });
 
-import type { DisplaySessionEvent } from "../types/stream";
+import type { DisplaySessionEvent } from "../shared/types/stream";
 import {
   persistTaskTurns,
   readTaskTurns,

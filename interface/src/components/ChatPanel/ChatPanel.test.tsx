@@ -3,7 +3,7 @@ import { act, forwardRef, useImperativeHandle, useLayoutEffect, useRef, type Com
 import { MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
 import { ChatPanel } from "./ChatPanel";
-import type { DisplaySessionEvent } from "../../types/stream";
+import type { DisplaySessionEvent } from "../../shared/types/stream";
 import { useMessageStore } from "../../stores/message-store";
 import { useChatViewStore } from "../../stores/chat-view-store";
 

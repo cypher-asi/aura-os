@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 import { NodeOutputTab } from "./NodeOutputTab";
-import type { ProcessNode } from "../../../../types";
+import type { ProcessNode } from "../../../../shared/types";
 
 const {
   mockListRunEvents,

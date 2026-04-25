@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { Gauge } from "lucide-react";
-import type { ToolCallEntry } from "../../../types/stream";
+import type { ToolCallEntry } from "../../../shared/types/stream";
 import { TOOL_LABELS } from "../../../constants/tools";
 import { Block } from "../Block";
 import styles from "./renderers.module.css";

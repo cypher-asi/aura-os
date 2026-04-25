@@ -1,4 +1,4 @@
-import type { ProcessEvent } from "../../../../types";
+import type { ProcessEvent } from "../../../../shared/types";
 import { buildProcessEventDisplay } from "./process-event-display";
 
 function makeEvent(overrides: Partial<ProcessEvent> = {}): ProcessEvent {

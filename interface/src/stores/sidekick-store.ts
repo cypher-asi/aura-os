@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { ReactNode } from "react";
-import type { AgentInstance, Spec, Task, Session } from "../types";
+import type { AgentInstance, Spec, Task, Session } from "../shared/types";
 import type { LogEntry } from "../hooks/use-log-stream";
 import { compareSpecs } from "../utils/collections";
 import {

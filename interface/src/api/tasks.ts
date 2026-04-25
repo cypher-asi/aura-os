@@ -1,4 +1,4 @@
-import type { ProjectId, SpecId, TaskId, TaskStatus, Task, BuildStepRecord, TestStepRecord } from "../types";
+import type { ProjectId, SpecId, TaskId, TaskStatus, Task, BuildStepRecord, TestStepRecord } from "../shared/types";
 import { apiFetch } from "./core";
 
 function runTaskQuery(agentInstanceId?: string, model?: string | null): string {

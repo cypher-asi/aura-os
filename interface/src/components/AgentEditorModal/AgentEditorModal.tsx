@@ -1,5 +1,5 @@
 import { Modal, Drawer, Button, Spinner } from "@cypher-asi/zui";
-import type { Agent } from "../../types";
+import type { Agent } from "../../shared/types";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useAgentEditorForm } from "./useAgentEditorForm";
 import { AgentEditorForm } from "./AgentEditorForm";

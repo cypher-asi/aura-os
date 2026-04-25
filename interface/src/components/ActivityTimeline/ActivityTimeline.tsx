@@ -1,5 +1,5 @@
 import { Fragment, useMemo, type ReactNode } from "react";
-import type { TimelineItem, ToolCallEntry } from "../../types/stream";
+import type { TimelineItem, ToolCallEntry } from "../../shared/types/stream";
 import {
   stripEmojis,
   normalizeMidSentenceBreaks,

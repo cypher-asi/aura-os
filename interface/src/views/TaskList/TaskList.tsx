@@ -1,14 +1,14 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useShallow } from "zustand/react/shallow";
-import type { Spec, Task } from "../../types";
+import type { Spec, Task } from "../../shared/types";
 import { LoopProgress } from "../../components/LoopProgress";
 import { TaskStatusIcon } from "../../components/TaskStatusIcon";
 import {
   selectTaskActivity,
   useLoopActivityStore,
 } from "../../stores/loop-activity-store";
-import { isLoopActivityActive } from "../../types/aura-events";
+import { isLoopActivityActive } from "../../shared/types/aura-events";
 import { useDelayedEmpty } from "../../hooks/use-delayed-empty";
 import { titleSortKey } from "../../utils/collections";
 import { filterExplorerNodes } from "../../utils/filterExplorerNodes";

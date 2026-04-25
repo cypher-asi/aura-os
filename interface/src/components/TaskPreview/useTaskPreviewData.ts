@@ -91,7 +91,7 @@ function useElapsedTime(active: boolean): number {
   return active ? elapsed : 0;
 }
 
-export function useTaskPreviewData(task: import("../../types").Task) {
+export function useTaskPreviewData(task: import("../../shared/types").Task) {
   const taskOutput = useTaskOutput(task.task_id);
   const ctx = useProjectActions();
   const pushPreview = useSidekickStore((s) => s.pushPreview);
@@ -169,7 +169,7 @@ export function useTaskPreviewData(task: import("../../types").Task) {
   };
 }
 
-export function useRunTaskData(task: import("../../types").Task) {
+export function useRunTaskData(task: import("../../shared/types").Task) {
   const ctx = useProjectActions();
   const { agentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;

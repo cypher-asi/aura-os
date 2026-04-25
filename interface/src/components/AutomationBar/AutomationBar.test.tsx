@@ -70,7 +70,7 @@ vi.mock("../../stores/chat-ui-store", () => ({
 }));
 
 import { AutomationBar } from "../AutomationBar";
-import type { ProjectId } from "../../types";
+import type { ProjectId } from "../../shared/types";
 
 function renderBar(projectId: ProjectId = "proj-1" as ProjectId) {
   return render(

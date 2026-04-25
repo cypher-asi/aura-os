@@ -12,7 +12,7 @@ import type {
   ToolCallRetryingInfo,
   ToolCallFailedInfo,
 } from "../../api/streams";
-import type { SessionEvent, ChatContentBlock } from "../../types";
+import type { SessionEvent, ChatContentBlock } from "../../shared/types";
 import { extractToolCalls, extractArtifactRefs } from "../../utils/chat-history";
 import type {
   DisplayContentBlockUnion,
@@ -21,7 +21,7 @@ import type {
   TimelineItem,
   StreamRefs,
   StreamSetters,
-} from "../../types/stream";
+} from "../../shared/types/stream";
 import { normalizeToolInput } from "../../utils/tool-input";
 
 export type FinalizeStreamReason = "completed" | "failed" | "disconnected";

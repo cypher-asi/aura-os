@@ -10,7 +10,7 @@ import {
   SidekickItemContextMenu,
   useSidekickItemContextMenu,
 } from "../../components/SidekickItemContextMenu";
-import type { Session } from "../../types";
+import type { Session } from "../../shared/types";
 import { useSessionListData } from "./useSessionListData";
 import styles from "../aura.module.css";
 

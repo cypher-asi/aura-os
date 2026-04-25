@@ -39,7 +39,7 @@ function ProjectCreationModalHost() {
   const closePreview = useSidekickStore((s) => s.closePreview);
   const { setProjects, newProjectModalOpen, closeNewProjectModal } = useProjectsList();
 
-  const handleProjectCreated = useCallback((project: import("../../types").Project) => {
+  const handleProjectCreated = useCallback((project: import("../../shared/types").Project) => {
     closeNewProjectModal();
     closePreview();
     setProjects((prev) => {

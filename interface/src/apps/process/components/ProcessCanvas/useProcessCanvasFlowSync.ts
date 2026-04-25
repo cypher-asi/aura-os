@@ -1,6 +1,6 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import type { Node, Edge } from "@xyflow/react";
-import type { ProcessNode, ProcessNodeConnection } from "../../../../types";
+import type { ProcessNode, ProcessNodeConnection } from "../../../../shared/types";
 import type { NodeRunStatus } from "../../stores/process-sidekick-store";
 import {
   toFlowNodes,

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
-import type { Org, OrgIntegration, OrgMember } from "../types";
+import type { Org, OrgIntegration, OrgMember } from "../shared/types";
 import { api } from "../api/client";
 import { useAuthStore } from "./auth-store";
 import { ACTIVE_ORG_KEY } from "../constants";

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { SetStateAction } from "react";
-import type { Project, Spec, Task } from "../types";
+import type { Project, Spec, Task } from "../shared/types";
 
 export interface ProjectActions {
   project: Project;

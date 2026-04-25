@@ -1,4 +1,4 @@
-import type { ProjectId } from "../types";
+import type { ProjectId } from "../shared/types";
 import { apiFetch, apiFetchText } from "./core";
 import { resolveApiUrl } from "../lib/host-config";
 import { authHeaders } from "../lib/auth-token";

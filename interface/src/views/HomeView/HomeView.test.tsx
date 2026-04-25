@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useParams } from "react-router-dom";
-import type { Project } from "../../types";
+import type { Project } from "../../shared/types";
 
 const orgState = {
   activeOrg: { id: "org-1" },

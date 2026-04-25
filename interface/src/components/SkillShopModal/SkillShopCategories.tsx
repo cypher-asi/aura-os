@@ -1,4 +1,4 @@
-import type { SkillCategory, SkillShopCatalogEntry } from "../../types";
+import type { SkillCategory, SkillShopCatalogEntry } from "../../shared/types";
 import styles from "./SkillShopModal.module.css";
 
 const CATEGORY_LABELS: Record<SkillCategory | "all", string> = {

@@ -1,5 +1,5 @@
 import { Modal, Button, Input, Spinner, Text } from "@cypher-asi/zui";
-import type { Project, AgentInstance } from "../../types";
+import type { Project, AgentInstance } from "../../shared/types";
 import { useProjectSettingsData } from "./useProjectSettingsData";
 import styles from "../ProjectList/ProjectList.module.css";
 import formStyles from "../ProjectSettingsModal/ProjectSettingsModal.module.css";

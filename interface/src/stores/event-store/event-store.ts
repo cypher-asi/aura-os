@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import type { AuraEvent, AuraEventOfType } from "../../types/aura-events";
-import { EventType, parseAuraEvent } from "../../types/aura-events";
+import type { AuraEvent, AuraEventOfType } from "../../shared/types/aura-events";
+import { EventType, parseAuraEvent } from "../../shared/types/aura-events";
 import { getStoredJwt } from "../../lib/auth-token";
 import { createReconnectingWebSocket } from "../../hooks/ws-reconnect";
 import { resolveWsUrl } from "../../lib/host-config";

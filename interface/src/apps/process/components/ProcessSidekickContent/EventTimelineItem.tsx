@@ -6,7 +6,7 @@ import { useEventStore } from "../../../../stores/event-store/index";
 import { processApi } from "../../../../api/process";
 import { formatTokensCompact as formatTokens } from "../../../../utils/format";
 import { EmptyState } from "../../../../components/EmptyState";
-import type { ProcessEvent } from "../../../../types";
+import type { ProcessEvent } from "../../../../shared/types";
 import { useElapsedTime, formatDuration, EMPTY_RUNS, EMPTY_NODES } from "./process-sidekick-utils";
 import { ProcessEventOutput } from "../ProcessEventOutput";
 import { prettyPrintIfJson } from "../NodeOutputTab/node-output-utils";

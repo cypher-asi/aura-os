@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useEventStore } from "../stores/event-store/index";
-import { EventType } from "../types/aura-events";
+import { EventType } from "../shared/types/aura-events";
 
 export interface CooldownState {
   /** `true` while a `loop_paused` cooldown window is active. */

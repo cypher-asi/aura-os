@@ -3,7 +3,7 @@ import { api } from "../../api/client";
 import { useProjectActions } from "../../stores/project-action-store";
 import { useStreamStore } from "../../hooks/stream/store";
 import { useEventStore } from "../../stores/event-store/index";
-import { EventType } from "../../types/aura-events";
+import { EventType } from "../../shared/types/aura-events";
 import type { ProjectStatsData } from "../../api/projects";
 
 const REALTIME_REFETCH_DEBOUNCE_MS = 300;

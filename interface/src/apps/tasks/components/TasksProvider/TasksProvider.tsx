@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useCallback, type ReactNode, type SetStateAction } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../../../../api/client";
-import type { Project, Spec, Task } from "../../../../types";
+import type { Project, Spec, Task } from "../../../../shared/types";
 import { useProjectRegister } from "../../../../stores/project-action-store";
 import { useProjectsList } from "../../../projects/useProjectsList";
 import { compareSpecs } from "../../../../utils/collections";

@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { useTaskAgentInstances } from "./use-task-agent-instances";
-import type { Task, AgentInstance } from "../types";
-import { emptyAgentPermissions } from "../types/permissions-wire";
+import type { Task, AgentInstance } from "../shared/types";
+import { emptyAgentPermissions } from "../shared/types/permissions-wire";
 
 vi.mock("../api/client", () => ({
   api: {

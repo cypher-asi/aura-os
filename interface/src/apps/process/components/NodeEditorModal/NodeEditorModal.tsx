@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
 import { Trash2 } from "lucide-react";
 import { Modal, ModalConfirm, Button, Text } from "@cypher-asi/zui";
-import type { ProcessNode } from "../../../../types";
+import type { ProcessNode } from "../../../../shared/types";
 import { Select } from "../../../../components/Select";
 import { SchedulePicker } from "../../../../components/SchedulePicker";
 import { CHAT_MODEL_OPTIONS, DEFAULT_MODEL } from "../../../../constants/models";

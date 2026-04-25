@@ -6,7 +6,7 @@ import type {
   TimelineItem,
   StreamRefs,
   StreamSetters,
-} from "../../types/stream";
+} from "../../shared/types/stream";
 
 /* ------------------------------------------------------------------ */
 /*  Zustand stream store                                               */

@@ -1,4 +1,4 @@
-import type { AuthSession } from "../types";
+import type { AuthSession } from "../shared/types";
 import { resolveApiUrl } from "./host-config";
 import { getStoredSession, hydrateStoredAuth, setStoredAuth } from "./auth-token";
 import { isNativeRuntime } from "./native-runtime";

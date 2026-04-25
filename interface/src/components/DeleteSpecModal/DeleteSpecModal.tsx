@@ -1,5 +1,5 @@
 import { Modal, Button } from "@cypher-asi/zui";
-import type { Spec } from "../../types";
+import type { Spec } from "../../shared/types";
 import styles from "../ProjectList/ProjectList.module.css";
 
 interface DeleteSpecModalProps {

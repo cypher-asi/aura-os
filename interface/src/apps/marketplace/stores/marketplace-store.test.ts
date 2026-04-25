@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MarketplaceAgent } from "../marketplace-types";
-import type { Agent } from "../../../types";
+import type { Agent } from "../../../shared/types";
 
 const { mockApi } = vi.hoisted(() => ({
   mockApi: {

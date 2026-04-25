@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import type { ProcessRun } from "../../../../types";
-import { EventType } from "../../../../types/aura-events";
+import type { ProcessRun } from "../../../../shared/types";
+import { EventType } from "../../../../shared/types/aura-events";
 import { useEventStore } from "../../../../stores/event-store/index";
 import { useProcessStore } from "../../stores/process-store";
 import { useProcessSidekickStore, type NodeRunStatus } from "../../stores/process-sidekick-store";

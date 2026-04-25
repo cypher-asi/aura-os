@@ -1,4 +1,4 @@
-import type { ProcessArtifact } from "../../../../types";
+import type { ProcessArtifact } from "../../../../shared/types";
 
 function formatArtifactSize(sizeBytes: number) {
   if (sizeBytes < 1024) return `${sizeBytes} B`;

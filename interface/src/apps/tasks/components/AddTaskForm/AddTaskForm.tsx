@@ -7,7 +7,7 @@ import { useProjectActions } from "../../../../stores/project-action-store";
 import { useProjectsListStore } from "../../../../stores/projects-list-store";
 import { useSidekickStore } from "../../../../stores/sidekick-store";
 import { Select } from "../../../../components/Select";
-import type { Task } from "../../../../types";
+import type { Task } from "../../../../shared/types";
 import styles from "./AddTaskForm.module.css";
 
 const STATUS_OPTIONS = [

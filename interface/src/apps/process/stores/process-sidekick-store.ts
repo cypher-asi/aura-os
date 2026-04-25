@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { ProcessNode, ProcessRun } from "../../../types";
+import type { ProcessNode, ProcessRun } from "../../../shared/types";
 import {
   createSidekickSlice,
   persistActiveTab,

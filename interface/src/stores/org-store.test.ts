@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import type { Org, OrgMember, OrgIntegration } from "../types";
+import type { Org, OrgMember, OrgIntegration } from "../shared/types";
 
 const org1: Org = {
   org_id: "org-1",

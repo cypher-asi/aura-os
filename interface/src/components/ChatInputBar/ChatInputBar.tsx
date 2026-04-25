@@ -37,7 +37,7 @@ import { SlashCommandMenu } from "./SlashCommandMenu";
 import { CommandChips } from "./CommandChips";
 import { useChatUI } from "../../stores/chat-ui-store";
 import type { SlashCommand } from "../../constants/commands";
-import type { Project } from "../../types";
+import type { Project } from "../../shared/types";
 import styles from "./ChatInputBar.module.css";
 
 export interface ChatInputBarHandle {

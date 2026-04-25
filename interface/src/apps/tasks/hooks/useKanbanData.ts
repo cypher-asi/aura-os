@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useKanbanStore, useKanbanLanes } from "../stores/kanban-store";
 import { useEventStore } from "../../../stores/event-store/index";
-import { EventType } from "../../../types/aura-events";
+import { EventType } from "../../../shared/types/aura-events";
 
 export function useKanbanData(
   projectId: string | undefined,

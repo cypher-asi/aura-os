@@ -1,6 +1,6 @@
 import { authHeaders } from "../lib/auth-token";
 import { resolveApiUrl } from "../lib/host-config";
-import type { ApiError } from "../types";
+import type { ApiError } from "../shared/types";
 import { ApiClientError } from "./core";
 
 export interface SSECallbacks<T extends string> {

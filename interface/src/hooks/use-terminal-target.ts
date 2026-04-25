@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { AgentInstance, ProjectId } from "../types";
+import type { AgentInstance, ProjectId } from "../shared/types";
 import {
   projectAgentInstanceQueryOptions,
   projectAgentsQueryOptions,

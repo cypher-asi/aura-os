@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import type { Spec, Task, Session, AgentInstance } from "../types";
+import type { Spec, Task, Session, AgentInstance } from "../shared/types";
 import { useSidekickStore } from "./sidekick-store";
 
 function makeSpec(id: string, order: number): Spec {

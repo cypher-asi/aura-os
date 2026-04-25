@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import type { ProcessNodeType } from "../../../../types/enums";
+import type { ProcessNodeType } from "../../../../shared/types/enums";
 
 export const NODE_TYPE_LABELS: Record<ProcessNodeType, string> = {
   ignition: "Ignition",

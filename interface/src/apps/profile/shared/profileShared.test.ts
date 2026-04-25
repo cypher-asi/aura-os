@@ -8,7 +8,7 @@ vi.mock("../../../stores/auth-store", () => ({
 
 import { isOwnProfile } from "./profileShared";
 import type { UserProfileData } from "../../../stores/profile-store";
-import type { ZeroUser } from "../../../types";
+import type { ZeroUser } from "../../../shared/types";
 
 function makeUser(overrides: Partial<ZeroUser> = {}): ZeroUser {
   return {

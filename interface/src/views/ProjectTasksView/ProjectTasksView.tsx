@@ -7,7 +7,7 @@ import { useProjectsListStore } from "../../stores/projects-list-store";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { TaskStatusIcon } from "../../components/TaskStatusIcon";
 import { useMobileTasks } from "../ProjectWorkView/useMobileTasks";
-import type { Task } from "../../types";
+import type { Task } from "../../shared/types";
 import styles from "./ProjectTasksView.module.css";
 
 type TaskSegmentId = "active" | "ready" | "blocked" | "done";

@@ -347,7 +347,7 @@ test("buildDemoAgentBrief keeps changed-file inference working from the interfac
       prompt: "Capability toggles autosave immediately in the Permissions tab and the saved state is clearly visible.",
       changedFiles: [
         "interface/src/apps/agents/AgentInfoPanel/PermissionsTab.tsx",
-        "interface/src/types/permissions.ts",
+        "interface/src/shared/types/permissions.ts",
       ],
     });
 

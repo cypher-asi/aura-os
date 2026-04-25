@@ -2,8 +2,8 @@ import { useEffect, useRef, useState, useCallback, useMemo, type SetStateAction 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
-import type { Project, Spec, Task } from "../../types";
-import { EventType } from "../../types/aura-events";
+import type { Project, Spec, Task } from "../../shared/types";
+import { EventType } from "../../shared/types/aura-events";
 import { useProjectsList } from "../../apps/projects/useProjectsList";
 import {
   mergeSpecIntoProjectLayout,

@@ -1,4 +1,4 @@
-import { EventType } from "../types/aura-events";
+import { EventType } from "../shared/types/aura-events";
 
 export const EVENT_LABELS: Record<EventType, string> = {
   [EventType.UserMessage]: "Message",

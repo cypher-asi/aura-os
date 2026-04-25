@@ -23,7 +23,7 @@ import { mergeAgentIntoProjectAgents, projectQueryKeys } from "../../queries/pro
 import { useChatHandoffStore } from "../../stores/chat-handoff-store";
 import { useContextUsage, useContextUsageStore } from "../../stores/context-usage-store";
 import { useHydrateContextUtilization } from "../../hooks/use-hydrate-context-utilization";
-import type { AgentInstance, Project } from "../../types";
+import type { AgentInstance, Project } from "../../shared/types";
 import {
   isCreateAgentChatHandoff,
   projectAgentHandoffTarget,

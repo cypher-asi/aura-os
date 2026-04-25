@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { api } from "../api/client";
-import type { OrgIntegration } from "../types";
+import type { OrgIntegration } from "../shared/types";
 import { useOrgStore } from "../stores/org-store";
 import { useAuth } from "../stores/auth-store";
 

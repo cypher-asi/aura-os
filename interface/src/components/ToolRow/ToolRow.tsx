@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import type { ToolCallEntry } from "../../types/stream";
+import type { ToolCallEntry } from "../../shared/types/stream";
 import { TOOL_LABELS } from "../../constants/tools";
 import { renderToolBlock } from "../Block";
 import toolStyles from "./ToolCallBlock.module.css";

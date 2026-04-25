@@ -10,7 +10,7 @@ import { useProjectsListStore } from "../../../../stores/projects-list-store";
 import { useSidekickStore } from "../../../../stores/sidekick-store";
 import { useKanbanData } from "../../hooks/useKanbanData";
 import { AddTaskForm } from "../AddTaskForm";
-import type { Task, TaskStatus } from "../../../../types";
+import type { Task, TaskStatus } from "../../../../shared/types";
 import styles from "./TasksMainPanel.module.css";
 
 const LANE_CONFIG: { status: TaskStatus; label: string; canAdd?: boolean }[] = [

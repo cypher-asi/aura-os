@@ -1,4 +1,4 @@
-import type { Follow, DailyCommitActivity } from "../types";
+import type { Follow, DailyCommitActivity } from "../shared/types";
 import { apiFetch } from "./core";
 
 export const followsApi = {

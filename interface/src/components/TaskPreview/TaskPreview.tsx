@@ -13,7 +13,7 @@ import { toBullets } from "../../utils/format";
 import { useTaskPreviewData, useRunTaskData } from "./useTaskPreviewData";
 import styles from "../Preview/Preview.module.css";
 
-export function RunTaskButton({ task }: { task: import("../../types").Task }) {
+export function RunTaskButton({ task }: { task: import("../../shared/types").Task }) {
   const { running, handleRun, visible } = useRunTaskData(task);
 
   return (
@@ -31,7 +31,7 @@ export function RunTaskButton({ task }: { task: import("../../types").Task }) {
 }
 
 interface TaskPreviewProps {
-  task: import("../../types").Task;
+  task: import("../../shared/types").Task;
   scrollRef?: RefObject<HTMLDivElement | null>;
   isAutoFollowing?: boolean;
 }

@@ -3,7 +3,7 @@ import type { FeedEvent } from "../../../stores/feed-store";
 import type { UserProfileData } from "../../../stores/profile-store";
 import { useProfile } from "../../../stores/profile-store";
 import { useAuth } from "../../../stores/auth-store";
-import type { ZeroUser } from "../../../types";
+import type { ZeroUser } from "../../../shared/types";
 
 export interface ProfileSummaryModel {
   profile: UserProfileData;

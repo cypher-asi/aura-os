@@ -1,4 +1,4 @@
-import type { SkillOS } from "../../types";
+import type { SkillOS } from "../../shared/types";
 import styles from "./SkillShopModal.module.css";
 
 const OS_OPTIONS: { id: SkillOS | "all"; label: string }[] = [

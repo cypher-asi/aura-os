@@ -1,4 +1,4 @@
-import type { ProjectId, SpecId, Project, Spec } from "../types";
+import type { ProjectId, SpecId, Project, Spec } from "../shared/types";
 import { apiFetch } from "./core";
 import { generateSpecsStream } from "./streams";
 

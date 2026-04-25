@@ -1,5 +1,5 @@
 import { useStreamStore } from "./store";
-import type { DisplaySessionEvent, ToolCallEntry, TimelineItem } from "../../types/stream";
+import type { DisplaySessionEvent, ToolCallEntry, TimelineItem } from "../../shared/types/stream";
 
 const EMPTY_EVENTS: DisplaySessionEvent[] = [];
 const EMPTY_TOOL_CALLS: ToolCallEntry[] = [];

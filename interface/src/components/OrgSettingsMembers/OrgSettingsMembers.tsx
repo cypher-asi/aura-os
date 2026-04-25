@@ -2,7 +2,7 @@ import { Button } from "@cypher-asi/zui";
 import { UserMinus } from "lucide-react";
 import { EmptyState } from "../EmptyState";
 import { Select } from "../Select";
-import type { OrgMember, OrgRole } from "../../types";
+import type { OrgMember, OrgRole } from "../../shared/types";
 import styles from "../OrgSettingsPanel/OrgSettingsPanel.module.css";
 
 const ROLE_OPTIONS = [

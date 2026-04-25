@@ -1,11 +1,11 @@
 import type {
   ProcessEvent,
-} from "../../../../types";
+} from "../../../../shared/types";
 import type {
   DisplaySessionEvent,
   TimelineItem,
   ToolCallEntry,
-} from "../../../../types/stream";
+} from "../../../../shared/types/stream";
 import {
   prettyPrintIfJson,
 } from "../NodeOutputTab/node-output-utils";

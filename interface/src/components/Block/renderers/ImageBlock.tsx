@@ -1,5 +1,5 @@
 import { Image as ImageIcon } from "lucide-react";
-import type { ToolCallEntry } from "../../../types/stream";
+import type { ToolCallEntry } from "../../../shared/types/stream";
 import { Block } from "../Block";
 import styles from "./renderers.module.css";
 

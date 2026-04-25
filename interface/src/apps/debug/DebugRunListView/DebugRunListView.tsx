@@ -5,7 +5,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import type { DebugRunMetadata, DebugRunStatus } from "../../../api/debug";
-import type { ProjectId } from "../../../types";
+import type { ProjectId } from "../../../shared/types";
 import {
   clearLastDebugRunIf,
   getLastDebugRun,

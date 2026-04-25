@@ -1,4 +1,4 @@
-import type { ToolCallEntry } from "../types/stream";
+import type { ToolCallEntry } from "../shared/types/stream";
 import { TOOL_PHASE_LABELS } from "../constants/tools";
 
 const CONNECTING_LABELS = [

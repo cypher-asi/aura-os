@@ -4,8 +4,8 @@ import { act, renderHook } from "@testing-library/react";
 import { AgentEditorForm, type AgentEditorFormProps } from "./AgentEditorForm";
 import { useAgentEditorForm } from "./useAgentEditorForm";
 import { api } from "../../api/client";
-import type { Agent } from "../../types";
-import { emptyAgentPermissions } from "../../types/permissions-wire";
+import type { Agent } from "../../shared/types";
+import { emptyAgentPermissions } from "../../shared/types/permissions-wire";
 
 vi.mock("@cypher-asi/zui", () => ({
   Input: ({ value, onChange, placeholder }: { value?: string; onChange?: (e: { target: { value: string } }) => void; placeholder?: string }) => (

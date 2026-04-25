@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import type { Session } from "../../types";
+import type { Session } from "../../shared/types";
 import { useSessionListData } from "./useSessionListData";
 
 const listProjectSessions = vi.fn();

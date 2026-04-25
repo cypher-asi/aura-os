@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useAgentStore } from "./agent-store";
-import type { Agent } from "../../../types";
-import { isSuperAgent } from "../../../types/permissions";
-import type { DisplaySessionEvent } from "../../../types/stream";
+import type { Agent } from "../../../shared/types";
+import { isSuperAgent } from "../../../shared/types/permissions";
+import type { DisplaySessionEvent } from "../../../shared/types/stream";
 
 type FetchStatus = "idle" | "loading" | "ready" | "error";
 

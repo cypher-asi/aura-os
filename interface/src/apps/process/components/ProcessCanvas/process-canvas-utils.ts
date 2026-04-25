@@ -1,6 +1,6 @@
 import type { Node, Edge } from "@xyflow/react";
-import type { ProcessNode, ProcessNodeConnection, ProcessRun } from "../../../../types";
-import type { ProcessNodeType } from "../../../../types/enums";
+import type { ProcessNode, ProcessNodeConnection, ProcessRun } from "../../../../shared/types";
+import type { ProcessNodeType } from "../../../../shared/types/enums";
 import type { NodeRunStatus } from "../../stores/process-sidekick-store";
 
 export interface ProcessCanvasProps {

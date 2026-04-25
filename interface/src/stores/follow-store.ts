@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Follow } from "../types";
+import type { Follow } from "../shared/types";
 import { api } from "../api/client";
 import { useAuthStore } from "./auth-store";
 

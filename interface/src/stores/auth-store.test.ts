@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import type { AuthSession, ZeroUser } from "../types";
+import type { AuthSession, ZeroUser } from "../shared/types";
 
 const { mockApi } = vi.hoisted(() => {
   const mockApi = {

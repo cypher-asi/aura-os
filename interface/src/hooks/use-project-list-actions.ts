@@ -11,7 +11,7 @@ import {
   projectAgentHandoffTarget,
 } from "../utils/chat-handoff";
 import { useProjectsList } from "../apps/projects/useProjectsList";
-import type { Project, AgentInstance } from "../types";
+import type { Project, AgentInstance } from "../shared/types";
 
 interface ContextMenuState {
   x: number;

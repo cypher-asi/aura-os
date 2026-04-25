@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "../api/client";
 import { useEventStore } from "../stores/event-store/index";
-import { EventType } from "../types/aura-events";
+import { EventType } from "../shared/types/aura-events";
 import { useIsStreaming } from "./stream/hooks";
 
 export type AgentBusyReason = "chat" | "loop" | null;

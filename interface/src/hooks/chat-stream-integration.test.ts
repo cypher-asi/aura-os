@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useChatStream } from "./use-chat-stream";
 import { useStreamStore, streamMetaMap } from "./stream/store";
-import type { DisplaySessionEvent } from "../types/stream";
+import type { DisplaySessionEvent } from "../shared/types/stream";
 
 const mockSetStreamingAgentInstanceId = vi.fn();
 const mockClearGeneratedArtifacts = vi.fn();

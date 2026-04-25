@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import type { Agent, SessionEvent } from "../../../types";
-import { emptyAgentPermissions } from "../../../types/permissions-wire";
-import type { DisplaySessionEvent } from "../../../types/stream";
+import type { Agent, SessionEvent } from "../../../shared/types";
+import { emptyAgentPermissions } from "../../../shared/types/permissions-wire";
+import type { DisplaySessionEvent } from "../../../shared/types/stream";
 
 const mockAgents: Agent[] = [
   {

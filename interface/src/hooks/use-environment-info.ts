@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
-import type { EnvironmentInfo } from "../types";
+import type { EnvironmentInfo } from "../shared/types";
 
 let cachedInfo: EnvironmentInfo | null = null;
 

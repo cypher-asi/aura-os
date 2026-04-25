@@ -1,4 +1,4 @@
-import type { ProjectId } from "../types";
+import type { ProjectId } from "../shared/types";
 import { useTerminalTarget, type TerminalTargetStatus } from "./use-terminal-target";
 
 export type TerminalModeStatus = TerminalTargetStatus;

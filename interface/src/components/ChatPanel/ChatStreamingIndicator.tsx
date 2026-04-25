@@ -2,7 +2,7 @@ import { useShallow } from "zustand/react/shallow";
 import { CookingIndicator } from "../CookingIndicator";
 import { useStreamStore } from "../../hooks/stream/store";
 import { getStreamingPhaseLabel } from "../../utils/streaming";
-import type { ToolCallEntry } from "../../types/stream";
+import type { ToolCallEntry } from "../../shared/types/stream";
 import styles from "./ChatPanel.module.css";
 
 const EMPTY_TOOL_CALLS: ToolCallEntry[] = [];

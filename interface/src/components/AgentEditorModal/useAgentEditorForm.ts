@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { api } from "../../api/client";
-import type { Agent, AgentPermissions, OrgIntegration } from "../../types";
-import { emptyAgentPermissions } from "../../types/permissions-wire";
-import { isSuperAgent as isSuperAgentByPerms } from "../../types/permissions";
+import type { Agent, AgentPermissions, OrgIntegration } from "../../shared/types";
+import { emptyAgentPermissions } from "../../shared/types/permissions-wire";
+import { isSuperAgent as isSuperAgentByPerms } from "../../shared/types/permissions";
 import { useModalInitialFocus } from "../../hooks/use-modal-initial-focus";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { getAgentNameValidationMessage } from "../../lib/agentNameValidation";

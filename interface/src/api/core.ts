@@ -1,4 +1,4 @@
-import type { ApiError } from "../types";
+import type { ApiError } from "../shared/types";
 import { authHeaders } from "../lib/auth-token";
 import { resolveApiUrl } from "../lib/host-config";
 

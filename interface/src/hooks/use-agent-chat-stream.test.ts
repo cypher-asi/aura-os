@@ -1,7 +1,7 @@
 import { renderHook, act } from "@testing-library/react";
 import { useAgentChatStream } from "./use-agent-chat-stream";
 import { useStreamStore, streamMetaMap } from "./stream/store";
-import { EventType } from "../types/aura-events";
+import { EventType } from "../shared/types/aura-events";
 
 vi.mock("../api/client", () => ({
   api: {

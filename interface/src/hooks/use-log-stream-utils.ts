@@ -1,5 +1,5 @@
-import type { AuraEvent, AuraEventContent } from "../types/aura-events";
-import { EventType } from "../types/aura-events";
+import type { AuraEvent, AuraEventContent } from "../shared/types/aura-events";
+import { EventType } from "../shared/types/aura-events";
 import { formatCost } from "../utils/format";
 
 function fmtDuration(ms: number): string {

@@ -9,7 +9,7 @@ import { api } from "../../api/client";
 import { useRemoteAgentState } from "../../hooks/use-remote-agent-state";
 import { projectAgentChatRoute } from "../../utils/mobileNavigation";
 import { formatAdapterLabel, formatAuthSourceLabel, formatRunsOnLabel } from "../../apps/agents/AgentInfoPanel/agent-info-utils";
-import type { HarnessSkill, HarnessSkillInstallation } from "../../types";
+import type { HarnessSkill, HarnessSkillInstallation } from "../../shared/types";
 import styles from "./ProjectAgentDetailsView.module.css";
 
 function formatUptime(seconds: number) {

@@ -1,6 +1,6 @@
 import { FileCode, FileText, FileX } from "lucide-react";
 import type { ReactNode } from "react";
-import type { ToolCallEntry } from "../../../types/stream";
+import type { ToolCallEntry } from "../../../shared/types/stream";
 import { langFromPath } from "../../../ide/lang";
 import { useHighlightedHtml } from "../../../hooks/use-highlighted-html";
 import { TOOL_PHASE_LABELS } from "../../../constants/tools";

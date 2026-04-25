@@ -1,5 +1,5 @@
 import { Wrench } from "lucide-react";
-import type { ToolCallEntry } from "../../../types/stream";
+import type { ToolCallEntry } from "../../../shared/types/stream";
 import { TOOL_LABELS } from "../../../constants/tools";
 import { formatResult, summarizeInput, summarizeError } from "../../../utils/format";
 import { Block } from "../Block";

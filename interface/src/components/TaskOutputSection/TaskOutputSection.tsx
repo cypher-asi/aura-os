@@ -21,8 +21,8 @@ import { useTaskOutputView } from "../../hooks/use-task-output-view";
 import { useProjectActions } from "../../stores/project-action-store";
 import { useCooldownStatus, cooldownLabel } from "../../hooks/use-cooldown-status";
 import { getStreamingPhaseLabel } from "../../utils/streaming";
-import type { DisplaySessionEvent, ToolCallEntry } from "../../types/stream";
-import type { Task } from "../../types";
+import type { DisplaySessionEvent, ToolCallEntry } from "../../shared/types/stream";
+import type { Task } from "../../shared/types";
 import { CookingIndicator } from "../CookingIndicator";
 import styles from "../Preview/Preview.module.css";
 

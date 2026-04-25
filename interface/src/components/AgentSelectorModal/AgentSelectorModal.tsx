@@ -2,7 +2,7 @@ import { useEffect, useMemo } from "react";
 import { Modal, Drawer, Button, Spinner, Text } from "@cypher-asi/zui";
 import { EmptyState } from "../EmptyState";
 import { Avatar } from "../Avatar";
-import type { AgentInstance } from "../../types";
+import type { AgentInstance } from "../../shared/types";
 import { AgentEditorModal } from "../AgentEditorModal";
 import { useAvatarState } from "../../hooks/use-avatar-state";
 import { useAgentSelectorData } from "./useAgentSelectorData";

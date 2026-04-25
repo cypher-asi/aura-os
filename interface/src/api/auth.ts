@@ -1,4 +1,4 @@
-import type { AuthSession } from "../types";
+import type { AuthSession } from "../shared/types";
 import { apiFetch } from "./core";
 
 export const authApi = {

@@ -31,8 +31,8 @@ vi.hoisted(() => {
   }
 });
 
-import type { AuraEvent } from "../types/aura-events";
-import { EventType } from "../types/aura-events";
+import type { AuraEvent } from "../shared/types/aura-events";
+import { EventType } from "../shared/types/aura-events";
 import { subscribers } from "./event-store/event-store";
 import { useEventStore } from "./event-store/index";
 import { useStreamStore, streamMetaMap } from "../hooks/stream/store";

@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import type { ProjectId } from "../types";
+import type { ProjectId } from "../shared/types";
 import { api } from "../api/client";
 import { useEventStore } from "../stores/event-store/index";
-import { EventType } from "../types/aura-events";
+import { EventType } from "../shared/types/aura-events";
 
 export function useLoopActive(projectId: ProjectId | undefined): boolean {
   const subscribe = useEventStore((s) => s.subscribe);

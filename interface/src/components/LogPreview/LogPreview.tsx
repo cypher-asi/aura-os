@@ -1,6 +1,6 @@
 import { Text } from "@cypher-asi/zui";
 import { EVENT_LABELS, type LogEntry } from "../../hooks/use-log-stream";
-import type { AuraEvent } from "../../types/aura-events";
+import type { AuraEvent } from "../../shared/types/aura-events";
 import { fmtMs } from "../../utils/format";
 import styles from "../Preview/Preview.module.css";
 

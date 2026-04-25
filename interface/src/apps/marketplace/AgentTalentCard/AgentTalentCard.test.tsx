@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { MarketplaceAgent } from "../marketplace-types";
-import type { Agent } from "../../../types";
+import type { Agent } from "../../../shared/types";
 
 vi.mock("./AgentTalentCard.module.css", () => ({
   default: new Proxy({}, { get: (_target, prop) => String(prop) }),

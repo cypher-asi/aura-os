@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { api, type OrbitCollaborator } from "../../api/client";
-import type { Project } from "../../types";
+import type { Project } from "../../shared/types";
 
 interface ProjectSettingsData {
   project: Project | null;

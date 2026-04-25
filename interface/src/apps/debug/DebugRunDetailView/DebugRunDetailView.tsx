@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import type { DebugRunMetadata, DebugRunStatus } from "../../../api/debug";
 import { api } from "../../../api/client";
-import type { ProjectId } from "../../../types";
+import type { ProjectId } from "../../../shared/types";
 import {
   clearLastDebugRunIf,
   setLastDebugProject,

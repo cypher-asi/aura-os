@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useShallow } from "zustand/react/shallow";
 import { useAgentStore, useSelectedAgent } from "../apps/agents/stores";
 import { projectAgentInstanceQueryOptions } from "../queries/project-queries";
-import type { Agent } from "../types";
+import type { Agent } from "../shared/types";
 
 type ChatMode = "project" | "agent";
 

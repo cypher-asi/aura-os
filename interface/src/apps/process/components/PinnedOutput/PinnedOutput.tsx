@@ -1,7 +1,7 @@
 import { useMemo, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { Pin, PinOff, ChevronDown, ChevronUp } from "lucide-react";
-import type { ProcessNode } from "../../../../types";
+import type { ProcessNode } from "../../../../shared/types";
 import { processApi } from "../../../../api/process";
 import { useProcessStore } from "../../stores/process-store";
 import { formatOutputContent } from "../NodeOutputTab/node-output-utils";

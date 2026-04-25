@@ -7,7 +7,7 @@ import {
   type GitStep,
 } from "../stores/event-store/index";
 import { hydrateTaskOutputOnce } from "../stores/task-output-hydration-cache";
-import type { Task } from "../types";
+import type { Task } from "../shared/types";
 
 // Persisted `build_steps` / `test_steps` on the server mix two shapes:
 //   1. Native `build_verification_*` / `test_verification_*` events with

@@ -1,6 +1,6 @@
 import { renderHook, act } from "@testing-library/react";
 import { useCooldownStatus, cooldownLabel } from "./use-cooldown-status";
-import { EventType } from "../types/aura-events";
+import { EventType } from "../shared/types/aura-events";
 
 type SubscribeCallback = (event: {
   type: EventType;

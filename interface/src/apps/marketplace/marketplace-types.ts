@@ -1,4 +1,4 @@
-import type { Agent, AgentId } from "../../types";
+import type { Agent, AgentId } from "../../shared/types";
 
 /**
  * Projection of a `network.Agent` augmented with marketplace-only stats

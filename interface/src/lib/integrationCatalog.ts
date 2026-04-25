@@ -1,4 +1,4 @@
-import type { OrgIntegration } from "../types";
+import type { OrgIntegration } from "../shared/types";
 
 export type IntegrationKind =
   | "workspace_connection"

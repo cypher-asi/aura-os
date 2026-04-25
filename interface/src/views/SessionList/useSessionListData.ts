@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { api } from "../../api/client";
-import type { Session } from "../../types";
+import type { Session } from "../../shared/types";
 import { useProjectActions } from "../../stores/project-action-store";
 
 interface SessionListData {

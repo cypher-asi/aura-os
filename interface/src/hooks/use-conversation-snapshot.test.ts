@@ -1,5 +1,5 @@
 import { renderHook } from "@testing-library/react";
-import type { DisplaySessionEvent } from "../types/stream";
+import type { DisplaySessionEvent } from "../shared/types/stream";
 import { useMessageStore } from "../stores/message-store";
 import { createSetters, streamMetaMap, useStreamStore } from "./stream/store";
 import { useConversationSnapshot } from "./use-conversation-snapshot";

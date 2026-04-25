@@ -11,7 +11,7 @@ import styles from "./NewProjectModal.module.css";
 interface NewProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreated: (project: import("../../types").Project) => void;
+  onCreated: (project: import("../../shared/types").Project) => void;
 }
 
 export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalProps) {

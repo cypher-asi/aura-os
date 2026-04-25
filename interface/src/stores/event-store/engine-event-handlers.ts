@@ -3,8 +3,8 @@ import type {
   AuraEventContent,
   LoopActivityPayload,
   LoopIdPayload,
-} from "../../types/aura-events";
-import { EventType } from "../../types/aura-events";
+} from "../../shared/types/aura-events";
+import { EventType } from "../../shared/types/aura-events";
 import { parseEventContent } from "../../shared/utils/event-content";
 import { useLoopActivityStore } from "../loop-activity-store";
 import { useSidekickStore } from "../sidekick-store";

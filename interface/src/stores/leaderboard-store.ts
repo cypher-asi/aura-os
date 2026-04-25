@@ -15,7 +15,7 @@ export interface LeaderboardUser {
   eventCount: number;
 }
 import { useEventStore } from "./event-store";
-import { EventType } from "../types/aura-events";
+import { EventType } from "../shared/types/aura-events";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

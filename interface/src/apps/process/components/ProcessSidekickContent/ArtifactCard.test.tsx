@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import type { ProcessArtifact } from "../../../../types";
+import type { ProcessArtifact } from "../../../../shared/types";
 import { ArtifactCard } from "./ArtifactCard";
 
 function makeArtifact(overrides: Partial<ProcessArtifact> = {}): ProcessArtifact {

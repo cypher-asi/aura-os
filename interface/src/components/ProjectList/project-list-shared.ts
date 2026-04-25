@@ -1,5 +1,5 @@
 import type { ExplorerNode } from "@cypher-asi/zui";
-import type { AgentInstance } from "../../types";
+import type { AgentInstance } from "../../shared/types";
 
 export function filterTree(nodes: ExplorerNode[], q: string): ExplorerNode[] {
   if (!q) return nodes;

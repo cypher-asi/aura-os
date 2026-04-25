@@ -12,7 +12,7 @@ import {
   type LoopActivityPayload,
   type LoopStatus,
   isLoopActivityActive,
-} from "../../types/aura-events";
+} from "../../shared/types/aura-events";
 
 /**
  * Single, reusable circular progress indicator for loop activity.

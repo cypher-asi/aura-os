@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ChatStreamingIndicator } from "./ChatStreamingIndicator";
-import type { ToolCallEntry } from "../../types/stream";
+import type { ToolCallEntry } from "../../shared/types/stream";
 
 const mockStreamEntry: {
   isStreaming: boolean;

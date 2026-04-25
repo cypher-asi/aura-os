@@ -9,7 +9,7 @@ import {
 } from "react";
 import { useNavigate } from "react-router-dom";
 import type { useProjectListActions } from "../../../hooks/use-project-list-actions";
-import type { Project } from "../../../types";
+import type { Project } from "../../../shared/types";
 import { useNotesStore } from "../../../stores/notes-store";
 import {
   leafName,

@@ -1,5 +1,5 @@
 import { buildDisplayEvents } from "./build-display-messages";
-import type { SessionEvent, ChatContentBlock } from "../types";
+import type { SessionEvent, ChatContentBlock } from "../shared/types";
 
 function makeMsg(overrides: Partial<SessionEvent> & { event_id: string; role: SessionEvent["role"] }): SessionEvent {
   return {

@@ -5,9 +5,9 @@ import { useSidekickStore } from "../stores/sidekick-store";
 import { useIsStreaming } from "./stream/hooks";
 import { getStreamEntry, streamMetaMap } from "./stream/store";
 import { useEventStore } from "../stores/event-store/index";
-import { EventType } from "../types/aura-events";
-import type { SessionEvent } from "../types";
-import type { DisplaySessionEvent } from "../types/stream";
+import { EventType } from "../shared/types/aura-events";
+import type { SessionEvent } from "../shared/types";
+import type { DisplaySessionEvent } from "../shared/types/stream";
 import {
   findTrailingInFlightAssistant,
   rebuildPendingArtifactsFromHistory,

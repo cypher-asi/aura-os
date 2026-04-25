@@ -1,5 +1,5 @@
 import { Text } from "@cypher-asi/zui";
-import type { MemoryFact, MemoryEvent, MemoryProcedure } from "../../../types";
+import type { MemoryFact, MemoryEvent, MemoryProcedure } from "../../../shared/types";
 import previewStyles from "../../../components/Preview/Preview.module.css";
 
 function formatDate(iso: string): string {

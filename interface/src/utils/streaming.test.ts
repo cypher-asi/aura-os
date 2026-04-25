@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { getStreamingPhaseLabel } from "./streaming";
-import type { ToolCallEntry } from "../types/stream";
+import type { ToolCallEntry } from "../shared/types/stream";
 
 function tool(overrides: Partial<ToolCallEntry> = {}): ToolCallEntry {
   return {

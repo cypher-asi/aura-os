@@ -6,7 +6,7 @@ import { useProjectActions } from "../../stores/project-action-store";
 import { TaskStatusIcon } from "../TaskStatusIcon";
 import { formatRelativeTime, formatTokens } from "../../utils/format";
 import { StatusBadge } from "../StatusBadge";
-import type { Task, Session } from "../../types";
+import type { Task, Session } from "../../shared/types";
 import styles from "../Preview/Preview.module.css";
 
 function formatDuration(startedAt: string, endedAt: string | null): string {

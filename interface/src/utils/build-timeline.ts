@@ -1,5 +1,5 @@
-import type { ChatContentBlock, ProcessEventContentBlock } from "../types";
-import type { TimelineItem, ToolCallEntry } from "../types/stream";
+import type { ChatContentBlock, ProcessEventContentBlock } from "../shared/types";
+import type { TimelineItem, ToolCallEntry } from "../shared/types/stream";
 import { normalizeToolInput } from "./tool-input";
 
 let _btlId = 0;

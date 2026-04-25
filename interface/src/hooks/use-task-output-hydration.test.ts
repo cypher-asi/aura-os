@@ -1,6 +1,6 @@
 import { renderHook } from "@testing-library/react";
 import { useTaskOutputHydration } from "./use-task-output-hydration";
-import type { Task } from "../types";
+import type { Task } from "../shared/types";
 import { useEventStore } from "../stores/event-store";
 
 vi.mock("../api/client", () => ({

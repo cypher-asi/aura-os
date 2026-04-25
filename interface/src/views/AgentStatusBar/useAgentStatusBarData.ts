@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback, type Dispatch, type SetStateAction } from "react";
-import type { ProjectId, AgentInstance, Session } from "../../types";
-import type { AuraEvent } from "../../types/aura-events";
-import { EventType } from "../../types/aura-events";
+import type { ProjectId, AgentInstance, Session } from "../../shared/types";
+import type { AuraEvent } from "../../shared/types/aura-events";
+import { EventType } from "../../shared/types/aura-events";
 import { api } from "../../api/client";
 import { useEventStore } from "../../stores/event-store/index";
 import { useClickOutside } from "../../hooks/use-click-outside";

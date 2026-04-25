@@ -4,7 +4,7 @@ import { Loader2, FolderOpen, Terminal } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { api } from "../../../api/client";
-import type { HarnessSkill, HarnessSkillInstallation } from "../../../types";
+import type { HarnessSkill, HarnessSkillInstallation } from "../../../shared/types";
 import previewStyles from "../../../components/Preview/Preview.module.css";
 
 interface SkillPreviewProps {

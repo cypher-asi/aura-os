@@ -1,5 +1,5 @@
 import { SkillShopCard } from "./SkillShopCard";
-import type { SkillShopCatalogEntry } from "../../types";
+import type { SkillShopCatalogEntry } from "../../shared/types";
 import styles from "./SkillShopModal.module.css";
 
 interface SkillShopGridProps {

@@ -2,7 +2,7 @@ import { useProcessStore } from "../../stores/process-store";
 import { useProcessSidekickStore } from "../../stores/process-sidekick-store";
 import { useAgentStore } from "../../../agents/stores/agent-store";
 import { formatTokensCompact as formatTokens, formatCost } from "../../../../utils/format";
-import type { ProcessEvent, ProcessRun } from "../../../../types";
+import type { ProcessEvent, ProcessRun } from "../../../../shared/types";
 import { injectKeyframes, useElapsedTime, EMPTY_NODES } from "./process-sidekick-utils";
 
 export interface LiveRunBannerProps {

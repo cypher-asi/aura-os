@@ -1,5 +1,5 @@
-import { EventType } from "../types/aura-events";
-import type { AuraEventOfType } from "../types/aura-events";
+import { EventType } from "../shared/types/aura-events";
+import type { AuraEventOfType } from "../shared/types/aura-events";
 import { useEventStore } from "./event-store/index";
 import { getStreamEntry, streamMetaMap } from "../hooks/stream/store";
 import { persistProcessNodeTurns } from "./process-node-turn-cache";

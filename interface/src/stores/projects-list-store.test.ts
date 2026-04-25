@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import type { Project, AgentInstance } from "../types";
-import { emptyAgentPermissions } from "../types/permissions-wire";
+import type { Project, AgentInstance } from "../shared/types";
+import { emptyAgentPermissions } from "../shared/types/permissions-wire";
 import { queryClient } from "../lib/query-client";
 
 const { mockApi, mockSessionStorage, mockLocalStorage, mockOrgStoreState } = vi.hoisted(() => {

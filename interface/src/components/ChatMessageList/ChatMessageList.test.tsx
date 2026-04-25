@@ -1,7 +1,7 @@
 import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ChatMessageList } from "./ChatMessageList";
-import type { DisplaySessionEvent } from "../../types/stream";
+import type { DisplaySessionEvent } from "../../shared/types/stream";
 
 function makeMessage(id: string, content: string, role: DisplaySessionEvent["role"] = "assistant"): DisplaySessionEvent {
   return { id, role, content } as DisplaySessionEvent;

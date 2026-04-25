@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { ToolCallEntry } from "../../types/stream";
+import type { ToolCallEntry } from "../../shared/types/stream";
 import { FileBlock } from "./renderers/FileBlock";
 import { CommandBlock } from "./renderers/CommandBlock";
 import { SpecBlock } from "./renderers/SpecBlock";

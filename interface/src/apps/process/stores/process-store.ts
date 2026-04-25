@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Process, ProcessNode, ProcessNodeConnection, ProcessRun, ProcessEvent, ProcessFolder } from "../../../types";
+import type { Process, ProcessNode, ProcessNodeConnection, ProcessRun, ProcessEvent, ProcessFolder } from "../../../shared/types";
 import { processApi } from "../../../api/process";
 
 export const LAST_PROCESS_ID_KEY = "aura:lastProcessId";

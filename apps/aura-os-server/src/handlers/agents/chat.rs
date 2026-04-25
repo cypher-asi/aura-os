@@ -400,7 +400,7 @@ pub(crate) fn publish_user_message_event(
         "project_id": ctx.project_id,
         "project_agent_id": ctx.project_agent_id,
         // `agent_instance_id` is the field the UI wire parser
-        // (`parseAuraEvent` in interface/src/types/aura-events.ts) reads
+        // (`parseAuraEvent` in interface/src/shared/types/aura-events.ts) reads
         // to populate `AuraEventBase.agent_id`, which the hook filters on.
         "agent_instance_id": ctx.project_agent_id,
         // Org-level agent id (`agents.agent_id`), used by the UI

@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { api } from "../../api/client";
-import type { Task } from "../../types";
-import { EventType } from "../../types/aura-events";
+import type { Task } from "../../shared/types";
+import { EventType } from "../../shared/types/aura-events";
 import { useProjectActions } from "../../stores/project-action-store";
 import { useEventStore } from "../../stores/event-store/index";
 import {

@@ -1,5 +1,5 @@
 import { buildTimelineFromBlocks, buildTimelineWithToolCalls } from "./build-timeline";
-import type { ChatContentBlock, ProcessEventContentBlock } from "../types";
+import type { ChatContentBlock, ProcessEventContentBlock } from "../shared/types";
 
 describe("buildTimelineFromBlocks", () => {
   it("returns empty array for empty blocks and no thinking", () => {

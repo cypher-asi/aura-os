@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../../api/client";
-import type { Spec } from "../../types";
+import type { Spec } from "../../shared/types";
 import { useProjectActions } from "../../stores/project-action-store";
 import { compareSpecs } from "../../utils/collections";
 

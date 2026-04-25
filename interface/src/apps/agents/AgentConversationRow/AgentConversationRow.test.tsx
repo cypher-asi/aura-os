@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
-import type { Agent } from "../../../types";
-import { emptyAgentPermissions } from "../../../types/permissions-wire";
-import type { DisplaySessionEvent } from "../../../types/stream";
+import type { Agent } from "../../../shared/types";
+import { emptyAgentPermissions } from "../../../shared/types/permissions-wire";
+import type { DisplaySessionEvent } from "../../../shared/types/stream";
 
 vi.mock("../../../hooks/use-avatar-state", () => ({
   useAvatarState: () => ({ status: "offline", isLocal: true }),

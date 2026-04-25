@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { api } from "../api/client";
-import type { AgentInstance, Project, Spec, Task } from "../types";
+import type { AgentInstance, Project, Spec, Task } from "../shared/types";
 import { compareSpecs } from "../utils/collections";
 
 export interface ProjectLayoutBundle {

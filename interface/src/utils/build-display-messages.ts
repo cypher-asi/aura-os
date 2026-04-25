@@ -1,5 +1,5 @@
-import type { SessionEvent, ChatContentBlock } from "../types";
-import type { DisplaySessionEvent } from "../types/stream";
+import type { SessionEvent, ChatContentBlock } from "../shared/types";
+import type { DisplaySessionEvent } from "../shared/types/stream";
 import { extractToolCalls, extractArtifactRefs } from "./chat-history";
 import { buildTimelineFromBlocks } from "./build-timeline";
 

@@ -20,8 +20,8 @@ import { FactPreview, EventPreview, ProcedurePreview } from "./MemoryPreview";
 import { ProfileTab } from "./ProfileTab";
 import { ChatsTab } from "./ChatsTab";
 import { PermissionsTab } from "./PermissionsTab";
-import type { Agent } from "../../../types";
-import { isSuperAgent } from "../../../types/permissions";
+import type { Agent } from "../../../shared/types";
+import { isSuperAgent } from "../../../shared/types/permissions";
 import styles from "./AgentInfoPanel.module.css";
 
 interface AgentInfoPanelProps {

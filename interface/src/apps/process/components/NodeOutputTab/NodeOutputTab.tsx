@@ -6,7 +6,7 @@ import type {
   ProcessEvent,
   ProcessArtifact,
   ProcessRun,
-} from "../../../../types";
+} from "../../../../shared/types";
 import { processApi } from "../../../../api/process";
 import { useProcessStore } from "../../stores/process-store";
 import { useProcessSidekickStore } from "../../stores/process-sidekick-store";

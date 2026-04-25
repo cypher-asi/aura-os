@@ -1,4 +1,4 @@
-import type { ProcessNode, ProcessNodeConnection } from "../../../../types";
+import type { ProcessNode, ProcessNodeConnection } from "../../../../shared/types";
 import { countRunnableProcessNodes } from "./process-sidekick-utils";
 
 function makeNode(overrides: Partial<ProcessNode>): ProcessNode {

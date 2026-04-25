@@ -11,7 +11,7 @@ import { useSidekickStore } from "../../stores/sidekick-store";
 import { getLastAgent } from "../../utils/storage";
 import { useMobileSpecs } from "./useMobileSpecs";
 import { useMobileTasks } from "./useMobileTasks";
-import type { Task } from "../../types";
+import type { Task } from "../../shared/types";
 import styles from "./ProjectWorkView.module.css";
 
 const EMPTY_PROJECT_AGENTS: ReadonlyArray<{

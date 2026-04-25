@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import type { Project, AgentInstance } from "../../types";
+import type { Project, AgentInstance } from "../../shared/types";
 import type { useProjectListActions } from "../../hooks/use-project-list-actions";
 
 type Actions = ReturnType<typeof useProjectListActions>;

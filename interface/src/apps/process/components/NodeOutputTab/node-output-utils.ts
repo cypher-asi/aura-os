@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
-import type { ProcessEventContentBlock } from "../../../../types";
-import type { ToolCallEntry, TimelineItem } from "../../../../types/stream";
+import type { ProcessEventContentBlock } from "../../../../shared/types";
+import type { ToolCallEntry, TimelineItem } from "../../../../shared/types/stream";
 
 type TerminalProcessStatus = "completed" | "failed" | "skipped";
 

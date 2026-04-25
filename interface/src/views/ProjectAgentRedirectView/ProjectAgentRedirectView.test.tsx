@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import type { AgentInstance } from "../../types";
-import { emptyAgentPermissions } from "../../types/permissions-wire";
+import type { AgentInstance } from "../../shared/types";
+import { emptyAgentPermissions } from "../../shared/types/permissions-wire";
 
 const mockNavigate = vi.fn();
 const mockRefreshProjectAgents = vi.fn();

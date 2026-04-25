@@ -4,7 +4,7 @@ import {
   splitTextByToolMarkers,
   trimIncompleteToolMarkerTail,
 } from "./tool-markers";
-import type { TimelineItem } from "../types/stream";
+import type { TimelineItem } from "../shared/types/stream";
 
 describe("tool marker parsing", () => {
   it("normalizes read and list aliases", () => {

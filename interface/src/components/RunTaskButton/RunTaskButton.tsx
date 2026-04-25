@@ -10,7 +10,7 @@ import { useLoopActive } from "../../hooks/use-loop-active";
 import { useTaskStatus } from "../../hooks/use-task-status";
 import styles from "../Preview/Preview.module.css";
 
-export function RunTaskButton({ task }: { task: import("../../types").Task }) {
+export function RunTaskButton({ task }: { task: import("../../shared/types").Task }) {
   const ctx = useProjectActions();
   const { agentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;

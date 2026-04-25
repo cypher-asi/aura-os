@@ -2,7 +2,7 @@ import { useCallback, type KeyboardEventHandler, type MouseEventHandler } from "
 import { processApi } from "../../../../api/process";
 import { api } from "../../../../api/client";
 import { LAST_PROCESS_ID_KEY, useProcessStore } from "../../stores/process-store";
-import type { Project } from "../../../../types";
+import type { Project } from "../../../../shared/types";
 import { getApiErrorDetails, getApiErrorMessage } from "../../../../utils/api-errors";
 import type { CtxMenuState, ProcessRecord, ProjectRecord, RenameTargetExt } from "./process-list-types";
 

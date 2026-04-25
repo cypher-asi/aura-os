@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { AgentInstance, Project, Spec, Task } from "../types";
-import { emptyAgentPermissions } from "../types/permissions-wire";
+import type { AgentInstance, Project, Spec, Task } from "../shared/types";
+import { emptyAgentPermissions } from "../shared/types/permissions-wire";
 import {
   mergeSpecIntoProjectLayout,
   mergeTaskIntoProjectLayout,

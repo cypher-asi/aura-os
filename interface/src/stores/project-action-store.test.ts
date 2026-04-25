@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useProjectActionStore } from "./project-action-store";
 import type { ProjectActions } from "./project-action-store";
-import type { Project } from "../types";
+import type { Project } from "../shared/types";
 
 const mockProject: Project = {
   project_id: "p1",

@@ -1,6 +1,6 @@
 import type React from "react";
 import { render, screen } from "../../test/render";
-import type { Agent } from "../../types";
+import type { Agent } from "../../shared/types";
 import { AgentSelectorModal } from "./AgentSelectorModal";
 
 const mockUseAuraCapabilities = vi.fn();

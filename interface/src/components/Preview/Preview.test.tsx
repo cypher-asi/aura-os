@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { Spec, Task, Session, SpecId, TaskId, ProjectId, SessionId, TaskStatus } from "../../types";
+import type { Spec, Task, Session, SpecId, TaskId, ProjectId, SessionId, TaskStatus } from "../../shared/types";
 import type { PreviewItem } from "../../stores/sidekick-store";
 
 vi.mock("@cypher-asi/zui", () => ({

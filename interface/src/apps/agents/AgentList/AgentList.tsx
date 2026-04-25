@@ -29,8 +29,8 @@ import { createAgentChatHandoffState } from "../../../utils/chat-handoff";
 import { standaloneAgentHandoffTarget } from "../../../utils/chat-handoff";
 import { getApiErrorDetails, getApiErrorMessage } from "../../../utils/api-errors";
 
-import type { Agent } from "../../../types";
-import { isSuperAgent as isSuperAgentByPerms } from "../../../types/permissions";
+import type { Agent } from "../../../shared/types";
+import { isSuperAgent as isSuperAgentByPerms } from "../../../shared/types/permissions";
 import styles from "./AgentList.module.css";
 
 function buildAgentMenuItems(

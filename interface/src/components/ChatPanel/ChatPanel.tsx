@@ -9,9 +9,9 @@ import { OverlayScrollbar } from "../OverlayScrollbar";
 import { ChatStreamingIndicator } from "./ChatStreamingIndicator";
 import { useChatPanelState } from "./useChatPanelState";
 import type { ChatAttachment } from "../../api/streams";
-import type { Project } from "../../types";
+import type { Project } from "../../shared/types";
 import type { GenerationMode } from "../../constants/models";
-import type { DisplaySessionEvent } from "../../types/stream";
+import type { DisplaySessionEvent } from "../../shared/types/stream";
 import type { ContextUsageEntry } from "../../stores/context-usage-store";
 import styles from "./ChatPanel.module.css";
 

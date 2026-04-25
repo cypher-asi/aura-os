@@ -19,7 +19,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useSelectedAgent } from "../stores";
 import { useAuth } from "../../../stores/auth-store";
 import { SidekickTabBar, type TabItem } from "../../../components/SidekickTabBar";
-import type { Agent } from "../../../types";
+import type { Agent } from "../../../shared/types";
 
 const TAB_ICONS: TabItem[] = [
   { id: "profile", icon: <User size={16} />, title: "Profile" },

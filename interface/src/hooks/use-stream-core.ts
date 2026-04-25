@@ -4,7 +4,7 @@ import type {
   DisplaySessionEvent,
   StreamRefs as StreamRefsType,
   StreamSetters,
-} from "../types/stream";
+} from "../shared/types/stream";
 import {
   storeKey,
   ensureEntry,
@@ -31,7 +31,7 @@ export type {
   TimelineItem,
   StreamRefs,
   StreamSetters,
-} from "../types/stream";
+} from "../shared/types/stream";
 
 export {
   snapshotThinking,

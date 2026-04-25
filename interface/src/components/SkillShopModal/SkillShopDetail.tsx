@@ -6,7 +6,7 @@ import remarkGfm from "remark-gfm";
 import { SkillIcon } from "./SkillIcon";
 import { SecurityBadge } from "./SecurityBadge";
 import { apiFetch, apiFetchText } from "../../api/core";
-import type { SkillShopCatalogEntry } from "../../types";
+import type { SkillShopCatalogEntry } from "../../shared/types";
 import styles from "./SkillShopDetail.module.css";
 import mdStyles from "../Preview/Preview.module.css";
 

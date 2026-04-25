@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import { api } from "../api/client";
-import type { CreditBalance, CreditTransaction, BillingAccount, CheckoutSessionResponse } from "../types";
+import type { CreditBalance, CreditTransaction, BillingAccount, CheckoutSessionResponse } from "../shared/types";
 
 interface BillingState {
   balance: CreditBalance | null;

@@ -6,7 +6,7 @@ import {
   isLoopActivityActive,
   type LoopActivityPayload,
   type LoopIdPayload,
-} from "../types/aura-events";
+} from "../shared/types/aura-events";
 
 /**
  * Single source of truth for per-loop activity state in the UI.

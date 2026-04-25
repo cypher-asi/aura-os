@@ -3,13 +3,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useProcessStore } from "../../stores/process-store";
 import { useProcessSidekickStore } from "../../stores/process-sidekick-store";
 import { useEventStore } from "../../../../stores/event-store/index";
-import { EventType } from "../../../../types/aura-events";
+import { EventType } from "../../../../shared/types/aura-events";
 import { processApi } from "../../../../api/process";
 import type {
   ProcessArtifact,
   ProcessEvent,
   ProcessRun,
-} from "../../../../types";
+} from "../../../../shared/types";
 import {
   EMPTY_NODES,
 } from "./process-sidekick-utils";

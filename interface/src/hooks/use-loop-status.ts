@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { api } from "../api/client";
 import { useEventStore } from "../stores/event-store/index";
-import { EventType, type AuraEvent } from "../types/aura-events";
+import { EventType, type AuraEvent } from "../shared/types/aura-events";
 
 export function useLoopStatus(
   currentAgentInstanceId?: string,

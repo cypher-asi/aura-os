@@ -4,7 +4,7 @@ import type { BadgeVariant } from "@cypher-asi/zui";
 import { FolderOpen, Bot, Activity } from "lucide-react";
 import { api } from "../../api/client";
 import { useProjectsListStore } from "../../stores/projects-list-store";
-import type { Agent, AgentOrchestration } from "../../types";
+import type { Agent, AgentOrchestration } from "../../shared/types";
 import styles from "./AgentOrchestrationDashboard.module.css";
 
 interface AgentOrchestrationDashboardProps {

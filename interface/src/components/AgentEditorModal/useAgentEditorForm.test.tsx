@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { api } from "../../api/client";
-import type { Agent } from "../../types";
-import { emptyAgentPermissions } from "../../types/permissions-wire";
+import type { Agent } from "../../shared/types";
+import { emptyAgentPermissions } from "../../shared/types/permissions-wire";
 import { useAgentEditorForm } from "./useAgentEditorForm";
 
 const mockUseAuraCapabilities = vi.fn();

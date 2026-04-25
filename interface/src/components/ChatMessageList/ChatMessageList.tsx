@@ -7,7 +7,7 @@ import {
 import { useShallow } from "zustand/react/shallow";
 import { MessageBubble } from "../MessageBubble";
 import { StreamingBubble } from "../StreamingBubble";
-import type { DisplaySessionEvent } from "../../types/stream";
+import type { DisplaySessionEvent } from "../../shared/types/stream";
 
 import { useStreamStore } from "../../hooks/stream/store";
 

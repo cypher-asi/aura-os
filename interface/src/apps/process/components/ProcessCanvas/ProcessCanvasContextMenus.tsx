@@ -3,8 +3,8 @@ import { createPortal } from "react-dom";
 import type { Edge } from "@xyflow/react";
 import { Trash2, ClipboardPaste } from "lucide-react";
 import { Menu, ModalConfirm } from "@cypher-asi/zui";
-import type { ProcessNodeType } from "../../../../types/enums";
-import type { ProcessNode, ProcessRun } from "../../../../types";
+import type { ProcessNodeType } from "../../../../shared/types/enums";
+import type { ProcessNode, ProcessRun } from "../../../../shared/types";
 import {
   nodeMenuItems,
   groupCtxMenuItems,

@@ -1,7 +1,7 @@
 import { renderHook, act } from "@testing-library/react";
 import { useStreamCore } from "./use-stream-core";
 import { useStreamStore, streamMetaMap } from "./stream/store";
-import type { DisplaySessionEvent } from "../types/stream";
+import type { DisplaySessionEvent } from "../shared/types/stream";
 
 describe("useStreamCore", () => {
   beforeEach(() => {

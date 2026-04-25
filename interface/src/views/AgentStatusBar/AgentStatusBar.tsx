@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { ProjectId, Session } from "../../types";
+import type { ProjectId, Session } from "../../shared/types";
 import { StatusBadge } from "../../components/StatusBadge";
 import { Panel, Badge, Text, Item } from "@cypher-asi/zui";
 import { ChevronDown } from "lucide-react";

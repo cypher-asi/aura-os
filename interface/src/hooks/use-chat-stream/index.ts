@@ -17,4 +17,4 @@ export type {
   ArtifactRef,
   DisplaySessionEvent,
   ToolCallEntry,
-} from "../../types/stream";
+} from "../../shared/types/stream";

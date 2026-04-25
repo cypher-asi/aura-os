@@ -61,7 +61,7 @@ function validateSubmit(
   selectedOrbitRepo: OrbitRepo | null,
   orbitOwner: string | null,
   resolvedOrbitRepo: string,
-  existingProjects: import("../types").Project[],
+  existingProjects: import("../shared/types").Project[],
 ): string | null {
   if (!name.trim()) return "name";
   if (orbitRepoMode === "existing" && !selectedOrbitRepo) return "Please select an existing repo.";
@@ -115,7 +115,7 @@ function buildOrbitFields(
 export function useNewProjectForm(
   isOpen: boolean,
   onClose: () => void,
-  onCreated: (project: import("../types").Project) => void,
+  onCreated: (project: import("../shared/types").Project) => void,
 ): NewProjectFormState {
   const activeOrg = useOrgStore((s) => s.activeOrg);
   const orgLoading = useOrgStore((s) => s.isLoading);

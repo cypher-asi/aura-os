@@ -1,5 +1,5 @@
 import { Modal, Button } from "@cypher-asi/zui";
-import type { Project } from "../../types";
+import type { Project } from "../../shared/types";
 import styles from "../ProjectList/ProjectList.module.css";
 
 interface DeleteProjectModalProps {

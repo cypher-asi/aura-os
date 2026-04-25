@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { api } from "../api/client";
-import type { RemoteVmState } from "../types";
+import type { RemoteVmState } from "../shared/types";
 import { useEventStore } from "../stores/event-store/index";
-import { EventType } from "../types/aura-events";
+import { EventType } from "../shared/types/aura-events";
 
 const POLL_INTERVAL_MS = 30_000;
 

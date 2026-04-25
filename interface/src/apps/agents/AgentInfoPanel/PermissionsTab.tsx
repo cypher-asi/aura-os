@@ -10,13 +10,13 @@ import { getApiErrorMessage } from "../../../utils/api-errors";
 import { useAgentStore } from "../stores";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
 import { useOrgStore } from "../../../stores/org-store";
-import type { Agent } from "../../../types";
+import type { Agent } from "../../../shared/types";
 import {
   emptyAgentPermissions,
   type AgentPermissions,
   type AgentScope,
   type Capability,
-} from "../../../types/permissions-wire";
+} from "../../../shared/types/permissions-wire";
 import {
   CAPABILITY_LABELS,
   GLOBAL_CAPABILITY_TYPES,
@@ -24,7 +24,7 @@ import {
   hasUniverseScope,
   isProjectScopedCapabilityType,
   isSuperAgent,
-} from "../../../types/permissions";
+} from "../../../shared/types/permissions";
 import styles from "./AgentInfoPanel.module.css";
 
 interface PermissionsTabProps {

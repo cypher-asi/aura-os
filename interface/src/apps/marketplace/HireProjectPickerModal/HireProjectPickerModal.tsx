@@ -4,7 +4,7 @@ import { FolderOpen } from "lucide-react";
 import { api } from "../../../api/client";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
 import { EmptyState } from "../../../components/EmptyState";
-import type { Agent, AgentInstance, Project } from "../../../types";
+import type { Agent, AgentInstance, Project } from "../../../shared/types";
 import { getApiErrorMessage } from "../../../utils/api-errors";
 import styles from "./HireProjectPickerModal.module.css";
 

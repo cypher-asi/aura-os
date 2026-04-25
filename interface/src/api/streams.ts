@@ -2,15 +2,15 @@ import type {
   ProjectId,
   Spec,
   Task,
-} from "../types";
-import type { AuraEvent } from "../types/aura-events";
-import { EventType, isValidEventType, parseAuraEvent } from "../types/aura-events";
+} from "../shared/types";
+import type { AuraEvent } from "../shared/types/aura-events";
+import { EventType, isValidEventType, parseAuraEvent } from "../shared/types/aura-events";
 import { handleEngineEvent } from "../stores/event-store/engine-event-handlers";
 import type { SSECallbacks } from "./sse";
 import { streamSSE } from "./sse";
 
-export type { ChatAttachment } from "../types/aura-events";
-import type { ChatAttachment } from "../types/aura-events";
+export type { ChatAttachment } from "../shared/types/aura-events";
+import type { ChatAttachment } from "../shared/types/aura-events";
 
 const BASE_URL = "";
 
