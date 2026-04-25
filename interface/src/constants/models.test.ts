@@ -81,10 +81,6 @@ describe("model persistence", () => {
     );
   });
 
-  it("normalizes raw GPT-5.5 to the Aura-managed chat model", () => {
-    expect(loadPersistedModel("default", "gpt-5.5")).toBe("aura-gpt-5-5");
-  });
-
   it("ignores an agent value that isn't valid for the adapter", () => {
     persistModel("codex", "codex", "agent-codex");
     // The codex model id is invalid for the default adapter's model list,

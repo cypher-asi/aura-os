@@ -340,6 +340,7 @@ fn model_provider_env_var(provider: &str) -> Option<&'static str> {
         "xai" => Some("XAI_API_KEY"),
         "groq" => Some("GROQ_API_KEY"),
         "openrouter" => Some("OPENROUTER_API_KEY"),
+        "deepseek" => Some("DEEPSEEK_API_KEY"),
         "together" => Some("TOGETHER_API_KEY"),
         "mistral" => Some("MISTRAL_API_KEY"),
         "perplexity" => Some("PERPLEXITY_API_KEY"),
@@ -355,6 +356,7 @@ fn opencode_default_model(provider: &str) -> Option<&'static str> {
         "xai" => Some("xai/grok-4"),
         "groq" => Some("groq/llama-3.3-70b-versatile"),
         "openrouter" => Some("openrouter/openai/gpt-4.1-mini"),
+        "deepseek" => Some("deepseek/deepseek-v4-flash"),
         "together" => Some("together/meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo"),
         "mistral" => Some("mistral/mistral-large-latest"),
         "perplexity" => Some("perplexity/sonar-pro"),
@@ -544,8 +546,12 @@ fn harness_upstream_provider_family(model: Option<&str>) -> Option<String> {
 
     if model.starts_with("aura-claude") || model.starts_with("claude") {
         Some("anthropic".to_string())
+    } else if model.starts_with("aura-deepseek-v4")
+        || model.starts_with("deepseek-v4")
+        || model.starts_with("deepseek/deepseek-v4")
+    {
+        Some("deepseek".to_string())
     } else if model.starts_with("aura-kimi")
-        || model.starts_with("aura-deepseek")
         || model.starts_with("aura-oss")
         || model.starts_with("aura-qwen")
     {
@@ -2374,6 +2380,14 @@ mod tests {
         assert_eq!(
             harness_upstream_provider_family(Some("aura-kimi-k2-5")),
             Some("fireworks".to_string())
+        );
+        assert_eq!(
+            harness_upstream_provider_family(Some("aura-deepseek-v4-pro")),
+            Some("deepseek".to_string())
+        );
+        assert_eq!(
+            harness_upstream_provider_family(Some("deepseek/deepseek-v4-flash")),
+            Some("deepseek".to_string())
         );
         assert_eq!(
             harness_upstream_provider_family(Some("unknown-model")),

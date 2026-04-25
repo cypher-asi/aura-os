@@ -1164,6 +1164,10 @@ fn extract_u64(value: &serde_json::Value, key: &str) -> Option<u64> {
     value.get(key).and_then(serde_json::Value::as_u64)
 }
 
+fn extract_first_u64(value: &serde_json::Value, keys: &[&str]) -> Option<u64> {
+    keys.iter().find_map(|key| extract_u64(value, key))
+}
+
 fn extract_string(value: &serde_json::Value, key: &str) -> Option<String> {
     value
         .get(key)
@@ -1175,15 +1179,22 @@ fn extract_string(value: &serde_json::Value, key: &str) -> Option<String> {
 
 fn extract_turn_usage(event: &serde_json::Value) -> Option<TurnUsageSnapshot> {
     let usage = usage_payload(event);
-    let input_tokens = extract_u64(usage, "input_tokens")?;
-    let output_tokens = extract_u64(usage, "output_tokens")?;
+    let input_tokens = extract_first_u64(usage, &["input_tokens", "prompt_tokens"])?;
+    let output_tokens = extract_first_u64(usage, &["output_tokens", "completion_tokens"])?;
 
     Some(TurnUsageSnapshot {
         input_tokens,
         output_tokens,
-        cache_creation_input_tokens: extract_u64(usage, "cache_creation_input_tokens")
-            .unwrap_or_default(),
-        cache_read_input_tokens: extract_u64(usage, "cache_read_input_tokens").unwrap_or_default(),
+        cache_creation_input_tokens: extract_first_u64(
+            usage,
+            &["cache_creation_input_tokens", "prompt_cache_miss_tokens"],
+        )
+        .unwrap_or_default(),
+        cache_read_input_tokens: extract_first_u64(
+            usage,
+            &["cache_read_input_tokens", "prompt_cache_hit_tokens"],
+        )
+        .unwrap_or_default(),
         cumulative_input_tokens: extract_u64(usage, "cumulative_input_tokens"),
         cumulative_output_tokens: extract_u64(usage, "cumulative_output_tokens"),
         cumulative_cache_creation_input_tokens: extract_u64(
@@ -1247,15 +1258,6 @@ struct ModelRates {
 
 fn default_fee_schedule() -> [(&'static str, ModelRates); 15] {
     [
-        (
-            "gpt-5.5",
-            ModelRates {
-                input: 5.0,
-                output: 30.0,
-                cache_write: 5.0,
-                cache_read: 0.5,
-            },
-        ),
         (
             "gpt-5.4",
             ModelRates {
@@ -1338,21 +1340,30 @@ fn default_fee_schedule() -> [(&'static str, ModelRates); 15] {
             },
         ),
         (
-            "deepseek-v3p2",
-            ModelRates {
-                input: 0.56,
-                output: 1.68,
-                cache_write: 0.56,
-                cache_read: 0.28,
-            },
-        ),
-        (
             "gpt-oss-120b",
             ModelRates {
                 input: 0.15,
                 output: 0.6,
                 cache_write: 0.15,
                 cache_read: 0.01,
+            },
+        ),
+        (
+            "deepseek-v4-pro",
+            ModelRates {
+                input: 1.74,
+                output: 3.48,
+                cache_write: 1.74,
+                cache_read: 0.145,
+            },
+        ),
+        (
+            "deepseek-v4-flash",
+            ModelRates {
+                input: 0.14,
+                output: 0.28,
+                cache_write: 0.14,
+                cache_read: 0.028,
             },
         ),
         (
@@ -1418,6 +1429,9 @@ fn normalize_pricing_model_id(model: &str) -> String {
     if let Some(rest) = normalized.strip_prefix("openai/") {
         return rest.to_string();
     }
+    if let Some(rest) = normalized.strip_prefix("deepseek/") {
+        return rest.to_string();
+    }
     if let Some(rest) = normalized.strip_prefix("accounts/fireworks/models/") {
         return rest.to_string();
     }
@@ -1426,13 +1440,13 @@ fn normalize_pricing_model_id(model: &str) -> String {
     }
 
     for (aura_id, model_id) in [
-        ("aura-gpt-5-5", "gpt-5.5"),
         ("aura-gpt-5-4", "gpt-5.4"),
         ("aura-gpt-5-4-mini", "gpt-5.4-mini"),
         ("aura-gpt-5-4-nano", "gpt-5.4-nano"),
         ("aura-kimi-k2-6", "kimi-k2p6"),
         ("aura-kimi-k2-5", "kimi-k2p5"),
-        ("aura-deepseek-v3-2", "deepseek-v3p2"),
+        ("aura-deepseek-v4-pro", "deepseek-v4-pro"),
+        ("aura-deepseek-v4-flash", "deepseek-v4-flash"),
         ("aura-oss-120b", "gpt-oss-120b"),
     ] {
         if normalized == aura_id {
@@ -1451,10 +1465,24 @@ fn estimate_usage_cost_usd(
     cache_read_input_tokens: u64,
 ) -> f64 {
     let rates = lookup_model_rates(model);
-    input_tokens as f64 * rates.input / 1_000_000.0
+    let cache_input_tokens = cache_creation_input_tokens.saturating_add(cache_read_input_tokens);
+    let billable_input_tokens =
+        if deepseek_usage_includes_cache_tokens_in_input(model) && cache_input_tokens > 0 {
+            input_tokens.saturating_sub(cache_input_tokens)
+        } else {
+            input_tokens
+        };
+    billable_input_tokens as f64 * rates.input / 1_000_000.0
         + output_tokens as f64 * rates.output / 1_000_000.0
         + cache_creation_input_tokens as f64 * rates.cache_write / 1_000_000.0
         + cache_read_input_tokens as f64 * rates.cache_read / 1_000_000.0
+}
+
+fn deepseek_usage_includes_cache_tokens_in_input(model: &str) -> bool {
+    matches!(
+        normalize_pricing_model_id(model).as_str(),
+        "deepseek-v4-pro" | "deepseek-v4-flash" | "deepseek-chat" | "deepseek-reasoner"
+    )
 }
 
 #[derive(Clone)]
@@ -4786,6 +4814,29 @@ mod tests {
     }
 
     #[test]
+    fn extracts_deepseek_turn_usage_aliases() {
+        let event = serde_json::json!({
+            "type": "assistant_message_end",
+            "usage": {
+                "prompt_tokens": 1200,
+                "completion_tokens": 800,
+                "prompt_cache_miss_tokens": 300,
+                "prompt_cache_hit_tokens": 900,
+                "model": "deepseek-v4-pro",
+                "provider": "deepseek"
+            }
+        });
+
+        let usage = extract_turn_usage(&event).expect("usage should parse");
+        assert_eq!(usage.input_tokens, 1200);
+        assert_eq!(usage.output_tokens, 800);
+        assert_eq!(usage.cache_creation_input_tokens, 300);
+        assert_eq!(usage.cache_read_input_tokens, 900);
+        assert_eq!(usage.model.as_deref(), Some("deepseek-v4-pro"));
+        assert_eq!(usage.provider.as_deref(), Some("deepseek"));
+    }
+
+    #[test]
     fn extracts_files_changed_from_assistant_message_end() {
         let event = serde_json::json!({
             "type": "assistant_message_end",
@@ -4867,11 +4918,6 @@ mod tests {
                 2.95,
             ),
             (
-                "aura-deepseek-v3-2",
-                "accounts/fireworks/models/deepseek-v3p2",
-                1.4,
-            ),
-            (
                 "aura-oss-120b",
                 "accounts/fireworks/models/gpt-oss-120b",
                 0.45,
@@ -4892,10 +4938,18 @@ mod tests {
     }
 
     #[test]
-    fn estimate_usage_cost_matches_gpt_5_5_rates() {
-        let cost = estimate_usage_cost_usd("aura-gpt-5-5", 1_000_000, 500_000, 0, 1_000_000);
+    fn estimate_usage_cost_matches_deepseek_v4_model_ids() {
+        let pro = estimate_usage_cost_usd("aura-deepseek-v4-pro", 1_000_000, 500_000, 0, 1_000_000);
+        let flash = estimate_usage_cost_usd(
+            "deepseek/deepseek-v4-flash",
+            1_000_000,
+            500_000,
+            0,
+            1_000_000,
+        );
 
-        assert!((cost - 20.5).abs() < 1e-9);
+        assert!((pro - 1.885).abs() < 1e-9);
+        assert!((flash - 0.168).abs() < 1e-9);
     }
 
     #[test]

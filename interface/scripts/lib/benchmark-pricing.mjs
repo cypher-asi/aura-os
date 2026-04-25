@@ -80,12 +80,6 @@ const ANTHROPIC_MODEL_PRICING_PER_MTOK = {
 };
 
 const OPENAI_MODEL_PRICING_PER_MTOK = {
-  "gpt-5.5": {
-    input: 5,
-    output: 30,
-    cacheWrite: 5,
-    cacheRead: 0.5,
-  },
   "gpt-5.4": {
     input: 2.5,
     output: 15,
@@ -155,12 +149,6 @@ const FIREWORKS_MODEL_PRICING_PER_MTOK = {
     cacheWrite: 0.6,
     cacheRead: 0.3,
   },
-  "deepseek-v3p2": {
-    input: 0.56,
-    output: 1.68,
-    cacheWrite: 0.56,
-    cacheRead: 0.28,
-  },
   "gpt-oss-120b": {
     input: 0.15,
     output: 0.6,
@@ -169,9 +157,40 @@ const FIREWORKS_MODEL_PRICING_PER_MTOK = {
   },
 };
 
+const DEEPSEEK_MODEL_PRICING_PER_MTOK = {
+  "deepseek-v4-pro": {
+    input: 1.74,
+    output: 3.48,
+    cacheWrite: 1.74,
+    cacheRead: 0.145,
+  },
+  "deepseek-v4-flash": {
+    input: 0.14,
+    output: 0.28,
+    cacheWrite: 0.14,
+    cacheRead: 0.028,
+  },
+  "deepseek-chat": {
+    input: 0.14,
+    output: 0.28,
+    cacheWrite: 0.14,
+    cacheRead: 0.028,
+  },
+  "deepseek-reasoner": {
+    input: 0.14,
+    output: 0.28,
+    cacheWrite: 0.14,
+    cacheRead: 0.028,
+  },
+};
+
 function normalizeModelKey(model) {
   const modelKey = typeof model === "string" ? model.trim().toLowerCase() : "";
-  const unprefixed = modelKey.startsWith("openai/") ? modelKey.slice("openai/".length) : modelKey;
+  const unprefixed = modelKey.startsWith("openai/")
+    ? modelKey.slice("openai/".length)
+    : modelKey.startsWith("deepseek/")
+      ? modelKey.slice("deepseek/".length)
+      : modelKey;
   const fireworksModel = unprefixed.match(/^accounts\/fireworks\/models\/(.+)$/);
   if (fireworksModel) return fireworksModel[1];
   const fireworksRouter = unprefixed.match(/^accounts\/fireworks\/routers\/(.+)$/);
@@ -179,10 +198,14 @@ function normalizeModelKey(model) {
   const auraFireworksModels = {
     "aura-kimi-k2-6": "kimi-k2p6",
     "aura-kimi-k2-5": "kimi-k2p5",
-    "aura-deepseek-v3-2": "deepseek-v3p2",
     "aura-oss-120b": "gpt-oss-120b",
   };
   if (auraFireworksModels[unprefixed]) return auraFireworksModels[unprefixed];
+  const auraDeepSeekModels = {
+    "aura-deepseek-v4-pro": "deepseek-v4-pro",
+    "aura-deepseek-v4-flash": "deepseek-v4-flash",
+  };
+  if (auraDeepSeekModels[unprefixed]) return auraDeepSeekModels[unprefixed];
   const auraGptMatch = unprefixed.match(/^aura-gpt-(\d+)-(\d+)(.*)$/);
   if (auraGptMatch) {
     return `gpt-${auraGptMatch[1]}.${auraGptMatch[2]}${auraGptMatch[3]}`;
@@ -194,8 +217,10 @@ function inferProvider(model, provider) {
   if (typeof provider === "string" && provider.trim()) return provider.trim().toLowerCase();
   const modelKey = normalizeModelKey(model);
   if (modelKey.startsWith("claude")) return "anthropic";
+  if (modelKey.startsWith("deepseek-v4") || modelKey === "deepseek-chat" || modelKey === "deepseek-reasoner") {
+    return "deepseek";
+  }
   if (
-    modelKey.startsWith("deepseek") ||
     modelKey.startsWith("kimi") ||
     modelKey.startsWith("gpt-oss")
   ) {
@@ -276,6 +301,29 @@ function findFireworksPricing(modelKey) {
   };
 }
 
+function findDeepSeekPricing(modelKey) {
+  const exactMatch = DEEPSEEK_MODEL_PRICING_PER_MTOK[modelKey];
+  if (exactMatch) {
+    return {
+      model: modelKey,
+      source: "deepseek-pricing",
+      ...exactMatch,
+    };
+  }
+
+  const partialEntry = Object.entries(DEEPSEEK_MODEL_PRICING_PER_MTOK).find(([candidate]) =>
+    modelKey.startsWith(candidate) || candidate.startsWith(modelKey),
+  );
+  if (!partialEntry) return null;
+
+  const [matchedModel, pricing] = partialEntry;
+  return {
+    model: matchedModel,
+    source: "deepseek-pricing-family-match",
+    ...pricing,
+  };
+}
+
 export function resolvePricing(model, provider) {
   const inferredProvider = inferProvider(model, provider);
   const modelKey = normalizeModelKey(model);
@@ -309,6 +357,16 @@ export function resolvePricing(model, provider) {
     }
   }
 
+  if (inferredProvider === "deepseek") {
+    const pricing = findDeepSeekPricing(modelKey);
+    if (pricing) {
+      return {
+        provider: inferredProvider,
+        ...pricing,
+      };
+    }
+  }
+
   return {
     provider: inferredProvider ?? "unknown",
     model: modelKey,
@@ -322,9 +380,15 @@ export function resolvePricing(model, provider) {
 
 export function calculateEstimatedCostUsd(usage) {
   const pricing = resolvePricing(usage.model, usage.provider);
+  const cacheInputTokens =
+    usage.cacheCreationInputTokens + usage.cacheReadInputTokens;
+  const inputTokens =
+    pricing.provider === "deepseek" && cacheInputTokens > 0
+      ? Math.max(0, usage.inputTokens - cacheInputTokens)
+      : usage.inputTokens;
 
   const estimatedCostUsd =
-    (usage.inputTokens / 1_000_000) * pricing.input
+    (inputTokens / 1_000_000) * pricing.input
     + (usage.outputTokens / 1_000_000) * pricing.output
     + (usage.cacheCreationInputTokens / 1_000_000) * pricing.cacheWrite
     + (usage.cacheReadInputTokens / 1_000_000) * pricing.cacheRead;
