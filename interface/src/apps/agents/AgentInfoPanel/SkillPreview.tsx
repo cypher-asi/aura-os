@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Text, Badge } from "@cypher-asi/zui";
-import { Loader2, FolderOpen, Terminal } from "lucide-react";
+import { Loader2, FolderOpen, SquareTerminal } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { api } from "../../../api/client";
@@ -104,7 +104,7 @@ export function SkillPreview({ skill: initial, installation }: SkillPreviewProps
             {permCommands.length > 0 && (
               <div className={previewStyles.taskField}>
                 <span className={previewStyles.fieldLabel} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <Terminal size={12} /> Commands
+                  <SquareTerminal size={12} /> Commands
                 </span>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                   {permCommands.map((c) => (

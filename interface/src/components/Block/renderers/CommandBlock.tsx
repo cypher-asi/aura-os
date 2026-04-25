@@ -1,4 +1,4 @@
-import { Terminal } from "lucide-react";
+import { SquareTerminal } from "lucide-react";
 import type { ToolCallEntry } from "../../../shared/types/stream";
 import { decodeCapturedOutput } from "../../../shared/utils/format";
 import { Block } from "../Block";
@@ -25,7 +25,7 @@ export function CommandBlock({ entry, defaultExpanded }: CommandBlockProps) {
 
   return (
     <Block
-      icon={<Terminal size={12} />}
+      icon={<SquareTerminal size={12} />}
       title={
         <>
           <span className={styles.cmdPrompt}>$</span>

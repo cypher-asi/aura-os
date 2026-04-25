@@ -2,7 +2,7 @@ import { useMemo, forwardRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { FileText, Search, Terminal, Trash2, FolderOpen, CheckCircle2, XCircle, Wrench } from "lucide-react";
+import { FileText, Search, SquareTerminal, Trash2, FolderOpen, CheckCircle2, XCircle, Wrench } from "lucide-react";
 import { agenticToolLabel } from "../../utils/derive-activity";
 import styles from "./FormattedRawOutput.module.css";
 
@@ -49,7 +49,7 @@ function toolIcon(name: string) {
     case "delete_file": return <Trash2 size={size} />;
     case "list_files": return <FolderOpen size={size} />;
     case "search_code": return <Search size={size} />;
-    case "run_command": return <Terminal size={size} />;
+    case "run_command": return <SquareTerminal size={size} />;
     default: return <Wrench size={size} />;
   }
 }

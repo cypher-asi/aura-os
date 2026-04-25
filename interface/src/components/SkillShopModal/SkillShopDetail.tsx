@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Text, Badge, Button } from "@cypher-asi/zui";
-import { ArrowLeft, Check, Loader2, Terminal, Key, Settings, FileText, FolderOpen, Wrench, Plus, X } from "lucide-react";
+import { ArrowLeft, Check, Loader2, SquareTerminal, Key, Settings, FileText, FolderOpen, Wrench, Plus, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { SkillIcon } from "./SkillIcon";
@@ -230,7 +230,7 @@ export function SkillShopDetail({
             <div className={styles.detailRequirements}>
               {approvedCommands.map((c) => (
                 <div key={c} className={styles.requirementItem}>
-                  <Terminal size={12} />
+                  <SquareTerminal size={12} />
                   <Text size="sm" style={{ flex: 1 }}>{c}</Text>
                   <button type="button" className={styles.permRemoveBtn} onClick={() => removeCommand(c)} title="Remove">
                     <X size={10} />
@@ -275,7 +275,7 @@ export function SkillShopDetail({
             <div className={styles.detailRequirements}>
               {entry.requires.bins?.map((bin) => (
                 <div key={bin} className={styles.requirementItem}>
-                  <Terminal size={12} />
+                  <SquareTerminal size={12} />
                   <Text size="sm">{bin}</Text>
                   <Badge variant="pending" style={{ fontSize: 9 }}>binary</Badge>
                 </div>

@@ -12,7 +12,7 @@ import {
   FolderClosed,
   Play,
   Plus,
-  Terminal,
+  SquareTerminal,
   Globe,
 } from "lucide-react";
 import { useSidekickStore, type SidekickTab } from "../../stores/sidekick-store";
@@ -72,7 +72,7 @@ export function SidekickTaskbar() {
   const handleArchive = ctx?.handleArchive;
   const tabs = useMemo<TabItem[]>(
     () => [
-      { id: "terminal", icon: <Terminal size={16} />, title: "Terminal" },
+      { id: "terminal", icon: <SquareTerminal size={16} />, title: "Terminal" },
       { id: "browser", icon: <Globe size={16} />, title: "Browser" },
       { id: "specs", icon: <File size={16} />, title: "Specs" },
       {

@@ -18,7 +18,7 @@ import {
   ShoppingCart,
   Sparkles,
   Target,
-  Terminal,
+  SquareTerminal,
   Truck,
   UserCog,
 } from "lucide-react";
@@ -45,7 +45,7 @@ export const MARKETPLACE_EXPERTISE = [
   { id: "data-analysis", label: "Data Analysis", icon: LineChart },
   { id: "writing", label: "Writing", icon: FileText },
   { id: "social-media", label: "Social Media", icon: Share2 },
-  { id: "devops", label: "DevOps", icon: Terminal },
+  { id: "devops", label: "DevOps", icon: SquareTerminal },
   { id: "ml-ai", label: "ML / AI", icon: Sparkles },
   { id: "product-management", label: "Product Management", icon: Briefcase },
   { id: "operations", label: "Operations", icon: Settings },
