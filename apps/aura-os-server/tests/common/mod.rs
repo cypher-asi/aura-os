@@ -291,6 +291,9 @@ pub fn build_test_app_from_store(
     let agent_event_listener = Arc::new(aura_os_server::agent_events::AgentEventListener::new(100));
     agent_event_listener.spawn(event_broadcast.subscribe());
 
+    let event_hub = aura_os_events::EventHub::new();
+    let loop_registry = aura_os_loops::LoopRegistry::new(event_hub.clone());
+
     let loop_log = Arc::new(aura_os_server::loop_log::LoopLogWriter::new(
         data_dir.join("loop_logs"),
     ));
@@ -307,10 +310,11 @@ pub fn build_test_app_from_store(
         session_service,
         local_harness,
         swarm_harness,
-        harness_sessions: Arc::new(Mutex::new(HashMap::new())),
         chat_sessions: Arc::new(Mutex::new(HashMap::new())),
         credit_cache: Arc::new(Mutex::new(HashMap::new())),
         event_broadcast,
+        event_hub,
+        loop_registry,
         terminal_manager: Arc::new(aura_os_terminal::TerminalManager::new()),
         browser_manager: Arc::new(aura_os_browser::BrowserManager::new(
             aura_os_browser::BrowserConfig::default(),

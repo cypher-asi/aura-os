@@ -1,9 +1,26 @@
 import type { ProjectId } from "../types";
+import type { LoopActivityPayload, LoopIdPayload, LoopKind } from "../types/aura-events";
 import { apiFetch } from "./core";
 
 export interface ActiveLoopTask {
   task_id: string;
   agent_instance_id: string;
+}
+
+export interface LoopsSnapshotEntry {
+  loop_id: LoopIdPayload;
+  activity: LoopActivityPayload;
+}
+
+export interface LoopsSnapshotResponse {
+  loops: LoopsSnapshotEntry[];
+}
+
+export interface LoopsFilter {
+  project_id?: string;
+  agent_instance_id?: string;
+  task_id?: string;
+  kind?: LoopKind;
 }
 
 export interface LoopStatusResponse {
@@ -58,4 +75,23 @@ export const loopApi = {
   },
   getLoopStatus: (projectId: ProjectId) =>
     apiFetch<LoopStatusResponse>(`/api/projects/${projectId}/loop/status`),
+
+  /**
+   * Snapshot the `LoopRegistry` in one round trip. Used to hydrate the
+   * unified circular progress indicator store on boot / reconnect so
+   * the indicator is accurate even before any `loop_activity_changed`
+   * WS event arrives for the open loops.
+   */
+  listLoops: (filter?: LoopsFilter) => {
+    const params = new URLSearchParams();
+    if (filter?.project_id) params.set("project_id", filter.project_id);
+    if (filter?.agent_instance_id)
+      params.set("agent_instance_id", filter.agent_instance_id);
+    if (filter?.task_id) params.set("task_id", filter.task_id);
+    if (filter?.kind) params.set("kind", filter.kind);
+    const query = params.toString();
+    return apiFetch<LoopsSnapshotResponse>(
+      `/api/loops${query ? `?${query}` : ""}`,
+    );
+  },
 };

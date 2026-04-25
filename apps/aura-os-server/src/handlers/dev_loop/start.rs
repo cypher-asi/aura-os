@@ -65,6 +65,7 @@ pub(super) async fn resolve_start_context(
         project,
         model,
         workspace_root,
+        agent_id: agent_instance.agent_id,
     })
 }
 

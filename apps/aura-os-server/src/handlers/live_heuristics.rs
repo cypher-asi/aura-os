@@ -188,14 +188,14 @@ pub(crate) fn build_finding_payload(finding: &Finding, run_id: &str) -> serde_js
 /// helper in the parent module so all live-heuristic broadcasts go
 /// through one definition.
 pub(crate) fn emit_live_heuristic(
-    broadcast_tx: &tokio::sync::broadcast::Sender<serde_json::Value>,
+    state: &crate::state::AppState,
     finding: &Finding,
     project_id: ProjectId,
     agent_instance_id: AgentInstanceId,
     run_id: &str,
 ) {
     super::dev_loop::emit_domain_event(
-        broadcast_tx,
+        state,
         "heuristic_finding",
         project_id,
         agent_instance_id,

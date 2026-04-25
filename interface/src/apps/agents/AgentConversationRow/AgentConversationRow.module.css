@@ -105,6 +105,13 @@
   color: var(--color-text-muted, var(--color-text-secondary));
   white-space: nowrap;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.loopProgress {
+  color: var(--color-text-muted, var(--color-text-secondary));
 }
 
 .preview {

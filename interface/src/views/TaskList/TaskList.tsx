@@ -1,7 +1,13 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Spec, Task } from "../../types";
+import { LoopProgress } from "../../components/LoopProgress";
 import { TaskStatusIcon } from "../../components/TaskStatusIcon";
+import {
+  selectTaskActivity,
+  useLoopActivityStore,
+} from "../../stores/loop-activity-store";
+import { isLoopActivityActive } from "../../types/aura-events";
 import { useDelayedEmpty } from "../../hooks/use-delayed-empty";
 import { titleSortKey } from "../../utils/collections";
 import { filterExplorerNodes } from "../../utils/filterExplorerNodes";
@@ -31,6 +37,20 @@ import { useRenameSpec } from "../../hooks/use-rename-spec";
 type TaskMenuTarget =
   | { kind: "task"; task: Task }
   | { kind: "spec"; spec: Spec };
+
+/**
+ * Explorer-row suffix for a task. Shows the unified circular loop
+ * progress indicator when the loop registry reports a live loop for
+ * this exact task, otherwise falls back to the static `TaskStatusIcon`
+ * so the row still communicates DB-status at a glance.
+ */
+function TaskRowSuffix({ taskId, status }: { taskId: string; status: Task["status"] }) {
+  const activity = useLoopActivityStore((s) => selectTaskActivity(s, taskId));
+  if (activity && isLoopActivityActive(activity.status)) {
+    return <LoopProgress source={{ activity }} size={14} />;
+  }
+  return <TaskStatusIcon status={status} />;
+}
 
 export function TaskList({ searchQuery }: { searchQuery: string }) {
   const { specs, tasks, liveTaskIds, loopActive, loading } = useTaskListData();
@@ -94,7 +114,7 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
         return {
           id: task.task_id,
           label: task.title,
-          suffix: <TaskStatusIcon status={displayStatus} />,
+          suffix: <TaskRowSuffix taskId={task.task_id} status={displayStatus} />,
           metadata: { type: "task" },
           ...(subtasks && subtasks.length > 0
             ? { children: subtasks.map(toNode) }

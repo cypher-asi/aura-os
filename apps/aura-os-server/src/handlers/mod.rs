@@ -15,6 +15,7 @@ pub(crate) mod leaderboard;
 #[allow(dead_code)]
 pub(crate) mod live_heuristics;
 pub(crate) mod log;
+pub(crate) mod loops;
 pub(crate) mod marketplace;
 pub(crate) mod notes;
 pub(crate) mod org_tools;

@@ -11,10 +11,10 @@ use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::handlers::{
-    agent_bootstrap, agents, auth, billing, browser, debug_runs, dev_loop, feed,
-    feedback, files, follows, generation, harness_proxy, leaderboard, log, marketplace, notes,
-    org_tools, orgs, process, project_artifacts, project_stats, projects, remote_files, remote_terminal, specs, swarm,
-    system, tasks, terminal, users, ws,
+    agent_bootstrap, agents, auth, billing, browser, debug_runs, dev_loop, feed, feedback, files,
+    follows, generation, harness_proxy, leaderboard, log, loops as loops_handler, marketplace,
+    notes, org_tools, orgs, process, project_artifacts, project_stats, projects, remote_files,
+    remote_terminal, specs, swarm, system, tasks, terminal, users, ws,
 };
 use crate::state::AppState;
 
@@ -91,6 +91,7 @@ pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathB
         .merge(notes_routes())
         .merge(marketplace_routes())
         .merge(debug_routes())
+        .merge(loops_routes())
         .layer(middleware::from_fn_with_state(
             state.clone(),
             crate::auth_guard::require_verified_session,
@@ -869,4 +870,8 @@ fn debug_routes() -> Router<AppState> {
             "/api/debug/projects/:project_id/runs/:run_id/export",
             get(debug_runs::export_run),
         )
+}
+
+fn loops_routes() -> Router<AppState> {
+    Router::new().route("/api/loops", get(loops_handler::list_loops))
 }

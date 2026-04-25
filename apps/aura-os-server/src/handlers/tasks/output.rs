@@ -327,11 +327,11 @@ async fn fetch_task_output_from_storage(
 pub(crate) async fn get_task_output(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
-    Path((_project_id, task_id)): Path<(ProjectId, TaskId)>,
+    Path((project_id, task_id)): Path<(ProjectId, TaskId)>,
 ) -> ApiResult<Json<TaskOutputResponse>> {
     let cached_session_id = {
         let cache = state.task_output_cache.lock().await;
-        if let Some(entry) = cache.get(&task_id.to_string()) {
+        if let Some(entry) = cache.get(&(project_id, task_id)) {
             let sync_state = entry
                 .sync_state
                 .clone()

@@ -371,6 +371,13 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
     let domain = init_domain_services(&store, &network_client, &storage_client);
 
     let (event_broadcast, _) = broadcast::channel::<serde_json::Value>(4096);
+    let event_hub = aura_os_events::EventHub::new();
+    let loop_registry = aura_os_loops::LoopRegistry::new(event_hub.clone());
+    // Forward typed loop lifecycle + activity events from the hub into
+    // the legacy websocket broadcast as JSON, so the existing frontend
+    // can consume `loop_opened` / `loop_activity_changed` / `loop_ended`
+    // frames without a protocol change.
+    crate::loop_events_bridge::spawn_loop_events_bridge(event_hub.clone(), event_broadcast.clone());
 
     let validation_cache = {
         let cache = Arc::new(dashmap::DashMap::new());
@@ -438,7 +445,6 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         session_service: domain.session_service,
         local_harness: domain.local_harness,
         swarm_harness: domain.swarm_harness,
-        harness_sessions: Arc::new(Mutex::new(HashMap::new())),
         chat_sessions: Arc::new(Mutex::new(HashMap::new())),
         credit_cache: Arc::new(Mutex::new(HashMap::new())),
         terminal_manager: Arc::new(TerminalManager::new()),
@@ -448,6 +454,8 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         storage_client,
         integrations_client,
         event_broadcast,
+        event_hub,
+        loop_registry,
         require_zero_pro: std::env::var("REQUIRE_ZERO_PRO")
             .map(|v| v != "false" && v != "0")
             .unwrap_or(true),

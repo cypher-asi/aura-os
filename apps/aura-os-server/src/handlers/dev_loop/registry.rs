@@ -5,12 +5,17 @@ use aura_os_core::{AgentInstanceId, ProjectId};
 use crate::dto::{ActiveLoopTask, LoopStatusResponse};
 use crate::state::AppState;
 
-pub(super) async fn set_paused(state: &AppState, agent_instance_id: AgentInstanceId, paused: bool) {
+pub(super) async fn set_paused(
+    state: &AppState,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+    paused: bool,
+) {
     if let Some(entry) = state
         .automaton_registry
         .lock()
         .await
-        .get_mut(&agent_instance_id)
+        .get_mut(&(project_id, agent_instance_id))
     {
         entry.paused = paused;
     }
@@ -18,25 +23,39 @@ pub(super) async fn set_paused(state: &AppState, agent_instance_id: AgentInstanc
 
 pub(super) async fn can_reuse_forwarder(
     state: &AppState,
-    agent_id: AgentInstanceId,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
     automaton_id: &str,
 ) -> bool {
     state
         .automaton_registry
         .lock()
         .await
-        .get(&agent_id)
+        .get(&(project_id, agent_instance_id))
         .is_some_and(|entry| {
             entry.automaton_id == automaton_id && entry.alive.load(Ordering::SeqCst)
         })
 }
 
-pub(super) async fn replace_registry_entry(state: &AppState, agent_id: AgentInstanceId) {
-    abort_and_remove(state, agent_id).await;
+pub(super) async fn replace_registry_entry(
+    state: &AppState,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+) {
+    abort_and_remove(state, project_id, agent_instance_id).await;
 }
 
-pub(super) async fn abort_and_remove(state: &AppState, agent_id: AgentInstanceId) {
-    if let Some(entry) = state.automaton_registry.lock().await.remove(&agent_id) {
+pub(super) async fn abort_and_remove(
+    state: &AppState,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+) {
+    if let Some(entry) = state
+        .automaton_registry
+        .lock()
+        .await
+        .remove(&(project_id, agent_instance_id))
+    {
         if let Some(handle) = entry.forwarder {
             handle.abort();
         }
@@ -51,16 +70,16 @@ pub(super) async fn status_response(
     let reg = state.automaton_registry.lock().await;
     let active: Vec<AgentInstanceId> = reg
         .iter()
-        .filter(|(_, entry)| entry.project_id == project_id)
-        .map(|(agent_id, _)| *agent_id)
+        .filter(|((pid, _), _)| *pid == project_id)
+        .map(|((_, agent_id), _)| *agent_id)
         .collect();
     let paused = reg
         .iter()
-        .any(|(_, entry)| entry.project_id == project_id && entry.paused);
+        .any(|((pid, _), entry)| *pid == project_id && entry.paused);
     let active_tasks = reg
         .iter()
-        .filter(|(_, entry)| entry.project_id == project_id)
-        .filter_map(|(agent_id, entry)| {
+        .filter(|((pid, _), _)| *pid == project_id)
+        .filter_map(|((_, agent_id), entry)| {
             entry
                 .current_task_id
                 .as_ref()

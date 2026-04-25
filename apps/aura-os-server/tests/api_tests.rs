@@ -1861,7 +1861,7 @@ async fn loop_stop_clears_registry_even_when_harness_unreachable() {
     {
         let mut reg = state.automaton_registry.lock().await;
         reg.insert(
-            aiid,
+            (pid, aiid),
             ActiveAutomaton {
                 automaton_id: "auto-1".into(),
                 project_id: pid,

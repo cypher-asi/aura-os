@@ -135,9 +135,13 @@ impl TaskService {
         let mut reset = Vec::new();
         for task in &all_tasks {
             if task.status == TaskStatus::InProgress {
-                let ready_task =
-                    crate::safe_transition(storage, &jwt, &task.task_id.to_string(), TaskStatus::Ready)
-                        .await?;
+                let ready_task = crate::safe_transition(
+                    storage,
+                    &jwt,
+                    &task.task_id.to_string(),
+                    TaskStatus::Ready,
+                )
+                .await?;
                 reset.push(ready_task);
             }
         }
@@ -389,14 +393,25 @@ impl TaskService {
     pub async fn select_next_task(
         &self,
         project_id: &ProjectId,
+        agent_instance_id: &AgentInstanceId,
     ) -> Result<Option<Task>, TaskError> {
         let all_tasks = self.list_tasks(project_id).await?;
-        self.select_next_task_from(project_id, &all_tasks).await
+        self.select_next_task_from(project_id, agent_instance_id, &all_tasks)
+            .await
     }
 
+    /// Pick the next task this `agent_instance_id` is allowed to claim.
+    ///
+    /// Tasks with an `assigned_agent_instance_id` set to a *different*
+    /// instance are filtered out so two parallel agents in the same
+    /// project can't fight over the same row. Unassigned `Ready` tasks
+    /// are first-come-first-serve. The auto-promote `ToDo -> Ready`
+    /// path inherits the same filter so a foreign-assigned `ToDo`
+    /// task is never promoted by the wrong agent.
     pub async fn select_next_task_from(
         &self,
         project_id: &ProjectId,
+        agent_instance_id: &AgentInstanceId,
         all_tasks: &[Task],
     ) -> Result<Option<Task>, TaskError> {
         let storage = self.require_storage()?;
@@ -418,9 +433,17 @@ impl TaskService {
             })
             .collect();
 
+        let claimable_for_agent = |t: &&Task| -> bool {
+            match t.assigned_agent_instance_id {
+                Some(assigned) => assigned == *agent_instance_id,
+                None => true,
+            }
+        };
+
         let mut ready: Vec<&Task> = all_tasks
             .iter()
             .filter(|t| t.status == TaskStatus::Ready)
+            .filter(claimable_for_agent)
             .collect();
 
         ready.sort_by(|a, b| {
@@ -452,6 +475,7 @@ impl TaskService {
         let mut todo: Vec<&Task> = all_tasks
             .iter()
             .filter(|t| t.status == TaskStatus::ToDo)
+            .filter(claimable_for_agent)
             .collect();
 
         todo.sort_by(|a, b| {
@@ -486,7 +510,9 @@ impl TaskService {
         let _guard = lock.lock().await;
 
         let all_tasks = self.list_tasks(project_id).await?;
-        let task = self.select_next_task_from(project_id, &all_tasks).await?;
+        let task = self
+            .select_next_task_from(project_id, agent_instance_id, &all_tasks)
+            .await?;
         match task {
             Some(t) => {
                 let assigned = self

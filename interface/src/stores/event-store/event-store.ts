@@ -306,6 +306,19 @@ export function connectEventSocket() {
     },
     (connected: boolean) => {
       useEventStore.setState({ connected });
+      // On every (re)connect, snapshot the server's `LoopRegistry` so
+      // the unified circular progress indicator is accurate even if we
+      // missed a `loop_activity_changed` event during the disconnect.
+      if (connected) {
+        // Lazy import so the event-store module has no hard dependency
+        // on the loop activity store during initial bundle parsing.
+        void import("../loop-activity-store").then(
+          ({ useLoopActivityStore, startLoopActivityWatchdog }) => {
+            void useLoopActivityStore.getState().hydrate();
+            startLoopActivityWatchdog();
+          },
+        );
+      }
     },
   );
 }

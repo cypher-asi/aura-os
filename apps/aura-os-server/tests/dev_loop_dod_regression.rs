@@ -800,14 +800,12 @@ fn completion_contract_failure_reconciles_to_terminal_reason() {
 
 #[test]
 fn dod_followup_prompt_and_retry_budget_are_retired() {
-    assert!(
-        tsp::build_dod_followup_prompt(
-            "missing_test",
-            1,
-            "Task modified source code but no test step was run"
-        )
-        .is_none()
-    );
+    assert!(tsp::build_dod_followup_prompt(
+        "missing_test",
+        1,
+        "Task modified source code but no test step was run"
+    )
+    .is_none());
     assert_eq!(
         tsp::max_dod_retries_per_task(),
         0,

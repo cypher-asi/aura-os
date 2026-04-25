@@ -14,6 +14,53 @@ export interface PhaseTimingEntry {
   duration_ms: number;
 }
 
+/* ── LoopId / LoopActivity (backend: aura-os-events) ─────────────── */
+
+export type LoopKind = "chat" | "automation" | "task_run" | "spec_gen" | "process_run";
+
+export type LoopStatus =
+  | "starting"
+  | "running"
+  | "waiting_tool"
+  | "compacting"
+  | "stalled"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export interface LoopIdPayload {
+  user_id: string;
+  project_id?: string | null;
+  agent_instance_id?: string | null;
+  agent_id: string;
+  kind: LoopKind;
+  instance: string;
+}
+
+export interface LoopActivityPayload {
+  status: LoopStatus;
+  percent?: number | null;
+  started_at: string;
+  last_event_at: string;
+  current_task_id?: string | null;
+  current_step?: string | null;
+}
+
+/**
+ * `true` when the loop activity should render a spinner in the UI.
+ * Mirrors the backend `LoopStatus::is_active` taxonomy so the same
+ * status values produce the same visual treatment everywhere.
+ */
+export function isLoopActivityActive(status: LoopStatus): boolean {
+  return (
+    status === "starting" ||
+    status === "running" ||
+    status === "waiting_tool" ||
+    status === "compacting" ||
+    status === "stalled"
+  );
+}
+
 /* ── ChatAttachment (shared by SSE + event schema) ────────────────── */
 
 export interface ChatAttachment {
@@ -128,6 +175,19 @@ export enum EventType {
   LoopFinished          = "loop_finished",
   LoopIterationSummary  = "loop_iteration_summary",
   SessionRolledOver     = "session_rolled_over",
+
+  /**
+   * Typed loop lifecycle / activity events emitted by the `LoopRegistry`
+   * (backend: `aura_os_events::DomainEvent::LoopOpened` /
+   * `LoopActivityChanged` / `LoopEnded`). These carry structured
+   * `loop_id` + `activity` payloads that feed the unified circular
+   * progress indicator in the agent list, sidekick tabs, and task rows.
+   * They coexist with the string-keyed `LoopStarted`/`LoopFinished`
+   * events above for backwards compatibility.
+   */
+  LoopOpened            = "loop_opened",
+  LoopActivityChanged   = "loop_activity_changed",
+  LoopEnded             = "loop_ended",
 
   // Build verification
   BuildVerificationSkipped  = "build_verification_skipped",
@@ -452,6 +512,20 @@ export type AuraEvent = AuraEventBase & (
       task_id?: string;
       phase_timings?: PhaseTimingEntry[];
       duration_ms?: number;
+    } }
+
+  // ── Typed loop activity (LoopRegistry) ─────────────────────
+  | { type: EventType.LoopOpened; content: {
+      loop_id: LoopIdPayload;
+      activity: LoopActivityPayload;
+    } }
+  | { type: EventType.LoopActivityChanged; content: {
+      loop_id: LoopIdPayload;
+      activity: LoopActivityPayload;
+    } }
+  | { type: EventType.LoopEnded; content: {
+      loop_id: LoopIdPayload;
+      activity: LoopActivityPayload;
     } }
   | { type: EventType.SessionRolledOver; content: {
       old_session_id: string;

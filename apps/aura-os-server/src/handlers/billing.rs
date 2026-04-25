@@ -274,6 +274,8 @@ mod tests {
             None,
         ));
         let (event_broadcast, _) = broadcast::channel::<serde_json::Value>(64);
+        let event_hub = aura_os_events::EventHub::new();
+        let loop_registry = aura_os_loops::LoopRegistry::new(event_hub.clone());
         let automaton_client = Arc::new(AutomatonClient::new(&harness_base));
         let harness_http = Arc::new(HarnessHttpGateway::new(harness_base.clone()));
         let router_url = "http://localhost:19080".to_string();
@@ -294,7 +296,6 @@ mod tests {
                 session_service,
                 local_harness,
                 swarm_harness,
-                harness_sessions: Arc::new(Mutex::new(HashMap::new())),
                 terminal_manager: Arc::new(aura_os_terminal::TerminalManager::new()),
                 browser_manager: Arc::new(aura_os_browser::BrowserManager::new(
                     aura_os_browser::BrowserConfig::default(),
@@ -304,6 +305,8 @@ mod tests {
                 storage_client: None,
                 integrations_client: None,
                 event_broadcast,
+                event_hub,
+                loop_registry,
                 require_zero_pro: false,
                 chat_sessions: Arc::new(Mutex::new(HashMap::new())),
                 credit_cache: Arc::new(Mutex::new(HashMap::new())),

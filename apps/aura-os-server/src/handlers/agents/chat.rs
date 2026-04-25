@@ -2788,7 +2788,7 @@ pub(crate) async fn send_event_stream(
     // harness error as a fallback.
     {
         let reg = state.automaton_registry.lock().await;
-        if let Some(entry) = reg.get(&agent_instance_id) {
+        if let Some(entry) = reg.get(&(project_id, agent_instance_id)) {
             let live = entry.alive.load(std::sync::atomic::Ordering::Acquire);
             if live && !entry.paused {
                 let automaton_id = entry.automaton_id.clone();

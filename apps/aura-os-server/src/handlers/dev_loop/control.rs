@@ -21,9 +21,9 @@ pub(super) async fn control_loop(
     let targets = {
         let reg = state.automaton_registry.lock().await;
         reg.iter()
-            .filter(|(_, entry)| entry.project_id == project_id)
-            .filter(|(agent_id, _)| only_agent.map_or(true, |wanted| **agent_id == wanted))
-            .map(|(agent_id, entry)| {
+            .filter(|((pid, _), _)| *pid == project_id)
+            .filter(|((_, agent_id), _)| only_agent.map_or(true, |wanted| *agent_id == wanted))
+            .map(|((_, agent_id), entry)| {
                 (
                     *agent_id,
                     entry.automaton_id.clone(),
@@ -59,12 +59,12 @@ async fn control_target(
         warn!(%automaton_id, %error, "harness automaton control request failed");
     }
     match action {
-        ControlAction::Pause => set_paused(state, agent_id, true).await,
-        ControlAction::Resume => set_paused(state, agent_id, false).await,
-        ControlAction::Stop => abort_and_remove(state, agent_id).await,
+        ControlAction::Pause => set_paused(state, project_id, agent_id, true).await,
+        ControlAction::Resume => set_paused(state, project_id, agent_id, false).await,
+        ControlAction::Stop => abort_and_remove(state, project_id, agent_id).await,
     }
     emit_domain_event(
-        &state.event_broadcast,
+        state,
         event_type(action),
         project_id,
         agent_id,

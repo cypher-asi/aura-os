@@ -17,6 +17,22 @@ use aura_os_storage::{StorageClient, StorageTask};
 pub struct TaskService {
     jwt_provider: Arc<dyn JwtProvider>,
     storage_client: Option<Arc<StorageClient>>,
+    /// Per-project claim mutex.
+    ///
+    /// The selection-then-assign critical section must be atomic per
+    /// project: two parallel agents reading the same project's task
+    /// list must not both pick task X and both call `assign_task(X)`.
+    /// We pair this with the [`select_next_task_from`] filter so each
+    /// agent only sees tasks that are unassigned or already assigned
+    /// to itself, which gives us:
+    ///
+    /// * **Within a project**: claims are serialised (correct), but
+    ///   each lock acquisition is short (just a list+select+assign
+    ///   round trip), so two agents end up with two different tasks
+    ///   on the next iteration of their automation loops.
+    /// * **Across projects**: claims run concurrently — the lock map
+    ///   is keyed by `ProjectId` so two projects never block each
+    ///   other.
     claim_locks: Mutex<HashMap<ProjectId, Arc<Mutex<()>>>>,
 }
 

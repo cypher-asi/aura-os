@@ -30,12 +30,22 @@ pub struct SwarmHarness {
 }
 
 impl SwarmHarness {
+    /// Build a [`SwarmHarness`] from a configured base URL.
+    ///
+    /// Falls back to a default `reqwest::Client` if the configured one
+    /// fails to build (e.g. TLS backend missing in a stripped test
+    /// environment). The fallback log line tells operators to look at
+    /// the surrounding warn message; we never panic in production
+    /// because callers may run on heavily restricted hosts.
     pub fn new(base_url: String, auth_token: Option<String>) -> Self {
         let client = reqwest::Client::builder()
             .connect_timeout(std::time::Duration::from_secs(10))
             .timeout(std::time::Duration::from_secs(120))
             .build()
-            .expect("failed to build HTTP client");
+            .unwrap_or_else(|error| {
+                warn!(%error, "failed to build SwarmHarness HTTP client; falling back to defaults");
+                reqwest::Client::new()
+            });
 
         Self {
             base_url,
@@ -45,9 +55,19 @@ impl SwarmHarness {
         }
     }
 
+    /// Construct from `SWARM_BASE_URL`. Returns an empty-base instance
+    /// when the env var is unset; callers should check
+    /// [`SwarmHarness::is_configured`] before using it.
     pub fn from_env() -> Self {
         let base_url = std::env::var("SWARM_BASE_URL").unwrap_or_default();
         Self::new(base_url, None)
+    }
+
+    /// `true` when this harness has a non-empty base URL and is
+    /// usable for outbound calls.
+    #[must_use]
+    pub fn is_configured(&self) -> bool {
+        !self.base_url.trim().is_empty()
     }
 
     fn configured_base_url(&self) -> anyhow::Result<&str> {

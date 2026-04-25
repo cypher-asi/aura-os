@@ -8,6 +8,8 @@ repository.workspace = true
 
 [dependencies]
 aura-os-core = { path = "../../crates/aura-os-core" }
+aura-os-events = { path = "../../crates/aura-os-events" }
+aura-os-loops = { path = "../../crates/aura-os-loops" }
 aura-os-integrations = { path = "../../crates/aura-os-integrations" }
 aura-os-store = { path = "../../crates/aura-os-store" }
 aura-os-billing = { path = "../../crates/aura-os-billing" }

@@ -5,6 +5,7 @@ import type { Agent } from "../../../types";
 import { isSuperAgent } from "../../../types/permissions";
 import type { DisplaySessionEvent } from "../../../types/stream";
 import { Avatar } from "../../../components/Avatar";
+import { LoopProgress } from "../../../components/LoopProgress";
 import { useAvatarState } from "../../../hooks/use-avatar-state";
 import { useAgentStore } from "../stores";
 import styles from "./AgentConversationRow.module.css";
@@ -86,7 +87,14 @@ export function AgentConversationRow({
               <Pin size={11} className={styles.pinIcon} />
             )}
           </span>
-          <span className={styles.time}>{formatChatTime(agent.updated_at)}</span>
+          <span className={styles.time}>
+            <LoopProgress
+              source={{ agentId: agent.agent_id }}
+              size={12}
+              className={styles.loopProgress}
+            />
+            {formatChatTime(agent.updated_at)}
+          </span>
         </span>
         <span className={styles.preview}>{preview}</span>
       </span>

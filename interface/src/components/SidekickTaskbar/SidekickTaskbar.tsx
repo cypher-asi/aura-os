@@ -11,7 +11,6 @@ import {
   Monitor,
   FolderClosed,
   Play,
-  Loader2,
   Plus,
   Terminal,
   Globe,
@@ -24,7 +23,13 @@ import { useTerminalTarget } from "../../hooks/use-terminal-target";
 import { useTerminalPanelStore } from "../../stores/terminal-panel-store";
 import { useBrowserPanelStore } from "../../stores/browser-panel-store";
 import { SidekickTabBar, type TabItem } from "../SidekickTabBar";
-import { useAutomationStatus } from "../AutomationBar/useAutomationStatus";
+import { LoopProgress } from "../LoopProgress";
+import {
+  selectAgentInstanceActivity,
+  selectProjectActivity,
+  useLoopActivityStore,
+} from "../../stores/loop-activity-store";
+import { isLoopActivityActive } from "../../types/aura-events";
 import styles from "../Sidekick/Sidekick.module.css";
 
 export function SidekickTaskbar() {
@@ -41,12 +46,22 @@ export function SidekickTaskbar() {
   const addTerminal = useTerminalPanelStore((s) => s.addTerminal);
   const addBrowserInstance = useBrowserPanelStore((s) => s.addInstance);
   const { projectId, agentInstanceId } = useParams<{ projectId: string; agentInstanceId: string }>();
-  const { status } = useAutomationStatus(projectId ?? "");
   const { remoteAgentId, remoteWorkspacePath, workspacePath } = useTerminalTarget({ projectId, agentInstanceId });
   const canBrowseLocal = features.linkedWorkspace && !remoteAgentId && Boolean(workspacePath);
   const canBrowseRemote = Boolean(remoteAgentId) && Boolean(remoteWorkspacePath);
   const canBrowseFiles = canBrowseLocal || canBrowseRemote;
-  const showRunProgress = status === "starting" || status === "preparing" || status === "active";
+  // Tasks tab lights up whenever ANY loop is open for this (project,
+  // agent_instance) — this covers the live task runs in this project.
+  // Run tab uses a project-wide scope so cross-agent activity inside
+  // the same project also surfaces on the shared Run tab.
+  const tasksActivity = useLoopActivityStore((s) =>
+    selectAgentInstanceActivity(s, agentInstanceId ?? null),
+  );
+  const runActivity = useLoopActivityStore((s) =>
+    selectProjectActivity(s, projectId ?? null),
+  );
+  const tasksActive = !!tasksActivity && isLoopActivityActive(tasksActivity.status);
+  const runActive = !!runActivity && isLoopActivityActive(runActivity.status);
 
   useEffect(() => {
     if (!canBrowseFiles && activeTab === "files") {
@@ -62,8 +77,12 @@ export function SidekickTaskbar() {
       { id: "specs", icon: <File size={16} />, title: "Specs" },
       {
         id: "tasks",
-        icon: showRunProgress ? (
-          <Loader2 size={16} className={styles.automationSpinner} />
+        icon: tasksActive ? (
+          <LoopProgress
+            source={{ activity: tasksActivity }}
+            size={16}
+            className={styles.automationSpinner}
+          />
         ) : (
           <Check size={16} />
         ),
@@ -71,8 +90,12 @@ export function SidekickTaskbar() {
       },
       {
         id: "run",
-        icon: showRunProgress ? (
-          <Loader2 size={16} className={styles.automationSpinner} />
+        icon: runActive ? (
+          <LoopProgress
+            source={{ activity: runActivity }}
+            size={16}
+            className={styles.automationSpinner}
+          />
         ) : (
           <Play size={16} />
         ),
@@ -85,7 +108,7 @@ export function SidekickTaskbar() {
       { id: "new-terminal", icon: <Plus size={16} />, title: "New terminal", kind: "action" },
       { id: "new-browser", icon: <Plus size={16} />, title: "New browser", kind: "action" },
     ],
-    [showRunProgress],
+    [tasksActive, runActive, tasksActivity, runActivity],
   );
   const visibleTabs = canBrowseFiles ? tabs : tabs.filter((tab) => tab.id !== "files");
 

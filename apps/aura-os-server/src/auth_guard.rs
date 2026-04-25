@@ -394,6 +394,8 @@ mod tests {
             .unwrap(),
         );
         let (event_broadcast, _) = tokio::sync::broadcast::channel(16);
+        let event_hub = aura_os_events::EventHub::new();
+        let loop_registry = aura_os_loops::LoopRegistry::new(event_hub.clone());
         let router_url = "http://localhost:9998".to_string();
         let agent_event_listener = Arc::new(crate::agent_events::AgentEventListener::new(100));
         agent_event_listener.spawn(event_broadcast.subscribe());
@@ -420,7 +422,6 @@ mod tests {
             )),
             local_harness: Arc::new(aura_os_harness::LocalHarness::from_env()),
             swarm_harness: Arc::new(aura_os_harness::SwarmHarness::from_env()),
-            harness_sessions: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
             terminal_manager: Arc::new(aura_os_terminal::TerminalManager::new()),
             browser_manager: Arc::new(aura_os_browser::BrowserManager::new(
                 aura_os_browser::BrowserConfig::default(),
@@ -430,6 +431,8 @@ mod tests {
             storage_client: None,
             integrations_client: None,
             event_broadcast,
+            event_hub,
+            loop_registry,
             require_zero_pro: false,
             chat_sessions: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
             credit_cache: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),

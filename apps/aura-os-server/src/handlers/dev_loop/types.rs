@@ -4,8 +4,9 @@ use std::time::Duration;
 use serde::Deserialize;
 use tokio::sync::broadcast;
 
-use aura_os_core::{AgentInstanceId, Project, ProjectId};
+use aura_os_core::{AgentId, AgentInstanceId, Project, ProjectId};
 use aura_os_harness::{AutomatonClient, WsReaderHandle};
+use aura_os_loops::LoopHandle;
 
 use crate::state::AppState;
 
@@ -21,6 +22,10 @@ pub(super) struct StartContext {
     pub(super) project: Option<Project>,
     pub(super) model: Option<String>,
     pub(super) workspace_root: String,
+    /// Org-level agent id backing the project-agent instance. Needed
+    /// for `LoopId` construction so loop events can be filtered by
+    /// `AgentId` topic in addition to `AgentInstanceId`.
+    pub(super) agent_id: AgentId,
 }
 
 pub(super) struct StartedAutomaton {
@@ -45,4 +50,19 @@ pub(super) struct ForwarderContext {
     pub(super) ws_reader_handle: WsReaderHandle,
     pub(super) alive: Arc<AtomicBool>,
     pub(super) timeout: Duration,
+    /// Handle into [`aura_os_loops::LoopRegistry`] for this loop. The
+    /// forwarder owns the handle and publishes `LoopActivityChanged`
+    /// transitions through it as harness events arrive. On completion
+    /// it calls `mark_completed` / `mark_failed`; on stream collapse,
+    /// the handle's RAII drop emits a `Cancelled` event.
+    pub(super) loop_handle: LoopHandle,
+    /// JWT captured from the HTTP request that started this loop, used
+    /// by the forwarder for best-effort background writes back to
+    /// aura-storage (e.g. persisting `tasks.execution_notes` on a
+    /// `task_failed` event so the fail reason survives a page reload
+    /// even after the WS stream is gone). `None` in tests or when the
+    /// caller didn't have one to hand; the forwarder skips the write
+    /// silently in that case. Expiry is tolerated: if storage rejects
+    /// the write with 401, the forwarder logs a warning and moves on.
+    pub(super) jwt: Option<String>,
 }

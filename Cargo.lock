@@ -490,6 +490,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "aura-os-events"
+version = "0.1.0"
+dependencies = [
+ "aura-os-core",
+ "chrono",
+ "dashmap",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "aura-os-harness"
 version = "0.1.0"
 dependencies = [
@@ -534,6 +549,22 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "aura-os-loops"
+version = "0.1.0"
+dependencies = [
+ "aura-os-core",
+ "aura-os-events",
+ "chrono",
+ "dashmap",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -589,8 +620,10 @@ dependencies = [
  "aura-os-billing",
  "aura-os-browser",
  "aura-os-core",
+ "aura-os-events",
  "aura-os-harness",
  "aura-os-integrations",
+ "aura-os-loops",
  "aura-os-network",
  "aura-os-orgs",
  "aura-os-projects",

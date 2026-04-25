@@ -1,5 +1,11 @@
-import type { AuraEvent, AuraEventContent } from "../../types/aura-events";
+import type {
+  AuraEvent,
+  AuraEventContent,
+  LoopActivityPayload,
+  LoopIdPayload,
+} from "../../types/aura-events";
 import { EventType } from "../../types/aura-events";
+import { useLoopActivityStore } from "../loop-activity-store";
 import { useSidekickStore } from "../sidekick-store";
 import { invalidateTaskOutputHydration } from "../task-output-hydration-cache";
 import { invalidateTaskTurns } from "../task-turn-cache";
@@ -259,6 +265,38 @@ function handleLoopEnd(_event: AuraEvent, u: OutputUpdate): void {
   }
 }
 
+function loopPayload(event: AuraEvent):
+  | { loopId: LoopIdPayload; activity: LoopActivityPayload }
+  | null {
+  const c = event.content as {
+    loop_id?: LoopIdPayload;
+    activity?: LoopActivityPayload;
+  };
+  if (!c.loop_id?.instance || !c.activity) return null;
+  return { loopId: c.loop_id, activity: c.activity };
+}
+
+function handleLoopOpened(event: AuraEvent, _u: OutputUpdate): void {
+  void _u;
+  const payload = loopPayload(event);
+  if (!payload) return;
+  useLoopActivityStore.getState().upsert(payload.loopId, payload.activity);
+}
+
+function handleLoopActivityChanged(event: AuraEvent, _u: OutputUpdate): void {
+  void _u;
+  const payload = loopPayload(event);
+  if (!payload) return;
+  useLoopActivityStore.getState().upsert(payload.loopId, payload.activity);
+}
+
+function handleLoopEnded(event: AuraEvent, _u: OutputUpdate): void {
+  void _u;
+  const payload = loopPayload(event);
+  if (!payload) return;
+  useLoopActivityStore.getState().remove(payload.loopId.instance);
+}
+
 const DISPATCH: Partial<Record<EventType, EngineHandler>> = {
   [EventType.TaskStarted]: handleTaskStarted,
   [EventType.TextDelta]: handleTextDelta,
@@ -285,6 +323,9 @@ const DISPATCH: Partial<Record<EventType, EngineHandler>> = {
   [EventType.TaskFailed]: handleTaskFinish,
   [EventType.LoopStopped]: handleLoopEnd,
   [EventType.LoopFinished]: handleLoopEnd,
+  [EventType.LoopOpened]: handleLoopOpened,
+  [EventType.LoopActivityChanged]: handleLoopActivityChanged,
+  [EventType.LoopEnded]: handleLoopEnded,
 };
 
 export function handleEngineEvent(event: AuraEvent): void {

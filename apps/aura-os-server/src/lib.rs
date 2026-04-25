@@ -12,6 +12,7 @@ pub(crate) mod harness_gateway;
 mod network_bridge;
 pub mod orbit_guard;
 
+mod loop_events_bridge;
 pub mod loop_log;
 
 pub(crate) mod orchestration_store;
@@ -25,8 +26,8 @@ pub(crate) mod sync_state;
 
 pub use app_builder::build_app_state;
 pub use harness_client::{
-    GetHeadResponse, HarnessClient, HarnessClientError, HarnessProbeResult, HarnessTxKind,
-    SubmitTxResponse, bearer_headers,
+    bearer_headers, GetHeadResponse, HarnessClient, HarnessClientError, HarnessProbeResult,
+    HarnessTxKind, SubmitTxResponse,
 };
 pub use harness_gateway::HarnessHttpGateway;
 pub use router::{build_local_api_cors_layer, create_router_with_interface};

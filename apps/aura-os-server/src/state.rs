@@ -14,9 +14,11 @@ use tokio::sync::{broadcast, mpsc, Mutex};
 use aura_os_agents::{AgentInstanceService, AgentService};
 use aura_os_auth::AuthService;
 use aura_os_billing::BillingClient;
-use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, ZeroAuthSession};
+use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, TaskId, ZeroAuthSession};
+use aura_os_events::EventHub;
 use aura_os_harness::{AutomatonClient, HarnessInbound, HarnessLink, HarnessOutbound};
 use aura_os_integrations::IntegrationsClient;
+use aura_os_loops::LoopRegistry;
 
 use crate::agent_events::AgentEventListener;
 use crate::harness_gateway::HarnessHttpGateway;
@@ -156,15 +158,8 @@ pub(crate) fn spawn_cache_eviction(cache: ValidationCache) {
 #[cfg(test)]
 mod tests;
 
-/// Active harness sessions: agent_instance_id → (session_id, commands_tx, project_id).
-pub struct ActiveHarnessSession {
-    pub session_id: String,
-    pub commands_tx: tokio::sync::mpsc::UnboundedSender<HarnessInbound>,
-    pub project_id: ProjectId,
-}
-pub(crate) type HarnessSessionRegistry = Arc<Mutex<HashMap<AgentInstanceId, ActiveHarnessSession>>>;
-
-/// Active automaton (dev loop or single-task run) tracked per agent instance.
+/// Active automaton (dev loop or single-task run) tracked per
+/// `(project_id, agent_instance_id)` pair.
 pub struct ActiveAutomaton {
     pub automaton_id: String,
     pub project_id: ProjectId,
@@ -193,7 +188,13 @@ pub struct ActiveAutomaton {
     /// task — same pattern as `paused`.
     pub current_task_id: Option<String>,
 }
-pub(crate) type AutomatonRegistry = Arc<Mutex<HashMap<AgentInstanceId, ActiveAutomaton>>>;
+/// Composite key for the automaton registry. Including `ProjectId`
+/// guarantees that two projects can never collide on the same
+/// `AgentInstanceId` even if a caller mints a fresh UUID without first
+/// validating it against `project_agents`.
+pub type AutomatonRegistryKey = (ProjectId, AgentInstanceId);
+
+pub(crate) type AutomatonRegistry = Arc<Mutex<HashMap<AutomatonRegistryKey, ActiveAutomaton>>>;
 
 /// Reusable chat session for agent / instance chat endpoints.
 pub struct ChatSession {
@@ -322,7 +323,13 @@ pub struct ToolCallFailureEntry {
     pub reason: String,
 }
 
-pub(crate) type TaskOutputCache = Arc<Mutex<HashMap<String, CachedTaskOutput>>>;
+/// Composite key for the task output cache. Including `ProjectId`
+/// guarantees that two tasks with identical task ids in different
+/// projects (extremely unlikely but possible) never bleed output
+/// into each other's cache entry.
+pub type TaskOutputKey = (ProjectId, TaskId);
+
+pub(crate) type TaskOutputCache = Arc<Mutex<HashMap<TaskOutputKey, CachedTaskOutput>>>;
 
 /// Simple time-based cache for billing credit checks.
 pub struct CreditCache {
@@ -367,7 +374,6 @@ pub struct AppState {
     pub session_service: Arc<SessionService>,
     pub local_harness: Arc<dyn HarnessLink>,
     pub swarm_harness: Arc<dyn HarnessLink>,
-    pub harness_sessions: HarnessSessionRegistry,
     pub terminal_manager: Arc<TerminalManager>,
     /// In-app browser sessions + project-aware URL resolver.
     pub browser_manager: Arc<BrowserManager>,
@@ -384,8 +390,23 @@ pub struct AppState {
     pub storage_client: Option<Arc<StorageClient>>,
     /// Optional aura-integrations client. `None` when `AURA_INTEGRATIONS_URL` is not set.
     pub integrations_client: Option<Arc<IntegrationsClient>>,
-    /// Broadcast channel for network/social events (JSON payloads).
+    /// Broadcast channel for legacy network/social events (JSON payloads).
+    ///
+    /// Retained for migration only: every producer also fans events
+    /// through [`AppState::event_hub`] as a typed [`aura_os_events::DomainEvent`].
+    /// New code MUST publish through `event_hub`.
     pub event_broadcast: broadcast::Sender<serde_json::Value>,
+    /// Topic-scoped event hub. Use this for all new event production
+    /// and consumption; subscribers receive only events whose
+    /// [`aura_os_events::Topic`] matches their filter, eliminating the
+    /// cross-loop bleed that the legacy global `event_broadcast`
+    /// allowed.
+    pub event_hub: EventHub,
+    /// Registry of currently-active loops (chat, automation, task run,
+    /// spec gen). Source of truth for the unified circular progress
+    /// indicator surfaced via the `/api/loops` snapshot endpoint and
+    /// `LoopActivityChanged` events.
+    pub loop_registry: LoopRegistry,
     /// When true, non-Pro users are blocked from API access.
     pub require_zero_pro: bool,
     /// Reusable chat sessions keyed by agent_id or agent_instance_id.
