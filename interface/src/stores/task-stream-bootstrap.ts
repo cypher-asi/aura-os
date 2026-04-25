@@ -23,6 +23,7 @@ import {
   finalizeStream,
 } from "../hooks/stream/handlers";
 import { useTaskOutputPanelStore } from "./task-output-panel-store";
+import { useTaskStatusStore } from "./task-status-store";
 import type { StreamRefs, StreamSetters } from "../types/stream";
 import type { MutableRefObject } from "react";
 
@@ -90,6 +91,18 @@ function handleTaskStarted(e: AuraEventOfType<EventType.TaskStarted>): void {
     useTaskOutputPanelStore
       .getState()
       .addTask(taskId, projectId, e.content.task_title, e.agent_id ?? undefined);
+  }
+
+  // Update the per-task status store so observers (sidekick preview,
+  // RunTaskButton, etc.) flip into "in progress" without each
+  // running its own duplicate WS subscription. A new run also
+  // clears any previous failure reason so retried tasks don't
+  // surface a stale banner from the prior attempt.
+  const status = useTaskStatusStore.getState();
+  status.setLiveStatus(taskId, "in_progress");
+  status.setLiveFailReason(taskId, null);
+  if (e.session_id) {
+    status.setLiveSessionId(taskId, e.session_id);
   }
 }
 
@@ -335,6 +348,7 @@ function handleTaskCompleted(e: AuraEventOfType<EventType.TaskCompleted>): void 
   });
   isStreamingByTask.delete(taskId);
   useTaskOutputPanelStore.getState().completeTask(taskId);
+  useTaskStatusStore.getState().setLiveStatus(taskId, "done");
   snapshotTaskTurns(taskId, e.project_id);
 }
 
@@ -359,6 +373,16 @@ function handleTaskFailed(e: AuraEventOfType<EventType.TaskFailed>): void {
   });
   isStreamingByTask.delete(taskId);
   useTaskOutputPanelStore.getState().failTask(taskId, reason);
+  // Mirror the status into the per-task status store. A `null`
+  // reason intentionally leaves the existing `liveFailReason`
+  // untouched (matching the panel store's behaviour) so a synthetic
+  // `task_failed` with no reason can't wipe out a real reason an
+  // earlier event already recorded.
+  const status = useTaskStatusStore.getState();
+  status.setLiveStatus(taskId, "failed");
+  if (reason) {
+    status.setLiveFailReason(taskId, reason);
+  }
   snapshotTaskTurns(taskId, e.project_id);
 }
 

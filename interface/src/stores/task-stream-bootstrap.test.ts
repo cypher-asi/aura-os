@@ -42,6 +42,7 @@ import {
   taskStreamKey,
 } from "./task-stream-bootstrap";
 import { useTaskOutputPanelStore } from "./task-output-panel-store";
+import { useTaskStatusStore } from "./task-status-store";
 
 function resetStreamStore(): void {
   useStreamStore.setState({ entries: {} });
@@ -63,6 +64,7 @@ beforeEach(() => {
   resetStreamStore();
   useEventStore.setState({ taskOutputs: {} });
   useTaskOutputPanelStore.setState({ tasks: [] });
+  useTaskStatusStore.getState().reset();
   bootstrapTaskStreamSubscriptions();
 });
 
@@ -71,6 +73,7 @@ afterEach(() => {
   subscribers.clear();
   resetStreamStore();
   useTaskOutputPanelStore.setState({ tasks: [] });
+  useTaskStatusStore.getState().reset();
 });
 
 describe("task-stream-bootstrap: handleTaskFailed reason extraction", () => {
@@ -305,5 +308,88 @@ describe("task-stream-bootstrap: task_completion_gate", () => {
       );
       expect(errorCard).toBeUndefined();
     }
+  });
+});
+
+describe("task-stream-bootstrap: per-task status store wiring", () => {
+  it("flips the status store to in_progress and captures session_id on TaskStarted", () => {
+    dispatch({
+      type: EventType.TaskStarted,
+      content: { task_id: "t1", task_title: "Task t1" },
+      project_id: "p1",
+      session_id: "sess-1",
+    } as unknown as AuraEvent);
+
+    const live = useTaskStatusStore.getState().byTaskId["t1"];
+    expect(live).toBeDefined();
+    expect(live!.liveStatus).toBe("in_progress");
+    expect(live!.liveSessionId).toBe("sess-1");
+  });
+
+  it("clears a stale liveFailReason when a task starts again (retry path)", () => {
+    useTaskStatusStore.getState().setLiveFailReason("t1", "previous attempt died");
+
+    dispatch({
+      type: EventType.TaskStarted,
+      content: { task_id: "t1", task_title: "Task t1" },
+      project_id: "p1",
+      session_id: "sess-2",
+    } as unknown as AuraEvent);
+
+    expect(useTaskStatusStore.getState().byTaskId["t1"]?.liveFailReason).toBeNull();
+  });
+
+  it("transitions status to done on TaskCompleted", () => {
+    dispatch({
+      type: EventType.TaskStarted,
+      content: { task_id: "t1", task_title: "Task t1" },
+      project_id: "p1",
+    } as unknown as AuraEvent);
+
+    dispatch({
+      type: EventType.TaskCompleted,
+      content: { task_id: "t1" },
+      project_id: "p1",
+    } as unknown as AuraEvent);
+
+    expect(useTaskStatusStore.getState().byTaskId["t1"]?.liveStatus).toBe("done");
+  });
+
+  it("transitions status to failed and records the canonical reason", () => {
+    dispatch({
+      type: EventType.TaskFailed,
+      content: { task_id: "t1", reason: "gate: missing build step" },
+      project_id: "p1",
+    } as unknown as AuraEvent);
+
+    const live = useTaskStatusStore.getState().byTaskId["t1"];
+    expect(live!.liveStatus).toBe("failed");
+    expect(live!.liveFailReason).toBe("gate: missing build step");
+  });
+
+  it("falls back through error/message when reason is absent on TaskFailed", () => {
+    dispatch({
+      type: EventType.TaskFailed,
+      content: { task_id: "t1", error: "connect timeout" },
+      project_id: "p1",
+    } as unknown as AuraEvent);
+
+    expect(useTaskStatusStore.getState().byTaskId["t1"]?.liveFailReason).toBe(
+      "connect timeout",
+    );
+  });
+
+  it("preserves an earlier liveFailReason when TaskFailed carries no reason", () => {
+    useTaskStatusStore.getState().setLiveFailReason("t1", "earlier real reason");
+
+    dispatch({
+      type: EventType.TaskFailed,
+      content: { task_id: "t1" },
+      project_id: "p1",
+    } as unknown as AuraEvent);
+
+    const live = useTaskStatusStore.getState().byTaskId["t1"];
+    expect(live!.liveStatus).toBe("failed");
+    expect(live!.liveFailReason).toBe("earlier real reason");
   });
 });

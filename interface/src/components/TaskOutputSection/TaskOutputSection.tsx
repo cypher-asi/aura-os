@@ -29,7 +29,7 @@ import styles from "../Preview/Preview.module.css";
 /*  Debug output serializer                                            */
 /* ------------------------------------------------------------------ */
 
-interface DebugContext {
+export interface DebugContext {
   task: Task;
   events: DisplaySessionEvent[];
   streamingText: string;
@@ -59,7 +59,15 @@ function formatToolCall(tc: ToolCallEntry): string {
   return parts.join("\n");
 }
 
-function formatDebugOutput(ctx: DebugContext): string {
+/**
+ * Serialize the current task's state (task record + live stream
+ * events + structured steps) into the markdown blob the "Copy all
+ * output" button writes to the clipboard. Exported so unit tests can
+ * assert on the exact wording without mounting the whole component
+ * tree. Call sites inside this module should keep using the private
+ * closure reference.
+ */
+export function formatDebugOutput(ctx: DebugContext): string {
   const lines: string[] = [];
 
   lines.push(`# Task: ${ctx.task.title}`);
@@ -139,7 +147,13 @@ function formatDebugOutput(ctx: DebugContext): string {
     lines.push("");
   }
 
-  if (ctx.task.execution_notes) {
+  // After server-side persistence, `execution_notes` on a failed task
+  // is typically identical to `failReason` (both originate from the
+  // same `task_failed` event's `reason` field). Render it only when it
+  // carries distinct content so "Copy All Output" doesn't emit the
+  // same paragraph twice.
+  const notes = ctx.task.execution_notes?.trim() ?? "";
+  if (notes && notes !== ctx.failReason?.trim()) {
     lines.push("## Execution Notes");
     lines.push(ctx.task.execution_notes);
     lines.push("");

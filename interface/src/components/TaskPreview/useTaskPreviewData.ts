@@ -104,7 +104,11 @@ export function useTaskPreviewData(task: import("../../types").Task) {
   const { selectedModel } = useChatUI(chatStreamKey ?? "__task-preview__");
   const [retrying, setRetrying] = useState(false);
 
-  const { liveStatus, liveSessionId, failReason, setLiveStatus, setFailReason } = useTaskStatus(task.task_id, task.status);
+  const { liveStatus, liveSessionId, failReason, setLiveStatus, setFailReason } = useTaskStatus(
+    task.task_id,
+    task.status,
+    task.execution_notes,
+  );
   const { agentInstance, completedByAgent } = useTaskAgentInstances(projectId, task);
 
   const effectiveStatus = liveStatus ?? task.status;
