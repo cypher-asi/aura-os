@@ -172,8 +172,7 @@ function storageKey(adapterType?: string): string {
   return `aura-selected-model:${adapterType ?? "default"}`;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function availableModelsForAdapter(adapterType?: string): ModelOption[] {
+export function availableModelsForAdapter(_adapterType?: string): ModelOption[] {
   // The `adapterType` argument is preserved on the public signature so call
   // sites do not need to change. External CLI adapters are no longer
   // supported, so every adapter resolves to the same Aura-managed list.
