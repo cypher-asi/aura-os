@@ -18,5 +18,8 @@ test("high-resolution capture stays generic and does not encode feature-specific
   assert.match(source, /data-aura-changelog-capture-zoom/);
   assert.match(source, /data-aura-changelog-capture-text-scale/);
   assert.match(source, /contextCreatesMostlyEmptyFrame/);
+  assert.match(source, /isFloatingProofElement/);
+  assert.match(source, /contextIsUsefulForProof/);
   assert.match(source, /nearbyAnchors/);
+  assert.match(source, /max-height: min\(68vh, 900px\)/);
 });

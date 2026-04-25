@@ -1,5 +1,6 @@
 import { apps } from "../apps/registry";
 import { LAST_APP_KEY, PREVIOUS_PATH_KEY } from "../constants";
+import { AURA_MANAGED_CHAT_MODELS } from "../constants/models";
 import type { Agent } from "../types";
 import type { DisplaySessionEvent } from "../types/stream";
 import { emptyAgentPermissions } from "../types/permissions-wire";
@@ -242,7 +243,22 @@ export function shouldApplyAgentChatSeed(seedPlan: AuraCaptureSeedPlan | null | 
   return /\b(?:app:agents|agent chat|agents?|chat input|chat model|model picker|model menu|open-model-picker)\b/i.test(seedText(seedPlan, targetAppId));
 }
 
-function demoAgent(): Agent {
+function normalizeModelSearchText(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function resolveSeedChatModel(seedPlan: AuraCaptureSeedPlan | null | undefined, targetAppId: string | null) {
+  const text = normalizeModelSearchText(seedText(seedPlan, targetAppId));
+  const sortedModels = [...AURA_MANAGED_CHAT_MODELS].sort((a, b) => b.label.length - a.label.length);
+  const requested = sortedModels.find((model) => {
+    const label = normalizeModelSearchText(model.label);
+    const id = normalizeModelSearchText(model.id);
+    return (label && text.includes(label)) || (id && text.includes(id));
+  });
+  return requested ?? AURA_MANAGED_CHAT_MODELS[0];
+}
+
+function demoAgent(modelId: string): Agent {
   const now = new Date().toISOString();
   return {
     agent_id: "capture-demo-agent",
@@ -259,7 +275,7 @@ function demoAgent(): Agent {
     environment: "browser",
     auth_source: "capture-demo",
     integration_id: null,
-    default_model: "aura-gpt-5-5",
+    default_model: modelId,
     tags: ["demo"],
     is_pinned: true,
     permissions: emptyAgentPermissions(),
@@ -374,7 +390,8 @@ export async function applyAuraCaptureSeedPlan(
     const { useAgentStore } = await import("../apps/agents/stores");
     const { useMessageStore } = await import("../stores/message-store");
     const { useChatUIStore } = await import("../stores/chat-ui-store");
-    const agent = demoAgent();
+    const seedModel = resolveSeedChatModel(seedPlan, targetAppId);
+    const agent = demoAgent(seedModel.id);
     const messages = demoAgentMessages();
     useAgentStore.setState((state) => ({
       agents: [agent, ...state.agents.filter((candidate) => candidate.agent_id !== agent.agent_id)],
@@ -392,13 +409,13 @@ export async function applyAuraCaptureSeedPlan(
       },
     }));
     useMessageStore.getState().setThread(agent.agent_id, messages);
-    useChatUIStore.getState().setSelectedModel(agent.agent_id, "aura-gpt-5-5", "default", agent.agent_id);
+    useChatUIStore.getState().setSelectedModel(agent.agent_id, seedModel.id, "default", agent.agent_id);
     try {
       window.localStorage.setItem("aura:lastAgentId", agent.agent_id);
     } catch {
       // Ignore capture-only persistence failures.
     }
-    applied.push("agent-chat-demo-model-picker");
+    applied.push(`agent-chat-demo-model-picker:${seedModel.id}`);
   }
 
   return {

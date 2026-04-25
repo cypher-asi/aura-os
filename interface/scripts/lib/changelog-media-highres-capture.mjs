@@ -50,17 +50,17 @@ function normalizeTargetPath(targetPath) {
   return raw;
 }
 
-function buildCaptureOutput({ targetAppId, targetPath, bridgeResult, pageText }) {
+function buildCaptureOutput({ targetAppId, targetPath, bridgeResult, pageText, proofText }) {
   const ok = Boolean(bridgeResult?.ok);
-  const proofText = String(pageText || "").replace(/\s+/g, " ").trim();
+  const focusedProofText = String(proofText || pageText || "").replace(/\s+/g, " ").trim();
   return {
     shouldCapture: ok,
     targetAppId: targetAppId || bridgeResult?.targetAppId || null,
     targetPath: targetPath || bridgeResult?.targetPath || null,
     proofSurface: bridgeResult?.state?.activeAppLabel || targetAppId || null,
     proofVisible: ok,
-    visibleProof: ok && proofText
-      ? [proofText.slice(0, 280)]
+    visibleProof: ok && focusedProofText
+      ? [focusedProofText.slice(0, 280)]
       : [],
     screenshotDescription: ok
       ? `High-resolution Aura desktop capture for ${targetAppId || "the target app"} at ${targetPath || "the target route"}.`
@@ -97,6 +97,20 @@ function seedPlanCaptureText(seedPlan = null) {
 async function prepareProofState(page, story) {
   const tokens = storyTokens(story);
   if (!tokens.length) return null;
+  const proofTokens = tokens.filter((token) => (
+    /\d/.test(token)
+    || token.length >= 6
+  ) && ![
+    "model",
+    "picker",
+    "available",
+    "directly",
+    "option",
+    "selectable",
+    "visible",
+    "showing",
+    "composer",
+  ].includes(token));
   const selected = await page.evaluate((candidateTokens) => {
     function visible(element) {
       const rect = element.getBoundingClientRect();
@@ -154,6 +168,45 @@ async function prepareProofState(page, story) {
   }
   if (selected) {
     await page.waitForTimeout(350);
+    await page.evaluate((desiredTokens) => {
+      if (!desiredTokens.length) return;
+      const visibleText = Array.from(document.querySelectorAll("[data-agent-proof], [data-agent-model-label]"))
+        .filter((element) => {
+          const rect = element.getBoundingClientRect();
+          const style = window.getComputedStyle(element);
+          return rect.width > 0
+            && rect.height > 0
+            && style.display !== "none"
+            && style.visibility !== "hidden"
+            && Number(style.opacity || 1) > 0.05;
+        })
+        .map((element) => `${element.getAttribute("data-agent-model-label") || ""} ${element.textContent || ""}`)
+        .join(" ")
+        .toLowerCase();
+      if (desiredTokens.some((token) => visibleText.includes(token))) return;
+      const showMoreButton = Array.from(document.querySelectorAll("button, [role='button']"))
+        .find((element) => /show all|more/i.test(element.textContent || ""));
+      if (showMoreButton instanceof HTMLElement) {
+        showMoreButton.click();
+      }
+    }, proofTokens).catch(() => null);
+    await page.waitForTimeout(250);
+    await page.evaluate((desiredTokens) => {
+      if (!desiredTokens.length) return;
+      const matches = Array.from(document.querySelectorAll("[data-agent-model-label]"))
+        .map((element) => {
+          const label = `${element.getAttribute("data-agent-model-label") || ""} ${element.textContent || ""}`.toLowerCase();
+          const score = desiredTokens.reduce((total, token) => total + (label.includes(token) ? 1 : 0), 0);
+          return { element, score };
+        })
+        .filter((entry) => entry.score > 0)
+        .sort((a, b) => b.score - a.score);
+      const best = matches[0]?.element;
+      if (best instanceof HTMLElement) {
+        best.scrollIntoView({ block: "center", inline: "nearest" });
+      }
+    }, proofTokens).catch(() => null);
+    await page.waitForTimeout(250);
     await page.waitForSelector("[data-agent-surface]", { state: "visible", timeout: 1500 }).catch(() => null);
   }
   return selected;
@@ -198,6 +251,11 @@ async function applyCapturePresentationMode(
       body[data-aura-changelog-capture-text-scale] [data-agent-proof] [data-agent-model-label] {
         font-size: calc(13px * var(--aura-changelog-capture-text-scale)) !important;
         line-height: 1.2 !important;
+      }
+      body[data-aura-changelog-capture-text-scale] [data-agent-proof][data-agent-surface] {
+        max-height: min(68vh, 900px) !important;
+        overflow-y: auto !important;
+        overscroll-behavior: contain !important;
       }
       body[data-aura-changelog-capture-text-scale] [data-agent-action],
       body[data-aura-changelog-capture-text-scale] [data-agent-field],
@@ -284,6 +342,29 @@ async function selectProofClip(page, story, proofAction = null, seedPlan = null)
       const farHorizontalContext = horizontalGap > Math.max(320, proofRect.width * 0.5);
       return emptyRatio > 0.55 && (farVerticalContext || farHorizontalContext);
     }
+    function isFloatingProofElement(element) {
+      const semanticName = [
+        element.getAttribute("data-agent-surface"),
+        element.getAttribute("data-agent-proof"),
+        element.getAttribute("role"),
+        element.getAttribute("aria-label"),
+      ].filter(Boolean).join(" ").toLowerCase();
+      const hasEnoughSelfContainedText = String(element.textContent || "").replace(/\s+/g, " ").trim().length >= 24;
+      return hasEnoughSelfContainedText
+        && /\b(?:combobox|dialog|dropdown|listbox|menu|picker|popover|selector)\b/.test(semanticName);
+    }
+    function contextIsUsefulForProof(contextRect, proofRect) {
+      if (!contextRect || !proofRect) return false;
+      if (contextCreatesMostlyEmptyFrame(contextRect, proofRect)) return false;
+      const proofArea = Math.max(1, proofRect.width * proofRect.height);
+      const contextArea = Math.max(1, contextRect.width * contextRect.height);
+      const verticalGap = Math.max(0, proofRect.y - contextRect.bottom, contextRect.y - proofRect.bottom);
+      const horizontalGap = Math.max(0, proofRect.x - contextRect.right, contextRect.x - proofRect.right);
+      const contextIsMuchLarger = contextArea > proofArea * 1.6;
+      const contextIsFar = verticalGap > Math.max(160, proofRect.height * 0.35)
+        || horizontalGap > Math.max(220, proofRect.width * 0.35);
+      return !(contextIsMuchLarger && contextIsFar);
+    }
     function expandToPresentationClip(rect, { minWidth = 1920, minHeight = 1080, maxWidth = null, maxHeight = null, alignTop = false } = {}) {
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
@@ -359,6 +440,9 @@ async function selectProofClip(page, story, proofAction = null, seedPlan = null)
         element,
         `[data-agent-proof="${CSS.escape(element.getAttribute("data-agent-proof") || "proof")}"]`,
       );
+      if (isFloatingProofElement(element)) {
+        return null;
+      }
       const explicitContext = element.closest("[data-agent-context]");
       if (explicitContext && isVisible(explicitContext)) {
         const anchors = Array.from(explicitContext.querySelectorAll("[data-agent-context-anchor]"))
@@ -368,7 +452,7 @@ async function selectProofClip(page, story, proofAction = null, seedPlan = null)
             `[data-agent-context-anchor="${CSS.escape(anchor.getAttribute("data-agent-context-anchor") || "context-anchor")}"]`,
           ));
         if (anchors.length) {
-          const nearbyAnchors = anchors.filter((anchor) => !contextCreatesMostlyEmptyFrame(anchor, proofRect));
+          const nearbyAnchors = anchors.filter((anchor) => contextIsUsefulForProof(anchor, proofRect));
           const contextAnchorRect = union(nearbyAnchors);
           if (contextAnchorRect) return contextAnchorRect;
         }
@@ -403,6 +487,7 @@ async function selectProofClip(page, story, proofAction = null, seedPlan = null)
           hasProofSignal: Boolean(element.querySelector("[data-agent-proof]") || element.getAttribute("data-agent-proof")),
           inProductContext: Boolean(element.closest("[data-agent-context]")),
           contextRect: contextRectForProofElement(element),
+          floatingProofSurface: isFloatingProofElement(element),
         };
       });
     const semanticProofElements = Array.from(document.querySelectorAll("body *"))
@@ -434,8 +519,11 @@ async function selectProofClip(page, story, proofAction = null, seedPlan = null)
       const rect = rectFor(surface.selector);
       if (!rect) continue;
       const included = [rect];
-      if (actionName) {
-        included.push(rectFor(`[data-agent-action="${CSS.escape(actionName)}"]`, { required: false }));
+      if (actionName && !surface.floatingProofSurface) {
+        const actionRect = rectFor(`[data-agent-action="${CSS.escape(actionName)}"]`, { required: false });
+        if (actionRect && contextIsUsefulForProof(actionRect, rect)) {
+          included.push(actionRect);
+        }
       }
       if (surface.directProofSignal) {
         included.push(surface.contextRect);
@@ -626,6 +714,7 @@ export async function captureHighResolutionAuraProof({
       targetPath: resolvedTargetPath,
       bridgeResult,
       pageText: pageState.text,
+      proofText: clip?.sourceText,
     });
 
     return {

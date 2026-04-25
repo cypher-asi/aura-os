@@ -252,6 +252,7 @@ export function buildVisionJudgePrompt({ candidate, stage = "raw" } = {}) {
         "- For raw captures, pass a utilitarian crop if the relevant product proof is crisp, readable, and correct.",
         "- For raw captures, do not reject merely because the app has dark/empty surrounding space; composition is handled by the branded stage.",
         "- For raw captures, the primary proof must still be large enough to verify without ambiguity.",
+        "- Focused controls, menus, and dropdowns can pass without a global app header when the specific proof and its local product context are visible; route/app identity is separately verified by deterministic gates.",
       ]
       : [
         "- Text and important UI are crisp and readable at normal changelog display size, without opening the full-size image.",

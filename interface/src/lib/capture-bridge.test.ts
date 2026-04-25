@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearAuraDesktopWindowPersistence,
+  applyAuraCaptureSeedPlan,
   persistAuraCaptureTarget,
   readAuraCaptureBridgeState,
   resolveAuraCaptureTargetAppId,
@@ -139,5 +140,15 @@ describe("capture-bridge helpers", () => {
         contextBoundary: ["The agent chat input remains visible"],
       }, null),
     ).toBe(true);
+  });
+
+  it("resolves requested chat seed models from the live model catalog", async () => {
+    const result = await applyAuraCaptureSeedPlan({
+      capabilities: ["app:agents", "agent-chat-ready", "model-picker-open"],
+      proofBoundary: ["Show DeepSeek V4 Pro in the model picker"],
+      contextBoundary: ["The chat input remains visible"],
+    }, "agents");
+
+    expect(result.applied).toContain("agent-chat-demo-model-picker:aura-deepseek-v4-pro");
   });
 });

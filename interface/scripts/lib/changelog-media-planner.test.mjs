@@ -57,6 +57,8 @@ test("buildMediaPlannerPrompt keeps Browser Use behind a conservative Anthropic 
   assert.match(prompt, /recognizable product context/);
   assert.match(prompt, /isolated widget/);
   assert.match(prompt, /Browser Use should receive fewer, better candidates/);
+  assert.match(prompt, /provider pricing, model catalog, routing, config, or API plumbing/);
+  assert.match(prompt, /confidence is at least 0\.70/);
   assert.match(prompt, /publicCaption/);
   assert.doesNotMatch(prompt, /Browserbase|Stagehand|Playwright/);
 });
@@ -73,6 +75,16 @@ test("normalizeMediaPlan keeps only high-confidence capture candidates and prese
         targetPath: "/agents",
         proofGoal: "Maybe",
         confidence: 0.2,
+      },
+      {
+        entryId: "borderline",
+        title: "Model catalog plumbing",
+        shouldCapture: true,
+        reason: "May affect the model picker",
+        targetAppId: "agents",
+        targetPath: "/agents",
+        proofGoal: "Show the model picker",
+        confidence: 0.68,
       },
       {
         entryId: "strong",
@@ -127,6 +139,7 @@ test("normalizeMediaPlan keeps only high-confidence capture candidates and prese
   assert.equal(plan.skipped[0].category, "mobile-only");
   assert.ok(plan.skipped.some((entry) => entry.entryId === "second-strong" && entry.category === "candidate-limit"));
   assert.ok(plan.skipped.some((entry) => entry.entryId === "low" && entry.category === "too-ambiguous"));
+  assert.ok(plan.skipped.some((entry) => entry.entryId === "borderline" && entry.category === "too-ambiguous"));
   assert.ok(plan.skipped.some((entry) => entry.entryId === "missing-target" && entry.reason.includes("sitemap-backed")));
 });
 

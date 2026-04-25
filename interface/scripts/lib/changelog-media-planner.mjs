@@ -3,6 +3,7 @@ import { normalizeCaptureSeedPlan } from "./changelog-media-seed-plan.mjs";
 const DEFAULT_MAX_CANDIDATES = 3;
 const DEFAULT_ENTRY_CHUNK_SIZE = 20;
 const MAX_PROMPT_CHARS = 52000;
+const MIN_CAPTURE_CONFIDENCE = 0.7;
 
 export const CHANGELOG_MEDIA_PLAN_TOOL = {
   name: "submit_changelog_media_plan",
@@ -169,6 +170,7 @@ export function buildMediaPlannerPrompt({
     "- Return at most the requested number of candidates.",
     "- Candidate screenshots must be desktop web product UI only.",
     "- Skip login, auth, sign-in, onboarding, mobile-only, native app, Android, iOS, backend-only, infra-only, release pipeline, dependency, test-only, docs-only, refactor-only, and invisible bug-fix changes.",
+    "- Skip provider pricing, model catalog, routing, config, or API plumbing changes unless the changelog explicitly describes a user-visible desktop UI change such as a new option in a picker, menu, settings panel, gallery, editor, or dashboard.",
     "- Skip entries that are not meaningfully provable in one static desktop screenshot.",
     "- Skip entries whose only likely proof is a default/empty state such as 'will appear here', 'pick a project', 'select a run', or an otherwise unseeded list/detail view.",
     "- Prefer high-confidence product features that can be located from the generated sitemap and changed files.",
@@ -181,6 +183,7 @@ export function buildMediaPlannerPrompt({
     "- Do not ask for an isolated widget, thumbnail, canvas, menu, or inner card by itself. The media must show proof plus recognizable product context.",
     "- For capture planning, prefer the smallest 16:9 desktop region where the proof remains readable at changelog-card size and the context still identifies the product surface.",
     "- Browser Use should receive fewer, better candidates. Be conservative.",
+    `- Only return a candidate when confidence is at least ${MIN_CAPTURE_CONFIDENCE.toFixed(2)}; otherwise skip it as too ambiguous.`,
     "- For each candidate, write publicCaption as a customer-facing changelog sentence. Do not use internal instructions like capture, open, show, screenshot, proof, or Browser Use.",
     "",
     `Candidate limit: ${maxCandidates}`,
@@ -235,7 +238,7 @@ export function normalizeMediaPlan(plan, { maxCandidates = DEFAULT_MAX_CANDIDATE
   }
   const uniqueCandidates = [...candidatesById.values()];
   const eligibleCandidates = uniqueCandidates
-    .filter((candidate) => candidate.confidence >= 0.55 && candidate.targetAppId && candidate.targetPath)
+    .filter((candidate) => candidate.confidence >= MIN_CAPTURE_CONFIDENCE && candidate.targetAppId && candidate.targetPath)
     .sort((left, right) => right.confidence - left.confidence || left.title.localeCompare(right.title));
   const candidates = eligibleCandidates.slice(0, maxCandidates);
   const selectedCandidateIds = new Set(candidates.map((candidate) => candidate.entryId));
@@ -246,10 +249,10 @@ export function normalizeMediaPlan(plan, { maxCandidates = DEFAULT_MAX_CANDIDATE
       title: candidate.title,
       reason: !candidate.targetAppId || !candidate.targetPath
         ? "Planner did not provide a sitemap-backed target app and path."
-        : candidate.confidence < 0.55
+        : candidate.confidence < MIN_CAPTURE_CONFIDENCE
         ? `Planner confidence ${candidate.confidence.toFixed(2)} is below the capture threshold.`
         : "Candidate was lower priority than the selected media budget.",
-      category: !candidate.targetAppId || !candidate.targetPath || candidate.confidence < 0.55 ? "too-ambiguous" : "candidate-limit",
+      category: !candidate.targetAppId || !candidate.targetPath || candidate.confidence < MIN_CAPTURE_CONFIDENCE ? "too-ambiguous" : "candidate-limit",
     }));
 
   const skipped = (Array.isArray(plan?.skipped) ? plan.skipped : [])
