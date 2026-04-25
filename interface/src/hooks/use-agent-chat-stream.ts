@@ -1,7 +1,7 @@
 import { useRef, useCallback, useEffect } from "react";
 import { api } from "../api/client";
-import type { ChatAttachment, StreamEventHandler } from "../shared/api/streams";
-import { generateImageStream, generate3dStream } from "../shared/api/streams";
+import type { ChatAttachment, StreamEventHandler } from "../api/streams";
+import { generateImageStream, generate3dStream } from "../api/streams";
 import type { GenerationMode } from "../constants/models";
 import { buildContentBlocks, buildAttachmentLabel } from "./attachment-helpers";
 import type { Spec, Task } from "../shared/types";

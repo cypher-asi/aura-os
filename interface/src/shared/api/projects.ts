@@ -1,6 +1,6 @@
 import type { ProjectId, SpecId, Project, Spec } from "../types";
 import { apiFetch } from "./core";
-import { generateSpecsStream } from "./streams";
+import { generateSpecsStream } from "../../api/streams";
 
 export interface CreateProjectRequest {
   org_id: string;

@@ -9,7 +9,7 @@ export {
 export type {
   SpecGenStreamCallbacks,
   StreamEventHandler,
-} from "../shared/api/streams";
+} from "./streams";
 
 export type {
   CreateProjectRequest,

@@ -5,7 +5,7 @@ import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import type { ChatInputBarHandle, AttachmentItem } from "../ChatInputBar";
 import { useMessageQueueStore, useMessageQueue } from "../../stores/message-queue-store";
 import type { QueuedMessage } from "../../stores/message-queue-store";
-import type { ChatAttachment } from "../../shared/api/streams";
+import type { ChatAttachment } from "../../api/streams";
 import type { DisplaySessionEvent } from "../../shared/types/stream";
 import type { SlashCommand } from "../../constants/commands";
 import { isGenerationCommand } from "../../constants/commands";

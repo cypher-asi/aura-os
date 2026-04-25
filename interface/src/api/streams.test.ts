@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { ApiClientError } from "./core";
+import { ApiClientError } from "../shared/api/core";
 import {
   generateSpecsStream,
   sendAgentEventStream,
@@ -9,14 +9,14 @@ import type {
   SpecGenStreamCallbacks,
   StreamEventHandler,
 } from "./streams";
-import * as sseModule from "./sse";
-import { handleEngineEvent } from "../../stores/event-store/engine-event-handlers";
+import * as sseModule from "../shared/api/sse";
+import { handleEngineEvent } from "../stores/event-store/engine-event-handlers";
 
-vi.mock("./sse", () => ({
+vi.mock("../shared/api/sse", () => ({
   streamSSE: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../../stores/event-store/engine-event-handlers", () => ({
+vi.mock("../stores/event-store/engine-event-handlers", () => ({
   handleEngineEvent: vi.fn(),
 }));
 

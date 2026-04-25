@@ -12,7 +12,7 @@ import type {
   AgentOrchestration,
 } from "../types";
 import { apiFetch } from "./core";
-import { sendAgentEventStream, sendEventStream } from "./streams";
+import { sendAgentEventStream, sendEventStream } from "../../api/streams";
 
 type ApiRequestOptions = {
   signal?: AbortSignal;

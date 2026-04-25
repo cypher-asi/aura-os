@@ -1,4 +1,4 @@
-import type { ChatAttachment } from "../shared/api/streams";
+import type { ChatAttachment } from "../api/streams";
 import type { DisplayContentBlockUnion } from "../shared/types/stream";
 
 function decodeBase64Text(base64: string): string {
