@@ -1,6 +1,7 @@
 import { EventType } from "../types/aura-events";
 import type { AuraEvent, AuraEventOfType } from "../types/aura-events";
 import { useEventStore, getTaskOutput } from "./event-store/index";
+import { parseEventContent } from "../shared/utils/event-content";
 import {
   ensureEntry,
   createSetters,
@@ -78,7 +79,7 @@ function contextForTask(taskId: string): TaskStreamContext {
   return { key, refs: meta.refs, setters, abortRef };
 }
 
-function handleTaskStarted(e: AuraEventOfType<EventType.TaskStarted>): void {
+function handleTaskStarted(e: AuraEventOfType<typeof EventType.TaskStarted>): void {
   const taskId = e.content.task_id;
   if (!taskId) return;
   const { refs, setters } = contextForTask(taskId);
@@ -107,7 +108,7 @@ function handleTaskStarted(e: AuraEventOfType<EventType.TaskStarted>): void {
 }
 
 function handleTextDeltaEvent(e: AuraEvent): void {
-  const c = e.content as unknown as Record<string, unknown>;
+  const c = parseEventContent(e);
   const taskId = c.task_id as string | undefined;
   if (!taskId) return;
   const text = (c.text as string) ?? "";
@@ -117,7 +118,7 @@ function handleTextDeltaEvent(e: AuraEvent): void {
 }
 
 function handleThinkingDeltaEvent(e: AuraEvent): void {
-  const c = e.content as unknown as Record<string, unknown>;
+  const c = parseEventContent(e);
   const taskId = c.task_id as string | undefined;
   if (!taskId) return;
   const thinking = (c.thinking as string) ?? (c.text as string) ?? "";
@@ -127,7 +128,7 @@ function handleThinkingDeltaEvent(e: AuraEvent): void {
 }
 
 function handleToolUseStartEvent(e: AuraEvent): void {
-  const c = e.content as unknown as Record<string, unknown>;
+  const c = parseEventContent(e);
   const taskId = c.task_id as string | undefined;
   if (!taskId) return;
   const { refs, setters } = contextForTask(taskId);
@@ -139,7 +140,7 @@ function handleToolUseStartEvent(e: AuraEvent): void {
 }
 
 function handleToolCallSnapshotEvent(e: AuraEvent): void {
-  const c = e.content as unknown as Record<string, unknown>;
+  const c = parseEventContent(e);
   const taskId = c.task_id as string | undefined;
   if (!taskId) return;
   const rawId = typeof c.id === "string" ? c.id.trim() : "";
@@ -153,7 +154,7 @@ function handleToolCallSnapshotEvent(e: AuraEvent): void {
 }
 
 function handleToolResultEvent(e: AuraEvent): void {
-  const c = e.content as unknown as Record<string, unknown>;
+  const c = parseEventContent(e);
   const taskId = c.task_id as string | undefined;
   if (!taskId) return;
   const { refs, setters } = contextForTask(taskId);
@@ -174,7 +175,7 @@ function handleToolResultEvent(e: AuraEvent): void {
  * placeholder entry if the start event hasn't arrived yet.
  */
 function handleToolCallRetryingEvent(
-  e: AuraEventOfType<EventType.ToolCallRetrying>,
+  e: AuraEventOfType<typeof EventType.ToolCallRetrying>,
 ): void {
   const c = e.content;
   const taskId = c.task_id ?? undefined;
@@ -200,7 +201,7 @@ function handleToolCallRetryingEvent(
  * "retried N/max — <reason>" instead of just "retrying…".
  */
 function handleToolCallFailedEvent(
-  e: AuraEventOfType<EventType.ToolCallFailed>,
+  e: AuraEventOfType<typeof EventType.ToolCallFailed>,
 ): void {
   const c = e.content;
   const taskId = c.task_id ?? undefined;
@@ -216,7 +217,7 @@ function handleToolCallFailedEvent(
 }
 
 function handleAssistantMessageEndEvent(e: AuraEvent): void {
-  const c = e.content as unknown as Record<string, unknown>;
+  const c = parseEventContent(e);
   const taskId = c.task_id as string | undefined;
   if (!taskId) return;
   const { refs, setters } = contextForTask(taskId);
@@ -224,7 +225,7 @@ function handleAssistantMessageEndEvent(e: AuraEvent): void {
 }
 
 function handleProgressEvent(e: AuraEvent): void {
-  const c = e.content as unknown as Record<string, unknown>;
+  const c = parseEventContent(e);
   const taskId = c.task_id as string | undefined;
   if (!taskId) return;
   const stage = (c.stage as string) ?? "";
@@ -233,7 +234,7 @@ function handleProgressEvent(e: AuraEvent): void {
   setters.setProgressText(stage);
 }
 
-function handleGitCommittedEvent(e: AuraEventOfType<EventType.GitCommitted>): void {
+function handleGitCommittedEvent(e: AuraEventOfType<typeof EventType.GitCommitted>): void {
   const taskId = e.content.task_id;
   if (!taskId) return;
   const { refs, setters } = contextForTask(taskId);
@@ -249,7 +250,7 @@ function handleGitCommittedEvent(e: AuraEventOfType<EventType.GitCommitted>): vo
 }
 
 function handleGitCommitFailedEvent(
-  e: AuraEventOfType<EventType.GitCommitFailed>,
+  e: AuraEventOfType<typeof EventType.GitCommitFailed>,
 ): void {
   const taskId = e.content.task_id;
   if (!taskId) return;
@@ -265,7 +266,7 @@ function handleGitCommitFailedEvent(
 }
 
 function handleGitCommitRolledBackEvent(
-  e: AuraEventOfType<EventType.GitCommitRolledBack>,
+  e: AuraEventOfType<typeof EventType.GitCommitRolledBack>,
 ): void {
   const taskId = e.content.task_id;
   if (!taskId) return;
@@ -281,7 +282,7 @@ function handleGitCommitRolledBackEvent(
   });
 }
 
-function handleGitPushedEvent(e: AuraEventOfType<EventType.GitPushed>): void {
+function handleGitPushedEvent(e: AuraEventOfType<typeof EventType.GitPushed>): void {
   const taskId = e.content.task_id;
   if (!taskId) return;
   const { refs, setters } = contextForTask(taskId);
@@ -298,7 +299,7 @@ function handleGitPushedEvent(e: AuraEventOfType<EventType.GitPushed>): void {
 }
 
 function handleGitPushFailedEvent(
-  e: AuraEventOfType<EventType.GitPushFailed>,
+  e: AuraEventOfType<typeof EventType.GitPushFailed>,
 ): void {
   const taskId = e.content.task_id;
   if (!taskId) return;
@@ -338,7 +339,7 @@ function snapshotTaskTurns(taskId: string, projectId?: string): void {
   persistTaskTurns(taskId, entry.events, projectId);
 }
 
-function handleTaskCompleted(e: AuraEventOfType<EventType.TaskCompleted>): void {
+function handleTaskCompleted(e: AuraEventOfType<typeof EventType.TaskCompleted>): void {
   const taskId = e.content.task_id;
   if (!taskId) return;
   const { refs, setters, abortRef } = contextForTask(taskId);
@@ -352,7 +353,7 @@ function handleTaskCompleted(e: AuraEventOfType<EventType.TaskCompleted>): void 
   snapshotTaskTurns(taskId, e.project_id);
 }
 
-function handleTaskFailed(e: AuraEventOfType<EventType.TaskFailed>): void {
+function handleTaskFailed(e: AuraEventOfType<typeof EventType.TaskFailed>): void {
   const taskId = e.content.task_id;
   if (!taskId) return;
   const { refs, setters, abortRef } = contextForTask(taskId);
@@ -361,7 +362,7 @@ function handleTaskFailed(e: AuraEventOfType<EventType.TaskFailed>): void {
   // legacy failure payloads use `error` or `message` instead of the
   // canonical `reason` field. Without these fallbacks the sidekick
   // panel would show a red badge with no explanation.
-  const raw = e.content as unknown as Record<string, unknown>;
+  const raw = parseEventContent(e);
   const reason =
     (typeof raw.reason === "string" && raw.reason) ||
     (typeof raw.error === "string" && raw.error) ||
@@ -397,7 +398,7 @@ function handleTaskFailed(e: AuraEventOfType<EventType.TaskFailed>): void {
  * timeline, which is exactly where a user would look for an explanation.
  */
 function handleTaskCompletionGateEvent(
-  e: AuraEventOfType<EventType.TaskCompletionGate>,
+  e: AuraEventOfType<typeof EventType.TaskCompletionGate>,
 ): void {
   const taskId = e.content.task_id;
   if (!taskId) return;
@@ -443,7 +444,7 @@ function handleTaskCompletionGateEvent(
  * below it.
  */
 function handleTaskRetryingEvent(
-  e: AuraEventOfType<EventType.TaskRetrying>,
+  e: AuraEventOfType<typeof EventType.TaskRetrying>,
 ): void {
   const taskId = e.content.task_id;
   if (!taskId) return;

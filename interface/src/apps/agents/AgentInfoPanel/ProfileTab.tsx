@@ -32,6 +32,19 @@ export interface ProfileTabProps {
   onViewSkill?: (skill: HarnessSkill, installation?: HarnessSkillInstallation) => void;
 }
 
+/**
+ * Some `listAgentSkills` callers receive a bare array, others receive an
+ * envelope `{ skills: [...] }` or `{ installations: [...] }`. Narrow the
+ * envelope shape and pull whichever array is present.
+ */
+function extractInstallations(value: unknown): HarnessSkillInstallation[] {
+  if (typeof value !== "object" || value === null) return [];
+  const obj = value as Record<string, unknown>;
+  if (Array.isArray(obj.skills)) return obj.skills as HarnessSkillInstallation[];
+  if (Array.isArray(obj.installations)) return obj.installations as HarnessSkillInstallation[];
+  return [];
+}
+
 function formatUptime(seconds: number): string {
   if (seconds < 60) return `${Math.floor(seconds)}s`;
   const minutes = Math.floor(seconds / 60) % 60;
@@ -276,11 +289,11 @@ export function ProfileTab(props: ProfileTabProps) {
     let cancelled = false;
     api.harnessSkills
       .listAgentSkills(agent.agent_id)
-      .then((result) => {
+      .then((result: unknown) => {
         if (cancelled) return;
-        const list = Array.isArray(result)
-          ? result
-          : (result as any)?.skills ?? (result as any)?.installations ?? [];
+        const list: HarnessSkillInstallation[] = Array.isArray(result)
+          ? (result as HarnessSkillInstallation[])
+          : extractInstallations(result);
         setInstallations(list);
       })
       .catch(() => {

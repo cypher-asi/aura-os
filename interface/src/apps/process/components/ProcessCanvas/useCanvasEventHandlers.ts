@@ -222,14 +222,20 @@ export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
 
   const onConnect = useCallback(
     async (connection: Connection) => {
-      const sourceNode = processNodes.find((n) => n.node_id === connection.source);
-      const targetNode = processNodes.find((n) => n.node_id === connection.target);
+      const { source, target } = connection;
+      // React Flow types `Connection.source`/`target` as `string | null`
+      // — a partial drag-in-progress emits null fields. Bail out so we
+      // never persist or render an edge with a missing endpoint.
+      if (!source || !target) return;
+
+      const sourceNode = processNodes.find((n) => n.node_id === source);
+      const targetNode = processNodes.find((n) => n.node_id === target);
       if (sourceNode?.node_type === "group" || targetNode?.node_type === "group") return;
 
       const duplicate = edges.some(
         (e) =>
-          e.source === connection.source &&
-          e.target === connection.target &&
+          e.source === source &&
+          e.target === target &&
           (e.sourceHandle ?? null) === (connection.sourceHandle ?? null) &&
           (e.targetHandle ?? null) === (connection.targetHandle ?? null),
       );
@@ -238,8 +244,8 @@ export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
       const tempId = `temp-${Date.now()}`;
       const optimisticEdge: Edge = {
         id: tempId,
-        source: connection.source!,
-        target: connection.target!,
+        source,
+        target,
         ...(connection.sourceHandle ? { sourceHandle: connection.sourceHandle } : {}),
         ...(connection.targetHandle ? { targetHandle: connection.targetHandle } : {}),
         animated: true,
@@ -248,9 +254,9 @@ export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
       setEdges((prev) => [...prev, optimisticEdge]);
 
       const connPayload = {
-        source_node_id: connection.source!,
+        source_node_id: source,
         source_handle: connection.sourceHandle ?? undefined,
-        target_node_id: connection.target!,
+        target_node_id: target,
         target_handle: connection.targetHandle ?? undefined,
       };
 

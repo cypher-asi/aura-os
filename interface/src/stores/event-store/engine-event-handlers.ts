@@ -5,6 +5,7 @@ import type {
   LoopIdPayload,
 } from "../../types/aura-events";
 import { EventType } from "../../types/aura-events";
+import { parseEventContent } from "../../shared/utils/event-content";
 import { useLoopActivityStore } from "../loop-activity-store";
 import { useSidekickStore } from "../sidekick-store";
 import { invalidateTaskOutputHydration } from "../task-output-hydration-cache";
@@ -21,7 +22,7 @@ interface OutputUpdate {
 type EngineHandler = (event: AuraEvent, u: OutputUpdate) => void;
 
 function handleTaskStarted(event: AuraEvent, u: OutputUpdate): void {
-  const { task_id } = event.content as AuraEventContent<EventType.TaskStarted>;
+  const { task_id } = event.content as AuraEventContent<typeof EventType.TaskStarted>;
   if (!task_id) return;
   const existing = u.outputs[task_id];
   if (existing?.text) {
@@ -42,7 +43,7 @@ function handleTaskStarted(event: AuraEvent, u: OutputUpdate): void {
 }
 
 function handleTextDelta(event: AuraEvent, u: OutputUpdate): void {
-  const c = event.content as unknown as Record<string, unknown>;
+  const c = parseEventContent(event);
   const taskId = c.task_id as string | undefined;
   const text = (c.text as string | undefined) ?? "";
   if (!taskId || !text) return;
@@ -56,7 +57,7 @@ function handleTextDelta(event: AuraEvent, u: OutputUpdate): void {
 }
 
 function handleFileOpsApplied(event: AuraEvent, u: OutputUpdate): void {
-  const { task_id, files } = event.content as AuraEventContent<EventType.FileOpsApplied>;
+  const { task_id, files } = event.content as AuraEventContent<typeof EventType.FileOpsApplied>;
   if (!task_id || !files) return;
   const existing = u.outputs[task_id] ?? EMPTY_OUTPUT;
   u.outputs = { ...u.outputs, [task_id]: { ...existing, fileOps: files } };
@@ -130,19 +131,19 @@ function appendGitStep(taskId: string, step: GitStep, u: OutputUpdate): void {
 }
 
 function handleGitCommitted(event: AuraEvent, u: OutputUpdate): void {
-  const c = event.content as AuraEventContent<EventType.GitCommitted>;
+  const c = event.content as AuraEventContent<typeof EventType.GitCommitted>;
   if (!c.task_id) return;
   appendGitStep(c.task_id, { kind: "committed", commitSha: c.commit_sha, timestamp: Date.now() }, u);
 }
 
 function handleGitCommitFailed(event: AuraEvent, u: OutputUpdate): void {
-  const c = event.content as AuraEventContent<EventType.GitCommitFailed>;
+  const c = event.content as AuraEventContent<typeof EventType.GitCommitFailed>;
   if (!c.task_id) return;
   appendGitStep(c.task_id, { kind: "commit_failed", reason: c.reason, timestamp: Date.now() }, u);
 }
 
 function handleGitCommitRolledBack(event: AuraEvent, u: OutputUpdate): void {
-  const c = event.content as AuraEventContent<EventType.GitCommitRolledBack>;
+  const c = event.content as AuraEventContent<typeof EventType.GitCommitRolledBack>;
   if (!c.task_id) return;
   appendGitStep(
     c.task_id,
@@ -157,7 +158,7 @@ function handleGitCommitRolledBack(event: AuraEvent, u: OutputUpdate): void {
 }
 
 function handleGitPushed(event: AuraEvent, u: OutputUpdate): void {
-  const c = event.content as AuraEventContent<EventType.GitPushed>;
+  const c = event.content as AuraEventContent<typeof EventType.GitPushed>;
   // A successful push clears any lingering project-level push-stuck banner
   // BEFORE we short-circuit on missing task_id, so project-scoped pushes
   // (e.g. manual remote-fix pushes made outside of a task run) still clear
@@ -176,7 +177,7 @@ function handleGitPushed(event: AuraEvent, u: OutputUpdate): void {
 }
 
 function handleGitPushFailed(event: AuraEvent, u: OutputUpdate): void {
-  const c = event.content as AuraEventContent<EventType.GitPushFailed>;
+  const c = event.content as AuraEventContent<typeof EventType.GitPushFailed>;
   if (!c.task_id) return;
   const rawClass = (c as { class?: string }).class;
   appendGitStep(c.task_id, {
@@ -191,7 +192,7 @@ function handleGitPushFailed(event: AuraEvent, u: OutputUpdate): void {
 }
 
 function handlePushDeferred(event: AuraEvent, u: OutputUpdate): void {
-  const c = event.content as AuraEventContent<EventType.PushDeferred>;
+  const c = event.content as AuraEventContent<typeof EventType.PushDeferred>;
   // A `remote_storage_exhausted` classification is promoted to a
   // project-level banner on the FIRST event (not the standard 3-streak)
   // because retrying in cooldown actively makes the orbit ENOSPC worse.
@@ -227,7 +228,7 @@ function handleProjectPushStuck(event: AuraEvent, u: OutputUpdate): void {
   // Banner state lives on the event store root (not per-task), so this
   // handler does not mutate the task-output update bag.
   void u;
-  const c = event.content as AuraEventContent<EventType.ProjectPushStuck>;
+  const c = event.content as AuraEventContent<typeof EventType.ProjectPushStuck>;
   const projectId = event.project_id;
   if (!projectId) return;
   useEventStore.getState().setPushStuck(projectId, {
@@ -248,13 +249,13 @@ function handleTaskFinish(event: AuraEvent, u: OutputUpdate): void {
 }
 
 function handleSpecSaved(event: AuraEvent, _u: OutputUpdate): void {
-  const spec = (event.content as AuraEventContent<EventType.SpecSaved>).spec;
+  const spec = (event.content as AuraEventContent<typeof EventType.SpecSaved>).spec;
   if (!spec) return;
   useSidekickStore.getState().pushSpec(spec);
 }
 
 function handleTaskSaved(event: AuraEvent, _u: OutputUpdate): void {
-  const task = (event.content as AuraEventContent<EventType.TaskSaved>).task;
+  const task = (event.content as AuraEventContent<typeof EventType.TaskSaved>).task;
   if (!task) return;
   useSidekickStore.getState().pushTask(task);
 }

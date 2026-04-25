@@ -13,6 +13,22 @@ interface SkillsTabProps {
   agent: Agent;
 }
 
+/**
+ * Some harness endpoints return either a bare array or an envelope object
+ * such as `{ skills: [...] }` / `{ installations: [...] }`. This helper
+ * narrows an `unknown` payload to the first matching array field, returning
+ * `[]` when no shape matches. Caller asserts the element type.
+ */
+function extractArrayField<T>(value: unknown, fields: readonly string[]): T[] {
+  if (typeof value !== "object" || value === null) return [];
+  const obj = value as Record<string, unknown>;
+  for (const f of fields) {
+    const v = obj[f];
+    if (Array.isArray(v)) return v as T[];
+  }
+  return [];
+}
+
 interface SkillRowProps {
   skill: HarnessSkill;
   installed: boolean;
@@ -227,14 +243,17 @@ export function SkillsTab({ agent }: SkillsTabProps) {
     if (mineResult.status === "rejected") {
       console.error("Failed to list user-created skills", mineResult.reason);
     }
-    const skillsData = skillsResult.status === "fulfilled" ? skillsResult.value : [];
-    const installData = installResult.status === "fulfilled" ? installResult.value : [];
-    const mineData = mineResult.status === "fulfilled" ? mineResult.value : [];
-    const skills = Array.isArray(skillsData) ? skillsData : (skillsData as any)?.skills ?? [];
-    const installs = Array.isArray(installData)
-      ? installData
-      : (installData as any)?.skills ?? (installData as any)?.installations ?? [];
-    const mine = Array.isArray(mineData) ? mineData : [];
+    const skillsData: unknown = skillsResult.status === "fulfilled" ? skillsResult.value : [];
+    const installData: unknown = installResult.status === "fulfilled" ? installResult.value : [];
+    const mineData: unknown = mineResult.status === "fulfilled" ? mineResult.value : [];
+
+    const skills: HarnessSkill[] = Array.isArray(skillsData)
+      ? (skillsData as HarnessSkill[])
+      : extractArrayField<HarnessSkill>(skillsData, ["skills"]);
+    const installs: HarnessSkillInstallation[] = Array.isArray(installData)
+      ? (installData as HarnessSkillInstallation[])
+      : extractArrayField<HarnessSkillInstallation>(installData, ["skills", "installations"]);
+    const mine: MySkillEntry[] = Array.isArray(mineData) ? (mineData as MySkillEntry[]) : [];
     setCatalog(skills);
     setInstallations(installs);
     setMySkills(mine);

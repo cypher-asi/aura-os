@@ -39,7 +39,7 @@ import { desktopRoutes } from "./desktop/routes";
 type AppModuleLoader = () => Promise<AuraAppModule>;
 
 const EmptyComponent = () => null;
-function wrapLazyAppComponent<Props>(
+function wrapLazyAppComponent<Props extends object>(
   loadApp: AppModuleLoader,
   selectComponent: (app: AuraAppModule) => ComponentType<Props> | undefined,
   fallbackRender?: (props: Props) => ReactNode,
@@ -55,7 +55,7 @@ function wrapLazyAppComponent<Props>(
     return createElement(
       Suspense,
       { fallback: fallbackRender ? fallbackRender(props) : null },
-      createElement(LazyComponent as ComponentType<any>, props as any),
+      createElement<Props>(LazyComponent, props),
     );
   }
 

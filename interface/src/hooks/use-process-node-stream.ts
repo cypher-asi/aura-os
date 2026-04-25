@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useEventStore } from "../stores/event-store/index";
+import { parseEventContent } from "../shared/utils/event-content";
 import { EventType } from "../types/aura-events";
 import {
   useStreamCore,
@@ -89,7 +90,7 @@ export function useProcessNodeStream(
 
     const release = acquireSharedStreamSubscriptions(key, () => [
       subscribe(EventType.ProcessNodeExecuted, (e) => {
-        const c = e.content as unknown as Record<string, unknown>;
+        const c = parseEventContent(e);
         if (c.run_id !== runId || c.node_id !== nodeId) return;
         const status = ((c.status as string) ?? "").toLowerCase();
         if (status.includes("running")) {
@@ -105,21 +106,21 @@ export function useProcessNodeStream(
       }),
 
       subscribe(EventType.TextDelta, (e) => {
-        const c = e.content as unknown as Record<string, unknown>;
+        const c = parseEventContent(e);
         if (!matchesCtx(c)) return;
         const text = (c.text as string) ?? "";
         if (text) handleTextDelta(refs, setters, getThinkingDurationMs(key), text);
       }),
 
       subscribe(EventType.ThinkingDelta, (e) => {
-        const c = e.content as unknown as Record<string, unknown>;
+        const c = parseEventContent(e);
         if (!matchesCtx(c)) return;
         const thinking = (c.thinking as string) ?? "";
         if (thinking) handleThinkingDelta(refs, setters, thinking);
       }),
 
       subscribe(EventType.ToolUseStart, (e) => {
-        const c = e.content as unknown as Record<string, unknown>;
+        const c = parseEventContent(e);
         if (!matchesCtx(c)) return;
         handleToolCallStarted(refs, setters, {
           id: (c.id as string) ?? crypto.randomUUID(),
@@ -128,7 +129,7 @@ export function useProcessNodeStream(
       }),
 
       subscribe(EventType.ToolCallSnapshot, (e) => {
-        const c = e.content as unknown as Record<string, unknown>;
+        const c = parseEventContent(e);
         if (!matchesCtx(c)) return;
         handleToolCallSnapshot(refs, setters, {
           id: (c.id as string) ?? "",
@@ -138,7 +139,7 @@ export function useProcessNodeStream(
       }),
 
       subscribe(EventType.ToolResult, (e) => {
-        const c = e.content as unknown as Record<string, unknown>;
+        const c = parseEventContent(e);
         if (!matchesCtx(c)) return;
         handleToolResult(refs, setters, {
           id: c.id as string | undefined,
@@ -149,7 +150,7 @@ export function useProcessNodeStream(
       }),
 
       subscribe(EventType.ProcessRunCompleted, (e) => {
-        const c = e.content as unknown as Record<string, unknown>;
+        const c = parseEventContent(e);
         if (c.run_id !== runId) return;
         finalizeStream(refs, setters, abortRef, isStreamingRef.current, {
           reason: "completed",
@@ -158,7 +159,7 @@ export function useProcessNodeStream(
       }),
 
       subscribe(EventType.ProcessRunFailed, (e) => {
-        const c = e.content as unknown as Record<string, unknown>;
+        const c = parseEventContent(e);
         if (c.run_id !== runId) return;
         finalizeStream(refs, setters, abortRef, isStreamingRef.current, {
           reason: "failed",

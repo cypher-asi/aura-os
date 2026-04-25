@@ -75,20 +75,20 @@ export interface ChatAttachment {
  * String values are the wire/storage format.
  * ------------------------------------------------------------------ */
 
-export enum EventType {
+export const EventType = {
   // Message lifecycle
-  UserMessage           = "user_message",
-  MessageStart          = "message_start",
-  MessageEnd            = "message_end",
+  UserMessage:           "user_message",
+  MessageStart:          "message_start",
+  MessageEnd:            "message_end",
 
   // Streaming (within MessageStart..MessageEnd)
-  Delta                 = "delta",
-  ThinkingDelta         = "thinking_delta",
-  Progress              = "progress",
-  ToolCallStarted       = "tool_call_started",
-  ToolCallSnapshot      = "tool_call_snapshot",
-  ToolCall              = "tool_call",
-  ToolResult            = "tool_result",
+  Delta:                 "delta",
+  ThinkingDelta:         "thinking_delta",
+  Progress:              "progress",
+  ToolCallStarted:       "tool_call_started",
+  ToolCallSnapshot:      "tool_call_snapshot",
+  ToolCall:              "tool_call",
+  ToolResult:            "tool_result",
   /**
    * Emitted by aura-harness (see `AgentLoopEvent::ToolCallRetrying`
    * in crates/aura-agent/src/events/mod.rs) when its internal
@@ -97,7 +97,7 @@ export enum EventType {
    * render a live "Write retrying (n/8)..." state on the tool card
    * that owns the `tool_use_id`.
    */
-  ToolCallRetrying      = "tool_call_retrying",
+  ToolCallRetrying:      "tool_call_retrying",
   /**
    * Emitted by aura-harness (see `AgentLoopEvent::ToolCallFailed`)
    * once the streaming-retry budget is exhausted and the tool call
@@ -108,16 +108,16 @@ export enum EventType {
    * both retry ladders gave up. Renders as a red failure badge with
    * the classified reason inline.
    */
-  ToolCallFailed        = "tool_call_failed",
-  TokenUsage            = "token_usage",
-  Done                  = "done",
+  ToolCallFailed:        "tool_call_failed",
+  TokenUsage:            "token_usage",
+  Done:                  "done",
 
   // Harness protocol (local harness wire format)
-  SessionReady              = "session_ready",
-  AssistantMessageStart     = "assistant_message_start",
-  AssistantMessageEnd       = "assistant_message_end",
-  TextDelta                 = "text_delta",
-  ToolUseStart              = "tool_use_start",
+  SessionReady:              "session_ready",
+  AssistantMessageStart:     "assistant_message_start",
+  AssistantMessageEnd:       "assistant_message_end",
+  TextDelta:                 "text_delta",
+  ToolUseStart:              "tool_use_start",
 
   /**
    * Throttled live-progress heartbeat published by
@@ -130,33 +130,33 @@ export enum EventType {
    * the partial response (text + tool cards + sidekick `pending-*`
    * placeholders) until `assistant_message_end` finally lands.
    */
-  AssistantTurnProgress     = "assistant_turn_progress",
+  AssistantTurnProgress:     "assistant_turn_progress",
 
   // Agent state
-  AgentInstanceUpdated      = "agent_instance_updated",
-  RemoteAgentStateChanged   = "remote_agent_state_changed",
+  AgentInstanceUpdated:      "agent_instance_updated",
+  RemoteAgentStateChanged:   "remote_agent_state_changed",
 
   // Spec generation
-  SpecSaved             = "spec_saved",
-  SpecsTitle            = "specs_title",
-  SpecsSummary          = "specs_summary",
-  SpecGenStarted        = "spec_gen_started",
-  SpecGenProgress       = "spec_gen_progress",
-  SpecGenCompleted      = "spec_gen_completed",
-  SpecGenFailed         = "spec_gen_failed",
-  SpecGenerating        = "generating",
-  SpecGenComplete       = "complete",
+  SpecSaved:             "spec_saved",
+  SpecsTitle:            "specs_title",
+  SpecsSummary:          "specs_summary",
+  SpecGenStarted:        "spec_gen_started",
+  SpecGenProgress:       "spec_gen_progress",
+  SpecGenCompleted:      "spec_gen_completed",
+  SpecGenFailed:         "spec_gen_failed",
+  SpecGenerating:        "generating",
+  SpecGenComplete:       "complete",
 
   // Task lifecycle
-  TaskSaved             = "task_saved",
-  TaskStarted           = "task_started",
-  TaskCompleted         = "task_completed",
-  TaskFailed            = "task_failed",
-  TaskRetrying          = "task_retrying",
-  TaskBecameReady       = "task_became_ready",
-  TasksBecameReady      = "tasks_became_ready",
-  FollowUpTaskCreated   = "follow_up_task_created",
-  FileOpsApplied        = "file_ops_applied",
+  TaskSaved:             "task_saved",
+  TaskStarted:           "task_started",
+  TaskCompleted:         "task_completed",
+  TaskFailed:            "task_failed",
+  TaskRetrying:          "task_retrying",
+  TaskBecameReady:       "task_became_ready",
+  TasksBecameReady:      "tasks_became_ready",
+  FollowUpTaskCreated:   "follow_up_task_created",
+  FileOpsApplied:        "file_ops_applied",
   /**
    * Audit event emitted by the server's Definition-of-Done gate after a
    * `task_completed` is inspected (see `completion_validation_failure_reason`
@@ -165,16 +165,16 @@ export enum EventType {
    * run lacked required evidence (empty-path writes, no build, no test,
    * etc.). Carries `failure_reason` + the gate report counters.
    */
-  TaskCompletionGate    = "task_completion_gate",
+  TaskCompletionGate:    "task_completion_gate",
 
   // Loop lifecycle
-  LoopStarted           = "loop_started",
-  LoopPaused            = "loop_paused",
-  LoopResumed           = "loop_resumed",
-  LoopStopped           = "loop_stopped",
-  LoopFinished          = "loop_finished",
-  LoopIterationSummary  = "loop_iteration_summary",
-  SessionRolledOver     = "session_rolled_over",
+  LoopStarted:           "loop_started",
+  LoopPaused:            "loop_paused",
+  LoopResumed:           "loop_resumed",
+  LoopStopped:           "loop_stopped",
+  LoopFinished:          "loop_finished",
+  LoopIterationSummary:  "loop_iteration_summary",
+  SessionRolledOver:     "session_rolled_over",
 
   /**
    * Typed loop lifecycle / activity events emitted by the `LoopRegistry`
@@ -185,69 +185,76 @@ export enum EventType {
    * They coexist with the string-keyed `LoopStarted`/`LoopFinished`
    * events above for backwards compatibility.
    */
-  LoopOpened            = "loop_opened",
-  LoopActivityChanged   = "loop_activity_changed",
-  LoopEnded             = "loop_ended",
+  LoopOpened:            "loop_opened",
+  LoopActivityChanged:   "loop_activity_changed",
+  LoopEnded:             "loop_ended",
 
   // Build verification
-  BuildVerificationSkipped  = "build_verification_skipped",
-  BuildVerificationStarted  = "build_verification_started",
-  BuildVerificationPassed   = "build_verification_passed",
-  BuildVerificationFailed   = "build_verification_failed",
-  BuildFixAttempt           = "build_fix_attempt",
+  BuildVerificationSkipped:  "build_verification_skipped",
+  BuildVerificationStarted:  "build_verification_started",
+  BuildVerificationPassed:   "build_verification_passed",
+  BuildVerificationFailed:   "build_verification_failed",
+  BuildFixAttempt:           "build_fix_attempt",
 
   // Test verification
-  TestVerificationStarted   = "test_verification_started",
-  TestVerificationPassed    = "test_verification_passed",
-  TestVerificationFailed    = "test_verification_failed",
-  TestFixAttempt            = "test_fix_attempt",
+  TestVerificationStarted:   "test_verification_started",
+  TestVerificationPassed:    "test_verification_passed",
+  TestVerificationFailed:    "test_verification_failed",
+  TestFixAttempt:            "test_fix_attempt",
 
   // Git
-  GitCommitted          = "git_committed",
-  GitCommitFailed       = "git_commit_failed",
-  /// Emitted when the DoD completion gate rejects a task *after* the
-  /// automaton already reported `git_committed`. The SHA carried in
-  /// the event cannot be reached from `git log` (the push was never
-  /// made, and the commit is effectively orphaned). The UI renders
-  /// this as a muted/strikethrough row so users are not misled by a
-  /// committed-looking SHA that does not actually exist on main.
-  GitCommitRolledBack   = "git_commit_rolled_back",
-  GitPushed             = "git_pushed",
-  GitPushFailed         = "git_push_failed",
-  /// Emitted on every push failure (transient or terminal). Carries
-  /// the task/project context and the classified failure reason so
-  /// the UI can surface a muted "Push deferred" row on the task card
-  /// without the red "push_failed" styling.
-  PushDeferred          = "push_deferred",
-  /// Emitted ONCE per streak when a project accumulates
-  /// CONSECUTIVE_PUSH_FAILURES_STUCK_THRESHOLD back-to-back push
-  /// failures. The UI uses this as a signal to mount a persistent
-  /// banner on the project header until a successful push clears it.
-  ProjectPushStuck      = "project_push_stuck",
+  GitCommitted:          "git_committed",
+  GitCommitFailed:       "git_commit_failed",
+  /**
+   * Emitted when the DoD completion gate rejects a task *after* the
+   * automaton already reported `git_committed`. The SHA carried in
+   * the event cannot be reached from `git log` (the push was never
+   * made, and the commit is effectively orphaned). The UI renders
+   * this as a muted/strikethrough row so users are not misled by a
+   * committed-looking SHA that does not actually exist on main.
+   */
+  GitCommitRolledBack:   "git_commit_rolled_back",
+  GitPushed:             "git_pushed",
+  GitPushFailed:         "git_push_failed",
+  /**
+   * Emitted on every push failure (transient or terminal). Carries
+   * the task/project context and the classified failure reason so
+   * the UI can surface a muted "Push deferred" row on the task card
+   * without the red "push_failed" styling.
+   */
+  PushDeferred:          "push_deferred",
+  /**
+   * Emitted ONCE per streak when a project accumulates
+   * CONSECUTIVE_PUSH_FAILURES_STUCK_THRESHOLD back-to-back push
+   * failures. The UI uses this as a signal to mount a persistent
+   * banner on the project header until a successful push clears it.
+   */
+  ProjectPushStuck:      "project_push_stuck",
 
   // Billing
-  CreditBalanceUpdated  = "credit_balance_updated",
+  CreditBalanceUpdated:  "credit_balance_updated",
 
   // Process execution
-  ProcessRunStarted     = "process_run_started",
-  ProcessRunProgress    = "process_run_progress",
-  ProcessRunCompleted   = "process_run_completed",
-  ProcessRunFailed      = "process_run_failed",
-  ProcessNodeExecuted   = "process_node_executed",
-  ProcessNodeOutputDelta = "process_node_output_delta",
+  ProcessRunStarted:     "process_run_started",
+  ProcessRunProgress:    "process_run_progress",
+  ProcessRunCompleted:   "process_run_completed",
+  ProcessRunFailed:      "process_run_failed",
+  ProcessNodeExecuted:   "process_node_executed",
+  ProcessNodeOutputDelta: "process_node_output_delta",
 
   // Generation (image / 3D)
-  GenerationStart       = "generation_start",
-  GenerationProgress    = "generation_progress",
-  GenerationPartialImage = "generation_partial_image",
-  GenerationCompleted   = "generation_completed",
-  GenerationError       = "generation_error",
+  GenerationStart:       "generation_start",
+  GenerationProgress:    "generation_progress",
+  GenerationPartialImage: "generation_partial_image",
+  GenerationCompleted:   "generation_completed",
+  GenerationError:       "generation_error",
 
   // Other
-  LogLine               = "log_line",
-  NetworkEvent          = "network_event",
-  Error                 = "error",
-}
+  LogLine:               "log_line",
+  NetworkEvent:          "network_event",
+  Error:                 "error",
+} as const;
+export type EventType = typeof EventType[keyof typeof EventType];
 
 /* ── Sender & AuraEventBase ─────────────────────────────────────────
  * Mirrors the `session_events` table columns.
@@ -274,59 +281,59 @@ export interface AuraEventBase {
 
 export type AuraEvent = AuraEventBase & (
   // ── Message lifecycle ──────────────────────────────────────
-  | { type: EventType.UserMessage; content: {
+  | { type: typeof EventType.UserMessage; content: {
       message_id: string;
       text: string;
       attachments?: ChatAttachment[];
     } }
-  | { type: EventType.MessageStart; content: {
+  | { type: typeof EventType.MessageStart; content: {
       message_id: string;
       role: "assistant" | "system";
     } }
-  | { type: EventType.MessageEnd; content: {
+  | { type: typeof EventType.MessageEnd; content: {
       message_id: string;
       event: SessionEvent;
     } }
 
   // ── Streaming (within MessageStart..MessageEnd) ─────────────
-  | { type: EventType.Delta; content: {
+  | { type: typeof EventType.Delta; content: {
       message_id?: string;
       text: string;
     } }
-  | { type: EventType.ThinkingDelta; content: {
+  | { type: typeof EventType.ThinkingDelta; content: {
       message_id?: string;
       text?: string;
       thinking?: string;
     } }
-  | { type: EventType.Progress; content: {
+  | { type: typeof EventType.Progress; content: {
       message_id?: string;
       stage: string;
     } }
-  | { type: EventType.ToolCallStarted; content: {
+  | { type: typeof EventType.ToolCallStarted; content: {
       message_id?: string;
       id: string;
       name: string;
     } }
-  | { type: EventType.ToolCallSnapshot; content: {
-      message_id?: string;
-      id: string;
-      name: string;
-      input: Record<string, unknown>;
-    } }
-  | { type: EventType.ToolCall; content: {
+  | { type: typeof EventType.ToolCallSnapshot; content: {
       message_id?: string;
       id: string;
       name: string;
       input: Record<string, unknown>;
     } }
-  | { type: EventType.ToolResult; content: {
+  | { type: typeof EventType.ToolCall; content: {
+      message_id?: string;
+      id: string;
+      name: string;
+      input: Record<string, unknown>;
+    } }
+  | { type: typeof EventType.ToolResult; content: {
       message_id?: string;
       id?: string;
       name: string;
       result: string;
       is_error: boolean;
     } }
-  | { type: EventType.ToolCallRetrying; content: {
+  | { type: typeof EventType.ToolCallRetrying; content: {
       message_id?: string;
       /** Harness-side `tool_use_id`; must match the `id` on the
        *  originating ToolCallStarted / ToolCallSnapshot so the UI can
@@ -345,27 +352,27 @@ export type AuraEvent = AuraEventBase & (
       reason: string;
       task_id?: string;
     } }
-  | { type: EventType.ToolCallFailed; content: {
+  | { type: typeof EventType.ToolCallFailed; content: {
       message_id?: string;
       tool_use_id: string;
       tool_name: string;
       reason: string;
       task_id?: string;
     } }
-  | { type: EventType.TokenUsage; content: {
+  | { type: typeof EventType.TokenUsage; content: {
       message_id?: string;
       input_tokens: number;
       output_tokens: number;
     } }
-  | { type: EventType.Done; content: {
+  | { type: typeof EventType.Done; content: {
       message_id?: string;
     } }
 
   // ── Agent state ────────────────────────────────────────────
-  | { type: EventType.AgentInstanceUpdated; content: {
+  | { type: typeof EventType.AgentInstanceUpdated; content: {
       agent_instance: AgentInstance;
     } }
-  | { type: EventType.RemoteAgentStateChanged; content: {
+  | { type: typeof EventType.RemoteAgentStateChanged; content: {
       agent_id: string;
       state: string;
       uptime_seconds: number;
@@ -378,33 +385,33 @@ export type AuraEvent = AuraEventBase & (
     } }
 
   // ── Spec generation ────────────────────────────────────────
-  | { type: EventType.SpecSaved; content: {
+  | { type: typeof EventType.SpecSaved; content: {
       spec: Spec;
       spec_id?: string;
     } }
-  | { type: EventType.SpecsTitle; content: { title: string } }
-  | { type: EventType.SpecsSummary; content: { summary: string } }
-  | { type: EventType.SpecGenStarted; content: Record<string, never> }
-  | { type: EventType.SpecGenProgress; content: {
+  | { type: typeof EventType.SpecsTitle; content: { title: string } }
+  | { type: typeof EventType.SpecsSummary; content: { summary: string } }
+  | { type: typeof EventType.SpecGenStarted; content: Record<string, never> }
+  | { type: typeof EventType.SpecGenProgress; content: {
       stage: string;
       spec_count?: number;
     } }
-  | { type: EventType.SpecGenCompleted; content: {
+  | { type: typeof EventType.SpecGenCompleted; content: {
       spec_count?: number;
     } }
-  | { type: EventType.SpecGenFailed; content: { reason?: string } }
-  | { type: EventType.SpecGenerating; content: { tokens: number } }
-  | { type: EventType.SpecGenComplete; content: { specs: Spec[] } }
+  | { type: typeof EventType.SpecGenFailed; content: { reason?: string } }
+  | { type: typeof EventType.SpecGenerating; content: { tokens: number } }
+  | { type: typeof EventType.SpecGenComplete; content: { specs: Spec[] } }
 
   // ── Task lifecycle ─────────────────────────────────────────
-  | { type: EventType.TaskSaved; content: { task: Task } }
-  | { type: EventType.TaskStarted; content: {
+  | { type: typeof EventType.TaskSaved; content: { task: Task } }
+  | { type: typeof EventType.TaskStarted; content: {
       task_id: string;
       task_title?: string;
       codebase_snapshot_bytes?: number;
       codebase_file_count?: number;
     } }
-  | { type: EventType.TaskCompleted; content: {
+  | { type: typeof EventType.TaskCompleted; content: {
       task_id: string;
       task_title?: string;
       outcome?: string;
@@ -419,7 +426,7 @@ export type AuraEvent = AuraEventBase & (
       parse_retries?: number;
       build_fix_attempts?: number;
     } }
-  | { type: EventType.TaskFailed; content: {
+  | { type: typeof EventType.TaskFailed; content: {
       task_id: string;
       task_title?: string;
       reason?: string;
@@ -427,7 +434,7 @@ export type AuraEvent = AuraEventBase & (
       phase?: string;
       build_fix_attempts?: number;
     } }
-  | { type: EventType.TaskRetrying; content: {
+  | { type: typeof EventType.TaskRetrying; content: {
       task_id: string;
       attempt: number;
       reason?: string;
@@ -439,20 +446,20 @@ export type AuraEvent = AuraEventBase & (
        */
       preamble?: string;
     } }
-  | { type: EventType.TaskBecameReady; content: { task_id: string } }
-  | { type: EventType.TasksBecameReady; content: {
+  | { type: typeof EventType.TaskBecameReady; content: { task_id: string } }
+  | { type: typeof EventType.TasksBecameReady; content: {
       task_ids: string[];
     } }
-  | { type: EventType.FollowUpTaskCreated; content: {
+  | { type: typeof EventType.FollowUpTaskCreated; content: {
       task_id: string;
     } }
-  | { type: EventType.FileOpsApplied; content: {
+  | { type: typeof EventType.FileOpsApplied; content: {
       task_id: string;
       files: { op: string; path: string }[];
       files_written?: number;
       files_deleted?: number;
     } }
-  | { type: EventType.TaskCompletionGate; content: {
+  | { type: typeof EventType.TaskCompletionGate; content: {
       task_id: string;
       passed: boolean;
       failure_reason?: string;
@@ -469,10 +476,10 @@ export type AuraEvent = AuraEventBase & (
     } }
 
   // ── Loop lifecycle ─────────────────────────────────────────
-  | { type: EventType.LoopStarted; content: {
+  | { type: typeof EventType.LoopStarted; content: {
       automaton_id?: string;
     } }
-  | { type: EventType.LoopPaused; content: {
+  | { type: typeof EventType.LoopPaused; content: {
       completed_count?: number;
       /** Task whose failure triggered the pause, when applicable. */
       task_id?: string;
@@ -483,19 +490,19 @@ export type AuraEvent = AuraEventBase & (
       /** How long the loop will remain paused before auto-resume, in milliseconds. */
       cooldown_ms?: number;
     } }
-  | { type: EventType.LoopResumed; content: {
+  | { type: typeof EventType.LoopResumed; content: {
       task_id?: string;
       reason?: string;
       retry_kind?: string;
     } }
-  | { type: EventType.LoopStopped; content: {
+  | { type: typeof EventType.LoopStopped; content: {
       completed_count?: number;
       tasks_completed?: number;
       tasks_failed?: number;
       total_duration_ms?: number;
       total_cost_usd?: number;
     } }
-  | { type: EventType.LoopFinished; content: {
+  | { type: typeof EventType.LoopFinished; content: {
       outcome?: string;
       tasks_completed?: number;
       tasks_failed?: number;
@@ -508,26 +515,26 @@ export type AuraEvent = AuraEventBase & (
       total_build_fix_attempts?: number;
       total_parse_retries?: number;
     } }
-  | { type: EventType.LoopIterationSummary; content: {
+  | { type: typeof EventType.LoopIterationSummary; content: {
       task_id?: string;
       phase_timings?: PhaseTimingEntry[];
       duration_ms?: number;
     } }
 
   // ── Typed loop activity (LoopRegistry) ─────────────────────
-  | { type: EventType.LoopOpened; content: {
+  | { type: typeof EventType.LoopOpened; content: {
       loop_id: LoopIdPayload;
       activity: LoopActivityPayload;
     } }
-  | { type: EventType.LoopActivityChanged; content: {
+  | { type: typeof EventType.LoopActivityChanged; content: {
       loop_id: LoopIdPayload;
       activity: LoopActivityPayload;
     } }
-  | { type: EventType.LoopEnded; content: {
+  | { type: typeof EventType.LoopEnded; content: {
       loop_id: LoopIdPayload;
       activity: LoopActivityPayload;
     } }
-  | { type: EventType.SessionRolledOver; content: {
+  | { type: typeof EventType.SessionRolledOver; content: {
       old_session_id: string;
       new_session_id: string;
       task_id?: string;
@@ -536,45 +543,45 @@ export type AuraEvent = AuraEventBase & (
     } }
 
   // ── Build verification ─────────────────────────────────────
-  | { type: EventType.BuildVerificationSkipped; content: {
+  | { type: typeof EventType.BuildVerificationSkipped; content: {
       task_id: string;
       reason?: string;
       command?: string;
     } }
-  | { type: EventType.BuildVerificationStarted; content: {
+  | { type: typeof EventType.BuildVerificationStarted; content: {
       task_id: string;
       command?: string;
     } }
-  | { type: EventType.BuildVerificationPassed; content: {
+  | { type: typeof EventType.BuildVerificationPassed; content: {
       task_id: string;
       stdout?: string;
       duration_ms?: number;
     } }
-  | { type: EventType.BuildVerificationFailed; content: {
+  | { type: typeof EventType.BuildVerificationFailed; content: {
       task_id: string;
       stderr?: string;
       stdout?: string;
       duration_ms?: number;
       attempt?: number;
     } }
-  | { type: EventType.BuildFixAttempt; content: {
+  | { type: typeof EventType.BuildFixAttempt; content: {
       task_id: string;
       attempt: number;
       stderr?: string;
     } }
 
   // ── Test verification ──────────────────────────────────────
-  | { type: EventType.TestVerificationStarted; content: {
+  | { type: typeof EventType.TestVerificationStarted; content: {
       task_id: string;
       command?: string;
     } }
-  | { type: EventType.TestVerificationPassed; content: {
+  | { type: typeof EventType.TestVerificationPassed; content: {
       task_id: string;
       tests?: { name: string; status: string; message?: string }[];
       summary?: string;
       duration_ms?: number;
     } }
-  | { type: EventType.TestVerificationFailed; content: {
+  | { type: typeof EventType.TestVerificationFailed; content: {
       task_id: string;
       tests?: { name: string; status: string; message?: string }[];
       stderr?: string;
@@ -582,28 +589,28 @@ export type AuraEvent = AuraEventBase & (
       duration_ms?: number;
       attempt?: number;
     } }
-  | { type: EventType.TestFixAttempt; content: {
+  | { type: typeof EventType.TestFixAttempt; content: {
       task_id: string;
       attempt: number;
       stderr?: string;
     } }
 
   // ── Git ────────────────────────────────────────────────────
-  | { type: EventType.GitCommitted; content: {
+  | { type: typeof EventType.GitCommitted; content: {
       task_id?: string;
       commit_sha: string;
       spec_id?: string;
     } }
-  | { type: EventType.GitCommitFailed; content: {
+  | { type: typeof EventType.GitCommitFailed; content: {
       task_id?: string;
       reason: string;
     } }
-  | { type: EventType.GitCommitRolledBack; content: {
+  | { type: typeof EventType.GitCommitRolledBack; content: {
       task_id?: string;
       commit_sha: string;
       reason: string;
     } }
-  | { type: EventType.GitPushed; content: {
+  | { type: typeof EventType.GitPushed; content: {
       task_id?: string;
       spec_id?: string;
       summary?: string;
@@ -611,7 +618,7 @@ export type AuraEvent = AuraEventBase & (
       branch?: string;
       commits?: { sha: string; message: string }[];
     } }
-  | { type: EventType.GitPushFailed; content: {
+  | { type: typeof EventType.GitPushFailed; content: {
       task_id?: string;
       reason: string;
       commit_sha?: string;
@@ -619,7 +626,7 @@ export type AuraEvent = AuraEventBase & (
       branch?: string;
       retry_safe?: boolean;
     } }
-  | { type: EventType.PushDeferred; content: {
+  | { type: typeof EventType.PushDeferred; content: {
       task_id?: string;
       reason: string;
       /** Failure classifier, e.g. `remote_rejected`, `transport_timeout`,
@@ -635,7 +642,7 @@ export type AuraEvent = AuraEventBase & (
        *  ENOSPC trip; otherwise absent / null. */
       retry_after_secs?: number | null;
     } }
-  | { type: EventType.ProjectPushStuck; content: {
+  | { type: typeof EventType.ProjectPushStuck; content: {
       task_id?: string;
       /** The streak threshold that was hit (default 3). */
       threshold: number;
@@ -651,12 +658,12 @@ export type AuraEvent = AuraEventBase & (
     } }
 
   // ── Harness protocol (canonical types from aura-protocol) ────
-  | { type: EventType.SessionReady; content: HarnessSessionReady }
-  | { type: EventType.AssistantMessageStart; content: HarnessAssistantMessageStart }
-  | { type: EventType.AssistantMessageEnd; content: HarnessAssistantMessageEnd }
-  | { type: EventType.TextDelta; content: HarnessTextDelta }
-  | { type: EventType.ToolUseStart; content: HarnessToolUseStart }
-  | { type: EventType.AssistantTurnProgress; content: {
+  | { type: typeof EventType.SessionReady; content: HarnessSessionReady }
+  | { type: typeof EventType.AssistantMessageStart; content: HarnessAssistantMessageStart }
+  | { type: typeof EventType.AssistantMessageEnd; content: HarnessAssistantMessageEnd }
+  | { type: typeof EventType.TextDelta; content: HarnessTextDelta }
+  | { type: typeof EventType.ToolUseStart; content: HarnessToolUseStart }
+  | { type: typeof EventType.AssistantTurnProgress; content: {
       message_id?: string;
       project_id?: string;
       session_id?: string;
@@ -665,31 +672,31 @@ export type AuraEvent = AuraEventBase & (
     } }
 
   // ── Billing ────────────────────────────────────────────────
-  | { type: EventType.CreditBalanceUpdated; content: {
+  | { type: typeof EventType.CreditBalanceUpdated; content: {
       balance_cents: number;
       balance_formatted: string;
     } }
 
   // ── Process execution ────────────────────────────────────────
-  | { type: EventType.ProcessRunStarted; content: {
+  | { type: typeof EventType.ProcessRunStarted; content: {
       process_id: string;
       run_id: string;
     } }
-  | { type: EventType.ProcessRunProgress; content: {
-      process_id: string;
-      run_id: string;
-      total_input_tokens?: number;
-      total_output_tokens?: number;
-      cost_usd?: number;
-    } }
-  | { type: EventType.ProcessRunCompleted; content: {
+  | { type: typeof EventType.ProcessRunProgress; content: {
       process_id: string;
       run_id: string;
       total_input_tokens?: number;
       total_output_tokens?: number;
       cost_usd?: number;
     } }
-  | { type: EventType.ProcessRunFailed; content: {
+  | { type: typeof EventType.ProcessRunCompleted; content: {
+      process_id: string;
+      run_id: string;
+      total_input_tokens?: number;
+      total_output_tokens?: number;
+      cost_usd?: number;
+    } }
+  | { type: typeof EventType.ProcessRunFailed; content: {
       process_id: string;
       run_id: string;
       error?: string;
@@ -697,7 +704,7 @@ export type AuraEvent = AuraEventBase & (
       total_output_tokens?: number;
       cost_usd?: number;
     } }
-  | { type: EventType.ProcessNodeExecuted; content: {
+  | { type: typeof EventType.ProcessNodeExecuted; content: {
       process_id: string;
       run_id: string;
       node_id: string;
@@ -707,7 +714,7 @@ export type AuraEvent = AuraEventBase & (
       output_tokens?: number;
       model?: string;
     } }
-  | { type: EventType.ProcessNodeOutputDelta; content: {
+  | { type: typeof EventType.ProcessNodeOutputDelta; content: {
       process_id: string;
       run_id: string;
       node_id: string;
@@ -721,18 +728,18 @@ export type AuraEvent = AuraEventBase & (
     } }
 
   // ── Generation (image / 3D) ─────────────────────────────────
-  | { type: EventType.GenerationStart; content: {
+  | { type: typeof EventType.GenerationStart; content: {
       mode: "image" | "3d";
       ts?: string;
     } }
-  | { type: EventType.GenerationProgress; content: {
+  | { type: typeof EventType.GenerationProgress; content: {
       percent: number;
       message?: string;
     } }
-  | { type: EventType.GenerationPartialImage; content: {
+  | { type: typeof EventType.GenerationPartialImage; content: {
       data: string;
     } }
-  | { type: EventType.GenerationCompleted; content: {
+  | { type: typeof EventType.GenerationCompleted; content: {
       mode: "image" | "3d";
       imageUrl?: string;
       originalUrl?: string;
@@ -741,21 +748,21 @@ export type AuraEvent = AuraEventBase & (
       polyCount?: number;
       meta?: Record<string, unknown>;
     } }
-  | { type: EventType.GenerationError; content: {
+  | { type: typeof EventType.GenerationError; content: {
       code?: string;
       message: string;
     } }
 
   // ── Other ──────────────────────────────────────────────────
-  | { type: EventType.LogLine; content: {
+  | { type: typeof EventType.LogLine; content: {
       message: string;
       task_id?: string;
     } }
-  | { type: EventType.NetworkEvent; content: {
+  | { type: typeof EventType.NetworkEvent; content: {
       network_event_type: string;
       payload: Record<string, unknown>;
     } }
-  | { type: EventType.Error; content: {
+  | { type: typeof EventType.Error; content: {
       message: string;
       task_id?: string;
     } }

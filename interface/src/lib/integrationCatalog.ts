@@ -254,7 +254,7 @@ export function getIntegrationLabel(provider: string): string {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function getAdapterLabel(adapterType: string): string {
+export function getAdapterLabel(_adapterType: string): string {
   // External CLI adapters are no longer supported. The argument is kept so
   // call sites can pass through whatever `adapter_type` they have without
   // branching, but the label is constant.

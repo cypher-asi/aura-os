@@ -47,12 +47,10 @@ const HostSettingsModal = lazy(() =>
   import("../HostSettingsModal").then((module) => ({ default: module.HostSettingsModal })),
 );
 
-const sharedDesktopLeftMenuPanes = apps
-  .filter((app) => Boolean(app.DesktopLeftMenuPane))
-  .map((app) => ({
-    appId: app.id,
-    Pane: app.DesktopLeftMenuPane!,
-  }));
+const sharedDesktopLeftMenuPanes = apps.flatMap((app) => {
+  const Pane = app.DesktopLeftMenuPane;
+  return Pane ? [{ appId: app.id, Pane }] : [];
+});
 
 function usesSharedDesktopLeftMenu(appId: string): boolean {
   return sharedDesktopLeftMenuPanes.some((pane) => pane.appId === appId);

@@ -38,9 +38,10 @@ export async function clearNativeServiceWorkerCachesForRuntime(
   const registrations = await runtimeNavigator.serviceWorker.getRegistrations();
   await Promise.all(registrations.map((registration) => registration.unregister()));
 
-  if (runtimeWindow.caches) {
-    const keys = await runtimeWindow.caches.keys();
-    await Promise.all(keys.map((key) => runtimeWindow.caches!.delete(key)));
+  const caches = runtimeWindow.caches;
+  if (caches) {
+    const keys = await caches.keys();
+    await Promise.all(keys.map((key) => caches.delete(key)));
   }
 
   if (registrations.length > 0 && !runtimeWindow.sessionStorage.getItem(NATIVE_SW_RESET_KEY)) {
@@ -67,7 +68,8 @@ export function registerServiceWorkerForRuntime({
     return;
   }
 
-  if (!runtimeNavigator?.serviceWorker) {
+  const serviceWorker = runtimeNavigator?.serviceWorker;
+  if (!serviceWorker) {
     return;
   }
 
@@ -81,7 +83,7 @@ export function registerServiceWorkerForRuntime({
   }
 
   runtimeWindow.addEventListener("load", () => {
-    runtimeNavigator.serviceWorker!.register("/sw.js").catch((error) => {
+    serviceWorker.register("/sw.js").catch((error) => {
       console.error("Failed to register service worker", error);
     });
   });

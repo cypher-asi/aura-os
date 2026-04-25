@@ -1,4 +1,11 @@
-import type { MemoryFact, MemoryEvent, MemoryProcedure, MemorySnapshot, MemoryStats } from "../types";
+import type {
+  JsonValue,
+  MemoryFact,
+  MemoryEvent,
+  MemoryProcedure,
+  MemorySnapshot,
+  MemoryStats,
+} from "../types";
 import { apiFetch } from "./core";
 
 export const memoryApi = {
@@ -9,9 +16,9 @@ export const memoryApi = {
     apiFetch<MemoryFact>(`/api/harness/agents/${agentId}/memory/facts/${factId}`),
   getFactByKey: (agentId: string, key: string) =>
     apiFetch<MemoryFact>(`/api/harness/agents/${agentId}/memory/facts/by-key/${key}`),
-  createFact: (agentId: string, data: { key: string; value: any; confidence?: number; importance?: number }) =>
+  createFact: (agentId: string, data: { key: string; value: JsonValue; confidence?: number; importance?: number }) =>
     apiFetch<MemoryFact>(`/api/harness/agents/${agentId}/memory/facts`, { method: "POST", body: JSON.stringify(data) }),
-  updateFact: (agentId: string, factId: string, data: { value?: any; confidence?: number; importance?: number }) =>
+  updateFact: (agentId: string, factId: string, data: { value?: JsonValue; confidence?: number; importance?: number }) =>
     apiFetch<MemoryFact>(`/api/harness/agents/${agentId}/memory/facts/${factId}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteFact: (agentId: string, factId: string) =>
     apiFetch<void>(`/api/harness/agents/${agentId}/memory/facts/${factId}`, { method: "DELETE" }),
@@ -25,7 +32,7 @@ export const memoryApi = {
     const qs = query.toString();
     return apiFetch<MemoryEvent[]>(`/api/harness/agents/${agentId}/memory/events${qs ? `?${qs}` : ""}`);
   },
-  createEvent: (agentId: string, data: { event_type: string; summary: string; metadata?: any; importance?: number }) =>
+  createEvent: (agentId: string, data: { event_type: string; summary: string; metadata?: JsonValue; importance?: number }) =>
     apiFetch<MemoryEvent>(`/api/harness/agents/${agentId}/memory/events`, { method: "POST", body: JSON.stringify(data) }),
   deleteEvent: (agentId: string, eventId: string) =>
     apiFetch<void>(`/api/harness/agents/${agentId}/memory/events/${eventId}`, { method: "DELETE" }),
@@ -40,14 +47,14 @@ export const memoryApi = {
   },
   createProcedure: (agentId: string, data: {
     name: string; trigger: string; steps: string[];
-    context_constraints?: any; skill_name?: string; skill_relevance?: number;
+    context_constraints?: JsonValue; skill_name?: string; skill_relevance?: number;
   }) =>
     apiFetch<MemoryProcedure>(`/api/harness/agents/${agentId}/memory/procedures`, {
       method: "POST", body: JSON.stringify(data),
     }),
   updateProcedure: (agentId: string, procId: string, data: {
     name?: string; trigger?: string; steps?: string[];
-    context_constraints?: any; skill_name?: string | null;
+    context_constraints?: JsonValue; skill_name?: string | null;
     skill_relevance?: number | null; success_rate?: number;
   }) =>
     apiFetch<MemoryProcedure>(`/api/harness/agents/${agentId}/memory/procedures/${procId}`, {

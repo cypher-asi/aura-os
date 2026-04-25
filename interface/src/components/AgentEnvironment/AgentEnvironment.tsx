@@ -100,9 +100,9 @@ export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps
   const avatarState = useAvatarState(agentId)
 
   const refreshState = useCallback(async () => {
-    if (!isRemote) return null
+    if (!isRemote || !agentId) return null
     try {
-      const state = await api.swarm.getRemoteAgentState(agentId!)
+      const state = await api.swarm.getRemoteAgentState(agentId)
       setVmState(state)
       setRemoteStateError(null)
       return state

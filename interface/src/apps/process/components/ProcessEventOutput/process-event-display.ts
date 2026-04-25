@@ -15,8 +15,8 @@ function collectBlockRawText(
 ): string {
   if (!blocks) return "";
   return blocks
-    .filter((block) => block.type === "text" && block.text)
-    .map((block) => block.text!)
+    .map((block) => (block.type === "text" ? block.text : undefined))
+    .filter((text): text is string => typeof text === "string" && text.length > 0)
     .join("");
 }
 
@@ -24,15 +24,17 @@ export function buildProcessEventDisplay(event: ProcessEvent): {
   message: DisplaySessionEvent | null;
   separateOutput: string | null;
 } {
-  const hasBlocks =
-    !!event.content_blocks && event.content_blocks.length > 0;
+  const contentBlocks =
+    event.content_blocks && event.content_blocks.length > 0
+      ? event.content_blocks
+      : null;
   const rawOutput = event.output?.trim() ?? "";
 
-  if (!hasBlocks && !rawOutput) {
+  if (!contentBlocks && !rawOutput) {
     return { message: null, separateOutput: null };
   }
 
-  if (!hasBlocks) {
+  if (!contentBlocks) {
     if (looksLikeStructuredData(rawOutput)) {
       return { message: null, separateOutput: rawOutput };
     }
@@ -52,7 +54,7 @@ export function buildProcessEventDisplay(event: ProcessEvent): {
   }
 
   const { timeline, toolCalls, thinkingText } = contentBlocksToTimeline(
-    event.content_blocks!,
+    contentBlocks,
     {
       terminalStatus:
         event.status === "completed" || event.status === "failed" || event.status === "skipped"
@@ -60,7 +62,7 @@ export function buildProcessEventDisplay(event: ProcessEvent): {
           : undefined,
     },
   );
-  const blockRawText = collectBlockRawText(event.content_blocks);
+  const blockRawText = collectBlockRawText(contentBlocks);
 
   if (
     !thinkingText &&

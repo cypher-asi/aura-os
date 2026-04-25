@@ -11,6 +11,20 @@ interface SkillEditorModalProps {
 
 const NAME_RE = /^[a-z0-9-]{1,64}$/;
 
+/**
+ * Pull a user-facing message off an unknown rejection. The harness API
+ * surfaces structured failures as `{ body: { error?, message? } }`, but
+ * networking / runtime errors fall through to a plain `Error.message`.
+ */
+function extractApiErrorMessage(err: unknown): string | undefined {
+  if (typeof err !== "object" || err === null) return undefined;
+  const e = err as { body?: { error?: unknown; message?: unknown }; message?: unknown };
+  if (typeof e.body?.error === "string") return e.body.error;
+  if (typeof e.body?.message === "string") return e.body.message;
+  if (typeof e.message === "string") return e.message;
+  return undefined;
+}
+
 export function SkillEditorModal({ isOpen, onClose, onCreated }: SkillEditorModalProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -66,8 +80,8 @@ export function SkillEditorModal({ isOpen, onClose, onCreated }: SkillEditorModa
       });
       onCreated();
       handleClose();
-    } catch (err: any) {
-      setError(err?.body?.error ?? err?.message ?? "Failed to create skill");
+    } catch (err: unknown) {
+      setError(extractApiErrorMessage(err) ?? "Failed to create skill");
     } finally {
       setSaving(false);
     }

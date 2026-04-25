@@ -435,6 +435,19 @@ export interface ApiError {
   details: string | null;
 }
 
+/**
+ * JSON-compatible value (mirrors `serde_json::Value`). Used for arbitrary
+ * payload shapes that originate as JSONB on the backend (memory facts,
+ * procedure constraints, event metadata).
+ */
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+
 // ---------------------------------------------------------------------------
 // Process workflow entities
 // ---------------------------------------------------------------------------
@@ -553,7 +566,7 @@ export interface MemoryFact {
   fact_id: string;
   agent_id: string;
   key: string;
-  value: any;
+  value: JsonValue;
   confidence: number;
   source: "extracted" | "user_provided" | "consolidated";
   importance: number;
@@ -568,7 +581,7 @@ export interface MemoryEvent {
   agent_id: string;
   event_type: string;
   summary: string;
-  metadata: any;
+  metadata: JsonValue;
   importance: number;
   access_count: number;
   last_accessed: string;
@@ -581,7 +594,7 @@ export interface MemoryProcedure {
   name: string;
   trigger: string;
   steps: string[];
-  context_constraints: any;
+  context_constraints: JsonValue;
   success_rate: number;
   execution_count: number;
   last_used: string;

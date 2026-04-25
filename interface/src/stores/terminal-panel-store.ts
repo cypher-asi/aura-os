@@ -11,7 +11,12 @@ const SUBSEQUENT_EXPAND_DELAY_MS = 80;
 export interface TerminalInstance {
   id: string;
   title: string;
-  hook: UseTerminalReturn;
+  /**
+   * The xterm-driving hook is attached lazily once the terminal mounts and
+   * calls `registerHook(id, hook)`. Until then we model the unattached
+   * state explicitly as `null` rather than lying with a non-null cast.
+   */
+  hook: UseTerminalReturn | null;
 }
 
 export interface TerminalTarget {
@@ -45,7 +50,7 @@ function createTerminalInstance(): TerminalInstance {
   return {
     id: `term-${Date.now()}-${num}`,
     title: `Terminal ${num}`,
-    hook: null!,
+    hook: null,
   };
 }
 

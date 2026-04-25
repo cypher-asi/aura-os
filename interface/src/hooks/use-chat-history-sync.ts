@@ -90,7 +90,9 @@ interface ChatHistorySyncResult {
   isLoading: boolean;
   historyError: string | null;
   /** Wraps a send function to invalidate history before sending. */
-  wrapSend: <T extends (...args: any[]) => any>(send: T) => T;
+  wrapSend: <TArgs extends readonly unknown[], TReturn>(
+    send: (...args: TArgs) => TReturn,
+  ) => (...args: TArgs) => TReturn;
 }
 
 /**
@@ -432,8 +434,10 @@ export function useChatHistorySync({
     (historyStatus === "ready" || historyStatus === "error") && !isFetchStale;
 
   const wrapSend = useCallback(
-    <T extends (...args: any[]) => any>(send: T): T => {
-      return ((...args: any[]) => send(...args)) as unknown as T;
+    <TArgs extends readonly unknown[], TReturn>(
+      send: (...args: TArgs) => TReturn,
+    ): ((...args: TArgs) => TReturn) => {
+      return (...args: TArgs) => send(...args);
     },
     [],
   );

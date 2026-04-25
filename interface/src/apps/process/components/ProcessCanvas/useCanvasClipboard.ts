@@ -47,16 +47,23 @@ async function createNodeCopies(
   const createdIds = results.map((r) => r.newId);
 
   await Promise.all(
-    sourceConns
-      .filter((c) => idMap.has(c.source_node_id) && idMap.has(c.target_node_id))
-      .map((c) =>
+    sourceConns.flatMap((c) => {
+      // The preceding `idMap.has(...)` filter is fused in here: a missing
+      // mapping means the connection's endpoint wasn't part of the
+      // copied selection, so we silently drop the edge instead of
+      // forcing a non-null lookup that could resurrect a stale id.
+      const newSource = idMap.get(c.source_node_id);
+      const newTarget = idMap.get(c.target_node_id);
+      if (!newSource || !newTarget) return [];
+      return [
         processApi.createConnection(processId, {
-          source_node_id: idMap.get(c.source_node_id)!,
+          source_node_id: newSource,
           source_handle: c.source_handle ?? undefined,
-          target_node_id: idMap.get(c.target_node_id)!,
+          target_node_id: newTarget,
           target_handle: c.target_handle ?? undefined,
         }),
-      ),
+      ];
+    }),
   );
 
   fetchNodes(processId);

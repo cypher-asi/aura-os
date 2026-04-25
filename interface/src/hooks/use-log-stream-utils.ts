@@ -57,7 +57,7 @@ function summariseLoopEvent(e: AuraEvent): string {
   }
 }
 
-function summariseTaskCompleted(c: AuraEventContent<EventType.TaskCompleted>): string {
+function summariseTaskCompleted(c: AuraEventContent<typeof EventType.TaskCompleted>): string {
   const name = c.task_title || c.task_id;
   const parts: string[] = [];
   if (c.duration_ms != null) parts.push(fmtDuration(c.duration_ms));

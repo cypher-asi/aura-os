@@ -47,7 +47,7 @@ function snapshotAllNodesForRun(runId: string, processId?: string): void {
 }
 
 function handleProcessNodeExecuted(
-  e: AuraEventOfType<EventType.ProcessNodeExecuted>,
+  e: AuraEventOfType<typeof EventType.ProcessNodeExecuted>,
 ): void {
   const { run_id: runId, node_id: nodeId, status, process_id: processId } = e.content;
   const normalized = (status ?? "").toLowerCase();
@@ -58,13 +58,13 @@ function handleProcessNodeExecuted(
 }
 
 function handleProcessRunCompleted(
-  e: AuraEventOfType<EventType.ProcessRunCompleted>,
+  e: AuraEventOfType<typeof EventType.ProcessRunCompleted>,
 ): void {
   snapshotAllNodesForRun(e.content.run_id, e.content.process_id);
 }
 
 function handleProcessRunFailed(
-  e: AuraEventOfType<EventType.ProcessRunFailed>,
+  e: AuraEventOfType<typeof EventType.ProcessRunFailed>,
 ): void {
   snapshotAllNodesForRun(e.content.run_id, e.content.process_id);
 }
