@@ -2,20 +2,20 @@
   {
     "date": "2026-04-25",
     "channel": "nightly",
-    "version": "0.1.0-nightly.386.1",
-    "title": "Harness consolidation, autonomous loop reliability, and a polished desktop shell",
-    "intro": "A heavy day for Aura's autonomy stack: the dev loop was hardened against transient provider errors, push failures, and policy denials, then largely refactored to delegate work to the new harness automatons. The desktop shell got a coordinated visual pass with floating capsules and rounded panels, and the chat surface gained richer retry, recovery, and error-state handling. Release tooling also got a real fix after the harness/aura-node crate move.",
+    "version": "0.1.0-nightly.387.1",
+    "title": "Harness consolidation, autonomous recovery, and a refreshed desktop shell",
+    "intro": "A heavy day for Aura: the autonomous dev loop got smarter at distinguishing transient provider blips from real failures, the desktop shell was reshaped into floating glass panels, and a major refactor migrated agent execution onto a single harness-based runtime. Operator runbooks, in-app error pages, and updater packaging also got safer.",
     "entryCount": 6,
     "highlights": [
-      "Autonomous dev loop now survives provider 5xx, push failures, and policy denials",
-      "Major refactor: agent runtime, dev loop, and process scheduling now run through the unified harness",
-      "Desktop shell redesigned with floating capsules, rounded panels, and corner-radius cohesion",
-      "Chat and run pane preserve in-flight state across refresh and surface live tool retry status",
-      "External CLI agent adapters retired — Aura OS now ships only on the aura_harness runtime"
+      "Autonomous dev loop now retries transient provider errors, jitters cooldowns, and recovers cleanly from stuck pushes",
+      "Desktop shell reworked into floating capsules with rounded glass panels and consistent insets",
+      "Single-runtime overhaul: legacy agent tool dispatcher, link layer, and external CLI adapters retired in favor of aura_harness",
+      "New per-loop event hub keeps concurrent chat, automation, and task work cleanly isolated",
+      "Desktop fixes: black drag-resize fill on Windows, working Cmd+C/V/X/A/Z on macOS, draggable titlebar on macOS/Linux"
     ],
-    "rawCommitCount": 123,
-    "generatedAt": "2026-04-25T17:50:27.790Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.386.1",
+    "rawCommitCount": 124,
+    "generatedAt": "2026-04-25T19:18:24.119Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.387.1",
     "path": "history/2026-04-25.json"
   },
   {
