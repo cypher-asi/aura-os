@@ -245,6 +245,7 @@ pub(crate) fn demo_agent_events() -> Vec<SessionEvent> {
             thinking: None,
             thinking_duration_ms: None,
             created_at: now,
+            in_flight: None,
         },
         SessionEvent {
             event_id: SessionEventId::from_uuid(parse_uuid(DEMO_ASSISTANT_EVENT_ID)),
@@ -256,6 +257,7 @@ pub(crate) fn demo_agent_events() -> Vec<SessionEvent> {
             thinking: None,
             thinking_duration_ms: None,
             created_at: now,
+            in_flight: None,
         },
     ]
 }
