@@ -77,10 +77,23 @@ function main() {
   const cargoTargetDir =
     resolveCargoMetadataTargetDir(harnessManifest, harnessDir) ?? resolveCargoTargetDir(harnessDir);
 
-  run("cargo", ["build", "--release", "--bin", "aura-node", "--manifest-path", harnessManifest], {
-    cwd: harnessDir,
-    env: process.env,
-  });
+  run(
+    "cargo",
+    [
+      "build",
+      "--release",
+      "-p",
+      "aura-runtime",
+      "--bin",
+      "aura-node",
+      "--manifest-path",
+      harnessManifest,
+    ],
+    {
+      cwd: harnessDir,
+      env: process.env,
+    },
+  );
 
   const binaryName = sidecarBinaryName();
   const builtBinary = path.join(cargoTargetDir, "release", binaryName);
