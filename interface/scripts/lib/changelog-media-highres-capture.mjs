@@ -9,8 +9,8 @@ export const DEFAULT_HIGH_RES_CAPTURE_VIEWPORT = Object.freeze({
   deviceScaleFactor: 3,
 });
 
-export const DEFAULT_CHANGELOG_CAPTURE_ZOOM = 1;
-export const DEFAULT_CHANGELOG_CAPTURE_TEXT_SCALE = 1.45;
+export const DEFAULT_CHANGELOG_CAPTURE_ZOOM = 1.12;
+export const DEFAULT_CHANGELOG_CAPTURE_TEXT_SCALE = 1;
 
 function commonChromeExecutablePath() {
   const candidates = [
@@ -235,24 +235,12 @@ async function applyCapturePresentationMode(
     const style = document.createElement("style");
     style.id = "aura-changelog-capture-style";
     style.textContent = `
+      body[data-aura-changelog-capture-text-scale] [data-agent-proof]:not(img):not(svg):not(canvas),
+      body[data-aura-changelog-capture-text-scale] [data-agent-proof]:not(img):not(svg):not(canvas) *,
       body[data-aura-changelog-capture-text-scale] [data-agent-context-anchor],
       body[data-aura-changelog-capture-text-scale] [data-agent-context-anchor] * {
-        font-size: calc(16px * var(--aura-changelog-capture-text-scale)) !important;
-        line-height: 1.15 !important;
-        font-weight: 600 !important;
         text-rendering: geometricPrecision !important;
         -webkit-font-smoothing: antialiased !important;
-      }
-      body[data-aura-changelog-capture-text-scale] [data-agent-proof]:not(img):not(svg):not(canvas),
-      body[data-aura-changelog-capture-text-scale] [data-agent-proof]:not(img):not(svg):not(canvas) * {
-        text-rendering: geometricPrecision !important;
-        -webkit-font-smoothing: antialiased !important;
-      }
-      body[data-aura-changelog-capture-text-scale] [data-agent-proof] button,
-      body[data-aura-changelog-capture-text-scale] [data-agent-proof] [role="menuitem"],
-      body[data-aura-changelog-capture-text-scale] [data-agent-proof] [data-agent-model-label] {
-        font-size: calc(13px * var(--aura-changelog-capture-text-scale)) !important;
-        line-height: 1.2 !important;
       }
       body[data-aura-changelog-capture-text-scale] [data-agent-proof][data-agent-surface] {
         min-width: min(72vw, 900px) !important;

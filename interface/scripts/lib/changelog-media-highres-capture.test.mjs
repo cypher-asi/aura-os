@@ -25,4 +25,6 @@ test("high-resolution capture stays generic and does not encode feature-specific
   assert.match(source, /nearbyAnchors/);
   assert.match(source, /min-width: min\(72vw, 900px\)/);
   assert.match(source, /max-height: min\(68vh, 900px\)/);
+  assert.doesNotMatch(source, /font-size: calc/);
+  assert.doesNotMatch(source, /width: calc\(.*--aura-changelog-capture-text-scale/);
 });
