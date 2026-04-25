@@ -54,11 +54,11 @@ export function SidekickTaskbar() {
   // agent_instance) — this covers the live task runs in this project.
   // Run tab uses a project-wide scope so cross-agent activity inside
   // the same project also surfaces on the shared Run tab.
-  const tasksActivity = useLoopActivityStore((s) =>
-    selectAgentInstanceActivity(s, agentInstanceId ?? null),
+  const tasksActivity = useLoopActivityStore(
+    useShallow((s) => selectAgentInstanceActivity(s, agentInstanceId ?? null)),
   );
-  const runActivity = useLoopActivityStore((s) =>
-    selectProjectActivity(s, projectId ?? null),
+  const runActivity = useLoopActivityStore(
+    useShallow((s) => selectProjectActivity(s, projectId ?? null)),
   );
   const tasksActive = !!tasksActivity && isLoopActivityActive(tasksActivity.status);
   const runActive = !!runActivity && isLoopActivityActive(runActivity.status);

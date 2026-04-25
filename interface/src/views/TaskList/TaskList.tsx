@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useShallow } from "zustand/react/shallow";
 import type { Spec, Task } from "../../types";
 import { LoopProgress } from "../../components/LoopProgress";
 import { TaskStatusIcon } from "../../components/TaskStatusIcon";
@@ -45,7 +46,7 @@ type TaskMenuTarget =
  * so the row still communicates DB-status at a glance.
  */
 function TaskRowSuffix({ taskId, status }: { taskId: string; status: Task["status"] }) {
-  const activity = useLoopActivityStore((s) => selectTaskActivity(s, taskId));
+  const activity = useLoopActivityStore(useShallow((s) => selectTaskActivity(s, taskId)));
   if (activity && isLoopActivityActive(activity.status)) {
     return <LoopProgress source={{ activity }} size={14} />;
   }
