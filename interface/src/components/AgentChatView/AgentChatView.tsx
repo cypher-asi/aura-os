@@ -17,7 +17,7 @@ import {
 } from "../../stores/chat-history-store";
 import { useSelectedAgent, LAST_AGENT_ID_KEY } from "../../apps/agents/stores";
 import { useProjectsListStore } from "../../stores/projects-list-store";
-import { queryClient } from "../../lib/query-client";
+import { queryClient } from "../../shared/lib/query-client";
 import { deriveProjectAgentTitle } from "../../lib/derive-project-agent-title";
 import { mergeAgentIntoProjectAgents, projectQueryKeys } from "../../queries/project-queries";
 import { useChatHandoffStore } from "../../stores/chat-handoff-store";

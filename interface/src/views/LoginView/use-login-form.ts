@@ -6,7 +6,7 @@ import {
   getHostDisplayLabel,
   getTargetHostOrigin,
   requiresExplicitHostOrigin,
-} from "../../lib/host-config";
+} from "../../shared/lib/host-config";
 import { getAuthErrorMessage } from "../../shared/utils/api-errors";
 import { authApi } from "../../shared/api/auth";
 import { useUIModalStore } from "../../stores/ui-modal-store";

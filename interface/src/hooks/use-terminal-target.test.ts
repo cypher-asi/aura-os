@@ -13,7 +13,7 @@ vi.mock("../api/client", () => ({
 }));
 
 import { useTerminalTarget } from "./use-terminal-target";
-import { queryClient } from "../lib/query-client";
+import { queryClient } from "../shared/lib/query-client";
 
 function createWrapper() {
   return function Wrapper({ children }: { children: React.ReactNode }) {

@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 
 // Quiet the projects-list-store persist layer so cascading subscriptions
 // don't emit unhandled promise rejections when we mutate the store below.
-vi.mock("../../../lib/browser-db", () => ({
+vi.mock("../../../shared/lib/browser-db", () => ({
   BROWSER_DB_STORES: new Proxy({}, { get: (_t, prop) => String(prop) }),
   browserDbGet: vi.fn().mockResolvedValue(null),
   browserDbSet: vi.fn().mockResolvedValue(undefined),

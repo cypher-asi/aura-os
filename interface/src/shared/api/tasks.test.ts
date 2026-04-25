@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { tasksApi } from "./tasks";
 import { ApiClientError } from "./core";
 
-vi.mock("../../lib/host-config", () => ({
+vi.mock("../../shared/lib/host-config", () => ({
   resolveApiUrl: (path: string) => path,
 }));
 

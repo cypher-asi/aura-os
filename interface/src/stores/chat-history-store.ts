@@ -1,12 +1,12 @@
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
-import { queryClient } from "../lib/query-client";
+import { queryClient } from "../shared/lib/query-client";
 import {
   BROWSER_DB_STORES,
   browserDbDelete,
   browserDbGet,
   browserDbSet,
-} from "../lib/browser-db";
+} from "../shared/lib/browser-db";
 import {
   CHAT_HISTORY_STALE_TIME_MS,
   chatHistoryQueryKeys,

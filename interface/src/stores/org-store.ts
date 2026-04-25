@@ -4,7 +4,7 @@ import type { Org, OrgIntegration, OrgMember } from "../shared/types";
 import { api } from "../api/client";
 import { useAuthStore } from "./auth-store";
 import { ACTIVE_ORG_KEY } from "../constants";
-import { BROWSER_DB_STORES, browserDbGet, browserDbSet } from "../lib/browser-db";
+import { BROWSER_DB_STORES, browserDbGet, browserDbSet } from "../shared/lib/browser-db";
 
 interface OrgState {
   orgs: Org[];

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { Agent, AgentInstance, Project } from "../shared/types";
-import { queryClient } from "../lib/query-client";
+import { queryClient } from "../shared/lib/query-client";
 import {
   dedupeProjects,
   mergeProjectAgentsSnapshot,
@@ -8,7 +8,7 @@ import {
   projectQueryKeys,
   projectsQueryOptions,
 } from "../queries/project-queries";
-import { BROWSER_DB_STORES, browserDbGet, browserDbSet } from "../lib/browser-db";
+import { BROWSER_DB_STORES, browserDbGet, browserDbSet } from "../shared/lib/browser-db";
 import { getProjectOrder, setProjectOrder } from "../utils/storage";
 import { useOrgStore } from "./org-store";
 import { useAuthStore } from "./auth-store";

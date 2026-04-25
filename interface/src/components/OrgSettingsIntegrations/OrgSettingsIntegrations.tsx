@@ -11,7 +11,7 @@ import {
   integrationSections,
   supportsDefaultModel,
 } from "../../lib/integrationCatalog";
-import { isSettingsProviderSelectionEnabled } from "../../lib/featureFlags";
+import { isSettingsProviderSelectionEnabled } from "../../shared/lib/featureFlags";
 import styles from "../OrgSettingsPanel/OrgSettingsPanel.module.css";
 
 interface Props {

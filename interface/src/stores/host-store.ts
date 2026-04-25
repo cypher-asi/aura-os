@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { authHeaders } from "../lib/auth-token";
+import { authHeaders } from "../shared/lib/auth-token";
 import {
   getConfiguredHostOrigin,
   getTargetHostOrigin,
@@ -7,7 +7,7 @@ import {
   resolveApiUrl,
   setConfiguredHostOrigin,
   subscribeToHostChanges,
-} from "../lib/host-config";
+} from "../shared/lib/host-config";
 
 export type HostConnectionStatus = "checking" | "online" | "auth_required" | "unreachable" | "error";
 

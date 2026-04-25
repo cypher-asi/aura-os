@@ -23,11 +23,11 @@ vi.mock("../hooks/ws-reconnect", () => ({
   },
 }));
 
-vi.mock("../lib/host-config", () => ({
+vi.mock("../shared/lib/host-config", () => ({
   resolveWsUrl: (path: string) => `ws://localhost${path}`,
 }));
 
-vi.mock("../lib/auth-token", () => ({
+vi.mock("../shared/lib/auth-token", () => ({
   getStoredJwt: () => "test-jwt",
 }));
 

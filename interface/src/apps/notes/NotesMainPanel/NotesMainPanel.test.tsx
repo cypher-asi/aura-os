@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 
 // Keep the persist layer in the projects/notes stores from emitting
 // unhandled-rejection noise in the test console.
-vi.mock("../../../lib/browser-db", () => ({
+vi.mock("../../../shared/lib/browser-db", () => ({
   BROWSER_DB_STORES: new Proxy({}, { get: (_t, prop) => String(prop) }),
   browserDbGet: vi.fn().mockResolvedValue(null),
   browserDbSet: vi.fn().mockResolvedValue(undefined),

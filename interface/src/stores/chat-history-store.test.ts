@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { SessionEvent } from "../shared/types";
 import type { DisplaySessionEvent } from "../shared/types/stream";
-import { queryClient } from "../lib/query-client";
+import { queryClient } from "../shared/lib/query-client";
 
 vi.mock("../utils/build-display-messages", () => ({
   buildDisplayEvents: (msgs: SessionEvent[]): DisplaySessionEvent[] =>

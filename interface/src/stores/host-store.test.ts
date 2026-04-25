@@ -10,7 +10,7 @@ const { hoisted, fetchMock } = vi.hoisted(() => {
   return { hoisted, fetchMock };
 });
 
-vi.mock("../lib/host-config", () => ({
+vi.mock("../shared/lib/host-config", () => ({
   getConfiguredHostOrigin: () => hoisted.mockHostOrigin,
   getTargetHostOrigin: () => hoisted.mockHostOrigin,
   requiresExplicitHostOrigin: () => hoisted.mockRequiresExplicitHost,

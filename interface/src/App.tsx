@@ -9,7 +9,7 @@ import { apps } from "./apps/registry";
 import { getInitialShellPath } from "./utils/last-app-path";
 import { getLastApp } from "./utils/storage";
 import { bootstrapNativeTestAuth } from "./lib/native-test-auth";
-import { hydrateStoredAuth, isLoggedInSync } from "./lib/auth-token";
+import { hydrateStoredAuth, isLoggedInSync } from "./shared/lib/auth-token";
 import { preloadInitialShellApp } from "./lib/boot-shell";
 
 const InviteAcceptView = lazy(() =>

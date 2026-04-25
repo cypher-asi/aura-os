@@ -7,7 +7,7 @@ import {
   hydrateStoredAuth,
   isLoggedInSync,
   setStoredAuth,
-} from "../lib/auth-token";
+} from "../shared/lib/auth-token";
 import { authApi } from "../shared/api/auth";
 import { ApiClientError } from "../shared/api/core";
 import { disconnectEventSocket, scheduleDeferredEventSocketConnect } from "./event-store";

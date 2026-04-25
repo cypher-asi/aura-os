@@ -1,5 +1,5 @@
 import { useEffect, useSyncExternalStore } from "react";
-import { isNativeRuntime } from "../lib/native-runtime";
+import { isNativeRuntime } from "../shared/lib/native-runtime";
 
 export const AURA_BREAKPOINTS = {
   phoneMax: 680,

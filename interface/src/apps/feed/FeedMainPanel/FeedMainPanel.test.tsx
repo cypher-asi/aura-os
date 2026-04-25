@@ -14,7 +14,7 @@ vi.mock("../../../stores/feed-store", () => ({
   useFeed: () => mockUseFeed(),
 }));
 
-vi.mock("../../../lib/auth-token", () => ({
+vi.mock("../../../shared/lib/auth-token", () => ({
   authHeaders: () => ({}),
   getStoredJwt: () => null,
   getStoredSession: () => null,

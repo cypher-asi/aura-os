@@ -5,7 +5,7 @@ import { buildDisplayEvents } from "../../../utils/build-display-messages";
 import type { Agent } from "../../../shared/types";
 import { isSuperAgent } from "../../../shared/types/permissions";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";
-import { BROWSER_DB_STORES, browserDbGet, browserDbSet } from "../../../lib/browser-db";
+import { BROWSER_DB_STORES, browserDbGet, browserDbSet } from "../../../shared/lib/browser-db";
 import { useAuthStore } from "../../../stores/auth-store";
 import { useOrgStore } from "../../../stores/org-store";
 

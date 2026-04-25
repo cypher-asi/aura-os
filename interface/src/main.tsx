@@ -6,7 +6,7 @@ import "@cypher-asi/zui/styles";
 import "highlight.js/styles/github-dark.min.css";
 import "./index.css";
 import App from "./App";
-import { queryClient } from "./lib/query-client";
+import { queryClient } from "./shared/lib/query-client";
 import { registerServiceWorker } from "./lib/registerServiceWorker";
 import {
   installDevPerfHelpers,
@@ -16,10 +16,10 @@ import {
 import { initWebVitalsLite } from "./lib/perf/web-vitals-lite";
 import { installPreloadRecovery } from "./lib/preload-recovery";
 import { installNativeTitlebarDrag } from "./lib/native-titlebar-drag";
-import { syncQueryHostOriginToStorage } from "./lib/host-config";
+import { syncQueryHostOriginToStorage } from "./shared/lib/host-config";
 import { signalDesktopReady } from "./lib/desktop-ready";
 import { awaitInitialShellAppReady } from "./lib/boot-shell";
-import { purgeLegacyChatHistoryFallback } from "./lib/browser-db";
+import { purgeLegacyChatHistoryFallback } from "./shared/lib/browser-db";
 import { bootstrapTaskStreamSubscriptions } from "./stores/task-stream-bootstrap";
 import { bootstrapProcessStreamSubscriptions } from "./stores/process-stream-bootstrap";
 

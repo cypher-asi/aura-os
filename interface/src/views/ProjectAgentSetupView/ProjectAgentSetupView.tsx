@@ -10,7 +10,7 @@ import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useProjectsList } from "../../apps/projects/useProjectsList";
 import { useProjectsListStore } from "../../stores/projects-list-store";
 import { useOrgStore } from "../../stores/org-store";
-import { queryClient } from "../../lib/query-client";
+import { queryClient } from "../../shared/lib/query-client";
 import { projectQueryKeys } from "../../queries/project-queries";
 import type { Agent, AgentInstance } from "../../shared/types";
 import { createAgentChatHandoffState } from "../../utils/chat-handoff";

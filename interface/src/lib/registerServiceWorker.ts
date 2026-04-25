@@ -1,4 +1,4 @@
-import { isNativeRuntime } from "./native-runtime";
+import { isNativeRuntime } from "../shared/lib/native-runtime";
 
 const NATIVE_SW_RESET_KEY = "aura-native-sw-reset";
 

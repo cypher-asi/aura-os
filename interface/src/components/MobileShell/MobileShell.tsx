@@ -11,7 +11,7 @@ import { projectFilesRoute, projectProcessRoute, projectStatsRoute, projectTasks
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useOrgStore } from "../../stores/org-store";
 import { useProjectsListStore } from "../../stores/projects-list-store";
-import { getHostDisplayLabel } from "../../lib/host-config";
+import { getHostDisplayLabel } from "../../shared/lib/host-config";
 import { useMobileShellState } from "./useMobileShellState";
 import { blurActiveElement, resolveProjectAgentPath } from "./mobile-shell-utils";
 import { ProjectNavigationDrawerContent } from "./ProjectNavigationDrawer";

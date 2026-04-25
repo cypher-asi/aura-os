@@ -243,7 +243,7 @@ vi.mock("../PanelSearch", () => ({
 vi.mock("../HostSettingsModal", () => ({
   HostSettingsModal: () => null,
 }));
-vi.mock("../../lib/host-config", () => ({
+vi.mock("../../shared/lib/host-config", () => ({
   getHostDisplayLabel: () => "https://bad-host.example",
 }));
 vi.mock("../../apps/agents/MobileAgentLibraryView", () => ({

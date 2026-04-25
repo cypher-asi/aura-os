@@ -8,7 +8,7 @@ import {
   getResolvedHostOrigin,
   normalizeHostOrigin,
   requiresExplicitHostOrigin,
-} from "../../lib/host-config";
+} from "../../shared/lib/host-config";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import styles from "./HostSettingsModal.module.css";
 

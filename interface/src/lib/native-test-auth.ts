@@ -1,7 +1,7 @@
 import type { AuthSession } from "../shared/types";
-import { resolveApiUrl } from "./host-config";
-import { getStoredSession, hydrateStoredAuth, setStoredAuth } from "./auth-token";
-import { isNativeRuntime } from "./native-runtime";
+import { resolveApiUrl } from "../shared/lib/host-config";
+import { getStoredSession, hydrateStoredAuth, setStoredAuth } from "../shared/lib/auth-token";
+import { isNativeRuntime } from "../shared/lib/native-runtime";
 
 const nativeTestAccessToken = import.meta.env.VITE_NATIVE_TEST_ACCESS_TOKEN?.trim() ?? "";
 

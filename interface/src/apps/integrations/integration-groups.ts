@@ -2,7 +2,7 @@ import {
   INTEGRATION_CATALOG,
   type IntegrationDefinition,
 } from "../../lib/integrationCatalog";
-import { isSettingsProviderSelectionEnabled } from "../../lib/featureFlags";
+import { isSettingsProviderSelectionEnabled } from "../../shared/lib/featureFlags";
 
 /**
  * Display groups for the Integrations app left-menu.

@@ -6,17 +6,17 @@ const setStoredAuth = vi.fn();
 const resolveApiUrl = vi.fn((path: string) => `http://127.0.0.1:3100${path}`);
 const isNativeRuntime = vi.fn();
 
-vi.mock("./auth-token", () => ({
+vi.mock("../shared/lib/auth-token", () => ({
   getStoredSession,
   hydrateStoredAuth,
   setStoredAuth,
 }));
 
-vi.mock("./host-config", () => ({
+vi.mock("../shared/lib/host-config", () => ({
   resolveApiUrl,
 }));
 
-vi.mock("./native-runtime", () => ({
+vi.mock("../shared/lib/native-runtime", () => ({
   isNativeRuntime,
 }));
 

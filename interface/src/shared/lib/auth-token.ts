@@ -1,4 +1,4 @@
-import type { AuthSession } from "../shared/types";
+import type { AuthSession } from "../types";
 import { BROWSER_DB_STORES, browserDbDelete, browserDbGet, browserDbSet } from "./browser-db";
 
 const JWT_STORAGE_KEY = "aura-jwt";

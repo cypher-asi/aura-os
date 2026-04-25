@@ -87,7 +87,7 @@ const sessionWithZeroProError: AuthSession = {
 
 import { useAuthStore } from "./auth-store";
 import { ApiClientError } from "../shared/api/core";
-import { clearStoredAuth } from "../lib/auth-token";
+import { clearStoredAuth } from "../shared/lib/auth-token";
 
 function expectedUser(session: AuthSession): ZeroUser {
   return {

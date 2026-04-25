@@ -1,5 +1,5 @@
-import { authHeaders, getStoredJwt } from "../../lib/auth-token";
-import { resolveApiUrl, resolveWsUrl } from "../../lib/host-config";
+import { authHeaders, getStoredJwt } from "../../shared/lib/auth-token";
+import { resolveApiUrl, resolveWsUrl } from "../../shared/lib/host-config";
 import { ApiClientError } from "./core";
 import type { ApiError } from "../types";
 
