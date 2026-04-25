@@ -393,14 +393,37 @@ pub struct ProjectStats {
     pub failed_tasks: u64,
     #[serde(default)]
     pub completion_percentage: f64,
-    #[serde(default)]
+    // Token / cost / lines / time fields carry an alias soup because the
+    // shared `/api/stats?scope=project` endpoint has emitted these under
+    // several naming conventions over time. Without aliases, any variant
+    // outside `rename_all = "camelCase"` silently decodes to the default
+    // (0), which presents in the UI as "Cost updates but Tokens / Time /
+    // Lines stay at zero" even though the proxy is populating the data.
+    // Mirrors the same pattern used on `PlatformStats` in `aura-os-network`.
+    #[serde(
+        default,
+        alias = "total_tokens",
+        alias = "tokens",
+        alias = "tokens_used",
+        alias = "tokensUsed"
+    )]
     pub total_tokens: u64,
     /// Sum of input tokens across all sessions. Some aura-storage deployments
     /// populate this (and `total_output_tokens`) alongside a zero or stale
     /// `total_tokens`; read them too so callers can fall back when needed.
-    #[serde(default)]
+    #[serde(
+        default,
+        alias = "total_input_tokens",
+        alias = "input_tokens",
+        alias = "inputTokens"
+    )]
     pub total_input_tokens: Option<u64>,
-    #[serde(default)]
+    #[serde(
+        default,
+        alias = "total_output_tokens",
+        alias = "output_tokens",
+        alias = "outputTokens"
+    )]
     pub total_output_tokens: Option<u64>,
     #[serde(default)]
     pub total_events: u64,
@@ -408,15 +431,38 @@ pub struct ProjectStats {
     pub total_agents: u64,
     #[serde(default)]
     pub total_sessions: u64,
-    #[serde(default)]
+    #[serde(
+        default,
+        alias = "total_time_seconds",
+        alias = "time_seconds",
+        alias = "timeSeconds",
+        alias = "total_time",
+        alias = "totalTime"
+    )]
     pub total_time_seconds: f64,
-    #[serde(default)]
+    #[serde(
+        default,
+        alias = "lines_changed",
+        alias = "lines_edited",
+        alias = "linesEdited",
+        alias = "total_lines_changed",
+        alias = "totalLinesChanged"
+    )]
     pub lines_changed: u64,
     #[serde(default)]
     pub total_specs: u64,
     #[serde(default)]
     pub contributors: u64,
-    #[serde(default)]
+    #[serde(
+        default,
+        alias = "estimated_cost_usd",
+        alias = "cost_usd",
+        alias = "costUsd",
+        alias = "total_cost_usd",
+        alias = "totalCostUsd",
+        alias = "total_cost",
+        alias = "totalCost"
+    )]
     pub estimated_cost_usd: f64,
 }
 
@@ -883,4 +929,85 @@ pub struct CreateProjectArtifactRequest {
     pub provider: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub meta: Option<Value>,
+}
+
+#[cfg(test)]
+mod project_stats_alias_tests {
+    use super::ProjectStats;
+
+    /// Locks in the alias coverage that lets `ProjectStats` decode token /
+    /// cost / lines / time fields regardless of which naming convention the
+    /// remote `/api/stats?scope=project` endpoint emits. Without these
+    /// aliases every variant outside `rename_all = "camelCase"` silently
+    /// decodes to 0 via `#[serde(default)]`, which presents in the UI as
+    /// "Cost updates but Tokens / Time / Lines stay at zero" even though
+    /// the proxy is populating the data.
+    #[test]
+    fn decodes_camelcase_canonical_shape() {
+        let body = serde_json::json!({
+            "totalTokens": 12345u64,
+            "totalInputTokens": 8000u64,
+            "totalOutputTokens": 4345u64,
+            "estimatedCostUsd": 0.66,
+            "totalTimeSeconds": 17.5,
+            "linesChanged": 240u64,
+        });
+        let stats: ProjectStats = serde_json::from_value(body).unwrap();
+        assert_eq!(stats.total_tokens, 12345);
+        assert_eq!(stats.total_input_tokens, Some(8000));
+        assert_eq!(stats.total_output_tokens, Some(4345));
+        assert!((stats.estimated_cost_usd - 0.66).abs() < f64::EPSILON);
+        assert!((stats.total_time_seconds - 17.5).abs() < f64::EPSILON);
+        assert_eq!(stats.lines_changed, 240);
+    }
+
+    #[test]
+    fn decodes_short_token_and_cost_aliases() {
+        let body = serde_json::json!({
+            "tokensUsed": 9000u64,
+            "inputTokens": 6000u64,
+            "outputTokens": 3000u64,
+            "costUsd": 0.42,
+            "timeSeconds": 9.0,
+            "linesEdited": 88u64,
+        });
+        let stats: ProjectStats = serde_json::from_value(body).unwrap();
+        assert_eq!(stats.total_tokens, 9000);
+        assert_eq!(stats.total_input_tokens, Some(6000));
+        assert_eq!(stats.total_output_tokens, Some(3000));
+        assert!((stats.estimated_cost_usd - 0.42).abs() < f64::EPSILON);
+        assert!((stats.total_time_seconds - 9.0).abs() < f64::EPSILON);
+        assert_eq!(stats.lines_changed, 88);
+    }
+
+    #[test]
+    fn decodes_snake_case_aliases() {
+        let body = serde_json::json!({
+            "total_tokens": 5000u64,
+            "total_input_tokens": 3000u64,
+            "total_output_tokens": 2000u64,
+            "total_cost_usd": 0.11,
+            "total_time_seconds": 4.0,
+            "lines_changed": 12u64,
+        });
+        let stats: ProjectStats = serde_json::from_value(body).unwrap();
+        assert_eq!(stats.total_tokens, 5000);
+        assert_eq!(stats.total_input_tokens, Some(3000));
+        assert_eq!(stats.total_output_tokens, Some(2000));
+        assert!((stats.estimated_cost_usd - 0.11).abs() < f64::EPSILON);
+        assert!((stats.total_time_seconds - 4.0).abs() < f64::EPSILON);
+        assert_eq!(stats.lines_changed, 12);
+    }
+
+    #[test]
+    fn missing_fields_default_to_zero() {
+        let body = serde_json::json!({});
+        let stats: ProjectStats = serde_json::from_value(body).unwrap();
+        assert_eq!(stats.total_tokens, 0);
+        assert_eq!(stats.total_input_tokens, None);
+        assert_eq!(stats.total_output_tokens, None);
+        assert_eq!(stats.estimated_cost_usd, 0.0);
+        assert_eq!(stats.total_time_seconds, 0.0);
+        assert_eq!(stats.lines_changed, 0);
+    }
 }
