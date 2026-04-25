@@ -1581,7 +1581,30 @@
             ],
             "confidence": "high"
           }
-        ]
+        ],
+        "media": {
+          "schemaVersion": 1,
+          "status": "published",
+          "type": "image",
+          "assetPath": "assets/changelog/nightly/2026-04-24/entry-4-106bda4a96c5.png",
+          "alt": "DeepSeek direct provider and seeded capture plans",
+          "caption": "DeepSeek is now a direct provider, with deepseek-v4-flash available in the chat model picker.",
+          "width": 4849,
+          "height": 2728,
+          "bytes": 266426,
+          "sourceCommitShas": [
+            "9e377b590455f455c962b3ffbab856a3671cb708",
+            "dd65db9dfdeb24141f60b5bab966752b54ae24a4",
+            "4636e0d51c7135393029b1ff6221b651a570f422"
+          ],
+          "gates": {
+            "rawQuality": "accepted",
+            "rawVision": "accepted",
+            "brandedQuality": "accepted",
+            "brandedVision": "accepted"
+          },
+          "updatedAt": "2026-04-25T05:30:38.107Z"
+        }
       },
       {
         "batch_id": "entry-5",
@@ -1614,7 +1637,32 @@
             ],
             "confidence": "high"
           }
-        ]
+        ],
+        "media": {
+          "schemaVersion": 1,
+          "status": "published",
+          "type": "image",
+          "assetPath": "assets/changelog/nightly/2026-04-24/entry-5-c287976f9a0b.png",
+          "alt": "GPT‑5.5 support and tighter agent-facing semantics",
+          "caption": "GPT-5.5 is now available as a selectable model in the Agents chat composer.",
+          "width": 4148,
+          "height": 2334,
+          "bytes": 222131,
+          "sourceCommitShas": [
+            "19b65b784d1a518590252409b798a61da3d19bff",
+            "41ee76d1867b7bf6b3fc143a65c398810b32a112",
+            "199fb2bd22854db340f3bbc7ab0028703a2cd17d",
+            "7634cce9381602993358fb1c24938a4f3cbe9097",
+            "b62958ee8d4d30340632012c240b1cf53c06985b"
+          ],
+          "gates": {
+            "rawQuality": "accepted",
+            "rawVision": "accepted",
+            "brandedQuality": "accepted",
+            "brandedVision": "accepted"
+          },
+          "updatedAt": "2026-04-25T05:30:38.107Z"
+        }
       }
     ],
     "highlights": [
