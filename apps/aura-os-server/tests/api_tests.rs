@@ -1904,6 +1904,93 @@ async fn loop_stop_clears_registry_even_when_harness_unreachable() {
     assert_eq!(event["agent_instance_id"], aiid.to_string());
 }
 
+#[tokio::test]
+async fn parallel_automatons_coexist_under_distinct_agent_instance_ids() {
+    // The harness contract is "one in-flight turn per agent_id", so multi-
+    // instance is the supported way to run a chat + automation loop + N
+    // ad-hoc tasks concurrently in one project. This test pins the
+    // invariant: `automaton_registry` keys on (project_id, agent_instance_id)
+    // and a per-instance stop targets exactly one slot, leaving the others
+    // untouched. If somebody accidentally regresses this to "one entry per
+    // project" again, ephemeral task executors and the project's Loop
+    // instance would clobber each other and concurrent runs would silently
+    // abort — exactly the bug we shipped Phase 2 to fix.
+    use aura_os_core::AgentInstanceId;
+    use aura_os_server::ActiveAutomaton;
+
+    let (app, state, _db) = build_test_app();
+
+    let pid = ProjectId::new();
+    let loop_aiid = AgentInstanceId::new();
+    let ephemeral_aiid_a = AgentInstanceId::new();
+    let ephemeral_aiid_b = AgentInstanceId::new();
+    let unreachable_harness = "http://127.0.0.1:1".to_string();
+
+    fn fake_entry(pid: ProjectId, automaton_id: &str, base_url: &str) -> ActiveAutomaton {
+        ActiveAutomaton {
+            automaton_id: automaton_id.into(),
+            project_id: pid,
+            harness_base_url: base_url.into(),
+            paused: false,
+            alive: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            forwarder: None,
+            current_task_id: None,
+        }
+    }
+
+    {
+        let mut reg = state.automaton_registry.lock().await;
+        reg.insert(
+            (pid, loop_aiid),
+            fake_entry(pid, "auto-loop", &unreachable_harness),
+        );
+        reg.insert(
+            (pid, ephemeral_aiid_a),
+            fake_entry(pid, "auto-task-a", &unreachable_harness),
+        );
+        reg.insert(
+            (pid, ephemeral_aiid_b),
+            fake_entry(pid, "auto-task-b", &unreachable_harness),
+        );
+    }
+
+    {
+        let reg = state.automaton_registry.lock().await;
+        let in_project = reg
+            .keys()
+            .filter(|(p, _)| *p == pid)
+            .count();
+        assert_eq!(
+            in_project, 3,
+            "registry must hold one slot per (project_id, agent_instance_id)"
+        );
+    }
+
+    let req = json_request(
+        "POST",
+        &format!("/api/projects/{pid}/loop/stop?agent_instance_id={ephemeral_aiid_a}"),
+        None,
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    {
+        let reg = state.automaton_registry.lock().await;
+        assert!(
+            !reg.contains_key(&(pid, ephemeral_aiid_a)),
+            "scoped stop should remove only the targeted instance"
+        );
+        assert!(
+            reg.contains_key(&(pid, loop_aiid)),
+            "loop instance must survive a per-instance stop on a different agent"
+        );
+        assert!(
+            reg.contains_key(&(pid, ephemeral_aiid_b)),
+            "sibling ephemeral executor must survive a per-instance stop"
+        );
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Error format consistency
 // ---------------------------------------------------------------------------
