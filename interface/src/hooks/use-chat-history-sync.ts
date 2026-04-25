@@ -3,7 +3,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useChatHistoryStore, useChatHistory } from "../stores/chat-history-store";
 import { useSidekickStore } from "../stores/sidekick-store";
 import { useIsStreaming } from "./stream/hooks";
-import { getStreamEntry } from "./stream/store";
+import { getStreamEntry, streamMetaMap } from "./stream/store";
 import { useEventStore } from "../stores/event-store/index";
 import { EventType } from "../types/aura-events";
 import type { SessionEvent } from "../types";
@@ -21,6 +21,21 @@ import {
  * history fetch per ~250ms while a turn is streaming.
  */
 const PROGRESS_REFETCH_DEBOUNCE_MS = 250;
+
+/**
+ * Grace window after a streaming → not-streaming transition during which
+ * we refuse to overwrite live stream events with a *shorter* history
+ * snapshot. The forced `fetchHistory({ force: true })` call that fires
+ * on stream finish often races with the server-side persistence of the
+ * trailing `assistant_message_end`, so we frequently see a "user only"
+ * snapshot land before the assistant row exists in storage. Without
+ * this guard that snapshot would replace the just-finalized stream
+ * events and the assistant content would visibly disappear at end of
+ * turn (full content reappearing only on a hard reload, since the
+ * server eventually persists it). 1500ms covers the worst observed
+ * persistence lag without delaying legitimate cross-session refreshes.
+ */
+const STREAM_FINISH_GRACE_MS = 1500;
 
 interface ChatHistorySyncOptions {
   historyKey: string | undefined;
@@ -116,8 +131,15 @@ export function useChatHistorySync({
   // instead of invalidateHistory so that the entry keeps its current
   // status/events — this avoids a loading-state flash (blink) in the UI.
   const prevIsStreamingRef = useRef(false);
+  // Wall-clock timestamp of the most recent streaming → not-streaming
+  // transition, used downstream as a "grace window" so we don't replace
+  // freshly-finalized stream events with a partial history snapshot
+  // (e.g. user-only) that arrives before the server has finished
+  // persisting the trailing assistant_message_end.
+  const streamFinishedAtRef = useRef<number>(0);
   useEffect(() => {
     if (prevIsStreamingRef.current && !isStreaming) {
+      streamFinishedAtRef.current = Date.now();
       if (historyKey && fetchFn) {
         useChatHistoryStore.getState().fetchHistory(historyKey, fetchFn, { force: true });
       }
@@ -240,6 +262,23 @@ export function useChatHistorySync({
   // 2. When the stream store already has >= as many events as the history,
   //    skip — avoids a full re-render blink after streaming ends and the
   //    background re-fetch returns equivalent data.
+  // 3. Post-stream grace window: for ~`STREAM_FINISH_GRACE_MS` after a
+  //    streaming → not-streaming transition, skip the reset entirely.
+  //    The forced `fetchHistory({ force: true })` we trigger on stream
+  //    finish often returns before the server has persisted the trailing
+  //    `assistant_message_end`, and even when the snapshot is the same
+  //    length as the stream it can carry partial / sanitized assistant
+  //    content that overwrites the freshly-streamed turn — manifesting
+  //    as "user prompt remains, all assistant content gone" right when
+  //    the turn finishes (full content reappearing only on hard reload,
+  //    after persistence catches up). Holding the stream as-is for a
+  //    short window lets the next history refetch land with the real
+  //    persisted state before we replace anything.
+  // 4. History-staleness check: even outside the grace window, if the
+  //    last persisted server timestamp predates our stream's most recent
+  //    local mutation (touched on every `setEvents` via `touchEntry`),
+  //    the stream is provably fresher than history — never let stale
+  //    history clobber it.
   useEffect(() => {
     if (!hydrateToStream) return;
     if (historyStatus !== "ready" || !historyKey) return;
@@ -248,8 +287,39 @@ export function useChatHistorySync({
     const streamCount = sEntry?.events.length ?? 0;
     if (histEntry && histEntry.fetchedAt === 0 && streamCount > 0) return;
     if (streamCount > 0 && streamCount >= historyMessages.length) return;
+
+    // Grace window after a stream just finished — skip any reset.
+    if (streamCount > 0) {
+      const finishedAt = streamFinishedAtRef.current;
+      if (finishedAt > 0 && Date.now() - finishedAt <= STREAM_FINISH_GRACE_MS) {
+        return;
+      }
+    }
+
+    // Stream-newer-than-history: persisted server timestamp predates the
+    // stream's most recent local mutation.
+    if (streamCount > 0 && historyLastMessageAt) {
+      const meta = streamMetaMap.get(streamKey);
+      const streamMutatedAt = meta?.lastAccessedAt ?? 0;
+      const historyAt = Date.parse(historyLastMessageAt);
+      if (
+        Number.isFinite(historyAt) &&
+        streamMutatedAt > 0 &&
+        historyAt < streamMutatedAt
+      ) {
+        return;
+      }
+    }
+
     resetEventsRef.current(historyMessages, { allowWhileStreaming: true });
-  }, [historyMessages, historyStatus, historyKey, hydrateToStream, streamKey]);
+  }, [
+    historyMessages,
+    historyStatus,
+    historyKey,
+    hydrateToStream,
+    streamKey,
+    historyLastMessageAt,
+  ]);
 
   const prevHistoryLastMessageAtRef = useRef<string | null>(null);
   useEffect(() => {

@@ -87,6 +87,60 @@ describe("useConversationSnapshot", () => {
     expect(result.current.messages).toEqual([...historyMessages, optimisticUser]);
   });
 
+  it("anchors the leading optimistic user bubble against history when the assistant content has not converged yet", () => {
+    // Regression for the "user prompt remains, all assistant content gone"
+    // bug: when the stream still holds [user-temp, asst-stream] and the
+    // forced post-stream history fetch returns [user-real, asst-real]
+    // whose assistant content is *fuller* than the stream (e.g. because
+    // the stream was paused mid-token, or final post-processing replaced
+    // it), tail-matching fails on the assistant slot. The back-walk path
+    // must still anchor the user at stored[0] so the user message
+    // doesn't get duplicated at the bottom while the assistant gets
+    // dropped.
+    const streamKey = "thread-anchor";
+    const historyMessages: DisplaySessionEvent[] = [
+      { id: "evt-user-real", role: "user", content: "Hi" },
+      { id: "evt-assistant-real", role: "assistant", content: "Meow!" },
+    ];
+
+    setStreamMessages(streamKey, [
+      { id: "temp-1", role: "user", content: "Hi" },
+      { id: "stream-1", role: "assistant", content: "Meo" },
+    ]);
+
+    const { result } = renderHook(() =>
+      useConversationSnapshot(streamKey, historyMessages),
+    );
+
+    expect(result.current.messages.map((m) => m.id)).toEqual([
+      "evt-user-real",
+      "evt-assistant-real",
+      "stream-1",
+    ]);
+    expect(
+      result.current.messages.filter((m) => m.role === "user"),
+    ).toHaveLength(1);
+  });
+
+  it("aligns [user-temp, asst-stream] with [user-real, asst-real] when assistant content matches", () => {
+    const streamKey = "thread-anchor-clean";
+    const historyMessages: DisplaySessionEvent[] = [
+      { id: "evt-user-real", role: "user", content: "Hi" },
+      { id: "evt-assistant-real", role: "assistant", content: "Meow!" },
+    ];
+
+    setStreamMessages(streamKey, [
+      { id: "temp-1", role: "user", content: "Hi" },
+      { id: "stream-1", role: "assistant", content: "Meow!" },
+    ]);
+
+    const { result } = renderHook(() =>
+      useConversationSnapshot(streamKey, historyMessages),
+    );
+
+    expect(result.current.messages).toEqual(historyMessages);
+  });
+
   it("dedupes the full turn once the tail of history sequence-matches the stream", () => {
     const streamKey = "thread-4";
     const historyMessages: DisplaySessionEvent[] = [

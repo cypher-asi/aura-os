@@ -827,16 +827,27 @@ export function handleAssistantTurnBoundary(
   setters: StreamSetters,
 ): void {
   const hasBuffer = !!refs.streamBuffer.current;
-  if (hasBuffer) {
-    flushStreamingText(refs, setters);
+  const newToolCalls = refs.toolCalls.current.filter(
+    (tc) => !refs.snapshottedToolCallIds.current.has(tc.id),
+  );
+  const hasNewToolCalls = newToolCalls.length > 0;
+
+  // Save a `stream-*` event whenever there is text OR new (unsnapshotted)
+  // tool calls. The tool-only branch matters because `resetStreamBuffers`
+  // — invoked shortly after this in the AssistantMessageEnd handler when
+  // `stop_reason !== "tool_use"`, and unconditionally on Done — wipes
+  // `refs.toolCalls.current` and `snapshottedToolCallIds`. Without this
+  // save a "tool calls only, no text" turn would silently disappear at
+  // end of turn (the prior behaviour: `if (hasBuffer)` skipped the save
+  // entirely when buffered text was empty, even with new tool calls).
+  if (hasBuffer || hasNewToolCalls) {
+    if (hasBuffer) {
+      flushStreamingText(refs, setters);
+    }
     const { savedThinking, savedThinkingDuration } = snapshotThinking(refs);
     const bufferedContent = refs.streamBuffer.current;
 
-    const newToolCalls = refs.toolCalls.current.filter(
-      (tc) => !refs.snapshottedToolCallIds.current.has(tc.id),
-    );
     const newToolCallIds = new Set(newToolCalls.map((tc) => tc.id));
-
     const newTimeline = refs.timeline.current.filter(
       (item) => item.kind !== "tool" || newToolCallIds.has(item.toolCallId),
     );

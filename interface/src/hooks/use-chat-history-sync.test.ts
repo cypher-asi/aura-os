@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => {
   const historyMessages: DisplaySessionEvent[] = [
     { id: "evt-1", role: "assistant", content: "Hello" },
   ];
+  const streamMetaMap = new Map<string, { lastAccessedAt: number }>();
   const state = {
     entries: {
       "agent:agent-1": {
@@ -62,6 +63,7 @@ const mocks = vi.hoisted(() => {
     ),
     useIsStreaming: vi.fn(() => false),
     getStreamEntry: vi.fn(() => ({ events: [] as DisplaySessionEvent[] })),
+    streamMetaMap,
     useEventStore: Object.assign(
       vi.fn((selector: (s: { subscribe: typeof subscribe }) => unknown) =>
         selector({ subscribe }),
@@ -84,6 +86,7 @@ vi.mock("./stream/hooks", () => ({
 
 vi.mock("./stream/store", () => ({
   getStreamEntry: mocks.getStreamEntry,
+  streamMetaMap: mocks.streamMetaMap,
 }));
 
 vi.mock("../stores/event-store/index", () => ({
@@ -491,5 +494,123 @@ describe("useChatHistorySync", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(mocks.subscribe).not.toHaveBeenCalled();
+  });
+
+  it("does not overwrite live stream events with a longer-but-stale history snapshot during the post-stream grace window", async () => {
+    // Regression for the "assistant turn vanishes at end of stream" bug.
+    // When the post-stream `fetchHistory({ force: true })` races with
+    // server-side persistence of `assistant_message_end`, the snapshot
+    // can briefly carry sanitized / partial assistant content. Replacing
+    // freshly-finalized stream events with that snapshot is what causes
+    // the visible "all assistant content gone" symptom right when the
+    // turn ends. The grace window must defer the reset for ~1500ms.
+    //
+    // We construct a case the *existing* length-based guard does NOT
+    // catch: streamCount=1 (just user) but history returns length=2.
+    // Without the grace window, the hydrate would replace the stream
+    // with a snapshot that may contain stale assistant content.
+    const liveStreamEvents: DisplaySessionEvent[] = [
+      { id: "temp-user", role: "user", content: "Hi" },
+    ];
+    mocks.getStreamEntry.mockReturnValue({ events: liveStreamEvents });
+    mocks.streamMetaMap.set("agent-1", { lastAccessedAt: Date.now() });
+
+    const initialHistory: DisplaySessionEvent[] = [
+      { id: "evt-user-real", role: "user", content: "Hi" },
+    ];
+    mocks.useChatHistory.mockReturnValue({
+      events: initialHistory,
+      status: "ready",
+      error: null,
+    });
+    mocks.state.entries["agent:agent-1"] = {
+      events: initialHistory,
+      status: "ready",
+      fetchedAt: Date.now(),
+      error: null,
+      lastMessageAt: "2026-04-13T00:00:00Z",
+    };
+
+    // First mount during streaming.
+    mocks.useIsStreaming.mockReturnValue(true);
+    const resetEvents = vi.fn();
+    const { rerender } = renderHook(() =>
+      useChatHistorySync({
+        historyKey: "agent:agent-1",
+        streamKey: "agent-1",
+        fetchFn: vi.fn(async () => []),
+        resetEvents,
+      }),
+    );
+
+    // Streaming → not-streaming transition; this sets streamFinishedAtRef
+    // inside the hook so we are now within the grace window.
+    mocks.useIsStreaming.mockReturnValue(false);
+    rerender();
+
+    // Now history grows (server-driven WS would normally trigger this).
+    const longerPartial: DisplaySessionEvent[] = [
+      { id: "evt-user-real", role: "user", content: "Hi" },
+      // Sanitized / partial assistant content as can arrive mid-persistence.
+      { id: "evt-assistant-partial", role: "assistant", content: "" },
+    ];
+    mocks.useChatHistory.mockReturnValue({
+      events: longerPartial,
+      status: "ready",
+      error: null,
+    });
+    rerender();
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    // Grace window must defer the reset; resetEvents must not fire with
+    // the stale longer snapshot.
+    expect(resetEvents).not.toHaveBeenCalledWith(longerPartial, expect.anything());
+  });
+
+  it("does not overwrite live stream events when persisted history is older than the most recent stream mutation", async () => {
+    // Even outside the grace window, history that is provably older
+    // than our stream's last local write must not clobber the stream —
+    // that would also cause the vanishing-assistant symptom whenever a
+    // forced refetch returns a stale snapshot.
+    const liveStreamEvents: DisplaySessionEvent[] = [
+      { id: "temp-user", role: "user", content: "Hi" },
+    ];
+    mocks.getStreamEntry.mockReturnValue({ events: liveStreamEvents });
+    // Stream mutated "now"; persisted history is 10 minutes old.
+    mocks.streamMetaMap.set("agent-1", { lastAccessedAt: Date.now() });
+
+    const stalerLonger: DisplaySessionEvent[] = [
+      { id: "evt-user-real", role: "user", content: "Hi" },
+      { id: "evt-assistant-real", role: "assistant", content: "old reply" },
+    ];
+    mocks.useChatHistory.mockReturnValue({
+      events: stalerLonger,
+      status: "ready",
+      error: null,
+    });
+    mocks.state.entries["agent:agent-1"] = {
+      events: stalerLonger,
+      status: "ready",
+      fetchedAt: Date.now(),
+      error: null,
+      lastMessageAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+    };
+
+    // Render outside the grace window (no prior streaming transition).
+    mocks.useIsStreaming.mockReturnValue(false);
+    const resetEvents = vi.fn();
+    renderHook(() =>
+      useChatHistorySync({
+        historyKey: "agent:agent-1",
+        streamKey: "agent-1",
+        fetchFn: vi.fn(async () => []),
+        resetEvents,
+      }),
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(resetEvents).not.toHaveBeenCalledWith(stalerLonger, expect.anything());
   });
 });

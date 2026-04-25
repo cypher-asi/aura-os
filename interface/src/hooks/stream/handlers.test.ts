@@ -24,6 +24,7 @@ import {
   handleToolCallFailed,
   handleStreamError,
   finalizeStream,
+  handleAssistantTurnBoundary,
 } from "./handlers";
 import {
   dispatchInsufficientCredits,
@@ -1129,6 +1130,80 @@ describe("stream/handlers", () => {
       const mostRecent = eventCalls[eventCalls.length - 1]?.([]) ?? [];
       expect(mostRecent).toEqual([]);
       expect(refs.streamBuffer.current).toBe("mid-turn text");
+    });
+  });
+
+  describe("handleAssistantTurnBoundary", () => {
+    it("saves a stream-* event with tool calls when the turn has no buffered text", () => {
+      // Regression: tool-only assistant turns (no text, only tool_use blocks)
+      // used to be silently dropped. The boundary skipped the save when
+      // `streamBuffer` was empty, then `resetStreamBuffers` (called shortly
+      // after on AssistantMessageEnd / Done) wiped `refs.toolCalls.current`,
+      // so the turn never landed in `events`.
+      const refs = makeRefs();
+      const tc: ToolCallEntry = {
+        id: "tc-tool-only",
+        name: "search",
+        input: { q: "kittens" },
+        pending: false,
+        started: true,
+      };
+      refs.toolCalls.current = [tc];
+      refs.timeline.current = [
+        { id: "tl-1", kind: "tool", toolCallId: "tc-tool-only" },
+      ];
+      const setters = makeSetters();
+
+      handleAssistantTurnBoundary(refs, setters);
+
+      const eventCalls =
+        (setters.calls.setEvents as Array<(prev: unknown[]) => unknown[]> | undefined) ?? [];
+      expect(eventCalls).toHaveLength(1);
+      const result = eventCalls[0]([]) as Array<{
+        id: string;
+        role: string;
+        content: string;
+        toolCalls?: ToolCallEntry[];
+        timeline?: unknown[];
+      }>;
+      expect(result).toHaveLength(1);
+      expect(result[0].role).toBe("assistant");
+      expect(result[0].content).toBe("");
+      expect(result[0].toolCalls).toHaveLength(1);
+      expect(result[0].toolCalls?.[0].id).toBe("tc-tool-only");
+      expect(result[0].id.startsWith("stream-")).toBe(true);
+
+      // The boundary marks the tool as snapshotted so a subsequent
+      // finalize/boundary won't re-emit it.
+      expect(refs.snapshottedToolCallIds.current.has("tc-tool-only")).toBe(true);
+    });
+
+    it("does nothing when there are no buffers and no new tool calls", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      handleAssistantTurnBoundary(refs, setters);
+
+      expect(setters.calls.setEvents).toBeUndefined();
+    });
+
+    it("does not re-emit tool calls already snapshotted by a prior boundary", () => {
+      const refs = makeRefs();
+      refs.toolCalls.current = [
+        {
+          id: "tc-already-saved",
+          name: "search",
+          input: {},
+          pending: false,
+          started: true,
+        },
+      ];
+      refs.snapshottedToolCallIds.current = new Set(["tc-already-saved"]);
+      const setters = makeSetters();
+
+      handleAssistantTurnBoundary(refs, setters);
+
+      expect(setters.calls.setEvents).toBeUndefined();
     });
   });
 });

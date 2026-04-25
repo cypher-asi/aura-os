@@ -116,7 +116,8 @@ function combineStoredAndStreamMessages(
   }
 
   const liveOnlyMessages: DisplaySessionEvent[] = [];
-  for (const message of streamAfterIdDedup) {
+  for (let streamIdx = 0; streamIdx < streamAfterIdDedup.length; streamIdx += 1) {
+    const message = streamAfterIdDedup[streamIdx];
     if (!isOptimisticLocalMessage(message)) {
       liveOnlyMessages.push(message);
       continue;
@@ -127,10 +128,34 @@ function combineStoredAndStreamMessages(
       if (matchedStoredIndexes.has(index)) continue;
       if (!messageContentMatches(storedMessages[index], message)) continue;
 
+      // Anchor the leading stream row to stored[0] when nothing has matched
+      // yet AND the stream represents a multi-row turn (user+assistant or
+      // user+tool). Without this branch, a [user-temp, asst-stream] stream
+      // paired with [user-real, asst-real] history — both length 2 but
+      // content-mismatched on the assistant slot, so tail-matching fails —
+      // leaves the user at index 0 unable to anchor (it isn't last and has
+      // no matched neighbour), which is why optimistic user prompts used
+      // to land in `liveOnlyMessages` while every back-walk-matched
+      // assistant got dropped, manifesting as "user prompt remains, all
+      // assistant content gone" right when the turn finishes.
+      //
+      // The `streamAfterIdDedup.length >= 2` gate keeps the original guard
+      // for "lone optimistic bubble whose content happens to repeat older
+      // history" (covered by the "still renders a fresh optimistic bubble
+      // when identical content exists earlier in history" test): if the
+      // user typed the same prompt twice and the stream only carries that
+      // bubble (no following assistant row yet), we still treat it as
+      // genuinely live.
+      const isFirstUnmatchedHead =
+        streamIdx === 0 &&
+        index === 0 &&
+        matchedStoredIndexes.size === 0 &&
+        streamAfterIdDedup.length >= 2;
       const isAnchored =
         matchedStoredIndexes.has(index - 1) ||
         matchedStoredIndexes.has(index + 1) ||
-        index === storedMessages.length - 1;
+        index === storedMessages.length - 1 ||
+        isFirstUnmatchedHead;
       if (isAnchored) {
         matched = index;
         break;
