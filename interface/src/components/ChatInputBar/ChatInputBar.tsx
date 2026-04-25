@@ -453,7 +453,11 @@ export const ChatInputBar = memo(
       }
 
       return (
-        <div className={styles.modelMenu} data-agent-surface="model-picker">
+        <div
+          className={styles.modelMenu}
+          data-agent-surface="model-picker"
+          data-agent-proof="chat-model-picker-visible"
+        >
           {shouldUseCondensedAuraMenu && !showAllModels ? (
             <>
               {featuredModels.map((m) => (
@@ -461,6 +465,8 @@ export const ChatInputBar = memo(
                   key={m.id}
                   type="button"
                   className={`${styles.modelMenuItem} ${m.id === selectedModel ? styles.modelMenuItemActive : ""}`}
+                  data-agent-model-id={m.id}
+                  data-agent-model-label={m.label}
                   onClick={() => {
                     onModelChange(m.id);
                     setModelMenuOpen(false);
@@ -492,6 +498,8 @@ export const ChatInputBar = memo(
                         key={m.id}
                         type="button"
                         className={`${styles.modelMenuItem} ${m.id === selectedModel ? styles.modelMenuItemActive : ""}`}
+                        data-agent-model-id={m.id}
+                        data-agent-model-label={m.label}
                         onClick={() => {
                           onModelChange(m.id);
                           setModelMenuOpen(false);
@@ -510,6 +518,8 @@ export const ChatInputBar = memo(
                 key={m.id}
                 type="button"
                 className={`${styles.modelMenuItem} ${m.id === selectedModel ? styles.modelMenuItemActive : ""}`}
+                data-agent-model-id={m.id}
+                data-agent-model-label={m.label}
                 onClick={() => {
                   onModelChange(m.id);
                   setModelMenuOpen(false);
@@ -654,7 +664,7 @@ export const ChatInputBar = memo(
             )}
           </div>
         </div>
-        <div className={styles.inputInfoBar}>
+        <div className={styles.inputInfoBar} data-agent-context-anchor="agent-chat-input-context">
           {machineType ? (
             <>
               <span className={styles.environmentWrap}>

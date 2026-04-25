@@ -9,6 +9,9 @@ export const DEFAULT_HIGH_RES_CAPTURE_VIEWPORT = Object.freeze({
   deviceScaleFactor: 3,
 });
 
+export const DEFAULT_CHANGELOG_CAPTURE_ZOOM = 1;
+export const DEFAULT_CHANGELOG_CAPTURE_TEXT_SCALE = 1.45;
+
 function commonChromeExecutablePath() {
   const candidates = [
     process.env.AURA_CHANGELOG_MEDIA_CHROME_EXECUTABLE,
@@ -79,6 +82,18 @@ function storyTokens(value) {
     .filter((token) => token.length >= 3))];
 }
 
+function seedPlanCaptureText(seedPlan = null) {
+  if (!seedPlan || typeof seedPlan !== "object") return "";
+  return [
+    ...(Array.isArray(seedPlan.capabilities) ? seedPlan.capabilities : []),
+    ...(Array.isArray(seedPlan.requiredState) ? seedPlan.requiredState : []),
+    ...(Array.isArray(seedPlan.proofBoundary) ? seedPlan.proofBoundary : []),
+    ...(Array.isArray(seedPlan.contextBoundary) ? seedPlan.contextBoundary : []),
+    ...(Array.isArray(seedPlan.readinessSignals) ? seedPlan.readinessSignals : []),
+    seedPlan.notes,
+  ].filter(Boolean).join("\n");
+}
+
 async function prepareProofState(page, story) {
   const tokens = storyTokens(story);
   if (!tokens.length) return null;
@@ -144,7 +159,67 @@ async function prepareProofState(page, story) {
   return selected;
 }
 
-async function selectProofClip(page, story, proofAction = null) {
+async function applyCapturePresentationMode(
+  page,
+  {
+    zoom = DEFAULT_CHANGELOG_CAPTURE_ZOOM,
+    textScale = DEFAULT_CHANGELOG_CAPTURE_TEXT_SCALE,
+  } = {},
+) {
+  const resolvedZoom = Number.isFinite(Number(zoom)) ? Number(zoom) : DEFAULT_CHANGELOG_CAPTURE_ZOOM;
+  const clampedZoom = Math.min(1.75, Math.max(1, resolvedZoom));
+  const resolvedTextScale = Number.isFinite(Number(textScale)) ? Number(textScale) : DEFAULT_CHANGELOG_CAPTURE_TEXT_SCALE;
+  const clampedTextScale = Math.min(1.8, Math.max(1, resolvedTextScale));
+  await page.evaluate(({ zoomValue, textScaleValue }) => {
+    document.documentElement.style.setProperty("--aura-changelog-capture-zoom", String(zoomValue));
+    document.documentElement.style.setProperty("--aura-changelog-capture-text-scale", String(textScaleValue));
+    document.body.style.zoom = zoomValue > 1 ? String(zoomValue) : "";
+    document.body.setAttribute("data-aura-changelog-capture-zoom", String(zoomValue));
+    document.body.setAttribute("data-aura-changelog-capture-text-scale", String(textScaleValue));
+    document.getElementById("aura-changelog-capture-style")?.remove();
+    const style = document.createElement("style");
+    style.id = "aura-changelog-capture-style";
+    style.textContent = `
+      body[data-aura-changelog-capture-text-scale] [data-agent-context-anchor],
+      body[data-aura-changelog-capture-text-scale] [data-agent-context-anchor] * {
+        font-size: calc(16px * var(--aura-changelog-capture-text-scale)) !important;
+        line-height: 1.15 !important;
+        font-weight: 600 !important;
+        text-rendering: geometricPrecision !important;
+        -webkit-font-smoothing: antialiased !important;
+      }
+      body[data-aura-changelog-capture-text-scale] [data-agent-proof]:not(img):not(svg):not(canvas),
+      body[data-aura-changelog-capture-text-scale] [data-agent-proof]:not(img):not(svg):not(canvas) * {
+        text-rendering: geometricPrecision !important;
+        -webkit-font-smoothing: antialiased !important;
+      }
+      body[data-aura-changelog-capture-text-scale] [data-agent-proof] button,
+      body[data-aura-changelog-capture-text-scale] [data-agent-proof] [role="menuitem"],
+      body[data-aura-changelog-capture-text-scale] [data-agent-proof] [data-agent-model-label] {
+        font-size: calc(13px * var(--aura-changelog-capture-text-scale)) !important;
+        line-height: 1.2 !important;
+      }
+      body[data-aura-changelog-capture-text-scale] [data-agent-action],
+      body[data-aura-changelog-capture-text-scale] [data-agent-field],
+      body[data-aura-changelog-capture-text-scale] input,
+      body[data-aura-changelog-capture-text-scale] button {
+        text-rendering: geometricPrecision !important;
+        -webkit-font-smoothing: antialiased !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }, { zoomValue: clampedZoom, textScaleValue: clampedTextScale });
+  await page.waitForTimeout(250);
+  return { zoom: clampedZoom, textScale: clampedTextScale };
+}
+
+async function selectProofClip(page, story, proofAction = null, seedPlan = null) {
+  const captureContract = [
+    story,
+    seedPlanCaptureText(seedPlan),
+    "proof plus recognizable product context",
+    "nearest product title tab sidebar toolbar navigation selected project active panel",
+  ].filter(Boolean).join("\n");
   return page.evaluate(({ tokens, actionName }) => {
     function isVisible(element) {
       const rect = element.getBoundingClientRect();
@@ -197,6 +272,18 @@ async function selectProofClip(page, story, proofAction = null) {
         text: visibleRects.map((rect) => rect.text || "").filter(Boolean).join(" ").slice(0, 500),
       };
     }
+    function contextCreatesMostlyEmptyFrame(contextRect, proofRect) {
+      const combined = union([contextRect, proofRect]);
+      if (!combined) return false;
+      const combinedArea = Math.max(1, combined.width * combined.height);
+      const contentArea = Math.max(1, (contextRect.width * contextRect.height) + (proofRect.width * proofRect.height));
+      const emptyRatio = 1 - Math.min(1, contentArea / combinedArea);
+      const verticalGap = Math.max(0, proofRect.y - contextRect.bottom, contextRect.y - proofRect.bottom);
+      const horizontalGap = Math.max(0, proofRect.x - contextRect.right, contextRect.x - proofRect.right);
+      const farVerticalContext = verticalGap > Math.max(240, proofRect.height * 0.5);
+      const farHorizontalContext = horizontalGap > Math.max(320, proofRect.width * 0.5);
+      return emptyRatio > 0.55 && (farVerticalContext || farHorizontalContext);
+    }
     function expandToPresentationClip(rect, { minWidth = 1920, minHeight = 1080, maxWidth = null, maxHeight = null, alignTop = false } = {}) {
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
@@ -219,7 +306,7 @@ async function selectProofClip(page, story, proofAction = null) {
       }
       width = Math.min(width, viewportWidth);
       height = Math.min(height, viewportHeight);
-      let x = rect.x + (rect.width / 2) - (width / 2);
+      let x = alignTop ? rect.x - padding : rect.x + (rect.width / 2) - (width / 2);
       let y = alignTop ? rect.y - padding : rect.y + (rect.height / 2) - (height / 2);
       x = Math.max(0, Math.min(x, viewportWidth - width));
       y = Math.max(0, Math.min(y, viewportHeight - height));
@@ -234,10 +321,14 @@ async function selectProofClip(page, story, proofAction = null) {
     }
     function dataAgentKeywords(element) {
       return [
+        element.getAttribute("data-agent-context"),
+        element.getAttribute("data-agent-context-anchor"),
         element.getAttribute("data-agent-surface"),
         element.getAttribute("data-agent-proof"),
         element.getAttribute("data-agent-action"),
         element.getAttribute("data-agent-field"),
+        element.getAttribute("data-agent-model-id"),
+        element.getAttribute("data-agent-model-label"),
         element.getAttribute("aria-label"),
       ].filter(Boolean).join(" ");
     }
@@ -247,29 +338,70 @@ async function selectProofClip(page, story, proofAction = null) {
       const visibleTextBonus = rect.text ? 0.5 : 0;
       const proofBonus = surface.directProofSignal ? 8 : surface.hasProofSignal ? 3 : 0;
       const semanticBonus = surface.semanticText ? 1 : 0;
+      const productContextBonus = surface.inProductContext ? 4 : 0;
+      const supportPanelPenalty = !surface.inProductContext && surface.hasProofSignal ? -3 : 0;
       const mainPanelPenalty = surface.name === "main-panel" ? -0.5 : 0;
       const viewportArea = Math.max(1, window.innerWidth * window.innerHeight);
       const areaRatio = (rect.width * rect.height) / viewportArea;
-      return tokenScore + visibleTextBonus + proofBonus + semanticBonus + mainPanelPenalty - (areaRatio * 4);
+      return tokenScore
+        + visibleTextBonus
+        + proofBonus
+        + semanticBonus
+        + productContextBonus
+        + supportPanelPenalty
+        + mainPanelPenalty
+        - (areaRatio * 4);
     }
 
     function contextRectForProofElement(element) {
       if (!element.getAttribute("data-agent-proof")) return null;
+      const proofRect = rectForElement(
+        element,
+        `[data-agent-proof="${CSS.escape(element.getAttribute("data-agent-proof") || "proof")}"]`,
+      );
+      const explicitContext = element.closest("[data-agent-context]");
+      if (explicitContext && isVisible(explicitContext)) {
+        const anchors = Array.from(explicitContext.querySelectorAll("[data-agent-context-anchor]"))
+          .filter(isVisible)
+          .map((anchor) => rectForElement(
+            anchor,
+            `[data-agent-context-anchor="${CSS.escape(anchor.getAttribute("data-agent-context-anchor") || "context-anchor")}"]`,
+          ));
+        if (anchors.length) {
+          const nearbyAnchors = anchors.filter((anchor) => !contextCreatesMostlyEmptyFrame(anchor, proofRect));
+          const contextAnchorRect = union(nearbyAnchors);
+          if (contextAnchorRect) return contextAnchorRect;
+        }
+        const rect = explicitContext.getBoundingClientRect();
+        const viewportArea = Math.max(1, window.innerWidth * window.innerHeight);
+        const contextAreaRatio = (rect.width * rect.height) / viewportArea;
+        if (contextAreaRatio <= 0.5) {
+          return rectForElement(
+            explicitContext,
+            `[data-agent-context="${CSS.escape(explicitContext.getAttribute("data-agent-context") || "proof-context")}"]`,
+          );
+        }
+      }
       const context = element.parentElement?.closest("[data-agent-surface]:not([data-agent-proof])");
       if (!context || !isVisible(context)) return null;
       return rectForElement(context, `[data-agent-surface="${CSS.escape(context.getAttribute("data-agent-surface") || "proof-context")}"]`);
     }
 
-    const proofSurfaces = Array.from(document.querySelectorAll("[data-agent-surface]"))
+    const proofSurfaces = Array.from(document.querySelectorAll("[data-agent-surface], [data-agent-context]"))
       .filter(isVisible)
       .map((element, index) => {
-        const surface = element.getAttribute("data-agent-surface") || `surface-${index + 1}`;
+        const surface = element.getAttribute("data-agent-surface")
+          || element.getAttribute("data-agent-context")
+          || `surface-${index + 1}`;
         return {
-          selector: `[data-agent-surface="${CSS.escape(surface)}"]`,
+          selector: element.getAttribute("data-agent-surface")
+            ? `[data-agent-surface="${CSS.escape(surface)}"]`
+            : `[data-agent-context="${CSS.escape(surface)}"]`,
           name: surface,
           semanticText: dataAgentKeywords(element),
           directProofSignal: Boolean(element.getAttribute("data-agent-proof")),
           hasProofSignal: Boolean(element.querySelector("[data-agent-proof]") || element.getAttribute("data-agent-proof")),
+          inProductContext: Boolean(element.closest("[data-agent-context]")),
           contextRect: contextRectForProofElement(element),
         };
       });
@@ -309,15 +441,19 @@ async function selectProofClip(page, story, proofAction = null) {
         included.push(surface.contextRect);
       }
       const combined = union(included) || rect;
+      const directProofContextFitsFocusFrame = surface.directProofSignal
+        && surface.inProductContext
+        && combined.width + 96 <= 1440
+        && combined.height + 96 <= 810;
       ranked.push({
         surface,
         rect: combined,
         score: scoreSurface(surface, combined),
         minWidth: surface.directProofSignal ? 1280 : 1920,
         minHeight: surface.directProofSignal ? 720 : 1080,
-        maxWidth: null,
-        maxHeight: null,
-        alignTop: surface.directProofSignal,
+        maxWidth: directProofContextFitsFocusFrame ? 1440 : null,
+        maxHeight: directProofContextFitsFocusFrame ? 810 : null,
+        alignTop: directProofContextFitsFocusFrame,
       });
     }
     if (actionName) {
@@ -361,7 +497,12 @@ async function selectProofClip(page, story, proofAction = null) {
       const areaB = b.rect.width * b.rect.height;
       return areaA - areaB;
     });
-    const best = ranked.find((entry) => entry.score >= 1) || ranked[0];
+    const directProofRanked = ranked.filter((entry) => entry.surface.directProofSignal);
+    const contextualProofRanked = ranked.filter((entry) => entry.surface.hasProofSignal);
+    const best = directProofRanked[0]
+      || contextualProofRanked[0]
+      || ranked.find((entry) => entry.score >= 1)
+      || ranked[0];
     if (best) {
       return expandToPresentationClip(best.rect, {
         minWidth: best.minWidth || 1920,
@@ -379,7 +520,7 @@ async function selectProofClip(page, story, proofAction = null) {
       sourceSelector: "viewport",
       sourceText: document.body.innerText.slice(0, 500),
     };
-  }, { tokens: storyTokens(story), actionName: proofAction?.action || "" });
+  }, { tokens: storyTokens(captureContract), actionName: proofAction?.action || "" });
 }
 
 export async function captureHighResolutionAuraProof({
@@ -392,6 +533,8 @@ export async function captureHighResolutionAuraProof({
   viewport = DEFAULT_HIGH_RES_CAPTURE_VIEWPORT,
   story = "",
   seedPlan = null,
+  captureZoom = DEFAULT_CHANGELOG_CAPTURE_ZOOM,
+  captureTextScale = DEFAULT_CHANGELOG_CAPTURE_TEXT_SCALE,
   waitAfterResetMs = 700,
   playwright = null,
 } = {}) {
@@ -456,15 +599,21 @@ export async function captureHighResolutionAuraProof({
       { appId: targetAppId, path: resolvedTargetPath, seed: seedPlan },
     );
     await page.waitForTimeout(waitAfterResetMs);
+    const appliedCapturePresentationMode = await applyCapturePresentationMode(page, {
+      zoom: captureZoom,
+      textScale: captureTextScale,
+    });
     await page.waitForSelector("[data-agent-surface], [data-agent-action]", { state: "visible", timeout: 5000 }).catch(() => null);
     const proofAction = await prepareProofState(page, story);
     await page.waitForTimeout(450);
-    const clip = await selectProofClip(page, story, proofAction);
+    const clip = await selectProofClip(page, story, proofAction, seedPlan);
     const pageState = await page.evaluate(() => ({
       url: window.location.href,
       width: window.innerWidth,
       height: window.innerHeight,
       devicePixelRatio: window.devicePixelRatio,
+      captureZoom: document.body.getAttribute("data-aura-changelog-capture-zoom") || "1",
+      captureTextScale: document.body.getAttribute("data-aura-changelog-capture-text-scale") || "1",
       text: document.body.innerText.slice(0, 2000),
       bridgeState: window.__AURA_CAPTURE_BRIDGE__?.getState?.() || null,
     }));
@@ -484,6 +633,7 @@ export async function captureHighResolutionAuraProof({
       status: bridgeResult?.ok && dimensions ? "captured" : "rejected",
       provider: "aura-high-res-browser-camera",
       viewport: resolvedViewport,
+      capturePresentationMode: appliedCapturePresentationMode,
       pageState,
       bridgeResult,
       proofAction,

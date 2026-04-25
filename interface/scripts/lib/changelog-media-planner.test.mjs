@@ -52,6 +52,10 @@ test("buildMediaPlannerPrompt keeps Browser Use behind a conservative Anthropic 
   assert.match(prompt, /default\/empty state/);
   assert.match(prompt, /seedPlan/);
   assert.match(prompt, /proof-data-populated/);
+  assert.match(prompt, /proofBoundary/);
+  assert.match(prompt, /contextBoundary/);
+  assert.match(prompt, /recognizable product context/);
+  assert.match(prompt, /isolated widget/);
   assert.match(prompt, /Browser Use should receive fewer, better candidates/);
   assert.match(prompt, /publicCaption/);
   assert.doesNotMatch(prompt, /Browserbase|Stagehand|Playwright/);

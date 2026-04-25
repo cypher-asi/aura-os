@@ -60,6 +60,19 @@ export function normalizeCaptureSeedPlan(seedPlan = null, candidate = {}) {
     ...(capabilities.includes("project-selected") ? ["A demo project is selected before capture."] : []),
     ...(capabilities.includes("proof-data-populated") ? ["The target surface has meaningful proof data instead of an empty/default state."] : []),
   ]);
+  const proofBoundary = unique([
+    ...(Array.isArray(explicit.proofBoundary) ? explicit.proofBoundary : []),
+    "The feature evidence itself is visible and readable.",
+  ]);
+  const contextBoundary = unique([
+    ...(Array.isArray(explicit.contextBoundary) ? explicit.contextBoundary : []),
+    "The crop includes the nearest recognizable product title, tab, sidebar, toolbar, or navigation that explains the proof.",
+  ]);
+  const avoid = unique([
+    ...(Array.isArray(explicit.avoid) ? explicit.avoid : []),
+    "isolated widget without product context",
+    "empty or placeholder-only state",
+  ]);
   const readinessSignals = unique([
     ...(Array.isArray(explicit.readinessSignals) ? explicit.readinessSignals : []),
     "desktop shell is visible",
@@ -72,7 +85,10 @@ export function normalizeCaptureSeedPlan(seedPlan = null, candidate = {}) {
     mode: normalizeString(explicit.mode) || "capture-demo-state",
     capabilities,
     requiredState,
+    proofBoundary,
+    contextBoundary,
     readinessSignals,
+    avoid,
     notes: normalizeString(explicit.notes) || null,
   };
 }

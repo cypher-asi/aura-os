@@ -117,7 +117,10 @@ export function ModelGeneration() {
   }
 
   return (
-    <div className={styles.root}>
+    <div
+      className={styles.root}
+      data-agent-surface="aura3d-model-generation"
+    >
       {current3DModel && (
         <div className={styles.header}>
           <div className={styles.viewerControls}>
@@ -162,11 +165,16 @@ export function ModelGeneration() {
             showTexture={showTexture}
           />
         ) : generateSourceImage ? (
-          <div className={styles.sourcePreview}>
+          <div
+            className={styles.sourcePreview}
+            data-agent-surface="aura3d-source-image-for-3d"
+          >
             <img
               src={generateSourceImage.imageUrl}
               alt="Source for 3D generation"
               className={styles.sourceImage}
+              data-agent-surface="aura3d-source-image-proof"
+              data-agent-proof="source-image-ready-for-3d"
             />
           </div>
         ) : null}

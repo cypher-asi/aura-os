@@ -9,5 +9,14 @@ test("high-resolution capture stays generic and does not encode feature-specific
 
   assert.doesNotMatch(source, /GPT-5\.5|open-model-picker|model-picker|feedback-composer|agent-editor/);
   assert.match(source, /\[data-agent-surface\]/);
+  assert.match(source, /\[data-agent-context\]/);
+  assert.match(source, /\[data-agent-context-anchor\]/);
   assert.match(source, /\[data-agent-action\]/);
+  assert.match(source, /proof plus recognizable product context/);
+  assert.match(source, /DEFAULT_CHANGELOG_CAPTURE_ZOOM/);
+  assert.match(source, /DEFAULT_CHANGELOG_CAPTURE_TEXT_SCALE/);
+  assert.match(source, /data-aura-changelog-capture-zoom/);
+  assert.match(source, /data-aura-changelog-capture-text-scale/);
+  assert.match(source, /contextCreatesMostlyEmptyFrame/);
+  assert.match(source, /nearbyAnchors/);
 });

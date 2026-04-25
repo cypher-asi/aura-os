@@ -5,6 +5,7 @@ import {
   readAuraCaptureBridgeState,
   resolveAuraCaptureTargetAppId,
   resolveAuraCaptureTargetPath,
+  shouldApplyAgentChatSeed,
 } from "./capture-bridge";
 
 function installLocalStorageStub() {
@@ -128,5 +129,15 @@ describe("capture-bridge helpers", () => {
 
     expect(state.routeMatched).toBe(false);
     expect(state.activeAppMatched).toBe(false);
+  });
+
+  it("uses proof and context boundaries when deciding whether to seed agent chat", () => {
+    expect(
+      shouldApplyAgentChatSeed({
+        capabilities: ["desktop proof"],
+        proofBoundary: ["The chat model picker menu shows GPT-5.5"],
+        contextBoundary: ["The agent chat input remains visible"],
+      }, null),
+    ).toBe(true);
   });
 });

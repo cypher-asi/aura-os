@@ -207,13 +207,16 @@ function summarizeSitemapCoverage(apps) {
     const sourceContext = app.sourceContext || {};
     const routeHints = sourceContext.routeHints || [];
     const surfaces = sourceContext.surfaces || [];
+    const contexts = sourceContext.contexts || [];
+    const contextAnchors = sourceContext.contextAnchors || [];
     const actions = sourceContext.actions || [];
     const fields = sourceContext.fields || [];
     const proofSignals = sourceContext.proofSignals || [];
     const ariaLabels = sourceContext.ariaLabels || [];
     const missing = [];
     if (routeHints.length === 0) missing.push("route-hints");
-    if (surfaces.length === 0 && proofSignals.length === 0) missing.push("proof-surface-handles");
+    if (surfaces.length === 0 && proofSignals.length === 0 && contexts.length === 0) missing.push("proof-surface-handles");
+    if (proofSignals.length > 0 && contextAnchors.length === 0) missing.push("context-anchors");
     if (ariaLabels.length === 0) missing.push("aria-labels");
     if (sourceContext.baseRouteKind === "placeholder") missing.push("base-route-placeholder");
     if (sourceContext.baseRouteKind === "unknown") missing.push("base-route-unknown");
@@ -222,6 +225,8 @@ function summarizeSitemapCoverage(apps) {
       label: app.label,
       routeHintCount: routeHints.length,
       surfaceCount: surfaces.length,
+      contextCount: contexts.length,
+      contextAnchorCount: contextAnchors.length,
       actionCount: actions.length,
       fieldCount: fields.length,
       proofSignalCount: proofSignals.length,
@@ -234,7 +239,8 @@ function summarizeSitemapCoverage(apps) {
   return {
     appCount: apps.length,
     appsWithRouteHints: appSummaries.filter((app) => app.routeHintCount > 0).length,
-    appsWithProofHandles: appSummaries.filter((app) => app.surfaceCount > 0 || app.proofSignalCount > 0).length,
+    appsWithProofHandles: appSummaries.filter((app) => app.surfaceCount > 0 || app.proofSignalCount > 0 || app.contextCount > 0).length,
+    appsWithContextAnchors: appSummaries.filter((app) => app.contextAnchorCount > 0).length,
     appsWithAriaLabels: appSummaries.filter((app) => app.ariaLabelCount > 0).length,
     appGaps: appSummaries.filter((app) => app.missing.length > 0),
   };
@@ -250,8 +256,9 @@ export async function buildAuraNavigationSitemap() {
     updatePolicy: [
       "Regenerate this sitemap from the current codebase for every media run.",
       "Use app registry metadata, route hints, aria labels, and data-agent-* handles as navigation evidence.",
+      "Use data-agent-context for the product boundary and data-agent-context-anchor for titles, tabs, toolbars, or navigation that must remain visible around the proof.",
       "Prefer generated sitemap evidence over static scenario scripts.",
-      "If a changed desktop feature lacks proof handles, add durable product semantics in the UI instead of adding a one-off screenshot script.",
+      "Place data-agent-proof on the concrete visual evidence, not on a giant page container; if a changed desktop feature lacks proof handles, add durable product semantics in the UI instead of a one-off screenshot script.",
     ],
     coverage: summarizeSitemapCoverage(apps),
     apps,
@@ -266,6 +273,8 @@ async function inspectAppSource(app) {
   const source = (await Promise.all(files.map((filePath) => fs.readFile(filePath, "utf8").catch(() => "")))).join("\n");
   const ariaLabels = extractMatches(source, /aria-label\s*=\s*"([^"]+)"/g, 32);
   const surfaces = extractMatches(source, /data-agent-surface\s*=\s*"([^"]+)"/g, 32);
+  const contexts = extractMatches(source, /data-agent-context\s*=\s*"([^"]+)"/g, 32);
+  const contextAnchors = extractMatches(source, /data-agent-context-anchor\s*=\s*"([^"]+)"/g, 32);
   const actions = extractMatches(source, /data-agent-action\s*=\s*"([^"]+)"/g, 32);
   const fields = extractMatches(source, /data-agent-field\s*=\s*"([^"]+)"/g, 32);
   const proofSignals = extractMatches(source, /data-agent-proof\s*=\s*"([^"]+)"/g, 32);
@@ -276,6 +285,8 @@ async function inspectAppSource(app) {
     routeHints: extractMatches(routeSource, /path:\s*"([^"]+)"/g, 16),
     ...routeKindsForApp(app, routeSource),
     surfaces,
+    contexts,
+    contextAnchors,
     actions,
     fields,
     proofSignals,
@@ -332,8 +343,20 @@ function scoreAppForChange(app, changedFiles, prompt, commitLog) {
       score += normalized === app.id ? 3 : 2;
     }
   }
-  if ((app.sourceContext?.surfaces || []).some((surface) => haystack.includes(surface.toLowerCase()))) {
-    score += 4;
+  const semanticHandles = [
+    ...(app.sourceContext?.surfaces || []),
+    ...(app.sourceContext?.contexts || []),
+    ...(app.sourceContext?.contextAnchors || []),
+    ...(app.sourceContext?.actions || []),
+    ...(app.sourceContext?.fields || []),
+    ...(app.sourceContext?.proofSignals || []),
+    ...(app.sourceContext?.ariaLabels || []),
+  ];
+  for (const handle of semanticHandles) {
+    const normalized = String(handle || "").toLowerCase();
+    if (normalized && haystack.includes(normalized)) {
+      score += 4;
+    }
   }
   return score;
 }
@@ -455,6 +478,8 @@ export async function buildAuraNavigationContract({ prompt = "", changedFiles = 
       "Use commitContext.logExcerpt as the first eligibility signal; mobile-only commit logs should not proceed to browser capture.",
       "Prefer changed-file evidence over vague wording.",
       "Use data-agent-* attributes, aria labels, and route hints as stable navigation handles.",
+      "Use data-agent-context as the product boundary and data-agent-context-anchor as the visible title/tab/toolbar context to keep in the screenshot.",
+      "Use data-agent-proof as the concrete evidence to capture; avoid giant proof containers that hide the real changed object.",
       "Capture only desktop product UI at the requested desktop viewport. Never capture mobile, native iOS, native Android, or narrow responsive layouts.",
       "Do not capture auth, loading, empty placeholder, or generic landing states.",
       "If mediaEligibility.shouldAttemptCapture is false, return shouldCapture=false and explain why instead of navigating.",

@@ -15,6 +15,8 @@ test("listAuraNavigationApps extracts apps and agent-facing handles from the reg
   assert.ok(apps.length >= 5);
   assert.equal(agents?.path, "/agents");
   assert.ok(Array.isArray(agents?.sourceContext?.surfaces));
+  assert.ok(Array.isArray(agents?.sourceContext?.contexts));
+  assert.ok(Array.isArray(agents?.sourceContext?.contextAnchors));
   assert.equal(aura3d?.sourceContext?.baseRouteKind, "placeholder");
 });
 
@@ -24,7 +26,9 @@ test("buildAuraNavigationSitemap reports coverage gaps for inference hardening",
   assert.equal(sitemap.schemaVersion, 1);
   assert.equal(sitemap.coverage.appCount, sitemap.apps.length);
   assert.ok(Array.isArray(sitemap.coverage.appGaps));
+  assert.ok(Number.isInteger(sitemap.coverage.appsWithContextAnchors));
   assert.match(sitemap.updatePolicy.join(" "), /Regenerate this sitemap/);
+  assert.match(sitemap.updatePolicy.join(" "), /data-agent-context/);
 });
 
 test("buildAuraNavigationContract ranks changed app files as likely targets", async () => {
@@ -39,6 +43,7 @@ test("buildAuraNavigationContract ranks changed app files as likely targets", as
   assert.equal(contract.mediaEligibility.shouldAttemptCapture, true);
   assert.equal(contract.desktopCapturePolicy.viewport.width, 2560);
   assert.match(contract.rules.join(" "), /Never capture mobile/);
+  assert.match(contract.rules.join(" "), /data-agent-context/);
 });
 
 test("buildAuraNavigationContract rejects mobile-only media candidates", async () => {

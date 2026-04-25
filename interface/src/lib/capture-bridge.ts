@@ -1,5 +1,8 @@
 import { apps } from "../apps/registry";
 import { LAST_APP_KEY, PREVIOUS_PATH_KEY } from "../constants";
+import type { Agent } from "../types";
+import type { DisplaySessionEvent } from "../types/stream";
+import { emptyAgentPermissions } from "../types/permissions-wire";
 import { sanitizeRestorePath } from "../utils/last-app-path";
 
 const DESKTOP_WINDOWS_STORAGE_KEY = "aura:desktopWindows";
@@ -13,6 +16,9 @@ export interface AuraCaptureSeedPlan {
   capabilities?: string[];
   requiredState?: string[];
   readinessSignals?: string[];
+  proofBoundary?: string[];
+  contextBoundary?: string[];
+  avoid?: string[];
   notes?: string | null;
 }
 
@@ -217,12 +223,64 @@ function seedText(seedPlan: AuraCaptureSeedPlan | null | undefined, targetAppId:
     ...(seedPlan?.capabilities ?? []),
     ...(seedPlan?.requiredState ?? []),
     ...(seedPlan?.readinessSignals ?? []),
+    ...(seedPlan?.proofBoundary ?? []),
+    ...(seedPlan?.contextBoundary ?? []),
+    ...(seedPlan?.avoid ?? []),
     seedPlan?.notes,
   ].filter(Boolean).join("\n").toLowerCase();
 }
 
 export function shouldApplyAura3DSeed(seedPlan: AuraCaptureSeedPlan | null | undefined, targetAppId: string | null): boolean {
   return /\b(?:app:aura3d|aura3d|aura 3d|3d|generated image|asset gallery|model preview)\b/i.test(seedText(seedPlan, targetAppId));
+}
+
+function shouldOpenAura3DModelSurface(seedPlan: AuraCaptureSeedPlan | null | undefined, targetAppId: string | null): boolean {
+  return /\b(?:3d model|webgl|viewer|convert|conversion|source image|model preview)\b/i.test(seedText(seedPlan, targetAppId));
+}
+
+export function shouldApplyAgentChatSeed(seedPlan: AuraCaptureSeedPlan | null | undefined, targetAppId: string | null): boolean {
+  return /\b(?:app:agents|agent chat|agents?|chat input|chat model|model picker|model menu|open-model-picker)\b/i.test(seedText(seedPlan, targetAppId));
+}
+
+function demoAgent(): Agent {
+  const now = new Date().toISOString();
+  return {
+    agent_id: "capture-demo-agent",
+    user_id: "capture-demo-user",
+    org_id: "capture-demo-org",
+    name: "Aura Guide",
+    role: "Product walkthrough agent",
+    personality: "Clear, helpful, and product-focused.",
+    system_prompt: "Help users explore Aura.",
+    skills: ["product-guidance", "workflow-planning"],
+    icon: null,
+    machine_type: "remote",
+    adapter_type: "default",
+    environment: "browser",
+    auth_source: "capture-demo",
+    integration_id: null,
+    default_model: "aura-gpt-5-5",
+    tags: ["demo"],
+    is_pinned: true,
+    permissions: emptyAgentPermissions(),
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+function demoAgentMessages(): DisplaySessionEvent[] {
+  return [
+    {
+      id: "capture-demo-user-message",
+      role: "user",
+      content: "Help me choose the best model for a product planning session.",
+    },
+    {
+      id: "capture-demo-assistant-message",
+      role: "assistant",
+      content: "Open the model picker to choose the newest GPT or Claude option before starting.",
+    },
+  ];
 }
 
 function demoImageDataUri(): string {
@@ -277,6 +335,7 @@ export async function applyAuraCaptureSeedPlan(
 
   if (shouldApplyAura3DSeed(seedPlan, targetAppId)) {
     const { useAura3DStore } = await import("../stores/aura3d-store");
+    const openModelSurface = shouldOpenAura3DModelSurface(seedPlan, targetAppId);
     const image = {
       id: "capture-demo-image",
       artifactId: "capture-demo-image-artifact",
@@ -289,7 +348,7 @@ export async function applyAuraCaptureSeedPlan(
     };
     useAura3DStore.setState((state) => ({
       selectedProjectId: DEMO_PROJECT_ID,
-      activeTab: "image",
+      activeTab: openModelSurface ? "3d" : "image",
       imaginePrompt: "A polished translucent 3D product cube",
       imagineModel: "gpt-image-2",
       isGeneratingImage: false,
@@ -308,7 +367,38 @@ export async function applyAuraCaptureSeedPlan(
       isLoadingArtifacts: false,
       loadedProjectIds: new Set([...state.loadedProjectIds, DEMO_PROJECT_ID]),
     }));
-    applied.push("aura3d-demo-generated-image");
+    applied.push(openModelSurface ? "aura3d-demo-source-image-for-3d" : "aura3d-demo-generated-image");
+  }
+
+  if (shouldApplyAgentChatSeed(seedPlan, targetAppId)) {
+    const { useAgentStore } = await import("../apps/agents/stores");
+    const { useMessageStore } = await import("../stores/message-store");
+    const { useChatUIStore } = await import("../stores/chat-ui-store");
+    const agent = demoAgent();
+    const messages = demoAgentMessages();
+    useAgentStore.setState((state) => ({
+      agents: [agent, ...state.agents.filter((candidate) => candidate.agent_id !== agent.agent_id)],
+      agentsStatus: "ready",
+      agentsError: null,
+      selectedAgentId: agent.agent_id,
+      history: {
+        ...state.history,
+        [agent.agent_id]: {
+          events: messages,
+          status: "ready",
+          fetchedAt: Date.now(),
+          error: null,
+        },
+      },
+    }));
+    useMessageStore.getState().setThread(agent.agent_id, messages);
+    useChatUIStore.getState().setSelectedModel(agent.agent_id, "aura-gpt-5-5", "default", agent.agent_id);
+    try {
+      window.localStorage.setItem("aura:lastAgentId", agent.agent_id);
+    } catch {
+      // Ignore capture-only persistence failures.
+    }
+    applied.push("agent-chat-demo-model-picker");
   }
 
   return {

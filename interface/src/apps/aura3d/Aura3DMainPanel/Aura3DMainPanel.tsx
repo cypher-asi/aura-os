@@ -19,8 +19,8 @@ export function Aura3DMainPanel({ children: _children }: { children?: ReactNode 
 
   return (
     <Lane flex>
-      <div className={styles.container}>
-        <div className={styles.tabBar}>
+      <div className={styles.container} data-agent-context="aura3d-product-context">
+        <div className={styles.tabBar} data-agent-context-anchor="aura3d-tabs">
           <Tabs
             tabs={TABS}
             value={activeTab}
