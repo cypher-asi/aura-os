@@ -1,5 +1,25 @@
 [
   {
+    "date": "2026-04-25",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.385.1",
+    "title": "Autonomous dev loop hardens, harness becomes the single runtime",
+    "intro": "A heavy day for autonomy: the dev loop learned to survive provider 5xx storms, ENOSPC remotes, and stuck agents, while the architecture pivoted decisively toward the harness as the only agent runtime. Alongside the engine work, the desktop shell got a coherent floating-glass redesign and chat regained mid-turn resilience across refreshes.",
+    "entryCount": 6,
+    "highlights": [
+      "Definition-of-Done gate, retry ladders, and rollback UX hardened end-to-end",
+      "Push failures, ENOSPC, and stuck agents no longer terminally fail tasks",
+      "Legacy agent-tool dispatcher and external CLI adapters retired in favor of aura_harness",
+      "Topic-scoped EventHub + LoopRegistry isolate concurrent loops across UI surfaces",
+      "Desktop shell restyled as floating glass capsules with cross-platform titlebar drag",
+      "macOS app menu wires Cmd+C/V/X/A/Z through to the WebView"
+    ],
+    "rawCommitCount": 122,
+    "generatedAt": "2026-04-25T07:13:54.196Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.385.1",
+    "path": "history/2026-04-25.json"
+  },
+  {
     "date": "2026-04-24",
     "channel": "nightly",
     "version": "0.1.0-nightly.378.1",
