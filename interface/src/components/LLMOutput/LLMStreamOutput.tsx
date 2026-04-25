@@ -1,7 +1,5 @@
-import { useMemo } from "react";
 import type { ArtifactRef, ToolCallEntry, TimelineItem } from "../../types/stream";
 import { getStreamingPhaseLabel } from "../../utils/streaming";
-import { expandToolMarkersInTimeline } from "../../utils/tool-markers";
 import { CookingIndicator } from "../CookingIndicator";
 import { LLMOutput } from "./LLMOutput";
 
@@ -62,39 +60,12 @@ export function LLMStreamOutput({
   isWriting,
   showPhaseIndicator = true,
 }: LLMStreamOutputProps) {
-  const { timelineForRender, toolCallsForRender } = useMemo<{
-    timelineForRender: TimelineItem[];
-    toolCallsForRender: ToolCallEntry[] | undefined;
-  }>(() => {
-    const baseToolCalls = toolCalls ?? [];
-    let baseTimeline: TimelineItem[];
-    if (timeline && timeline.length > 0) {
-      baseTimeline = timeline;
-    } else {
-      const synthetic: TimelineItem[] = [];
-      if (thinkingText) synthetic.push({ kind: "thinking", id: "live-thinking" });
-      if (toolCalls && toolCalls.length > 0) {
-        for (const tc of toolCalls) {
-          synthetic.push({ kind: "tool", toolCallId: tc.id, id: `live-tool-${tc.id}` });
-        }
-      }
-      if (text) synthetic.push({ kind: "text", content: text, id: "live-text" });
-      baseTimeline = synthetic;
-    }
-
-    const expanded = expandToolMarkersInTimeline(baseTimeline, baseToolCalls);
-    return {
-      timelineForRender: expanded.timeline,
-      toolCallsForRender: expanded.toolCalls.length > 0 ? expanded.toolCalls : undefined,
-    };
-  }, [timeline, thinkingText, toolCalls, text]);
-
   return (
     <>
       <LLMOutput
         content={text}
-        timeline={timelineForRender}
-        toolCalls={toolCallsForRender}
+        timeline={timeline}
+        toolCalls={toolCalls}
         thinkingText={thinkingText}
         thinkingDurationMs={thinkingDurationMs}
         artifactRefs={artifactRefs}

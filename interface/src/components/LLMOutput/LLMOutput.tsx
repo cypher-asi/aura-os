@@ -1,15 +1,7 @@
 import { useMemo } from "react";
 import type { ArtifactRef, TimelineItem, ToolCallEntry } from "../../types/stream";
-import {
-  stripEmojis,
-  normalizeMidSentenceBreaks,
-  flattenListIndentation,
-  normalizeLooseStrongEmphasis,
-} from "../../utils/text-normalize";
+import { expandToolMarkersInTimeline } from "../../utils/tool-markers";
 import { ActivityTimeline } from "../ActivityTimeline";
-import { ThinkingBlock } from "../Block";
-import { ToolCallsList } from "../ToolRow";
-import { SegmentedContent } from "../SegmentedContent";
 import styles from "./LLMOutput.module.css";
 
 interface ArtifactRefsListProps {
@@ -68,47 +60,56 @@ export function LLMOutput({
   const hasArtifactRefs = artifactRefs && artifactRefs.length > 0;
   const hasTimeline = timeline && timeline.length > 0;
 
-  const normalizedContent = useMemo(
-    () =>
-      hasContent
-        ? normalizeLooseStrongEmphasis(
-            flattenListIndentation(normalizeMidSentenceBreaks(stripEmojis(content))),
-          )
-        : "",
-    [hasContent, content],
-  );
+  // Unify the render path behind ActivityTimeline so `[tool: read(...) -> ok]`
+  // markers that arrive inline in assistant text (live stream, persisted turn
+  // cache, or the plain-text fallback from `api.getTaskOutput`) consistently
+  // render through the shared Block registry. Without this synthesis the
+  // historical path used to short-circuit to `SegmentedContent`'s inline
+  // row renderer, which the sidekick task overlay reported as a regression
+  // (flat rows instead of collapsible Blocks).
+  const { timelineForRender, toolCallsForRender } = useMemo<{
+    timelineForRender: TimelineItem[];
+    toolCallsForRender: ToolCallEntry[] | undefined;
+  }>(() => {
+    const baseToolCalls = toolCalls ?? [];
+    let baseTimeline: TimelineItem[];
+    if (hasTimeline && timeline) {
+      baseTimeline = timeline;
+    } else {
+      const synthetic: TimelineItem[] = [];
+      if (hasThinking) synthetic.push({ kind: "thinking", id: "synthetic-thinking" });
+      if (hasToolCalls && toolCalls) {
+        for (const tc of toolCalls) {
+          synthetic.push({ kind: "tool", toolCallId: tc.id, id: `synthetic-tool-${tc.id}` });
+        }
+      }
+      if (hasContent) {
+        synthetic.push({ kind: "text", content, id: "synthetic-text" });
+      }
+      baseTimeline = synthetic;
+    }
+
+    const expanded = expandToolMarkersInTimeline(baseTimeline, baseToolCalls);
+    return {
+      timelineForRender: expanded.timeline,
+      toolCallsForRender: expanded.toolCalls.length > 0 ? expanded.toolCalls : undefined,
+    };
+  }, [hasTimeline, timeline, hasThinking, hasToolCalls, toolCalls, hasContent, content]);
 
   if (!hasContent && !hasToolCalls && !hasThinking && !hasTimeline) return null;
 
   return (
     <div className={`${styles.root} ${className ?? ""}`}>
-      {hasTimeline ? (
+      {timelineForRender.length > 0 && (
         <ActivityTimeline
-          timeline={timeline}
+          timeline={timelineForRender}
           thinkingText={thinkingText}
           thinkingDurationMs={thinkingDurationMs}
-          toolCalls={toolCalls}
+          toolCalls={toolCallsForRender}
           isStreaming={isStreaming}
           defaultThinkingExpanded={defaultThinkingExpanded}
           defaultActivitiesExpanded={defaultActivitiesExpanded}
         />
-      ) : (
-        <div className={styles.fallbackStack}>
-          {hasThinking && thinkingText && (
-            <ThinkingBlock
-              text={thinkingText}
-              isStreaming={isStreaming}
-              durationMs={thinkingDurationMs}
-              defaultExpanded={defaultThinkingExpanded}
-            />
-          )}
-          {hasToolCalls && toolCalls && (
-            <ToolCallsList entries={toolCalls} />
-          )}
-          {hasContent && (
-            <SegmentedContent content={normalizedContent} isStreaming={isStreaming} />
-          )}
-        </div>
       )}
       {hasArtifactRefs && artifactRefs && (
         <ArtifactRefsList refs={artifactRefs} />

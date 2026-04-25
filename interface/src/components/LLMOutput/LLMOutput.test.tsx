@@ -62,6 +62,33 @@ describe("LLMOutput", () => {
     expect(container.firstChild).toHaveClass("custom");
   });
 
+  it("expands textual [tool: ...] markers in historical content into Block rows", () => {
+    render(
+      <LLMOutput
+        content={"Intro prose\n[tool: read(src/db.rs) -> ok]\n[tool: list(src) -> ok]\nOutro."}
+      />,
+    );
+
+    expect(screen.getByText("db.rs")).toBeInTheDocument();
+    expect(screen.getByText("Read")).toBeInTheDocument();
+    expect(screen.getByText("List files")).toBeInTheDocument();
+    expect(screen.queryByText(/\[tool:/)).not.toBeInTheDocument();
+  });
+
+  it("expands textual markers embedded in a provided timeline text item", () => {
+    const timeline: TimelineItem[] = [
+      {
+        kind: "text",
+        id: "t1",
+        content: "Before\n[tool: list(src) -> ok]\nAfter",
+      },
+    ];
+    render(<LLMOutput content="" timeline={timeline} />);
+
+    expect(screen.getByText("List files")).toBeInTheDocument();
+    expect(screen.queryByText(/\[tool:/)).not.toBeInTheDocument();
+  });
+
   it("keeps finalized list/delete/get tools collapsed in a just-finalized bubble", () => {
     const toolCalls: ToolCallEntry[] = [
       {
