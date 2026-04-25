@@ -3,7 +3,7 @@ import { useShallow } from "zustand/react/shallow";
 import { api, STANDALONE_AGENT_HISTORY_LIMIT } from "../api/client";
 import { useAgentChatStream } from "./use-agent-chat-stream";
 import { useChatHistorySync } from "./use-chat-history-sync";
-import { useDelayedLoading } from "./use-delayed-loading";
+import { useDelayedLoading } from "../shared/hooks/use-delayed-loading";
 import { useStandaloneAgentMeta } from "./use-agent-chat-meta";
 import { agentHistoryKey } from "../stores/chat-history-store";
 import { useAgentStore } from "../apps/agents/stores";

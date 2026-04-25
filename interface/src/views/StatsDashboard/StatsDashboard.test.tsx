@@ -18,7 +18,7 @@ vi.mock("@cypher-asi/zui", () => ({
 const mockUseStatsDashboardData = vi.fn();
 const mockUseDelayedEmpty = vi.fn();
 
-vi.mock("../../hooks/use-delayed-empty", () => ({
+vi.mock("../../shared/hooks/use-delayed-empty", () => ({
   useDelayedEmpty: (...args: unknown[]) => mockUseDelayedEmpty(...args),
 }));
 

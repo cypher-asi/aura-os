@@ -10,7 +10,7 @@ import { useTerminalPanelStore } from "../../stores/terminal-panel-store";
 import { useShallow } from "zustand/react/shallow";
 import { useProjectActions } from "../../stores/project-action-store";
 import { useAutomationStatus } from "../AutomationBar/useAutomationStatus";
-import { useScrollAnchorV2 } from "../../hooks/use-scroll-anchor-v2";
+import { useScrollAnchorV2 } from "../../shared/hooks/use-scroll-anchor-v2";
 import { OverlayScrollbar } from "../OverlayScrollbar";
 import { TerminalPanelBody } from "../TerminalPanelBody";
 import { useTaskStream } from "../../hooks/use-task-stream";

@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { AuraEvent, AuraEventOfType } from "../../shared/types/aura-events";
 import { EventType, parseAuraEvent } from "../../shared/types/aura-events";
 import { getStoredJwt } from "../../shared/lib/auth-token";
-import { createReconnectingWebSocket } from "../../hooks/ws-reconnect";
+import { createReconnectingWebSocket } from "../../shared/hooks/ws-reconnect";
 import { resolveWsUrl } from "../../shared/lib/host-config";
 import { persistTaskOutputText } from "./task-output-cache";
 import { handleEngineEvent } from "./engine-event-handlers";

@@ -16,7 +16,7 @@ let mockIsStreaming = false;
 let mockStreamMessages: Array<{ id: string }> = [];
 let requestAnimationFrameSpy: ReturnType<typeof vi.spyOn> | null = null;
 
-vi.mock("../../hooks/use-scroll-anchor-v2", () => ({
+vi.mock("../../shared/hooks/use-scroll-anchor-v2", () => ({
   useScrollAnchorV2: () => ({
     handleScroll: mockHandleScroll,
     scrollToBottom: mockScrollToBottom,

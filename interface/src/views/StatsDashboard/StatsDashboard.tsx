@@ -1,4 +1,4 @@
-import { useDelayedEmpty } from "../../hooks/use-delayed-empty";
+import { useDelayedEmpty } from "../../shared/hooks/use-delayed-empty";
 import { EmptyState } from "../../components/EmptyState";
 import {
   StatCard,

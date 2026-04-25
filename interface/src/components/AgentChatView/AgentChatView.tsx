@@ -7,7 +7,7 @@ import { api, STANDALONE_AGENT_HISTORY_LIMIT } from "../../api/client";
 import { useAgentChatStream } from "../../hooks/use-agent-chat-stream";
 import { useChatStream } from "../../hooks/use-chat-stream";
 import { useChatHistorySync } from "../../hooks/use-chat-history-sync";
-import { useDelayedLoading } from "../../hooks/use-delayed-loading";
+import { useDelayedLoading } from "../../shared/hooks/use-delayed-loading";
 import { useAgentChatMeta } from "../../hooks/use-agent-chat-meta";
 import { setLastAgent, setLastProject } from "../../utils/storage";
 import { ChatPanel } from "../ChatPanel";

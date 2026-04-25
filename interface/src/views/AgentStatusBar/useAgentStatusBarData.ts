@@ -4,7 +4,7 @@ import type { AuraEvent } from "../../shared/types/aura-events";
 import { EventType } from "../../shared/types/aura-events";
 import { api } from "../../api/client";
 import { useEventStore } from "../../stores/event-store/index";
-import { useClickOutside } from "../../hooks/use-click-outside";
+import { useClickOutside } from "../../shared/hooks/use-click-outside";
 
 interface AgentEventParams {
   subscribe: ReturnType<typeof useEventStore.getState>["subscribe"];

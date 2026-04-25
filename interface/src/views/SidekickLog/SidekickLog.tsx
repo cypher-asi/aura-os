@@ -4,7 +4,7 @@ import { Text } from "@cypher-asi/zui";
 import { Check } from "lucide-react";
 import { OverlayScrollbar } from "../../components/OverlayScrollbar";
 import { useLogStream, EVENT_LABELS } from "../../hooks/use-log-stream";
-import { useClickOutside } from "../../hooks/use-click-outside";
+import { useClickOutside } from "../../shared/hooks/use-click-outside";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import type { LogEntry } from "../../hooks/use-log-stream";
 import styles from "./SidekickLog.module.css";

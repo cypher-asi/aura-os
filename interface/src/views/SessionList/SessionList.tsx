@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { Explorer } from "@cypher-asi/zui";
-import { useDelayedEmpty } from "../../hooks/use-delayed-empty";
+import { useDelayedEmpty } from "../../shared/hooks/use-delayed-empty";
 import { filterExplorerNodes } from "../../shared/utils/filterExplorerNodes";
 import { EmptyState } from "../../components/EmptyState";
 import { api } from "../../api/client";

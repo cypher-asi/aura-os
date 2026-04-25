@@ -89,7 +89,7 @@ vi.mock("../../hooks/use-terminal-target", () => ({
   }),
 }));
 
-vi.mock("../../hooks/use-click-outside", () => ({
+vi.mock("../../shared/hooks/use-click-outside", () => ({
   useClickOutside: vi.fn(),
 }));
 

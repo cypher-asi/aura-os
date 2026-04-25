@@ -2,8 +2,8 @@ import { useState, useRef, useEffect, useLayoutEffect, useMemo, type ReactNode }
 import { createPortal } from "react-dom";
 import { Button, Menu, type MenuItem } from "@cypher-asi/zui";
 import { MoreHorizontal } from "lucide-react";
-import { useClickOutside } from "../../hooks/use-click-outside";
-import { useOverflowTabs } from "../../hooks/use-overflow-tabs";
+import { useClickOutside } from "../../shared/hooks/use-click-outside";
+import { useOverflowTabs } from "../../shared/hooks/use-overflow-tabs";
 import styles from "../Sidekick/Sidekick.module.css";
 
 export interface TabItem {

@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Menu, type MenuItem } from "@cypher-asi/zui";
 import { ChevronDown } from "lucide-react";
-import { useClickOutside } from "../../../../hooks/use-click-outside";
+import { useClickOutside } from "../../../../shared/hooks/use-click-outside";
 import styles from "./DebugFilterMenu.module.css";
 
 export interface DebugFilterOption {

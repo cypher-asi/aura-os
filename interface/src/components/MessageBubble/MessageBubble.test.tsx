@@ -8,7 +8,7 @@ vi.mock("lucide-react", () => ({
   FileText: () => null,
 }));
 
-vi.mock("../../hooks/use-highlighted-html", () => ({
+vi.mock("../../shared/hooks/use-highlighted-html", () => ({
   useHighlightedHtml: () => "",
 }));
 

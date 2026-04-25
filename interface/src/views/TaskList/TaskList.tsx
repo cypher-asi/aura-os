@@ -9,7 +9,7 @@ import {
   useLoopActivityStore,
 } from "../../stores/loop-activity-store";
 import { isLoopActivityActive } from "../../shared/types/aura-events";
-import { useDelayedEmpty } from "../../hooks/use-delayed-empty";
+import { useDelayedEmpty } from "../../shared/hooks/use-delayed-empty";
 import { titleSortKey } from "../../utils/collections";
 import { filterExplorerNodes } from "../../shared/utils/filterExplorerNodes";
 import { Explorer } from "@cypher-asi/zui";

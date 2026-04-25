@@ -7,7 +7,7 @@ import { CommitGrid } from "../../../components/CommitGrid";
 import { ActivityCard } from "../../../components/ActivityCard";
 import { EmptyState } from "../../../components/EmptyState";
 import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
-import { useDelayedLoading } from "../../../hooks/use-delayed-loading";
+import { useDelayedLoading } from "../../../shared/hooks/use-delayed-loading";
 import {
   buildFilteredProfileEvents,
   buildProfileCommitActivity,

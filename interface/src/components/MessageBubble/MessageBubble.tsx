@@ -2,7 +2,7 @@ import { memo } from "react";
 import { FileText } from "lucide-react";
 import type { DisplaySessionEvent } from "../../shared/types/stream";
 import { langFromPath } from "../../ide/lang";
-import { useHighlightedHtml } from "../../hooks/use-highlighted-html";
+import { useHighlightedHtml } from "../../shared/hooks/use-highlighted-html";
 import { useUIModalStore } from "../../stores/ui-modal-store";
 import styles from "./MessageBubble.module.css";
 import { ResponseBlock } from "../ResponseBlock";

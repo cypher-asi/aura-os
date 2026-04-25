@@ -13,7 +13,7 @@ const sidekickCapture = vi.hoisted(() => ({
   pushTask: vi.fn(),
 }));
 
-vi.mock("../hooks/ws-reconnect", () => ({
+vi.mock("../shared/hooks/ws-reconnect", () => ({
   createReconnectingWebSocket: (
     _cfg: unknown,
     msgCb: (data: string) => void,

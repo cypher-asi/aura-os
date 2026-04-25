@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useScrollAnchorV2 } from "../../hooks/use-scroll-anchor-v2";
+import { useScrollAnchorV2 } from "../../shared/hooks/use-scroll-anchor-v2";
 import { useIsStreaming } from "../../hooks/stream/hooks";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import type { ChatInputBarHandle, AttachmentItem } from "../ChatInputBar";

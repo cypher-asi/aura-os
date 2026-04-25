@@ -17,7 +17,7 @@ vi.mock("../Block/renderers/renderers.module.css", () => ({
   default: new Proxy({}, { get: (_t, prop) => String(prop) }),
 }));
 
-vi.mock("../../hooks/use-highlighted-html", () => ({
+vi.mock("../../shared/hooks/use-highlighted-html", () => ({
   useHighlightedHtml: (src: string) => src,
 }));
 

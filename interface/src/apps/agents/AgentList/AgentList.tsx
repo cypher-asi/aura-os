@@ -24,7 +24,7 @@ import { useChatHandoffStore } from "../../../stores/chat-handoff-store";
 import { useChatHistoryStore, agentHistoryKey } from "../../../stores/chat-history-store";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
 import { useSidebarSearch } from "../../../hooks/use-sidebar-search";
-import { useOverlayScrollbar } from "../../../hooks/use-overlay-scrollbar";
+import { useOverlayScrollbar } from "../../../shared/hooks/use-overlay-scrollbar";
 import { createAgentChatHandoffState } from "../../../utils/chat-handoff";
 import { standaloneAgentHandoffTarget } from "../../../utils/chat-handoff";
 import { getApiErrorDetails, getApiErrorMessage } from "../../../shared/utils/api-errors";

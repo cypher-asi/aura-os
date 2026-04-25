@@ -13,7 +13,7 @@ import {
 import { createPortal } from "react-dom";
 import { ChevronRight } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useOverlayScrollbar } from "../../../hooks/use-overlay-scrollbar";
+import { useOverlayScrollbar } from "../../../shared/hooks/use-overlay-scrollbar";
 import type {
   LeftMenuEmptyEntry,
   LeftMenuEntry,

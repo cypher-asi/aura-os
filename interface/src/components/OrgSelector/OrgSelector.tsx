@@ -4,7 +4,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useOrgStore } from "../../stores/org-store";
 import { Building2, ChevronDown, Plus, Settings } from "lucide-react";
 import { Button, Input, Modal } from "@cypher-asi/zui";
-import { useClickOutside } from "../../hooks/use-click-outside";
+import { useClickOutside } from "../../shared/hooks/use-click-outside";
 import { useModalInitialFocus } from "../../hooks/use-modal-initial-focus";
 import { useUIModalStore } from "../../stores/ui-modal-store";
 import styles from "./OrgSelector.module.css";

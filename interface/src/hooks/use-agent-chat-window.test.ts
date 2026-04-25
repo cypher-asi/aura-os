@@ -23,7 +23,7 @@ vi.mock("./use-chat-history-sync", () => ({
   })),
 }));
 
-vi.mock("./use-delayed-loading", () => ({
+vi.mock("../shared/hooks/use-delayed-loading", () => ({
   useDelayedLoading: vi.fn((loading: boolean) => loading),
 }));
 

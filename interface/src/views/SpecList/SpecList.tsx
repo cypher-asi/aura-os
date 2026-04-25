@@ -7,7 +7,7 @@ import { useEventStore } from "../../stores/event-store/index";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { useShallow } from "zustand/react/shallow";
 import { useProjectActions } from "../../stores/project-action-store";
-import { useDelayedEmpty } from "../../hooks/use-delayed-empty";
+import { useDelayedEmpty } from "../../shared/hooks/use-delayed-empty";
 import { mergeById, compareSpecs } from "../../utils/collections";
 import { filterExplorerNodes } from "../../shared/utils/filterExplorerNodes";
 import { Explorer } from "@cypher-asi/zui";

@@ -4,7 +4,7 @@ import { Outlet, useNavigate, useParams } from "react-router-dom";
 import { ErrorBoundary } from "../../components/ErrorBoundary";
 import { EmptyState } from "../../components/EmptyState";
 import { PageEmptyState, Button } from "@cypher-asi/zui";
-import { useDelayedLoading } from "../../hooks/use-delayed-loading";
+import { useDelayedLoading } from "../../shared/hooks/use-delayed-loading";
 import { useOrgStore } from "../../stores/org-store";
 import { useProjectLayoutData } from "./useProjectLayoutData";
 

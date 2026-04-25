@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import { useOverlayScrollbar } from "../../hooks/use-overlay-scrollbar";
+import { useOverlayScrollbar } from "../../shared/hooks/use-overlay-scrollbar";
 import styles from "./OverlayScrollbar.module.css";
 
 interface OverlayScrollbarProps {
