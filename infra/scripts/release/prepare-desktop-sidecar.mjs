@@ -77,7 +77,7 @@ function main() {
   const cargoTargetDir =
     resolveCargoMetadataTargetDir(harnessManifest, harnessDir) ?? resolveCargoTargetDir(harnessDir);
 
-  run("cargo", ["build", "--release", "-p", "aura-node", "--manifest-path", harnessManifest], {
+  run("cargo", ["build", "--release", "--bin", "aura-node", "--manifest-path", harnessManifest], {
     cwd: harnessDir,
     env: process.env,
   });
