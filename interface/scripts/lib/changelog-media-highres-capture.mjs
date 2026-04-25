@@ -183,9 +183,11 @@ async function prepareProofState(page, story) {
         .map((element) => `${element.getAttribute("data-agent-model-label") || ""} ${element.textContent || ""}`)
         .join(" ")
         .toLowerCase();
-      if (desiredTokens.some((token) => visibleText.includes(token))) return;
+      const proofAlreadyVisible = desiredTokens.some((token) => visibleText.includes(token));
+      const proofIsCompactTeaser = visibleText.length < 180;
+      if (proofAlreadyVisible && !proofIsCompactTeaser) return;
       const showMoreButton = Array.from(document.querySelectorAll("button, [role='button']"))
-        .find((element) => /show all|more/i.test(element.textContent || ""));
+        .find((element) => /show all(?:\s+\w+)?|more/i.test(element.textContent || ""));
       if (showMoreButton instanceof HTMLElement) {
         showMoreButton.click();
       }
@@ -253,6 +255,8 @@ async function applyCapturePresentationMode(
         line-height: 1.2 !important;
       }
       body[data-aura-changelog-capture-text-scale] [data-agent-proof][data-agent-surface] {
+        min-width: min(72vw, 900px) !important;
+        max-width: min(82vw, 1080px) !important;
         max-height: min(68vh, 900px) !important;
         overflow-y: auto !important;
         overscroll-behavior: contain !important;
@@ -533,15 +537,18 @@ async function selectProofClip(page, story, proofAction = null, seedPlan = null)
         && surface.inProductContext
         && combined.width + 96 <= 1440
         && combined.height + 96 <= 810;
+      const floatingProofFitsTightFrame = surface.floatingProofSurface
+        && combined.width + 96 <= 960
+        && combined.height + 96 <= 540;
       ranked.push({
         surface,
         rect: combined,
         score: scoreSurface(surface, combined),
-        minWidth: surface.directProofSignal ? 1280 : 1920,
-        minHeight: surface.directProofSignal ? 720 : 1080,
-        maxWidth: directProofContextFitsFocusFrame ? 1440 : null,
-        maxHeight: directProofContextFitsFocusFrame ? 810 : null,
-        alignTop: directProofContextFitsFocusFrame,
+        minWidth: floatingProofFitsTightFrame ? 960 : surface.directProofSignal ? 1280 : 1920,
+        minHeight: floatingProofFitsTightFrame ? 540 : surface.directProofSignal ? 720 : 1080,
+        maxWidth: floatingProofFitsTightFrame ? 960 : directProofContextFitsFocusFrame ? 1440 : null,
+        maxHeight: floatingProofFitsTightFrame ? 540 : directProofContextFitsFocusFrame ? 810 : null,
+        alignTop: floatingProofFitsTightFrame || directProofContextFitsFocusFrame,
       });
     }
     if (actionName) {
