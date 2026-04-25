@@ -640,6 +640,95 @@ impl AgentInstanceService {
             .await
     }
 
+    /// Pick an existing project-agent instance to use as the **template**
+    /// for a fresh ad-hoc task run.
+    ///
+    /// The template only contributes config (workspace path, agent
+    /// template, default model, etc.) — the run itself is dispatched
+    /// against a freshly minted ephemeral [`AgentInstanceId`] so
+    /// concurrent runs don't collide on the
+    /// `(project_id, agent_instance_id)` automaton registry key.
+    ///
+    /// See [`pick_run_template_from_instances`] for the precise
+    /// selection order. Returns [`AgentError::NotFound`] only when
+    /// the project has no instances at all — callers should treat
+    /// that as a 404 because the project is genuinely uninitialised.
+    pub async fn pick_run_template(
+        &self,
+        project_id: &ProjectId,
+    ) -> Result<AgentInstance, AgentError> {
+        let instances = self.list_instances(project_id).await?;
+        pick_run_template_from_instances(&instances)
+            .cloned()
+            .ok_or(AgentError::NotFound)
+    }
+
+    /// Resolve (or lazily create) the project's canonical `Loop`
+    /// instance — the one the automation loop binds to when the
+    /// caller doesn't pin an `agent_instance_id`.
+    ///
+    /// If the project already has an instance with
+    /// `instance_role == Loop`, return it. Otherwise promote a
+    /// non-`Executor` instance (preferring `Chat`) by cloning its
+    /// agent template into a fresh `Loop`-roled `project_agents`
+    /// row. The original instance is left untouched so existing
+    /// chat threads keep their session state.
+    ///
+    /// Returns [`AgentError::NotFound`] when the project has no
+    /// usable template instance to clone from.
+    pub async fn ensure_default_loop_instance(
+        &self,
+        project_id: &ProjectId,
+    ) -> Result<AgentInstance, AgentError> {
+        let instances = self.list_instances(project_id).await?;
+        if let Some(existing) = instances
+            .iter()
+            .find(|i| i.instance_role == AgentInstanceRole::Loop)
+        {
+            return Ok(existing.clone());
+        }
+        let template = pick_loop_template_from_instances(&instances)
+            .cloned()
+            .ok_or(AgentError::NotFound)?;
+        let agent_id_str = template.agent_id.to_string();
+        let agent = self.resolve_agent_async(&agent_id_str).await.ok_or_else(|| {
+            AgentError::Parse(
+                "could not resolve agent template for default loop instance".into(),
+            )
+        })?;
+        self.create_instance_from_agent_with_role(project_id, &agent, AgentInstanceRole::Loop)
+            .await
+    }
+
+    /// Allocate a fresh ephemeral `Executor` instance for an ad-hoc
+    /// task run.
+    ///
+    /// The ephemeral instance shares the agent template of `template`
+    /// (so workspace resolution, default model, etc. continue to
+    /// work) but lives in its own `project_agents` row with
+    /// `instance_role == Executor`. The automaton registry keys off
+    /// the new id, which means concurrent task runs in the same
+    /// project no longer abort each other.
+    ///
+    /// On terminal status the dev-loop forwarder drops the registry
+    /// entry; the caller is responsible for tearing down the
+    /// `project_agents` row (typically via a janitor that sweeps
+    /// stale `Executor` rows older than a TTL).
+    pub async fn spawn_ephemeral_executor(
+        &self,
+        project_id: &ProjectId,
+        template: &AgentInstance,
+    ) -> Result<AgentInstance, AgentError> {
+        let agent_id_str = template.agent_id.to_string();
+        let agent = self.resolve_agent_async(&agent_id_str).await.ok_or_else(|| {
+            AgentError::Parse(
+                "could not resolve agent template for ephemeral executor".into(),
+            )
+        })?;
+        self.create_instance_from_agent_with_role(project_id, &agent, AgentInstanceRole::Executor)
+            .await
+    }
+
     /// Create a project-agent binding pinned to a specific functional
     /// role (chat target, automation loop target, or ephemeral
     /// executor). Used by the Phase 2 default-instance bootstrap and
@@ -864,6 +953,73 @@ fn synthesize_agent_from_project_agent(
         created_at: parse_dt(&spa.created_at),
         updated_at: parse_dt(&spa.updated_at),
     })
+}
+
+// ---------------------------------------------------------------------------
+// Project-instance selection helpers
+//
+// Pure functions over an already-materialised slice of
+// `AgentInstance`s so they're trivial to unit-test without a live
+// storage client. The `AgentInstanceService` async methods are thin
+// wrappers that fetch the slice and delegate.
+// ---------------------------------------------------------------------------
+
+/// Selection order for picking a project's default ad-hoc task
+/// "run template":
+///
+///   1. The project's `Loop` instance — most likely to share the
+///      worker workspace the user expects.
+///   2. The project's `Chat` instance — always present after
+///      `home_project` bootstrap.
+///   3. Any non-`Executor` instance.
+///   4. The first instance in the slice as a last resort (so a
+///      project that only has `Executor` rows still resolves
+///      *something* rather than 404ing the run).
+///
+/// Returns `None` when the slice is empty so callers can map to
+/// `AgentError::NotFound` themselves.
+pub fn pick_run_template_from_instances(
+    instances: &[AgentInstance],
+) -> Option<&AgentInstance> {
+    instances
+        .iter()
+        .find(|i| i.instance_role == AgentInstanceRole::Loop)
+        .or_else(|| {
+            instances
+                .iter()
+                .find(|i| i.instance_role == AgentInstanceRole::Chat)
+        })
+        .or_else(|| {
+            instances
+                .iter()
+                .find(|i| i.instance_role != AgentInstanceRole::Executor)
+        })
+        .or_else(|| instances.first())
+}
+
+/// Selection order for promoting an existing instance to the
+/// project's default `Loop` binding:
+///
+///   1. Prefer the `Chat` instance — every project has one after
+///      `home_project` bootstrap, and cloning it to a fresh `Loop`
+///      row preserves the agent template the user has been chatting
+///      with.
+///   2. Fall back to any non-`Executor` instance.
+///
+/// Deliberately excludes existing `Executor` rows because those are
+/// per-task and would tie the project's persistent loop binding to a
+/// run that's already on its way to deletion.
+pub fn pick_loop_template_from_instances(
+    instances: &[AgentInstance],
+) -> Option<&AgentInstance> {
+    instances
+        .iter()
+        .find(|i| i.instance_role == AgentInstanceRole::Chat)
+        .or_else(|| {
+            instances
+                .iter()
+                .find(|i| i.instance_role != AgentInstanceRole::Executor)
+        })
 }
 
 // ---------------------------------------------------------------------------
@@ -1150,6 +1306,83 @@ mod tests {
         let spa = make_storage_project_agent(Some("supervisor"));
         let merged = merge_agent_instance(&spa, None, None);
         assert_eq!(merged.instance_role, AgentInstanceRole::Chat);
+    }
+
+    // -----------------------------------------------------------------
+    // pick_run_template_from_instances / pick_loop_template_from_instances
+    //
+    // Pin the selection-order contract every concurrent-loop consumer
+    // depends on: parallel ad-hoc task runs spawn ephemeral
+    // `Executor` instances, and they pick their template from
+    // these helpers without ever touching real storage. If a future
+    // refactor accidentally lets `Executor` rows be selected as a
+    // template, every freshly-allocated executor would clone *another*
+    // executor and the row would briefly point at itself. These
+    // tests are the canary for that class of regression.
+    // -----------------------------------------------------------------
+
+    fn make_instance_with_role(role: AgentInstanceRole) -> AgentInstance {
+        let spa = make_storage_project_agent(Some(role.as_wire_str()));
+        merge_agent_instance(&spa, None, None)
+    }
+
+    #[test]
+    fn pick_run_template_prefers_loop_over_chat_over_other() {
+        let chat = make_instance_with_role(AgentInstanceRole::Chat);
+        let loop_inst = make_instance_with_role(AgentInstanceRole::Loop);
+        let executor = make_instance_with_role(AgentInstanceRole::Executor);
+
+        // Loop wins when present.
+        let all = [chat.clone(), loop_inst.clone(), executor.clone()];
+        let pick = pick_run_template_from_instances(&all)
+            .expect("at least one instance available");
+        assert_eq!(pick.agent_instance_id, loop_inst.agent_instance_id);
+
+        // Chat wins when no Loop exists.
+        let chat_and_exec = [chat.clone(), executor.clone()];
+        let pick = pick_run_template_from_instances(&chat_and_exec)
+            .expect("chat fallback available");
+        assert_eq!(pick.agent_instance_id, chat.agent_instance_id);
+
+        // Falls all the way through to the first instance when only
+        // executors exist — better to dispatch against an existing
+        // template than to 404 the run.
+        let only_executor = make_instance_with_role(AgentInstanceRole::Executor);
+        let executor_only = [only_executor.clone()];
+        let pick = pick_run_template_from_instances(&executor_only)
+            .expect("executor-only fallback");
+        assert_eq!(pick.agent_instance_id, only_executor.agent_instance_id);
+    }
+
+    #[test]
+    fn pick_run_template_returns_none_for_empty_slice() {
+        assert!(pick_run_template_from_instances(&[]).is_none());
+    }
+
+    #[test]
+    fn pick_loop_template_prefers_chat_and_skips_executor() {
+        let chat = make_instance_with_role(AgentInstanceRole::Chat);
+        let executor = make_instance_with_role(AgentInstanceRole::Executor);
+
+        let chat_and_exec = [chat.clone(), executor.clone()];
+        let pick = pick_loop_template_from_instances(&chat_and_exec)
+            .expect("chat available as loop template");
+        assert_eq!(pick.agent_instance_id, chat.agent_instance_id);
+
+        // Executor-only project: no valid template — caller must
+        // surface NotFound rather than promote an in-flight ad-hoc
+        // run to the project's persistent loop binding.
+        let executor_only = [make_instance_with_role(AgentInstanceRole::Executor)];
+        let none = pick_loop_template_from_instances(&executor_only);
+        assert!(
+            none.is_none(),
+            "executor-only project must not yield a loop template"
+        );
+    }
+
+    #[test]
+    fn pick_loop_template_returns_none_for_empty_slice() {
+        assert!(pick_loop_template_from_instances(&[]).is_none());
     }
 
     // -----------------------------------------------------------------

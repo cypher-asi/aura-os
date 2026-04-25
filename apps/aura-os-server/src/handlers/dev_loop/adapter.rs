@@ -21,27 +21,38 @@ pub(crate) use super::streaming::emit_domain_event;
 use super::streaming::{seed_task_output, spawn_event_forwarder};
 use super::types::{ControlAction, ForwarderContext, LoopQueryParams};
 
-/// Resolve the agent_instance_id for a loop start request.
+/// Resolve the `agent_instance_id` to use for an automation loop.
 ///
-/// We deliberately reject calls that omit the agent_instance_id rather
-/// than minting a random UUID. A random UUID does not correspond to any
-/// project_agents row, which means:
-///
-/// * the resulting registry entry is unreachable from any client that
-///   only knows the real project agents,
-/// * two concurrent omitting callers each get a distinct random id
-///   instead of being multiplexed onto the right binding,
-/// * the harness session opens against a non-existent agent.
-///
-/// Forcing the caller to supply the binding id is the difference
-/// between "isolated agent loops" and "uncoordinated zombie loops".
-fn require_agent_instance_id(params: &LoopQueryParams) -> ApiResult<AgentInstanceId> {
-    params.agent_instance_id.ok_or_else(|| {
-        ApiError::bad_request(
-            "agent_instance_id is required: every loop must be bound to a real \
-             project_agents row so it can be addressed and supervised correctly",
-        )
-    })
+/// When the caller pins an explicit id, honour it — that's the
+/// "I want the loop for *this* binding" case. Otherwise lazily
+/// resolve the project's canonical `Loop`-roled instance via
+/// [`AgentInstanceService::ensure_default_loop_instance`], which
+/// promotes a `Chat` instance to `Loop` on first use. The fallback
+/// keeps us out of the "random UUID -> unreachable registry slot"
+/// failure mode that motivated the original
+/// `require_agent_instance_id` guard while still letting the
+/// frontend omit the param when it doesn't yet know the project's
+/// loop instance.
+async fn resolve_loop_instance_id(
+    state: &AppState,
+    project_id: ProjectId,
+    params: &LoopQueryParams,
+) -> ApiResult<AgentInstanceId> {
+    if let Some(id) = params.agent_instance_id {
+        return Ok(id);
+    }
+    let instance = state
+        .agent_instance_service
+        .ensure_default_loop_instance(&project_id)
+        .await
+        .map_err(|e| match e {
+            aura_os_agents::AgentError::NotFound => ApiError::bad_request(
+                "agent_instance_id is required: project has no usable template \
+                 instance to promote to a Loop binding",
+            ),
+            other => ApiError::internal(format!("resolving default loop instance: {other}")),
+        })?;
+    Ok(instance.agent_instance_id)
 }
 
 /// Resolve the signed-in user id for loop identity.
@@ -69,9 +80,10 @@ pub(crate) async fn start_loop(
     Query(params): Query<LoopQueryParams>,
 ) -> ApiResult<(StatusCode, Json<LoopStatusResponse>)> {
     crate::handlers::billing::require_credits(&state, &jwt).await?;
-    let agent_instance_id = require_agent_instance_id(&params)?;
+    let agent_instance_id = resolve_loop_instance_id(&state, project_id, &params).await?;
     let ctx =
-        resolve_start_context(&state, project_id, agent_instance_id, &jwt, params.model).await?;
+        resolve_start_context(&state, project_id, agent_instance_id, &jwt, params.model.clone())
+            .await?;
     // Clone the JWT for the forwarder before `build_start_params`
     // consumes it. The forwarder uses it for background writes to
     // aura-storage (e.g. persisting `tasks.execution_notes` when a
@@ -214,9 +226,44 @@ pub(crate) async fn run_single_task(
     Query(params): Query<LoopQueryParams>,
 ) -> ApiResult<StatusCode> {
     crate::handlers::billing::require_credits(&state, &jwt).await?;
-    let agent_instance_id = require_agent_instance_id(&params)?;
-    let ctx =
-        resolve_start_context(&state, project_id, agent_instance_id, &jwt, params.model).await?;
+
+    // run_single_task allocates a fresh ephemeral `agent_instance_id`
+    // per call so concurrent ad-hoc task runs in the same project no
+    // longer abort each other on the
+    // `(project_id, agent_instance_id)` automaton registry key. The
+    // caller-supplied id (or the project's default Loop/Chat
+    // template) is used solely to resolve the start context
+    // (workspace path, agent template, default model). The freshly
+    // minted ephemeral id keys the registry slot, the loop handle,
+    // the forwarder, and every emitted event — the dev-loop forwarder
+    // drops the registry entry on terminal status, and best-effort
+    // teardown of the persisted `Executor` row happens in the
+    // background after the run completes.
+    let template_instance = resolve_run_template(&state, project_id, &params).await?;
+    let template_instance_id = template_instance.agent_instance_id;
+    let ephemeral = state
+        .agent_instance_service
+        .spawn_ephemeral_executor(&project_id, &template_instance)
+        .await
+        .map_err(|e| ApiError::internal(format!("allocating ephemeral executor: {e}")))?;
+    let ephemeral_instance_id = ephemeral.agent_instance_id;
+
+    let ctx = resolve_start_context(
+        &state,
+        project_id,
+        template_instance_id,
+        &jwt,
+        params.model,
+    )
+    .await
+    .inspect_err(|_| {
+        // Best-effort: don't leak the row we just created if context
+        // resolution fails before we even reach the harness.
+        let svc = state.agent_instance_service.clone();
+        tokio::spawn(async move {
+            let _ = svc.delete_instance(&ephemeral_instance_id).await;
+        });
+    })?;
     let task_id_str = task_id.to_string();
     // Clone the JWT for the forwarder before `build_start_params` moves
     // it; see `start_loop` for the motivation.
@@ -225,7 +272,13 @@ pub(crate) async fn run_single_task(
         .client
         .start(build_start_params(&state, &ctx, Some(jwt), Some(task_id_str.clone())).await)
         .await
-        .map_err(|e| map_start_error(ctx.client.base_url(), e))?;
+        .map_err(|e| {
+            let svc = state.agent_instance_service.clone();
+            tokio::spawn(async move {
+                let _ = svc.delete_instance(&ephemeral_instance_id).await;
+            });
+            map_start_error(ctx.client.base_url(), e)
+        })?;
     let (events_tx, ws_reader_handle) = connect_with_retries(
         &ctx.client,
         &result.automaton_id,
@@ -235,19 +288,23 @@ pub(crate) async fn run_single_task(
     .await
     .map_err(|e| ApiError::bad_gateway(format!("connecting task automaton stream: {e}")))?;
 
-    seed_task_output(&state, project_id, agent_instance_id, &task_id_str).await;
+    seed_task_output(&state, project_id, ephemeral_instance_id, &task_id_str).await;
     emit_domain_event(
         &state,
         "task_started",
         project_id,
-        agent_instance_id,
-        serde_json::json!({"task_id": task_id_str}),
+        ephemeral_instance_id,
+        serde_json::json!({
+            "task_id": task_id_str,
+            "template_agent_instance_id": template_instance_id.to_string(),
+            "ephemeral": true,
+        }),
     );
     let alive = Arc::new(AtomicBool::new(true));
     let loop_handle = state.loop_registry.open(LoopId::new(
         loop_user_id(&session),
         Some(project_id),
-        Some(agent_instance_id),
+        Some(ephemeral_instance_id),
         ctx.agent_id,
         LoopKind::TaskRun,
     ));
@@ -255,7 +312,7 @@ pub(crate) async fn run_single_task(
     let forwarder = spawn_event_forwarder(ForwarderContext {
         state: state.clone(),
         project_id,
-        agent_instance_id,
+        agent_instance_id: ephemeral_instance_id,
         automaton_id: result.automaton_id.clone(),
         task_id: Some(task_id_str.clone()),
         events_tx,
@@ -265,9 +322,12 @@ pub(crate) async fn run_single_task(
         loop_handle,
         jwt: Some(forwarder_jwt),
     });
-    replace_registry_entry(&state, project_id, agent_instance_id).await;
+    // No `replace_registry_entry`: the ephemeral id is freshly minted,
+    // there is nothing to displace, and concurrent task runs are
+    // explicitly allowed to coexist under different ephemeral ids in
+    // the registry.
     state.automaton_registry.lock().await.insert(
-        (project_id, agent_instance_id),
+        (project_id, ephemeral_instance_id),
         ActiveAutomaton {
             automaton_id: result.automaton_id,
             project_id,
@@ -278,5 +338,98 @@ pub(crate) async fn run_single_task(
             current_task_id: Some(task_id_str),
         },
     );
+    // Schedule a best-effort cleanup of the ephemeral `project_agents`
+    // row after the run hits terminal status (or after a generous TTL
+    // if the forwarder dies before reporting completion). Storage
+    // failures are swallowed: the entry will be reaped by the next
+    // janitor sweep.
+    spawn_ephemeral_executor_reaper(state.clone(), ephemeral_instance_id).await;
     Ok(StatusCode::ACCEPTED)
+}
+
+/// Resolve the project-agent instance to use as the **template** for
+/// an ad-hoc task run. The caller's `agent_instance_id` is honoured
+/// when supplied; otherwise the project's default Loop/Chat instance
+/// is picked via `pick_run_template` so the frontend can omit the
+/// param when it doesn't yet know which binding to target.
+async fn resolve_run_template(
+    state: &AppState,
+    project_id: ProjectId,
+    params: &LoopQueryParams,
+) -> ApiResult<aura_os_core::AgentInstance> {
+    if let Some(id) = params.agent_instance_id {
+        return state
+            .agent_instance_service
+            .get_instance(&project_id, &id)
+            .await
+            .map_err(|e| match e {
+                aura_os_agents::AgentError::NotFound => {
+                    ApiError::not_found(format!("agent instance {id} not found"))
+                }
+                other => ApiError::internal(format!("looking up agent instance: {other}")),
+            });
+    }
+    state
+        .agent_instance_service
+        .pick_run_template(&project_id)
+        .await
+        .map_err(|e| match e {
+            aura_os_agents::AgentError::NotFound => ApiError::bad_request(
+                "agent_instance_id is required: project has no instances available \
+                 to use as a task-run template",
+            ),
+            other => ApiError::internal(format!("picking run template: {other}")),
+        })
+}
+
+/// Spawn a best-effort background reaper that deletes the ephemeral
+/// `Executor` `project_agents` row once the run is no longer in the
+/// automaton registry, with a TTL backstop in case the forwarder
+/// never reports terminal status.
+///
+/// The forwarder removes the registry entry on terminal status; this
+/// reaper polls until the entry is gone (or the TTL fires) and then
+/// drops the storage row. Failures are logged at `warn` and ignored —
+/// the row at worst becomes a stale catalogue entry that the next
+/// janitor pass can sweep.
+async fn spawn_ephemeral_executor_reaper(
+    state: AppState,
+    ephemeral_instance_id: AgentInstanceId,
+) {
+    const TTL: Duration = Duration::from_secs(8 * 60 * 60);
+    const POLL: Duration = Duration::from_secs(15);
+    tokio::spawn(async move {
+        let started = std::time::Instant::now();
+        loop {
+            tokio::time::sleep(POLL).await;
+            let still_present = state
+                .automaton_registry
+                .lock()
+                .await
+                .keys()
+                .any(|(_, id)| *id == ephemeral_instance_id);
+            if !still_present {
+                break;
+            }
+            if started.elapsed() >= TTL {
+                tracing::warn!(
+                    %ephemeral_instance_id,
+                    elapsed_secs = started.elapsed().as_secs(),
+                    "ephemeral executor still in registry after TTL; forcing storage cleanup"
+                );
+                break;
+            }
+        }
+        if let Err(error) = state
+            .agent_instance_service
+            .delete_instance(&ephemeral_instance_id)
+            .await
+        {
+            tracing::warn!(
+                %ephemeral_instance_id,
+                %error,
+                "failed to reap ephemeral executor row; will be retried by janitor"
+            );
+        }
+    });
 }
