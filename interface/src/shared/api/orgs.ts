@@ -61,6 +61,16 @@ export const orgsApi = {
     apiFetch<TransactionsResponse>(`/api/orgs/${orgId}/credits/transactions`),
   getAccount: (orgId: string) =>
     apiFetch<BillingAccount>(`/api/orgs/${orgId}/account`),
+  // Subscriptions
+  createSubscriptionCheckout: (plan: string) =>
+    apiFetch<{ url: string }>("/api/subscriptions/checkout", {
+      method: "POST",
+      body: JSON.stringify({ plan }),
+    }),
+  createPortalSession: () =>
+    apiFetch<{ url: string }>("/api/subscriptions/portal", { method: "POST" }),
+  getSubscriptionStatus: () =>
+    apiFetch<{ plan: string; is_subscribed: boolean; monthly_credits: number }>("/api/subscriptions/me"),
   listIntegrations: (orgId: string) =>
     apiFetch<OrgIntegration[]>(`/api/orgs/${orgId}/integrations`),
   createIntegration: (

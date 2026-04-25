@@ -51,7 +51,7 @@ beforeEach(() => {
 describe("OrgSettingsBilling", () => {
   it("renders the current balance formatted", () => {
     renderBilling();
-    expect(screen.getByText("$5.00")).toBeInTheDocument();
+    expect(screen.getByText("500 credits")).toBeInTheDocument();
   });
 
   it("renders preset buttons", () => {

@@ -92,9 +92,9 @@ export function OrgSettingsRewards() {
         </div>
         <div className={styles.settingsRow}>
           <div className={styles.rowInfo}>
-            <span className={styles.rowLabel}>Daily Credits</span>
+            <span className={styles.rowLabel}>Daily Active Reward</span>
             <span className={styles.rowDescription}>
-              Earned on first use each day. Upgrade your tier for more.
+              Earned each day you use AURA. Upgrade your tier for more.
             </span>
           </div>
           <div className={styles.rowControl}>

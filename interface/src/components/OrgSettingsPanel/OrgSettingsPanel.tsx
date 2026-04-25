@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Modal, Navigator, Text } from "@cypher-asi/zui";
 import type { NavigatorItemProps } from "@cypher-asi/zui";
@@ -7,6 +8,7 @@ import { OrgSettingsMembers } from "../OrgSettingsMembers";
 import { OrgSettingsInvites } from "../OrgSettingsInvites";
 import { OrgSettingsBilling } from "../OrgSettingsBilling";
 import { OrgSettingsRewards } from "../OrgSettingsRewards";
+import { TierSubscriptionModal } from "../TierSubscriptionModal";
 import { useAuth } from "../../stores/auth-store";
 import { useOrgSettingsData } from "./useOrgSettingsData";
 import styles from "./OrgSettingsPanel.module.css";
@@ -28,7 +30,7 @@ const NAV_ITEMS: NavigatorItemProps[] = [
   { id: "integrations", label: "Integrations", icon: <Plug size={14} /> },
 ];
 
-function OrgSettingsContent({ data }: { data: ReturnType<typeof useOrgSettingsData> }) {
+function OrgSettingsContent({ data, onUpgrade }: { data: ReturnType<typeof useOrgSettingsData>; onUpgrade: () => void }) {
   return (
     <>
       {data.section === "general" && (
@@ -51,7 +53,7 @@ function OrgSettingsContent({ data }: { data: ReturnType<typeof useOrgSettingsDa
         <OrgSettingsRewards />
       )}
       {data.section === "billing" && (
-        <OrgSettingsBilling billing={data.billing} billingEmail={data.billingEmail} isAdminOrOwner={data.isAdminOrOwner} balance={data.balance} balanceLoading={data.balanceLoading} balanceError={data.balanceError} checkoutError={data.checkoutError} pollingStatus={data.pollingStatus} onPurchase={data.handlePurchase} onRetryBalance={data.loadCreditBalance} />
+        <OrgSettingsBilling billing={data.billing} billingEmail={data.billingEmail} isAdminOrOwner={data.isAdminOrOwner} balance={data.balance} balanceLoading={data.balanceLoading} balanceError={data.balanceError} checkoutError={data.checkoutError} pollingStatus={data.pollingStatus} onPurchase={data.handlePurchase} onRetryBalance={data.loadCreditBalance} onUpgrade={onUpgrade} />
       )}
     </>
   );
@@ -61,6 +63,7 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
   const data = useOrgSettingsData(isOpen, initialSection);
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const [tierModalOpen, setTierModalOpen] = useState(false);
 
   const handleNavChange = (id: string) => {
     // Integrations were promoted to a top-level app. Keep the tab in the
@@ -114,9 +117,10 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
           </div>
         </div>
         <div className={styles.settingsContent}>
-          <OrgSettingsContent data={data} />
+          <OrgSettingsContent data={data} onUpgrade={() => setTierModalOpen(true)} />
         </div>
       </div>
+      <TierSubscriptionModal isOpen={tierModalOpen} onClose={() => setTierModalOpen(false)} />
     </Modal>
   );
 }

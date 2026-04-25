@@ -87,4 +87,71 @@ impl BillingClient {
             })
         }
     }
+
+    /// Create a subscription checkout session for a tier plan.
+    pub async fn create_subscription_checkout(
+        &self,
+        access_token: &str,
+        plan: &str,
+    ) -> Result<serde_json::Value, BillingError> {
+        let resp = self
+            .send_authed_json(
+                Method::POST,
+                "/v1/subscriptions/checkout",
+                access_token,
+                Some(serde_json::json!({ "plan": plan })),
+            )
+            .await?;
+        let status = resp.status();
+        if status.is_success() {
+            Ok(resp.json().await.map_err(BillingError::from)?)
+        } else {
+            let body = resp.text().await.unwrap_or_default();
+            Err(BillingError::ServerError { status: status.as_u16(), body })
+        }
+    }
+
+    /// Create a Stripe Customer Portal session for managing subscriptions.
+    pub async fn create_portal_session(
+        &self,
+        access_token: &str,
+    ) -> Result<serde_json::Value, BillingError> {
+        let resp = self
+            .send_authed_json(
+                Method::POST,
+                "/v1/subscriptions/portal",
+                access_token,
+                None,
+            )
+            .await?;
+        let status = resp.status();
+        if status.is_success() {
+            Ok(resp.json().await.map_err(BillingError::from)?)
+        } else {
+            let body = resp.text().await.unwrap_or_default();
+            Err(BillingError::ServerError { status: status.as_u16(), body })
+        }
+    }
+
+    /// Get current subscription status.
+    pub async fn get_subscription_status(
+        &self,
+        access_token: &str,
+    ) -> Result<serde_json::Value, BillingError> {
+        let resp = self
+            .send_authed_json(
+                Method::GET,
+                "/v1/subscriptions/me",
+                access_token,
+                None,
+            )
+            .await?;
+        let status = resp.status();
+        if status.is_success() {
+            Ok(resp.json().await.map_err(BillingError::from)?)
+        } else {
+            let body = resp.text().await.unwrap_or_default();
+            Err(BillingError::ServerError { status: status.as_u16(), body })
+        }
+    }
 }

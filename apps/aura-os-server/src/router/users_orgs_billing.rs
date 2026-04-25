@@ -78,4 +78,16 @@ pub(super) fn billing_routes() -> Router<AppState> {
             get(billing::get_transactions),
         )
         .route("/api/orgs/:org_id/account", get(billing::get_account))
+        .route(
+            "/api/subscriptions/checkout",
+            post(billing::subscription_checkout),
+        )
+        .route(
+            "/api/subscriptions/portal",
+            post(billing::subscription_portal),
+        )
+        .route(
+            "/api/subscriptions/me",
+            get(billing::subscription_status),
+        )
 }

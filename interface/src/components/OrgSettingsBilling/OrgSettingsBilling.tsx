@@ -18,6 +18,7 @@ interface Props {
   pollingStatus: CheckoutPollingStatus;
   onPurchase: (amountUsd: number) => void;
   onRetryBalance: () => void;
+  onUpgrade?: () => void;
 }
 
 const PRESETS = [25, 50, 100, 250];
@@ -35,6 +36,7 @@ export function OrgSettingsBilling({
   pollingStatus,
   onPurchase,
   onRetryBalance,
+  onUpgrade,
 }: Props) {
   const { isNativeApp } = useAuraCapabilities();
   const [customAmount, setCustomAmount] = useState("");
@@ -65,38 +67,11 @@ export function OrgSettingsBilling({
   return (
     <>
       <h2 className={styles.sectionTitle}>Billing</h2>
+      <p className={billingStyles.billingIntro}>
+        Subscribe to a tier for monthly credit allowances and enhanced rewards, or purchase credits as you go.
+      </p>
 
-      <div className={styles.settingsGroupLabel}>Plan</div>
-      <div className={styles.settingsGroup}>
-        <div className={styles.settingsRow}>
-          <div className={styles.rowInfo}>
-            <span className={styles.rowLabel}>Current Plan</span>
-            <span className={styles.rowDescription}>
-              Your active subscription
-            </span>
-          </div>
-          <div className={styles.rowControl}>
-            <span className={styles.roleBadge}>{billing?.plan ?? "mortal"}</span>
-          </div>
-        </div>
-        {isAdminOrOwner && (
-          <div className={billingStyles.billingEmailSection}>
-            <div className={styles.rowInfo}>
-              <span className={styles.rowLabel}>Billing Email</span>
-              <span className={styles.rowDescription}>
-                Tied to your ZERO account. Invoices and receipts are sent here.
-              </span>
-            </div>
-            <div className={billingStyles.billingEmailRow}>
-              <span className={billingStyles.billingEmailValue}>
-                {billingEmail || "—"}
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Credit Balance */}
+      {/* Credit Balance — shown first */}
       <div className={styles.settingsGroupLabel}>Credits</div>
       <div className={styles.settingsGroup}>
         <div className={styles.settingsRow}>
@@ -116,11 +91,46 @@ export function OrgSettingsBilling({
                       <button className={billingStyles.retryLink} onClick={onRetryBalance}>Retry</button>
                     </span>
                   : balance !== null
-                    ? balance.balance_formatted
+                    ? `${balance.balance_cents.toLocaleString()} credits`
                     : "---"}
             </span>
           </div>
         </div>
+      </div>
+
+      <div className={styles.settingsGroupLabel}>Plan</div>
+      <div className={styles.settingsGroup}>
+        <div className={styles.settingsRow}>
+          <div className={styles.rowInfo}>
+            <span className={styles.rowLabel}>Current Plan</span>
+            <span className={styles.rowDescription}>
+              Your active subscription
+            </span>
+          </div>
+          <div className={styles.rowControl}>
+            <span className={styles.roleBadge}>{billing?.plan ?? "mortal"}</span>
+            {onUpgrade && (
+              <Button variant="ghost" size="sm" onClick={onUpgrade} style={{ marginLeft: 8 }}>
+                Change Plan
+              </Button>
+            )}
+          </div>
+        </div>
+        {isAdminOrOwner && (
+          <div className={billingStyles.billingEmailSection}>
+            <div className={styles.rowInfo}>
+              <span className={styles.rowLabel}>Billing Email</span>
+              <span className={styles.rowDescription}>
+                Tied to your ZERO account. Invoices and receipts are sent here.
+              </span>
+            </div>
+            <div className={billingStyles.billingEmailRow}>
+              <span className={billingStyles.billingEmailValue}>
+                {billingEmail || "—"}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Purchase Credits */}
@@ -137,7 +147,7 @@ export function OrgSettingsBilling({
                   onClick={() => handlePresetClick(amount)}
                   disabled={isPolling}
                 >
-                  ${amount}
+                  ${amount} <span style={{ fontSize: "0.75em", opacity: 0.6 }}>({(amount * 100).toLocaleString()})</span>
                 </button>
               ))}
             </div>

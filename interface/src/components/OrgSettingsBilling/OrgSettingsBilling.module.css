@@ -1,3 +1,10 @@
+.billingIntro {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--space-3);
+  line-height: 1.5;
+}
+
 .balanceValue {
   font-size: var(--text-lg);
   font-weight: 600;

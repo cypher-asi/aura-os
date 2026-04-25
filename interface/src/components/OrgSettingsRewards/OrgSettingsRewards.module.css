@@ -12,15 +12,15 @@
 .codeRow {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
 .codeValue {
   font-family: var(--font-mono, monospace);
-  font-size: 14px;
+  font-size: 12px;
   color: var(--color-text);
   background: rgba(255, 255, 255, 0.06);
-  padding: 6px 12px;
+  padding: 4px 10px;
   border-radius: 4px;
   border: 1px solid var(--color-border);
   user-select: all;

@@ -14,7 +14,7 @@ vi.mock("./useBuyCreditsData", () => ({
     checkoutError: null,
     pollingStatus: "idle",
     isPolling: false,
-    balanceDisplay: "$10.00",
+    balanceDisplay: "1,000 credits",
     loadBalance: mockLoadBalance,
     handlePurchase: mockHandlePurchase,
   }),
@@ -59,8 +59,8 @@ describe("BuyCreditsModal", () => {
 
   it("shows the current balance", () => {
     renderModal();
+    expect(screen.getByText("1,000 credits")).toBeInTheDocument();
     expect(screen.getByText("1,000 Z")).toBeInTheDocument();
-    expect(screen.getAllByText("$10.00")).toHaveLength(2);
   });
 
   it("renders preset buttons", () => {
