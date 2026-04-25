@@ -68,7 +68,7 @@ function buildTaskAgentNode(
           className={explorerStyles.automationSpinner}
         />
       </span>
-    ) : data.sidekick.streamingAgentInstanceId === agent.agent_instance_id ? (
+    ) : data.sidekick.streamingAgentInstanceIds.includes(agent.agent_instance_id) ? (
       <span className={explorerStyles.sessionIndicator}>
         <span className={explorerStyles.streamingDot} />
       </span>

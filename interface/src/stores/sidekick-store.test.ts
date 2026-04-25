@@ -65,6 +65,7 @@ const initialState = {
   tasks: [],
   deletedSpecIds: [],
   streamingAgentInstanceId: null,
+  streamingAgentInstanceIds: [],
   canGoBack: false,
 };
 
@@ -325,6 +326,49 @@ describe("sidekick-store", () => {
       useSidekickStore.getState().setStreamingAgentInstanceId("ai1");
       expect(useSidekickStore.getState().streamingAgentInstanceId).toBe("ai1");
       useSidekickStore.getState().setStreamingAgentInstanceId(null);
+      expect(useSidekickStore.getState().streamingAgentInstanceId).toBeNull();
+    });
+  });
+
+  describe("setAgentStreaming (multi-id)", () => {
+    it("tracks multiple streaming agents independently", () => {
+      const store = useSidekickStore.getState();
+      store.setAgentStreaming("ai1", true);
+      store.setAgentStreaming("ai2", true);
+      const ids = useSidekickStore.getState().streamingAgentInstanceIds;
+      expect(ids).toContain("ai1");
+      expect(ids).toContain("ai2");
+      // Backwards-compat single-string field reflects the most recently
+      // added id so legacy "is anything streaming?" truthy checks keep
+      // working.
+      expect(useSidekickStore.getState().streamingAgentInstanceId).toBe("ai2");
+    });
+
+    it("removing one agent leaves the other(s) streaming — regression for the cross-project badge bug", () => {
+      const store = useSidekickStore.getState();
+      store.setAgentStreaming("ai1", true);
+      store.setAgentStreaming("ai2", true);
+      store.setAgentStreaming("ai1", false);
+      const ids = useSidekickStore.getState().streamingAgentInstanceIds;
+      expect(ids).toEqual(["ai2"]);
+      expect(useSidekickStore.getState().streamingAgentInstanceId).toBe("ai2");
+    });
+
+    it("idempotent on duplicate add and missing remove", () => {
+      const store = useSidekickStore.getState();
+      store.setAgentStreaming("ai1", true);
+      store.setAgentStreaming("ai1", true);
+      expect(useSidekickStore.getState().streamingAgentInstanceIds).toEqual(["ai1"]);
+      store.setAgentStreaming("ai-never-set", false);
+      expect(useSidekickStore.getState().streamingAgentInstanceIds).toEqual(["ai1"]);
+    });
+
+    it("legacy setStreamingAgentInstanceId(null) clears the entire set", () => {
+      const store = useSidekickStore.getState();
+      store.setAgentStreaming("ai1", true);
+      store.setAgentStreaming("ai2", true);
+      store.setStreamingAgentInstanceId(null);
+      expect(useSidekickStore.getState().streamingAgentInstanceIds).toEqual([]);
       expect(useSidekickStore.getState().streamingAgentInstanceId).toBeNull();
     });
   });

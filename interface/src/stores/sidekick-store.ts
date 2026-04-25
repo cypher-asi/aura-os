@@ -53,6 +53,22 @@ interface SidekickState extends SidekickSliceState<SidekickTab, PreviewItem> {
   tasks: Task[];
   deletedSpecIds: string[];
   deletedTaskIds: string[];
+  /**
+   * Source of truth for "which agent instances are currently
+   * mid-turn from this client". Multi-value so the UI can correctly
+   * surface concurrent streams across agents/projects (chat in
+   * project A while a parallel chat / loop runs in project B). Use
+   * the `useIsAgentStreaming(id)` selector to compare against a
+   * specific agent instance.
+   */
+  streamingAgentInstanceIds: string[];
+  /**
+   * Backwards-compat single-string view: most-recently-added entry
+   * from `streamingAgentInstanceIds`, or `null` if the set is empty.
+   * Existing call sites that only need a truthy "is anything
+   * streaming?" signal can keep reading this; equality checks
+   * against a specific id should migrate to `useIsAgentStreaming`.
+   */
   streamingAgentInstanceId: string | null;
 
   viewSpec: (spec: Spec) => void;
@@ -68,6 +84,18 @@ interface SidekickState extends SidekickSliceState<SidekickTab, PreviewItem> {
   removeTask: (taskId: string) => void;
   clearDeletedTasks: () => void;
   clearGeneratedArtifacts: () => void;
+  /**
+   * Add or remove a single agent instance from the streaming set.
+   * Preferred over `setStreamingAgentInstanceId` — this is the
+   * primitive that supports multiple concurrent streams.
+   */
+  setAgentStreaming: (agentInstanceId: string, streaming: boolean) => void;
+  /**
+   * @deprecated for new code; prefer `setAgentStreaming`. Retained
+   * because tests and a few legacy callers still use the
+   * single-string signature. `id != null` adds the id to the set;
+   * `id == null` clears the entire set (legacy semantic).
+   */
   setStreamingAgentInstanceId: (id: string | null) => void;
   notifyAgentInstanceUpdate: (instance: AgentInstance) => void;
   onAgentInstanceUpdate: (listener: AgentInstanceUpdateListener) => () => void;
@@ -136,6 +164,7 @@ export const useSidekickStore = create<SidekickState>()((set, get) => ({
   tasks: [],
   deletedSpecIds: [],
   deletedTaskIds: [],
+  streamingAgentInstanceIds: [],
   streamingAgentInstanceId: null,
 
   setActiveTab: (tab) => {
@@ -314,8 +343,32 @@ export const useSidekickStore = create<SidekickState>()((set, get) => ({
     set({ specs: [], tasks: [] });
   },
 
+  setAgentStreaming: (agentInstanceId, streaming) => {
+    if (!agentInstanceId) return;
+    set((s) => {
+      const has = s.streamingAgentInstanceIds.includes(agentInstanceId);
+      if (streaming && has) return s;
+      if (!streaming && !has) return s;
+      const nextIds = streaming
+        ? [...s.streamingAgentInstanceIds, agentInstanceId]
+        : s.streamingAgentInstanceIds.filter((id) => id !== agentInstanceId);
+      return {
+        streamingAgentInstanceIds: nextIds,
+        streamingAgentInstanceId: nextIds.length > 0 ? nextIds[nextIds.length - 1] : null,
+      };
+    });
+  },
+
   setStreamingAgentInstanceId: (id) => {
-    set({ streamingAgentInstanceId: id });
+    if (id == null) {
+      set((s) =>
+        s.streamingAgentInstanceIds.length === 0 && s.streamingAgentInstanceId === null
+          ? s
+          : { streamingAgentInstanceIds: [], streamingAgentInstanceId: null },
+      );
+      return;
+    }
+    get().setAgentStreaming(id, true);
   },
 
   notifyAgentInstanceUpdate: (instance) => {
@@ -351,3 +404,22 @@ export const useSidekickStore = create<SidekickState>()((set, get) => ({
     set({ previewItem: { kind: "specs_overview", specs } });
   },
 }));
+
+/**
+ * Returns `true` while `agentInstanceId` is in the streaming set.
+ * Use this in lists/explorers that need a per-row "is this specific
+ * agent currently streaming?" badge — the legacy
+ * `streamingAgentInstanceId === agent.id` comparison only worked
+ * when at most one agent was active and silently lost the badge for
+ * any second concurrent stream.
+ */
+export function useIsAgentStreaming(agentInstanceId: string | undefined | null): boolean {
+  return useSidekickStore((s) =>
+    !!agentInstanceId && s.streamingAgentInstanceIds.includes(agentInstanceId),
+  );
+}
+
+/** True if any agent instance is streaming right now. */
+export function useHasAnyStreamingAgent(): boolean {
+  return useSidekickStore((s) => s.streamingAgentInstanceIds.length > 0);
+}

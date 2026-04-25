@@ -20,7 +20,7 @@ export function useProjectListData(appIdOverride?: string) {
     useShallow((s) => ({
       closePreview: s.closePreview,
       onAgentInstanceUpdate: s.onAgentInstanceUpdate,
-      streamingAgentInstanceId: s.streamingAgentInstanceId,
+      streamingAgentInstanceIds: s.streamingAgentInstanceIds,
     })),
   );
   const {

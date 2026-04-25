@@ -246,7 +246,9 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
         if (amc.stop_reason !== "tool_use") {
           resetStreamBuffers(refs, setters);
           setters.setIsStreaming(false);
-          sidekickRef.current.setStreamingAgentInstanceId(null);
+          if (agentInstanceId) {
+            sidekickRef.current.setAgentStreaming(agentInstanceId, false);
+          }
         }
         break;
       }
@@ -275,7 +277,9 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
         coreHandleToolResult(refs, setters, { id: toolId, name: toolName, result: JSON.stringify(gc), is_error: false });
         resetStreamBuffers(refs, setters);
         setters.setIsStreaming(false);
-        sidekickRef.current.setStreamingAgentInstanceId(null);
+        if (agentInstanceId) {
+          sidekickRef.current.setAgentStreaming(agentInstanceId, false);
+        }
         break;
       }
       case EventType.GenerationError:
@@ -286,7 +290,9 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
         break;
       case EventType.Done:
         finalizeStream(refs, setters, abortRef, false);
-        sidekickRef.current.setStreamingAgentInstanceId(null);
+        if (agentInstanceId) {
+          sidekickRef.current.setAgentStreaming(agentInstanceId, false);
+        }
         clearAllPendingArtifacts(pendingSpecIdsRef, (id) =>
           sidekickRef.current.removeSpec(id),
         );
@@ -301,6 +307,9 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
     onEvent,
     onError: (error) => {
       handleStreamError(refs, setters, error);
+      if (agentInstanceId) {
+        sidekickRef.current.setAgentStreaming(agentInstanceId, false);
+      }
       clearAllPendingArtifacts(pendingSpecIdsRef, (id) =>
         sidekickRef.current.removeSpec(id),
       );
@@ -310,7 +319,9 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
     },
     onDone: () => {
       finalizeStream(refs, setters, abortRef, false);
-      sidekickRef.current.setStreamingAgentInstanceId(null);
+      if (agentInstanceId) {
+        sidekickRef.current.setAgentStreaming(agentInstanceId, false);
+      }
       clearAllPendingArtifacts(pendingSpecIdsRef, (id) =>
         sidekickRef.current.removeSpec(id),
       );

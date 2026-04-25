@@ -28,7 +28,14 @@ export interface ProjectExplorerBuildContext {
   automatingProjectId: string | null;
   automatingAgentInstanceId: string | null;
   isMobileLayout: boolean;
-  streamingAgentInstanceId: string | null;
+  /**
+   * Snapshot of every agent instance currently mid-turn (chat or
+   * loop) on this client. Use `.includes(agent_instance_id)` to
+   * decide whether to render the "streaming" indicator on a row —
+   * the previous single-string equality check silently lost the
+   * indicator on every concurrent stream after the first.
+   */
+  streamingAgentInstanceIds: string[];
   creatingGeneralAgentProjectIds: string[];
   archivingAgentInstanceIds: string[];
   handleQuickAddAgent: (projectId: string) => void;
@@ -114,7 +121,7 @@ export function buildAgentNode(
         className={explorerStyles.automationSpinner}
       />
     </span>
-  ) : context.streamingAgentInstanceId === agent.agent_instance_id ? (
+  ) : context.streamingAgentInstanceIds.includes(agent.agent_instance_id) ? (
     <span className={explorerStyles.sessionIndicator}>
       <span className={explorerStyles.streamingDot} />
     </span>

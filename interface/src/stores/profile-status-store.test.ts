@@ -27,6 +27,7 @@ const { mockEventStore, mockAuthStore, mockSidekickStore, mockApi } = vi.hoisted
   const mockSidekickStore = {
     getState: vi.fn(() => ({
       streamingAgentInstanceId: null,
+      streamingAgentInstanceIds: [] as string[],
       onAgentInstanceUpdate: vi.fn(() => () => {}),
     })),
     subscribe: vi.fn(() => () => {}),

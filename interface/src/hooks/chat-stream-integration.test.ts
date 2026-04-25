@@ -10,6 +10,7 @@ import { useStreamStore, streamMetaMap } from "./stream/store";
 import type { DisplaySessionEvent } from "../shared/types/stream";
 
 const mockSetStreamingAgentInstanceId = vi.fn();
+const mockSetAgentStreaming = vi.fn();
 const mockClearGeneratedArtifacts = vi.fn();
 const mockSetActiveTab = vi.fn();
 const mockPushSpec = vi.fn();
@@ -22,7 +23,10 @@ const mockSidekickState = {
   previewItem: null,
   specs: [],
   tasks: [],
+  streamingAgentInstanceIds: [] as string[],
+  streamingAgentInstanceId: null as string | null,
   setStreamingAgentInstanceId: mockSetStreamingAgentInstanceId,
+  setAgentStreaming: mockSetAgentStreaming,
   clearGeneratedArtifacts: mockClearGeneratedArtifacts,
   setActiveTab: mockSetActiveTab,
   pushSpec: mockPushSpec,

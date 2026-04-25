@@ -3,6 +3,7 @@ import { useChatStream } from "./use-chat-stream";
 import { useStreamStore, streamMetaMap } from "./stream/store";
 
 const mockSetStreamingAgentInstanceId = vi.fn();
+const mockSetAgentStreaming = vi.fn();
 const mockClearGeneratedArtifacts = vi.fn();
 const mockSetActiveTab = vi.fn();
 const mockPushSpec = vi.fn();
@@ -13,7 +14,10 @@ const mockNotifyAgentInstanceUpdate = vi.fn();
 
 const mockSidekickState = {
   previewItem: null,
+  streamingAgentInstanceIds: [] as string[],
+  streamingAgentInstanceId: null as string | null,
   setStreamingAgentInstanceId: mockSetStreamingAgentInstanceId,
+  setAgentStreaming: mockSetAgentStreaming,
   clearGeneratedArtifacts: mockClearGeneratedArtifacts,
   setActiveTab: mockSetActiveTab,
   pushSpec: mockPushSpec,
@@ -125,7 +129,7 @@ describe("useChatStream", () => {
       await result.current.sendMessage("hello");
     });
 
-    expect(mockSetStreamingAgentInstanceId).toHaveBeenCalledWith("ai-1");
+    expect(mockSetAgentStreaming).toHaveBeenCalledWith("ai-1", true);
   });
 
   it("handles generate_specs action", async () => {
@@ -184,7 +188,7 @@ describe("useChatStream", () => {
       await result.current.sendMessage("hello");
     });
 
-    expect(mockSetStreamingAgentInstanceId).toHaveBeenCalledWith(null);
+    expect(mockSetAgentStreaming).toHaveBeenCalledWith("ai-1", false);
   });
 
   it("marks only the next project send as a new session", async () => {

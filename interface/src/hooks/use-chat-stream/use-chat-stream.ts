@@ -35,7 +35,9 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
   const nextSendStartsNewSessionRef = useRef(false);
 
   useEffect(() => () => {
-    if (!getIsStreaming(core.key)) sidekickRef.current.setStreamingAgentInstanceId(null);
+    if (agentInstanceId && !getIsStreaming(core.key)) {
+      sidekickRef.current.setAgentStreaming(agentInstanceId, false);
+    }
   }, [projectId, agentInstanceId, core.key]);
 
   const sendMessage = useCallback(
@@ -52,7 +54,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
       };
       core.setEvents((prev) => [...prev, userMsg]);
       core.setIsStreaming(true);
-      sidekickRef.current.setStreamingAgentInstanceId(agentInstanceId);
+      sidekickRef.current.setAgentStreaming(agentInstanceId, true);
       resetStreamBuffers(refs, setters);
       pendingSpecIdsRef.current = [];
       pendingTaskIdsRef.current = [];
@@ -101,7 +103,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
       } finally {
         if (abortRef.current === controller) {
           core.setIsStreaming(false);
-          sidekickRef.current.setStreamingAgentInstanceId(null);
+          sidekickRef.current.setAgentStreaming(agentInstanceId, false);
           controller.abort();
           abortRef.current = null;
         }
@@ -123,7 +125,9 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
 
   const stopStreaming = useCallback(() => {
     core.baseStopStreaming();
-    sidekickRef.current.setStreamingAgentInstanceId(null);
+    if (agentInstanceId) {
+      sidekickRef.current.setAgentStreaming(agentInstanceId, false);
+    }
     if (projectId && agentInstanceId) {
       const refetch = () => {
         api.getAgentInstance(projectId, agentInstanceId).then((instance) => {

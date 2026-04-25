@@ -99,7 +99,21 @@ interface TaskOutputPanelState {
   failTask: (taskId: string, reason?: string | null) => void;
   dismissTask: (taskId: string) => void;
   clearCompleted: () => void;
+  /**
+   * Mark every `"active"` task as `"completed"` regardless of project.
+   * Retained for tests and emergency reset paths only — production
+   * callers should use `markCompletedForProject` so a `LoopStopped`
+   * in project A doesn't wipe project B's live rows.
+   */
   markAllCompleted: () => void;
+  /**
+   * Mark only the `"active"` rows that belong to `projectId` (and, if
+   * `agentInstanceId` is provided, also match that instance) as
+   * `"completed"`. This is what the `LoopStopped` / `LoopFinished`
+   * handler should use so cross-project Run panels stay correct when a
+   * loop ends in only one of them.
+   */
+  markCompletedForProject: (projectId: string, agentInstanceId?: string) => void;
   restoreTasks: (entries: PanelTaskEntry[]) => void;
   /**
    * Apply authoritative per-task statuses (e.g. from `GET /projects/:pid/tasks`
@@ -243,6 +257,20 @@ export const useTaskOutputPanelStore = create<TaskOutputPanelState>()((set, get)
         t.status === "active" ? { ...t, status: "completed" as const, updatedAt: Date.now() } : t,
       ),
     }));
+  },
+
+  markCompletedForProject: (projectId, agentInstanceId) => {
+    set((s) => {
+      let changed = false;
+      const nextTasks = s.tasks.map((t) => {
+        if (t.status !== "active") return t;
+        if (t.projectId !== projectId) return t;
+        if (agentInstanceId && t.agentInstanceId !== agentInstanceId) return t;
+        changed = true;
+        return { ...t, status: "completed" as const, updatedAt: Date.now() };
+      });
+      return changed ? { tasks: nextTasks } : s;
+    });
   },
 
   restoreTasks: (entries) => {

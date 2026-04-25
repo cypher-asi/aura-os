@@ -397,8 +397,8 @@ export function useChatHistorySync({
       const localStream = getStreamEntry(streamKey);
       const localIsStreaming = !!localStream?.isStreaming;
       if (localIsStreaming) return;
-      if (sidekick.streamingAgentInstanceId !== watchAgentInstanceId) {
-        sidekick.setStreamingAgentInstanceId(watchAgentInstanceId);
+      if (!sidekick.streamingAgentInstanceIds.includes(watchAgentInstanceId)) {
+        sidekick.setAgentStreaming(watchAgentInstanceId, true);
       }
       inFlightRecoveryRef.current = watchAgentInstanceId;
       if (projectIdForSidekick) {
@@ -414,9 +414,9 @@ export function useChatHistorySync({
       }
     } else if (
       inFlightRecoveryRef.current === watchAgentInstanceId &&
-      sidekick.streamingAgentInstanceId === watchAgentInstanceId
+      sidekick.streamingAgentInstanceIds.includes(watchAgentInstanceId)
     ) {
-      sidekick.setStreamingAgentInstanceId(null);
+      sidekick.setAgentStreaming(watchAgentInstanceId, false);
       inFlightRecoveryRef.current = null;
       // Drop tracked placeholder ids — once the in-flight marker is
       // gone the matching real spec/task entries should already have

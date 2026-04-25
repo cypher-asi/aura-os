@@ -56,6 +56,7 @@ vi.mock("@cypher-asi/zui", () => ({
 const mockSidekickState = {
   closePreview: vi.fn(),
   streamingAgentInstanceId: null,
+  streamingAgentInstanceIds: [] as string[],
   onAgentInstanceUpdate: vi.fn(() => vi.fn()),
 };
 vi.mock("../../stores/sidekick-store", () => ({

@@ -456,17 +456,39 @@ function handleTaskRetryingEvent(
   );
 }
 
-function handleLoopEnd(): void {
-  // Snapshot any task rows we flip to "completed" so reopening the
-  // Run panel after a LoopFinished/LoopStopped event still renders
-  // their structured turn history from cache.
+/**
+ * `LoopStopped` / `LoopFinished` arrives keyed to the project (and
+ * usually the agent instance) whose loop ended. We must NOT clear or
+ * complete rows for *other* projects' live runs — doing so used to
+ * silently wipe the Run panel for project B every time the user
+ * stopped a loop in project A. Filter the snapshot + completion to
+ * the matching scope, and only forget per-task streaming flags for
+ * tasks that actually belonged to the ended loop.
+ */
+function handleLoopEnd(
+  e:
+    | AuraEventOfType<typeof EventType.LoopStopped>
+    | AuraEventOfType<typeof EventType.LoopFinished>,
+): void {
+  const projectId = e.project_id;
+  const agentInstanceId = e.agent_id ?? undefined;
+  if (!projectId) {
+    // Without a project id we cannot scope safely; bail rather than
+    // fall back to the old global wipe.
+    return;
+  }
   const panel = useTaskOutputPanelStore.getState();
-  const activeTasks = panel.tasks.filter((t) => t.status === "active");
-  panel.markAllCompleted();
+  const activeTasks = panel.tasks.filter(
+    (t) =>
+      t.status === "active" &&
+      t.projectId === projectId &&
+      (!agentInstanceId || t.agentInstanceId === agentInstanceId),
+  );
+  panel.markCompletedForProject(projectId, agentInstanceId);
   for (const task of activeTasks) {
     snapshotTaskTurns(task.taskId, task.projectId);
+    isStreamingByTask.delete(task.taskId);
   }
-  isStreamingByTask.clear();
 }
 
 let bootstrapped = false;

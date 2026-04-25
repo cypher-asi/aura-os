@@ -29,6 +29,7 @@ const mockSidekick = {
   canGoBack: false,
   goBackPreview: vi.fn(),
   streamingAgentInstanceId: null as string | null,
+  streamingAgentInstanceIds: [] as string[],
 };
 
 vi.mock("../../stores/sidekick-store", () => ({

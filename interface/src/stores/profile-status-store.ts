@@ -175,17 +175,31 @@ export const useProfileStatusStore = create<ProfileStatusState>()((_, get) => ({
     subscribe(EventType.LoopStopped, clearLoop);
     subscribe(EventType.LoopFinished, clearLoop);
 
-    let _prevStreamingId: string | null = null;
+    // Track the multi-id streaming set so per-agent profile status
+    // flips correctly when several agents stream concurrently. The
+    // previous single-string subscription would mark an agent "idle"
+    // any time *another* agent started streaming, because the derived
+    // most-recent id moved off the still-active stream.
+    let _prevStreamingIds: string[] = [];
     useSidekickStore.subscribe((state) => {
-      const streamingId = state.streamingAgentInstanceId;
-      if (streamingId === _prevStreamingId) return;
-      const prevId = _prevStreamingId;
-      _prevStreamingId = streamingId;
+      const nextIds = state.streamingAgentInstanceIds;
+      if (
+        nextIds === _prevStreamingIds ||
+        (nextIds.length === _prevStreamingIds.length &&
+          nextIds.every((id, i) => id === _prevStreamingIds[i]))
+      ) {
+        return;
+      }
+      const prevSet = new Set(_prevStreamingIds);
+      const nextSet = new Set(nextIds);
+      const stoppedIds = _prevStreamingIds.filter((id) => !nextSet.has(id));
+      const startedIds = nextIds.filter((id) => !prevSet.has(id));
+      _prevStreamingIds = nextIds.slice();
 
-      if (prevId) {
-        const onUpdate = useSidekickStore.getState().onAgentInstanceUpdate;
+      const onUpdate = useSidekickStore.getState().onAgentInstanceUpdate;
+      for (const stoppedId of stoppedIds) {
         const unsub = onUpdate((inst) => {
-          if (inst.agent_instance_id === prevId && !_remoteAgentIds.has(inst.agent_id)) {
+          if (inst.agent_instance_id === stoppedId && !_remoteAgentIds.has(inst.agent_id)) {
             if (!_activeTaskAgents.has(inst.agent_id)) {
               setStatuses({
                 [inst.agent_id]: inst.status,
@@ -197,10 +211,9 @@ export const useProfileStatusStore = create<ProfileStatusState>()((_, get) => ({
         });
         setTimeout(unsub, 5000);
       }
-      if (streamingId) {
-        const onUpdate = useSidekickStore.getState().onAgentInstanceUpdate;
+      for (const startedId of startedIds) {
         const unsub = onUpdate((inst) => {
-          if (inst.agent_instance_id === streamingId) {
+          if (inst.agent_instance_id === startedId) {
             const updates: Record<string, string> = {
               [inst.agent_instance_id]: "working",
             };

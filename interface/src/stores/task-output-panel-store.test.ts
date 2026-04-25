@@ -215,6 +215,32 @@ describe("task-output-panel-store", () => {
     });
   });
 
+  describe("markCompletedForProject", () => {
+    it("only flips active rows that match the requested project", () => {
+      useTaskOutputPanelStore.getState().addTask("t1", "p1", "A");
+      useTaskOutputPanelStore.getState().addTask("t2", "p2", "B");
+      useTaskOutputPanelStore.getState().markCompletedForProject("p1");
+      const tasks = useTaskOutputPanelStore.getState().tasks;
+      const t1 = tasks.find((t) => t.taskId === "t1");
+      const t2 = tasks.find((t) => t.taskId === "t2");
+      expect(t1?.status).toBe("completed");
+      // Regression: a LoopStopped in p1 must not silently complete p2's
+      // live rows, which is what `markAllCompleted` did before.
+      expect(t2?.status).toBe("active");
+    });
+
+    it("further filters by agentInstanceId when provided", () => {
+      useTaskOutputPanelStore.getState().addTask("t1", "p1", "A", "ai1");
+      useTaskOutputPanelStore.getState().addTask("t2", "p1", "B", "ai2");
+      useTaskOutputPanelStore.getState().markCompletedForProject("p1", "ai1");
+      const tasks = useTaskOutputPanelStore.getState().tasks;
+      const t1 = tasks.find((t) => t.taskId === "t1");
+      const t2 = tasks.find((t) => t.taskId === "t2");
+      expect(t1?.status).toBe("completed");
+      expect(t2?.status).toBe("active");
+    });
+  });
+
   describe("restoreTasks", () => {
     it("adds new entries without duplicating existing ones", () => {
       useTaskOutputPanelStore.getState().addTask("t1", "p1", "A");

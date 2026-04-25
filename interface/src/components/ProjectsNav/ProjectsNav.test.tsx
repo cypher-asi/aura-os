@@ -48,6 +48,7 @@ interface MockProjectListData {
   sidekick: {
     closePreview: typeof mockClosePreview;
     streamingAgentInstanceId: string | null;
+    streamingAgentInstanceIds: string[];
     onAgentInstanceUpdate: (callback: (instance: MockAgent) => void) => () => void;
   };
   projects: MockProject[];
@@ -155,6 +156,7 @@ function buildMockData(overrides: Partial<MockProjectListData> = {}): MockProjec
     sidekick: {
       closePreview: mockClosePreview,
       streamingAgentInstanceId: null,
+      streamingAgentInstanceIds: [],
       onAgentInstanceUpdate: vi.fn(() => vi.fn()),
     },
     projects,

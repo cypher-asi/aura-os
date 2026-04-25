@@ -96,8 +96,29 @@ vi.mock("../stores/event-store/index", () => ({
 const sidekickMocks = vi.hoisted(() => {
   const state = {
     streamingAgentInstanceId: null as string | null,
+    streamingAgentInstanceIds: [] as string[],
     setStreamingAgentInstanceId: vi.fn((id: string | null) => {
       state.streamingAgentInstanceId = id;
+      if (id == null) {
+        state.streamingAgentInstanceIds = [];
+      } else if (!state.streamingAgentInstanceIds.includes(id)) {
+        state.streamingAgentInstanceIds = [...state.streamingAgentInstanceIds, id];
+      }
+    }),
+    setAgentStreaming: vi.fn((id: string, streaming: boolean) => {
+      if (streaming) {
+        if (!state.streamingAgentInstanceIds.includes(id)) {
+          state.streamingAgentInstanceIds = [...state.streamingAgentInstanceIds, id];
+        }
+      } else {
+        state.streamingAgentInstanceIds = state.streamingAgentInstanceIds.filter(
+          (x) => x !== id,
+        );
+      }
+      state.streamingAgentInstanceId =
+        state.streamingAgentInstanceIds.length > 0
+          ? state.streamingAgentInstanceIds[state.streamingAgentInstanceIds.length - 1]
+          : null;
     }),
     specs: [] as Array<{ spec_id: string; title: string }>,
     tasks: [] as Array<{ task_id: string; title: string }>,
@@ -393,7 +414,9 @@ describe("useChatHistorySync", () => {
 
   it("re-arms streamingAgentInstanceId when history reports an in-flight assistant turn", async () => {
     sidekickMocks.state.streamingAgentInstanceId = null;
+    sidekickMocks.state.streamingAgentInstanceIds = [];
     sidekickMocks.state.setStreamingAgentInstanceId.mockClear();
+    sidekickMocks.state.setAgentStreaming.mockClear();
     const inFlightMessages: DisplaySessionEvent[] = [
       { id: "evt-1", role: "user", content: "hi" },
       {
@@ -421,15 +444,18 @@ describe("useChatHistorySync", () => {
     );
 
     await waitFor(() => {
-      expect(sidekickMocks.state.setStreamingAgentInstanceId).toHaveBeenCalledWith(
+      expect(sidekickMocks.state.setAgentStreaming).toHaveBeenCalledWith(
         "pa-42",
+        true,
       );
     });
   });
 
   it("clears streamingAgentInstanceId when the in-flight marker disappears", async () => {
     sidekickMocks.state.streamingAgentInstanceId = null;
+    sidekickMocks.state.streamingAgentInstanceIds = [];
     sidekickMocks.state.setStreamingAgentInstanceId.mockClear();
+    sidekickMocks.state.setAgentStreaming.mockClear();
     const inFlight: DisplaySessionEvent[] = [
       {
         id: "evt-2",
@@ -460,11 +486,12 @@ describe("useChatHistorySync", () => {
     );
 
     await waitFor(() => {
-      expect(sidekickMocks.state.setStreamingAgentInstanceId).toHaveBeenCalledWith(
+      expect(sidekickMocks.state.setAgentStreaming).toHaveBeenCalledWith(
         "pa-42",
+        true,
       );
     });
-    sidekickMocks.state.setStreamingAgentInstanceId.mockClear();
+    sidekickMocks.state.setAgentStreaming.mockClear();
 
     mocks.useChatHistory.mockReturnValue({
       events: settled,
@@ -474,8 +501,9 @@ describe("useChatHistorySync", () => {
     rerender();
 
     await waitFor(() => {
-      expect(sidekickMocks.state.setStreamingAgentInstanceId).toHaveBeenCalledWith(
-        null,
+      expect(sidekickMocks.state.setAgentStreaming).toHaveBeenCalledWith(
+        "pa-42",
+        false,
       );
     });
   });
