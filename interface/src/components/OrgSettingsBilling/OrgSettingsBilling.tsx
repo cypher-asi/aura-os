@@ -76,7 +76,7 @@ export function OrgSettingsBilling({
             </span>
           </div>
           <div className={styles.rowControl}>
-            <span className={styles.roleBadge}>{billing?.plan ?? "free"}</span>
+            <span className={styles.roleBadge}>{billing?.plan ?? "mortal"}</span>
           </div>
         </div>
         {isAdminOrOwner && (

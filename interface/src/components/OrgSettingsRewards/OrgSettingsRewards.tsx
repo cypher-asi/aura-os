@@ -2,12 +2,10 @@ import { useState, useEffect } from "react";
 import { Button } from "@cypher-asi/zui";
 import { Copy, Check, Gift } from "lucide-react";
 import { authApi } from "../../api/auth";
-import { useAuth } from "../../stores/auth-store";
 import styles from "../OrgSettingsPanel/OrgSettingsPanel.module.css";
 import rewardStyles from "./OrgSettingsRewards.module.css";
 
 export function OrgSettingsRewards() {
-  const { user } = useAuth();
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -38,9 +36,9 @@ export function OrgSettingsRewards() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const isZeroPro = user?.is_zero_pro ?? false;
-  const dailyCredits = isZeroPro ? 400 : 200;
-  const referralBonus = isZeroPro ? 7500 : 5000;
+  // Mortal tier defaults — will update dynamically when tier system is wired up
+  const dailyCredits = 50;
+  const referralBonus = 5000;
 
   return (
     <>
@@ -96,10 +94,7 @@ export function OrgSettingsRewards() {
           <div className={styles.rowInfo}>
             <span className={styles.rowLabel}>Daily Credits</span>
             <span className={styles.rowDescription}>
-              Earned on first use each day
-              {isZeroPro
-                ? " (ZERO Pro boost)"
-                : " (400/day with ZERO Pro)"}
+              Earned on first use each day. Upgrade your tier for more.
             </span>
           </div>
           <div className={styles.rowControl}>
@@ -112,10 +107,7 @@ export function OrgSettingsRewards() {
           <div className={styles.rowInfo}>
             <span className={styles.rowLabel}>Referral Bonus</span>
             <span className={styles.rowDescription}>
-              Earned when someone signs up with your invite code
-              {isZeroPro
-                ? " (ZERO Pro boost)"
-                : " (7,500 with ZERO Pro)"}
+              Earned when someone signs up with your invite code. Higher tiers earn more.
             </span>
           </div>
           <div className={styles.rowControl}>
@@ -126,20 +118,16 @@ export function OrgSettingsRewards() {
         </div>
       </div>
 
-      {!isZeroPro && (
-        <>
-          <div className={styles.settingsGroupLabel}>Earn More</div>
-          <div className={styles.settingsGroup}>
-            <div className={rewardStyles.proPromo}>
-              <Gift size={16} />
-              <span>
-                ZERO Pro members earn more daily credits and higher referral
-                bonuses.
-              </span>
-            </div>
-          </div>
-        </>
-      )}
+      <div className={styles.settingsGroupLabel}>Earn More</div>
+      <div className={styles.settingsGroup}>
+        <div className={rewardStyles.proPromo}>
+          <Gift size={16} />
+          <span>
+            Upgrade your tier to earn more daily credits, higher referral
+            bonuses, and monthly credit allowances.
+          </span>
+        </div>
+      </div>
     </>
   );
 }
