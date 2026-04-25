@@ -167,14 +167,10 @@ export function LoopProgress({
         strokeDasharray={geom.circumference}
         strokeDashoffset={dashOffset}
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        style={
-          determinate
-            ? undefined
-            : {
-                transformOrigin: `${size / 2}px ${size / 2}px`,
-                animation: "loop-progress-spin 1.1s linear infinite",
-              }
-        }
+        style={{
+          transformOrigin: `${size / 2}px ${size / 2}px`,
+          animation: "loop-progress-spin 1.1s linear infinite",
+        }}
       />
       <style>{`
         @keyframes loop-progress-spin {
