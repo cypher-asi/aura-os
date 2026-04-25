@@ -1,47 +1,51 @@
-# Browser Use rebuild of changelog media and DeepSeek pricing support
+# Browser Use rebuild of changelog media, plus a wave of new model pricing
 
 - Date: `2026-04-24`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.375.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.375.1
+- Version: `0.1.0-nightly.376.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.376.1
 
-Today's nightly replaces the old screenshot pipeline with a Browser Use–driven changelog media system gated by independent quality and branding checks, and broadens model pricing coverage with new DeepSeek direct support and Fireworks open-model rates. Desktop builds for Mac, Windows, and Linux shipped alongside these changes.
+Today's nightly was dominated by a ground-up rebuild of how Aura captures and publishes changelog media, swapping the old Browserbase/Playwright pipeline for a Browser Use planning flow gated by quality and branding checks. Alongside that infra work, the model catalog picked up Fireworks open-weight pricing, first-class DeepSeek direct support, and GPT-5.5.
 
-## 2:34 AM — Changelog media pipeline rebuilt on Browser Use
+## 2:34 AM — Browser Use replaces the legacy changelog media pipeline
 
-The legacy screenshot pipeline was torn out and replaced with a Browser Use–first media system backed by seeded capture sessions and multi-stage quality gates.
+The old Browserbase/Playwright screenshot stack was retired in favor of an Anthropic-planned, Browser Use-driven capture flow with explicit quality and branding gates.
 
-- Retired the old Browserbase-based screenshot workflows and their supporting demo-agent seeding code, replacing them with a Browser Use planning trial, an Aura navigation contract, and a new capture-login view; the server now exposes a dedicated capture_auth path so automated runs can authenticate without leaking secrets. (`888afbe`, `a3be62e`)
-- Added independent branding and quality gates — raw screenshots, branded SVG cards, and final branded PNGs each pass their own structural and vision checks before anything is considered publish-ready. (`ff509bb`, `36a29c5`, `36ca8bb`)
-- Media runs now use seeded capture sessions passed through the URL fragment, with captureSession values redacted from task prompts and Browser Use message logs so secrets never land in artifacts. (`1fd2c56`, `e7b602e`)
-- Hardened the planner so large changelogs are chunked instead of truncated, omitted entries get a rescue pass, and lower-priority candidates are recorded as explicit skips rather than silently dropped; added sharp for real image processing in branding. (`36ca8bb`, `9b716b4`)
+- Removed the legacy changelog media publishing stack — Browserbase capture, demo seed planner, agent-demo screenshot generator, and the retry/sync workflows — and replaced it with a Browser Use planning pipeline driven by an Anthropic-classified media plan, deleting roughly 20k lines of older capture code. (`888afbe`)
+- Added independent quality and branding gates so a screenshot must pass a vision check before branding, and the final branded PNG must clear the same gate before it can publish, with chunked planner calls and a rescue pass to keep large changelogs from dropping entries. (`ff509bb`, `36a29c5`, `36ca8bb`, `9b716b4`)
+- Hardened automated capture auth: the server now accepts stateless capture sessions, the trial harness seeds them through the URL fragment, and capture-login secrets are redacted from logs and Browser Use task transcripts. (`a3be62e`, `1fd2c56`, `e7b602e`)
 
-## 5:09 AM — Safer publish handoff for media runs
+## 5:09 AM — Safer handoff between media evaluation and publish
 
-A documented handoff step ensures media is only handed to publish after passing the full evaluator chain.
+A small follow-up tightened how the evaluation pipeline hands accepted media off to the publish step.
 
-- Extended the evaluator with a safe publish handoff stage and documented the gate in the Browser Use plan, so media only advances to publish after capture, branding, and vision checks all succeed. (`d2bd4be`)
+- Added a safe publish handoff path in the changelog media evaluator and documented it in the Browser Use plan, so only fully gated assets advance toward publishing. (`d2bd4be`)
 
-## 9:45 AM — Higher-resolution capture and Fireworks open-model pricing
+## 9:45 AM — Fireworks open-model pricing and a wired-up media publish workflow
 
-The media pipeline moved to 2560×1440 captures with a real publish script, and the server's fee schedule grew to cover Fireworks-hosted open models.
+Midday work brought the new Publish Release Changelog Media GitHub workflow online and added pricing coverage for Fireworks-hosted open models.
 
-- Bumped the desktop capture viewport to 2560×1440 (1920×1080 minimum), taught the Browser Use task to handle capture-secret prompts via sensitive-data placeholders, and reintroduced a proper publish-release-changelog-media workflow that chains off the changelog publish run with artifact-based metadata. (`24208c6`, `4535126`)
-- Added a high-resolution capture library and a real publish-changelog-media script with tests, wiring the evaluator, planner, and branding stages into a single end-to-end publishing path. (`4535126`)
-- Expanded the server fee schedule from 7 to 15 models, adding pricing for Kimi K2.5/K2.6 (including turbo and thinking variants), Kimi K2 Instruct 0905, DeepSeek V3.2, and GPT-OSS 120B, and taught model-ID normalization to handle Fireworks account and router prefixes. (`916e38b`)
+- Brought back a Publish Release Changelog Media workflow that runs after the changelog publish job completes, with high-resolution capture, branding, and quality libraries wired into a real publish-changelog-media script — and tightened the trial's desktop viewport floor to 1920×1080 with a 2560×1440 default. (`4535126`, `24208c6`)
+- Expanded the server fee schedule from 7 to 15 models, adding Kimi K2.5/K2.6 and their turbo variants, Kimi K2 Thinking, Kimi K2 Instruct 0905, DeepSeek V3.2, and gpt-oss-120b, with normalization for `accounts/fireworks/models/*` and `accounts/fireworks/routers/*` IDs. (`916e38b`)
 
-## 1:49 PM — DeepSeek direct provider support
+## 1:49 PM — DeepSeek as a first-class direct provider
 
-DeepSeek is now a first-class provider family with its own API key, default model, and usage accounting, while the older Fireworks-hosted DeepSeek V3.2 entry was retired from the model list.
+DeepSeek moved from a Fireworks-hosted alias to a directly supported provider, and the older Fireworks DeepSeek V3.2 entry was retired from the picker.
 
-- Added DeepSeek as a recognized provider family with DEEPSEEK_API_KEY wiring, a deepseek-v4-flash default, and provider-family routing that distinguishes aura-deepseek-v4 direct models from the Fireworks-hosted aura-deepseek-v3-2 path. (`9e377b5`)
-- Taught usage extraction to accept DeepSeek-style prompt_tokens, completion_tokens, and prompt_cache_hit/miss fields so benchmark pricing and token accounting work against DeepSeek's native API shape. (`9e377b5`)
-- Removed the Fireworks-hosted DeepSeek V3.2 model from the public model list now that direct DeepSeek access is available. (`dd65db9`)
+- Added DeepSeek as a direct model provider: new `DEEPSEEK_API_KEY` wiring, a `deepseek/deepseek-v4-flash` default, and routing so `aura-deepseek-v4*` and `deepseek-v4*` model IDs resolve to the DeepSeek provider family while legacy `aura-deepseek-v3-2` still maps to Fireworks. (`9e377b5`)
+- Taught the usage extractor to read OpenAI-style `prompt_tokens`/`completion_tokens` and DeepSeek's `prompt_cache_hit_tokens`/`prompt_cache_miss_tokens`, so token accounting and cache stats stay accurate across providers. (`9e377b5`)
+- Removed the Fireworks-hosted DeepSeek V3.2 model from the picker and benchmark pricing now that direct DeepSeek is the supported path. (`dd65db9`)
+
+## 9:01 PM — GPT-5.5 available in the model picker
+
+Late-night change added GPT-5.5 as a selectable model with matching pricing.
+
+- Added GPT-5.5 to the model constants, chat input picker, and benchmark pricing tables so it can be selected in chat and metered correctly against usage. (`19b65b7`)
 
 ## Highlights
 
 - Changelog media pipeline rebuilt around Browser Use planning
-- Independent vision, branding, and layout gates before any media publishes
-- DeepSeek added as a first-class pricing and provider family
-- Fireworks open models (Kimi K2, DeepSeek V3.2, GPT-OSS 120B) now priced
+- Fireworks Kimi, DeepSeek, and gpt-oss models gain pricing coverage
+- DeepSeek direct provider and GPT-5.5 added to the model picker
+- Stateless capture auth and seeded sessions harden automated screenshots
 

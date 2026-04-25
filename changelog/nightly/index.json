@@ -2,19 +2,19 @@
   {
     "date": "2026-04-24",
     "channel": "nightly",
-    "version": "0.1.0-nightly.375.1",
-    "title": "Browser Use rebuild of changelog media and DeepSeek pricing support",
-    "intro": "Today's nightly replaces the old screenshot pipeline with a Browser Use–driven changelog media system gated by independent quality and branding checks, and broadens model pricing coverage with new DeepSeek direct support and Fireworks open-model rates. Desktop builds for Mac, Windows, and Linux shipped alongside these changes.",
-    "entryCount": 4,
+    "version": "0.1.0-nightly.376.1",
+    "title": "Browser Use rebuild of changelog media, plus a wave of new model pricing",
+    "intro": "Today's nightly was dominated by a ground-up rebuild of how Aura captures and publishes changelog media, swapping the old Browserbase/Playwright pipeline for a Browser Use planning flow gated by quality and branding checks. Alongside that infra work, the model catalog picked up Fireworks open-weight pricing, first-class DeepSeek direct support, and GPT-5.5.",
+    "entryCount": 5,
     "highlights": [
       "Changelog media pipeline rebuilt around Browser Use planning",
-      "Independent vision, branding, and layout gates before any media publishes",
-      "DeepSeek added as a first-class pricing and provider family",
-      "Fireworks open models (Kimi K2, DeepSeek V3.2, GPT-OSS 120B) now priced"
+      "Fireworks Kimi, DeepSeek, and gpt-oss models gain pricing coverage",
+      "DeepSeek direct provider and GPT-5.5 added to the model picker",
+      "Stateless capture auth and seeded sessions harden automated screenshots"
     ],
-    "rawCommitCount": 15,
-    "generatedAt": "2026-04-24T21:11:45.129Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.375.1",
+    "rawCommitCount": 16,
+    "generatedAt": "2026-04-25T04:15:34.551Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.376.1",
     "path": "history/2026-04-24.json"
   },
   {
