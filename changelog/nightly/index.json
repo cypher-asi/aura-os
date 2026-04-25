@@ -2,19 +2,19 @@
   {
     "date": "2026-04-24",
     "channel": "nightly",
-    "version": "0.1.0-nightly.376.1",
-    "title": "Browser Use rebuild of changelog media, plus a wave of new model pricing",
-    "intro": "Today's nightly was dominated by a ground-up rebuild of how Aura captures and publishes changelog media, swapping the old Browserbase/Playwright pipeline for a Browser Use planning flow gated by quality and branding checks. Alongside that infra work, the model catalog picked up Fireworks open-weight pricing, first-class DeepSeek direct support, and GPT-5.5.",
+    "version": "0.1.0-nightly.377.1",
+    "title": "Browser Use takes over changelog media, plus DeepSeek and GPT‑5.5 pricing",
+    "intro": "Most of today's nightly went into rebuilding how Aura captures and brands its own changelog screenshots — retiring the old Browserbase/Playwright pipeline in favor of a Browser Use–driven flow gated by Anthropic planning and OpenAI vision checks. Alongside that infrastructure work, the model catalog picked up native DeepSeek pricing and a new GPT‑5.5 entry in the chat model list.",
     "entryCount": 5,
     "highlights": [
-      "Changelog media pipeline rebuilt around Browser Use planning",
-      "Fireworks Kimi, DeepSeek, and gpt-oss models gain pricing coverage",
-      "DeepSeek direct provider and GPT-5.5 added to the model picker",
-      "Stateless capture auth and seeded sessions harden automated screenshots"
+      "Old changelog screenshot pipeline replaced with Browser Use planning",
+      "Stateless capture auth and seeded sessions for media runs",
+      "Multi-stage quality and branding gates on every captured asset",
+      "DeepSeek added as a first-class pricing/provider, GPT‑5.5 in chat picker"
     ],
-    "rawCommitCount": 16,
-    "generatedAt": "2026-04-25T04:15:34.551Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.376.1",
+    "rawCommitCount": 25,
+    "generatedAt": "2026-04-25T05:04:10.653Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.377.1",
     "path": "history/2026-04-24.json"
   },
   {

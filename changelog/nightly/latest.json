@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-25T04:15:34.551Z",
+  "generatedAt": "2026-04-25T05:04:10.653Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.376.1",
+  "version": "0.1.0-nightly.377.1",
   "date": "2026-04-24",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.376.1",
-  "lastIncludedSha": "19b65b784d1a518590252409b798a61da3d19bff",
-  "previousProcessedSha": "dd65db9dfdeb24141f60b5bab966752b54ae24a4",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.377.1",
+  "lastIncludedSha": "7634cce9381602993358fb1c24938a4f3cbe9097",
+  "previousProcessedSha": "19b65b784d1a518590252409b798a61da3d19bff",
   "commitShas": [
     "888afbe54b40663a072507842a7e01418d213479",
     "ff509bbaad88ca49ca6db28c3f157cb409d71a38",
@@ -26,10 +26,17 @@
     "45351266085d051ff86ea89baaec5388be36c22f",
     "9e377b590455f455c962b3ffbab856a3671cb708",
     "dd65db9dfdeb24141f60b5bab966752b54ae24a4",
-    "19b65b784d1a518590252409b798a61da3d19bff"
+    "19b65b784d1a518590252409b798a61da3d19bff",
+    "cdb612f0157c430c99e22aaa16ee5afec6b7d0ef",
+    "e1c2792826cbbe869b6aed39191fd238011146f9",
+    "a9ab5791edf5eea2ef58e00bacebb8490f07e2d2",
+    "4636e0d51c7135393029b1ff6221b651a570f422",
+    "41ee76d1867b7bf6b3fc143a65c398810b32a112",
+    "199fb2bd22854db340f3bbc7ab0028703a2cd17d",
+    "7634cce9381602993358fb1c24938a4f3cbe9097"
   ],
-  "rawCommitCount": 16,
-  "filteredCommitCount": 15,
+  "rawCommitCount": 25,
+  "filteredCommitCount": 22,
   "rawCommits": [
     {
       "sha": "888afbe54b40663a072507842a7e01418d213479",
@@ -866,6 +873,403 @@
         "Interface",
         "Other"
       ]
+    },
+    {
+      "sha": "cdb612f0157c430c99e22aaa16ee5afec6b7d0ef",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-24T15:18:07-04:00",
+      "subject": "Use OpenAI for changelog media vision gates",
+      "body": "",
+      "parents": [
+        "0ae7018cae4c495701a2fc3ee909579f151074a6"
+      ],
+      "files": [
+        ".github/workflows/publish-release-changelog-media.yml",
+        "interface/scripts/evaluate-changelog-media-pipeline.mjs",
+        "interface/scripts/evaluate-changelog-media-pipeline.test.mjs",
+        "interface/scripts/lib/changelog-media-quality.mjs",
+        "interface/scripts/lib/changelog-media-quality.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 190,
+        "deletions": 142
+      },
+      "committedAtMs": 1777058287000,
+      "cleanSubject": "Use OpenAI for changelog media vision gates",
+      "keywords": [
+        "openai",
+        "changelog",
+        "media",
+        "vision",
+        "gates"
+      ],
+      "fileGroups": [
+        ".github/workflows/publish-release-changelog-media.yml",
+        "interface/scripts/evaluate-changelog-media-pipeline.mjs",
+        "interface/scripts/evaluate-changelog-media-pipeline.test.mjs",
+        "interface/scripts/lib"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "e1c2792826cbbe869b6aed39191fd238011146f9",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-24T15:18:14-04:00",
+      "subject": "Simplify changelog media card branding",
+      "body": "",
+      "parents": [
+        "cdb612f0157c430c99e22aaa16ee5afec6b7d0ef"
+      ],
+      "files": [
+        "interface/scripts/lib/changelog-media-branding.mjs",
+        "interface/scripts/lib/changelog-media-branding.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 26,
+        "deletions": 37
+      },
+      "committedAtMs": 1777058294000,
+      "cleanSubject": "Simplify changelog media card branding",
+      "keywords": [
+        "simplify",
+        "changelog",
+        "media",
+        "card",
+        "branding"
+      ],
+      "fileGroups": [
+        "interface/scripts/lib"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "a9ab5791edf5eea2ef58e00bacebb8490f07e2d2",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-24T15:39:19-04:00",
+      "subject": "Reject empty-state changelog media proof",
+      "body": "",
+      "parents": [
+        "e1c2792826cbbe869b6aed39191fd238011146f9"
+      ],
+      "files": [
+        "interface/scripts/lib/changelog-media-planner.mjs",
+        "interface/scripts/lib/changelog-media-planner.test.mjs",
+        "interface/scripts/lib/changelog-media-quality.mjs",
+        "interface/scripts/lib/changelog-media-quality.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 38,
+        "deletions": 0
+      },
+      "committedAtMs": 1777059559000,
+      "cleanSubject": "Reject empty-state changelog media proof",
+      "keywords": [
+        "reject",
+        "empty",
+        "state",
+        "changelog",
+        "media",
+        "proof"
+      ],
+      "fileGroups": [
+        "interface/scripts/lib"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "4636e0d51c7135393029b1ff6221b651a570f422",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-24T16:45:04-04:00",
+      "subject": "Add scalable changelog media seed plans",
+      "body": "",
+      "parents": [
+        "a9ab5791edf5eea2ef58e00bacebb8490f07e2d2"
+      ],
+      "files": [
+        "interface/scripts/evaluate-changelog-media-pipeline.mjs",
+        "interface/scripts/lib/changelog-media-branding.mjs",
+        "interface/scripts/lib/changelog-media-branding.test.mjs",
+        "interface/scripts/lib/changelog-media-highres-capture.mjs",
+        "interface/scripts/lib/changelog-media-planner.mjs",
+        "interface/scripts/lib/changelog-media-planner.test.mjs",
+        "interface/scripts/lib/changelog-media-seed-plan.mjs",
+        "interface/scripts/lib/changelog-media-seed-plan.test.mjs",
+        "interface/src/apps/aura3d/Aura3DMainPanel/Aura3DMainPanel.tsx",
+        "interface/src/apps/aura3d/Aura3DSidekickPanel/Aura3DSidekickPanel.tsx",
+        "interface/src/apps/aura3d/ImageGeneration/ImageGeneration.tsx",
+        "interface/src/apps/aura3d/ImagePreview/ImagePreview.tsx",
+        "interface/src/components/AppShell/AppShell.tsx",
+        "interface/src/lib/capture-bridge.ts"
+      ],
+      "stats": {
+        "fileCount": 14,
+        "insertions": 411,
+        "deletions": 52
+      },
+      "committedAtMs": 1777063504000,
+      "cleanSubject": "Add scalable changelog media seed plans",
+      "keywords": [
+        "scalable",
+        "changelog",
+        "media",
+        "seed",
+        "plans"
+      ],
+      "fileGroups": [
+        "interface/scripts/evaluate-changelog-media-pipeline.mjs",
+        "interface/scripts/lib",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/lib"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "41ee76d1867b7bf6b3fc143a65c398810b32a112",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-24T23:59:02-04:00",
+      "subject": "Harden changelog media inference and capture",
+      "body": "",
+      "parents": [
+        "4636e0d51c7135393029b1ff6221b651a570f422"
+      ],
+      "files": [
+        "interface/scripts/lib/aura-navigation-contract.mjs",
+        "interface/scripts/lib/aura-navigation-contract.test.mjs",
+        "interface/scripts/lib/changelog-media-highres-capture.mjs",
+        "interface/scripts/lib/changelog-media-highres-capture.test.mjs",
+        "interface/scripts/lib/changelog-media-planner.mjs",
+        "interface/scripts/lib/changelog-media-planner.test.mjs",
+        "interface/scripts/lib/changelog-media-seed-plan.mjs",
+        "interface/scripts/lib/changelog-media-seed-plan.test.mjs",
+        "interface/src/apps/agents/AgentMainPanel/AgentMainPanel.tsx",
+        "interface/src/apps/aura3d/Aura3DMainPanel/Aura3DMainPanel.tsx",
+        "interface/src/apps/aura3d/ModelGeneration/ModelGeneration.tsx",
+        "interface/src/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/lib/capture-bridge.test.ts",
+        "interface/src/lib/capture-bridge.ts"
+      ],
+      "stats": {
+        "fileCount": 14,
+        "insertions": 372,
+        "deletions": 27
+      },
+      "committedAtMs": 1777089542000,
+      "cleanSubject": "Harden changelog media inference and capture",
+      "keywords": [
+        "harden",
+        "changelog",
+        "media",
+        "inference",
+        "capture"
+      ],
+      "fileGroups": [
+        "interface/scripts/lib",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/lib"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "9ddf52c9ebdc98df154fb1bbc669209138fdebf5",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-24T23:59:30-04:00",
+      "subject": "Merge remote-tracking branch 'origin/main' into codex/changelog-media-quality-branding",
+      "body": "",
+      "parents": [
+        "41ee76d1867b7bf6b3fc143a65c398810b32a112",
+        "dd65db9dfdeb24141f60b5bab966752b54ae24a4"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 346,
+        "deletions": 105
+      },
+      "committedAtMs": 1777089570000,
+      "cleanSubject": "Merge remote-tracking branch 'origin/main' into codex/changelog-media-quality-branding",
+      "keywords": [
+        "merge",
+        "remote",
+        "tracking",
+        "branch",
+        "origin",
+        "main",
+        "into",
+        "codex",
+        "changelog",
+        "media",
+        "quality",
+        "branding"
+      ],
+      "fileGroups": [],
+      "primaryArea": "Other",
+      "areas": []
+    },
+    {
+      "sha": "199fb2bd22854db340f3bbc7ab0028703a2cd17d",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-25T00:31:15-04:00",
+      "subject": "Tighten changelog media inference after main merge",
+      "body": "",
+      "parents": [
+        "9ddf52c9ebdc98df154fb1bbc669209138fdebf5"
+      ],
+      "files": [
+        "interface/scripts/lib/changelog-media-highres-capture.mjs",
+        "interface/scripts/lib/changelog-media-highres-capture.test.mjs",
+        "interface/scripts/lib/changelog-media-planner.mjs",
+        "interface/scripts/lib/changelog-media-planner.test.mjs",
+        "interface/scripts/lib/changelog-media-quality.mjs",
+        "interface/src/lib/capture-bridge.test.ts",
+        "interface/src/lib/capture-bridge.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 152,
+        "deletions": 15
+      },
+      "committedAtMs": 1777091475000,
+      "cleanSubject": "Tighten changelog media inference after main merge",
+      "keywords": [
+        "tighten",
+        "changelog",
+        "media",
+        "inference",
+        "after",
+        "main",
+        "merge"
+      ],
+      "fileGroups": [
+        "interface/scripts/lib",
+        "interface/src/lib"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "df56202982a8de355e42a2e6b8e4e9147a72f9a2",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-25T00:34:47-04:00",
+      "subject": "Merge remote-tracking branch 'origin/main' into codex/changelog-media-quality-branding",
+      "body": "",
+      "parents": [
+        "199fb2bd22854db340f3bbc7ab0028703a2cd17d",
+        "19b65b784d1a518590252409b798a61da3d19bff"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 52,
+        "deletions": 1
+      },
+      "committedAtMs": 1777091687000,
+      "cleanSubject": "Merge remote-tracking branch 'origin/main' into codex/changelog-media-quality-branding",
+      "keywords": [
+        "merge",
+        "remote",
+        "tracking",
+        "branch",
+        "origin",
+        "main",
+        "into",
+        "codex",
+        "changelog",
+        "media",
+        "quality",
+        "branding"
+      ],
+      "fileGroups": [],
+      "primaryArea": "Other",
+      "areas": []
+    },
+    {
+      "sha": "7634cce9381602993358fb1c24938a4f3cbe9097",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-25T00:50:20-04:00",
+      "subject": "Calibrate compact changelog media captures",
+      "body": "",
+      "parents": [
+        "df56202982a8de355e42a2e6b8e4e9147a72f9a2"
+      ],
+      "files": [
+        "interface/scripts/lib/changelog-media-highres-capture.mjs",
+        "interface/scripts/lib/changelog-media-highres-capture.test.mjs",
+        "interface/scripts/lib/changelog-media-quality.mjs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 21,
+        "deletions": 9
+      },
+      "committedAtMs": 1777092620000,
+      "cleanSubject": "Calibrate compact changelog media captures",
+      "keywords": [
+        "calibrate",
+        "compact",
+        "changelog",
+        "media",
+        "captures"
+      ],
+      "fileGroups": [
+        "interface/scripts/lib"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
     }
   ],
   "batchCount": 5,
@@ -877,36 +1281,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11438682
+          "sizeBytes": 11444770
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.376.1",
+      "version": "0.1.0-nightly.377.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.376.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.377.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 35298210
+          "sizeBytes": 35304932
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.376.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.377.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.376.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.377.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 102484472
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.376.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.377.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -916,29 +1320,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.376.1",
+      "version": "0.1.0-nightly.377.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.376.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.377.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 31727724
+          "sizeBytes": 31740464
         },
         {
-          "name": "Aura_0.1.0-nightly.376.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.377.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.376.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.377.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 31535112
+          "sizeBytes": 31538974
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.376.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.377.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -948,29 +1352,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.376.1",
+      "version": "0.1.0-nightly.377.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.376.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.377.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33327231
+          "sizeBytes": 33296810
         },
         {
-          "name": "Aura_0.1.0-nightly.376.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.377.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.376.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.377.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33151914
+          "sizeBytes": 33150864
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.376.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.377.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -980,17 +1384,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.376.1",
+      "version": "0.1.0-nightly.377.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.376.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.377.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 23881440
+          "sizeBytes": 23887126
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.376.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.377.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -999,40 +1403,47 @@
     }
   ],
   "rendered": {
-    "title": "Browser Use rebuild of changelog media, plus a wave of new model pricing",
-    "intro": "Today's nightly was dominated by a ground-up rebuild of how Aura captures and publishes changelog media, swapping the old Browserbase/Playwright pipeline for a Browser Use planning flow gated by quality and branding checks. Alongside that infra work, the model catalog picked up Fireworks open-weight pricing, first-class DeepSeek direct support, and GPT-5.5.",
+    "title": "Browser Use takes over changelog media, plus DeepSeek and GPT‑5.5 pricing",
+    "intro": "Most of today's nightly went into rebuilding how Aura captures and brands its own changelog screenshots — retiring the old Browserbase/Playwright pipeline in favor of a Browser Use–driven flow gated by Anthropic planning and OpenAI vision checks. Alongside that infrastructure work, the model catalog picked up native DeepSeek pricing and a new GPT‑5.5 entry in the chat model list.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:34 AM",
         "started_at": "2026-04-24T09:34:25.000Z",
         "ended_at": "2026-04-24T12:02:56.000Z",
-        "title": "Browser Use replaces the legacy changelog media pipeline",
-        "summary": "The old Browserbase/Playwright screenshot stack was retired in favor of an Anthropic-planned, Browser Use-driven capture flow with explicit quality and branding gates.",
+        "title": "Changelog media pipeline rebuilt around Browser Use",
+        "summary": "The legacy Browserbase/Playwright screenshot pipeline was deleted and replaced with an Anthropic-planned, Browser Use–driven capture flow guarded by quality and branding checks.",
         "items": [
           {
-            "text": "Removed the legacy changelog media publishing stack — Browserbase capture, demo seed planner, agent-demo screenshot generator, and the retry/sync workflows — and replaced it with a Browser Use planning pipeline driven by an Anthropic-classified media plan, deleting roughly 20k lines of older capture code.",
+            "text": "Removed the old changelog media publishing stack — including the publish-release-changelog-media, retry, and history-sync workflows plus ~20k lines of demo screenshot tooling — and replaced it with a Browser Use planning trial driven by new evaluate-changelog-media-pipeline and plan-changelog-media scripts.",
             "commit_shas": [
               "888afbe54b40663a072507842a7e01418d213479"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added independent quality and branding gates so a screenshot must pass a vision check before branding, and the final branded PNG must clear the same gate before it can publish, with chunked planner calls and a rescue pass to keep large changelogs from dropping entries.",
+            "text": "Introduced stateless capture authentication on the server with a new capture_auth module, AURA_CHANGELOG_CAPTURE_SECRET, and a dedicated CaptureLoginView so automated media runs can sign in without persisted sessions.",
             "commit_shas": [
-              "ff509bbaad88ca49ca6db28c3f157cb409d71a38",
-              "36a29c577e5c6804bf89adf7092e62e2dda4bee6",
-              "36ca8bb3bc141fd0735c1dac5ea2b5df923413f4",
-              "9b716b4c5788798046f6f26a575cbc30eacbd3d2"
+              "888afbe54b40663a072507842a7e01418d213479",
+              "a3be62e637dd8354ce1fb42228a562757e982f90",
+              "e7b602e4d46a22e9500212977b09f33b0506b409"
             ],
             "confidence": "high"
           },
           {
-            "text": "Hardened automated capture auth: the server now accepts stateless capture sessions, the trial harness seeds them through the URL fragment, and capture-login secrets are redacted from logs and Browser Use task transcripts.",
+            "text": "Added independent quality and branding gates: raw screenshots, branded SVG cards, and final PNGs each pass structural and vision checks, with chunked Anthropic planning and an OpenAI-backed branding stage that only runs after proof gates pass.",
             "commit_shas": [
-              "a3be62e637dd8354ce1fb42228a562757e982f90",
-              "1fd2c56e3a21c05a700e8917d825c5cd59f26fad",
-              "e7b602e4d46a22e9500212977b09f33b0506b409"
+              "ff509bbaad88ca49ca6db28c3f157cb409d71a38",
+              "9b716b4c5788798046f6f26a575cbc30eacbd3d2",
+              "36a29c577e5c6804bf89adf7092e62e2dda4bee6",
+              "36ca8bb3bc141fd0735c1dac5ea2b5df923413f4"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Switched media runs to seeded capture sessions so Browser Use lands directly inside an authenticated Aura desktop shell instead of getting stuck on the access-key form.",
+            "commit_shas": [
+              "1fd2c56e3a21c05a700e8917d825c5cd59f26fad"
             ],
             "confidence": "high"
           }
@@ -1043,11 +1454,11 @@
         "time_label": "5:09 AM",
         "started_at": "2026-04-24T12:09:13.000Z",
         "ended_at": "2026-04-24T12:09:13.000Z",
-        "title": "Safer handoff between media evaluation and publish",
-        "summary": "A small follow-up tightened how the evaluation pipeline hands accepted media off to the publish step.",
+        "title": "Safe handoff between capture and publish stages",
+        "summary": "Added a guarded handoff so the evaluator only forwards assets to the publish step once they've cleared proof gates.",
         "items": [
           {
-            "text": "Added a safe publish handoff path in the changelog media evaluator and documented it in the Browser Use plan, so only fully gated assets advance toward publishing.",
+            "text": "Documented and implemented a safe publish handoff in evaluate-changelog-media-pipeline so branded media is only released downstream when capture and quality checks succeed.",
             "commit_shas": [
               "d2bd4beb584cde7593941416e78a0e4f0111cf78"
             ],
@@ -1059,20 +1470,35 @@
         "batch_id": "entry-3",
         "time_label": "9:45 AM",
         "started_at": "2026-04-24T16:45:12.000Z",
-        "ended_at": "2026-04-24T18:53:18.000Z",
-        "title": "Fireworks open-model pricing and a wired-up media publish workflow",
-        "summary": "Midday work brought the new Publish Release Changelog Media GitHub workflow online and added pricing coverage for Fireworks-hosted open models.",
+        "ended_at": "2026-04-24T19:39:19.000Z",
+        "title": "OpenAI vision gate and a workflow_run-triggered publisher",
+        "summary": "The publisher workflow was rewritten to chain off the changelog publish run, and vision gating moved to OpenAI with stricter rejection of empty-state proofs.",
         "items": [
           {
-            "text": "Brought back a Publish Release Changelog Media workflow that runs after the changelog publish job completes, with high-resolution capture, branding, and quality libraries wired into a real publish-changelog-media script — and tightened the trial's desktop viewport floor to 1920×1080 with a 2560×1440 default.",
+            "text": "Re-introduced a Publish Release Changelog Media workflow that triggers on workflow_run from the upstream changelog job, resolves the target from publish metadata, and runs a new publish-changelog-media script with high-resolution capture support.",
             "commit_shas": [
-              "45351266085d051ff86ea89baaec5388be36c22f",
-              "24208c688c1a9dca28051ff193e32c85e4ec7a1b"
+              "45351266085d051ff86ea89baaec5388be36c22f"
             ],
             "confidence": "high"
           },
           {
-            "text": "Expanded the server fee schedule from 7 to 15 models, adding Kimi K2.5/K2.6 and their turbo variants, Kimi K2 Thinking, Kimi K2 Instruct 0905, DeepSeek V3.2, and gpt-oss-120b, with normalization for `accounts/fireworks/models/*` and `accounts/fireworks/routers/*` IDs.",
+            "text": "Switched the changelog media vision judge to OpenAI and tightened branding so the same vision gate applies to both raw screenshots and the final branded PNG.",
+            "commit_shas": [
+              "cdb612f0157c430c99e22aaa16ee5afec6b7d0ef",
+              "e1c2792826cbbe869b6aed39191fd238011146f9"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Hardened Browser Use task prompts with a sensitive-secret placeholder for the capture access key, raised the desktop viewport target to 2560×1440, and added quality rules that reject empty-state or weak proofs outright.",
+            "commit_shas": [
+              "24208c688c1a9dca28051ff193e32c85e4ec7a1b",
+              "a9ab5791edf5eea2ef58e00bacebb8490f07e2d2"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added Fireworks open-model pricing coverage to the benchmark pricing tables and dev-loop fee schedule.",
             "commit_shas": [
               "916e38bbf83f0defba37869fc495e9d0e4cd9f2d"
             ],
@@ -1082,47 +1508,69 @@
       },
       {
         "batch_id": "entry-4",
-        "time_label": "1:49 PM",
-        "started_at": "2026-04-24T20:49:30.000Z",
+        "time_label": "1:45 PM",
+        "started_at": "2026-04-24T20:45:04.000Z",
         "ended_at": "2026-04-24T20:58:01.000Z",
-        "title": "DeepSeek as a first-class direct provider",
-        "summary": "DeepSeek moved from a Fireworks-hosted alias to a directly supported provider, and the older Fireworks DeepSeek V3.2 entry was retired from the picker.",
+        "title": "DeepSeek as a first-class provider and seeded capture plans",
+        "summary": "DeepSeek picked up direct provider routing and pricing, the older Fireworks-hosted DeepSeek V3.2 entry was retired, and capture runs gained scalable per-candidate seed plans.",
         "items": [
           {
-            "text": "Added DeepSeek as a direct model provider: new `DEEPSEEK_API_KEY` wiring, a `deepseek/deepseek-v4-flash` default, and routing so `aura-deepseek-v4*` and `deepseek-v4*` model IDs resolve to the DeepSeek provider family while legacy `aura-deepseek-v3-2` still maps to Fireworks.",
+            "text": "Added DeepSeek as a direct provider with its own DEEPSEEK_API_KEY routing, deepseek-v4 model family detection, and benchmark pricing/usage coverage in both the server dev-loop and the interface model constants.",
             "commit_shas": [
               "9e377b590455f455c962b3ffbab856a3671cb708"
             ],
             "confidence": "high"
           },
           {
-            "text": "Taught the usage extractor to read OpenAI-style `prompt_tokens`/`completion_tokens` and DeepSeek's `prompt_cache_hit_tokens`/`prompt_cache_miss_tokens`, so token accounting and cache stats stay accurate across providers.",
-            "commit_shas": [
-              "9e377b590455f455c962b3ffbab856a3671cb708"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Removed the Fireworks-hosted DeepSeek V3.2 model from the picker and benchmark pricing now that direct DeepSeek is the supported path.",
+            "text": "Removed the Fireworks-hosted DeepSeek V3.2 model from the chat picker, pricing tables, and runtime routing now that DeepSeek is wired up directly.",
             "commit_shas": [
               "dd65db9dfdeb24141f60b5bab966752b54ae24a4"
             ],
             "confidence": "high"
+          },
+          {
+            "text": "Introduced normalized capture seed plans per media candidate, persisted alongside the navigation contract, and tuned branded-card padding so screenshots without a header get tighter framing.",
+            "commit_shas": [
+              "4636e0d51c7135393029b1ff6221b651a570f422"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added data-agent-context and capture-bridge plumbing across AppShell and the Aura3D image generation surfaces so changed product features expose stable proof handles for screenshot navigation.",
+            "commit_shas": [
+              "4636e0d51c7135393029b1ff6221b651a570f422"
+            ],
+            "confidence": "medium"
           }
         ]
       },
       {
         "batch_id": "entry-5",
-        "time_label": "9:01 PM",
-        "started_at": "2026-04-25T04:01:26.000Z",
-        "ended_at": "2026-04-25T04:01:26.000Z",
-        "title": "GPT-5.5 available in the model picker",
-        "summary": "Late-night change added GPT-5.5 as a selectable model with matching pricing.",
+        "time_label": "8:59 PM",
+        "started_at": "2026-04-25T03:59:02.000Z",
+        "ended_at": "2026-04-25T04:50:20.000Z",
+        "title": "Late-night inference tightening and GPT‑5.5 in the chat picker",
+        "summary": "Closed out the day by sharpening navigation inference, recalibrating compact captures, and adding GPT‑5.5 to the model catalog.",
         "items": [
           {
-            "text": "Added GPT-5.5 to the model constants, chat input picker, and benchmark pricing tables so it can be selected in chat and metered correctly against usage.",
+            "text": "Added GPT‑5.5 to the interface model list, ChatInputBar picker, and benchmark pricing so it can be selected and costed end-to-end.",
             "commit_shas": [
               "19b65b784d1a518590252409b798a61da3d19bff"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Hardened changelog media inference by teaching the navigation contract about data-agent-context, data-agent-context-anchor, and data-agent-proof handles, and surfaced those across AgentMainPanel, Aura3D, and ChatInputBar.",
+            "commit_shas": [
+              "41ee76d1867b7bf6b3fc143a65c398810b32a112"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Calibrated the high-resolution capture path with a configurable changelog capture zoom and tightened compact-capture quality thresholds after the main merge.",
+            "commit_shas": [
+              "199fb2bd22854db340f3bbc7ab0028703a2cd17d",
+              "7634cce9381602993358fb1c24938a4f3cbe9097"
             ],
             "confidence": "high"
           }
@@ -1130,11 +1578,11 @@
       }
     ],
     "highlights": [
-      "Changelog media pipeline rebuilt around Browser Use planning",
-      "Fireworks Kimi, DeepSeek, and gpt-oss models gain pricing coverage",
-      "DeepSeek direct provider and GPT-5.5 added to the model picker",
-      "Stateless capture auth and seeded sessions harden automated screenshots"
+      "Old changelog screenshot pipeline replaced with Browser Use planning",
+      "Stateless capture auth and seeded sessions for media runs",
+      "Multi-stage quality and branding gates on every captured asset",
+      "DeepSeek added as a first-class pricing/provider, GPT‑5.5 in chat picker"
     ],
-    "raw_commit_count": 15
+    "raw_commit_count": 22
   }
 }
