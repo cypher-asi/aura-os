@@ -61,6 +61,26 @@ describe("benchmark pricing", () => {
     expect(pricing.output).toBe(14);
   });
 
+  it("resolves GPT-5.5 pricing for OpenAI model IDs", () => {
+    const pricing = resolvePricing("openai/gpt-5.5", "openai");
+
+    expect(pricing.source).toBe("openai-pricing");
+    expect(pricing.model).toBe("gpt-5.5");
+    expect(pricing.input).toBe(5);
+    expect(pricing.cacheRead).toBe(0.5);
+    expect(pricing.output).toBe(30);
+  });
+
+  it("resolves GPT-5.5 pricing for Aura-managed model IDs", () => {
+    const pricing = resolvePricing("aura-gpt-5-5");
+
+    expect(pricing.provider).toBe("openai");
+    expect(pricing.source).toBe("openai-pricing");
+    expect(pricing.model).toBe("gpt-5.5");
+    expect(pricing.input).toBe(5);
+    expect(pricing.output).toBe(30);
+  });
+
   it("resolves Kimi pricing for Aura-managed Fireworks model IDs", () => {
     const pricing = resolvePricing("aura-kimi-k2-6");
 

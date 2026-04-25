@@ -1256,8 +1256,17 @@ struct ModelRates {
     cache_read: f64,
 }
 
-fn default_fee_schedule() -> [(&'static str, ModelRates); 15] {
+fn default_fee_schedule() -> [(&'static str, ModelRates); 16] {
     [
+        (
+            "gpt-5.5",
+            ModelRates {
+                input: 5.0,
+                output: 30.0,
+                cache_write: 5.0,
+                cache_read: 0.5,
+            },
+        ),
         (
             "gpt-5.4",
             ModelRates {
@@ -1440,6 +1449,7 @@ fn normalize_pricing_model_id(model: &str) -> String {
     }
 
     for (aura_id, model_id) in [
+        ("aura-gpt-5-5", "gpt-5.5"),
         ("aura-gpt-5-4", "gpt-5.4"),
         ("aura-gpt-5-4-mini", "gpt-5.4-mini"),
         ("aura-gpt-5-4-nano", "gpt-5.4-nano"),
@@ -4950,6 +4960,13 @@ mod tests {
 
         assert!((pro - 1.885).abs() < 1e-9);
         assert!((flash - 0.168).abs() < 1e-9);
+    }
+
+    #[test]
+    fn estimate_usage_cost_matches_gpt_5_5_rates() {
+        let cost = estimate_usage_cost_usd("aura-gpt-5-5", 1_000_000, 500_000, 0, 1_000_000);
+
+        assert!((cost - 20.5).abs() < 1e-9);
     }
 
     #[test]

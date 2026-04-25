@@ -80,6 +80,12 @@ const ANTHROPIC_MODEL_PRICING_PER_MTOK = {
 };
 
 const OPENAI_MODEL_PRICING_PER_MTOK = {
+  "gpt-5.5": {
+    input: 5,
+    output: 30,
+    cacheWrite: 5,
+    cacheRead: 0.5,
+  },
   "gpt-5.4": {
     input: 2.5,
     output: 15,
