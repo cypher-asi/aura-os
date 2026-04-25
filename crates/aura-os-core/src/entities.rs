@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 
 use crate::enums::{
-    AgentStatus, ArtifactType, ChatRole, HarnessMode, ProcessEventStatus, ProcessNodeType,
-    ProcessRunStatus, ProcessRunTrigger, ProjectStatus, SessionStatus, TaskStatus,
+    AgentInstanceRole, AgentStatus, ArtifactType, ChatRole, HarnessMode, ProcessEventStatus,
+    ProcessNodeType, ProcessRunStatus, ProcessRunTrigger, ProjectStatus, SessionStatus, TaskStatus,
 };
 use crate::ids::{
     AgentId, AgentInstanceId, OrgId, ProcessArtifactId, ProcessEventId, ProcessFolderId, ProcessId,
@@ -346,6 +346,13 @@ pub struct AgentInstance {
     pub status: AgentStatus,
     pub current_task_id: Option<TaskId>,
     pub current_session_id: Option<SessionId>,
+    /// Functional role this instance plays in the project (chat target,
+    /// automation loop target, or an ephemeral per-task executor).
+    /// Defaults to [`AgentInstanceRole::Chat`] so legacy rows without
+    /// the field stay on the chat surface — see the enum docs for the
+    /// full multi-instance rationale.
+    #[serde(default)]
+    pub instance_role: AgentInstanceRole,
     #[serde(default)]
     pub total_input_tokens: u64,
     #[serde(default)]

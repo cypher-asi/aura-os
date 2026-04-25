@@ -204,6 +204,10 @@ pub(crate) async fn ensure_agent_home_project_and_binding(
         skills: Some(agent.skills.clone()),
         icon: agent.icon.clone(),
         harness: None,
+        // The home-project binding is the user's primary chat target,
+        // so stamp it as such even when the storage backend silently
+        // drops the column on older deployments.
+        instance_role: Some(aura_os_core::AgentInstanceRole::Chat.as_wire_str().to_string()),
         permissions: Some(agent.permissions.clone()),
         intent_classifier: agent.intent_classifier.clone(),
     };

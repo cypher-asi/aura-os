@@ -636,6 +636,21 @@ impl AgentInstanceService {
         project_id: &ProjectId,
         agent: &Agent,
     ) -> Result<AgentInstance, AgentError> {
+        self.create_instance_from_agent_with_role(project_id, agent, AgentInstanceRole::Chat)
+            .await
+    }
+
+    /// Create a project-agent binding pinned to a specific functional
+    /// role (chat target, automation loop target, or ephemeral
+    /// executor). Used by the Phase 2 default-instance bootstrap and
+    /// by the ad-hoc executor allocator to keep registry slots
+    /// distinct from the persistent chat / loop instances.
+    pub async fn create_instance_from_agent_with_role(
+        &self,
+        project_id: &ProjectId,
+        agent: &Agent,
+        role: AgentInstanceRole,
+    ) -> Result<AgentInstance, AgentError> {
         let storage = self.require_storage()?;
         let jwt = self.get_jwt()?;
         let req = aura_os_storage::CreateProjectAgentRequest {
@@ -648,13 +663,19 @@ impl AgentInstanceService {
             skills: Some(agent.skills.clone()),
             icon: agent.icon.clone(),
             harness: None,
+            instance_role: Some(role.as_wire_str().to_string()),
             permissions: Some(agent.permissions.clone()),
             intent_classifier: agent.intent_classifier.clone(),
         };
         let spa = storage
             .create_project_agent(&project_id.to_string(), &jwt, &req)
             .await?;
-        Ok(merge_agent_instance(&spa, Some(agent), None))
+        let mut instance = merge_agent_instance(&spa, Some(agent), None);
+        // The storage round-trip can drop unknown columns on older
+        // backends — keep the explicit role we just sent so callers
+        // observe the same value they requested.
+        instance.instance_role = role;
+        Ok(instance)
     }
 
     pub async fn get_instance(
@@ -930,6 +951,11 @@ pub fn merge_agent_instance(
             .unwrap_or(AgentStatus::Idle),
         current_task_id: runtime.and_then(|r| r.current_task_id),
         current_session_id: runtime.and_then(|r| r.current_session_id),
+        instance_role: spa
+            .instance_role
+            .as_deref()
+            .map(AgentInstanceRole::from_wire_str)
+            .unwrap_or_default(),
         total_input_tokens: spa.total_input_tokens.unwrap_or(0),
         total_output_tokens: spa.total_output_tokens.unwrap_or(0),
         model: spa.model.clone(),
@@ -974,6 +1000,7 @@ mod tests {
             model: None,
             total_input_tokens: None,
             total_output_tokens: None,
+            instance_role: None,
             permissions: None,
             intent_classifier: None,
             created_at: None,
@@ -1052,6 +1079,77 @@ mod tests {
         let agent = network_agent_to_core(&net);
         assert!(!agent.permissions.is_ceo_preset());
         assert!(agent.permissions.capabilities.is_empty());
+    }
+
+    // -----------------------------------------------------------------
+    // merge_agent_instance + AgentInstanceRole. Pins that the new
+    // `instance_role` column round-trips through the storage DTO and
+    // that legacy rows (storage payloads without the column) still
+    // resolve to `Chat`, matching the entity-layer default. This is
+    // the contract every consumer of `AgentInstance.instance_role`
+    // (frontend type, sidekick routing, future executor allocator)
+    // depends on.
+    // -----------------------------------------------------------------
+
+    fn make_storage_project_agent(role: Option<&str>) -> aura_os_storage::StorageProjectAgent {
+        aura_os_storage::StorageProjectAgent {
+            id: AgentInstanceId::new().to_string(),
+            project_id: Some(ProjectId::new().to_string()),
+            org_id: None,
+            agent_id: Some(AgentId::new().to_string()),
+            name: Some("Atlas".to_string()),
+            role: Some("Engineer".to_string()),
+            personality: None,
+            system_prompt: None,
+            skills: None,
+            icon: None,
+            harness: None,
+            status: Some("idle".to_string()),
+            model: None,
+            total_input_tokens: None,
+            total_output_tokens: None,
+            instance_role: role.map(str::to_string),
+            permissions: None,
+            intent_classifier: None,
+            created_at: None,
+            updated_at: None,
+        }
+    }
+
+    #[test]
+    fn merge_agent_instance_propagates_known_instance_role() {
+        for (wire, expected) in [
+            ("chat", AgentInstanceRole::Chat),
+            ("loop", AgentInstanceRole::Loop),
+            ("executor", AgentInstanceRole::Executor),
+        ] {
+            let spa = make_storage_project_agent(Some(wire));
+            let merged = merge_agent_instance(&spa, None, None);
+            assert_eq!(
+                merged.instance_role, expected,
+                "wire role `{wire}` should map to {expected:?}",
+            );
+        }
+    }
+
+    #[test]
+    fn merge_agent_instance_defaults_legacy_rows_to_chat() {
+        // Storage rows that pre-date the column come back with
+        // `instance_role: None`; consumers must observe the same
+        // default the entity layer applies on a missing field.
+        let spa = make_storage_project_agent(None);
+        let merged = merge_agent_instance(&spa, None, None);
+        assert_eq!(merged.instance_role, AgentInstanceRole::Chat);
+    }
+
+    #[test]
+    fn merge_agent_instance_treats_unknown_role_as_chat() {
+        // Forward-compat: a future variant minted by a newer client
+        // must not blow up an older deserialiser. We collapse to the
+        // default rather than panic or error.
+        let spa = make_storage_project_agent(Some("supervisor"));
+        let merged = merge_agent_instance(&spa, None, None);
+        assert_eq!(merged.instance_role, AgentInstanceRole::Chat);
     }
 
     // -----------------------------------------------------------------

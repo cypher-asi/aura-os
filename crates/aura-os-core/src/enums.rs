@@ -34,6 +34,56 @@ pub enum AgentStatus {
     Archived,
 }
 
+/// Functional role an `AgentInstance` plays inside a project.
+///
+/// This is the foundation for the multi-instance concurrency model
+/// (see `concurrent-agent-loops` plan, Phase 2): the upstream harness
+/// enforces "one in-flight turn per `agent_id`", so a single instance
+/// cannot simultaneously serve a chat turn, an automation loop, and a
+/// task run. Instead, each project hosts at least:
+///
+/// * one `Chat` instance — the default target for the main chat
+///   surface,
+/// * one `Loop` instance — the default target for the automation loop,
+/// * any number of ephemeral `Executor` instances — one per concurrent
+///   ad-hoc task run.
+///
+/// Defaults to [`Self::Chat`] so existing rows that pre-date this
+/// field stay routed to the chat surface, matching their historical
+/// behavior. Persisted on the storage DTO as a snake-case string so
+/// the field survives unknown values from older clients (deserialised
+/// via `#[serde(default)]` everywhere it appears).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum AgentInstanceRole {
+    #[default]
+    Chat,
+    Loop,
+    Executor,
+}
+
+impl AgentInstanceRole {
+    /// Stable wire string used in storage payloads and event JSON.
+    pub fn as_wire_str(&self) -> &'static str {
+        match self {
+            Self::Chat => "chat",
+            Self::Loop => "loop",
+            Self::Executor => "executor",
+        }
+    }
+
+    /// Parse the wire string emitted by [`Self::as_wire_str`].
+    /// Unknown values map to [`Self::Chat`] so a forward-compat
+    /// upstream that introduces a new variant doesn't poison reads.
+    pub fn from_wire_str(s: &str) -> Self {
+        match s {
+            "loop" => Self::Loop,
+            "executor" => Self::Executor,
+            _ => Self::Chat,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SessionStatus {

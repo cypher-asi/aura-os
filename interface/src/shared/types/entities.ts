@@ -160,6 +160,22 @@ export interface Agent {
   updated_at: string;
 }
 
+/**
+ * Functional role this `AgentInstance` plays inside its project. The
+ * upstream harness gates "one in-flight turn per agent_id", so a single
+ * instance cannot service chat, an automation loop, and an ad-hoc task
+ * simultaneously. The multi-instance concurrency model partitions work
+ * across:
+ *
+ * - `chat`: the default target for the main chat surface,
+ * - `loop`: the default target for the project's automation loop,
+ * - `executor`: an ephemeral instance allocated per ad-hoc task run.
+ *
+ * Defaults to `chat` for legacy rows that pre-date this field, matching
+ * their existing routing to the chat surface.
+ */
+export type AgentInstanceRole = "chat" | "loop" | "executor";
+
 export interface AgentInstance {
   agent_instance_id: AgentInstanceId;
   project_id: ProjectId;
@@ -181,6 +197,10 @@ export interface AgentInstance {
   status: AgentStatus;
   current_task_id: TaskId | null;
   current_session_id: SessionId | null;
+  /** See {@link AgentInstanceRole}. Optional on the wire so older
+   *  backends without the column round-trip cleanly; consumers should
+   *  treat `undefined` as `"chat"`. */
+  instance_role?: AgentInstanceRole;
   total_input_tokens: number;
   total_output_tokens: number;
   model?: string;

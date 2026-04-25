@@ -218,6 +218,10 @@ pub(crate) async fn create_agent_instance(
         skills: Some(agent.skills.clone()),
         icon: agent.icon.clone(),
         harness: None,
+        // User-initiated instance creation defaults to a chat target;
+        // the loop / executor roles are minted by their respective
+        // bootstrap and ad-hoc-run paths, not by this handler.
+        instance_role: Some(aura_os_core::AgentInstanceRole::Chat.as_wire_str().to_string()),
         permissions: Some(agent.permissions.clone()),
         intent_classifier: agent.intent_classifier.clone(),
     };

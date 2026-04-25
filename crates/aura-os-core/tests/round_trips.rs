@@ -241,6 +241,7 @@ fn sample_agent_instance(project_id: ProjectId, agent_id: AgentId) -> AgentInsta
         status: AgentStatus::Idle,
         current_task_id: None,
         current_session_id: None,
+        instance_role: aura_os_core::AgentInstanceRole::Chat,
         total_input_tokens: 0,
         total_output_tokens: 0,
         model: None,
@@ -324,4 +325,52 @@ fn agent_marketplace_fields_survive_non_default_round_trip() {
     assert_eq!(back.jobs, 42);
     assert!((back.revenue_usd - 1_234.56).abs() < f64::EPSILON);
     assert!((back.reputation - 4.75).abs() < f32::EPSILON);
+}
+
+/// `instance_role` must survive a JSON round-trip and missing-field
+/// payloads (older clients that pre-date the column) must deserialise
+/// as `Chat`. Pinning this contract here so a future
+/// `#[serde(default)]` removal — or a rename — surfaces immediately
+/// against the same harness used for the rest of the entity layer.
+#[test]
+fn agent_instance_role_round_trips_and_defaults() {
+    let p = sample_project();
+    let a = sample_agent();
+    let mut instance = sample_agent_instance(p.project_id, a.agent_id);
+    instance.instance_role = AgentInstanceRole::Loop;
+
+    let json = serde_json::to_string(&instance).expect("serialize");
+    let back: AgentInstance = serde_json::from_str(&json).expect("deserialize");
+    assert_eq!(back.instance_role, AgentInstanceRole::Loop);
+
+    let mut value: serde_json::Value = serde_json::from_str(&json).unwrap();
+    value
+        .as_object_mut()
+        .expect("object")
+        .remove("instance_role");
+    let back_legacy: AgentInstance =
+        serde_json::from_value(value).expect("legacy payload deserialises");
+    assert_eq!(
+        back_legacy.instance_role,
+        AgentInstanceRole::Chat,
+        "rows missing the column must default to Chat to preserve legacy behavior"
+    );
+}
+
+#[test]
+fn agent_instance_role_wire_string_round_trip() {
+    for role in [
+        AgentInstanceRole::Chat,
+        AgentInstanceRole::Loop,
+        AgentInstanceRole::Executor,
+    ] {
+        let parsed = AgentInstanceRole::from_wire_str(role.as_wire_str());
+        assert_eq!(parsed, role);
+    }
+    // Unknown values must collapse to the default rather than fail
+    // parsing — see the enum doc for the forward-compat rationale.
+    assert_eq!(
+        AgentInstanceRole::from_wire_str("unknown_role"),
+        AgentInstanceRole::Chat,
+    );
 }

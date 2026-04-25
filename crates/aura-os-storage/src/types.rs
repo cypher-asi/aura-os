@@ -502,6 +502,13 @@ pub struct StorageProjectAgent {
     pub total_input_tokens: Option<u64>,
     #[serde(default)]
     pub total_output_tokens: Option<u64>,
+    /// Functional role this instance plays in the project — `"chat"`,
+    /// `"loop"`, or `"executor"`. Stored as a string so unknown values
+    /// from older clients deserialise as `None`, which we treat as
+    /// [`aura_os_core::AgentInstanceRole::Chat`] in the merge layer.
+    /// See the enum docs for the multi-instance concurrency rationale.
+    #[serde(default)]
+    pub instance_role: Option<String>,
     /// Snapshot of the parent Agent's permissions at instance-creation
     /// time. Persisted so a cold reload doesn't silently fall back to
     /// an empty bundle when the parent Agent lookup fails.
@@ -535,6 +542,12 @@ pub struct CreateProjectAgentRequest {
     pub icon: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub harness: Option<String>,
+    /// Functional role this instance plays in the project. Sent to
+    /// storage as a snake-case string (`"chat"`, `"loop"`,
+    /// `"executor"`); `None` is interpreted server-side and on read as
+    /// the default [`aura_os_core::AgentInstanceRole::Chat`].
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub instance_role: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub permissions: Option<aura_os_core::AgentPermissions>,
     #[serde(skip_serializing_if = "Option::is_none")]

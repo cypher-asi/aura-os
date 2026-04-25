@@ -404,6 +404,7 @@ async fn create_project_agent(
         model: None,
         total_input_tokens: None,
         total_output_tokens: None,
+        instance_role: req.instance_role,
         permissions: req.permissions,
         intent_classifier: req.intent_classifier,
         created_at: Some(now.clone()),
