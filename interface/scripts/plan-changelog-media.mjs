@@ -10,6 +10,7 @@ import {
   extractChangelogMediaEntries,
   planChangelogMediaWithAnthropic,
 } from "./lib/changelog-media-planner.mjs";
+import { loadChangelogMediaKnowledge } from "./lib/changelog-media-knowledge.mjs";
 import { resolveDemoRepoPath } from "./lib/demo-repo-paths.mjs";
 import { loadLocalEnv } from "./lib/load-local-env.mjs";
 
@@ -111,6 +112,7 @@ export async function main(argv = process.argv.slice(2)) {
     : allChangelogEntries.filter((entry) => !entry.mediaPublished);
   const existingPublishedMediaCount = allChangelogEntries.length - changelogEntries.length;
   const sitemap = await buildAuraNavigationSitemap();
+  const learnedKnowledge = loadChangelogMediaKnowledge();
   const changedFiles = [...new Set([
     ...readChangedFiles(args),
     ...deriveChangedFilesFromChangelog(changelog),
@@ -131,6 +133,7 @@ export async function main(argv = process.argv.slice(2)) {
 
   fs.mkdirSync(outputDir, { recursive: true });
   writeJson(path.join(outputDir, "aura-navigation-sitemap.json"), sitemap);
+  writeJson(path.join(outputDir, "changelog-media-knowledge.json"), learnedKnowledge);
 
   if (changelogEntries.length === 0) {
     const emptyPlan = { schemaVersion: 1, generatedAt: new Date().toISOString(), candidates: [], skipped: [] };
@@ -162,6 +165,7 @@ export async function main(argv = process.argv.slice(2)) {
     const prompt = buildMediaPlannerPrompt({
       changelogEntries,
       sitemap,
+      learnedKnowledge,
       commitLog,
       changedFiles,
       maxCandidates,
@@ -189,6 +193,7 @@ export async function main(argv = process.argv.slice(2)) {
     model,
     changelogEntries,
     sitemap,
+    learnedKnowledge,
     commitLog,
     changedFiles,
     maxCandidates,

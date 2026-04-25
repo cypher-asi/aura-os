@@ -1,4 +1,5 @@
 import { normalizeCaptureSeedPlan } from "./changelog-media-seed-plan.mjs";
+import { summarizeChangelogMediaKnowledge } from "./changelog-media-knowledge.mjs";
 
 const DEFAULT_MAX_CANDIDATES = 3;
 const DEFAULT_ENTRY_CHUNK_SIZE = 20;
@@ -154,11 +155,13 @@ export function extractChangelogMediaEntries(changelog) {
 export function buildMediaPlannerPrompt({
   changelogEntries,
   sitemap,
+  learnedKnowledge = null,
   commitLog = "",
   changedFiles = [],
   maxCandidates = DEFAULT_MAX_CANDIDATES,
   retryInstruction = "",
 } = {}) {
+  const knowledgeSummary = summarizeChangelogMediaKnowledge(learnedKnowledge);
   return [
     "You are the Aura changelog media planner.",
     "",
@@ -190,6 +193,10 @@ export function buildMediaPlannerPrompt({
     "",
     "Generated Aura sitemap:",
     truncateText(JSON.stringify(sitemap || {}, null, 2)),
+    "",
+    knowledgeSummary
+      ? truncateText(knowledgeSummary, 16000)
+      : "Curated changelog media lessons: none loaded.",
     "",
     "Changed files across release:",
     truncateText(JSON.stringify(unique(changedFiles, 160), null, 2), 12000),
@@ -368,6 +375,7 @@ async function planChangelogMediaChunkWithAnthropic({
   model = "claude-opus-4-7",
   changelogEntries,
   sitemap,
+  learnedKnowledge = null,
   commitLog = "",
   changedFiles = [],
   maxCandidates = DEFAULT_MAX_CANDIDATES,
@@ -380,6 +388,7 @@ async function planChangelogMediaChunkWithAnthropic({
     const prompt = buildMediaPlannerPrompt({
       changelogEntries,
       sitemap,
+      learnedKnowledge,
       commitLog,
       changedFiles,
       maxCandidates,
@@ -448,6 +457,7 @@ export async function planChangelogMediaWithAnthropic({
   model = "claude-opus-4-7",
   changelogEntries,
   sitemap,
+  learnedKnowledge = null,
   commitLog = "",
   changedFiles = [],
   maxCandidates = DEFAULT_MAX_CANDIDATES,
@@ -468,6 +478,7 @@ export async function planChangelogMediaWithAnthropic({
       model,
       changelogEntries: chunk,
       sitemap,
+      learnedKnowledge,
       commitLog,
       changedFiles,
       maxCandidates,
@@ -489,6 +500,7 @@ export async function planChangelogMediaWithAnthropic({
         model,
         changelogEntries: chunk,
         sitemap,
+        learnedKnowledge,
         commitLog,
         changedFiles,
         maxCandidates,

@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Curated procedural memory for Aura changelog media inference, seeding, capture framing, and quality review.",
+  "curationPolicy": [
+    "Store reusable lessons only; do not store screenshots, traces, secrets, or one-off feature hacks.",
+    "Promote a lesson only after it improves inference, seeding, capture, or quality review across at least one real or replayed changelog media run.",
+    "Keep lessons surface-oriented and capability-oriented instead of selector-oriented.",
+    "Do not use lessons to bypass quality gates; failed media must still be omitted from the public changelog.",
+    "Prefer deleting stale lessons over accumulating low-confidence memory."
+  ],
+  "lessons": [
+    {
+      "id": "agents-chat-model-picker",
+      "status": "promoted",
+      "surface": "agents.chat.model_picker",
+      "targetAppId": "agents",
+      "targetPath": "/agents",
+      "aliases": [
+        "chat model picker",
+        "model picker",
+        "model menu",
+        "chat composer model",
+        "new model option",
+        "GPT-5.5",
+        "DeepSeek V4 Pro"
+      ],
+      "changedFileHints": [
+        "interface/src/constants/models.ts",
+        "interface/src/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/scripts/lib/benchmark-pricing.mjs"
+      ],
+      "mediaSignals": [
+        "A changelog entry says a model is available, selectable, added to the picker, or visible in the chat composer.",
+        "The changed files touch the model catalog and chat input/model picker UI."
+      ],
+      "skipSignals": [
+        "Provider pricing, routing, benchmark, or model catalog plumbing with no explicit user-visible picker/menu claim."
+      ],
+      "seedPlan": {
+        "capabilities": [
+          "app:agents",
+          "agent-chat-ready",
+          "model-picker-open",
+          "proof-data-populated"
+        ],
+        "requiredState": [
+          "A seeded agent chat session is selected.",
+          "The chat composer model picker is open.",
+          "The requested model label is visible in the picker and selected control."
+        ],
+        "proofBoundary": [
+          "The new model label is visible as a selectable option.",
+          "The nearby selected model control confirms this is the chat composer picker."
+        ],
+        "contextBoundary": [
+          "Keep enough local chat composer context to show the picker belongs to Aura Agents.",
+          "Global app header is helpful but not required for compact control proof."
+        ]
+      },
+      "captureGuidance": [
+        "For compact pickers or dropdowns, use a focused frame where the label and selected control are crisp.",
+        "If the compact picker offers Show all or More, expand it when the current teaser does not provide enough context.",
+        "Do not reject solely because a compact picker does not fill most of the branded canvas."
+      ],
+      "qualityGuidance": [
+        "Pass compact control media when the changed label/control is crisp and the local product context makes the surface understandable.",
+        "Reject if the new model label is clipped, unreadable, absent, or shown outside desktop Aura UI."
+      ],
+      "evidence": {
+        "source": "local replayed changelog media runs",
+        "examples": [
+          "GPT-5.5 available in the chat model picker",
+          "DeepSeek V4 Pro available in the chat model picker"
+        ],
+        "lastValidated": "2026-04-25"
+      }
+    },
+    {
+      "id": "aura3d-image-to-model-viewer",
+      "status": "promoted",
+      "surface": "aura3d.image_to_model_viewer",
+      "targetAppId": "aura3d",
+      "targetPath": "/aura3d",
+      "aliases": [
+        "AURA 3D",
+        "3D app",
+        "image to 3D",
+        "3D model",
+        "WebGL viewer",
+        "model preview",
+        "generated model"
+      ],
+      "changedFileHints": [
+        "interface/src/apps/aura3d",
+        "interface/src/components/three",
+        "interface/src/lib/three"
+      ],
+      "mediaSignals": [
+        "A changelog entry describes image-to-3D generation, persisted 3D projects, generated models, or a WebGL/model viewer.",
+        "The changed files touch AURA 3D project, image, asset gallery, or model preview surfaces."
+      ],
+      "skipSignals": [
+        "3D backend, dependency, or storage plumbing with no visible project, source image, generated model, or viewer claim."
+      ],
+      "seedPlan": {
+        "capabilities": [
+          "app:aura3d",
+          "project-selected",
+          "asset-gallery-populated",
+          "generated-result-visible",
+          "proof-data-populated"
+        ],
+        "requiredState": [
+          "A seeded AURA 3D project is selected.",
+          "A source image or generated model preview is visible.",
+          "The viewer/model surface is open when the changelog mentions 3D model or WebGL viewer."
+        ],
+        "proofBoundary": [
+          "Show the generated 3D/model preview or source-image-to-model flow evidence.",
+          "Avoid empty project, pick-a-project, or placeholder gallery states."
+        ],
+        "contextBoundary": [
+          "Keep the AURA 3D title, selected project, asset/gallery controls, or viewer panel visible around the proof."
+        ]
+      },
+      "captureGuidance": [
+        "Seed realistic demo project/image/model state before capture; do not capture empty 3D canvases.",
+        "Prefer the generated model/viewer area with nearby AURA 3D context over an isolated thumbnail."
+      ],
+      "qualityGuidance": [
+        "Reject empty galleries, placeholder canvases, loading viewers, or isolated thumbnails without product context.",
+        "Pass when a generated model/viewer or source image workflow is clearly visible and not clipped."
+      ],
+      "evidence": {
+        "source": "implemented seeded capture bridge support and prior local media experiments",
+        "examples": [
+          "New AURA 3D app with image to 3D model flow and WebGL viewer",
+          "3D projects, images, and models persist across sessions"
+        ],
+        "lastValidated": "2026-04-25"
+      }
+    },
+    {
+      "id": "empty-state-media-rejection",
+      "status": "promoted",
+      "surface": "general.empty_state_rejection",
+      "targetAppId": "*",
+      "targetPath": "*",
+      "aliases": [
+        "empty state",
+        "placeholder",
+        "pick a project",
+        "select a run",
+        "will appear here"
+      ],
+      "mediaSignals": [],
+      "skipSignals": [
+        "The only visible proof would be an empty list, placeholder panel, loading UI, login wall, or default state."
+      ],
+      "seedPlan": {
+        "capabilities": [
+          "proof-data-populated"
+        ],
+        "requiredState": [
+          "If the feature needs data to be visible, seed realistic demo data before capture."
+        ],
+        "proofBoundary": [
+          "The feature itself must be visible, not merely the screen where it would appear later."
+        ],
+        "contextBoundary": [
+          "Keep the smallest recognizable product context around populated proof."
+        ]
+      },
+      "captureGuidance": [
+        "Do not publish media for empty/default screens even if route navigation succeeds.",
+        "If seeding cannot create visible proof, omit media and leave the changelog text-only."
+      ],
+      "qualityGuidance": [
+        "Reject login, loading, error, placeholder, empty, or unseeded states."
+      ],
+      "evidence": {
+        "source": "changelog media quality gate failures and hardening",
+        "examples": [
+          "Rejected empty-state changelog media proof"
+        ],
+        "lastValidated": "2026-04-25"
+      }
+    }
+  ]
+}

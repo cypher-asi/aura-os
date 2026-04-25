@@ -9,6 +9,7 @@ import {
   planChangelogMediaWithAnthropic,
   validateMediaPlanCoverage,
 } from "./changelog-media-planner.mjs";
+import { loadChangelogMediaKnowledge } from "./changelog-media-knowledge.mjs";
 
 test("extractChangelogMediaEntries normalizes generated changelog entries", () => {
   const entries = extractChangelogMediaEntries({
@@ -39,6 +40,7 @@ test("buildMediaPlannerPrompt keeps Browser Use behind a conservative Anthropic 
   const prompt = buildMediaPlannerPrompt({
     changelogEntries: [{ entryId: "entry-1", title: "Add Android release metadata" }],
     sitemap: { apps: [{ id: "agents", path: "/agents" }] },
+    learnedKnowledge: loadChangelogMediaKnowledge(),
     commitLog: "abc123 Add Android release metadata",
     changedFiles: ["interface/android/app/src/main/AndroidManifest.xml"],
   });
@@ -60,6 +62,9 @@ test("buildMediaPlannerPrompt keeps Browser Use behind a conservative Anthropic 
   assert.match(prompt, /provider pricing, model catalog, routing, config, or API plumbing/);
   assert.match(prompt, /confidence is at least 0\.70/);
   assert.match(prompt, /publicCaption/);
+  assert.match(prompt, /Curated changelog media lessons/);
+  assert.match(prompt, /agents\.chat\.model_picker/);
+  assert.match(prompt, /aura3d\.image_to_model_viewer/);
   assert.doesNotMatch(prompt, /Browserbase|Stagehand|Playwright/);
 });
 

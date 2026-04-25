@@ -13,6 +13,7 @@ import {
   planChangelogMediaWithAnthropic,
 } from "./lib/changelog-media-planner.mjs";
 import { normalizeCaptureSeedPlan } from "./lib/changelog-media-seed-plan.mjs";
+import { loadChangelogMediaKnowledge } from "./lib/changelog-media-knowledge.mjs";
 import { resolveDemoRepoPath } from "./lib/demo-repo-paths.mjs";
 import { loadLocalEnv } from "./lib/load-local-env.mjs";
 import {
@@ -494,6 +495,7 @@ export async function runChangelogMediaEvaluation({
   }
   const changelog = JSON.parse(fs.readFileSync(resolvedChangelogFile, "utf8"));
   const sitemap = await buildAuraNavigationSitemap();
+  const learnedKnowledge = loadChangelogMediaKnowledge();
   const allChangelogEntries = extractChangelogMediaEntries(changelog);
   const refreshExistingMedia = isEnabled(process.env.CHANGELOG_MEDIA_REFRESH_EXISTING);
   const changelogEntries = refreshExistingMedia
@@ -517,6 +519,7 @@ export async function runChangelogMediaEvaluation({
 
   fs.mkdirSync(outputDir, { recursive: true });
   writeJson(path.join(outputDir, "aura-navigation-sitemap.json"), sitemap);
+  writeJson(path.join(outputDir, "changelog-media-knowledge.json"), learnedKnowledge);
 
   const planning = changelogEntries.length > 0
     ? await planChangelogMediaWithAnthropic({
@@ -524,6 +527,7 @@ export async function runChangelogMediaEvaluation({
       model: anthropicModel,
       changelogEntries,
       sitemap,
+      learnedKnowledge,
       commitLog,
       changedFiles,
       maxCandidates,
