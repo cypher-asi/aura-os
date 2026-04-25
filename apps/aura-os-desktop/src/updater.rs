@@ -217,7 +217,7 @@ pub(crate) fn update_base_url() -> String {
         .filter(|value| !value.is_empty())
         .unwrap_or_else(|| {
             option_env!("AURA_UPDATE_BASE_URL")
-                .unwrap_or("https://n3o.github.io/aura-app")
+                .unwrap_or("https://cypher-asi.github.io/aura-os")
                 .trim_end_matches('/')
                 .to_string()
         })

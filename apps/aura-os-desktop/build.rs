@@ -223,8 +223,10 @@ fn main() {
     println!("cargo:rustc-env=UPDATER_PUBLIC_KEY={pub_key}");
     println!("cargo:rerun-if-env-changed=UPDATER_PUBLIC_KEY");
 
-    let update_base_url =
-        env_value_or_default("AURA_UPDATE_BASE_URL", "https://n3o.github.io/aura-app");
+    let update_base_url = env_value_or_default(
+        "AURA_UPDATE_BASE_URL",
+        "https://cypher-asi.github.io/aura-os",
+    );
     println!("cargo:rustc-env=AURA_UPDATE_BASE_URL={update_base_url}");
     println!("cargo:rerun-if-env-changed=AURA_UPDATE_BASE_URL");
     emit_runtime_default(
