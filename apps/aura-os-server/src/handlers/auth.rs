@@ -131,6 +131,12 @@ pub(crate) async fn register(
     Ok(Json(AuthSessionResponse::from_auth_result(result)))
 }
 
+/// Get the zOS API base URL from env var or use the default.
+fn zos_api_url() -> String {
+    std::env::var("ZOS_API_URL")
+        .unwrap_or_else(|_| "https://zosapi.zero.tech".to_string())
+}
+
 /// Check if the invite code is the system default (organic signup, no referral).
 fn is_default_invite_code(code: &str) -> bool {
     let default = std::env::var("DEFAULT_INVITE_CODE")
@@ -221,7 +227,7 @@ pub(crate) async fn validate_invite_code(
 
     let client = reqwest::Client::new();
     let resp = client
-        .post(format!("https://zosapi.zero.tech/invite/{code}/validate"))
+        .post(format!("{}/invite/{code}/validate", zos_api_url()))
         .send()
         .await
         .map_err(|e| ApiError::bad_gateway(format!("invite validation failed: {e}")))?;
@@ -249,7 +255,7 @@ pub(crate) async fn get_my_invite_code(
 ) -> ApiResult<Json<serde_json::Value>> {
     let client = reqwest::Client::new();
     let resp = client
-        .post("https://zosapi.zero.tech/invite")
+        .post(format!("{}/invite", zos_api_url()))
         .bearer_auth(&jwt)
         .send()
         .await
