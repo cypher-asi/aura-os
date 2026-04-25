@@ -5,6 +5,7 @@ import {
   endLocalSession,
   getStoredSession,
   hydrateStoredAuth,
+  isCaptureAuthSession,
   isLoggedInSync,
   setStoredAuth,
 } from "../lib/auth-token";
@@ -35,6 +36,29 @@ function sessionToUser(session: AuthSession): ZeroUser {
 
 function getZeroProRefreshError(session: AuthSession): string | null {
   return session.zero_pro_refresh_error ?? null;
+}
+
+function isUnauthenticatedCaptureLoginRoute(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    window.location.pathname === "/capture-login" &&
+    getStoredSession() === null
+  );
+}
+
+async function bootstrapShellForSession(session: AuthSession): Promise<void> {
+  if (isCaptureAuthSession(session)) {
+    return;
+  }
+  await loadAndRunShellRealtimeBootstrap();
+}
+
+async function startRealtimeForSession(session: AuthSession): Promise<void> {
+  await bootstrapShellForSession(session);
+  if (isCaptureAuthSession(session)) {
+    return;
+  }
+  scheduleDeferredEventSocketConnect();
 }
 
 function formatZeroProRefreshError(err: unknown): string {
@@ -105,6 +129,12 @@ export const useAuthStore = create<AuthState>()((set) => ({
   ...seedAuthStateFromStorage(),
 
   restoreSession: async () => {
+    if (isUnauthenticatedCaptureLoginRoute()) {
+      set({ isLoading: false, hasResolvedInitialSession: true });
+      markAuthRestoreComplete();
+      return;
+    }
+
     await hydrateStoredAuth();
 
     const cached = getStoredSession();
@@ -116,7 +146,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
         zeroProRefreshError: getZeroProRefreshError(cached),
         isLoading: false,
       });
-      await loadAndRunShellRealtimeBootstrap();
+      await bootstrapShellForSession(cached);
     }
 
     try {
@@ -127,8 +157,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
         user: sessionToUser(validated),
         zeroProRefreshError: getZeroProRefreshError(validated) ?? prevZeroProErr,
       });
-      await loadAndRunShellRealtimeBootstrap();
-      scheduleDeferredEventSocketConnect();
+      await startRealtimeForSession(validated);
     } catch (err) {
       if (err instanceof ApiClientError && err.status === 401) {
         // A 401 on the boot-time validate means this session is genuinely
@@ -140,7 +169,9 @@ export const useAuthStore = create<AuthState>()((set) => ({
         set({ user: null, zeroProRefreshError: null });
       } else if (hadCachedSession) {
         // Non-401 error (e.g. network): keep cached session with event socket
-        scheduleDeferredEventSocketConnect();
+        if (cached && !isCaptureAuthSession(cached)) {
+          scheduleDeferredEventSocketConnect();
+        }
         set({ zeroProRefreshError: formatZeroProRefreshError(err) });
       }
     } finally {
@@ -182,8 +213,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       hasResolvedInitialSession: true,
       zeroProRefreshError: getZeroProRefreshError(session),
     });
-    await loadAndRunShellRealtimeBootstrap();
-    scheduleDeferredEventSocketConnect();
+    await startRealtimeForSession(session);
   },
 
   register: async (email: string, password: string, name: string, inviteCode: string) => {
@@ -194,8 +224,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       hasResolvedInitialSession: true,
       zeroProRefreshError: getZeroProRefreshError(session),
     });
-    await loadAndRunShellRealtimeBootstrap();
-    scheduleDeferredEventSocketConnect();
+    await startRealtimeForSession(session);
   },
 
   logout: async () => {

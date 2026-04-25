@@ -4,7 +4,7 @@ import styles from "../MobileShell/MobileShell.module.css";
 export type MobileNavId = "agent" | "tasks" | "execution" | "files" | "process" | "stats";
 
 const MOBILE_NAV_ITEMS: Array<{ id: MobileNavId; label: string; icon: typeof Brain }> = [
-  { id: "agent", label: "Agent", icon: Brain },
+  { id: "agent", label: "Agents", icon: Brain },
   { id: "tasks", label: "Tasks", icon: ListTodo },
   { id: "execution", label: "Execution", icon: CheckSquare },
   { id: "files", label: "Files", icon: FolderClosed },
@@ -22,14 +22,14 @@ export function MobileBottomNav({
   return (
     <nav
       className={styles.mobileNavBar}
-      aria-label="Primary mobile navigation"
-      style={{ gridTemplateColumns: `repeat(${MOBILE_NAV_ITEMS.length}, minmax(0, 1fr))` }}
+      aria-label="Project sections"
     >
       {MOBILE_NAV_ITEMS.map((item) => (
         <button
           key={item.id}
           className={styles.mobileNavButton}
           data-active={activeId === item.id ? "true" : "false"}
+          data-nav-id={item.id}
           onClick={() => onNavigate(item.id)}
           type="button"
           aria-pressed={activeId === item.id}

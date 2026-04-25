@@ -37,6 +37,7 @@ import {
   getStoredJwt,
   getStoredSession,
   hydrateStoredAuth,
+  isCaptureAuthSession,
   isLoggedInSync,
   setStoredAuth,
 } from "./auth-token";
@@ -103,6 +104,13 @@ describe("auth-token", () => {
   it("authHeaders returns Authorization header when jwt stored", async () => {
     await setStoredAuth(mockSession);
     expect(authHeaders()).toEqual({ Authorization: "Bearer my-jwt-token" });
+  });
+
+  it("detects capture sessions by their explicit token prefix", async () => {
+    expect(isCaptureAuthSession()).toBe(false);
+    await setStoredAuth({ ...mockSession, access_token: "aura-capture:session-id" });
+    expect(isCaptureAuthSession()).toBe(true);
+    expect(isCaptureAuthSession(mockSession)).toBe(false);
   });
 
   it("hydrates legacy localStorage auth into the runtime cache", async () => {

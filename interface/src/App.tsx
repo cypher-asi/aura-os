@@ -1,10 +1,11 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
 import { useAuthStore } from "./stores/auth-store";
 import { useAppUIStore } from "./stores/app-ui-store";
 import { RequireAuth } from "./components/RequireAuth";
 import { AppShell } from "./components/AppShell";
 import { LoginView } from "./views/LoginView";
+import { CaptureLoginView } from "./views/CaptureLoginView";
 import { apps } from "./apps/registry";
 import { getInitialShellPath } from "./utils/last-app-path";
 import { getLastApp } from "./utils/storage";
@@ -75,6 +76,14 @@ function ShellOutletSuspense() {
  */
 const shellAppRoutes = apps.flatMap((app) => app.routes);
 
+function isCaptureLoginRoute(location: { pathname: string; search: string }): boolean {
+  if (location.pathname === "/capture-login") {
+    return true;
+  }
+  const params = new URLSearchParams(location.search);
+  return params.get("capture-login") === "1" || params.get("captureMode") === "login";
+}
+
 function renderRoutes(routes: typeof shellAppRoutes): React.ReactNode {
   return routes.map((route, index) => {
     const key = route.path ?? (route.index ? `index-${index}` : String(index));
@@ -111,13 +120,18 @@ export default function App() {
     let active = true;
 
     void (async () => {
+      let shouldRestoreSession = true;
       try {
+        if (isCaptureLoginRoute(window.location) && !isLoggedInSync()) {
+          shouldRestoreSession = false;
+          return;
+        }
         await hydrateStoredAuth();
         await bootstrapNativeTestAuth();
       } catch (error) {
         console.error("Native test auth bootstrap failed", error);
       } finally {
-        if (active) {
+        if (active && shouldRestoreSession) {
           await restoreSession();
         }
       }
@@ -130,40 +144,57 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <AppRoutes showShell={showShell} />
+    </BrowserRouter>
+  );
+}
+
+function AppRoutes({ showShell }: { showShell: boolean }) {
+  const location = useLocation();
+
+  if (isCaptureLoginRoute(location)) {
+    return (
       <Routes>
-        <Route
-          path="login"
-          element={showShell ? <Navigate to="/" replace /> : <LoginView />}
-        />
-        <Route
-          path="ide"
-          element={
-            <Suspense fallback={null}>
-              <IdeView />
-            </Suspense>
-          }
-        />
-        {showShell ? (
-          <Route element={<RequireAuth />}>
-            <Route
-              path="invite/:token"
-              element={
-                <Suspense fallback={null}>
-                  <InviteAcceptView />
-                </Suspense>
-              }
-            />
-            <Route element={<AppShell />}>
-              <Route element={<ShellOutletSuspense />}>
-                <Route index element={<LastAppRedirect />} />
-                {renderRoutes(shellAppRoutes)}
-              </Route>
+        <Route path="*" element={<CaptureLoginView />} />
+      </Routes>
+    );
+  }
+
+  return (
+    <Routes>
+      <Route
+        path="login"
+        element={showShell ? <Navigate to="/" replace /> : <LoginView />}
+      />
+      <Route path="capture-login" element={<CaptureLoginView />} />
+      <Route
+        path="ide"
+        element={
+          <Suspense fallback={null}>
+            <IdeView />
+          </Suspense>
+        }
+      />
+      {showShell ? (
+        <Route element={<RequireAuth />}>
+          <Route
+            path="invite/:token"
+            element={
+              <Suspense fallback={null}>
+                <InviteAcceptView />
+              </Suspense>
+            }
+          />
+          <Route element={<AppShell />}>
+            <Route element={<ShellOutletSuspense />}>
+              <Route index element={<LastAppRedirect />} />
+              {renderRoutes(shellAppRoutes)}
             </Route>
           </Route>
-        ) : (
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        )}
-      </Routes>
-    </BrowserRouter>
+        </Route>
+      ) : (
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      )}
+    </Routes>
   );
 }

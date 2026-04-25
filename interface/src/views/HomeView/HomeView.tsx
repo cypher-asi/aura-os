@@ -4,7 +4,7 @@ import { Button, PageEmptyState } from "@cypher-asi/zui";
 import { Rocket } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { getLastAgent, getLastAgentEntry, getLastProject } from "../../utils/storage";
-import { projectAgentChatRoute, projectAgentRoute } from "../../utils/mobileNavigation";
+import { projectAgentChatRoute, projectAgentRoute, projectAgentsRoute } from "../../utils/mobileNavigation";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useOrgStore } from "../../stores/org-store";
 import { getMostRecentProject, useProjectsListStore } from "../../stores/projects-list-store";
@@ -44,6 +44,10 @@ export function HomeView() {
   }, [activeOrg, isLoading, loadingProjects, projects.length, refreshProjects]);
 
   if (targetProject) {
+    if (isMobileLayout) {
+      return <Navigate to={projectAgentsRoute(targetProject.project_id)} replace />;
+    }
+
     const lastAgentId = getLastAgent(targetProject.project_id);
     const targetPath = lastAgentId
       ? projectAgentChatRoute(targetProject.project_id, lastAgentId)

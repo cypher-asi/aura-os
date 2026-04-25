@@ -8,6 +8,7 @@ import { ExecutionView } from "../../views/ExecutionView";
 import { ProjectAgentDetailsView } from "../../views/ProjectAgentDetailsView";
 import { ProjectAgentRedirectView } from "../../views/ProjectAgentRedirectView";
 import { ProjectAgentSetupView } from "../../views/ProjectAgentSetupView/ProjectAgentSetupView";
+import { ProjectAgentsView } from "../../views/ProjectAgentsView";
 import { ProjectFilesView } from "../../views/ProjectFilesView";
 import { ProjectLayout } from "../../views/ProjectLayout";
 import { ProjectProcessView } from "../../views/ProjectProcessView";
@@ -40,6 +41,7 @@ export const projectsRoutes: RouteObject[] = [
     children: [
       { index: true, element: <ProjectRootRedirectView /> },
       { path: "agent", element: <ProjectAgentRedirectView /> },
+      { path: "agents", element: <ProjectAgentsView /> },
       { path: "agents/create", element: <ProjectAgentSetupView mode="create" /> },
       { path: "agents/attach", element: <ProjectAgentSetupView mode="existing" /> },
       { path: "agents/:agentInstanceId/details", element: <ProjectAgentDetailsView /> },

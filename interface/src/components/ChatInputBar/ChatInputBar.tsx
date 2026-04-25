@@ -179,7 +179,6 @@ export const ChatInputBar = memo(
     const [slashMenuOpen, setSlashMenuOpen] = useState(false);
     const [slashQuery, setSlashQuery] = useState("");
     const slashStartRef = useRef<number | null>(null);
-    const modelMenuRef = useRef<HTMLDivElement>(null);
     const projectMenuRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -263,12 +262,11 @@ export const ChatInputBar = memo(
     useEffect(() => {
       if (!modelMenuOpen) return;
       const onClickOutside = (e: MouseEvent) => {
-        if (
-          modelMenuRef.current &&
-          !modelMenuRef.current.contains(e.target as Node)
-        ) {
-          setModelMenuOpen(false);
+        const target = e.target;
+        if (target instanceof Element && target.closest("[data-model-menu-root='true']")) {
+          return;
         }
+        setModelMenuOpen(false);
       };
       document.addEventListener("mousedown", onClickOutside);
       return () => document.removeEventListener("mousedown", onClickOutside);
@@ -448,6 +446,92 @@ export const ChatInputBar = memo(
       }
     };
 
+    const renderModelMenu = () => {
+      if (!modelMenuOpen || modelsForMode.length <= 1) {
+        return null;
+      }
+
+      return (
+        <div
+          className={styles.modelMenu}
+          data-agent-surface="model-picker"
+          data-agent-proof="chat-model-picker-visible"
+        >
+          {shouldUseCondensedAuraMenu && !showAllModels ? (
+            <>
+              {featuredModels.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className={`${styles.modelMenuItem} ${m.id === selectedModel ? styles.modelMenuItemActive : ""}`}
+                  data-agent-model-id={m.id}
+                  data-agent-model-label={m.label}
+                  onClick={() => {
+                    onModelChange(m.id);
+                    setModelMenuOpen(false);
+                  }}
+                >
+                  {m.label}
+                </button>
+              ))}
+              {hiddenModels.length > 0 ? (
+                <button
+                  type="button"
+                  className={styles.modelMenuShowMore}
+                  onClick={() => setShowAllModels(true)}
+                >
+                  Show all models
+                </button>
+              ) : null}
+            </>
+          ) : shouldUseCondensedAuraMenu ? (
+            <>
+              {Array.from(groupedExpandedModels.entries()).map(
+                ([provider, providerModels]) => (
+                  <div key={provider} className={styles.modelMenuGroup}>
+                    <div className={styles.modelMenuGroupLabel}>
+                      {providerLabel(provider)}
+                    </div>
+                    {providerModels.map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        className={`${styles.modelMenuItem} ${m.id === selectedModel ? styles.modelMenuItemActive : ""}`}
+                        data-agent-model-id={m.id}
+                        data-agent-model-label={m.label}
+                        onClick={() => {
+                          onModelChange(m.id);
+                          setModelMenuOpen(false);
+                        }}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+                ),
+              )}
+            </>
+          ) : (
+            sortedModelsForMode.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                className={`${styles.modelMenuItem} ${m.id === selectedModel ? styles.modelMenuItemActive : ""}`}
+                data-agent-model-id={m.id}
+                data-agent-model-label={m.label}
+                onClick={() => {
+                  onModelChange(m.id);
+                  setModelMenuOpen(false);
+                }}
+              >
+                {m.label}
+              </button>
+            ))
+          )}
+        </div>
+      );
+    };
+
     return (
       <div
         className={`${styles.inputWrapper}${isVisible ? "" : ` ${styles.inputWrapperHidden}`}${isCentered ? ` ${styles.inputWrapperCentered}` : ""}`}
@@ -493,6 +577,29 @@ export const ChatInputBar = memo(
             commands={selectedCommands}
             onRemove={handleCommandRemove}
           />
+          {modelsForMode.length > 0 ? (
+            <div className={styles.mobileModelBar}>
+              <span className={styles.mobileModelLabel}>Model</span>
+              <div className={styles.mobileModelMenuWrap} data-model-menu-root="true">
+                <button
+                  type="button"
+                  className={`${styles.modelButton} ${styles.mobileModelButton}`}
+                  onClick={
+                    modelsForMode.length > 1
+                      ? () => setModelMenuOpen((v) => !v)
+                      : undefined
+                  }
+                  style={
+                    modelsForMode.length > 1 ? undefined : { cursor: "default" }
+                  }
+                >
+                  {modelLabel(selectedModel ?? "", adapterType, defaultModel)}
+                  {modelsForMode.length > 1 && <ChevronDown size={12} />}
+                </button>
+                {renderModelMenu()}
+              </div>
+            </div>
+          ) : null}
           <div className={styles.inputRow}>
             <button
               type="button"
@@ -556,7 +663,7 @@ export const ChatInputBar = memo(
             )}
           </div>
         </div>
-        <div className={styles.inputInfoBar}>
+        <div className={styles.inputInfoBar} data-agent-context-anchor="agent-chat-input-context">
           {machineType ? (
             <>
               <span className={styles.environmentWrap}>
@@ -657,7 +764,7 @@ export const ChatInputBar = memo(
             </button>
           ) : null}
           {modelsForMode.length > 0 && (
-            <div className={styles.modelMenuWrap} ref={modelMenuRef}>
+            <div className={styles.modelMenuWrap} data-model-menu-root="true">
               <button
                 type="button"
                 className={styles.modelButton}
@@ -676,75 +783,7 @@ export const ChatInputBar = memo(
                 {modelLabel(selectedModel ?? "", adapterType, defaultModel)}
                 {modelsForMode.length > 1 && <ChevronDown size={10} />}
               </button>
-              {modelMenuOpen && modelsForMode.length > 1 && (
-                <div className={styles.modelMenu} data-agent-surface="model-picker">
-                  {shouldUseCondensedAuraMenu && !showAllModels ? (
-                    <>
-                      {featuredModels.map((m) => (
-                        <button
-                          key={m.id}
-                          type="button"
-                          className={`${styles.modelMenuItem} ${m.id === selectedModel ? styles.modelMenuItemActive : ""}`}
-                          onClick={() => {
-                            onModelChange(m.id);
-                            setModelMenuOpen(false);
-                          }}
-                        >
-                          {m.label}
-                        </button>
-                      ))}
-                      {hiddenModels.length > 0 ? (
-                        <button
-                          type="button"
-                          className={styles.modelMenuShowMore}
-                          onClick={() => setShowAllModels(true)}
-                        >
-                          Show all models
-                        </button>
-                      ) : null}
-                    </>
-                  ) : shouldUseCondensedAuraMenu ? (
-                    <>
-                      {Array.from(groupedExpandedModels.entries()).map(
-                        ([provider, providerModels]) => (
-                          <div key={provider} className={styles.modelMenuGroup}>
-                            <div className={styles.modelMenuGroupLabel}>
-                              {providerLabel(provider)}
-                            </div>
-                            {providerModels.map((m) => (
-                              <button
-                                key={m.id}
-                                type="button"
-                                className={`${styles.modelMenuItem} ${m.id === selectedModel ? styles.modelMenuItemActive : ""}`}
-                                onClick={() => {
-                                  onModelChange(m.id);
-                                  setModelMenuOpen(false);
-                                }}
-                              >
-                                {m.label}
-                              </button>
-                            ))}
-                          </div>
-                        ),
-                      )}
-                    </>
-                  ) : (
-                    sortedModelsForMode.map((m) => (
-                      <button
-                        key={m.id}
-                        type="button"
-                        className={`${styles.modelMenuItem} ${m.id === selectedModel ? styles.modelMenuItemActive : ""}`}
-                        onClick={() => {
-                          onModelChange(m.id);
-                          setModelMenuOpen(false);
-                        }}
-                      >
-                        {m.label}
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
+              {renderModelMenu()}
             </div>
           )}
         </div>

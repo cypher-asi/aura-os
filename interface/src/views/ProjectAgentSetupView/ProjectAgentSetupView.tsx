@@ -14,7 +14,7 @@ import { queryClient } from "../../lib/query-client";
 import { projectQueryKeys } from "../../queries/project-queries";
 import type { Agent, AgentInstance } from "../../types";
 import { createAgentChatHandoffState } from "../../utils/chat-handoff";
-import { projectAgentAttachRoute, projectAgentChatRoute, projectAgentCreateRoute, projectAgentRoute, projectRootPath } from "../../utils/mobileNavigation";
+import { projectAgentAttachRoute, projectAgentChatRoute, projectAgentCreateRoute, projectAgentsRoute, projectRootPath } from "../../utils/mobileNavigation";
 import { setLastAgent, setLastProject } from "../../utils/storage";
 import styles from "./ProjectAgentSetupView.module.css";
 
@@ -302,7 +302,7 @@ function ProjectAgentCreateSurface({
 
   const handleClose = useCallback(() => {
     setEditorOpen(false);
-    navigate(projectAgentRoute(projectId), { replace: true });
+    navigate(projectAgentsRoute(projectId), { replace: true });
   }, [navigate, projectId]);
 
   const handleSaved = useCallback(async (agent: Agent) => {

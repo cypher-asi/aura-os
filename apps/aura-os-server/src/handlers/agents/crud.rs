@@ -8,6 +8,9 @@ use std::time::Duration;
 use aura_os_core::{effective_auth_source, Agent, AgentId, AgentRuntimeConfig, HarnessMode};
 use aura_os_network::{NetworkAgent, NetworkClient};
 
+use crate::capture_auth::{
+    demo_agent, demo_agent_id, demo_agent_instance_id, demo_project, is_capture_access_token,
+};
 use crate::dto::{CreateAgentRequest, UpdateAgentRequest};
 use crate::error::{map_network_error, map_storage_error, ApiError, ApiResult};
 use crate::handlers::projects;
@@ -751,6 +754,10 @@ pub(crate) async fn list_agents(
     AuthJwt(jwt): AuthJwt,
     Query(query): Query<ListAgentsQuery>,
 ) -> ApiResult<Json<Vec<Agent>>> {
+    if is_capture_access_token(&jwt) {
+        return Ok(Json(vec![demo_agent()]));
+    }
+
     if let Some(ref client) = state.network_client {
         // When the caller passes `org_id`, we want BOTH:
         //   - every agent in that org's fleet (teammates' agents,
@@ -874,6 +881,10 @@ pub(crate) async fn get_agent(
     AuthJwt(jwt): AuthJwt,
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<Json<Agent>> {
+    if is_capture_access_token(&jwt) && agent_id == demo_agent_id() {
+        return Ok(Json(demo_agent()));
+    }
+
     if let Some(ref client) = state.network_client {
         let net_agent = client
             .get_agent(&agent_id.to_string(), &jwt)
@@ -1387,6 +1398,15 @@ pub(crate) async fn list_agent_project_bindings(
     AuthJwt(jwt): AuthJwt,
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<Json<Vec<AgentProjectBinding>>> {
+    if is_capture_access_token(&jwt) && agent_id == demo_agent_id() {
+        let project = demo_project();
+        return Ok(Json(vec![AgentProjectBinding {
+            project_agent_id: demo_agent_instance_id().to_string(),
+            project_id: project.project_id.to_string(),
+            project_name: project.name,
+        }]));
+    }
+
     let storage = state.require_storage_client()?;
     let bindings = resolve_agent_project_bindings(&state, storage, &jwt, &agent_id).await?;
     Ok(Json(bindings))

@@ -36,7 +36,7 @@ export function ImagePreview({
 
   if (!displayUrl) {
     return (
-      <div className={`${styles.root} ${styles.rootEmpty}`}>
+      <div className={`${styles.root} ${styles.rootEmpty}`} data-agent-surface="aura3d-image-preview-empty">
         <div className={styles.emptyState}>
           <ImageIcon size={32} className={styles.emptyIcon} />
           <span className={styles.emptyText}>Your generated image will appear here</span>
@@ -47,7 +47,7 @@ export function ImagePreview({
 
   return (
     <>
-      <div className={styles.root}>
+      <div className={styles.root} data-agent-surface="aura3d-image-preview" data-agent-proof="generated-image-preview">
         <img
           src={displayUrl}
           alt="Generated asset"

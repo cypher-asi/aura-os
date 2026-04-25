@@ -198,6 +198,9 @@
 @media (max-width: 680px) {
   .container {
     overflow: hidden;
+    background:
+      radial-gradient(circle at 18% -8%, color-mix(in srgb, var(--color-primary) 8%, transparent), transparent 34%),
+      var(--color-bg);
   }
 
   .explorerArea {
@@ -206,5 +209,14 @@
 
   .mobileRemoteRoot {
     padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+    background:
+      radial-gradient(circle at 18% -8%, color-mix(in srgb, var(--color-primary) 8%, transparent), transparent 34%),
+      var(--color-bg);
+  }
+
+  .mobilePreviewRoot {
+    background:
+      radial-gradient(circle at 18% -8%, color-mix(in srgb, var(--color-primary) 8%, transparent), transparent 34%),
+      var(--color-bg);
   }
 }

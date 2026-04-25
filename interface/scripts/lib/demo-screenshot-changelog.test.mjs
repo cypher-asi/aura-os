@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import os from "node:os";
 import path from "node:path";
 import { promises as fs } from "node:fs";
 import test from "node:test";
@@ -31,12 +32,6 @@ test("loadDemoScreenshotChangelog parses published-style markdown", async () => 
     "",
     "A focused pass on collaboration.",
     "",
-    "<!-- AURA_CHANGELOG_MEDIA:BEGIN {\"slotId\":\"entry-1-feedback\",\"batchId\":\"entry-1\"} -->",
-    "<!-- AURA_CHANGELOG_MEDIA:PENDING -->",
-    "<!-- AURA_CHANGELOG_MEDIA:END entry-1-feedback -->",
-    "",
-    "![Feedback board screenshot](../../assets/changelog/nightly/demo/entry-1-feedback.png)",
-    "",
     "- Feedback comments are now visible inline.",
     "- Reviewers can approve ideas faster.",
     "",
@@ -46,8 +41,8 @@ test("loadDemoScreenshotChangelog parses published-style markdown", async () => 
     "- Reviewers can approve ideas faster",
   ].join("\n");
 
-  const tempPath = path.join(process.cwd(), "output", "demo-screenshots", `markdown-test-${Date.now()}.md`);
-  await fs.mkdir(path.dirname(tempPath), { recursive: true });
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "aura-demo-screenshot-changelog-"));
+  const tempPath = path.join(tempDir, "published-style.md");
   await fs.writeFile(tempPath, markdown, "utf8");
 
   const changelog = await loadDemoScreenshotChangelog({

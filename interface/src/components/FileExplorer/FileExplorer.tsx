@@ -51,8 +51,8 @@ export function FileExplorer({
     return (
       <PageEmptyState
         icon={<Folder size={32} />}
-        title="Could not load files"
-        description={s.error}
+        title={getFileExplorerErrorTitle(s.isRemote)}
+        description={getFileExplorerErrorDescription(s.error, s.isRemote)}
       />
     );
   }
@@ -95,4 +95,20 @@ export function FileExplorer({
       />
     </div>
   );
+}
+
+export function getFileExplorerErrorTitle(isRemote: boolean): string {
+  return isRemote ? "Files are temporarily unavailable" : "Could not load files";
+}
+
+export function getFileExplorerErrorDescription(error: string, isRemote: boolean): string {
+  if (isRemote) {
+    return "Remote files are temporarily unavailable. Try again in a moment.";
+  }
+
+  if (!error.trim()) {
+    return "Files are temporarily unavailable. Try again in a moment.";
+  }
+
+  return error;
 }

@@ -3,14 +3,10 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import {
-  annotateRenderedEntriesWithMedia,
   assertStrictToolModelSupport,
   batchCommits,
-  buildMediaPlaceholderBlock,
   buildAnthropicRequestBody,
-  inferEntryMediaHeuristic,
-  mergeMediaDecision,
-  preserveExistingPublishedMedia,
+  preservePublishedEntryMedia,
   validateRenderedEntry,
 } from "./generate-daily-changelog.mjs";
 
@@ -101,6 +97,10 @@ test("assertStrictToolModelSupport warns instead of failing for non-allowlisted 
   assert.equal(assertStrictToolModelSupport("claude-sonnet-4-20250514"), false);
 });
 
+test("assertStrictToolModelSupport accepts Claude Opus 4.7", () => {
+  assert.equal(assertStrictToolModelSupport("claude-opus-4-7"), true);
+});
+
 test("buildAnthropicRequestBody omits deprecated temperature and preserves tool mode", () => {
   const request = buildAnthropicRequestBody({
     model: "claude-sonnet-4-6",
@@ -134,405 +134,52 @@ test("buildAnthropicRequestBody includes retry guidance when requested", () => {
   assert.equal("temperature" in request, false);
 });
 
-test("assertStrictToolModelSupport accepts Claude Opus 4.7", () => {
-  assert.equal(assertStrictToolModelSupport("claude-opus-4-7"), true);
-});
-
-test("annotateRenderedEntriesWithMedia requests placeholders for UI-facing entries", async () => {
-  const rendered = {
-    title: "Demo day",
-    intro: "Intro",
-    highlights: [],
-    entries: [
-      {
-        batch_id: "entry-1",
-        time_label: "9:10 AM",
-        title: "Feedback board and comments stay visible",
-        summary: "The feedback board now keeps discussion visible while triaging ideas.",
-        items: [
-          {
-            text: "Comments remain visible next to the feedback board.",
-            commit_shas: ["abc1234"],
-          },
-        ],
-      },
-      {
-        batch_id: "entry-2",
-        time_label: "11:30 AM",
-        title: "Release packaging reliability improvements",
-        summary: "The release workflow handles packaging retries more safely.",
-        items: [
-          {
-            text: "Packaging retries no longer fail on stale artifacts.",
-            commit_shas: ["def5678"],
-          },
-        ],
-      },
-      {
-        batch_id: "entry-3",
-        time_label: "2:15 PM",
-        title: "Desktop chat shows more useful failures",
-        summary: "The desktop chat screen now makes failure states easier to understand.",
-        items: [
-          {
-            text: "Visible error handling is clearer in the desktop chat window.",
-            commit_shas: ["9876abc"],
-          },
-        ],
-      },
-    ],
-  };
-
-  const rawCommits = [
-    { sha: "abc1234", files: ["interface/src/apps/feedback/FeedbackMainPanel.tsx"] },
-    { sha: "def5678", files: [".github/workflows/release-nightly.yml"] },
-    { sha: "9876abc", files: ["apps/aura-os-desktop/src/chat/errors.ts"] },
-  ];
-
-  const annotated = await annotateRenderedEntriesWithMedia(rendered, rawCommits, { enableAiInference: false });
-
-  assert.equal(annotated.entries[0].media.requested, true);
-  assert.equal(annotated.entries[0].media.status, "pending");
-  assert.equal(annotated.entries[1].media.requested, false);
-  assert.equal(annotated.entries[1].media.status, "skipped");
-  assert.equal(annotated.entries[2].media.requested, true);
-  assert.equal(annotated.entries[2].media.status, "pending");
-});
-
-test("annotateRenderedEntriesWithMedia skips runtime config entries without a clear screen target", async () => {
-  const rendered = {
-    title: "Demo day",
-    intro: "Intro",
-    highlights: [],
-    entries: [
-      {
-        batch_id: "entry-1",
-        time_label: "4:45 PM",
-        title: "External harness flag surfaced in desktop runtime config",
-        summary: "The desktop runtime config now exposes AURA_DESKTOP_EXTERNAL_HARNESS so the UI can tell whether an external harness is in use.",
-        items: [
-          {
-            text: "Desktop runtime config exposes the external harness flag without reading env directly.",
-            commit_shas: ["abc1234"],
-          },
-        ],
-      },
-    ],
-  };
-
-  const rawCommits = [
-    { sha: "abc1234", files: ["apps/aura-os-desktop/src/handlers.rs"] },
-  ];
-
-  const annotated = await annotateRenderedEntriesWithMedia(rendered, rawCommits, { enableAiInference: false });
-
-  assert.equal(annotated.entries[0].media.requested, false);
-  assert.equal(annotated.entries[0].media.status, "skipped");
-});
-
-test("annotateRenderedEntriesWithMedia skips backend-heavy mixed batches without a dominant UI story", async () => {
-  const rendered = {
-    title: "Demo day",
-    intro: "Intro",
-    highlights: [],
-    entries: [
-      {
-        batch_id: "entry-1",
-        time_label: "5:10 PM",
-        title: "Autonomous recovery pipeline for truncated dev-loop runs",
-        summary: "A full multi-phase pipeline now classifies truncation failures, decomposes oversized tasks, and streams heuristic findings live during a run.",
-        items: [
-          {
-            text: "The Debug app gained a tabbed sidekick, but most of the landing centered on backend recovery and heuristic plumbing.",
-            commit_shas: ["abc1234", "def5678"],
-          },
-        ],
-      },
-    ],
-  };
-
-  const rawCommits = [
-    {
-      sha: "abc1234",
-      files: [
-        "apps/aura-os-server/src/handlers/dev_loop.rs",
-        "apps/aura-os-server/src/handlers/live_heuristics.rs",
-        "crates/aura-run-heuristics/src/lib.rs",
-        "crates/aura-run-heuristics/src/rules/high_retry_density.rs",
-        "crates/aura-os-core/src/entities.rs",
-        "interface/src/apps/debug/DebugSidekick.tsx",
-      ],
-    },
-    {
-      sha: "def5678",
-      files: [
-        "apps/aura-os-server/src/handlers/tasks.rs",
-        "apps/aura-run-analyze/src/render.rs",
-        "crates/aura-os-storage/src/conversions.rs",
-        "crates/aura-os-tasks/tests/state_machine.rs",
-      ],
-    },
-  ];
-
-  const annotated = await annotateRenderedEntriesWithMedia(rendered, rawCommits, { enableAiInference: false });
-
-  assert.equal(annotated.entries[0].media.requested, false);
-  assert.equal(annotated.entries[0].media.status, "skipped");
-});
-
-test("mergeMediaDecision lets Anthropic inference override the heuristic and preserves proof hints", () => {
-  const entry = {
-    batch_id: "entry-1",
-    title: "GPT-5.5 in the model picker",
-    summary: "The chat model picker now shows GPT-5.5.",
-    items: [
-      {
-        text: "Open the chat model picker and verify GPT-5.5 is selectable.",
-        commit_shas: ["abc1234"],
-      },
-    ],
-  };
-  const heuristic = inferEntryMediaHeuristic(entry, new Map([
-    ["abc1234", { files: ["interface/src/components/ChatInputBar/ChatInputBar.tsx"] }],
-  ]));
-
-  const merged = mergeMediaDecision(entry, heuristic, {
-    requested: true,
-    confidence: "high",
-    category: "product_surface",
-    rationale: "The feature adds a visible option to the chat model picker.",
-    proofSurface: "Chat model picker",
-    captureHint: "Open the chat model picker and keep GPT-5.5 visible.",
-    visibleProof: ["GPT-5.5", "Model picker"],
-  });
-
-  assert.equal(merged.requested, true);
-  assert.equal(merged.status, "pending");
-  assert.equal(merged.inferenceSource, "anthropic");
-  assert.equal(merged.inferenceCategory, "product_surface");
-  assert.equal(merged.proofSurface, "Chat model picker");
-  assert.equal(merged.captureHint, "Open the chat model picker and keep GPT-5.5 visible.");
-  assert.deepEqual(merged.visibleProof, ["GPT-5.5", "Model picker"]);
-});
-
-test("annotateRenderedEntriesWithMedia accepts injected Anthropic media decisions", async () => {
-  const rendered = {
-    title: "Demo day",
-    intro: "Intro",
-    highlights: [],
-    entries: [
-      {
-        batch_id: "entry-1",
-        time_label: "9:10 AM",
-        title: "Release pipeline hardening",
-        summary: "The nightly release workflow now retries asset pruning.",
-        items: [
-          {
-            text: "Nightly release tooling became more resilient.",
-            commit_shas: ["abc1234"],
-          },
-        ],
-      },
-      {
-        batch_id: "entry-2",
-        time_label: "11:30 AM",
-        title: "GPT-5.5 in the model picker",
-        summary: "The chat composer now includes GPT-5.5.",
-        items: [
-          {
-            text: "Open the chat model picker and verify GPT-5.5 is selectable.",
-            commit_shas: ["def5678"],
-          },
-        ],
-      },
-    ],
-  };
-  const rawCommits = [
-    { sha: "abc1234", files: [".github/workflows/release-nightly.yml"] },
-    { sha: "def5678", files: ["interface/src/components/ChatInputBar/ChatInputBar.tsx"] },
-  ];
-
-  const annotated = await annotateRenderedEntriesWithMedia(rendered, rawCommits, {
-    mediaInferenceByBatchId: {
-      "entry-1": {
-        requested: false,
-        confidence: "high",
-        category: "release_infra",
-        rationale: "Release hardening is tooling, not a product screenshot target.",
-        proofSurface: "",
-        captureHint: "",
-        visibleProof: [],
-      },
-      "entry-2": {
-        requested: true,
-        confidence: "high",
-        category: "product_surface",
-        rationale: "GPT-5.5 is a visible model-picker option.",
-        proofSurface: "Chat model picker",
-        captureHint: "Open the chat model picker and keep GPT-5.5 visible.",
-        visibleProof: ["GPT-5.5", "Model"],
-      },
-    },
-  });
-
-  assert.equal(annotated.entries[0].media.requested, false);
-  assert.equal(annotated.entries[0].media.inferenceCategory, "release_infra");
-  assert.equal(annotated.entries[1].media.requested, true);
-  assert.equal(annotated.entries[1].media.proofSurface, "Chat model picker");
-  assert.deepEqual(annotated.entries[1].media.visibleProof, ["GPT-5.5", "Model"]);
-});
-
-test("buildMediaPlaceholderBlock emits hidden markers only for requested slots", () => {
-  const placeholderLines = buildMediaPlaceholderBlock({
-    batch_id: "entry-1",
-    title: "Feedback board and comments stay visible",
-    media: {
-      requested: true,
-      slotId: "entry-1-feedback-board-and-comments-stay-visible",
-      slug: "feedback-board-and-comments-stay-visible",
-      alt: "Feedback board screenshot",
-    },
-  });
-
-  assert.equal(placeholderLines.length > 0, true);
-  assert.match(placeholderLines[0], /AURA_CHANGELOG_MEDIA:BEGIN/);
-  assert.match(placeholderLines[1], /AURA_CHANGELOG_MEDIA:PENDING/);
-  assert.match(placeholderLines[2], /AURA_CHANGELOG_MEDIA:END/);
-
-  assert.deepEqual(
-    buildMediaPlaceholderBlock({
-      batch_id: "entry-2",
-      title: "Release packaging reliability improvements",
-      media: { requested: false },
-    }),
-    [],
-  );
-});
-
-test("buildMediaPlaceholderBlock keeps published media visible when rerendering markdown", () => {
-  const placeholderLines = buildMediaPlaceholderBlock(
-    {
+test("preservePublishedEntryMedia carries published media across regenerated changelog entries", () => {
+  const previousRendered = {
+    entries: [{
       batch_id: "entry-1",
-      title: "Feedback board and comments stay visible",
+      title: "Model picker",
+      items: [
+        { text: "GPT-5.5 available", commit_shas: ["bbb", "aaa"] },
+      ],
       media: {
-        requested: true,
         status: "published",
-        slotId: "entry-1-feedback-board",
-        slug: "feedback-board",
-        alt: "Feedback board screenshot",
-        assetPath: "assets/changelog/nightly/0.1.0-nightly.321.1/entry-1-feedback-board.png",
+        assetPath: "assets/changelog/nightly/2026-04-24/model-picker.png",
+        width: 3840,
+        height: 2160,
       },
-    },
-    {
-      pagesDir: "/tmp/aura-pages",
-      markdownPath: "/tmp/aura-pages/changelog/nightly/latest.md",
-    },
-  );
-
-  assert.match(placeholderLines[0], /"status":"published"/);
-  assert.match(placeholderLines[1], /!\[Feedback board screenshot\]\(\.\.\/\.\.\/assets\/changelog\/nightly\/0\.1\.0-nightly\.321\.1\/entry-1-feedback-board\.png\)/);
-});
-
-test("preserveExistingPublishedMedia prevents rerenders from downgrading existing screenshots", () => {
-  const rendered = {
-    entries: [
-      {
-        batch_id: "entry-1",
-        title: "Feedback board and comments stay visible",
-        media: {
-          requested: true,
-          status: "pending",
-          slotId: "entry-1-feedback-board-and-comments-stay-visible",
-          slug: "feedback-board-and-comments-stay-visible",
-          alt: "New feedback screenshot",
-        },
-      },
-    ],
+    }],
   };
-  const existingDoc = {
-    rendered: {
-      entries: [
-        {
-          batch_id: "entry-1",
-          title: "Feedback board",
-          items: [
-            {
-              text: "Feedback board ships.",
-              commit_shas: ["abc1234"],
-            },
-          ],
-          media: {
-            requested: true,
-            status: "published",
-            slotId: "entry-1-feedback-board",
-            slug: "feedback-board",
-            alt: "Feedback board screenshot",
-            assetPath: "assets/changelog/nightly/0.1.0-nightly.321.1/entry-1-feedback-board.png",
-            screenshotSource: "capture-proof",
-            updatedAt: "2026-04-22T10:00:00.000Z",
-            storyTitle: "Feedback board proof",
-          },
-        },
+  const regenerated = {
+    entries: [{
+      batch_id: "entry-1",
+      title: "GPT-5.5 model picker",
+      items: [
+        { text: "GPT-5.5 is now visible in the chat model picker", commit_shas: ["aaa", "bbb"] },
       ],
-    },
+    }],
   };
 
-  const preserved = preserveExistingPublishedMedia(rendered, [existingDoc]);
+  const preserved = preservePublishedEntryMedia(regenerated, previousRendered);
+
   assert.equal(preserved.entries[0].media.status, "published");
-  assert.equal(preserved.entries[0].media.slotId, "entry-1-feedback-board");
-  assert.equal(preserved.entries[0].media.assetPath, "assets/changelog/nightly/0.1.0-nightly.321.1/entry-1-feedback-board.png");
-  assert.equal(preserved.entries[0].media.preservedFromSlotId, "entry-1-feedback-board");
+  assert.equal(preserved.entries[0].media.assetPath, "assets/changelog/nightly/2026-04-24/model-picker.png");
 });
 
-test("preserveExistingPublishedMedia does not carry batch media to unrelated regenerated entries", () => {
-  const rendered = {
-    entries: [
-      {
-        batch_id: "entry-1",
-        title: "Model picker gains provider filters",
-        items: [
-          {
-            text: "Provider filters are visible.",
-            commit_shas: ["new1234"],
-          },
-        ],
-        media: {
-          requested: true,
-          status: "pending",
-          slotId: "entry-1-model-picker-gains-provider-filters",
-          slug: "model-picker-gains-provider-filters",
-          alt: "Model picker screenshot",
-        },
-      },
-    ],
+test("preservePublishedEntryMedia does not carry media to unrelated regenerated entries", () => {
+  const previousRendered = {
+    entries: [{
+      items: [{ text: "Agent composer", commit_shas: ["111"] }],
+      media: { status: "published", assetPath: "assets/changelog/nightly/agent.png" },
+    }],
   };
-  const existingDoc = {
-    rendered: {
-      entries: [
-        {
-          batch_id: "entry-1",
-          title: "Feedback board",
-          items: [
-            {
-              text: "Feedback board ships.",
-              commit_shas: ["abc1234"],
-            },
-          ],
-          media: {
-            requested: true,
-            status: "published",
-            slotId: "entry-1-feedback-board",
-            slug: "feedback-board",
-            alt: "Feedback board screenshot",
-            assetPath: "assets/changelog/nightly/0.1.0-nightly.321.1/entry-1-feedback-board.png",
-          },
-        },
-      ],
-    },
+  const regenerated = {
+    entries: [{
+      items: [{ text: "Release hardening", commit_shas: ["222"] }],
+    }],
   };
 
-  const preserved = preserveExistingPublishedMedia(rendered, [existingDoc]);
-  assert.equal(preserved.entries[0].media.status, "pending");
-  assert.equal(preserved.entries[0].media.slotId, "entry-1-model-picker-gains-provider-filters");
-  assert.equal(preserved.entries[0].media.assetPath, undefined);
+  const preserved = preservePublishedEntryMedia(regenerated, previousRendered);
+
+  assert.equal(preserved.entries[0].media, undefined);
 });

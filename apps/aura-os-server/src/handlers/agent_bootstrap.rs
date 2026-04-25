@@ -7,6 +7,7 @@ use aura_os_core::{Agent, AgentOrchestration};
 use aura_os_network::NetworkAgent;
 
 use crate::agent_events::AgentEvent;
+use crate::capture_auth::{demo_agent, is_capture_access_token};
 use crate::error::{map_network_error, ApiError, ApiResult};
 use crate::handlers::agents::conversions_pub::agent_from_network;
 use crate::handlers::agents::ensure_agent_home_project_and_binding;
@@ -238,6 +239,13 @@ pub(crate) async fn setup_ceo_agent(
     AuthJwt(jwt): AuthJwt,
     AuthSession(_session): AuthSession,
 ) -> ApiResult<Json<SetupResponse>> {
+    if is_capture_access_token(&jwt) {
+        return Ok(Json(SetupResponse {
+            agent: demo_agent(),
+            created: false,
+        }));
+    }
+
     let network = state.require_network_client()?;
 
     let net_agents = network.list_agents(&jwt).await.map_err(map_network_error)?;
@@ -396,6 +404,14 @@ pub(crate) async fn cleanup_ceo_agents(
     AuthJwt(jwt): AuthJwt,
     AuthSession(_session): AuthSession,
 ) -> ApiResult<Json<CleanupCeoResponse>> {
+    if is_capture_access_token(&jwt) {
+        return Ok(Json(CleanupCeoResponse {
+            kept: Some(demo_agent().agent_id.to_string()),
+            deleted: Vec::new(),
+            failed: Vec::new(),
+        }));
+    }
+
     let network = state.require_network_client()?;
     let net_agents = network.list_agents(&jwt).await.map_err(map_network_error)?;
     let outcome = dedupe_ceo_agents(network, &jwt, &net_agents).await;

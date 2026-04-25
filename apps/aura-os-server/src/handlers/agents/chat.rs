@@ -114,6 +114,10 @@ use super::conversions::events_to_session_history;
 use super::runtime::{
     build_harness_provider_config, effective_model, resolve_integration, resolve_integration_ref,
 };
+use crate::capture_auth::{
+    demo_agent_events, demo_agent_id, demo_agent_instance_id, demo_project_id,
+    is_capture_access_token,
+};
 
 // ---------------------------------------------------------------------------
 // Session installed_tools assembly
@@ -2062,6 +2066,14 @@ pub(crate) async fn list_agent_events(
     Path(agent_id): Path<AgentId>,
     Query(query): Query<AgentEventsQuery>,
 ) -> ApiResult<Json<Vec<SessionEvent>>> {
+    if is_capture_access_token(&jwt) && agent_id == demo_agent_id() {
+        return Ok(Json(slice_recent_agent_events(
+            demo_agent_events(),
+            query.limit,
+            query.offset,
+        )));
+    }
+
     let _ = state.require_storage_client()?;
     let target_size = target_window_size(query.limit, query.offset);
     let messages =
@@ -2109,6 +2121,28 @@ pub(crate) async fn list_agent_events_paginated(
     Path(agent_id): Path<AgentId>,
     Query(query): Query<PaginatedEventsQuery>,
 ) -> ApiResult<Json<PaginatedEventsResponse>> {
+    if is_capture_access_token(&jwt) && agent_id == demo_agent_id() {
+        let filtered = apply_cursor_filter(
+            demo_agent_events(),
+            query.before.as_deref(),
+            query.after.as_deref(),
+        );
+        let limit = normalize_agent_history_limit(query.limit).unwrap_or(50);
+        let has_more = filtered.len() > limit;
+        let start = filtered.len().saturating_sub(limit);
+        let result = filtered[start..].to_vec();
+        let next_cursor = if has_more {
+            result.first().map(|m| m.event_id.to_string())
+        } else {
+            None
+        };
+        return Ok(Json(PaginatedEventsResponse {
+            events: result,
+            has_more,
+            next_cursor,
+        }));
+    }
+
     let _ = state.require_storage_client()?;
     // When either cursor is present we need the full transcript so the
     // `before`/`after` anchor can be located; otherwise we only need
@@ -2706,8 +2740,15 @@ pub(crate) async fn send_agent_event_stream(
 pub(crate) async fn list_events(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
-    Path((_project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
+    Path((project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
 ) -> ApiResult<Json<Vec<SessionEvent>>> {
+    if is_capture_access_token(&jwt)
+        && project_id == demo_project_id()
+        && agent_instance_id == demo_agent_instance_id()
+    {
+        return Ok(Json(demo_agent_events()));
+    }
+
     // Project-scoped UI endpoint has no explicit limit parameter yet, but
     // the `AgentChatView` currently renders at most the last
     // `MAX_AGENT_HISTORY_WINDOW_LIMIT` messages — cap the load so we don't

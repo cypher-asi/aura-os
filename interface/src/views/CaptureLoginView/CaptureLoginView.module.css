@@ -1,0 +1,104 @@
+.page {
+  display: grid;
+  min-height: 100%;
+  place-items: center;
+  padding: var(--space-6);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(45, 212, 191, 0.12), transparent 32rem),
+    var(--color-bg);
+}
+
+.card {
+  width: min(100%, 420px);
+  padding: var(--space-6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-lg);
+  background: rgba(10, 10, 12, 0.84);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.eyebrow {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-lg);
+  line-height: 1.2;
+}
+
+.copy {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text-primary);
+  font: inherit;
+  outline: none;
+}
+
+.input:focus {
+  border-color: rgba(45, 212, 191, 0.65);
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.16);
+}
+
+.button {
+  min-height: 42px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: #f4f4f5;
+  color: #09090b;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.error {
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}

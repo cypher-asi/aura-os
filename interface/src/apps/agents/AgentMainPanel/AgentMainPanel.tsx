@@ -50,6 +50,7 @@ export function AgentMainPanel({ children }: { children?: ReactNode }) {
       */}
       <div
         data-agent-surface="agent-chat-panel"
+        data-agent-context="agent-chat-product-context"
         data-agent-agent-id={agentId ?? ""}
         style={{
           display: "flex",

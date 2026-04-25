@@ -16,9 +16,8 @@ import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useModalInitialFocus } from "../../hooks/use-modal-initial-focus";
 import type { Org } from "../../types";
 import {
-  projectAgentChatRoute,
   projectAgentCreateRoute,
-  projectAgentRoute,
+  projectAgentsRoute,
   projectTasksRoute,
 } from "../../utils/mobileNavigation";
 import { getLastAgent, getLastAgentEntry, getLastProject } from "../../utils/storage";
@@ -139,12 +138,7 @@ export function MobileOrganizationView() {
   }, [agentsByProject, recentProjects, refreshProjectAgents]);
 
   const openProjectWorkspace = (projectId: string) => {
-    const rememberedAgentId = getLastAgent(projectId);
-    navigate(
-      rememberedAgentId
-        ? projectAgentChatRoute(projectId, rememberedAgentId)
-        : projectAgentRoute(projectId),
-    );
+    navigate(projectAgentsRoute(projectId));
   };
 
   const openCreateProject = () => {
@@ -211,7 +205,7 @@ export function MobileOrganizationView() {
                         className={styles.resumeActionButton}
                         onClick={() => openProjectWorkspace(resumeProject.project_id)}
                       >
-                        {resumeAgent ? "Open chat" : "Open project"}
+                        {resumeAgent ? "Open agents" : "Open project"}
                       </Button>
                       <Button
                         variant="ghost"

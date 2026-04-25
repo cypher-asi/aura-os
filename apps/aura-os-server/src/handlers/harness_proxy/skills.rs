@@ -5,7 +5,9 @@ use axum::response::{IntoResponse, Response};
 use aura_os_core::AgentId;
 
 use super::skill_exists_on_disk;
+use crate::capture_auth::is_capture_access_token;
 use crate::state::AppState;
+use crate::state::AuthJwt;
 
 /// Proxies `GET api/skills` to the harness catalog, but filters out any
 /// entries whose `~/.aura/skills/<name>/SKILL.md` is gone. The external
@@ -109,9 +111,19 @@ pub(crate) async fn activate_skill(
 
 pub(crate) async fn list_agent_skills(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(agent_id): Path<AgentId>,
     RawQuery(query): RawQuery,
 ) -> Result<Response, StatusCode> {
+    if is_capture_access_token(&jwt) {
+        return Ok((
+            StatusCode::OK,
+            [(header::CONTENT_TYPE, "application/json")],
+            "[]",
+        )
+            .into_response());
+    }
+
     let resp = state
         .harness_http
         .proxy_json(

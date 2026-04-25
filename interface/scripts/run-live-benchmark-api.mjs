@@ -137,6 +137,15 @@ function readUsagePayload(content) {
   return asRecord(outer.usage) ?? outer;
 }
 
+function readNumber(record, keys) {
+  for (const key of keys) {
+    if (typeof record[key] === "number" && Number.isFinite(record[key])) {
+      return record[key];
+    }
+  }
+  return null;
+}
+
 function countFilesChanged(content) {
   const outer = asRecord(content);
   if (!outer) return 0;
@@ -167,14 +176,32 @@ function summarizeSessionUsage(events) {
     if (!(eventType in summaries)) continue;
     const usage = readUsagePayload(event.content);
     if (!usage) continue;
-    if (typeof usage.input_tokens !== "number" || typeof usage.output_tokens !== "number") {
+    const inputTokens = readNumber(usage, ["input_tokens", "inputTokens", "prompt_tokens"]);
+    const outputTokens = readNumber(usage, [
+      "output_tokens",
+      "outputTokens",
+      "completion_tokens",
+    ]);
+    if (inputTokens == null || outputTokens == null) {
       continue;
     }
     summaries[eventType].push({
-      inputTokens: usage.input_tokens,
-      outputTokens: usage.output_tokens,
-      cacheCreationInputTokens: Number(usage.cache_creation_input_tokens ?? 0),
-      cacheReadInputTokens: Number(usage.cache_read_input_tokens ?? 0),
+      inputTokens,
+      outputTokens,
+      cacheCreationInputTokens: Number(
+        readNumber(usage, [
+          "cache_creation_input_tokens",
+          "cacheCreationInputTokens",
+          "prompt_cache_miss_tokens",
+        ]) ?? 0,
+      ),
+      cacheReadInputTokens: Number(
+        readNumber(usage, [
+          "cache_read_input_tokens",
+          "cacheReadInputTokens",
+          "prompt_cache_hit_tokens",
+        ]) ?? 0,
+      ),
       estimatedContextTokens: Number(usage.estimated_context_tokens ?? 0),
       contextUtilization: Number(usage.context_utilization ?? 0),
       model: typeof usage.model === "string" ? usage.model : null,

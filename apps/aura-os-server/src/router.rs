@@ -10,6 +10,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
+use crate::capture_auth;
 use crate::handlers::{
     agent_bootstrap, agents, auth, billing, browser, debug_runs, dev_loop, feed, feedback, files,
     follows, generation, harness_proxy, leaderboard, log, loops as loops_handler, marketplace,
@@ -113,7 +114,7 @@ pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathB
                     axum::http::header::CACHE_CONTROL,
                     HeaderValue::from_static("no-cache"),
                 ))
-                .service(ServeDir::new(&dir).not_found_service(ServeFile::new(index)));
+                .service(ServeDir::new(&dir).fallback(ServeFile::new(index)));
             api_router.fallback_service(serve)
         }
         None => api_router,
@@ -125,6 +126,10 @@ fn auth_routes() -> Router<AppState> {
         .route("/api/auth/login", post(auth::login))
         .route("/api/auth/register", post(auth::register))
         .route("/api/auth/logout", post(auth::logout))
+        .route(
+            "/api/capture/session",
+            post(capture_auth::create_capture_session),
+        )
         .route(
             "/api/auth/request-password-reset",
             post(auth::request_password_reset),
@@ -249,6 +254,17 @@ fn project_routes() -> Router<AppState> {
         .route(
             "/api/projects/:project_id/stats",
             get(project_stats::get_project_stats),
+        )
+        // Project artifacts (images, 3D models)
+        .route(
+            "/api/projects/:project_id/artifacts",
+            get(project_artifacts::list_project_artifacts)
+                .post(project_artifacts::create_project_artifact),
+        )
+        .route(
+            "/api/artifacts/:artifact_id",
+            get(project_artifacts::get_project_artifact)
+                .delete(project_artifacts::delete_project_artifact),
         )
         .route("/api/list-directory", post(files::list_directory))
         .route("/api/read-file", post(files::read_file))
@@ -625,17 +641,6 @@ fn process_routes() -> Router<AppState> {
             get(process::list_run_artifacts),
         )
         .route("/api/process-artifacts/:id", get(process::get_artifact))
-        // Project artifacts (images, 3D models)
-        .route(
-            "/api/projects/:project_id/artifacts",
-            get(project_artifacts::list_project_artifacts)
-                .post(project_artifacts::create_project_artifact),
-        )
-        .route(
-            "/api/artifacts/:artifact_id",
-            get(project_artifacts::get_project_artifact)
-                .delete(project_artifacts::delete_project_artifact),
-        )
         .route(
             "/api/process-folders",
             get(process::list_folders).post(process::create_folder),
