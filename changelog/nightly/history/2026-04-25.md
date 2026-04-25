@@ -1,78 +1,71 @@
-# Autonomous dev loop hardens, harness becomes the single runtime
+# Harness consolidation, autonomous loop reliability, and a polished desktop shell
 
 - Date: `2026-04-25`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.385.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.385.1
+- Version: `0.1.0-nightly.386.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.386.1
 
-A heavy day for autonomy: the dev loop learned to survive provider 5xx storms, ENOSPC remotes, and stuck agents, while the architecture pivoted decisively toward the harness as the only agent runtime. Alongside the engine work, the desktop shell got a coherent floating-glass redesign and chat regained mid-turn resilience across refreshes.
+A heavy day for Aura's autonomy stack: the dev loop was hardened against transient provider errors, push failures, and policy denials, then largely refactored to delegate work to the new harness automatons. The desktop shell got a coordinated visual pass with floating capsules and rounded panels, and the chat surface gained richer retry, recovery, and error-state handling. Release tooling also got a real fix after the harness/aura-node crate move.
 
-## 8:52 AM — Durable sync milestones survive push timeouts
+## 8:52 AM — Durable sync checkpoints for the dev loop
 
-Reload-safe checkpoints and a lighter left-menu hierarchy land before the day's bigger autonomy work.
+Sync milestones now persist across push timeouts and reloads so locally completed work survives restarts, with light typographic polish to the left menu and Sidekick.
 
-- Task sync checkpoints and milestone events now persist across push recovery, so locally completed work survives reloads and surfaces as a retryable remote-sync issue rather than an opaque task failure. (`68be945`, `a69f2e3`)
-- Lightened child-row font weight in the left menu and Sidekick to give nested items clearer visual hierarchy. (`2b608a7`, `d973798`)
+- Dev-loop sync milestones and task sync state are now persisted as durable checkpoints, so a push timeout or restart resumes from the last commit/push milestone instead of treating repo sync as opaque task output and surfacing a misleading task failure. (`68be945`, `a69f2e3`)
+- Lightened child-row font weight in the left menu tree and Sidekick so nested items read as clearly subordinate to their parents. (`2b608a7`, `d973798`)
 
 ## 9:46 AM — Black drag-resize fill on Windows desktop
 
-The frameless desktop window stops flashing white during live resize.
+The Windows desktop window now flashes black instead of white during live drag-resize, blending into Aura's dark theme.
 
-- Switched the main window class background brush to BLACK_BRUSH so the sliver exposed during WebView2's resize lag blends into the dark theme instead of flashing white. (`c1aad81`)
+- Switched the main window class background brush back to BLACK_BRUSH so newly exposed client area during drag-resize fills with black, matching the WebView2 background and avoiding a jarring white flash on Windows. (`c1aad81`)
 
-## 10:19 AM — DoD gate, retry ladders, and floating-glass shell
+## 10:19 AM — Autonomous dev loop hardening and the harness migration
 
-A long thread of autonomy hardening pairs with a top-to-bottom restyle of the desktop shell into floating capsules, plus mid-turn chat recovery and a browser error overlay.
+A long arc that turned the dev loop into a recoverable system — DoD guardrails, transient-error retries, push decoupling, ENOSPC handling — and then refactored agent runtime, dev loop, and process scheduling onto the new aura-os-harness automatons.
 
-- Hardened the Definition-of-Done gate end-to-end: rejects empty-path writes, preflights the local workspace, emits commit_rolled_back on gate failures, and now infers files_changed from tool events so recovered runs aren't falsely rejected. (`a8e3e72`, `f1c9dce`, `a2c218d`, `87e929c`)
-- Built a layered retry ladder for transient provider failures: 5xx and stream-terminated errors classify as transient, project cooldowns escalate with jitter, single-task retries get a budget of 3, completion-gate failures route through infra retry, and a per-tool-call retry budget of 8 mirrors aura-harness with live retry/exhaustion badges on tool cards. (`9cb0c6a`, `7150cd3`, `373be42`, `88fa94e`, `f474edc`, `4424201`, `8e75d47`, `e94aa54`)
-- Decoupled task terminal status from git push outcomes and added an Orbit ENOSPC capacity guard: tasks complete locally even when the remote is full, push_deferred and project_push_stuck events surface in the UI as a banner plus muted GitStep, and a remote-push-recovery runbook documents the operator path. (`73ab86f`, `f4425e2`, `fc08c18`, `5badbea`)
-- Introduced a pure recovery-action reconciler and exposed its recommendation on the task-output API so each task surfaces what the recovery worker would do (adopt_run, retry_push, decompose, mark_terminal) without the backend acting yet. (`d09c166`, `c0e7121`)
-- Restyled the desktop shell into a floating-glass system: bottom taskbar split into three rounded capsules, topbar and main panel inset with rounded corners, sidebar and sidekick separated by transparent gaps, and pinned-agent corners aligned to the pill radius. (`065b565`, `d0bd776`, `de67ed6`, `8d8225f`, `3ace217`, `07c6832`, `b1c6453`, `8494863`, `078aca5`, `21373eb`, `b995cb2`, `eeba9fc`, `8fc9dbd`, `4474f6c`, `bce7a34`, `2251b35`, `fece144`, `13acee2`, `5019432`, `e0b2735`, `4f67df1`)
-- Eliminated stream jank in the Run pane and Task Overlay by porting the chat's overflow-anchor + layout-effect scroll pattern, and reconciled stale active rows so a single cooking indicator floats above the bottom fade. (`0244c85`, `3089289`)
-- Surfaced richer task-failure context: abandoned tool cards resolve on retry, errored writes get specific titles, completion-gate rejections render a red card, and a stable retry preamble tells the next attempt what failed. (`d131349`, `8e75d47`)
-- Made desktop autonomy work out of the box: the bundled aura-node sidecar boots with autonomous + run_command + shell policy, --external-harness is honored and probes /health for run_command, and DoD diagnostics call out kernel-policy denial with the specific envs to set. (`ed55e37`, `a41c273`, `f1f4735`, `5760d25`, `76d8a05`)
-- Project-bound chats now Just Work for non-CEO agents: project self-caps splice on chat open, persist_ctx project_id is used as a fallback, and X-Aura-Project-Id is injected on cross-agent dispatch so project_id no longer needs to live in tool schemas. (`8d0d715`, `b6a066e`, `def464a`, `13acee2`, `6efa695`, `c477313`)
-- Browser surfaces grew real error and search behavior: a dark Aura overlay replaces Chromium's main-frame error page, the address bar is restyled as a flat pill, and unresolved input falls back to a DuckDuckGo search. (`bd92f08`, `7837adb`, `1c155de`)
-- Mid-turn chat now survives a hard refresh: the server emits an in_flight flag and throttled assistant_turn_progress, the client rebuilds partial assistant turns with their tool cards, and the sidekick preview selection persists in the URL. (`6021e18`, `4c671f1`, `07bbdc3`)
-- Aligned aura-os-server's task state machine with aura-storage via a single safe_transition helper, added flat /tasks/:id and /specs/:id routes the harness's HttpDomainApi expects, and made retry idempotent on ready to stop the cascade of "Invalid status transition" 400s. (`bde1254`, `3809aeb`)
-- macOS desktop polish: a minimal native menu bar wires Cmd+C/V/X/A/Z/Z through to the WebView, and the custom titlebar becomes draggable on macOS and Linux via a pointerdown→WinCmd::Drag IPC route since WebKit ignores -webkit-app-region. (`cc3193a`, `c2294d3`)
-- Added a Copy button with cross-OS clipboard fallback to file/spec preview cards and stripped emojis from the agents-sidebar last-message preview for a cleaner row. (`55eb3c7`, `5bc8ad9`)
+- Definition-of-Done gate hardened end to end: empty-path writes are rejected unless a real-path write later lands, files_changed is now inferred from successful tool events, workspace preflight runs before the loop starts, and rolled-back commits surface in the UI with a strike-through Git step. (`a8e3e72`, `f1c9dce`, `a2c218d`)
+- Transient provider errors (HTTP 5xx, stream-terminated, broken pipes) are now classified as retryable with jittered, escalating per-class cooldowns; single-task retries get a budget of 3 to absorb a provider blip, and completion-gate failures route through the same infra retry ladder when the underlying cause was transient. (`9cb0c6a`, `7150cd3`, `373be42`, `88fa94e`)
+- Retried tasks now ship with a stateful resume preamble ("[aura-retry attempt=N]…") so the next turn doesn't redo work, and the Run pane resolves abandoned tool cards on retry, surfaces task failureReason, and renders a live "Writing retrying (n/8)…" state from the harness's new ToolCallRetrying / ToolCallFailed events with a matching server-side per-tool retry budget. (`8e75d47`, `d131349`, `f474edc`, `4424201`)
+- Task terminal status is now decoupled from git push success — push failures emit a push_deferred event and a project_push_stuck banner instead of demoting completed tasks, with first-class handling for orbit ENOSPC (15-minute cooldown, amber Orbit status dot, runbook) and a remote-push-recovery runbook for operators. (`73ab86f`, `f4425e2`, `fc08c18`, `5badbea`)
+- Closed the run_command policy-denial trap end to end: the desktop sidecar now sets AURA_ALLOWED_COMMANDS plus AURA_ALLOW_SHELL, --external-harness probes the harness /health policy, the DoD gate emits a specific diagnostic naming AURA_STRICT_MODE / ENABLE_CMD_TOOLS / binary_allowlist, and aura-harness's run_command-by-default contract is honored across server, sidecar, and docs. (`ed55e37`, `a41c273`, `5760d25`, `f1f4735`, `76d8a05`, `abfb6d1`, `71304ce`, `3bdb2b4`)
+- Project-scoped agent tools (create_spec, create_task, list_specs, …) work without the LLM threading project_id: chat sessions auto-splice ReadProject/WriteProject self-caps for the bound project, the cross-agent dispatcher injects project_id from X-Aura-Project-Id, and the schemas drop it from required. (`8d0d715`, `b6a066e`, `def464a`, `13acee2`, `6efa695`, `c477313`)
+- A pure recovery-action reconciler (adopt run, retry push, retry task, decompose, mark terminal) is now exposed on the task-output API as a recommended_action, and a new DoD retry tier with a language-neutral follow-up prompt re-prompts on missing build/test/fmt/lint axes before falling through to terminal failure. (`d09c166`, `c0e7121`, `70623bd`, `e94aa54`)
+- Task state machine is now unified with aura-storage via a single safe_transition helper: the dev loop's five direct transition sites and /tasks/:id/retry all bridge ready→failed via in_progress, /retry is idempotent on ready, and the harness reader WebSocket is closed on every restart so the 128-slot WS cap stops getting exhausted. (`3809aeb`, `ef50887`, `ee5d955`, `bde1254`)
+- Stuck-agent storms are no longer self-perpetuating: terminal harness signals like "appears stuck" or "stopping to prevent waste" now bypass the error-event restart, and provider credit exhaustion is classified as terminal so automation halts immediately with an insufficient-credits outcome. (`4c01759`, `95cd075`, `5fe6976`)
+- Major refactor: the legacy agent-tool dispatcher and aura-os-link compatibility layer are deleted, dev loop and process scheduling now run as harness automatons, the reconciler derives recovery from harness signals, and external CLI adapters (claude_code, codex, gemini_cli, opencode, cursor) are retired — Aura OS ships only on the aura_harness runtime. (`c21106b`, `9e23bbc`, `53ace21`, `d8c2480`, `00d095e`, `71d1821`, `c1e87fb`, `2dd8391`, `f39dc74`, `b43e4b8`, `49a1d45`)
+- Concurrent loops are now isolated end to end: a new aura-os-events / aura-os-loops pair tracks chat, automation, task, process and spec loops per (user, project, agent_instance, agent, kind) with topic-scoped channels, the in-memory caches are re-keyed to remove cross-agent bleed, and a single LoopProgress component renders activity in agent rows, the sidekick, and per-task explorer rows from a /api/loops snapshot plus WS bridge. (`9860141`, `26ed693`, `ac52a80`, `61eb586`)
+- Desktop shell got a coordinated visual pass: the bottom taskbar splits into three floating glass capsules with consistent 5px insets and rounded corners, the topbar and main content area float with matching radius and gaps, and the right sidekick mirrors the left menu's bottom fade. (`065b565`, `d0bd776`, `de67ed6`, `8d8225f`, `3ace217`, `07c6832`, `b1c6453`, `8494863`, `21373eb`, `b995cb2`, `eeba9fc`, `8fc9dbd`, `078aca5`, `13acee2`, `4474f6c`, `bce7a34`, `2251b35`, `fece144`)
+- Chat and Run pane stream behavior is much steadier: scroll uses overflow-anchor instead of MutationObserver-driven sentinels (eliminating the up-then-down blink), mid-turn state is recovered from the server after a hard refresh, the assistant turn is preserved at end-of-stream, and stale "active" panel rows in localStorage are reconciled against the server's active task list. (`0244c85`, `6021e18`, `2bb8f04`, `3089289`, `09b8424`)
+- Browser surface gets a flat Edge-style address pill, free-form queries fall back to a DuckDuckGo search, and main-frame load failures now render an Aura-branded error overlay with Ask Agent / Show Details / Reload instead of Chromium's default error page. (`7837adb`, `1c155de`, `bd92f08`)
+- Native desktop polish: macOS gains a real NSMenu so Cmd+C/V/X/A/Z work inside the WebView, the custom titlebar is now draggable on macOS and Linux via tao::drag_window (WebKit ignores -webkit-app-region), and the chat composer is hidden until history resolves to avoid an empty-agent flash. (`cc3193a`, `c2294d3`, `07bbdc3`)
+- Inline rename for project agents: a Rename entry in the sidebar context menu (and F2 on a focused row) opens the existing inline rename overlay, matching the project rename UX. (`efa2c79`)
+- Spec and file previews gained a Copy button with cross-OS clipboard support (navigator.clipboard with execCommand fallback for Capacitor WebViews), and the GroupCollapsible header was fixed so interactive controls no longer cause a nested-button hydration error. (`55eb3c7`, `6e9126b`)
+- Tool call inputs that arrived as stringified JSON no longer render as character-indexed objects, and historical/inline [tool: …] markers in completed task output are now expanded into real Block renderers instead of falling back to the legacy inline marker path. (`ad52832`, `cc71745`, `cc4781d`)
 
-## 12:10 AM — Harness becomes the single agent runtime
+## 11:17 PM — Desktop sidecar build fix after the harness package move
 
-The legacy agent-tool dispatcher, the link compatibility layer, and external CLI adapters are retired; chat, automation, processes, and DoD are routed through the harness, with concurrent loops isolated by a new EventHub + LoopRegistry.
+The release script that bundles aura-node into the desktop sidecar was failing because the binary now lives in the aura-runtime package; the build invocation was corrected.
 
-- Retired the legacy agent-tool dispatcher and external CLI adapter pathways (claude_code, codex, gemini_cli, opencode, cursor), leaving aura_harness as the only supported runtime and removing ~18k lines across runtime, validation, UI, evals, and docs. (`53ace21`, `b43e4b8`)
-- Refactored the dev loop, processes, and reconciler to delegate to harness automatons via a new aura-os-harness crate and session bridge, removing aura-os-link entirely and trimming ~9k-line dev_loop.rs into focused adapter, control, registry, signals, start, and streaming modules. (`c21106b`, `9e23bbc`, `d8c2480`, `00d095e`, `71d1821`, `c1e87fb`, `2dd8391`, `f39dc74`, `c6174bb`, `d29f248`)
-- Made the harness authoritative for task DoD: aura-os retired its own completion rejection and DoD-retry shims, treats credit-exhaustion and no-edits completions as terminal contract errors, and stops decomposing on those signals. (`49a1d45`, `95cd075`, `5fe6976`)
-- Isolated concurrent loops with a new aura-os-events EventHub and aura-os-loops LoopRegistry: chat, automation, task, process, and spec loops are tracked per (user, project, agent_instance, agent, kind, instance), GET /api/loops exposes a snapshot, and a single LoopProgress component renders activity consistently across agent rows, the sidekick, and task explorer. (`9860141`, `26ed693`, `82f93b3`, `ac52a80`, `61eb586`)
-- Closed several DoD lockup classes that pre-dated the harness migration: a DoD retry tier with language-neutral follow-up prompt, an extended kernel-policy-denial gate covering all four DoD axes, an end-to-end binary_allowlist denial fix, and a tight-loop reconnect guard for terminal harness errors like the agent-stuck anti-waste signal. (`70623bd`, `3bdb2b4`, `71304ce`, `4c01759`)
-- Stopped exhausting the harness 128-slot WS cap by giving connect_event_stream a WsReaderHandle the dev loop closes on every retry/swap, freeing the previous reader before opening the next stream. (`ee5d955`)
-- Live tool approvals get a wire shape: WebSocket prompt/response payloads for tri-state approvals, plus per-agent tool overrides and effective tool state on the protocol so clients can render and edit the live tool catalog. (`53b2c16`, `3636203`)
-- Polished the assistant-turn rendering pipeline: tool-call inputs are normalized so stringified args don't render as character-indexed JSON, textual [tool: ...] markers are routed through the shared Block registry in both live and historical views, and the end-of-stream race that wiped tool-only turns is closed. (`ad52832`, `cc71745`, `cc4781d`, `2bb8f04`)
-- Hoisted live task status into a shared zustand store keyed by taskId, fixing a "Maximum update depth exceeded" loop on retry and stopping the sidekick from re-hydrating task output redundantly. (`26ed693`, `09b8424`)
-- Added inline rename for project agents from the sidebar context menu (and F2), reusing the existing InlineRenameInput overlay. (`efa2c79`)
-- Reserved space for the cooking indicator across the task preview's Live Output, the process run overlay, and the sidekick Run pane, and anchored it inside the preview overlay so it no longer floats above the overlay's bottom edge. (`2509b9c`, `bf02505`, `206097d`)
+- prepare-desktop-sidecar now builds aura-node with `-p aura-runtime --bin aura-node` instead of `-p aura-node`, fixing the "no bin target named aura-node in default-run packages" error introduced when the binary moved into the aura-runtime package. (`cb4e6a1`, `4da6c8c`)
 
-## 11:17 PM — Desktop sidecar build targets the right Cargo package
+## 11:55 PM — Reverted accidental hooks/ relocation
 
-Two quick fixes to the prepare-desktop-sidecar script so the bundled aura-node binary actually builds.
+A CI retrigger commit unintentionally moved interface/src/hooks into interface/src/shared/hooks without updating imports; it was reverted to restore the build.
 
-- Switched prepare-desktop-sidecar to build aura-node by --bin name and then scoped the build to the aura-runtime package so Cargo resolves the binary that lives in the harness workspace instead of failing with "no bin target named aura-node". (`cb4e6a1`, `4da6c8c`)
+- A workflow-retrigger change accidentally moved interface/src/hooks/* under interface/src/shared/hooks/ without rewriting imports, breaking main; the original layout was restored to unblock CI. (`2320faf`, `08ec42c`)
 
-## 11:55 PM — Reverted accidental hooks-directory move
+## 10:36 AM — Changelog media capture workflow guards
 
-A CI retrigger commit unintentionally relocated interface hooks; the change was reverted to restore main.
+The release-changelog media workflow gained tighter skip and capture gates, plus matching planner/quality logic and small shell adjustments.
 
-- Reverted a CI-retrigger commit that moved interface/src/hooks/* into interface/src/shared/hooks/ without updating import sites, restoring the original layout so the build stays green. (`2320faf`, `08ec42c`)
+- Hardened the publish-release-changelog-media workflow with stricter skip and capture gates and matching planner/quality logic so changelog media generation no longer runs (or fails) on releases that shouldn't produce it. (`ee70b4b`)
 
 ## Highlights
 
-- Definition-of-Done gate, retry ladders, and rollback UX hardened end-to-end
-- Push failures, ENOSPC, and stuck agents no longer terminally fail tasks
-- Legacy agent-tool dispatcher and external CLI adapters retired in favor of aura_harness
-- Topic-scoped EventHub + LoopRegistry isolate concurrent loops across UI surfaces
-- Desktop shell restyled as floating glass capsules with cross-platform titlebar drag
-- macOS app menu wires Cmd+C/V/X/A/Z through to the WebView
+- Autonomous dev loop now survives provider 5xx, push failures, and policy denials
+- Major refactor: agent runtime, dev loop, and process scheduling now run through the unified harness
+- Desktop shell redesigned with floating capsules, rounded panels, and corner-radius cohesion
+- Chat and run pane preserve in-flight state across refresh and surface live tool retry status
+- External CLI agent adapters retired — Aura OS now ships only on the aura_harness runtime
 

@@ -2,21 +2,20 @@
   {
     "date": "2026-04-25",
     "channel": "nightly",
-    "version": "0.1.0-nightly.385.1",
-    "title": "Autonomous dev loop hardens, harness becomes the single runtime",
-    "intro": "A heavy day for autonomy: the dev loop learned to survive provider 5xx storms, ENOSPC remotes, and stuck agents, while the architecture pivoted decisively toward the harness as the only agent runtime. Alongside the engine work, the desktop shell got a coherent floating-glass redesign and chat regained mid-turn resilience across refreshes.",
+    "version": "0.1.0-nightly.386.1",
+    "title": "Harness consolidation, autonomous loop reliability, and a polished desktop shell",
+    "intro": "A heavy day for Aura's autonomy stack: the dev loop was hardened against transient provider errors, push failures, and policy denials, then largely refactored to delegate work to the new harness automatons. The desktop shell got a coordinated visual pass with floating capsules and rounded panels, and the chat surface gained richer retry, recovery, and error-state handling. Release tooling also got a real fix after the harness/aura-node crate move.",
     "entryCount": 6,
     "highlights": [
-      "Definition-of-Done gate, retry ladders, and rollback UX hardened end-to-end",
-      "Push failures, ENOSPC, and stuck agents no longer terminally fail tasks",
-      "Legacy agent-tool dispatcher and external CLI adapters retired in favor of aura_harness",
-      "Topic-scoped EventHub + LoopRegistry isolate concurrent loops across UI surfaces",
-      "Desktop shell restyled as floating glass capsules with cross-platform titlebar drag",
-      "macOS app menu wires Cmd+C/V/X/A/Z through to the WebView"
+      "Autonomous dev loop now survives provider 5xx, push failures, and policy denials",
+      "Major refactor: agent runtime, dev loop, and process scheduling now run through the unified harness",
+      "Desktop shell redesigned with floating capsules, rounded panels, and corner-radius cohesion",
+      "Chat and run pane preserve in-flight state across refresh and surface live tool retry status",
+      "External CLI agent adapters retired — Aura OS now ships only on the aura_harness runtime"
     ],
-    "rawCommitCount": 122,
-    "generatedAt": "2026-04-25T07:13:54.196Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.385.1",
+    "rawCommitCount": 123,
+    "generatedAt": "2026-04-25T17:50:27.790Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.386.1",
     "path": "history/2026-04-25.json"
   },
   {
