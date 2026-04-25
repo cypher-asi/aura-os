@@ -1030,19 +1030,52 @@ pub(crate) fn harness_broadcast_to_sse(
             return None;
         }
 
-        loop {
-            match rx.recv().await {
-                Ok(evt) => {
-                    let should_close = matches!(
-                        evt,
-                        HarnessOutbound::AssistantMessageEnd(_) | HarnessOutbound::Error(_)
-                    );
-                    let event = super::super::sse::harness_event_to_sse(&evt);
-                    return Some((event, (rx, should_close)));
-                }
-                Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
-                Err(tokio::sync::broadcast::error::RecvError::Closed) => return None,
+        match rx.recv().await {
+            Ok(evt) => {
+                let should_close = matches!(
+                    evt,
+                    HarnessOutbound::AssistantMessageEnd(_) | HarnessOutbound::Error(_)
+                );
+                let event = super::super::sse::harness_event_to_sse(&evt);
+                Some((event, (rx, should_close)))
             }
+            // The harness broadcast channel evicted `n` events before we
+            // could read them — typically because heavy text-delta + large
+            // tool-result traffic outran the SSE writer. Previously we
+            // silently `continue`d the recv loop, which meant a dropped
+            // terminal `AssistantMessageEnd` would leave the client
+            // waiting until its 90s idle timeout fired and the run
+            // appeared to "just get dropped with no explanation."
+            //
+            // Now we log, surface a synthetic SSE error event so the UI
+            // can render an explicit banner, and close the stream. The
+            // parallel `chat_persist_task` keeps draining through lag, so
+            // the post-stream history refetch will repaint the full
+            // assistant turn from storage.
+            Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                warn!(
+                    skipped = n,
+                    "harness_broadcast_to_sse: receiver lagged; closing SSE with synthetic error"
+                );
+                let payload = serde_json::json!({
+                    "type": "error",
+                    "message": format!(
+                        "Stream lagged ({n} events skipped). Reloading history…"
+                    ),
+                    "code": "stream_lagged",
+                    "recoverable": true,
+                });
+                let event = Event::default()
+                    .event("error")
+                    .json_data(&payload)
+                    .unwrap_or_else(|_| {
+                        Event::default()
+                            .event("error")
+                            .data("{\"type\":\"error\",\"message\":\"Stream lagged\",\"code\":\"stream_lagged\",\"recoverable\":true}")
+                    });
+                Some((Ok(event), (rx, true)))
+            }
+            Err(tokio::sync::broadcast::error::RecvError::Closed) => None,
         }
     })
 }

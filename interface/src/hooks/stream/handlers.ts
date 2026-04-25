@@ -4,6 +4,7 @@ import {
   isAgentBusyError,
   dispatchInsufficientCredits,
 } from "../../api/client";
+import { SSEIdleTimeoutError } from "../../shared/api/sse";
 import type {
   ToolCallStartedInfo,
   ToolCallSnapshotInfo,
@@ -78,9 +79,39 @@ function getStreamErrorMessage(error: unknown): string {
   return String(error);
 }
 
+/**
+ * Detect a "stream dropped" condition coming from either side of the
+ * SSE pipeline:
+ *
+ * - Client-side `SSEIdleTimeoutError` — 90s with no bytes from the
+ *   server. Almost always means an upstream proxy buffered the
+ *   response or the harness broadcast channel wedged.
+ * - Server-side synthetic error with `code === "stream_lagged"` —
+ *   `harness_broadcast_to_sse` saw `RecvError::Lagged` and closed
+ *   the SSE early to avoid a silent stall. The accompanying message
+ *   has a stable `Stream lagged` prefix so we still match it when
+ *   the structured payload is flattened to a string by the time it
+ *   reaches us via `EventType.Error`.
+ */
+function isStreamDroppedError(error: unknown, message: string): boolean {
+  if (error instanceof SSEIdleTimeoutError) return true;
+  if (error instanceof Error && error.name === "SSEIdleTimeoutError") return true;
+  if (
+    typeof error === "object"
+    && error !== null
+    && "code" in error
+    && (error as { code?: unknown }).code === "stream_lagged"
+  ) {
+    return true;
+  }
+  if (/^SSE idle timeout/i.test(message)) return true;
+  if (/^Stream lagged/i.test(message)) return true;
+  return false;
+}
+
 function normalizeStreamError(error: unknown): {
   message: string;
-  displayVariant?: "insufficientCreditsError" | "agentBusyError";
+  displayVariant?: "insufficientCreditsError" | "agentBusyError" | "streamDropped";
 } {
   if (isInsufficientCreditsError(error)) {
     return {
@@ -97,8 +128,17 @@ function normalizeStreamError(error: unknown): {
     };
   }
 
+  const rawMessage = getStreamErrorMessage(error);
+  if (isStreamDroppedError(error, rawMessage)) {
+    return {
+      message:
+        "The chat stream went quiet unexpectedly. Your assistant turn is being recovered from history — refresh if it does not reappear shortly.",
+      displayVariant: "streamDropped",
+    };
+  }
+
   return {
-    message: getStreamErrorMessage(error),
+    message: rawMessage,
   };
 }
 

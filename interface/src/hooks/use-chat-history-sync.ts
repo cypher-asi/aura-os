@@ -32,10 +32,19 @@ const PROGRESS_REFETCH_DEBOUNCE_MS = 250;
  * this guard that snapshot would replace the just-finalized stream
  * events and the assistant content would visibly disappear at end of
  * turn (full content reappearing only on a hard reload, since the
- * server eventually persists it). 1500ms covers the worst observed
- * persistence lag without delaying legitimate cross-session refreshes.
+ * server eventually persists it).
+ *
+ * 1500ms covered the typical persistence lag, but under load — long
+ * tool-result writes, slow storage round trips, or a heavy harness
+ * burst — we occasionally still saw the assistant turn flash to empty
+ * before the next refetch caught up, which presented as the main chat
+ * "just getting dropped with no explanation." 5000ms covers the worst
+ * observed persistence lag with comfortable headroom; the staleness
+ * guards below still let legitimate cross-session refreshes land
+ * promptly because they short-circuit when history is provably newer
+ * than the stream.
  */
-const STREAM_FINISH_GRACE_MS = 1500;
+const STREAM_FINISH_GRACE_MS = 5000;
 
 interface ChatHistorySyncOptions {
   historyKey: string | undefined;

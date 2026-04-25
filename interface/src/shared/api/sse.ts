@@ -12,6 +12,22 @@ export interface SSECallbacks<T extends string> {
 const IDLE_TIMEOUT_MS = 90_000;
 const SSE_CONTENT_TYPE = "text/event-stream";
 
+/**
+ * Thrown when the SSE reader has not received any bytes for
+ * `IDLE_TIMEOUT_MS`. The harness side already attaches an Axum
+ * `KeepAlive`, so seeing this almost always means a proxy is buffering
+ * the response or the upstream broadcast channel got wedged. The chat
+ * UI uses the `name` to surface a "stream dropped" banner with a retry
+ * hint instead of inlining `*Error: SSE idle timeout*` in the trailing
+ * assistant bubble.
+ */
+export class SSEIdleTimeoutError extends Error {
+  constructor() {
+    super("SSE idle timeout");
+    this.name = "SSEIdleTimeoutError";
+  }
+}
+
 function parseSSEFrame(frame: string): { eventType: string; data: string | null } {
   let eventType = "";
   const dataLines: string[] = [];
@@ -107,7 +123,7 @@ export async function streamSSE<T extends string>(
     while (true) {
       const readPromise = reader.read();
       const timeoutPromise = new Promise<{ done: true; value: undefined }>(
-        (_, reject) => setTimeout(() => reject(new Error("SSE idle timeout")), IDLE_TIMEOUT_MS),
+        (_, reject) => setTimeout(() => reject(new SSEIdleTimeoutError()), IDLE_TIMEOUT_MS),
       );
       const { done, value } = await Promise.race([readPromise, timeoutPromise]);
       if (done) break;

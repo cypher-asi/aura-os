@@ -178,3 +178,33 @@
   flex-basis: 100%;
 }
 
+/* Banner for `displayVariant: "streamDropped"`. Renders as a prominent
+   warning row -- much harder to miss than the inline italic
+   `*Error: ...*` suffix the chat used to fall back to when the SSE
+   stream went quiet. */
+.streamDroppedBanner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.12));
+  background: var(--color-bg-warning-subtle, rgba(255, 196, 0, 0.08));
+  color: var(--color-text-secondary);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.streamDroppedTitle {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.streamDroppedMessage {
+  color: inherit;
+}
+
+.streamDroppedMeta {
+  margin-top: 2px;
+}
+

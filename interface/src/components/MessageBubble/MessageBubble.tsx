@@ -70,6 +70,7 @@ export const MessageBubble = memo(function MessageBubble({
   const hasThinking = message.thinkingText && message.thinkingText.length > 0;
   const hasTimeline = message.timeline && message.timeline.length > 0;
   const isInsufficientCreditsError = message.displayVariant === "insufficientCreditsError";
+  const isStreamDropped = message.displayVariant === "streamDropped";
   // Models sometimes emit an empty text block right before a tool_use; that
   // still leaves contentBlocks non-empty but nothing renderable, so ignore
   // whitespace-only text blocks when deciding if the bubble carries prose.
@@ -79,10 +80,13 @@ export const MessageBubble = memo(function MessageBubble({
   // A tool-only assistant bubble holds no prose/thinking -- it is just a
   // slice of the agent's tool-use loop. Drop the bubble padding for these
   // so consecutive tool-only bubbles stack as a tight checklist instead of
-  // each row floating in its own 16px padding box.
+  // each row floating in its own 16px padding box. Stream-dropped bubbles
+  // own their own banner chrome and must not be collapsed into the compact
+  // tool-only slot.
   const isAssistantToolOnly =
     message.role === "assistant"
     && !isInsufficientCreditsError
+    && !isStreamDropped
     && !hasContent
     && !hasRenderableBlocks
     && !hasThinking
@@ -143,6 +147,36 @@ export const MessageBubble = memo(function MessageBubble({
   };
 
   const renderAssistantContent = () => {
+    if (isStreamDropped) {
+      return (
+        <div
+          className={styles.streamDroppedBanner}
+          role="status"
+          aria-live="polite"
+        >
+          <span className={styles.streamDroppedTitle}>
+            Chat stream interrupted
+          </span>
+          <span className={styles.streamDroppedMessage}>{message.content}</span>
+          {(hasToolCalls || hasThinking || hasArtifactRefs || hasTimeline) && (
+            <div className={styles.streamDroppedMeta}>
+              <LLMOutput
+                content=""
+                timeline={message.timeline}
+                toolCalls={message.toolCalls}
+                thinkingText={message.thinkingText}
+                thinkingDurationMs={message.thinkingDurationMs}
+                artifactRefs={message.artifactRefs}
+                isStreaming={isStreaming}
+                defaultThinkingExpanded={initialThinkingExpanded}
+                defaultActivitiesExpanded={initialActivitiesExpanded}
+              />
+            </div>
+          )}
+        </div>
+      );
+    }
+
     if (!isInsufficientCreditsError) {
       return (
         <LLMOutput

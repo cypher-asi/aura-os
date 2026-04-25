@@ -757,6 +757,48 @@ describe("stream/handlers", () => {
       expect(result[0].content).toBe("You have no credits remaining. Buy more credits to continue.");
       expect(result[0].displayVariant).toBe("insufficientCreditsError");
     });
+
+    it("classifies SSE idle timeout as a streamDropped banner instead of inlining the raw error", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+      vi.mocked(isInsufficientCreditsError).mockReturnValue(false);
+
+      class SSEIdleTimeoutError extends Error {
+        constructor() {
+          super("SSE idle timeout");
+          this.name = "SSEIdleTimeoutError";
+        }
+      }
+
+      handleStreamError(refs, setters, new SSEIdleTimeoutError());
+
+      const lastCall = setters.calls.setEvents[setters.calls.setEvents.length - 1];
+      const updater = lastCall as (prev: unknown[]) => unknown[];
+      const result = updater([]) as Array<{ content: string; displayVariant?: string }>;
+
+      expect(result[0].displayVariant).toBe("streamDropped");
+      expect(result[0].content).not.toMatch(/\*Error: /);
+      expect(result[0].content).toMatch(/recovered from history/i);
+    });
+
+    it("classifies server-side stream_lagged errors as a streamDropped banner", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+      vi.mocked(isInsufficientCreditsError).mockReturnValue(false);
+
+      handleStreamError(refs, setters, {
+        message: "Stream lagged (12 events skipped). Reloading history…",
+        code: "stream_lagged",
+        recoverable: true,
+      });
+
+      const lastCall = setters.calls.setEvents[setters.calls.setEvents.length - 1];
+      const updater = lastCall as (prev: unknown[]) => unknown[];
+      const result = updater([]) as Array<{ content: string; displayVariant?: string }>;
+
+      expect(result[0].displayVariant).toBe("streamDropped");
+      expect(result[0].content).not.toMatch(/\*Error: /);
+    });
   });
 
   describe("finalizeStream", () => {
