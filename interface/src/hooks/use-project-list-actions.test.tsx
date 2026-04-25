@@ -349,6 +349,92 @@ describe("useProjectListActions", () => {
     );
   });
 
+  it("handleRenameAgent updates the agent name and clears the target", async () => {
+    (api.updateAgentInstance as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      agent_instance_id: "ai-1",
+      project_id: "p-1",
+      agent_id: "a-1",
+      name: "Renamed Agent",
+      role: "dev",
+      personality: "",
+      system_prompt: "",
+      skills: [],
+      icon: null,
+      status: "idle",
+      current_task_id: null,
+      current_session_id: null,
+      total_input_tokens: 0,
+      total_output_tokens: 0,
+      created_at: "",
+      updated_at: "",
+    });
+
+    const { result } = renderHook(() => useProjectListActions(), { wrapper });
+
+    act(() => {
+      result.current.setRenameAgentTarget({
+        agent_instance_id: "ai-1",
+        project_id: "p-1",
+        agent_id: "a-1",
+        name: "Old Name",
+        role: "dev",
+        personality: "",
+        system_prompt: "",
+        skills: [],
+        icon: null,
+        status: "idle",
+        current_task_id: null,
+        current_session_id: null,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        created_at: "",
+        updated_at: "",
+      });
+    });
+
+    expect(result.current.renameAgentTarget?.agent_instance_id).toBe("ai-1");
+
+    await act(async () => {
+      await result.current.handleRenameAgent("  Renamed Agent  ");
+    });
+
+    expect(api.updateAgentInstance).toHaveBeenCalledWith("p-1", "ai-1", { name: "Renamed Agent" });
+    expect(mockSetAgentsByProject).toHaveBeenCalled();
+    expect(result.current.renameAgentTarget).toBeNull();
+  });
+
+  it("handleRenameAgent skips the API call when the name is unchanged or empty", async () => {
+    const { result } = renderHook(() => useProjectListActions(), { wrapper });
+
+    act(() => {
+      result.current.setRenameAgentTarget({
+        agent_instance_id: "ai-1",
+        project_id: "p-1",
+        agent_id: "a-1",
+        name: "Same Name",
+        role: "dev",
+        personality: "",
+        system_prompt: "",
+        skills: [],
+        icon: null,
+        status: "idle",
+        current_task_id: null,
+        current_session_id: null,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        created_at: "",
+        updated_at: "",
+      });
+    });
+
+    await act(async () => {
+      await result.current.handleRenameAgent("   Same Name   ");
+    });
+
+    expect(api.updateAgentInstance).not.toHaveBeenCalled();
+    expect(result.current.renameAgentTarget).toBeNull();
+  });
+
   it("handleProjectSaved updates the projects list", () => {
     const { result } = renderHook(() => useProjectListActions(), { wrapper });
 

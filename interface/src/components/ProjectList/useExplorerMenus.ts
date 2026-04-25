@@ -24,8 +24,10 @@ export function useExplorerMenus(
     const focused = (e.target as HTMLElement).closest("button[id]");
     if (!focused) return;
     const proj = projectMap.get(focused.id);
-    if (proj) { e.preventDefault(); actions.setRenameTarget(proj); }
-  }, [projectMap, actions]);
+    if (proj) { e.preventDefault(); actions.setRenameTarget(proj); return; }
+    const meta = agentMeta.get(focused.id);
+    if (meta) { e.preventDefault(); actions.setRenameAgentTarget(meta.agent); }
+  }, [projectMap, agentMeta, actions]);
 
   return { handleContextMenu, handleKeyDown };
 }

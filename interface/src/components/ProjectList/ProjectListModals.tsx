@@ -20,6 +20,17 @@ export function ProjectListModals({ actions }: Props) {
         />
       )}
 
+      {actions.renameAgentTarget && (
+        <InlineRenameInput
+          target={{
+            id: actions.renameAgentTarget.agent_instance_id,
+            name: actions.renameAgentTarget.name,
+          }}
+          onSave={actions.handleRenameAgent}
+          onCancel={() => actions.setRenameAgentTarget(null)}
+        />
+      )}
+
       <ProjectSettingsModal
         target={actions.settingsTarget}
         onClose={() => actions.setSettingsTarget(null)}

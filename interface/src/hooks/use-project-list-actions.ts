@@ -35,6 +35,7 @@ export function useProjectListActions() {
 
   const [ctxMenu, setCtxMenu] = useState<ContextMenuState | null>(null);
   const [renameTarget, setRenameTarget] = useState<Project | null>(null);
+  const [renameAgentTarget, setRenameAgentTarget] = useState<AgentInstance | null>(null);
   const [settingsTarget, setSettingsTarget] = useState<Project | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -148,6 +149,8 @@ export function useProjectListActions() {
       setSettingsTarget(target);
     } else if (actionId === "delete" && target) {
       setDeleteTarget(target);
+    } else if (actionId === "rename-agent" && agentTarget) {
+      setRenameAgentTarget(agentTarget);
     } else if (actionId === "delete-agent" && agentTarget) {
       setDeleteAgentTarget(agentTarget);
     }
@@ -166,6 +169,31 @@ export function useProjectListActions() {
       }
     },
     [refreshProjects, renameTarget],
+  );
+
+  const handleRenameAgent = useCallback(
+    async (newName: string) => {
+      if (!renameAgentTarget) return;
+      const { project_id: pid, agent_instance_id: aid } = renameAgentTarget;
+      const trimmed = newName.trim();
+      if (!trimmed || trimmed === renameAgentTarget.name) {
+        setRenameAgentTarget(null);
+        return;
+      }
+      try {
+        const updated = await api.updateAgentInstance(pid, aid, { name: trimmed });
+        queryClient.setQueryData(projectQueryKeys.agentInstance(pid, aid), updated);
+        setAgentsByProject((prev) => ({
+          ...prev,
+          [pid]: mergeAgentIntoProjectAgents(prev[pid], updated),
+        }));
+      } catch (err) {
+        console.error("Failed to rename agent instance", err);
+      } finally {
+        setRenameAgentTarget(null);
+      }
+    },
+    [renameAgentTarget, setAgentsByProject],
   );
 
   const handleDelete = useCallback(async () => {
@@ -267,6 +295,7 @@ export function useProjectListActions() {
   return {
     ctxMenu, setCtxMenu, ctxMenuRef,
     renameTarget, setRenameTarget,
+    renameAgentTarget, setRenameAgentTarget,
     settingsTarget, setSettingsTarget,
     deleteTarget, setDeleteTarget, deleteLoading, deleteError, setDeleteError,
     deleteAgentTarget, setDeleteAgentTarget, deleteAgentLoading, deleteAgentError, setDeleteAgentError,
@@ -277,6 +306,7 @@ export function useProjectListActions() {
     handleQuickAddAgent,
     handleMenuAction,
     handleRename,
+    handleRenameAgent,
     handleDelete,
     handleDeleteAgent,
     handleAgentCreated,
