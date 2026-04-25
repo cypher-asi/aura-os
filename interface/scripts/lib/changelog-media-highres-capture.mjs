@@ -9,7 +9,7 @@ export const DEFAULT_HIGH_RES_CAPTURE_VIEWPORT = Object.freeze({
   deviceScaleFactor: 3,
 });
 
-export const DEFAULT_CHANGELOG_CAPTURE_ZOOM = 1.12;
+export const DEFAULT_CHANGELOG_CAPTURE_ZOOM = 1;
 export const DEFAULT_CHANGELOG_CAPTURE_TEXT_SCALE = 1;
 
 function commonChromeExecutablePath() {
@@ -274,8 +274,13 @@ async function selectProofClip(page, story, proofAction = null, seedPlan = null)
     function isVisible(element) {
       const rect = element.getBoundingClientRect();
       const style = window.getComputedStyle(element);
+      const intersectsViewport = rect.right > 0
+        && rect.bottom > 0
+        && rect.x < window.innerWidth
+        && rect.y < window.innerHeight;
       return rect.width > 0
         && rect.height > 0
+        && intersectsViewport
         && style.display !== "none"
         && style.visibility !== "hidden"
         && Number(style.opacity || 1) > 0.05;

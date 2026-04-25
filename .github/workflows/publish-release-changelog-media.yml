@@ -120,7 +120,7 @@ jobs:
           echo "version=${version}" >> "$GITHUB_OUTPUT"
 
       - name: Install Node.js
-        if: steps.target.outputs.skip != 'true'
+        if: steps.target.outputs.skip == 'false'
         uses: actions/setup-node@v4
         with:
           node-version: 25.9.0
@@ -128,15 +128,15 @@ jobs:
           cache-dependency-path: repo/interface/package-lock.json
 
       - name: Install interface dependencies
-        if: steps.target.outputs.skip != 'true'
+        if: steps.target.outputs.skip == 'false'
         run: npm ci --prefix repo/interface
 
       - name: Install Chromium camera
-        if: steps.target.outputs.skip != 'true'
+        if: steps.target.outputs.skip == 'false'
         run: npm --prefix repo/interface exec -- playwright install chromium --with-deps
 
       - name: Preflight media capture configuration
-        if: steps.target.outputs.skip != 'true'
+        if: steps.target.outputs.skip == 'false'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -157,7 +157,7 @@ jobs:
           fi
 
       - name: Capture and validate changelog media
-        if: steps.target.outputs.skip != 'true'
+        if: steps.target.outputs.skip == 'false'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -184,7 +184,7 @@ jobs:
           node repo/interface/scripts/evaluate-changelog-media-pipeline.mjs "${args[@]}"
 
       - name: Publish accepted media into gh-pages
-        if: steps.target.outputs.skip != 'true'
+        if: steps.target.outputs.skip == 'false'
         env:
           CHANGELOG_MEDIA_REFRESH_EXISTING: ${{ inputs.refresh_existing }}
         shell: bash
@@ -209,7 +209,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Commit and push accepted media
-        if: steps.target.outputs.skip != 'true'
+        if: steps.target.outputs.skip == 'false'
         shell: bash
         run: |
           bash repo/infra/scripts/release/commit-gh-pages-with-retry.sh \

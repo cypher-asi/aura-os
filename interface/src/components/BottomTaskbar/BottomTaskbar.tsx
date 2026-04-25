@@ -51,7 +51,12 @@ export function BottomTaskbar() {
   };
 
   return (
-    <div className={styles.bar}>
+    <div
+      className={styles.bar}
+      data-agent-surface="desktop-shell-bottom-taskbar"
+      data-agent-proof="desktop-shell-bottom-taskbar"
+      data-agent-context-anchor="desktop-shell-bottom-taskbar"
+    >
       <div className={styles.left}>
         <TaskbarIconButton
           selected={activeApp.id === "desktop"}

@@ -177,7 +177,7 @@ export function assessChangelogMediaQuality({
     parsedOutput?.concerns,
   ]);
   const hasConcreteProofText = Array.isArray(parsedOutput?.visibleProof) && parsedOutput.visibleProof.length > 0;
-  if (metrics?.visuallySparse && !hasConcreteProofText) {
+  if (metrics?.visuallySparse) {
     concerns.push("Screenshot appears mostly blank or visually flat.");
   }
   if (BAD_PROOF_PATTERNS.some((pattern) => pattern.test(evidenceText))) {

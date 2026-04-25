@@ -60,6 +60,10 @@ test("buildMediaPlannerPrompt keeps Browser Use behind a conservative Anthropic 
   assert.match(prompt, /isolated widget/);
   assert.match(prompt, /Browser Use should receive fewer, better candidates/);
   assert.match(prompt, /provider pricing, model catalog, routing, config, or API plumbing/);
+  assert.match(prompt, /do not target \/desktop/);
+  assert.match(prompt, /populated desktop app route/);
+  assert.match(prompt, /transient interaction states/);
+  assert.match(prompt, /context menus/);
   assert.match(prompt, /confidence is at least 0\.70/);
   assert.match(prompt, /publicCaption/);
   assert.match(prompt, /Curated changelog media lessons/);
@@ -146,6 +150,42 @@ test("normalizeMediaPlan keeps only high-confidence capture candidates and prese
   assert.ok(plan.skipped.some((entry) => entry.entryId === "low" && entry.category === "too-ambiguous"));
   assert.ok(plan.skipped.some((entry) => entry.entryId === "borderline" && entry.category === "too-ambiguous"));
   assert.ok(plan.skipped.some((entry) => entry.entryId === "missing-target" && entry.reason.includes("sitemap-backed")));
+});
+
+test("normalizeMediaPlan routes shell chrome captures through a populated app", () => {
+  const plan = normalizeMediaPlan({
+    candidates: [
+      {
+        entryId: "shell",
+        title: "Floating glass desktop shell",
+        shouldCapture: true,
+        reason: "Visible desktop shell chrome and bottom taskbar change.",
+        targetAppId: "desktop",
+        targetPath: "/desktop",
+        proofGoal: "Show the floating-glass desktop shell with bottom taskbar capsules.",
+        publicCaption: "The desktop shell now floats as glass capsules.",
+        confidence: 0.9,
+        changedFiles: [
+          "interface/src/components/DesktopShell/DesktopShell.module.css",
+          "interface/src/components/BottomTaskbar/BottomTaskbar.module.css",
+        ],
+        seedPlan: {
+          capabilities: ["app:desktop", "proof-data-populated"],
+          requiredState: ["The desktop shell is visible."],
+          readinessSignals: ["Bottom taskbar split into capsules."],
+        },
+      },
+    ],
+    skipped: [],
+  }, { maxCandidates: 1 });
+
+  assert.equal(plan.candidates.length, 1);
+  assert.equal(plan.candidates[0].targetAppId, "agents");
+  assert.equal(plan.candidates[0].targetPath, "/agents");
+  assert.match(plan.candidates[0].reason, /populated instead of landing on an empty \/desktop shell/);
+  assert.ok(plan.candidates[0].seedPlan.capabilities.includes("app:agents"));
+  assert.ok(plan.candidates[0].seedPlan.capabilities.includes("agent-chat-ready"));
+  assert.ok(plan.candidates[0].seedPlan.avoid.includes("empty /desktop launcher shell"));
 });
 
 test("validateMediaPlanCoverage catches planner omissions and duplicates", () => {

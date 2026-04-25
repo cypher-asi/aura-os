@@ -354,7 +354,11 @@ export function DesktopShell() {
 
   return (
     <>
-      <div className={styles.desktopShell} data-desktop-mode={desktopModeActive || undefined}>
+      <div
+        className={styles.desktopShell}
+        data-desktop-mode={desktopModeActive || undefined}
+        data-agent-context="desktop-shell"
+      >
         <BackgroundLayer />
         <Topbar
           className={`titlebar-drag ${styles.topbarAlignRail} ${styles.topbarBlur}`}

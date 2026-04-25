@@ -5,6 +5,8 @@ const DEFAULT_MAX_CANDIDATES = 3;
 const DEFAULT_ENTRY_CHUNK_SIZE = 20;
 const MAX_PROMPT_CHARS = 52000;
 const MIN_CAPTURE_CONFIDENCE = 0.7;
+const SHELL_CAPTURE_FALLBACK_APP_ID = "agents";
+const SHELL_CAPTURE_FALLBACK_PATH = "/agents";
 
 export const CHANGELOG_MEDIA_PLAN_TOOL = {
   name: "submit_changelog_media_plan",
@@ -176,9 +178,11 @@ export function buildMediaPlannerPrompt({
     "- Skip provider pricing, model catalog, routing, config, or API plumbing changes unless the changelog explicitly describes a user-visible desktop UI change such as a new option in a picker, menu, settings panel, gallery, editor, or dashboard.",
     "- Skip entries that are not meaningfully provable in one static desktop screenshot.",
     "- Skip entries whose only likely proof is a default/empty state such as 'will appear here', 'pick a project', 'select a run', or an otherwise unseeded list/detail view.",
+    "- Skip transient interaction states such as hover-only UI, context menus, F2 rename fields, drag/resize states, flashing native-window paint, or keyboard-focus-only affordances unless the sitemap exposes durable data-agent proof/action handles and the seedPlan can deterministically make that state visible.",
     "- Prefer high-confidence product features that can be located from the generated sitemap and changed files.",
     "- Do not invent routes or product states that are not supported by the sitemap or commit context.",
     "- Candidates must include a targetAppId and targetPath from the sitemap. If no sitemap target exists, skip the entry.",
+    "- For desktop shell, chrome, layout, taskbar, sidebar, sidekick, or floating-panel changes, do not target /desktop because it can be an empty launcher shell. Target a populated desktop app route from the sitemap instead, preferably /agents, and keep the shell chrome in the screenshot context.",
     "- Candidates should include a seedPlan that describes generic capture-state capabilities, not a one-off script. Prefer capabilities like app:<id>, project-selected, proof-data-populated, asset-gallery-populated, agent-chat-ready, run-history-populated, model-picker-open, settings-panel-open, generated-result-visible, feature-toggle-enabled.",
     "- The seedPlan must describe the state/data needed before capture so the browser does not land on empty/default UI. If the feature needs data to be visible, request realistic demo data for the target surface.",
     "- In seedPlan.proofBoundary, describe the feature evidence itself: the visible control/result/list/detail/menu that proves the change.",
@@ -218,22 +222,86 @@ function clampConfidence(value) {
   return Math.min(1, Math.max(0, parsed));
 }
 
+function isShellChromeCandidate(candidate) {
+  const text = [
+    candidate?.targetAppId,
+    candidate?.targetPath,
+    candidate?.title,
+    candidate?.reason,
+    candidate?.proofGoal,
+    candidate?.publicCaption,
+    ...(candidate?.changedFiles || []),
+  ].join("\n").toLowerCase();
+  return candidate?.targetAppId === "desktop"
+    || candidate?.targetPath === "/desktop"
+    || /\b(?:desktop shell|shell chrome|bottom taskbar|taskbar|bottomtaskbar|desktopchrome|floating[- ]glass|floating panel|desktop layout)\b/.test(text)
+    || /interface\/src\/components\/(?:desktopshell|bottomtaskbar|appshell)/i.test(text);
+}
+
+function normalizeShellChromeCandidate(candidate) {
+  if (!isShellChromeCandidate(candidate)) return candidate;
+  const needsRouteRewrite = candidate.targetAppId === "desktop" || candidate.targetPath === "/desktop";
+  const seedPlan = normalizeCaptureSeedPlan(candidate.seedPlan, {
+    ...candidate,
+    targetAppId: SHELL_CAPTURE_FALLBACK_APP_ID,
+    targetPath: SHELL_CAPTURE_FALLBACK_PATH,
+  });
+  return {
+    ...candidate,
+    targetAppId: SHELL_CAPTURE_FALLBACK_APP_ID,
+    targetPath: SHELL_CAPTURE_FALLBACK_PATH,
+    reason: needsRouteRewrite
+      ? [
+        candidate.reason,
+        `Shell/chrome captures are routed through ${SHELL_CAPTURE_FALLBACK_PATH} so the desktop frame is populated instead of landing on an empty /desktop shell.`,
+      ].filter(Boolean).join(" ")
+      : candidate.reason,
+    seedPlan: {
+      ...seedPlan,
+      capabilities: unique([
+        ...seedPlan.capabilities,
+        `app:${SHELL_CAPTURE_FALLBACK_APP_ID}`,
+        "agent-chat-ready",
+        "proof-data-populated",
+      ]),
+      requiredState: unique([
+        ...seedPlan.requiredState,
+        "A populated Agents chat surface is open inside the desktop shell so shell chrome, panels, and taskbar are visible around real product content.",
+      ]),
+      readinessSignals: unique([
+        ...seedPlan.readinessSignals,
+        "Agents app is active inside the desktop shell",
+        "chat composer and bottom taskbar are visible",
+        "desktop shell is populated, not empty",
+      ]),
+      avoid: unique([
+        ...seedPlan.avoid,
+        "empty /desktop launcher shell",
+        "mostly black shell with only the Aura logo or topbar visible",
+      ]),
+    },
+  };
+}
+
 export function normalizeMediaPlan(plan, { maxCandidates = DEFAULT_MAX_CANDIDATES } = {}) {
   const normalizedCandidates = (Array.isArray(plan?.candidates) ? plan.candidates : [])
     .filter((candidate) => candidate?.shouldCapture === true)
-    .map((candidate, index) => ({
-      entryId: normalizeString(candidate.entryId || `candidate-${index + 1}`),
-      title: normalizeString(candidate.title),
-      shouldCapture: true,
-      reason: normalizeString(candidate.reason),
-      targetAppId: normalizeString(candidate.targetAppId) || null,
-      targetPath: normalizeString(candidate.targetPath) || null,
-      proofGoal: normalizeString(candidate.proofGoal) || null,
-      publicCaption: normalizeString(candidate.publicCaption) || null,
-      confidence: clampConfidence(candidate.confidence),
-      changedFiles: unique(candidate.changedFiles || []),
-      seedPlan: normalizeCaptureSeedPlan(candidate.seedPlan, candidate),
-    }))
+    .map((candidate, index) => {
+      const normalized = {
+        entryId: normalizeString(candidate.entryId || `candidate-${index + 1}`),
+        title: normalizeString(candidate.title),
+        shouldCapture: true,
+        reason: normalizeString(candidate.reason),
+        targetAppId: normalizeString(candidate.targetAppId) || null,
+        targetPath: normalizeString(candidate.targetPath) || null,
+        proofGoal: normalizeString(candidate.proofGoal) || null,
+        publicCaption: normalizeString(candidate.publicCaption) || null,
+        confidence: clampConfidence(candidate.confidence),
+        changedFiles: unique(candidate.changedFiles || []),
+        seedPlan: normalizeCaptureSeedPlan(candidate.seedPlan, candidate),
+      };
+      return normalizeShellChromeCandidate(normalized);
+    })
     .filter((candidate) => candidate.title && candidate.reason);
 
   const candidatesById = new Map();
