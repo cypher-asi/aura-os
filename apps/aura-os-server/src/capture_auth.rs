@@ -8,8 +8,9 @@ use serde::Deserialize;
 
 use aura_os_core::listing_status::AgentListingStatus;
 use aura_os_core::{
-    Agent, AgentId, AgentInstance, AgentInstanceId, AgentPermissions, AgentStatus, ChatRole, OrgId,
-    Project, ProjectId, ProjectStatus, SessionEvent, SessionEventId, SessionId, TaskId,
+    Agent, AgentId, AgentInstance, AgentInstanceId, AgentInstanceRole, AgentPermissions,
+    AgentStatus, ChatRole, OrgId, Project, ProjectId, ProjectStatus, SessionEvent, SessionEventId,
+    SessionId, TaskId,
     ZeroAuthSession,
 };
 
@@ -218,6 +219,7 @@ pub(crate) fn demo_agent_instance() -> AgentInstance {
         auth_source: agent.auth_source,
         integration_id: agent.integration_id,
         default_model: agent.default_model,
+        instance_role: AgentInstanceRole::Chat,
         workspace_path: Some("/tmp/aura-capture-workspace".into()),
         status: AgentStatus::Idle,
         current_task_id: None::<TaskId>,
