@@ -2,20 +2,20 @@
   {
     "date": "2026-04-26",
     "channel": "nightly",
-    "version": "0.1.0-nightly.404.1",
-    "title": "Aura-managed models, persistent shell, and harness hardening",
-    "intro": "A dense nightly day: chat agents now generate images natively, all model traffic consolidates onto Aura-managed credits, the desktop shell stops flashing between apps, and a sweep of harness, auth, and permission fixes tightens reliability across the server and sidecar.",
+    "version": "0.1.0-nightly.406.1",
+    "title": "Aura-managed model routing, persistent shell, and harness hardening",
+    "intro": "A dense nightly: model traffic now flows through Aura's managed proxy with a single chat picker, the desktop shell keeps its middle panel mounted across app switches, and a wave of server and harness fixes tighten auth, permissions, and sidecar startup. Big internal module splits set the stage without changing behavior, and the changelog media planner got smarter at filtering noisy candidates.",
     "entryCount": 6,
     "highlights": [
-      "generate_image tool and gpt-image-2 default for chat agents",
-      "All model traffic now routes through the Aura proxy",
-      "Middle panel stays mounted across app switches",
-      "Desktop fails closed when the local harness sidecar is unhealthy",
-      "Run pane finally shows loop runs and survives reloads"
+      "Image generation defaults to gpt-image-2 with a new generate_image agent tool",
+      "All model traffic routes through the Aura proxy, collapsing the chat picker",
+      "Middle panel persists across app switches, eliminating the wallpaper flash",
+      "Desktop fails closed when the local harness sidecar never gets healthy",
+      "Stale auth, harness backpressure, and dev-loop permissions tightened"
     ],
-    "rawCommitCount": 27,
-    "generatedAt": "2026-04-26T18:37:43.164Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.404.1",
+    "rawCommitCount": 29,
+    "generatedAt": "2026-04-26T19:03:49.481Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.406.1",
     "path": "history/2026-04-26.json"
   },
   {
