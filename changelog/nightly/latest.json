@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-25T19:18:24.119Z",
+  "generatedAt": "2026-04-26T01:10:37.678Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.387.1",
+  "version": "0.1.0-nightly.389.1",
   "date": "2026-04-25",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.387.1",
-  "lastIncludedSha": "63d4c89ab5bd9c8888355cc1b743dafcf6ca3d7c",
-  "previousProcessedSha": "ee70b4b5181e7a925181c55c39cc7cf19d8e3810",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.389.1",
+  "lastIncludedSha": "4fd68734e5952e524b0ec83fe6a6fe36818c70df",
+  "previousProcessedSha": "63d4c89ab5bd9c8888355cc1b743dafcf6ca3d7c",
   "commitShas": [
     "68be945b8c85e3a7eed55a77aa3f5c4508c37ce4",
     "a69f2e303298e38e8ae0043f4bdf8673a1bebae0",
@@ -131,10 +131,45 @@
     "2320fafe5d6c44f859bb38dcef6ec06aaf606371",
     "08ec42c5833310ed5ecf550a08168c73e9a09350",
     "ee70b4b5181e7a925181c55c39cc7cf19d8e3810",
-    "63d4c89ab5bd9c8888355cc1b743dafcf6ca3d7c"
+    "63d4c89ab5bd9c8888355cc1b743dafcf6ca3d7c",
+    "d5c36d9e7fc3788cd11d1f7e4b38c36b9c7eaefa",
+    "207756c5678e4b0805866daf79f0587c4e939532",
+    "7304dc3012e842b317b407c5d68d5a8de759eca4",
+    "2a88e8164212b04bf1b00598caa9086287681355",
+    "9c714cf6f8e789aa9d9dc72e0f6539759e0f3681",
+    "283f16b3dea83cd0814369a3f26807e8bee97e4a",
+    "6be59f172f48327f7199224e835cca6e8e0d02ac",
+    "a53d32bf432578e8400364f610904246839eb83e",
+    "f71b9eb8cf1f56475952977b8e664f71d313e817",
+    "da4436e24c3da45c4fc36d36b0b0e5838f1a2130",
+    "15777df3e5ca1dfaf12de837cbd3e6d58c61e5fc",
+    "e1ac283ca5ce65677891acfd0b3d2adeda449d77",
+    "510205d7227dca12afb926f24fcc0bd56b50a72d",
+    "1102674d8469baf30c319ca2bd92c10b9263dfb2",
+    "ae4801ead329f6cb70ab36edbfd26683647d028a",
+    "ed8d9f4198497ea645ff84d7cb9209035529e71f",
+    "cf39422d88c134add9073af8925a0635b963aeab",
+    "f3c91d5f18f73ecedc6f899625a6428bd22a65a8",
+    "2f2adb66f99e4e31169ab381d4c07cfcd1742c2c",
+    "27efe7a36a558cf984f6103a247cf3c5af8d9be3",
+    "298bb4cf4f70ca201a33593583d7fc558e604d5c",
+    "41c586f0674c3c3237579e2b2c137ff69df8d99c",
+    "6e17e330380aa15e0593b801d687abb3da012630",
+    "711a3917f89d45b87a21773615d4c51952350b64",
+    "386a905b196e79021785a9ec18e1385092b8891e",
+    "b4525bf68032c5549bf0c68f07e1d8367c0f9e5a",
+    "4c5768ea46caa4b1c6bc9bf13e23506b609821ec",
+    "04806b27042e1a9492943efcdfc409e4f80d4c71",
+    "629e58d823a71a6687a380f36e1099b3c60a608a",
+    "3ab332791b52ddef13eeb341ec1dcc04693dbe8e",
+    "13e44690d923fe848ff5569436ed61b6c929957c",
+    "f67f9abff8198fb7761d3bf5e054ec6af02ce99b",
+    "f7f7bc2ebd3e76cbe33f7bdf195733cfac93bd40",
+    "e756ea5b5bb6ec58a1d3651e2dfbff0c50aadd94",
+    "4fd68734e5952e524b0ec83fe6a6fe36818c70df"
   ],
-  "rawCommitCount": 124,
-  "filteredCommitCount": 120,
+  "rawCommitCount": 161,
+  "filteredCommitCount": 155,
   "rawCommits": [
     {
       "sha": "68be945b8c85e3a7eed55a77aa3f5c4508c37ce4",
@@ -5855,6 +5890,2313 @@
         "Desktop",
         "Other"
       ]
+    },
+    {
+      "sha": "d5c36d9e7fc3788cd11d1f7e4b38c36b9c7eaefa",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-24T22:42:52-07:00",
+      "subject": "refactor(ts): convert EventType to literal union, replace any with unknown, drop non-null assertions",
+      "body": "Phase F1 of the monorepo refactoring plan. See .cursor/plans/aura-os_refactoring_plan_*.md.\n\n- Convert EventType enum to a string-literal const + type alias so\n  callers keep namespace-style access (`EventType.X`) and TypeScript\n  still narrows via `typeof EventType.X` in AuraEvent's discriminated\n  union and AuraEventOfType/AuraEventContent generics.\n- Replace `any` with `unknown` (or a JsonValue alias) across the memory\n  API surface, agent-skill modals, and harness skill panels; introduce\n  small type-guard helpers for API responses and caught errors.\n- Tighten `wrapSend` to a properly constrained generic\n  `<TArgs extends readonly unknown[], TReturn>`.\n- Drop `ComponentType<any>` from apps/registry.ts; the lazy wrapper now\n  forwards a typed Props generic to React.createElement directly.\n- Extract a `parseEventContent` helper at shared/utils/event-content.ts\n  and use it from the three event-handling stores instead of repeating\n  the `as unknown as Record<string, unknown>` cast eight times.\n- Remove non-null assertions in process canvas handlers, the canvas\n  clipboard, terminal panel store, DesktopShell, AgentEnvironment, the\n  service-worker registration helper, and process event display in\n  favour of explicit narrowing or restructured nullable types.\n\nMade-with: Cursor",
+      "parents": [
+        "82f93b319e8e96e531c6c10dcbdb7e2b9ab26350"
+      ],
+      "files": [
+        "interface/src/api/memory.ts",
+        "interface/src/apps/agents/AgentInfoPanel/CreateSkillModal.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/ProfileTab.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/SkillEditorModal.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/SkillsTab.tsx",
+        "interface/src/apps/process/components/ProcessCanvas/useCanvasClipboard.ts",
+        "interface/src/apps/process/components/ProcessCanvas/useCanvasEventHandlers.ts",
+        "interface/src/apps/process/components/ProcessEventOutput/process-event-display.ts",
+        "interface/src/apps/registry.ts",
+        "interface/src/components/AgentEnvironment/AgentEnvironment.tsx",
+        "interface/src/components/DesktopShell/DesktopShell.tsx",
+        "interface/src/constants/models.ts",
+        "interface/src/hooks/use-chat-history-sync.ts",
+        "interface/src/hooks/use-log-stream-labels.ts",
+        "interface/src/hooks/use-log-stream-utils.ts",
+        "interface/src/hooks/use-process-node-stream.ts",
+        "interface/src/lib/integrationCatalog.ts",
+        "interface/src/lib/registerServiceWorker.ts",
+        "interface/src/shared/utils/event-content.ts",
+        "interface/src/stores/event-store/engine-event-handlers.ts",
+        "interface/src/stores/process-stream-bootstrap.ts",
+        "interface/src/stores/task-stream-bootstrap.ts",
+        "interface/src/stores/terminal-panel-store.ts",
+        "interface/src/types/aura-events.ts",
+        "interface/src/types/entities.ts"
+      ],
+      "stats": {
+        "fileCount": 25,
+        "insertions": 425,
+        "deletions": 294
+      },
+      "committedAtMs": 1777095772000,
+      "cleanSubject": "convert EventType to literal union, replace any with unknown, drop non-null assertions",
+      "keywords": [
+        "convert",
+        "eventtype",
+        "literal",
+        "union",
+        "replace",
+        "with",
+        "unknown",
+        "drop",
+        "null",
+        "assertions"
+      ],
+      "fileGroups": [
+        "interface/src/api",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/constants",
+        "interface/src/hooks",
+        "interface/src/lib",
+        "interface/src/shared",
+        "interface/src/stores",
+        "interface/src/types"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "207756c5678e4b0805866daf79f0587c4e939532",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-24T23:32:26-07:00",
+      "subject": "chore(interface): scaffold src/shared/{ui,hooks,api,types,utils,lib}/",
+      "body": "Establish the F2 shared/ scaffolding called for by the refactor plan. Empty .gitkeep files reserve ui/, hooks/, api/, types/, and lib/; utils/ already exists from Phase F1's parseEventContent helper.\n\nMade-with: Cursor",
+      "parents": [
+        "d5c36d9e7fc3788cd11d1f7e4b38c36b9c7eaefa"
+      ],
+      "files": [
+        "interface/src/shared/api/.gitkeep",
+        "interface/src/shared/hooks/.gitkeep",
+        "interface/src/shared/lib/.gitkeep",
+        "interface/src/shared/types/.gitkeep",
+        "interface/src/shared/ui/.gitkeep"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 0,
+        "deletions": 0
+      },
+      "committedAtMs": 1777098746000,
+      "cleanSubject": "scaffold src/shared/{ui,hooks,api,types,utils,lib}/",
+      "keywords": [
+        "scaffold",
+        "shared",
+        "hooks",
+        "types",
+        "utils"
+      ],
+      "fileGroups": [
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "7304dc3012e842b317b407c5d68d5a8de759eca4",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-24T23:40:52-07:00",
+      "subject": "refactor(interface): move generic types/* to shared/types/",
+      "body": "All 11 type files (aura-events, entities, enums, events, filters, harness-protocol, ids, index, permissions-wire, permissions, stream) are domain-neutral DTOs and shared contracts. Move them to interface/src/shared/types/ and codemod all import paths via path resolution to avoid colliding with sibling types.ts modules in apps/, features/, etc.\n\nMade-with: Cursor",
+      "parents": [
+        "207756c5678e4b0805866daf79f0587c4e939532"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat.rs",
+        "interface/package.json",
+        "interface/scripts/lib/demo-agent-brief.test.mjs",
+        "interface/src/api/agents.ts",
+        "interface/src/api/auth.ts",
+        "interface/src/api/browser.ts",
+        "interface/src/api/core.ts",
+        "interface/src/api/debug.ts",
+        "interface/src/api/desktop.ts",
+        "interface/src/api/environment.ts",
+        "interface/src/api/harness-skills.ts",
+        "interface/src/api/loop.ts",
+        "interface/src/api/memory.ts",
+        "interface/src/api/orgs.ts",
+        "interface/src/api/process.ts",
+        "interface/src/api/projects.ts",
+        "interface/src/api/social.ts",
+        "interface/src/api/sse.ts",
+        "interface/src/api/streams.ts",
+        "interface/src/api/swarm.ts",
+        "interface/src/api/tasks.ts",
+        "interface/src/api/terminal.ts",
+        "interface/src/apps/agents/AgentConversationRow/AgentConversationRow.test.tsx",
+        "interface/src/apps/agents/AgentConversationRow/AgentConversationRow.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/AgentInfoPanel.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/ChatsTab.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/MemoryPreview.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/MemoryTab.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/PermissionsTab.test.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/PermissionsTab.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/ProfileTab.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/SkillPreview.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/SkillsTab.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/agent-info-utils.ts",
+        "interface/src/apps/agents/AgentList/AgentList.tsx",
+        "interface/src/apps/agents/AgentSidekickTaskbar/AgentSidekickTaskbar.tsx",
+        "interface/src/apps/agents/stores/agent-selectors.ts",
+        "interface/src/apps/agents/stores/agent-sidekick-store.ts",
+        "interface/src/apps/agents/stores/agent-store.test.ts",
+        "interface/src/apps/agents/stores/agent-store.ts",
+        "interface/src/apps/aura3d/ImageGeneration/ImageGeneration.tsx",
+        "interface/src/apps/aura3d/ModelGeneration/ModelGeneration.tsx",
+        "interface/src/apps/debug/DebugRunDetailView/DebugRunDetailView.tsx",
+        "interface/src/apps/debug/DebugRunListView/DebugRunListView.tsx",
+        "interface/src/apps/debug/components/DebugSidekickContent/DebugSidekickContent.tsx",
+        "interface/src/apps/debug/components/DebugSidekickContent/RunInfoTab.tsx",
+        "interface/src/apps/debug/components/DebugSidekickContent/StatsTab.tsx",
+        "interface/src/apps/debug/components/DebugSidekickContent/TasksTab.tsx",
+        "interface/src/apps/debug/useDebugRunLogs.ts",
+        "interface/src/apps/debug/useDebugRunMetadata.ts",
+        "interface/src/apps/debug/useDebugRuns.ts",
+        "interface/src/apps/marketplace/AgentTalentCard/AgentTalentCard.test.tsx",
+        "interface/src/apps/marketplace/HireProjectPickerModal/HireProjectPickerModal.tsx",
+        "interface/src/apps/marketplace/marketplace-types.ts",
+        "interface/src/apps/marketplace/stores/marketplace-store.test.ts",
+        "interface/src/apps/notes/NotesNav/useNotesContextMenu.ts",
+        "interface/src/apps/process/components/NodeConfigTab/NodeConfigTab.tsx",
+        "interface/src/apps/process/components/NodeConnectionsTab/NodeConnectionsTab.tsx",
+        "interface/src/apps/process/components/NodeEditorModal/NodeEditorModal.tsx",
+        "interface/src/apps/process/components/NodeEditorModal/node-editor-modal-constants.ts",
+        "interface/src/apps/process/components/NodeEditorModal/useNodeEditorModal.ts",
+        "interface/src/apps/process/components/NodeInfoTab/NodeInfoTab.tsx",
+        "interface/src/apps/process/components/NodeOutputTab/NodeOutputTab.test.tsx",
+        "interface/src/apps/process/components/NodeOutputTab/NodeOutputTab.tsx",
+        "interface/src/apps/process/components/NodeOutputTab/node-output-utils.ts",
+        "interface/src/apps/process/components/PinnedOutput/PinnedOutput.tsx",
+        "interface/src/apps/process/components/ProcessCanvas/ProcessCanvasContextMenus.tsx",
+        "interface/src/apps/process/components/ProcessCanvas/process-canvas-utils.ts",
+        "interface/src/apps/process/components/ProcessCanvas/useCanvasClipboard.ts",
+        "interface/src/apps/process/components/ProcessCanvas/useCanvasEventHandlers.ts",
+        "interface/src/apps/process/components/ProcessCanvas/useProcessCanvasFlowSync.ts",
+        "interface/src/apps/process/components/ProcessEditorModal/ProcessEditorModal.tsx",
+        "interface/src/apps/process/components/ProcessEventOutput/ProcessEventOutput.tsx",
+        "interface/src/apps/process/components/ProcessEventOutput/process-event-display.test.ts",
+        "interface/src/apps/process/components/ProcessEventOutput/process-event-display.ts",
+        "interface/src/apps/process/components/ProcessList/process-list-handlers.tsx",
+        "interface/src/apps/process/components/ProcessList/process-list-types.ts",
+        "interface/src/apps/process/components/ProcessMainPanel/useProcessMainPanelLiveEvents.ts",
+        "interface/src/apps/process/components/ProcessNodeCard/ProcessNodeCard.tsx",
+        "interface/src/apps/process/components/ProcessSidekickContent/ArtifactCard.test.tsx",
+        "interface/src/apps/process/components/ProcessSidekickContent/ArtifactCard.tsx",
+        "interface/src/apps/process/components/ProcessSidekickContent/EventTimelineItem.test.tsx",
+        "interface/src/apps/process/components/ProcessSidekickContent/EventTimelineItem.tsx",
+        "interface/src/apps/process/components/ProcessSidekickContent/LiveRunBanner.tsx",
+        "interface/src/apps/process/components/ProcessSidekickContent/RunList.tsx",
+        "interface/src/apps/process/components/ProcessSidekickContent/RunPreviewBody.test.tsx",
+        "interface/src/apps/process/components/ProcessSidekickContent/RunPreviewBody.tsx",
+        "interface/src/apps/process/components/ProcessSidekickContent/StatsView.tsx",
+        "interface/src/apps/process/components/ProcessSidekickContent/process-output-utils.test.ts",
+        "interface/src/apps/process/components/ProcessSidekickContent/process-output-utils.ts",
+        "interface/src/apps/process/components/ProcessSidekickContent/process-sidekick-utils.test.ts",
+        "interface/src/apps/process/components/ProcessSidekickContent/process-sidekick-utils.ts",
+        "interface/src/apps/process/components/ProcessSidekickContent/run-preview-hooks.ts",
+        "interface/src/apps/process/stores/process-sidekick-store.ts",
+        "interface/src/apps/process/stores/process-store.ts",
+        "interface/src/apps/profile/shared/profileShared.test.ts",
+        "interface/src/apps/profile/shared/profileShared.ts",
+        "interface/src/apps/tasks/components/AddTaskForm/AddTaskForm.tsx",
+        "interface/src/apps/tasks/components/TasksMainPanel/TasksMainPanel.tsx",
+        "interface/src/apps/tasks/components/TasksProvider/TasksProvider.tsx",
+        "interface/src/apps/tasks/hooks/useKanbanData.ts",
+        "interface/src/apps/tasks/stores/kanban-store.test.ts",
+        "interface/src/apps/tasks/stores/kanban-store.ts",
+        "interface/src/components/ActivityTimeline/ActivityTimeline.tsx",
+        "interface/src/components/AgentChatView/AgentChatView.tsx",
+        "interface/src/components/AgentEditorModal/AgentEditorForm.test.tsx",
+        "interface/src/components/AgentEditorModal/AgentEditorModal.tsx",
+        "interface/src/components/AgentEditorModal/useAgentEditorForm.test.tsx",
+        "interface/src/components/AgentEditorModal/useAgentEditorForm.ts",
+        "interface/src/components/AgentEnvironment/AgentEnvironment.tsx",
+        "interface/src/components/AgentOrchestrationDashboard/AgentOrchestrationDashboard.tsx",
+        "interface/src/components/AgentSelectorModal/AgentSelectorModal.test.tsx",
+        "interface/src/components/AgentSelectorModal/AgentSelectorModal.tsx",
+        "interface/src/components/AgentSelectorModal/useAgentSelectorData.ts",
+        "interface/src/components/AppShell/AppShell.tsx",
+        "interface/src/components/AutomationBar/AutomationBar.test.tsx",
+        "interface/src/components/AutomationBar/AutomationBar.tsx",
+        "interface/src/components/AutomationBar/useAutomationStatus.ts",
+        "interface/src/components/Block/registry.tsx",
+        "interface/src/components/Block/renderers/CommandBlock.tsx",
+        "interface/src/components/Block/renderers/FileBlock.tsx",
+        "interface/src/components/Block/renderers/GenericToolBlock.tsx",
+        "interface/src/components/Block/renderers/ImageBlock.tsx",
+        "interface/src/components/Block/renderers/ListBlock.tsx",
+        "interface/src/components/Block/renderers/Model3DBlock.tsx",
+        "interface/src/components/Block/renderers/SpecBlock.tsx",
+        "interface/src/components/Block/renderers/StatusReadoutBlock.tsx",
+        "interface/src/components/Block/renderers/TaskBlock.tsx",
+        "interface/src/components/BottomTaskbar/FavoriteAgentsStrip.tsx",
+        "interface/src/components/BuyCreditsModal/useBuyCreditsData.ts",
+        "interface/src/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/components/ChatMessageList/ChatMessageList.test.tsx",
+        "interface/src/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.test.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/components/ChatPanel/ChatStreamingIndicator.test.tsx",
+        "interface/src/components/ChatPanel/ChatStreamingIndicator.tsx",
+        "interface/src/components/ChatPanel/useChatPanelState.ts",
+        "interface/src/components/ChatView/useProjectAgentState.ts",
+        "interface/src/components/CreditsBadge/useCreditBalance.ts",
+        "interface/src/components/DeleteAgentInstanceModal/DeleteAgentInstanceModal.tsx",
+        "interface/src/components/DeleteProjectModal/DeleteProjectModal.tsx",
+        "interface/src/components/DeleteSpecModal/DeleteSpecModal.tsx",
+        "interface/src/components/FileExplorer/useFileExplorerState.ts",
+        "interface/src/components/IntegrationEditor/IntegrationEditor.tsx",
+        "interface/src/components/LLMOutput/LLMOutput.test.tsx",
+        "interface/src/components/LLMOutput/LLMOutput.tsx",
+        "interface/src/components/LLMOutput/LLMStreamOutput.test.tsx",
+        "interface/src/components/LLMOutput/LLMStreamOutput.tsx",
+        "interface/src/components/LogPreview/LogPreview.tsx",
+        "interface/src/components/LoopProgress/LoopProgress.tsx",
+        "interface/src/components/MessageBubble/MessageBubble.tsx",
+        "interface/src/components/NewProjectModal/NewProjectModal.tsx",
+        "interface/src/components/OrbitStatusIndicator/OrbitStatusIndicator.tsx",
+        "interface/src/components/OrgSettingsBilling/OrgSettingsBilling.tsx",
+        "interface/src/components/OrgSettingsIntegrations/OrgSettingsIntegrations.tsx",
+        "interface/src/components/OrgSettingsInvites/OrgSettingsInvites.tsx",
+        "interface/src/components/OrgSettingsMembers/OrgSettingsMembers.tsx",
+        "interface/src/components/OrgSettingsPanel/useOrgSettingsData.ts",
+        "interface/src/components/Preview/Preview.test.tsx",
+        "interface/src/components/Preview/Preview.tsx",
+        "interface/src/components/ProjectList/ProjectList.test.tsx",
+        "interface/src/components/ProjectList/project-list-shared.ts",
+        "interface/src/components/ProjectList/useExplorerMenus.ts",
+        "interface/src/components/ProjectList/useProjectListData.ts",
+        "interface/src/components/ProjectModals/ProjectModals.tsx",
+        "interface/src/components/ProjectModals/useProjectSettingsData.ts",
+        "interface/src/components/ProjectSettingsModal/ProjectSettingsModal.tsx",
+        "interface/src/components/RunTaskButton/RunTaskButton.tsx",
+        "interface/src/components/SessionPreview/SessionPreview.tsx",
+        "interface/src/components/SidekickContent/InfoPanel.tsx",
+        "interface/src/components/SidekickTaskbar/SidekickTaskbar.tsx",
+        "interface/src/components/SkillShopModal/OsFilterBar.tsx",
+        "interface/src/components/SkillShopModal/SkillShopCard.tsx",
+        "interface/src/components/SkillShopModal/SkillShopCategories.tsx",
+        "interface/src/components/SkillShopModal/SkillShopDetail.tsx",
+        "interface/src/components/SkillShopModal/SkillShopGrid.tsx",
+        "interface/src/components/SkillShopModal/SkillShopModal.tsx",
+        "interface/src/components/StreamingBubble/StreamingBubble.tsx",
+        "interface/src/components/TaskMetaSection/TaskMetaSection.tsx",
+        "interface/src/components/TaskOutputSection/TaskOutputSection.test.tsx",
+        "interface/src/components/TaskOutputSection/TaskOutputSection.tsx",
+        "interface/src/components/TaskPreview/TaskPreview.test.tsx",
+        "interface/src/components/TaskPreview/TaskPreview.tsx",
+        "interface/src/components/TaskPreview/useTaskPreviewData.ts",
+        "interface/src/components/ToolRow/ToolRow.test.tsx",
+        "interface/src/components/ToolRow/ToolRow.tsx",
+        "interface/src/hooks/attachment-helpers.ts",
+        "interface/src/hooks/chat-stream-integration.test.ts",
+        "interface/src/hooks/stream/handlers.test.ts",
+        "interface/src/hooks/stream/handlers.ts",
+        "interface/src/hooks/stream/hooks.ts",
+        "interface/src/hooks/stream/store.test.ts",
+        "interface/src/hooks/stream/store.ts",
+        "interface/src/hooks/use-agent-busy.ts",
+        "interface/src/hooks/use-agent-chat-meta.ts",
+        "interface/src/hooks/use-agent-chat-stream.test.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-agent-chat-window.ts",
+        "interface/src/hooks/use-chat-history-sync.test.ts",
+        "interface/src/hooks/use-chat-history-sync.ts",
+        "interface/src/hooks/use-chat-stream/build-stream-handler.ts",
+        "interface/src/hooks/use-chat-stream/index.ts",
+        "interface/src/hooks/use-chat-stream/optimistic-artifacts.test.ts",
+        "interface/src/hooks/use-chat-stream/optimistic-artifacts.ts",
+        "interface/src/hooks/use-checkout-polling.ts",
+        "interface/src/hooks/use-conversation-snapshot.test.ts",
+        "interface/src/hooks/use-conversation-snapshot.ts",
+        "interface/src/hooks/use-cooldown-status.test.ts",
+        "interface/src/hooks/use-cooldown-status.ts",
+        "interface/src/hooks/use-delete-spec.ts",
+        "interface/src/hooks/use-environment-info.ts",
+        "interface/src/hooks/use-integrations-manager.ts",
+        "interface/src/hooks/use-log-stream-labels.ts",
+        "interface/src/hooks/use-log-stream-utils.ts",
+        "interface/src/hooks/use-log-stream.ts",
+        "interface/src/hooks/use-loop-active.ts",
+        "interface/src/hooks/use-loop-control.ts",
+        "interface/src/hooks/use-loop-status.ts",
+        "interface/src/hooks/use-new-project-form.ts",
+        "interface/src/hooks/use-process-node-stream.ts",
+        "interface/src/hooks/use-project-list-actions.ts",
+        "interface/src/hooks/use-project-terminal-mode.ts",
+        "interface/src/hooks/use-remote-agent-state.ts",
+        "interface/src/hooks/use-rename-spec.test.ts",
+        "interface/src/hooks/use-rename-spec.ts",
+        "interface/src/hooks/use-sidekick-preview-url-sync.ts",
+        "interface/src/hooks/use-stream-core.test.ts",
+        "interface/src/hooks/use-stream-core.ts",
+        "interface/src/hooks/use-task-agent-instances.test.ts",
+        "interface/src/hooks/use-task-agent-instances.ts",
+        "interface/src/hooks/use-task-output-hydration.test.ts",
+        "interface/src/hooks/use-task-output-hydration.ts",
+        "interface/src/hooks/use-task-output-view.ts",
+        "interface/src/hooks/use-terminal-target.ts",
+        "interface/src/lib/auth-token.ts",
+        "interface/src/lib/integrationCatalog.ts",
+        "interface/src/lib/native-test-auth.ts",
+        "interface/src/queries/chat-history-queries.ts",
+        "interface/src/queries/project-queries.test.ts",
+        "interface/src/queries/project-queries.ts",
+        "interface/src/shared/types/.gitkeep",
+        "interface/src/shared/types/aura-events.ts",
+        "interface/src/shared/types/entities.ts",
+        "interface/src/shared/types/enums.ts",
+        "interface/src/shared/types/events.ts",
+        "interface/src/shared/types/filters.ts",
+        "interface/src/shared/types/harness-protocol.ts",
+        "interface/src/shared/types/ids.ts",
+        "interface/src/shared/types/index.ts",
+        "interface/src/shared/types/permissions-wire.ts",
+        "interface/src/shared/types/permissions.ts",
+        "interface/src/shared/types/stream.ts",
+        "interface/src/stores/auth-store.test.ts",
+        "interface/src/stores/auth-store.ts",
+        "interface/src/stores/billing-store.test.ts",
+        "interface/src/stores/billing-store.ts",
+        "interface/src/stores/chat-history-store.test.ts",
+        "interface/src/stores/chat-history-store.ts",
+        "interface/src/stores/event-store/engine-event-handlers.ts",
+        "interface/src/stores/event-store/event-store.ts",
+        "interface/src/stores/feed-store.ts",
+        "interface/src/stores/follow-store.test.ts",
+        "interface/src/stores/follow-store.ts",
+        "interface/src/stores/leaderboard-store.ts",
+        "interface/src/stores/loop-activity-store.ts",
+        "interface/src/stores/message-store.ts",
+        "interface/src/stores/org-store.test.ts",
+        "interface/src/stores/org-store.ts",
+        "interface/src/stores/process-node-turn-cache.test.ts",
+        "interface/src/stores/process-node-turn-cache.ts",
+        "interface/src/stores/process-stream-bootstrap.test.ts",
+        "interface/src/stores/process-stream-bootstrap.ts",
+        "interface/src/stores/profile-status-store.ts",
+        "interface/src/stores/project-action-store.test.ts",
+        "interface/src/stores/project-action-store.ts",
+        "interface/src/stores/projects-list-store.test.ts",
+        "interface/src/stores/projects-list-store.ts",
+        "interface/src/stores/sidekick-store.test.ts",
+        "interface/src/stores/sidekick-store.ts",
+        "interface/src/stores/task-stream-bootstrap.test.ts",
+        "interface/src/stores/task-stream-bootstrap.ts",
+        "interface/src/stores/task-turn-cache.test.ts",
+        "interface/src/stores/task-turn-cache.ts",
+        "interface/src/types/aura-events.ts",
+        "interface/src/types/entities.ts",
+        "interface/src/types/enums.ts",
+        "interface/src/types/events.ts",
+        "interface/src/types/filters.ts",
+        "interface/src/types/harness-protocol.ts",
+        "interface/src/types/ids.ts",
+        "interface/src/types/index.ts",
+        "interface/src/types/permissions-wire.ts",
+        "interface/src/types/permissions.ts",
+        "interface/src/types/stream.ts",
+        "interface/src/utils/build-display-messages.test.ts",
+        "interface/src/utils/build-display-messages.ts",
+        "interface/src/utils/build-timeline.test.ts",
+        "interface/src/utils/build-timeline.ts",
+        "interface/src/utils/chat-history.test.ts",
+        "interface/src/utils/chat-history.ts",
+        "interface/src/utils/streaming.test.ts",
+        "interface/src/utils/streaming.ts",
+        "interface/src/utils/tool-markers.test.ts",
+        "interface/src/utils/tool-markers.ts",
+        "interface/src/views/AgentStatusBar/AgentStatusBar.tsx",
+        "interface/src/views/AgentStatusBar/useAgentStatusBarData.ts",
+        "interface/src/views/HomeView/HomeView.test.tsx",
+        "interface/src/views/LogPanel/LogPanel.tsx",
+        "interface/src/views/LoopControls/LoopControls.tsx",
+        "interface/src/views/MobileOrganizationView/MobileOrganizationView.tsx",
+        "interface/src/views/ProjectAgentDetailsView/ProjectAgentDetailsView.tsx",
+        "interface/src/views/ProjectAgentRedirectView/ProjectAgentRedirectView.test.tsx",
+        "interface/src/views/ProjectAgentSetupView/ProjectAgentSetupView.tsx",
+        "interface/src/views/ProjectLayout/useProjectLayoutData.ts",
+        "interface/src/views/ProjectTasksView/ProjectTasksView.tsx",
+        "interface/src/views/ProjectWorkView/ProjectWorkView.tsx",
+        "interface/src/views/ProjectWorkView/useMobileSpecs.ts",
+        "interface/src/views/ProjectWorkView/useMobileTasks.test.tsx",
+        "interface/src/views/ProjectWorkView/useMobileTasks.ts",
+        "interface/src/views/SessionList/SessionList.tsx",
+        "interface/src/views/SessionList/useSessionListData.test.tsx",
+        "interface/src/views/SessionList/useSessionListData.ts",
+        "interface/src/views/SpecList/SpecList.tsx",
+        "interface/src/views/StatsDashboard/useStatsDashboardData.ts",
+        "interface/src/views/TaskFeed/TaskFeed.tsx",
+        "interface/src/views/TaskFeed/useTaskFeedData.ts",
+        "interface/src/views/TaskList/TaskList.tsx",
+        "interface/src/views/TaskList/useTaskListData.test.tsx",
+        "interface/src/views/TaskList/useTaskListData.ts"
+      ],
+      "stats": {
+        "fileCount": 330,
+        "insertions": 397,
+        "deletions": 397
+      },
+      "committedAtMs": 1777099252000,
+      "cleanSubject": "move generic types/* to shared/types/",
+      "keywords": [
+        "move",
+        "generic",
+        "types",
+        "shared"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/package.json",
+        "interface/scripts/lib",
+        "interface/src/api",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/hooks",
+        "interface/src/lib",
+        "interface/src/queries",
+        "interface/src/shared",
+        "interface/src/stores",
+        "interface/src/types",
+        "interface/src/utils",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "2a88e8164212b04bf1b00598caa9086287681355",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-24T23:50:54-07:00",
+      "subject": "refactor(interface): move generic api/* to shared/api/",
+      "body": "Move framework-agnostic api transport modules to interface/src/shared/api/. Kept feedback.ts, marketplace.ts, marketplace.test.ts, client.ts, and client.test.ts in interface/src/api/ because they import app-specific types or aggregate the app-specific sub-APIs (would otherwise create shared->apps deps). All other 38 api files moved cleanly with import paths recomputed via path resolution to avoid touching unrelated relative imports.\n\nMade-with: Cursor",
+      "parents": [
+        "7304dc3012e842b317b407c5d68d5a8de759eca4"
+      ],
+      "files": [
+        "interface/src/api/agents.test.ts",
+        "interface/src/api/agents.ts",
+        "interface/src/api/artifacts.ts",
+        "interface/src/api/auth.test.ts",
+        "interface/src/api/auth.ts",
+        "interface/src/api/browser.test.ts",
+        "interface/src/api/browser.ts",
+        "interface/src/api/client.ts",
+        "interface/src/api/core.test.ts",
+        "interface/src/api/core.ts",
+        "interface/src/api/debug.ts",
+        "interface/src/api/desktop.test.ts",
+        "interface/src/api/desktop.ts",
+        "interface/src/api/environment.test.ts",
+        "interface/src/api/environment.ts",
+        "interface/src/api/feedback.ts",
+        "interface/src/api/harness-skills.test.ts",
+        "interface/src/api/harness-skills.ts",
+        "interface/src/api/loop.test.ts",
+        "interface/src/api/loop.ts",
+        "interface/src/api/marketplace.ts",
+        "interface/src/api/memory.test.ts",
+        "interface/src/api/memory.ts",
+        "interface/src/api/notes.ts",
+        "interface/src/api/orgs.test.ts",
+        "interface/src/api/orgs.ts",
+        "interface/src/api/process.test.ts",
+        "interface/src/api/process.ts",
+        "interface/src/api/projects.test.ts",
+        "interface/src/api/projects.ts",
+        "interface/src/api/social.test.ts",
+        "interface/src/api/social.ts",
+        "interface/src/api/sse.test.ts",
+        "interface/src/api/sse.ts",
+        "interface/src/api/streams.test.ts",
+        "interface/src/api/streams.ts",
+        "interface/src/api/swarm.test.ts",
+        "interface/src/api/swarm.ts",
+        "interface/src/api/tasks.test.ts",
+        "interface/src/api/tasks.ts",
+        "interface/src/api/terminal.test.ts",
+        "interface/src/api/terminal.ts",
+        "interface/src/apps/agents/AgentInfoPanel/PermissionsTab.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/SkillsTab.tsx",
+        "interface/src/apps/aura3d/ImageGeneration/ImageGeneration.tsx",
+        "interface/src/apps/aura3d/ModelGeneration/ModelGeneration.tsx",
+        "interface/src/apps/debug/DebugNav/debug-nav-explorer-node.tsx",
+        "interface/src/apps/debug/DebugRunDetailView/DebugRunDetailView.tsx",
+        "interface/src/apps/debug/DebugRunListView/DebugRunListView.tsx",
+        "interface/src/apps/debug/components/DebugSidekickContent/RunInfoTab.tsx",
+        "interface/src/apps/debug/stores/debug-sidekick-store.ts",
+        "interface/src/apps/debug/types.ts",
+        "interface/src/apps/debug/useDebugProjects.ts",
+        "interface/src/apps/debug/useDebugRunLogs.ts",
+        "interface/src/apps/debug/useDebugRunMetadata.ts",
+        "interface/src/apps/debug/useDebugRuns.ts",
+        "interface/src/apps/debug/useDebugRunsByProject.ts",
+        "interface/src/apps/marketplace/stores/marketplace-store.test.ts",
+        "interface/src/apps/marketplace/stores/marketplace-store.ts",
+        "interface/src/apps/notes/NotesIndexRedirect/NotesIndexRedirect.tsx",
+        "interface/src/apps/notes/NotesNav/NotesNav.tsx",
+        "interface/src/apps/process/components/NodeConnectionsTab/NodeConnectionsTab.tsx",
+        "interface/src/apps/process/components/NodeEditorModal/useNodeEditorModal.ts",
+        "interface/src/apps/process/components/NodeInfoTab/NodeInfoTab.tsx",
+        "interface/src/apps/process/components/NodeOutputTab/NodeOutputTab.test.tsx",
+        "interface/src/apps/process/components/NodeOutputTab/NodeOutputTab.tsx",
+        "interface/src/apps/process/components/PinnedOutput/PinnedOutput.tsx",
+        "interface/src/apps/process/components/ProcessCanvas/useCanvasClipboard.ts",
+        "interface/src/apps/process/components/ProcessCanvas/useCanvasEventHandlers.ts",
+        "interface/src/apps/process/components/ProcessEditorModal/ProcessEditorModal.tsx",
+        "interface/src/apps/process/components/ProcessFolderForm/ProcessFolderForm.tsx",
+        "interface/src/apps/process/components/ProcessForm/ProcessForm.tsx",
+        "interface/src/apps/process/components/ProcessList/process-list-handlers.tsx",
+        "interface/src/apps/process/components/ProcessMainPanel/ProcessMainPanel.tsx",
+        "interface/src/apps/process/components/ProcessSidekickContent/EventTimelineItem.test.tsx",
+        "interface/src/apps/process/components/ProcessSidekickContent/EventTimelineItem.tsx",
+        "interface/src/apps/process/components/ProcessSidekickContent/RunPreviewBody.test.tsx",
+        "interface/src/apps/process/components/ProcessSidekickContent/run-preview-hooks.ts",
+        "interface/src/apps/process/stores/process-store.ts",
+        "interface/src/apps/tasks/components/AddTaskForm/AddTaskForm.tsx",
+        "interface/src/apps/tasks/stores/kanban-store.test.ts",
+        "interface/src/apps/tasks/stores/kanban-store.ts",
+        "interface/src/components/AgentEnvironment/AgentEnvironment.test.tsx",
+        "interface/src/components/AgentEnvironment/AgentEnvironment.tsx",
+        "interface/src/components/AppProviders/AppProviders.tsx",
+        "interface/src/components/AutomationBar/useAutomationStatus.ts",
+        "interface/src/components/BrowserAddressBar/BrowserAddressBar.tsx",
+        "interface/src/components/BrowserErrorOverlay/BrowserErrorOverlay.tsx",
+        "interface/src/components/BrowserInstance/BrowserInstance.tsx",
+        "interface/src/components/BrowserViewport/BrowserViewport.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/components/ChatPanel/useChatPanelState.ts",
+        "interface/src/components/SkillShopModal/SkillShopDetail.tsx",
+        "interface/src/components/UpdateBanner/useUpdateBanner.ts",
+        "interface/src/components/UpdateControl/useUpdateStatus.ts",
+        "interface/src/hooks/attachment-helpers.ts",
+        "interface/src/hooks/stream/handlers.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-browser.ts",
+        "interface/src/hooks/use-chat-stream/build-stream-handler.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts",
+        "interface/src/hooks/use-load-older-messages.ts",
+        "interface/src/hooks/use-project-list-actions.test.tsx",
+        "interface/src/hooks/use-terminal.test.ts",
+        "interface/src/hooks/use-terminal.ts",
+        "interface/src/lib/browser-input.ts",
+        "interface/src/shared/api/.gitkeep",
+        "interface/src/shared/api/agents.test.ts",
+        "interface/src/shared/api/agents.ts",
+        "interface/src/shared/api/artifacts.ts",
+        "interface/src/shared/api/auth.test.ts",
+        "interface/src/shared/api/auth.ts",
+        "interface/src/shared/api/browser.test.ts",
+        "interface/src/shared/api/browser.ts",
+        "interface/src/shared/api/core.test.ts",
+        "interface/src/shared/api/core.ts",
+        "interface/src/shared/api/debug.ts",
+        "interface/src/shared/api/desktop.test.ts",
+        "interface/src/shared/api/desktop.ts",
+        "interface/src/shared/api/environment.test.ts",
+        "interface/src/shared/api/environment.ts",
+        "interface/src/shared/api/harness-skills.test.ts",
+        "interface/src/shared/api/harness-skills.ts",
+        "interface/src/shared/api/loop.test.ts",
+        "interface/src/shared/api/loop.ts",
+        "interface/src/shared/api/memory.test.ts",
+        "interface/src/shared/api/memory.ts",
+        "interface/src/shared/api/notes.ts",
+        "interface/src/shared/api/orgs.test.ts",
+        "interface/src/shared/api/orgs.ts",
+        "interface/src/shared/api/process.test.ts",
+        "interface/src/shared/api/process.ts",
+        "interface/src/shared/api/projects.test.ts",
+        "interface/src/shared/api/projects.ts",
+        "interface/src/shared/api/social.test.ts",
+        "interface/src/shared/api/social.ts",
+        "interface/src/shared/api/sse.test.ts",
+        "interface/src/shared/api/sse.ts",
+        "interface/src/shared/api/streams.test.ts",
+        "interface/src/shared/api/streams.ts",
+        "interface/src/shared/api/swarm.test.ts",
+        "interface/src/shared/api/swarm.ts",
+        "interface/src/shared/api/tasks.test.ts",
+        "interface/src/shared/api/tasks.ts",
+        "interface/src/shared/api/terminal.test.ts",
+        "interface/src/shared/api/terminal.ts",
+        "interface/src/stores/aura3d-store.ts",
+        "interface/src/stores/auth-store.test.ts",
+        "interface/src/stores/auth-store.ts",
+        "interface/src/stores/browser-panel-store.ts",
+        "interface/src/stores/feed-store.test.ts",
+        "interface/src/stores/feed-store.ts",
+        "interface/src/stores/live-task-ids-store.ts",
+        "interface/src/stores/loop-activity-store.ts",
+        "interface/src/stores/message-queue-store.ts",
+        "interface/src/stores/notes-store.ts",
+        "interface/src/stores/profile-status-store.test.ts",
+        "interface/src/stores/profile-status-store.ts",
+        "interface/src/stores/profile-store.test.ts",
+        "interface/src/stores/shared/event-comments-slice.test.ts",
+        "interface/src/stores/shared/event-comments-slice.ts",
+        "interface/src/utils/api-errors.test.ts",
+        "interface/src/utils/api-errors.ts",
+        "interface/src/views/LoginView/use-login-form.ts",
+        "interface/src/views/SettingsView/SettingsView.test.tsx",
+        "interface/src/views/StatsDashboard/useStatsDashboardData.ts"
+      ],
+      "stats": {
+        "fileCount": 166,
+        "insertions": 156,
+        "deletions": 156
+      },
+      "committedAtMs": 1777099854000,
+      "cleanSubject": "move generic api/* to shared/api/",
+      "keywords": [
+        "move",
+        "generic",
+        "shared"
+      ],
+      "fileGroups": [
+        "interface/src/api",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/hooks",
+        "interface/src/lib",
+        "interface/src/shared",
+        "interface/src/stores",
+        "interface/src/utils",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "9c714cf6f8e789aa9d9dc72e0f6539759e0f3681",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-24T23:52:40-07:00",
+      "subject": "refactor(interface): move generic utils/* to shared/utils/",
+      "body": "Move clearly generic utility modules to interface/src/shared/utils/: format (timestamp/duration/token formatters and base64/result helpers), extract-error-message, api-errors (depends on shared/api/core), clipboard, crop-image, text-normalize (markdown/code-fence/emoji helpers), and filterExplorerNodes (zui ExplorerNode tree filter). Left chat-history/streaming/tool-markers/tool-input/derive-activity*/build-display-messages/build-timeline/chat-handoff/storage/last-app-path/mobileNavigation/collections in utils/ as Aura-specific or borderline; F3+ phases will relocate them.\n\nMade-with: Cursor",
+      "parents": [
+        "2a88e8164212b04bf1b00598caa9086287681355"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentConversationRow/AgentConversationRow.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/AgentInfoPanel.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/PermissionsTab.test.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/PermissionsTab.tsx",
+        "interface/src/apps/agents/AgentList/AgentList.tsx",
+        "interface/src/apps/debug/clipboard.ts",
+        "interface/src/apps/feed/FeedSidekickPanel/FeedSidekickPanel.tsx",
+        "interface/src/apps/feed/LeaderboardContent/LeaderboardContent.tsx",
+        "interface/src/apps/feed/LeaderboardSidekick/LeaderboardSidekick.tsx",
+        "interface/src/apps/feedback/FeedbackItemCard/FeedbackItemCard.tsx",
+        "interface/src/apps/feedback/FeedbackSidekickPanel/FeedbackSidekickPanel.tsx",
+        "interface/src/apps/marketplace/AgentTalentCard/AgentTalentCard.tsx",
+        "interface/src/apps/marketplace/HireProjectPickerModal/HireProjectPickerModal.tsx",
+        "interface/src/apps/notes/NotesCommentsPanel/NotesCommentsPanel.tsx",
+        "interface/src/apps/process/components/ProcessList/process-list-handlers.tsx",
+        "interface/src/apps/process/components/ProcessSidekickContent/EventTimelineItem.tsx",
+        "interface/src/apps/process/components/ProcessSidekickContent/LiveRunBanner.tsx",
+        "interface/src/apps/process/components/ProcessSidekickContent/RunPreviewBody.tsx",
+        "interface/src/apps/profile/shared/ProfileCommentsPanel/ProfileCommentsPanel.tsx",
+        "interface/src/components/ActivityCard/ActivityCard.test.tsx",
+        "interface/src/components/ActivityCard/ActivityCard.tsx",
+        "interface/src/components/ActivityTimeline/ActivityTimeline.tsx",
+        "interface/src/components/AgentEnvironment/AgentEnvironment.tsx",
+        "interface/src/components/Block/ThinkingBlock.tsx",
+        "interface/src/components/Block/renderers/CommandBlock.tsx",
+        "interface/src/components/Block/renderers/FileBlock.tsx",
+        "interface/src/components/Block/renderers/GenericToolBlock.tsx",
+        "interface/src/components/Block/renderers/ListBlock.tsx",
+        "interface/src/components/Block/renderers/SpecBlock.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.tsx",
+        "interface/src/components/BuyCreditsModal/BuyCreditsModal.tsx",
+        "interface/src/components/CopyButton/CopyButton.tsx",
+        "interface/src/components/CreditsBadge/CreditsBadge.tsx",
+        "interface/src/components/FileExplorer/useFileExplorerState.ts",
+        "interface/src/components/ImageCropModal/ImageCropModal.tsx",
+        "interface/src/components/LogPreview/LogPreview.tsx",
+        "interface/src/components/Preview/Preview.test.tsx",
+        "interface/src/components/Preview/Preview.tsx",
+        "interface/src/components/SessionPreview/SessionPreview.tsx",
+        "interface/src/components/StatCard/StatCard.tsx",
+        "interface/src/components/TaskMetaSection/TaskMetaSection.tsx",
+        "interface/src/components/TaskOutputPanel/CompletedTaskOutput.tsx",
+        "interface/src/components/TaskPreview/TaskPreview.test.tsx",
+        "interface/src/components/TaskPreview/TaskPreview.tsx",
+        "interface/src/hooks/use-delete-spec.ts",
+        "interface/src/hooks/use-log-stream-utils.ts",
+        "interface/src/hooks/use-log-stream.test.ts",
+        "interface/src/hooks/use-log-stream.ts",
+        "interface/src/hooks/use-project-list-actions.ts",
+        "interface/src/hooks/use-stream-safe-content.ts",
+        "interface/src/shared/utils/api-errors.test.ts",
+        "interface/src/shared/utils/api-errors.ts",
+        "interface/src/shared/utils/clipboard.ts",
+        "interface/src/shared/utils/crop-image.ts",
+        "interface/src/shared/utils/extract-error-message.ts",
+        "interface/src/shared/utils/filterExplorerNodes.test.ts",
+        "interface/src/shared/utils/filterExplorerNodes.ts",
+        "interface/src/shared/utils/format.test.ts",
+        "interface/src/shared/utils/format.ts",
+        "interface/src/shared/utils/text-normalize.test.ts",
+        "interface/src/shared/utils/text-normalize.ts",
+        "interface/src/utils/api-errors.test.ts",
+        "interface/src/utils/api-errors.ts",
+        "interface/src/utils/clipboard.ts",
+        "interface/src/utils/crop-image.ts",
+        "interface/src/utils/extract-error-message.ts",
+        "interface/src/utils/filterExplorerNodes.test.ts",
+        "interface/src/utils/filterExplorerNodes.ts",
+        "interface/src/utils/format.test.ts",
+        "interface/src/utils/format.ts",
+        "interface/src/utils/text-normalize.test.ts",
+        "interface/src/utils/text-normalize.ts",
+        "interface/src/views/AgentStatusBar/AgentStatusBar.tsx",
+        "interface/src/views/LoginView/use-login-form.ts",
+        "interface/src/views/SessionList/SessionList.tsx",
+        "interface/src/views/SpecList/SpecList.tsx",
+        "interface/src/views/TaskList/TaskList.tsx"
+      ],
+      "stats": {
+        "fileCount": 77,
+        "insertions": 61,
+        "deletions": 61
+      },
+      "committedAtMs": 1777099960000,
+      "cleanSubject": "move generic utils/* to shared/utils/",
+      "keywords": [
+        "move",
+        "generic",
+        "utils",
+        "shared"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/hooks",
+        "interface/src/shared",
+        "interface/src/utils",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "283f16b3dea83cd0814369a3f26807e8bee97e4a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-24T23:53:23-07:00",
+      "subject": "ci: retrigger workflows (transient cargo-packager fetch timeout)",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "9c714cf6f8e789aa9d9dc72e0f6539759e0f3681"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 0,
+        "deletions": 0
+      },
+      "committedAtMs": 1777100003000,
+      "cleanSubject": "retrigger workflows (transient cargo-packager fetch timeout)",
+      "keywords": [
+        "retrigger",
+        "workflows",
+        "transient",
+        "cargo",
+        "packager",
+        "fetch",
+        "timeout"
+      ],
+      "fileGroups": [],
+      "primaryArea": "Other",
+      "areas": []
+    },
+    {
+      "sha": "6be59f172f48327f7199224e835cca6e8e0d02ac",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-24T23:55:11-07:00",
+      "subject": "refactor(interface): move foundational lib/* to shared/lib/",
+      "body": "Move generic foundational library modules to interface/src/shared/lib/: auth-token (token storage built on browser-db), browser-db (IndexedDB wrapper with localStorage fallback), host-config (API host resolution + native defaults), native-runtime (Capacitor platform detection), query-client (TanStack Query default config), and featureFlags (env-driven flag reader). Skipped boot-shell.ts and capture-bridge.ts per F2 plan (deferred to F5). Other lib/ files left as Aura-specific.\n\nMade-with: Cursor",
+      "parents": [
+        "283f16b3dea83cd0814369a3f26807e8bee97e4a"
+      ],
+      "files": [
+        "interface/src/App.tsx",
+        "interface/src/apps/agents/stores/agent-store.ts",
+        "interface/src/apps/feed/FeedMainPanel/FeedMainPanel.test.tsx",
+        "interface/src/apps/integrations/integration-groups.ts",
+        "interface/src/apps/notes/NotesMainPanel/NotesMainPanel.test.tsx",
+        "interface/src/apps/notes/NotesNav/NotesNav.test.tsx",
+        "interface/src/components/AgentChatView/AgentChatView.tsx",
+        "interface/src/components/HostSettingsModal/HostSettingsModal.tsx",
+        "interface/src/components/MobileShell/MobileShell.test.tsx",
+        "interface/src/components/MobileShell/MobileShell.tsx",
+        "interface/src/components/OrgSettingsIntegrations/OrgSettingsIntegrations.tsx",
+        "interface/src/hooks/use-aura-capabilities.ts",
+        "interface/src/hooks/use-project-list-actions.ts",
+        "interface/src/hooks/use-terminal-target.test.ts",
+        "interface/src/lib/auth-token.test.ts",
+        "interface/src/lib/auth-token.ts",
+        "interface/src/lib/browser-db.test.ts",
+        "interface/src/lib/browser-db.ts",
+        "interface/src/lib/featureFlags.ts",
+        "interface/src/lib/host-config.test.ts",
+        "interface/src/lib/host-config.ts",
+        "interface/src/lib/native-runtime.test.ts",
+        "interface/src/lib/native-runtime.ts",
+        "interface/src/lib/native-test-auth.test.ts",
+        "interface/src/lib/native-test-auth.ts",
+        "interface/src/lib/query-client.ts",
+        "interface/src/lib/registerServiceWorker.ts",
+        "interface/src/main.tsx",
+        "interface/src/shared/api/browser.ts",
+        "interface/src/shared/api/core.ts",
+        "interface/src/shared/api/debug.ts",
+        "interface/src/shared/api/loop.test.ts",
+        "interface/src/shared/api/sse.ts",
+        "interface/src/shared/api/tasks.test.ts",
+        "interface/src/shared/api/terminal.ts",
+        "interface/src/shared/lib/.gitkeep",
+        "interface/src/shared/lib/auth-token.test.ts",
+        "interface/src/shared/lib/auth-token.ts",
+        "interface/src/shared/lib/browser-db.test.ts",
+        "interface/src/shared/lib/browser-db.ts",
+        "interface/src/shared/lib/featureFlags.ts",
+        "interface/src/shared/lib/host-config.test.ts",
+        "interface/src/shared/lib/host-config.ts",
+        "interface/src/shared/lib/native-runtime.test.ts",
+        "interface/src/shared/lib/native-runtime.ts",
+        "interface/src/shared/lib/query-client.ts",
+        "interface/src/stores/auth-store.test.ts",
+        "interface/src/stores/auth-store.ts",
+        "interface/src/stores/chat-history-store.test.ts",
+        "interface/src/stores/chat-history-store.ts",
+        "interface/src/stores/event-store.test.tsx",
+        "interface/src/stores/event-store/event-store.ts",
+        "interface/src/stores/host-store.test.ts",
+        "interface/src/stores/host-store.ts",
+        "interface/src/stores/org-store.ts",
+        "interface/src/stores/projects-list-store.test.ts",
+        "interface/src/stores/projects-list-store.ts",
+        "interface/src/views/LoginView/use-login-form.ts",
+        "interface/src/views/ProjectAgentSetupView/ProjectAgentSetupView.tsx"
+      ],
+      "stats": {
+        "fileCount": 59,
+        "insertions": 55,
+        "deletions": 55
+      },
+      "committedAtMs": 1777100111000,
+      "cleanSubject": "move foundational lib/* to shared/lib/",
+      "keywords": [
+        "move",
+        "foundational",
+        "shared"
+      ],
+      "fileGroups": [
+        "interface/src/App.tsx",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/hooks",
+        "interface/src/lib",
+        "interface/src/main.tsx",
+        "interface/src/shared",
+        "interface/src/stores",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "a53d32bf432578e8400364f610904246839eb83e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-24T23:59:01-07:00",
+      "subject": "refactor(interface): move generic hooks/* to shared/hooks/",
+      "body": "Move clearly generic React hooks to interface/src/shared/hooks/: use-click-outside, use-delayed-empty, use-delayed-loading, use-overlay-scrollbar, use-scroll-anchor-v2, use-highlighted-html, use-overflow-tabs, and ws-reconnect (WebSocket reconnect helper). Each only imports from React (or vendored libs) and is fully app-agnostic. Other hooks left in hooks/ because they depend on apps/, stores/, or domain-specific api/ aggregators (relocated in later phases).\n\nMade-with: Cursor",
+      "parents": [
+        "6be59f172f48327f7199224e835cca6e8e0d02ac"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentList/AgentList.tsx",
+        "interface/src/apps/debug/components/DebugFilterMenu/DebugFilterMenu.tsx",
+        "interface/src/apps/profile/ProfileMainPanel/ProfileMainPanel.tsx",
+        "interface/src/components/AgentChatView/AgentChatView.tsx",
+        "interface/src/components/Block/renderers/FileBlock.tsx",
+        "interface/src/components/Block/renderers/SpecBlock.tsx",
+        "interface/src/components/ChatPanel/useChatPanelState.test.tsx",
+        "interface/src/components/ChatPanel/useChatPanelState.ts",
+        "interface/src/components/MessageBubble/MessageBubble.test.tsx",
+        "interface/src/components/MessageBubble/MessageBubble.tsx",
+        "interface/src/components/OrgSelector/OrgSelector.tsx",
+        "interface/src/components/OverlayScrollbar/OverlayScrollbar.tsx",
+        "interface/src/components/Sidekick/Sidekick.test.tsx",
+        "interface/src/components/SidekickTabBar/SidekickTabBar.tsx",
+        "interface/src/components/TaskOutputPanel/TaskOutputPanel.tsx",
+        "interface/src/components/ToolRow/ToolRow.test.tsx",
+        "interface/src/features/left-menu/LeftMenuTree/LeftMenuTree.tsx",
+        "interface/src/hooks/use-agent-chat-window.test.ts",
+        "interface/src/hooks/use-agent-chat-window.ts",
+        "interface/src/hooks/use-click-outside.test.ts",
+        "interface/src/hooks/use-click-outside.ts",
+        "interface/src/hooks/use-delayed-empty.test.ts",
+        "interface/src/hooks/use-delayed-empty.ts",
+        "interface/src/hooks/use-delayed-loading.test.ts",
+        "interface/src/hooks/use-delayed-loading.ts",
+        "interface/src/hooks/use-highlighted-html.test.ts",
+        "interface/src/hooks/use-highlighted-html.ts",
+        "interface/src/hooks/use-overflow-tabs.test.ts",
+        "interface/src/hooks/use-overflow-tabs.ts",
+        "interface/src/hooks/use-overlay-scrollbar.test.ts",
+        "interface/src/hooks/use-overlay-scrollbar.ts",
+        "interface/src/hooks/use-scroll-anchor-v2.test.ts",
+        "interface/src/hooks/use-scroll-anchor-v2.ts",
+        "interface/src/hooks/ws-reconnect.test.ts",
+        "interface/src/hooks/ws-reconnect.ts",
+        "interface/src/shared/hooks/.gitkeep",
+        "interface/src/shared/hooks/use-click-outside.test.ts",
+        "interface/src/shared/hooks/use-click-outside.ts",
+        "interface/src/shared/hooks/use-delayed-empty.test.ts",
+        "interface/src/shared/hooks/use-delayed-empty.ts",
+        "interface/src/shared/hooks/use-delayed-loading.test.ts",
+        "interface/src/shared/hooks/use-delayed-loading.ts",
+        "interface/src/shared/hooks/use-highlighted-html.test.ts",
+        "interface/src/shared/hooks/use-highlighted-html.ts",
+        "interface/src/shared/hooks/use-overflow-tabs.test.ts",
+        "interface/src/shared/hooks/use-overflow-tabs.ts",
+        "interface/src/shared/hooks/use-overlay-scrollbar.test.ts",
+        "interface/src/shared/hooks/use-overlay-scrollbar.ts",
+        "interface/src/shared/hooks/use-scroll-anchor-v2.test.ts",
+        "interface/src/shared/hooks/use-scroll-anchor-v2.ts",
+        "interface/src/shared/hooks/ws-reconnect.test.ts",
+        "interface/src/shared/hooks/ws-reconnect.ts",
+        "interface/src/stores/event-store.test.tsx",
+        "interface/src/stores/event-store/event-store.ts",
+        "interface/src/views/AgentStatusBar/useAgentStatusBarData.ts",
+        "interface/src/views/ProjectLayout/ProjectLayout.tsx",
+        "interface/src/views/SessionList/SessionList.tsx",
+        "interface/src/views/SidekickLog/SidekickLog.tsx",
+        "interface/src/views/SpecList/SpecList.tsx",
+        "interface/src/views/StatsDashboard/StatsDashboard.test.tsx",
+        "interface/src/views/StatsDashboard/StatsDashboard.tsx",
+        "interface/src/views/TaskList/TaskList.tsx"
+      ],
+      "stats": {
+        "fileCount": 62,
+        "insertions": 30,
+        "deletions": 30
+      },
+      "committedAtMs": 1777100341000,
+      "cleanSubject": "move generic hooks/* to shared/hooks/",
+      "keywords": [
+        "move",
+        "generic",
+        "hooks",
+        "shared"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/features",
+        "interface/src/hooks",
+        "interface/src/shared",
+        "interface/src/stores",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f71b9eb8cf1f56475952977b8e664f71d313e817",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T00:10:51-07:00",
+      "subject": "refactor(interface): keep api/streams.ts in api/ (depends on stores/)",
+      "body": "streams.ts couples engine event handling (handleEngineEvent from\nstores/event-store/engine-event-handlers) with SSE transport, so it\nviolates the shared/ rule that disallows imports from stores/. Move it\nback to interface/src/api/ and update all callers; this matches the\nprior decisions for api/feedback.ts, api/marketplace.ts, and api/client.ts.\n\nMade-with: Cursor",
+      "parents": [
+        "a53d32bf432578e8400364f610904246839eb83e"
+      ],
+      "files": [
+        "interface/src/api/client.ts",
+        "interface/src/api/streams.test.ts",
+        "interface/src/api/streams.ts",
+        "interface/src/apps/aura3d/ImageGeneration/ImageGeneration.tsx",
+        "interface/src/apps/aura3d/ModelGeneration/ModelGeneration.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/components/ChatPanel/useChatPanelState.ts",
+        "interface/src/hooks/attachment-helpers.ts",
+        "interface/src/hooks/stream/handlers.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream/build-stream-handler.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts",
+        "interface/src/shared/api/agents.ts",
+        "interface/src/shared/api/projects.ts",
+        "interface/src/shared/api/streams.test.ts",
+        "interface/src/shared/api/streams.ts",
+        "interface/src/stores/message-queue-store.ts"
+      ],
+      "stats": {
+        "fileCount": 17,
+        "insertions": 28,
+        "deletions": 28
+      },
+      "committedAtMs": 1777101051000,
+      "cleanSubject": "keep api/streams.ts in api/ (depends on stores/)",
+      "keywords": [
+        "keep",
+        "streams",
+        "depends",
+        "stores"
+      ],
+      "fileGroups": [
+        "interface/src/api",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/hooks",
+        "interface/src/shared",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "da4436e24c3da45c4fc36d36b0b0e5838f1a2130",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T00:22:02-07:00",
+      "subject": "fix(stats): decode project token/cost/lines/time across key shapes",
+      "body": "The project stats panel showed Cost moving but Tokens, Time, and Lines\nstuck at zero because aura-storage's `/api/stats?scope=project` endpoint\nemits those fields under naming conventions outside our\n`rename_all = camelCase` deserializer (e.g. `tokensUsed`, `inputTokens`,\n`costUsd`). With `#[serde(default)]` they silently fell back to 0.\n\nAdd a serde alias soup on `ProjectStats` for total tokens, input/output\ntokens, cost, time, and lines (mirroring `PlatformStats` in\naura-os-network), and fetch the stats body as text + `debug!` log it so\nfuture shape drift is diagnosable. Add unit tests that lock in coverage\nfor camelCase, snake_case, and short-form variants.\n\nMade-with: Cursor",
+      "parents": [
+        "f71b9eb8cf1f56475952977b8e664f71d313e817"
+      ],
+      "files": [
+        "crates/aura-os-storage/src/client/stats.rs",
+        "crates/aura-os-storage/src/types.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 166,
+        "deletions": 14
+      },
+      "committedAtMs": 1777101722000,
+      "cleanSubject": "decode project token/cost/lines/time across key shapes",
+      "keywords": [
+        "decode",
+        "project",
+        "token",
+        "cost",
+        "lines",
+        "time",
+        "across",
+        "shapes"
+      ],
+      "fileGroups": [
+        "crates/aura-os-storage/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "15777df3e5ca1dfaf12de837cbd3e6d58c61e5fc",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T12:23:51-07:00",
+      "subject": "fix(chat): surface dropped main-thread chat streams instead of failing silently",
+      "body": "Long-running agent runs would occasionally see the main thread chat\n\"just get dropped with no explanation\" — the assistant turn would stop\nmid-flight, no error banner appeared, and the only recovery was a hard\nreload.\n\nThree layered causes, fixed together:\n\n1. Server: `harness_broadcast_to_sse` swallowed `RecvError::Lagged`\n   from the harness `tokio::sync::broadcast` channel (capacity 4096) on\n   a silent `continue`. Heavy text-delta + large tool-result bursts\n   could outrun the SSE writer enough to evict the terminal\n   `AssistantMessageEnd`, leaving the client to wait for its 90s idle\n   timeout and treat it as an unexplained drop. Now we log a structured\n   `warn!` with the skipped count and emit a synthetic SSE `error`\n   event (`code: \"stream_lagged\"`, `recoverable: true`) before closing\n   the stream so the UI can react explicitly.\n\n2. Client: `SSEIdleTimeoutError` is now a named subclass instead of an\n   anonymous `Error(\"SSE idle timeout\")`, and `normalizeStreamError`\n   classifies both the idle-timeout case and the server-side\n   `stream_lagged` payload as a new `displayVariant: \"streamDropped\"`.\n   `MessageBubble` renders that variant as a dedicated \"Chat stream\n   interrupted\" banner (with retry hint) instead of inlining\n   `*Error: SSE idle timeout*` into the trailing assistant bubble.\n\n3. Client: `STREAM_FINISH_GRACE_MS` in `useChatHistorySync` raised from\n   1500ms → 5000ms. Under load the forced post-stream history refetch\n   could still beat the server's persistence of the trailing\n   `assistant_message_end`, and the resulting \"user only\" snapshot\n   would replace the just-finalized stream events. The increased grace\n   window covers the worst observed persistence lag with headroom; the\n   staleness guards still let legitimate cross-session refreshes land\n   promptly.\n\nTests: extended `handlers.test.ts` with cases asserting both the\nclient-side `SSEIdleTimeoutError` and the server-side `stream_lagged`\npayload are normalized to `displayVariant: \"streamDropped\"` (and that\nthe banner copy replaces the legacy `*Error: ...*` inline suffix).\n`cargo clippy -p aura-os-server -D warnings`, `tsc -b --noEmit`,\n`eslint`, and the impacted vitest suite all pass.\n\nMade-with: Cursor",
+      "parents": [
+        "da4436e24c3da45c4fc36d36b0b0e5838f1a2130"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat.rs",
+        "interface/src/components/MessageBubble/MessageBubble.module.css",
+        "interface/src/components/MessageBubble/MessageBubble.tsx",
+        "interface/src/hooks/stream/handlers.test.ts",
+        "interface/src/hooks/stream/handlers.ts",
+        "interface/src/hooks/use-chat-history-sync.ts",
+        "interface/src/shared/api/sse.ts",
+        "interface/src/shared/types/stream.ts"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 224,
+        "deletions": 20
+      },
+      "committedAtMs": 1777145031000,
+      "cleanSubject": "surface dropped main-thread chat streams instead of failing silently",
+      "keywords": [
+        "surface",
+        "dropped",
+        "main",
+        "thread",
+        "chat",
+        "streams",
+        "instead",
+        "failing",
+        "silently"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/components",
+        "interface/src/hooks",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "e1ac283ca5ce65677891acfd0b3d2adeda449d77",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T15:50:47-07:00",
+      "subject": "chore(interface): swap lucide Terminal icon for SquareTerminal",
+      "body": "Use the square-terminal lucide icon for the sidekick terminal tab,\ncommand/run_command blocks, skill shop and skill preview command\nrows, and the marketplace DevOps expertise category.\n\nMade-with: Cursor",
+      "parents": [
+        "15777df3e5ca1dfaf12de837cbd3e6d58c61e5fc"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentInfoPanel/SkillPreview.tsx",
+        "interface/src/apps/marketplace/marketplace-expertise.ts",
+        "interface/src/components/Block/renderers/CommandBlock.tsx",
+        "interface/src/components/FormattedRawOutput/FormattedRawOutput.tsx",
+        "interface/src/components/SidekickTaskbar/SidekickTaskbar.tsx",
+        "interface/src/components/SkillShopModal/SkillShopDetail.tsx"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 13,
+        "deletions": 13
+      },
+      "committedAtMs": 1777157447000,
+      "cleanSubject": "swap lucide Terminal icon for SquareTerminal",
+      "keywords": [
+        "swap",
+        "lucide",
+        "terminal",
+        "icon",
+        "squareterminal"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "510205d7227dca12afb926f24fcc0bd56b50a72d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T16:03:07-07:00",
+      "subject": "fix(interface): scope task panel + sidekick streaming state per project / agent instance",
+      "body": "`LoopStopped`/`LoopFinished` for project A used to silently complete\nevery active task row in the panel, including project B's, because\n`task-stream-bootstrap.handleLoopEnd` called the global\n`markAllCompleted`. Add `markCompletedForProject(projectId, agentInstanceId?)`\non `task-output-panel-store` and route `handleLoopEnd` to it scoped by\nthe event's `project_id` / `agent_id` (and only purge `isStreamingByTask`\nfor matching tasks).\n\nThe sidekick `streamingAgentInstanceId` was a single string, so two\nprojects (or two instances within a project) streaming concurrently\ncaused the streaming dot to flicker between rows and lose entirely on\nall but the most-recently-started stream. Replace it with\n`streamingAgentInstanceIds: string[]` driven by a new\n`setAgentStreaming(id, isStreaming)` setter and a `useIsAgentStreaming(id)`\nselector. Keep the legacy single-string field as a derived \"most recent\nid\" for existing truthy/transition checks. Migrate `use-chat-stream`,\n`build-stream-handler`, `use-chat-history-sync`, the project-list /\ntasks-project-list explorer node builders, and `profile-status-store` so\neach per-instance lifecycle is tracked independently and stopped streams\nno longer mark unrelated agents idle.\n\nCross-project regression tests cover the `markCompletedForProject` and\nmulti-id streaming paths.\n\nMade-with: Cursor",
+      "parents": [
+        "e1ac283ca5ce65677891acfd0b3d2adeda449d77"
+      ],
+      "files": [
+        "interface/src/apps/tasks/components/TasksProjectList/TasksProjectList.test.tsx",
+        "interface/src/apps/tasks/components/TasksProjectList/tasks-project-list-explorer-node.tsx",
+        "interface/src/components/ProjectList/ProjectList.test.tsx",
+        "interface/src/components/ProjectList/project-list-explorer-node.tsx",
+        "interface/src/components/ProjectList/project-list-projects-explorer.tsx",
+        "interface/src/components/ProjectList/useProjectListData.ts",
+        "interface/src/components/ProjectsNav/ProjectsNav.test.tsx",
+        "interface/src/components/Sidekick/Sidekick.test.tsx",
+        "interface/src/hooks/chat-stream-integration.test.ts",
+        "interface/src/hooks/use-chat-history-sync.test.ts",
+        "interface/src/hooks/use-chat-history-sync.ts",
+        "interface/src/hooks/use-chat-stream.test.ts",
+        "interface/src/hooks/use-chat-stream/build-stream-handler.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts",
+        "interface/src/stores/profile-status-store.test.ts",
+        "interface/src/stores/profile-status-store.ts",
+        "interface/src/stores/sidekick-store.test.ts",
+        "interface/src/stores/sidekick-store.ts",
+        "interface/src/stores/task-output-panel-store.test.ts",
+        "interface/src/stores/task-output-panel-store.ts",
+        "interface/src/stores/task-stream-bootstrap.ts"
+      ],
+      "stats": {
+        "fileCount": 21,
+        "insertions": 313,
+        "deletions": 43
+      },
+      "committedAtMs": 1777158187000,
+      "cleanSubject": "scope task panel + sidekick streaming state per project / agent instance",
+      "keywords": [
+        "scope",
+        "task",
+        "panel",
+        "sidekick",
+        "streaming",
+        "state",
+        "project",
+        "agent",
+        "instance"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/hooks",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "1102674d8469baf30c319ca2bd92c10b9263dfb2",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T16:13:16-07:00",
+      "subject": "feat(agents): add AgentInstanceRole foundation for multi-instance concurrency",
+      "body": "The upstream harness gates \"one in-flight turn per agent_id\", so a\nsingle agent instance can't simultaneously serve a chat turn, an\nautomation loop, and an ad-hoc task run. The Phase 2 fix is to\npartition work across multiple instances per project: a `Chat`\ninstance, a `Loop` instance, and any number of ephemeral `Executor`\ninstances per concurrent task. Land the type-level foundation those\nlater changes depend on:\n\n- New `AgentInstanceRole` enum in `aura-os-core::enums` with `Chat`,\n  `Loop`, and `Executor` variants. `Chat` is the `#[derive(Default)]`\n  variant and the wire fallback for unknown values, so legacy rows\n  stay routed to the chat surface and a forward-compat upstream\n  doesn't poison reads.\n- `AgentInstance.instance_role` field with `#[serde(default)]` so JSON\n  payloads from older clients (and round-trips through storage\n  backends that drop the column) deserialise cleanly.\n- `StorageProjectAgent.instance_role` and\n  `CreateProjectAgentRequest.instance_role` (string, optional) so the\n  role survives the storage round-trip when the backend supports it.\n- `AgentInstanceService::create_instance_from_agent_with_role` plus a\n  back-compat shim on the existing `create_instance_from_agent` that\n  defaults to `Chat`. The server's `home_project` and `instances`\n  create handlers now stamp `Chat` explicitly on the wire so a backend\n  that drops unknown columns still records the intended role on the\n  next round-trip.\n- `merge_agent_instance` reads the storage column, falls back to\n  `Chat` on missing/unknown values, and surfaces it on the merged\n  `AgentInstance`. Tests pin the round-trip, the legacy default, and\n  the unknown-value collapse.\n- Frontend `AgentInstance` type gains an optional `instance_role`\n  field documented as defaulting to `\"chat\"` when absent so consumers\n  of the type can already start branching on it.\n\nNo behavior change yet — the role is recorded and propagated but\nnothing reads it. The follow-up commits in Phase 2 use it to bind\nloop starts to the project's `Loop` instance and to spawn ephemeral\n`Executor` instances for parallel `run_single_task` calls.\n\nMade-with: Cursor",
+      "parents": [
+        "510205d7227dca12afb926f24fcc0bd56b50a72d"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/home_project.rs",
+        "apps/aura-os-server/src/handlers/agents/instances.rs",
+        "apps/aura-os-server/tests/chat_events_test.rs",
+        "apps/aura-os-server/tests/session_delete_test.rs",
+        "apps/aura-os-server/tests/session_rotation_test.rs",
+        "apps/aura-os-server/tests/storage_integration_test.rs",
+        "crates/aura-os-agents/src/lib.rs",
+        "crates/aura-os-core/src/entities.rs",
+        "crates/aura-os-core/src/enums.rs",
+        "crates/aura-os-core/src/lib.rs",
+        "crates/aura-os-core/src/testutil.rs",
+        "crates/aura-os-core/tests/round_trips.rs",
+        "crates/aura-os-storage/src/testutil.rs",
+        "crates/aura-os-storage/src/types.rs",
+        "interface/src/shared/types/entities.ts"
+      ],
+      "stats": {
+        "fileCount": 15,
+        "insertions": 259,
+        "deletions": 6
+      },
+      "committedAtMs": 1777158796000,
+      "cleanSubject": "add AgentInstanceRole foundation for multi-instance concurrency",
+      "keywords": [
+        "agentinstancerole",
+        "foundation",
+        "multi",
+        "instance",
+        "concurrency"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-agents/src",
+        "crates/aura-os-core/src",
+        "crates/aura-os-core/tests",
+        "crates/aura-os-storage/src",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Other",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "ae4801ead329f6cb70ab36edbfd26683647d028a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T16:39:29-07:00",
+      "subject": "Phase 2: ephemeral executors and default Loop instances",
+      "body": "Concurrent ad-hoc task runs no longer collide on the\n`(project_id, agent_instance_id)` automaton registry key. Every call\nto `run_single_task` now allocates a fresh `Executor`-roled\n`project_agents` row and routes the registry slot, loop handle,\nforwarder, and emitted events through that ephemeral id. The\ncaller-supplied id (or a project default) is used solely as a\ntemplate for resolving workspace path, agent template, and default\nmodel.\n\nHighlights:\n- `aura-os-agents`: add `pick_run_template` /\n  `ensure_default_loop_instance` / `spawn_ephemeral_executor` plus\n  pure helpers (`pick_run_template_from_instances`,\n  `pick_loop_template_from_instances`) so the selection order is\n  unit-testable without storage round-trips.\n- `dev_loop::adapter`: replace `require_agent_instance_id` with a\n  template-resolution path. `start_loop` lazily promotes a Chat\n  instance to Loop when no id is pinned. `run_single_task` mints an\n  ephemeral executor per call, schedules best-effort cleanup of the\n  storage row after terminal status (with an 8h TTL backstop), and\n  rolls back on early failure paths.\n- Pin selection-order regressions for both helpers — Executor rows\n  must never be selected as templates for new ephemeral runs or\n  promoted to the project's persistent Loop binding.\n\nCombined with the Phase 1 frontend fixes, two parallel chat threads,\nmultiple concurrent task runs, and a single automation loop per\nproject — within and across projects — now all coexist correctly.\n\nMade-with: Cursor",
+      "parents": [
+        "1102674d8469baf30c319ca2bd92c10b9263dfb2"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop/adapter.rs",
+        "crates/aura-os-agents/src/lib.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 419,
+        "deletions": 33
+      },
+      "committedAtMs": 1777160369000,
+      "cleanSubject": "Phase 2: ephemeral executors and default Loop instances",
+      "keywords": [
+        "phase",
+        "ephemeral",
+        "executors",
+        "default",
+        "loop",
+        "instances"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-agents/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Other"
+      ]
+    },
+    {
+      "sha": "ed8d9f4198497ea645ff84d7cb9209035529e71f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T16:45:08-07:00",
+      "subject": "Phase 3: integration test for parallel automatons under distinct agent_instance_ids",
+      "body": "Pins the registry-keying invariant so a future refactor cannot regress to a\nper-project slot, which would silently abort concurrent ad-hoc task runs and\nthe project's automation loop on each other. Covers the three-way concurrent\nsetup (one Loop instance + two ephemeral executors) and asserts a per-instance\nstop targets exactly one slot, leaving its siblings running.\n\nMade-with: Cursor",
+      "parents": [
+        "ae4801ead329f6cb70ab36edbfd26683647d028a"
+      ],
+      "files": [
+        "apps/aura-os-server/tests/api_tests.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 87,
+        "deletions": 0
+      },
+      "committedAtMs": 1777160708000,
+      "cleanSubject": "Phase 3: integration test for parallel automatons under distinct agent_instance_ids",
+      "keywords": [
+        "phase",
+        "integration",
+        "test",
+        "parallel",
+        "automatons",
+        "under",
+        "distinct",
+        "agent",
+        "instance"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/tests"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "cf39422d88c134add9073af8925a0635b963aeab",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T17:06:30-07:00",
+      "subject": "Phase 2 polish: startup janitor for orphaned ephemeral executors",
+      "body": "Phase 2 allocates a fresh `Executor`-roled `project_agents` row for\nevery ad-hoc task run so concurrent runs in a project keep distinct\nslots in `automaton_registry`. The per-run reaper inside\n`dev_loop::adapter::run_single_task` deletes that row on terminal\nstatus, but a server crash between \"registry cleared\" and \"storage\ndeleted\" — or between allocation and the reaper spawning — would\norphan the row.\n\n`AgentInstanceService::purge_executor_instances_in_project` sweeps\nthose orphans, and `app_builder::spawn_executor_janitor` calls it once\nper project at server boot so orphans don't accumulate across\nrestarts. Best effort: a missing JWT (fresh user, hasn't signed in) or\na single-row delete failure logs and continues so the rest of the\nsweep still completes.\n\nDrive-by: add a DELETE handler for `/api/project-agents/:id` to the\nmock storage testutil so the new integration test (and any future\ntest that exercises `delete_instance`) can round-trip end-to-end.\n\nMade-with: Cursor",
+      "parents": [
+        "ed8d9f4198497ea645ff84d7cb9209035529e71f"
+      ],
+      "files": [
+        "apps/aura-os-server/src/app_builder.rs",
+        "apps/aura-os-server/tests/common/mod.rs",
+        "apps/aura-os-server/tests/executor_janitor_test.rs",
+        "crates/aura-os-agents/src/lib.rs",
+        "crates/aura-os-storage/src/testutil.rs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 242,
+        "deletions": 1
+      },
+      "committedAtMs": 1777161990000,
+      "cleanSubject": "Phase 2 polish: startup janitor for orphaned ephemeral executors",
+      "keywords": [
+        "phase",
+        "polish",
+        "startup",
+        "janitor",
+        "orphaned",
+        "ephemeral",
+        "executors"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-agents/src",
+        "crates/aura-os-storage/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "f3c91d5f18f73ecedc6f899625a6428bd22a65a8",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T17:08:32-07:00",
+      "subject": "fix(interface): round desktop main panel corners",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "cf39422d88c134add9073af8925a0635b963aeab"
+      ],
+      "files": [
+        "interface/src/components/DesktopShell/DesktopShell.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 0
+      },
+      "committedAtMs": 1777162112000,
+      "cleanSubject": "round desktop main panel corners",
+      "keywords": [
+        "round",
+        "desktop",
+        "main",
+        "panel",
+        "corners"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "2f2adb66f99e4e31169ab381d4c07cfcd1742c2c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T17:13:59-07:00",
+      "subject": "fix(interface): apply radius to desktop content shell",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "f3c91d5f18f73ecedc6f899625a6428bd22a65a8"
+      ],
+      "files": [
+        "interface/src/components/DesktopShell/DesktopShell.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 2
+      },
+      "committedAtMs": 1777162439000,
+      "cleanSubject": "apply radius to desktop content shell",
+      "keywords": [
+        "apply",
+        "radius",
+        "desktop",
+        "content",
+        "shell"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "27efe7a36a558cf984f6103a247cf3c5af8d9be3",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T17:14:21-07:00",
+      "subject": "fix(interface): set desktop content radius to 6px",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "2f2adb66f99e4e31169ab381d4c07cfcd1742c2c"
+      ],
+      "files": [
+        "interface/src/components/DesktopShell/DesktopShell.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1777162461000,
+      "cleanSubject": "set desktop content radius to 6px",
+      "keywords": [
+        "desktop",
+        "content",
+        "radius"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "298bb4cf4f70ca201a33593583d7fc558e604d5c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T17:16:05-07:00",
+      "subject": "fix(server): count automation runs as sessions",
+      "body": "Wire dev-loop automation into storage sessions so loop and single-task runs create, update, and end session rows for project stats.\n\nMade-with: Cursor",
+      "parents": [
+        "27efe7a36a558cf984f6103a247cf3c5af8d9be3"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/adapter.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/session.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/streaming.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/types.rs",
+        "apps/aura-os-server/src/state.rs",
+        "apps/aura-os-server/tests/api_tests.rs",
+        "apps/aura-os-server/tests/automation_session_counting_test.rs",
+        "apps/aura-os-server/tests/common/mod.rs"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 581,
+        "deletions": 50
+      },
+      "committedAtMs": 1777162565000,
+      "cleanSubject": "count automation runs as sessions",
+      "keywords": [
+        "count",
+        "automation",
+        "runs",
+        "sessions"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "41c586f0674c3c3237579e2b2c137ff69df8d99c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T17:16:31-07:00",
+      "subject": "feat(interface): add team avatar editing",
+      "body": "Allow team avatars to be uploaded from settings and shown in the topbar selector.\n\nMade-with: Cursor",
+      "parents": [
+        "298bb4cf4f70ca201a33593583d7fc558e604d5c"
+      ],
+      "files": [
+        "apps/aura-os-server/src/dto.rs",
+        "apps/aura-os-server/src/handlers/orgs.rs",
+        "interface/src/components/Avatar/Avatar.module.css",
+        "interface/src/components/Avatar/Avatar.tsx",
+        "interface/src/components/OrgSelector/OrgSelector.module.css",
+        "interface/src/components/OrgSelector/OrgSelector.tsx",
+        "interface/src/components/OrgSettingsGeneral/OrgSettingsGeneral.tsx",
+        "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.module.css",
+        "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.test.tsx",
+        "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.tsx",
+        "interface/src/components/OrgSettingsPanel/useOrgSettingsData.ts",
+        "interface/src/shared/api/orgs.ts",
+        "interface/src/stores/org-store.test.ts",
+        "interface/src/stores/org-store.ts"
+      ],
+      "stats": {
+        "fileCount": 14,
+        "insertions": 291,
+        "deletions": 23
+      },
+      "committedAtMs": 1777162591000,
+      "cleanSubject": "add team avatar editing",
+      "keywords": [
+        "team",
+        "avatar",
+        "editing"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/components",
+        "interface/src/shared",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "6e17e330380aa15e0593b801d687abb3da012630",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T17:21:06-07:00",
+      "subject": "fix(interface): unify bottom taskbar icons and round pill-edge corners",
+      "body": "- Refactor TaskbarIconButton to a plain button using a single shared\n  .taskbarBtn class with a consistent hover background, replacing the\n  zui Button ghost wrapper, the FavoriteAgentsStrip's .favoriteBtn, and\n  the raw button used by SortableTaskbarAppButton.\n- Add an `edge` prop (start/end/both) so icons that sit flush at a pill\n  section's rounded corner round their hover/selected background to\n  match. Applied to the Desktop Circle, the apps-collapse chevron, the\n  credits-toggle chevron, and the last favorite agent.\n- Add `roundEdges` to AppNavRail so the first/last app icon in a flush\n  taskbar layout rounds against the surrounding pill (used for the\n  center pill's leading edge).\n- Make all three pill sections flush (no inner horizontal padding) so\n  edge rounding lines up consistently across left, center, and right.\n\nMade-with: Cursor",
+      "parents": [
+        "41c586f0674c3c3237579e2b2c137ff69df8d99c"
+      ],
+      "files": [
+        "interface/src/components/AppNavRail/AppNavRail.module.css",
+        "interface/src/components/AppNavRail/AppNavRail.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.module.css",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.tsx",
+        "interface/src/components/BottomTaskbar/FavoriteAgentsStrip.tsx"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 119,
+        "deletions": 89
+      },
+      "committedAtMs": 1777162866000,
+      "cleanSubject": "unify bottom taskbar icons and round pill-edge corners",
+      "keywords": [
+        "unify",
+        "bottom",
+        "taskbar",
+        "icons",
+        "round",
+        "pill",
+        "edge",
+        "corners"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "711a3917f89d45b87a21773615d4c51952350b64",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T17:21:49-07:00",
+      "subject": "fix(interface): align desktop chrome height",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "6e17e330380aa15e0593b801d687abb3da012630"
+      ],
+      "files": [
+        "interface/src/components/DesktopShell/DesktopShell.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 15,
+        "deletions": 6
+      },
+      "committedAtMs": 1777162909000,
+      "cleanSubject": "align desktop chrome height",
+      "keywords": [
+        "align",
+        "desktop",
+        "chrome",
+        "height"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "386a905b196e79021785a9ec18e1385092b8891e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T17:24:43-07:00",
+      "subject": "fix(interface): scope automation loop controls to the project's Loop instance",
+      "body": "The AutomationBar, useLoopControl, and the chat stream's loop-tool\nbridge were all forwarding the URL's chat agent_instance_id to\nstart/pause/resume/stop. After Phase 2 introduced the Loop-role\ninstance + ephemeral Executor instances, this collided with the\nharness \"one in-flight turn per agent_id\" rule: a Start while the\nchat was streaming would silently abort the chat reply (or the new\nloop turn), and Stop from the bar could tear down a parallel ad-hoc\ntask running on its own executor.\n\nAdd useAutomationLoopStore keyed by projectId, hydrate it on mount\nvia listAgentInstances (so a previously-running loop is controllable\nafter a reload), capture the resolved id from startLoop's response,\nand route every subsequent control call through the bound id\ninstead of useParams().agentInstanceId. Start itself omits the id\nso the backend's ensure_default_loop_instance resolves or lazily\ncreates the project's canonical Loop instance.\n\nUpdate useLoopControl (used by ProjectWorkView / ExecutionView) and\nbridgeLoopToolResult in build-stream-handler.ts so all three control\nsurfaces share the same bound id. Refresh the AutomationBar and\nuseLoopControl test suites to assert pause / resume / stop hit the\nbound Loop instance and never the chat surface.\n\nMade-with: Cursor",
+      "parents": [
+        "711a3917f89d45b87a21773615d4c51952350b64"
+      ],
+      "files": [
+        "interface/src/components/AutomationBar/AutomationBar.test.tsx",
+        "interface/src/components/AutomationBar/useAutomationStatus.ts",
+        "interface/src/hooks/use-chat-stream/build-stream-handler.ts",
+        "interface/src/hooks/use-loop-control.test.ts",
+        "interface/src/hooks/use-loop-control.ts",
+        "interface/src/stores/automation-loop-store.ts"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 321,
+        "deletions": 40
+      },
+      "committedAtMs": 1777163083000,
+      "cleanSubject": "scope automation loop controls to the project's Loop instance",
+      "keywords": [
+        "scope",
+        "automation",
+        "loop",
+        "controls",
+        "project",
+        "instance"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/hooks",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "b4525bf68032c5549bf0c68f07e1d8367c0f9e5a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T17:25:13-07:00",
+      "subject": "fix(interface): give bottom taskbar pills breathing room at their ends",
+      "body": "- Add a consistent `padding: 0 var(--space-2)` on the shared\n  `.left, .center, .right` pill rule so every pill section has the\n  same breathing room at its rounded start and end, instead of icons\n  sitting flush against the corners.\n- Drop the now-unused edge-rounding plumbing (`edge`, `roundEdges`,\n  and the matching CSS modifiers) from `TaskbarIconButton` /\n  `AppNavRail` and their usages in `BottomTaskbar` and\n  `FavoriteAgentsStrip`, plus the favorites-strip overflow-corner\n  workaround in `BottomTaskbar.module.css` that only mattered when\n  the strip was flush against the pill's right corner.\n\nMade-with: Cursor",
+      "parents": [
+        "386a905b196e79021785a9ec18e1385092b8891e"
+      ],
+      "files": [
+        "interface/src/components/AppNavRail/AppNavRail.module.css",
+        "interface/src/components/AppNavRail/AppNavRail.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.module.css",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.tsx",
+        "interface/src/components/BottomTaskbar/FavoriteAgentsStrip.tsx"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 9,
+        "deletions": 73
+      },
+      "committedAtMs": 1777163113000,
+      "cleanSubject": "give bottom taskbar pills breathing room at their ends",
+      "keywords": [
+        "give",
+        "bottom",
+        "taskbar",
+        "pills",
+        "breathing",
+        "room",
+        "their",
+        "ends"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "4c5768ea46caa4b1c6bc9bf13e23506b609821ec",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T17:27:13-07:00",
+      "subject": "fix(interface): group sidekick toggle with window controls",
+      "body": "Place the sidekick drawer toggle beside the native window controls so the topbar actions read as one compact control group.\n\nMade-with: Cursor",
+      "parents": [
+        "b4525bf68032c5549bf0c68f07e1d8367c0f9e5a"
+      ],
+      "files": [
+        "interface/src/components/DesktopShell/DesktopShell.tsx",
+        "interface/src/components/WindowControls/WindowControls.module.css",
+        "interface/src/components/WindowControls/WindowControls.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 41,
+        "deletions": 17
+      },
+      "committedAtMs": 1777163233000,
+      "cleanSubject": "group sidekick toggle with window controls",
+      "keywords": [
+        "group",
+        "sidekick",
+        "toggle",
+        "with",
+        "window",
+        "controls"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "9270a37ff09b217c86c423090d273a14954ae1fd",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T17:27:18-07:00",
+      "subject": "style(server): apply rustfmt to agent handlers and AgentInstanceService",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "4c5768ea46caa4b1c6bc9bf13e23506b609821ec"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/home_project.rs",
+        "apps/aura-os-server/src/handlers/agents/instances.rs",
+        "apps/aura-os-server/src/handlers/agents/runtime.rs",
+        "crates/aura-os-agents/src/lib.rs"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 35,
+        "deletions": 26
+      },
+      "committedAtMs": 1777163238000,
+      "cleanSubject": "style(server): apply rustfmt to agent handlers and AgentInstanceService",
+      "keywords": [
+        "style",
+        "server",
+        "apply",
+        "rustfmt",
+        "agent",
+        "handlers",
+        "agentinstanceservice"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-agents/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "04806b27042e1a9492943efcdfc409e4f80d4c71",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T17:27:23-07:00",
+      "subject": "feat(interface): add WebGL terminal renderer with canvas fallback and 100k scrollback",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "9270a37ff09b217c86c423090d273a14954ae1fd"
+      ],
+      "files": [
+        "interface/package-lock.json",
+        "interface/package.json",
+        "interface/src/components/XTerminal/XTerminal.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 64,
+        "deletions": 2
+      },
+      "committedAtMs": 1777163243000,
+      "cleanSubject": "add WebGL terminal renderer with canvas fallback and 100k scrollback",
+      "keywords": [
+        "webgl",
+        "terminal",
+        "renderer",
+        "with",
+        "canvas",
+        "fallback",
+        "100k",
+        "scrollback"
+      ],
+      "fileGroups": [
+        "interface/package-lock.json",
+        "interface/package.json",
+        "interface/src/components"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "629e58d823a71a6687a380f36e1099b3c60a608a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T17:27:28-07:00",
+      "subject": "fix(interface): keep terminal content above sidekick panel fade gradient",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "04806b27042e1a9492943efcdfc409e4f80d4c71"
+      ],
+      "files": [
+        "interface/src/components/TaskOutputPanel/TaskOutputPanel.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 6,
+        "deletions": 0
+      },
+      "committedAtMs": 1777163248000,
+      "cleanSubject": "keep terminal content above sidekick panel fade gradient",
+      "keywords": [
+        "keep",
+        "terminal",
+        "content",
+        "above",
+        "sidekick",
+        "panel",
+        "fade",
+        "gradient"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "3ab332791b52ddef13eeb341ec1dcc04693dbe8e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T17:27:32-07:00",
+      "subject": "fix(interface): widen topbar align rail to 44px to match nav rail",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "629e58d823a71a6687a380f36e1099b3c60a608a"
+      ],
+      "files": [
+        "interface/src/components/DesktopShell/DesktopShell.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1777163252000,
+      "cleanSubject": "widen topbar align rail to 44px to match nav rail",
+      "keywords": [
+        "widen",
+        "topbar",
+        "align",
+        "rail",
+        "44px",
+        "match"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "13e44690d923fe848ff5569436ed61b6c929957c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T17:27:38-07:00",
+      "subject": "fix(interface): use solid black background for team avatars",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "3ab332791b52ddef13eeb341ec1dcc04693dbe8e"
+      ],
+      "files": [
+        "interface/src/components/Avatar/Avatar.module.css",
+        "interface/src/components/OrgSelector/OrgSelector.module.css"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 2,
+        "deletions": 2
+      },
+      "committedAtMs": 1777163258000,
+      "cleanSubject": "use solid black background for team avatars",
+      "keywords": [
+        "solid",
+        "black",
+        "background",
+        "team",
+        "avatars"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f67f9abff8198fb7761d3bf5e054ec6af02ce99b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T17:27:42-07:00",
+      "subject": "feat(interface): persist org avatar overrides locally as fallback for hosts that drop avatar updates",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "13e44690d923fe848ff5569436ed61b6c929957c"
+      ],
+      "files": [
+        "interface/src/stores/org-store.test.ts",
+        "interface/src/stores/org-store.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 111,
+        "deletions": 14
+      },
+      "committedAtMs": 1777163262000,
+      "cleanSubject": "persist org avatar overrides locally as fallback for hosts that drop avatar updates",
+      "keywords": [
+        "persist",
+        "avatar",
+        "overrides",
+        "locally",
+        "fallback",
+        "hosts",
+        "that",
+        "drop",
+        "updates"
+      ],
+      "fileGroups": [
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f7f7bc2ebd3e76cbe33f7bdf195733cfac93bd40",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T17:41:08-07:00",
+      "subject": "fix(interface): soften chat panel top edge",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "f67f9abff8198fb7761d3bf5e054ec6af02ce99b"
+      ],
+      "files": [
+        "interface/src/components/ChatPanel/ChatPanel.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 18,
+        "deletions": 0
+      },
+      "committedAtMs": 1777164068000,
+      "cleanSubject": "soften chat panel top edge",
+      "keywords": [
+        "soften",
+        "chat",
+        "panel",
+        "edge"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "e756ea5b5bb6ec58a1d3651e2dfbff0c50aadd94",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T17:42:24-07:00",
+      "subject": "fix(interface): reduce chat top fade height",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "f7f7bc2ebd3e76cbe33f7bdf195733cfac93bd40"
+      ],
+      "files": [
+        "interface/src/components/ChatPanel/ChatPanel.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1777164144000,
+      "cleanSubject": "reduce chat top fade height",
+      "keywords": [
+        "reduce",
+        "chat",
+        "fade",
+        "height"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "37589bdc73403abb401dcbeead03b030eafd307c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T17:47:05-07:00",
+      "subject": "Merge origin/main into fix/main-thread-chat-silent-drop",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "e756ea5b5bb6ec58a1d3651e2dfbff0c50aadd94",
+        "63d4c89ab5bd9c8888355cc1b743dafcf6ca3d7c"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 13174,
+        "deletions": 18335
+      },
+      "committedAtMs": 1777164425000,
+      "cleanSubject": "Merge origin/main into fix/main-thread-chat-silent-drop",
+      "keywords": [
+        "merge",
+        "origin",
+        "main",
+        "into",
+        "thread",
+        "chat",
+        "silent",
+        "drop"
+      ],
+      "fileGroups": [],
+      "primaryArea": "Other",
+      "areas": []
+    },
+    {
+      "sha": "4fd68734e5952e524b0ec83fe6a6fe36818c70df",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T17:57:49-07:00",
+      "subject": "fix(server): set capture demo agent instance role",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "37589bdc73403abb401dcbeead03b030eafd307c"
+      ],
+      "files": [
+        "apps/aura-os-server/src/capture_auth.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 4,
+        "deletions": 2
+      },
+      "committedAtMs": 1777165069000,
+      "cleanSubject": "set capture demo agent instance role",
+      "keywords": [
+        "capture",
+        "demo",
+        "agent",
+        "instance",
+        "role"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
     }
   ],
   "batchCount": 6,
@@ -5866,36 +8208,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11453492
+          "sizeBytes": 11512646
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.387.1",
+      "version": "0.1.0-nightly.389.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.387.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.389.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 33803330
+          "sizeBytes": 34034374
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.387.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.389.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.387.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.389.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 101181944
+          "sizeBytes": 101419512
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.387.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.389.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -5905,29 +8247,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.387.1",
+      "version": "0.1.0-nightly.389.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.387.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.389.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 30302587
+          "sizeBytes": 30545697
         },
         {
-          "name": "Aura_0.1.0-nightly.387.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.389.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.387.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.389.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 30114569
+          "sizeBytes": 30347115
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.387.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.389.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -5937,29 +8279,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.387.1",
+      "version": "0.1.0-nightly.389.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.387.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.389.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 31882361
+          "sizeBytes": 32063822
         },
         {
-          "name": "Aura_0.1.0-nightly.387.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.389.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.387.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.389.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 31699093
+          "sizeBytes": 31897955
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.387.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.389.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -5969,17 +8311,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.387.1",
+      "version": "0.1.0-nightly.389.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.387.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.389.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 23037568
+          "sizeBytes": 23120982
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.387.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.389.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -5988,221 +8330,128 @@
     }
   ],
   "rendered": {
-    "title": "Harness consolidation, autonomous recovery, and a refreshed desktop shell",
-    "intro": "A heavy day for Aura: the autonomous dev loop got smarter at distinguishing transient provider blips from real failures, the desktop shell was reshaped into floating glass panels, and a major refactor migrated agent execution onto a single harness-based runtime. Operator runbooks, in-app error pages, and updater packaging also got safer.",
+    "title": "Concurrent agents, harness-native automation, and a cleaner desktop shell",
+    "intro": "A heavy day of platform work: Aura collapsed its dual agent stack onto the harness, hardened the autonomous dev loop against transient failures and policy denials, and rebuilt task/automation isolation so multiple agents can run in parallel per project. The desktop shell also picked up a new floating-pill look, native macOS edit shortcuts, and a real in-app browser error page.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "8:52 AM",
         "started_at": "2026-04-23T15:52:23.000Z",
-        "ended_at": "2026-04-23T16:39:39.000Z",
-        "title": "Resilient sync milestones and lighter tree typography",
-        "summary": "Push and commit progress now survive reloads instead of looking like full task failures, and nested rows in the left menu and sidekick read with clearer hierarchy.",
+        "ended_at": "2026-04-25T06:17:10.000Z",
+        "title": "Autonomous dev loop becomes resilient and harness-native",
+        "summary": "A long arc of work hardened the autonomous dev loop against transient failures, policy denials, and remote-storage outages, then collapsed the legacy aura-os agent runtime onto the harness so harness terminal events are now authoritative for task completion.",
         "items": [
           {
-            "text": "Task sync milestones, commit SHAs, and push-failure context now persist across restarts so locally completed work is shown as a remote sync issue rather than a terminal task failure, with structured harness milestone events normalized into the existing git event contract.",
-            "commit_shas": [
-              "68be945b8c85e3a7eed55a77aa3f5c4508c37ce4",
-              "a69f2e303298e38e8ae0043f4bdf8673a1bebae0"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Lightened child-row font weight in the left menu tree and the sidekick so nested items visibly defer to their parents.",
-            "commit_shas": [
-              "2b608a7e5c6fd2519a74619b33b7d06a92d04464",
-              "d973798e1fbcc19de7b4a23a9cff978335a859f5"
-            ],
-            "confidence": "high"
-          }
-        ]
-      },
-      {
-        "batch_id": "entry-2",
-        "time_label": "9:46 AM",
-        "started_at": "2026-04-23T16:46:38.000Z",
-        "ended_at": "2026-04-23T16:46:38.000Z",
-        "title": "Black drag-resize fill on Windows desktop",
-        "summary": "Switched the main window background brush so live drag-resize no longer flashes white before the WebView catches up.",
-        "items": [
-          {
-            "text": "On Windows, the main window class now paints with BLACK_BRUSH instead of NULL_BRUSH so the brief sliver exposed during drag-resize blends into the dark theme rather than flashing white.",
-            "commit_shas": [
-              "c1aad81ee46d1e02d939a0c1c3ec2b0114900664"
-            ],
-            "confidence": "high"
-          }
-        ]
-      },
-      {
-        "batch_id": "entry-3",
-        "time_label": "10:19 AM",
-        "started_at": "2026-04-23T17:19:34.000Z",
-        "ended_at": "2026-04-25T06:05:16.000Z",
-        "title": "Autonomous dev loop hardening, harness consolidation, and a glass desktop shell",
-        "summary": "The bulk of the day: a deep pass on dev-loop reliability and recovery, a sweeping migration onto a single aura_harness runtime, a refreshed floating desktop layout, and many UI fixes around streaming, retries, and chat continuity.",
-        "items": [
-          {
-            "text": "Definition-of-Done gate gained five guardrails: empty-path writes are rejected, workspaces are preflighted before runs, rollbacks emit a dedicated git_commit_rolled_back event with strike-through UI, and recovered empty-path misfires are now accepted when a real-path write actually lands. Tool events also drive files_changed inference so verified runs aren't falsely rejected.",
-            "commit_shas": [
-              "a8e3e72acf90acb0ce4dee763801e919fc238828",
-              "f1c9dce904294b4c7ad626ab053c5716b3121cdb",
-              "a2c218d06680acc3a31d92d82b16cdb89909eef8",
-              "87e929cffb891b6841d845d8d88880aab43df357"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Transient provider failures now have a real recovery ladder: 5xx, stream-terminated, and rate-limited errors classify as ProviderInternalError, project cooldowns escalate per failure class with ±20% jitter, single-task retry budget rose to 3, and completion-gate failures route through the same infra retry path with a stateful resume preamble (\"[aura-retry attempt=N]\") on retried turns.",
+            "text": "The dev loop now classifies provider 5xx, stream aborts, push timeouts, and ENOSPC as transient with jittered, escalating cooldowns, retries tool calls up to 8 times against aura-harness's streaming retry loop, and routes completion-gate failures through the same infra-retry ladder so a single mid-stream blip no longer terminates a task.",
             "commit_shas": [
               "9cb0c6a4bad40565d2da420a548cace23b427a35",
               "7150cd358dee087cec317f28fae8af66e72eb90c",
-              "8e75d47b06a92e3cd44694f3510c5d1b9f62317e",
               "373be4278f1abfec2e8b8e96057927c612968b88",
               "88fa94efaadb840bf1ae1980cae436611c4afb16",
+              "f474edc9ea30fb80e1c429114d406de94eef6129",
+              "fc08c18841b9fa283650d5020691ba7c79600185",
+              "8e75d47b06a92e3cd44694f3510c5d1b9f62317e",
               "e94aa5402ed8992c7cbf63768f15929c3c57c720"
             ],
             "confidence": "high"
           },
           {
-            "text": "Per-tool-call retries are now first-class: the harness's tool_call_retrying / tool_call_failed events drive a server-side budget of 8 and surface a live \"Writing retrying (n/8)…\" header on tool cards instead of a stuck \"Writing code…\" during upstream storms.",
-            "commit_shas": [
-              "f474edc9ea30fb80e1c429114d406de94eef6129",
-              "4424201e7deb810be42504dbf4f94c5fc8605e48"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "A new pure reconciler decides recovery actions (adopt run, retry push, retry task, decompose, mark terminal) and is exposed on the task output API as a recommended_action field so the UI can render \"retrying push\", \"provider throttling\", etc. without guessing.",
-            "commit_shas": [
-              "d09c1661332121685fcf0a0592e2c7739fc801da",
-              "c0e712194d97760da43fe65527ebbc054b963b05"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Task status is now decoupled from git push outcome: pushes that fail emit push_deferred plus a project_push_stuck banner once a streak hits the threshold, an Orbit ENOSPC guard trips a 15-minute cooldown with an amber \"Orbit out of disk\" indicator, and a remote-push-recovery runbook documents the operator workflow.",
+            "text": "Task terminal status is now decoupled from `git push`: failed pushes emit a `push_deferred` event and a per-project `project_push_stuck` banner with remediation copy, ENOSPC on Orbit trips a 15-minute capacity guard, and a new remote-push-recovery runbook documents the operator path. The stuck-agent harness signal also short-circuits tight-loop reconnects.",
             "commit_shas": [
               "73ab86fb8fce5c870712097b3af89bf5a7981ab3",
               "f4425e28a34616b951ed45cb8ec78800f2c2ded0",
               "fc08c18841b9fa283650d5020691ba7c79600185",
-              "5badbea7f4c7d142e4d3421446fea417507fb393"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Task state machine unified with aura-storage via a single safe_transition helper; ready→failed is now bridged through in_progress, retry is idempotent on ready, and flat /api/tasks/:id and /api/specs/:id routes match what the harness's HttpDomainApi calls.",
-            "commit_shas": [
-              "bde1254b5a1f970d7d0873898f94d50a90fedd52",
-              "ef5088789aa71d08e87b70ae0714c62930214780",
-              "3809aeb807f4406c39969c2bff5907624445f37d"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "DoD gate gets a language-neutral retry tier with a capped budget for missing build/test/fmt/lint axes, while kernel-policy denials (run_command, allow_shell, binary_allowlist) short-circuit to a precise diagnostic that names the exact env knobs operators need to flip.",
-            "commit_shas": [
-              "70623bd716ec88205575716ce46af2a886a30648",
-              "3bdb2b4d17f7cbead72c5cb35a41b61d51624eda",
-              "71304ce19758e794bb134cdd5464844b5a9b2450",
-              "5760d25cac3fe1b8da1eae14ca548729f147c705"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Stuck-agent loops are now caught: the harness's anti-waste \"appears stuck / stopping to prevent waste\" terminal signal stops the tight reconnect loop instead of triggering endless WS restarts.",
-            "commit_shas": [
+              "5badbea7f4c7d142e4d3421446fea417507fb393",
               "4c01759db3f10d12c4ffeee55aea29f8a9072826"
             ],
             "confidence": "high"
           },
           {
-            "text": "Harness WS reader is now an RAII handle that's aborted on every retry / adopt / stop, ending the slow leak that filled the 128-slot ws_slots cap and caused 503 \"WS connection cap reached\" responses.",
+            "text": "The Definition-of-Done gate stopped failing recovered runs: empty-path writes only fail when nothing real ever lands, `tool_call_completed` and legacy `tool_result+snapshot` shapes both populate `files_changed`, kernel-policy denials (including the `binary_allowlist` and shell variants) emit a specific actionable diagnostic, and a new DoD retry tier with a language-neutral follow-up prompt re-prompts the agent when it skipped build/test/fmt/lint.",
             "commit_shas": [
-              "ee5d9553835274bad352de88b9088253232532f8"
+              "a8e3e72acf90acb0ce4dee763801e919fc238828",
+              "f1c9dce904294b4c7ad626ab053c5716b3121cdb",
+              "a2c218d06680acc3a31d92d82b16cdb89909eef8",
+              "87e929cffb891b6841d845d8d88880aab43df357",
+              "5760d25cac3fe1b8da1eae14ca548729f147c705",
+              "70623bd716ec88205575716ce46af2a886a30648",
+              "3bdb2b4d17f7cbead72c5cb35a41b61d51624eda",
+              "71304ce19758e794bb134cdd5464844b5a9b2450"
             ],
             "confidence": "high"
           },
           {
-            "text": "Major server consolidation: the legacy agent_tools dispatcher (~13k lines), aura-os-link compatibility layer, and standalone aura-os-process scheduler are gone, replaced by a new aura-os-harness adapter crate that runs every chat turn, dev loop, and scheduled process as a harness automaton through a single bridge.",
+            "text": "The autonomous harness sidecar now ships with the policy envs the dev loop actually needs (`AURA_AUTONOMOUS_DEV_LOOP`, `AURA_ALLOW_SHELL`, a vetted default `AURA_ALLOWED_COMMANDS`), the desktop honors `--external-harness` with a /health policy probe, and harness `run_command` is now on by default in non-strict mode.",
+            "commit_shas": [
+              "a41c273bb2f739b84b3a56755665c07210a9f4e6",
+              "ed55e3755ab85f621973b83e792fc62464891aef",
+              "f1f47358b39d250244917c8d4886a34a716ed191",
+              "76d8a0581799f165d40530c520e5735508cc2014",
+              "abfb6d1e04678726cb6d238841e82201759837bb"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The legacy `aura-os-agent-tools` / `agent-runtime` / `agent-templates` stack and the entire process executor crate were deleted (~13k lines). Chat, automation, and scheduled work now go through `aura-os-harness` session bridges and harness automatons, with harness terminal events authoritative for task DoD and credit-exhaustion classified as terminal so the loop stops cleanly.",
             "commit_shas": [
               "c21106bbae40901863a0bc4bb2806c6ef7524b95",
               "9e23bbc1214d5b7e3bb61e56134b7917c65ed701",
               "53ace2163821aa341d05eeff60e7deb1831a30cd",
               "d8c2480273d6eddf9984ac52183d27da4fddda42",
-              "00d095ecde24f824e090d84e5f52da046e9ea0b9",
-              "71d182168bd72a700507af84641a9be2d67e351a",
               "c1e87fb89b2f3c60955f6f3a3217f386878895ed",
-              "2dd8391a3fe0084ee3908a27c45d069a0a0c580c",
               "f39dc742e1ed330af0ccaf68b67f1725adc79321",
-              "c6174bb6fc5f9fb3bf51cc69173287f378fcd09c"
+              "49a1d454b8c250e74fde0859f332da3c92ad938b",
+              "95cd075daa5ad445f855ba68652dc7fd4bf9bc81",
+              "b43e4b8e4998ffced70f506b51e07fd86328c6d2"
             ],
             "confidence": "high"
           },
           {
-            "text": "External CLI adapter pathway (claude_code, codex, gemini_cli, opencode, cursor) was removed end-to-end across runtime, UI, evals, and docs; aura_harness is now the only supported runtime, and the harness becomes authoritative for task DoD with aura-os keeping verification evidence for display only.",
+            "text": "Task state, retry, and the cross-agent dispatcher were unified: every transition now goes through a single `safe_transition` helper aligned with aura-storage's edge list, retries are idempotent on `ready`, project-scoped tools auto-inject `project_id` from session headers, and project self-caps are spliced for project-bound chats so non-CEO agents can call `list_specs` / `create_task` etc. without the LLM threading IDs.",
             "commit_shas": [
-              "b43e4b8e4998ffced70f506b51e07fd86328c6d2",
-              "49a1d454b8c250e74fde0859f332da3c92ad938b"
+              "3809aeb807f4406c39969c2bff5907624445f37d",
+              "ef5088789aa71d08e87b70ae0714c62930214780",
+              "bde1254b5a1f970d7d0873898f94d50a90fedd52",
+              "8d0d715527f30f40970bfff27b5c7d611d38837a",
+              "b6a066eb11c7fb6084bfe2f67525fc0ff1453bd1",
+              "def464a66cef5ff0e14be325bcb2afb16519f236",
+              "13acee2289eb203c7543ddf25a4c4205d47b0b48",
+              "c477313f434900151366e375d284edf2a82d8c16"
             ],
             "confidence": "high"
           },
           {
-            "text": "New aura-os-events and aura-os-loops crates introduce a topic-scoped EventHub and LoopRegistry so concurrent chat, automation, task, process, and spec loops are tracked per (user, project, agent_instance, agent, kind, instance) instead of bleeding through one global broadcast; a GET /api/loops snapshot and a single LoopProgress component render consistent activity across agent rows, sidekick tabs, and task explorer rows.",
+            "text": "A new topic-scoped `aura-os-events` + `aura-os-loops` foundation re-keys the in-memory automaton registry by `(project, agent_instance)` and exposes a `GET /api/loops` snapshot. The UI gets a unified `LoopProgress` indicator across agent rows, sidekick tabs, and per-task explorer rows, plus a 60s stall watchdog and reconnect hydration.",
             "commit_shas": [
-              "9860141803426fa0ce19f57191394fbc5d71462e",
-              "26ed6930f9995c72063c2033b81bd38d3f13f552",
-              "82f93b319e8e96e531c6c10dcbdb7e2b9ab26350",
-              "ac52a806ba8820be69714547001268993faf108f"
+              "9860141803426fa0ce19f57191394fbc5d71462e"
             ],
             "confidence": "high"
           },
           {
-            "text": "Run pane and Task Overlay no longer blink scroll: replaced the MutationObserver/RAF/scrollIntoView dance with overflow-anchor + a synchronous useLayoutEffect, killed a stray border under the cooking indicator, and reconciled stale \"active\" rows so each project shows only one cooking indicator.",
+            "text": "The desktop shell was rebuilt as floating glass pills: the bottom taskbar splits into three capsules with insets, the topbar and main content gain rounded corners and gaps that show the desktop background, the sidekick mirrors the left-menu fade, and a copy button appears on file/spec previews with a cross-OS clipboard fallback.",
             "commit_shas": [
-              "0244c857428796bfeb6df05e54770a3b2ea16706",
-              "3089289dd126f6b34fbcba0a4c917f1b2aa11b4d",
-              "2509b9c8e46157069537d5cad6420a4eadce558c",
-              "bf02505fbcc7dcd9760de2f0af2fb11957f128bc",
-              "206097d58359ab3fc22ccf8f197ee5e3444793c2"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Failure context surfaces clearly in the Run pane: abandoned pending tool cards resolve to \"Interrupted by upstream error\" on retry, errored file cards show action-specific titles instead of \"Untitled file\", and task failureReason plus completion-gate-rejected cards render in the panel.",
-            "commit_shas": [
-              "d1313496567c5a7b63360e6e2730fa1fcdaa7696"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Desktop shell rebuilt around floating glass: the bottom taskbar splits into three capsules, the topbar and main content gain rounded corners and 5px insets, sidebar/sidekick separators become transparent gaps, and corner radii are unified at 20px with a tighter panel layout.",
-            "commit_shas": [
+              "c1aad81ee46d1e02d939a0c1c3ec2b0114900664",
               "065b565508558af701ba32ece7a38065267ffe76",
               "d0bd776f1d183c6311c20a91aff65375cf24066a",
-              "de67ed6742fbe6ab0001fce67666590c52d857a8",
               "8d8225f5ae1c43146e920e4fe0a027c5552b79b6",
               "3ace217bcaa3cb8a5048d64364550aa30398ea98",
               "07c68327c445cceb7234d156067b89a39f01ff62",
-              "b1c64532a807c636fa743a0393c1bf1fffd06029",
               "84948636334055082e2592ac050a398ec443a256",
-              "21373eb9a3adefe8c9b644a3d8c5104de16c16ca",
-              "b995cb26ca6cbb650d6e8c5eb8b7a0f30e587119",
               "eeba9fcba80cfc07852c85d52069b3dbbd5d3489",
-              "8fc9dbdddd45da5e3f03c7facb81123f9056eb5e",
               "4474f6c94b4cffee21a12b842e443e63a8f9b820",
               "bce7a34e13be621da435414f45dea85ae4871dd8",
               "2251b3544201118b627b31f50eb6a2a788c1685f",
               "fece144ebda94b9b04f8fbfbfbf4b011f77d2b38",
-              "5019432a9bbd143f23e8a8eb886d66b3bab9482d",
-              "e0b2735da4b4063577e153a3cc2ed633688c1512",
-              "4f67df1ca42f9deceddc6076b497150a122bc51f"
+              "55eb3c7ebd2d2efd25afafda1f29cdc97cc4bfc0"
             ],
             "confidence": "high"
           },
           {
-            "text": "Browser surface improvements: in-app Aura-branded error overlay on main-frame load failures, address bar restyled as a flat pill with a site-info icon and star, and unresolved input is now searched on DuckDuckGo instead of being silently dropped.",
+            "text": "Native desktop polish: macOS now installs an app menu so Cmd+C/V/X/A/Z reach the WebView, the custom titlebar is draggable on macOS and Linux via tao's IPC, the Windows drag-resize flash paints black instead of white, and the browser surfaces a branded error overlay on `Network.loadingFailed` instead of Chromium's default page.",
             "commit_shas": [
+              "cc3193a6c2af192cd28fd1fb564f713756872ec7",
+              "c2294d390c344bcb7e09fee8b3c984de80e9669d",
+              "c1aad81ee46d1e02d939a0c1c3ec2b0114900664",
               "bd92f082a75e7b509262d644cc083cd98ec5c044",
               "7837adb5ac02aab9faa11f59818d38734440e615",
               "1c155dea4f7e6180c3404000bfba27b86d38166c"
@@ -6210,97 +8459,42 @@
             "confidence": "high"
           },
           {
-            "text": "Cross-platform desktop input fixes: a native Cocoa app menu wires Cmd+C/V/X/A/Z to the WebView on macOS, and the custom titlebar is now draggable on macOS/Linux via tao::drag_window since WebKit ignores -webkit-app-region.",
-            "commit_shas": [
-              "cc3193a6c2af192cd28fd1fb564f713756872ec7",
-              "c2294d390c344bcb7e09fee8b3c984de80e9669d"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Desktop sidecar boot is more honest about policy: --external-harness now requires LOCAL_HARNESS_URL with a /health probe, the bundled harness ships an explicit AURA_ALLOWED_COMMANDS allow-list now that empty no longer means permissive, and the README plus eval stack document AURA_ALLOW_SHELL=1 alongside the new knobs.",
-            "commit_shas": [
-              "ed55e3755ab85f621973b83e792fc62464891aef",
-              "a41c273bb2f739b84b3a56755665c07210a9f4e6",
-              "f1f47358b39d250244917c8d4886a34a716ed191",
-              "76d8a0581799f165d40530c520e5735508cc2014",
-              "abfb6d1e04678726cb6d238841e82201759837bb",
-              "71304ce19758e794bb134cdd5464844b5a9b2450",
-              "d29f24882dfdb2f6122c31f1ba194d7fd8dfa9f5"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Project-bound chat sessions stop spuriously denying tools: agents auto-splice ReadProject/WriteProject self-caps when entering a project, X-Aura-Project-Id is stamped on every cross-agent tool call so the dispatcher injects project_id deterministically, and project_id is dropped from required schemas. Capable tools also ship by default rather than waiting for a load_domain_tools handshake.",
-            "commit_shas": [
-              "c477313f434900151366e375d284edf2a82d8c16",
-              "8d0d715527f30f40970bfff27b5c7d611d38837a",
-              "b6a066eb11c7fb6084bfe2f67525fc0ff1453bd1",
-              "def464a66cef5ff0e14be325bcb2afb16519f236",
-              "13acee2289eb203c7543ddf25a4c4205d47b0b48",
-              "6efa695a4871233b5043c76ac248b67c7e26b8ea"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Mid-turn chat state now survives a page refresh: server emits throttled assistant_turn_progress with an in_flight flag, the client rebuilds partial assistant turns and pending sidekick placeholders, and the sidekick preview selection persists in a ?preview= URL param. End-of-stream rendering also stops dropping tool-only turns, racing history fetches, and orphaning optimistic user bubbles.",
+            "text": "Chat and run-pane reliability: assistant turns survive a mid-stream refresh and tool-only turns no longer disappear at end of stream, the run pane and task overlay drop their MutationObserver-based scroll hack for `overflow-anchor` + sync `scrollTop`, retry/interrupt context is surfaced on tool cards with live `n/8` retry status, and stale active rows are reconciled against the server's loop status.",
             "commit_shas": [
               "6021e18170d3a67b647bca1a6c92c4f7921f2e2b",
               "2bb8f040d49a871fc0a089f145bfe16fb05a63bd",
-              "4c671f105a53782cfb8864d1274671727d7d1f3f",
+              "0244c857428796bfeb6df05e54770a3b2ea16706",
+              "d1313496567c5a7b63360e6e2730fa1fcdaa7696",
+              "4424201e7deb810be42504dbf4f94c5fc8605e48",
+              "3089289dd126f6b34fbcba0a4c917f1b2aa11b4d",
+              "26ed6930f9995c72063c2033b81bd38d3f13f552",
+              "cc4781d5658d3eac076ab97802fe5f49f7ee252f",
               "07bbdc3af089ba0cdff4d92959936f75800035cb"
             ],
             "confidence": "high"
           },
           {
-            "text": "Tool input rendering normalizes provider/UI payloads so stringified JSON no longer renders as character-indexed objects, textual [tool: …] markers expand into proper Block renderers in both live streams and historical task overlays, and credit exhaustion now classifies as terminal so automation stops immediately.",
+            "text": "A stale harness WS reader is now closed on every restart via an `WsReaderHandle` so the 128-slot harness cap stops filling up with 503s, and the protocol gains live tool-approval prompt/response messages plus per-agent permission overrides for the upcoming approvals UI.",
             "commit_shas": [
-              "ad5283297d23f35ab7914ba0d76188296b75775c",
-              "cc717456a39e1d957f7793f2c7d54f68cb2a74de",
-              "cc4781d5658d3eac076ab97802fe5f49f7ee252f",
-              "95cd075daa5ad445f855ba68652dc7fd4bf9bc81",
-              "5fe69769aa7cfa48a4789330e9b1889fb9b9b420"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Quality-of-life chat features: copy buttons with cross-OS clipboard fallback on file/spec/text bubbles, inline rename of project agents from the sidebar context menu (and via F2), and stripped emojis from sidebar last-message previews.",
-            "commit_shas": [
-              "55eb3c7ebd2d2efd25afafda1f29cdc97cc4bfc0",
-              "efa2c79841b18138a302db94977ad96947c30295",
-              "5bc8ad9749404df989d515633b21d9e1834794da"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Smaller reliability and polish: GroupCollapsible no longer nests buttons (fixing hydration warnings on copy controls), queue z-index now sits above the cooking indicator, the LoopProgress spinner keeps rotating in determinate mode, the composer hides until chat history resolves to avoid an empty-agent flash, and live tool-approval message types were added to the protocol.",
-            "commit_shas": [
-              "6e9126b0c482e7edd592243a8063bfa7e873a914",
-              "12f5d68f152efdc141f48f44e0fc857224e40c03",
-              "ac52a806ba8820be69714547001268993faf108f",
-              "07bbdc3af089ba0cdff4d92959936f75800035cb",
+              "ee5d9553835274bad352de88b9088253232532f8",
               "53b2c1628e23638bbf6c4caccb10ff7126b4a601",
-              "36362031a267d508f53e9aea2eb96429a9c6e9b8",
-              "61eb58681e48570916502bae31e4001580c5f5a9",
-              "09b84247d3390a19e010d1d9f2386faba5073319",
-              "c2b82afb8cd754593c5d2722b0d34f98ffb0eab5"
+              "36362031a267d508f53e9aea2eb96429a9c6e9b8"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           }
         ]
       },
       {
-        "batch_id": "entry-4",
-        "time_label": "11:17 PM",
-        "started_at": "2026-04-25T06:17:10.000Z",
+        "batch_id": "entry-3",
+        "time_label": "11:35 PM",
+        "started_at": "2026-04-25T06:35:53.000Z",
         "ended_at": "2026-04-25T06:35:53.000Z",
-        "title": "Desktop sidecar build resolves aura-node by package",
-        "summary": "Fixed the release packaging script that was failing to find aura-node when building the desktop sidecar.",
+        "title": "Desktop sidecar build scoped to aura-runtime",
+        "summary": "Fixes the release pipeline's bundled aura-node build, which was failing because `--bin aura-node` couldn't resolve against the harness workspace's default-run packages.",
         "items": [
           {
-            "text": "prepare-desktop-sidecar.mjs now scopes the cargo build to the aura-runtime package with `-p aura-runtime --bin aura-node`, since `--bin aura-node` alone only resolves against default-run packages and was failing the harness sidecar build.",
+            "text": "`prepare-desktop-sidecar` now passes `-p aura-runtime` alongside `--bin aura-node` so cargo can locate the binary inside the harness workspace and the desktop sidecar packaging step succeeds.",
             "commit_shas": [
-              "cb4e6a1443eeac2252c5008e9616f09c7eaed8ad",
               "4da6c8ccf761c3fd7eb6624e6c70d1302d2de472"
             ],
             "confidence": "high"
@@ -6308,18 +8502,47 @@
         ]
       },
       {
-        "batch_id": "entry-5",
-        "time_label": "11:55 PM",
-        "started_at": "2026-04-25T06:55:57.000Z",
-        "ended_at": "2026-04-25T07:01:04.000Z",
-        "title": "Reverted accidental hooks directory move",
-        "summary": "A CI retrigger commit unintentionally moved interface hooks into a shared/ directory without updating imports; the move was reverted to restore main.",
+        "batch_id": "entry-4",
+        "time_label": "11:40 PM",
+        "started_at": "2026-04-25T06:40:52.000Z",
+        "ended_at": "2026-04-25T07:10:51.000Z",
+        "title": "Interface scaffolding moves to shared/ for the F2 refactor",
+        "summary": "Phase F2 of the interface refactor relocates the generic, app-agnostic types, api transport, utils, lib foundations, and React hooks under `interface/src/shared/` while keeping Aura-specific modules in their original homes.",
         "items": [
           {
-            "text": "Reverted the workflow-retrigger commit that had relocated interface/src/hooks/* into interface/src/shared/hooks/ without updating import sites, breaking main.",
+            "text": "All 11 type files plus 38 generic API transport modules moved to `shared/types/` and `shared/api/`, with import paths codemodded across the interface; app-specific aggregators like `client.ts`, `feedback.ts`, and `marketplace.ts` stay in `api/` to avoid `shared/ → apps/` dependencies.",
             "commit_shas": [
+              "7304dc3012e842b317b407c5d68d5a8de759eca4",
+              "2a88e8164212b04bf1b00598caa9086287681355",
+              "f71b9eb8cf1f56475952977b8e664f71d313e817"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Generic utilities, foundational lib modules, and pure React hooks (click-outside, scroll-anchor, ws-reconnect, etc.) moved to `shared/utils/`, `shared/lib/`, and `shared/hooks/`. An accidental hooks move that broke main was caught and reverted before landing the proper migration.",
+            "commit_shas": [
+              "9c714cf6f8e789aa9d9dc72e0f6539759e0f3681",
+              "6be59f172f48327f7199224e835cca6e8e0d02ac",
+              "a53d32bf432578e8400364f610904246839eb83e",
               "2320fafe5d6c44f859bb38dcef6ec06aaf606371",
               "08ec42c5833310ed5ecf550a08168c73e9a09350"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-5",
+        "time_label": "12:22 AM",
+        "started_at": "2026-04-25T07:22:02.000Z",
+        "ended_at": "2026-04-25T07:22:02.000Z",
+        "title": "Project stats panel decodes tokens, time, and lines again",
+        "summary": "Recovers the missing numbers in the project stats panel, where Tokens / Time / Lines stuck at zero while Cost moved.",
+        "items": [
+          {
+            "text": "`ProjectStats` now accepts the camelCase, snake_case, and short-form key shapes that aura-storage's `/api/stats?scope=project` actually emits (e.g. `tokensUsed`, `inputTokens`, `costUsd`), and the response body is debug-logged so future shape drift is diagnosable.",
+            "commit_shas": [
+              "da4436e24c3da45c4fc36d36b0b0e5838f1a2130"
             ],
             "confidence": "high"
           }
@@ -6329,34 +8552,87 @@
         "batch_id": "entry-6",
         "time_label": "10:36 AM",
         "started_at": "2026-04-25T17:36:51.000Z",
-        "ended_at": "2026-04-25T19:03:59.000Z",
-        "title": "Updater sidecar contract validation and changelog media gates",
-        "summary": "Release pipelines gained explicit validation that the updater sidecar package contract is intact, and the changelog media workflow learned to skip and gate captures more reliably.",
+        "ended_at": "2026-04-26T00:57:49.000Z",
+        "title": "Per-instance concurrency for chat, loop, and ad-hoc task runs",
+        "summary": "A multi-commit Phase 2 lands the foundation for running a chat, an automation loop, and several ad-hoc tasks in the same project simultaneously, plus assorted UI polish, a hardened sidecar release contract, and team avatar editing.",
         "items": [
           {
-            "text": "Desktop builds now validate the updater sidecar package contract through a new verify-desktop CI step wired into nightly and stable release workflows, with matching updater and build-script checks.",
+            "text": "Agent instances gain an `AgentInstanceRole` (Chat / Loop / Executor) and `run_single_task` now spawns an ephemeral Executor-roled instance per call, so concurrent ad-hoc runs no longer collide on the per-project automaton slot. A startup janitor sweeps orphaned executor rows from previous crashes, and an integration test pins three-way concurrent operation with per-instance stop targeting only one slot.",
+            "commit_shas": [
+              "1102674d8469baf30c319ca2bd92c10b9263dfb2",
+              "ae4801ead329f6cb70ab36edbfd26683647d028a",
+              "ed8d9f4198497ea645ff84d7cb9209035529e71f",
+              "cf39422d88c134add9073af8925a0635b963aeab"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The frontend stops cross-talk between concurrent loops: `LoopStopped`/`LoopFinished` is scoped to the event's project and agent instance so project A no longer marks project B's tasks completed, the sidekick streaming indicator tracks multiple instance IDs, and AutomationBar/useLoopControl bind to the project's resolved Loop instance instead of the URL's chat instance.",
+            "commit_shas": [
+              "510205d7227dca12afb926f24fcc0bd56b50a72d",
+              "386a905b196e79021785a9ec18e1385092b8891e"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Mid-flight chat drops are now surfaced explicitly: the server emits a `stream_lagged` SSE error before closing when the harness broadcast falls behind, the client classifies both that and SSE idle timeouts into a `streamDropped` banner with retry hint, and the post-stream history grace window is widened to 5s to avoid races with `assistant_message_end` persistence.",
+            "commit_shas": [
+              "15777df3e5ca1dfaf12de837cbd3e6d58c61e5fc"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Releases now validate the desktop updater sidecar package contract end-to-end via a new `desktop-validate` workflow, a build-time check, and a `verify-desktop` CI script — pairing with the earlier `prepare-desktop-sidecar` fixes so nightly bundles can no longer ship without the harness binary in the right shape.",
             "commit_shas": [
               "63d4c89ab5bd9c8888355cc1b743dafcf6ca3d7c"
             ],
             "confidence": "high"
           },
           {
-            "text": "Hardened the publish-release-changelog-media workflow with stricter skip and capture gates and proportional high-res media scaling, so changelog screenshots fall back cleanly when prerequisites aren't met.",
+            "text": "Dev-loop automation runs are now counted as storage sessions (created, updated, and ended for both loop and single-task runs), so project stats reflect autonomous activity instead of only interactive chats.",
+            "commit_shas": [
+              "298bb4cf4f70ca201a33593583d7fc558e604d5c"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Team avatars can be uploaded from settings and render in the topbar selector, with a local-storage fallback for hosts that don't persist avatar updates so the override survives a refresh.",
+            "commit_shas": [
+              "41c586f0674c3c3237579e2b2c137ff69df8d99c",
+              "13e44690d923fe848ff5569436ed61b6c929957c",
+              "f67f9abff8198fb7761d3bf5e054ec6af02ce99b"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Desktop shell polish: bottom taskbar pills get consistent end padding, the sidekick toggle joins the native window controls as one compact group, and the embedded terminal switches to a WebGL renderer with a 2D-canvas fallback and 100k-line scrollback.",
+            "commit_shas": [
+              "6e17e330380aa15e0593b801d687abb3da012630",
+              "b4525bf68032c5549bf0c68f07e1d8367c0f9e5a",
+              "4c5768ea46caa4b1c6bc9bf13e23506b609821ec",
+              "04806b27042e1a9492943efcdfc409e4f80d4c71",
+              "629e58d823a71a6687a380f36e1099b3c60a608a",
+              "f7f7bc2ebd3e76cbe33f7bdf195733cfac93bd40"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Changelog media capture workflow is hardened with stronger skip and capture gates so failed UI captures no longer silently produce broken release media.",
             "commit_shas": [
               "ee70b4b5181e7a925181c55c39cc7cf19d8e3810"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           }
         ]
       }
     ],
     "highlights": [
-      "Autonomous dev loop now retries transient provider errors, jitters cooldowns, and recovers cleanly from stuck pushes",
-      "Desktop shell reworked into floating capsules with rounded glass panels and consistent insets",
-      "Single-runtime overhaul: legacy agent tool dispatcher, link layer, and external CLI adapters retired in favor of aura_harness",
-      "New per-loop event hub keeps concurrent chat, automation, and task work cleanly isolated",
-      "Desktop fixes: black drag-resize fill on Windows, working Cmd+C/V/X/A/Z on macOS, draggable titlebar on macOS/Linux"
+      "Autonomous dev loop survives provider 5xx, push outages, and policy denials",
+      "Legacy agent runtime removed — everything routes through aura_harness",
+      "Concurrent chat, loop, and task runs no longer collide per project",
+      "Desktop shell redesigned as floating glass pills with macOS edit shortcuts",
+      "Mid-stream chat drops now surface a banner instead of failing silently"
     ],
-    "raw_commit_count": 120
+    "raw_commit_count": 155
   }
 }

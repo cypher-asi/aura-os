@@ -2,20 +2,20 @@
   {
     "date": "2026-04-25",
     "channel": "nightly",
-    "version": "0.1.0-nightly.387.1",
-    "title": "Harness consolidation, autonomous recovery, and a refreshed desktop shell",
-    "intro": "A heavy day for Aura: the autonomous dev loop got smarter at distinguishing transient provider blips from real failures, the desktop shell was reshaped into floating glass panels, and a major refactor migrated agent execution onto a single harness-based runtime. Operator runbooks, in-app error pages, and updater packaging also got safer.",
-    "entryCount": 6,
+    "version": "0.1.0-nightly.389.1",
+    "title": "Concurrent agents, harness-native automation, and a cleaner desktop shell",
+    "intro": "A heavy day of platform work: Aura collapsed its dual agent stack onto the harness, hardened the autonomous dev loop against transient failures and policy denials, and rebuilt task/automation isolation so multiple agents can run in parallel per project. The desktop shell also picked up a new floating-pill look, native macOS edit shortcuts, and a real in-app browser error page.",
+    "entryCount": 5,
     "highlights": [
-      "Autonomous dev loop now retries transient provider errors, jitters cooldowns, and recovers cleanly from stuck pushes",
-      "Desktop shell reworked into floating capsules with rounded glass panels and consistent insets",
-      "Single-runtime overhaul: legacy agent tool dispatcher, link layer, and external CLI adapters retired in favor of aura_harness",
-      "New per-loop event hub keeps concurrent chat, automation, and task work cleanly isolated",
-      "Desktop fixes: black drag-resize fill on Windows, working Cmd+C/V/X/A/Z on macOS, draggable titlebar on macOS/Linux"
+      "Autonomous dev loop survives provider 5xx, push outages, and policy denials",
+      "Legacy agent runtime removed — everything routes through aura_harness",
+      "Concurrent chat, loop, and task runs no longer collide per project",
+      "Desktop shell redesigned as floating glass pills with macOS edit shortcuts",
+      "Mid-stream chat drops now surface a banner instead of failing silently"
     ],
-    "rawCommitCount": 124,
-    "generatedAt": "2026-04-25T19:18:24.119Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.387.1",
+    "rawCommitCount": 161,
+    "generatedAt": "2026-04-26T01:10:37.678Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.389.1",
     "path": "history/2026-04-25.json"
   },
   {
