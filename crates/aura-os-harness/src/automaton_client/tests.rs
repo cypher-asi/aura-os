@@ -111,6 +111,8 @@ fn automaton_start_result_accepts_ws_url_alias() {
 fn automaton_start_params_serializes_agent_permissions() {
     let params = AutomatonStartParams {
         project_id: "project-1".into(),
+        agent_id: None,
+        template_agent_id: None,
         auth_token: None,
         model: None,
         workspace_root: None,

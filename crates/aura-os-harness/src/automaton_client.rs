@@ -87,6 +87,26 @@ impl std::fmt::Debug for WsReaderHandle {
 #[derive(Debug, Clone, Serialize)]
 pub struct AutomatonStartParams {
     pub project_id: String,
+    /// Upstream harness `agent_id` for this automaton run.
+    ///
+    /// After Phase 1c this is the partitioned
+    /// `{template}::{agent_instance_id}` key produced by
+    /// [`aura_os_core::harness_agent_id`], not the bare template id.
+    /// The harness uses this string as the turn-lock key, so two
+    /// concurrent dev-loop / single-task runs of the same template
+    /// no longer collide once they sit on different partitions.
+    /// Skipped on the wire when `None` so pre-Phase-1c harnesses
+    /// (which derive `agent_id` from the URL path) keep accepting
+    /// the payload.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub agent_id: Option<String>,
+    /// Template agent id for harness skill / permissions / billing
+    /// lookup when `agent_id` carries a partition key
+    /// (`{template}::{instance}`). When `None`, the harness falls back
+    /// to `agent_id` for skill lookup. Mirrors
+    /// `aura_protocol::SessionInit::template_agent_id`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub template_agent_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub auth_token: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

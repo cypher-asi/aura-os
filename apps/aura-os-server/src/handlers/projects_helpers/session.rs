@@ -148,14 +148,32 @@ pub(crate) async fn project_tool_session_config(
         }
         None => None,
     };
+    // Phase 1c: partition the upstream harness `agent_id` per
+    // `AgentInstance` so a project-tool session (spec gen / task
+    // extraction) running against the same template as a chat or
+    // dev-loop session can no longer collide on the harness's
+    // "one in-flight turn per agent_id" rule. The stable template id
+    // is preserved in `template_agent_id` for skill / permissions /
+    // billing lookup. The local-mode synthetic id
+    // (`{tool_agent_name}-{project_id}`) is left bare: it's already
+    // per-project, isn't a real Aura template, and the local harness
+    // doesn't need partitioning here.
+    let agent_id_field = if let Some(instance) = remote_instance.as_ref() {
+        Some(aura_os_core::harness_agent_id(
+            &instance.agent_id,
+            Some(&instance.agent_instance_id),
+        ))
+    } else if harness_mode == HarnessMode::Local {
+        Some(format!("{tool_agent_name}-{project_id}"))
+    } else {
+        None
+    };
+    let template_agent_id_field = remote_instance
+        .as_ref()
+        .map(|instance| instance.agent_id.to_string());
     SessionConfig {
-        agent_id: if let Some(instance) = remote_instance.as_ref() {
-            Some(instance.agent_id.to_string())
-        } else if harness_mode == HarnessMode::Local {
-            Some(format!("{tool_agent_name}-{project_id}"))
-        } else {
-            None
-        },
+        agent_id: agent_id_field,
+        template_agent_id: template_agent_id_field,
         agent_name: Some(
             remote_instance
                 .as_ref()
