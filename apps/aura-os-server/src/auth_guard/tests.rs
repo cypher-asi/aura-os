@@ -336,6 +336,7 @@ fn mock_app_state_with_cache(cache: crate::state::ValidationCache) -> AppState {
         loop_log: Arc::new(crate::loop_log::LoopLogWriter::new(
             std::env::temp_dir().join(format!("aura-test-loop-{}-{id}", std::process::id())),
         )),
+        harness_ws_slots: 128,
     }
 }
 

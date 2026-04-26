@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { create } from "zustand";
-import { api, type AgentBusyErrorInfo } from "../api/client";
+import {
+  api,
+  type AgentBusyErrorInfo,
+  type HarnessCapacityExhaustedInfo,
+} from "../api/client";
 import { useEventStore } from "../stores/event-store/index";
 import { EventType } from "../shared/types/aura-events";
 import { useIsStreaming } from "./stream/hooks";
@@ -16,8 +20,17 @@ export type { AgentBusyErrorInfo } from "../api/client";
  * - `"queue_full"` — the most recent send was rejected because more
  *                  than the bounded number of turns are queued behind
  *                  the in-flight turn (Phase 3 server signal).
+ * - `"server_busy"` — Phase 6: the upstream `aura-node` WS-slot
+ *                  semaphore is exhausted. Distinct from `queue_full`
+ *                  because the cause is a global server-side limit,
+ *                  not this partition's pending-turn count.
  */
-export type AgentBusyReason = "chat" | "loop" | "queue_full" | null;
+export type AgentBusyReason =
+  | "chat"
+  | "loop"
+  | "queue_full"
+  | "server_busy"
+  | null;
 
 export interface AgentBusy {
   isBusy: boolean;
@@ -30,6 +43,14 @@ export interface AgentBusy {
    * targets the specific automaton instead of guessing.
    */
   automatonId?: string;
+  /**
+   * Phase 6: when `reason === "server_busy"`, the server's hint for
+   * how long to wait before retrying. Surfaced from the structured
+   * `harness_capacity_exhausted` 503 payload so the input bar can
+   * say "Server is busy — try again in N seconds." instead of
+   * leaking the raw 503.
+   */
+  retryAfterSeconds?: number;
 }
 
 /* ------------------------------------------------------------------ */
@@ -44,24 +65,43 @@ export interface AgentBusy {
 /*  of the most recent server signal per agent instance.               */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Stored signal kind. Phase 2 / 3 emit `agent_busy`; Phase 6 emits
+ * `harness_capacity_exhausted`. Both share the same per-(project,
+ * instance) store + TTL machinery so the hook can surface whichever
+ * fired most recently with a single short-lived banner.
+ */
+type StoredAgentBusySignal =
+  | { kind: "agent_busy"; info: AgentBusyErrorInfo }
+  | { kind: "harness_capacity_exhausted"; info: HarnessCapacityExhaustedInfo };
+
 interface AgentBusyServerStore {
-  signals: Record<string, AgentBusyErrorInfo>;
-  recordSignal: (key: string, info: AgentBusyErrorInfo) => void;
+  signals: Record<string, StoredAgentBusySignal>;
+  recordSignal: (key: string, signal: StoredAgentBusySignal) => void;
   clearSignal: (key: string) => void;
 }
 
 /** TTL for a server-reported signal before it self-expires. */
 const AGENT_BUSY_SIGNAL_TTL_MS = 8_000;
 
+/**
+ * Phase 6 fallback: the harness `harness_capacity_exhausted` 503
+ * payload includes a `retry_after_seconds` hint. If the wire shape is
+ * missing it (older server build, `data` field stripped by a proxy),
+ * we still surface a sensible "try again soon" message rather than a
+ * blank one.
+ */
+const HARNESS_CAPACITY_DEFAULT_RETRY_SECONDS = 5;
+
 const expirationTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 export const useAgentBusyServerStore = create<AgentBusyServerStore>((set) => ({
   signals: {},
-  recordSignal: (key, info) => {
+  recordSignal: (key, signal) => {
     const existing = expirationTimers.get(key);
     if (existing) clearTimeout(existing);
     set((s) => ({
-      signals: { ...s.signals, [key]: info },
+      signals: { ...s.signals, [key]: signal },
     }));
     const timer = setTimeout(() => {
       expirationTimers.delete(key);
@@ -114,7 +154,30 @@ export function recordAgentBusySignal(
 ): void {
   useAgentBusyServerStore
     .getState()
-    .recordSignal(agentBusyKey(projectId, agentInstanceId), info);
+    .recordSignal(agentBusyKey(projectId, agentInstanceId), {
+      kind: "agent_busy",
+      info,
+    });
+}
+
+/**
+ * Phase 6: stamp a server-reported `harness_capacity_exhausted` 503
+ * so `useAgentBusy` surfaces a "Server is busy — try again in a few
+ * seconds." reading for ~8s. Call this from the chat / runtime / spec
+ * / extraction error paths after
+ * `isHarnessCapacityExhaustedError(err)` returns a value.
+ */
+export function recordHarnessCapacityExhaustedSignal(
+  projectId: string | undefined,
+  agentInstanceId: string | undefined,
+  info: HarnessCapacityExhaustedInfo,
+): void {
+  useAgentBusyServerStore
+    .getState()
+    .recordSignal(agentBusyKey(projectId, agentInstanceId), {
+      kind: "harness_capacity_exhausted",
+      info,
+    });
 }
 
 /**
@@ -169,14 +232,24 @@ export function useAgentBusy(params: {
   }
 
   if (serverSignal) {
-    if (serverSignal.reason === "queue_full") {
+    if (serverSignal.kind === "harness_capacity_exhausted") {
+      return {
+        isBusy: true,
+        reason: "server_busy",
+        retryAfterSeconds:
+          serverSignal.info.retry_after_seconds ??
+          HARNESS_CAPACITY_DEFAULT_RETRY_SECONDS,
+      };
+    }
+    const info = serverSignal.info;
+    if (info.reason === "queue_full") {
       return { isBusy: true, reason: "queue_full" };
     }
-    if (serverSignal.reason === "automation_running") {
+    if (info.reason === "automation_running") {
       return {
         isBusy: true,
         reason: "loop",
-        automatonId: serverSignal.automaton_id,
+        automatonId: info.automaton_id,
       };
     }
   }

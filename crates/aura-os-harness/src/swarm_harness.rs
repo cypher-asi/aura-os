@@ -5,12 +5,14 @@ use std::time::Duration;
 use anyhow::Context;
 use async_trait::async_trait;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
+use reqwest::StatusCode;
 use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tracing::{info, warn};
 
 use aura_protocol::InboundMessage;
 
+use crate::error::HarnessError;
 use crate::harness::{
     build_remote_handshake, build_session_init, HarnessLink, HarnessSession, SessionConfig,
 };
@@ -298,9 +300,57 @@ async fn parse_create_session_response(
         // struct here and bubbling it as a dedicated error so the
         // server can call `remap_harness_error_to_api` instead of
         // pattern-matching on this flattened anyhow string.
+        if is_capacity_exhausted_response(status, &body) {
+            return Err(anyhow::Error::new(HarnessError::CapacityExhausted)
+                .context(format!("swarm create session failed with {status}: {body}")));
+        }
         anyhow::bail!("swarm create session failed with {}: {}", status, body);
     }
     serde_json::from_str(&body).map_err(Into::into)
+}
+
+/// Detect the upstream "all WS slots in use" rejection.
+///
+/// The aura-node gateway returns HTTP 503 in two shapes when the
+/// per-process WS-slot semaphore is full:
+/// * Structured: `{ "code": "capacity_exhausted", "message": "..." }`
+///   (preferred wire — pinned by Phase 6 of the
+///   robust-concurrent-agent-infra plan).
+/// * Opaque: empty body or any non-JSON payload.
+///
+/// Both shapes resolve to [`HarnessError::CapacityExhausted`]. Any
+/// 503 with a clearly-different structured `code` (e.g. `"db_down"`)
+/// passes through as a regular `anyhow::Error` so the existing
+/// gateway-error mappers in the server keep their current behavior.
+fn is_capacity_exhausted_response(status: StatusCode, body: &str) -> bool {
+    if status != StatusCode::SERVICE_UNAVAILABLE {
+        return false;
+    }
+    let trimmed = body.trim();
+    if trimmed.is_empty() {
+        return true;
+    }
+    let Ok(parsed) = serde_json::from_str::<serde_json::Value>(trimmed) else {
+        // Non-JSON 503 body: treat as opaque exhaustion. The harness
+        // never surfaces a different structured 503 today, so this
+        // matches the operational reality without needing a per-error
+        // taxonomy.
+        return true;
+    };
+    let code = parsed
+        .get("code")
+        .and_then(|v| v.as_str())
+        .or_else(|| {
+            parsed
+                .get("error")
+                .and_then(|err| err.get("code"))
+                .and_then(|v| v.as_str())
+        });
+    match code {
+        Some(c) if c.eq_ignore_ascii_case("capacity_exhausted") => true,
+        Some(_) => false,
+        None => true,
+    }
 }
 
 fn send_session_init(

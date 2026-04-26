@@ -331,6 +331,7 @@ mod tests {
                 loop_log: Arc::new(crate::loop_log::LoopLogWriter::new(
                     store_dir.path().join("loop_logs"),
                 )),
+                harness_ws_slots: 128,
             },
             store_dir,
         )

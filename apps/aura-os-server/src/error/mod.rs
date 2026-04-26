@@ -149,6 +149,34 @@ impl ApiError {
         )
     }
 
+    /// Upstream harness rejected the connection because all WS slots
+    /// are in use. Surfaced when the configured cap
+    /// (`AURA_HARNESS_WS_SLOTS`, default 128) is reached. Returns
+    /// HTTP 503 with a structured `data` payload (`configured_cap`,
+    /// `retry_after_seconds`) so the UI can render a "Server is busy"
+    /// banner and retry button instead of leaking the raw upstream
+    /// 503. Phase 6 of the robust-concurrent-agent-infra plan.
+    pub(crate) fn harness_capacity_exhausted(
+        configured_cap: usize,
+    ) -> (StatusCode, Json<Self>) {
+        let message = format!(
+            "Harness is at its concurrent-session limit ({configured_cap}). Please retry in a moment."
+        );
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(Self {
+                error: message.clone(),
+                code: "harness_capacity_exhausted".to_string(),
+                details: Some(message),
+                data: Some(serde_json::json!({
+                    "code": "harness_capacity_exhausted",
+                    "configured_cap": configured_cap,
+                    "retry_after_seconds": 5,
+                })),
+            }),
+        )
+    }
+
     pub(crate) fn service_unavailable(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
         (
             StatusCode::SERVICE_UNAVAILABLE,

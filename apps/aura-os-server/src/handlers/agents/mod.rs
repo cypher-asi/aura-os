@@ -1,4 +1,4 @@
-mod chat;
+pub(crate) mod chat;
 mod control;
 mod conversions;
 mod crud;

@@ -12,6 +12,7 @@ use aura_os_harness::{
 
 use crate::dto::AgentRuntimeTestResponse;
 use crate::error::{ApiError, ApiResult};
+use crate::handlers::agents::chat::errors::map_harness_error_to_api;
 use crate::handlers::agents::workspace_tools::{
     installed_workspace_app_tools, installed_workspace_integrations_for_org_with_token,
 };
@@ -142,7 +143,15 @@ async fn run_harness_test(
         .harness_for(agent.harness_mode())
         .open_session(config)
         .await
-        .map_err(|e| ApiError::bad_gateway(format!("opening harness session failed: {e}")))?;
+        .map_err(|e| {
+            // Phase 6: route through the shared `map_harness_error_to_api`
+            // so upstream WS-slot exhaustion surfaces as the structured
+            // 503 instead of a raw `bad_gateway`. Non-capacity transport
+            // failures keep the original 502 mapping via the fallback.
+            map_harness_error_to_api(&e, state.harness_ws_slots, |err| {
+                ApiError::bad_gateway(format!("opening harness session failed: {err}"))
+            })
+        })?;
     let mut rx = session.events_tx.subscribe();
     session
         .commands_tx

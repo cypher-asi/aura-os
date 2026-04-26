@@ -220,6 +220,7 @@ fn resolve_git_repo_url(project: Option<&Project>) -> Option<String> {
 pub(super) async fn start_or_adopt(
     client: &AutomatonClient,
     params: AutomatonStartParams,
+    ws_slots_cap: usize,
 ) -> ApiResult<StartedAutomaton> {
     match client.start(params.clone()).await {
         Ok(result) => Ok(StartedAutomaton {
@@ -233,7 +234,7 @@ pub(super) async fn start_or_adopt(
                 let result = client
                     .start(params)
                     .await
-                    .map_err(|e| map_start_error(client.base_url(), e))?;
+                    .map_err(|e| map_start_error(client.base_url(), e, ws_slots_cap))?;
                 return Ok(StartedAutomaton {
                     automaton_id: result.automaton_id,
                     event_stream_url: Some(result.event_stream_url),
@@ -246,7 +247,7 @@ pub(super) async fn start_or_adopt(
                 adopted: true,
             })
         }
-        Err(error) => Err(map_start_error(client.base_url(), error)),
+        Err(error) => Err(map_start_error(client.base_url(), error, ws_slots_cap)),
     }
 }
 
@@ -270,6 +271,7 @@ async fn automaton_status_is_active(client: &AutomatonClient, automaton_id: &str
 pub(super) fn map_start_error(
     base_url: &str,
     error: AutomatonStartError,
+    ws_slots_cap: usize,
 ) -> (StatusCode, Json<ApiError>) {
     match error {
         AutomatonStartError::Conflict(_) => ApiError::conflict("a dev loop is already running"),
@@ -283,9 +285,51 @@ pub(super) fn map_start_error(
                 "aura-harness at {base_url} is unavailable: {message}"
             ))
         }
+        // Phase 6: detect upstream WS-slot exhaustion shape (HTTP 503,
+        // optionally with a structured `code: "capacity_exhausted"`
+        // body) and remap to the structured 503 instead of leaking the
+        // raw upstream body via `bad_gateway`. Mirrors the
+        // `is_capacity_exhausted_response` heuristic in
+        // `crates/aura-os-harness/src/swarm_harness.rs` so chat / spec
+        // / task / dev-loop paths agree on the wire-level taxonomy.
+        AutomatonStartError::Response { status: 503, body }
+            if response_body_is_capacity_exhausted(&body) =>
+        {
+            ApiError::harness_capacity_exhausted(ws_slots_cap)
+        }
         AutomatonStartError::Response { status, body } => ApiError::bad_gateway(format!(
             "automaton start via {base_url} failed ({status}): {body}"
         )),
         other => ApiError::internal(format!("starting automaton: {other}")),
+    }
+}
+
+/// Heuristic match for "upstream WS-slot semaphore exhausted" on a
+/// 503 automaton-start response. Empty bodies and explicit
+/// `code: "capacity_exhausted"` payloads both qualify; an explicit
+/// non-`capacity_exhausted` `code` opts back into the generic
+/// `bad_gateway` mapping. Kept in sync with
+/// `crates/aura-os-harness/src/swarm_harness.rs::is_capacity_exhausted_response`.
+fn response_body_is_capacity_exhausted(body: &str) -> bool {
+    let trimmed = body.trim();
+    if trimmed.is_empty() {
+        return true;
+    }
+    let Ok(parsed) = serde_json::from_str::<serde_json::Value>(trimmed) else {
+        return true;
+    };
+    let code = parsed
+        .get("code")
+        .and_then(|v| v.as_str())
+        .or_else(|| {
+            parsed
+                .get("error")
+                .and_then(|err| err.get("code"))
+                .and_then(|v| v.as_str())
+        });
+    match code {
+        Some(c) if c.eq_ignore_ascii_case("capacity_exhausted") => true,
+        Some(_) => false,
+        None => true,
     }
 }

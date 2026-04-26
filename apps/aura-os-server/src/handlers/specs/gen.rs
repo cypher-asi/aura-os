@@ -15,6 +15,8 @@ use tracing::info;
 use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, Spec};
 use aura_os_harness::{HarnessInbound, HarnessOutbound, UserMessage};
 
+use crate::handlers::agents::chat::errors::map_harness_error_to_api;
+
 use super::super::projects_helpers::project_tool_session_config;
 use super::{load_generated_specs, resolve_harness_mode, specs_changed_since, SpecQueryParams};
 use crate::error::{ApiError, ApiResult};
@@ -42,10 +44,11 @@ pub(crate) async fn generate_specs_summary(
         &jwt,
     )
     .await;
-    let session = harness
-        .open_session(session_config)
-        .await
-        .map_err(|e| ApiError::internal(format!("opening spec summary session: {e}")))?;
+    let session = harness.open_session(session_config).await.map_err(|e| {
+        map_harness_error_to_api(&e, state.harness_ws_slots, |err| {
+            ApiError::internal(format!("opening spec summary session: {err}"))
+        })
+    })?;
 
     session
         .commands_tx
@@ -94,10 +97,11 @@ async fn open_spec_gen_session(
         jwt,
     )
     .await;
-    let session = harness
-        .open_session(session_config)
-        .await
-        .map_err(|e| ApiError::internal(format!("opening spec gen session: {e}")))?;
+    let session = harness.open_session(session_config).await.map_err(|e| {
+        map_harness_error_to_api(&e, state.harness_ws_slots, |err| {
+            ApiError::internal(format!("opening spec gen session: {err}"))
+        })
+    })?;
 
     session
         .commands_tx

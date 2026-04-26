@@ -340,6 +340,7 @@ pub fn build_test_app_from_store(
         agent_event_listener,
         loop_log,
         orbit_capacity_guard: Arc::new(aura_os_server::orbit_guard::OrbitCapacityGuard::new()),
+        harness_ws_slots: 128,
     };
 
     let app = aura_os_server::create_router_with_interface(state.clone(), None);

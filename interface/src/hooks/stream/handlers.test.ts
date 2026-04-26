@@ -1,6 +1,7 @@
 vi.mock("../../api/client", () => ({
   isInsufficientCreditsError: vi.fn(() => false),
   isAgentBusyError: vi.fn(() => false),
+  isHarnessCapacityExhaustedError: vi.fn(() => null),
   dispatchInsufficientCredits: vi.fn(),
 }));
 
@@ -29,6 +30,7 @@ import {
 import {
   dispatchInsufficientCredits,
   isInsufficientCreditsError,
+  isHarnessCapacityExhaustedError,
 } from "../../api/client";
 import type { StreamRefs, StreamSetters, ToolCallEntry } from "../../shared/types/stream";
 
@@ -809,6 +811,27 @@ describe("stream/handlers", () => {
       expect(result[0].displayVariant).toBe("streamDropped");
       expect(result[0].content).not.toMatch(/\*Error: /);
       expect(result[0].content).toMatch(/recovered from history/i);
+    });
+
+    it("classifies harness_capacity_exhausted errors as a Server is busy banner with the retry hint", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+      vi.mocked(isInsufficientCreditsError).mockReturnValue(false);
+      vi.mocked(isHarnessCapacityExhaustedError).mockReturnValue({
+        configured_cap: 96,
+        retry_after_seconds: 5,
+      });
+
+      handleStreamError(refs, setters, new Error("503 capacity exhausted"));
+
+      const lastCall = setters.calls.setEvents[setters.calls.setEvents.length - 1];
+      const updater = lastCall as (prev: unknown[]) => unknown[];
+      const result = updater([]) as Array<{ content: string; displayVariant?: string }>;
+
+      expect(result[0].displayVariant).toBe("harnessCapacityExhaustedError");
+      expect(result[0].content).toBe("Server is busy — try again in 5 seconds.");
+      expect(result[0].content).not.toMatch(/\*Error: /);
+      vi.mocked(isHarnessCapacityExhaustedError).mockReturnValue(null);
     });
 
     it("classifies server-side stream_lagged errors as a streamDropped banner", () => {

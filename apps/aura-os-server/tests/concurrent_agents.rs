@@ -31,8 +31,8 @@ use std::time::{Duration, Instant};
 use aura_os_core::{harness_agent_id, AgentId, AgentInstanceId, ProjectId};
 use aura_os_harness::test_support::FakeHarness;
 use aura_os_harness::{
-    AssistantMessageEnd, FilesChanged, HarnessOutbound, SessionBridge, SessionBridgeStarted,
-    SessionBridgeTurn, SessionConfig, SessionUsage, TextDelta,
+    AssistantMessageEnd, FilesChanged, HarnessOutbound, SessionBridge, SessionBridgeError,
+    SessionBridgeStarted, SessionBridgeTurn, SessionConfig, SessionUsage, TextDelta,
 };
 use aura_os_server::handlers_test_support::{
     acquire_turn_slot, build_active_automaton_for_test, evaluate_partition_busy,
@@ -399,4 +399,74 @@ async fn same_partition_third_turn_rejects() {
         .expect("second acquire");
     drop(second.guard);
     assert_eq!(counter.load(Ordering::Acquire), 0);
+}
+
+// ---------------------------------------------------------------------------
+// Phase 6: harness_capacity_exhausted end-to-end via FakeHarness.
+// ---------------------------------------------------------------------------
+
+/// Phase-6: when the upstream WS-slot semaphore rejects a new session,
+/// the server-side `SessionBridge` must surface the typed
+/// `SessionBridgeError::CapacityExhausted` variant. This is the bridge
+/// layer the HTTP handlers (chat / runtime / specs / extraction) feed
+/// into `chat::errors::map_harness_error_to_api`, which then maps
+/// onto `ApiError::harness_capacity_exhausted` (status 503,
+/// `code: "harness_capacity_exhausted"`, structured `configured_cap`
+/// + `retry_after_seconds`). Driving that from a real HTTP request
+/// would require the full app scaffolding; pinning the bridge-level
+/// contract here keeps the assertion tight while still proving the
+/// harness → bridge → handler path stays connected.
+#[tokio::test]
+async fn fake_harness_capacity_exhausted_surfaces_typed_session_bridge_error() {
+    let fake = FakeHarness::new();
+    fake.set_script(vec![text_delta("ok"), assistant_end()])
+        .await;
+    fake.set_capacity_limit(1).await;
+
+    let template = AgentId::new();
+    let instance_a = AgentInstanceId::new();
+    let instance_b = AgentInstanceId::new();
+
+    let _ok = SessionBridge::open_and_send_user_message(
+        &fake,
+        cfg_for(&template, Some(&instance_a)),
+        turn("first"),
+    )
+    .await
+    .expect("first session under the cap must succeed");
+
+    let result = SessionBridge::open_and_send_user_message(
+        &fake,
+        cfg_for(&template, Some(&instance_b)),
+        turn("second"),
+    )
+    .await;
+
+    let err = match result {
+        Ok(_) => panic!(
+            "second session must be refused once the cap is hit — \
+             FakeHarness::set_capacity_limit regression"
+        ),
+        Err(err) => err,
+    };
+    match err {
+        SessionBridgeError::CapacityExhausted(message) => {
+            assert!(
+                !message.is_empty(),
+                "CapacityExhausted variant must carry a non-empty diagnostic, got: {message}"
+            );
+        }
+        other => panic!(
+            "expected SessionBridgeError::CapacityExhausted, got {other:?} — \
+             this regression would cause the server to leak a generic 502 \
+             instead of the structured 503 mapped by \
+             ApiError::harness_capacity_exhausted"
+        ),
+    }
+
+    assert_eq!(
+        fake.session_count().await,
+        1,
+        "FakeHarness must record exactly the sessions it accepted (= cap)"
+    );
 }

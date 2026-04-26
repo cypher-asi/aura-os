@@ -10,6 +10,8 @@ vi.mock("../api/client", () => ({
     },
   },
   isInsufficientCreditsError: vi.fn(() => false),
+  isAgentBusyError: vi.fn(() => null),
+  isHarnessCapacityExhaustedError: vi.fn(() => null),
   dispatchInsufficientCredits: vi.fn(),
 }));
 

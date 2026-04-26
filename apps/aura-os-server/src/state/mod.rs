@@ -259,6 +259,19 @@ pub struct AppState {
     /// stream, per-category debug channels, and task outputs; the Debug
     /// UI app and `aura-run-analyze` read from the same directory.
     pub loop_log: Arc<LoopLogWriter>,
+    /// Configured upstream WS-slot cap. Read from
+    /// `AURA_HARNESS_WS_SLOTS` at startup (default `128`, matching
+    /// the doc-comment in
+    /// `crates/aura-os-harness/src/automaton_client.rs` lines 33-34)
+    /// and forwarded to the autospawned local harness child process
+    /// so both ends agree on the cap. Surfaced through
+    /// `ApiError::harness_capacity_exhausted` so the operator-visible
+    /// error message includes the cap that just got hit. NOTE: the
+    /// upstream `aura-node` harness binary is expected to read the
+    /// same env var to size its semaphore; if it currently does not,
+    /// the server's view is still authoritative for error messaging
+    /// but the actual upstream limit may stay at the harness default.
+    pub harness_ws_slots: usize,
 }
 
 impl AppState {

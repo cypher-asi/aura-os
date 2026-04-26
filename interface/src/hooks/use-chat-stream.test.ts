@@ -45,6 +45,8 @@ vi.mock("../api/client", () => ({
     getAgentInstance: vi.fn().mockResolvedValue({}),
   },
   isInsufficientCreditsError: vi.fn(() => false),
+  isAgentBusyError: vi.fn(() => null),
+  isHarnessCapacityExhaustedError: vi.fn(() => null),
   dispatchInsufficientCredits: vi.fn(),
 }));
 

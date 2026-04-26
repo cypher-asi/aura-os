@@ -98,7 +98,7 @@ pub(crate) async fn start_loop(
     let forwarder_jwt = jwt.clone();
     let start_params =
         build_start_params(&state, &ctx, agent_instance_id, Some(jwt), None).await;
-    let started = start_or_adopt(&ctx.client, start_params).await?;
+    let started = start_or_adopt(&ctx.client, start_params, state.harness_ws_slots).await?;
 
     if started.adopted
         && can_reuse_forwarder(&state, project_id, agent_instance_id, &started.automaton_id).await
@@ -311,7 +311,7 @@ pub(crate) async fn run_single_task(
             tokio::spawn(async move {
                 let _ = svc.delete_instance(&ephemeral_instance_id).await;
             });
-            map_start_error(ctx.client.base_url(), e)
+            map_start_error(ctx.client.base_url(), e, state.harness_ws_slots)
         })?;
     let (events_tx, ws_reader_handle) = connect_with_retries(
         &ctx.client,

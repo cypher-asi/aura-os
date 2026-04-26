@@ -26,6 +26,7 @@ use tokio::sync::{broadcast, mpsc, Mutex, Notify};
 
 use aura_protocol::SessionInit;
 
+use crate::error::HarnessError;
 use crate::harness::{build_session_init, HarnessLink, HarnessSession, SessionConfig};
 use crate::{HarnessInbound, HarnessOutbound};
 
@@ -62,6 +63,11 @@ struct FakeInner {
     gate: Option<Arc<Notify>>,
     /// Counter for synthetic session ids.
     next_session_id: u64,
+    /// When `Some(n)`, every `open_session` call after the `n`-th one
+    /// fails with [`HarnessError::CapacityExhausted`]. Used by Phase
+    /// 6 integration tests that assert the server's clean
+    /// `harness_capacity_exhausted` 503 mapping.
+    capacity_limit: Option<usize>,
 }
 
 impl FakeInner {
@@ -71,6 +77,7 @@ impl FakeInner {
             script: ResponseScript::default(),
             gate: None,
             next_session_id: 0,
+            capacity_limit: None,
         }
     }
 }
@@ -151,6 +158,17 @@ impl FakeHarness {
     pub async fn session_count(&self) -> usize {
         self.inner.lock().await.session_inits.len()
     }
+
+    /// Configure the harness to fail every `open_session` call after
+    /// the first `limit` successful ones with
+    /// [`HarnessError::CapacityExhausted`]. Phase 6 integration
+    /// tests use this to drive the server's clean
+    /// `harness_capacity_exhausted` 503 mapping without needing a
+    /// real upstream harness with a saturated WS-slot semaphore.
+    pub async fn set_capacity_limit(&self, limit: usize) {
+        let mut inner = self.inner.lock().await;
+        inner.capacity_limit = Some(limit);
+    }
 }
 
 impl Default for FakeHarness {
@@ -183,6 +201,16 @@ impl HarnessLink for FakeHarness {
         let session_init = build_session_init(&config);
         let (script, gate, session_id) = {
             let mut inner = self.inner.lock().await;
+            // Phase-6 capacity-exhaustion stub. Refusing BEFORE we
+            // record the session_init keeps the observable count of
+            // accepted sessions equal to the configured limit, which
+            // is what integration tests want to assert.
+            if let Some(limit) = inner.capacity_limit {
+                if inner.session_inits.len() >= limit {
+                    return Err(anyhow::Error::new(HarnessError::CapacityExhausted)
+                        .context("FakeHarness: capacity_limit reached"));
+                }
+            }
             inner.session_inits.push(session_init.clone());
             inner.next_session_id += 1;
             let session_id = format!("fake-session-{}", inner.next_session_id);

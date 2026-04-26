@@ -32,7 +32,11 @@ export interface DisplaySessionEvent {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
-  displayVariant?: "insufficientCreditsError" | "agentBusyError" | "streamDropped";
+  displayVariant?:
+    | "insufficientCreditsError"
+    | "agentBusyError"
+    | "harnessCapacityExhaustedError"
+    | "streamDropped";
   toolCalls?: ToolCallEntry[];
   artifactRefs?: ArtifactRef[];
   contentBlocks?: DisplayContentBlockUnion[];

@@ -6,6 +6,7 @@
 
 mod automaton_client;
 pub mod client;
+mod error;
 mod harness;
 mod harness_url;
 mod local_harness;
@@ -25,6 +26,7 @@ pub use client::{
     bearer_headers, GetHeadResponse, HarnessAutomatonStartParams, HarnessAutomatonStartResponse,
     HarnessClient, HarnessClientError, HarnessProbeResult, HarnessTxKind, SubmitTxResponse,
 };
+pub use error::HarnessError;
 pub use harness::{
     build_remote_handshake, build_session_init, HarnessCommandSender, HarnessLink, HarnessSession,
     SessionConfig,

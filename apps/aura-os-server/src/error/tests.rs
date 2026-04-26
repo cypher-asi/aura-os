@@ -1,5 +1,4 @@
 use super::*;
-use super::*;
 
 #[test]
 fn upstream_context_parses_nested_code_and_message() {
@@ -110,6 +109,22 @@ fn agent_busy_accepts_missing_automaton_id() {
     assert_eq!(api_err.code, "agent_busy");
     let data = api_err.data.expect("data populated");
     assert!(data["automaton_id"].is_null());
+}
+
+#[test]
+fn harness_capacity_exhausted_returns_503_with_structured_data() {
+    let (status, Json(api_err)) = ApiError::harness_capacity_exhausted(96);
+    assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(api_err.code, "harness_capacity_exhausted");
+    let data = api_err.data.expect("data must be populated");
+    assert_eq!(data["code"], "harness_capacity_exhausted");
+    assert_eq!(data["configured_cap"], 96);
+    assert_eq!(data["retry_after_seconds"], 5);
+    let body = api_err.error;
+    assert!(
+        body.contains("96"),
+        "user-visible message must include the configured cap, got: {body}"
+    );
 }
 
 #[test]

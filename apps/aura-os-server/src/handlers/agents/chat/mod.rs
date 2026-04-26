@@ -9,7 +9,7 @@ mod busy;
 mod compaction;
 mod constants;
 mod discovery;
-mod errors;
+pub(crate) mod errors;
 mod event_bus;
 mod events;
 mod instance_route;

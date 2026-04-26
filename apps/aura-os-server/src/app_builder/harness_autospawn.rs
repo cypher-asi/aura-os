@@ -79,6 +79,23 @@ pub(super) fn maybe_spawn_local_harness() {
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null());
 
+    // Phase 6 of the robust-concurrent-agent-infra plan: forward the
+    // configured WS-slot cap to the autospawned harness child so both
+    // ends agree on the limit. The harness binary is expected to read
+    // `AURA_HARNESS_WS_SLOTS` itself to size its semaphore — if the
+    // version currently in use does not, the env var still propagates
+    // through `.env` overlays and config files inside the harness dir
+    // unchanged, and the server-side `ApiError::harness_capacity_exhausted`
+    // message keeps reflecting the configured value (so operators see
+    // the intended cap even when the upstream binary still uses its
+    // own default). Track that follow-up on the harness side; this
+    // crate does not own the upstream source.
+    if let Ok(slots) = std::env::var(super::HARNESS_WS_SLOTS_ENV) {
+        if !slots.trim().is_empty() {
+            cmd.env(super::HARNESS_WS_SLOTS_ENV, slots);
+        }
+    }
+
     // Load the harness's own .env so the child gets its configured values
     // (service URLs, etc.) regardless of what the
     // parent process has in its environment.

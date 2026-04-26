@@ -43,6 +43,67 @@ fn env_opt(key: &str) -> Option<String> {
     std::env::var(key).ok().filter(|s| !s.trim().is_empty())
 }
 
+/// Default upstream WS-slot cap, mirroring the doc-comment on
+/// `crates/aura-os-harness/src/automaton_client.rs` lines 33-34.
+/// `aura-node` caps concurrent WS sessions per harness process at
+/// 128 by default; Phase 6 of the robust-concurrent-agent-infra plan
+/// makes this configurable end-to-end via `AURA_HARNESS_WS_SLOTS`.
+pub(crate) const DEFAULT_HARNESS_WS_SLOTS: usize = 128;
+
+/// Env var the server reads (and the autospawned harness child
+/// inherits) to size the upstream WS-slot semaphore. Held in one
+/// place so the autospawn forwarder, the AppState wiring, and the
+/// `ApiError::harness_capacity_exhausted` operator message stay in
+/// agreement.
+pub(crate) const HARNESS_WS_SLOTS_ENV: &str = "AURA_HARNESS_WS_SLOTS";
+
+/// Parse `AURA_HARNESS_WS_SLOTS` from the environment, falling back
+/// to [`DEFAULT_HARNESS_WS_SLOTS`] (and warning at `info` level)
+/// when the value is missing, empty, or non-numeric. Zero is treated
+/// as a parse failure because it would mean "every session-open
+/// rejects" — that has no operationally useful meaning and almost
+/// certainly indicates a misconfiguration.
+///
+/// FOLLOW-UP: the upstream `aura-node` harness binary is expected
+/// to read this same env var. If the harness build in use does not
+/// yet honour `AURA_HARNESS_WS_SLOTS`, the server's view stays in
+/// sync with the configured value but the actual upstream cap
+/// remains the harness default; the operator-visible error message
+/// will still reflect the server's `harness_ws_slots`.
+pub(crate) fn parse_harness_ws_slots(raw: Option<&str>) -> usize {
+    let Some(raw) = raw else {
+        return DEFAULT_HARNESS_WS_SLOTS;
+    };
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return DEFAULT_HARNESS_WS_SLOTS;
+    }
+    match trimmed.parse::<usize>() {
+        Ok(0) => {
+            warn!(
+                value = trimmed,
+                default = DEFAULT_HARNESS_WS_SLOTS,
+                "AURA_HARNESS_WS_SLOTS=0 has no operational meaning; falling back to default"
+            );
+            DEFAULT_HARNESS_WS_SLOTS
+        }
+        Ok(n) => n,
+        Err(error) => {
+            warn!(
+                value = trimmed,
+                %error,
+                default = DEFAULT_HARNESS_WS_SLOTS,
+                "AURA_HARNESS_WS_SLOTS is not a valid usize; falling back to default"
+            );
+            DEFAULT_HARNESS_WS_SLOTS
+        }
+    }
+}
+
+pub(crate) fn read_harness_ws_slots_from_env() -> usize {
+    parse_harness_ws_slots(env_opt(HARNESS_WS_SLOTS_ENV).as_deref())
+}
+
 pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
     let data_dir = store_path
         .parent()
@@ -73,6 +134,13 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
     info!(
         cooldown_secs = orbit_capacity_guard.cooldown().as_secs(),
         "Orbit capacity guard armed (trips on remote_storage_exhausted; tunable via AURA_ORBIT_ENOSPC_COOLDOWN_SECS)"
+    );
+
+    let harness_ws_slots = read_harness_ws_slots_from_env();
+    info!(
+        harness_ws_slots,
+        env_var = HARNESS_WS_SLOTS_ENV,
+        "Configured upstream harness WS-slot cap (used for harness_capacity_exhausted operator message and forwarded to autospawned child)"
     );
 
     ensure_local_harness_running();
@@ -186,6 +254,7 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         http_client,
         agent_event_listener,
         loop_log,
+        harness_ws_slots,
     })
 }
 

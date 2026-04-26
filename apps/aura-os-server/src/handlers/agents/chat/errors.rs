@@ -88,6 +88,7 @@ pub(super) fn remap_harness_error_to_sse(err: &ErrorMsg) -> Option<ErrorMsg> {
 pub(super) fn map_session_bridge_start_error(
     key: &str,
     harness_mode: HarnessMode,
+    ws_slots_cap: usize,
 ) -> impl FnOnce(SessionBridgeError) -> (StatusCode, Json<ApiError>) + '_ {
     move |err| {
         warn!(
@@ -96,16 +97,49 @@ pub(super) fn map_session_bridge_start_error(
             error = %err,
             "Failed to open delegated harness chat session"
         );
-        map_session_bridge_error(err)
+        map_session_bridge_error(err, ws_slots_cap)
     }
 }
 
-pub(super) fn map_session_bridge_error(err: SessionBridgeError) -> (StatusCode, Json<ApiError>) {
+pub(super) fn map_session_bridge_error(
+    err: SessionBridgeError,
+    ws_slots_cap: usize,
+) -> (StatusCode, Json<ApiError>) {
     match err {
         SessionBridgeError::Open(message) => map_harness_session_startup_error(&message),
         SessionBridgeError::Send(message) => {
             ApiError::internal(format!("sending user message: {message}"))
         }
+        SessionBridgeError::CapacityExhausted(_) => {
+            ApiError::harness_capacity_exhausted(ws_slots_cap)
+        }
+    }
+}
+
+/// Single source of truth for "translate a raw `harness.open_session`
+/// failure into an [`ApiError`]". Used by the non-chat session-open
+/// call sites (runtime, specs gen, task extraction) which receive an
+/// `anyhow::Error` rather than a typed [`SessionBridgeError`]. The
+/// chat path goes through [`map_session_bridge_error`] which has its
+/// own typed variants but funnels capacity exhaustion to the same
+/// `ApiError::harness_capacity_exhausted` constructor.
+///
+/// `fallback` is invoked for non-capacity errors so each caller keeps
+/// its own context-specific wording (e.g. "opening spec gen session").
+///
+/// See `crates/aura-os-harness/src/error.rs` for the upstream
+/// detection contract — both [`HarnessError::is_capacity_exhausted`]
+/// and `SessionBridgeError::CapacityExhausted` resolve to the same
+/// 503 here.
+pub(crate) fn map_harness_error_to_api(
+    err: &anyhow::Error,
+    ws_slots_cap: usize,
+    fallback: impl FnOnce(&anyhow::Error) -> (StatusCode, Json<ApiError>),
+) -> (StatusCode, Json<ApiError>) {
+    if aura_os_harness::HarnessError::is_capacity_exhausted(err) {
+        ApiError::harness_capacity_exhausted(ws_slots_cap)
+    } else {
+        fallback(err)
     }
 }
 
@@ -217,5 +251,58 @@ mod tests {
     #[test]
     fn remap_harness_error_to_sse_passes_through_unrelated_errors() {
         assert!(remap_harness_error_to_sse(&err("something_else", "boom")).is_none());
+    }
+
+    #[test]
+    fn map_harness_error_to_api_capacity_exhausted_remaps_to_503() {
+        let err = anyhow::Error::new(aura_os_harness::HarnessError::CapacityExhausted)
+            .context("upstream WS slots full");
+        let (status, Json(body)) = map_harness_error_to_api(&err, 96, |_| {
+            unreachable!("capacity errors must NOT hit the fallback");
+        });
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(body.code, "harness_capacity_exhausted");
+        let data = body
+            .data
+            .as_ref()
+            .expect("structured data must be populated");
+        assert_eq!(data["configured_cap"], 96);
+        assert_eq!(data["retry_after_seconds"], 5);
+    }
+
+    #[test]
+    fn map_harness_error_to_api_non_capacity_uses_fallback() {
+        let err = anyhow::anyhow!("DNS lookup failed");
+        let (status, Json(body)) = map_harness_error_to_api(&err, 128, |e| {
+            ApiError::bad_gateway(format!("opening session: {e}"))
+        });
+        assert_eq!(status, StatusCode::BAD_GATEWAY);
+        assert_ne!(body.code, "harness_capacity_exhausted");
+        assert!(
+            body.error.contains("DNS lookup failed"),
+            "fallback wording must be preserved, got: {}",
+            body.error
+        );
+    }
+
+    #[test]
+    fn map_session_bridge_error_capacity_exhausted_remaps_to_503() {
+        let err = SessionBridgeError::CapacityExhausted("upstream WS slots full".to_string());
+        let (status, Json(body)) = map_session_bridge_error(err, 96);
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(body.code, "harness_capacity_exhausted");
+        let data = body
+            .data
+            .as_ref()
+            .expect("structured data must be populated");
+        assert_eq!(data["configured_cap"], 96);
+    }
+
+    #[test]
+    fn map_session_bridge_error_send_returns_internal() {
+        let err = SessionBridgeError::Send("channel closed".to_string());
+        let (status, Json(body)) = map_session_bridge_error(err, 128);
+        assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+        assert_ne!(body.code, "harness_capacity_exhausted");
     }
 }

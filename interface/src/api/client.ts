@@ -2,12 +2,14 @@ export {
   ApiClientError,
   isInsufficientCreditsError,
   isAgentBusyError,
+  isHarnessCapacityExhaustedError,
   dispatchInsufficientCredits,
   INSUFFICIENT_CREDITS_EVENT,
 } from "../shared/api/core";
 export type {
   AgentBusyErrorInfo,
   AgentBusyReasonCode,
+  HarnessCapacityExhaustedInfo,
 } from "../shared/api/core";
 
 export type {

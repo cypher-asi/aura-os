@@ -3,6 +3,7 @@ import {
   ApiClientError,
   isInsufficientCreditsError,
   isAgentBusyError,
+  isHarnessCapacityExhaustedError,
   dispatchInsufficientCredits,
   INSUFFICIENT_CREDITS_EVENT,
   apiFetch,
@@ -167,6 +168,72 @@ describe("isAgentBusyError", () => {
     });
     if (isAgentBusyError(err)) {
       // type narrowed to AgentBusyErrorInfo
+    } else {
+      throw new Error("expected truthy");
+    }
+  });
+});
+
+describe("isHarnessCapacityExhaustedError", () => {
+  it("returns null for unrelated values", () => {
+    expect(isHarnessCapacityExhaustedError(null)).toBeNull();
+    expect(isHarnessCapacityExhaustedError(undefined)).toBeNull();
+    expect(isHarnessCapacityExhaustedError(42)).toBeNull();
+    expect(
+      isHarnessCapacityExhaustedError(new Error("upstream is busy")),
+    ).toBeNull();
+    const unrelated = new ApiClientError(503, {
+      error: "service down",
+      code: "service_unavailable",
+      details: null,
+    });
+    expect(isHarnessCapacityExhaustedError(unrelated)).toBeNull();
+  });
+
+  it("recognizes the structured 503 and surfaces configured_cap + retry_after_seconds", () => {
+    const err = new ApiClientError(503, {
+      error:
+        "Harness is at its concurrent-session limit (96). Please retry in a moment.",
+      code: "harness_capacity_exhausted",
+      details: null,
+      // @ts-expect-error — `data` lives on the wire body, not the
+      // narrowed TS interface
+      data: {
+        code: "harness_capacity_exhausted",
+        configured_cap: 96,
+        retry_after_seconds: 5,
+      },
+    });
+    const info = isHarnessCapacityExhaustedError(err);
+    expect(info).toEqual({ configured_cap: 96, retry_after_seconds: 5 });
+  });
+
+  it("tolerates a missing structured `data` (older server build)", () => {
+    const err = new ApiClientError(503, {
+      error: "Harness is at its concurrent-session limit. Please retry.",
+      code: "harness_capacity_exhausted",
+      details: null,
+    });
+    const info = isHarnessCapacityExhaustedError(err);
+    expect(info).not.toBeNull();
+    expect(info?.configured_cap).toBeUndefined();
+    expect(info?.retry_after_seconds).toBeUndefined();
+  });
+
+  it("ignores non-ApiClientError thrown values to avoid false positives", () => {
+    expect(
+      isHarnessCapacityExhaustedError("Server is busy — try again."),
+    ).toBeNull();
+  });
+
+  it("returns truthy in boolean position so `if (info = isHarnessCapacityExhaustedError(e))` callers narrow", () => {
+    const err = new ApiClientError(503, {
+      error: "Harness is at its concurrent-session limit (128).",
+      code: "harness_capacity_exhausted",
+      details: null,
+    });
+    if (isHarnessCapacityExhaustedError(err)) {
+      // type narrowed to HarnessCapacityExhaustedInfo
     } else {
       throw new Error("expected truthy");
     }

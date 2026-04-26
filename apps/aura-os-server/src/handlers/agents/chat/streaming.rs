@@ -325,7 +325,7 @@ async fn get_or_create_delegated_chat_session(
     turn: SessionBridgeTurn,
 ) -> ApiResult<SessionForTurn> {
     if let Some(reused) = try_reuse_session(state, key, &requested_model).await {
-        return reuse_with_turn_slot(reused, turn).await;
+        return reuse_with_turn_slot(reused, turn, state.harness_ws_slots).await;
     }
 
     let harness = state.harness_for(harness_mode);
@@ -333,7 +333,11 @@ async fn get_or_create_delegated_chat_session(
     let session_template_agent_id = session_config.template_agent_id.clone();
     let started = SessionBridge::open_and_send_user_message(harness, session_config, turn)
         .await
-        .map_err(map_session_bridge_start_error(key, harness_mode))?;
+        .map_err(map_session_bridge_start_error(
+            key,
+            harness_mode,
+            state.harness_ws_slots,
+        ))?;
     insert_delegated_chat_session(
         state,
         key,
@@ -354,6 +358,7 @@ async fn get_or_create_delegated_chat_session(
 async fn reuse_with_turn_slot(
     reused: ReusedSessionHandles,
     turn: SessionBridgeTurn,
+    ws_slots_cap: usize,
 ) -> ApiResult<SessionForTurn> {
     let acquired = acquire_turn_slot(reused.turn_slot, reused.turn_pending_count)
         .await
@@ -363,7 +368,8 @@ async fn reuse_with_turn_slot(
                 None,
             )
         })?;
-    SessionBridge::send_user_message(&reused.commands_tx, turn).map_err(map_session_bridge_error)?;
+    SessionBridge::send_user_message(&reused.commands_tx, turn)
+        .map_err(|err| map_session_bridge_error(err, ws_slots_cap))?;
     Ok(SessionForTurn {
         is_new: false,
         was_queued: acquired.queued,

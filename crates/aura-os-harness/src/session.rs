@@ -2,6 +2,7 @@
 
 use tokio::sync::broadcast;
 
+use crate::error::HarnessError;
 use crate::{
     HarnessCommandSender, HarnessInbound, HarnessLink, HarnessOutbound, HarnessSession,
     MessageAttachment, SessionConfig, UserMessage,
@@ -39,6 +40,17 @@ pub enum SessionBridgeError {
     Open(String),
     #[error("sending harness message failed: {0}")]
     Send(String),
+    /// Upstream harness rejected the new session because all WS
+    /// slots in its per-process semaphore are in use. Surfaced from
+    /// either [`crate::SwarmHarness::open_session`] (HTTP 503) or
+    /// [`crate::LocalHarness::open_session`] (tungstenite 503 / WS
+    /// 1013) via [`HarnessError::CapacityExhausted`]. The server side
+    /// maps this to `ApiError::harness_capacity_exhausted` using its
+    /// configured `AURA_HARNESS_WS_SLOTS` value (Phase 6 of the
+    /// robust-concurrent-agent-infra plan). The original anyhow chain
+    /// is preserved as a `Display` string for log fidelity.
+    #[error("harness rejected new session: WS slot capacity exhausted ({0})")]
+    CapacityExhausted(String),
 }
 
 /// Delegates the open-session + first-user-message sequence to aura-harness.
@@ -58,10 +70,13 @@ impl SessionBridge {
             aura_org_id = ?config.aura_org_id,
             "opening harness session",
         );
-        let session = harness
-            .open_session(config)
-            .await
-            .map_err(|err| SessionBridgeError::Open(err.to_string()))?;
+        let session = harness.open_session(config).await.map_err(|err| {
+            if HarnessError::is_capacity_exhausted(&err) {
+                SessionBridgeError::CapacityExhausted(err.to_string())
+            } else {
+                SessionBridgeError::Open(err.to_string())
+            }
+        })?;
         let events_rx = session.events_tx.subscribe();
         let commands_tx = session.commands_tx.clone();
         Self::send_user_message(&commands_tx, turn)?;

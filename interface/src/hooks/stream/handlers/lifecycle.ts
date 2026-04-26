@@ -2,6 +2,7 @@ import type { MutableRefObject } from "react";
 import {
   isInsufficientCreditsError,
   isAgentBusyError,
+  isHarnessCapacityExhaustedError,
   dispatchInsufficientCredits,
 } from "../../../api/client";
 import { SSEIdleTimeoutError } from "../../../shared/api/sse";
@@ -55,12 +56,31 @@ function isStreamDroppedError(error: unknown, message: string): boolean {
 
 function normalizeStreamError(error: unknown): {
   message: string;
-  displayVariant?: "insufficientCreditsError" | "agentBusyError" | "streamDropped";
+  displayVariant?:
+    | "insufficientCreditsError"
+    | "agentBusyError"
+    | "harnessCapacityExhaustedError"
+    | "streamDropped";
 } {
   if (isInsufficientCreditsError(error)) {
     return {
       message: "You have no credits remaining. Buy more credits to continue.",
       displayVariant: "insufficientCreditsError",
+    };
+  }
+
+  const capacityExhausted = isHarnessCapacityExhaustedError(error);
+  if (capacityExhausted) {
+    const retrySeconds =
+      typeof capacityExhausted.retry_after_seconds === "number" &&
+      capacityExhausted.retry_after_seconds > 0
+        ? capacityExhausted.retry_after_seconds
+        : 5;
+    return {
+      message: `Server is busy — try again in ${retrySeconds} second${
+        retrySeconds === 1 ? "" : "s"
+      }.`,
+      displayVariant: "harnessCapacityExhaustedError",
     };
   }
 

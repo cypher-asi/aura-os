@@ -150,6 +150,63 @@ export function isAgentBusyError(err: unknown): AgentBusyErrorInfo | null {
   return null;
 }
 
+/**
+ * Structured payload for an `harness_capacity_exhausted` error
+ * returned by the chat / runtime / spec / extraction routes when the
+ * upstream `aura-node` WebSocket-slot semaphore is full. Phase 6 of
+ * the robust-concurrent-agent-infra plan.
+ *
+ * - `configured_cap` — server's view of the cap (`AURA_HARNESS_WS_SLOTS`,
+ *   default 128). Surfaced so an in-app banner can mention the limit
+ *   for ops/debug visibility.
+ * - `retry_after_seconds` — server hint for how long the UI should
+ *   wait before retrying. Always populated by the server; the type
+ *   marks it optional so the predicate stays tolerant of older server
+ *   builds during rollout.
+ */
+export interface HarnessCapacityExhaustedInfo {
+  configured_cap?: number;
+  retry_after_seconds?: number;
+}
+
+/**
+ * Inspect a thrown error from any chat / runtime / spec-gen /
+ * task-extraction call and decide whether it is the structured
+ * "all WS slots in use" 503 emitted by
+ * `ApiError::harness_capacity_exhausted`. Returns `null` when the
+ * error is something else (so the caller can keep its existing
+ * generic-error fallback).
+ *
+ * Mirrors `isAgentBusyError` shape so callers can `if (info = isHarnessCapacityExhaustedError(err))`
+ * style their handling. The returned object exposes the structured
+ * `configured_cap` and `retry_after_seconds` from the response body
+ * so the UI can render an actionable retry message ("Server is busy
+ * — try again in N seconds.") instead of leaking a raw 503.
+ */
+export function isHarnessCapacityExhaustedError(
+  err: unknown,
+): HarnessCapacityExhaustedInfo | null {
+  if (!(err instanceof ApiClientError)) return null;
+  if (err.body.code !== "harness_capacity_exhausted") return null;
+  const data = (err.body as { data?: unknown }).data as
+    | { configured_cap?: unknown; retry_after_seconds?: unknown }
+    | null
+    | undefined;
+  const configuredCap =
+    typeof data?.configured_cap === "number" && data.configured_cap > 0
+      ? data.configured_cap
+      : undefined;
+  const retryAfterSeconds =
+    typeof data?.retry_after_seconds === "number" &&
+    data.retry_after_seconds >= 0
+      ? data.retry_after_seconds
+      : undefined;
+  return {
+    configured_cap: configuredCap,
+    retry_after_seconds: retryAfterSeconds,
+  };
+}
+
 export function dispatchInsufficientCredits(): void {
   window.dispatchEvent(new CustomEvent(INSUFFICIENT_CREDITS_EVENT));
 }
