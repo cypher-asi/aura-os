@@ -30,6 +30,7 @@ export type Capability =
   | { type: "spawnAgent" }
   | { type: "controlAgent" }
   | { type: "readAgent" }
+  | { type: "listAgents" }
   | { type: "manageOrgMembers" }
   | { type: "manageBilling" }
   | { type: "invokeProcess" }
@@ -73,6 +74,7 @@ export const CEO_CORE_CAPABILITY_TYPES = [
   "spawnAgent",
   "controlAgent",
   "readAgent",
+  "listAgents",
   "manageOrgMembers",
   "manageBilling",
   "invokeProcess",

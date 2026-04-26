@@ -105,7 +105,7 @@ const HARNESS_NATIVE_TOOL_NAMES: &[&str] = &[
     "check_budget",
     "record_usage",
     // NOTE: cross_agent_catalog_entries (spawn_agent, send_to_agent,
-    // agent_lifecycle, get_agent_state, delegate_task, task) are
+    // agent_lifecycle, get_agent_state, list_agents, delegate_task, task) are
     // deliberately NOT listed here. They are capability-gated
     // harness-native tools surfaced through `visible_tools_with_permissions`
     // using `SessionConfig.agent_permissions`, not server-shipped
@@ -269,7 +269,7 @@ mod tests {
             tool_named("stop_dev_loop"),
             tool_named("send_to_agent"), // harness cross-agent, KEEP (capability-gated)
             tool_named("spawn_agent"),   // harness cross-agent, KEEP (capability-gated)
-            tool_named("list_agents"),   // server-only, keep
+            tool_named("list_agents"),   // harness cross-agent, KEEP (capability-gated)
             tool_named("create_project"), // server-only, keep
             tool_named("list_projects"), // harness network, drop
         ];

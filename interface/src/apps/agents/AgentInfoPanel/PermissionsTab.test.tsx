@@ -131,6 +131,7 @@ const ceoPermissions: AgentPermissions = {
     { type: "spawnAgent" },
     { type: "controlAgent" },
     { type: "readAgent" },
+    { type: "listAgents" },
     { type: "manageOrgMembers" },
     { type: "manageBilling" },
     { type: "invokeProcess" },

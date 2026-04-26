@@ -5,6 +5,7 @@ import {
   Eye,
   Gamepad2,
   ImagePlus,
+  List,
   type LucideIcon,
   Megaphone,
   Plus,
@@ -84,6 +85,12 @@ export function hasReadAgentCapability(
   return hasCapabilityType(perms, "readAgent");
 }
 
+export function hasListAgentsCapability(
+  perms: AgentPermissions | undefined,
+): boolean {
+  return hasCapabilityType(perms, "listAgents");
+}
+
 /**
  * Human-readable metadata for every `Capability` variant, colocated with the
  * predicates above so the wire types stay the single source of truth and UI
@@ -108,6 +115,11 @@ export const CAPABILITY_LABELS: Record<
     label: "Read agents",
     description: "Inspect agent state and transcripts. Enables harness tool: get_agent_state.",
     Icon: Eye,
+  },
+  listAgents: {
+    label: "List agents",
+    description: "Discover agents in scope. Enables harness tool: list_agents.",
+    Icon: List,
   },
   manageOrgMembers: {
     label: "Manage org members",
@@ -167,7 +179,7 @@ export function isProjectScopedCapabilityType(
 }
 
 /**
- * The eight non-project-scoped capability variants, in display order. Mirrors
+ * The non-project-scoped capability variants, in display order. Mirrors
  * `CEO_CORE_CAPABILITY_TYPES` plus `generateMedia`, and is the canonical
  * order the permissions UI renders toggles in.
  */
@@ -175,6 +187,7 @@ export const GLOBAL_CAPABILITY_TYPES = [
   "spawnAgent",
   "controlAgent",
   "readAgent",
+  "listAgents",
   "manageOrgMembers",
   "manageBilling",
   "invokeProcess",

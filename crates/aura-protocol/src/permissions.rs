@@ -59,6 +59,7 @@ pub enum CapabilityWire {
     SpawnAgent,
     ControlAgent,
     ReadAgent,
+    ListAgents,
     ManageOrgMembers,
     ManageBilling,
     InvokeProcess,
