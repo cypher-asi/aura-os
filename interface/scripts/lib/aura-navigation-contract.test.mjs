@@ -11,6 +11,7 @@ test("listAuraNavigationApps extracts apps and agent-facing handles from the reg
   const apps = await listAuraNavigationApps();
   const agents = apps.find((app) => app.id === "agents");
   const aura3d = apps.find((app) => app.id === "aura3d");
+  const projects = apps.find((app) => app.id === "projects");
   const feedback = apps.find((app) => app.id === "feedback");
   const notes = apps.find((app) => app.id === "notes");
 
@@ -24,8 +25,14 @@ test("listAuraNavigationApps extracts apps and agent-facing handles from the reg
   assert.equal(aura3d?.sourceContext?.baseRouteKind, "placeholder");
   assert.ok(aura3d?.captureSeedProfile?.capabilities.includes("image-gallery-populated"));
   assert.match(aura3d?.captureSeedProfile?.preferredStableSurface || "", /Generated Image gallery/);
+  assert.equal(projects?.captureSeedProfile?.runtimeSeedSupport, "supported");
+  assert.ok(projects?.captureSeedProfile?.capabilities.includes("project-stats-populated"));
+  assert.ok(projects?.captureSeedProfile?.seededData.includes("project stats"));
   assert.equal(feedback?.captureSeedProfile?.runtimeSeedSupport, "supported");
   assert.ok(feedback?.captureSeedProfile?.capabilities.includes("feedback-board-populated"));
+  assert.ok(feedback?.sourceContext?.proofSignals.includes("feedback-thread-populated"));
+  assert.ok(feedback?.sourceContext?.contextAnchors.includes("feedback-thread-header"));
+  assert.ok(feedback?.sourceContext?.contextAnchors.includes("feedback-comment-list"));
   assert.ok(notes?.captureSeedProfile?.seededData.includes("markdown note content"));
 });
 

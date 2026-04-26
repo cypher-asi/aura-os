@@ -46,6 +46,7 @@ export function FeedbackItemCard({
       data-agent-item-title={item.title}
       data-agent-item-status={item.status}
       data-agent-item-category={item.category}
+      data-agent-context-anchor={isSelected ? "feedback-selected-item" : undefined}
     >
       <div className={styles.voteColumn}>
         <button
@@ -57,7 +58,11 @@ export function FeedbackItemCard({
         >
           <ChevronUp size={16} />
         </button>
-        <span className={styles.voteScore} aria-label="Vote score">
+        <span
+          className={styles.voteScore}
+          aria-label="Vote score"
+          data-agent-proof="feedback-vote-score-visible"
+        >
           {item.voteScore}
         </span>
         <button
@@ -85,7 +90,11 @@ export function FeedbackItemCard({
           <span className={styles.separator}>&middot;</span>
           <span className={styles.category}>{categoryLabel(item.category)}</span>
           <span className={styles.headerSpacer} />
-          <span className={styles.statusTag} data-status={item.status}>
+          <span
+            className={styles.statusTag}
+            data-status={item.status}
+            data-agent-proof="feedback-status-visible"
+          >
             {statusLabel(item.status)}
           </span>
         </span>
@@ -99,6 +108,7 @@ export function FeedbackItemCard({
           type="button"
           className={styles.commentPreview}
           aria-label={`Open ${item.commentCount} comment${item.commentCount !== 1 ? "s" : ""} for ${item.title || "feedback item"}`}
+          data-agent-proof="feedback-comment-count-visible"
           onClick={(event) => {
             event.stopPropagation();
             onSelect(item.id);

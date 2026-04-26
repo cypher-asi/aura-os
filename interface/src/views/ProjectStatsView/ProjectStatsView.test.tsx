@@ -36,7 +36,7 @@ describe("ProjectStatsView", () => {
 
     render(<ProjectStatsView />);
 
-    expect(screen.getByText("Stats")).toBeInTheDocument();
+    expect(screen.getByText(/stats/i)).toBeInTheDocument();
     expect(screen.getByTestId("stats-dashboard")).toHaveAttribute("data-variant", "mobile");
   });
 

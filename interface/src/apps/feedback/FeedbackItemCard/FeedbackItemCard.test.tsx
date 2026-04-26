@@ -90,7 +90,9 @@ describe("FeedbackItemCard", () => {
       />,
     );
 
-    const button = screen.getByLabelText("3 comments");
+    const button = screen.getByRole("button", {
+      name: "Open 3 comments for Keyboard shortcuts please",
+    });
     fireEvent.click(button);
     expect(onSelect).toHaveBeenCalledWith("fb-1");
   });

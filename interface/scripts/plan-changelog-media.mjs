@@ -7,6 +7,7 @@ import { pathToFileURL } from "node:url";
 import { buildAuraNavigationSitemap } from "./lib/aura-navigation-contract.mjs";
 import {
   buildMediaPlannerPrompt,
+  deriveVisualMediaOpportunities,
   extractChangelogMediaEntries,
   planChangelogMediaWithAnthropic,
 } from "./lib/changelog-media-planner.mjs";
@@ -113,6 +114,11 @@ export async function main(argv = process.argv.slice(2)) {
   const existingPublishedMediaCount = allChangelogEntries.length - changelogEntries.length;
   const sitemap = await buildAuraNavigationSitemap();
   const learnedKnowledge = loadChangelogMediaKnowledge();
+  const allowedEntryIds = new Set(changelogEntries.map((entry) => entry.entryId));
+  const visualOpportunities = deriveVisualMediaOpportunities(changelog, {
+    sitemap,
+    allowedEntryIds,
+  });
   const changedFiles = [...new Set([
     ...readChangedFiles(args),
     ...deriveChangedFilesFromChangelog(changelog),
@@ -134,6 +140,7 @@ export async function main(argv = process.argv.slice(2)) {
   fs.mkdirSync(outputDir, { recursive: true });
   writeJson(path.join(outputDir, "aura-navigation-sitemap.json"), sitemap);
   writeJson(path.join(outputDir, "changelog-media-knowledge.json"), learnedKnowledge);
+  writeJson(path.join(outputDir, "visual-media-opportunities.json"), visualOpportunities);
 
   if (changelogEntries.length === 0) {
     const emptyPlan = { schemaVersion: 1, generatedAt: new Date().toISOString(), candidates: [], skipped: [] };
@@ -151,6 +158,7 @@ export async function main(argv = process.argv.slice(2)) {
       candidateCount: 0,
       skippedCount: 0,
       forcedSkippedCount: 0,
+      visualOpportunityCount: visualOpportunities.length,
       existingPublishedMediaCount,
       coverage: { ok: true, missing: [], duplicate: [], unknown: [] },
       attemptCount: 0,
@@ -168,6 +176,7 @@ export async function main(argv = process.argv.slice(2)) {
       learnedKnowledge,
       commitLog,
       changedFiles,
+      visualOpportunities,
       maxCandidates,
     });
     fs.writeFileSync(path.join(outputDir, "anthropic-media-planner-prompt.md"), `${prompt}\n`, "utf8");
@@ -179,6 +188,7 @@ export async function main(argv = process.argv.slice(2)) {
       entryCount: changelogEntries.length,
       existingPublishedMediaCount,
       changedFileCount: changedFiles.length,
+      visualOpportunityCount: visualOpportunities.length,
       sitemapAppCount: sitemap.coverage.appCount,
       sitemapGapCount: sitemap.coverage.appGaps.length,
       outputDir,
@@ -196,6 +206,7 @@ export async function main(argv = process.argv.slice(2)) {
     learnedKnowledge,
     commitLog,
     changedFiles,
+    visualOpportunities,
     maxCandidates,
     entryChunkSize,
   });
@@ -213,6 +224,7 @@ export async function main(argv = process.argv.slice(2)) {
     candidateCount: result.plan.candidates.length,
     skippedCount: result.plan.skipped.length,
     forcedSkippedCount: result.forcedSkipped?.length || 0,
+    visualOpportunityCount: visualOpportunities.length,
     existingPublishedMediaCount,
     coverage: result.coverage,
     attemptCount: result.attempts.length,

@@ -60,6 +60,7 @@ export function FeedbackSidekickPanel() {
       className={styles.panel}
       data-demo-shot="feedback-sidekick-panel"
       data-agent-surface="feedback-thread"
+      data-agent-context="feedback-thread"
       data-agent-item-id={item.id}
       data-agent-item-title={item.title}
       aria-label={`Feedback thread for ${item.title}`}
@@ -69,6 +70,8 @@ export function FeedbackSidekickPanel() {
           <div
             data-demo-shot="feedback-thread-comments"
             data-agent-list="feedback-comments"
+            data-agent-proof={comments.length > 0 ? "feedback-thread-populated" : undefined}
+            data-agent-context-anchor="feedback-comment-list"
           >
             {comments.length === 0 ? (
               <EmptyState>No comments yet</EmptyState>

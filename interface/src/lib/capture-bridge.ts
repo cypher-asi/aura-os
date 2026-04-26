@@ -17,6 +17,8 @@ import type { FeedbackComment, FeedbackItem } from "../apps/feedback/types";
 import type { DisplaySessionEvent } from "../shared/types/stream";
 import { emptyAgentPermissions } from "../shared/types/permissions-wire";
 import { sanitizeRestorePath } from "../utils/last-app-path";
+import type { ProjectStatsData } from "../shared/api/projects";
+import { writeCaptureDemoProjectStats } from "./capture-demo-stats";
 
 const DESKTOP_WINDOWS_STORAGE_KEY = "aura:desktopWindows";
 const DEMO_PROJECT_ID = "22222222-2222-4222-8222-222222222222";
@@ -134,11 +136,19 @@ export function resolveAuraCaptureTargetAppId(request: AuraCaptureResetRequest =
 
 export function resolveAuraCaptureTargetPath(request: AuraCaptureResetRequest = {}): string | null {
   const explicitPath = sanitizeRestorePath(request.targetPath);
+  const targetAppId = resolveAuraCaptureTargetAppId(request);
+  if (targetAppId === "projects" && (!explicitPath || explicitPath === "/projects")) {
+    const text = seedText(request.seedPlan, targetAppId);
+    if (/\b(?:project-stats-populated|stats?|metrics?|completion)\b/i.test(text)) {
+      return `/projects/${DEMO_PROJECT_ID}/stats`;
+    }
+    return `/projects/${DEMO_PROJECT_ID}`;
+  }
+
   if (explicitPath) {
     return explicitPath;
   }
 
-  const targetAppId = resolveAuraCaptureTargetAppId(request);
   if (!targetAppId) {
     return null;
   }
@@ -383,6 +393,28 @@ function demoProject(): Project {
   };
 }
 
+function demoProjectStats(): ProjectStatsData {
+  return {
+    total_tasks: 18,
+    pending_tasks: 3,
+    ready_tasks: 5,
+    in_progress_tasks: 2,
+    blocked_tasks: 1,
+    done_tasks: 7,
+    failed_tasks: 0,
+    completion_percentage: 62,
+    total_tokens: 186_400,
+    total_events: 128,
+    total_agents: 4,
+    total_sessions: 12,
+    total_time_seconds: 14_820,
+    lines_changed: 3_280,
+    total_specs: 6,
+    contributors: 5,
+    estimated_cost_usd: 18.42,
+  };
+}
+
 function demoProjectAgent(modelId = AURA_MANAGED_CHAT_MODELS[0]?.id ?? "default"): AgentInstance {
   const now = new Date().toISOString();
   return {
@@ -419,6 +451,7 @@ async function seedDemoProject(): Promise<void> {
   const { useProjectsListStore } = await import("../stores/projects-list-store");
   const project = demoProject();
   const agent = demoProjectAgent();
+  writeCaptureDemoProjectStats(project.project_id, demoProjectStats());
   useProjectsListStore.setState((state) => ({
     projects: [
       project,
@@ -452,6 +485,10 @@ function shouldApplyTasksSeed(seedPlan: AuraCaptureSeedPlan | null | undefined, 
 
 function shouldApplyProcessSeed(seedPlan: AuraCaptureSeedPlan | null | undefined, targetAppId: string | null): boolean {
   return /\b(?:app:process|processes?|workflow|nodes?|automation|graph|run history|run-history)\b/i.test(seedText(seedPlan, targetAppId));
+}
+
+function shouldApplyProjectsSeed(seedPlan: AuraCaptureSeedPlan | null | undefined, targetAppId: string | null): boolean {
+  return /\b(?:app:projects|project-selected|project-summary-populated|project-stats-populated|project workspace|project stats|projects?)\b/i.test(seedText(seedPlan, targetAppId));
 }
 
 function shouldApplyFeedSeed(seedPlan: AuraCaptureSeedPlan | null | undefined, targetAppId: string | null): boolean {
@@ -1089,6 +1126,16 @@ export async function applyAuraCaptureSeedPlan(
   if (capabilities.includes("project-selected") || shouldApplyAura3DSeed(seedPlan, targetAppId)) {
     await seedDemoProject();
     applied.push("capture-demo-project");
+  }
+
+  if (shouldApplyProjectsSeed(seedPlan, targetAppId)) {
+    await seedDemoProject();
+    if (capabilities.includes("project-stats-populated")) {
+      applied.push("project-demo-stats");
+    }
+    if (capabilities.includes("project-summary-populated")) {
+      applied.push("project-demo-summary");
+    }
   }
 
   if (shouldApplyFeedbackSeed(seedPlan, targetAppId)) {

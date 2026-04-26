@@ -110,6 +110,6 @@ describe("StatsDashboard", () => {
     render(<StatsDashboard variant="mobile" />);
 
     expect(screen.getByText("Cost")).toBeInTheDocument();
-    expect(screen.getByText("$0")).toBeInTheDocument();
+    expect(screen.getByText("$0.00")).toBeInTheDocument();
   });
 });

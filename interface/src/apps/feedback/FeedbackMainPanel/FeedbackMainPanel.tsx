@@ -50,10 +50,12 @@ export function FeedbackMainPanel() {
         className={styles.container}
         data-demo-shot="feedback-main-panel"
         data-agent-surface="feedback-board"
+        data-agent-context="feedback-board"
       >
         <div
           className={styles.feedHeader}
           data-agent-section="feedback-actions"
+          data-agent-context-anchor="feedback-board-toolbar"
         >
           <button
             type="button"
@@ -100,6 +102,7 @@ export function FeedbackMainPanel() {
               data-demo-shot="feedback-board-list"
               data-agent-list="feedback-items"
               data-agent-proof="feedback-board-populated"
+              data-agent-context-anchor="feedback-board-list"
             >
               {sortedItems.map((item) => (
                 <FeedbackItemCard

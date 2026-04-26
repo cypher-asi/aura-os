@@ -5,6 +5,7 @@ import { useStreamStore } from "../../hooks/stream/store";
 import { useEventStore } from "../../stores/event-store/index";
 import { EventType } from "../../shared/types/aura-events";
 import type { ProjectStatsData } from "../../shared/api/projects";
+import { readCaptureDemoProjectStats } from "../../lib/capture-demo-stats";
 
 const REALTIME_REFETCH_DEBOUNCE_MS = 300;
 
@@ -83,6 +84,13 @@ export function useStatsDashboardData(): StatsDashboardData {
 
     if (!projectId) {
       setStats(null);
+      setLoading(false);
+      return;
+    }
+
+    const captureStats = readCaptureDemoProjectStats(projectId);
+    if (captureStats) {
+      setStats(normalizeProjectStats(captureStats));
       setLoading(false);
       return;
     }

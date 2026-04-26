@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   buildMediaPlannerPrompt,
+  deriveVisualMediaOpportunities,
   extractChangelogMediaEntries,
   normalizeMediaPlan,
   parseAnthropicMediaPlanResponse,
@@ -63,18 +64,115 @@ test("buildMediaPlannerPrompt keeps Browser Use behind a conservative Anthropic 
   assert.match(prompt, /isolated widget/);
   assert.match(prompt, /Browser Use should receive fewer, better candidates/);
   assert.match(prompt, /provider pricing, model catalog, routing, config, or API plumbing/);
+  assert.match(prompt, /Visual opportunity index from raw commits and changelog bullets/);
+  assert.match(prompt, /concrete user-visible screen, control, picker, sort\/filter behavior/);
+  assert.match(prompt, /mere mention of an app name/);
   assert.match(prompt, /do not target \/desktop/);
   assert.match(prompt, /populated, visually rich desktop app route/);
   assert.match(prompt, /image-gallery-populated/);
   assert.match(prompt, /do not open the 3D Model tab just because the app is called AURA 3D/);
   assert.match(prompt, /transient interaction states/);
   assert.match(prompt, /context menus/);
-  assert.match(prompt, /confidence is at least 0\.70/);
+  assert.match(prompt, /down to 0\.60/);
   assert.match(prompt, /publicCaption/);
   assert.match(prompt, /Curated changelog media lessons/);
   assert.match(prompt, /agents\.chat\.model_picker/);
   assert.match(prompt, /aura3d\.image_to_model_viewer/);
   assert.doesNotMatch(prompt, /Browserbase|Stagehand|Playwright/);
+});
+
+test("deriveVisualMediaOpportunities finds visual sub-features inside broad changelog entries", () => {
+  const changelog = {
+    rawCommits: [
+      {
+        sha: "feed1234567890",
+        subject: "feat(feedback): add feedback app board",
+        files: [
+          "interface/src/apps/feedback/FeedbackMainPanel/FeedbackMainPanel.tsx",
+          "interface/src/apps/feedback/FeedbackItemCard/FeedbackItemCard.tsx",
+        ],
+      },
+      {
+        sha: "stats1234567890",
+        subject: "feat(projects): show project stats dashboard",
+        files: ["interface/src/views/ProjectStatsView/ProjectStatsView.tsx"],
+      },
+      {
+        sha: "infra1234567890",
+        subject: "ci: update release workflow",
+        files: [".github/workflows/release-nightly.yml"],
+      },
+    ],
+    rendered: {
+      entries: [
+        {
+          batch_id: "entry-product",
+          title: "Daily product updates",
+          items: [
+            {
+              text: "Feedback app now tracks votes and comments.",
+              commit_shas: ["feed1234"],
+              changed_files: ["interface/src/apps/feedback/FeedbackMainPanel/FeedbackMainPanel.tsx"],
+            },
+            {
+              text: "Project stats dashboard shows delivery progress.",
+              commit_shas: ["stats123"],
+              changed_files: ["interface/src/views/ProjectStatsView/ProjectStatsView.tsx"],
+            },
+          ],
+        },
+        {
+          batch_id: "entry-infra",
+          title: "Release pipeline hardened",
+          items: [
+            {
+              text: "Nightly workflow got safer defaults.",
+              commit_shas: ["infra123"],
+              changed_files: [".github/workflows/release-nightly.yml"],
+            },
+          ],
+        },
+      ],
+    },
+  };
+
+  const opportunities = deriveVisualMediaOpportunities(changelog, {
+    sitemap: {
+      apps: [
+        {
+          id: "feedback",
+          label: "Feedback",
+          path: "/feedback",
+          keywords: ["feedback", "board", "votes", "comments"],
+          captureSeedProfile: {
+            runtimeSeedSupport: "supported",
+            preferredStableSurface: "feedback board",
+            capabilities: ["feedback-board-populated"],
+          },
+        },
+        {
+          id: "projects",
+          label: "Projects",
+          path: "/projects",
+          keywords: ["project", "stats", "dashboard"],
+          captureSeedProfile: {
+            runtimeSeedSupport: "supported",
+            preferredStableSurface: "project stats dashboard",
+            capabilities: ["project-selected", "stats-dashboard-populated"],
+          },
+        },
+      ],
+    },
+    allowedEntryIds: new Set(["entry-product"]),
+  });
+
+  assert.equal(opportunities.length, 2);
+  assert.deepEqual([...new Set(opportunities.map((opportunity) => opportunity.entryId))], ["entry-product"]);
+  assert.ok(opportunities.some((opportunity) => opportunity.commitSha === "feed12345678"));
+  assert.ok(opportunities.some((opportunity) => opportunity.likelyApps[0]?.id === "feedback"));
+  assert.ok(opportunities.some((opportunity) => opportunity.likelyApps[0]?.id === "projects"));
+  assert.ok(opportunities.every((opportunity) => opportunity.changedFiles.every((filePath) => filePath.startsWith("interface/src/"))));
+  assert.equal(opportunities.some((opportunity) => opportunity.entryId === "entry-infra"), false);
 });
 
 test("normalizeMediaPlan keeps only high-confidence capture candidates and preserves coverage under the cap", () => {
@@ -153,7 +251,7 @@ test("normalizeMediaPlan keeps only high-confidence capture candidates and prese
   assert.equal(plan.skipped[0].category, "mobile-only");
   assert.ok(plan.skipped.some((entry) => entry.entryId === "second-strong" && entry.category === "candidate-limit"));
   assert.ok(plan.skipped.some((entry) => entry.entryId === "low" && entry.category === "too-ambiguous"));
-  assert.ok(plan.skipped.some((entry) => entry.entryId === "borderline" && entry.category === "too-ambiguous"));
+  assert.ok(plan.skipped.some((entry) => entry.entryId === "borderline" && entry.category === "candidate-limit"));
   assert.ok(plan.skipped.some((entry) => entry.entryId === "missing-target" && entry.reason.includes("sitemap-backed")));
 });
 
@@ -193,6 +291,30 @@ test("normalizeMediaPlan routes shell chrome captures through a populated app", 
   assert.ok(plan.candidates[0].seedPlan.capabilities.includes("image-gallery-populated"));
   assert.ok(plan.candidates[0].seedPlan.avoid.includes("empty /desktop launcher shell"));
   assert.ok(plan.candidates[0].seedPlan.avoid.some((entry) => entry.includes("model tab")));
+});
+
+test("normalizeMediaPlan does not route non-shell proofs because the reason mentions shell alternatives", () => {
+  const plan = normalizeMediaPlan({
+    candidates: [
+      {
+        entryId: "chat-banner",
+        title: "Dropped-stream recovery",
+        shouldCapture: true,
+        reason: "The chat interrupted banner is the chosen proof; taskbar styling was rejected as too small.",
+        targetAppId: "agents",
+        targetPath: "/agents",
+        proofGoal: "Show the Chat stream interrupted banner in an agent chat transcript.",
+        publicCaption: "Aura now surfaces interrupted chat streams directly in the conversation.",
+        confidence: 0.8,
+        changedFiles: ["interface/src/apps/agents/AgentChatView.tsx"],
+      },
+    ],
+    skipped: [],
+  }, { maxCandidates: 1 });
+
+  assert.equal(plan.candidates.length, 1);
+  assert.equal(plan.candidates[0].targetAppId, "agents");
+  assert.equal(plan.candidates[0].targetPath, "/agents");
 });
 
 test("validateMediaPlanCoverage catches planner omissions and duplicates", () => {
@@ -422,6 +544,72 @@ test("planChangelogMediaWithAnthropic safely skips entries omitted after retries
   assert.equal(result.forcedSkipped.length, 1);
   assert.equal(result.forcedSkipped[0].entryId, "entry-2");
   assert.equal(result.plan.skipped.some((entry) => entry.entryId === "entry-2"), true);
+});
+
+test("planChangelogMediaWithAnthropic drops hallucinated entry IDs before coverage decisions", async () => {
+  const result = await planChangelogMediaWithAnthropic({
+    apiKey: "test-key",
+    model: "claude-opus-4-7",
+    changelogEntries: [
+      { entryId: "entry-1", title: "Feedback sorting" },
+      { entryId: "entry-2", title: "Backend fix" },
+    ],
+    sitemap: { apps: [{ id: "feedback", path: "/feedback" }] },
+    fetchImpl: async () => ({
+      ok: true,
+      async json() {
+        return {
+          content: [
+            {
+              type: "tool_use",
+              name: "submit_changelog_media_plan",
+              input: {
+                candidates: [
+                  {
+                    entryId: "entry-1",
+                    title: "Feedback sorting",
+                    shouldCapture: true,
+                    reason: "Visible feedback sorting control.",
+                    targetAppId: "feedback",
+                    targetPath: "/feedback",
+                    proofGoal: "Show the feedback board sorted by priority.",
+                    publicCaption: "Feedback can now be sorted by priority.",
+                    confidence: 0.84,
+                    changedFiles: ["interface/src/apps/feedback/FeedbackMainPanel/FeedbackMainPanel.tsx"],
+                  },
+                  {
+                    entryId: "entry-1-dup",
+                    title: "Feedback duplicate",
+                    shouldCapture: true,
+                    reason: "Second proof for the same entry.",
+                    targetAppId: "feedback",
+                    targetPath: "/feedback",
+                    proofGoal: "Show another feedback proof.",
+                    publicCaption: "Another feedback screenshot.",
+                    confidence: 0.8,
+                    changedFiles: ["interface/src/apps/feedback/FeedbackMainPanel/FeedbackMainPanel.tsx"],
+                  },
+                ],
+                skipped: [
+                  {
+                    entryId: "entry-2",
+                    title: "Backend fix",
+                    reason: "Backend-only change.",
+                    category: "backend-only",
+                  },
+                ],
+              },
+            },
+          ],
+        };
+      },
+    }),
+  });
+
+  assert.equal(result.coverage.ok, true);
+  assert.deepEqual(result.coverage.unknown, []);
+  assert.deepEqual(result.plan.candidates.map((candidate) => candidate.entryId), ["entry-1"]);
+  assert.equal(result.plan.skipped.some((entry) => entry.entryId === "entry-1-dup"), false);
 });
 
 test("planChangelogMediaWithAnthropic rescues omitted entries with a focused follow-up pass", async () => {
