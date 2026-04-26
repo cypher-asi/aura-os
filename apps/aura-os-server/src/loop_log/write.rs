@@ -9,7 +9,7 @@ use chrono::Utc;
 use serde::Serialize;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
-use tracing::debug;
+use tracing::{debug, warn};
 
 use super::{
     classify_debug_file, LoopLogWriter, RunCounters, RunMetadata, RunState, RunStatus,
@@ -98,7 +98,13 @@ impl LoopLogWriter {
                 if let Some(sid) = spec_id {
                     merge_spec_id(&mut run.metadata.spec_ids, sid);
                 }
-                let _ = write_metadata(&run.run_dir, &run.metadata).await;
+                if let Err(error) = write_metadata(&run.run_dir, &run.metadata).await {
+                    warn!(
+                        path = %run.run_dir.display(),
+                        %error,
+                        "loop_log: failed to update task metadata"
+                    );
+                }
             }
         }
     }
@@ -144,7 +150,13 @@ impl LoopLogWriter {
                         }
                     }
                 }
-                let _ = write_metadata(&run.run_dir, &run.metadata).await;
+                if let Err(error) = write_metadata(&run.run_dir, &run.metadata).await {
+                    warn!(
+                        path = %run.run_dir.display(),
+                        %error,
+                        "loop_log: failed to update run metadata"
+                    );
+                }
                 Some(run.run_dir.clone())
             } else {
                 None

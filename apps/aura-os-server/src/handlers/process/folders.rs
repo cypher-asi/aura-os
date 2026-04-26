@@ -116,7 +116,10 @@ async fn clear_folder_from_processes(
                 folder_id: Some(None),
                 ..Default::default()
             };
-            let _ = client.update_process(&p.id, jwt, &update).await;
+            client
+                .update_process(&p.id, jwt, &update)
+                .await
+                .map_err(map_storage_error)?;
         }
     }
     Ok(())

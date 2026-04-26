@@ -45,10 +45,13 @@ pub(crate) async fn spawn_terminal(
         Err(err) => return err.into_response(),
     };
 
-    match state
-        .terminal_manager
-        .spawn_with_project(cols, rows, body.cwd, project_id)
-    {
+    let terminal_manager = state.terminal_manager.clone();
+    let spawn_result = tokio::task::spawn_blocking(move || {
+        terminal_manager.spawn_with_project(cols, rows, body.cwd, project_id)
+    })
+    .await;
+
+    match flatten_terminal_blocking_result(spawn_result) {
         Ok(info) => {
             let resp = SpawnResponse {
                 id: info.id.to_string(),
@@ -128,7 +131,10 @@ pub(crate) async fn kill_terminal(
         }
     };
 
-    match state.terminal_manager.kill(tid) {
+    let terminal_manager = state.terminal_manager.clone();
+    let kill_result = tokio::task::spawn_blocking(move || terminal_manager.kill(tid)).await;
+
+    match flatten_terminal_blocking_result(kill_result) {
         Ok(()) => axum::http::StatusCode::NO_CONTENT.into_response(),
         // Deleting an already-gone terminal should be idempotent.
         // The WS shutdown path already kills the PTY, so a follow-up DELETE
@@ -161,13 +167,49 @@ pub(crate) async fn ws_terminal(
     ws.on_upgrade(move |socket| handle_terminal_ws(socket, state, tid))
 }
 
+fn flatten_terminal_blocking_result<T>(
+    result: Result<Result<T, String>, tokio::task::JoinError>,
+) -> Result<T, String> {
+    result.map_err(|error| format!("terminal worker failed: {error}"))?
+}
+
+async fn write_terminal_input(
+    state: &AppState,
+    id: TerminalId,
+    bytes: Vec<u8>,
+) -> Result<(), String> {
+    let terminal_manager = state.terminal_manager.clone();
+    flatten_terminal_blocking_result(
+        tokio::task::spawn_blocking(move || terminal_manager.write_input(id, &bytes)).await,
+    )
+}
+
+async fn resize_terminal(
+    state: &AppState,
+    id: TerminalId,
+    cols: u16,
+    rows: u16,
+) -> Result<(), String> {
+    let terminal_manager = state.terminal_manager.clone();
+    flatten_terminal_blocking_result(
+        tokio::task::spawn_blocking(move || terminal_manager.resize(id, cols, rows)).await,
+    )
+}
+
+async fn kill_terminal_session(state: &AppState, id: TerminalId) -> Result<(), String> {
+    let terminal_manager = state.terminal_manager.clone();
+    flatten_terminal_blocking_result(
+        tokio::task::spawn_blocking(move || terminal_manager.kill(id)).await,
+    )
+}
+
 /// Returns true if the connection should close.
-fn handle_ws_client_message(state: &AppState, id: TerminalId, msg: WsClientMsg) -> bool {
+async fn handle_ws_client_message(state: &AppState, id: TerminalId, msg: WsClientMsg) -> bool {
     match msg.msg_type.as_str() {
         "input" => {
             if let Some(data) = msg.data {
                 if let Ok(bytes) = B64.decode(&data) {
-                    if let Err(e) = state.terminal_manager.write_input(id, &bytes) {
+                    if let Err(e) = write_terminal_input(state, id, bytes).await {
                         warn!(%id, "Write to PTY failed: {e}");
                         return true;
                     }
@@ -176,7 +218,7 @@ fn handle_ws_client_message(state: &AppState, id: TerminalId, msg: WsClientMsg) 
         }
         "resize" => {
             if let (Some(cols), Some(rows)) = (msg.cols, msg.rows) {
-                if let Err(e) = state.terminal_manager.resize(id, cols, rows) {
+                if let Err(e) = resize_terminal(state, id, cols, rows).await {
                     warn!(%id, "Resize PTY failed: {e}");
                 }
             }
@@ -229,7 +271,7 @@ async fn handle_terminal_ws(mut socket: WebSocket, state: AppState, id: Terminal
                 match ws_msg {
                     Some(Ok(Message::Text(text))) => {
                         if let Ok(msg) = serde_json::from_str::<WsClientMsg>(&text) {
-                            if handle_ws_client_message(&state, id, msg) { break; }
+                            if handle_ws_client_message(&state, id, msg).await { break; }
                         }
                     }
                     Some(Ok(Message::Close(_))) | None => break,
@@ -239,7 +281,7 @@ async fn handle_terminal_ws(mut socket: WebSocket, state: AppState, id: Terminal
         }
     }
 
-    let _ = state.terminal_manager.kill(id);
+    let _ = kill_terminal_session(&state, id).await;
     info!(%id, "Terminal WebSocket disconnected");
 }
 
