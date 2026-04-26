@@ -6,7 +6,8 @@ use tokio::time::timeout;
 
 use aura_os_core::{Agent, AgentId, OrgIntegration};
 use aura_os_harness::{
-    HarnessInbound, HarnessOutbound, SessionConfig, SessionProviderConfig, SessionUsage, UserMessage,
+    HarnessInbound, HarnessOutbound, SessionConfig, SessionProviderConfig, SessionUsage,
+    UserMessage,
 };
 
 use crate::dto::AgentRuntimeTestResponse;
@@ -49,7 +50,8 @@ pub(crate) async fn test_agent_runtime(
     let integration = resolve_integration(&state, &agent, &jwt).await?;
     let model = effective_model(&agent, integration.as_ref(), None);
 
-    let outcome = run_harness_test(&state, &agent, &jwt, model.clone(), integration.as_ref()).await?;
+    let outcome =
+        run_harness_test(&state, &agent, &jwt, model.clone(), integration.as_ref()).await?;
 
     Ok(Json(AgentRuntimeTestResponse {
         ok: true,

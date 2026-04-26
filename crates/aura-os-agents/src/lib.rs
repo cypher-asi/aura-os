@@ -691,11 +691,14 @@ impl AgentInstanceService {
             .cloned()
             .ok_or(AgentError::NotFound)?;
         let agent_id_str = template.agent_id.to_string();
-        let agent = self.resolve_agent_async(&agent_id_str).await.ok_or_else(|| {
-            AgentError::Parse(
-                "could not resolve agent template for default loop instance".into(),
-            )
-        })?;
+        let agent = self
+            .resolve_agent_async(&agent_id_str)
+            .await
+            .ok_or_else(|| {
+                AgentError::Parse(
+                    "could not resolve agent template for default loop instance".into(),
+                )
+            })?;
         self.create_instance_from_agent_with_role(project_id, &agent, AgentInstanceRole::Loop)
             .await
     }
@@ -720,11 +723,12 @@ impl AgentInstanceService {
         template: &AgentInstance,
     ) -> Result<AgentInstance, AgentError> {
         let agent_id_str = template.agent_id.to_string();
-        let agent = self.resolve_agent_async(&agent_id_str).await.ok_or_else(|| {
-            AgentError::Parse(
-                "could not resolve agent template for ephemeral executor".into(),
-            )
-        })?;
+        let agent = self
+            .resolve_agent_async(&agent_id_str)
+            .await
+            .ok_or_else(|| {
+                AgentError::Parse("could not resolve agent template for ephemeral executor".into())
+            })?;
         self.create_instance_from_agent_with_role(project_id, &agent, AgentInstanceRole::Executor)
             .await
     }
@@ -1020,9 +1024,7 @@ fn synthesize_agent_from_project_agent(
 ///
 /// Returns `None` when the slice is empty so callers can map to
 /// `AgentError::NotFound` themselves.
-pub fn pick_run_template_from_instances(
-    instances: &[AgentInstance],
-) -> Option<&AgentInstance> {
+pub fn pick_run_template_from_instances(instances: &[AgentInstance]) -> Option<&AgentInstance> {
     instances
         .iter()
         .find(|i| i.instance_role == AgentInstanceRole::Loop)
@@ -1051,9 +1053,7 @@ pub fn pick_run_template_from_instances(
 /// Deliberately excludes existing `Executor` rows because those are
 /// per-task and would tie the project's persistent loop binding to a
 /// run that's already on its way to deletion.
-pub fn pick_loop_template_from_instances(
-    instances: &[AgentInstance],
-) -> Option<&AgentInstance> {
+pub fn pick_loop_template_from_instances(instances: &[AgentInstance]) -> Option<&AgentInstance> {
     instances
         .iter()
         .find(|i| i.instance_role == AgentInstanceRole::Chat)
@@ -1376,14 +1376,13 @@ mod tests {
 
         // Loop wins when present.
         let all = [chat.clone(), loop_inst.clone(), executor.clone()];
-        let pick = pick_run_template_from_instances(&all)
-            .expect("at least one instance available");
+        let pick = pick_run_template_from_instances(&all).expect("at least one instance available");
         assert_eq!(pick.agent_instance_id, loop_inst.agent_instance_id);
 
         // Chat wins when no Loop exists.
         let chat_and_exec = [chat.clone(), executor.clone()];
-        let pick = pick_run_template_from_instances(&chat_and_exec)
-            .expect("chat fallback available");
+        let pick =
+            pick_run_template_from_instances(&chat_and_exec).expect("chat fallback available");
         assert_eq!(pick.agent_instance_id, chat.agent_instance_id);
 
         // Falls all the way through to the first instance when only
@@ -1391,8 +1390,8 @@ mod tests {
         // template than to 404 the run.
         let only_executor = make_instance_with_role(AgentInstanceRole::Executor);
         let executor_only = [only_executor.clone()];
-        let pick = pick_run_template_from_instances(&executor_only)
-            .expect("executor-only fallback");
+        let pick =
+            pick_run_template_from_instances(&executor_only).expect("executor-only fallback");
         assert_eq!(pick.agent_instance_id, only_executor.agent_instance_id);
     }
 
