@@ -32,7 +32,7 @@ use super::persist_task::spawn_chat_persist_task;
 use super::turn_slot::{acquire_turn_slot, spawn_turn_slot_release, TurnSlotGuard};
 use super::types::{SseResponse, SseStream};
 
-pub(crate) fn harness_broadcast_to_sse(
+pub fn harness_broadcast_to_sse(
     rx: tokio::sync::broadcast::Receiver<HarnessOutbound>,
 ) -> impl futures_core::Stream<Item = Result<Event, Infallible>> + Send {
     stream::unfold((rx, false), |(mut rx, done)| async move {
@@ -469,13 +469,13 @@ mod tests {
     use std::time::Duration;
 
     use aura_os_harness::{
-        AssistantMessageEnd, FilesChanged, HarnessOutbound, SessionUsage, TextDelta,
+        AssistantMessageEnd, ErrorMsg, FilesChanged, HarnessOutbound, SessionUsage, TextDelta,
     };
     use futures_util::StreamExt;
     use tokio::sync::{broadcast, Mutex};
 
     use super::super::turn_slot::acquire_turn_slot;
-    use super::build_sse_stream;
+    use super::{build_sse_stream, harness_broadcast_to_sse};
 
     fn end_event() -> HarnessOutbound {
         HarnessOutbound::AssistantMessageEnd(AssistantMessageEnd {
@@ -664,6 +664,53 @@ mod tests {
             counter.load(Ordering::Acquire),
             0,
             "both guards dropped should leave the counter at zero",
+        );
+    }
+
+    /// Phase-5 regression guard for the in-stream busy remap.
+    ///
+    /// `harness_broadcast_to_sse` must intercept any
+    /// `HarnessOutbound::Error { code: "turn_in_progress", … }` it
+    /// observes mid-stream and surface a clean `agent_busy` SSE
+    /// `error` event, so the frontend never has to string-match the
+    /// raw harness wording. Phase 2 added the
+    /// `remap_harness_error_to_sse` helper and the in-bridge call
+    /// site; this test pins the end-to-end behavior of the bridge
+    /// itself: feed a raw `turn_in_progress` error in, get a
+    /// canonical `agent_busy` event out and the stream closes.
+    #[tokio::test]
+    async fn harness_turn_in_progress_remapped_to_agent_busy_sse_event() {
+        let (tx, rx) = broadcast::channel::<HarnessOutbound>(8);
+        tx.send(HarnessOutbound::Error(ErrorMsg {
+            code: "turn_in_progress".into(),
+            message: "A turn is currently in progress; send cancel first".into(),
+            recoverable: true,
+        }))
+        .expect("seed turn_in_progress error");
+        drop(tx);
+
+        let stream = harness_broadcast_to_sse(rx);
+        tokio::pin!(stream);
+        let first = tokio::time::timeout(Duration::from_secs(1), stream.next())
+            .await
+            .expect("event in time")
+            .expect("first event")
+            .expect("ok");
+        let body = dump(&first);
+        assert!(
+            body.contains("agent_busy"),
+            "remapped event must surface the structured `agent_busy` code, got: {body}"
+        );
+        assert!(
+            !body.to_ascii_lowercase().contains("turn is currently in progress")
+                && !body.contains("turn_in_progress"),
+            "remapped event must NOT leak the raw harness wording, got: {body}"
+        );
+
+        let next = tokio::time::timeout(Duration::from_millis(100), stream.next()).await;
+        assert!(
+            matches!(next, Ok(None)),
+            "stream must close after the remapped error event, got: {next:?}"
         );
     }
 }

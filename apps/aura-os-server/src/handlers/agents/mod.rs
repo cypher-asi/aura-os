@@ -40,7 +40,9 @@ pub mod conversions_pub {
 }
 pub mod chat_pub {
     pub use super::chat::{
+        acquire_turn_slot, evaluate_partition_busy, harness_broadcast_to_sse,
         load_current_session_events_for_agent, load_current_session_events_for_instance,
-        session_events_to_agent_history, session_events_to_conversation_history,
+        session_events_to_agent_history, session_events_to_conversation_history, BusyMatch,
+        TurnSlotAcquired, TurnSlotGuard, TurnSlotQueueFull, MAX_PENDING_TURNS,
     };
 }

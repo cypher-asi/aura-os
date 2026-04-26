@@ -69,6 +69,7 @@ reqwest = { workspace = true }
 tower = { version = "0.5", features = ["util"] }
 uuid = { workspace = true }
 aura-os-storage = { path = "../../crates/aura-os-storage", features = ["test-utils"] }
+aura-os-harness = { path = "../../crates/aura-os-harness", features = ["test-support"] }
 
 [lints.clippy]
 all = "warn"

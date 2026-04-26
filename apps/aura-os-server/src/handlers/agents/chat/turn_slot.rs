@@ -35,31 +35,31 @@ use tokio::sync::{broadcast, Mutex, OwnedMutexGuard};
 /// Maximum simultaneous "in-flight + queued" turns on one partition.
 /// One actively holding the lock plus at most one waiter; a third
 /// concurrent acquirer is rejected up front.
-pub(super) const MAX_PENDING_TURNS: usize = 2;
+pub const MAX_PENDING_TURNS: usize = 2;
 
 /// Returned by [`acquire_turn_slot`] when the partition already has
 /// one turn in flight and one queued. The orchestrator translates
 /// this into `ApiError::agent_busy` so callers see a structured
 /// 409 instead of stacking unbounded behind the mutex.
 #[derive(Debug)]
-pub(super) struct TurnSlotQueueFull;
+pub struct TurnSlotQueueFull;
 
 /// Successful reservation of the per-partition turn slot.
-pub(super) struct TurnSlotAcquired {
+pub struct TurnSlotAcquired {
     /// RAII guard that releases the slot on drop.
-    pub(super) guard: TurnSlotGuard,
+    pub guard: TurnSlotGuard,
     /// `true` when the caller had to wait for an in-flight turn to
     /// finish before the lock became available; the orchestrator
     /// uses this to prepend the synthetic `progress: queued` SSE
     /// event so the UI can render "Queued behind current turn".
-    pub(super) queued: bool,
+    pub queued: bool,
 }
 
 /// Owns the partition mutex lock plus a strong reference to the
 /// pending counter. Drop releases the mutex first so the next
 /// waiter can proceed, then decrements the counter so a follow-on
 /// `acquire_turn_slot` observes the correct queue depth.
-pub(super) struct TurnSlotGuard {
+pub struct TurnSlotGuard {
     inner: Option<OwnedMutexGuard<()>>,
     counter: Arc<AtomicUsize>,
 }
@@ -80,7 +80,7 @@ impl Drop for TurnSlotGuard {
 ///    `queued = false` and the guard is held without ever yielding.
 ///    On failure another turn is in flight; we await `lock_owned`
 ///    and report `queued = true`.
-pub(super) async fn acquire_turn_slot(
+pub async fn acquire_turn_slot(
     slot: Arc<Mutex<()>>,
     counter: Arc<AtomicUsize>,
 ) -> Result<TurnSlotAcquired, TurnSlotQueueFull> {
@@ -112,7 +112,7 @@ pub(super) async fn acquire_turn_slot(
 /// terminal boundary, and the broadcast `Closed` arm handles the
 /// catastrophic case where the harness dropped the channel before
 /// emitting one.
-pub(super) fn spawn_turn_slot_release(
+pub(crate) fn spawn_turn_slot_release(
     guard: TurnSlotGuard,
     mut events_rx: broadcast::Receiver<HarnessOutbound>,
 ) {

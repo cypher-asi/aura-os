@@ -33,7 +33,12 @@ pub(crate) use events::{list_agent_events, list_agent_events_paginated, list_eve
 pub(crate) use instance_route::send_event_stream;
 pub(crate) use setup::{reset_agent_session, reset_instance_session};
 
+pub use busy::{evaluate_partition_busy, BusyMatch};
 pub use compaction::{session_events_to_agent_history, session_events_to_conversation_history};
 pub use loaders::{
     load_current_session_events_for_agent, load_current_session_events_for_instance,
+};
+pub use streaming::harness_broadcast_to_sse;
+pub use turn_slot::{
+    acquire_turn_slot, TurnSlotAcquired, TurnSlotGuard, TurnSlotQueueFull, MAX_PENDING_TURNS,
 };

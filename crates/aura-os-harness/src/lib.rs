@@ -13,6 +13,8 @@ pub mod runner;
 pub mod session;
 pub mod signals;
 mod swarm_harness;
+#[cfg(any(test, feature = "test-support"))]
+pub mod test_support;
 mod ws_bridge;
 
 pub use automaton_client::{

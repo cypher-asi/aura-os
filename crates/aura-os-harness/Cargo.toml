@@ -6,6 +6,15 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+default = []
+# Public `FakeHarness` scaffold for downstream integration tests
+# (e.g. the `aura-os-server` Phase 5 concurrent-agents tests). Compiled
+# in unconditionally for our own `cargo test` (see the `cfg` gate in
+# `lib.rs`); downstream crates opt in by enabling this feature in
+# their dev-dependencies entry.
+test-support = []
+
 [dependencies]
 aura-protocol = { path = "../aura-protocol" }
 anyhow = { workspace = true }

@@ -59,7 +59,7 @@ pub(super) async fn reject_if_partition_busy(
 /// out so the synchronous matching logic can be unit-tested without
 /// having to construct a full [`AppState`].
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) struct BusyMatch {
+pub struct BusyMatch {
     pub project_id: ProjectId,
     pub agent_instance_id: AgentInstanceId,
     pub automaton_id: String,
@@ -73,7 +73,7 @@ pub(super) struct BusyMatch {
 /// not paused; a paused entry is treated as free because the
 /// harness turn-lock is released while the loop is paused and the
 /// next chat turn will displace it cleanly on resume.
-pub(super) fn evaluate_partition_busy(
+pub fn evaluate_partition_busy(
     registry: &HashMap<AutomatonRegistryKey, ActiveAutomaton>,
     template: &AgentId,
     instance_target: Option<(&ProjectId, &AgentInstanceId)>,
