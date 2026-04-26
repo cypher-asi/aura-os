@@ -197,7 +197,15 @@ export function RunSidekickPane() {
   const ctx = useProjectActions();
   const projectId = ctx?.project.project_id;
   const { agentInstanceId } = useParams<{ agentInstanceId?: string }>();
-  const projectTasks = useTasksForProject(projectId, agentInstanceId);
+  // The Run pane shows project-scoped automation activity. Don't filter by
+  // the URL's `agentInstanceId` here: that param is the *chat* agent the
+  // user is currently viewing, while the loop runs on a separate
+  // `Loop`-role instance (see `useAutomationStatus` -> `boundLoopId`). If
+  // we filter by the chat instance id, every `task_started` row produced
+  // by the loop is silently dropped because its `agent_id` is the loop
+  // instance, not the chat one — the exact regression where the pane sits
+  // on "No tasks" forever after Run is pressed.
+  const projectTasks = useTasksForProject(projectId);
   const hasCompleted = projectTasks.some((t) => t.status !== "active");
   // After `demoteStaleActive`, at most one row should be "active" per
   // pane. Pick it (the newest wins if a brief window ever produces
