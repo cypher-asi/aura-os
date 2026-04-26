@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-26T19:03:49.481Z",
+  "generatedAt": "2026-04-26T23:38:21.112Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.406.1",
+  "version": "0.1.0-nightly.407.1",
   "date": "2026-04-26",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.406.1",
-  "lastIncludedSha": "80889ffa1883d10db4e80bc6543bfdf6b1e08b20",
-  "previousProcessedSha": "61020504157ff20b82161795439cb5014a8e8dce",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.407.1",
+  "lastIncludedSha": "e6885326051714e383700336c8bf4860b9c28c00",
+  "previousProcessedSha": "80889ffa1883d10db4e80bc6543bfdf6b1e08b20",
   "commitShas": [
     "285f4bcbbfe4bcce4097f676885ce5a9de6a9c77",
     "11cc7815ab83ca128f6cf2dd5805ce40fd620891",
@@ -39,10 +39,12 @@
     "4561db06922d1f0ec0c344670c9fb97cb701b74f",
     "61020504157ff20b82161795439cb5014a8e8dce",
     "7941c911853825aaee6ff771916614548ba39428",
-    "80889ffa1883d10db4e80bc6543bfdf6b1e08b20"
+    "80889ffa1883d10db4e80bc6543bfdf6b1e08b20",
+    "8b9c3106198e8baf42e5a824d59f8d1f01a74a03",
+    "e6885326051714e383700336c8bf4860b9c28c00"
   ],
-  "rawCommitCount": 29,
-  "filteredCommitCount": 28,
+  "rawCommitCount": 31,
+  "filteredCommitCount": 30,
   "rawCommits": [
     {
       "sha": "285f4bcbbfe4bcce4097f676885ce5a9de6a9c77",
@@ -1438,6 +1440,228 @@
       "areas": [
         "Other"
       ]
+    },
+    {
+      "sha": "8b9c3106198e8baf42e5a824d59f8d1f01a74a03",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-26T19:16:08-04:00",
+      "subject": "feat: make mobile iOS views first class",
+      "body": "",
+      "parents": [
+        "80889ffa1883d10db4e80bc6543bfdf6b1e08b20"
+      ],
+      "files": [
+        "MOBILE_IOS_SIGNOFF.md",
+        "interface/capacitor.config.ts",
+        "interface/ios/App/App/AppDelegate.swift",
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.tsx",
+        "interface/src/apps/agents/components/AgentEditorModal/AgentEditorModal.module.css",
+        "interface/src/apps/agents/components/AgentEditorModal/AgentEditorModal.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/apps/chat/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.module.css",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/apps/chat/components/MessageBubble/MessageBubble.module.css",
+        "interface/src/apps/profile/ProfileEditorModal/ProfileEditorModal.module.css",
+        "interface/src/apps/profile/ProfileEditorModal/ProfileEditorModal.tsx",
+        "interface/src/apps/profile/shared/ProfileSummaryCard/ProfileSummaryCard.module.css",
+        "interface/src/apps/profile/shared/ProfileSummaryCard/ProfileSummaryCard.tsx",
+        "interface/src/apps/projects/routes.tsx",
+        "interface/src/components/MobileBottomNav/MobileBottomNav.tsx",
+        "interface/src/components/MobileShell/MobileShell.module.css",
+        "interface/src/components/MobileShell/MobileShell.test.tsx",
+        "interface/src/components/MobileShell/MobileShell.tsx",
+        "interface/src/components/MobileShell/MobileTopbar.tsx",
+        "interface/src/components/MobileShell/ProjectNavigationDrawer.tsx",
+        "interface/src/components/MobileShell/mobile-shell-utils.ts",
+        "interface/src/components/MobileShell/useMobileShellState.ts",
+        "interface/src/constants/models.ts",
+        "interface/src/mobile/chat/MobileChatHeader.module.css",
+        "interface/src/mobile/chat/MobileChatHeader.tsx",
+        "interface/src/mobile/chat/MobileChatInputBar.module.css",
+        "interface/src/mobile/chat/MobileChatInputBar.tsx",
+        "interface/src/mobile/screens/ProjectAgentsScreen/ProjectAgentsScreen.module.css",
+        "interface/src/mobile/screens/ProjectAgentsScreen/ProjectAgentsScreen.tsx",
+        "interface/src/mobile/screens/ProjectFilesScreen/ProjectFilesScreen.module.css",
+        "interface/src/mobile/screens/ProjectFilesScreen/ProjectFilesScreen.tsx",
+        "interface/src/mobile/screens/ProjectProcessScreen/ProjectProcessScreen.module.css",
+        "interface/src/mobile/screens/ProjectProcessScreen/ProjectProcessScreen.tsx",
+        "interface/src/mobile/screens/ProjectStatsScreen/ProjectStatsScreen.module.css",
+        "interface/src/mobile/screens/ProjectStatsScreen/ProjectStatsScreen.tsx",
+        "interface/src/views/CaptureLoginView/CaptureLoginView.tsx",
+        "interface/src/views/LoginView/LoginView.tsx",
+        "interface/src/views/ProjectAgentSetupView/ProjectAgentSetupView.module.css",
+        "interface/src/views/ProjectAgentSetupView/ProjectAgentSetupView.tsx",
+        "interface/src/views/ProjectAgentsView/ProjectAgentsView.module.css",
+        "interface/src/views/ProjectAgentsView/ProjectAgentsView.tsx",
+        "interface/src/views/ProjectFilesView/ProjectFilesView.module.css",
+        "interface/src/views/ProjectFilesView/ProjectFilesView.test.tsx",
+        "interface/src/views/ProjectFilesView/ProjectFilesView.tsx",
+        "interface/src/views/ProjectProcessView/ProjectProcessView.module.css",
+        "interface/src/views/ProjectProcessView/ProjectProcessView.test.tsx",
+        "interface/src/views/ProjectProcessView/ProjectProcessView.tsx",
+        "interface/src/views/ProjectStatsView/ProjectStatsView.module.css",
+        "interface/src/views/ProjectStatsView/ProjectStatsView.test.tsx",
+        "interface/src/views/SettingsView/SettingsView.module.css",
+        "interface/src/views/SettingsView/SettingsView.tsx",
+        "interface/src/views/StatsDashboard/StatsDashboard.module.css",
+        "interface/src/views/StatsDashboard/StatsDashboard.test.tsx",
+        "interface/src/views/StatsDashboard/StatsDashboard.tsx"
+      ],
+      "stats": {
+        "fileCount": 58,
+        "insertions": 4718,
+        "deletions": 1126
+      },
+      "committedAtMs": 1777245368000,
+      "cleanSubject": "make mobile iOS views first class",
+      "keywords": [
+        "make",
+        "mobile",
+        "views",
+        "first",
+        "class"
+      ],
+      "fileGroups": [
+        "MOBILE_IOS_SIGNOFF.md",
+        "interface/capacitor.config.ts",
+        "interface/ios/App",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/constants",
+        "interface/src/mobile",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other",
+        "iOS"
+      ]
+    },
+    {
+      "sha": "e6885326051714e383700336c8bf4860b9c28c00",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-26T19:24:48-04:00",
+      "subject": "fix: isolate mobile views from desktop",
+      "body": "",
+      "parents": [
+        "8b9c3106198e8baf42e5a824d59f8d1f01a74a03"
+      ],
+      "files": [
+        "DESKTOP_REGRESSION_SIGNOFF.md",
+        "MOBILE_IOS_SIGNOFF.md",
+        "interface/src/apps/agents/MobileAgentDetailsView/MobileAgentDetailsView.tsx",
+        "interface/src/apps/agents/MobileAgentDetailsView/index.ts",
+        "interface/src/apps/agents/MobileAgentLibraryView/MobileAgentLibraryView.tsx",
+        "interface/src/apps/agents/MobileAgentLibraryView/index.ts",
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.module.css",
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.test.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/apps/projects/routes.tsx",
+        "interface/src/components/AppShell/AppShell.tsx",
+        "interface/src/components/FileExplorer/FileExplorer.test.tsx",
+        "interface/src/components/FileExplorer/FileExplorer.tsx",
+        "interface/src/components/FileExplorer/MobileFileList.tsx",
+        "interface/src/components/MobileBottomNav/MobileBottomNav.tsx",
+        "interface/src/components/MobileBottomNav/index.ts",
+        "interface/src/components/MobileShell/MobileDrawerContents.tsx",
+        "interface/src/components/MobileShell/MobileShell.module.css",
+        "interface/src/components/MobileShell/MobileShell.test.tsx",
+        "interface/src/components/MobileShell/MobileShell.tsx",
+        "interface/src/components/MobileShell/MobileTopbar.tsx",
+        "interface/src/components/MobileShell/ProjectNavigationDrawer.tsx",
+        "interface/src/components/MobileShell/index.ts",
+        "interface/src/components/MobileShell/mobile-shell-utils.ts",
+        "interface/src/components/MobileShell/useMobileShellState.ts",
+        "interface/src/mobile/agents/MobileAgentDetailsView/MobileAgentDetailsView.tsx",
+        "interface/src/mobile/agents/MobileAgentDetailsView/index.ts",
+        "interface/src/mobile/agents/MobileAgentLibraryView/MobileAgentLibraryView.tsx",
+        "interface/src/mobile/agents/MobileAgentLibraryView/index.ts",
+        "interface/src/mobile/chat/MobileChatInputBar.tsx",
+        "interface/src/mobile/chat/MobileChatPanel.test.tsx",
+        "interface/src/mobile/chat/MobileChatPanel.tsx",
+        "interface/src/mobile/chat/MobileProjectAgentSwitcherSheet.module.css",
+        "interface/src/mobile/chat/MobileProjectAgentSwitcherSheet.tsx",
+        "interface/src/mobile/files/MobileFileList.tsx",
+        "interface/src/mobile/hooks/useMobileFilePreview.ts",
+        "interface/src/mobile/hooks/useMobileSpecs.ts",
+        "interface/src/mobile/hooks/useMobileTasks.test.tsx",
+        "interface/src/mobile/hooks/useMobileTasks.ts",
+        "interface/src/mobile/mobile-boundary.test.ts",
+        "interface/src/mobile/navigation/MobileBottomNav.tsx",
+        "interface/src/mobile/navigation/index.ts",
+        "interface/src/mobile/screens/MobileOrganizationView/MobileOrganizationView.module.css",
+        "interface/src/mobile/screens/MobileOrganizationView/MobileOrganizationView.test.tsx",
+        "interface/src/mobile/screens/MobileOrganizationView/MobileOrganizationView.tsx",
+        "interface/src/mobile/screens/MobileOrganizationView/index.ts",
+        "interface/src/mobile/screens/MobileSettingsView/MobileSettingsView.module.css",
+        "interface/src/mobile/screens/MobileSettingsView/MobileSettingsView.tsx",
+        "interface/src/mobile/screens/MobileSettingsView/index.ts",
+        "interface/src/mobile/screens/ProjectAgentsScreen/ProjectAgentsScreen.tsx",
+        "interface/src/mobile/shell/MobileDrawerContents.tsx",
+        "interface/src/mobile/shell/MobileShell.module.css",
+        "interface/src/mobile/shell/MobileShell.test.tsx",
+        "interface/src/mobile/shell/MobileShell.tsx",
+        "interface/src/mobile/shell/MobileTopbar.tsx",
+        "interface/src/mobile/shell/ProjectNavigationDrawer.tsx",
+        "interface/src/mobile/shell/index.ts",
+        "interface/src/mobile/shell/mobile-shell-utils.ts",
+        "interface/src/mobile/shell/useMobileShellState.ts",
+        "interface/src/views/MobileOrganizationView/MobileOrganizationView.module.css",
+        "interface/src/views/MobileOrganizationView/MobileOrganizationView.test.tsx",
+        "interface/src/views/MobileOrganizationView/MobileOrganizationView.tsx",
+        "interface/src/views/MobileOrganizationView/index.ts",
+        "interface/src/views/ProjectFilesView/useMobileFilePreview.ts",
+        "interface/src/views/ProjectTasksView/ProjectTasksView.test.tsx",
+        "interface/src/views/ProjectTasksView/ProjectTasksView.tsx",
+        "interface/src/views/ProjectWorkView/ProjectWorkView.test.tsx",
+        "interface/src/views/ProjectWorkView/ProjectWorkView.tsx",
+        "interface/src/views/ProjectWorkView/useMobileSpecs.ts",
+        "interface/src/views/ProjectWorkView/useMobileTasks.test.tsx",
+        "interface/src/views/ProjectWorkView/useMobileTasks.ts",
+        "interface/src/views/SettingsView/SettingsView.module.css",
+        "interface/src/views/SettingsView/SettingsView.tsx",
+        "interface/src/views/StatsDashboard/StatsDashboard.tsx"
+      ],
+      "stats": {
+        "fileCount": 77,
+        "insertions": 943,
+        "deletions": 451
+      },
+      "committedAtMs": 1777245888000,
+      "cleanSubject": "isolate mobile views from desktop",
+      "keywords": [
+        "isolate",
+        "mobile",
+        "views",
+        "from",
+        "desktop"
+      ],
+      "fileGroups": [
+        "DESKTOP_REGRESSION_SIGNOFF.md",
+        "MOBILE_IOS_SIGNOFF.md",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/mobile",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
     }
   ],
   "batchCount": 6,
@@ -1449,36 +1673,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11534875
+          "sizeBytes": 11549308
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.406.1",
+      "version": "0.1.0-nightly.407.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.406.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.407.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 34210798
+          "sizeBytes": 34225290
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.406.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.407.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.406.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.407.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 101538296
+          "sizeBytes": 101562872
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.406.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.407.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -1488,29 +1712,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.406.1",
+      "version": "0.1.0-nightly.407.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.406.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.407.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 30746762
+          "sizeBytes": 30767442
         },
         {
-          "name": "Aura_0.1.0-nightly.406.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.407.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.406.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.407.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 30555830
+          "sizeBytes": 30566657
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.406.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.407.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1520,29 +1744,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.406.1",
+      "version": "0.1.0-nightly.407.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.406.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.407.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 32300587
+          "sizeBytes": 32310091
         },
         {
-          "name": "Aura_0.1.0-nightly.406.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.407.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.406.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.407.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 32135628
+          "sizeBytes": 32145439
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.406.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.407.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1552,17 +1776,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.406.1",
+      "version": "0.1.0-nightly.407.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.406.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.407.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 23323641
+          "sizeBytes": 23334505
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.406.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.407.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -1571,26 +1795,26 @@
     }
   ],
   "rendered": {
-    "title": "Aura-managed model routing, persistent shell, and harness hardening",
-    "intro": "A dense nightly: model traffic now flows through Aura's managed proxy with a single chat picker, the desktop shell keeps its middle panel mounted across app switches, and a wave of server and harness fixes tighten auth, permissions, and sidecar startup. Big internal module splits set the stage without changing behavior, and the changelog media planner got smarter at filtering noisy candidates.",
+    "title": "Mobile iOS goes first-class, model traffic unifies on Aura",
+    "intro": "A heavy day across the stack: a brand-new first-class iOS experience landed alongside a desktop-isolation follow-up, agents now route exclusively through the Aura proxy, and a wide reliability sweep tightened streaming, permissions, and the harness sidecar. Server and Rust internals were also reorganized to keep the platform maintainable as it grows.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "7:49 PM",
         "started_at": "2026-04-26T02:49:15.000Z",
         "ended_at": "2026-04-26T03:00:25.000Z",
-        "title": "Recoverable spec drafts when the model times out",
-        "summary": "Streamed spec markdown is now preserved across model timeouts, with extra server-side telemetry on agent stream output.",
+        "title": "Recoverable spec drafts and richer agent stream logs",
+        "summary": "Streaming spec creation now survives model timeouts, and server-side agent stream output gained summary logging for easier debugging.",
         "items": [
           {
-            "text": "create_spec drafts are kept recoverable when a model timeout interrupts streaming, and agents are nudged away from oversized spec payloads so partial work isn't lost.",
+            "text": "Streamed spec markdown is preserved when create_spec times out, so users no longer lose drafted specs to model interruptions, with guidance to keep payload sizes in check.",
             "commit_shas": [
               "11cc7815ab83ca128f6cf2dd5805ce40fd620891"
             ],
             "confidence": "high"
           },
           {
-            "text": "Server-side agent stream output now emits summary logs to make it easier to diagnose chat and tool flows in production.",
+            "text": "Agent chat streaming, persistence, and tool dispatch paths now emit output summaries to make production agent runs easier to trace.",
             "commit_shas": [
               "285f4bcbbfe4bcce4097f676885ce5a9de6a9c77"
             ],
@@ -1603,11 +1827,11 @@
         "time_label": "8:14 PM",
         "started_at": "2026-04-26T03:14:25.000Z",
         "ended_at": "2026-04-26T03:14:25.000Z",
-        "title": "Desktop fails closed on an unhealthy harness sidecar",
-        "summary": "The desktop app no longer continues with a broken local harness when its startup health probe never passes.",
+        "title": "Desktop harness sidecar fails closed on unhealthy startup",
+        "summary": "The desktop app no longer continues with a broken local harness when the startup health probe never passes.",
         "items": [
           {
-            "text": "If the managed local harness sidecar fails its startup health probe, the desktop now kills the process and refuses to proceed instead of silently running against a wedged sidecar.",
+            "text": "The managed local harness sidecar is now killed if it never passes its startup health check, preventing the desktop from booting into a silently broken agent runtime.",
             "commit_shas": [
               "e2d054010b2929f6eaca48caac6fc879da6f7699"
             ],
@@ -1619,29 +1843,12 @@
         "batch_id": "entry-3",
         "time_label": "8:18 PM",
         "started_at": "2026-04-26T03:18:42.000Z",
-        "ended_at": "2026-04-26T03:18:42.000Z",
-        "title": "Smoother task output streaming in the browser",
-        "summary": "Task-output persistence stops thrashing storage during streaming updates.",
-        "items": [
-          {
-            "text": "Task-output cache writes are now debounced and reuse a single IndexedDB connection across browser storage operations, removing the per-token localStorage parse/rewrite churn that caused jank during streaming.",
-            "commit_shas": [
-              "bac6cf2527a9282aa0f1273c7d351459b8fcad2b"
-            ],
-            "confidence": "high"
-          }
-        ]
-      },
-      {
-        "batch_id": "entry-4",
-        "time_label": "8:24 PM",
-        "started_at": "2026-04-26T03:24:01.000Z",
         "ended_at": "2026-04-26T07:45:17.000Z",
-        "title": "Aura-managed model proxy, persistent shell, and a generate_image tool",
-        "summary": "The day's biggest batch reshapes model routing, the desktop shell, and agent capabilities, alongside large internal module splits and a sweep of reliability fixes.",
+        "title": "Aura proxy becomes the only path for model traffic",
+        "summary": "A wide-ranging session covering a unified model-routing refactor, persistent middle panel, run-pane fixes, permission plumbing, and large internal module splits.",
         "items": [
           {
-            "text": "All model traffic now routes through the Aura proxy: the org_integration BYOK path and direct Anthropic/OpenAI/Gemini/xAI/OpenRouter catalog entries are removed, the agent editor migrates legacy org-backed agents, and the chat model picker collapses to a single Aura group.",
+            "text": "All chat agents now route through the Aura-managed proxy: the BYOK org_integration auth path and direct Anthropic/OpenAI/Gemini/xAI/OpenRouter catalog entries were removed, the chat model picker collapsed to a single Aura group, and image-only models are filtered out of the chat picker.",
             "commit_shas": [
               "8b9fbd91027bf0aabd509cc09335f4f20426ff86",
               "1a897b8ce8fa711e7632229ee72e7b5421acf208"
@@ -1649,14 +1856,14 @@
             "confidence": "high"
           },
           {
-            "text": "Image generation defaults to gpt-image-2 across the chat input and the Aura 3D Image Generation app, and a new provider-less generate_image workspace tool lets chat agents fulfil natural-language image requests without invoking the /image slash command.",
+            "text": "gpt-image-2 is now the default image model and a new provider-less generate_image tool lets chat agents fulfill natural-language image requests without needing the /image slash command, with mock-router tests covering the streaming happy path and error cases.",
             "commit_shas": [
               "03c14491d814e1218c049605a76d5b17de4ba79f"
             ],
             "confidence": "high"
           },
           {
-            "text": "The desktop shell now hosts a persistent ResponsiveMainLane so the middle panel keeps DOM identity across app switches, eliminating the wallpaper-through-flash; a new bareMainPanel flag preserves the Desktop app's transparent surface.",
+            "text": "The middle panel is lifted into the desktop shell and stays mounted across app switches, eliminating the wallpaper-flash size snap during navigation; a new bareMainPanel flag preserves the Desktop app's transparent surface.",
             "commit_shas": [
               "c48f16047c9461f11398007e6c6073962fdb8a9c",
               "9d3f6f37a11b633660ccab9aa931937a284bd3a8"
@@ -1664,16 +1871,7 @@
             "confidence": "high"
           },
           {
-            "text": "Server hardening: stale auth fallback is capped with sensitive routes failing closed, harness WebSocket commands are bounded with explicit delivery errors and redacted frame logging, and dev-loop runs now receive the same normalized agent permissions as chat sessions, with missing bundles defaulting to full access.",
-            "commit_shas": [
-              "272818e34de377e76922d04e9501fad6f16cfa4b",
-              "2af35f3033f53d8908d160bca48d3b2f28da9b67",
-              "442fd8ae79ef347fb53963cc0e1ec23adae74fdc"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Run pane fixes: rows are seeded from the authoritative project task list so reloads don't hide completed or active runs, and loop runs now show up regardless of which chat the user is viewing because the panel queries by project rather than agentInstanceId.",
+            "text": "Run pane reliability improved: completed/failed/active runs are seeded from the authoritative project task list so reloads no longer hide history, and the pane now scopes by project so loop runs show up regardless of which chat agent is being viewed.",
             "commit_shas": [
               "6c1393cad429613410b2b37709527fbf49aa002c",
               "5ba2be2db5103f5adc6002be484f79706c5ef90b"
@@ -1681,17 +1879,39 @@
             "confidence": "high"
           },
           {
-            "text": "Agent capabilities gain a first-class list_agents permission with new control callback endpoints and synced wire types, so CEO and permission UI bundles can grant the harness tool explicitly. Floating agent windows also drop the '/ for commands' hint to keep narrow input bars on a single line.",
+            "text": "Task output streaming feels smoother: a shared IndexedDB connection plus debounced cache writes stop streaming updates from repeatedly parsing and rewriting localStorage.",
             "commit_shas": [
-              "fe50f6a8c8a03bae08cf4d27a8a97d40944811a1",
+              "bac6cf2527a9282aa0f1273c7d351459b8fcad2b"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Server hardening capped stale auth fallbacks, made sensitive routes fail closed, and bounded harness WebSocket commands with explicit delivery errors and redacted frame logging.",
+            "commit_shas": [
+              "272818e34de377e76922d04e9501fad6f16cfa4b"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Agent permissions are now consistent across surfaces: dev-loop runs receive the same normalized capability bundle as chat sessions, missing permission bundles default to canonical full access, list_agents is a first-class capability, and new agent control callback endpoints expose runtime hooks.",
+            "commit_shas": [
+              "2af35f3033f53d8908d160bca48d3b2f28da9b67",
+              "442fd8ae79ef347fb53963cc0e1ec23adae74fdc",
               "9fbbd1de1b95fd0c91d6176f6fa54f9f051946e5",
-              "fbb75204dae01158c2af9ddd0983ddaafaa2593f",
+              "fe50f6a8c8a03bae08cf4d27a8a97d40944811a1",
+              "fbb75204dae01158c2af9ddd0983ddaafaa2593f"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Floating agent windows hide the '/ for commands' hint via a new compact ChatPanel/ChatInputBar flag so the input bar stops wrapping in narrow surfaces, while image/3D mode indicators remain.",
+            "commit_shas": [
               "b9f19d329a58cf9b88853a4babe01c4eff2ff567"
             ],
             "confidence": "high"
           },
           {
-            "text": "Large structural cleanups land without behavior changes: the aura-os-server crate splits app_builder, auth_guard, error, generation, router, and state into focused modules; core Rust crates break up entities, permissions, sessions, and tasks; and the interface splits stream handlers and routes server caches through queries.",
+            "text": "Large server, crate, and interface modules were broken up — app_builder, auth_guard, error, generation, router, core entities, sessions, storage testutil, task service, and stream handlers — and billing/leaderboard caches were moved behind queries, keeping the codebase navigable as the platform grows.",
             "commit_shas": [
               "7b0b4c0918a533ac6b9bdbe4d4f706603703217b",
               "1e9b8eedf3e22be3db90835c72ef4ef689411927",
@@ -1700,56 +1920,18 @@
             ],
             "confidence": "high"
           }
-        ],
-        "media": {
-          "schemaVersion": 1,
-          "status": "published",
-          "type": "image",
-          "assetPath": "assets/changelog/nightly/2026-04-26/entry-4-dc721533d988.png",
-          "alt": "Aura-proxied models, persistent shell, and a hardened agent runtime",
-          "caption": "All model traffic now routes through the Aura proxy, so the chat model picker collapses into a single Aura group.",
-          "width": 2560,
-          "height": 1440,
-          "bytes": 2517774,
-          "sourceCommitShas": [
-            "8b9fbd91027bf0aabd509cc09335f4f20426ff86",
-            "c48f16047c9461f11398007e6c6073962fdb8a9c",
-            "03c14491d814e1218c049605a76d5b17de4ba79f",
-            "1a897b8ce8fa711e7632229ee72e7b5421acf208",
-            "9fbbd1de1b95fd0c91d6176f6fa54f9f051946e5",
-            "2af35f3033f53d8908d160bca48d3b2f28da9b67",
-            "442fd8ae79ef347fb53963cc0e1ec23adae74fdc",
-            "fbb75204dae01158c2af9ddd0983ddaafaa2593f",
-            "272818e34de377e76922d04e9501fad6f16cfa4b",
-            "fe50f6a8c8a03bae08cf4d27a8a97d40944811a1",
-            "6c1393cad429613410b2b37709527fbf49aa002c",
-            "5ba2be2db5103f5adc6002be484f79706c5ef90b",
-            "b9f19d329a58cf9b88853a4babe01c4eff2ff567",
-            "7b0b4c0918a533ac6b9bdbe4d4f706603703217b",
-            "1e9b8eedf3e22be3db90835c72ef4ef689411927",
-            "d4e0fa3ae38d89994c05a525885edd44a549833d",
-            "9d3f6f37a11b633660ccab9aa931937a284bd3a8",
-            "06af9e7769c39f448d92e349136fc4139d7c497b"
-          ],
-          "gates": {
-            "rawQuality": "accepted",
-            "rawVision": "accepted",
-            "brandedQuality": "accepted",
-            "brandedVision": "accepted"
-          },
-          "updatedAt": "2026-04-26T17:32:54.585Z"
-        }
+        ]
       },
       {
-        "batch_id": "entry-5",
+        "batch_id": "entry-4",
         "time_label": "1:06 AM",
         "started_at": "2026-04-26T08:06:16.000Z",
         "ended_at": "2026-04-26T08:06:16.000Z",
-        "title": "Sidecar build re-triggered after the ListAgents harness fix",
-        "summary": "A no-op CI nudge to rebuild the desktop sidecar against the new list_agents capability.",
+        "title": "CI re-trigger after harness ListAgents fix",
+        "summary": "A pipeline re-run picked up the new list_agents capability for the desktop sidecar build.",
         "items": [
           {
-            "text": "Re-triggered the desktop sidecar build so the packaged harness picks up the new ListAgents capability wired earlier in the day.",
+            "text": "Desktop sidecar build was re-triggered to ensure the harness ListAgents fix is included in shipped artifacts.",
             "commit_shas": [
               "9cd6bb3c57d04f1701387da8963292aeb85b3bb6"
             ],
@@ -1758,15 +1940,15 @@
         ]
       },
       {
-        "batch_id": "entry-6",
+        "batch_id": "entry-5",
         "time_label": "10:12 AM",
         "started_at": "2026-04-26T17:12:57.000Z",
         "ended_at": "2026-04-26T18:50:16.000Z",
-        "title": "Smarter changelog media planner targeting",
-        "summary": "The changelog media planner gets better at picking publishable proof shots and ignoring noisy candidates.",
+        "title": "Changelog media planner gets smarter and more accurate",
+        "summary": "A focused pass on the changelog media tooling improved how surfaces are inferred, seeded, and validated, reducing missed or wrong screenshots in release notes.",
         "items": [
           {
-            "text": "Media planner now preserves intended targets, skips mobile-only and pricing/benchmark plumbing without picker proof, deduplicates model-picker surfaces, and learns from historical media misses via a lessons file. Token-only candidates are also filtered out.",
+            "text": "Media planner now preserves declared targets, hardens inference seeding, broadens surface coverage, and learns from historical misses via a lessons store, while filtering out token-only candidates that produced low-signal matches.",
             "commit_shas": [
               "697ed9849eb3e37d9e9d51bdbad76014e17fd804",
               "4561db06922d1f0ec0c344670c9fb97cb701b74f",
@@ -1775,25 +1957,48 @@
               "80889ffa1883d10db4e80bc6543bfdf6b1e08b20"
             ],
             "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-6",
+        "time_label": "4:16 PM",
+        "started_at": "2026-04-26T23:16:08.000Z",
+        "ended_at": "2026-04-26T23:24:48.000Z",
+        "title": "First-class iOS mobile views with desktop isolation",
+        "summary": "A dedicated mobile iOS experience shipped with its own shell, screens, and chat surfaces, followed by an isolation pass that prevents mobile changes from leaking into the desktop layout.",
+        "items": [
+          {
+            "text": "iOS becomes a first-class target with a Capacitor config, AppDelegate, dedicated mobile chat header and input bar, and full project screens for Agents, Files, Process, and Stats — validated against an iPhone simulator sign-off matrix covering navigation, drawers, keyboard behavior, and tab transitions.",
+            "commit_shas": [
+              "8b9c3106198e8baf42e5a824d59f8d1f01a74a03"
+            ],
+            "confidence": "high"
           },
           {
-            "text": "The Debug app is now a recognized seeded capture surface, with capture-bridge gaining hardened seeding for run history, event timelines, counters, and the sidekick inspector.",
+            "text": "Mobile code was relocated under interface/src/mobile (shell, navigation, screens, chat, files), with new MobileSettingsView and MobileChatPanel; the desktop SettingsView was restored after a regression where the mobile settings screen had replaced it on /projects/settings.",
             "commit_shas": [
-              "4561db06922d1f0ec0c344670c9fb97cb701b74f",
-              "61020504157ff20b82161795439cb5014a8e8dce"
+              "e6885326051714e383700336c8bf4860b9c28c00"
             ],
-            "confidence": "medium"
+            "confidence": "high"
+          },
+          {
+            "text": "A mobile-boundary test and route-level isMobileLayout switch enforce that desktop routes never render mobile chrome, backed by a desktop regression sign-off matrix across agents, projects, files, tasks, run, process, stats, feed, profile, integrations, and settings.",
+            "commit_shas": [
+              "e6885326051714e383700336c8bf4860b9c28c00"
+            ],
+            "confidence": "high"
           }
         ]
       }
     ],
     "highlights": [
-      "Image generation defaults to gpt-image-2 with a new generate_image agent tool",
-      "All model traffic routes through the Aura proxy, collapsing the chat picker",
-      "Middle panel persists across app switches, eliminating the wallpaper flash",
-      "Desktop fails closed when the local harness sidecar never gets healthy",
-      "Stale auth, harness backpressure, and dev-loop permissions tightened"
+      "First-class iOS mobile experience",
+      "All model traffic unified through the Aura proxy",
+      "Desktop harness sidecar fails closed on bad health",
+      "Natural-language image generation via new tool",
+      "Server and crate modules restructured for maintainability"
     ],
-    "raw_commit_count": 28
+    "raw_commit_count": 30
   }
 }
