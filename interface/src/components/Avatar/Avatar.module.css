@@ -28,6 +28,11 @@
   color: var(--color-text);
 }
 
+.avatar[data-team="true"] {
+  background: var(--color-overlay-medium, var(--color-bg-hover));
+  color: var(--color-text);
+}
+
 .statusDot {
   position: absolute;
   bottom: 0;

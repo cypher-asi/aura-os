@@ -21,6 +21,7 @@ interface OrgState {
   refreshIntegrations: () => Promise<void>;
   createOrg: (name: string) => Promise<Org>;
   renameOrg: (orgId: string, name: string) => Promise<void>;
+  updateOrgAvatar: (orgId: string, avatarUrl: string | null) => Promise<void>;
 }
 
 type PersistedOrgState = {
@@ -161,7 +162,15 @@ export const useOrgStore = create<OrgState>()((set, get) => ({
   },
 
   renameOrg: async (orgId: string, name: string) => {
-    const updated = await api.orgs.update(orgId, name);
+    const updated = await api.orgs.update(orgId, { name });
+    set((state) => ({
+      orgs: state.orgs.map((o) => (o.org_id === orgId ? updated : o)),
+      activeOrg: state.activeOrg?.org_id === orgId ? updated : state.activeOrg,
+    }));
+  },
+
+  updateOrgAvatar: async (orgId: string, avatarUrl: string | null) => {
+    const updated = await api.orgs.update(orgId, { avatar_url: avatarUrl });
     set((state) => ({
       orgs: state.orgs.map((o) => (o.org_id === orgId ? updated : o)),
       activeOrg: state.activeOrg?.org_id === orgId ? updated : state.activeOrg,
@@ -239,6 +248,7 @@ export function useOrg() {
       refreshIntegrations: s.refreshIntegrations,
       createOrg: s.createOrg,
       renameOrg: s.renameOrg,
+      updateOrgAvatar: s.updateOrgAvatar,
     })),
   );
 }

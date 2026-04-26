@@ -233,6 +233,7 @@ describe("org-store", () => {
 
       await useOrgStore.getState().renameOrg("org-1", "Renamed");
 
+      expect(mockApi.orgs.update).toHaveBeenCalledWith("org-1", { name: "Renamed" });
       expect(useOrgStore.getState().orgs[0].name).toBe("Renamed");
       expect(useOrgStore.getState().activeOrg?.name).toBe("Renamed");
     });
@@ -244,8 +245,37 @@ describe("org-store", () => {
 
       await useOrgStore.getState().renameOrg("org-2", "Renamed");
 
+      expect(mockApi.orgs.update).toHaveBeenCalledWith("org-2", { name: "Renamed" });
       expect(useOrgStore.getState().activeOrg?.name).toBe("Test Org");
       expect(useOrgStore.getState().orgs[1].name).toBe("Renamed");
+    });
+  });
+
+  describe("updateOrgAvatar", () => {
+    it("updates the org avatar in orgs list and activeOrg", async () => {
+      const updated = { ...org1, avatar_url: "data:image/png;base64,abc" };
+      mockApi.orgs.update.mockResolvedValue(updated);
+      useOrgStore.setState({ orgs: [org1, org2], activeOrg: org1 });
+
+      await useOrgStore.getState().updateOrgAvatar("org-1", updated.avatar_url);
+
+      expect(mockApi.orgs.update).toHaveBeenCalledWith("org-1", {
+        avatar_url: updated.avatar_url,
+      });
+      expect(useOrgStore.getState().orgs[0].avatar_url).toBe(updated.avatar_url);
+      expect(useOrgStore.getState().activeOrg?.avatar_url).toBe(updated.avatar_url);
+    });
+
+    it("clears the org avatar", async () => {
+      const orgWithAvatar = { ...org1, avatar_url: "data:image/png;base64,abc" };
+      const updated = { ...org1, avatar_url: undefined };
+      mockApi.orgs.update.mockResolvedValue(updated);
+      useOrgStore.setState({ orgs: [orgWithAvatar, org2], activeOrg: orgWithAvatar });
+
+      await useOrgStore.getState().updateOrgAvatar("org-1", null);
+
+      expect(mockApi.orgs.update).toHaveBeenCalledWith("org-1", { avatar_url: null });
+      expect(useOrgStore.getState().activeOrg?.avatar_url).toBeUndefined();
     });
   });
 });

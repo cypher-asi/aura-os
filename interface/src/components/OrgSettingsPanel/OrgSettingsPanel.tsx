@@ -30,7 +30,14 @@ function OrgSettingsContent({ data }: { data: ReturnType<typeof useOrgSettingsDa
   return (
     <>
       {data.section === "general" && (
-        <OrgSettingsGeneral teamName={data.teamName} onTeamNameChange={data.handleTeamNameChange} teamSaving={data.teamSaving} teamMessage={data.teamMessage} />
+        <OrgSettingsGeneral
+          teamName={data.teamName}
+          teamAvatarUrl={data.teamAvatarUrl}
+          onTeamNameChange={data.handleTeamNameChange}
+          onTeamAvatarChange={data.handleTeamAvatarChange}
+          teamSaving={data.teamSaving}
+          teamMessage={data.teamMessage}
+        />
       )}
       {data.section === "members" && (
         <OrgSettingsMembers members={data.members} myRole={data.myRole} currentUserId={data.user?.user_id} isAdminOrOwner={data.isAdminOrOwner} onRoleChange={data.handleRoleChange} onRemoveMember={data.handleRemoveMember} />

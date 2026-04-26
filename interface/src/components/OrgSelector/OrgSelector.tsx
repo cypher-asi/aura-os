@@ -7,6 +7,7 @@ import { Button, Input, Modal } from "@cypher-asi/zui";
 import { useClickOutside } from "../../shared/hooks/use-click-outside";
 import { useModalInitialFocus } from "../../hooks/use-modal-initial-focus";
 import { useUIModalStore } from "../../stores/ui-modal-store";
+import { Avatar } from "../Avatar";
 import styles from "./OrgSelector.module.css";
 
 export function OrgSelector({
@@ -71,7 +72,7 @@ export function OrgSelector({
             setDropdownOpen(false);
           }}
         >
-          <Building2 size={12} />
+          <Avatar avatarUrl={org.avatar_url} name={org.name} type="team" size={16} />
           <span>{org.name}</span>
         </button>
       ))}
@@ -104,7 +105,7 @@ export function OrgSelector({
   const iconDropdownPos = (): React.CSSProperties => {
     const rect = iconTriggerRef.current?.getBoundingClientRect();
     if (!rect) return {};
-    return { top: rect.bottom, left: rect.left + 21 };
+    return { top: rect.bottom, left: rect.left };
   };
 
   return (
@@ -118,7 +119,12 @@ export function OrgSelector({
           title={activeOrg?.name ?? "My Team"}
           aria-label="Switch team"
         >
-          <span className={styles.orgNameLabel}>/{activeOrg?.name?.toLowerCase() ?? "org"}</span>
+          <Avatar
+            avatarUrl={activeOrg?.avatar_url}
+            name={activeOrg?.name ?? "My Team"}
+            type="team"
+            size={20}
+          />
         </button>
       ) : (
         <button

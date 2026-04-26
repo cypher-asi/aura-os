@@ -349,9 +349,12 @@ pub(crate) async fn update_org(
     let client = state.require_network_client()?;
     let org_id_str = org_id.to_string();
     let net_req = aura_os_network::UpdateOrgRequest {
-        name: Some(req.name),
+        name: req
+            .name
+            .map(|name| name.trim().to_string())
+            .filter(|name| !name.is_empty()),
         description: None,
-        avatar_url: None,
+        avatar_url: req.avatar_url.map(|avatar_url| avatar_url.unwrap_or_default()),
     };
     let net_org = client
         .update_org(&org_id_str, &jwt, &net_req)

@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Bot, User } from "lucide-react";
+import { Bot, Building2, User } from "lucide-react";
 import styles from "./Avatar.module.css";
 
 export interface AvatarProps {
   avatarUrl?: string;
   name?: string;
-  type: "user" | "agent";
+  type: "user" | "agent" | "team";
   size: number;
   /** Pre-resolved dot status (e.g. "running", "idle", "error"). */
   status?: string;
@@ -19,9 +19,14 @@ export interface AvatarProps {
 export function Avatar({ avatarUrl, name, type, size, status, isLocal, className, style, onClick }: AvatarProps) {
   const iconSize = Math.round(size * 0.5);
   const isAgent = type === "agent";
+  const isTeam = type === "team";
   const [broken, setBroken] = useState(false);
   const showImage = avatarUrl && !broken;
-  const fallback = isAgent ? <Bot size={iconSize} /> : <User size={iconSize} />;
+  const fallback = isAgent
+    ? <Bot size={iconSize} />
+    : isTeam
+      ? <Building2 size={iconSize} />
+      : <User size={iconSize} />;
   const showDot = !!status || isLocal;
 
   return (
@@ -30,7 +35,7 @@ export function Avatar({ avatarUrl, name, type, size, status, isLocal, className
       style={{ width: size, height: size, ...style }}
       onClick={onClick}
     >
-      <div className={styles.avatar} data-agent={isAgent}>
+      <div className={styles.avatar} data-agent={isAgent} data-team={isTeam}>
         {showImage ? (
           <img src={avatarUrl} alt={name ?? type} onError={() => setBroken(true)} />
         ) : (

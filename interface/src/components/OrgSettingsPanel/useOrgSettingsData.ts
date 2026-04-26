@@ -14,9 +14,9 @@ type Section = "general" | "members" | "invites" | "billing";
 
 export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
   const { isNativeApp } = useAuraCapabilities();
-  const { activeOrg, renameOrg, members, integrations, refreshMembers, refreshIntegrations, refreshOrgs, isLoading } = useOrgStore(
+  const { activeOrg, renameOrg, updateOrgAvatar, members, integrations, refreshMembers, refreshIntegrations, refreshOrgs, isLoading } = useOrgStore(
     useShallow((s) => ({
-      activeOrg: s.activeOrg, renameOrg: s.renameOrg, members: s.members,
+      activeOrg: s.activeOrg, renameOrg: s.renameOrg, updateOrgAvatar: s.updateOrgAvatar, members: s.members,
       integrations: s.integrations, refreshMembers: s.refreshMembers, refreshIntegrations: s.refreshIntegrations,
       refreshOrgs: s.refreshOrgs, isLoading: s.isLoading,
     })),
@@ -28,6 +28,7 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
   useEffect(() => { if (isOpen) setSection(initialSection ?? "general"); }, [isOpen, initialSection]);
 
   const [teamName, setTeamName] = useState(activeOrg?.name ?? "");
+  const [teamAvatarUrl, setTeamAvatarUrl] = useState(activeOrg?.avatar_url ?? "");
   const [teamSaving, setTeamSaving] = useState(false);
   const [teamMessage, setTeamMessage] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -49,6 +50,7 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
   const isAdminOrOwner = myRole === "owner" || myRole === "admin";
 
   useEffect(() => { setTeamName(activeOrg?.name ?? ""); }, [activeOrg?.name, activeOrg?.org_id]);
+  useEffect(() => { setTeamAvatarUrl(activeOrg?.avatar_url ?? ""); }, [activeOrg?.avatar_url, activeOrg?.org_id]);
 
   const handleTeamNameChange = (value: string) => {
     setTeamName(value); setTeamMessage("");
@@ -61,6 +63,23 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
       finally { setTeamSaving(false); }
     }, 500);
   };
+
+  const handleTeamAvatarChange = useCallback(async (avatarUrl: string | null) => {
+    if (!activeOrg) return;
+    const previousAvatarUrl = activeOrg.avatar_url ?? "";
+    setTeamAvatarUrl(avatarUrl ?? "");
+    setTeamSaving(true);
+    setTeamMessage("");
+    try {
+      await updateOrgAvatar(activeOrg.org_id, avatarUrl);
+      setTeamMessage("Saved");
+    } catch (err) {
+      setTeamAvatarUrl(previousAvatarUrl);
+      setTeamMessage(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setTeamSaving(false);
+    }
+  }, [activeOrg, updateOrgAvatar]);
 
   const loadInvites = useCallback(async () => {
     if (!orgId) return;
@@ -188,7 +207,7 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
 
   return {
     activeOrg, isLoading, user, section, setSection, retryingOrg,
-    teamName, handleTeamNameChange, teamSaving, teamMessage,
+    teamName, teamAvatarUrl, handleTeamNameChange, handleTeamAvatarChange, teamSaving, teamMessage,
     members, myRole, isAdminOrOwner,
     integrations, integrationBusyId, createIntegration, updateIntegration, deleteIntegration,
     invites, handleCreateInvite, handleRevokeInvite,

@@ -364,7 +364,10 @@ pub(crate) struct CreateOrgRequest {
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct UpdateOrgRequest {
-    pub name: String,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_patch_option")]
+    pub avatar_url: Option<Option<String>>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

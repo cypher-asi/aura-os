@@ -1,6 +1,11 @@
 import type { Org, OrgMember, OrgInvite, OrgBilling, OrgRole, CreditBalance, CheckoutSessionResponse, TransactionsResponse, BillingAccount, OrgIntegration } from "../types";
 import { apiFetch } from "./core";
 
+export interface UpdateOrgPayload {
+  name?: string;
+  avatar_url?: string | null;
+}
+
 export const orgsApi = {
   list: () => apiFetch<Org[]>("/api/orgs"),
   create: (name: string) =>
@@ -9,10 +14,10 @@ export const orgsApi = {
       body: JSON.stringify({ name }),
     }),
   get: (orgId: string) => apiFetch<Org>(`/api/orgs/${orgId}`),
-  update: (orgId: string, name: string) =>
+  update: (orgId: string, data: UpdateOrgPayload) =>
     apiFetch<Org>(`/api/orgs/${orgId}`, {
       method: "PUT",
-      body: JSON.stringify({ name }),
+      body: JSON.stringify(data),
     }),
   listMembers: (orgId: string) =>
     apiFetch<OrgMember[]>(`/api/orgs/${orgId}/members`),

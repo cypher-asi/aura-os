@@ -31,6 +31,7 @@ const { mockOrgStore, mockApis } = vi.hoisted(() => {
     mockOrgStore: {
       activeOrg: mockOrg as typeof mockOrg | null,
       renameOrg: vi.fn(),
+      updateOrgAvatar: vi.fn(),
       members: [{ user_id: "u1", role: "owner", display_name: "Owner" }],
       integrations: [],
       refreshMembers: vi.fn(),
