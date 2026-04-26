@@ -1,23 +1,16 @@
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
-import { api } from "../api/client";
-
-export type TimePeriod = "all" | "month" | "week" | "day";
-
-export interface LeaderboardUser {
-  id: string;
-  name: string;
-  avatarUrl?: string;
-  profileId?: string;
-  type: "user" | "agent";
-  tokens: number;
-  estimatedCostUsd: number;
-  eventCount: number;
-}
 import { useEventStore } from "./event-store";
 import { EventType } from "../shared/types/aura-events";
+import { queryClient } from "../shared/lib/query-client";
+import {
+  leaderboardEntriesQueryOptions,
+  leaderboardQueryKeys,
+  type LeaderboardUser,
+  type TimePeriod,
+} from "../queries/leaderboard-queries";
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export type { LeaderboardUser, TimePeriod } from "../queries/leaderboard-queries";
 
 interface LeaderboardState {
   period: TimePeriod;
@@ -52,25 +45,12 @@ export const useLeaderboardStore = create<LeaderboardState>()((set, get) => ({
     set({ loading: true });
     const { period } = get();
     try {
-      const data = await api.leaderboard.get(period);
-      if (id !== _fetchId) return;
-      set({
-        entries: data.map((e) => ({
-          id: e.profile_id,
-          name:
-            e.display_name && !UUID_RE.test(e.display_name)
-              ? e.display_name
-              : e.profile_type === "agent"
-                ? "Unnamed Agent"
-                : "Unknown",
-          avatarUrl: e.avatar_url ?? undefined,
-          profileId: e.profile_id,
-          type: (e.profile_type === "agent" ? "agent" : "user") as "user" | "agent",
-          tokens: typeof e.tokens_used === "number" ? e.tokens_used : 0,
-          estimatedCostUsd: typeof e.estimated_cost_usd === "number" ? e.estimated_cost_usd : 0,
-          eventCount: typeof e.event_count === "number" ? e.event_count : 0,
-        })),
+      const data = await queryClient.fetchQuery({
+        ...leaderboardEntriesQueryOptions(period),
+        staleTime: 0,
       });
+      if (id !== _fetchId) return;
+      set({ entries: data });
     } catch {
       if (id !== _fetchId) return;
       set({ entries: [] });
@@ -94,7 +74,8 @@ useEventStore.getState().subscribe(EventType.NetworkEvent, (event) => {
   if (!payload) return;
   const wsType = (payload.type as string) ?? "";
   if (wsType === "activity.new") {
-    useLeaderboardStore.getState().fetchEntries();
+    void queryClient.invalidateQueries({ queryKey: leaderboardQueryKeys.root });
+    void useLeaderboardStore.getState().fetchEntries();
   }
 });
 

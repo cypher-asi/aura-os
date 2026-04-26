@@ -1,6 +1,13 @@
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import { api } from "../api/client";
+import {
+  billingAccountQueryOptions,
+  billingBalanceQueryOptions,
+  billingQueryKeys,
+  billingTransactionsQueryOptions,
+} from "../queries/billing-queries";
+import { queryClient } from "../shared/lib/query-client";
 import type { CreditBalance, CreditTransaction, BillingAccount, CheckoutSessionResponse } from "../shared/types";
 
 interface BillingState {
@@ -47,7 +54,10 @@ export const useBillingStore = create<BillingState>()((set) => ({
   fetchBalance: async (orgId) => {
     set({ balanceLoading: true });
     try {
-      const balance = await api.orgs.getCreditBalance(orgId);
+      const balance = await queryClient.fetchQuery({
+        ...billingBalanceQueryOptions(orgId),
+        staleTime: 0,
+      });
       set({ balance, balanceLoading: false });
     } catch {
       set({ balanceLoading: false });
@@ -57,7 +67,10 @@ export const useBillingStore = create<BillingState>()((set) => ({
   fetchTransactions: async (orgId) => {
     set({ transactionsLoading: true });
     try {
-      const resp = await api.orgs.getTransactions(orgId);
+      const resp = await queryClient.fetchQuery({
+        ...billingTransactionsQueryOptions(orgId),
+        staleTime: 0,
+      });
       set({
         transactions: resp.transactions,
         transactionsHasMore: resp.has_more,
@@ -71,7 +84,10 @@ export const useBillingStore = create<BillingState>()((set) => ({
   fetchAccount: async (orgId) => {
     set({ accountLoading: true });
     try {
-      const account = await api.orgs.getAccount(orgId);
+      const account = await queryClient.fetchQuery({
+        ...billingAccountQueryOptions(orgId),
+        staleTime: 0,
+      });
       set({ account, accountLoading: false });
     } catch {
       set({ accountLoading: false });
@@ -82,6 +98,9 @@ export const useBillingStore = create<BillingState>()((set) => ({
     set({ purchaseLoading: true });
     try {
       const result = await api.orgs.createCreditCheckout(orgId, amountUsd);
+      void queryClient.invalidateQueries({ queryKey: billingQueryKeys.balance(orgId) });
+      void queryClient.invalidateQueries({ queryKey: billingQueryKeys.transactions(orgId) });
+      void queryClient.invalidateQueries({ queryKey: billingQueryKeys.account(orgId) });
       set({ purchaseLoading: false });
       return result;
     } catch {
@@ -90,7 +109,10 @@ export const useBillingStore = create<BillingState>()((set) => ({
     }
   },
 
-  reset: () => set({ ...INITIAL }),
+  reset: () => {
+    queryClient.removeQueries({ queryKey: billingQueryKeys.root });
+    set({ ...INITIAL });
+  },
 }));
 
 export function useBilling() {

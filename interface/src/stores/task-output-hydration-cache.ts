@@ -10,29 +10,26 @@
 /*  this produces two waves of 20 parallel GETs against a server that  */
 /*  cannot find the task's session_id, which is pure noise.            */
 /*                                                                     */
-/*  This cache:                                                        */
-/*    1. Returns the same in-flight promise to concurrent callers.     */
-/*    2. Caches the outcome (`loaded` vs `empty`) for the session.     */
-/*    3. Never retries on `empty` - a fresh run of the task is what    */
-/*       clears the cache entry (`invalidateTaskOutputHydration`).     */
+/*  This cache uses React Query so concurrent callers share the same    */
+/*  in-flight fetch and terminal outcomes are remembered for the        */
+/*  session. A fresh run clears the query entry via                     */
+/*  `invalidateTaskOutputHydration`.                                    */
 /*                                                                     */
 /*  Error responses are treated like `empty` so that transient         */
 /*  failures also stop looping; the user can force a refetch by        */
 /*  calling `invalidateTaskOutputHydration(projectId, taskId)`.        */
 /* ------------------------------------------------------------------ */
 
+import { queryClient } from "../shared/lib/query-client";
+
 export type HydrationOutcome = "loaded" | "empty";
 export type HydrationState = "idle" | "loading" | HydrationOutcome;
 
-interface CacheEntry {
-  state: HydrationState;
-  promise?: Promise<HydrationOutcome>;
-}
+const TASK_OUTPUT_HYDRATION_STALE_TIME_MS = Infinity;
+const TASK_OUTPUT_HYDRATION_GC_TIME_MS = Infinity;
 
-const cache = new Map<string, CacheEntry>();
-
-function cacheKey(projectId: string, taskId: string): string {
-  return `${projectId}:${taskId}`;
+function cacheKey(projectId: string, taskId: string) {
+  return ["task-output-hydration", projectId, taskId] as const;
 }
 
 /**
@@ -46,29 +43,19 @@ export function hydrateTaskOutputOnce(
   taskId: string,
   fetcher: () => Promise<HydrationOutcome>,
 ): Promise<HydrationOutcome> {
-  const key = cacheKey(projectId, taskId);
-  const existing = cache.get(key);
-  if (existing) {
-    if (existing.state === "loaded" || existing.state === "empty") {
-      return Promise.resolve(existing.state);
-    }
-    if (existing.state === "loading" && existing.promise) {
-      return existing.promise;
-    }
-  }
-
-  const promise = fetcher()
-    .then((outcome) => {
-      cache.set(key, { state: outcome });
-      return outcome;
-    })
-    .catch(() => {
-      cache.set(key, { state: "empty" });
-      return "empty" as const;
-    });
-
-  cache.set(key, { state: "loading", promise });
-  return promise;
+  return queryClient.fetchQuery({
+    queryKey: cacheKey(projectId, taskId),
+    queryFn: async () => {
+      try {
+        return await fetcher();
+      } catch {
+        return "empty" as const;
+      }
+    },
+    retry: false,
+    staleTime: TASK_OUTPUT_HYDRATION_STALE_TIME_MS,
+    gcTime: TASK_OUTPUT_HYDRATION_GC_TIME_MS,
+  });
 }
 
 /**
@@ -77,15 +64,22 @@ export function hydrateTaskOutputOnce(
  * sticky-cache a stale result.
  */
 export function invalidateTaskOutputHydration(projectId: string, taskId: string): void {
-  cache.delete(cacheKey(projectId, taskId));
+  queryClient.removeQueries({ queryKey: cacheKey(projectId, taskId), exact: true });
 }
 
 /** Test-only: returns the cached state for inspection. */
 export function peekHydrationState(projectId: string, taskId: string): HydrationState {
-  return cache.get(cacheKey(projectId, taskId))?.state ?? "idle";
+  const queryState = queryClient.getQueryState<HydrationOutcome>(
+    cacheKey(projectId, taskId),
+  );
+  if (!queryState) return "idle";
+  if (queryState.data === "loaded" || queryState.data === "empty") {
+    return queryState.data;
+  }
+  return queryState.fetchStatus === "fetching" ? "loading" : "idle";
 }
 
 /** Test-only: reset the cache between tests. */
 export function resetTaskOutputHydrationCache(): void {
-  cache.clear();
+  queryClient.removeQueries({ queryKey: ["task-output-hydration"] });
 }
