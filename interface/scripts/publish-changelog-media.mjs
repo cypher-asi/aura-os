@@ -144,6 +144,11 @@ export function publishChangelogMedia({
   if (!resolvedDate) throw new Error("date is required or must exist in latest changelog JSON.");
   const historyPath = path.join(pagesDir, "changelog", channel, "history", `${resolvedDate}.json`);
   const historyDoc = fs.existsSync(historyPath) ? readJson(historyPath) : null;
+  const latestMatchesDate = String(latestDoc.date || "").trim() === resolvedDate;
+  if (!latestMatchesDate && !historyDoc) {
+    throw new Error(`Historical changelog JSON is required for backfill date ${resolvedDate}.`);
+  }
+  const targetDoc = latestMatchesDate ? latestDoc : historyDoc;
 
   const results = [];
   for (const asset of assets) {
@@ -154,16 +159,16 @@ export function publishChangelogMedia({
       continue;
     }
 
-    const latestMatch = findEntry(latestDoc, entryId);
-    if (!latestMatch) {
+    const targetMatch = findEntry(targetDoc, entryId);
+    if (!targetMatch) {
       results.push({ status: "missing-entry", entryId });
       continue;
     }
-    if (!refreshExisting && isPublishedMedia(latestMatch.entry.media)) {
+    if (!refreshExisting && isPublishedMedia(targetMatch.entry.media)) {
       results.push({
         status: "skipped-existing",
         entryId,
-        assetPath: latestMatch.entry.media.assetPath || latestMatch.entry.media.asset_path || null,
+        assetPath: targetMatch.entry.media.assetPath || targetMatch.entry.media.asset_path || null,
       });
       continue;
     }
@@ -174,13 +179,6 @@ export function publishChangelogMedia({
     fs.mkdirSync(path.dirname(destinationPath), { recursive: true });
     fs.copyFileSync(sourcePath, destinationPath);
 
-    const latestResult = applyMediaToDoc({
-      doc: latestDoc,
-      asset,
-      assetPath,
-      refreshExisting,
-      generatedAt,
-    });
     const historyResult = historyDoc
       ? applyMediaToDoc({
         doc: historyDoc,
@@ -190,8 +188,18 @@ export function publishChangelogMedia({
         generatedAt,
       })
       : { status: "history-missing", entryId };
+    const latestResult = latestMatchesDate
+      ? applyMediaToDoc({
+        doc: latestDoc,
+        asset,
+        assetPath,
+        refreshExisting,
+        generatedAt,
+      })
+      : { status: "latest-unchanged", entryId };
     results.push({
-      ...latestResult,
+      ...(latestMatchesDate ? latestResult : historyResult),
+      latestStatus: latestResult.status,
       historyStatus: historyResult.status,
       bytes: fs.statSync(destinationPath).size,
     });

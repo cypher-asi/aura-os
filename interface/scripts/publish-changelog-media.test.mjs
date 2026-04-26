@@ -125,3 +125,48 @@ test("publishChangelogMedia skips already-published media unless refresh-existin
   const latest = JSON.parse(fs.readFileSync(path.join(pagesDir, "changelog", "nightly", "latest.json"), "utf8"));
   assert.notEqual(latest.rendered.entries[0].media.assetPath, "assets/changelog/nightly/2026-04-24/existing.png");
 });
+
+test("publishChangelogMedia backfills historical dates without mutating latest", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-publish-media-"));
+  const pagesDir = path.join(tempDir, "pages");
+  const sourcePng = path.join(tempDir, "out", "historical.png");
+  writePngPlaceholder(sourcePng, "image-v3");
+  const latest = changelogDoc();
+  latest.date = "2026-04-25";
+  latest.rendered.entries[0].batch_id = "latest-entry";
+  latest.rendered.entries[0].title = "Latest unrelated entry";
+  const history = changelogDoc();
+  history.date = "2026-04-24";
+  writeJson(path.join(pagesDir, "changelog", "nightly", "latest.json"), latest);
+  writeJson(path.join(pagesDir, "changelog", "nightly", "history", "2026-04-24.json"), history);
+  const manifestPath = path.join(tempDir, "manifest.json");
+  writeJson(manifestPath, {
+    assets: [
+      {
+        entryId: "entry-model-picker",
+        title: "GPT-5.5 available in the chat model picker",
+        publicCaption: "GPT-5.5 is now available in the chat model picker.",
+        source: { brandedPngPath: sourcePng },
+        dimensions: { width: 2560, height: 1440 },
+        bytes: 8,
+      },
+    ],
+  });
+
+  const report = publishChangelogMedia({
+    manifestFile: manifestPath,
+    pagesDir,
+    channel: "nightly",
+    date: "2026-04-24",
+    generatedAt: "2026-04-24T00:00:00.000Z",
+  });
+
+  assert.equal(report.publishedCount, 1);
+  assert.equal(report.results[0].latestStatus, "latest-unchanged");
+  assert.equal(report.results[0].historyStatus, "published");
+  const nextLatest = JSON.parse(fs.readFileSync(path.join(pagesDir, "changelog", "nightly", "latest.json"), "utf8"));
+  const nextHistory = JSON.parse(fs.readFileSync(path.join(pagesDir, "changelog", "nightly", "history", "2026-04-24.json"), "utf8"));
+  assert.equal(nextLatest.rendered.entries[0].media, undefined);
+  assert.equal(nextHistory.rendered.entries[0].media.status, "published");
+  assert.ok(nextHistory.rendered.entries[0].media.assetPath.includes("2026-04-24/entry-model-picker-"));
+});

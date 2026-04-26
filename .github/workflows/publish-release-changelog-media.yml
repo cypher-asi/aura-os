@@ -113,11 +113,17 @@ jobs:
           if [[ -z "$date" ]]; then
             date="$(jq -er '.date' "$latest_json")"
           fi
+          changelog_json="$latest_json"
+          history_json="pages/changelog/${channel}/history/${date}.json"
+          if [[ -f "$history_json" ]]; then
+            changelog_json="$history_json"
+          fi
 
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "channel=${channel}" >> "$GITHUB_OUTPUT"
           echo "date=${date}" >> "$GITHUB_OUTPUT"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "changelog_json=${changelog_json}" >> "$GITHUB_OUTPUT"
 
       - name: Install Node.js
         if: steps.target.outputs.skip == 'false'
@@ -173,7 +179,7 @@ jobs:
         shell: bash
         run: |
           args=(
-            --changelog-file "pages/changelog/${{ steps.target.outputs.channel }}/latest.json"
+            --changelog-file "${{ steps.target.outputs.changelog_json }}"
             --output-dir changelog-media-output
             --base-url "$AURA_DEMO_SCREENSHOT_BASE_URL"
             --max-candidates "${{ inputs.max_candidates || '3' }}"
