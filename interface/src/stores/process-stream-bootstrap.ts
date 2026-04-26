@@ -3,6 +3,7 @@ import type { AuraEventOfType } from "../shared/types/aura-events";
 import { useEventStore } from "./event-store/index";
 import { getStreamEntry, streamMetaMap } from "../hooks/stream/store";
 import { persistProcessNodeTurns } from "./process-node-turn-cache";
+import { createEventSubscriptionGroup } from "./event-subscription-group";
 
 /* ------------------------------------------------------------------ */
 /*  App-scoped process-run stream snapshot bootstrap                   */
@@ -69,8 +70,14 @@ function handleProcessRunFailed(
   snapshotAllNodesForRun(e.content.run_id, e.content.process_id);
 }
 
-let bootstrapped = false;
-let registeredDisposers: Array<() => void> = [];
+const processStreamSubscriptionGroup = createEventSubscriptionGroup(
+  () => useEventStore.getState().subscribe,
+  (subscribe) => [
+    subscribe(EventType.ProcessNodeExecuted, handleProcessNodeExecuted),
+    subscribe(EventType.ProcessRunCompleted, handleProcessRunCompleted),
+    subscribe(EventType.ProcessRunFailed, handleProcessRunFailed),
+  ],
+);
 
 /**
  * Installs the app-scoped process-run snapshot subscriptions. Safe to
@@ -78,25 +85,10 @@ let registeredDisposers: Array<() => void> = [];
  * `teardownProcessStreamBootstrap` is used (test-only).
  */
 export function bootstrapProcessStreamSubscriptions(): void {
-  if (bootstrapped) return;
-  bootstrapped = true;
-  const subscribe = useEventStore.getState().subscribe;
-  registeredDisposers = [
-    subscribe(EventType.ProcessNodeExecuted, handleProcessNodeExecuted),
-    subscribe(EventType.ProcessRunCompleted, handleProcessRunCompleted),
-    subscribe(EventType.ProcessRunFailed, handleProcessRunFailed),
-  ];
+  processStreamSubscriptionGroup.bootstrap();
 }
 
 /** Test-only: undo the bootstrap so tests can re-install a fresh set. */
 export function teardownProcessStreamBootstrap(): void {
-  for (const dispose of registeredDisposers) {
-    try {
-      dispose();
-    } catch {
-      // Disposer failures should not block further cleanup.
-    }
-  }
-  registeredDisposers = [];
-  bootstrapped = false;
+  processStreamSubscriptionGroup.teardown();
 }

@@ -25,6 +25,7 @@ import {
 } from "../hooks/stream/handlers";
 import { useTaskOutputPanelStore } from "./task-output-panel-store";
 import { useTaskStatusStore } from "./task-status-store";
+import { createEventSubscriptionGroup } from "./event-subscription-group";
 import type { StreamRefs, StreamSetters } from "../shared/types/stream";
 import type { MutableRefObject } from "react";
 
@@ -508,19 +509,9 @@ function handleLoopEnd(
   }
 }
 
-let bootstrapped = false;
-let registeredDisposers: Array<() => void> = [];
-
-/**
- * Installs the app-scoped task stream subscriptions. Safe to call
- * multiple times — re-invocations no-op until `teardownTaskStreamBootstrap`
- * is used (test-only).
- */
-export function bootstrapTaskStreamSubscriptions(): void {
-  if (bootstrapped) return;
-  bootstrapped = true;
-  const subscribe = useEventStore.getState().subscribe;
-  registeredDisposers = [
+const taskStreamSubscriptionGroup = createEventSubscriptionGroup(
+  () => useEventStore.getState().subscribe,
+  (subscribe) => [
     subscribe(EventType.TaskStarted, handleTaskStarted),
     subscribe(EventType.TextDelta, handleTextDeltaEvent),
     subscribe(EventType.ThinkingDelta, handleThinkingDeltaEvent),
@@ -542,21 +533,24 @@ export function bootstrapTaskStreamSubscriptions(): void {
     subscribe(EventType.TaskFailed, handleTaskFailed),
     subscribe(EventType.LoopStopped, handleLoopEnd),
     subscribe(EventType.LoopFinished, handleLoopEnd),
-  ];
+  ],
+  () => {
+    isStreamingByTask.clear();
+  },
+);
+
+/**
+ * Installs the app-scoped task stream subscriptions. Safe to call
+ * multiple times — re-invocations no-op until `teardownTaskStreamBootstrap`
+ * is used (test-only).
+ */
+export function bootstrapTaskStreamSubscriptions(): void {
+  taskStreamSubscriptionGroup.bootstrap();
 }
 
 /** Test-only: undo the bootstrap so tests can re-install a fresh set. */
 export function teardownTaskStreamBootstrap(): void {
-  for (const dispose of registeredDisposers) {
-    try {
-      dispose();
-    } catch {
-      // Disposer failures should not block further cleanup.
-    }
-  }
-  registeredDisposers = [];
-  isStreamingByTask.clear();
-  bootstrapped = false;
+  taskStreamSubscriptionGroup.teardown();
 }
 
 export function peekIsTaskStreaming(taskId: string): boolean {
