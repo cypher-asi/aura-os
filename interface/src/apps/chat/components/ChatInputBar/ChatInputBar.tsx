@@ -80,6 +80,22 @@ export interface ChatInputBarProps {
    * running an automation task" instead of the raw upstream string.
    */
   externalBusyMessage?: string;
+  /**
+   * True when the most recent send is queued behind another in-flight
+   * turn on the same upstream agent partition (Phase 3 server signal:
+   * `progress { stage: "queued" }`). Renders an inline hint that is
+   * visually distinct from the generic busy state so the user
+   * understands "your message is next" rather than "the agent is
+   * blocked". Clears as soon as the actual turn delivers its first
+   * delta — `progressText` is wiped by `handleTextDelta` /
+   * `handleThinkingDelta` upstream.
+   */
+  isQueued?: boolean;
+  /**
+   * Optional override for the inline queued hint copy. Defaults to
+   * "Queued behind current turn…".
+   */
+  queuedHint?: string;
   adapterType?: string;
   defaultModel?: string | null;
   agentName?: string;
@@ -149,6 +165,8 @@ export const DesktopChatInputBar = memo(
       streamKey,
       isExternallyBusy = false,
       externalBusyMessage,
+      isQueued = false,
+      queuedHint,
       adapterType,
       defaultModel,
       machineType,
@@ -589,6 +607,42 @@ export const DesktopChatInputBar = memo(
             commands={selectedCommands}
             onRemove={handleCommandRemove}
           />
+          {isQueued ? (
+            <div
+              className={styles.queuedHint}
+              role="status"
+              aria-live="polite"
+              data-agent-surface="chat-input-queued-hint"
+            >
+              <span className={styles.queuedHintDot} aria-hidden="true" />
+              <span className={styles.queuedHintLabel}>
+                {queuedHint ?? "Queued behind current turn\u2026"}
+              </span>
+            </div>
+          ) : null}
+          {modelsForMode.length > 0 ? (
+            <div className={styles.mobileModelBar}>
+              <span className={styles.mobileModelLabel}>Model</span>
+              <div className={styles.mobileModelMenuWrap} data-model-menu-root="true">
+                <button
+                  type="button"
+                  className={`${styles.modelButton} ${styles.mobileModelButton}`}
+                  onClick={
+                    modelsForMode.length > 1
+                      ? () => setModelMenuOpen((v) => !v)
+                      : undefined
+                  }
+                  style={
+                    modelsForMode.length > 1 ? undefined : { cursor: "default" }
+                  }
+                >
+                  {modelLabel(selectedModel ?? "", adapterType, defaultModel)}
+                  {modelsForMode.length > 1 && <ChevronDown size={12} />}
+                </button>
+                {renderModelMenu()}
+              </div>
+            </div>
+          ) : null}
           <div className={styles.inputRow}>
             <button
               type="button"

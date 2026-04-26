@@ -48,6 +48,13 @@ export interface SessionInit {
   project_id?: string | null;
   conversation_messages?: ConversationMessage[] | null;
   agent_id?: string | null;
+  /**
+   * Phase 1a: stable Aura template id, kept distinct from `agent_id`
+   * which is now the partition key (`{template}::{instance}`) the
+   * harness uses for per-turn locking. The harness falls back to
+   * `agent_id` when this is omitted.
+   */
+  template_agent_id?: string | null;
 }
 
 export interface MessageAttachment {

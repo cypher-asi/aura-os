@@ -15,6 +15,7 @@ import { MessageQueue } from "../MessageQueue";
 import { OverlayScrollbar } from "../../../../components/OverlayScrollbar";
 import { ChatStreamingIndicator } from "./ChatStreamingIndicator";
 import { useChatPanelState } from "./useChatPanelState";
+import { useProgressText } from "../../../../hooks/stream/hooks";
 import type { ChatAttachment } from "../../../../api/streams";
 import type { Project } from "../../../../shared/types";
 import type { GenerationMode } from "../../../../constants/models";
@@ -137,6 +138,16 @@ export function ChatPanel({
     selectedProjectId,
     agentId,
   });
+
+  // Phase 3 server emits `progress { stage: "queued" }` as the first
+  // SSE event when our turn is waiting behind another on the same
+  // upstream agent partition. The chat-stream handler stamps that
+  // stage into the stream store's `progressText`; downstream text /
+  // tool / thinking deltas wipe it (handlers/text.ts, thinking.ts,
+  // shared.ts). So a derived `isQueued` from this slot is exactly
+  // "queued and the actual turn hasn't started yet".
+  const progressText = useProgressText(streamKey);
+  const isQueued = progressText === "queued";
 
   const initialHandoffReadyRef = useRef(false);
   const inputFocusReadyRef = useRef(false);
@@ -347,6 +358,7 @@ export function ChatPanel({
           streamKey={streamKey}
           isExternallyBusy={isExternallyBusy}
           externalBusyMessage={externalBusyMessage}
+          isQueued={isQueued}
           adapterType={adapterType}
           defaultModel={defaultModel}
           agentName={agentName}

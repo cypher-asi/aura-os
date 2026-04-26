@@ -5,6 +5,10 @@ export {
   dispatchInsufficientCredits,
   INSUFFICIENT_CREDITS_EVENT,
 } from "../shared/api/core";
+export type {
+  AgentBusyErrorInfo,
+  AgentBusyReasonCode,
+} from "../shared/api/core";
 
 export type {
   SpecGenStreamCallbacks,

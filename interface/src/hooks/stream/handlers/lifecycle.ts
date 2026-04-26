@@ -64,10 +64,14 @@ function normalizeStreamError(error: unknown): {
     };
   }
 
-  if (isAgentBusyError(error)) {
+  const agentBusy = isAgentBusyError(error);
+  if (agentBusy) {
+    const message =
+      agentBusy.reason === "queue_full"
+        ? "Too many turns are queued for this agent — wait a moment and try again."
+        : "This agent is currently running an automation task. Stop the automation to chat.";
     return {
-      message:
-        "This agent is currently running an automation task. Stop the automation to chat.",
+      message,
       displayVariant: "agentBusyError",
     };
   }

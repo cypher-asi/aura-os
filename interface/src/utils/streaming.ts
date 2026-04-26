@@ -40,6 +40,12 @@ export function getStreamingPhaseLabel(state: {
     if (state.progressText.toLowerCase() === "connecting") {
       return pickConnectingLabel();
     }
+    // Phase 3: the input bar surfaces a dedicated "Queued behind
+    // current turn…" pill; suppress the duplicate streaming-phase
+    // label so the user sees one clear hint instead of two.
+    if (state.progressText.toLowerCase() === "queued") {
+      return null;
+    }
     return state.progressText;
   }
   _cachedConnectingLabel = null;

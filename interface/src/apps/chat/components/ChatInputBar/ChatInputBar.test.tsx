@@ -172,6 +172,39 @@ describe("ChatInputBar", () => {
     expect(onStop).toHaveBeenCalledOnce();
   });
 
+  it("renders the queued hint when isQueued=true", () => {
+    render(<ChatInputBar {...makeProps({ isQueued: true })} />);
+    const hint = screen.getByRole("status");
+    expect(hint).toBeInTheDocument();
+    expect(hint).toHaveTextContent(/queued behind current turn/i);
+  });
+
+  it("uses the override copy when queuedHint is provided", () => {
+    render(
+      <ChatInputBar
+        {...makeProps({ isQueued: true, queuedHint: "Hold tight — your turn is next" })}
+      />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Hold tight — your turn is next",
+    );
+  });
+
+  it("clears the queued hint when isQueued flips to false", () => {
+    const { rerender } = render(
+      <ChatInputBar {...makeProps({ isQueued: true })} />,
+    );
+    expect(screen.getByRole("status")).toBeInTheDocument();
+
+    rerender(<ChatInputBar {...makeProps({ isQueued: false })} />);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("does not render the queued hint by default", () => {
+    render(<ChatInputBar {...makeProps()} />);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
   it("shows default model label when selectedModel set in store", () => {
     mockSelectedModel = "aura-claude-opus-4-6";
     render(<ChatInputBar {...makeProps()} />);
