@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Store } from "lucide-react";
-import { Lane } from "../../../components/Lane";
 import { EmptyState } from "../../../components/EmptyState";
 import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
 import { AgentTalentCard } from "../AgentTalentCard";
@@ -37,7 +36,7 @@ export function MarketplaceMainPanel() {
   );
 
   return (
-    <Lane flex>
+    <>
       <div className={styles.container}>
         <div ref={scrollRef} className={styles.scrollArea}>
           {agents.length === 0 ? (
@@ -73,6 +72,6 @@ export function MarketplaceMainPanel() {
         onClose={() => setHireTarget(null)}
         onHired={() => setHireTarget(null)}
       />
-    </Lane>
+    </>
   );
 }

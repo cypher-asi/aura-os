@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
 import { GitCommitVertical } from "lucide-react";
-import { Lane } from "../../../components/Lane";
 import { CommitGrid } from "../../../components/CommitGrid";
 import { ActivityCard } from "../../../components/ActivityCard";
 import { EmptyState } from "../../../components/EmptyState";
@@ -25,58 +24,56 @@ export function FeedMainPanel() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   return (
-    <Lane flex>
-      <div className={styles.container}>
-        <div ref={scrollRef} className={styles.scrollArea}>
-          {isMobileLayout ? (
-            <div className={styles.mobileFilterBar} aria-label="Feed filters">
-              {FEED_FILTERS.map((feedFilter) => {
-                const isSelected = feedFilter.id === filter;
-                return (
-                  <button
-                    key={feedFilter.id}
-                    type="button"
-                    className={`${styles.mobileFilterChip} ${isSelected ? styles.mobileFilterChipActive : ""}`}
-                    aria-pressed={isSelected}
-                    onClick={() => setFilter(feedFilter.id)}
-                  >
-                    {feedFilter.label}
-                  </button>
-                );
-              })}
-            </div>
-          ) : null}
-          {isLeaderboard ? (
-            <LeaderboardContent />
-          ) : filteredEvents.length === 0 ? (
-            <div className={styles.emptyWrapper}>
-              <EmptyState icon={<GitCommitVertical size={32} />}>It's quiet here.</EmptyState>
-            </div>
-          ) : (
-            <>
-              {hasCommitActivity ? (
-                <div className={styles.commitGridWrapper}>
-                  <CommitGrid data={commitActivity} />
-                </div>
-              ) : null}
-              <div className={styles.feedList}>
-                {filteredEvents.map((evt, i) => (
-                  <ActivityCard
-                    key={evt.id}
-                    event={evt}
-                    isLast={i === filteredEvents.length - 1}
-                    isSelected={selectedEventId === evt.id}
-                    comments={getCommentsForEvent(evt.id)}
-                    onSelect={selectEvent}
-                    onSelectProfile={(author) => selectProfile({ name: author.name, type: author.type, avatarUrl: author.avatarUrl })}
-                  />
-                ))}
+    <div className={styles.container}>
+      <div ref={scrollRef} className={styles.scrollArea}>
+        {isMobileLayout ? (
+          <div className={styles.mobileFilterBar} aria-label="Feed filters">
+            {FEED_FILTERS.map((feedFilter) => {
+              const isSelected = feedFilter.id === filter;
+              return (
+                <button
+                  key={feedFilter.id}
+                  type="button"
+                  className={`${styles.mobileFilterChip} ${isSelected ? styles.mobileFilterChipActive : ""}`}
+                  aria-pressed={isSelected}
+                  onClick={() => setFilter(feedFilter.id)}
+                >
+                  {feedFilter.label}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+        {isLeaderboard ? (
+          <LeaderboardContent />
+        ) : filteredEvents.length === 0 ? (
+          <div className={styles.emptyWrapper}>
+            <EmptyState icon={<GitCommitVertical size={32} />}>It's quiet here.</EmptyState>
+          </div>
+        ) : (
+          <>
+            {hasCommitActivity ? (
+              <div className={styles.commitGridWrapper}>
+                <CommitGrid data={commitActivity} />
               </div>
-            </>
-          )}
-        </div>
-        <OverlayScrollbar scrollRef={scrollRef} />
+            ) : null}
+            <div className={styles.feedList}>
+              {filteredEvents.map((evt, i) => (
+                <ActivityCard
+                  key={evt.id}
+                  event={evt}
+                  isLast={i === filteredEvents.length - 1}
+                  isSelected={selectedEventId === evt.id}
+                  comments={getCommentsForEvent(evt.id)}
+                  onSelect={selectEvent}
+                  onSelectProfile={(author) => selectProfile({ name: author.name, type: author.type, avatarUrl: author.avatarUrl })}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
-    </Lane>
+      <OverlayScrollbar scrollRef={scrollRef} />
+    </div>
   );
 }

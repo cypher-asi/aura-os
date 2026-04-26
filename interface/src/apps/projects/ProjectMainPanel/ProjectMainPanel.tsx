@@ -1,6 +1,5 @@
 import { useEffect, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
-import { ResponsiveMainLane } from "../../../components/ResponsiveMainLane";
 import { useTerminalPanelStore } from "../../../stores/terminal-panel-store";
 import { useTerminalTarget } from "../../../hooks/use-terminal-target";
 
@@ -15,9 +14,5 @@ export function ProjectMainPanel({ children }: { children?: ReactNode }) {
     setTerminalTarget({ cwd: workspacePath, remoteAgentId, projectId });
   }, [projectId, remoteAgentId, setTerminalTarget, status, workspacePath]);
 
-  return (
-    <ResponsiveMainLane>
-      {children}
-    </ResponsiveMainLane>
-  );
+  return <>{children}</>;
 }

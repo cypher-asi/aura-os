@@ -3,7 +3,6 @@ import { useParams } from "react-router-dom";
 import { PageEmptyState, Text } from "@cypher-asi/zui";
 import { GitBranch, Loader2, SquareKanban } from "lucide-react";
 import { Avatar } from "../../../../components/Avatar";
-import { ResponsiveMainLane } from "../../../../components/ResponsiveMainLane";
 import { RunTaskButton } from "../../../../components/RunTaskButton";
 import { TaskStatusIcon } from "../../../../components/TaskStatusIcon";
 import { useProjectsListStore } from "../../../../stores/projects-list-store";
@@ -97,18 +96,16 @@ export function TasksMainPanel({ children: _children }: { children?: React.React
 
   if (!projectId) {
     return (
-      <ResponsiveMainLane>
-        <PageEmptyState
-          icon={<SquareKanban size={32} />}
-          title="Tasks"
-          description="Select a project from navigation to view its task board."
-        />
-      </ResponsiveMainLane>
+      <PageEmptyState
+        icon={<SquareKanban size={32} />}
+        title="Tasks"
+        description="Select a project from navigation to view its task board."
+      />
     );
   }
 
   return (
-    <ResponsiveMainLane>
+    <>
       <div className={styles.root}>
         <div className={styles.boardViewport}>
           <div className={styles.board}>
@@ -174,6 +171,6 @@ export function TasksMainPanel({ children: _children }: { children?: React.React
         onDone={handleAddDone}
         onStatusChange={setAddingToLane}
       />
-    </ResponsiveMainLane>
+    </>
   );
 }

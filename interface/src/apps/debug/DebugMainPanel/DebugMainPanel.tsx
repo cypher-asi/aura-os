@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { Lane } from "../../../components/Lane";
 import styles from "./DebugMainPanel.module.css";
 
 interface Props {
@@ -11,17 +10,16 @@ interface Props {
  * we intentionally do **not** wrap the content in a centered column with
  * hidden overflow, because the Debug Run Detail view owns its own
  * three-pane layout (toolbar + virtualized log list + inspector) and
- * needs to control scrolling itself.
+ * needs to control scrolling itself. The shell provides the persistent
+ * `ResponsiveMainLane`, so this component only renders inner chrome.
  */
 export function DebugMainPanel({ children }: Props) {
   return (
-    <Lane flex>
-      <div className={styles.container}>
-        <div className={styles.scrollArea}>
-          <div className={styles.content}>{children}</div>
-        </div>
+    <div className={styles.container}>
+      <div className={styles.scrollArea}>
+        <div className={styles.content}>{children}</div>
       </div>
-    </Lane>
+    </div>
   );
 }
 

@@ -13,7 +13,6 @@ import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Markdown } from "tiptap-markdown";
-import { Lane } from "../../../components/Lane";
 import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
 import {
   useActiveNote,
@@ -338,87 +337,81 @@ export function NotesMainPanel({ children }: { children?: ReactNode }) {
     // `NotesIndexRedirect` is the route element for `/notes` and
     // `/notes/:projectId`; it mounts inside this lane (via `children`) and
     // issues a `Navigate` to a concrete note path.
-    return (
-      <Lane flex>
-        <div className={styles.container}>{children}</div>
-      </Lane>
-    );
+    return <div className={styles.container}>{children}</div>;
   }
 
   return (
-    <Lane flex>
-      <div
-        className={styles.container}
-        data-agent-surface="notes-editor"
-        data-agent-note-title={note?.title || ""}
-        data-agent-note-path={activeKey?.relPath || ""}
-        data-agent-note-mode={mode}
-      >
-        <div className={styles.toolbar}>
-          <div className={styles.modeToggle} role="tablist" aria-label="Editor mode">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === "wysiwyg"}
-              data-active={mode === "wysiwyg"}
-              className={styles.modeButton}
-              onClick={() => handleModeChange("wysiwyg")}
-              onKeyDown={(e) => {
-                if (e.key === "ArrowRight") handleModeChange("markdown");
-              }}
-            >
-              Rich
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === "markdown"}
-              data-active={mode === "markdown"}
-              className={styles.modeButton}
-              onClick={() => handleModeChange("markdown")}
-              onKeyDown={(e) => {
-                if (e.key === "ArrowLeft") handleModeChange("wysiwyg");
-              }}
-            >
-              Markdown
-            </button>
-          </div>
-        </div>
-        <div ref={scrollRef} className={styles.scrollArea}>
-          <div ref={setCenterColumnRef} className={styles.centerColumn}>
-            {!note ? null : mode === "wysiwyg" && editor ? (
-              <div data-notes-editor-root>
-                <BubbleMenu
-                  editor={editor}
-                  options={{ placement: "top" }}
-                  className={styles.bubbleMenu}
-                >
-                  <BubbleToolbar editor={editor} />
-                </BubbleMenu>
-                <EditorContent editor={editor} />
-              </div>
-            ) : (
-              <textarea
-                ref={markdownRef}
-                className={styles.markdownArea}
-                value={body}
-                onChange={(e) => handleMarkdownEdit(e.target.value)}
-                spellCheck={false}
-                aria-label="Note body (markdown)"
-              />
-            )}
-          </div>
-        </div>
-        <OverlayScrollbar scrollRef={scrollRef} />
-        {saveState ? (
-          <span
-            className={`${styles.saveState} ${note?.error ? styles.saveStateError : ""}`}
-            aria-live="polite"
+    <div
+      className={styles.container}
+      data-agent-surface="notes-editor"
+      data-agent-note-title={note?.title || ""}
+      data-agent-note-path={activeKey?.relPath || ""}
+      data-agent-note-mode={mode}
+    >
+      <div className={styles.toolbar}>
+        <div className={styles.modeToggle} role="tablist" aria-label="Editor mode">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "wysiwyg"}
+            data-active={mode === "wysiwyg"}
+            className={styles.modeButton}
+            onClick={() => handleModeChange("wysiwyg")}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowRight") handleModeChange("markdown");
+            }}
           >
-            {saveState}
-          </span>
-        ) : null}
+            Rich
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "markdown"}
+            data-active={mode === "markdown"}
+            className={styles.modeButton}
+            onClick={() => handleModeChange("markdown")}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowLeft") handleModeChange("wysiwyg");
+            }}
+          >
+            Markdown
+          </button>
+        </div>
       </div>
-    </Lane>
+      <div ref={scrollRef} className={styles.scrollArea}>
+        <div ref={setCenterColumnRef} className={styles.centerColumn}>
+          {!note ? null : mode === "wysiwyg" && editor ? (
+            <div data-notes-editor-root>
+              <BubbleMenu
+                editor={editor}
+                options={{ placement: "top" }}
+                className={styles.bubbleMenu}
+              >
+                <BubbleToolbar editor={editor} />
+              </BubbleMenu>
+              <EditorContent editor={editor} />
+            </div>
+          ) : (
+            <textarea
+              ref={markdownRef}
+              className={styles.markdownArea}
+              value={body}
+              onChange={(e) => handleMarkdownEdit(e.target.value)}
+              spellCheck={false}
+              aria-label="Note body (markdown)"
+            />
+          )}
+        </div>
+      </div>
+      <OverlayScrollbar scrollRef={scrollRef} />
+      {saveState ? (
+        <span
+          className={`${styles.saveState} ${note?.error ? styles.saveStateError : ""}`}
+          aria-live="polite"
+        >
+          {saveState}
+        </span>
+      ) : null}
+    </div>
   );
 }

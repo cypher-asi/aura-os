@@ -65,6 +65,7 @@ function wrapLazyAppComponent<Props extends object>(
 function createAppDefinition(
   metadata: Pick<AuraApp, "id" | "label" | "agentDescription" | "agentKeywords" | "icon" | "basePath" | "searchPlaceholder"> & {
     routes: RouteObject[];
+    bareMainPanel?: boolean;
   },
   loadApp: AppModuleLoader,
   options?: {
@@ -414,6 +415,7 @@ export const apps: AuraApp[] = [
       icon: Circle,
       basePath: "/desktop",
       routes: desktopRoutes,
+      bareMainPanel: true,
     },
     loadDesktopApp,
   ),

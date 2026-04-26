@@ -1,6 +1,5 @@
 import { useCallback, useMemo } from "react";
 import { useParams } from "react-router-dom";
-import { ResponsiveMainLane } from "../../../../components/ResponsiveMainLane";
 import { useProcessStore } from "../../stores/process-store";
 import { useProcessSidekickStore } from "../../stores/process-sidekick-store";
 import { processApi } from "../../../../shared/api/process";
@@ -66,27 +65,21 @@ export function ProcessMainPanel({ children }: { children?: ReactNode }) {
   }, [process, processId, runs, fetchRuns]);
 
   if (!processId || !process) {
-    return (
-      <ResponsiveMainLane>
-        <div style={{ height: "100%" }}>{children}</div>
-      </ResponsiveMainLane>
-    );
+    return <div style={{ height: "100%" }}>{children}</div>;
   }
 
   return (
-    <ResponsiveMainLane>
-      <div style={{ position: "relative", height: "100%", overflow: "hidden" }}>
-        <ProcessCanvas
-          processId={processId}
-          processNodes={processNodes}
-          processConnections={processConnections}
-          onTrigger={handleTrigger}
-          onToggle={handleToggle}
-          onStop={handleStop}
-          isEnabled={process.enabled}
-        />
-        {children}
-      </div>
-    </ResponsiveMainLane>
+    <div style={{ position: "relative", height: "100%", overflow: "hidden" }}>
+      <ProcessCanvas
+        processId={processId}
+        processNodes={processNodes}
+        processConnections={processConnections}
+        onTrigger={handleTrigger}
+        onToggle={handleToggle}
+        onStop={handleStop}
+        isEnabled={process.enabled}
+      />
+      {children}
+    </div>
   );
 }

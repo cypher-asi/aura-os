@@ -186,6 +186,15 @@ vi.mock("../../apps/agents/components/AgentWindow/AgentWindow", () => ({
 vi.mock("../BottomTaskbar", () => ({
   BottomTaskbar: () => <div data-testid="bottom-taskbar" />,
 }));
+// `DesktopShell` now wraps the active app's `MainPanel` in a persistent
+// `ResponsiveMainLane` so the visible middle container survives app switches.
+// Mock it as a passthrough so the existing `mainPanelHost` / `main-panel`
+// assertions still see the same parent chain.
+vi.mock("../ResponsiveMainLane", () => ({
+  ResponsiveMainLane: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="responsive-main-lane">{children}</div>
+  ),
+}));
 vi.mock("../Lane", () => ({
   Lane: ({
     children,
@@ -387,6 +396,52 @@ describe("DesktopShell", () => {
     expect(screen.getAllByTestId("left-panel")).toHaveLength(1);
     expect(screen.getAllByTestId("sidekick-panel")).toHaveLength(1);
     expect(screen.getByTestId("sidekick-panel")).toHaveAttribute("data-app", "projects");
+  });
+
+  it("keeps the persistent main panel lane mounted while swapping app content", () => {
+    currentActiveApp = mockProjectsApp;
+    currentVisitedAppIds = new Set(["projects"]);
+    const view = renderShell("/projects");
+
+    // The persistent `ResponsiveMainLane` lives *inside* `mainPanelHost` and
+    // wraps the active app's `MainPanel`. Both should keep their DOM identity
+    // across app switches so the visible middle container doesn't tear down.
+    const mainPanelHost = screen.getByTestId("main-panel").closest(".mainPanelHost");
+    const persistentLane = screen.getByTestId("responsive-main-lane");
+    expect(mainPanelHost).not.toBeNull();
+    expect(persistentLane).not.toBeNull();
+
+    currentActiveApp = mockTasksApp;
+    currentVisitedAppIds = new Set(["projects", "tasks"]);
+    view.rerender(
+      <MemoryRouter initialEntries={["/tasks"]}>
+        <DesktopShell />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("main-panel").closest(".mainPanelHost")).toBe(mainPanelHost);
+    expect(screen.getByTestId("responsive-main-lane")).toBe(persistentLane);
+
+    currentActiveApp = mockProcessApp;
+    currentVisitedAppIds = new Set(["projects", "tasks", "process"]);
+    view.rerender(
+      <MemoryRouter initialEntries={["/process"]}>
+        <DesktopShell />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("main-panel").closest(".mainPanelHost")).toBe(mainPanelHost);
+    expect(screen.getByTestId("responsive-main-lane")).toBe(persistentLane);
+  });
+
+  it("renders the desktop main panel without a persistent lane wrapper (bareMainPanel)", () => {
+    currentActiveApp = { ...mockDesktopApp, bareMainPanel: true } as typeof mockDesktopApp;
+    currentVisitedAppIds = new Set(["desktop"]);
+
+    renderShell("/desktop");
+
+    expect(screen.queryByTestId("responsive-main-lane")).toBeNull();
+    expect(screen.getByTestId("main-panel")).toBeInTheDocument();
   });
 
   it("keeps the sidekick lane mounted while swapping app content", () => {

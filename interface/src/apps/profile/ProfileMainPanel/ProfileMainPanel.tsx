@@ -2,7 +2,6 @@ import { useEffect, useMemo } from "react";
 import { Drawer } from "@cypher-asi/zui";
 import { GitCommitVertical, Loader2 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
-import { Lane } from "../../../components/Lane";
 import { CommitGrid } from "../../../components/CommitGrid";
 import { ActivityCard } from "../../../components/ActivityCard";
 import { EmptyState } from "../../../components/EmptyState";
@@ -97,66 +96,64 @@ export function ProfileMainPanel() {
   );
 
   return (
-    <Lane flex>
-      <div className={styles.container}>
-        <div className={styles.scrollArea}>
-          {isMobileLayout ? (
-            <div className={styles.mobileProfileStack}>
-              <ProfileSummaryCard
-                summary={summary}
-                variant="mobile"
-                showInlineFollowAction={false}
-              />
-              <ProfileActionGroup summary={summary} variant="stacked" />
-              {projects.length > 0 ? (
-                <div className={styles.mobileFilterBar} aria-label="Profile activity filter">
-                  <button
-                    type="button"
-                    className={`${styles.mobileFilterChip} ${selectedProject === null ? styles.mobileFilterChipActive : ""}`}
-                    aria-pressed={selectedProject === null}
-                    onClick={() => setSelectedProject(null)}
-                  >
-                    All activity
-                  </button>
-                  {projects.map((project) => {
-                    const isSelected = selectedProject === project.id;
-                    return (
-                      <button
-                        key={project.id}
-                        type="button"
-                        className={`${styles.mobileFilterChip} ${isSelected ? styles.mobileFilterChipActive : ""}`}
-                        aria-pressed={isSelected}
-                        onClick={() => setSelectedProject(project.id)}
-                      >
-                        {project.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : null}
-              <div className={styles.mobileActivitySection}>
-                {activityContent}
+    <div className={styles.container}>
+      <div className={styles.scrollArea}>
+        {isMobileLayout ? (
+          <div className={styles.mobileProfileStack}>
+            <ProfileSummaryCard
+              summary={summary}
+              variant="mobile"
+              showInlineFollowAction={false}
+            />
+            <ProfileActionGroup summary={summary} variant="stacked" />
+            {projects.length > 0 ? (
+              <div className={styles.mobileFilterBar} aria-label="Profile activity filter">
+                <button
+                  type="button"
+                  className={`${styles.mobileFilterChip} ${selectedProject === null ? styles.mobileFilterChipActive : ""}`}
+                  aria-pressed={selectedProject === null}
+                  onClick={() => setSelectedProject(null)}
+                >
+                  All activity
+                </button>
+                {projects.map((project) => {
+                  const isSelected = selectedProject === project.id;
+                  return (
+                    <button
+                      key={project.id}
+                      type="button"
+                      className={`${styles.mobileFilterChip} ${isSelected ? styles.mobileFilterChipActive : ""}`}
+                      aria-pressed={isSelected}
+                      onClick={() => setSelectedProject(project.id)}
+                    >
+                      {project.name}
+                    </button>
+                  );
+                })}
               </div>
+            ) : null}
+            <div className={styles.mobileActivitySection}>
+              {activityContent}
             </div>
-          ) : (
-            activityContent
-          )}
-        </div>
-        {isMobileLayout && selectedEventId ? (
-          <Drawer
-            side={isPhoneLayout ? "bottom" : "right"}
-            isOpen
-            onClose={() => selectEvent(null)}
-            title={selectedEvent ? `${selectedEvent.author.name} · ${getProfileEventDetail(selectedEvent)}` : "Comments"}
-            className={styles.mobileCommentsDrawer}
-            showMinimizedBar={false}
-            defaultSize={isPhoneLayout ? 420 : 380}
-            maxSize={isPhoneLayout ? 560 : 460}
-          >
-            <ProfileCommentsPanel eventId={selectedEventId} variant="drawer" />
-          </Drawer>
-        ) : null}
+          </div>
+        ) : (
+          activityContent
+        )}
       </div>
-    </Lane>
+      {isMobileLayout && selectedEventId ? (
+        <Drawer
+          side={isPhoneLayout ? "bottom" : "right"}
+          isOpen
+          onClose={() => selectEvent(null)}
+          title={selectedEvent ? `${selectedEvent.author.name} · ${getProfileEventDetail(selectedEvent)}` : "Comments"}
+          className={styles.mobileCommentsDrawer}
+          showMinimizedBar={false}
+          defaultSize={isPhoneLayout ? 420 : 380}
+          maxSize={isPhoneLayout ? 560 : 460}
+        >
+          <ProfileCommentsPanel eventId={selectedEventId} variant="drawer" />
+        </Drawer>
+      ) : null}
+    </div>
   );
 }

@@ -13,6 +13,7 @@ import { useOutlet } from "react-router-dom";
 import { Topbar, Button } from "@cypher-asi/zui";
 import { Server } from "lucide-react";
 import { Lane, type LaneResizeControls } from "../Lane";
+import { ResponsiveMainLane } from "../ResponsiveMainLane";
 import { BottomTaskbar } from "../BottomTaskbar";
 import { OrgSelector } from "../OrgSelector";
 import { ErrorBoundary } from "../ErrorBoundary";
@@ -185,11 +186,12 @@ export function DesktopShell() {
   );
   const routeContent = useOutlet();
   const leftPanelRef = useRef<HTMLDivElement>(null);
-  // Callback-ref-backed state: the main panel div is unmounted and remounted
-  // whenever `ActiveProvider` changes identity (e.g. Projects has no Provider
-  // so `ActiveProvider` is `Fragment`, while Tasks has a lazy-wrapped
-  // `TasksProvider`). When the ref changes, the retarget effect re-runs so it
-  // can apply the stored width once the new panel is in the DOM.
+  // Callback-ref-backed state on the persistent `mainPanelHost` div. The host
+  // div is now rendered above `ActiveProvider` so it stays mounted across app
+  // switches — this `setState`-on-ref still gives us a stable handle that's
+  // resilient to first-render timing (e.g. initial layout pass before the ref
+  // has populated) and lets the sidekick retarget effect react if the host is
+  // ever recreated for unrelated reasons.
   const [mainPanelEl, setMainPanelEl] = useState<HTMLDivElement | null>(null);
   const handleMainPanelRef = useCallback((node: HTMLDivElement | null) => {
     setMainPanelEl(node);
@@ -281,25 +283,21 @@ export function DesktopShell() {
   // Retarget the sidekick Lane whenever the active app changes so each app
   // restores the width the user chose for it.
   //
-  // Timing is tricky: when an app switch involves a different `ActiveProvider`
-  // (e.g. Projects has no Provider, Tasks has a lazy-loaded `TasksProvider`),
-  // the provider swap unmounts and remounts the main panel div. Meanwhile, a
-  // suspense boundary can briefly replace the panel with `null` while the
-  // lazy chunk loads, so `mainPanelEl` is null for one or more renders after
-  // the navigation. To handle this robustly:
+  // The `mainPanelHost` div now stays mounted across app switches (it sits
+  // outside the per-app `ActiveProvider`), so width measurements are stable.
+  // Timing can still be tricky during suspense fallbacks where the inner
+  // content briefly renders nothing — in that case the host can momentarily
+  // measure zero width while flex-sized children are absent. To handle this:
   //
-  // - `mainPanelEl` is callback-ref-backed state, so this effect re-runs
-  //   whenever the main panel div appears/disappears.
   // - `appliedSidekickAppIdRef` tracks which app's width is currently on the
   //   Lane. We only mark an app as applied after a successful `setSize`, so
   //   if prerequisites (main panel, sidekick controls, non-zero width) are
-  //   missing, a later effect run (triggered by the new main panel mounting)
-  //   retries the apply.
+  //   missing, a later effect run retries the apply.
   // - The first render short-circuits because `sidekickInitialWidth` (passed
   //   as Lane's `defaultWidth`) already applied the initial app's width.
   //
-  // A ResizeObserver also watches the main panel for the case where it mounts
-  // with width 0 (e.g. during suspense fallback) and later lays out.
+  // A ResizeObserver also watches the main panel for the rare case where it
+  // mounts with width 0 (e.g. during suspense fallback) and later lays out.
   useLayoutEffect(() => {
     if (appliedSidekickAppIdRef.current === null) {
       appliedSidekickAppIdRef.current = activeApp.id;
@@ -419,28 +417,38 @@ export function DesktopShell() {
             </div>
           </div>
 
-          <ActiveProvider>
-            <div
-              ref={handleMainPanelRef}
-              className={styles.mainPanelHost}
-              data-agent-surface="main-panel"
-              data-agent-active-app-id={activeApp.id}
-              data-agent-active-app-label={activeApp.label}
-              aria-label={`${activeApp.label} main panel`}
-            >
-              <ErrorBoundary name="main">
-                <MainPanel>{routeContent}</MainPanel>
-              </ErrorBoundary>
-            </div>
-            {hasActiveSidekick && (
-              <ErrorBoundary name="sidekick">
-                <SidekickPortalBridge
-                  headerTarget={sidekickHeaderTarget}
-                  panelTarget={sidekickPanelTarget}
-                />
-              </ErrorBoundary>
+          <div
+            ref={handleMainPanelRef}
+            className={styles.mainPanelHost}
+            data-agent-surface="main-panel"
+            data-agent-active-app-id={activeApp.id}
+            data-agent-active-app-label={activeApp.label}
+            aria-label={`${activeApp.label} main panel`}
+          >
+            {activeApp.bareMainPanel ? (
+              <ActiveProvider>
+                <ErrorBoundary name="main">
+                  <MainPanel>{routeContent}</MainPanel>
+                </ErrorBoundary>
+              </ActiveProvider>
+            ) : (
+              <ResponsiveMainLane>
+                <ActiveProvider>
+                  <ErrorBoundary name="main">
+                    <MainPanel>{routeContent}</MainPanel>
+                  </ErrorBoundary>
+                </ActiveProvider>
+              </ResponsiveMainLane>
             )}
-          </ActiveProvider>
+          </div>
+          {hasActiveSidekick && (
+            <ErrorBoundary name="sidekick">
+              <SidekickPortalBridge
+                headerTarget={sidekickHeaderTarget}
+                panelTarget={sidekickPanelTarget}
+              />
+            </ErrorBoundary>
+          )}
           <PersistentSidekickLane
             resizeControlsRef={sidekickResizeControlsRef}
             collapsed={sidekickHostCollapsed}

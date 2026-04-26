@@ -15,11 +15,22 @@ export interface AuraApp {
   /** Optional persistent desktop left menu pane used by the shared shell host. */
   DesktopLeftMenuPane?: ComponentType;
   /**
-   * Wraps the active route element. The shell renders this as chrome around
-   * the matched `<Outlet />`, so panel-scoped setup (e.g. `ResponsiveMainLane`)
-   * stays in the app rather than leaking into every route element.
+   * Wraps the active route element. The shell renders this inside a persistent
+   * `ResponsiveMainLane` (the "middle root panel") so that switching between
+   * apps swaps inner content rather than tearing down the visible container.
+   * Apps therefore return inner JSX only — no `<Lane>` / `<ResponsiveMainLane>`
+   * wrapper of their own. To opt out (e.g. the Desktop wallpaper surface), set
+   * `bareMainPanel: true` and the shell will render `MainPanel` directly inside
+   * `mainPanelHost` without the persistent lane.
    */
   MainPanel: ComponentType<{ children?: ReactNode }>;
+  /**
+   * When true, the shell renders this app's `MainPanel` directly inside
+   * `mainPanelHost` without wrapping it in the persistent `ResponsiveMainLane`.
+   * Used by the Desktop app, whose marquee surface needs a transparent
+   * full-bleed area over the wallpaper rather than a Lane chrome.
+   */
+  bareMainPanel?: boolean;
   ResponsiveControls?: ComponentType;
   SidekickPanel?: ComponentType;
   /** Rendered in the sidekick Lane's `header` slot (e.g. tab bar). */

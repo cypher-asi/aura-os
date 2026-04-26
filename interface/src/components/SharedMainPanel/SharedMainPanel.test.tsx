@@ -23,11 +23,10 @@ vi.mock("@cypher-asi/zui", () => ({
     classNames.filter(Boolean).join(" "),
 }));
 
-vi.mock("../ResponsiveMainLane", () => ({
-  ResponsiveMainLane: ({ children }: { children?: unknown }) => (
-    <div data-testid="responsive-main-lane">{children as JSX.Element}</div>
-  ),
-}));
+// `SharedMainPanel` no longer renders `ResponsiveMainLane` itself — the shell
+// (`DesktopShell`) provides the persistent lane wrapper around the active
+// app's `MainPanel`. This component is now just a side-effect host for the
+// terminal target. No mock for `ResponsiveMainLane` is needed here.
 
 vi.mock("../XTerminal", () => ({
   XTerminal: () => <div data-testid="x-terminal" />,

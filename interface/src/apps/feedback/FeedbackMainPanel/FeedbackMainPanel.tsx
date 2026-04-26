@@ -1,6 +1,5 @@
 import { useRef } from "react";
 import { Lightbulb, MessageSquare } from "lucide-react";
-import { Lane } from "../../../components/Lane";
 import { EmptyState } from "../../../components/EmptyState";
 import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
 import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
@@ -45,7 +44,7 @@ export function FeedbackMainPanel() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   return (
-    <Lane flex>
+    <>
       <div
         className={styles.container}
         data-demo-shot="feedback-main-panel"
@@ -116,6 +115,6 @@ export function FeedbackMainPanel() {
         <OverlayScrollbar scrollRef={scrollRef} />
       </div>
       <NewFeedbackModal isOpen={isComposerOpen} onClose={closeComposer} />
-    </Lane>
+    </>
   );
 }
