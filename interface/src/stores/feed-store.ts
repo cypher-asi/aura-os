@@ -16,6 +16,7 @@ export {
 } from "./shared/event-comments-slice";
 import type { FeedAuthor, FeedComment } from "./shared/event-comments-slice";
 import { api } from "../api/client";
+import { isAuraCaptureSessionActive } from "../lib/screenshot-bridge";
 import type { FeedEventDto } from "../shared/api/social";
 import { buildCommitActivityFromEvents } from "../lib/commitActivity";
 import type { AuraEvent } from "../shared/types/aura-events";
@@ -307,6 +308,10 @@ export const useFeedStore = create<FeedState>()((set, get) => {
     init: () => {
       if (_initialized) return;
       _initialized = true;
+      if (isAuraCaptureSessionActive()) {
+        set((s) => ({ liveEvents: s.liveEvents ?? [] }));
+        return;
+      }
 
       api.feed
         .list()

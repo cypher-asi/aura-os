@@ -7,6 +7,7 @@ import type {
   NotesTreeNode,
 } from "../shared/api/notes";
 import { useAuthStore } from "./auth-store";
+import { isAuraCaptureSessionActive } from "../lib/screenshot-bridge";
 import { clearLastNote, setLastNote } from "../utils/storage";
 
 const AUTOSAVE_DEBOUNCE_MS = 600;
@@ -209,6 +210,19 @@ export const useNotesStore = create<NotesStore>()((set, get) => ({
   sidekickTab: "toc",
 
   loadTree: async (projectId) => {
+    if (isAuraCaptureSessionActive() && get().trees[projectId]) {
+      set((state) => ({
+        trees: {
+          ...state.trees,
+          [projectId]: {
+            ...state.trees[projectId],
+            loading: false,
+            error: undefined,
+          },
+        },
+      }));
+      return;
+    }
     set((state) => ({
       trees: {
         ...state.trees,
@@ -268,6 +282,9 @@ export const useNotesStore = create<NotesStore>()((set, get) => ({
 
   readNote: async (projectId, relPath) => {
     const key = makeNoteKey(projectId, relPath);
+    if (isAuraCaptureSessionActive()) {
+      return get().contentCache[key] ?? null;
+    }
     try {
       const res = await api.notes.read(projectId, relPath);
       const entry: NoteContent = {
@@ -499,6 +516,15 @@ export const useNotesStore = create<NotesStore>()((set, get) => ({
 
   loadComments: async (projectId, relPath) => {
     const key = makeNoteKey(projectId, relPath);
+    if (isAuraCaptureSessionActive()) {
+      set((state) => ({
+        commentsByNote: {
+          ...state.commentsByNote,
+          [key]: state.commentsByNote[key] ?? [],
+        },
+      }));
+      return;
+    }
     try {
       const comments = await api.notes.listComments(projectId, relPath);
       set((state) => ({

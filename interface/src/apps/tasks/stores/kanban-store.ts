@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { create } from "zustand";
 import type { Task, ProjectId, TaskStatus } from "../../../shared/types";
 import { tasksApi } from "../../../shared/api/tasks";
+import { isAuraCaptureSessionActive } from "../../../lib/screenshot-bridge";
 
 interface ProjectTaskCache {
   tasks: Task[];
@@ -63,6 +64,10 @@ export const useKanbanStore = create<KanbanState>()((set, get) => ({
   loading: {},
 
   fetchTasks: async (projectId) => {
+    if (isAuraCaptureSessionActive() && get().tasksByProject[projectId]) {
+      set((s) => ({ loading: { ...s.loading, [projectId]: false } }));
+      return;
+    }
     const cached = get().tasksByProject[projectId];
     if (cached && Date.now() - cached.fetchedAt < STALE_MS) return;
 

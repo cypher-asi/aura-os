@@ -21,7 +21,7 @@ import {
   resolveAuraCaptureTargetAppId,
   resolveAuraCaptureTargetPath,
 } from "../../lib/capture-bridge";
-import { shouldEnableAuraScreenshotBridge } from "../../lib/screenshot-bridge";
+import { markAuraCaptureSessionActive, shouldEnableAuraScreenshotBridge } from "../../lib/screenshot-bridge";
 
 const BuyCreditsModal = lazy(() =>
   import("../BuyCreditsModal").then((module) => ({ default: module.BuyCreditsModal })),
@@ -224,6 +224,7 @@ function CaptureBridgeHost() {
             ? rawOptions.timeoutMs
             : 6_000;
 
+        markAuraCaptureSessionActive();
         useUIModalStore.setState({
           orgSettingsOpen: false,
           orgInitialSection: undefined,
@@ -264,14 +265,25 @@ function CaptureBridgeHost() {
 
         persistAuraCaptureTarget(targetPath, targetAppId);
         navigate(targetPath, { replace: true });
-        const finalState = await waitForCaptureShell(targetPath, targetAppId, timeoutMs);
+        let finalState = await waitForCaptureShell(targetPath, targetAppId, timeoutMs);
+        const routeSeedResult = await applyAuraCaptureSeedPlan(seedPlan, targetAppId);
+        await waitForMs(180);
+        finalState = await waitForCaptureShell(targetPath, targetAppId, Math.min(timeoutMs, 2_500));
 
         return {
           ok: finalState.routeMatched && finalState.activeAppMatched && finalState.shellVisible,
           targetPath,
           targetAppId,
           sidekickCollapsed,
-          seed: seedResult,
+          seed: {
+            ...routeSeedResult,
+            applied: [
+              ...((seedResult.applied as string[] | undefined) ?? []),
+              ...((routeSeedResult.applied as string[] | undefined) ?? []),
+            ],
+            beforeNavigation: seedResult,
+            afterNavigation: routeSeedResult,
+          },
           state: finalState,
         };
       },

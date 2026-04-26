@@ -8,12 +8,8 @@ import { PNG } from "pngjs";
 
 import {
   assessBrandedMediaAsset,
-  calculateBrandedCanvas,
-  createBrandedMediaPngPreview,
-  createBrandedMediaSvg,
-  createBrandingFocusScreenshot,
+  createOpenAIProductionMediaImage,
   readPngDimensionsFromFile,
-  wrapTextForSvg,
 } from "./changelog-media-branding.mjs";
 
 function writePng(filePath, width, height) {
@@ -31,14 +27,51 @@ function writePng(filePath, width, height) {
   fs.writeFileSync(filePath, PNG.sync.write(png));
 }
 
-function readPixel(filePath, x, y) {
-  const png = PNG.sync.read(fs.readFileSync(filePath));
-  const offset = ((png.width * y) + x) * 4;
+function fakeOpenAIAsset({
+  imagePath,
+  sourcePath,
+  width = 2560,
+  height = 1440,
+  sourceWidth = 3840,
+  sourceHeight = 2160,
+} = {}) {
+  const bytes = fs.existsSync(imagePath) ? fs.statSync(imagePath).size : 0;
   return {
-    r: png.data[offset],
-    g: png.data[offset + 1],
-    b: png.data[offset + 2],
-    a: png.data[offset + 3],
+    path: imagePath,
+    format: "png",
+    dimensions: { width, height },
+    bytes,
+    layout: {
+      aspectRatio: width / height,
+      labelLines: 0,
+      titleLines: 0,
+      subtitleLines: 0,
+      maxTitleLines: 0,
+      maxSubtitleLines: 0,
+      screenshot: { x: 0, y: 0, width, height },
+    },
+    embeddedScreenshot: {
+      path: sourcePath,
+      width: sourceWidth,
+      height: sourceHeight,
+      bytes,
+      renderedWidth: sourceWidth,
+      renderedHeight: sourceHeight,
+      scale: 1,
+      treatment: "openai-production-redraw",
+    },
+    preview: {
+      path: imagePath,
+      format: "png",
+      dimensions: { width, height },
+      bytes,
+    },
+    generation: {
+      provider: "openai",
+      model: "gpt-image-2",
+      quality: "high",
+      size: "2560x1440",
+    },
   };
 }
 
@@ -54,185 +87,110 @@ test("readPngDimensionsFromFile extracts PNG dimensions", () => {
   });
 });
 
-test("calculateBrandedCanvas keeps screenshot at native size", () => {
-  const canvas = calculateBrandedCanvas({ width: 1920, height: 1080 });
-
-  assert.ok(canvas.width > 1920);
-  assert.ok(canvas.height > 1080);
-  assert.equal(canvas.screenshot.width, 1920);
-  assert.equal(canvas.screenshot.height, 1080);
-});
-
-test("createBrandedMediaSvg wraps the raw screenshot without scaling it", () => {
+test("createOpenAIProductionMediaImage sends the proof screenshot for high-quality production redraw", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-branding-"));
-  const screenshotPath = path.join(tempDir, "screenshot.png");
-  const outputPath = path.join(tempDir, "branded.svg");
-  writePng(screenshotPath, 1920, 1080);
+  const sourcePath = path.join(tempDir, "source.png");
+  const outputPath = path.join(tempDir, "openai-production-media.png");
+  writePng(sourcePath, 1920, 1080);
+  const sourceBase64 = fs.readFileSync(sourcePath).toString("base64");
+  const calls = [];
 
-  const asset = createBrandedMediaSvg({
-    screenshotPath,
+  const result = await createOpenAIProductionMediaImage({
+    apiKey: "openai-test-key",
+    model: "gpt-image-2",
+    inputImagePath: sourcePath,
     outputPath,
-    title: "GPT-5.5 available in the chat model picker",
-    subtitle: "Open the picker and show the model option.",
-  });
-
-  assert.equal(fs.existsSync(outputPath), true);
-  assert.equal(asset.embeddedScreenshot.scale, 1);
-  assert.equal(asset.embeddedScreenshot.renderedWidth, 1920);
-  assert.equal(asset.embeddedScreenshot.renderedHeight, 1080);
-  assert.equal(asset.layout.titleLines, 0);
-  assert.equal(asset.layout.subtitleLines, 0);
-  assert.ok(Math.abs(asset.layout.aspectRatio - (16 / 9)) < 0.02);
-  assert.equal(assessBrandedMediaAsset(asset).ok, true);
-
-  const svg = fs.readFileSync(outputPath, "utf8");
-  assert.doesNotMatch(svg, /AURA CHANGELOG/);
-  assert.match(svg, /data:image\/png;base64,/);
-  assert.doesNotMatch(svg, /<tspan x="/);
-  assert.doesNotMatch(svg, /#6ee7f9|#7dd3fc|#60a5fa|#00ff00|green/i);
-  assert.ok(asset.layout.screenshot.width / asset.dimensions.width > 0.86);
-  assert.ok(asset.layout.screenshot.height / asset.dimensions.height > 0.86);
-});
-
-test("createBrandedMediaSvg can render a bounded header when explicitly requested", () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-branding-"));
-  const screenshotPath = path.join(tempDir, "screenshot.png");
-  const outputPath = path.join(tempDir, "branded.svg");
-  writePng(screenshotPath, 1920, 1080);
-
-  const asset = createBrandedMediaSvg({
-    screenshotPath,
-    outputPath,
-    title: "GPT-5.5 available in the chat model picker",
-    subtitle: "Open the picker and show the model option.",
-    includeHeader: true,
-  });
-
-  assert.ok(asset.layout.titleLines > 0 && asset.layout.titleLines <= asset.layout.maxTitleLines);
-  assert.equal(asset.layout.subtitleLines, 1);
-  const svg = fs.readFileSync(outputPath, "utf8");
-  assert.match(svg, /GPT-5.5 available/);
-  assert.match(svg, /<tspan x="/);
-  assert.match(svg, /fill="#ffffff".*font-weight="760"/);
-  assert.match(svg, /fill="#f1f5f9" opacity="0.96".*font-weight="620"/);
-});
-
-test("assessBrandedMediaAsset rejects canvas and layout regressions", () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-branding-"));
-  const screenshotPath = path.join(tempDir, "screenshot.png");
-  const outputPath = path.join(tempDir, "branded.svg");
-  writePng(screenshotPath, 1920, 1080);
-
-  const asset = createBrandedMediaSvg({
-    screenshotPath,
-    outputPath,
-    title: "GPT-5.5 available in the chat model picker",
-    subtitle: "Open the picker and show the model option.",
-  });
-  const report = assessBrandedMediaAsset({
-    ...asset,
-    dimensions: { width: 1000, height: 1000 },
-    layout: {
-      ...asset.layout,
-      titleLines: 3,
-      screenshot: { x: 700, y: 700, width: 1920, height: 1080 },
+    candidate: {
+      title: "GPT-5.5 available in the chat model picker",
+      proofGoal: "Show the chat model picker with GPT-5.5 visible.",
+      targetAppId: "agents",
+      targetPath: "/agents",
+    },
+    rawVisionGate: {
+      judgment: {
+        reasons: ["The source screenshot is relevant but slightly distant."],
+      },
+    },
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return {
+        ok: true,
+        status: 200,
+        async text() {
+          return JSON.stringify({ data: [{ b64_json: sourceBase64 }] });
+        },
+      };
     },
   });
 
-  assert.equal(report.ok, false);
-  assert.ok(report.concerns.some((concern) => concern.includes("16:9")));
-  assert.ok(report.concerns.some((concern) => concern.includes("title layout")));
-  assert.ok(report.concerns.some((concern) => concern.includes("overflows the canvas width")));
+  assert.equal(result.status, "created");
+  assert.equal(fs.existsSync(outputPath), true);
+  assert.equal(result.asset.generation.provider, "openai");
+  assert.equal(result.asset.generation.model, "gpt-image-2");
+  assert.equal(result.asset.generation.quality, "high");
+  assert.equal(result.asset.generation.size, "2560x1440");
+  assert.equal(result.asset.embeddedScreenshot.path, sourcePath);
+  assert.equal(result.asset.embeddedScreenshot.scale, 1);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, "https://api.openai.com/v1/images/edits");
+  assert.equal(calls[0].options.method, "POST");
+  assert.equal(calls[0].options.headers.authorization, "Bearer openai-test-key");
+  assert.equal(calls[0].options.body.get("model"), "gpt-image-2");
+  assert.equal(calls[0].options.body.get("quality"), "high");
+  assert.equal(calls[0].options.body.get("size"), "2560x1440");
+  assert.match(calls[0].options.body.get("prompt"), /Preserve visible app text faithfully/);
+  assert.match(calls[0].options.body.get("prompt"), /do not abbreviate, garble, crop, or partially hide labels/);
+  assert.match(calls[0].options.body.get("prompt"), /Preserve the exact count, position, size relationship/);
+  assert.match(calls[0].options.body.get("prompt"), /Do not make subtle proof elements more prominent/);
+  assert.match(calls[0].options.body.get("prompt"), /omit or de-emphasize that edge text rather than guessing/);
+  assert.equal(calls[0].options.body.get("image").type, "image/png");
 });
 
-test("createBrandedMediaPngPreview renders a judgeable PNG from the SVG card", async () => {
+test("assessBrandedMediaAsset accepts OpenAI production media with full-source proof", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-branding-"));
-  const screenshotPath = path.join(tempDir, "screenshot.png");
-  const svgPath = path.join(tempDir, "branded.svg");
-  const pngPath = path.join(tempDir, "branded.png");
-  writePng(screenshotPath, 1920, 1080);
+  const imagePath = path.join(tempDir, "openai-production-media.png");
+  const sourcePath = path.join(tempDir, "source.png");
+  writePng(imagePath, 2560, 1440);
+  writePng(sourcePath, 3840, 2160);
 
-  const asset = createBrandedMediaSvg({
-    screenshotPath,
-    outputPath: svgPath,
-    title: "GPT-5.5 available in the chat model picker",
-    subtitle: "GPT-5.5 is now available directly from the chat model picker.",
-  });
-  asset.preview = await createBrandedMediaPngPreview({ svgPath, outputPath: pngPath });
+  const report = assessBrandedMediaAsset(fakeOpenAIAsset({ imagePath, sourcePath }));
 
-  assert.equal(fs.existsSync(pngPath), true);
-  assert.equal(asset.preview.format, "png");
-  assert.equal(asset.preview.dimensions.width, asset.dimensions.width);
-  assert.equal(asset.preview.dimensions.height, asset.dimensions.height);
-  assert.equal(assessBrandedMediaAsset(asset).ok, true);
+  assert.equal(report.ok, true);
+  assert.deepEqual(report.concerns, []);
 });
 
-test("assessBrandedMediaAsset rejects low-resolution embedded proof", () => {
+test("assessBrandedMediaAsset rejects low-resolution source proof", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-branding-"));
-  const screenshotPath = path.join(tempDir, "screenshot.png");
-  const outputPath = path.join(tempDir, "branded.svg");
-  writePng(screenshotPath, 1536, 608);
+  const imagePath = path.join(tempDir, "openai-production-media.png");
+  const sourcePath = path.join(tempDir, "source.png");
+  writePng(imagePath, 2560, 1440);
+  writePng(sourcePath, 1536, 864);
 
-  const asset = createBrandedMediaSvg({
-    screenshotPath,
-    outputPath,
-    title: "GPT-5.5 available in the chat model picker",
-    subtitle: "GPT-5.5 is now available directly from the chat model picker.",
-  });
-  const report = assessBrandedMediaAsset(asset);
+  const report = assessBrandedMediaAsset(fakeOpenAIAsset({
+    imagePath,
+    sourcePath,
+    sourceWidth: 1536,
+    sourceHeight: 864,
+  }));
 
   assert.equal(report.ok, false);
   assert.ok(report.concerns.some((concern) => concern.includes("below production readability minimum")));
 });
 
-test("createBrandingFocusScreenshot preserves high-resolution proof captures up to production 8K", async () => {
+test("assessBrandedMediaAsset rejects generated media layout regressions", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-branding-"));
-  const screenshotPath = path.join(tempDir, "oversized.png");
-  const outputPath = path.join(tempDir, "focus.png");
-  writePng(screenshotPath, 7680, 4320);
+  const imagePath = path.join(tempDir, "openai-production-media.png");
+  const sourcePath = path.join(tempDir, "source.png");
+  writePng(imagePath, 1000, 1000);
+  writePng(sourcePath, 3840, 2160);
 
-  const focus = await createBrandingFocusScreenshot({
-    screenshotPath,
-    outputPath,
-  });
+  const report = assessBrandedMediaAsset(fakeOpenAIAsset({
+    imagePath,
+    sourcePath,
+    width: 1000,
+    height: 1000,
+  }));
 
-  assert.equal(fs.existsSync(outputPath), true);
-  assert.equal(focus.dimensions.width, 7680);
-  assert.equal(focus.dimensions.height, 4320);
-  assert.equal(focus.crop.resizedFrom.width, 7680);
-  assert.equal(focus.crop.resizedFrom.height, 4320);
-});
-
-test("createBrandingFocusScreenshot neutralizes green chroma in near-black product background", async () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-branding-"));
-  const screenshotPath = path.join(tempDir, "green-dark.png");
-  const outputPath = path.join(tempDir, "focus.png");
-  const png = new PNG({ width: 1920, height: 1080 });
-  for (let index = 0; index < png.data.length; index += 4) {
-    png.data[index] = 0;
-    png.data[index + 1] = 22;
-    png.data[index + 2] = 16;
-    png.data[index + 3] = 255;
-  }
-  fs.mkdirSync(path.dirname(screenshotPath), { recursive: true });
-  fs.writeFileSync(screenshotPath, PNG.sync.write(png));
-
-  await createBrandingFocusScreenshot({
-    screenshotPath,
-    outputPath,
-  });
-  const pixel = readPixel(outputPath, 20, 20);
-
-  assert.ok(pixel.g - pixel.r < 8);
-  assert.ok(pixel.g - pixel.b < 8);
-});
-
-test("wrapTextForSvg caps long marketing copy to bounded lines", () => {
-  const lines = wrapTextForSvg(
-    "Open the chat model picker in the ChatInputBar and capture the dropdown showing GPT-5.5 listed as an available model option.",
-    { fontSize: 26, maxWidth: 620, maxLines: 2 },
-  );
-
-  assert.equal(lines.length, 2);
-  assert.match(lines.at(-1), /\.\.\.$/);
+  assert.equal(report.ok, false);
+  assert.ok(report.concerns.some((concern) => concern.includes("16:9")));
 });

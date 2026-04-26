@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { Process, ProcessNode, ProcessNodeConnection, ProcessRun, ProcessEvent, ProcessFolder } from "../../../shared/types";
 import { processApi } from "../../../shared/api/process";
+import { isAuraCaptureSessionActive } from "../../../lib/screenshot-bridge";
 
 export const LAST_PROCESS_ID_KEY = "aura:lastProcessId";
 export const PROCESS_VIEWPORTS_KEY = "aura:processViewports";
@@ -82,7 +83,7 @@ interface ProcessState {
   setConnections: (processId: string, connections: ProcessNodeConnection[]) => void;
 }
 
-export const useProcessStore = create<ProcessState>()((set) => ({
+export const useProcessStore = create<ProcessState>()((set, get) => ({
   processes: [],
   loading: true,
   nodes: {},
@@ -94,6 +95,10 @@ export const useProcessStore = create<ProcessState>()((set) => ({
   viewports: loadStoredViewports(),
 
   fetchProcesses: async () => {
+    if (isAuraCaptureSessionActive()) {
+      set({ loading: false });
+      return;
+    }
     set({ loading: true });
     try {
       const processes = await processApi.listProcesses();
@@ -105,6 +110,9 @@ export const useProcessStore = create<ProcessState>()((set) => ({
   },
 
   fetchNodes: async (processId: string) => {
+    if (isAuraCaptureSessionActive() && get().nodes[processId]) {
+      return;
+    }
     try {
       const nodes = await processApi.listNodes(processId);
       set((s) => ({ nodes: { ...s.nodes, [processId]: nodes } }));
@@ -114,6 +122,9 @@ export const useProcessStore = create<ProcessState>()((set) => ({
   },
 
   fetchConnections: async (processId: string) => {
+    if (isAuraCaptureSessionActive() && get().connections[processId]) {
+      return;
+    }
     try {
       const connections = await processApi.listConnections(processId);
       set((s) => ({ connections: { ...s.connections, [processId]: connections } }));
@@ -123,6 +134,9 @@ export const useProcessStore = create<ProcessState>()((set) => ({
   },
 
   fetchRuns: async (processId: string) => {
+    if (isAuraCaptureSessionActive() && get().runs[processId]) {
+      return;
+    }
     try {
       const runs = await processApi.listRuns(processId);
       set((s) => ({ runs: { ...s.runs, [processId]: runs } }));
@@ -132,6 +146,9 @@ export const useProcessStore = create<ProcessState>()((set) => ({
   },
 
   fetchEvents: async (processId: string, runId: string) => {
+    if (isAuraCaptureSessionActive() && get().events[runId]) {
+      return;
+    }
     try {
       const events = await processApi.listRunEvents(processId, runId);
       set((s) => ({ events: { ...s.events, [runId]: events } }));

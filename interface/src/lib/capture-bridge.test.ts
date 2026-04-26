@@ -151,4 +151,81 @@ describe("capture-bridge helpers", () => {
 
     expect(result.applied).toContain("agent-chat-demo-model-picker:aura-deepseek-v4-pro");
   });
+
+  it("seeds AURA 3D shell proof with a populated image gallery by default", async () => {
+    const { useAura3DStore } = await import("../stores/aura3d-store");
+    const { useProjectsListStore } = await import("../stores/projects-list-store");
+
+    const result = await applyAuraCaptureSeedPlan({
+      capabilities: [
+        "app:aura3d",
+        "project-selected",
+        "image-gallery-populated",
+        "asset-gallery-populated",
+        "shell-context-populated",
+      ],
+      requiredState: ["Show desktop shell around seeded AURA 3D gallery content."],
+      readinessSignals: ["generated image preview and image gallery are visible"],
+    }, "aura3d");
+
+    expect(result.applied).toContain("capture-demo-project");
+    expect(result.applied).toContain("aura3d-demo-generated-image");
+    expect(useAura3DStore.getState().activeTab).toBe("image");
+    expect(useAura3DStore.getState().images.length).toBeGreaterThan(1);
+    expect(useProjectsListStore.getState().projects[0]?.project_id).toBe("22222222-2222-4222-8222-222222222222");
+  });
+
+  it("opens the AURA 3D model surface only when the seed plan explicitly asks for it", async () => {
+    const { useAura3DStore } = await import("../stores/aura3d-store");
+
+    const result = await applyAuraCaptureSeedPlan({
+      capabilities: [
+        "app:aura3d",
+        "project-selected",
+        "asset-gallery-populated",
+        "model-source-image-populated",
+      ],
+      requiredState: ["A source image is selected so the model surface is not empty."],
+      readinessSignals: ["source image for 3D conversion is visible"],
+    }, "aura3d");
+
+    expect(result.applied).toContain("aura3d-demo-source-image-for-3d");
+    expect(useAura3DStore.getState().activeTab).toBe("3d");
+    expect(useAura3DStore.getState().generateSourceImage?.id).toBe("capture-demo-image");
+  });
+
+  it("seeds data-rich desktop app surfaces before capture", async () => {
+    const { useFeedbackStore } = await import("../stores/feedback-store");
+    const { useNotesStore } = await import("../stores/notes-store");
+    const { useKanbanStore } = await import("../apps/tasks/stores/kanban-store");
+    const { useProcessStore } = await import("../apps/process/stores/process-store");
+    const { useFeedStore } = await import("../stores/feed-store");
+
+    const feedback = await applyAuraCaptureSeedPlan({
+      capabilities: ["app:feedback", "feedback-board-populated", "feedback-thread-populated"],
+    }, "feedback");
+    const notes = await applyAuraCaptureSeedPlan({
+      capabilities: ["app:notes", "project-selected", "notes-tree-populated", "note-editor-populated"],
+    }, "notes");
+    const tasks = await applyAuraCaptureSeedPlan({
+      capabilities: ["app:tasks", "project-selected", "task-board-populated"],
+    }, "tasks");
+    const process = await applyAuraCaptureSeedPlan({
+      capabilities: ["app:process", "project-selected", "process-graph-populated", "run-history-populated"],
+    }, "process");
+    const feed = await applyAuraCaptureSeedPlan({
+      capabilities: ["app:feed", "feed-timeline-populated"],
+    }, "feed");
+
+    expect(feedback.applied).toContain("feedback-demo-board");
+    expect(notes.applied).toContain("notes-demo-workspace");
+    expect(tasks.applied).toContain("tasks-demo-board");
+    expect(process.applied).toContain("process-demo-workflow");
+    expect(feed.applied).toContain("feed-demo-timeline");
+    expect(useFeedbackStore.getState().items.length).toBeGreaterThan(1);
+    expect(useNotesStore.getState().activeRelPath).toBe("Launch Plan.md");
+    expect(useKanbanStore.getState().tasksByProject["22222222-2222-4222-8222-222222222222"]?.tasks.length).toBeGreaterThan(1);
+    expect(useProcessStore.getState().nodes["capture-demo-process"]?.length).toBeGreaterThan(1);
+    expect(useFeedStore.getState().liveEvents?.length).toBeGreaterThan(1);
+  });
 });

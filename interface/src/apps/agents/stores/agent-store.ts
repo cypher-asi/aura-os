@@ -6,6 +6,7 @@ import type { Agent } from "../../../shared/types";
 import { isSuperAgent } from "../../../shared/types/permissions";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";
 import { BROWSER_DB_STORES, browserDbGet, browserDbSet } from "../../../shared/lib/browser-db";
+import { isAuraCaptureSessionActive } from "../../../lib/screenshot-bridge";
 import { useAuthStore } from "../../../stores/auth-store";
 import { useOrgStore } from "../../../stores/org-store";
 
@@ -140,6 +141,13 @@ export const useAgentStore = create<AgentState>()(
       fetchAgents: async (opts): Promise<void> => {
         const { agentsStatus } = get();
 
+        if (isAuraCaptureSessionActive()) {
+          if (agentsStatus === "idle" || agentsStatus === "loading") {
+            set({ agentsStatus: "ready", agentsError: null });
+          }
+          return;
+        }
+
         if (agentsFetchPromise) return agentsFetchPromise;
 
         if (
@@ -166,6 +174,11 @@ export const useAgentStore = create<AgentState>()(
         agentsFetchPromise = api.agents
           .list(activeOrgId)
           .then(async (initialAgents) => {
+            if (isAuraCaptureSessionActive()) {
+              set({ agentsStatus: "ready", agentsError: null });
+              return;
+            }
+
             let agents = initialAgents;
             const superAgents = agents.filter((a) => isSuperAgent(a));
 
@@ -216,6 +229,10 @@ export const useAgentStore = create<AgentState>()(
               if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
               return a.name.localeCompare(b.name);
             });
+            if (isAuraCaptureSessionActive()) {
+              set({ agentsStatus: "ready", agentsError: null });
+              return;
+            }
             agentsFetchedAt = Date.now();
             set({ agents: sorted, agentsStatus: "ready", agentsError: null });
           })

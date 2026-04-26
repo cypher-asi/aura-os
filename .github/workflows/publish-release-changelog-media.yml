@@ -113,11 +113,17 @@ jobs:
           if [[ -z "$date" ]]; then
             date="$(jq -er '.date' "$latest_json")"
           fi
+          changelog_json="$latest_json"
+          history_json="pages/changelog/${channel}/history/${date}.json"
+          if [[ -f "$history_json" ]]; then
+            changelog_json="$history_json"
+          fi
 
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "channel=${channel}" >> "$GITHUB_OUTPUT"
           echo "date=${date}" >> "$GITHUB_OUTPUT"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "changelog_json=${changelog_json}" >> "$GITHUB_OUTPUT"
 
       - name: Install Node.js
         if: steps.target.outputs.skip == 'false'
@@ -166,14 +172,17 @@ jobs:
           AURA_DEMO_SCREENSHOT_BASE_URL: ${{ inputs.base_url || vars.AURA_DEMO_SCREENSHOT_BASE_URL || secrets.AURA_DEMO_SCREENSHOT_BASE_URL }}
           AURA_DEMO_SCREENSHOT_API_URL: ${{ vars.AURA_DEMO_SCREENSHOT_API_URL || secrets.AURA_DEMO_SCREENSHOT_API_URL }}
           CHANGELOG_MEDIA_ANTHROPIC_MODEL: ${{ vars.CHANGELOG_MEDIA_ANTHROPIC_MODEL || 'claude-opus-4-7' }}
-          CHANGELOG_MEDIA_OPENAI_VISION_MODEL: ${{ vars.CHANGELOG_MEDIA_OPENAI_VISION_MODEL || 'gpt-5.2' }}
+          CHANGELOG_MEDIA_OPENAI_VISION_MODEL: ${{ vars.CHANGELOG_MEDIA_OPENAI_VISION_MODEL || 'gpt-5.5' }}
+          AURA_CHANGELOG_MEDIA_OPENAI_IMAGE_MODEL: ${{ vars.AURA_CHANGELOG_MEDIA_OPENAI_IMAGE_MODEL || 'gpt-image-2' }}
+          AURA_CHANGELOG_MEDIA_OPENAI_IMAGE_QUALITY: ${{ vars.AURA_CHANGELOG_MEDIA_OPENAI_IMAGE_QUALITY || 'high' }}
+          AURA_CHANGELOG_MEDIA_OPENAI_IMAGE_SIZE: ${{ vars.AURA_CHANGELOG_MEDIA_OPENAI_IMAGE_SIZE || '2560x1440' }}
           CHANGELOG_MEDIA_REFRESH_EXISTING: ${{ inputs.refresh_existing }}
-          BROWSER_USE_MODEL: ${{ vars.BROWSER_USE_MODEL || 'claude-opus-4.6' }}
+          BROWSER_USE_MODEL: ${{ vars.BROWSER_USE_MODEL || 'claude-opus-4.7' }}
           BROWSER_USE_MAX_COST_USD: ${{ vars.BROWSER_USE_MAX_COST_USD || '5' }}
         shell: bash
         run: |
           args=(
-            --changelog-file "pages/changelog/${{ steps.target.outputs.channel }}/latest.json"
+            --changelog-file "${{ steps.target.outputs.changelog_json }}"
             --output-dir changelog-media-output
             --base-url "$AURA_DEMO_SCREENSHOT_BASE_URL"
             --max-candidates "${{ inputs.max_candidates || '3' }}"
