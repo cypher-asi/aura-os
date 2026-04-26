@@ -146,9 +146,27 @@
 }
 
 .messageAreaShell {
+  --chat-top-fade-background: var(--color-bg, #111);
+  --chat-top-fade-height: 40px;
   position: relative;
   flex: 1;
   min-height: 0;
+}
+
+.messageAreaShell::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--chat-top-fade-height);
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(to bottom, var(--chat-top-fade-background), transparent);
+}
+
+:global([data-desktop-mode]) .messageAreaShell {
+  --chat-top-fade-background: color-mix(in srgb, var(--color-bg, #111) 92%, transparent);
 }
 
 .messageArea {
