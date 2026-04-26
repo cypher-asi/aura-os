@@ -30,7 +30,7 @@
   overflow: hidden;
   background: transparent;
   margin: 0 5px;
-  border-radius: 20px;
+  border-radius: 3px;
 }
 
 .mainPanelHost {
@@ -41,7 +41,6 @@
   display: flex;
   overflow: hidden;
   background: var(--color-bg);
-  border-radius: 3px;
 }
 
 /*
