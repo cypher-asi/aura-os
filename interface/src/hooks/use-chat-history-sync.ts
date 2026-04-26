@@ -5,6 +5,7 @@ import { useSidekickStore } from "../stores/sidekick-store";
 import { useIsStreaming } from "./stream/hooks";
 import { getStreamEntry, streamMetaMap } from "./stream/store";
 import { useEventStore } from "../stores/event-store/index";
+import { isAuraCaptureSessionActive } from "../lib/screenshot-bridge";
 import { EventType } from "../shared/types/aura-events";
 import type { SessionEvent } from "../shared/types";
 import type { DisplaySessionEvent } from "../shared/types/stream";
@@ -250,6 +251,10 @@ export function useChatHistorySync({
   useEffect(() => {
     if (!historyKey || !fetchFn) {
       onClear?.();
+      return;
+    }
+    if (isAuraCaptureSessionActive()) {
+      onSwitch?.();
       return;
     }
     if (invalidateBeforeFetch) {

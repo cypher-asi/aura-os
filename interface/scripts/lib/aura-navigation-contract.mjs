@@ -8,8 +8,8 @@ const DEFAULT_APP_LIMIT = 24;
 const MAX_COMMIT_LOG_CHARS = 6000;
 const DESKTOP_CAPTURE_POLICY = Object.freeze({
   target: "desktop-web-product-ui",
-  viewport: { width: 2560, height: 1440 },
-  minimumViewport: { width: 1920, height: 1080 },
+  viewport: { width: 1280, height: 720, deviceScaleFactor: 2 },
+  minimumViewport: { width: 1280, height: 720 },
   rejectIfVisible: [
     "mobile responsive layout",
     "native iOS or Android surface",
@@ -20,6 +20,43 @@ const DESKTOP_CAPTURE_POLICY = Object.freeze({
 });
 
 const SITEMAP_GENERATOR_VERSION = 1;
+const SEEDED_CAPTURE_SURFACES = Object.freeze({
+  agents: {
+    capabilities: ["agent-chat-ready", "sidebar-list-populated", "sidekick-context-populated"],
+    preferredStableSurface: "Agent chat with a selected seeded agent, readable transcript, and sidekick context.",
+    seededData: ["selected agent", "chat transcript", "agent sidebar rows", "profile sidekick"],
+  },
+  aura3d: {
+    capabilities: ["asset-gallery-populated", "image-gallery-populated", "project-selected"],
+    preferredStableSurface: "Generated Image gallery with a selected demo project, selected image, and visible sidekick thumbnails.",
+    seededData: ["selected project", "generated image preview", "image gallery thumbnails"],
+  },
+  feedback: {
+    capabilities: ["feedback-board-populated", "feedback-thread-populated", "sidebar-list-populated", "sidekick-context-populated"],
+    preferredStableSurface: "Feedback board with multiple idea cards, vote counts, status pills, and a selected comment thread.",
+    seededData: ["feedback cards", "vote counts", "review statuses", "selected thread comments"],
+  },
+  notes: {
+    capabilities: ["notes-tree-populated", "note-editor-populated", "project-selected", "sidekick-context-populated"],
+    preferredStableSurface: "Notes editor with a selected launch note, populated notes tree, and table-of-contents sidekick.",
+    seededData: ["selected project", "notes tree", "markdown note content", "TOC sidekick"],
+  },
+  tasks: {
+    capabilities: ["task-board-populated", "project-selected", "sidebar-list-populated", "sidekick-context-populated"],
+    preferredStableSurface: "Tasks kanban board with seeded cards across Done, In Progress, and Ready lanes.",
+    seededData: ["selected project", "kanban lanes", "task cards", "assigned agent"],
+  },
+  process: {
+    capabilities: ["process-graph-populated", "run-history-populated", "project-selected", "sidekick-context-populated"],
+    preferredStableSurface: "Process canvas with connected automation nodes and visible run context.",
+    seededData: ["selected process", "connected nodes", "run history", "node output"],
+  },
+  feed: {
+    capabilities: ["feed-timeline-populated"],
+    preferredStableSurface: "Feed timeline with release activity, commit messages, and a selected update.",
+    seededData: ["activity entries", "commit messages", "selected event"],
+  },
+});
 
 const FALLBACK_APPS = [
   {
@@ -246,6 +283,50 @@ function summarizeSitemapCoverage(apps) {
   };
 }
 
+function buildCaptureSeedProfile(app) {
+  const sourceContext = app.sourceContext || {};
+  const seededSurface = SEEDED_CAPTURE_SURFACES[app.id] || null;
+  const capabilities = unique([
+    "proof-data-populated",
+    `app:${app.id}`,
+    ...(seededSurface?.capabilities || []),
+    ...(app.id === "agents" ? ["agent-chat-ready", "sidebar-list-populated", "sidekick-context-populated"] : []),
+    ...(app.id === "aura3d" ? ["asset-gallery-populated", "image-gallery-populated", "project-selected"] : []),
+    ...(app.id === "projects" ? ["project-selected", "run-history-populated"] : []),
+    ...(app.id === "tasks" ? ["run-history-populated", "project-selected"] : []),
+    ...(sourceContext.surfaces?.some((handle) => /sidekick/i.test(handle)) ? ["sidekick-context-populated"] : []),
+    ...(sourceContext.surfaces?.some((handle) => /list|row|sidebar/i.test(handle)) ? ["sidebar-list-populated"] : []),
+    ...(sourceContext.proofSignals?.some((handle) => /gallery|image|model|preview/i.test(handle)) ? ["asset-gallery-populated"] : []),
+  ], 18);
+  return {
+    purpose: "Seed realistic demo state before capture so Browser Use does not screenshot empty product shells.",
+    runtimeSeedSupport: seededSurface ? "supported" : "unknown",
+    seededData: seededSurface?.seededData || [],
+    capabilities,
+    preferredStableSurface: seededSurface?.preferredStableSurface || "Populated desktop product state with proof data visible before screenshot capture.",
+    recommendedProofHandles: unique(sourceContext.proofSignals || [], 12),
+    recommendedContextHandles: unique([
+      ...(sourceContext.contexts || []),
+      ...(sourceContext.contextAnchors || []),
+      ...(sourceContext.surfaces || []).filter((handle) => /panel|list|row|sidebar|sidekick|toolbar|tab/i.test(handle)),
+    ], 18),
+    readinessSignals: unique([
+      "desktop shell is visible",
+      `${app.label} route is active`,
+      "target surface contains seeded product data",
+      ...(sourceContext.proofSignals?.length ? ["at least one data-agent-proof handle is visible"] : []),
+      ...(sourceContext.contextAnchors?.length ? ["nearest data-agent-context-anchor remains in the crop"] : []),
+    ], 12),
+    avoid: [
+      "auth/login screen",
+      "loading spinner",
+      "empty placeholder",
+      "mostly black shell with no populated app data",
+      "mobile or narrow responsive layout",
+    ],
+  };
+}
+
 export async function buildAuraNavigationSitemap() {
   const apps = await listAuraNavigationApps();
   return {
@@ -258,10 +339,14 @@ export async function buildAuraNavigationSitemap() {
       "Use app registry metadata, route hints, aria labels, and data-agent-* handles as navigation evidence.",
       "Use data-agent-context for the product boundary and data-agent-context-anchor for titles, tabs, toolbars, or navigation that must remain visible around the proof.",
       "Prefer generated sitemap evidence over static scenario scripts.",
+      "Treat captureSeedProfile as the contract for data-first capture: choose candidates whose target surface can be seeded, and request those capabilities before Browser Use navigates.",
       "Place data-agent-proof on the concrete visual evidence, not on a giant page container; if a changed desktop feature lacks proof handles, add durable product semantics in the UI instead of a one-off screenshot script.",
     ],
     coverage: summarizeSitemapCoverage(apps),
-    apps,
+    apps: apps.map((app) => ({
+      ...app,
+      captureSeedProfile: buildCaptureSeedProfile(app),
+    })),
   };
 }
 
@@ -298,6 +383,19 @@ function cloneApp(app) {
   return {
     ...app,
     keywords: [...(app.keywords || [])],
+    captureSeedProfile: app.captureSeedProfile
+      ? {
+          ...app.captureSeedProfile,
+          runtimeSeedSupport: app.captureSeedProfile.runtimeSeedSupport || "unknown",
+          seededData: [...(app.captureSeedProfile.seededData || [])],
+          capabilities: [...(app.captureSeedProfile.capabilities || [])],
+          preferredStableSurface: app.captureSeedProfile.preferredStableSurface || null,
+          recommendedProofHandles: [...(app.captureSeedProfile.recommendedProofHandles || [])],
+          recommendedContextHandles: [...(app.captureSeedProfile.recommendedContextHandles || [])],
+          readinessSignals: [...(app.captureSeedProfile.readinessSignals || [])],
+          avoid: [...(app.captureSeedProfile.avoid || [])],
+        }
+      : null,
     sourceContext: app.sourceContext
       ? Object.fromEntries(
           Object.entries(app.sourceContext).map(([key, value]) => [
@@ -315,10 +413,16 @@ export async function listAuraNavigationApps() {
     const registrySource = await fs.readFile(registryPath, "utf8").catch(() => "");
     const apps = parseAppsFromRegistry(registrySource);
     const source = apps.length > 0 ? apps : FALLBACK_APPS;
-    return Promise.all(source.map(async (app) => ({
-      ...app,
-      sourceContext: await inspectAppSource(app),
-    })));
+    return Promise.all(source.map(async (app) => {
+      const appWithSource = {
+        ...app,
+        sourceContext: await inspectAppSource(app),
+      };
+      return {
+        ...appWithSource,
+        captureSeedProfile: buildCaptureSeedProfile(appWithSource),
+      };
+    }));
   })();
 
   return (await cachedAppsPromise).map(cloneApp);

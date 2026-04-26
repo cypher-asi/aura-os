@@ -17,7 +17,9 @@ test("normalizeCaptureSeedPlan derives generic capabilities without feature-spec
   assert.ok(plan.capabilities.includes("app:aura3d"));
   assert.ok(plan.capabilities.includes("proof-data-populated"));
   assert.ok(plan.capabilities.includes("asset-gallery-populated"));
+  assert.ok(plan.capabilities.includes("image-gallery-populated"));
   assert.ok(plan.requiredState.some((entry) => entry.includes("meaningful proof data")));
+  assert.ok(plan.requiredState.some((entry) => entry.includes("generated image preview")));
   assert.ok(plan.proofBoundary.some((entry) => entry.includes("feature evidence")));
   assert.ok(plan.contextBoundary.some((entry) => entry.includes("recognizable product")));
   assert.ok(plan.avoid.includes("isolated widget without product context"));
@@ -50,4 +52,93 @@ test("normalizeCaptureSeedPlan preserves AI-provided seed intent and deduplicate
   assert.ok(plan.avoid.includes("empty run history"));
   assert.ok(plan.readinessSignals.includes("Run detail timeline is visible."));
   assert.equal(plan.notes, "Use seeded data only.");
+});
+
+test("normalizeCaptureSeedPlan upgrades shell captures with rich context requirements", () => {
+  const plan = normalizeCaptureSeedPlan(null, {
+    title: "Restyle desktop shell into floating glass capsules",
+    targetAppId: "agents",
+    targetPath: "/agents",
+    proofGoal: "Show bottom taskbar, sidebar, sidekick, and main panel gaps.",
+    changedFiles: [
+      "interface/src/components/DesktopShell/DesktopShell.module.css",
+      "interface/src/components/BottomTaskbar/BottomTaskbar.module.css",
+    ],
+  });
+
+  assert.ok(plan.capabilities.includes("shell-context-populated"));
+  assert.ok(plan.capabilities.includes("sidekick-context-populated"));
+  assert.ok(plan.capabilities.includes("sidebar-list-populated"));
+  assert.ok(plan.capabilities.includes("agent-chat-ready"));
+  assert.ok(plan.requiredState.some((entry) => entry.includes("not an empty launcher")));
+  assert.ok(plan.readinessSignals.some((entry) => entry.includes("sidebar, main panel, sidekick")));
+  assert.ok(plan.avoid.includes("mostly black shell with only chrome and no product data"));
+});
+
+test("normalizeCaptureSeedPlan keeps AURA 3D shell proof on populated image state", () => {
+  const plan = normalizeCaptureSeedPlan(null, {
+    title: "Floating glass desktop shell",
+    targetAppId: "aura3d",
+    targetPath: "/3d",
+    proofGoal: "Show the shell chrome around a populated AURA 3D gallery.",
+    changedFiles: ["interface/src/components/DesktopShell/DesktopShell.module.css"],
+  });
+
+  assert.ok(plan.capabilities.includes("app:aura3d"));
+  assert.ok(plan.capabilities.includes("image-gallery-populated"));
+  assert.ok(plan.capabilities.includes("shell-context-populated"));
+  assert.ok(!plan.capabilities.includes("model-source-image-populated"));
+  assert.ok(plan.readinessSignals.includes("generated image preview and image gallery are visible"));
+});
+
+test("normalizeCaptureSeedPlan opens the AURA 3D model surface only for explicit model proof", () => {
+  const plan = normalizeCaptureSeedPlan(null, {
+    title: "New AURA 3D image to 3D model viewer",
+    targetAppId: "aura3d",
+    targetPath: "/3d",
+    proofGoal: "Show the selected source image ready for 3D model conversion.",
+    changedFiles: ["interface/src/apps/aura3d/ModelGeneration/ModelGeneration.tsx"],
+  });
+
+  assert.ok(plan.capabilities.includes("model-source-image-populated"));
+  assert.ok(plan.requiredState.some((entry) => entry.includes("source image is selected")));
+});
+
+test("normalizeCaptureSeedPlan asks for seeded data on non-empty app surfaces", () => {
+  const feedbackPlan = normalizeCaptureSeedPlan(null, {
+    title: "Feedback board adds threaded review status",
+    targetAppId: "feedback",
+    targetPath: "/feedback",
+    proofGoal: "Show feedback cards, votes, statuses, and selected comments.",
+    changedFiles: ["interface/src/apps/feedback/FeedbackMainPanel/FeedbackMainPanel.tsx"],
+  });
+  const notesPlan = normalizeCaptureSeedPlan(null, {
+    title: "Notes editor adds table of contents sidekick",
+    targetAppId: "notes",
+    targetPath: "/notes",
+    proofGoal: "Show a populated note editor with TOC context.",
+    changedFiles: ["interface/src/apps/notes/NotesMainPanel/NotesMainPanel.tsx"],
+  });
+  const tasksPlan = normalizeCaptureSeedPlan(null, {
+    title: "Task board now shows release gates across lanes",
+    targetAppId: "tasks",
+    targetPath: "/tasks",
+    proofGoal: "Show a populated kanban board.",
+    changedFiles: ["interface/src/apps/tasks/components/TasksMainPanel/TasksMainPanel.tsx"],
+  });
+  const processPlan = normalizeCaptureSeedPlan(null, {
+    title: "Process graph run history is visible",
+    targetAppId: "process",
+    targetPath: "/process",
+    proofGoal: "Show connected workflow nodes and run history.",
+    changedFiles: ["interface/src/apps/process/components/ProcessCanvas/ProcessCanvas.tsx"],
+  });
+
+  assert.ok(feedbackPlan.capabilities.includes("feedback-board-populated"));
+  assert.ok(feedbackPlan.capabilities.includes("feedback-thread-populated"));
+  assert.ok(notesPlan.capabilities.includes("notes-tree-populated"));
+  assert.ok(notesPlan.capabilities.includes("note-editor-populated"));
+  assert.ok(tasksPlan.capabilities.includes("task-board-populated"));
+  assert.ok(processPlan.capabilities.includes("process-graph-populated"));
+  assert.ok(processPlan.capabilities.includes("run-history-populated"));
 });

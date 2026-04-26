@@ -140,6 +140,14 @@ vi.mock("../stores/sidekick-store", () => ({
   useSidekickStore: sidekickMocks.useSidekickStore,
 }));
 
+const screenshotBridgeMocks = vi.hoisted(() => ({
+  isAuraCaptureSessionActive: vi.fn(() => false),
+}));
+
+vi.mock("../lib/screenshot-bridge", () => ({
+  isAuraCaptureSessionActive: screenshotBridgeMocks.isAuraCaptureSessionActive,
+}));
+
 function emit(type: string, event: { content: Record<string, unknown> }): void {
   const listeners = mocks.eventListeners.get(type);
   if (!listeners) return;
@@ -167,6 +175,7 @@ describe("useChatHistorySync", () => {
       error: null,
     });
     mocks.getStreamEntry.mockReturnValue({ events: [] as DisplaySessionEvent[] });
+    screenshotBridgeMocks.isAuraCaptureSessionActive.mockReturnValue(false);
   });
 
   it("hydrates ready history into the stream store by default", async () => {
@@ -205,6 +214,27 @@ describe("useChatHistorySync", () => {
       expect(mocks.state.fetchHistory).toHaveBeenCalled();
     });
     expect(resetEvents).not.toHaveBeenCalled();
+  });
+
+  it("does not fetch server history during capture sessions", async () => {
+    screenshotBridgeMocks.isAuraCaptureSessionActive.mockReturnValue(true);
+    const resetEvents = vi.fn();
+    const fetchFn = vi.fn(async () => []);
+
+    renderHook(() =>
+      useChatHistorySync({
+        historyKey: "agent:agent-1",
+        streamKey: "agent-1",
+        fetchFn,
+        resetEvents,
+        hydrateToStream: false,
+      }),
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(mocks.state.hydrateFromCache).not.toHaveBeenCalled();
+    expect(mocks.state.fetchHistory).not.toHaveBeenCalled();
+    expect(fetchFn).not.toHaveBeenCalled();
   });
 
   it("force-refetches history when a matching UserMessage event arrives", async () => {

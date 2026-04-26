@@ -4,13 +4,41 @@ import path from "node:path";
 import { buildCaptureLoginUrl, readPngDimensions } from "../changelog-media-browser-use-trial.mjs";
 
 export const DEFAULT_HIGH_RES_CAPTURE_VIEWPORT = Object.freeze({
-  width: 2560,
-  height: 1440,
-  deviceScaleFactor: 3,
+  width: 1280,
+  height: 720,
+  deviceScaleFactor: 2,
 });
 
-export const DEFAULT_CHANGELOG_CAPTURE_ZOOM = 1;
-export const DEFAULT_CHANGELOG_CAPTURE_TEXT_SCALE = 1;
+export const CHANGELOG_CAPTURE_PRESENTATION_CSS = `
+  body[data-aura-changelog-capture-presentation="true"] {
+    --color-text: #f7f8fb !important;
+    --color-text-primary: #f7f8fb !important;
+    --color-text-secondary: rgba(247, 248, 251, 0.8) !important;
+    --color-text-muted: rgba(247, 248, 251, 0.66) !important;
+    --color-border: rgba(255, 255, 255, 0.14) !important;
+    --color-border-subtle: rgba(255, 255, 255, 0.1) !important;
+    --color-bg-secondary: #1a1a1a !important;
+    --color-bg-tertiary: rgba(255, 255, 255, 0.075) !important;
+  }
+  body[data-aura-changelog-capture-presentation="true"] [data-agent-surface],
+  body[data-aura-changelog-capture-presentation="true"] [data-agent-context],
+  body[data-aura-changelog-capture-presentation="true"] [data-agent-action],
+  body[data-aura-changelog-capture-presentation="true"] [data-agent-field] {
+    filter: none !important;
+  }
+  body[data-aura-changelog-capture-presentation="true"] [data-agent-surface] {
+    color: var(--color-text-secondary) !important;
+  }
+  body[data-aura-changelog-capture-presentation="true"] [data-agent-proof],
+  body[data-aura-changelog-capture-presentation="true"] [data-agent-action],
+  body[data-aura-changelog-capture-presentation="true"] [data-agent-model-label] {
+    color: var(--color-text) !important;
+  }
+  body[data-aura-changelog-capture-presentation="true"] [data-agent-model-label],
+  body[data-aura-changelog-capture-presentation="true"] [data-agent-proof] button {
+    font-weight: 500 !important;
+  }
+`;
 
 function commonChromeExecutablePath() {
   const candidates = [
@@ -94,7 +122,19 @@ function seedPlanCaptureText(seedPlan = null) {
   ].filter(Boolean).join("\n");
 }
 
-async function prepareProofState(page, story) {
+function shouldPreferStableShellProof(seedPlan = null, story = "") {
+  const seedText = seedPlanCaptureText(seedPlan).toLowerCase();
+  const storyText = String(story || "").toLowerCase();
+  const capabilityText = Array.isArray(seedPlan?.capabilities) ? seedPlan.capabilities.join("\n").toLowerCase() : "";
+  const wantsShellProof = /\b(?:shell-context-populated|desktop shell|shell chrome|bottom taskbar|taskbar|floating[- ]glass|floating panel|desktop layout)\b/.test(`${seedText}\n${storyText}`);
+  const wantsInteractiveProof = /\b[a-z0-9-]+-open\b/.test(capabilityText);
+  return wantsShellProof && !wantsInteractiveProof;
+}
+
+async function prepareProofState(page, story, seedPlan = null) {
+  if (shouldPreferStableShellProof(seedPlan, story)) {
+    return null;
+  }
   const tokens = storyTokens(story);
   if (!tokens.length) return null;
   const proofTokens = tokens.filter((token) => (
@@ -131,9 +171,9 @@ async function prepareProofState(page, story) {
         const tokenScore = candidateTokens.reduce((total, token) => total + (haystack.includes(token) ? 1 : 0), 0);
         const actionBonus = action ? 8 : 0;
         const score = tokenScore + actionBonus;
-        return { element, action, label, text: text.trim(), score };
+        return { element, action, label, text: text.trim(), score, tokenScore };
       })
-      .filter((entry) => entry.score > 0)
+      .filter((entry) => entry.tokenScore > 0)
       .sort((a, b) => b.score - a.score);
     const best = actions[0];
     if (!best || best.score < 2) return null;
@@ -214,401 +254,33 @@ async function prepareProofState(page, story) {
   return selected;
 }
 
-async function applyCapturePresentationMode(
-  page,
-  {
-    zoom = DEFAULT_CHANGELOG_CAPTURE_ZOOM,
-    textScale = DEFAULT_CHANGELOG_CAPTURE_TEXT_SCALE,
-  } = {},
-) {
-  const resolvedZoom = Number.isFinite(Number(zoom)) ? Number(zoom) : DEFAULT_CHANGELOG_CAPTURE_ZOOM;
-  const clampedZoom = Math.min(1.75, Math.max(1, resolvedZoom));
-  const resolvedTextScale = Number.isFinite(Number(textScale)) ? Number(textScale) : DEFAULT_CHANGELOG_CAPTURE_TEXT_SCALE;
-  const clampedTextScale = Math.min(1.8, Math.max(1, resolvedTextScale));
-  await page.evaluate(({ zoomValue, textScaleValue }) => {
-    document.documentElement.style.setProperty("--aura-changelog-capture-zoom", String(zoomValue));
-    document.documentElement.style.setProperty("--aura-changelog-capture-text-scale", String(textScaleValue));
-    document.body.style.zoom = zoomValue > 1 ? String(zoomValue) : "";
-    document.body.setAttribute("data-aura-changelog-capture-zoom", String(zoomValue));
-    document.body.setAttribute("data-aura-changelog-capture-text-scale", String(textScaleValue));
+async function applyCapturePresentationMode(page) {
+  await page.evaluate(({ css }) => {
+    document.body.setAttribute("data-aura-changelog-capture-presentation", "true");
     document.getElementById("aura-changelog-capture-style")?.remove();
     const style = document.createElement("style");
     style.id = "aura-changelog-capture-style";
-    style.textContent = `
-      body[data-aura-changelog-capture-text-scale] [data-agent-proof]:not(img):not(svg):not(canvas),
-      body[data-aura-changelog-capture-text-scale] [data-agent-proof]:not(img):not(svg):not(canvas) *,
-      body[data-aura-changelog-capture-text-scale] [data-agent-context-anchor],
-      body[data-aura-changelog-capture-text-scale] [data-agent-context-anchor] * {
-        text-rendering: geometricPrecision !important;
-        -webkit-font-smoothing: antialiased !important;
-      }
-      body[data-aura-changelog-capture-text-scale] [data-agent-proof][data-agent-surface] {
-        min-width: min(72vw, 900px) !important;
-        max-width: min(82vw, 1080px) !important;
-        max-height: min(68vh, 900px) !important;
-        overflow-y: auto !important;
-        overscroll-behavior: contain !important;
-      }
-      body[data-aura-changelog-capture-text-scale] [data-agent-action],
-      body[data-aura-changelog-capture-text-scale] [data-agent-field],
-      body[data-aura-changelog-capture-text-scale] input,
-      body[data-aura-changelog-capture-text-scale] button {
-        text-rendering: geometricPrecision !important;
-        -webkit-font-smoothing: antialiased !important;
-      }
-    `;
+    style.textContent = css;
     document.head.appendChild(style);
-  }, { zoomValue: clampedZoom, textScaleValue: clampedTextScale });
+  }, {
+    css: CHANGELOG_CAPTURE_PRESENTATION_CSS,
+  });
   await page.waitForTimeout(250);
-  return { zoom: clampedZoom, textScale: clampedTextScale };
+  return { presentation: true };
 }
 
-async function selectProofClip(page, story, proofAction = null, seedPlan = null) {
-  const captureContract = [
-    story,
-    seedPlanCaptureText(seedPlan),
-    "proof plus recognizable product context",
-    "nearest product title tab sidebar toolbar navigation selected project active panel",
-  ].filter(Boolean).join("\n");
-  return page.evaluate(({ tokens, actionName }) => {
-    function isVisible(element) {
-      const rect = element.getBoundingClientRect();
-      const style = window.getComputedStyle(element);
-      const intersectsViewport = rect.right > 0
-        && rect.bottom > 0
-        && rect.x < window.innerWidth
-        && rect.y < window.innerHeight;
-      return rect.width > 0
-        && rect.height > 0
-        && intersectsViewport
-        && style.display !== "none"
-        && style.visibility !== "hidden"
-        && Number(style.opacity || 1) > 0.05;
-    }
-    function rectFor(selector, { required = true } = {}) {
-      const element = Array.from(document.querySelectorAll(selector)).find(isVisible);
-      if (!element || !isVisible(element)) {
-        return required ? null : null;
-      }
-      return rectForElement(element, selector);
-    }
-    function rectForElement(element, selector) {
-      const rect = element.getBoundingClientRect();
-      return {
-        x: rect.x,
-        y: rect.y,
-        right: rect.right,
-        bottom: rect.bottom,
-        width: rect.width,
-        height: rect.height,
-        selector,
-        text: String(element.textContent || "").replace(/\s+/g, " ").trim().slice(0, 500),
-      };
-    }
-    function tokenScoreFor(text) {
-      const haystack = String(text || "").toLowerCase();
-      return tokens.reduce((total, token) => total + (haystack.includes(token) ? 1 : 0), 0);
-    }
-    function union(rects) {
-      const visibleRects = rects.filter(Boolean);
-      if (!visibleRects.length) return null;
-      const x = Math.min(...visibleRects.map((rect) => rect.x));
-      const y = Math.min(...visibleRects.map((rect) => rect.y));
-      const right = Math.max(...visibleRects.map((rect) => rect.right));
-      const bottom = Math.max(...visibleRects.map((rect) => rect.bottom));
-      return {
-        x,
-        y,
-        right,
-        bottom,
-        width: right - x,
-        height: bottom - y,
-        selector: visibleRects.map((rect) => rect.selector).join(", "),
-        text: visibleRects.map((rect) => rect.text || "").filter(Boolean).join(" ").slice(0, 500),
-      };
-    }
-    function contextCreatesMostlyEmptyFrame(contextRect, proofRect) {
-      const combined = union([contextRect, proofRect]);
-      if (!combined) return false;
-      const combinedArea = Math.max(1, combined.width * combined.height);
-      const contentArea = Math.max(1, (contextRect.width * contextRect.height) + (proofRect.width * proofRect.height));
-      const emptyRatio = 1 - Math.min(1, contentArea / combinedArea);
-      const verticalGap = Math.max(0, proofRect.y - contextRect.bottom, contextRect.y - proofRect.bottom);
-      const horizontalGap = Math.max(0, proofRect.x - contextRect.right, contextRect.x - proofRect.right);
-      const farVerticalContext = verticalGap > Math.max(240, proofRect.height * 0.5);
-      const farHorizontalContext = horizontalGap > Math.max(320, proofRect.width * 0.5);
-      return emptyRatio > 0.55 && (farVerticalContext || farHorizontalContext);
-    }
-    function isFloatingProofElement(element) {
-      const semanticName = [
-        element.getAttribute("data-agent-surface"),
-        element.getAttribute("data-agent-proof"),
-        element.getAttribute("role"),
-        element.getAttribute("aria-label"),
-      ].filter(Boolean).join(" ").toLowerCase();
-      const hasEnoughSelfContainedText = String(element.textContent || "").replace(/\s+/g, " ").trim().length >= 24;
-      return hasEnoughSelfContainedText
-        && /\b(?:combobox|dialog|dropdown|listbox|menu|picker|popover|selector)\b/.test(semanticName);
-    }
-    function contextIsUsefulForProof(contextRect, proofRect) {
-      if (!contextRect || !proofRect) return false;
-      if (contextCreatesMostlyEmptyFrame(contextRect, proofRect)) return false;
-      const proofArea = Math.max(1, proofRect.width * proofRect.height);
-      const contextArea = Math.max(1, contextRect.width * contextRect.height);
-      const verticalGap = Math.max(0, proofRect.y - contextRect.bottom, contextRect.y - proofRect.bottom);
-      const horizontalGap = Math.max(0, proofRect.x - contextRect.right, contextRect.x - proofRect.right);
-      const contextIsMuchLarger = contextArea > proofArea * 1.6;
-      const contextIsFar = verticalGap > Math.max(160, proofRect.height * 0.35)
-        || horizontalGap > Math.max(220, proofRect.width * 0.35);
-      return !(contextIsMuchLarger && contextIsFar);
-    }
-    function expandToPresentationClip(rect, { minWidth = 1920, minHeight = 1080, maxWidth = null, maxHeight = null, alignTop = false } = {}) {
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      const targetRatio = 16 / 9;
-      const padding = 48;
-      let width = Math.max(rect.width + (padding * 2), minWidth);
-      let height = Math.max(rect.height + (padding * 2), minHeight);
-      if (width / height > targetRatio) {
-        height = width / targetRatio;
-      } else {
-        width = height * targetRatio;
-      }
-      if (maxWidth && width > maxWidth) {
-        width = maxWidth;
-        height = width / targetRatio;
-      }
-      if (maxHeight && height > maxHeight) {
-        height = maxHeight;
-        width = height * targetRatio;
-      }
-      width = Math.min(width, viewportWidth);
-      height = Math.min(height, viewportHeight);
-      let x = alignTop ? rect.x - padding : rect.x + (rect.width / 2) - (width / 2);
-      let y = alignTop ? rect.y - padding : rect.y + (rect.height / 2) - (height / 2);
-      x = Math.max(0, Math.min(x, viewportWidth - width));
-      y = Math.max(0, Math.min(y, viewportHeight - height));
-      return {
-        x: Math.round(x),
-        y: Math.round(y),
-        width: Math.round(width),
-        height: Math.round(height),
-        sourceSelector: rect.selector,
-        sourceText: rect.text || "",
-      };
-    }
-    function dataAgentKeywords(element) {
-      return [
-        element.getAttribute("data-agent-context"),
-        element.getAttribute("data-agent-context-anchor"),
-        element.getAttribute("data-agent-surface"),
-        element.getAttribute("data-agent-proof"),
-        element.getAttribute("data-agent-action"),
-        element.getAttribute("data-agent-field"),
-        element.getAttribute("data-agent-model-id"),
-        element.getAttribute("data-agent-model-label"),
-        element.getAttribute("aria-label"),
-      ].filter(Boolean).join(" ");
-    }
-    function scoreSurface(surface, rect) {
-      const haystack = `${surface.selector} ${surface.semanticText || ""} ${rect.text || ""}`.toLowerCase();
-      const tokenScore = tokens.reduce((total, token) => total + (haystack.includes(token) ? 1 : 0), 0);
-      const visibleTextBonus = rect.text ? 0.5 : 0;
-      const proofBonus = surface.directProofSignal ? 8 : surface.hasProofSignal ? 3 : 0;
-      const semanticBonus = surface.semanticText ? 1 : 0;
-      const productContextBonus = surface.inProductContext ? 4 : 0;
-      const supportPanelPenalty = !surface.inProductContext && surface.hasProofSignal ? -3 : 0;
-      const mainPanelPenalty = surface.name === "main-panel" ? -0.5 : 0;
-      const viewportArea = Math.max(1, window.innerWidth * window.innerHeight);
-      const areaRatio = (rect.width * rect.height) / viewportArea;
-      return tokenScore
-        + visibleTextBonus
-        + proofBonus
-        + semanticBonus
-        + productContextBonus
-        + supportPanelPenalty
-        + mainPanelPenalty
-        - (areaRatio * 4);
-    }
-
-    function contextRectForProofElement(element) {
-      if (!element.getAttribute("data-agent-proof")) return null;
-      const proofRect = rectForElement(
-        element,
-        `[data-agent-proof="${CSS.escape(element.getAttribute("data-agent-proof") || "proof")}"]`,
-      );
-      if (isFloatingProofElement(element)) {
-        return null;
-      }
-      const explicitContext = element.closest("[data-agent-context]");
-      if (explicitContext && isVisible(explicitContext)) {
-        const anchors = Array.from(explicitContext.querySelectorAll("[data-agent-context-anchor]"))
-          .filter(isVisible)
-          .map((anchor) => rectForElement(
-            anchor,
-            `[data-agent-context-anchor="${CSS.escape(anchor.getAttribute("data-agent-context-anchor") || "context-anchor")}"]`,
-          ));
-        if (anchors.length) {
-          const nearbyAnchors = anchors.filter((anchor) => contextIsUsefulForProof(anchor, proofRect));
-          const contextAnchorRect = union(nearbyAnchors);
-          if (contextAnchorRect) return contextAnchorRect;
-        }
-        const rect = explicitContext.getBoundingClientRect();
-        const viewportArea = Math.max(1, window.innerWidth * window.innerHeight);
-        const contextAreaRatio = (rect.width * rect.height) / viewportArea;
-        if (contextAreaRatio <= 0.5) {
-          return rectForElement(
-            explicitContext,
-            `[data-agent-context="${CSS.escape(explicitContext.getAttribute("data-agent-context") || "proof-context")}"]`,
-          );
-        }
-      }
-      const context = element.parentElement?.closest("[data-agent-surface]:not([data-agent-proof])");
-      if (!context || !isVisible(context)) return null;
-      return rectForElement(context, `[data-agent-surface="${CSS.escape(context.getAttribute("data-agent-surface") || "proof-context")}"]`);
-    }
-
-    const proofSurfaces = Array.from(document.querySelectorAll("[data-agent-surface], [data-agent-context]"))
-      .filter(isVisible)
-      .map((element, index) => {
-        const surface = element.getAttribute("data-agent-surface")
-          || element.getAttribute("data-agent-context")
-          || `surface-${index + 1}`;
-        return {
-          selector: element.getAttribute("data-agent-surface")
-            ? `[data-agent-surface="${CSS.escape(surface)}"]`
-            : `[data-agent-context="${CSS.escape(surface)}"]`,
-          name: surface,
-          semanticText: dataAgentKeywords(element),
-          directProofSignal: Boolean(element.getAttribute("data-agent-proof")),
-          hasProofSignal: Boolean(element.querySelector("[data-agent-proof]") || element.getAttribute("data-agent-proof")),
-          inProductContext: Boolean(element.closest("[data-agent-context]")),
-          contextRect: contextRectForProofElement(element),
-          floatingProofSurface: isFloatingProofElement(element),
-        };
-      });
-    const semanticProofElements = Array.from(document.querySelectorAll("body *"))
-      .filter(isVisible)
-      .map((element, index) => {
-        const rect = element.getBoundingClientRect();
-        const text = String(element.textContent || "").replace(/\s+/g, " ").trim();
-        const area = rect.width * rect.height;
-        const viewportArea = window.innerWidth * window.innerHeight;
-        const tokenScore = tokenScoreFor(`${dataAgentKeywords(element)} ${text}`);
-        return {
-          element,
-          selector: `semantic-proof-${index + 1}`,
-          tokenScore,
-          area,
-          viewportArea,
-          text,
-        };
-      })
-      .filter((entry) => (
-        entry.tokenScore > 0
-        && entry.text.length >= 12
-        && entry.area >= 8000
-        && entry.area <= entry.viewportArea * 0.72
-      ));
-
-    const ranked = [];
-    for (const surface of proofSurfaces) {
-      const rect = rectFor(surface.selector);
-      if (!rect) continue;
-      const included = [rect];
-      if (actionName && !surface.floatingProofSurface) {
-        const actionRect = rectFor(`[data-agent-action="${CSS.escape(actionName)}"]`, { required: false });
-        if (actionRect && contextIsUsefulForProof(actionRect, rect)) {
-          included.push(actionRect);
-        }
-      }
-      if (surface.directProofSignal) {
-        included.push(surface.contextRect);
-      }
-      const combined = union(included) || rect;
-      const directProofContextFitsFocusFrame = surface.directProofSignal
-        && surface.inProductContext
-        && combined.width + 96 <= 1440
-        && combined.height + 96 <= 810;
-      const floatingProofFitsTightFrame = surface.floatingProofSurface
-        && combined.width + 96 <= 960
-        && combined.height + 96 <= 540;
-      ranked.push({
-        surface,
-        rect: combined,
-        score: scoreSurface(surface, combined),
-        minWidth: floatingProofFitsTightFrame ? 960 : surface.directProofSignal ? 1280 : 1920,
-        minHeight: floatingProofFitsTightFrame ? 540 : surface.directProofSignal ? 720 : 1080,
-        maxWidth: floatingProofFitsTightFrame ? 960 : directProofContextFitsFocusFrame ? 1440 : null,
-        maxHeight: floatingProofFitsTightFrame ? 540 : directProofContextFitsFocusFrame ? 810 : null,
-        alignTop: floatingProofFitsTightFrame || directProofContextFitsFocusFrame,
-      });
-    }
-    if (actionName) {
-      const actionRect = rectFor(`[data-agent-action="${CSS.escape(actionName)}"]`, { required: false });
-      if (actionRect) {
-        ranked.push({
-          surface: {
-            name: "semantic-action-proof",
-            semanticText: actionRect.text || actionName,
-          },
-          rect: actionRect,
-          score: tokenScoreFor(`${actionName} ${actionRect.text || ""}`) * 5 + 4,
-          minWidth: 1280,
-          minHeight: 720,
-        });
-      }
-    }
-    for (const semantic of semanticProofElements) {
-      const rect = rectForElement(semantic.element, semantic.selector);
-      const areaRatio = semantic.area / semantic.viewportArea;
-      const compactBonus = areaRatio < 0.18 ? 2 : areaRatio < 0.35 ? 1 : 0;
-      const score = (semantic.tokenScore * 4)
-        + compactBonus
-        + (semantic.text.length > 24 ? 0.5 : 0)
-        - (areaRatio * 4);
-      if (score <= 0) continue;
-      ranked.push({
-        surface: {
-          name: "semantic-proof",
-          semanticText: semantic.text.slice(0, 500),
-        },
-        rect,
-        score,
-        minWidth: 1440,
-        minHeight: 810,
-      });
-    }
-    ranked.sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score;
-      const areaA = a.rect.width * a.rect.height;
-      const areaB = b.rect.width * b.rect.height;
-      return areaA - areaB;
-    });
-    const directProofRanked = ranked.filter((entry) => entry.surface.directProofSignal);
-    const contextualProofRanked = ranked.filter((entry) => entry.surface.hasProofSignal);
-    const best = directProofRanked[0]
-      || contextualProofRanked[0]
-      || ranked.find((entry) => entry.score >= 1)
-      || ranked[0];
-    if (best) {
-      return expandToPresentationClip(best.rect, {
-        minWidth: best.minWidth || 1920,
-        minHeight: best.minHeight || 1080,
-        maxWidth: best.maxWidth || null,
-        maxHeight: best.maxHeight || null,
-        alignTop: best.alignTop || false,
-      });
-    }
+async function selectProofClip(page) {
+  return page.evaluate(() => {
+    const targetHeight = Math.min(window.innerHeight, Math.round(window.innerWidth * 9 / 16));
     return {
       x: 0,
       y: 0,
       width: window.innerWidth,
-      height: Math.round(window.innerWidth * 9 / 16),
-      sourceSelector: "viewport",
+      height: targetHeight,
+      sourceSelector: "viewport-full-desktop-proof",
       sourceText: document.body.innerText.slice(0, 500),
     };
-  }, { tokens: storyTokens(captureContract), actionName: proofAction?.action || "" });
+  });
 }
 
 export async function captureHighResolutionAuraProof({
@@ -621,8 +293,6 @@ export async function captureHighResolutionAuraProof({
   viewport = DEFAULT_HIGH_RES_CAPTURE_VIEWPORT,
   story = "",
   seedPlan = null,
-  captureZoom = DEFAULT_CHANGELOG_CAPTURE_ZOOM,
-  captureTextScale = DEFAULT_CHANGELOG_CAPTURE_TEXT_SCALE,
   waitAfterResetMs = 700,
   playwright = null,
 } = {}) {
@@ -687,12 +357,9 @@ export async function captureHighResolutionAuraProof({
       { appId: targetAppId, path: resolvedTargetPath, seed: seedPlan },
     );
     await page.waitForTimeout(waitAfterResetMs);
-    const appliedCapturePresentationMode = await applyCapturePresentationMode(page, {
-      zoom: captureZoom,
-      textScale: captureTextScale,
-    });
+    const appliedCapturePresentationMode = await applyCapturePresentationMode(page);
     await page.waitForSelector("[data-agent-surface], [data-agent-action]", { state: "visible", timeout: 5000 }).catch(() => null);
-    const proofAction = await prepareProofState(page, story);
+    const proofAction = await prepareProofState(page, story, seedPlan);
     await page.waitForTimeout(450);
     const clip = await selectProofClip(page, story, proofAction, seedPlan);
     const pageState = await page.evaluate(() => ({
@@ -700,13 +367,20 @@ export async function captureHighResolutionAuraProof({
       width: window.innerWidth,
       height: window.innerHeight,
       devicePixelRatio: window.devicePixelRatio,
-      captureZoom: document.body.getAttribute("data-aura-changelog-capture-zoom") || "1",
-      captureTextScale: document.body.getAttribute("data-aura-changelog-capture-text-scale") || "1",
+      capturePresentation: document.body.getAttribute("data-aura-changelog-capture-presentation") === "true",
       text: document.body.innerText.slice(0, 2000),
       bridgeState: window.__AURA_CAPTURE_BRIDGE__?.getState?.() || null,
     }));
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-    await page.screenshot({ path: outputPath, fullPage: false, clip });
+    await page.screenshot({
+      path: outputPath,
+      fullPage: false,
+      clip,
+      type: "png",
+      scale: "device",
+      animations: "disabled",
+      caret: "hide",
+    });
     const buffer = fs.readFileSync(outputPath);
     const dimensions = readPngDimensions(buffer);
     const output = buildCaptureOutput({

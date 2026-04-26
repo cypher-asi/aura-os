@@ -20,7 +20,10 @@ import {
   type FeedbackStatus,
   type ViewerVote,
 } from "../apps/feedback/types";
-import { shouldEnableAuraScreenshotBridge } from "../lib/screenshot-bridge";
+import {
+  isAuraCaptureSessionActive,
+  shouldEnableAuraScreenshotBridge,
+} from "../lib/screenshot-bridge";
 
 interface FeedbackState {
   items: readonly FeedbackItem[];
@@ -207,6 +210,10 @@ export const useFeedbackStore = create<FeedbackStore>()((set, get) => ({
   resetComposerError: () => set({ composerError: null }),
 
   loadItems: async () => {
+    if (isAuraCaptureSessionActive()) {
+      set({ isLoading: false, hasLoaded: true, loadError: null });
+      return;
+    }
     set({ isLoading: true, loadError: null });
     try {
       const dtos = await api.feedback.list();
@@ -221,6 +228,14 @@ export const useFeedbackStore = create<FeedbackStore>()((set, get) => ({
   },
 
   loadComments: async (itemId) => {
+    if (isAuraCaptureSessionActive()) {
+      set((state) => {
+        const loaded = new Set(state.commentsLoadedFor);
+        loaded.add(itemId);
+        return { commentsLoadedFor: loaded };
+      });
+      return;
+    }
     if (get().commentsLoadedFor.has(itemId)) return;
     try {
       const dtos = await api.feedback.listComments(itemId);

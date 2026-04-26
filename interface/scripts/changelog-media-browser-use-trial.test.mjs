@@ -139,7 +139,7 @@ test("buildBrowserUseTask includes the desktop-only contract", () => {
   });
 
   assert.equal(DEFAULT_BROWSER_USE_MODEL, "claude-opus-4.6");
-  assert.match(task, /Target desktop screenshot expectation: 2560x1440/);
+  assert.match(task, /Target desktop screenshot expectation: 1920x1080/);
   assert.match(task, /Capture only the desktop web product UI/);
   assert.match(task, /Do not change browser zoom/);
   assert.doesNotMatch(task, /zoom up to/i);

@@ -21,7 +21,7 @@ export const PRODUCTION_MEDIA_QUALITY_POLICY = Object.freeze({
 const OPENAI_VISION_QUALITY_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["pass", "score", "reasons", "visibleProof", "rejectionCategory"],
+  required: ["pass", "score", "reasons", "visibleProof", "rejectionCategory", "textIntegrity", "hallucinatedText"],
   properties: {
     pass: { type: "boolean" },
     score: { type: "number", minimum: 0, maximum: 1 },
@@ -40,6 +40,14 @@ const OPENAI_VISION_QUALITY_SCHEMA = {
         "other",
         null,
       ],
+    },
+    textIntegrity: {
+      type: "string",
+      enum: ["preserved", "minor-nonessential-drift", "materially-changed"],
+    },
+    hallucinatedText: {
+      type: "array",
+      items: { type: "string" },
     },
   },
 };
@@ -222,14 +230,16 @@ export function assessChangelogMediaQuality({
   };
 }
 
-export function buildVisionJudgePrompt({ candidate, stage = "raw" } = {}) {
+export function buildVisionJudgePrompt({ candidate, stage = "raw", hasReferenceImage = false } = {}) {
   const isRawStage = stage === "raw";
   return [
     "You are the independent quality judge for an Aura changelog media asset.",
     "",
     isRawStage
       ? "Judge the attached raw capture strictly for product proof, not final marketing composition."
-      : "Judge the attached branded image strictly as the final public changelog media asset.",
+      : hasReferenceImage
+        ? "Judge the attached final image as public changelog media. The first image is the raw source screenshot, and the second image is the final generated/polished image."
+        : "Judge the attached branded image strictly as the final public changelog media asset.",
     "",
     "Candidate:",
     JSON.stringify({
@@ -245,14 +255,16 @@ export function buildVisionJudgePrompt({ candidate, stage = "raw" } = {}) {
     "- It shows desktop Aura product UI, not mobile UI.",
     "- It is not a login, loading, placeholder, empty, or error page.",
     "- The screenshot visibly proves the changelog entry.",
+    "- Judge the visible product proof, not internal routing metadata. Do not reject only because the target app id, route, file path, or literal app name is not printed onscreen; targetAppId/targetPath are verified by deterministic gates outside the image.",
     "- Reject soft, compressed, pixelated, tiny, or low-resolution product UI even when the right screen is technically visible.",
+    "- Meaningful product text must be sharp enough to read without guessing; reject smeared, fuzzy, AI-garbled, or antialiased-to-mush text.",
     "- Nothing important is clipped.",
     ...(isRawStage
       ? [
-        "- For raw captures, pass a utilitarian crop if the relevant product proof is crisp, readable, and correct.",
+        "- For raw captures, prefer a full desktop viewport proof; do not reward tiny crops that hide surrounding product context.",
         "- For raw captures, do not reject merely because the app has dark/empty surrounding space; composition is handled by the branded stage.",
         "- For raw captures, the primary proof must still be large enough to verify without ambiguity.",
-        "- Focused controls, menus, and dropdowns can pass without a global app header when the specific proof and its local product context are visible; route/app identity is separately verified by deterministic gates.",
+        "- Focused controls, menus, and dropdowns can pass inside the full desktop frame when the specific proof and nearby product context are visible; route/app identity is separately verified by deterministic gates and does not need to be printed in the pixels.",
       ]
       : [
         "- Text and important UI are crisp and readable at normal changelog display size, without opening the full-size image.",
@@ -262,13 +274,27 @@ export function buildVisionJudgePrompt({ candidate, stage = "raw" } = {}) {
         "- For compact controls, menus, dropdowns, pickers, or popovers, pass when the changed label/control is crisp and the nearby selected control or local UI context makes the product surface understandable.",
         "- Do not require compact control/menu proof to fill most of the canvas or show the global app header; route and app identity are checked separately.",
         "- For branded assets, the real product screenshot remains clear, unaltered, and large enough for the primary proof to be read comfortably.",
+        "- For branded assets, public polish cannot come at the cost of text clarity; reject if the generated product text is softer, less readable, or more artificial than the source.",
         "- For branded assets, title/caption copy is public-facing and does not read like an internal instruction.",
         "- Reject branded assets only when branding makes the actual proof unreadable, clipped, misleading, or obviously incidental.",
+        ...(hasReferenceImage
+          ? [
+            "- Compare the final image against the raw source screenshot. Pass only if the final image preserves the same Aura app, layout, selected state, navigation, panels, and product content.",
+            "- Reject if the final image hallucinates a different feature, changes labels materially, garbles readable text, invents controls, changes the app identity, or removes the proof context from the source.",
+            "- Set textIntegrity to materially-changed and list hallucinatedText if any readable source label is rewritten, garbled, or replaced by guessed text.",
+            "- Small polish is allowed, but visible product labels must remain readable and should not look AI-smeared, softened, pixelated, or partially truncated.",
+            "- It is acceptable for the final image to be cleaner, crisper, better framed, and more readable than the raw source.",
+          ]
+          : []),
       ]),
+    "",
+    isRawStage || !hasReferenceImage
+      ? "Set textIntegrity to preserved unless the image itself contains garbled or unreadable product text; hallucinatedText should be empty for raw screenshots."
+      : "For final generated images, textIntegrity must be preserved and hallucinatedText must be empty to publish.",
     "",
     "If pass is true and the image has no severe quality issue, choose a score at or above the required passing threshold.",
     "",
-    "Return strict JSON with: pass, score, reasons, visibleProof, rejectionCategory.",
+    "Return strict JSON with: pass, score, reasons, visibleProof, rejectionCategory, textIntegrity, hallucinatedText.",
   ].join("\n");
 }
 
@@ -321,11 +347,21 @@ function evaluateVisionJudgment(judgment, { stage = "raw" } = {}) {
     ? PRODUCTION_MEDIA_QUALITY_POLICY.minRawVisionScore
     : PRODUCTION_MEDIA_QUALITY_POLICY.minBrandedVisionScore;
   const rejectionCategory = judgment?.rejectionCategory ?? null;
+  const textIntegrity = typeof judgment?.textIntegrity === "string"
+    ? judgment.textIntegrity
+    : "materially-changed";
+  const hallucinatedText = Array.isArray(judgment?.hallucinatedText)
+    ? judgment.hallucinatedText.map((entry) => String(entry || "").trim()).filter(Boolean)
+    : [];
+  const textIntegrityOk = stage === "raw"
+    ? textIntegrity !== "materially-changed"
+    : textIntegrity === "preserved" && hallucinatedText.length === 0;
   const ok = Boolean(
     judgment?.pass === true
       && score >= minimumScore
       && visibleProof.length > 0
-      && rejectionCategory === null,
+      && rejectionCategory === null
+      && textIntegrityOk,
   );
   const concerns = [];
   if (judgment?.pass !== true) concerns.push("Vision judge rejected the image.");
@@ -334,6 +370,13 @@ function evaluateVisionJudgment(judgment, { stage = "raw" } = {}) {
   }
   if (visibleProof.length === 0) concerns.push("Vision judge did not provide visible proof.");
   if (rejectionCategory !== null) concerns.push(`Vision judge reported rejection category: ${rejectionCategory}.`);
+  if (!textIntegrityOk) {
+    concerns.push(
+      stage === "raw"
+        ? `Vision judge reported unacceptable source text integrity: ${textIntegrity}.`
+        : `Vision judge reported generated text drift: ${textIntegrity}${hallucinatedText.length ? ` (${hallucinatedText.join("; ")})` : ""}.`,
+    );
+  }
 
   return {
     ok,
@@ -345,6 +388,8 @@ function evaluateVisionJudgment(judgment, { stage = "raw" } = {}) {
       reasons,
       visibleProof,
       rejectionCategory,
+      textIntegrity,
+      hallucinatedText,
     },
   };
 }
@@ -353,6 +398,7 @@ export async function judgeChangelogMediaWithOpenAI({
   apiKey,
   model = "gpt-5.2",
   imagePath,
+  referenceImagePath = null,
   candidate,
   stage = "raw",
   fetchImpl = fetch,
@@ -376,6 +422,26 @@ export async function judgeChangelogMediaWithOpenAI({
 
   const mediaType = mediaTypeForImagePath(imagePath);
   const imageUrl = `data:${mediaType};base64,${fs.readFileSync(imagePath).toString("base64")}`;
+  const referenceImageUrl = referenceImagePath && fs.existsSync(referenceImagePath)
+    ? `data:${mediaTypeForImagePath(referenceImagePath)};base64,${fs.readFileSync(referenceImagePath).toString("base64")}`
+    : null;
+  const imageParts = referenceImageUrl
+    ? [
+      {
+        type: "input_image",
+        image_url: referenceImageUrl,
+      },
+      {
+        type: "input_image",
+        image_url: imageUrl,
+      },
+    ]
+    : [
+      {
+        type: "input_image",
+        image_url: imageUrl,
+      },
+    ];
   const response = await fetchImpl("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
@@ -390,12 +456,13 @@ export async function judgeChangelogMediaWithOpenAI({
           content: [
             {
               type: "input_text",
-              text: buildVisionJudgePrompt({ candidate, stage }),
+              text: buildVisionJudgePrompt({
+                candidate,
+                stage,
+                hasReferenceImage: Boolean(referenceImageUrl),
+              }),
             },
-            {
-              type: "input_image",
-              image_url: imageUrl,
-            },
+            ...imageParts,
           ],
         },
       ],

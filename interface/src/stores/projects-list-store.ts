@@ -9,6 +9,7 @@ import {
   projectsQueryOptions,
 } from "../queries/project-queries";
 import { BROWSER_DB_STORES, browserDbGet, browserDbSet } from "../shared/lib/browser-db";
+import { isAuraCaptureSessionActive } from "../lib/screenshot-bridge";
 import { getProjectOrder, setProjectOrder } from "../utils/storage";
 import { useOrgStore } from "./org-store";
 import { useAuthStore } from "./auth-store";
@@ -208,6 +209,14 @@ export const useProjectsListStore = create<ProjectsListState>()((set, get) => ({
   },
 
   refreshProjects: async () => {
+    if (isAuraCaptureSessionActive()) {
+      set((state) => ({
+        loadingProjects: false,
+        projectsError: null,
+        projectsOrgId: state.projectsOrgId ?? getActiveOrgId() ?? null,
+      }));
+      return;
+    }
     const requestId = ++refreshRequestId;
     const requestedOrgId = getActiveOrgId() ?? null;
     set({ loadingProjects: true, projectsError: null });
@@ -257,6 +266,12 @@ export const useProjectsListStore = create<ProjectsListState>()((set, get) => ({
   },
 
   refreshProjectAgents: async (projectId: string) => {
+    if (isAuraCaptureSessionActive()) {
+      set((state) => ({
+        loadingAgentsByProject: { ...state.loadingAgentsByProject, [projectId]: false },
+      }));
+      return get().agentsByProject[projectId] ?? [];
+    }
     const requestId = (agentRefreshRequestIds[projectId] ?? 0) + 1;
     const requestStartedAtMs = Date.now();
     agentRefreshRequestIds[projectId] = requestId;
@@ -406,6 +421,7 @@ function scheduleAgentPrefetch(batchId: number): void {
 // Auto-refresh projects when active org changes
 let _prevOrgId: string | null = null;
 useOrgStore.subscribe((state) => {
+  if (isAuraCaptureSessionActive()) return;
   const orgId = state.activeOrg?.org_id ?? null;
   if (orgId === _prevOrgId) return;
   _prevOrgId = orgId;
@@ -440,6 +456,7 @@ useOrgStore.subscribe((state) => {
 // still returns the user's accessible projects.
 let _prevProjectsUserId: string | null = null;
 useAuthStore.subscribe((state) => {
+  if (isAuraCaptureSessionActive()) return;
   const userId = state.user?.user_id ?? null;
   if (userId === _prevProjectsUserId) return;
   _prevProjectsUserId = userId;
@@ -465,6 +482,7 @@ useAuthStore.subscribe((state) => {
 });
 
 useProjectsListStore.subscribe((state) => {
+  if (isAuraCaptureSessionActive()) return;
   const snapshotOrgId = state.projectsOrgId;
   const hasOrgMismatch =
     snapshotOrgId != null
@@ -485,6 +503,7 @@ useProjectsListStore.subscribe((state) => {
 });
 
 useProjectsListStore.subscribe((state) => {
+  if (isAuraCaptureSessionActive()) return;
   const currentIds = new Set(state.projects.map((p) => p.project_id));
   const newIds = state.projects
     .filter(

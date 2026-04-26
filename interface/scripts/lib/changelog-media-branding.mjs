@@ -1,14 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
 
-function escapeXml(value) {
-  return String(value || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
 export function readPngDimensionsFromFile(filePath) {
   const buffer = fs.readFileSync(filePath);
   if (buffer.length < 24 || buffer.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a") {
@@ -21,8 +13,10 @@ export function readPngDimensionsFromFile(filePath) {
   };
 }
 
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
+function mediaTypeForImagePath(imagePath) {
+  if (/\.jpe?g$/i.test(imagePath)) return "image/jpeg";
+  if (/\.webp$/i.test(imagePath)) return "image/webp";
+  return "image/png";
 }
 
 const PRODUCTION_BRANDED_MEDIA_POLICY = Object.freeze({
@@ -33,361 +27,172 @@ const PRODUCTION_BRANDED_MEDIA_POLICY = Object.freeze({
   minEmbeddedHeightRatio: 0.48,
 });
 
-function addEllipsis(value, maxChars) {
-  if (value.length <= maxChars) {
-    return value.endsWith("...") ? value : `${value}...`;
-  }
-  return `${value.slice(0, Math.max(0, maxChars - 3)).trimEnd()}...`;
+function parseOpenAIImagePayload(payload) {
+  const first = Array.isArray(payload?.data) ? payload.data[0] : null;
+  if (!first || typeof first !== "object") return null;
+  return first.b64_json || first.image_base64 || first.image?.b64_json || null;
 }
 
-export function wrapTextForSvg(value, { fontSize, maxWidth, maxLines = 2 } = {}) {
-  const text = String(value || "").replace(/\s+/g, " ").trim();
-  if (!text) {
-    return [];
-  }
-
-  const maxChars = Math.max(12, Math.floor(maxWidth / Math.max(1, fontSize * 0.56)));
-  const words = text.split(" ");
-  const lines = [];
-  let current = "";
-  let truncated = false;
-
-  for (const word of words) {
-    const next = current ? `${current} ${word}` : word;
-    if (next.length <= maxChars) {
-      current = next;
-      continue;
-    }
-
-    if (current) {
-      lines.push(current);
-      current = word;
-    } else {
-      lines.push(addEllipsis(word, maxChars));
-      current = "";
-      truncated = true;
-    }
-
-    if (lines.length >= maxLines) {
-      truncated = true;
-      current = "";
-      break;
-    }
-  }
-
-  if (current && lines.length < maxLines) {
-    lines.push(current);
-  } else if (current) {
-    truncated = true;
-  }
-
-  if (truncated && lines.length > 0) {
-    lines[lines.length - 1] = addEllipsis(lines[lines.length - 1], maxChars);
-  }
-
-  return lines.slice(0, maxLines);
+function buildOpenAIProductionRedrawPrompt({ candidate, rawVisionGate } = {}) {
+  const rawReasons = Array.isArray(rawVisionGate?.judgment?.reasons)
+    ? rawVisionGate.judgment.reasons.slice(0, 4)
+    : [];
+  return [
+    "Create a production-grade Aura changelog image from the attached product screenshot by restoring clarity while staying product-faithful.",
+    "",
+    "Non-negotiable fidelity rules:",
+    "- Preserve the same Aura app, dark desktop shell, layout structure, navigation, panels, selected app state, and product content from the reference screenshot.",
+    "- Preserve visible app text faithfully and make it fully legible; do not abbreviate, garble, crop, or partially hide labels.",
+    "- Preserve the exact count, position, size relationship, and shape language of visible navigation controls, side panels, taskbar capsules, icons, tabs, thumbnails, and input fields.",
+    "- If a non-essential edge label is visibly clipped in the reference, repair only the obvious clipping when certain; otherwise omit or de-emphasize that edge text rather than guessing.",
+    "- Do not invent new features, new controls, fake metrics, different product names, or unrelated UI.",
+    "- Do not make subtle proof elements more prominent than they are in the source; improve clarity without exaggerating, redesigning, reframing, or adding glass/chrome.",
+    "- Do not add marketing text, badges, captions, labels, watermarks, or a title outside the app UI.",
+    "- Keep the Aura design language: dark spacious interface, glassy panels, subtle borders, rounded chrome, crisp white/gray typography.",
+    "",
+    "Quality goals:",
+    "- Restore the screenshot with more finesse, contrast, and crispness while staying faithful to the app.",
+    "- Make UI text and important controls readable at changelog-card size.",
+    "- Keep the same product framing unless the reference is clearly unusable; for shell/layout proof, preserve the full desktop frame including sidebar, main panel, side panel, and bottom taskbar.",
+    "- Improve contrast and edge clarity without changing the actual product state.",
+    "- Output a clean 16:9 desktop image.",
+    "",
+    "Changelog proof target:",
+    JSON.stringify({
+      title: candidate?.title || null,
+      proofGoal: candidate?.proofGoal || null,
+      targetAppId: candidate?.targetAppId || null,
+      targetPath: candidate?.targetPath || null,
+      rawVisionFeedback: rawReasons,
+    }, null, 2),
+  ].join("\n");
 }
 
-function renderTextLines({ lines, x, y, lineHeight, attributes }) {
-  if (!lines.length) {
-    return "";
-  }
-  const tspans = lines
-    .map((line, index) => `    <tspan x="${x}" dy="${index === 0 ? 0 : lineHeight}">${escapeXml(line)}</tspan>`)
-    .join("\n");
-  return `  <text x="${x}" y="${y}" ${attributes}>\n${tspans}\n  </text>`;
-}
-
-export function calculateBrandedCanvas(screenshotDimensions, { headerHeight } = {}) {
-  const screenshotWidth = screenshotDimensions.width;
-  const screenshotHeight = screenshotDimensions.height;
-  const hasHeader = Number(headerHeight || 0) > 0;
-  const horizontalPad = hasHeader
-    ? clamp(Math.round(screenshotWidth * 0.14), 160, 320)
-    : clamp(Math.round(screenshotWidth * 0.04), 96, 180);
-  const topPad = hasHeader
-    ? Math.max(
-      clamp(Math.round(screenshotHeight * 0.2), 180, 280),
-      Math.round(headerHeight || 0),
-    )
-    : clamp(Math.round(screenshotHeight * 0.04), 72, 120);
-  const bottomPad = hasHeader
-    ? clamp(Math.round(screenshotHeight * 0.12), 110, 200)
-    : clamp(Math.round(screenshotHeight * 0.04), 72, 120);
-  const contentWidth = screenshotWidth + (horizontalPad * 2);
-  const contentHeight = screenshotHeight + topPad + bottomPad;
-  const canvasWidth = Math.ceil(Math.max(contentWidth, contentHeight * (16 / 9)));
-  const canvasHeight = Math.ceil(canvasWidth * (9 / 16));
-  const screenshotX = Math.round((canvasWidth - screenshotWidth) / 2);
-  const contentTop = Math.max(0, Math.round((canvasHeight - contentHeight) / 2));
-  const screenshotY = Math.round(contentTop + topPad);
-
-  return {
-    width: canvasWidth,
-    height: canvasHeight,
-    screenshot: {
-      x: screenshotX,
-      y: screenshotY,
-      width: screenshotWidth,
-      height: screenshotHeight,
-    },
-    title: {
-      x: screenshotX,
-      y: Math.max(72, contentTop + 74),
-    },
-  };
-}
-
-export function createBrandedMediaSvg({
-  screenshotPath,
+export async function createOpenAIProductionMediaImage({
+  apiKey,
+  model = "gpt-image-2",
+  inputImagePath,
   outputPath,
-  title,
-  subtitle = "Aura changelog proof",
-  includeHeader = false,
+  candidate,
+  rawVisionGate = null,
+  quality = "high",
+  size = "2560x1440",
+  fetchImpl = fetch,
 } = {}) {
-  if (!screenshotPath) {
-    throw new Error("screenshotPath is required.");
+  if (!apiKey) {
+    return {
+      status: "blocked",
+      reason: "OPENAI_API_KEY is required for production image generation.",
+    };
+  }
+  if (!inputImagePath || !fs.existsSync(inputImagePath)) {
+    return {
+      status: "blocked",
+      reason: "A source screenshot is required for production image generation.",
+    };
   }
   if (!outputPath) {
     throw new Error("outputPath is required.");
   }
 
-  const dimensions = readPngDimensionsFromFile(screenshotPath);
-  const baseCanvas = calculateBrandedCanvas(dimensions, { headerHeight: includeHeader ? undefined : 0 });
-  const titleFontSize = clamp(Math.round(baseCanvas.width * 0.032), 48, 76);
-  const subtitleFontSize = clamp(Math.round(baseCanvas.width * 0.019), 30, 42);
-  const titleLineHeight = Math.round(titleFontSize * 1.08);
-  const subtitleLineHeight = Math.round(subtitleFontSize * 1.24);
-  const titleLines = includeHeader
-    ? wrapTextForSvg(title || "Aura product update", {
-      fontSize: titleFontSize,
-      maxWidth: dimensions.width,
-      maxLines: 2,
-    })
-    : [];
-  const subtitleLines = includeHeader
-    ? wrapTextForSvg(subtitle, {
-      fontSize: subtitleFontSize,
-      maxWidth: dimensions.width,
-      maxLines: 2,
-    })
-    : [];
-  const headerHeight = includeHeader ? (titleLines.length * titleLineHeight)
-    + (subtitleLines.length ? Math.round(subtitleFontSize * 0.7) : 0)
-    + (subtitleLines.length * subtitleLineHeight)
-    + 70 : 0;
-  const canvas = calculateBrandedCanvas(dimensions, { headerHeight });
-  const dataUri = `data:image/png;base64,${fs.readFileSync(screenshotPath).toString("base64")}`;
-  const safeTitle = escapeXml(title || "Aura product update");
-  const radius = clamp(Math.round(dimensions.width * 0.018), 18, 32);
-  const shadowOffset = clamp(Math.round(dimensions.height * 0.04), 24, 56);
-  const titleY = canvas.title.y;
-  const subtitleY = titleY
-    + (Math.max(1, titleLines.length) * titleLineHeight)
-    + Math.round(subtitleFontSize * 0.95);
+  const imageBuffer = fs.readFileSync(inputImagePath);
+  const form = new FormData();
+  form.append("model", model);
+  form.append("prompt", buildOpenAIProductionRedrawPrompt({ candidate, rawVisionGate }));
+  form.append("quality", quality);
+  form.append("size", size);
+  form.append(
+    "image",
+    new Blob([imageBuffer], { type: mediaTypeForImagePath(inputImagePath) }),
+    path.basename(inputImagePath),
+  );
 
-  const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}" role="img" aria-label="${safeTitle}">
-  <defs>
-    <linearGradient id="aura-bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#05070c"/>
-      <stop offset="0.5" stop-color="#101827"/>
-      <stop offset="1" stop-color="#050812"/>
-    </linearGradient>
-    <radialGradient id="aura-glow" cx="50%" cy="0%" r="68%">
-      <stop offset="0" stop-color="#e2e8f0" stop-opacity="0.10"/>
-      <stop offset="0.44" stop-color="#64748b" stop-opacity="0.08"/>
-      <stop offset="1" stop-color="#050812" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="aura-corner" cx="84%" cy="20%" r="54%">
-      <stop offset="0" stop-color="#475569" stop-opacity="0.16"/>
-      <stop offset="1" stop-color="#020617" stop-opacity="0"/>
-    </radialGradient>
-    <filter id="card-shadow" x="-8%" y="-8%" width="116%" height="124%">
-      <feDropShadow dx="0" dy="${shadowOffset}" stdDeviation="${Math.round(shadowOffset * 0.58)}" flood-color="#000000" flood-opacity="0.44"/>
-    </filter>
-  </defs>
-  <rect width="100%" height="100%" fill="url(#aura-bg)"/>
-  <rect width="100%" height="100%" fill="url(#aura-glow)"/>
-  <rect width="100%" height="100%" fill="url(#aura-corner)"/>
-${includeHeader ? renderTextLines({
-    lines: titleLines,
-    x: canvas.title.x,
-    y: titleY,
-    lineHeight: titleLineHeight,
-    attributes: `fill="#ffffff" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="${titleFontSize}" font-weight="760"`,
-  }) : ""}
-${includeHeader ? renderTextLines({
-    lines: subtitleLines,
-    x: canvas.title.x,
-    y: subtitleY,
-    lineHeight: subtitleLineHeight,
-    attributes: `fill="#f1f5f9" opacity="0.96" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="${subtitleFontSize}" font-weight="620"`,
-  }) : ""}
-  <g filter="url(#card-shadow)">
-    <rect x="${canvas.screenshot.x - 1}" y="${canvas.screenshot.y - 1}" width="${canvas.screenshot.width + 2}" height="${canvas.screenshot.height + 2}" rx="${radius + 1}" fill="#ffffff" opacity="0.16"/>
-    <image href="${dataUri}" x="${canvas.screenshot.x}" y="${canvas.screenshot.y}" width="${canvas.screenshot.width}" height="${canvas.screenshot.height}" preserveAspectRatio="none" clip-path="inset(0 round ${radius}px)"/>
-  </g>
-</svg>
-`;
+  const response = await fetchImpl("https://api.openai.com/v1/images/edits", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${apiKey}`,
+    },
+    body: form,
+  });
+  const body = await response.text();
+  if (!response.ok) {
+    return {
+      status: "failed",
+      reason: `OpenAI production image generation failed with HTTP ${response.status}: ${body.slice(0, 300)}`,
+    };
+  }
+
+  let payload = null;
+  try {
+    payload = JSON.parse(body);
+  } catch {
+    return {
+      status: "failed",
+      reason: "OpenAI production image generation returned invalid JSON.",
+    };
+  }
+
+  const b64 = parseOpenAIImagePayload(payload);
+  if (!b64) {
+    return {
+      status: "failed",
+      reason: "OpenAI production image generation did not return image bytes.",
+    };
+  }
 
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-  fs.writeFileSync(outputPath, svg, "utf8");
-
+  fs.writeFileSync(outputPath, Buffer.from(b64, "base64"));
+  const dimensions = readPngDimensionsFromFile(outputPath);
+  const sourceDimensions = readPngDimensionsFromFile(inputImagePath);
   return {
-    path: outputPath,
-    format: "svg",
-    dimensions: {
-      width: canvas.width,
-      height: canvas.height,
-    },
-    layout: {
-      aspectRatio: canvas.width / canvas.height,
-      labelLines: 0,
-      titleLines: titleLines.length,
-      subtitleLines: subtitleLines.length,
-      maxTitleLines: 2,
-      maxSubtitleLines: 2,
-      screenshot: canvas.screenshot,
-    },
-    embeddedScreenshot: {
-      path: screenshotPath,
-      width: dimensions.width,
-      height: dimensions.height,
+    status: "created",
+    reason: "Created an OpenAI production redraw from the accepted raw product screenshot.",
+    asset: {
+      path: outputPath,
+      format: "png",
+      dimensions: {
+        width: dimensions.width,
+        height: dimensions.height,
+      },
       bytes: dimensions.bytes,
-      renderedWidth: canvas.screenshot.width,
-      renderedHeight: canvas.screenshot.height,
-      scale: 1,
-    },
-  };
-}
-
-export async function createBrandedMediaPngPreview({ svgPath, outputPath } = {}) {
-  if (!svgPath) {
-    throw new Error("svgPath is required.");
-  }
-  if (!outputPath) {
-    throw new Error("outputPath is required.");
-  }
-  const sharp = (await import("sharp")).default;
-  const info = await sharp(svgPath)
-    .png({ compressionLevel: 9 })
-    .toFile(outputPath);
-  return {
-    path: outputPath,
-    format: "png",
-    dimensions: {
-      width: info.width,
-      height: info.height,
-    },
-    bytes: info.size,
-  };
-}
-
-async function neutralizeDarkChroma(sharp, inputBuffer) {
-  const image = sharp(inputBuffer).ensureAlpha();
-  const { data, info } = await image.raw().toBuffer({ resolveWithObject: true });
-  const neutralBase = { r: 5, g: 7, b: 12 };
-
-  for (let index = 0; index < data.length; index += info.channels) {
-    const red = data[index];
-    const green = data[index + 1];
-    const blue = data[index + 2];
-    const maxChannel = Math.max(red, green, blue);
-    const minChannel = Math.min(red, green, blue);
-    const luma = (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
-    const chroma = maxChannel - minChannel;
-
-    if (luma < 36 && chroma > 3) {
-      const lift = Math.round(luma * 0.34);
-      data[index] = Math.min(255, neutralBase.r + lift);
-      data[index + 1] = Math.min(255, neutralBase.g + lift);
-      data[index + 2] = Math.min(255, neutralBase.b + lift);
-    }
-  }
-
-  return sharp(data, {
-    raw: {
-      width: info.width,
-      height: info.height,
-      channels: info.channels,
-    },
-  }).png().toBuffer();
-}
-
-export async function createBrandingFocusScreenshot({
-  screenshotPath,
-  outputPath,
-  minWidth = 1920,
-  minHeight = 1080,
-  maxWidth = 7680,
-  maxHeight = 4320,
-  background = { r: 5, g: 7, b: 10, alpha: 1 },
-} = {}) {
-  if (!screenshotPath) {
-    throw new Error("screenshotPath is required.");
-  }
-  if (!outputPath) {
-    throw new Error("outputPath is required.");
-  }
-
-  const sharp = (await import("sharp")).default;
-  const source = await sharp(screenshotPath)
-    .png()
-    .toBuffer({ resolveWithObject: true });
-  const width = source.info.width || minWidth;
-  const height = source.info.height || minHeight;
-  const targetRatio = 16 / 9;
-  let targetWidth = Math.max(width, minWidth, Math.ceil(height * targetRatio));
-  let targetHeight = Math.max(height, minHeight, Math.ceil(targetWidth / targetRatio));
-  if (targetWidth / targetHeight > targetRatio) {
-    targetHeight = Math.ceil(targetWidth / targetRatio);
-  } else {
-    targetWidth = Math.ceil(targetHeight * targetRatio);
-  }
-  const left = Math.floor((targetWidth - width) / 2);
-  const right = targetWidth - width - left;
-  const top = Math.floor((targetHeight - height) / 2);
-  const bottom = targetHeight - height - top;
-  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-  const extended = await sharp(source.data)
-    .extend({ top, bottom, left, right, background })
-    .png()
-    .toBuffer();
-  const resized = await sharp(extended)
-    .resize({
-      width: maxWidth,
-      height: maxHeight,
-      fit: "inside",
-      withoutEnlargement: true,
-    })
-    .png()
-    .toBuffer();
-  const neutralized = await neutralizeDarkChroma(sharp, resized);
-  const info = await sharp(neutralized)
-    .png({ compressionLevel: 9 })
-    .toFile(outputPath);
-  return {
-    path: outputPath,
-    format: "png",
-    dimensions: {
-      width: info.width,
-      height: info.height,
-    },
-    bytes: info.size,
-    sourcePath: screenshotPath,
-    crop: {
-      trimmedWidth: width,
-      trimmedHeight: height,
-      left,
-      right,
-      top,
-      bottom,
-      maxWidth,
-      maxHeight,
-      resizedFrom: {
-        width: targetWidth,
-        height: targetHeight,
+      layout: {
+        aspectRatio: dimensions.width / dimensions.height,
+        labelLines: 0,
+        titleLines: 0,
+        subtitleLines: 0,
+        maxTitleLines: 0,
+        maxSubtitleLines: 0,
+        screenshot: {
+          x: 0,
+          y: 0,
+          width: dimensions.width,
+          height: dimensions.height,
+        },
+      },
+      embeddedScreenshot: {
+        path: inputImagePath,
+        width: sourceDimensions.width,
+        height: sourceDimensions.height,
+        bytes: sourceDimensions.bytes,
+        renderedWidth: sourceDimensions.width,
+        renderedHeight: sourceDimensions.height,
+        scale: 1,
+        treatment: "openai-production-redraw",
+      },
+      preview: {
+        path: outputPath,
+        format: "png",
+        dimensions: {
+          width: dimensions.width,
+          height: dimensions.height,
+        },
+        bytes: dimensions.bytes,
+      },
+      generation: {
+        provider: "openai",
+        model,
+        quality,
+        size,
       },
     },
   };
@@ -466,7 +271,7 @@ export function assessBrandedMediaAsset(asset) {
       concerns.push("Branded media preview is not a PNG.");
     }
     if (asset.preview.dimensions?.width !== asset?.dimensions?.width || asset.preview.dimensions?.height !== asset?.dimensions?.height) {
-      concerns.push("Branded media PNG preview dimensions do not match the SVG canvas.");
+      concerns.push("Branded media PNG preview dimensions do not match the media canvas.");
     }
   }
   return {

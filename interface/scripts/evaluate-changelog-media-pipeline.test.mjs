@@ -11,6 +11,8 @@ import {
   buildPublishableMediaManifest,
   discoverCaptureApiBaseUrlFromFrontend,
   preflightCaptureAuth,
+  rawVisionCanBeRepairedByImageGeneration,
+  requestCaptureSession,
   resolveCaptureApiBaseUrl,
   runChangelogMediaEvaluation,
 } from "./evaluate-changelog-media-pipeline.mjs";
@@ -152,6 +154,66 @@ test("buildPublishableMediaManifest requires accepted vision, not skipped vision
   assert.equal(manifest.assets.length, 0);
 });
 
+test("rawVisionCanBeRepairedByImageGeneration only softens wrong-screen for shell layout proof", () => {
+  const rejectedShellVision = {
+    ok: false,
+    status: "rejected",
+    judgment: {
+      rejectionCategory: "wrong-screen",
+      visibleProof: [
+        "Aura desktop header is visible.",
+        "Bottom taskbar and side panels are visible but subtle.",
+      ],
+    },
+  };
+
+  assert.equal(rawVisionCanBeRepairedByImageGeneration(rejectedShellVision, {
+    title: "Floating-glass desktop shell",
+    proofGoal: "Show bottom taskbar capsules and rounded shell panels.",
+  }), true);
+  assert.equal(rawVisionCanBeRepairedByImageGeneration(rejectedShellVision, {
+    title: "GPT-5.5 available in model picker",
+    proofGoal: "Show the model picker dropdown.",
+  }), false);
+  assert.equal(rawVisionCanBeRepairedByImageGeneration({
+    ...rejectedShellVision,
+    judgment: {
+      rejectionCategory: "wrong-screen",
+      visibleProof: ["Unrelated settings page."],
+    },
+  }, {
+    title: "Floating-glass desktop shell",
+    proofGoal: "Show bottom taskbar capsules and rounded shell panels.",
+  }), false);
+  assert.equal(rawVisionCanBeRepairedByImageGeneration({
+    ok: false,
+    status: "rejected",
+    judgment: {
+      rejectionCategory: "other",
+      reasons: ["The right Aura desktop product proof is visible but slightly blurry and distant."],
+      visibleProof: ["Aura desktop chat model picker is visible with GPT-5.5 present."],
+    },
+  }, {
+    title: "GPT-5.5 available in model picker",
+    proofGoal: "Show the model picker dropdown.",
+  }), true);
+  assert.equal(rawVisionCanBeRepairedByImageGeneration({
+    ok: false,
+    status: "rejected",
+    judgment: {
+      rejectionCategory: "other",
+      reasons: [
+        "The screenshot does not clearly prove the requested shell changes.",
+        "The gallery is not convincingly populated.",
+      ],
+      visibleProof: ["Aura desktop shell and image gallery are visible."],
+    },
+  }, {
+    title: "Floating-glass desktop shell",
+    proofGoal: "Show bottom taskbar capsules and rounded shell panels.",
+  }), false);
+});
+
 test("discoverCaptureApiBaseUrlFromFrontend finds the API origin used by the deployed app bundle", async () => {
   const requests = [];
   const resolved = await discoverCaptureApiBaseUrlFromFrontend({
@@ -207,7 +269,54 @@ function writeStructuredPng(filePath, width = 160, height = 90) {
   fs.writeFileSync(filePath, PNG.sync.write(png));
 }
 
-test("preflightCaptureAuth requires a live capture entry route and capture token JSON", async () => {
+async function fakeProductionImageImpl({ inputImagePath, outputPath, model = "gpt-image-2", quality = "high", size = "2560x1440" }) {
+  fs.copyFileSync(inputImagePath, outputPath);
+  const dimensions = { width: 1920, height: 1080 };
+  const bytes = fs.statSync(outputPath).size;
+  return {
+    status: "created",
+    reason: "Fake production image created for tests.",
+    asset: {
+      path: outputPath,
+      format: "png",
+      dimensions,
+      bytes,
+      layout: {
+        aspectRatio: 16 / 9,
+        labelLines: 0,
+        titleLines: 0,
+        subtitleLines: 0,
+        maxTitleLines: 0,
+        maxSubtitleLines: 0,
+        screenshot: { x: 0, y: 0, width: dimensions.width, height: dimensions.height },
+      },
+      embeddedScreenshot: {
+        path: inputImagePath,
+        width: dimensions.width,
+        height: dimensions.height,
+        bytes,
+        renderedWidth: dimensions.width,
+        renderedHeight: dimensions.height,
+        scale: 1,
+        treatment: "openai-production-redraw",
+      },
+      preview: {
+        path: outputPath,
+        format: "png",
+        dimensions,
+        bytes,
+      },
+      generation: {
+        provider: "openai",
+        model,
+        quality,
+        size,
+      },
+    },
+  };
+}
+
+test("preflightCaptureAuth requires a live capture entry route", async () => {
   const report = await preflightCaptureAuth({
     baseUrl: "https://example.com",
     apiBaseUrl: "https://api.example.com",
@@ -222,8 +331,22 @@ test("preflightCaptureAuth requires a live capture entry route and capture token
 
   assert.equal(report.ok, false);
   assert.ok(report.concerns.some((concern) => concern.includes("Capture login route returned HTTP 404")));
-  assert.ok(report.concerns.some((concern) => concern.includes("expected 201")));
-  assert.ok(report.concerns.some((concern) => concern.includes("aura-capture access token")));
+  assert.equal(report.sessionAvailable, true);
+});
+
+test("requestCaptureSession locally mints media sessions when the API endpoint is unavailable", async () => {
+  const report = await requestCaptureSession({
+    baseUrl: "https://example.com",
+    apiBaseUrl: "https://api.example.com",
+    captureSecret: "capture-secret-with-enough-entropy",
+    fetchImpl: async () => fakeResponse({ status: 404, headers: { "content-type": "text/html" }, body: "<html></html>" }),
+  });
+
+  assert.equal(report.ok, true);
+  assert.equal(report.source, "local-media-session");
+  assert.match(report.session?.access_token || "", /^aura-capture:/);
+  assert.equal(report.concerns.length, 0);
+  assert.ok(report.fallbackConcerns.some((concern) => concern.includes("expected 201")));
 });
 
 test("preflightCaptureAuth accepts the deployed capture contract shape", async () => {
@@ -499,6 +622,7 @@ test("runChangelogMediaEvaluation creates branded media only after quality and v
           rejectionCategory: null,
         },
       }),
+      productionImageImpl: fakeProductionImageImpl,
     });
 
     assert.equal(report.counts.captureAccepted, 1);
@@ -527,6 +651,176 @@ test("runChangelogMediaEvaluation creates branded media only after quality and v
     else process.env.ANTHROPIC_API_KEY = previousAnthropic;
     if (previousOpenAI === undefined) delete process.env.OPENAI_API_KEY;
     else process.env.OPENAI_API_KEY = previousOpenAI;
+    if (previousBrowserUse === undefined) delete process.env.BROWSER_USE_API_KEY;
+    else process.env.BROWSER_USE_API_KEY = previousBrowserUse;
+    if (previousCaptureSecret === undefined) delete process.env.AURA_CHANGELOG_CAPTURE_SECRET;
+    else process.env.AURA_CHANGELOG_CAPTURE_SECRET = previousCaptureSecret;
+  }
+});
+
+test("runChangelogMediaEvaluation requires OpenAI before attempting publishable media", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-eval-"));
+  const changelogPath = path.join(tempDir, "latest.json");
+  fs.writeFileSync(changelogPath, JSON.stringify({
+    rawCommits: [
+      {
+        sha: "abc123456789",
+        subject: "feat(chat): add GPT-5.5 model picker option",
+        files: ["interface/src/components/ChatInputBar/ChatInputBar.tsx"],
+      },
+    ],
+    rendered: {
+      entries: [
+        {
+          batch_id: "entry-1",
+          title: "GPT-5.5 available in the chat model picker",
+          summary: "Users can choose GPT-5.5 in chat.",
+          items: [
+            {
+              text: "Added GPT-5.5 to the model picker.",
+              commit_shas: ["abc123456789"],
+              changed_files: ["interface/src/components/ChatInputBar/ChatInputBar.tsx"],
+            },
+          ],
+        },
+      ],
+    },
+  }));
+  const screenshotPath = path.join(tempDir, "browser-use.png");
+  writeStructuredPng(screenshotPath, 1920, 1080);
+
+  const previousAnthropic = process.env.ANTHROPIC_API_KEY;
+  const previousOpenAI = process.env.OPENAI_API_KEY;
+  const previousMediaOpenAI = process.env.AURA_CHANGELOG_MEDIA_OPENAI_API_KEY;
+  const previousBrowserUse = process.env.BROWSER_USE_API_KEY;
+  const previousCaptureSecret = process.env.AURA_CHANGELOG_CAPTURE_SECRET;
+  process.env.ANTHROPIC_API_KEY = "test-key";
+  delete process.env.OPENAI_API_KEY;
+  delete process.env.AURA_CHANGELOG_MEDIA_OPENAI_API_KEY;
+  process.env.BROWSER_USE_API_KEY = "browser-use-test-key";
+  process.env.AURA_CHANGELOG_CAPTURE_SECRET = "capture-secret-with-enough-entropy";
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({
+    ok: true,
+    async json() {
+      return {
+        content: [
+          {
+            type: "tool_use",
+            name: "submit_changelog_media_plan",
+            input: {
+              candidates: [
+                {
+                  entryId: "entry-1",
+                  title: "GPT-5.5 available in the chat model picker",
+                  shouldCapture: true,
+                  reason: "The model picker option is visible desktop UI.",
+                  targetAppId: "agents",
+                  targetPath: "/agents",
+                  proofGoal: "Open the chat model picker and show GPT-5.5.",
+                  publicCaption: "GPT-5.5 is now available directly from the chat model picker.",
+                  confidence: 0.91,
+                  changedFiles: ["interface/src/components/ChatInputBar/ChatInputBar.tsx"],
+                },
+              ],
+              skipped: [],
+            },
+          },
+        ],
+      };
+    },
+  });
+
+  try {
+    const report = await runChangelogMediaEvaluation({
+      changelogFile: changelogPath,
+      outputDir: path.join(tempDir, "out"),
+      baseUrl: "https://example.com",
+      maxCandidates: 1,
+      preflightCaptureAuthImpl: async () => ({ ok: true, concerns: [], loginStatus: 200, sessionStatus: 201 }),
+      requestCaptureSessionImpl: async () => ({
+        ok: true,
+        sessionStatus: 201,
+        concerns: [],
+        session: { access_token: "aura-capture:test-token" },
+      }),
+      runBrowserUseTaskImpl: async () => ({
+        ok: true,
+        provider: "browser-use-cloud",
+        output: {
+          shouldCapture: true,
+          targetAppId: "agents",
+          targetPath: "/agents",
+          proofSurface: "chat model picker",
+          proofVisible: true,
+          visibleProof: ["GPT-5.5 is visible in the chat model picker."],
+          screenshotDescription: "Aura desktop chat screen with the model picker open.",
+          desktopLayoutVisible: true,
+          mobileLayoutVisible: false,
+          concerns: [],
+        },
+        screenshot: {
+          path: screenshotPath,
+          dimensions: { width: 1920, height: 1080 },
+        },
+        messages: [],
+      }),
+      runHighResolutionCaptureImpl: async () => ({
+        ok: true,
+        status: "captured",
+        provider: "aura-high-res-browser-camera",
+        output: {
+          shouldCapture: true,
+          targetAppId: "agents",
+          targetPath: "/agents",
+          proofSurface: "chat model picker",
+          proofVisible: true,
+          visibleProof: ["GPT-5.5 is visible in the chat model picker."],
+          screenshotDescription: "High-resolution Aura desktop capture with model picker proof.",
+          desktopLayoutVisible: true,
+          mobileLayoutVisible: false,
+          concerns: [],
+        },
+        screenshot: {
+          path: screenshotPath,
+          dimensions: { width: 1920, height: 1080 },
+        },
+      }),
+      visionJudgeImpl: async () => ({
+        ok: true,
+        status: "accepted",
+        concerns: [],
+        judgment: {
+          pass: true,
+          score: 0.9,
+          reasons: ["The model picker is visible and readable."],
+          visibleProof: ["GPT-5.5 is visible."],
+          rejectionCategory: null,
+        },
+      }),
+      productionImageImpl: async () => {
+        throw new Error("productionImageImpl should not run without an OpenAI API key");
+      },
+    });
+
+    assert.equal(report.counts.captureBlocked, 1);
+    assert.equal(report.counts.visionAccepted, 0);
+    assert.equal(report.counts.brandingCreated, 0);
+    assert.equal(report.counts.brandedVisionAccepted, 0);
+    assert.equal(report.counts.publishReady, 0);
+    assert.equal(report.counts.publishableMediaAssets, 0);
+    assert.equal(report.captureResults[0].branding.status, "blocked");
+    assert.ok(report.captureResults[0].blockers.some((blocker) => blocker.includes("OPENAI_API_KEY")));
+    assert.deepEqual(report.publishableMedia.assets, []);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previousAnthropic === undefined) delete process.env.ANTHROPIC_API_KEY;
+    else process.env.ANTHROPIC_API_KEY = previousAnthropic;
+    if (previousOpenAI === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = previousOpenAI;
+    if (previousMediaOpenAI === undefined) delete process.env.AURA_CHANGELOG_MEDIA_OPENAI_API_KEY;
+    else process.env.AURA_CHANGELOG_MEDIA_OPENAI_API_KEY = previousMediaOpenAI;
     if (previousBrowserUse === undefined) delete process.env.BROWSER_USE_API_KEY;
     else process.env.BROWSER_USE_API_KEY = previousBrowserUse;
     if (previousCaptureSecret === undefined) delete process.env.AURA_CHANGELOG_CAPTURE_SECRET;
@@ -673,10 +967,10 @@ test("runChangelogMediaEvaluation does not publish when vision judge is disabled
       }),
     });
 
-    assert.equal(report.counts.captureAccepted, 1);
-    assert.equal(report.counts.brandingCreated, 1);
+    assert.equal(report.counts.captureAccepted, 0);
+    assert.equal(report.counts.brandingCreated, 0);
     assert.equal(report.captureResults[0].visionGate.status, "skipped");
-    assert.equal(report.captureResults[0].brandedVisionGate.status, "skipped");
+    assert.equal(report.captureResults[0].brandedVisionGate.status, "blocked");
     assert.equal(report.captureResults[0].publishReady, false);
     assert.equal(report.counts.publishReady, 0);
     assert.equal(report.counts.publishableMediaAssets, 0);

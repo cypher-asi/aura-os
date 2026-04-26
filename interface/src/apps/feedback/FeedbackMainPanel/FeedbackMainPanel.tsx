@@ -99,6 +99,7 @@ export function FeedbackMainPanel() {
               className={styles.feedbackList}
               data-demo-shot="feedback-board-list"
               data-agent-list="feedback-items"
+              data-agent-proof="feedback-board-populated"
             >
               {sortedItems.map((item) => (
                 <FeedbackItemCard

@@ -219,11 +219,18 @@ test("buildVisionJudgePrompt defines an independent strict review", () => {
       proofGoal: "Show GPT-5.5 in the model picker.",
     },
     stage: "branded",
+    hasReferenceImage: true,
   });
 
   assert.match(prompt, /independent quality judge/);
   assert.match(prompt, /not a login, loading, placeholder, empty, or error page/);
+  assert.match(prompt, /Judge the visible product proof, not internal routing metadata/);
+  assert.match(prompt, /targetAppId\/targetPath are verified by deterministic gates outside the image/);
   assert.match(prompt, /pixelated/);
+  assert.match(prompt, /Meaningful product text must be sharp enough to read without guessing/);
+  assert.match(prompt, /generated product text is softer, less readable, or more artificial than the source/);
+  assert.match(prompt, /textIntegrity must be preserved/);
+  assert.match(prompt, /hallucinatedText must be empty/);
   assert.match(prompt, /easy to find without zooming/);
   assert.match(prompt, /public-facing/);
   assert.match(prompt, /Return strict JSON/);
@@ -262,6 +269,8 @@ test("judgeChangelogMediaWithOpenAI uses Responses image input and strict JSON s
                       reasons: ["The product UI is crisp and relevant."],
                       visibleProof: ["GPT-5.5 is visible in the model picker."],
                       rejectionCategory: null,
+                      textIntegrity: "preserved",
+                      hallucinatedText: [],
                     }),
                   },
                 ],
@@ -281,6 +290,8 @@ test("judgeChangelogMediaWithOpenAI uses Responses image input and strict JSON s
   assert.equal(requestBody.input[0].content[1].type, "input_image");
   assert.match(requestBody.input[0].content[1].image_url, /^data:image\/png;base64,/);
   assert.equal(requestBody.text.format.type, "json_schema");
+  assert.ok(requestBody.text.format.schema.required.includes("textIntegrity"));
+  assert.ok(requestBody.text.format.schema.required.includes("hallucinatedText"));
 });
 
 test("judgeChangelogMediaWithOpenAI rejects marginal vision scores", async () => {
@@ -312,6 +323,8 @@ test("judgeChangelogMediaWithOpenAI rejects marginal vision scores", async () =>
                   reasons: ["The correct screen is visible, but text is soft."],
                   visibleProof: ["GPT-5.5 is present."],
                   rejectionCategory: null,
+                  textIntegrity: "preserved",
+                  hallucinatedText: [],
                 }),
               }],
             },
@@ -350,6 +363,8 @@ test("judgeChangelogMediaWithOpenAI rejects images with a rejection category eve
                   reasons: ["A product screen is visible but it is the wrong area."],
                   visibleProof: ["Unrelated screen is visible."],
                   rejectionCategory: "wrong-screen",
+                  textIntegrity: "preserved",
+                  hallucinatedText: [],
                 }),
               }],
             },
@@ -361,4 +376,46 @@ test("judgeChangelogMediaWithOpenAI rejects images with a rejection category eve
 
   assert.equal(report.ok, false);
   assert.ok(report.concerns.some((concern) => concern.includes("wrong-screen")));
+});
+
+test("judgeChangelogMediaWithOpenAI rejects generated images that rewrite source text", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-quality-"));
+  const sourcePath = path.join(tempDir, "source.png");
+  const generatedPath = path.join(tempDir, "generated.png");
+  writePng(sourcePath, 160, 90, (x, y) => ((x + y) % 24 < 12 ? [18, 24, 38] : [238, 242, 248]));
+  writePng(generatedPath, 160, 90, (x, y) => ((x + y) % 24 < 12 ? [18, 24, 38] : [238, 242, 248]));
+
+  const report = await judgeChangelogMediaWithOpenAI({
+    apiKey: "test-key",
+    imagePath: generatedPath,
+    referenceImagePath: sourcePath,
+    stage: "branded",
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      async text() {
+        return JSON.stringify({
+          output: [
+            {
+              content: [{
+                type: "output_text",
+                text: JSON.stringify({
+                  pass: true,
+                  score: 0.92,
+                  reasons: ["The image is polished but one source label was rewritten."],
+                  visibleProof: ["GPT-5.5 is visible."],
+                  rejectionCategory: null,
+                  textIntegrity: "materially-changed",
+                  hallucinatedText: ["'/aura capture team' became '^a capture team'"],
+                }),
+              }],
+            },
+          ],
+        });
+      },
+    }),
+  });
+
+  assert.equal(report.ok, false);
+  assert.ok(report.concerns.some((concern) => concern.includes("generated text drift")));
 });

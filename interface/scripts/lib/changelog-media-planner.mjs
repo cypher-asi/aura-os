@@ -3,10 +3,11 @@ import { summarizeChangelogMediaKnowledge } from "./changelog-media-knowledge.mj
 
 const DEFAULT_MAX_CANDIDATES = 3;
 const DEFAULT_ENTRY_CHUNK_SIZE = 20;
+const DEFAULT_PLANNER_TIMEOUT_MS = 120_000;
 const MAX_PROMPT_CHARS = 52000;
 const MIN_CAPTURE_CONFIDENCE = 0.7;
-const SHELL_CAPTURE_FALLBACK_APP_ID = "agents";
-const SHELL_CAPTURE_FALLBACK_PATH = "/agents";
+const SHELL_CAPTURE_FALLBACK_APP_ID = "aura3d";
+const SHELL_CAPTURE_FALLBACK_PATH = "/3d";
 
 export const CHANGELOG_MEDIA_PLAN_TOOL = {
   name: "submit_changelog_media_plan",
@@ -180,13 +181,18 @@ export function buildMediaPlannerPrompt({
     "- Skip entries whose only likely proof is a default/empty state such as 'will appear here', 'pick a project', 'select a run', or an otherwise unseeded list/detail view.",
     "- Skip transient interaction states such as hover-only UI, context menus, F2 rename fields, drag/resize states, flashing native-window paint, or keyboard-focus-only affordances unless the sitemap exposes durable data-agent proof/action handles and the seedPlan can deterministically make that state visible.",
     "- Prefer high-confidence product features that can be located from the generated sitemap and changed files.",
+    "- Use each sitemap app's captureSeedProfile to choose seedPlan capabilities; if the screen would otherwise be empty, request the matching seeded demo state before capture.",
+    "- Treat captureSeedProfile.runtimeSeedSupport='supported' as the safest path. If an app has unknown seed support and the proof needs data, skip unless the sitemap shows durable proof handles for a non-empty state.",
     "- Do not invent routes or product states that are not supported by the sitemap or commit context.",
     "- Candidates must include a targetAppId and targetPath from the sitemap. If no sitemap target exists, skip the entry.",
-    "- For desktop shell, chrome, layout, taskbar, sidebar, sidekick, or floating-panel changes, do not target /desktop because it can be an empty launcher shell. Target a populated desktop app route from the sitemap instead, preferably /agents, and keep the shell chrome in the screenshot context.",
-    "- Candidates should include a seedPlan that describes generic capture-state capabilities, not a one-off script. Prefer capabilities like app:<id>, project-selected, proof-data-populated, asset-gallery-populated, agent-chat-ready, run-history-populated, model-picker-open, settings-panel-open, generated-result-visible, feature-toggle-enabled.",
+    "- For desktop shell, chrome, layout, taskbar, sidebar, sidekick, or floating-panel changes, do not target /desktop because it can be an empty launcher shell. Target a populated, visually rich desktop app route from the sitemap instead. Prefer AURA 3D (/3d) on the generated Image gallery surface for shell/layout proof because seeded image content makes panel boundaries and chrome more legible; use Agents only when the change itself is agent/chat-specific.",
+    "- For AURA 3D, request image-gallery-populated for stable visual proof. Only request model-source-image-populated when the changelog explicitly needs the 3D model/source-image conversion surface; do not open the 3D Model tab just because the app is called AURA 3D.",
+    "- Candidates should include a seedPlan that describes generic capture-state capabilities, not a one-off script. Prefer capabilities like app:<id>, project-selected, proof-data-populated, image-gallery-populated, asset-gallery-populated, agent-chat-ready, feedback-board-populated, feedback-thread-populated, notes-tree-populated, note-editor-populated, task-board-populated, process-graph-populated, feed-timeline-populated, run-history-populated, model-picker-open, settings-panel-open, generated-result-visible, feature-toggle-enabled.",
     "- The seedPlan must describe the state/data needed before capture so the browser does not land on empty/default UI. If the feature needs data to be visible, request realistic demo data for the target surface.",
     "- In seedPlan.proofBoundary, describe the feature evidence itself: the visible control/result/list/detail/menu that proves the change.",
-    "- In seedPlan.contextBoundary, describe the smallest recognizable Aura product context that must remain around the proof: nearby title, tab, sidebar, toolbar, navigation, selected project, open picker, or active panel.",
+    "- In seedPlan.contextBoundary, describe visible product context only: nearby title, tab, sidebar, toolbar, navigation, selected project, open picker, active panel, chat transcript, composer, or selected row.",
+    "- Do not require the screenshot to show an internal route name, app id, file path, or literal app label if the visible UI does not naturally print it. Deterministic app/route gates verify targetAppId and targetPath separately.",
+    "- Write proofGoal as a visible proof contract, not an internal routing assertion. For example, ask for a picker option plus composer/sidebar context, not a visible '/agents' or 'Agents route' label.",
     "- Do not ask for an isolated widget, thumbnail, canvas, menu, or inner card by itself. The media must show proof plus recognizable product context.",
     "- For capture planning, prefer the smallest 16:9 desktop region where the proof remains readable at changelog-card size and the context still identifies the product surface.",
     "- Browser Use should receive fewer, better candidates. Be conservative.",
@@ -253,7 +259,7 @@ function normalizeShellChromeCandidate(candidate) {
     reason: needsRouteRewrite
       ? [
         candidate.reason,
-        `Shell/chrome captures are routed through ${SHELL_CAPTURE_FALLBACK_PATH} so the desktop frame is populated instead of landing on an empty /desktop shell.`,
+        `Shell/chrome captures are routed through ${SHELL_CAPTURE_FALLBACK_PATH} so the desktop frame is populated with visual product data instead of landing on an empty /desktop shell.`,
       ].filter(Boolean).join(" ")
       : candidate.reason,
     seedPlan: {
@@ -261,23 +267,27 @@ function normalizeShellChromeCandidate(candidate) {
       capabilities: unique([
         ...seedPlan.capabilities,
         `app:${SHELL_CAPTURE_FALLBACK_APP_ID}`,
-        "agent-chat-ready",
+        "asset-gallery-populated",
+        "image-gallery-populated",
+        "project-selected",
         "proof-data-populated",
       ]),
       requiredState: unique([
         ...seedPlan.requiredState,
-        "A populated Agents chat surface is open inside the desktop shell so shell chrome, panels, and taskbar are visible around real product content.",
+        "A populated AURA 3D project is open on the generated Image gallery surface so shell chrome, panels, and taskbar are visible around visual product content.",
       ]),
       readinessSignals: unique([
         ...seedPlan.readinessSignals,
-        "Agents app is active inside the desktop shell",
-        "chat composer and bottom taskbar are visible",
+        "AURA 3D app is active inside the desktop shell",
+        "generated image preview and image gallery are visible",
+        "bottom taskbar and sidekick are visible around visual product data",
         "desktop shell is populated, not empty",
       ]),
       avoid: unique([
         ...seedPlan.avoid,
         "empty /desktop launcher shell",
         "mostly black shell with only the Aura logo or topbar visible",
+        "AURA 3D model tab showing only a placeholder/source image without gallery context",
       ]),
     },
   };
@@ -438,6 +448,31 @@ function mergePlans(plans, { maxCandidates = DEFAULT_MAX_CANDIDATES } = {}) {
   }, { maxCandidates });
 }
 
+async function fetchWithTimeout(fetchImpl, url, options, { timeoutMs, label } = {}) {
+  const resolvedTimeoutMs = Math.max(10, Number(timeoutMs) || DEFAULT_PLANNER_TIMEOUT_MS);
+  const controller = new AbortController();
+  let timeout = null;
+  const timeoutPromise = new Promise((_resolve, reject) => {
+    timeout = setTimeout(() => {
+      controller.abort();
+      reject(new Error(`${label || "Anthropic media planning"} timed out after ${resolvedTimeoutMs}ms.`));
+    }, resolvedTimeoutMs);
+  });
+  try {
+    return await Promise.race([fetchImpl(url, {
+      ...options,
+      signal: options?.signal || controller.signal,
+    }), timeoutPromise]);
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error(`${label || "Anthropic media planning"} timed out after ${resolvedTimeoutMs}ms.`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function planChangelogMediaChunkWithAnthropic({
   apiKey,
   model = "claude-opus-4-7",
@@ -448,6 +483,8 @@ async function planChangelogMediaChunkWithAnthropic({
   changedFiles = [],
   maxCandidates = DEFAULT_MAX_CANDIDATES,
   fetchImpl = fetch,
+  timeoutMs = DEFAULT_PLANNER_TIMEOUT_MS,
+  onProgress = null,
   chunkLabel = "",
 } = {}) {
   const attempts = [];
@@ -465,7 +502,13 @@ async function planChangelogMediaChunkWithAnthropic({
         retryInstruction,
       ].filter(Boolean).join("\n\n"),
     });
-    const response = await fetchImpl("https://api.anthropic.com/v1/messages", {
+    onProgress?.({
+      stage: "planner-attempt-start",
+      chunkLabel,
+      attempt,
+      entryCount: changelogEntries.length,
+    });
+    const response = await fetchWithTimeout(fetchImpl, "https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -479,6 +522,9 @@ async function planChangelogMediaChunkWithAnthropic({
         tool_choice: { type: "tool", name: CHANGELOG_MEDIA_PLAN_TOOL.name },
         messages: [{ role: "user", content: prompt }],
       }),
+    }, {
+      timeoutMs,
+      label: chunkLabel ? `Anthropic media planning (${chunkLabel}, attempt ${attempt})` : `Anthropic media planning attempt ${attempt}`,
     });
     if (!response.ok) {
       const body = await response.text().catch(() => "");
@@ -492,6 +538,14 @@ async function planChangelogMediaChunkWithAnthropic({
     const plan = normalizeMediaPlan(rawPlan, { maxCandidates });
     const coverage = validateMediaPlanCoverage(plan, changelogEntries);
     attempts.push({ attempt, prompt, rawPlan, plan, coverage });
+    onProgress?.({
+      stage: "planner-attempt-complete",
+      chunkLabel,
+      attempt,
+      candidateCount: plan.candidates.length,
+      skippedCount: plan.skipped.length,
+      coverage,
+    });
     if (coverage.ok) {
       return {
         prompt,
@@ -530,7 +584,9 @@ export async function planChangelogMediaWithAnthropic({
   changedFiles = [],
   maxCandidates = DEFAULT_MAX_CANDIDATES,
   entryChunkSize = DEFAULT_ENTRY_CHUNK_SIZE,
+  timeoutMs = DEFAULT_PLANNER_TIMEOUT_MS,
   fetchImpl = fetch,
+  onProgress = null,
 } = {}) {
   if (!apiKey) {
     throw new Error("ANTHROPIC_API_KEY is required to plan changelog media.");
@@ -541,6 +597,14 @@ export async function planChangelogMediaWithAnthropic({
   const chunkResults = [];
 
   for (const [index, chunk] of chunks.entries()) {
+    const chunkLabel = chunks.length > 1 ? `${index + 1} of ${chunks.length}` : "";
+    onProgress?.({
+      stage: "planner-chunk-start",
+      chunkLabel,
+      chunkIndex: index + 1,
+      chunkCount: chunks.length,
+      entryCount: chunk.length,
+    });
     chunkResults.push(await planChangelogMediaChunkWithAnthropic({
       apiKey,
       model,
@@ -551,8 +615,18 @@ export async function planChangelogMediaWithAnthropic({
       changedFiles,
       maxCandidates,
       fetchImpl,
-      chunkLabel: chunks.length > 1 ? `${index + 1} of ${chunks.length}` : "",
+      timeoutMs,
+      onProgress,
+      chunkLabel,
     }));
+    onProgress?.({
+      stage: "planner-chunk-complete",
+      chunkLabel,
+      chunkIndex: index + 1,
+      chunkCount: chunks.length,
+      candidateCount: chunkResults.at(-1)?.plan?.candidates?.length || 0,
+      skippedCount: chunkResults.at(-1)?.plan?.skipped?.length || 0,
+    });
   }
 
   let incompletePlan = mergePlans(chunkResults.map((result) => result.plan), { maxCandidates });
@@ -563,6 +637,12 @@ export async function planChangelogMediaWithAnthropic({
       .map((entryId) => entriesById.get(entryId))
       .filter(Boolean);
     for (const [index, chunk] of chunkArray(rescueEntries, 5).entries()) {
+      const chunkLabel = `rescue ${index + 1}`;
+      onProgress?.({
+        stage: "planner-rescue-start",
+        chunkLabel,
+        entryCount: chunk.length,
+      });
       chunkResults.push(await planChangelogMediaChunkWithAnthropic({
         apiKey,
         model,
@@ -573,8 +653,16 @@ export async function planChangelogMediaWithAnthropic({
         changedFiles,
         maxCandidates,
         fetchImpl,
-        chunkLabel: `rescue ${index + 1}`,
+        timeoutMs,
+        onProgress,
+        chunkLabel,
       }));
+      onProgress?.({
+        stage: "planner-rescue-complete",
+        chunkLabel,
+        candidateCount: chunkResults.at(-1)?.plan?.candidates?.length || 0,
+        skippedCount: chunkResults.at(-1)?.plan?.skipped?.length || 0,
+      });
     }
     incompletePlan = mergePlans(chunkResults.map((result) => result.plan), { maxCandidates });
     incompleteCoverage = validateMediaPlanCoverage(incompletePlan, entries);

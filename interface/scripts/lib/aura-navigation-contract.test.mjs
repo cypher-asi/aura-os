@@ -11,13 +11,22 @@ test("listAuraNavigationApps extracts apps and agent-facing handles from the reg
   const apps = await listAuraNavigationApps();
   const agents = apps.find((app) => app.id === "agents");
   const aura3d = apps.find((app) => app.id === "aura3d");
+  const feedback = apps.find((app) => app.id === "feedback");
+  const notes = apps.find((app) => app.id === "notes");
 
   assert.ok(apps.length >= 5);
   assert.equal(agents?.path, "/agents");
   assert.ok(Array.isArray(agents?.sourceContext?.surfaces));
   assert.ok(Array.isArray(agents?.sourceContext?.contexts));
   assert.ok(Array.isArray(agents?.sourceContext?.contextAnchors));
+  assert.ok(Array.isArray(agents?.captureSeedProfile?.capabilities));
+  assert.ok(agents?.captureSeedProfile?.capabilities.includes("agent-chat-ready"));
   assert.equal(aura3d?.sourceContext?.baseRouteKind, "placeholder");
+  assert.ok(aura3d?.captureSeedProfile?.capabilities.includes("image-gallery-populated"));
+  assert.match(aura3d?.captureSeedProfile?.preferredStableSurface || "", /Generated Image gallery/);
+  assert.equal(feedback?.captureSeedProfile?.runtimeSeedSupport, "supported");
+  assert.ok(feedback?.captureSeedProfile?.capabilities.includes("feedback-board-populated"));
+  assert.ok(notes?.captureSeedProfile?.seededData.includes("markdown note content"));
 });
 
 test("buildAuraNavigationSitemap reports coverage gaps for inference hardening", async () => {
@@ -29,6 +38,8 @@ test("buildAuraNavigationSitemap reports coverage gaps for inference hardening",
   assert.ok(Number.isInteger(sitemap.coverage.appsWithContextAnchors));
   assert.match(sitemap.updatePolicy.join(" "), /Regenerate this sitemap/);
   assert.match(sitemap.updatePolicy.join(" "), /data-agent-context/);
+  assert.match(sitemap.updatePolicy.join(" "), /captureSeedProfile/);
+  assert.ok(sitemap.apps.some((app) => app.captureSeedProfile?.avoid?.includes("mostly black shell with no populated app data")));
 });
 
 test("buildAuraNavigationContract ranks changed app files as likely targets", async () => {
@@ -41,7 +52,11 @@ test("buildAuraNavigationContract ranks changed app files as likely targets", as
   assert.equal(contract.likelyApps[0]?.id, "agents");
   assert.ok(contract.apps.some((app) => app.id === "agents"));
   assert.equal(contract.mediaEligibility.shouldAttemptCapture, true);
-  assert.equal(contract.desktopCapturePolicy.viewport.width, 2560);
+  assert.deepEqual(contract.desktopCapturePolicy.viewport, {
+    width: 1280,
+    height: 720,
+    deviceScaleFactor: 2,
+  });
   assert.match(contract.rules.join(" "), /Never capture mobile/);
   assert.match(contract.rules.join(" "), /data-agent-context/);
 });
@@ -58,8 +73,8 @@ test("buildAuraNavigationContract rejects mobile-only media candidates", async (
   assert.equal(contract.mediaEligibility.shouldAttemptCapture, false);
   assert.match(contract.mediaEligibility.reason, /mobile-only/);
   assert.deepEqual(contract.desktopCapturePolicy.minimumViewport, {
-    width: 1920,
-    height: 1080,
+    width: 1280,
+    height: 720,
   });
 });
 

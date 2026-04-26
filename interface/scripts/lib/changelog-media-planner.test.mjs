@@ -56,12 +56,17 @@ test("buildMediaPlannerPrompt keeps Browser Use behind a conservative Anthropic 
   assert.match(prompt, /proof-data-populated/);
   assert.match(prompt, /proofBoundary/);
   assert.match(prompt, /contextBoundary/);
+  assert.match(prompt, /visible product context only/);
+  assert.match(prompt, /Deterministic app\/route gates verify targetAppId and targetPath separately/);
+  assert.match(prompt, /not a visible '\/agents' or 'Agents route' label/);
   assert.match(prompt, /recognizable product context/);
   assert.match(prompt, /isolated widget/);
   assert.match(prompt, /Browser Use should receive fewer, better candidates/);
   assert.match(prompt, /provider pricing, model catalog, routing, config, or API plumbing/);
   assert.match(prompt, /do not target \/desktop/);
-  assert.match(prompt, /populated desktop app route/);
+  assert.match(prompt, /populated, visually rich desktop app route/);
+  assert.match(prompt, /image-gallery-populated/);
+  assert.match(prompt, /do not open the 3D Model tab just because the app is called AURA 3D/);
   assert.match(prompt, /transient interaction states/);
   assert.match(prompt, /context menus/);
   assert.match(prompt, /confidence is at least 0\.70/);
@@ -180,12 +185,14 @@ test("normalizeMediaPlan routes shell chrome captures through a populated app", 
   }, { maxCandidates: 1 });
 
   assert.equal(plan.candidates.length, 1);
-  assert.equal(plan.candidates[0].targetAppId, "agents");
-  assert.equal(plan.candidates[0].targetPath, "/agents");
-  assert.match(plan.candidates[0].reason, /populated instead of landing on an empty \/desktop shell/);
-  assert.ok(plan.candidates[0].seedPlan.capabilities.includes("app:agents"));
-  assert.ok(plan.candidates[0].seedPlan.capabilities.includes("agent-chat-ready"));
+  assert.equal(plan.candidates[0].targetAppId, "aura3d");
+  assert.equal(plan.candidates[0].targetPath, "/3d");
+  assert.match(plan.candidates[0].reason, /populated with visual product data instead of landing on an empty \/desktop shell/);
+  assert.ok(plan.candidates[0].seedPlan.capabilities.includes("app:aura3d"));
+  assert.ok(plan.candidates[0].seedPlan.capabilities.includes("asset-gallery-populated"));
+  assert.ok(plan.candidates[0].seedPlan.capabilities.includes("image-gallery-populated"));
   assert.ok(plan.candidates[0].seedPlan.avoid.includes("empty /desktop launcher shell"));
+  assert.ok(plan.candidates[0].seedPlan.avoid.some((entry) => entry.includes("model tab")));
 });
 
 test("validateMediaPlanCoverage catches planner omissions and duplicates", () => {
@@ -349,6 +356,25 @@ test("planChangelogMediaWithAnthropic chunks large entry sets and aggregates cov
   assert.equal(result.coverage.expectedCount, 45);
   assert.equal(result.plan.candidates.length, 1);
   assert.equal(result.plan.skipped.length, 44);
+});
+
+test("planChangelogMediaWithAnthropic times out silent planner calls and emits progress", async () => {
+  const progress = [];
+  await assert.rejects(
+    () => planChangelogMediaWithAnthropic({
+      apiKey: "test-key",
+      model: "claude-opus-4-7",
+      changelogEntries: [{ entryId: "entry-1", title: "Visible product update" }],
+      sitemap: { apps: [{ id: "agents", path: "/agents" }] },
+      timeoutMs: 10,
+      onProgress: (event) => progress.push(event),
+      fetchImpl: () => new Promise(() => {}),
+    }),
+    /timed out after/,
+  );
+
+  assert.equal(progress.some((event) => event.stage === "planner-chunk-start"), true);
+  assert.equal(progress.some((event) => event.stage === "planner-attempt-start"), true);
 });
 
 test("planChangelogMediaWithAnthropic safely skips entries omitted after retries", async () => {
