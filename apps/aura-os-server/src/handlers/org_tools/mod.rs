@@ -46,6 +46,8 @@ pub(crate) async fn call_tool(
     hydrate_canonical_integration_shadow(&state, &org_id, &jwt).await;
     let result = if tool_name == "list_org_integrations" {
         list_org_integrations(&state, &org_id, &args).await?
+    } else if tool_name == "generate_image" {
+        crate::handlers::generation::generate_image_tool(&state, &jwt, &args).await?
     } else {
         let contract = app_provider_contract_by_tool(&tool_name)
             .ok_or_else(|| ApiError::not_found(format!("unknown org tool `{tool_name}`")))?;

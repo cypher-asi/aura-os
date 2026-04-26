@@ -15,6 +15,37 @@
     }
   },
   {
+    "name": "generate_image",
+    "description": "Generate an image from a text prompt using the configured image model. Returns the hosted image URL and artifact metadata. Use this whenever the user asks to create, draw, render, or generate an image.",
+    "promptSignature": "generate_image(prompt, model?, size?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "Text description of the image to generate."
+        },
+        "model": {
+          "type": "string",
+          "description": "Image model id. Defaults to gpt-image-2.",
+          "enum": [
+            "gpt-image-2",
+            "gpt-image-1",
+            "dall-e-3",
+            "dall-e-2",
+            "gemini-nano-banana"
+          ]
+        },
+        "size": {
+          "type": "string",
+          "description": "Optional WxH size hint (e.g. 1024x1024, 1792x1024)."
+        }
+      },
+      "required": ["prompt"]
+    }
+  },
+  {
     "name": "github_list_repos",
     "provider": "github",
     "description": "List GitHub repositories accessible through a saved org integration.",

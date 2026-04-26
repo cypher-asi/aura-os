@@ -98,6 +98,7 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
 ];
 
 export const IMAGE_MODELS: ModelOption[] = [
+  { id: "gpt-image-2", label: "GPT Image 2", tier: "image", mode: "image" },
   { id: "gpt-image-1", label: "GPT Image 1", tier: "image", mode: "image" },
   { id: "dall-e-3", label: "DALL-E 3", tier: "image", mode: "image" },
   { id: "dall-e-2", label: "DALL-E 2", tier: "image", mode: "image" },
@@ -108,6 +109,8 @@ export const IMAGE_MODELS: ModelOption[] = [
     mode: "image",
   },
 ];
+
+export const DEFAULT_IMAGE_MODEL_ID: string = IMAGE_MODELS[0]?.id ?? "gpt-image-2";
 
 export const AVAILABLE_MODELS: ModelOption[] = [
   ...AURA_MANAGED_CHAT_MODELS,

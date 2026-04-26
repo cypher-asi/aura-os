@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { artifactsApi, type ProjectArtifact } from "../shared/api/artifacts";
+import { DEFAULT_IMAGE_MODEL_ID } from "../constants/models";
 
 export type Aura3DTab = "image" | "3d";
 
@@ -155,7 +156,7 @@ export const useAura3DStore = create<Aura3DState>()((set, get) => ({
 
   imaginePrompt: "",
   setImaginePrompt: (prompt) => set({ imaginePrompt: prompt }),
-  imagineModel: "gpt-image-1",
+  imagineModel: DEFAULT_IMAGE_MODEL_ID,
   setImagineModel: (model) => set({ imagineModel: model }),
 
   isGeneratingImage: false,

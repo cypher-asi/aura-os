@@ -12,7 +12,7 @@ describe("aura3d-store", () => {
     expect(state.selectedProjectId).toBeNull();
     expect(state.isLoadingArtifacts).toBe(false);
     expect(state.imaginePrompt).toBe("");
-    expect(state.imagineModel).toBe("gpt-image-1");
+    expect(state.imagineModel).toBe("gpt-image-2");
     expect(state.isGeneratingImage).toBe(false);
     expect(state.currentImage).toBeNull();
     expect(state.isGenerating3D).toBe(false);

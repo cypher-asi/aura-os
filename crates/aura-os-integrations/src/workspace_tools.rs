@@ -312,6 +312,34 @@ mod tests {
     }
 
     #[test]
+    fn generate_image_tool_is_provider_less_and_always_installed() {
+        // Empty integrations on purpose: `generate_image` has no provider
+        // gate, so every chat agent must see it regardless of which
+        // workspace integrations the org has enabled.
+        let org_id = OrgId::new();
+        let integrations: Vec<OrgIntegration> = Vec::new();
+
+        let tools = installed_workspace_app_tools(&org_id, &integrations, "jwt-image");
+        let generate_image = tools
+            .iter()
+            .find(|tool| tool.name == "generate_image")
+            .expect("generate_image tool should ship for every org");
+        assert!(generate_image
+            .endpoint
+            .ends_with("/tool-actions/generate_image"));
+        assert!(matches!(generate_image.auth, ToolAuth::Bearer { .. }));
+        assert!(
+            generate_image.required_integration.is_none()
+                || generate_image
+                    .required_integration
+                    .as_ref()
+                    .and_then(|req| req.provider.as_deref())
+                    .is_none(),
+            "generate_image must not be gated on any workspace integration provider",
+        );
+    }
+
+    #[test]
     fn installed_workspace_integrations_include_enabled_runtime_capabilities() {
         let integrations = vec![
             test_integration(

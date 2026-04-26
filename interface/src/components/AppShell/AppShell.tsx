@@ -121,12 +121,13 @@ async function resetCaptureAppSpecificState(): Promise<void> {
         liveRunNodeId: null,
       });
     }),
-    import("../../stores/aura3d-store").then(({ useAura3DStore }) => {
+    import("../../stores/aura3d-store").then(async ({ useAura3DStore }) => {
+      const { DEFAULT_IMAGE_MODEL_ID } = await import("../../constants/models");
       useAura3DStore.setState({
         activeTab: "image",
         selectedProjectId: null,
         imaginePrompt: "",
-        imagineModel: "gpt-image-1",
+        imagineModel: DEFAULT_IMAGE_MODEL_ID,
         isGeneratingImage: false,
         imageProgress: 0,
         imageProgressMessage: "",
