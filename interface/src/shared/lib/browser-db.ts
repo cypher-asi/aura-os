@@ -43,12 +43,49 @@ function canUseIndexedDb(): boolean {
   return typeof window !== "undefined" && "indexedDB" in window;
 }
 
+let sharedDb: IDBDatabase | null = null;
+let sharedDbPromise: Promise<IDBDatabase | null> | null = null;
+
+function resetSharedDatabase(db?: IDBDatabase): void {
+  if (db && sharedDb && db !== sharedDb) return;
+  sharedDb = null;
+  sharedDbPromise = null;
+}
+
+function closeAndResetSharedDatabase(db: IDBDatabase): void {
+  resetSharedDatabase(db);
+  try {
+    db.close();
+  } catch {
+    // ignore
+  }
+}
+
+function retainSharedDatabase(db: IDBDatabase): IDBDatabase {
+  sharedDb = db;
+  db.onversionchange = () => {
+    closeAndResetSharedDatabase(db);
+  };
+  if ("onclose" in db) {
+    (db as IDBDatabase & { onclose: (() => void) | null }).onclose = () => {
+      resetSharedDatabase(db);
+    };
+  }
+  return db;
+}
+
 function openDatabase(): Promise<IDBDatabase | null> {
   if (!canUseIndexedDb()) {
     return Promise.resolve(null);
   }
+  if (sharedDb) {
+    return Promise.resolve(sharedDb);
+  }
+  if (sharedDbPromise) {
+    return sharedDbPromise;
+  }
 
-  return new Promise((resolve) => {
+  sharedDbPromise = new Promise((resolve) => {
     const request = window.indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onupgradeneeded = () => {
@@ -60,9 +97,13 @@ function openDatabase(): Promise<IDBDatabase | null> {
       }
     };
 
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => resolve(null);
+    request.onsuccess = () => resolve(retainSharedDatabase(request.result));
+    request.onerror = () => {
+      resetSharedDatabase();
+      resolve(null);
+    };
   });
+  return sharedDbPromise;
 }
 
 function readLocalFallback<T>(store: BrowserDbStoreName, key: string): T | null {
@@ -117,15 +158,20 @@ export async function browserDbGet<T>(
   }
 
   return new Promise((resolve) => {
-    const transaction = db.transaction(store, "readonly");
-    const objectStore = transaction.objectStore(store);
-    const request = objectStore.get(key);
+    try {
+      const transaction = db.transaction(store, "readonly");
+      const objectStore = transaction.objectStore(store);
+      const request = objectStore.get(key);
 
-    request.onsuccess = () => {
-      resolve((request.result as T | undefined) ?? null);
-    };
-    request.onerror = () => resolve(readLocalFallback<T>(store, key));
-    transaction.oncomplete = () => db.close();
+      request.onsuccess = () => {
+        resolve((request.result as T | undefined) ?? null);
+      };
+      request.onerror = () => resolve(readLocalFallback<T>(store, key));
+      transaction.onerror = () => resolve(readLocalFallback<T>(store, key));
+      transaction.onabort = () => resolve(readLocalFallback<T>(store, key));
+    } catch {
+      resolve(readLocalFallback<T>(store, key));
+    }
   });
 }
 
@@ -145,11 +191,6 @@ export async function browserDbSet<T>(
     const settle = () => {
       if (settled) return;
       settled = true;
-      try {
-        db.close();
-      } catch {
-        // ignore
-      }
       resolve();
     };
 
@@ -191,11 +232,6 @@ export async function browserDbDelete(
     const settle = () => {
       if (settled) return;
       settled = true;
-      try {
-        db.close();
-      } catch {
-        // ignore
-      }
       resolve();
     };
 
