@@ -26,6 +26,22 @@ fn npm() -> Command {
     }
 }
 
+fn frontend_build_tools_installed(interface_dir: &Path) -> bool {
+    let bin_dir = interface_dir.join("node_modules").join(".bin");
+    let tsc = if cfg!(target_os = "windows") {
+        bin_dir.join("tsc.cmd")
+    } else {
+        bin_dir.join("tsc")
+    };
+    let vite = if cfg!(target_os = "windows") {
+        bin_dir.join("vite.cmd")
+    } else {
+        bin_dir.join("vite")
+    };
+
+    tsc.exists() && vite.exists()
+}
+
 fn watch_dir(dir: &Path) {
     for entry in std::fs::read_dir(dir).expect("failed to read directory") {
         let entry = entry.expect("failed to read entry");
@@ -171,7 +187,7 @@ fn main() {
     } else if use_frontend_dev_server {
         println!("cargo:warning=Vite frontend dev server detected; skipping npm run build");
     } else {
-        if !interface_dir.join("node_modules").exists() {
+        if !frontend_build_tools_installed(&interface_dir) {
             let status = npm()
                 .arg("install")
                 .current_dir(&interface_dir)
