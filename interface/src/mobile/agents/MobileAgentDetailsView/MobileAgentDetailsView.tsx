@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { AgentInfoPanel } from "../AgentInfoPanel";
-import { LAST_AGENT_ID_KEY, useAgents, useSelectedAgent } from "../stores";
+import { AgentInfoPanel } from "../../../apps/agents/AgentInfoPanel";
+import { LAST_AGENT_ID_KEY, useAgents, useSelectedAgent } from "../../../apps/agents/stores";
 
 export function MobileAgentDetailsView() {
   const { agentId } = useParams<{ agentId: string }>();

@@ -112,7 +112,7 @@ vi.mock("@cypher-asi/zui", () => ({
   Text: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
 }));
 
-vi.mock("../../stores/projects-list-store", () => ({
+vi.mock("../../../stores/projects-list-store", () => ({
   getRecentProjects: (items: typeof projects) => [...items]
     .sort((left, right) => right.updated_at.localeCompare(left.updated_at)),
   useProjectsListStore: (selector: (state: {
@@ -132,7 +132,7 @@ vi.mock("../../stores/projects-list-store", () => ({
   }),
 }));
 
-vi.mock("../../stores/org-store", () => ({
+vi.mock("../../../stores/org-store", () => ({
   useOrgStore: (selector: (state: {
     orgs: typeof orgs;
     activeOrg: typeof orgs[number] | null;
@@ -146,13 +146,13 @@ vi.mock("../../stores/org-store", () => ({
   }),
 }));
 
-vi.mock("../../utils/storage", () => ({
+vi.mock("../../../utils/storage", () => ({
   getLastAgent: (projectId: string) => (projectId === "project-1" ? "agent-1" : null),
   getLastAgentEntry: () => ({ projectId: "project-1", agentInstanceId: "agent-1" }),
   getLastProject: () => "project-1",
 }));
 
-vi.mock("../../hooks/use-modal-initial-focus", () => ({
+vi.mock("../../../hooks/use-modal-initial-focus", () => ({
   useModalInitialFocus: () => ({
     inputRef: { current: null },
     initialFocusRef: { current: null },
@@ -160,7 +160,7 @@ vi.mock("../../hooks/use-modal-initial-focus", () => ({
   }),
 }));
 
-vi.mock("../../hooks/use-aura-capabilities", () => ({
+vi.mock("../../../hooks/use-aura-capabilities", () => ({
   useAuraCapabilities: () => ({
     features: {
       hostRetargeting: true,
@@ -168,7 +168,7 @@ vi.mock("../../hooks/use-aura-capabilities", () => ({
   }),
 }));
 
-vi.mock("../../stores/ui-modal-store", () => ({
+vi.mock("../../../stores/ui-modal-store", () => ({
   useUIModalStore: (selector: (state: {
     openOrgSettings: typeof openOrgSettings;
     openHostSettings: typeof openHostSettings;
@@ -187,6 +187,7 @@ function renderView() {
         <Route path="/projects/organization" element={<MobileOrganizationView />} />
         <Route path="/projects" element={<div>projects-route</div>} />
         <Route path="/projects/:projectId/agent" element={<div>project-agent-route</div>} />
+        <Route path="/projects/:projectId/agents" element={<div>project-agents-route</div>} />
         <Route path="/projects/:projectId/agents/:agentInstanceId" element={<div>project-agent-chat-route</div>} />
         <Route path="/projects/:projectId/tasks" element={<div>project-tasks-route</div>} />
       </Routes>
@@ -201,15 +202,15 @@ beforeEach(() => {
 });
 
 describe("MobileOrganizationView", () => {
-  it("renders a resume-work card for the active org and opens the remembered agent chat", async () => {
+  it("renders a resume-work card for the active org and opens the project agents list", async () => {
     const user = userEvent.setup();
     renderView();
 
-    expect(screen.getByRole("button", { name: "Open chat" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open agents" })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Open chat" }));
+    await user.click(screen.getByRole("button", { name: "Open agents" }));
 
-    expect(await screen.findByText("project-agent-chat-route")).toBeInTheDocument();
+    expect(await screen.findByText("project-agents-route")).toBeInTheDocument();
   });
 
   it("opens recent project tasks from the resume card secondary action", async () => {
@@ -269,7 +270,7 @@ describe("MobileOrganizationView", () => {
     renderView();
 
     expect(screen.getByRole("heading", { name: "Continue work" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Open chat" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open agents" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "New Project" }));
 

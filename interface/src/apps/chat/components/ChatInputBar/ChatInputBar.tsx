@@ -18,9 +18,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { ContextUsageIndicator } from "./ContextUsageIndicator";
-import { MobileChatInputBar } from "../../../../mobile/chat/MobileChatInputBar";
 import type { ContextUsageEntry } from "../../../../stores/context-usage-store";
-import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
 import { useIsStreaming } from "../../../../hooks/stream/hooks";
 import { useFileAttachments } from "./useFileAttachments";
 import type { GenerationMode } from "../../../../constants/models";
@@ -141,21 +139,7 @@ function AttachmentPreviews({
   );
 }
 
-export const ChatInputBar = memo(
-  forwardRef<ChatInputBarHandle, ChatInputBarProps>(function ChatInputBar(
-    props,
-    ref,
-  ) {
-    const { isMobileLayout } = useAuraCapabilities();
-    return isMobileLayout ? (
-      <MobileChatInputBar {...props} ref={ref} />
-    ) : (
-      <DesktopChatInputBar {...props} ref={ref} />
-    );
-  }),
-);
-
-const DesktopChatInputBar = memo(
+export const DesktopChatInputBar = memo(
   forwardRef<ChatInputBarHandle, ChatInputBarProps>(function DesktopChatInputBar(
     {
       input,
@@ -802,3 +786,5 @@ const DesktopChatInputBar = memo(
     );
   }),
 );
+
+export const ChatInputBar = DesktopChatInputBar;

@@ -152,3 +152,49 @@ Remaining production blockers before full app sign-off:
 
 - Auth, capture login, feed, feedback, organization workspace, host settings, team settings, file picker/upload, and destructive/session-ending actions still need dedicated safe fixtures or user confirmation before full simulator validation.
 - A remote-agent send success path still needs a live remote workspace fixture; local agents are guarded on mobile.
+
+## Navigation Back Pass 2026-04-26
+
+This pass specifically validates the iOS navigation contract. Android can provide system back as an additional exit path, but iOS does not have a hardware/system back button that users can rely on inside this app. Every pushed screen, sheet, or modal must therefore expose a visible Back, Cancel, or Close affordance. Edge-swipe was tested as a bonus gesture and did not change route in the simulator WebView, so it is not part of the product contract.
+
+| Flow | Status | Evidence | Notes |
+| --- | --- | --- | --- |
+| Agents roster opens agent chat | Passed | `/tmp/aura-ios-signoff/nav-back-pass/01-agents-roster.jpg`, `/tmp/aura-ios-signoff/nav-back-pass/02-agent-chat-back-visible.jpg` | Chat now has a visible top-left back arrow instead of relying on the active Agents tab or browser history. |
+| Agent chat back to roster | Passed | `/tmp/aura-ios-signoff/nav-back-pass/03-back-to-agents-roster.jpg` | Back returns to the agents roster. |
+| Profile opened from Files | Passed | `/tmp/aura-ios-signoff/nav-back-pass/04-profile-back-visible.jpg`, `/tmp/aura-ios-signoff/nav-back-pass/05-profile-back-returned-files.jpg` | Profile behaves like an iOS pushed screen with explicit back to the originating project route. |
+| Settings opened from Files | Passed | `/tmp/aura-ios-signoff/nav-back-pass/06-settings-back-visible.jpg`, `/tmp/aura-ios-signoff/nav-back-pass/07-settings-back-returned-files.jpg` | Settings has explicit back and clean production copy. |
+| Add agent sheet cancel | Passed | `/tmp/aura-ios-signoff/nav-back-pass/08-add-agent-sheet-cancel-visible.jpg`, `/tmp/aura-ios-signoff/nav-back-pass/09-add-agent-cancel-returned-roster.jpg` | Bottom sheet has a visible Cancel action and returns to roster. |
+| Create remote agent back | Passed | `/tmp/aura-ios-signoff/nav-back-pass/10-create-agent-back-visible.jpg`, `/tmp/aura-ios-signoff/nav-back-pass/11-create-agent-back-returned-roster.jpg` | Form has explicit back. Submit was not pressed. |
+| Attach existing agent back | Passed | `/tmp/aura-ios-signoff/nav-back-pass/12-attach-agent-back-visible.jpg`, `/tmp/aura-ios-signoff/nav-back-pass/13-attach-agent-back-returned-roster.jpg` | Attach list has explicit back. Attach submit was not pressed. |
+| More inline destinations | Passed | `/tmp/aura-ios-signoff/nav-back-pass/14-more-menu-inline.jpg`, `/tmp/aura-ios-signoff/nav-back-pass/15-more-process-destination.jpg`, `/tmp/aura-ios-signoff/nav-back-pass/16-tab-back-to-agents.jpg` | More behaves as in-place tab navigation. Return path is the tab bar, not a pushed back button. |
+| Drawer open/dismiss | Passed | `/tmp/aura-ios-signoff/nav-back-pass/17-drawer-open-backdrop.jpg`, `/tmp/aura-ios-signoff/nav-back-pass/18-drawer-backdrop-dismissed.jpg` | Drawer shows a backdrop and tapping outside closes it. |
+| iOS edge swipe | Informational | `/tmp/aura-ios-signoff/nav-back-pass/19-chat-before-edge-swipe.jpg`, `/tmp/aura-ios-signoff/nav-back-pass/20-edge-swipe-no-route-change.jpg` | Edge swipe did not navigate back in simulator, so visible back controls are required. |
+| More to Stats backflow | Passed | `/tmp/aura-web-screenshot-pass-node/mobile-stats-more-backflow.png` | Stats now keeps the More subnav visible. `Process` remains reachable and `Stats` is visibly active, so the route no longer feels like a dead end. |
+
+## Separation Pass 2026-04-26
+
+This pass moved the obvious mobile-owned screens, shells, navigation, files, agent views, and mobile hooks into `interface/src/mobile` so desktop-owned folders no longer carry named mobile view files. It also reran targeted tests, web fixture screenshots, and a native simulator build/run after the move.
+
+| Flow | Status | Evidence | Notes |
+| --- | --- | --- | --- |
+| Mobile shell boundary | Passed | `interface/src/mobile/shell`, `interface/src/mobile/navigation`, `interface/src/mobile/mobile-boundary.test.ts` | `MobileShell` and `MobileBottomNav` moved out of `components/`; `AppShell` is now the desktop/mobile switch point. |
+| Mobile chat boundary | Passed | `interface/src/mobile/chat/MobileChatPanel.tsx`, `interface/src/mobile/chat/MobileChatInputBar.tsx`, `interface/src/mobile/chat/MobileProjectAgentSwitcherSheet.tsx` | `ChatPanel` now accepts header/input slots and defaults to the desktop input; mobile owns the ZERO-like header/input/model sheet. |
+| Mobile project/org boundary | Passed | `interface/src/mobile/screens/MobileOrganizationView`, `interface/src/mobile/screens/ProjectAgentsScreen`, `interface/src/mobile/screens/ProjectFilesScreen`, `interface/src/mobile/screens/ProjectProcessScreen`, `interface/src/mobile/screens/ProjectStatsScreen` | Mobile project and organization screens live under `src/mobile/screens`; desktop routes import them only at the route switch boundary. |
+| Mobile agents/files/hooks boundary | Passed | `interface/src/mobile/agents`, `interface/src/mobile/files`, `interface/src/mobile/hooks` | Mobile agent library/details, mobile file list, and mobile task/spec/file-preview hooks moved out of `apps`, `components`, and `views`. |
+| Named mobile file audit | Passed | `find interface/src/components interface/src/views interface/src/apps -path '*Mobile*' -print` | Command returned no files. This proves named `Mobile*` files are out of desktop-owned folders. It does not mean every `isMobileLayout` branch has been extracted yet. |
+| Web mobile agents | Passed | `/tmp/aura-web-screenshot-pass-node/mobile-agents.png` | Fixture-backed browser screenshot at iPhone width. |
+| Web mobile chat | Passed | `/tmp/aura-web-screenshot-pass-node/mobile-agent-chat.png` | Composer, remote/local row, and chat header render without desktop shell. |
+| Web mobile model sheet | Partial | `/tmp/aura-web-screenshot-pass-node/mobile-model-sheet.png` | Bottom model sheet opens from the mobile composer, but the composer remains visibly underneath the sheet in the fixture screenshot. Needs a small visual follow-up before full sign-off. |
+| Web desktop shell sanity | Partial | `/tmp/aura-web-screenshot-pass-node/desktop-projects.png` | Desktop shell renders with desktop taskbar/sidebar from a mocked fixture. The fixture shows a mocked terminal connection error, so this is a layout sanity check, not a live backend sign-off. |
+| iOS native chat render | Passed | `/var/folders/0b/1pfkk8c93xx9ffrcsjh8k_4r0000gn/T/screenshot_optimized_08b0c2e8-e470-4197-a335-061587ffbb41.jpg` | `npm run build:native` and Xcode simulator build/run succeeded on iPhone 17; chat rendered from the native bundle. |
+| iOS agents roster | Passed | `/var/folders/0b/1pfkk8c93xx9ffrcsjh8k_4r0000gn/T/screenshot_optimized_b994ed79-47e6-407a-a24a-dfaedd598f2d.jpg` | Top-left back from chat returned to the mobile agents roster. |
+| iOS drawer open | Passed | `/var/folders/0b/1pfkk8c93xx9ffrcsjh8k_4r0000gn/T/screenshot_optimized_42ad2ea0-dc3a-408e-a31c-d17d6cf9900d.jpg` | Drawer shows AURA branding, search icon instead of an always-visible search field, single-line project rows, and backdrop. |
+| iOS drawer backdrop dismiss | Passed | `/var/folders/0b/1pfkk8c93xx9ffrcsjh8k_4r0000gn/T/screenshot_optimized_b53d1279-1c92-4dd3-b9d8-2e317ae88ac0.jpg` | Tapping outside the drawer returned to the agents roster. |
+| Targeted unit checks | Passed | `npm test -- --run ...` | Passed focused suites for mobile organization, mobile shell/chat, desktop chat/input, project work/tasks, file explorer, and the mobile boundary test. |
+
+Known limits in this pass:
+
+- The selected in-app browser tab at `127.0.0.1:5173` was still on the hosted login screen after reload, so authenticated hosted-web verification was not claimed.
+- The web screenshots use a local fixture with fake non-sensitive data; remote send success was not exercised.
+- `interface/src/mobile/hooks/useMobileTasks.test.tsx` still OOMs/hangs under Vitest even when isolated; the hook behavior was indirectly covered through the project work/tasks focused suites, but that isolated hook test is not signed off.
+- Mixed responsive/shared code still exists in desktop-owned folders where the desktop shell routes into mobile screens or shared components adapt with `isMobileLayout`. This pass separated named mobile views and files; eliminating every mobile branch from shared/desktop components is a larger follow-up.

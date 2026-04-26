@@ -10,7 +10,7 @@ import {
   formatSeconds,
 } from "../../components/StatCard";
 import { useStatsDashboardData } from "./useStatsDashboardData";
-import { formatCompact } from "../../utils/format";
+import { formatCompact } from "../../shared/utils/format";
 import styles from "../aura.module.css";
 import mobileStyles from "./StatsDashboard.module.css";
 

@@ -1,7 +1,7 @@
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { api } from "../../api/client";
 import type { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
-import styles from "./FileExplorer.module.css";
+import styles from "../../components/FileExplorer/FileExplorer.module.css";
 
 function getMobilePreviewLabel(filename: string): string {
   const lower = filename.toLowerCase();

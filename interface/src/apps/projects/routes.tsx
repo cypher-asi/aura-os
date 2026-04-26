@@ -3,7 +3,7 @@ import { lazy } from "react";
 import { Navigate, type RouteObject } from "react-router-dom";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { AgentChatView } from "../agents/components/AgentChatView";
-import { MobileOrganizationView } from "../../views/MobileOrganizationView";
+import { MobileOrganizationView } from "../../mobile/screens/MobileOrganizationView";
 import { ExecutionView } from "../../views/ExecutionView";
 import { ProjectAgentDetailsView } from "../../views/ProjectAgentDetailsView";
 import { ProjectAgentRedirectView } from "../../views/ProjectAgentRedirectView";
@@ -20,6 +20,7 @@ import { MobileProjectAgentsScreen } from "../../mobile/screens/ProjectAgentsScr
 import { MobileProjectFilesScreen } from "../../mobile/screens/ProjectFilesScreen/ProjectFilesScreen";
 import { MobileProjectProcessScreen } from "../../mobile/screens/ProjectProcessScreen/ProjectProcessScreen";
 import { MobileProjectStatsScreen } from "../../mobile/screens/ProjectStatsScreen/ProjectStatsScreen";
+import { MobileSettingsView } from "../../mobile/screens/MobileSettingsView";
 
 const HomeView = lazy(() => import("../../views/HomeView").then((m) => ({ default: m.HomeView })));
 const SettingsView = lazy(() => import("../../views/SettingsView").then((m) => ({ default: m.SettingsView })));
@@ -49,6 +50,11 @@ function ProjectStatsRoute() {
   return isMobileLayout ? <MobileProjectStatsScreen /> : <ProjectStatsView />;
 }
 
+function SettingsRoute() {
+  const { isMobileLayout } = useAuraCapabilities();
+  return isMobileLayout ? <MobileSettingsView /> : <SettingsView />;
+}
+
 /**
  * Routes owned by the Projects app. The `/projects/:projectId` subtree is a
  * nested `ProjectLayout` that renders its own `<Outlet />`, so per-view code
@@ -58,7 +64,7 @@ function ProjectStatsRoute() {
 export const projectsRoutes: RouteObject[] = [
   { path: "projects", element: <HomeView /> },
   { path: "projects/organization", element: <MobileOrganizationRoute /> },
-  { path: "projects/settings", element: <SettingsView /> },
+  { path: "projects/settings", element: <SettingsRoute /> },
   {
     path: "projects/:projectId",
     element: <ProjectLayout />,

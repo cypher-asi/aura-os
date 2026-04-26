@@ -28,7 +28,7 @@ vi.mock("../../stores/sidekick-store", () => ({
   useSidekickStore: (selector: (state: any) => unknown) => selector(mockUseSidekickStore()),
 }));
 
-vi.mock("../ProjectWorkView/useMobileTasks", () => ({
+vi.mock("../../mobile/hooks/useMobileTasks", () => ({
   useMobileTasks: (projectId: string) => mockUseMobileTasks(projectId),
 }));
 

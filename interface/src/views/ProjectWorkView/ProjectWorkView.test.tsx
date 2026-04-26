@@ -66,11 +66,11 @@ vi.mock("../../stores/sidekick-store", () => ({
   ),
 }));
 
-vi.mock("./useMobileSpecs", () => ({
+vi.mock("../../mobile/hooks/useMobileSpecs", () => ({
   useMobileSpecs: () => ({ specs: [] }),
 }));
 
-vi.mock("./useMobileTasks", () => ({
+vi.mock("../../mobile/hooks/useMobileTasks", () => ({
   useMobileTasks: (projectId: string) => mockUseMobileTasks(projectId),
 }));
 

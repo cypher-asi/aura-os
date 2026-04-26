@@ -11,6 +11,10 @@ vi.mock("./ChatInputBar.module.css", () => ({
   default: new Proxy({}, { get: (_t, prop) => String(prop) }),
 }));
 
+vi.mock("../../../../mobile/chat/MobileChatInputBar.module.css", () => ({
+  default: new Proxy({}, { get: (_t, prop) => String(prop) }),
+}));
+
 vi.mock("../../../../hooks/use-aura-capabilities", () => ({
   useAuraCapabilities: () => ({ isMobileLayout: mockIsMobileLayout }),
 }));
@@ -39,6 +43,7 @@ vi.mock("./useFileAttachments", () => ({
 }));
 
 import { ChatInputBar } from "../ChatInputBar";
+import { MobileChatInputBar } from "../../../../mobile/chat/MobileChatInputBar";
 import type { AttachmentItem } from "../ChatInputBar";
 
 function makeProps(overrides: Partial<Parameters<typeof ChatInputBar>[0]> = {}) {
@@ -256,9 +261,8 @@ describe("ChatInputBar", () => {
 
   it("opens the mobile model sheet and calls setSelectedModel", async () => {
     const user = userEvent.setup();
-    mockIsMobileLayout = true;
     mockSelectedModel = "aura-claude-opus-4-6";
-    render(<ChatInputBar {...makeProps({ machineType: "local" })} />);
+    render(<MobileChatInputBar {...makeProps({ machineType: "local" })} />);
 
     await user.click(screen.getByRole("button", { name: /Opus 4\.6/i }));
     expect(screen.getByRole("dialog", { name: "Select model" })).toBeInTheDocument();

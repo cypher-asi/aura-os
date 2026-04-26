@@ -239,28 +239,28 @@ vi.mock("../../utils/mobileNavigation", () => ({
   projectWorkRoute: (id: string) => `/projects/${id}/work`,
 }));
 
-vi.mock("../ErrorBoundary", () => ({
+vi.mock("../../components/ErrorBoundary", () => ({
   ErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
-vi.mock("../ProjectList", () => ({
+vi.mock("../../components/ProjectList", () => ({
   ProjectList: () => <div data-testid="project-list" />,
 }));
-vi.mock("../UpdateBanner", () => ({
+vi.mock("../../components/UpdateBanner", () => ({
   UpdateBanner: () => <div data-testid="update-banner" />,
 }));
-vi.mock("../PanelSearch", () => ({
+vi.mock("../../components/PanelSearch", () => ({
   PanelSearch: () => <div data-testid="panel-search" />,
 }));
-vi.mock("../HostSettingsModal", () => ({
+vi.mock("../../components/HostSettingsModal", () => ({
   HostSettingsModal: () => null,
 }));
 vi.mock("../../shared/lib/host-config", () => ({
   getHostDisplayLabel: () => "https://bad-host.example",
 }));
-vi.mock("../../apps/agents/MobileAgentLibraryView", () => ({
+vi.mock("../agents/MobileAgentLibraryView", () => ({
   MobileAgentLibraryView: () => <div data-testid="mobile-agent-library-view" />,
 }));
-vi.mock("../../apps/agents/MobileAgentDetailsView", () => ({
+vi.mock("../agents/MobileAgentDetailsView", () => ({
   MobileAgentDetailsView: () => <div data-testid="mobile-agent-details-view" />,
 }));
 vi.mock("../../apps/profile/ProfileMainPanel", () => ({
@@ -285,7 +285,7 @@ vi.mock("./MobileShell.module.css", () => ({
   default: new Proxy({}, { get: (_t, prop) => String(prop) }),
 }));
 
-import { MobileShell } from "../MobileShell";
+import { MobileShell } from "./MobileShell";
 
 function renderMobile(path: InitialEntry | InitialEntry[] = "/projects") {
   const initialEntries = Array.isArray(path) ? path : [path];
@@ -306,6 +306,7 @@ function renderMobile(path: InitialEntry | InitialEntry[] = "/projects") {
           <Route path="/projects/:projectId/process" element={<div>Project process</div>} />
           <Route path="/projects/:projectId/stats" element={<div>Project stats</div>} />
           <Route path="/projects/settings" element={<div>Settings route</div>} />
+          <Route path="/profile" element={<div>Profile settings destination</div>} />
           <Route path="/agents" element={<div>Agents</div>} />
           <Route path="/agents/:agentId" element={<div>Agent details</div>} />
           <Route path="/feed" element={<div>Feed</div>} />
@@ -354,6 +355,17 @@ describe("MobileShell", () => {
   it("keeps the project title trigger in the top bar on the agent route", () => {
     renderMobile("/projects/proj-1/agents/agent-inst-1");
     expect(screen.getByRole("button", { name: "Open project navigation for Demo Project" })).toBeInTheDocument();
+  });
+
+  it("shows an explicit back action from agent chat to the agents list", async () => {
+    const user = userEvent.setup();
+    renderMobile("/projects/proj-1/agents/agent-inst-1");
+
+    expect(screen.getByRole("button", { name: "Back to agents" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Back to agents" }));
+
+    expect(await screen.findByText("Project agents roster")).toBeInTheDocument();
   });
 
   it("keeps project drawers free of nested back navigation", async () => {
@@ -446,6 +458,20 @@ describe("MobileShell", () => {
     expect(await screen.findByText("Project files")).toBeInTheDocument();
   });
 
+  it("opens profile with a visible back action to the originating mobile screen", async () => {
+    const user = userEvent.setup();
+    renderMobile("/projects/proj-1/files");
+
+    await user.click(screen.getByRole("button", { name: "Open profile" }));
+
+    expect(await screen.findByText("Profile settings destination")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Back to previous screen" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Back to previous screen" }));
+
+    expect(await screen.findByText("Project files")).toBeInTheDocument();
+  });
+
   it("renders update banner", () => {
     renderMobile();
     expect(screen.getByTestId("update-banner")).toBeInTheDocument();
@@ -475,6 +501,15 @@ describe("MobileShell", () => {
     await user.click(screen.getByRole("button", { name: /agents/i }));
 
     expect(await screen.findByText("Project agents roster")).toBeInTheDocument();
+  });
+
+  it("keeps the More destinations visible from the stats route", () => {
+    renderMobile("/projects/proj-1/stats");
+
+    expect(screen.getByRole("button", { pressed: true, name: /More/i })).toBeInTheDocument();
+    expect(screen.getByRole("menu", { name: "More project sections" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Process" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Stats" })).toHaveAttribute("data-active", "true");
   });
 
   it("hides project tabs when a drawer is open", () => {

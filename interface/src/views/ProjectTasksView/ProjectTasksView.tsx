@@ -6,7 +6,7 @@ import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useProjectsListStore } from "../../stores/projects-list-store";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { TaskStatusIcon } from "../../components/TaskStatusIcon";
-import { useMobileTasks } from "../ProjectWorkView/useMobileTasks";
+import { useMobileTasks } from "../../mobile/hooks/useMobileTasks";
 import type { Task } from "../../shared/types";
 import styles from "./ProjectTasksView.module.css";
 

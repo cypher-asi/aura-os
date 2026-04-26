@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import { X } from "lucide-react";
-import { Drawer, Modal } from "@cypher-asi/zui";
+import { Modal } from "@cypher-asi/zui";
 import { api, STANDALONE_AGENT_HISTORY_LIMIT } from "../../../../api/client";
 import { useAgentChatStream } from "../../../../hooks/use-agent-chat-stream";
 import { useChatStream } from "../../../../hooks/use-chat-stream";
@@ -10,7 +10,9 @@ import { useChatHistorySync } from "../../../../hooks/use-chat-history-sync";
 import { useDelayedLoading } from "../../../../shared/hooks/use-delayed-loading";
 import { useAgentChatMeta } from "../../../../hooks/use-agent-chat-meta";
 import { setLastAgent, setLastProject } from "../../../../utils/storage";
-import { ChatPanel } from "../../../chat/components/ChatPanel";
+import { ChatPanel, type ChatPanelProps } from "../../../chat/components/ChatPanel";
+import { MobileChatPanel } from "../../../../mobile/chat/MobileChatPanel";
+import { MobileProjectAgentSwitcherSheet } from "../../../../mobile/chat/MobileProjectAgentSwitcherSheet";
 import {
   projectChatHistoryKey,
   agentHistoryKey,
@@ -193,32 +195,33 @@ function StandaloneAgentChatPanel({
 
   const wrappedSend = useMemo(() => wrapSend(sendMessage), [wrapSend, sendMessage]);
   const deferredLoading = useDelayedLoading(isLoading);
+  const { isMobileLayout } = useAuraCapabilities();
 
-  return (
-    <ChatPanel
-      streamKey={streamKey}
-      onSend={wrappedSend}
-      onStop={stopStreaming}
-      agentName={agentName}
-      machineType={machineType}
-      templateAgentId={templateAgentId}
-      adapterType={adapterType}
-      defaultModel={defaultModel}
-      agentId={agentId}
-      isLoading={deferredLoading}
-      historyResolved={historyResolved}
-      errorMessage={historyError ? historyError : null}
-      initialHandoff={initialCreateHandoff ? "create-agent" : undefined}
-      onInitialHandoffReady={onInitialHandoffReady}
-      scrollResetKey={agentId}
-      historyMessages={historyMessages}
-      projects={agentProjects}
-      selectedProjectId={effectiveProjectId}
-      onProjectChange={handleProjectChange}
-      contextUsage={contextUsage}
-      onNewSession={handleNewSession}
-    />
-  );
+  const panelProps: ChatPanelProps = {
+    streamKey,
+    onSend: wrappedSend,
+    onStop: stopStreaming,
+    agentName,
+    machineType,
+    templateAgentId,
+    adapterType,
+    defaultModel,
+    agentId,
+    isLoading: deferredLoading,
+    historyResolved,
+    errorMessage: historyError ? historyError : null,
+    initialHandoff: initialCreateHandoff ? "create-agent" : undefined,
+    onInitialHandoffReady,
+    scrollResetKey: agentId,
+    historyMessages,
+    projects: agentProjects,
+    selectedProjectId: effectiveProjectId,
+    onProjectChange: handleProjectChange,
+    contextUsage,
+    onNewSession: handleNewSession,
+  };
+
+  return isMobileLayout ? <MobileChatPanel {...panelProps} /> : <ChatPanel {...panelProps} />;
 }
 
 function ProjectAgentChatPanel({
@@ -395,19 +398,19 @@ function ProjectAgentChatPanel({
     navigate(`/projects/${projectId}/agents/${nextAgentInstanceId}`);
   }, [navigate, projectId]);
   const agentPickerContent = (
-    <div className={styles.mobileAgentSwitcherBody}>
-      <div className={styles.mobileAgentSwitcherHeader}>
-        <span className={styles.mobileAgentSwitcherName}>Project agents</span>
-        <span className={styles.mobileAgentSwitcherMeta}>Switch who you are chatting with.</span>
+    <div className={styles.agentSwitcherBody}>
+      <div className={styles.agentSwitcherHeader}>
+        <span className={styles.agentSwitcherName}>Project agents</span>
+        <span className={styles.agentSwitcherMeta}>Switch who you are chatting with.</span>
       </div>
-      <div className={styles.mobileAgentSwitcherList}>
+      <div className={styles.agentSwitcherList}>
         {projectAgents.map((agent) => {
           const isCurrentAgent = agent.agent_instance_id === agentInstanceId;
           return (
             <button
               key={agent.agent_instance_id}
               type="button"
-              className={`${styles.mobileAgentSwitcherRow} ${isCurrentAgent ? styles.mobileAgentSwitcherRowCurrent : ""}`}
+              className={`${styles.agentSwitcherRow} ${isCurrentAgent ? styles.agentSwitcherRowCurrent : ""}`}
               onClick={() => {
                 if (isCurrentAgent) {
                   return;
@@ -417,67 +420,67 @@ function ProjectAgentChatPanel({
               aria-label={isCurrentAgent ? `${agent.name}, current agent` : `Switch to ${agent.name}`}
               disabled={isCurrentAgent}
             >
-              <span className={styles.mobileAgentSwitcherCopy}>
-                <span className={styles.mobileAgentSwitcherName}>{agent.name}</span>
-                <span className={styles.mobileAgentSwitcherMeta}>{agent.role?.trim() || "Remote AURA agent"}</span>
+              <span className={styles.agentSwitcherCopy}>
+                <span className={styles.agentSwitcherName}>{agent.name}</span>
+                <span className={styles.agentSwitcherMeta}>{agent.role?.trim() || "Remote AURA agent"}</span>
               </span>
-              {isCurrentAgent ? <span className={styles.mobileAgentSwitcherStatus}>Current</span> : null}
+              {isCurrentAgent ? <span className={styles.agentSwitcherStatus}>Current</span> : null}
             </button>
           );
         })}
       </div>
     </div>
   );
+  const panelProps: ChatPanelProps = {
+    streamKey,
+    onSend: isSessionView ? noopSend : wrappedSend,
+    onStop: handleCombinedStop,
+    isExternallyBusy: loopOnlyBusy,
+    externalBusyMessage: loopOnlyBusy
+      ? "This agent is running an automation task. Stop it to chat."
+      : undefined,
+    agentName,
+    machineType,
+    templateAgentId,
+    adapterType,
+    defaultModel,
+    agentId: agentInstanceId,
+    isLoading: deferredLoading,
+    historyResolved,
+    errorMessage: historyError ? historyError : null,
+    initialHandoff: shouldUseCreateHandoff ? "create-agent" : undefined,
+    onInitialHandoffReady,
+    scrollResetKey: panelKey,
+    historyMessages,
+    projects: currentProject,
+    selectedProjectId: projectId,
+    contextUsage: isSessionView ? undefined : contextUsage,
+    onNewSession: isSessionView ? undefined : handleNewSession,
+  };
 
   return (
     <>
       {isSessionView && <SessionBanner onExit={onExitSessionView} />}
-      <ChatPanel
-        streamKey={streamKey}
-        onSend={isSessionView ? noopSend : wrappedSend}
-        onStop={handleCombinedStop}
-        isExternallyBusy={loopOnlyBusy}
-        externalBusyMessage={
-          loopOnlyBusy
-            ? "This agent is running an automation task. Stop it to chat."
-            : undefined
-        }
-        agentName={agentName}
-        machineType={machineType}
-        templateAgentId={templateAgentId}
-        adapterType={adapterType}
-        defaultModel={defaultModel}
-        agentId={agentInstanceId}
-        isLoading={deferredLoading}
-        historyResolved={historyResolved}
-        errorMessage={historyError ? historyError : null}
-        initialHandoff={shouldUseCreateHandoff ? "create-agent" : undefined}
-        onInitialHandoffReady={onInitialHandoffReady}
-        scrollResetKey={panelKey}
-        historyMessages={historyMessages}
-        projects={currentProject}
-        selectedProjectId={projectId}
-        contextUsage={isSessionView ? undefined : contextUsage}
-        onNewSession={isSessionView ? undefined : handleNewSession}
-        onMobileHeaderSummaryClick={showAgentSwitcher ? openAgentPicker : undefined}
-        mobileHeaderSummaryHint={mobileHeaderSummaryHint}
-        mobileHeaderSummaryLabel="Switch project agent"
-        mobileHeaderSummaryKind={showAgentSwitcher ? "switch" : "details"}
-      />
+      {isMobileLayout ? (
+        <MobileChatPanel
+          {...panelProps}
+          onMobileHeaderSummaryClick={showAgentSwitcher ? openAgentPicker : undefined}
+          mobileHeaderSummaryHint={mobileHeaderSummaryHint}
+          mobileHeaderSummaryLabel="Switch project agent"
+          mobileHeaderSummaryKind={showAgentSwitcher ? "switch" : "details"}
+        />
+      ) : (
+        <ChatPanel {...panelProps} />
+      )}
       {agentPickerOpen
         ? (isMobileLayout ? (
-          <Drawer
-            side="bottom"
+          <MobileProjectAgentSwitcherSheet
             isOpen
+            agents={projectAgents}
+            currentAgentInstanceId={agentInstanceId}
             onClose={closeAgentPicker}
-            title="Switch agent"
-            className={styles.mobileAgentSwitcher}
-            showMinimizedBar={false}
-            defaultSize={360}
-            maxSize={520}
-          >
-            {agentPickerContent}
-          </Drawer>
+            onSwitchAgent={switchProjectAgent}
+          />
         ) : (
           <Modal
             isOpen

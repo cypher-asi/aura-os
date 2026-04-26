@@ -1,8 +1,16 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ForwardRefExoticComponent,
+  type ReactNode,
+  type RefAttributes,
+} from "react";
 import { MessageSquare, AlertCircle } from "lucide-react";
 import { Text } from "@cypher-asi/zui";
 import { ChatMessageList } from "../ChatMessageList";
-import { ChatInputBar } from "../ChatInputBar";
+import { DesktopChatInputBar, type ChatInputBarHandle, type ChatInputBarProps } from "../ChatInputBar";
 import { MessageQueue } from "../MessageQueue";
 import { OverlayScrollbar } from "../../../../components/OverlayScrollbar";
 import { ChatStreamingIndicator } from "./ChatStreamingIndicator";
@@ -12,7 +20,6 @@ import type { Project } from "../../../../shared/types";
 import type { GenerationMode } from "../../../../constants/models";
 import type { DisplaySessionEvent } from "../../../../shared/types/stream";
 import type { ContextUsageEntry } from "../../../../stores/context-usage-store";
-import { MobileChatHeader } from "../../../../mobile/chat/MobileChatHeader";
 import styles from "./ChatPanel.module.css";
 
 type ChatPanelHandoffMode = "create-agent";
@@ -53,12 +60,8 @@ export interface ChatPanelProps {
   projects?: Project[];
   selectedProjectId?: string;
   onProjectChange?: (projectId: string) => void;
-  mobileHeaderAction?: ReactNode;
-  onMobileHeaderSummaryClick?: () => void;
-  mobileHeaderSummaryTo?: string;
-  mobileHeaderSummaryHint?: string;
-  mobileHeaderSummaryLabel?: string;
-  mobileHeaderSummaryKind?: "details" | "switch";
+  header?: ReactNode;
+  InputBarComponent?: ForwardRefExoticComponent<ChatInputBarProps & RefAttributes<ChatInputBarHandle>>;
   initialHandoff?: ChatPanelHandoffMode;
   onInitialHandoffReady?: () => void;
   contextUsage?: ContextUsageEntry;
@@ -91,12 +94,8 @@ export function ChatPanel({
   projects,
   selectedProjectId,
   onProjectChange,
-  mobileHeaderAction,
-  onMobileHeaderSummaryClick,
-  mobileHeaderSummaryTo,
-  mobileHeaderSummaryHint,
-  mobileHeaderSummaryLabel,
-  mobileHeaderSummaryKind = "details",
+  header,
+  InputBarComponent = DesktopChatInputBar,
   initialHandoff,
   onInitialHandoffReady,
   contextUsage,
@@ -284,18 +283,7 @@ export function ChatPanel({
 
   return (
     <div className={styles.container}>
-      {isMobileLayout && agentName ? (
-        <MobileChatHeader
-          agentName={agentName}
-          machineType={machineType}
-          action={mobileHeaderAction}
-          onSummaryClick={onMobileHeaderSummaryClick}
-          summaryTo={mobileHeaderSummaryTo}
-          summaryHint={mobileHeaderSummaryHint}
-          summaryLabel={mobileHeaderSummaryLabel}
-          summaryKind={mobileHeaderSummaryKind}
-        />
-      ) : null}
+      {header}
       <div className={styles.chatArea}>
         <div className={styles.messageAreaShell}>
           <div
@@ -350,7 +338,7 @@ export function ChatPanel({
 
         <ChatStreamingIndicator streamKey={streamKey} />
 
-        <ChatInputBar
+        <InputBarComponent
           ref={inputBarRef}
           input={input}
           onInputChange={setInput}

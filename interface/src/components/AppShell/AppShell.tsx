@@ -10,7 +10,7 @@ import { useDesktopWindowStore } from "../../stores/desktop-window-store";
 import { useAppUIStore } from "../../stores/app-ui-store";
 import { useShallow } from "zustand/react/shallow";
 import { DesktopShell } from "../DesktopShell";
-import { MobileShell } from "../MobileShell";
+import { MobileShell } from "../../mobile/shell";
 import { markShellVisible } from "../../lib/perf/startup-perf";
 import {
   applyAuraCaptureSeedPlan,

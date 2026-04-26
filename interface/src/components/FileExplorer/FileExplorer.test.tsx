@@ -23,7 +23,7 @@ vi.mock("./useFileExplorerState", () => ({
   useFileExplorerState: (...args: unknown[]) => mockUseFileExplorerState(...args),
 }));
 
-vi.mock("./MobileFileList", () => ({
+vi.mock("../../mobile/files/MobileFileList", () => ({
   MobileFileList: () => <div data-testid="mobile-file-list" />,
 }));
 

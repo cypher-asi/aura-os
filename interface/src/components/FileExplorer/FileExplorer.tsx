@@ -1,7 +1,7 @@
 import { Explorer, Spinner, PageEmptyState } from "@cypher-asi/zui";
 import { Folder, FolderOpen } from "lucide-react";
 import { useFileExplorerState } from "./useFileExplorerState";
-import { MobileFileList } from "./MobileFileList";
+import { MobileFileList } from "../../mobile/files/MobileFileList";
 import { FileExplorerHeader } from "./FileExplorerHeader";
 import styles from "./FileExplorer.module.css";
 

@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { act, forwardRef, useImperativeHandle, useLayoutEffect, useRef, type ComponentProps, type ForwardedRef } from "react";
-import { MemoryRouter } from "react-router-dom";
+import { act, useLayoutEffect, type ComponentProps } from "react";
 import { vi } from "vitest";
 import { ChatPanel } from "./ChatPanel";
 import type { DisplaySessionEvent } from "../../../../shared/types/stream";
@@ -57,13 +56,14 @@ vi.mock("../ChatMessageList", () => ({
   },
 }));
 
-vi.mock("../ChatInputBar", () => ({
-  ChatInputBar: forwardRef(function MockChatInputBar(
+vi.mock("../ChatInputBar", async () => {
+  const React = await import("react");
+  const MockChatInputBar = React.forwardRef(function MockChatInputBar(
     { isVisible, isCentered }: { isVisible?: boolean; isCentered?: boolean },
-    ref: ForwardedRef<{ focus: () => void }>,
+    ref: React.ForwardedRef<{ focus: () => void }>,
   ) {
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-    useImperativeHandle(ref, () => ({
+    const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+    React.useImperativeHandle(ref, () => ({
       focus: () => textareaRef.current?.focus(),
     }));
 
@@ -75,8 +75,13 @@ vi.mock("../ChatInputBar", () => ({
         data-centered={isCentered ? "true" : "false"}
       />
     );
-  }),
-}));
+  });
+
+  return {
+    ChatInputBar: MockChatInputBar,
+    DesktopChatInputBar: MockChatInputBar,
+  };
+});
 
 vi.mock("../MessageQueue", () => ({
   MessageQueue: () => null,
@@ -143,58 +148,24 @@ describe("ChatPanel", () => {
     return screen.getByTestId("chat-input-bar");
   }
 
-  it("shows the inline agent header on mobile", () => {
+  it("renders caller-provided header content", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
+
+    renderPanel({ header: <div>Mobile-owned chat header</div> });
+
+    expect(screen.getByText("Mobile-owned chat header")).toBeInTheDocument();
+  });
+
+  it("does not render a mobile header by default", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
 
     renderPanel();
 
-    expect(screen.getByText("Coca")).toBeInTheDocument();
-    expect(screen.getByText("Remote agent chat")).toBeInTheDocument();
-  });
-
-  it("makes the agent summary actionable on mobile when details are available", () => {
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
-    const onDetails = vi.fn();
-
-    render(
-      <ChatPanel
-        streamKey="stream-1"
-        onSend={vi.fn()}
-        onStop={vi.fn()}
-        agentName="Coca"
-        machineType="remote"
-        onMobileHeaderSummaryClick={onDetails}
-      />,
-    );
-
-    expect(screen.getByRole("button", { name: "Open details for Coca" })).toBeInTheDocument();
-    expect(screen.getByText("Open skills and runtime")).toBeInTheDocument();
-  });
-
-  it("can present a project-count summary affordance on mobile", () => {
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
-
-    render(
-      <MemoryRouter>
-        <ChatPanel
-          streamKey="stream-1"
-          onSend={vi.fn()}
-          onStop={vi.fn()}
-          agentName="Coca"
-          machineType="remote"
-          mobileHeaderSummaryTo="/projects/proj-1/agents/agent-inst-1/details"
-          mobileHeaderSummaryHint="2 agents in project"
-          mobileHeaderSummaryLabel="Open details for Coca"
-        />
-      </MemoryRouter>,
-    );
-
-    expect(screen.getByRole("link", { name: "Open details for Coca" })).toBeInTheDocument();
-    expect(screen.getByText("2 agents in project")).toBeInTheDocument();
+    expect(screen.queryByText("Remote agent chat")).not.toBeInTheDocument();
   });
 
   it("does not show the inline agent header on desktop", () => {
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
 
     renderPanel();
 

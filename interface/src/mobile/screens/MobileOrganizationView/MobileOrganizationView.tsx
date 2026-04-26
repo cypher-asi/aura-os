@@ -10,17 +10,17 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
-import { useOrgStore } from "../../stores/org-store";
-import { getRecentProjects, useProjectsListStore } from "../../stores/projects-list-store";
-import { useUIModalStore } from "../../stores/ui-modal-store";
-import { useModalInitialFocus } from "../../hooks/use-modal-initial-focus";
-import type { Org } from "../../shared/types";
+import { useOrgStore } from "../../../stores/org-store";
+import { getRecentProjects, useProjectsListStore } from "../../../stores/projects-list-store";
+import { useUIModalStore } from "../../../stores/ui-modal-store";
+import { useModalInitialFocus } from "../../../hooks/use-modal-initial-focus";
+import type { Org } from "../../../shared/types";
 import {
   projectAgentCreateRoute,
   projectAgentsRoute,
   projectTasksRoute,
-} from "../../utils/mobileNavigation";
-import { getLastAgent, getLastAgentEntry, getLastProject } from "../../utils/storage";
+} from "../../../utils/mobileNavigation";
+import { getLastAgent, getLastAgentEntry, getLastProject } from "../../../utils/storage";
 import styles from "./MobileOrganizationView.module.css";
 
 function formatStatus(status: string): string {

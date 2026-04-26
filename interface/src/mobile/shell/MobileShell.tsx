@@ -2,14 +2,14 @@ import { Fragment, Suspense, lazy, useCallback, useEffect, useState } from "reac
 import { useNavigate, useOutlet } from "react-router-dom";
 import { Button, Drawer, Text } from "@cypher-asi/zui";
 import { ChevronLeft, X } from "lucide-react";
-import { ErrorBoundary } from "../ErrorBoundary";
-import { UpdateBanner } from "../UpdateBanner";
+import { ErrorBoundary } from "../../components/ErrorBoundary";
+import { UpdateBanner } from "../../components/UpdateBanner";
 import {
   MOBILE_MORE_NAV_ITEMS,
   MobileBottomNav,
   type MobileMoreNavId,
   type MobileNavId,
-} from "../MobileBottomNav";
+} from "../navigation";
 import { useMobileDrawerEffects } from "../../hooks/use-mobile-drawers";
 import { useMobileDrawerStore, selectDrawerOpen, selectOverlayDrawerOpen } from "../../stores/mobile-drawer-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";
@@ -32,15 +32,15 @@ import { useShallow } from "zustand/react/shallow";
 import styles from "./MobileShell.module.css";
 
 const HostSettingsModal = lazy(() =>
-  import("../HostSettingsModal").then((module) => ({ default: module.HostSettingsModal })),
+  import("../../components/HostSettingsModal").then((module) => ({ default: module.HostSettingsModal })),
 );
 const MobileAgentLibraryView = lazy(() =>
-  import("../../apps/agents/MobileAgentLibraryView").then((module) => ({
+  import("../agents/MobileAgentLibraryView").then((module) => ({
     default: module.MobileAgentLibraryView,
   })),
 );
 const MobileAgentDetailsView = lazy(() =>
-  import("../../apps/agents/MobileAgentDetailsView").then((module) => ({
+  import("../agents/MobileAgentDetailsView").then((module) => ({
     default: module.MobileAgentDetailsView,
   })),
 );
@@ -89,6 +89,8 @@ export function MobileShell() {
       : state.mobileDestination === "process" || state.mobileDestination === "stats"
         ? "more"
         : null;
+  const isMoreDestination = state.mobileDestination === "process" || state.mobileDestination === "stats";
+  const showMoreNavMenu = moreNavOpen || isMoreDestination;
 
   useMobileDrawerEffects(Boolean(PreviewPanel));
 
@@ -180,7 +182,7 @@ export function MobileShell() {
           {!drawerOpen && state.showProjectTitle && !state.isProjectAgentManagementRoute && (
             <div className={styles.mobileProjectTabs}>
               <MobileBottomNav activeId={mobileNavActiveId} onNavigate={handleMobilePrimaryNavigate} />
-              {moreNavOpen ? (
+              {showMoreNavMenu ? (
                 <div className={styles.mobileMoreNavMenu} role="menu" aria-label="More project sections">
                   {MOBILE_MORE_NAV_ITEMS.map((item) => (
                     <button

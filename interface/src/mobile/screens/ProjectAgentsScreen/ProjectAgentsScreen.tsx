@@ -6,14 +6,14 @@ import { Avatar } from "../../../components/Avatar";
 import { selectOverlayDrawerOpen, useMobileDrawerStore } from "../../../stores/mobile-drawer-store";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
 import { useSidekickStore } from "../../../stores/sidekick-store";
-import { formatChatTime } from "../../../utils/format";
+import { formatChatTime } from "../../../shared/utils/format";
 import {
   projectAgentAttachRoute,
   projectAgentChatRoute,
   projectAgentCreateRoute,
 } from "../../../utils/mobileNavigation";
 import { getLastAgent, setLastAgent, setLastProject } from "../../../utils/storage";
-import type { AgentInstance } from "../../../types";
+import type { AgentInstance } from "../../../shared/types";
 import styles from "./ProjectAgentsScreen.module.css";
 
 function formatAgentStatus(status: string | undefined): string {

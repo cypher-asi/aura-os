@@ -7,7 +7,7 @@ import {
   MoreHorizontal,
   Play,
 } from "lucide-react";
-import styles from "../MobileShell/MobileShell.module.css";
+import styles from "../shell/MobileShell.module.css";
 
 export type MobileNavId = "agent" | "files" | "tasks" | "execution" | "more";
 export type MobileMoreNavId = "process" | "stats";

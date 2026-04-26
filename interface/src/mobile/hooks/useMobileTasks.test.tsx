@@ -1,4 +1,4 @@
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { EventType } from "../../shared/types/aura-events";
 import { useMobileTasks } from "./useMobileTasks";
@@ -46,8 +46,8 @@ describe("useMobileTasks", () => {
     subscribeMap.clear();
   });
 
-  it("appends tasks immediately on TaskSaved events", () => {
-    const { result } = renderHook(() => useMobileTasks("proj-1"));
+  it("appends tasks immediately on TaskSaved events", async () => {
+    const { result, unmount } = renderHook(() => useMobileTasks("proj-1"));
 
     emit(EventType.TaskSaved, {
       project_id: "proj-1",
@@ -82,5 +82,8 @@ describe("useMobileTasks", () => {
         title: "Created mid-stream",
       }),
     ]);
+
+    await waitFor(() => expect(result.current.loopActive).toBe(false));
+    unmount();
   });
 });

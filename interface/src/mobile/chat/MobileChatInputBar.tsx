@@ -8,16 +8,16 @@ import {
   useState,
 } from "react";
 import { ArrowUp, ChevronDown, FileText, Plus, X } from "lucide-react";
-import { AgentEnvironment } from "../../components/AgentEnvironment";
-import { CommandChips } from "../../components/ChatInputBar/CommandChips";
-import { ContextUsageIndicator } from "../../components/ChatInputBar/ContextUsageIndicator";
-import { SlashCommandMenu } from "../../components/ChatInputBar/SlashCommandMenu";
-import { useFileAttachments } from "../../components/ChatInputBar/useFileAttachments";
+import { AgentEnvironment } from "../../apps/agents/components/AgentEnvironment";
+import { CommandChips } from "../../apps/chat/components/ChatInputBar/CommandChips";
+import { ContextUsageIndicator } from "../../apps/chat/components/ChatInputBar/ContextUsageIndicator";
+import { SlashCommandMenu } from "../../apps/chat/components/ChatInputBar/SlashCommandMenu";
+import { useFileAttachments } from "../../apps/chat/components/ChatInputBar/useFileAttachments";
 import type {
   AttachmentItem,
   ChatInputBarHandle,
   ChatInputBarProps,
-} from "../../components/ChatInputBar/ChatInputBar";
+} from "../../apps/chat/components/ChatInputBar/ChatInputBar";
 import { isGenerationCommand, type SlashCommand } from "../../constants/commands";
 import {
   availableModelsForAdapter,

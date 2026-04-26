@@ -2,9 +2,14 @@ import { useNavigate } from "react-router-dom";
 import { Topbar, Button } from "@cypher-asi/zui";
 import { ArrowLeft, CircleUserRound, Menu, Plus, Settings } from "lucide-react";
 import { useMobileDrawerStore } from "../../stores/mobile-drawer-store";
-import { projectRootPath } from "../../utils/mobileNavigation";
+import { projectAgentsRoute, projectRootPath } from "../../utils/mobileNavigation";
 import type { MobileShellState } from "./useMobileShellState";
-import { resolveSettingsReturnPath, resolveWorkspaceReturnPath } from "./mobile-shell-utils";
+import {
+  buildMobileReturnState,
+  resolveGlobalReturnPath,
+  resolveSettingsReturnPath,
+  resolveWorkspaceReturnPath,
+} from "./mobile-shell-utils";
 import styles from "./MobileShell.module.css";
 
 export function MobileTopbar({ state }: { state: MobileShellState }) {
@@ -18,7 +23,16 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
         className={styles.mobileTopbar}
         icon={
           <div className={styles.mobileTopbarSlot}>
-            {state.isStandaloneAgentDetailRoute ? (
+            {state.isProjectAgentChatRoute && state.currentProjectId ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                iconOnly
+                icon={<ArrowLeft size={20} />}
+                aria-label="Back to agents"
+                onClick={() => navigate(projectAgentsRoute(state.currentProjectId!))}
+              />
+            ) : state.isStandaloneAgentDetailRoute ? (
               <Button
                 variant="ghost"
                 size="sm"
@@ -44,6 +58,15 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
                 icon={<ArrowLeft size={20} />}
                 aria-label="Back to previous screen"
                 onClick={() => navigate(resolveSettingsReturnPath(state.mobileTargetProjectId, state.location.state))}
+              />
+            ) : state.location.pathname === "/profile" || state.location.pathname.startsWith("/profile/") ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                iconOnly
+                icon={<ArrowLeft size={20} />}
+                aria-label="Back to previous screen"
+                onClick={() => navigate(resolveGlobalReturnPath(state.mobileTargetProjectId, state.location.state))}
               />
             ) : state.showProjectBack && state.currentProjectId ? (
               <Button
@@ -114,7 +137,7 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
               iconOnly
               icon={<CircleUserRound size={19} />}
               aria-label="Open profile"
-              onClick={() => navigate("/profile")}
+              onClick={() => navigate("/profile", { state: buildMobileReturnState(state.location.pathname) })}
             />
             <Button
               variant="ghost"

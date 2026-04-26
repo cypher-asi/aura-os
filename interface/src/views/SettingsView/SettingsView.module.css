@@ -1,137 +1,31 @@
-.settingsRoot {
-  width: 100%;
-  min-height: 100%;
-  padding: 18px 16px calc(28px + env(safe-area-inset-bottom));
-  color: var(--color-text);
-  background: var(--color-bg);
-}
-
-.settingsHeader {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  margin: 0 0 16px;
-}
-
-.settingsHeader h1,
-.settingsPanel h2 {
-  margin: 0;
-  color: var(--color-text);
-  font-size: 17px;
-  font-weight: 650;
-  line-height: 22px;
-  letter-spacing: 0;
-}
-
-.settingsHeader p {
-  margin: 0;
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 18px;
-}
-
-.settingsPanel,
-.settingsNote {
-  width: 100%;
-  max-width: 560px;
-  border: 1px solid color-mix(in srgb, var(--color-border) 32%, transparent);
-  border-radius: 18px;
-  background: color-mix(in srgb, var(--color-bg-surface) 72%, transparent);
-}
-
 .settingsPanel {
+  max-width: 560px;
+  padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  gap: var(--space-3);
 }
 
-.settingsPanel h2 {
-  padding: 14px 16px 7px;
-}
-
-.settingsNote {
-  margin-top: 12px;
-  padding: 14px 16px;
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 18px;
-}
-
-.settingsNote code {
-  font-family: var(--font-mono);
-  font-size: 0.96em;
-  color: var(--color-text);
+.settingsPanel + .settingsPanel {
+  margin-top: var(--space-3);
 }
 
 .infoGrid {
   display: grid;
-  grid-template-columns: minmax(78px, max-content) minmax(0, 1fr);
-  column-gap: 16px;
+  grid-template-columns: max-content 1fr;
+  column-gap: var(--space-4);
+  row-gap: var(--space-2);
   margin: 0;
-  padding: 0 16px 12px;
-}
-
-.infoGrid dt,
-.infoGrid dd {
-  display: flex;
-  align-items: center;
-  min-height: 42px;
-  margin: 0;
-  border-top: 1px solid color-mix(in srgb, var(--color-border) 28%, transparent);
-  font-size: 13px;
-  line-height: 18px;
-}
-
-.infoGrid dt:first-of-type,
-.infoGrid dt:first-of-type + dd {
-  border-top: 0;
 }
 
 .infoGrid dt {
-  color: var(--color-text-secondary);
-  font-weight: 500;
+  margin: 0;
 }
 
 .infoGrid dd {
-  min-width: 0;
-  color: var(--color-text);
-  font-weight: 520;
-  justify-content: flex-end;
-  text-align: right;
-}
-
-.infoGrid .updateCell {
-  grid-column: 1 / -1;
-  min-height: 0;
-  padding: 0 0 10px;
-  border-top: 0;
-}
-
-.infoGrid .updateCell :global([data-layout="inline"]) {
-  width: 100%;
-  min-height: 0;
-  justify-content: flex-start;
-}
-
-.infoGrid .updateCell :global([data-testid="settings-update-unsupported"]) {
-  max-width: none;
-  text-align: left;
-  font-size: 12px;
-  line-height: 17px;
-}
-
-.mutedText {
-  color: var(--color-text-muted);
+  margin: 0;
 }
 
 .monoText {
   font-family: var(--font-mono);
-}
-
-@media (min-width: 720px) {
-  .settingsRoot {
-    padding: 24px;
-  }
 }

@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Text } from "@cypher-asi/zui";
 import { ChevronDown, ChevronRight, Loader2, Search, X } from "lucide-react";
 import { api } from "../../api/client";
-import { PanelSearch } from "../PanelSearch";
+import { PanelSearch } from "../../components/PanelSearch";
 import { useSidebarSearch } from "../../hooks/use-sidebar-search";
 import { useProjectsListStore } from "../../stores/projects-list-store";
 import { useMobileDrawerStore } from "../../stores/mobile-drawer-store";
