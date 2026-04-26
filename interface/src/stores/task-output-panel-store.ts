@@ -191,6 +191,16 @@ interface TaskOutputPanelState {
    * When `title` is provided and differs from a placeholder (e.g. the raw
    * task id left behind by `hydrateActiveTask`), the row's title is updated
    * too so rehydrated rows show a proper label once `listTasks` arrives.
+   *
+   * When `options.seedProjectId` is supplied, updates whose `taskId` is
+   * not yet in the store are *inserted* as new panel entries scoped to
+   * that project — but only when the resolved status represents an
+   * actual run (`"active"` / `"completed"` / `"failed"`). This is what
+   * lets the Run pane populate from the authoritative server task list
+   * on a fresh boot (or after the user cleared site data) without
+   * waiting for a future `task_started` event. Statuses that map to
+   * `"interrupted"` (backlog / to_do / pending / ready / blocked) are
+   * skipped so the panel doesn't fill up with rows the user never ran.
    */
   reconcileStatuses: (
     updates: Array<{
@@ -204,7 +214,17 @@ interface TaskOutputPanelState {
        * that arrived over the WS wins over a stale DB value).
        */
       executionNotes?: string | null;
+      /**
+       * Optional millisecond timestamp used as the seeded entry's
+       * `updatedAt` when this update inserts a new row (i.e. when
+       * `options.seedProjectId` is set and the row is unknown). Lets
+       * callers preserve the server's `updated_at` ordering on first
+       * seed so newly-completed tasks land at the bottom of the pane.
+       * Ignored when patching an existing row.
+       */
+      updatedAt?: number;
     }>,
+    options?: { seedProjectId?: string },
   ) => void;
   /**
    * Demote any `"active"` row for `projectId` whose `taskId` is NOT in
@@ -366,19 +386,26 @@ export const useTaskOutputPanelStore = create<TaskOutputPanelState>()((set, get)
     });
   },
 
-  reconcileStatuses: (updates) => {
+  reconcileStatuses: (updates, options) => {
     if (updates.length === 0) return;
     const updateMap = new Map(
       updates.map(
         (u) =>
           [
             u.taskId,
-            { status: u.status, title: u.title, executionNotes: u.executionNotes },
+            {
+              status: u.status,
+              title: u.title,
+              executionNotes: u.executionNotes,
+              updatedAt: u.updatedAt,
+            },
           ] as const,
       ),
     );
+    const seedProjectId = options?.seedProjectId;
     set((s) => {
       let changed = false;
+      const existingIds = new Set(s.tasks.map((t) => t.taskId));
       const nextTasks = s.tasks.map((t) => {
         const update = updateMap.get(t.taskId);
         if (!update) return t;
@@ -412,6 +439,38 @@ export const useTaskOutputPanelStore = create<TaskOutputPanelState>()((set, get)
           failureReason: nextFailureReason,
         };
       });
+      // Seed missing entries from the server task list so the Run pane
+      // populates on a cold boot (or after the user cleared site data)
+      // without waiting for a future `task_started` event. We only seed
+      // statuses that represent an actual run; `"interrupted"` (which
+      // covers backlog / to_do / pending / ready / blocked tasks the
+      // server never advanced past pending) is intentionally dropped to
+      // avoid stuffing the panel with rows the user never ran.
+      const seeded: PanelTaskEntry[] = [];
+      if (seedProjectId) {
+        for (const update of updates) {
+          if (existingIds.has(update.taskId)) continue;
+          if (update.status === "interrupted") continue;
+          const trimmedNotes =
+            typeof update.executionNotes === "string" &&
+            update.executionNotes.trim().length > 0
+              ? update.executionNotes.trim()
+              : null;
+          seeded.push({
+            taskId: update.taskId,
+            title: update.title || update.taskId,
+            status: update.status,
+            projectId: seedProjectId,
+            updatedAt: update.updatedAt ?? Date.now(),
+            failureReason:
+              update.status === "failed" && trimmedNotes ? trimmedNotes : undefined,
+          });
+        }
+      }
+      if (seeded.length > 0) {
+        seeded.sort((a, b) => a.updatedAt - b.updatedAt);
+        return { tasks: [...nextTasks, ...seeded] };
+      }
       return changed ? { tasks: nextTasks } : s;
     });
   },

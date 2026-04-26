@@ -182,6 +182,14 @@ export function useProjectLayoutData(): ProjectLayoutData {
   // panel store so rehydrated "active" rows whose runs finished while
   // the UI was closed get the correct final badge instead of blindly
   // being marked "interrupted" (or, worse, staying stuck on "active").
+  //
+  // We also pass `seedProjectId: projectId` so tasks the panel store
+  // doesn't yet know about (e.g. a cold boot with no persisted
+  // localStorage and no live loop) get seeded as fresh rows for runs
+  // the server already saw — `completed`, `failed`, or in-progress.
+  // Without this seed the Run pane shows "No tasks" forever after a
+  // browser data wipe, even though `aura-storage` has plenty of
+  // history for the project.
   const reconcilePanelStatuses = useTaskOutputPanelStore((s) => s.reconcileStatuses);
   useEffect(() => {
     if (!projectId) return;
@@ -191,6 +199,7 @@ export function useProjectLayoutData(): ProjectLayoutData {
       status: PanelTaskStatus;
       title?: string;
       executionNotes?: string | null;
+      updatedAt?: number;
     }> = [];
     for (const task of initialTasks) {
       if (!task.task_id) continue;
@@ -212,6 +221,10 @@ export function useProjectLayoutData(): ProjectLayoutData {
           next = "interrupted";
           break;
       }
+      // Preserve the server's per-task `updated_at` ordering when
+      // seeding fresh rows so the Run pane shows the most recent run
+      // last (matching the live append-on-task-started behaviour).
+      const parsedUpdatedAt = Date.parse(task.updated_at ?? "");
       // Carry `execution_notes` only for failed tasks so the sidekick
       // Run pane can display the persisted failure reason after a
       // reload, without polluting completed rows with whatever
@@ -221,9 +234,10 @@ export function useProjectLayoutData(): ProjectLayoutData {
         status: next,
         title: task.title,
         executionNotes: next === "failed" ? task.execution_notes : undefined,
+        updatedAt: Number.isFinite(parsedUpdatedAt) ? parsedUpdatedAt : undefined,
       });
     }
-    reconcilePanelStatuses(updates);
+    reconcilePanelStatuses(updates, { seedProjectId: projectId });
   }, [projectId, initialTasks, reconcilePanelStatuses]);
 
   const streamingId = useSidekickStore((s) => s.streamingAgentInstanceId);

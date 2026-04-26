@@ -513,4 +513,66 @@ describe("task-output-panel-store rehydration", () => {
       mod.useTaskOutputPanelStore.getState().tasks[0].failureReason,
     ).toBeUndefined();
   });
+
+  it("reconcileStatuses seeds missing rows from the server task list when seedProjectId is provided", async () => {
+    // Cold-boot scenario: no persisted localStorage, no `task_started`
+    // event since boot, so the panel store is empty. The reconcile
+    // pass driven by `useProjectLayoutData` once `GET /projects/:pid/tasks`
+    // resolves should populate the Run pane with rows for tasks that
+    // already had a run (`done`, `failed`, `in_progress`). Tasks the
+    // server still considers backlog/pending (mapped to `interrupted`)
+    // are dropped so the panel doesn't fill with rows the user never ran.
+    const mod = await import("./task-output-panel-store");
+    expect(mod.useTaskOutputPanelStore.getState().tasks).toEqual([]);
+
+    mod.useTaskOutputPanelStore.getState().reconcileStatuses(
+      [
+        { taskId: "t-completed", status: "completed", title: "Done one", updatedAt: 100 },
+        {
+          taskId: "t-failed",
+          status: "failed",
+          title: "Crashed",
+          executionNotes: "build step failed: missing cargo",
+          updatedAt: 200,
+        },
+        { taskId: "t-active", status: "active", title: "Running", updatedAt: 300 },
+        // Backlog-like tasks should NOT seed a panel row.
+        { taskId: "t-backlog", status: "interrupted", title: "Idea" },
+      ],
+      { seedProjectId: "p1" },
+    );
+
+    const tasks = mod.useTaskOutputPanelStore.getState().tasks;
+    const byId = Object.fromEntries(tasks.map((t) => [t.taskId, t]));
+
+    expect(tasks.map((t) => t.taskId)).toEqual([
+      "t-completed",
+      "t-failed",
+      "t-active",
+    ]);
+    expect(byId["t-backlog"]).toBeUndefined();
+    expect(byId["t-completed"].status).toBe("completed");
+    expect(byId["t-completed"].projectId).toBe("p1");
+    expect(byId["t-completed"].updatedAt).toBe(100);
+    expect(byId["t-failed"].failureReason).toBe(
+      "build step failed: missing cargo",
+    );
+    expect(byId["t-active"].status).toBe("active");
+  });
+
+  it("reconcileStatuses without seedProjectId leaves missing rows alone", async () => {
+    // Default behaviour is preserved for callers that only want to
+    // patch existing rows (e.g. a future caller that reuses the
+    // signature without opting into the seed path).
+    const mod = await import("./task-output-panel-store");
+    mod.useTaskOutputPanelStore.setState({ tasks: [] });
+
+    mod.useTaskOutputPanelStore
+      .getState()
+      .reconcileStatuses([
+        { taskId: "t-completed", status: "completed", title: "Done one" },
+      ]);
+
+    expect(mod.useTaskOutputPanelStore.getState().tasks).toEqual([]);
+  });
 });
