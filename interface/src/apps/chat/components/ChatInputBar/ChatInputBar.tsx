@@ -96,6 +96,13 @@ interface Props {
   onProjectChange?: (projectId: string) => void;
   isVisible?: boolean;
   isCentered?: boolean;
+  /**
+   * When true, hides the "/ for commands" hint in the info bar to save
+   * horizontal space. Used in floating desktop agent windows where the
+   * chat surface can be very narrow. Image / 3D mode labels are still
+   * shown since they convey active state, not just a hint.
+   */
+  compact?: boolean;
   contextUsage?: ContextUsageEntry;
   onNewSession?: () => void;
 }
@@ -157,6 +164,7 @@ export const ChatInputBar = memo(
       onProjectChange,
       isVisible = true,
       isCentered = false,
+      compact = false,
       contextUsage,
       onNewSession,
     },
@@ -680,33 +688,39 @@ export const ChatInputBar = memo(
           <span className={styles.orbitWrap}>
             <OrbitStatusIndicator project={selectedProject} />
           </span>
-          <span className={styles.infoDivider} aria-hidden="true">
-            ·
-          </span>
-          <button
-            type="button"
-            className={styles.commandsTrigger}
-            onClick={() => {
-              if (generationMode !== "chat") return;
-              onInputChange(
-                input.endsWith(" ") || input.length === 0
-                  ? input + "/"
-                  : input + " /",
-              );
-              slashStartRef.current = (
-                input.endsWith(" ") || input.length === 0 ? input : input + " "
-              ).length;
-              setSlashQuery("");
-              setSlashMenuOpen(true);
-              textareaRef.current?.focus();
-            }}
-          >
-            {generationMode === "image"
-              ? "/image mode"
-              : generationMode === "3d"
-                ? "/3d mode"
-                : "/ for commands"}
-          </button>
+          {compact && generationMode === "chat" ? null : (
+            <>
+              <span className={styles.infoDivider} aria-hidden="true">
+                ·
+              </span>
+              <button
+                type="button"
+                className={styles.commandsTrigger}
+                onClick={() => {
+                  if (generationMode !== "chat") return;
+                  onInputChange(
+                    input.endsWith(" ") || input.length === 0
+                      ? input + "/"
+                      : input + " /",
+                  );
+                  slashStartRef.current = (
+                    input.endsWith(" ") || input.length === 0
+                      ? input
+                      : input + " "
+                  ).length;
+                  setSlashQuery("");
+                  setSlashMenuOpen(true);
+                  textareaRef.current?.focus();
+                }}
+              >
+                {generationMode === "image"
+                  ? "/image mode"
+                  : generationMode === "3d"
+                    ? "/3d mode"
+                    : "/ for commands"}
+              </button>
+            </>
+          )}
           <div className={styles.projectMenuWrap} ref={projectMenuRef}>
             <button
               type="button"

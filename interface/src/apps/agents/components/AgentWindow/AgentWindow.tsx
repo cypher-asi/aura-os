@@ -42,6 +42,7 @@ const AgentChatWindowPanel = memo(function AgentChatWindowPanel({ agentId }: { a
       onProjectChange={chatProps.onProjectChange}
       contextUsage={chatProps.contextUsage}
       onNewSession={chatProps.onNewSession}
+      compact
     />
   );
 });

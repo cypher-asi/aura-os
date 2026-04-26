@@ -63,6 +63,11 @@ export interface ChatPanelProps {
   onInitialHandoffReady?: () => void;
   contextUsage?: ContextUsageEntry;
   onNewSession?: () => void;
+  /**
+   * Render the input bar in compact mode (e.g. inside floating desktop
+   * agent windows). Suppresses the "/ for commands" hint to save room.
+   */
+  compact?: boolean;
 }
 
 export function ChatPanel({
@@ -96,6 +101,7 @@ export function ChatPanel({
   onInitialHandoffReady,
   contextUsage,
   onNewSession,
+  compact = false,
 }: ChatPanelProps) {
   const {
     input,
@@ -412,6 +418,7 @@ export function ChatPanel({
           onProjectChange={onProjectChange}
           isVisible={historyResolved}
           isCentered={isThreadEmpty}
+          compact={compact}
           contextUsage={contextUsage}
           onNewSession={onNewSession}
         />
