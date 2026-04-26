@@ -11,7 +11,7 @@ import {
 import { createPortal } from "react-dom";
 import { useOutlet } from "react-router-dom";
 import { Topbar, Button } from "@cypher-asi/zui";
-import { PanelRight, Server } from "lucide-react";
+import { Server } from "lucide-react";
 import { Lane, type LaneResizeControls } from "../Lane";
 import { BottomTaskbar } from "../BottomTaskbar";
 import { OrgSelector } from "../OrgSelector";
@@ -371,17 +371,10 @@ export function DesktopShell() {
                   onClick={openHostSettings}
                 />
               )}
-              <Button
-                variant="ghost"
-                size="sm"
-                iconOnly
-                icon={<PanelRight size={16} />}
-                title="Toggle sidekick"
-                aria-label="Toggle sidekick"
-                selected={!sidekickCollapsed}
-                onClick={toggleSidekick}
+              <WindowControls
+                sidekickCollapsed={sidekickCollapsed}
+                onToggleSidekick={toggleSidekick}
               />
-              <WindowControls />
             </div>
           )}
         />
