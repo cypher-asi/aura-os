@@ -109,7 +109,7 @@ pub(crate) async fn update_org(
     let net_req = aura_os_network::UpdateOrgRequest {
         name: req.name,
         description: None,
-        avatar_url: None,
+        avatar_url: req.avatar_url.flatten(),
     };
     let net_org = client
         .update_org(&org_id_str, &jwt, &net_req)
