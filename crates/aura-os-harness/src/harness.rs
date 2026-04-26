@@ -15,6 +15,10 @@ pub struct SessionConfig {
     pub max_turns: Option<u32>,
     pub workspace: Option<String>,
     pub agent_id: Option<String>,
+    /// Template agent id for harness skill / permissions / billing lookup
+    /// when the partitioned `agent_id` is in use. See
+    /// `aura_protocol::SessionInit::template_agent_id`.
+    pub template_agent_id: Option<String>,
     /// Originating end-user id for harness-side tool defaults.
     pub user_id: Option<String>,
     /// Human-readable display name for the remote agent.
@@ -98,6 +102,7 @@ pub fn build_session_init(cfg: &SessionConfig) -> SessionInit {
         aura_session_id: cfg.aura_session_id.clone(),
         aura_org_id: cfg.aura_org_id.clone(),
         agent_id: cfg.agent_id.clone(),
+        template_agent_id: cfg.template_agent_id.clone(),
         user_id: cfg.user_id.clone().unwrap_or_default(),
         provider_config: cfg.provider_config.clone(),
         intent_classifier: cfg.intent_classifier.clone(),

@@ -177,6 +177,9 @@ impl SwarmHarness {
         if let Some(ref aid) = config.agent_id {
             agent_body["agent_id"] = serde_json::Value::String(aid.clone());
         }
+        if let Some(ref tid) = config.template_agent_id {
+            agent_body["template_agent_id"] = serde_json::Value::String(tid.clone());
+        }
         agent_body
     }
 

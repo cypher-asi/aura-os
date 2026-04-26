@@ -50,13 +50,10 @@ impl SessionBridge {
         config: SessionConfig,
         turn: SessionBridgeTurn,
     ) -> Result<SessionBridgeStarted, SessionBridgeError> {
-        // TODO(phase 1a): once `SessionConfig.template_agent_id` lands,
-        // log it here alongside `harness_agent_id` so we can prove from
-        // logs which sessions share a turn-lock vs which template they
-        // came from.
         tracing::info!(
             target: "aura_os_harness::session",
             harness_agent_id = ?config.agent_id,
+            template_agent_id = ?config.template_agent_id,
             aura_session_id = ?config.aura_session_id,
             aura_org_id = ?config.aura_org_id,
             "opening harness session",

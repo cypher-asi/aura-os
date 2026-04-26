@@ -97,6 +97,20 @@ pub struct SessionInit {
     /// skills are installed for this agent.
     #[serde(default)]
     pub agent_id: Option<String>,
+    /// Template agent id for skill / permissions / billing lookup.
+    ///
+    /// `agent_id` (above) is the partition key the harness uses for
+    /// turn-locking, derived from the AgentInstance via
+    /// `aura_os_core::harness_agent_id`. `template_agent_id` is the
+    /// stable Aura template id (the row in `agents`) so the harness
+    /// can resolve installed skills, agent-level permissions, and
+    /// billing aggregation against a single identity per template
+    /// even when multiple partitions exist.
+    ///
+    /// Optional during rollout: when `None`, the harness falls back
+    /// to `agent_id` for skill lookup (the pre-Phase-1 behavior).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template_agent_id: Option<String>,
     /// Originating end-user id for resolving and persisting tool defaults.
     pub user_id: String,
     /// Optional per-session provider override for BYOK/runtime isolation.
