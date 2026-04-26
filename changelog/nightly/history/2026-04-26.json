@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-26T18:23:43.354Z",
+  "generatedAt": "2026-04-26T18:37:43.164Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.403.1",
+  "version": "0.1.0-nightly.404.1",
   "date": "2026-04-26",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.403.1",
-  "lastIncludedSha": "4561db06922d1f0ec0c344670c9fb97cb701b74f",
-  "previousProcessedSha": "697ed9849eb3e37d9e9d51bdbad76014e17fd804",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.404.1",
+  "lastIncludedSha": "61020504157ff20b82161795439cb5014a8e8dce",
+  "previousProcessedSha": "4561db06922d1f0ec0c344670c9fb97cb701b74f",
   "commitShas": [
     "285f4bcbbfe4bcce4097f676885ce5a9de6a9c77",
     "11cc7815ab83ca128f6cf2dd5805ce40fd620891",
@@ -36,10 +36,11 @@
     "8b9fbd91027bf0aabd509cc09335f4f20426ff86",
     "9cd6bb3c57d04f1701387da8963292aeb85b3bb6",
     "697ed9849eb3e37d9e9d51bdbad76014e17fd804",
-    "4561db06922d1f0ec0c344670c9fb97cb701b74f"
+    "4561db06922d1f0ec0c344670c9fb97cb701b74f",
+    "61020504157ff20b82161795439cb5014a8e8dce"
   ],
-  "rawCommitCount": 26,
-  "filteredCommitCount": 25,
+  "rawCommitCount": 27,
+  "filteredCommitCount": 26,
   "rawCommits": [
     {
       "sha": "285f4bcbbfe4bcce4097f676885ce5a9de6a9c77",
@@ -1309,6 +1310,50 @@
         "Other",
         "Interface"
       ]
+    },
+    {
+      "sha": "61020504157ff20b82161795439cb5014a8e8dce",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-26T14:25:38-04:00",
+      "subject": "fix(changelog): improve media surface coverage",
+      "body": "",
+      "parents": [
+        "4561db06922d1f0ec0c344670c9fb97cb701b74f"
+      ],
+      "files": [
+        "interface/scripts/lib/aura-navigation-contract.mjs",
+        "interface/scripts/lib/changelog-media-planner.mjs",
+        "interface/scripts/lib/changelog-media-planner.test.mjs",
+        "interface/scripts/lib/changelog-media-seed-plan.mjs",
+        "interface/scripts/lib/changelog-media-seed-plan.test.mjs",
+        "interface/src/lib/capture-bridge.test.ts",
+        "interface/src/lib/capture-bridge.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 234,
+        "deletions": 3
+      },
+      "committedAtMs": 1777227938000,
+      "cleanSubject": "improve media surface coverage",
+      "keywords": [
+        "improve",
+        "media",
+        "surface",
+        "coverage"
+      ],
+      "fileGroups": [
+        "interface/scripts/lib",
+        "interface/src/lib"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface"
+      ]
     }
   ],
   "batchCount": 6,
@@ -1320,36 +1365,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11532468
+          "sizeBytes": 11534859
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.403.1",
+      "version": "0.1.0-nightly.404.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.403.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.404.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 34207790
+          "sizeBytes": 34212476
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.403.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.404.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.403.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.404.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 101546488
+          "sizeBytes": 101538296
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.403.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.404.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -1359,29 +1404,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.403.1",
+      "version": "0.1.0-nightly.404.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.403.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.404.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 30745582
+          "sizeBytes": 30747813
         },
         {
-          "name": "Aura_0.1.0-nightly.403.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.404.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.403.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.404.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 30553636
+          "sizeBytes": 30555325
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.403.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.404.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1391,29 +1436,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.403.1",
+      "version": "0.1.0-nightly.404.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.403.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.404.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 32293117
+          "sizeBytes": 32301253
         },
         {
-          "name": "Aura_0.1.0-nightly.403.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.404.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.403.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.404.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 32130729
+          "sizeBytes": 32139916
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.403.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.404.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1423,17 +1468,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.403.1",
+      "version": "0.1.0-nightly.404.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.403.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.404.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 23320260
+          "sizeBytes": 23326320
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.403.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.404.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -1442,26 +1487,26 @@
     }
   ],
   "rendered": {
-    "title": "Aura-managed models, sturdier streams, and a persistent desktop shell",
-    "intro": "A heavy day across the stack: chat agents gained a native image-generation tool while every model request was consolidated onto the Aura proxy, the desktop shell stopped flashing on app switches, and the server hardened auth, harness backpressure, and stream recovery. A large internal split of oversized server and Rust modules sets up cleaner ownership without changing behavior.",
+    "title": "Aura-managed models, persistent shell, and harness hardening",
+    "intro": "A dense nightly day: chat agents now generate images natively, all model traffic consolidates onto Aura-managed credits, the desktop shell stops flashing between apps, and a sweep of harness, auth, and permission fixes tightens reliability across the server and sidecar.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "7:49 PM",
         "started_at": "2026-04-26T02:49:15.000Z",
         "ended_at": "2026-04-26T03:00:25.000Z",
-        "title": "Recoverable spec drafts and richer agent stream logs",
-        "summary": "Streamed spec creation now survives model timeouts, and the server emits clearer agent stream summaries for debugging.",
+        "title": "Spec drafts survive model timeouts",
+        "summary": "Server-side observability and recovery for streamed spec authoring.",
         "items": [
           {
-            "text": "Streamed spec markdown is preserved when create_spec hits a model timeout, so partial drafts stay recoverable instead of vanishing, and agents are nudged away from oversized spec payloads.",
+            "text": "Streamed spec markdown is now preserved when create_spec is interrupted by a model timeout, so users no longer lose in-progress drafts, and agents are nudged away from oversized spec payloads.",
             "commit_shas": [
               "11cc7815ab83ca128f6cf2dd5805ce40fd620891"
             ],
             "confidence": "high"
           },
           {
-            "text": "Agent chat handlers now log stream output summaries across bootstrap, persistence, and tool dispatch paths to make production stream debugging easier.",
+            "text": "Agent stream output now logs concise summaries on the server, making it easier to trace chat and tool activity across persist, dispatch, and streaming paths.",
             "commit_shas": [
               "285f4bcbbfe4bcce4097f676885ce5a9de6a9c77"
             ],
@@ -1474,11 +1519,11 @@
         "time_label": "8:14 PM",
         "started_at": "2026-04-26T03:14:25.000Z",
         "ended_at": "2026-04-26T03:14:25.000Z",
-        "title": "Desktop fails closed on an unhealthy harness sidecar",
-        "summary": "The desktop app no longer continues with a broken local harness when its startup probe never passes.",
+        "title": "Desktop fails closed on a broken harness sidecar",
+        "summary": "The desktop app no longer launches into a half-working state when the local harness can't start.",
         "items": [
           {
-            "text": "If the managed local harness sidecar never passes its startup health probe, the desktop now kills the process and refuses to proceed instead of silently running against a broken harness.",
+            "text": "If the managed local harness sidecar never passes its startup health probe, the desktop now kills the process instead of proceeding with a broken sidecar, preventing silent failures downstream on Mac, Windows, and Linux builds.",
             "commit_shas": [
               "e2d054010b2929f6eaca48caac6fc879da6f7699"
             ],
@@ -1491,11 +1536,11 @@
         "time_label": "8:18 PM",
         "started_at": "2026-04-26T03:18:42.000Z",
         "ended_at": "2026-04-26T03:18:42.000Z",
-        "title": "Smoother task output streaming in the browser",
-        "summary": "Task output caching no longer thrashes browser storage during streaming updates.",
+        "title": "Smoother streaming task output persistence",
+        "summary": "Reduced jank when long task outputs stream into the cache.",
         "items": [
           {
-            "text": "The IndexedDB connection is reused across operations and task-output cache writes are debounced, eliminating the per-token localStorage parse-and-rewrite that made streaming feel janky.",
+            "text": "Task-output cache writes are now debounced and share a single IndexedDB connection, so streaming updates stop repeatedly parsing and rewriting localStorage and the UI feels noticeably smoother during long runs.",
             "commit_shas": [
               "bac6cf2527a9282aa0f1273c7d351459b8fcad2b"
             ],
@@ -1508,11 +1553,18 @@
         "time_label": "8:24 PM",
         "started_at": "2026-04-26T03:24:01.000Z",
         "ended_at": "2026-04-26T07:45:17.000Z",
-        "title": "Aura-proxied models, generate_image tool, and a persistent desktop shell",
-        "summary": "The biggest thread of the day: chat agents gained a native image generation tool, all model traffic was unified behind the Aura proxy, the middle panel now persists across app switches, and the server tightened auth, permissions, and harness backpressure.",
+        "title": "Aura-managed models, generate_image, and a persistent desktop shell",
+        "summary": "The largest batch of the day: a unified Aura model proxy, a native image-generation tool for chat agents, a flicker-free middle panel, and a wave of harness, permission, and reliability fixes.",
         "items": [
           {
-            "text": "Chat agents can now fulfil natural-language requests like \"create an image of a cat\" through a new provider-less generate_image workspace tool that drains the upstream router SSE and returns a single ImageBlock-shaped result; gpt-image-2 is promoted to the default in both the chat input picker and the Aura 3D Image Generation app, and image-only models are kept out of the chat model picker.",
+            "text": "All model traffic now routes through the Aura proxy: the org_integration BYOK path and direct Anthropic, OpenAI, Gemini, xAI, and OpenRouter catalog entries are gone, the chat model picker collapses to a single Aura group, and legacy org-backed agents are migrated through the agent editor.",
+            "commit_shas": [
+              "8b9fbd91027bf0aabd509cc09335f4f20426ff86"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Chat agents can now fulfill natural-language requests like \"create an image of a cat\" via a new provider-less generate_image workspace tool, with gpt-image-2 promoted to the default in both the chat picker and the Aura 3D Image Generation app. Image-only models are also kept out of the chat model picker.",
             "commit_shas": [
               "03c14491d814e1218c049605a76d5b17de4ba79f",
               "1a897b8ce8fa711e7632229ee72e7b5421acf208"
@@ -1520,21 +1572,14 @@
             "confidence": "high"
           },
           {
-            "text": "All model traffic now resolves through Aura-managed credits: the org_integration BYOK path and direct Anthropic, OpenAI, Gemini, xAI, and OpenRouter catalog entries are removed, harness provider config and billing checks are simplified, and the chat model picker collapses to a single Aura group.",
-            "commit_shas": [
-              "8b9fbd91027bf0aabd509cc09335f4f20426ff86"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "App switches no longer flash the wallpaper: the middle ResponsiveMainLane is lifted into a persistent DesktopShell host that retains DOM identity across navigations, with a bareMainPanel opt-out so the Desktop app keeps its transparent wallpaper-bleed surface.",
+            "text": "The middle root panel now stays mounted across app switches: the visible ResponsiveMainLane lives in DesktopShell so navigating between Agents, Notes, Tasks, Aura 3D, and other apps no longer flashes the wallpaper, while the Desktop app keeps its transparent wallpaper-bleed surface via a new bareMainPanel flag.",
             "commit_shas": [
               "c48f16047c9461f11398007e6c6073962fdb8a9c"
             ],
             "confidence": "high"
           },
           {
-            "text": "The Run pane is fixed on two fronts: it now seeds rows from the authoritative project task list so reloads or cleared local storage no longer hide completed or active runs, and it queries the panel store by project instead of the viewed chat's agent id so loop runs show up the moment Run is pressed.",
+            "text": "The Run pane is fixed in two ways: it now seeds rows from the authoritative project task list so reloads or cleared local storage don't hide completed, failed, or active runs, and it queries by project rather than by the viewed chat's agent so loop runs actually appear when Run is pressed.",
             "commit_shas": [
               "6c1393cad429613410b2b37709527fbf49aa002c",
               "5ba2be2db5103f5adc6002be484f79706c5ef90b"
@@ -1542,37 +1587,31 @@
             "confidence": "high"
           },
           {
-            "text": "Server hardening: stale auth fallback is capped and sensitive routes fail closed, harness WebSocket commands are bounded with explicit delivery errors and redacted frame logging, dev-loop runs now receive the same normalized agent permissions as chat sessions, and missing permission bundles default to canonical full access so harness sessions keep process invocation capabilities.",
+            "text": "Server-side hardening across auth and harness: stale auth fallback is capped, sensitive routes fail closed, harness WebSocket commands are bounded with explicit delivery errors and redacted frame logging, and floating agent windows hide the cramped \"/ for commands\" hint while keeping image/3D mode indicators.",
             "commit_shas": [
               "272818e34de377e76922d04e9501fad6f16cfa4b",
-              "2af35f3033f53d8908d160bca48d3b2f28da9b67",
-              "442fd8ae79ef347fb53963cc0e1ec23adae74fdc"
+              "b9f19d329a58cf9b88853a4babe01c4eff2ff567"
             ],
             "confidence": "high"
           },
           {
-            "text": "list_agents is promoted to a first-class agent capability so CEO and permission UI bundles can grant the harness tool explicitly, and new agent control callback endpoints expose a dedicated server surface for managing agents.",
+            "text": "Agent permissions are now consistent end to end: dev-loop runs receive the same normalized capability bundle as chat sessions, missing or empty permission bundles default to full access so harness sessions retain process invocation, list_agents is a first-class capability that can be granted explicitly, and new agent control callback endpoints are exposed.",
             "commit_shas": [
+              "2af35f3033f53d8908d160bca48d3b2f28da9b67",
+              "442fd8ae79ef347fb53963cc0e1ec23adae74fdc",
               "9fbbd1de1b95fd0c91d6176f6fa54f9f051946e5",
               "fe50f6a8c8a03bae08cf4d27a8a97d40944811a1"
             ],
             "confidence": "high"
           },
           {
-            "text": "Floating agent windows hide the \"/ for commands\" hint via a new ChatPanel compact mode, so narrow desktop agent windows no longer wrap the input info bar onto a second line.",
-            "commit_shas": [
-              "b9f19d329a58cf9b88853a4babe01c4eff2ff567"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Large structural cleanups landed under the hood: the server's app_builder, auth_guard, error, generation, router, and state modules were split into focused submodules, several oversized Rust crates (agents, core entities, network types, sessions, tasks, storage testutil) were broken up, and the interface stream handlers and server-cache stores were reorganized into smaller files and query hooks. No behavior change, but ownership is clearer and future work in these areas should land more safely.",
+            "text": "Large-scale internal restructuring landed without behavior changes: the aura-os-server app builder, auth guard, error, generation, router, and state modules were split into focused submodules; core Rust crates (agents, browser, core entities, loops, network types, sessions, storage testutil, tasks) were similarly subdivided; and the interface stream handlers, shell, and output components were reorganized, with billing and leaderboard server caches routed through queries and protocol permission types regenerated.",
             "commit_shas": [
               "7b0b4c0918a533ac6b9bdbe4d4f706603703217b",
               "1e9b8eedf3e22be3db90835c72ef4ef689411927",
               "9d3f6f37a11b633660ccab9aa931937a284bd3a8",
-              "06af9e7769c39f448d92e349136fc4139d7c497b",
               "d4e0fa3ae38d89994c05a525885edd44a549833d",
+              "06af9e7769c39f448d92e349136fc4139d7c497b",
               "fbb75204dae01158c2af9ddd0983ddaafaa2593f"
             ],
             "confidence": "medium"
@@ -1622,15 +1661,15 @@
         "time_label": "1:06 AM",
         "started_at": "2026-04-26T08:06:16.000Z",
         "ended_at": "2026-04-26T08:06:16.000Z",
-        "title": "Desktop sidecar build re-triggered after ListAgents fix",
-        "summary": "A CI nudge to rebuild the desktop sidecar against the updated harness ListAgents capability.",
+        "title": "CI rerun for the desktop sidecar after the ListAgents fix",
+        "summary": "A targeted release-infrastructure nudge to pick up the new harness capability.",
         "items": [
           {
-            "text": "Re-triggered the desktop sidecar build so the packaged harness picks up the new ListAgents capability landed earlier in the day.",
+            "text": "The desktop sidecar build was re-triggered on CI so the nightly bundle picks up the harness ListAgents capability change.",
             "commit_shas": [
               "9cd6bb3c57d04f1701387da8963292aeb85b3bb6"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           }
         ]
       },
@@ -1638,21 +1677,16 @@
         "batch_id": "entry-6",
         "time_label": "10:12 AM",
         "started_at": "2026-04-26T17:12:57.000Z",
-        "ended_at": "2026-04-26T18:10:25.000Z",
-        "title": "Changelog media planner stops duplicating proofs and respects mobile-only work",
-        "summary": "The release-time changelog media tooling got more discriminating about which commits warrant screenshots.",
+        "ended_at": "2026-04-26T18:25:38.000Z",
+        "title": "Sturdier media planning for the public changelog",
+        "summary": "The changelog screenshot pipeline gets better at picking real product surfaces and avoiding duplicates.",
         "items": [
           {
-            "text": "The changelog media planner now preserves explicit media targets and de-duplicates model-picker proofs via a new duplicate-surface skip reason, so reconciliations don't repeatedly seed the same screenshot.",
+            "text": "The changelog media planner now preserves planner targets across runs, recognizes the Debug app as a seedable capture surface, filters out mobile-only and pricing/benchmark-only commits that lack a visible model-picker proof, and de-duplicates model-picker candidates so screenshot coverage focuses on genuinely user-visible changes.",
             "commit_shas": [
-              "697ed9849eb3e37d9e9d51bdbad76014e17fd804"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Media inference seeding is hardened to skip mobile-only commits and pricing/benchmark plumbing without picker proof, recognize a debug capture surface, and route capture-bridge work through a tested helper, reducing low-signal screenshots in the published changelog.",
-            "commit_shas": [
-              "4561db06922d1f0ec0c344670c9fb97cb701b74f"
+              "697ed9849eb3e37d9e9d51bdbad76014e17fd804",
+              "4561db06922d1f0ec0c344670c9fb97cb701b74f",
+              "61020504157ff20b82161795439cb5014a8e8dce"
             ],
             "confidence": "high"
           }
@@ -1660,12 +1694,12 @@
       }
     ],
     "highlights": [
-      "generate_image tool and gpt-image-2 default",
-      "All model traffic now flows through the Aura proxy",
-      "Persistent middle panel removes app-switch flash",
-      "Harness sidecar fails closed on unhealthy startup",
-      "Run pane restored from authoritative project tasks"
+      "generate_image tool and gpt-image-2 default for chat agents",
+      "All model traffic now routes through the Aura proxy",
+      "Middle panel stays mounted across app switches",
+      "Desktop fails closed when the local harness sidecar is unhealthy",
+      "Run pane finally shows loop runs and survives reloads"
     ],
-    "raw_commit_count": 25
+    "raw_commit_count": 26
   }
 }

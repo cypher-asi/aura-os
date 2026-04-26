@@ -2,20 +2,20 @@
   {
     "date": "2026-04-26",
     "channel": "nightly",
-    "version": "0.1.0-nightly.403.1",
-    "title": "Aura-managed models, sturdier streams, and a persistent desktop shell",
-    "intro": "A heavy day across the stack: chat agents gained a native image-generation tool while every model request was consolidated onto the Aura proxy, the desktop shell stopped flashing on app switches, and the server hardened auth, harness backpressure, and stream recovery. A large internal split of oversized server and Rust modules sets up cleaner ownership without changing behavior.",
+    "version": "0.1.0-nightly.404.1",
+    "title": "Aura-managed models, persistent shell, and harness hardening",
+    "intro": "A dense nightly day: chat agents now generate images natively, all model traffic consolidates onto Aura-managed credits, the desktop shell stops flashing between apps, and a sweep of harness, auth, and permission fixes tightens reliability across the server and sidecar.",
     "entryCount": 6,
     "highlights": [
-      "generate_image tool and gpt-image-2 default",
-      "All model traffic now flows through the Aura proxy",
-      "Persistent middle panel removes app-switch flash",
-      "Harness sidecar fails closed on unhealthy startup",
-      "Run pane restored from authoritative project tasks"
+      "generate_image tool and gpt-image-2 default for chat agents",
+      "All model traffic now routes through the Aura proxy",
+      "Middle panel stays mounted across app switches",
+      "Desktop fails closed when the local harness sidecar is unhealthy",
+      "Run pane finally shows loop runs and survives reloads"
     ],
-    "rawCommitCount": 26,
-    "generatedAt": "2026-04-26T18:23:43.354Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.403.1",
+    "rawCommitCount": 27,
+    "generatedAt": "2026-04-26T18:37:43.164Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.404.1",
     "path": "history/2026-04-26.json"
   },
   {
