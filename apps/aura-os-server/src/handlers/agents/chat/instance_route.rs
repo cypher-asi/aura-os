@@ -7,7 +7,7 @@ use aura_os_core::{AgentInstanceId, AgentPermissions, OrgId, ProjectId};
 use aura_os_harness::SessionConfig;
 use axum::extract::{Path, State};
 use axum::Json;
-use tracing::{info, warn};
+use tracing::info;
 
 use crate::dto::SendChatRequest;
 use crate::error::{map_storage_error, ApiError, ApiResult};
@@ -15,6 +15,7 @@ use crate::handlers::billing::require_credits_for_auth_source;
 use crate::handlers::projects_helpers::resolve_agent_instance_workspace_path;
 use crate::state::{AppState, AuthJwt};
 
+use super::busy::reject_if_partition_busy;
 use super::compaction::{
     append_project_state_to_system_prompt, load_project_state_snapshot,
     session_events_to_conversation_history,
@@ -46,7 +47,12 @@ pub(crate) async fn send_event_stream(
     // through to the harness — preserve the original chat.rs behavior.
     let _ = body.commands;
 
-    reject_if_automaton_running(&state, &project_id, &agent_instance_id).await?;
+    reject_if_partition_busy(
+        &state,
+        &instance.agent_id,
+        Some((&project_id, &agent_instance_id)),
+    )
+    .await?;
 
     let partition_agent_id =
         aura_os_core::harness_agent_id(&instance.agent_id, Some(&agent_instance_id));
@@ -138,42 +144,6 @@ pub(crate) async fn send_event_stream(
         },
     )
     .await
-}
-
-/// Reject new chat turns when this agent is already running an
-/// automation loop upstream. The harness enforces one in-flight
-/// turn per `agent_id` (shared by `/v1/agents/{id}/sessions` and
-/// `/v1/agents/{id}/automaton/start`), so a `UserMessage` posted
-/// while the loop is active surfaces as the raw upstream error
-/// "A turn is currently in progress; send cancel first" with no
-/// way for the UI to cancel it. Catching the conflict here lets
-/// the frontend render a targeted "stop automation to chat"
-/// affordance instead.
-async fn reject_if_automaton_running(
-    state: &AppState,
-    project_id: &ProjectId,
-    agent_instance_id: &AgentInstanceId,
-) -> ApiResult<()> {
-    let reg = state.automaton_registry.lock().await;
-    let Some(entry) = reg.get(&(*project_id, *agent_instance_id)) else {
-        return Ok(());
-    };
-    let live = entry.alive.load(std::sync::atomic::Ordering::Acquire);
-    if !live || entry.paused {
-        return Ok(());
-    }
-    let automaton_id = entry.automaton_id.clone();
-    drop(reg);
-    warn!(
-        %project_id,
-        %agent_instance_id,
-        %automaton_id,
-        "Rejecting chat turn: agent is running an automation loop",
-    );
-    Err(ApiError::agent_busy(
-        "Agent is currently running an automation task. Stop the loop to chat.",
-        Some(automaton_id),
-    ))
 }
 
 async fn load_history_and_project_state(

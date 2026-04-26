@@ -11,14 +11,32 @@ use crate::error::ApiError;
 
 /// Wire-level error code emitted by aura-harness when a new
 /// `UserMessage` arrives on an agent that already has a turn in flight.
-#[allow(dead_code)] // wired up by callers in Phase 1 of robust-concurrent-agent-infra
 const HARNESS_TURN_IN_PROGRESS_CODE: &str = "turn_in_progress";
 
 /// Substring of the raw harness error message ("A turn is currently
 /// in progress; send cancel first") used as a fallback when the
 /// `code` field is missing or stale.
-#[allow(dead_code)] // wired up by callers in Phase 1 of robust-concurrent-agent-infra
 const HARNESS_TURN_IN_PROGRESS_MESSAGE_FRAGMENT: &str = "turn is currently in progress";
+
+/// Single source of truth for the user-visible "agent is busy with
+/// another turn" wording. Used by both the structured API-error
+/// remap (`remap_harness_error_to_api`) and the in-stream SSE remap
+/// (`remap_harness_error_to_sse`) so the frontend sees one
+/// consistent message regardless of which path surfaced the
+/// conflict.
+const AGENT_BUSY_CONCURRENT_TURN_MESSAGE: &str =
+    "Agent is currently running another turn. Please wait.";
+
+/// True when this `ErrorMsg` matches the harness "turn already in
+/// progress" condition — either by the canonical
+/// `turn_in_progress` code or by the legacy raw message string.
+fn is_turn_in_progress(err: &ErrorMsg) -> bool {
+    err.code == HARNESS_TURN_IN_PROGRESS_CODE
+        || err
+            .message
+            .to_ascii_lowercase()
+            .contains(HARNESS_TURN_IN_PROGRESS_MESSAGE_FRAGMENT)
+}
 
 /// Recognize a harness `Error` event that means "this agent already
 /// has a turn in flight" and remap it to the structured
@@ -37,18 +55,34 @@ const HARNESS_TURN_IN_PROGRESS_MESSAGE_FRAGMENT: &str = "turn is currently in pr
 /// onto a structured wire shape we can match here.
 #[allow(dead_code)] // wired up by callers in Phase 1 of robust-concurrent-agent-infra
 pub(crate) fn remap_harness_error_to_api(err: &ErrorMsg) -> Option<(StatusCode, Json<ApiError>)> {
-    if err.code == HARNESS_TURN_IN_PROGRESS_CODE
-        || err
-            .message
-            .to_ascii_lowercase()
-            .contains(HARNESS_TURN_IN_PROGRESS_MESSAGE_FRAGMENT)
-    {
-        return Some(ApiError::agent_busy(
-            "Agent is currently running another turn. Please wait.",
-            None,
-        ));
+    if is_turn_in_progress(err) {
+        return Some(ApiError::agent_busy(AGENT_BUSY_CONCURRENT_TURN_MESSAGE, None));
     }
     None
+}
+
+/// In-stream variant of [`remap_harness_error_to_api`]. Returns a
+/// cleaned [`ErrorMsg`] with the canonical `agent_busy` code and
+/// the same user-visible wording the structured API path uses,
+/// preserving the upstream `recoverable` flag. Returns `None` for
+/// any other error so callers pass the original event through
+/// unchanged.
+///
+/// Used by the chat SSE forwarder to swap out a mid-stream
+/// `HarnessOutbound::Error { code: "turn_in_progress", … }` (which
+/// happens when a `UserMessage` races an in-flight turn on the
+/// same partition — e.g. fast double-click on send) for a
+/// structured `agent_busy` error event before closing the stream,
+/// so the UI never sees the raw harness wording.
+pub(super) fn remap_harness_error_to_sse(err: &ErrorMsg) -> Option<ErrorMsg> {
+    if !is_turn_in_progress(err) {
+        return None;
+    }
+    Some(ErrorMsg {
+        code: "agent_busy".to_string(),
+        message: AGENT_BUSY_CONCURRENT_TURN_MESSAGE.to_string(),
+        recoverable: err.recoverable,
+    })
 }
 
 pub(super) fn map_session_bridge_start_error(
@@ -153,5 +187,35 @@ mod tests {
     fn remap_harness_error_to_api_passes_through_unrelated_errors() {
         let result = remap_harness_error_to_api(&err("something_else", "boom"));
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn remap_harness_error_to_sse_matches_canonical_code() {
+        let mut original = err("turn_in_progress", "anything");
+        original.recoverable = true;
+        let mapped = remap_harness_error_to_sse(&original)
+            .expect("turn_in_progress code should remap to agent_busy");
+        assert_eq!(mapped.code, "agent_busy");
+        assert_eq!(mapped.message, AGENT_BUSY_CONCURRENT_TURN_MESSAGE);
+        assert!(
+            mapped.recoverable,
+            "recoverable flag from upstream must be preserved"
+        );
+    }
+
+    #[test]
+    fn remap_harness_error_to_sse_falls_back_to_message_string() {
+        let mapped = remap_harness_error_to_sse(&err(
+            "internal_error",
+            "A turn is currently in progress; send cancel first",
+        ))
+        .expect("legacy raw message should remap to agent_busy");
+        assert_eq!(mapped.code, "agent_busy");
+        assert_eq!(mapped.message, AGENT_BUSY_CONCURRENT_TURN_MESSAGE);
+    }
+
+    #[test]
+    fn remap_harness_error_to_sse_passes_through_unrelated_errors() {
+        assert!(remap_harness_error_to_sse(&err("something_else", "boom")).is_none());
     }
 }

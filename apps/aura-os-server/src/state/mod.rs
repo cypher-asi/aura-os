@@ -14,7 +14,9 @@ use tokio::sync::{broadcast, Mutex};
 use aura_os_agents::{AgentInstanceService, AgentService};
 use aura_os_auth::AuthService;
 use aura_os_billing::BillingClient;
-use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, SessionId, TaskId, ZeroAuthSession};
+use aura_os_core::{
+    AgentId, AgentInstanceId, HarnessMode, ProjectId, SessionId, TaskId, ZeroAuthSession,
+};
 use aura_os_events::EventHub;
 use aura_os_harness::{AutomatonClient, HarnessCommandSender, HarnessLink, HarnessOutbound};
 use aura_os_integrations::IntegrationsClient;
@@ -58,6 +60,16 @@ mod tests;
 pub struct ActiveAutomaton {
     pub automaton_id: String,
     pub project_id: ProjectId,
+    /// Stable Aura agent template id this automaton was started under.
+    ///
+    /// Populated at every `automaton_registry.insert(...)` site
+    /// (`start_loop`, `run_single_task`) from the `AgentInstance`'s
+    /// parent template. Lets the chat-vs-automation conflict guard in
+    /// `chat::busy::reject_if_partition_busy` answer "is any
+    /// automaton attached to this template's partition?" in O(N)
+    /// without doing async `agent_instance_service.get_instance`
+    /// lookups while the registry mutex is held.
+    pub template_agent_id: AgentId,
     pub harness_base_url: String,
     pub paused: bool,
     /// Set to `true` while the `forward_automaton_events` task for this

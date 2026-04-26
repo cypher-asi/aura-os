@@ -174,6 +174,7 @@ pub(crate) async fn start_loop(
         ActiveAutomaton {
             automaton_id: started.automaton_id.clone(),
             project_id,
+            template_agent_id: ctx.agent_id,
             harness_base_url: ctx.client.base_url().to_string(),
             paused: false,
             alive,
@@ -379,6 +380,7 @@ pub(crate) async fn run_single_task(
         ActiveAutomaton {
             automaton_id: result.automaton_id,
             project_id,
+            template_agent_id: ctx.agent_id,
             harness_base_url: ctx.client.base_url().to_string(),
             paused: false,
             alive,

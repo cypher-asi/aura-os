@@ -5,6 +5,7 @@
 //! rest of the server depends on.
 
 mod agent_route;
+mod busy;
 mod compaction;
 mod constants;
 mod discovery;

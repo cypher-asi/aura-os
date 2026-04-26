@@ -50,6 +50,7 @@ async fn loop_stop_clears_registry_even_when_harness_unreachable() {
             ActiveAutomaton {
                 automaton_id: "auto-1".into(),
                 project_id: pid,
+                template_agent_id: AgentId::new(),
                 harness_base_url: unreachable_harness,
                 paused: false,
                 alive: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),

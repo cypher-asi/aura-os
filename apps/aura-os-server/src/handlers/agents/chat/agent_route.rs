@@ -12,6 +12,7 @@ use crate::dto::SendChatRequest;
 use crate::error::{ApiError, ApiResult};
 use crate::state::{AppState, AuthJwt};
 
+use super::busy::reject_if_partition_busy;
 use super::compaction::{
     append_project_state_to_system_prompt, load_project_state_snapshot,
     session_events_to_conversation_history,
@@ -52,6 +53,15 @@ pub(crate) async fn send_agent_event_stream(
             agent.adapter_type
         )));
     }
+
+    // Block the bare-agent chat route when *any* AgentInstance of
+    // this template is currently running an automaton. The legacy
+    // route has no project / instance scope of its own, so it
+    // collides with the harness turn-lock as soon as any partition
+    // for this template is occupied. Surfacing `agent_busy` here
+    // matches the instance-route guard and keeps the raw upstream
+    // "turn in progress" wording from leaking to the UI.
+    reject_if_partition_busy(&state, &agent_id, None).await?;
 
     let force_new = body.new_session.unwrap_or(false);
     let partition_agent_id = aura_os_core::harness_agent_id(&agent_id, None);

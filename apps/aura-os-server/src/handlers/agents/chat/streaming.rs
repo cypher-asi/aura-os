@@ -20,7 +20,9 @@ use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::chat::types::sse_response_headers;
 use crate::state::{AppState, ChatSession};
 
-use super::errors::{map_session_bridge_error, map_session_bridge_start_error};
+use super::errors::{
+    map_session_bridge_error, map_session_bridge_start_error, remap_harness_error_to_sse,
+};
 use super::event_bus::publish_user_message_event;
 use super::persist::{persist_user_message, ChatPersistCtx};
 use super::persist_task::spawn_chat_persist_task;
@@ -40,7 +42,20 @@ pub(crate) fn harness_broadcast_to_sse(
                     evt,
                     HarnessOutbound::AssistantMessageEnd(_) | HarnessOutbound::Error(_)
                 );
-                let event = super::super::super::sse::harness_event_to_sse(&evt);
+                // Intercept the harness "turn already in progress"
+                // error mid-stream and surface it as the structured
+                // `agent_busy` SSE event so the UI never has to
+                // string-match the raw upstream wording. The error
+                // still closes the SSE stream — the `should_close`
+                // flag above already covers `Error(_)` regardless of
+                // remap outcome.
+                let normalized = match &evt {
+                    HarnessOutbound::Error(err) => remap_harness_error_to_sse(err)
+                        .map(HarnessOutbound::Error)
+                        .unwrap_or(evt),
+                    _ => evt,
+                };
+                let event = super::super::super::sse::harness_event_to_sse(&normalized);
                 Some((event, (rx, should_close)))
             }
             // The harness broadcast channel evicted `n` events before we
