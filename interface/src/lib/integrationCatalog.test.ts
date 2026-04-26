@@ -10,9 +10,9 @@ describe("integrationCatalog auth labels", () => {
     vi.unstubAllEnvs();
   });
 
-  it("uses provider-specific API labels for the aura harness adapter", () => {
-    expect(getConnectionAuthLabel("aura_harness")).toBe("Anthropic API");
-    expect(getConnectionAuthHint("aura_harness")).toContain("Anthropic");
+  it("uses generic workspace connection labels for the aura harness adapter", () => {
+    expect(getConnectionAuthLabel("aura_harness")).toBe("Workspace Connection");
+    expect(getConnectionAuthHint("aura_harness")).toContain("compatible workspace connection");
   });
 
   it("falls back to workspace connection wording for unknown adapters", () => {
@@ -48,7 +48,7 @@ describe("integrationCatalog auth labels", () => {
     const connectionIds = new Set(connections?.providers.map((provider) => provider.id));
 
     expect(connectionIds.has("aura_proxy")).toBe(false);
-    expect(connectionIds.has("anthropic")).toBe(true);
+    expect(connectionIds.has("anthropic")).toBe(false);
     expect(getIntegrationDefinition("aura_proxy")?.kind).toBe("workspace_connection");
   });
 
@@ -59,6 +59,6 @@ describe("integrationCatalog auth labels", () => {
     const connectionIds = new Set(connections?.providers.map((provider) => provider.id));
 
     expect(connectionIds.has("aura_proxy")).toBe(false);
-    expect(connectionIds.has("anthropic")).toBe(true);
+    expect(connectionIds.has("anthropic")).toBe(false);
   });
 });

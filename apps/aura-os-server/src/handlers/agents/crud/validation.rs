@@ -80,7 +80,7 @@ fn ensure_supported_adapter(adapter_type: Option<String>) -> ApiResult<String> {
 
 fn ensure_supported_auth_source(adapter_type: &str, auth_source: &str) -> ApiResult<()> {
     match auth_source {
-        "aura_managed" | "org_integration" => Ok(()),
+        "aura_managed" => Ok(()),
         other => Err(ApiError::bad_request(format!(
             "adapter `{adapter_type}` does not support auth source `{other}`"
         ))),
@@ -94,16 +94,10 @@ fn resolve_integration_id(
     if auth_source != "org_integration" {
         return Ok(None);
     }
-    let trimmed = integration_id
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(str::to_owned);
-    trimmed
-        .ok_or_else(|| {
-            ApiError::bad_request("auth source `org_integration` requires an attached integration")
-        })
-        .map(Some)
+    let _ = integration_id;
+    Err(ApiError::bad_request(
+        "auth source `org_integration` is no longer supported; model requests route through Aura",
+    ))
 }
 
 #[cfg(test)]
@@ -130,17 +124,16 @@ mod tests {
     }
 
     #[test]
-    fn aura_harness_accepts_org_integration_auth() {
-        let config = build_runtime_config(RuntimeConfigInputs {
+    fn aura_harness_rejects_org_integration_auth() {
+        let error = build_runtime_config(RuntimeConfigInputs {
             auth_source: Some("org_integration".to_string()),
             integration_id: Some("int-anthropic".to_string()),
             default_model: Some("claude-opus-4-6".to_string()),
             ..aura_harness_inputs()
         })
-        .expect("aura_harness org integration should be allowed");
+        .expect_err("aura_harness org integration should be rejected");
 
-        assert_eq!(config.auth_source, "org_integration");
-        assert_eq!(config.integration_id.as_deref(), Some("int-anthropic"));
+        assert!(format!("{error:?}").contains("does not support auth source `org_integration`"));
     }
 
     #[test]
@@ -155,14 +148,14 @@ mod tests {
     }
 
     #[test]
-    fn org_integration_requires_integration_id() {
+    fn org_integration_is_rejected() {
         let error = build_runtime_config(RuntimeConfigInputs {
             auth_source: Some("org_integration".to_string()),
             ..aura_harness_inputs()
         })
-        .expect_err("missing integration should fail");
+        .expect_err("org integration auth should fail");
 
-        assert!(format!("{error:?}").contains("requires an attached integration"));
+        assert!(format!("{error:?}").contains("does not support auth source `org_integration`"));
     }
 
     #[test]

@@ -8,9 +8,7 @@ export interface ModelOption {
 }
 
 export type ModelProviderGroup =
-  | "openai"
-  | "anthropic"
-  | "open_source"
+  | "aura"
   | "image"
   | "other";
 
@@ -303,15 +301,7 @@ export function modelLabel(
 
 export function modelProviderGroup(model: ModelOption): ModelProviderGroup {
   if (model.mode === "image") return "image";
-  if (model.id.startsWith("aura-gpt-")) return "openai";
-  if (model.id.startsWith("aura-claude-")) return "anthropic";
-  if (
-    model.id.startsWith("aura-kimi-") ||
-    model.id.startsWith("aura-deepseek-") ||
-    model.id.startsWith("aura-oss-")
-  ) {
-    return "open_source";
-  }
+  if (model.id.startsWith("aura-")) return "aura";
   return "other";
 }
 
@@ -327,11 +317,9 @@ function versionWeight(label: string): number {
 
 export function sortModelsForMenu(models: ModelOption[]): ModelOption[] {
   const providerOrder: Record<ModelProviderGroup, number> = {
-    openai: 0,
-    anthropic: 1,
-    open_source: 2,
-    image: 3,
-    other: 4,
+    aura: 0,
+    image: 1,
+    other: 2,
   };
 
   return [...models].sort((left, right) => {

@@ -28,7 +28,7 @@ use super::streaming::{open_harness_chat_stream, OpenChatStreamArgs};
 use super::tools::{build_session_installed_tools, InstalledToolsCtx};
 use super::types::SseResponse;
 
-use super::super::runtime::{build_harness_provider_config, effective_model, resolve_integration};
+use super::super::runtime::{build_harness_provider_config, effective_model};
 use crate::handlers::billing::require_credits_for_auth_source;
 
 pub(crate) async fn send_agent_event_stream(
@@ -70,8 +70,7 @@ pub(crate) async fn send_agent_event_stream(
         load_project_state_for_agent(&state, &body, &persist_ctx, &jwt, force_new, live_session)
             .await;
 
-    let integration = resolve_integration(&state, &agent, &jwt).await?;
-    let model = effective_model(&agent, integration.as_ref(), body.model.clone());
+    let model = effective_model(&agent, body.model.clone());
     let org_integrations = fetch_org_integrations(&state, agent.org_id.as_ref(), &jwt).await;
 
     let effective_project_id = resolve_effective_project_id(&body, &persist_ctx);
@@ -108,7 +107,7 @@ pub(crate) async fn send_agent_event_stream(
         aura_session_id: persist_ctx.as_ref().map(|c| c.session_id.clone()),
         provider_config: build_harness_provider_config(
             &agent.auth_source,
-            integration.as_ref(),
+            None,
             model.as_deref(),
         )?,
         installed_tools,

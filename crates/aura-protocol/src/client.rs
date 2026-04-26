@@ -151,23 +151,23 @@ pub struct IntentClassifierRule {
     pub keywords: Vec<String>,
 }
 
-/// Optional per-session provider override used for BYOK-style runtime resolution.
+/// Optional per-session routing override used by Aura proxy runtime resolution.
 #[derive(Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "typescript", derive(TS), ts(export))]
 pub struct SessionProviderConfig {
-    /// Provider identifier (currently `anthropic`).
+    /// Provider identifier for the Aura-managed proxy.
     pub provider: String,
-    /// Optional routing mode (`direct` or `proxy`).
+    /// Optional routing mode (`proxy`).
     #[serde(default)]
     pub routing_mode: Option<String>,
-    /// Optional upstream provider family hint for managed proxy routing.
-    /// When set, harness proxy capability decisions prefer this over model-name heuristics.
+    /// Deprecated upstream provider family hint. Aura OS leaves provider
+    /// selection to the harness/proxy layer.
     #[serde(default)]
     pub upstream_provider_family: Option<String>,
-    /// Optional API key for direct provider access.
+    /// Deprecated direct-provider API key. Aura OS does not send provider keys.
     #[serde(default)]
     pub api_key: Option<String>,
-    /// Optional explicit base URL override.
+    /// Deprecated explicit base URL override.
     #[serde(default)]
     pub base_url: Option<String>,
     /// Optional provider default model for this session.

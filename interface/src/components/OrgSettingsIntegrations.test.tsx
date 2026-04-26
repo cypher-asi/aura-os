@@ -20,7 +20,7 @@ describe("OrgSettingsIntegrations", () => {
     vi.unstubAllEnvs();
   });
 
-  it("switches create form labels when a tool integration is selected", async () => {
+  it("shows tool integration labels when a tool integration is selected", async () => {
     vi.stubEnv("VITE_ENABLE_SETTINGS_PROVIDER_SELECTION", "true");
     const user = userEvent.setup();
 
@@ -36,13 +36,6 @@ describe("OrgSettingsIntegrations", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Add Integration" }));
-    await user.click(screen.getByRole("button", { name: "Anthropic" }));
-    await user.click(screen.getByText("Advanced"));
-
-    expect(screen.getByLabelText("New preferred model")).toBeInTheDocument();
-    expect(screen.getByLabelText("New Anthropic API Key")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Change" }));
     await user.click(screen.getByRole("button", { name: "GitHub" }));
 
     expect(screen.queryByLabelText("New preferred model")).not.toBeInTheDocument();

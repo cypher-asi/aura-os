@@ -244,7 +244,7 @@ export const useAura3DStore = create<Aura3DState>()((set, get) => ({
         originalUrl: image.originalUrl,
         prompt: image.prompt,
         model: image.model,
-        provider: "openai",
+        provider: "aura_proxy",
         meta: image.meta,
       });
       // Update the image with the artifact ID
@@ -270,7 +270,7 @@ export const useAura3DStore = create<Aura3DState>()((set, get) => ({
         name: "3D Model",
         assetUrl: model.glbUrl,
         parentId: parentArtifactId,
-        provider: "tripo",
+        provider: "aura_proxy",
         model: "tripo-v2",
         meta: model.polyCount != null ? { polyCount: model.polyCount } : undefined,
       });

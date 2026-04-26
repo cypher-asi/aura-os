@@ -41,17 +41,6 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     runtimeCompatibleAdapters: [],
   },
   {
-    id: "anthropic",
-    label: "Anthropic",
-    kind: "workspace_connection",
-    description: "Workspace-level Anthropic credentials so Aura can call Claude on the workspace's behalf.",
-    secretLabel: "Anthropic API Key",
-    secretPlaceholder: "Paste the Anthropic API key",
-    authHint: "Use a shared Anthropic key when the workspace should provide Claude access.",
-    supportsDefaultModel: true,
-    runtimeCompatibleAdapters: ["aura_harness"],
-  },
-  {
     id: "github",
     label: "GitHub",
     kind: "workspace_integration",
@@ -357,7 +346,7 @@ export function integrationSections(): Array<{
     {
       id: "workspace_connection",
       title: "Connections",
-      description: "Shared model providers for agent runtimes.",
+      description: "Shared Aura runtime connections.",
       providers: workspaceConnectionProviders,
     },
     {

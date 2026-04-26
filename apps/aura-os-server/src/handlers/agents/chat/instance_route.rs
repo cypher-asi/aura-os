@@ -25,7 +25,7 @@ use super::streaming::{open_harness_chat_stream, OpenChatStreamArgs};
 use super::tools::{build_session_installed_tools, InstalledToolsCtx};
 use super::types::SseResponse;
 
-use super::super::runtime::{build_harness_provider_config, resolve_integration_ref};
+use super::super::runtime::build_harness_provider_config;
 
 pub(crate) async fn send_event_stream(
     State(state): State<AppState>,
@@ -79,15 +79,7 @@ pub(crate) async fn send_event_stream(
     let system_prompt =
         append_project_state_to_system_prompt(&system_prompt, project_state_snapshot.as_deref());
 
-    let integration = resolve_integration_ref(
-        &state,
-        instance.org_id,
-        &instance.auth_source,
-        instance.integration_id.as_deref(),
-        &jwt,
-    )
-    .await?;
-    let model = pick_instance_model(&body, &instance, integration.as_ref());
+    let model = pick_instance_model(&body, &instance);
     let org_integrations = fetch_org_integrations(&state, instance.org_id.as_ref(), &jwt).await;
     let normalized_instance_perms = normalize_instance_perms(&state, &instance, &pid_str).await;
 
@@ -120,7 +112,7 @@ pub(crate) async fn send_event_stream(
         aura_session_id: persist_ctx.as_ref().map(|c| c.session_id.clone()),
         provider_config: build_harness_provider_config(
             &instance.auth_source,
-            integration.as_ref(),
+            None,
             model.as_deref(),
         )?,
         installed_tools,
@@ -217,7 +209,6 @@ async fn load_history_and_project_state(
 fn pick_instance_model(
     body: &SendChatRequest,
     instance: &aura_os_core::AgentInstance,
-    integration: Option<&crate::handlers::agents::runtime::ResolvedIntegration>,
 ) -> Option<String> {
     body.model
         .clone()
@@ -226,11 +217,6 @@ fn pick_instance_model(
             instance
                 .default_model
                 .clone()
-                .filter(|value| !value.trim().is_empty())
-        })
-        .or_else(|| {
-            integration
-                .and_then(|resolved| resolved.metadata.default_model.clone())
                 .filter(|value| !value.trim().is_empty())
         })
 }

@@ -163,7 +163,7 @@ describe("useAgentEditorForm", () => {
     expect(result.current.showAdvancedRuntime).toBe(false);
   });
 
-  it("preserves a legacy org-backed agent while editing", async () => {
+  it("migrates a legacy org-backed agent to Aura-managed runtime while editing", async () => {
     mockOrgState.integrations = [
       {
         integration_id: "int-anthropic",
@@ -188,8 +188,8 @@ describe("useAgentEditorForm", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.authSource).toBe("org_integration");
-      expect(result.current.integrationId).toBe("int-anthropic");
+      expect(result.current.authSource).toBe("aura_managed");
+      expect(result.current.integrationId).toBe("");
       expect(result.current.restrictCreateToAuraRuntimes).toBe(false);
     });
   });

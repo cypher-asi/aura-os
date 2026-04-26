@@ -190,7 +190,7 @@ describe("ChatInputBar", () => {
     );
   });
 
-  it("shows all models grouped by provider after expanding", async () => {
+  it("shows all chat models grouped under Aura after expanding", async () => {
     const user = userEvent.setup();
     mockSelectedModel = "aura-gpt-5-4";
     render(<ChatInputBar {...makeProps()} />);
@@ -198,9 +198,10 @@ describe("ChatInputBar", () => {
     await user.click(screen.getAllByText("GPT-5.4")[0]);
     await user.click(screen.getAllByText("Show all models")[0]);
 
-    expect(screen.getAllByText("OpenAI")[0]).toBeInTheDocument();
-    expect(screen.getAllByText("Anthropic")[0]).toBeInTheDocument();
-    expect(screen.getAllByText("Open source")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("Aura")[0]).toBeInTheDocument();
+    expect(screen.queryByText("OpenAI")).not.toBeInTheDocument();
+    expect(screen.queryByText("Anthropic")).not.toBeInTheDocument();
+    expect(screen.queryByText("Open source")).not.toBeInTheDocument();
     expect(screen.getAllByText("GPT-OSS 120B")[0]).toBeInTheDocument();
   });
 

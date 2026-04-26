@@ -7,9 +7,6 @@ import { isSuperAgent as isSuperAgentByPerms } from "../../../../shared/types/pe
 import { useModalInitialFocus } from "../../../../hooks/use-modal-initial-focus";
 import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
 import { getAgentNameValidationMessage } from "../../../../lib/agentNameValidation";
-import {
-  runtimeAuthProvidersForAdapter,
-} from "../../../../lib/integrationCatalog";
 import { useOrgStore } from "../../../../stores/org-store";
 import {
   DEFAULT_LISTING_STATUS,
@@ -78,7 +75,7 @@ interface AgentEditorFormResult {
 }
 
 function defaultAuthSource(_adapterType: string, integrationId?: string | null): string {
-  if (integrationId?.trim()) return "org_integration";
+  void integrationId;
   return "aura_managed";
 }
 
@@ -157,8 +154,8 @@ export function useAgentEditorForm(
       setPersonality(agent.personality); setSystemPrompt(agent.system_prompt);
       setIcon(agent.icon ?? "");
       setEnvironment(agent.environment ?? (agent.machine_type === "remote" ? "swarm_microvm" : "local_host"));
-      setAuthSource(agent.auth_source ?? defaultAuthSource("aura_harness", agent.integration_id));
-      setIntegrationId(agent.integration_id ?? "");
+      setAuthSource(defaultAuthSource("aura_harness", agent.integration_id));
+      setIntegrationId("");
       setDefaultModel(agent.default_model ?? "");
       setLocalWorkspacePath(agent.local_workspace_path ?? "");
       setInitialLocalWorkspacePath(agent.local_workspace_path ?? "");
@@ -166,8 +163,8 @@ export function useAgentEditorForm(
       setShowAdvancedRuntime(
         !isDefaultCreateRuntime(
           agent.environment ?? (agent.machine_type === "remote" ? "swarm_microvm" : "local_host"),
-          agent.auth_source ?? defaultAuthSource("aura_harness", agent.integration_id),
-          agent.integration_id ?? "",
+          defaultAuthSource("aura_harness", agent.integration_id),
+          "",
           agent.default_model ?? "",
           restrictCreateToAuraRuntimes,
         ),
@@ -265,33 +262,19 @@ export function useAgentEditorForm(
       return;
     }
 
-    // Only `aura_managed` and `org_integration` are supported now that the
-    // external CLI adapters have been removed.
-    const allowedAuthSources = ["aura_managed", "org_integration"] as const;
-    if (!allowedAuthSources.includes(authSource as (typeof allowedAuthSources)[number])) {
+    if (authSource !== "aura_managed") {
       setAuthSource("aura_managed");
     }
   }, [authSource, restrictCreateToAuraRuntimes]);
 
   useEffect(() => {
-    if (restrictCreateToAuraRuntimes || authSource !== "org_integration") {
+    if (authSource !== "aura_managed") {
       return;
     }
-
-    const requiredProviders = new Set(runtimeAuthProvidersForAdapter(adapterType));
-    // Adapter has no runtime-compatible providers in the catalog (e.g. legacy
-    // `aura_harness` hosted agents pointing at an Anthropic org integration).
-    // We must not clobber the operator's saved integration here just because
-    // the current catalog no longer advertises a runtime route for it.
-    if (requiredProviders.size === 0) {
-      return;
+    if (integrationId) {
+      setIntegrationId("");
     }
-    const selected = integrations.find((integration) => integration.integration_id === integrationId);
-    if (!selected || !requiredProviders.has(selected.provider)) {
-      const fallback = integrations.find((integration) => requiredProviders.has(integration.provider));
-      setIntegrationId(fallback?.integration_id ?? "");
-    }
-  }, [adapterType, authSource, integrationId, integrations, restrictCreateToAuraRuntimes]);
+  }, [authSource, integrationId]);
 
   const handleClose = useCallback(() => {
     if (rawImageSrc) URL.revokeObjectURL(rawImageSrc);
@@ -425,7 +408,7 @@ export function useAgentEditorForm(
         adapter_type: adapterType,
         environment,
         auth_source: authSource,
-        integration_id: authSource === "org_integration" ? (integrationId || null) : null,
+        integration_id: null,
         default_model: defaultModel.trim() || null,
         ...(tagsPayload !== undefined ? { tags: tagsPayload } : {}),
         listing_status: listingStatus,

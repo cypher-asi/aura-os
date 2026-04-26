@@ -443,12 +443,10 @@ export const ChatInputBar = memo(
 
     const providerLabel = (provider: string): string => {
       switch (provider) {
-        case "openai":
-          return "OpenAI";
-        case "anthropic":
-          return "Anthropic";
-        case "open_source":
-          return "Open source";
+        case "aura":
+          return "Aura";
+        case "image":
+          return "Image";
         default:
           return "Other";
       }

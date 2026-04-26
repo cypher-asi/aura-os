@@ -99,13 +99,9 @@ pub(crate) async fn require_credits(
 pub(crate) async fn require_credits_for_auth_source(
     state: &AppState,
     jwt: &str,
-    auth_source: &str,
+    _auth_source: &str,
 ) -> Result<(), (StatusCode, Json<ApiError>)> {
-    if auth_source == "aura_managed" {
-        require_credits(state, jwt).await
-    } else {
-        Ok(())
-    }
+    require_credits(state, jwt).await
 }
 
 pub(crate) async fn get_credit_balance(
