@@ -1,0 +1,8 @@
+{
+  "name": "aura-os-monorepo",
+  "private": true,
+  "description": "Repo-root tooling scripts that span the Rust and TypeScript monorepo.",
+  "scripts": {
+    "lint:file-sizes": "node scripts/lint-file-sizes.mjs"
+  }
+}
