@@ -13,10 +13,9 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
 use futures_util::future::join_all;
-use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-use aura_os_network::{NetworkClient, NetworkComment, NetworkFeedEvent, NetworkProfile};
+use aura_os_network::{NetworkClient, NetworkProfile};
 
 use crate::error::{map_network_error, ApiError, ApiResult};
 use crate::state::{AppState, AuthJwt, AuthSession};
@@ -92,141 +91,12 @@ fn metadata_string<'a>(metadata: &'a serde_json::Value, key: &str) -> Option<&'a
     metadata.get(key).and_then(serde_json::Value::as_str)
 }
 
-#[derive(Debug, Deserialize)]
-pub(crate) struct FeedbackListQuery {
-    pub sort: Option<String>,
-    pub limit: Option<u32>,
-    pub offset: Option<u32>,
-}
+mod types;
 
-#[derive(Debug, Deserialize)]
-pub(crate) struct CreateFeedbackRequest {
-    pub title: Option<String>,
-    pub body: String,
-    pub category: String,
-    pub status: String,
-    pub product: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct UpdateStatusRequest {
-    pub status: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct VoteRequest {
-    pub vote: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct AddCommentRequest {
-    pub content: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct FeedbackItemResponse {
-    pub id: String,
-    pub profile_id: String,
-    pub event_type: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub post_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub title: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub summary: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<serde_json::Value>,
-    pub category: String,
-    pub status: String,
-    pub product: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub created_at: Option<String>,
-    pub comment_count: i64,
-    pub upvotes: i64,
-    pub downvotes: i64,
-    pub vote_score: i64,
-    pub viewer_vote: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub author_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub author_avatar: Option<String>,
-}
-
-impl FeedbackItemResponse {
-    fn from_event(e: NetworkFeedEvent, profiles: &HashMap<String, NetworkProfile>) -> Self {
-        let metadata = e.metadata.clone().unwrap_or(serde_json::Value::Null);
-        let category = metadata_string(&metadata, "feedbackCategory")
-            .or_else(|| metadata_string(&metadata, "feedback_category"))
-            .unwrap_or("feedback")
-            .to_string();
-        let status = metadata_string(&metadata, "feedbackStatus")
-            .or_else(|| metadata_string(&metadata, "feedback_status"))
-            .unwrap_or("not_started")
-            .to_string();
-        // Default legacy items (created before product tagging landed) to
-        // the shell's default product so they remain visible.
-        let product = metadata_string(&metadata, "feedbackProduct")
-            .or_else(|| metadata_string(&metadata, "feedback_product"))
-            .unwrap_or(DEFAULT_PRODUCT)
-            .to_string();
-        let profile = profiles.get(&e.profile_id);
-        Self {
-            author_name: profile
-                .and_then(|p| p.display_name.clone())
-                .filter(|n| !is_uuid(n)),
-            author_avatar: profile.and_then(|p| p.avatar_url.clone()),
-            id: e.id,
-            profile_id: e.profile_id,
-            event_type: e.event_type,
-            post_type: e.post_type,
-            title: e.title,
-            summary: e.summary,
-            metadata: e.metadata,
-            category,
-            status,
-            product,
-            created_at: e.created_at,
-            comment_count: e.comment_count,
-            upvotes: e.upvotes,
-            downvotes: e.downvotes,
-            vote_score: e.vote_score,
-            viewer_vote: e.viewer_vote,
-        }
-    }
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct FeedbackCommentResponse {
-    pub id: String,
-    pub activity_event_id: String,
-    pub profile_id: String,
-    pub content: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub created_at: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub author_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub author_avatar: Option<String>,
-}
-
-impl FeedbackCommentResponse {
-    fn from_comment(c: NetworkComment, profiles: &HashMap<String, NetworkProfile>) -> Self {
-        let profile = profiles.get(&c.profile_id);
-        Self {
-            author_name: profile
-                .and_then(|p| p.display_name.clone())
-                .filter(|n| !is_uuid(n)),
-            author_avatar: profile.and_then(|p| p.avatar_url.clone()),
-            id: c.id,
-            activity_event_id: c.activity_event_id,
-            profile_id: c.profile_id,
-            content: c.content,
-            created_at: c.created_at,
-        }
-    }
-}
+pub(crate) use types::{
+    AddCommentRequest, CreateFeedbackRequest, FeedbackCommentResponse, FeedbackItemResponse,
+    FeedbackListQuery, FeedbackVoteResponse, UpdateStatusRequest, VoteRequest,
+};
 
 /// Batch-fetch profiles for a set of ids, falling back through profile → user
 /// lookups (same behaviour as the feed handler; feedback reuses the aura-network
@@ -473,15 +343,6 @@ pub(crate) async fn add_feedback_comment(
         StatusCode::CREATED,
         Json(FeedbackCommentResponse::from_comment(comment, &profiles)),
     ))
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct FeedbackVoteResponse {
-    pub upvotes: i64,
-    pub downvotes: i64,
-    pub vote_score: i64,
-    pub viewer_vote: String,
 }
 
 pub(crate) async fn cast_feedback_vote(
