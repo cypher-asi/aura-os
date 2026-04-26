@@ -12,7 +12,7 @@ import { useProjectsListStore } from "../../../stores/projects-list-store";
 import { useOrgStore } from "../../../stores/org-store";
 import type { Agent } from "../../../shared/types";
 import {
-  emptyAgentPermissions,
+  fullAccessAgentPermissions,
   type AgentPermissions,
   type AgentScope,
   type Capability,
@@ -62,8 +62,8 @@ function permissionsEqual(
   a: AgentPermissions | undefined,
   b: AgentPermissions | undefined,
 ): boolean {
-  const aa = a ?? emptyAgentPermissions();
-  const bb = b ?? emptyAgentPermissions();
+  const aa = a ?? fullAccessAgentPermissions();
+  const bb = b ?? fullAccessAgentPermissions();
   const sa = sortedScope(aa.scope);
   const sb = sortedScope(bb.scope);
   if (
@@ -572,7 +572,7 @@ type SaveStatus =
 
 export function PermissionsTab({ agent, isOwnAgent }: PermissionsTabProps) {
   const initial = useMemo<AgentPermissions>(
-    () => agent.permissions ?? emptyAgentPermissions(),
+    () => agent.permissions ?? fullAccessAgentPermissions(),
     // `agent.permissions` is only read on first render / agent switch;
     // subsequent edits flow through the local `draft` and are persisted
     // via the autosave effect below. We intentionally do NOT resync
@@ -609,7 +609,7 @@ export function PermissionsTab({ agent, isOwnAgent }: PermissionsTabProps) {
   }, [draft]);
 
   useEffect(() => {
-    const next = agent.permissions ?? emptyAgentPermissions();
+    const next = agent.permissions ?? fullAccessAgentPermissions();
     setDraft(next);
     lastSavedRef.current = next;
     draftRef.current = next;

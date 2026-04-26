@@ -251,7 +251,7 @@ describe("useAgentEditorForm save payload", () => {
     expect(tags.some((t) => t.startsWith("migration:"))).toBe(false);
   });
 
-  it("does not send any system tags on create and ships empty permissions", async () => {
+  it("does not send any system tags on create and ships full-access permissions", async () => {
     const { result } = renderHook(() =>
       useAgentEditorForm(true, undefined, vi.fn(), vi.fn()),
     );
@@ -275,6 +275,8 @@ describe("useAgentEditorForm save payload", () => {
     expect(tags.some((t) => t.startsWith("preset:"))).toBe(false);
     expect(tags.some((t) => t.startsWith("migration:"))).toBe(false);
     expect(payload.permissions).toBeDefined();
-    expect(payload.permissions.capabilities).toEqual([]);
+    expect(payload.permissions.capabilities).toEqual(
+      expect.arrayContaining([{ type: "invokeProcess" }]),
+    );
   });
 });

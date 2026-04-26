@@ -191,7 +191,7 @@ pub(crate) fn demo_agent() -> Agent {
         revenue_usd: 0.0,
         reputation: 4.9,
         local_workspace_path: None,
-        permissions: AgentPermissions::empty(),
+        permissions: AgentPermissions::full_access(),
         intent_classifier: None,
         created_at: now,
         updated_at: now,

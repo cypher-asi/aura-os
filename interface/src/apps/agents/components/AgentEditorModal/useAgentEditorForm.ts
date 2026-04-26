@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { api } from "../../../../api/client";
 import type { Agent, AgentPermissions, OrgIntegration } from "../../../../shared/types";
-import { emptyAgentPermissions } from "../../../../shared/types/permissions-wire";
+import { fullAccessAgentPermissions } from "../../../../shared/types/permissions-wire";
 import { isSuperAgent as isSuperAgentByPerms } from "../../../../shared/types/permissions";
 import { useModalInitialFocus } from "../../../../hooks/use-modal-initial-focus";
 import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
@@ -438,13 +438,12 @@ export function useAgentEditorForm(
         // this form today, so we pass `undefined` meaning "don't change".
         saved = await api.agents.update(agent.agent_id, basePayload);
       } else {
-        // Create path: `permissions` is required. New agents always spawn
-        // with an empty permissions bundle (no cross-agent capabilities);
-        // the CEO bootstrap has its own dedicated endpoint.
+        // Create path: `permissions` is required. New agents default to full
+        // access; the permissions editor can deliberately narrow this later.
         const createPayload: Parameters<typeof api.agents.create>[0] = {
           ...basePayload,
           icon: basePayload.icon ?? "",
-          permissions: cloneAgentPermissions(emptyAgentPermissions()),
+          permissions: cloneAgentPermissions(fullAccessAgentPermissions()),
         };
         saved = await api.agents.create(createPayload);
       }

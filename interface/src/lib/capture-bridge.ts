@@ -15,7 +15,7 @@ import type {
 import type { NotesTreeNode } from "../shared/api/notes";
 import type { FeedbackComment, FeedbackItem } from "../apps/feedback/types";
 import type { DisplaySessionEvent } from "../shared/types/stream";
-import { emptyAgentPermissions } from "../shared/types/permissions-wire";
+import { fullAccessAgentPermissions } from "../shared/types/permissions-wire";
 import { sanitizeRestorePath } from "../utils/last-app-path";
 
 const DESKTOP_WINDOWS_STORAGE_KEY = "aura:desktopWindows";
@@ -315,7 +315,7 @@ function demoAgent(
     profile_id: "capture-demo-profile",
     tags: ["demo"],
     is_pinned: overrides.is_pinned ?? true,
-    permissions: emptyAgentPermissions(),
+    permissions: fullAccessAgentPermissions(),
     created_at: now,
     updated_at: now,
   };
@@ -409,7 +409,7 @@ function demoProjectAgent(modelId = AURA_MANAGED_CHAT_MODELS[0]?.id ?? "default"
     total_input_tokens: 18400,
     total_output_tokens: 4200,
     model: modelId,
-    permissions: emptyAgentPermissions(),
+    permissions: fullAccessAgentPermissions(),
     created_at: now,
     updated_at: now,
   };

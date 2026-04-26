@@ -83,3 +83,10 @@ export const CEO_CORE_CAPABILITY_TYPES = [
   "readAllProjects",
   "writeAllProjects",
 ] as const satisfies ReadonlyArray<Capability["type"]>;
+
+export function fullAccessAgentPermissions(): AgentPermissions {
+  return {
+    scope: emptyAgentScope(),
+    capabilities: CEO_CORE_CAPABILITY_TYPES.map((type) => ({ type })),
+  };
+}

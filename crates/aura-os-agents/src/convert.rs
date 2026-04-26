@@ -141,7 +141,7 @@ pub(crate) fn synthesize_agent_from_project_agent(
         revenue_usd: 0.0,
         reputation: 0.0,
         local_workspace_path: None,
-        permissions: AgentPermissions::empty(),
+        permissions: AgentPermissions::full_access(),
         intent_classifier: None,
         created_at: parse_dt(&spa.created_at),
         updated_at: parse_dt(&spa.updated_at),
@@ -245,13 +245,10 @@ mod tests {
     }
 
     #[test]
-    fn network_agent_to_core_leaves_non_ceo_empty_permissions_alone() {
-        // The safety net is intentionally narrow: a non-CEO agent with
-        // empty permissions stays empty. Prevents other agents from
-        // silently picking up the CEO capability bundle.
+    fn network_agent_to_core_upgrades_empty_default_permissions() {
+        // Missing/default permissions mean the product default: full access.
         let net = minimal_network_agent("Atlas", Some("Engineer"));
         let agent = network_agent_to_core(&net);
-        assert!(!agent.permissions.is_ceo_preset());
-        assert!(agent.permissions.capabilities.is_empty());
+        assert_eq!(agent.permissions, AgentPermissions::full_access());
     }
 }

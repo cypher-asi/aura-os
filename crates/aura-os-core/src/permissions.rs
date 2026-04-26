@@ -90,10 +90,10 @@ pub struct AgentPermissions {
 }
 
 impl AgentPermissions {
-    /// Fully permissive preset used for bootstrap CEO agents: universe
-    /// scope plus every capability variant.
+    /// Fully permissive agent bundle: universe scope plus every capability
+    /// variant that does not require a host-specific id.
     #[must_use]
-    pub fn ceo_preset() -> Self {
+    pub fn full_access() -> Self {
         Self {
             scope: AgentScope::default(),
             capabilities: vec![
@@ -116,6 +116,14 @@ impl AgentPermissions {
                 Capability::WriteAllProjects,
             ],
         }
+    }
+
+    /// Historical name for the bootstrap CEO bundle. Kept as an alias so
+    /// existing CEO-specific checks keep compiling while default agent access
+    /// is expressed through [`Self::full_access`].
+    #[must_use]
+    pub fn ceo_preset() -> Self {
+        Self::full_access()
     }
 
     /// Empty permissions: universe scope (vacuously), zero capabilities.
@@ -159,17 +167,15 @@ impl AgentPermissions {
             .all(|c| self.capabilities.contains(c))
     }
 
-    /// Read-time safety net for CEO agents whose `permissions` bundle
-    /// was persisted empty (older `aura-network` deployments didn't
-    /// store the column, so legacy records round-trip as
-    /// `AgentPermissions::empty()`).
+    /// Read-time safety net for records whose `permissions` bundle was
+    /// persisted empty (older `aura-network` deployments didn't store the
+    /// column, so legacy records round-trip as `AgentPermissions::empty()`).
     ///
-    /// If `(name, role)` identifies the CEO role *and* `self` is not
-    /// already the canonical [`Self::ceo_preset`], this returns the
-    /// preset so downstream callers (tool manifest builders, sidekick
-    /// toggles, etc.) see an agent with the capabilities users expect
-    /// from the CEO icon. For every other case it returns `self`
-    /// unchanged.
+    /// Empty/default bundles are treated as the product default,
+    /// [`Self::full_access`]. If `(name, role)` identifies the CEO role and
+    /// `self` is not already canonical, this also returns the full-access
+    /// preset so downstream callers (tool manifest builders, sidekick toggles,
+    /// etc.) see the expected capability set.
     ///
     /// The check is intentionally narrow — only `name == "CEO"` *and*
     /// `role == "CEO"` (case-insensitive) — so a non-CEO agent can't
@@ -183,6 +189,8 @@ impl AgentPermissions {
             name.eq_ignore_ascii_case("CEO") && role.is_some_and(|r| r.eq_ignore_ascii_case("CEO"));
         if looks_like_ceo && !self.is_ceo_preset() {
             Self::ceo_preset()
+        } else if self.is_empty() {
+            Self::full_access()
         } else {
             self
         }
@@ -401,6 +409,12 @@ mod tests {
     }
 
     #[test]
+    fn normalized_for_identity_upgrades_empty_default_to_full_access() {
+        let upgraded = AgentPermissions::empty().normalized_for_identity("Atlas", Some("Engineer"));
+        assert_eq!(upgraded, AgentPermissions::full_access());
+    }
+
+    #[test]
     fn normalized_for_identity_is_case_insensitive() {
         let upgraded = AgentPermissions::empty().normalized_for_identity("ceo", Some("Ceo"));
         assert!(upgraded.is_ceo_preset());
@@ -420,15 +434,25 @@ mod tests {
 
     #[test]
     fn normalized_for_identity_requires_both_name_and_role_to_match() {
-        // name matches but role doesn't — must not promote.
-        let only_name = AgentPermissions::empty().normalized_for_identity("CEO", Some("Engineer"));
+        let restricted = AgentPermissions {
+            scope: AgentScope::default(),
+            capabilities: vec![Capability::ReadAgent],
+        };
+        // name matches but role doesn't — must not promote a deliberately
+        // restricted bundle.
+        let only_name = restricted
+            .clone()
+            .normalized_for_identity("CEO", Some("Engineer"));
         assert!(!only_name.is_ceo_preset());
-        // role matches but name doesn't — must not promote.
-        let only_role = AgentPermissions::empty().normalized_for_identity("Atlas", Some("CEO"));
+        // role matches but name doesn't — must not promote a deliberately
+        // restricted bundle.
+        let only_role = restricted
+            .clone()
+            .normalized_for_identity("Atlas", Some("CEO"));
         assert!(!only_role.is_ceo_preset());
-        // role missing entirely — must not promote (prevents pre-
-        // schema records from hijacking the preset).
-        let missing_role = AgentPermissions::empty().normalized_for_identity("CEO", None);
+        // role missing entirely — must not promote a deliberately restricted
+        // bundle through the CEO repair path.
+        let missing_role = restricted.normalized_for_identity("CEO", None);
         assert!(!missing_role.is_ceo_preset());
     }
 

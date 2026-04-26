@@ -70,10 +70,9 @@ fn agent_from_network_ceo_preset_matches_case_insensitively() {
 }
 
 #[test]
-fn agent_from_network_does_not_promote_non_ceo_agents() {
-    // Users may legitimately create regular agents whose name or role
-    // resembles "CEO" in isolation — only the (name="CEO" AND
-    // role="CEO") pair triggers the safety net.
+fn agent_from_network_upgrades_empty_default_permissions() {
+    // Missing/default permissions mean full access for every agent. Name/role
+    // only matters for the historical CEO repair path.
     let cases = vec![
         blank_network_agent("CEO", Some("Coach")),
         blank_network_agent("Eve", Some("CEO")),
@@ -81,13 +80,10 @@ fn agent_from_network_does_not_promote_non_ceo_agents() {
     ];
     for net in cases {
         let agent = agent_from_network(&net);
-        assert!(
-            !agent.permissions.is_ceo_preset(),
-            "non-CEO agents keep their empty permissions bundle"
-        );
+        assert_eq!(agent.permissions, AgentPermissions::full_access());
         assert!(
             agent.intent_classifier.is_none(),
-            "non-CEO agents don't receive the canonical classifier"
+            "default permission repair does not synthesize the old classifier"
         );
     }
 }

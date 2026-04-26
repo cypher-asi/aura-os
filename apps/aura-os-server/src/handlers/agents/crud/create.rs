@@ -104,6 +104,9 @@ fn prepare_create(body: CreateAgentRequest) -> ApiResult<PreparedCreate> {
         normalize_marketplace_fields(body.listing_status.as_deref(), body.expertise.as_deref())?;
     let dual_write_tags = merge_marketplace_tags(body.tags, &marketplace);
     let submitted_local_path = trim_local_path(body.local_workspace_path.as_deref());
+    let permissions = body
+        .permissions
+        .normalized_for_identity(&body.name, Some(body.role.as_str()));
 
     let net_req = aura_os_network::CreateAgentRequest {
         org_id: body.org_id.map(|id| id.to_string()),
@@ -118,7 +121,7 @@ fn prepare_create(body: CreateAgentRequest) -> ApiResult<PreparedCreate> {
         tags: dual_write_tags,
         listing_status: marketplace.listing_status,
         expertise: marketplace.expertise,
-        permissions: body.permissions,
+        permissions,
         intent_classifier: body.intent_classifier,
     };
 
