@@ -41,6 +41,7 @@
   display: flex;
   overflow: hidden;
   background: var(--color-bg);
+  border-radius: 3px;
 }
 
 /*
