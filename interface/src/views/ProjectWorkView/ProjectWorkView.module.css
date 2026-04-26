@@ -6,6 +6,9 @@
   padding: var(--space-3) var(--space-3) calc(var(--space-6) + env(safe-area-inset-bottom));
   overflow-y: auto;
   overscroll-behavior: contain;
+  background:
+    radial-gradient(circle at 18% -8%, color-mix(in srgb, var(--color-primary) 8%, transparent), transparent 34%),
+    var(--color-bg);
 }
 
 .section {

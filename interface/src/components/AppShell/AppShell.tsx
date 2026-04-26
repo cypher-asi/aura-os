@@ -13,7 +13,9 @@ import { DesktopShell } from "../DesktopShell";
 import { MobileShell } from "../MobileShell";
 import { markShellVisible } from "../../lib/perf/startup-perf";
 import {
+  applyAuraCaptureSeedPlan,
   clearAuraDesktopWindowPersistence,
+  type AuraCaptureSeedPlan,
   persistAuraCaptureTarget,
   readAuraCaptureBridgeState,
   resolveAuraCaptureTargetAppId,
@@ -119,6 +121,30 @@ async function resetCaptureAppSpecificState(): Promise<void> {
         liveRunNodeId: null,
       });
     }),
+    import("../../stores/aura3d-store").then(({ useAura3DStore }) => {
+      useAura3DStore.setState({
+        activeTab: "image",
+        selectedProjectId: null,
+        imaginePrompt: "",
+        imagineModel: "gpt-image-1",
+        isGeneratingImage: false,
+        imageProgress: 0,
+        imageProgressMessage: "",
+        partialImageData: null,
+        currentImage: null,
+        generateSourceImage: null,
+        isGenerating3D: false,
+        generate3DProgress: 0,
+        generate3DProgressMessage: "",
+        current3DModel: null,
+        images: [],
+        models: [],
+        selectedImageId: null,
+        selectedModelId: null,
+        sidekickTab: "images",
+        error: null,
+      });
+    }),
   ]);
 
   for (const result of results) {
@@ -189,6 +215,10 @@ function CaptureBridgeHost() {
             targetPath,
           }) ?? "agents";
         const sidekickCollapsed = rawOptions.sidekickCollapsed === true;
+        const seedPlan =
+          rawOptions.seedPlan && typeof rawOptions.seedPlan === "object"
+            ? rawOptions.seedPlan as AuraCaptureSeedPlan
+            : null;
         const timeoutMs =
           typeof rawOptions.timeoutMs === "number" && rawOptions.timeoutMs > 0
             ? rawOptions.timeoutMs
@@ -223,6 +253,7 @@ function CaptureBridgeHost() {
         });
         clearAuraDesktopWindowPersistence();
         await resetCaptureAppSpecificState();
+        const seedResult = await applyAuraCaptureSeedPlan(seedPlan, targetAppId);
 
         const viaDesktopPath = targetPath === "/desktop" ? null : "/desktop";
         if (viaDesktopPath) {
@@ -240,6 +271,7 @@ function CaptureBridgeHost() {
           targetPath,
           targetAppId,
           sidekickCollapsed,
+          seed: seedResult,
           state: finalState,
         };
       },

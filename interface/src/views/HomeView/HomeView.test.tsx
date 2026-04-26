@@ -77,9 +77,9 @@ function makeProject(overrides: Partial<Project> = {}): Project {
   } as Project;
 }
 
-function ProjectAgentRouteTarget() {
+function ProjectAgentsRouteTarget() {
   const { projectId } = useParams<{ projectId: string }>();
-  return <div>{`project-agent:${projectId}`}</div>;
+  return <div>{`project-agents:${projectId}`}</div>;
 }
 
 function ProjectAgentChatTarget() {
@@ -96,7 +96,7 @@ function renderHomeView() {
       <Routes>
         <Route path="/projects" element={<HomeView />} />
         <Route path="/projects/organization" element={<div>organization-route</div>} />
-        <Route path="/projects/:projectId/agent" element={<ProjectAgentRouteTarget />} />
+        <Route path="/projects/:projectId/agents" element={<ProjectAgentsRouteTarget />} />
         <Route path="/projects/:projectId/agents/:agentInstanceId" element={<ProjectAgentChatTarget />} />
       </Routes>
     </MemoryRouter>,
@@ -119,7 +119,7 @@ beforeEach(() => {
 });
 
 describe("HomeView", () => {
-  it("redirects to the remembered project agent when one is stored", () => {
+  it("redirects mobile users to the remembered project agents roster", () => {
     projectsState.projects = [
       makeProject({ project_id: "p1", name: "Alpha" }),
       makeProject({ project_id: "p2", name: "Beta" }),
@@ -129,10 +129,10 @@ describe("HomeView", () => {
 
     renderHomeView();
 
-    expect(screen.getByText("project-chat:p2:agent-9")).toBeInTheDocument();
+    expect(screen.getByText("project-agents:p2")).toBeInTheDocument();
   });
 
-  it("redirects to the project agent resolver when a project is resolved without a remembered agent", () => {
+  it("redirects mobile users to the project agents roster when a project is resolved without a remembered agent", () => {
     const recentProject = makeProject({ project_id: "p2", name: "Beta" });
     projectsState.projects = [
       makeProject({ project_id: "p1", name: "Alpha" }),
@@ -142,7 +142,7 @@ describe("HomeView", () => {
 
     renderHomeView();
 
-    expect(screen.getByText("project-agent:p2")).toBeInTheDocument();
+    expect(screen.getByText("project-agents:p2")).toBeInTheDocument();
   });
 
   it("renders the welcome empty state when no projects can be resolved", () => {

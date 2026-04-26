@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearAuraDesktopWindowPersistence,
+  applyAuraCaptureSeedPlan,
   persistAuraCaptureTarget,
   readAuraCaptureBridgeState,
   resolveAuraCaptureTargetAppId,
   resolveAuraCaptureTargetPath,
+  shouldApplyAgentChatSeed,
 } from "./capture-bridge";
 
 function installLocalStorageStub() {
@@ -128,5 +130,25 @@ describe("capture-bridge helpers", () => {
 
     expect(state.routeMatched).toBe(false);
     expect(state.activeAppMatched).toBe(false);
+  });
+
+  it("uses proof and context boundaries when deciding whether to seed agent chat", () => {
+    expect(
+      shouldApplyAgentChatSeed({
+        capabilities: ["desktop proof"],
+        proofBoundary: ["The chat model picker menu shows GPT-5.5"],
+        contextBoundary: ["The agent chat input remains visible"],
+      }, null),
+    ).toBe(true);
+  });
+
+  it("resolves requested chat seed models from the live model catalog", async () => {
+    const result = await applyAuraCaptureSeedPlan({
+      capabilities: ["app:agents", "agent-chat-ready", "model-picker-open"],
+      proofBoundary: ["Show DeepSeek V4 Pro in the model picker"],
+      contextBoundary: ["The chat input remains visible"],
+    }, "agents");
+
+    expect(result.applied).toContain("agent-chat-demo-model-picker:aura-deepseek-v4-pro");
   });
 });

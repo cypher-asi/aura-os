@@ -108,7 +108,6 @@ export function ProjectTasksView() {
   return (
     <div className={styles.root}>
       <header className={styles.header}>
-        <div className={styles.sectionLabel}>Tasks</div>
         <Text size="lg" weight="medium">What needs attention</Text>
       </header>
 

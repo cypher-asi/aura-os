@@ -5,6 +5,7 @@ import { ErrorBoundary } from "../../components/ErrorBoundary";
 import { EmptyState } from "../../components/EmptyState";
 import { PageEmptyState, Button } from "@cypher-asi/zui";
 import { useDelayedLoading } from "../../shared/hooks/use-delayed-loading";
+import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useOrgStore } from "../../stores/org-store";
 import { useProjectLayoutData } from "./useProjectLayoutData";
 
@@ -12,6 +13,7 @@ export function ProjectLayout() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { displayProject, loading, loadingProjects, projects } = useProjectLayoutData();
+  const { isMobileLayout } = useAuraCapabilities();
   const activeOrgId = useOrgStore((s) => s.activeOrg?.org_id ?? null);
   const showSpinner = useDelayedLoading(loading && !displayProject);
   const previousOrgIdRef = useRef<string | null>(activeOrgId);
@@ -36,6 +38,14 @@ export function ProjectLayout() {
       navigate("/projects", { replace: true });
     }
   }, [activeOrgId, loading, loadingProjects, navigate, projectId, projects]);
+
+  useEffect(() => {
+    if (!isMobileLayout || loading || loadingProjects || displayProject || projects.length === 0) {
+      return;
+    }
+
+    navigate("/projects", { replace: true });
+  }, [displayProject, isMobileLayout, loading, loadingProjects, navigate, projects.length]);
 
   if (showSpinner) {
     return (

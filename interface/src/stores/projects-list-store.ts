@@ -30,6 +30,19 @@ function syncAgentsQueryCache(agentsByProject: Record<string, AgentInstance[]>):
   }
 }
 
+function isExpectedQueryCancellation(error: unknown): boolean {
+  const name =
+    typeof error === "object" && error !== null && "name" in error
+      ? String((error as { name?: unknown }).name)
+      : "";
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    (error instanceof DOMException && error.name === "AbortError") ||
+    name === "CancelledError" ||
+    message.includes("CancelledError")
+  );
+}
+
 export function normalizeProjectOrderIds(
   projectIds: string[],
   orderedIds: string[],
@@ -214,12 +227,14 @@ export const useProjectsListStore = create<ProjectsListState>()((set, get) => ({
       }
     } catch (error) {
       if (refreshRequestId === requestId) {
-        console.error("Failed to load projects", error);
-        set({
-          projectsError: error instanceof Error
-            ? error.message
-            : "Could not load projects from the current host.",
-        });
+        if (!isExpectedQueryCancellation(error)) {
+          console.error("Failed to load projects", error);
+          set({
+            projectsError: error instanceof Error
+              ? error.message
+              : "Could not load projects from the current host.",
+          });
+        }
       }
     }
     if (refreshRequestId === requestId) {

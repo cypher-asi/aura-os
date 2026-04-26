@@ -290,25 +290,6 @@ async function mockMobileVisualApp(page: import("@playwright/test").Page) {
   });
 }
 
-async function openAccountSheet(page: import("@playwright/test").Page) {
-  if (/\/projects\/organization$/.test(page.url())) {
-    await expect(page.getByRole("heading", { name: "Continue work" })).toBeVisible();
-    return;
-  }
-
-  const trigger = page.getByRole("button", { name: "Open workspace" });
-  await trigger.tap();
-
-  try {
-    await page.waitForURL(/\/projects\/organization$/, { timeout: 1500 });
-  } catch {
-    await trigger.click({ force: true });
-    await expect(page).toHaveURL(/\/projects\/organization$/);
-  }
-
-  await expect(page.getByRole("heading", { name: "Continue work" })).toBeVisible();
-}
-
 test("capture mobile login screen", async ({ page, browserName }, testInfo) => {
   mkdirSync("test-artifacts/review-shots", { recursive: true });
 
@@ -346,29 +327,36 @@ test("capture mobile root and project drawer", async ({ page, browserName }, tes
   const projectName = testInfo.project.name.replace(/\s+/g, "-");
 
   await page.goto("/projects");
-  await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/agent-inst-1$/);
-  await expect(page.getByPlaceholder("What do you want to create?")).toBeVisible({ timeout: 10000 });
+  await expect(page).toHaveURL(/\/projects\/proj-1\/agents$/);
+  await expect(page.getByRole("button", { name: "Open chat with Builder Bot" })).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText("Project roster")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Open workspace" })).toHaveCount(0);
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-${browserName}-projects-root-mobile-ia.png`,
     fullPage: true,
   });
 
-  await page.getByRole("button", { name: /Open project navigation/i }).click();
-  await expect(page.getByPlaceholder("Search Projects...")).toBeVisible({ timeout: 10000 });
+  await page.getByRole("button", { name: "Open chat with Builder Bot" }).click();
+  await expect(page.getByPlaceholder("What do you want to create?")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole("button", { name: /Sonnet|Opus|GPT|Kimi|DeepSeek|OSS/i }).first()).toBeVisible({ timeout: 10000 });
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-${browserName}-project-chat-mobile-ia.png`,
+    fullPage: true,
+  });
+
+  await page.getByRole("button", { name: "Open project navigation", exact: true }).click();
+  await expect(page.getByPlaceholder("Search projects...")).toBeVisible({ timeout: 10000 });
+  const drawerBox = await page.locator('[class*="mobileNavDrawer"]').first().boundingBox();
+  const viewport = page.viewportSize();
+  expect(drawerBox).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  expect(drawerBox!.width).toBeGreaterThan(viewport!.width * 0.7);
+  expect(drawerBox!.width).toBeLessThan(viewport!.width * 0.8);
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-${browserName}-projects-drawer-mobile-ia.png`,
-    fullPage: true,
   });
 
-  await page.getByRole("button", { name: "Close drawer" }).dispatchEvent("click");
-  await page.getByRole("button", { name: "Open apps" }).click();
-  await expect(page.getByRole("button", { name: "Return to project" })).toBeVisible({ timeout: 10000 });
-  await page.screenshot({
-    path: `test-artifacts/review-shots/${projectName}-${browserName}-global-switcher-mobile-ia.png`,
-    fullPage: true,
-  });
-
-  await page.getByRole("button", { name: "Agent library" }).click();
+  await page.goto("/agents");
   await expect(page).toHaveURL(/\/agents$/);
   await expect(page.getByText("Builder Bot")).toBeVisible({ timeout: 10000 });
   await expect(page.getByRole("button", { name: "Create Remote Agent" })).toBeVisible({ timeout: 10000 });
@@ -401,15 +389,15 @@ test("capture mobile work, process, and agent settings", async ({ page, browserN
   const projectName = testInfo.project.name.replace(/\s+/g, "-");
 
   await page.goto("/projects");
-  await page.getByRole("navigation", { name: "Primary mobile navigation" }).getByRole("button", { name: "Execution" }).click();
+  await page.getByRole("navigation", { name: "Project sections" }).getByRole("button", { name: "Execution" }).click();
   await expect(page).toHaveURL(/\/projects\/proj-1\/work$/);
-  await expect(page.getByRole("main").getByText("Execution", { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole("button", { name: "Start remote work" })).toBeVisible({ timeout: 15000 });
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-${browserName}-project-work-mobile-ia.png`,
     fullPage: true,
   });
 
-  await page.getByRole("navigation", { name: "Primary mobile navigation" }).getByRole("button", { name: "Tasks" }).click();
+  await page.getByRole("navigation", { name: "Project sections" }).getByRole("button", { name: "Tasks" }).click();
   await expect(page).toHaveURL(/\/projects\/proj-1\/tasks$/);
   await expect(page.getByText("What needs attention")).toBeVisible({ timeout: 10000 });
   await page.screenshot({
@@ -417,9 +405,9 @@ test("capture mobile work, process, and agent settings", async ({ page, browserN
     fullPage: true,
   });
 
-  await page.getByRole("navigation", { name: "Primary mobile navigation" }).getByRole("button", { name: "Files" }).click();
+  await page.getByRole("navigation", { name: "Project sections" }).getByRole("button", { name: "Files" }).click();
   await expect(page).toHaveURL(/\/projects\/proj-1\/files$/);
-  await expect(page.getByText("Remote workspace")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText("Remote workspace", { exact: true })).toBeVisible({ timeout: 10000 });
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-${browserName}-project-files-mobile-ia.png`,
     fullPage: true,
@@ -434,7 +422,7 @@ test("capture mobile work, process, and agent settings", async ({ page, browserN
 
   await page.getByRole("button", { name: "Back to files" }).click();
 
-  const processTab = page.getByRole("navigation", { name: "Primary mobile navigation" }).getByRole("button", { name: "Process" });
+  const processTab = page.getByRole("navigation", { name: "Project sections" }).getByRole("button", { name: "Process" });
   await expect(processTab).toBeVisible({ timeout: 10000 });
   await processTab.click();
   await expect(page).toHaveURL(/\/projects\/proj-1\/process$/);
@@ -444,7 +432,7 @@ test("capture mobile work, process, and agent settings", async ({ page, browserN
     fullPage: true,
   });
 
-  const statsTab = page.getByRole("navigation", { name: "Primary mobile navigation" }).getByRole("button", { name: "Stats" });
+  const statsTab = page.getByRole("navigation", { name: "Project sections" }).getByRole("button", { name: "Stats" });
   await expect(statsTab).toBeVisible({ timeout: 10000 });
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-${browserName}-project-work-stats-collapsed-mobile-ia.png`,
@@ -479,7 +467,7 @@ test("capture mobile work, process, and agent settings", async ({ page, browserN
   });
 
   await page.goto("/projects");
-  await expect(page.getByPlaceholder("What do you want to create?")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole("button", { name: "Open chat with Builder Bot" })).toBeVisible({ timeout: 10000 });
   await page.getByRole("button", { name: "Add project agent" }).click();
   await expect(page.getByText("Add Project Agent")).toBeVisible({ timeout: 10000 });
   await page.screenshot({

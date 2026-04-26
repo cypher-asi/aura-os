@@ -126,6 +126,11 @@ jobs:
       - name: Check desktop runtime parity
         run: node scripts/ci/check-runtime.mjs desktop --require-harness
 
+      - name: Validate desktop auto-update sidecar contract
+        run: |
+          node --test infra/scripts/release/prepare-desktop-sidecar.test.mjs
+          node infra/scripts/release/prepare-desktop-sidecar.mjs --check
+
       - name: Build bundled aura-node sidecar
         run: node infra/scripts/release/prepare-desktop-sidecar.mjs
 

@@ -1,22 +1,28 @@
-import { Fragment, Suspense, lazy, useCallback } from "react";
+import { Fragment, Suspense, lazy, useCallback, useState } from "react";
 import { useNavigate, useOutlet } from "react-router-dom";
 import { Button, Drawer, Text } from "@cypher-asi/zui";
+import { ChevronLeft, X } from "lucide-react";
 import { ErrorBoundary } from "../ErrorBoundary";
 import { UpdateBanner } from "../UpdateBanner";
 import { MobileBottomNav, type MobileNavId } from "../MobileBottomNav";
 import { useMobileDrawerEffects } from "../../hooks/use-mobile-drawers";
 import { useMobileDrawerStore, selectDrawerOpen, selectOverlayDrawerOpen } from "../../stores/mobile-drawer-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";
-import { projectFilesRoute, projectProcessRoute, projectStatsRoute, projectTasksRoute, projectWorkRoute } from "../../utils/mobileNavigation";
+import { projectAgentsRoute, projectFilesRoute, projectProcessRoute, projectStatsRoute, projectTasksRoute, projectWorkRoute } from "../../utils/mobileNavigation";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useOrgStore } from "../../stores/org-store";
 import { useProjectsListStore } from "../../stores/projects-list-store";
 import { getHostDisplayLabel } from "../../shared/lib/host-config";
 import { useMobileShellState } from "./useMobileShellState";
-import { blurActiveElement, resolveProjectAgentPath } from "./mobile-shell-utils";
+import { blurActiveElement } from "./mobile-shell-utils";
 import { ProjectNavigationDrawerContent } from "./ProjectNavigationDrawer";
 import { MobileTopbar } from "./MobileTopbar";
-import { AppSwitcherContent, AccountSheetContent, PreviewSheetContent } from "./MobileDrawerContents";
+import {
+  AccountSheetContent,
+  PreviewSheetContent,
+  getSettingsDestinationTitle,
+  type SettingsDestination,
+} from "./MobileDrawerContents";
 import { useShallow } from "zustand/react/shallow";
 import styles from "./MobileShell.module.css";
 
@@ -44,12 +50,11 @@ export function MobileShell() {
 
   const navOpen = useMobileDrawerStore((s) => s.navOpen);
   const setNavOpen = useMobileDrawerStore((s) => s.setNavOpen);
-  const appOpen = useMobileDrawerStore((s) => s.appOpen);
-  const setAppOpen = useMobileDrawerStore((s) => s.setAppOpen);
   const previewOpen = useMobileDrawerStore((s) => s.previewOpen);
   const setPreviewOpen = useMobileDrawerStore((s) => s.setPreviewOpen);
   const accountOpen = useMobileDrawerStore((s) => s.accountOpen);
   const setAccountOpen = useMobileDrawerStore((s) => s.setAccountOpen);
+  const [settingsDestination, setSettingsDestination] = useState<SettingsDestination | null>(null);
   const closeDrawers = useMobileDrawerStore((s) => s.closeDrawers);
   const drawerOpen = useMobileDrawerStore(selectDrawerOpen);
   const overlayDrawerOpen = useMobileDrawerStore(selectOverlayDrawerOpen);
@@ -83,7 +88,7 @@ export function MobileShell() {
 
   const handleMobilePrimaryNavigate = useCallback((id: MobileNavId) => {
     if (!state.mobileTargetProjectId) { navigate("/projects"); return; }
-    if (id === "agent") { navigate(resolveProjectAgentPath(state.mobileTargetProjectId)); return; }
+    if (id === "agent") { navigate(projectAgentsRoute(state.mobileTargetProjectId)); return; }
     if (id === "tasks") { navigate(projectTasksRoute(state.mobileTargetProjectId)); return; }
     if (id === "execution") { navigate(projectWorkRoute(state.mobileTargetProjectId)); return; }
     if (id === "files") { navigate(projectFilesRoute(state.mobileTargetProjectId)); return; }
@@ -123,6 +128,11 @@ export function MobileShell() {
               </div>
             </div>
           ) : null}
+          {!drawerOpen && state.showProjectTitle && !state.isProjectAgentManagementRoute && (
+            <div className={styles.mobileProjectTabs}>
+              <MobileBottomNav activeId={mobileNavActiveId} onNavigate={handleMobilePrimaryNavigate} />
+            </div>
+          )}
           <div className={styles.mobileMain}>
             {state.showProjectResponsiveControls && ResponsiveControls && <div className={styles.mobileResponsiveControls}><ResponsiveControls /></div>}
             {state.isStandaloneAgentLibraryRoot ? (
@@ -145,20 +155,11 @@ export function MobileShell() {
               <div className={styles.mobileMainPanel}><ErrorBoundary name="main"><MainPanel>{routeContent}</MainPanel></ErrorBoundary></div>
             )}
           </div>
-          {!drawerOpen && state.showProjectTitle && !state.isProjectAgentManagementRoute && (
-            <div className={styles.mobileBottomNav}>
-              <MobileBottomNav activeId={mobileNavActiveId} onNavigate={handleMobilePrimaryNavigate} />
-            </div>
-          )}
         </div>
         {overlayDrawerOpen && <button type="button" className={styles.mobileDrawerBackdrop} aria-label="Close drawer" onClick={closeDrawers} />}
 
-        <Drawer side="left" isOpen={navOpen} onClose={() => { blurActiveElement(); setNavOpen(false); }} title="" className={styles.mobileNavDrawer} showMinimizedBar={false} defaultSize={356} maxSize={404}>
+        <Drawer side="left" isOpen={navOpen} onClose={() => { blurActiveElement(); setNavOpen(false); }} title="" className={styles.mobileNavDrawer} showMinimizedBar={false} defaultSize={360} maxSize={420}>
           {navOpen && <ProjectNavigationDrawerContent />}
-        </Drawer>
-
-        <Drawer side="right" isOpen={appOpen} onClose={() => { blurActiveElement(); setAppOpen(false); }} title="Navigate" className={styles.mobileSideSheet} showMinimizedBar={false} defaultSize={360} maxSize={420}>
-          <AppSwitcherContent state={state} />
         </Drawer>
 
         {PreviewPanel && state.isPhoneLayout && previewOpen ? (
@@ -177,6 +178,48 @@ export function MobileShell() {
           <Drawer side="right" isOpen={accountOpen} onClose={() => { blurActiveElement(); setAccountOpen(false); }} title="Account" className={styles.mobileSideSheet} showMinimizedBar={false} defaultSize={360} maxSize={440}>
             <AccountSheetContent />
           </Drawer>
+        ) : null}
+
+        {state.isPhoneLayout && accountOpen ? (
+          <div className={styles.mobileActionSheet} role="dialog" aria-modal="true" aria-label="Settings">
+            <div className={styles.mobileActionSheetHeader}>
+              {settingsDestination ? (
+                <button
+                  type="button"
+                  className={styles.mobileActionSheetBack}
+                  aria-label="Back to Settings"
+                  onClick={() => setSettingsDestination(null)}
+                >
+                  <ChevronLeft size={18} />
+                  <span>Settings</span>
+                </button>
+              ) : (
+                <div className={styles.mobileActionSheetTitle}>Settings</div>
+              )}
+              {settingsDestination ? (
+                <div className={styles.mobileActionSheetDestinationTitle}>
+                  {getSettingsDestinationTitle(settingsDestination)}
+                </div>
+              ) : null}
+              <button
+                type="button"
+                className={styles.mobileActionSheetClose}
+                aria-label="Close settings"
+                onClick={() => {
+                  blurActiveElement();
+                  setSettingsDestination(null);
+                  setAccountOpen(false);
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <AccountSheetContent
+              mode="settings"
+              settingsDestination={settingsDestination}
+              onSettingsDestinationChange={setSettingsDestination}
+            />
+          </div>
         ) : null}
 
         {hostSettingsOpen ? (

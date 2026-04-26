@@ -16,6 +16,83 @@ function hasMeaningfulVisibleText(value) {
   return String(value || "").replace(/\s+/g, " ").trim().length >= 24;
 }
 
+const UNPUBLISHABLE_EMPTY_STATE_PHRASES = [
+  "Your generated image will appear here",
+  "Generated images will appear here",
+  "Your generated model will appear here",
+  "Generated models will appear here",
+  "Your generated asset will appear here",
+  "Generated assets will appear here",
+  "No generated images yet",
+  "No generated models yet",
+];
+
+const GENERIC_PROOF_TOKENS = new Set([
+  "app",
+  "apps",
+  "asset",
+  "assets",
+  "demo",
+  "generated",
+  "generation",
+  "image",
+  "images",
+  "model",
+  "models",
+  "org",
+  "project",
+  "search",
+  "surface",
+  "tab",
+  "tabs",
+  "test",
+  "view",
+  "will",
+  "your",
+]);
+
+function normalizeTextForQuality(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9.]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function collectUnpublishableEmptyStateMatches(visibleText) {
+  const normalizedVisible = normalizeTextForQuality(visibleText);
+  return UNPUBLISHABLE_EMPTY_STATE_PHRASES.filter((phrase) => {
+    const normalizedPhrase = normalizeTextForQuality(phrase);
+    return normalizedPhrase && normalizedVisible.includes(normalizedPhrase);
+  });
+}
+
+function countSubstantiveTokens(values) {
+  return Array.from(new Set(
+    values
+      .flatMap((value) => String(value || "").toLowerCase().split(/[^a-z0-9.]+/g))
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 3 && !GENERIC_PROOF_TOKENS.has(token)),
+  )).length;
+}
+
+function hasSubstantiveProductProofText({ visibleText, validationMatches = [], proofRequirementMatches = [] }) {
+  const matchedProofPhrases = (Array.isArray(proofRequirementMatches) ? proofRequirementMatches : [])
+    .flatMap((entry) => [entry?.matchedPhrase, entry?.label])
+    .filter(Boolean);
+  const values = [
+    visibleText,
+    ...(Array.isArray(validationMatches) ? validationMatches : []),
+    ...matchedProofPhrases,
+  ];
+
+  if (/\b(?:gpt|claude|zero|webgl|jsonl|run id|copy all|billing|feedback|comment|skill|permission|login)\b/i.test(values.join(" "))) {
+    return true;
+  }
+
+  return countSubstantiveTokens(values) >= 3;
+}
+
 function aspectRatioFromClip(clip) {
   if (!clip?.width || !clip?.height) {
     return null;
@@ -85,6 +162,12 @@ export function assessDemoScreenshotQuality({
   const blockedPhrases = Array.isArray(forbiddenPhraseMatches)
     ? forbiddenPhraseMatches.map((entry) => String(entry || "").trim()).filter(Boolean)
     : [];
+  const unpublishableEmptyStateMatches = collectUnpublishableEmptyStateMatches(visibleText);
+  const substantiveProductProofText = hasSubstantiveProductProofText({
+    visibleText,
+    validationMatches,
+    proofRequirementMatches,
+  });
   const checks = [];
 
   checks.push(
@@ -160,6 +243,30 @@ export function assessDemoScreenshotQuality({
       ),
     );
   }
+
+  checks.push(
+    buildCheck(
+      "empty-product-placeholder",
+      unpublishableEmptyStateMatches.length === 0,
+      unpublishableEmptyStateMatches.length === 0
+        ? "no generated-product placeholder text is visible"
+        : `generated-product placeholder text is visible: ${unpublishableEmptyStateMatches.join("; ")}`,
+      18,
+      phaseId !== "setup-state",
+    ),
+  );
+
+  checks.push(
+    buildCheck(
+      "substantive-product-proof",
+      substantiveProductProofText,
+      substantiveProductProofText
+        ? "visible text includes substantive product proof beyond generic shell labels"
+        : "visible text is mostly generic shell, tab, project, or empty-canvas labels",
+      14,
+      phaseId !== "setup-state",
+    ),
+  );
 
   checks.push(
     buildCheck(
@@ -264,6 +371,8 @@ export function assessDemoScreenshotQuality({
       clipCoverage,
       forbiddenToolCalls: blockedTools,
       forbiddenPhraseMatches: blockedPhrases,
+      unpublishableEmptyStateMatches,
+      substantiveProductProofText,
     },
   };
 }

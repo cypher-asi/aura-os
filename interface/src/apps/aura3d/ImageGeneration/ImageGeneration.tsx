@@ -98,8 +98,12 @@ export function ImageGeneration() {
   ]);
 
   return (
-    <div className={styles.root}>
-      <div className={styles.previewArea}>
+    <div className={styles.root} data-agent-surface="aura3d-image-generation">
+      <div
+        className={styles.previewArea}
+        data-agent-surface="aura3d-image-preview-area"
+        data-agent-proof={currentImage?.imageUrl || partialImageData ? "generated-image-visible" : undefined}
+      >
         <ImagePreview
           imageUrl={currentImage?.imageUrl}
           partialData={partialImageData}

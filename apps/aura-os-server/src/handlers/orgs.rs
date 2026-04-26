@@ -10,6 +10,7 @@ use aura_os_core::*;
 use aura_os_network::{NetworkOrg, NetworkOrgInvite, NetworkOrgMember};
 use aura_os_orgs::IntegrationSecretUpdate;
 
+use crate::capture_auth::{demo_org_id, is_capture_access_token};
 use crate::dto::SetBillingRequest;
 use crate::dto::{CreateOrgIntegrationRequest, UpdateOrgIntegrationRequest};
 use crate::error::{map_integrations_error, map_network_error, ApiError, ApiResult};
@@ -278,6 +279,22 @@ pub(crate) async fn list_orgs(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
 ) -> ApiResult<Json<Vec<OrgResponse>>> {
+    if is_capture_access_token(&jwt) {
+        let now = chrono::Utc::now().to_rfc3339();
+        return Ok(Json(vec![OrgResponse {
+            org_id: demo_org_id().to_string(),
+            name: "Aura Capture Team".into(),
+            owner_user_id: "capture-demo-user".into(),
+            slug: Some("aura-capture".into()),
+            description: Some("Demo organization for changelog media capture.".into()),
+            avatar_url: None,
+            billing_email: None,
+            billing: None,
+            created_at: now.clone(),
+            updated_at: now,
+        }]));
+    }
+
     let client = state.require_network_client()?;
     let net_orgs = client.list_orgs(&jwt).await.map_err(map_network_error)?;
 
@@ -370,6 +387,10 @@ pub(crate) async fn list_integrations(
     AuthJwt(jwt): AuthJwt,
     Path(org_id): Path<OrgId>,
 ) -> ApiResult<Json<Vec<OrgIntegration>>> {
+    if is_capture_access_token(&jwt) {
+        return Ok(Json(Vec::new()));
+    }
+
     if let Some(client) = &state.integrations_client {
         let integrations = client
             .list_integrations(&org_id, &jwt)
@@ -554,6 +575,22 @@ pub(crate) async fn list_members(
     AuthSession(session): AuthSession,
     Path(org_id): Path<OrgId>,
 ) -> ApiResult<Json<Vec<MemberResponse>>> {
+    if is_capture_access_token(&jwt) && org_id != demo_org_id() {
+        return Ok(Json(Vec::new()));
+    }
+
+    if is_capture_access_token(&jwt) {
+        return Ok(Json(vec![MemberResponse {
+            org_id: org_id.to_string(),
+            user_id: session.user_id,
+            display_name: session.display_name,
+            role: "owner".into(),
+            avatar_url: None,
+            credit_budget: None,
+            joined_at: chrono::Utc::now().to_rfc3339(),
+        }]));
+    }
+
     let client = state.require_network_client()?;
     let org_id_str = org_id.to_string();
     let members = client

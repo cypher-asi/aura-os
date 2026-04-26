@@ -278,9 +278,8 @@ export function ProjectWorkView() {
   if (!isMobileLayout) return <ExecutionView />;
 
   return (
-    <div className={styles.root}>
+    <div className={styles.root} data-testid="mobile-project-work">
       <section className={styles.section} aria-label="Execution">
-        <div className={styles.sectionLabel}>Execution</div>
         <ExecutionSummary projectId={projectId} />
       </section>
 

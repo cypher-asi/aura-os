@@ -58,7 +58,7 @@ export function getMobileProjectDestination(pathname: string): MobileProjectDest
   if (/^agents\/[^/]+\/details$/.test(suffix)) {
     return "agent";
   }
-  if (suffix === "agent" || suffix.startsWith("agents/")) {
+  if (suffix === "agent" || suffix === "agents" || suffix.startsWith("agents/")) {
     return "agent";
   }
 
@@ -96,6 +96,10 @@ export function projectRootPath(projectId: string): string {
 
 export function projectAgentRoute(projectId: string): string {
   return `/projects/${projectId}/agent`;
+}
+
+export function projectAgentsRoute(projectId: string): string {
+  return `/projects/${projectId}/agents`;
 }
 
 export function projectAgentChatRoute(projectId: string, agentInstanceId: string): string {

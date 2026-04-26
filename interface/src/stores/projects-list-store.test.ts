@@ -32,6 +32,7 @@ vi.mock("./org-store", () => ({
 
 vi.mock("./auth-store", () => ({
   useAuthStore: {
+    getState: () => ({ user: null }),
     subscribe: vi.fn(() => vi.fn()),
   },
 }));

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { authHeaders } from "../shared/lib/auth-token";
+import { authHeaders, isCaptureAuthSession } from "../shared/lib/auth-token";
 import {
   getConfiguredHostOrigin,
   getTargetHostOrigin,
@@ -15,6 +15,13 @@ const PROBE_INTERVAL_MS = 20_000;
 const PROBE_TIMEOUT_MS = 4_000;
 
 async function probeHost(): Promise<HostConnectionStatus> {
+  if (
+    typeof window !== "undefined" &&
+    (window.location.pathname === "/capture-login" || isCaptureAuthSession())
+  ) {
+    return "online";
+  }
+
   // Native shells bundle the interface at a local webview origin, so they need
   // an explicit Aura host instead of falling back to the embedded app origin.
   if (requiresExplicitHostOrigin() && !getTargetHostOrigin()) {

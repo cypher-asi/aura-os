@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type ChangeEvent } from "react";
 import { Button, Input, Modal, Text } from "@cypher-asi/zui";
 import { Select } from "../../../components/Select";
+import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import { useModalInitialFocus } from "../../../hooks/use-modal-initial-focus";
 import { useFeedbackStore } from "../../../stores/feedback-store";
 import {
@@ -36,6 +37,7 @@ const DEFAULT_STATUS: FeedbackStatus = "not_started";
 
 export function NewFeedbackModal({ isOpen, onClose }: NewFeedbackModalProps) {
   const { inputRef, initialFocusRef } = useModalInitialFocus<HTMLInputElement>();
+  const { isMobileLayout } = useAuraCapabilities();
   const createFeedback = useFeedbackStore((s) => s.createFeedback);
   const isSubmitting = useFeedbackStore((s) => s.isSubmitting);
   const composerError = useFeedbackStore((s) => s.composerError);
@@ -94,7 +96,10 @@ export function NewFeedbackModal({ isOpen, onClose }: NewFeedbackModalProps) {
       isOpen={isOpen}
       onClose={handleClose}
       title="New Feedback"
-      size="md"
+      size={isMobileLayout ? "full" : "md"}
+      fullHeight={isMobileLayout}
+      className={isMobileLayout ? styles.mobileModal : undefined}
+      contentClassName={isMobileLayout ? styles.mobileContent : undefined}
       initialFocusRef={initialFocusRef}
       footer={
         <>

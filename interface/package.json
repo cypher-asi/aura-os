@@ -25,8 +25,10 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:perf": "playwright test --project=perf-desktop-chromium",
-    "demo:screenshots:capture": "node ./scripts/capture-demo-screenshots.mjs",
-    "demo:screenshots:agent": "node ./scripts/produce-agent-demo-screenshots.mjs",
+    "changelog:media:sitemap": "node ./scripts/generate-aura-sitemap.mjs",
+    "changelog:media:plan": "node ./scripts/plan-changelog-media.mjs",
+    "changelog:media:evaluate": "node ./scripts/evaluate-changelog-media-pipeline.mjs",
+    "changelog:media:browser-use:trial": "node ./scripts/changelog-media-browser-use-trial.mjs",
     "perf:bundle-budgets": "node ./scripts/check-bundle-budgets.mjs",
     "perf:guardrails": "npm run build && npm run perf:bundle-budgets && npm run test:e2e:perf",
     "test:evals": "playwright test tests/e2e/evals",
@@ -40,7 +42,6 @@
     "codegen:protocol": "cd .. && cargo test -p aura-protocol --features typescript export_typescript_bindings -- --nocapture && cp crates/aura-protocol/bindings/*.ts interface/src/shared/types/harness-protocol.ts"
   },
   "dependencies": {
-    "@browserbasehq/stagehand": "^3.2.1",
     "@capacitor/android": "^8.0.0",
     "@capacitor/core": "^8.0.0",
     "@capacitor/ios": "^8.0.0",
@@ -73,8 +74,9 @@
     "react-router-dom": "^7.13.1",
     "rehype-highlight": "^7.0.2",
     "remark-gfm": "^4.0.1",
-    "tiptap-markdown": "^0.9.0",
+    "sharp": "^0.34.5",
     "three": "^0.174.0",
+    "tiptap-markdown": "^0.9.0",
     "zustand": "^5.0.12"
   },
   "overrides": {
@@ -99,6 +101,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/three": "^0.174.0",
     "@vitejs/plugin-react": "^6.0.0",
+    "browser-use-sdk": "^3.4.3",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",

@@ -1,5 +1,4 @@
-import { getLastAgent } from "../../utils/storage";
-import { projectAgentChatRoute, projectAgentRoute } from "../../utils/mobileNavigation";
+import { projectAgentsRoute } from "../../utils/mobileNavigation";
 
 export function blurActiveElement() {
   const active = document.activeElement;
@@ -7,11 +6,7 @@ export function blurActiveElement() {
 }
 
 export function resolveProjectAgentPath(projectId: string) {
-  const lastAgentInstanceId = getLastAgent(projectId);
-  if (lastAgentInstanceId) {
-    return projectAgentChatRoute(projectId, lastAgentInstanceId);
-  }
-  return projectAgentRoute(projectId);
+  return projectAgentsRoute(projectId);
 }
 
 export function resolveWorkspaceReturnPath(projectId: string, state: unknown) {

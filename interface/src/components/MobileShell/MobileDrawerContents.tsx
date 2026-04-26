@@ -1,153 +1,56 @@
-import { useCallback, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { lazy, Suspense, useCallback, useRef, useState } from "react";
 import { Button, Input, Modal, Text } from "@cypher-asi/zui";
 import {
-  CircleUserRound, Building2, Check,
-  ChevronRight, Plus, Server,
-  FolderOpen, Bot, GitCommitVertical, Cross,
+  Activity, Building2, Check,
+  ChevronRight, Gem, MessageSquareText, Plus, Server, UserRound,
 } from "lucide-react";
+import { useFeedStore } from "../../stores/feed-store";
 import { useMobileDrawerStore } from "../../stores/mobile-drawer-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useOrgStore } from "../../stores/org-store";
 import { useModalInitialFocus } from "../../hooks/use-modal-initial-focus";
-import { projectFilesRoute, projectWorkRoute, projectStatsRoute, projectTasksRoute, projectProcessRoute } from "../../utils/mobileNavigation";
-import { resolveProjectAgentPath } from "./mobile-shell-utils";
-import type { MobileShellState } from "./useMobileShellState";
+import { getHostDisplayLabel } from "../../shared/lib/host-config";
 import styles from "./MobileShell.module.css";
 
-function resolveGlobalProjectPath(state: MobileShellState) {
-  if (state.mobileDestination === "tasks" && state.mobileTargetProjectId) {
-    return projectTasksRoute(state.mobileTargetProjectId);
-  }
+const FeedbackMainPanel = lazy(() =>
+  import("../../apps/feedback/FeedbackMainPanel").then((module) => ({ default: module.FeedbackMainPanel })),
+);
+const FeedMainPanel = lazy(() =>
+  import("../../apps/feed/FeedMainPanel").then((module) => ({ default: module.FeedMainPanel })),
+);
+const ProfileMainPanel = lazy(() =>
+  import("../../apps/profile/ProfileMainPanel").then((module) => ({ default: module.ProfileMainPanel })),
+);
 
-  if (state.mobileDestination === "execution" && state.mobileTargetProjectId) {
-    return projectWorkRoute(state.mobileTargetProjectId);
-  }
-
-  if (state.mobileDestination === "files" && state.mobileTargetProjectId) {
-    return projectFilesRoute(state.mobileTargetProjectId);
-  }
-
-  if (state.mobileDestination === "process" && state.mobileTargetProjectId) {
-    return projectProcessRoute(state.mobileTargetProjectId);
-  }
-
-  if (state.mobileDestination === "stats" && state.mobileTargetProjectId) {
-    return projectStatsRoute(state.mobileTargetProjectId);
-  }
-
-  if (state.mobileTargetProjectId) {
-    return resolveProjectAgentPath(state.mobileTargetProjectId);
-  }
-
-  return "/projects";
+interface AccountSheetContentProps {
+  mode?: "account" | "settings";
+  settingsDestination?: SettingsDestination | null;
+  onSettingsDestinationChange?: (destination: SettingsDestination | null) => void;
 }
 
-function resolveGlobalAgentsPath() {
-  return "/agents";
+export type SettingsDestination = "profile" | "feed" | "leaderboard" | "feedback" | "team" | "host";
+
+export function getSettingsDestinationTitle(destination: SettingsDestination) {
+  if (destination === "profile") return "Profile";
+  if (destination === "leaderboard") return "Leaderboard";
+  if (destination === "feedback") return "Feedback";
+  if (destination === "team") return "Team settings";
+  if (destination === "host") return "Host settings";
+  return "Feed";
 }
 
-export function AppSwitcherContent({ state }: { state: MobileShellState }) {
-  const navigate = useNavigate();
-  const openAfterDrawerClose = useMobileDrawerStore((s) => s.openAfterDrawerClose);
-  const setAccountOpen = useMobileDrawerStore((s) => s.setAccountOpen);
-  const activeOrg = useOrgStore((s) => s.activeOrg);
-  const activeAppId = state.activeApp.id;
-  const projectLauncherLabel = state.mobileTargetProject ? "Return to project" : "Projects";
-  const projectLauncherDescription = state.mobileTargetProject?.name ?? "Open your projects";
-
-  const items = [
-    ...(!state.isPhoneLayout ? [{
-      id: "organization",
-      label: "Organization",
-      description: activeOrg?.name ?? "Teams & settings",
-      icon: Building2,
-      onSelect: () => setAccountOpen(true),
-    }] as const : []),
-    {
-      id: "projects",
-      label: projectLauncherLabel,
-      description: projectLauncherDescription,
-      icon: FolderOpen,
-      path: resolveGlobalProjectPath(state),
-    },
-    {
-      id: "agents",
-      label: "Agent library",
-      description: "Browse shared agents",
-      icon: Bot,
-      path: resolveGlobalAgentsPath(),
-    },
-    {
-      id: "feed",
-      label: "Feed",
-      description: "Activity across your projects",
-      icon: GitCommitVertical,
-      path: "/feed",
-    },
-    {
-      id: "feedback",
-      label: "Feedback",
-      description: "Post, vote, and discuss feedback",
-      icon: Cross,
-      path: "/feedback",
-    },
-    {
-      id: "profile",
-      label: "Profile",
-      description: "Your account and activity",
-      icon: CircleUserRound,
-      path: "/profile",
-    },
-  ] as const;
-
-  return (
-    <div className={styles.mobileDrawerContent}>
-      <div className={styles.mobileDrawerBody}>
-        <div className={styles.mobileAppSwitcherList}>
-          {items.map((item) => {
-            const isSelected = item.id === "projects"
-              ? activeAppId === "projects"
-              : activeAppId === item.id;
-
-            return (
-              <button
-                key={item.id}
-                type="button"
-                className={`${styles.mobileAppSwitcherButton} ${isSelected ? styles.mobileAppSwitcherButtonActive : ""}`}
-                aria-pressed={isSelected}
-                aria-label={item.label}
-                onClick={() => openAfterDrawerClose(() => {
-                  if ("path" in item) {
-                    navigate(item.path);
-                    return;
-                  }
-                  item.onSelect();
-                })}
-              >
-                <span className={styles.mobileAppSwitcherIcon}>
-                  <item.icon size={18} />
-                </span>
-                <span className={styles.mobileAppSwitcherText}>
-                  <span className={styles.mobileAppSwitcherLabel}>{item.label}</span>
-                  <span className={styles.mobileAppSwitcherDescription}>{item.description}</span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function AccountSheetContent() {
+export function AccountSheetContent({
+  mode = "account",
+  settingsDestination: controlledSettingsDestination,
+  onSettingsDestinationChange,
+}: AccountSheetContentProps) {
   const openAfterDrawerClose = useMobileDrawerStore((s) => s.openAfterDrawerClose);
   const closeDrawers = useMobileDrawerStore((s) => s.closeDrawers);
   const { features } = useAuraCapabilities();
   const openOrgSettings = useUIModalStore((s) => s.openOrgSettings);
   const openHostSettings = useUIModalStore((s) => s.openHostSettings);
+  const setFeedFilter = useFeedStore((s) => s.setFilter);
   const { inputRef, initialFocusRef, autoFocus } = useModalInitialFocus<HTMLInputElement>();
   const orgs = useOrgStore((s) => s.orgs);
   const activeOrg = useOrgStore((s) => s.activeOrg);
@@ -157,10 +60,23 @@ export function AccountSheetContent() {
   const [teamName, setTeamName] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [uncontrolledSettingsDestination, setUncontrolledSettingsDestination] = useState<SettingsDestination | null>(null);
   const lastOrgSelectionRef = useRef<{ orgId: string | null; atMs: number }>({
     orgId: null,
     atMs: 0,
   });
+  const isSettingsDestinationControlled = onSettingsDestinationChange !== undefined;
+  const settingsDestination = isSettingsDestinationControlled
+    ? controlledSettingsDestination ?? null
+    : uncontrolledSettingsDestination;
+
+  const setSettingsDestination = useCallback((destination: SettingsDestination | null) => {
+    if (onSettingsDestinationChange) {
+      onSettingsDestinationChange(destination);
+      return;
+    }
+    setUncontrolledSettingsDestination(destination);
+  }, [onSettingsDestinationChange]);
 
   const handleOrgSelection = useCallback((orgId: string) => {
     const now = Date.now();
@@ -194,79 +110,206 @@ export function AccountSheetContent() {
     }
   }
 
+  const openSettingsDestination = useCallback((destination: SettingsDestination) => {
+    if (destination === "feed") {
+      setFeedFilter("everything");
+    }
+    if (destination === "leaderboard") {
+      setFeedFilter("leaderboard");
+    }
+    setSettingsDestination(destination);
+  }, [setFeedFilter]);
+
+  const openLeaderboard = useCallback(() => {
+    openSettingsDestination("leaderboard");
+  }, [openSettingsDestination]);
+
+  const isSettingsMode = mode === "settings";
+
   return (
     <>
       <div className={styles.mobileDrawerContent}>
         <div className={styles.mobileDrawerBody}>
-          <section className={styles.mobileDrawerSectionBlock} aria-labelledby="mobile-team-switcher-title">
-            <div className={styles.mobileDrawerSectionHeaderRow}>
-              <div className={styles.mobileDrawerSectionEyebrow}>
-                <Building2 size={15} />
-                <span id="mobile-team-switcher-title">Organization</span>
-              </div>
-              <span className={styles.mobileDrawerSectionMeta}>
-                {activeOrg?.name ?? "No team selected"}
+          {isSettingsMode && settingsDestination ? (
+            <section className={styles.mobileSettingsDetail} aria-labelledby="mobile-settings-detail-title">
+              <span id="mobile-settings-detail-title" className={styles.mobileSettingsDetailTitleHidden}>
+                {getSettingsDestinationTitle(settingsDestination)}
               </span>
-            </div>
-            <div className={styles.mobileDrawerSectionDescription}>
-              Feed, leaderboard, projects, and integrations follow the active organization.
-            </div>
-            {orgs.length > 0 ? (
-              <div className={styles.mobileOrgList} role="list" aria-label="Organizations">
-                {orgs.map((org) => {
-                  const isActive = org.org_id === activeOrg?.org_id;
-                  return (
-                    <button
-                      key={org.org_id}
-                      type="button"
-                      role="listitem"
-                      className={`${styles.mobileOrgButton} ${isActive ? styles.mobileOrgButtonActive : ""}`}
-                      aria-pressed={isActive}
-                      onPointerUp={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        handleOrgSelection(org.org_id);
-                      }}
-                      onClick={() => handleOrgSelection(org.org_id)}
-                    >
-                      <span className={styles.mobileOrgButtonText}>
-                        <span className={styles.mobileOrgButtonName}>{org.name}</span>
-                        {isActive ? (
-                          <span className={styles.mobileOrgButtonMeta}>
-                            Current organization
-                          </span>
-                        ) : null}
-                      </span>
-                      <span className={styles.mobileOrgButtonIcon}>
-                        {isActive ? <Check size={16} /> : <ChevronRight size={16} />}
-                      </span>
-                    </button>
-                  );
-                })}
+              <div className={styles.mobileSettingsDetailContent}>
+                {settingsDestination === "profile" ? (
+                  <div className={styles.mobileSettingsEmbeddedPanel}>
+                    <Suspense fallback={<Text size="sm" variant="muted">Loading profile...</Text>}>
+                      <ProfileMainPanel />
+                    </Suspense>
+                  </div>
+                ) : settingsDestination === "feed" || settingsDestination === "leaderboard" ? (
+                  <div className={styles.mobileSettingsEmbeddedPanel}>
+                    <Suspense fallback={<Text size="sm" variant="muted">Loading feed...</Text>}>
+                      <FeedMainPanel />
+                    </Suspense>
+                  </div>
+                ) : settingsDestination === "feedback" ? (
+                  <div className={styles.mobileSettingsEmbeddedPanel}>
+                    <Suspense fallback={<Text size="sm" variant="muted">Loading feedback...</Text>}>
+                      <FeedbackMainPanel />
+                    </Suspense>
+                  </div>
+                ) : settingsDestination === "team" ? (
+                  <div className={styles.mobileSettingsDetailCard}>
+                    <div className={styles.mobileSettingsDetailCardTitle}>{activeOrg?.name ?? "No team selected"}</div>
+                    <div className={styles.mobileSettingsDetailCardMeta}>
+                      Manage members, invites, billing, and integrations without losing your current project context.
+                    </div>
+                    <Button variant="primary" onClick={openOrgSettings}>Open Team Settings</Button>
+                  </div>
+                ) : (
+                  <div className={styles.mobileSettingsDetailCard}>
+                    <div className={styles.mobileSettingsDetailCardTitle}>Current target</div>
+                    <div className={styles.mobileSettingsDetailMono}>{getHostDisplayLabel()}</div>
+                    <div className={styles.mobileSettingsDetailCardMeta}>
+                      Host settings open as a focused modal, then return here when closed.
+                    </div>
+                    <Button variant="primary" onClick={openHostSettings}>Open Host Settings</Button>
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className={styles.mobileDrawerEmptyState}>
-                <Text variant="muted" size="sm">
-                  Create your first team to unlock projects, agents, and mobile workspaces.
-                </Text>
+            </section>
+          ) : isSettingsMode ? (
+            <section className={styles.mobileSettingsPanel} aria-labelledby="mobile-settings-title">
+              <div className={styles.mobileSettingsHero}>
+                <div>
+                  <div className={styles.mobileDrawerSectionEyebrow}>
+                    <Building2 size={15} />
+                    <span id="mobile-settings-title">Current team</span>
+                  </div>
+                  <div className={styles.mobileSettingsTeamName}>{activeOrg?.name ?? "No team selected"}</div>
+                </div>
+                <div className={styles.mobileDrawerSectionDescription}>
+                  Account, team, activity, and community views live here so project navigation can stay focused.
+                </div>
               </div>
-            )}
-          </section>
-          <div className={styles.mobileDrawerActions}>
-            <Button
-              variant={orgs.length === 0 ? "primary" : "ghost"}
-              size="sm"
-              icon={<Plus size={16} />}
-              className={styles.mobileDrawerAction}
-              onClick={() => setCreateOpen(true)}
-            >
-              {orgs.length === 0 ? "Create Team" : "New Team"}
-            </Button>
-            <Button variant="ghost" size="sm" icon={<Building2 size={16} />} className={styles.mobileDrawerAction} onClick={() => openAfterDrawerClose(openOrgSettings)}>Team settings</Button>
-            {features.hostRetargeting ? (
-              <Button variant="ghost" size="sm" icon={<Server size={16} />} className={styles.mobileDrawerAction} onClick={() => openAfterDrawerClose(openHostSettings)}>Host settings</Button>
-            ) : null}
-          </div>
+
+              <div className={styles.mobileSettingsShortcutGrid} aria-label="Settings destinations">
+                <button type="button" className={styles.mobileSettingsShortcut} onClick={() => openSettingsDestination("profile")}>
+                  <span className={styles.mobileSettingsShortcutIcon}><UserRound size={18} /></span>
+                  <span>
+                    <span className={styles.mobileSettingsShortcutTitle}>Profile</span>
+                    <span className={styles.mobileSettingsShortcutMeta}>Account summary</span>
+                  </span>
+                </button>
+                <button type="button" className={styles.mobileSettingsShortcut} onClick={() => openSettingsDestination("feed")}>
+                  <span className={styles.mobileSettingsShortcutIcon}><Activity size={18} /></span>
+                  <span>
+                    <span className={styles.mobileSettingsShortcutTitle}>Feed</span>
+                    <span className={styles.mobileSettingsShortcutMeta}>Team activity</span>
+                  </span>
+                </button>
+                <button type="button" className={styles.mobileSettingsShortcut} onClick={openLeaderboard}>
+                  <span className={styles.mobileSettingsShortcutIcon}><Gem size={18} /></span>
+                  <span>
+                    <span className={styles.mobileSettingsShortcutTitle}>Leaderboard</span>
+                    <span className={styles.mobileSettingsShortcutMeta}>Rankings</span>
+                  </span>
+                </button>
+                <button type="button" className={styles.mobileSettingsShortcut} onClick={() => openSettingsDestination("feedback")}>
+                  <span className={styles.mobileSettingsShortcutIcon}><MessageSquareText size={18} /></span>
+                  <span>
+                    <span className={styles.mobileSettingsShortcutTitle}>Feedback</span>
+                    <span className={styles.mobileSettingsShortcutMeta}>Ideas and votes</span>
+                  </span>
+                </button>
+              </div>
+            </section>
+          ) : (
+            <section className={styles.mobileDrawerSectionBlock} aria-labelledby="mobile-team-switcher-title">
+              <div className={styles.mobileDrawerSectionHeaderRow}>
+                <div className={styles.mobileDrawerSectionEyebrow}>
+                  <Building2 size={15} />
+                  <span id="mobile-team-switcher-title">Organization</span>
+                </div>
+                <span className={styles.mobileDrawerSectionMeta}>
+                  {activeOrg?.name ?? "No team selected"}
+                </span>
+              </div>
+              <div className={styles.mobileDrawerSectionDescription}>
+                Feed, leaderboard, projects, and integrations follow the active organization.
+              </div>
+              {orgs.length > 0 ? (
+                <div className={styles.mobileOrgList} role="list" aria-label="Organizations">
+                  {orgs.map((org) => {
+                    const isActive = org.org_id === activeOrg?.org_id;
+                    return (
+                      <button
+                        key={org.org_id}
+                        type="button"
+                        role="listitem"
+                        className={`${styles.mobileOrgButton} ${isActive ? styles.mobileOrgButtonActive : ""}`}
+                        aria-pressed={isActive}
+                        onPointerUp={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          handleOrgSelection(org.org_id);
+                        }}
+                        onClick={() => handleOrgSelection(org.org_id)}
+                      >
+                        <span className={styles.mobileOrgButtonText}>
+                          <span className={styles.mobileOrgButtonName}>{org.name}</span>
+                          {isActive ? (
+                            <span className={styles.mobileOrgButtonMeta}>
+                              Current organization
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className={styles.mobileOrgButtonIcon}>
+                          {isActive ? <Check size={16} /> : <ChevronRight size={16} />}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className={styles.mobileDrawerEmptyState}>
+                  <Text variant="muted" size="sm">
+                    Create your first team to unlock projects, agents, and mobile workspaces.
+                  </Text>
+                </div>
+              )}
+            </section>
+          )}
+          {isSettingsMode ? (
+            <div className={styles.mobileSettingsActionList} aria-label="Team settings actions">
+              <button type="button" className={styles.mobileSettingsAction} onClick={() => setCreateOpen(true)}>
+                <Plus size={16} />
+                <span>{orgs.length === 0 ? "Create Team" : "New Team"}</span>
+              </button>
+              <button type="button" className={styles.mobileSettingsAction} onClick={() => openSettingsDestination("team")}>
+                <Building2 size={16} />
+                <span>Team settings</span>
+              </button>
+              {features.hostRetargeting ? (
+                <button type="button" className={styles.mobileSettingsAction} onClick={() => openSettingsDestination("host")}>
+                  <Server size={16} />
+                  <span>Host settings</span>
+                </button>
+              ) : null}
+            </div>
+          ) : (
+            <div className={styles.mobileDrawerActions}>
+              <Button
+                variant={orgs.length === 0 ? "primary" : "ghost"}
+                size="sm"
+                icon={<Plus size={16} />}
+                className={styles.mobileDrawerAction}
+                onClick={() => setCreateOpen(true)}
+              >
+                {orgs.length === 0 ? "Create Team" : "New Team"}
+              </Button>
+              <Button variant="ghost" size="sm" icon={<Building2 size={16} />} className={styles.mobileDrawerAction} onClick={() => openAfterDrawerClose(openOrgSettings)}>Team settings</Button>
+              {features.hostRetargeting ? (
+                <Button variant="ghost" size="sm" icon={<Server size={16} />} className={styles.mobileDrawerAction} onClick={() => openAfterDrawerClose(openHostSettings)}>Host settings</Button>
+              ) : null}
+            </div>
+          )}
         </div>
       </div>
       <Modal

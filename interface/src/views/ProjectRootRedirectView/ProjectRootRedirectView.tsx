@@ -2,7 +2,7 @@ import { Navigate, useParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useProjectsListStore } from "../../stores/projects-list-store";
-import { projectAgentRoute } from "../../utils/mobileNavigation";
+import { projectAgentsRoute } from "../../utils/mobileNavigation";
 import { ProjectEmptyView } from "../ProjectEmptyView";
 
 export function ProjectRootRedirectView() {
@@ -16,7 +16,7 @@ export function ProjectRootRedirectView() {
   );
 
   if (isMobileLayout && projectId) {
-    return <Navigate to={projectAgentRoute(projectId)} replace />;
+    return <Navigate to={projectAgentsRoute(projectId)} replace />;
   }
 
   if (projectId) {

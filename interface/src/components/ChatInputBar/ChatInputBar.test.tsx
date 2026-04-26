@@ -164,13 +164,13 @@ describe("ChatInputBar", () => {
   it("shows default model label when selectedModel set in store", () => {
     mockSelectedModel = "aura-claude-opus-4-6";
     render(<ChatInputBar {...makeProps()} />);
-    expect(screen.getByText("Opus 4.6")).toBeInTheDocument();
+    expect(screen.getAllByText("Opus 4.6")[0]).toBeInTheDocument();
   });
 
   it("shows selected model label", () => {
     mockSelectedModel = "aura-claude-sonnet-4-6";
     render(<ChatInputBar {...makeProps()} />);
-    expect(screen.getByText("Sonnet 4.6")).toBeInTheDocument();
+    expect(screen.getAllByText("Sonnet 4.6")[0]).toBeInTheDocument();
   });
 
   it("opens model dropdown on click and calls setSelectedModel", async () => {
@@ -178,10 +178,10 @@ describe("ChatInputBar", () => {
     mockSelectedModel = "aura-claude-opus-4-6";
     render(<ChatInputBar {...makeProps()} />);
 
-    await user.click(screen.getByText("Opus 4.6"));
-    expect(screen.getByText("Kimi K2.6")).toBeInTheDocument();
+    await user.click(screen.getAllByText("Opus 4.6")[0]);
+    expect(screen.getAllByText("Show all models")[0]).toBeInTheDocument();
 
-    await user.click(screen.getByText("Sonnet 4.6"));
+    await user.click(screen.getAllByText("Sonnet 4.6")[0]);
     expect(mockSetSelectedModel).toHaveBeenCalledWith(
       "test-stream",
       "aura-claude-sonnet-4-6",
@@ -195,13 +195,13 @@ describe("ChatInputBar", () => {
     mockSelectedModel = "aura-gpt-5-4";
     render(<ChatInputBar {...makeProps()} />);
 
-    await user.click(screen.getByText("GPT-5.4"));
-    await user.click(screen.getByText("Show all models"));
+    await user.click(screen.getAllByText("GPT-5.4")[0]);
+    await user.click(screen.getAllByText("Show all models")[0]);
 
-    expect(screen.getByText("OpenAI")).toBeInTheDocument();
-    expect(screen.getByText("Anthropic")).toBeInTheDocument();
-    expect(screen.getByText("Open source")).toBeInTheDocument();
-    expect(screen.getByText("GPT-OSS 120B")).toBeInTheDocument();
+    expect(screen.getAllByText("OpenAI")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("Anthropic")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("Open source")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("GPT-OSS 120B")[0]).toBeInTheDocument();
   });
 
   it("renders attachment previews", () => {

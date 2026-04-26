@@ -5,6 +5,7 @@ use axum::Json;
 use aura_os_core::{Project, ProjectId};
 use aura_os_projects::UpdateProjectInput;
 
+use crate::capture_auth::{demo_org_id, demo_project, demo_project_id, is_capture_access_token};
 use crate::dto::{CreateImportedProjectRequest, CreateProjectRequest, UpdateProjectRequest};
 use crate::error::{map_network_error, ApiError, ApiResult, UpstreamErrorContext};
 use crate::state::{AppState, AuthJwt};
@@ -216,6 +217,17 @@ pub(crate) async fn list_projects(
     AuthJwt(jwt): AuthJwt,
     Query(query): Query<ListProjectsQuery>,
 ) -> ApiResult<Json<Vec<Project>>> {
+    if is_capture_access_token(&jwt) {
+        if query
+            .org_id
+            .as_ref()
+            .map_or(true, |org_id| org_id == &demo_org_id())
+        {
+            return Ok(Json(vec![demo_project()]));
+        }
+        return Ok(Json(Vec::new()));
+    }
+
     if let Some(ref org_id) = query.org_id {
         if let Some(client) = &state.network_client {
             let net_projects = client
@@ -276,6 +288,10 @@ pub(crate) async fn get_project(
     AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Project>> {
+    if is_capture_access_token(&jwt) && project_id == demo_project_id() {
+        return Ok(Json(demo_project()));
+    }
+
     if let Some(client) = &state.network_client {
         let net_project = client
             .get_project(&project_id.to_string(), &jwt)

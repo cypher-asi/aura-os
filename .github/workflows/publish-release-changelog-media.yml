@@ -1,368 +1,235 @@
 name: Publish Release Changelog Media
 
 on:
+  workflow_run:
+    workflows:
+      - Publish Release Changelog
+    types:
+      - completed
   workflow_dispatch:
     inputs:
-      preview_url:
-        description: "Public preview URL for Browserbase to open"
-        required: false
-        default: ""
-        type: string
       channel:
         description: "Changelog channel to publish media for"
         required: true
         default: nightly
         type: string
-      version:
-        description: "Release version to publish media for"
-        required: false
-        default: ""
-        type: string
       date:
-        description: "Changelog date to publish media for"
+        description: "Optional changelog date. If omitted, latest.json date is used."
         required: false
         default: ""
         type: string
-      head_sha:
-        description: "Repo commit SHA to use for the media capture logic"
+      refresh_existing:
+        description: "Regenerate entries that already have published media"
+        required: false
+        default: false
+        type: boolean
+      max_candidates:
+        description: "Maximum media candidates to attempt"
+        required: false
+        default: "3"
+        type: string
+      base_url:
+        description: "Optional Aura web app URL. Defaults to repository variable/secret."
         required: false
         default: ""
-        type: string
-      provider:
-        description: "Browser automation provider"
-        required: true
-        default: browserbase
-        type: string
-      profile:
-        description: "Optional screenshot profile override"
-        required: false
-        default: ""
-        type: string
-      deploy_wait_minutes:
-        description: "Minutes to wait before capture so the deployed frontend can settle"
-        required: false
-        default: "5"
         type: string
 
 permissions:
-  actions: write
+  actions: read
   contents: write
 
 concurrency:
-  group: changelog-media-${{ inputs.channel }}
+  group: publish-release-changelog-media-${{ github.event.workflow_run.id || inputs.channel || github.run_id }}
   cancel-in-progress: false
 
 jobs:
   publish-media:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
-      - name: Resolve changelog target
-        id: target
+      - name: Download changelog publish metadata
+        if: github.event_name == 'workflow_run'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: changelog-publish-metadata
+          path: changelog-publish-metadata
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Resolve upstream media skip
+        id: upstream
+        if: github.event_name == 'workflow_run'
         shell: bash
         run: |
-          if [[ -z "${{ inputs.channel }}" ]]; then
-            echo "channel is required" >&2
-            exit 1
+          metadata_file="changelog-publish-metadata/changelog-publish-metadata.json"
+          if [[ ! -f "$metadata_file" ]]; then
+            echo "No changelog publish metadata artifact was found. The upstream changelog workflow likely skipped because no release was produced."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
-          echo "ready=true" >> "$GITHUB_OUTPUT"
-          echo "channel=${{ inputs.channel }}" >> "$GITHUB_OUTPUT"
-          echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
-          echo "date=${{ inputs.date }}" >> "$GITHUB_OUTPUT"
-          echo "head_sha=${{ inputs.head_sha }}" >> "$GITHUB_OUTPUT"
-
-      - name: Preflight media configuration
-        if: steps.target.outputs.ready == 'true'
-        id: preflight
-        env:
-          INPUT_PREVIEW_URL: ${{ inputs.preview_url }}
-          DEFAULT_PREVIEW_URL_VAR: ${{ vars.AURA_DEMO_SCREENSHOT_BASE_URL }}
-          DEFAULT_PREVIEW_URL_SECRET: ${{ secrets.AURA_DEMO_SCREENSHOT_BASE_URL }}
-          INPUT_PROVIDER: ${{ inputs.provider }}
-          BROWSERBASE_API_KEY: ${{ secrets.BROWSERBASE_API_KEY }}
-          BROWSERBASE_PROJECT_ID: ${{ secrets.BROWSERBASE_PROJECT_ID }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        shell: bash
-        run: |
-          provider="$INPUT_PROVIDER"
-          if [[ -z "$provider" ]]; then
-            provider="browserbase"
-          fi
-
-          preview_url="$INPUT_PREVIEW_URL"
-          preview_source="workflow input"
-          if [[ -z "$preview_url" ]]; then
-            preview_url="$DEFAULT_PREVIEW_URL_VAR"
-            preview_source="repository variable"
-          fi
-          if [[ -z "$preview_url" ]]; then
-            preview_url="$DEFAULT_PREVIEW_URL_SECRET"
-            preview_source="repository secret"
-          fi
-          if [[ -z "$preview_url" ]]; then
-            echo "AURA_DEMO_SCREENSHOT_BASE_URL is not configured. Set the repository variable or secret, or pass preview_url when manually dispatching Publish Release Changelog Media." >&2
-            exit 1
-          fi
-
-          python3 - "$preview_url" <<'PY'
-          from urllib.parse import urlparse
-          import sys
-
-          candidate = sys.argv[1].strip()
-          parsed = urlparse(candidate)
-          if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-              raise SystemExit(f"preview_url must be an absolute http(s) URL, got: {candidate}")
-          PY
-
-          if [[ "$provider" == "browserbase" ]]; then
-            missing=()
-            [[ -z "$BROWSERBASE_API_KEY" ]] && missing+=("BROWSERBASE_API_KEY")
-            [[ -z "$BROWSERBASE_PROJECT_ID" ]] && missing+=("BROWSERBASE_PROJECT_ID")
-            if (( ${#missing[@]} > 0 )); then
-              echo "Browserbase provider requires ${missing[*]}." >&2
-              exit 1
-            fi
-          fi
-
-          if [[ -z "$OPENAI_API_KEY" ]]; then
-            echo "OPENAI_API_KEY is required because changelog screenshots are always transformed into branded OpenAI-polished media before publishing." >&2
-            exit 1
-          fi
-
-          echo "Resolved preview URL from ${preview_source}."
-          echo "provider=$provider" >> "$GITHUB_OUTPUT"
-          echo "url=$preview_url" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@v4
-        if: steps.target.outputs.ready == 'true'
+        if: steps.upstream.outputs.skip != 'true'
         with:
-          ref: ${{ steps.target.outputs.head_sha || github.sha }}
           fetch-depth: 0
           path: repo
 
       - uses: actions/checkout@v4
-        if: steps.target.outputs.ready == 'true'
-        with:
-          ref: ${{ github.ref }}
-          fetch-depth: 1
-          path: workflow
-
-      - uses: actions/checkout@v4
-        if: steps.target.outputs.ready == 'true'
+        if: steps.upstream.outputs.skip != 'true'
         with:
           ref: gh-pages
           fetch-depth: 0
           path: pages
 
+      - name: Resolve changelog target
+        id: target
+        if: steps.upstream.outputs.skip != 'true'
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            metadata_file="changelog-publish-metadata/changelog-publish-metadata.json"
+            channel="$(jq -er '.channel' "$metadata_file")"
+            date="$(jq -er '.date' "$metadata_file")"
+            version="$(jq -er '.version' "$metadata_file")"
+          else
+            channel="${{ inputs.channel }}"
+            date="${{ inputs.date }}"
+            version="manual"
+          fi
+
+          if [[ -z "$channel" ]]; then
+            echo "Changelog channel is required." >&2
+            exit 1
+          fi
+
+          latest_json="pages/changelog/${channel}/latest.json"
+          if [[ ! -f "$latest_json" ]]; then
+            echo "Missing ${latest_json}" >&2
+            exit 1
+          fi
+
+          if [[ -z "$date" ]]; then
+            date="$(jq -er '.date' "$latest_json")"
+          fi
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "channel=${channel}" >> "$GITHUB_OUTPUT"
+          echo "date=${date}" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
       - name: Install Node.js
-        if: steps.target.outputs.ready == 'true'
+        if: steps.target.outputs.skip == 'false'
         uses: actions/setup-node@v4
         with:
           node-version: 25.9.0
           cache: npm
           cache-dependency-path: repo/interface/package-lock.json
 
-      - name: Wait for deployed frontend to settle
-        if: steps.target.outputs.ready == 'true'
+      - name: Install interface dependencies
+        if: steps.target.outputs.skip == 'false'
+        run: npm ci --prefix repo/interface
+
+      - name: Install Chromium camera
+        if: steps.target.outputs.skip == 'false'
+        run: npm --prefix repo/interface exec -- playwright install chromium --with-deps
+
+      - name: Preflight media capture configuration
+        if: steps.target.outputs.skip == 'false'
         env:
-          DEFAULT_DEPLOY_WAIT_MINUTES: ${{ vars.AURA_CHANGELOG_MEDIA_DEPLOY_WAIT_MINUTES }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          BROWSER_USE_API_KEY: ${{ secrets.BROWSER_USE_API_KEY }}
+          AURA_CHANGELOG_CAPTURE_SECRET: ${{ secrets.AURA_CHANGELOG_CAPTURE_SECRET }}
+          AURA_DEMO_SCREENSHOT_BASE_URL: ${{ inputs.base_url || vars.AURA_DEMO_SCREENSHOT_BASE_URL || secrets.AURA_DEMO_SCREENSHOT_BASE_URL }}
         shell: bash
         run: |
-          wait_minutes="${{ inputs.deploy_wait_minutes }}"
-          if [[ -z "$wait_minutes" ]]; then
-            wait_minutes="$DEFAULT_DEPLOY_WAIT_MINUTES"
-          fi
-          if [[ -z "$wait_minutes" ]]; then
-            wait_minutes="5"
-          fi
-
-          if ! [[ "$wait_minutes" =~ ^[0-9]+$ ]]; then
-            echo "deploy_wait_minutes must be an integer number of minutes, got: $wait_minutes" >&2
+          missing=()
+          [[ -n "$ANTHROPIC_API_KEY" ]] || missing+=("ANTHROPIC_API_KEY")
+          [[ -n "$OPENAI_API_KEY" ]] || missing+=("OPENAI_API_KEY")
+          [[ -n "$BROWSER_USE_API_KEY" ]] || missing+=("BROWSER_USE_API_KEY")
+          [[ -n "$AURA_CHANGELOG_CAPTURE_SECRET" ]] || missing+=("AURA_CHANGELOG_CAPTURE_SECRET")
+          [[ -n "$AURA_DEMO_SCREENSHOT_BASE_URL" ]] || missing+=("AURA_DEMO_SCREENSHOT_BASE_URL")
+          if (( ${#missing[@]} > 0 )); then
+            printf 'Missing required changelog media configuration: %s\n' "${missing[*]}" >&2
             exit 1
           fi
 
-          if [[ "$wait_minutes" -le 0 ]]; then
-            echo "Skipping deploy settle wait."
-            exit 0
-          fi
-
-          wait_seconds=$((wait_minutes * 60))
-          echo "Waiting ${wait_minutes} minute(s) (${wait_seconds}s) before changelog media capture so the deployed frontend can settle."
-          sleep "$wait_seconds"
-
-      - name: Verify preview URL is reachable
-        if: steps.target.outputs.ready == 'true'
-        shell: bash
-        run: |
-          curl \
-            --fail \
-            --location \
-            --silent \
-            --show-error \
-            --output /dev/null \
-            --retry 3 \
-            --retry-delay 10 \
-            --max-time 30 \
-            "${{ steps.preflight.outputs.url }}"
-
-      - name: Install interface dependencies
-        if: steps.target.outputs.ready == 'true'
-        working-directory: repo/interface
-        run: npm ci
-
-      - name: Publish changelog screenshots into gh-pages
-        if: steps.target.outputs.ready == 'true'
-        id: capture
-        continue-on-error: true
+      - name: Capture and validate changelog media
+        if: steps.target.outputs.skip == 'false'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          BROWSERBASE_API_KEY: ${{ secrets.BROWSERBASE_API_KEY }}
-          BROWSERBASE_PROJECT_ID: ${{ secrets.BROWSERBASE_PROJECT_ID }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          BROWSER_USE_API_KEY: ${{ secrets.BROWSER_USE_API_KEY }}
+          AURA_CHANGELOG_CAPTURE_SECRET: ${{ secrets.AURA_CHANGELOG_CAPTURE_SECRET }}
+          AURA_DEMO_SCREENSHOT_BASE_URL: ${{ inputs.base_url || vars.AURA_DEMO_SCREENSHOT_BASE_URL || secrets.AURA_DEMO_SCREENSHOT_BASE_URL }}
+          AURA_DEMO_SCREENSHOT_API_URL: ${{ vars.AURA_DEMO_SCREENSHOT_API_URL || secrets.AURA_DEMO_SCREENSHOT_API_URL }}
+          CHANGELOG_MEDIA_ANTHROPIC_MODEL: ${{ vars.CHANGELOG_MEDIA_ANTHROPIC_MODEL || 'claude-opus-4-7' }}
+          CHANGELOG_MEDIA_OPENAI_VISION_MODEL: ${{ vars.CHANGELOG_MEDIA_OPENAI_VISION_MODEL || 'gpt-5.2' }}
+          CHANGELOG_MEDIA_REFRESH_EXISTING: ${{ inputs.refresh_existing }}
+          BROWSER_USE_MODEL: ${{ vars.BROWSER_USE_MODEL || 'claude-opus-4.6' }}
+          BROWSER_USE_MAX_COST_USD: ${{ vars.BROWSER_USE_MAX_COST_USD || '5' }}
         shell: bash
         run: |
-          ARGS=(
-            --repo-dir repo
+          args=(
+            --changelog-file "pages/changelog/${{ steps.target.outputs.channel }}/latest.json"
+            --output-dir changelog-media-output
+            --base-url "$AURA_DEMO_SCREENSHOT_BASE_URL"
+            --max-candidates "${{ inputs.max_candidates || '3' }}"
+          )
+          if [[ -n "$AURA_DEMO_SCREENSHOT_API_URL" ]]; then
+            args+=(--api-base-url "$AURA_DEMO_SCREENSHOT_API_URL")
+          fi
+          node repo/interface/scripts/evaluate-changelog-media-pipeline.mjs "${args[@]}"
+
+      - name: Publish accepted media into gh-pages
+        if: steps.target.outputs.skip == 'false'
+        env:
+          CHANGELOG_MEDIA_REFRESH_EXISTING: ${{ inputs.refresh_existing }}
+        shell: bash
+        run: |
+          args=(
+            --manifest-file changelog-media-output/publishable-media-manifest.json
             --pages-dir pages
             --channel "${{ steps.target.outputs.channel }}"
-            --provider "${{ steps.preflight.outputs.provider }}"
+            --date "${{ steps.target.outputs.date }}"
           )
-          ARGS+=(--preview-url "${{ steps.preflight.outputs.url }}")
-
-          if [[ -n "${{ steps.target.outputs.version }}" ]]; then
-            ARGS+=(--version "${{ steps.target.outputs.version }}")
+          if [[ "$CHANGELOG_MEDIA_REFRESH_EXISTING" == "true" ]]; then
+            args+=(--refresh-existing)
           fi
-          if [[ -n "${{ steps.target.outputs.date }}" ]]; then
-            ARGS+=(--date "${{ steps.target.outputs.date }}")
-          fi
-          if [[ -n "${{ inputs.profile }}" ]]; then
-            ARGS+=(--profile "${{ inputs.profile }}")
-          fi
-
-          node repo/infra/scripts/release/publish-changelog-media.mjs "${ARGS[@]}"
-
-      - name: Read changelog media summary
-        if: always() && steps.target.outputs.ready == 'true'
-        id: summary
-        shell: bash
-        run: |
-          summary_file="repo/interface/output/demo-screenshots/publish-changelog-media/publish-changelog-media-summary.json"
-          retry_file="repo/interface/output/demo-screenshots/publish-changelog-media/publish-changelog-media-retry.json"
-
-          if [[ ! -f "$summary_file" ]]; then
-            echo "found=false" >> "$GITHUB_OUTPUT"
-            echo "attempted=0" >> "$GITHUB_OUTPUT"
-            echo "failed=0" >> "$GITHUB_OUTPUT"
-            echo "published=0" >> "$GITHUB_OUTPUT"
-            echo "skipped=0" >> "$GITHUB_OUTPUT"
-            echo "workflow_outcome=failure" >> "$GITHUB_OUTPUT"
-            echo "should_fail=true" >> "$GITHUB_OUTPUT"
-            echo "strict_passed=false" >> "$GITHUB_OUTPUT"
-            echo "retry_file=$retry_file" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          echo "found=true" >> "$GITHUB_OUTPUT"
-          echo "attempted=$(jq -r '.attempted // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
-          echo "failed=$(jq -r '.failed // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
-          echo "published=$(jq -r '.published // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
-          echo "skipped=$(jq -r '.skipped // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
-          workflow_outcome="$(jq -r '.workflowOutcome // "failure"' "$summary_file")"
-          should_fail="$(jq -r 'if has("shouldFailWorkflow") then .shouldFailWorkflow else true end' "$summary_file")"
-          echo "workflow_outcome=$workflow_outcome" >> "$GITHUB_OUTPUT"
-          echo "should_fail=$should_fail" >> "$GITHUB_OUTPUT"
-          echo "strict_passed=$(jq -r '.strictRubricPassed // false' "$summary_file")" >> "$GITHUB_OUTPUT"
-          echo "retry_file=$retry_file" >> "$GITHUB_OUTPUT"
-
-      - name: Append changelog media diagnostics summary
-        if: always() && steps.target.outputs.ready == 'true'
-        shell: bash
-        run: |
-          summary_file="repo/interface/output/demo-screenshots/publish-changelog-media/publish-changelog-media-summary.md"
-          if [[ -f "$summary_file" ]]; then
-            cat "$summary_file" >> "$GITHUB_STEP_SUMMARY"
-          fi
+          node repo/interface/scripts/publish-changelog-media.mjs "${args[@]}"
 
       - name: Upload changelog media diagnostics
-        if: always() && steps.target.outputs.ready == 'true'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: changelog-media-diagnostics-${{ github.run_id }}
+          name: changelog-media-output
+          path: changelog-media-output
           if-no-files-found: ignore
-          path: |
-            repo/interface/output/demo-screenshots/publish-changelog-media
-            pages/changelog/${{ steps.target.outputs.channel }}
-            pages/assets/changelog/${{ steps.target.outputs.channel }}
 
-      - name: Commit and push changelog media
-        if: always() && steps.target.outputs.ready == 'true' && steps.summary.outputs.found == 'true'
+      - name: Commit and push accepted media
+        if: steps.target.outputs.skip == 'false'
         shell: bash
         run: |
-          label="${{ steps.target.outputs.version }}"
-          if [[ -z "$label" ]]; then
-            label="${{ steps.target.outputs.date }}"
-          fi
-          bash workflow/infra/scripts/release/commit-gh-pages-with-retry.sh \
+          bash repo/infra/scripts/release/commit-gh-pages-with-retry.sh \
             pages \
-            "Publish ${{ steps.target.outputs.channel }} changelog media for ${label}" \
+            "Publish ${{ steps.target.outputs.channel }} changelog media for ${{ steps.target.outputs.version }}" \
             "changelog/${{ steps.target.outputs.channel }}" \
             "assets/changelog/${{ steps.target.outputs.channel }}"
 
-      - name: Queue failed changelog media for retry
-        if: always() && steps.target.outputs.ready == 'true' && steps.summary.outputs.found == 'true' && steps.summary.outputs.failed != '0'
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Attach media summary
+        if: always() && hashFiles('changelog-media-output/evaluation-report.json') != ''
         shell: bash
         run: |
-          retry_file="${{ steps.summary.outputs.retry_file }}"
-          if [[ ! -f "$retry_file" ]]; then
-            echo "Retry plan file is missing at $retry_file" >&2
-            exit 1
-          fi
-
-          payload="$(jq -n \
-            --arg ref "main" \
-            --arg channel "${{ steps.target.outputs.channel }}" \
-            --arg version "${{ steps.target.outputs.version }}" \
-            --arg date "${{ steps.target.outputs.date }}" \
-            --arg preview_url "${{ steps.preflight.outputs.url }}" \
-            --arg provider "${{ steps.preflight.outputs.provider }}" \
-            --arg profile "${{ inputs.profile }}" \
-            --arg head_sha "$(git -C repo rev-parse HEAD)" \
-            --arg source_run_id "${{ github.run_id }}" \
-            --arg deploy_wait_minutes "2" \
-            '{ref: $ref, inputs: {channel: $channel, version: $version, date: $date, preview_url: $preview_url, provider: $provider, profile: $profile, head_sha: $head_sha, source_run_id: $source_run_id, deploy_wait_minutes: $deploy_wait_minutes}}')"
-
-          gh api "repos/${{ github.repository }}/actions/workflows/retry-release-changelog-media.yml/dispatches" \
-            --method POST \
-            --input - <<<"$payload"
-
-      - name: Finalize changelog media outcome
-        if: always() && steps.target.outputs.ready == 'true'
-        shell: bash
-        run: |
-          if [[ "${{ steps.summary.outputs.found }}" != "true" ]]; then
-            echo "Changelog media summary was not produced." >&2
-            exit 1
-          fi
-
-          attempted="${{ steps.summary.outputs.attempted }}"
-          published="${{ steps.summary.outputs.published }}"
-          failed="${{ steps.summary.outputs.failed }}"
-          skipped="${{ steps.summary.outputs.skipped }}"
-          workflow_outcome="${{ steps.summary.outputs.workflow_outcome }}"
-          should_fail="${{ steps.summary.outputs.should_fail }}"
-          capture_outcome="${{ steps.capture.outcome }}"
-
-          if [[ "$should_fail" == "true" ]]; then
-            echo "Changelog media did not publish any screenshots for ${attempted} attempted slot(s); ${failed} slot(s) failed." >&2
-            exit 1
-          fi
-
-          if [[ "$workflow_outcome" == "partial" ]]; then
-            echo "::warning::Changelog media published ${published} screenshot(s), skipped ${skipped}, and queued retry for ${failed} failed slot(s)."
-            exit 0
-          fi
-
-          if [[ "$capture_outcome" == "failure" ]]; then
-            echo "::warning::Changelog media capture reported a recoverable issue, but no failed slots remain after summary processing."
-          fi
+          {
+            echo "## Changelog Media"
+            echo ""
+            jq '{
+              existingPublishedMedia: .counts.existingPublishedMedia,
+              plannedCandidates: .counts.plannedCandidates,
+              captureAccepted: .counts.captureAccepted,
+              publishReady: .counts.publishReady,
+              publishableMediaAssets: .counts.publishableMediaAssets
+            }' changelog-media-output/evaluation-report.json
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -4,19 +4,42 @@ function asRecord(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : null;
 }
 
+function readNumber(record, keys) {
+  for (const key of keys) {
+    if (typeof record[key] === "number" && Number.isFinite(record[key])) {
+      return record[key];
+    }
+  }
+  return null;
+}
+
 export function readHarnessUsage(message) {
   const usage = asRecord(message.usage);
   if (!usage) return null;
-  const inputTokens = Number(usage.input_tokens ?? 0);
-  const outputTokens = Number(usage.output_tokens ?? 0);
+  const inputTokens = Number(readNumber(usage, ["input_tokens", "inputTokens", "prompt_tokens"]) ?? 0);
+  const outputTokens = Number(
+    readNumber(usage, ["output_tokens", "outputTokens", "completion_tokens"]) ?? 0,
+  );
   if (!Number.isFinite(inputTokens) || !Number.isFinite(outputTokens)) {
     return null;
   }
   return {
     inputTokens,
     outputTokens,
-    cacheCreationInputTokens: Number(usage.cache_creation_input_tokens ?? 0),
-    cacheReadInputTokens: Number(usage.cache_read_input_tokens ?? 0),
+    cacheCreationInputTokens: Number(
+      readNumber(usage, [
+        "cache_creation_input_tokens",
+        "cacheCreationInputTokens",
+        "prompt_cache_miss_tokens",
+      ]) ?? 0,
+    ),
+    cacheReadInputTokens: Number(
+      readNumber(usage, [
+        "cache_read_input_tokens",
+        "cacheReadInputTokens",
+        "prompt_cache_hit_tokens",
+      ]) ?? 0,
+    ),
     estimatedContextTokens: Number(usage.estimated_context_tokens ?? 0),
     contextUtilization: Number(usage.context_utilization ?? 0),
     model: typeof usage.model === "string" ? usage.model : null,

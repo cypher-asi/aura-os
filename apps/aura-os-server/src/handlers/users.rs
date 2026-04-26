@@ -6,6 +6,7 @@ use tracing::warn;
 use aura_os_core::ZeroAuthSession;
 use aura_os_network::{NetworkProfile, NetworkUser};
 
+use crate::capture_auth::is_capture_access_token;
 use crate::error::{map_network_error, ApiResult};
 use crate::state::{persist_zero_auth_session, AppState, AuthJwt};
 
@@ -89,6 +90,21 @@ pub(crate) async fn get_me(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
 ) -> ApiResult<Json<UserResponse>> {
+    if is_capture_access_token(&jwt) {
+        return Ok(Json(UserResponse {
+            id: "capture-demo-user".into(),
+            zos_user_id: Some("capture-demo-user".into()),
+            display_name: Some("Aura Capture".into()),
+            avatar_url: None,
+            bio: Some("Demo user for Aura changelog media capture.".into()),
+            location: None,
+            website: None,
+            profile_id: None,
+            created_at: None,
+            updated_at: None,
+        }));
+    }
+
     let client = state.require_network_client()?;
 
     let user = client

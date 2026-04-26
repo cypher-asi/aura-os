@@ -26,7 +26,7 @@ vi.mock("../ProjectEmptyView", () => ({
 import { ProjectRootRedirectView } from "./ProjectRootRedirectView";
 
 function MobileRouteTarget() {
-  return <div data-testid="mobile-agent-route" />;
+  return <div data-testid="mobile-agents-route" />;
 }
 
 function renderView() {
@@ -34,7 +34,7 @@ function renderView() {
     <MemoryRouter initialEntries={["/projects/p1"]}>
       <Routes>
         <Route path="/projects/:projectId" element={<ProjectRootRedirectView />} />
-        <Route path="/projects/:projectId/agent" element={<MobileRouteTarget />} />
+        <Route path="/projects/:projectId/agents" element={<MobileRouteTarget />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -70,11 +70,11 @@ describe("ProjectRootRedirectView", () => {
     expect(screen.getByTestId("project-empty-view")).toBeInTheDocument();
   });
 
-  it("redirects mobile layouts straight to the project agent route", () => {
+  it("redirects mobile layouts straight to the project agents route", () => {
     mockCapabilities.isMobileLayout = true;
 
     renderView();
 
-    expect(screen.getByTestId("mobile-agent-route")).toBeInTheDocument();
+    expect(screen.getByTestId("mobile-agents-route")).toBeInTheDocument();
   });
 });

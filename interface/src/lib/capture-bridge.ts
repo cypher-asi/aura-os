@@ -1,14 +1,32 @@
 import { apps } from "../apps/registry";
 import { LAST_APP_KEY, PREVIOUS_PATH_KEY } from "../constants";
+import { AURA_MANAGED_CHAT_MODELS } from "../constants/models";
+import type { Agent } from "../shared/types";
+import type { DisplaySessionEvent } from "../shared/types/stream";
+import { emptyAgentPermissions } from "../shared/types/permissions-wire";
 import { sanitizeRestorePath } from "../utils/last-app-path";
 
 const DESKTOP_WINDOWS_STORAGE_KEY = "aura:desktopWindows";
+const DEMO_PROJECT_ID = "22222222-2222-4222-8222-222222222222";
 
 const appBasePathById = new Map(apps.map((app) => [app.id, app.basePath]));
+
+export interface AuraCaptureSeedPlan {
+  schemaVersion?: number;
+  mode?: string | null;
+  capabilities?: string[];
+  requiredState?: string[];
+  readinessSignals?: string[];
+  proofBoundary?: string[];
+  contextBoundary?: string[];
+  avoid?: string[];
+  notes?: string | null;
+}
 
 export interface AuraCaptureResetRequest {
   targetAppId?: string | null;
   targetPath?: string | null;
+  seedPlan?: AuraCaptureSeedPlan | null;
   sidekickCollapsed?: boolean;
   timeoutMs?: number;
 }
@@ -37,6 +55,7 @@ export interface AuraCaptureBridgeState {
   appsModalOpen: boolean;
   newProjectModalOpen: boolean;
   desktopWindowCount: number;
+  seedProofVisible: boolean;
 }
 
 function normalizePathname(value: string | null | undefined): string | null {
@@ -168,6 +187,8 @@ export function readAuraCaptureBridgeState(
   const feedbackComposerVisible = isVisible(document.querySelector('[data-agent-surface="feedback-composer"]'));
   const dialogVisible = Array.from(document.querySelectorAll('[role="dialog"], [aria-modal="true"]'))
     .some((node) => isVisible(node));
+  const seedProofVisible = Array.from(document.querySelectorAll("[data-agent-proof]"))
+    .some((node) => isVisible(node));
 
   return {
     timestamp: new Date().toISOString(),
@@ -193,5 +214,213 @@ export function readAuraCaptureBridgeState(
     appsModalOpen: hasVisibleDialogWithText(/\bvisible in taskbar\b/i),
     newProjectModalOpen: hasVisibleDialogWithText(/\bnew project\b/i),
     desktopWindowCount: document.querySelectorAll('[data-window-layer-host="true"] [data-agent-id]').length,
+    seedProofVisible,
+  };
+}
+
+function seedText(seedPlan: AuraCaptureSeedPlan | null | undefined, targetAppId: string | null): string {
+  return [
+    targetAppId,
+    ...(seedPlan?.capabilities ?? []),
+    ...(seedPlan?.requiredState ?? []),
+    ...(seedPlan?.readinessSignals ?? []),
+    ...(seedPlan?.proofBoundary ?? []),
+    ...(seedPlan?.contextBoundary ?? []),
+    ...(seedPlan?.avoid ?? []),
+    seedPlan?.notes,
+  ].filter(Boolean).join("\n").toLowerCase();
+}
+
+export function shouldApplyAura3DSeed(seedPlan: AuraCaptureSeedPlan | null | undefined, targetAppId: string | null): boolean {
+  return /\b(?:app:aura3d|aura3d|aura 3d|3d|generated image|asset gallery|model preview)\b/i.test(seedText(seedPlan, targetAppId));
+}
+
+function shouldOpenAura3DModelSurface(seedPlan: AuraCaptureSeedPlan | null | undefined, targetAppId: string | null): boolean {
+  return /\b(?:3d model|webgl|viewer|convert|conversion|source image|model preview)\b/i.test(seedText(seedPlan, targetAppId));
+}
+
+export function shouldApplyAgentChatSeed(seedPlan: AuraCaptureSeedPlan | null | undefined, targetAppId: string | null): boolean {
+  return /\b(?:app:agents|agent chat|agents?|chat input|chat model|model picker|model menu|open-model-picker)\b/i.test(seedText(seedPlan, targetAppId));
+}
+
+function normalizeModelSearchText(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function resolveSeedChatModel(seedPlan: AuraCaptureSeedPlan | null | undefined, targetAppId: string | null) {
+  const text = normalizeModelSearchText(seedText(seedPlan, targetAppId));
+  const sortedModels = [...AURA_MANAGED_CHAT_MODELS].sort((a, b) => b.label.length - a.label.length);
+  const requested = sortedModels.find((model) => {
+    const label = normalizeModelSearchText(model.label);
+    const id = normalizeModelSearchText(model.id);
+    return (label && text.includes(label)) || (id && text.includes(id));
+  });
+  return requested ?? AURA_MANAGED_CHAT_MODELS[0];
+}
+
+function demoAgent(modelId: string): Agent {
+  const now = new Date().toISOString();
+  return {
+    agent_id: "capture-demo-agent",
+    user_id: "capture-demo-user",
+    org_id: "capture-demo-org",
+    name: "Aura Guide",
+    role: "Product walkthrough agent",
+    personality: "Clear, helpful, and product-focused.",
+    system_prompt: "Help users explore Aura.",
+    skills: ["product-guidance", "workflow-planning"],
+    icon: null,
+    machine_type: "remote",
+    adapter_type: "default",
+    environment: "browser",
+    auth_source: "capture-demo",
+    integration_id: null,
+    default_model: modelId,
+    tags: ["demo"],
+    is_pinned: true,
+    permissions: emptyAgentPermissions(),
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+function demoAgentMessages(): DisplaySessionEvent[] {
+  return [
+    {
+      id: "capture-demo-user-message",
+      role: "user",
+      content: "Help me choose the best model for a product planning session.",
+    },
+    {
+      id: "capture-demo-assistant-message",
+      role: "assistant",
+      content: "Open the model picker to choose the newest GPT or Claude option before starting.",
+    },
+  ];
+}
+
+function demoImageDataUri(): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1020"/>
+      <stop offset="0.48" stop-color="#1d2d68"/>
+      <stop offset="1" stop-color="#060816"/>
+    </linearGradient>
+    <radialGradient id="spot" cx="50%" cy="36%" r="46%">
+      <stop offset="0" stop-color="#dbeafe" stop-opacity="0.95"/>
+      <stop offset="0.42" stop-color="#60a5fa" stop-opacity="0.38"/>
+      <stop offset="1" stop-color="#1d4ed8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="front" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#dbeafe"/>
+      <stop offset="1" stop-color="#3b82f6"/>
+    </linearGradient>
+    <linearGradient id="side" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#60a5fa"/>
+      <stop offset="1" stop-color="#1e3a8a"/>
+    </linearGradient>
+    <linearGradient id="top" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#93c5fd"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#bg)"/>
+  <rect width="1600" height="1000" fill="url(#spot)"/>
+  <ellipse cx="805" cy="760" rx="390" ry="88" fill="#020617" opacity="0.42" filter="url(#soft)"/>
+  <polygon points="805,190 1125,370 805,550 485,370" fill="url(#top)" opacity="0.96"/>
+  <polygon points="485,370 805,550 805,810 485,625" fill="url(#front)" opacity="0.94"/>
+  <polygon points="1125,370 805,550 805,810 1125,620" fill="url(#side)" opacity="0.96"/>
+  <path d="M805 190v360M485 370v255M1125 370v250M805 810V550" stroke="#eff6ff" stroke-width="8" opacity="0.38"/>
+  <circle cx="1010" cy="268" r="58" fill="#ffffff" opacity="0.74"/>
+  <circle cx="1010" cy="268" r="96" fill="#93c5fd" opacity="0.22"/>
+  <path d="M605 646c118 72 282 72 400 0" fill="none" stroke="#dbeafe" stroke-width="18" stroke-linecap="round" opacity="0.5"/>
+  <path d="M632 695c100 48 246 48 346 0" fill="none" stroke="#bfdbfe" stroke-width="10" stroke-linecap="round" opacity="0.38"/>
+</svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+export async function applyAuraCaptureSeedPlan(
+  seedPlan: AuraCaptureSeedPlan | null | undefined,
+  targetAppId: string | null,
+): Promise<Record<string, unknown>> {
+  const applied: string[] = [];
+
+  if (shouldApplyAura3DSeed(seedPlan, targetAppId)) {
+    const { useAura3DStore } = await import("../stores/aura3d-store");
+    const openModelSurface = shouldOpenAura3DModelSurface(seedPlan, targetAppId);
+    const image = {
+      id: "capture-demo-image",
+      artifactId: "capture-demo-image-artifact",
+      prompt: "A polished translucent 3D product cube on a cinematic dark background",
+      imageUrl: demoImageDataUri(),
+      originalUrl: demoImageDataUri(),
+      model: "gpt-image-2",
+      createdAt: new Date().toISOString(),
+      meta: { captureDemo: true },
+    };
+    useAura3DStore.setState((state) => ({
+      selectedProjectId: DEMO_PROJECT_ID,
+      activeTab: openModelSurface ? "3d" : "image",
+      imaginePrompt: "A polished translucent 3D product cube",
+      imagineModel: "gpt-image-2",
+      isGeneratingImage: false,
+      imageProgress: 100,
+      imageProgressMessage: "Ready",
+      partialImageData: null,
+      currentImage: image,
+      generateSourceImage: image,
+      current3DModel: null,
+      images: [image],
+      models: [],
+      selectedImageId: image.id,
+      selectedModelId: null,
+      sidekickTab: "images",
+      error: null,
+      isLoadingArtifacts: false,
+      loadedProjectIds: new Set([...state.loadedProjectIds, DEMO_PROJECT_ID]),
+    }));
+    applied.push(openModelSurface ? "aura3d-demo-source-image-for-3d" : "aura3d-demo-generated-image");
+  }
+
+  if (shouldApplyAgentChatSeed(seedPlan, targetAppId)) {
+    const { useAgentStore } = await import("../apps/agents/stores");
+    const { useMessageStore } = await import("../stores/message-store");
+    const { useChatUIStore } = await import("../stores/chat-ui-store");
+    const seedModel = resolveSeedChatModel(seedPlan, targetAppId);
+    const agent = demoAgent(seedModel.id);
+    const messages = demoAgentMessages();
+    useAgentStore.setState((state) => ({
+      agents: [agent, ...state.agents.filter((candidate) => candidate.agent_id !== agent.agent_id)],
+      agentsStatus: "ready",
+      agentsError: null,
+      selectedAgentId: agent.agent_id,
+      history: {
+        ...state.history,
+        [agent.agent_id]: {
+          events: messages,
+          status: "ready",
+          fetchedAt: Date.now(),
+          error: null,
+        },
+      },
+    }));
+    useMessageStore.getState().setThread(agent.agent_id, messages);
+    useChatUIStore.getState().setSelectedModel(agent.agent_id, seedModel.id, "default", agent.agent_id);
+    try {
+      window.localStorage.setItem("aura:lastAgentId", agent.agent_id);
+    } catch {
+      // Ignore capture-only persistence failures.
+    }
+    applied.push(`agent-chat-demo-model-picker:${seedModel.id}`);
+  }
+
+  return {
+    ok: true,
+    applied,
+    capabilities: seedPlan?.capabilities ?? [],
   };
 }
