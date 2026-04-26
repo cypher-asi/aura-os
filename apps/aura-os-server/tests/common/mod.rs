@@ -377,6 +377,7 @@ pub fn build_test_app_with_billing_client(
 
 pub const TEST_JWT: &str = "test-token";
 
+#[allow(dead_code)]
 pub fn json_request(method: &str, uri: &str, body: Option<Value>) -> Request<Body> {
     let builder = Request::builder()
         .method(method)

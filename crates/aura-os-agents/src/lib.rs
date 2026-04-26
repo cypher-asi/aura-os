@@ -729,6 +729,48 @@ impl AgentInstanceService {
             .await
     }
 
+    /// Sweep `Executor`-role rows that survived a previous run.
+    ///
+    /// Ephemeral executors are normally torn down by the per-run reaper
+    /// inside `dev_loop::adapter::run_single_task`. A server crash
+    /// between "registry cleared" and "storage deleted" — or between
+    /// allocation and the reaper spawning — would orphan a row. This
+    /// helper is meant to be called once at server startup (and
+    /// optionally on a slow timer) so orphaned executors don't
+    /// accumulate across restarts.
+    ///
+    /// Best-effort: a single per-row delete failure is logged and
+    /// skipped so a transient storage hiccup can't poison the rest of
+    /// the sweep. Returns the count successfully deleted.
+    pub async fn purge_executor_instances_in_project(
+        &self,
+        project_id: &ProjectId,
+    ) -> Result<usize, AgentError> {
+        let instances = self.list_instances(project_id).await?;
+        let mut purged = 0usize;
+        for inst in instances
+            .iter()
+            .filter(|i| i.instance_role == AgentInstanceRole::Executor)
+        {
+            match self.delete_instance(&inst.agent_instance_id).await {
+                Ok(()) => purged += 1,
+                Err(AgentError::NotFound) => {
+                    // Raced with another reaper; treat as already-gone.
+                    purged += 1;
+                }
+                Err(error) => {
+                    tracing::warn!(
+                        agent_instance_id = %inst.agent_instance_id,
+                        project_id = %project_id,
+                        %error,
+                        "purge_executor_instances: failed to delete orphan executor row"
+                    );
+                }
+            }
+        }
+        Ok(purged)
+    }
+
     /// Create a project-agent binding pinned to a specific functional
     /// role (chat target, automation loop target, or ephemeral
     /// executor). Used by the Phase 2 default-instance bootstrap and

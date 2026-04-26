@@ -461,6 +461,20 @@ async fn update_project_agent(
     }
 }
 
+async fn delete_project_agent(
+    Path(project_agent_id): Path<String>,
+    State(db): State<SharedDb>,
+) -> axum::http::StatusCode {
+    let mut db = db.lock().await;
+    let before = db.project_agents.len();
+    db.project_agents.retain(|a| a.id != project_agent_id);
+    if db.project_agents.len() < before {
+        axum::http::StatusCode::NO_CONTENT
+    } else {
+        axum::http::StatusCode::NOT_FOUND
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Session Event handlers
 // ---------------------------------------------------------------------------
@@ -562,7 +576,9 @@ pub fn mock_storage_router(db: SharedDb) -> Router {
         )
         .route(
             "/api/project-agents/:id",
-            get(get_project_agent).put(update_project_agent),
+            get(get_project_agent)
+                .put(update_project_agent)
+                .delete(delete_project_agent),
         )
         .with_state(db)
 }
