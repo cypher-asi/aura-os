@@ -177,7 +177,7 @@
 }
 
 .topbarAlignRail > :first-child > :first-child {
-  width: 42px;
+  width: 44px;
   justify-content: center;
   flex-shrink: 0;
 }
