@@ -1,4 +1,7 @@
-use super::{normalize_automaton_event, AutomatonStartResult, WsReaderHandle};
+use super::{
+    normalize_automaton_event, AutomatonStartParams, AutomatonStartResult, WsReaderHandle,
+};
+use aura_protocol::{AgentPermissionsWire, AgentScopeWire, CapabilityWire};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -102,6 +105,34 @@ fn automaton_start_result_accepts_ws_url_alias() {
 
     assert_eq!(result.automaton_id, "auto-123");
     assert_eq!(result.event_stream_url, "/stream/automaton/auto-123");
+}
+
+#[test]
+fn automaton_start_params_serializes_agent_permissions() {
+    let params = AutomatonStartParams {
+        project_id: "project-1".into(),
+        auth_token: None,
+        model: None,
+        workspace_root: None,
+        task_id: None,
+        git_repo_url: None,
+        git_branch: None,
+        installed_tools: None,
+        installed_integrations: None,
+        agent_permissions: AgentPermissionsWire {
+            scope: AgentScopeWire::default(),
+            capabilities: vec![CapabilityWire::InvokeProcess],
+        },
+        prior_failure: None,
+        work_log: Vec::new(),
+    };
+
+    let value = serde_json::to_value(params).expect("serialize params");
+
+    assert_eq!(
+        value["agent_permissions"]["capabilities"][0]["type"],
+        "invokeProcess"
+    );
 }
 
 #[test]

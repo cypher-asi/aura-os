@@ -4,7 +4,7 @@ use std::time::Duration;
 use serde::Deserialize;
 use tokio::sync::broadcast;
 
-use aura_os_core::{AgentId, AgentInstanceId, Project, ProjectId, SessionId};
+use aura_os_core::{AgentId, AgentInstanceId, AgentPermissions, Project, ProjectId, SessionId};
 use aura_os_harness::{AutomatonClient, WsReaderHandle};
 use aura_os_loops::LoopHandle;
 
@@ -26,6 +26,10 @@ pub(super) struct StartContext {
     /// for `LoopId` construction so loop events can be filtered by
     /// `AgentId` topic in addition to `AgentInstanceId`.
     pub(super) agent_id: AgentId,
+    /// Permission bundle applied to the harness automaton kernel policy.
+    /// Mirrors the chat path's session permissions so capability-gated
+    /// tools like `run_command` behave consistently in dev-loop runs.
+    pub(super) permissions: AgentPermissions,
 }
 
 pub(super) struct StartedAutomaton {

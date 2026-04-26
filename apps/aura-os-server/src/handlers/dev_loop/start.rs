@@ -59,6 +59,11 @@ pub(super) async fn resolve_start_context(
         .map(str::to_string)
         .or_else(|| agent_instance.default_model.clone())
         .or_else(|| agent_instance.model.clone());
+    let permissions = agent_instance
+        .permissions
+        .clone()
+        .normalized_for_identity(&agent_instance.name, Some(agent_instance.role.as_str()))
+        .with_project_self_caps(&project_id.to_string());
     Ok(StartContext {
         client,
         project_id,
@@ -66,6 +71,7 @@ pub(super) async fn resolve_start_context(
         model,
         workspace_root,
         agent_id: agent_instance.agent_id,
+        permissions,
     })
 }
 
@@ -186,6 +192,7 @@ pub(super) async fn build_start_params(
         work_log: Vec::new(),
         installed_tools,
         installed_integrations,
+        agent_permissions: (&ctx.permissions).into(),
     }
 }
 

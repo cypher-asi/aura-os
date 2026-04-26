@@ -19,7 +19,7 @@ use crate::runner::automaton_event_kinds::DONE;
 
 mod event_normalization;
 
-use aura_protocol::{InstalledIntegration, InstalledTool};
+use aura_protocol::{AgentPermissionsWire, InstalledIntegration, InstalledTool};
 use event_normalization::normalize_automaton_event;
 
 /// Handle that keeps the harness WebSocket connection opened by
@@ -103,6 +103,11 @@ pub struct AutomatonStartParams {
     pub installed_tools: Option<Vec<InstalledTool>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub installed_integrations: Option<Vec<InstalledIntegration>>,
+    /// Capability + scope bundle for the agent driving this automaton.
+    /// The harness applies this to the same kernel policy gate used by
+    /// chat sessions, so dev-loop runs inherit the agent's real tool
+    /// capabilities instead of falling back to an empty bundle.
+    pub agent_permissions: AgentPermissionsWire,
     /// Retry-warm-up: the reason text persisted on the previous
     /// attempt's `task_failed` record. Forwarded verbatim to the
     /// harness as `prior_failure`; the `task-run` automaton folds it
