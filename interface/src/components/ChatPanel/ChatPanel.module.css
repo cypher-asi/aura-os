@@ -147,7 +147,7 @@
 
 .messageAreaShell {
   --chat-top-fade-background: var(--color-bg, #111);
-  --chat-top-fade-height: 40px;
+  --chat-top-fade-height: 26px;
   position: relative;
   flex: 1;
   min-height: 0;
