@@ -218,7 +218,7 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
   }
 
   return (
-    <div className={styles.root}>
+    <div className={styles.root} data-agent-setup-scroll-root="true">
       <header className={styles.header}>
         <Text size="lg" weight="medium">
           Add Existing Agent
@@ -241,7 +241,7 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
               <Avatar avatarUrl={primaryProjectAgent.icon ?? undefined} name={primaryProjectAgent.name} type="agent" size={40} />
               <div className={styles.currentAgentCopy}>
                 <span className={styles.agentName}>{primaryProjectAgent.name}</span>
-                <span className={styles.agentMeta}>{primaryProjectAgent.role || "Remote Aura agent"}</span>
+                <span className={styles.agentMeta}>{primaryProjectAgent.role || "Remote AURA agent"}</span>
               </div>
             </div>
           </div>
@@ -265,7 +265,7 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
               <Avatar avatarUrl={agent.icon ?? undefined} name={agent.name} type="agent" size={44} />
               <span className={styles.agentCardCopy}>
                 <span className={styles.agentName}>{agent.name}</span>
-                <span className={styles.agentMeta}>{agent.role || "Remote Aura agent"}</span>
+                <span className={styles.agentMeta}>{agent.role || "Remote AURA agent"}</span>
               </span>
               <span className={styles.agentCardAction}>
                 {attachingId === agent.agent_id ? "Adding…" : "Add"}
@@ -314,7 +314,7 @@ function ProjectAgentCreateSurface({
   }, [finishAttach, projectId]);
 
   return (
-    <div className={styles.root}>
+    <div className={styles.root} data-agent-setup-scroll-root="true">
       <header className={styles.header}>
         <Text size="xs" weight="medium" variant="muted" className={styles.flowEyebrow}>
           <Sparkles size={14} aria-hidden="true" />
@@ -324,7 +324,7 @@ function ProjectAgentCreateSurface({
           Create Remote Agent
         </Text>
         <Text size="sm" variant="muted">
-          Create an Aura-managed agent for this project. The new agent will attach here as soon as setup finishes.
+          Create an AURA-managed agent for this project. The new agent will attach here as soon as setup finishes.
         </Text>
       </header>
 

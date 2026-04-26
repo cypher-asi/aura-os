@@ -1,0 +1,20 @@
+.root {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px 12px calc(24px + env(safe-area-inset-bottom));
+  background: #000;
+  -webkit-overflow-scrolling: touch;
+}
+
+.screenTitle {
+  margin: 0 4px 12px;
+  color: var(--color-text);
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 22px;
+  letter-spacing: 0;
+}

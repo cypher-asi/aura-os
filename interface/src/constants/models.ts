@@ -153,6 +153,7 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "deepseek/deepseek-v4-flash": "aura-deepseek-v4-flash",
   "aura-oss-120b": "aura-oss-120b",
   "aura-qwen2-5-coder-7b": "aura-qwen2-5-coder-7b",
+  "chatgpt-image-latest": "gpt-image-2",
   "accounts/fireworks/models/kimi-k2p5": "aura-kimi-k2-5",
   "accounts/fireworks/models/kimi-k2p6": "aura-kimi-k2-6",
   "accounts/fireworks/models/gpt-oss-120b": "aura-oss-120b",

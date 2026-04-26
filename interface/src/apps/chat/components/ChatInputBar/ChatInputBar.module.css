@@ -739,17 +739,18 @@
 @media (max-width: 640px) {
   .inputWrapper {
     right: 0;
-    padding: 0 var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom));
+    padding: 0 8px calc(8px + env(safe-area-inset-bottom));
   }
 
   .inputContainer {
-    border-radius: 18px;
-    background: color-mix(in srgb, var(--color-bg-surface) 96%, transparent);
-    padding: 0 2px;
+    border-color: color-mix(in srgb, var(--color-border) 54%, transparent);
+    border-radius: 20px;
+    background: #111213;
+    padding: 5px 8px 8px 5px;
   }
 
   .mobileModelBar {
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
@@ -805,25 +806,83 @@
 
   .attachButton,
   .sendButton {
-    width: 32px;
-    height: 32px;
+    width: 44px;
+    height: 44px;
     border-radius: 999px;
-    bottom: 6px;
+    bottom: 0;
   }
 
   .attachButton {
-    left: 4px;
+    left: 0;
+    color: var(--color-text-secondary);
   }
 
   .sendButton {
-    right: 16px;
+    right: 0;
+    background: #28282b;
+    color: #01f4cb;
   }
 
   .textarea {
-    padding: 8px 44px;
+    min-height: 44px;
+    max-height: 250px;
+    padding: 10px 48px;
+    line-height: 1.38;
   }
 
   .inputInfoBar {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    min-height: 32px;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 4px 0;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    pointer-events: auto;
+  }
+
+  .inputInfoBar .orbitWrap,
+  .inputInfoBar .commandsTrigger,
+  .inputInfoBar .projectMenuWrap,
+  .inputInfoBar .infoDivider,
+  .inputInfoBar .contextUsageWrap,
+  .inputInfoBar .newSessionButton {
     display: none;
+  }
+
+  .inputInfoBar .modelMenuWrap {
+    margin-left: auto;
+  }
+
+  .inputInfoBar .modelButton {
+    min-height: 36px;
+    min-width: 104px;
+    max-width: min(58vw, 240px);
+    justify-content: flex-end;
+    padding: 0 0 0 12px;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    touch-action: manipulation;
+  }
+
+  .inputInfoBar .modelMenu {
+    right: 0;
+    bottom: calc(100% + 8px);
+    min-width: min(280px, calc(100vw - 32px));
+    max-height: min(46vh, 340px);
+    border-radius: 16px;
+    padding: 6px;
+  }
+
+  .inputInfoBar .modelMenuItem,
+  .inputInfoBar .modelMenuShowMore {
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-size: 13px;
   }
 }

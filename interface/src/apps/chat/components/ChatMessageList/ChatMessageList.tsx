@@ -11,8 +11,6 @@ import type { DisplaySessionEvent } from "../../../../shared/types/stream";
 
 import { useStreamStore } from "../../../../hooks/stream/store";
 
-const MESSAGE_GAP = 2;
-
 interface ChatMessageListProps {
   messages: DisplaySessionEvent[];
   streamKey: string;
@@ -23,6 +21,7 @@ interface ChatMessageListProps {
   hasOlderMessages?: boolean;
   onInitialAnchorReady?: () => void;
   isAutoFollowing?: boolean;
+  density?: "desktop" | "mobile";
 }
 
 const EMPTY_TOOL_CALLS: NonNullable<
@@ -52,6 +51,7 @@ export function ChatMessageList({
   hasOlderMessages,
   onInitialAnchorReady,
   isAutoFollowing = true,
+  density = "desktop",
 }: ChatMessageListProps) {
   const {
     isStreaming,
@@ -166,7 +166,14 @@ export function ChatMessageList({
           )}
         </div>
       )}
-      <div style={{ display: "flex", flexDirection: "column", gap: MESSAGE_GAP, flexShrink: 0 }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: density === "mobile" ? 6 : 2,
+          flexShrink: 0,
+        }}
+      >
         {/* eslint-disable-next-line react-hooks/refs -- reading justFinalizedIdRef.current here is part of the intentional render-phase pattern documented above the transition detection */}
         {messages.map((msg) => (
           <div

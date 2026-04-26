@@ -66,7 +66,7 @@
 }
 
 .agentRowRemembered {
-  background: color-mix(in srgb, #01f4cb 12%, transparent);
+  background: color-mix(in srgb, #111213 82%, transparent);
 }
 
 .avatar {
@@ -219,8 +219,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 40px;
-  padding: 0 4px 0 12px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 6px 0 14px;
   border: 0;
   background: transparent;
   color: var(--color-text);

@@ -78,9 +78,11 @@ describe("StatsDashboard", () => {
 
     expect(screen.getByText("Completion")).toBeInTheDocument();
     expect(screen.getByText("58%")).toBeInTheDocument();
+    expect(screen.getByText("Task flow")).toBeInTheDocument();
+    expect(screen.getByText("Activity")).toBeInTheDocument();
     expect(screen.getByText("Tokens")).toBeInTheDocument();
-    expect(screen.getByTitle("128,400")).toHaveTextContent("128K");
-    expect(container.querySelector(".mobileStatsGrid")).not.toBeNull();
+    expect(screen.getByText("128K")).toBeInTheDocument();
+    expect(container.querySelector(".mobileHero")).not.toBeNull();
   });
 
   it("falls back cleanly when optional numeric fields are absent", () => {

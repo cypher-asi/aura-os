@@ -305,6 +305,7 @@ function renderMobile(path: InitialEntry | InitialEntry[] = "/projects") {
           <Route path="/projects/:projectId/files" element={<div>Project files</div>} />
           <Route path="/projects/:projectId/process" element={<div>Project process</div>} />
           <Route path="/projects/:projectId/stats" element={<div>Project stats</div>} />
+          <Route path="/projects/settings" element={<div>Settings route</div>} />
           <Route path="/agents" element={<div>Agents</div>} />
           <Route path="/agents/:agentId" element={<div>Agent details</div>} />
           <Route path="/feed" element={<div>Feed</div>} />
@@ -341,11 +342,12 @@ describe("MobileShell", () => {
     renderMobile("/projects/proj-1/agent");
     expect(screen.getByRole("button", { name: "Open project navigation for Demo Project" })).toBeInTheDocument();
     expect(screen.getByRole("button", { pressed: true, name: /Agents/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { pressed: false, name: /Tasks/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { pressed: false, name: /Execution/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { pressed: false, name: /Files/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { pressed: false, name: /Process/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { pressed: false, name: /Stats/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { pressed: false, name: /Tasks/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { pressed: false, name: /Run/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { pressed: false, name: /More/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Process/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Stats/i })).not.toBeInTheDocument();
     expect(screen.queryByText("Feed")).not.toBeInTheDocument();
   });
 
@@ -430,6 +432,20 @@ describe("MobileShell", () => {
     expect(await screen.findByText("Project files")).toBeInTheDocument();
   });
 
+  it("opens settings with a return path to the current mobile screen", async () => {
+    const user = userEvent.setup();
+    renderMobile("/projects/proj-1/files");
+
+    await user.click(screen.getByRole("button", { name: "Open settings" }));
+
+    expect(await screen.findByText("Settings route")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Back to previous screen" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Back to previous screen" }));
+
+    expect(await screen.findByText("Project files")).toBeInTheDocument();
+  });
+
   it("renders update banner", () => {
     renderMobile();
     expect(screen.getByTestId("update-banner")).toBeInTheDocument();
@@ -476,7 +492,7 @@ describe("MobileShell", () => {
     drawers.navOpen = true;
     renderMobile("/projects/proj-1/work");
 
-    expect(screen.getByText("Switch project")).toBeInTheDocument();
+    expect(screen.getByText("AURA")).toBeInTheDocument();
     expect(screen.queryByText("Agents")).not.toBeInTheDocument();
     expect(screen.queryByText("Current project")).not.toBeInTheDocument();
     expect(screen.queryByText("Agent & skills")).not.toBeInTheDocument();
@@ -484,7 +500,7 @@ describe("MobileShell", () => {
     expect(screen.queryByText("Recent projects")).not.toBeInTheDocument();
     expect(screen.queryByText("Other projects")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Alpha Team/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Open Demo Project" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Open Demo Project/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Agents" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Tasks" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Execution" })).not.toBeInTheDocument();
@@ -536,7 +552,7 @@ describe("MobileShell", () => {
     const user = userEvent.setup();
     renderMobile("/projects/proj-1/work");
 
-    expect(within(screen.getByTestId("drawer-untitled")).getAllByText("Demo Project")[0]).toBeInTheDocument();
+    expect(within(screen.getByTestId("project-navigation-drawer")).getAllByText("Demo Project")[0]).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Close drawer" }));
     expect(drawers.closeDrawers).toHaveBeenCalledOnce();
@@ -555,7 +571,7 @@ describe("MobileShell", () => {
 
     expect(screen.queryByText("Agents")).not.toBeInTheDocument();
     expect(screen.queryByText("Research agent")).not.toBeInTheDocument();
-    expect(screen.getByText("Switch project")).toBeInTheDocument();
+    expect(screen.getByText("AURA")).toBeInTheDocument();
     expect(screen.queryByText("Projects")).not.toBeInTheDocument();
   });
 });

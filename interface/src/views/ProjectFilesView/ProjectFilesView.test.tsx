@@ -87,6 +87,7 @@ vi.mock("./ProjectFilesView.module.css", () => ({
 }));
 
 import { ProjectFilesView } from "./ProjectFilesView";
+import { MobileProjectFilesScreen } from "../../mobile/screens/ProjectFilesScreen/ProjectFilesScreen";
 
 const project = {
   project_id: "proj-1",
@@ -111,7 +112,7 @@ describe("ProjectFilesView", () => {
   it("keeps the mobile files route on-page and shows the remote explorer", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isMobileClient: true });
 
-    render(<ProjectFilesView />);
+    render(<MobileProjectFilesScreen />);
 
     expect(screen.getByText("Remote workspace")).toBeInTheDocument();
     expect(screen.getByTestId("panel-search")).toBeInTheDocument();
@@ -121,7 +122,7 @@ describe("ProjectFilesView", () => {
   it("records the selected mobile file in search params for preview", async () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isMobileClient: true });
 
-    render(<ProjectFilesView />);
+    render(<MobileProjectFilesScreen />);
 
     screen.getByRole("button", { name: "Preview README" }).click();
 
@@ -133,7 +134,7 @@ describe("ProjectFilesView", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isMobileClient: true });
     currentSearchParams = new URLSearchParams("file=%2Fworkspace%2FREADME.md");
 
-    render(<ProjectFilesView />);
+    render(<MobileProjectFilesScreen />);
 
     await waitFor(() => {
       expect(mockReadRemoteFile).toHaveBeenCalledWith("remote-agent-1", "/workspace/README.md");
@@ -151,7 +152,7 @@ describe("ProjectFilesView", () => {
       status: "ready",
     });
 
-    render(<ProjectFilesView />);
+    render(<MobileProjectFilesScreen />);
 
     expect(screen.getByText(/Workspace files will appear here when this project has a live remote workspace/i)).toBeInTheDocument();
     expect(screen.queryByTestId("file-explorer")).not.toBeInTheDocument();
@@ -166,7 +167,7 @@ describe("ProjectFilesView", () => {
       status: "loading",
     });
 
-    render(<ProjectFilesView />);
+    render(<MobileProjectFilesScreen />);
 
     expect(screen.getByText(/Remote workspace is still loading/i)).toBeInTheDocument();
     expect(screen.queryByTestId("file-explorer")).not.toBeInTheDocument();
@@ -181,7 +182,7 @@ describe("ProjectFilesView", () => {
       status: "error",
     });
 
-    render(<ProjectFilesView />);
+    render(<MobileProjectFilesScreen />);
 
     expect(screen.getByText(/Remote workspace data could not load/i)).toBeInTheDocument();
     expect(screen.queryByText(/Workspace files will appear here when this project has a live remote workspace/i)).not.toBeInTheDocument();

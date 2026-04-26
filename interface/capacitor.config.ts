@@ -10,6 +10,10 @@ const config: CapacitorConfig = {
   // Ship the bundled Vite build inside the native shell rather than pointing
   // Capacitor at a hosted URL. The backend/API host is configured separately.
   webDir: "dist",
+  ios: {
+    scrollEnabled: false,
+    contentInset: "never",
+  },
   // Capacitor Android shells load the bundled app from a local scheme. When we
   // point debug builds at an http:// host like 10.0.2.2, align the Android
   // scheme and cleartext policy so local API + websocket traffic keeps working.

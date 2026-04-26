@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { MessageSquare, AlertCircle, ChevronDown, ChevronRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import { MessageSquare, AlertCircle } from "lucide-react";
 import { Text } from "@cypher-asi/zui";
 import { ChatMessageList } from "../ChatMessageList";
 import { ChatInputBar } from "../ChatInputBar";
@@ -13,6 +12,7 @@ import type { Project } from "../../../../shared/types";
 import type { GenerationMode } from "../../../../constants/models";
 import type { DisplaySessionEvent } from "../../../../shared/types/stream";
 import type { ContextUsageEntry } from "../../../../stores/context-usage-store";
+import { MobileChatHeader } from "../../../../mobile/chat/MobileChatHeader";
 import styles from "./ChatPanel.module.css";
 
 type ChatPanelHandoffMode = "create-agent";
@@ -285,60 +285,16 @@ export function ChatPanel({
   return (
     <div className={styles.container}>
       {isMobileLayout && agentName ? (
-        <div className={styles.projectAgentBar}>
-          <div className={styles.projectAgentSummary}>
-            {onMobileHeaderSummaryClick || mobileHeaderSummaryTo ? (
-              mobileHeaderSummaryTo ? (
-                <Link
-                  to={mobileHeaderSummaryTo}
-                  className={styles.projectAgentSummaryButton}
-                  aria-label={mobileHeaderSummaryLabel ?? `Open details for ${agentName}`}
-                >
-                  <div className={styles.projectAgentSummaryCopy}>
-                    <span className={styles.projectAgentName}>{agentName}</span>
-                    <span className={styles.projectAgentSummaryHint}>
-                      {mobileHeaderSummaryHint
-                        ?? (machineType === "remote" ? "Open skills and runtime" : "Open agent settings")}
-                    </span>
-                  </div>
-                  <span className={styles.projectAgentSummaryChevron} aria-hidden="true">
-                    {mobileHeaderSummaryKind === "switch" ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                  </span>
-                </Link>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.projectAgentSummaryButton}
-                  onClick={onMobileHeaderSummaryClick}
-                  aria-label={mobileHeaderSummaryLabel ?? `Open details for ${agentName}`}
-                >
-                  <div className={styles.projectAgentSummaryCopy}>
-                    <span className={styles.projectAgentName}>{agentName}</span>
-                    <span className={styles.projectAgentSummaryHint}>
-                      {mobileHeaderSummaryHint
-                        ?? (machineType === "remote" ? "Open skills and runtime" : "Open agent settings")}
-                    </span>
-                  </div>
-                  <span className={styles.projectAgentSummaryChevron} aria-hidden="true">
-                    {mobileHeaderSummaryKind === "switch" ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                  </span>
-                </button>
-              )
-            ) : (
-              <div className={styles.projectAgentSummaryCopy}>
-                <span className={styles.projectAgentName}>{agentName}</span>
-                <span className={styles.projectAgentSummaryHint}>
-                  {machineType === "remote" ? "Remote agent chat" : "Local agent chat"}
-                </span>
-              </div>
-            )}
-            {mobileHeaderAction ? (
-              <div className={styles.projectAgentAction}>
-                {mobileHeaderAction}
-              </div>
-            ) : null}
-          </div>
-        </div>
+        <MobileChatHeader
+          agentName={agentName}
+          machineType={machineType}
+          action={mobileHeaderAction}
+          onSummaryClick={onMobileHeaderSummaryClick}
+          summaryTo={mobileHeaderSummaryTo}
+          summaryHint={mobileHeaderSummaryHint}
+          summaryLabel={mobileHeaderSummaryLabel}
+          summaryKind={mobileHeaderSummaryKind}
+        />
       ) : null}
       <div className={styles.chatArea}>
         <div className={styles.messageAreaShell}>
@@ -360,6 +316,7 @@ export function ChatPanel({
                 hasOlderMessages={hasOlderMessages}
                 onInitialAnchorReady={handleInitialAnchorReady}
                 isAutoFollowing={isAutoFollowing}
+                density={isMobileLayout ? "mobile" : "desktop"}
               />
             </div>
           </div>

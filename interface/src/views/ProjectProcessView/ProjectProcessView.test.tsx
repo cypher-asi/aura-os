@@ -31,6 +31,7 @@ vi.mock("./ProjectProcessView.module.css", () => ({
 }));
 
 import { ProjectProcessView } from "./ProjectProcessView";
+import { MobileProjectProcessScreen } from "../../mobile/screens/ProjectProcessScreen/ProjectProcessScreen";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -77,8 +78,9 @@ describe("ProjectProcessView", () => {
     render(
       <Routes>
         <Route path="/projects/:projectId/process" element={<ProjectProcessView />} />
+        <Route path="/mobile/projects/:projectId/process" element={<MobileProjectProcessScreen />} />
       </Routes>,
-      { routerProps: { initialEntries: ["/projects/proj-1/process"] } },
+      { routerProps: { initialEntries: ["/mobile/projects/proj-1/process"] } },
     );
 
     expect(screen.getByText("Project automations")).toBeInTheDocument();

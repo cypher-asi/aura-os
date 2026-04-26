@@ -18,7 +18,9 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { ContextUsageIndicator } from "./ContextUsageIndicator";
+import { MobileChatInputBar } from "../../../../mobile/chat/MobileChatInputBar";
 import type { ContextUsageEntry } from "../../../../stores/context-usage-store";
+import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
 import { useIsStreaming } from "../../../../hooks/stream/hooks";
 import { useFileAttachments } from "./useFileAttachments";
 import type { GenerationMode } from "../../../../constants/models";
@@ -54,7 +56,7 @@ export interface AttachmentItem {
   preview?: string;
 }
 
-interface Props {
+export interface ChatInputBarProps {
   input: string;
   onInputChange: (value: string) => void;
   onSend: (
@@ -140,7 +142,21 @@ function AttachmentPreviews({
 }
 
 export const ChatInputBar = memo(
-  forwardRef<ChatInputBarHandle, Props>(function ChatInputBar(
+  forwardRef<ChatInputBarHandle, ChatInputBarProps>(function ChatInputBar(
+    props,
+    ref,
+  ) {
+    const { isMobileLayout } = useAuraCapabilities();
+    return isMobileLayout ? (
+      <MobileChatInputBar {...props} ref={ref} />
+    ) : (
+      <DesktopChatInputBar {...props} ref={ref} />
+    );
+  }),
+);
+
+const DesktopChatInputBar = memo(
+  forwardRef<ChatInputBarHandle, ChatInputBarProps>(function DesktopChatInputBar(
     {
       input,
       onInputChange,
@@ -402,6 +418,12 @@ export const ChatInputBar = memo(
       [selectedCommands, onCommandsChange],
     );
 
+    const handleModelButtonClick = useCallback(() => {
+      if (modelsForMode.length <= 1) return;
+      textareaRef.current?.blur();
+      setModelMenuOpen((isOpen) => !isOpen);
+    }, [modelsForMode.length]);
+
     const handleInputChange = useCallback(
       (value: string) => {
         onInputChange(value);
@@ -583,29 +605,6 @@ export const ChatInputBar = memo(
             commands={selectedCommands}
             onRemove={handleCommandRemove}
           />
-          {modelsForMode.length > 0 ? (
-            <div className={styles.mobileModelBar}>
-              <span className={styles.mobileModelLabel}>Model</span>
-              <div className={styles.mobileModelMenuWrap} data-model-menu-root="true">
-                <button
-                  type="button"
-                  className={`${styles.modelButton} ${styles.mobileModelButton}`}
-                  onClick={
-                    modelsForMode.length > 1
-                      ? () => setModelMenuOpen((v) => !v)
-                      : undefined
-                  }
-                  style={
-                    modelsForMode.length > 1 ? undefined : { cursor: "default" }
-                  }
-                >
-                  {modelLabel(selectedModel ?? "", adapterType, defaultModel)}
-                  {modelsForMode.length > 1 && <ChevronDown size={12} />}
-                </button>
-                {renderModelMenu()}
-              </div>
-            </div>
-          ) : null}
           <div className={styles.inputRow}>
             <button
               type="button"
@@ -785,7 +784,7 @@ export const ChatInputBar = memo(
                 aria-expanded={modelsForMode.length > 1 ? modelMenuOpen : undefined}
                 onClick={
                   modelsForMode.length > 1
-                    ? () => setModelMenuOpen((v) => !v)
+                    ? handleModelButtonClick
                     : undefined
                 }
                 style={

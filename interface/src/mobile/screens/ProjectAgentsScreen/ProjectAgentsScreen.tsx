@@ -2,19 +2,19 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, Text } from "@cypher-asi/zui";
 import { Link2, Plus, Sparkles } from "lucide-react";
-import { Avatar } from "../../components/Avatar";
-import { selectOverlayDrawerOpen, useMobileDrawerStore } from "../../stores/mobile-drawer-store";
-import { useProjectsListStore } from "../../stores/projects-list-store";
-import { useSidekickStore } from "../../stores/sidekick-store";
-import { formatChatTime } from "../../shared/utils/format";
+import { Avatar } from "../../../components/Avatar";
+import { selectOverlayDrawerOpen, useMobileDrawerStore } from "../../../stores/mobile-drawer-store";
+import { useProjectsListStore } from "../../../stores/projects-list-store";
+import { useSidekickStore } from "../../../stores/sidekick-store";
+import { formatChatTime } from "../../../utils/format";
 import {
   projectAgentAttachRoute,
   projectAgentChatRoute,
   projectAgentCreateRoute,
-} from "../../utils/mobileNavigation";
-import { getLastAgent, setLastAgent, setLastProject } from "../../utils/storage";
-import type { AgentInstance } from "../../shared/types";
-import styles from "./ProjectAgentsView.module.css";
+} from "../../../utils/mobileNavigation";
+import { getLastAgent, setLastAgent, setLastProject } from "../../../utils/storage";
+import type { AgentInstance } from "../../../types";
+import styles from "./ProjectAgentsScreen.module.css";
 
 function formatAgentStatus(status: string | undefined): string {
   if (!status) return "Ready";
@@ -32,7 +32,7 @@ function getAgentDisplayName(agent: AgentInstance): string {
   return "Unnamed agent";
 }
 
-export function ProjectAgentsView() {
+export function MobileProjectAgentsScreen() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const closePreview = useSidekickStore((s) => s.closePreview);
@@ -143,7 +143,7 @@ export function ProjectAgentsView() {
                       <span className={styles.agentTime}>{formatChatTime(agent.updated_at)}</span>
                     </span>
                     <span className={styles.agentMetaLine}>
-                      <span>{agent.role?.trim() || "Remote Aura agent"}</span>
+                      <span>{agent.role?.trim() || "Remote AURA agent"}</span>
                       <span className={styles.statusDotText}>{formatAgentStatus(agent.status)}</span>
                     </span>
                   </span>
@@ -183,7 +183,7 @@ export function ProjectAgentsView() {
                 <span className={styles.actionIcon}><Sparkles size={18} /></span>
                 <span className={styles.actionCopy}>
                   <span className={styles.actionTitle}>Create Remote Agent</span>
-                  <span className={styles.actionMeta}>Start a fresh Aura-managed agent for this project.</span>
+                  <span className={styles.actionMeta}>Start a fresh AURA-managed agent for this project.</span>
                 </span>
               </button>
               <button type="button" className={styles.actionChoice} onClick={openAttach}>

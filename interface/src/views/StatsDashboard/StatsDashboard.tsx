@@ -10,6 +10,7 @@ import {
   formatSeconds,
 } from "../../components/StatCard";
 import { useStatsDashboardData } from "./useStatsDashboardData";
+import { formatCompact } from "../../utils/format";
 import styles from "../aura.module.css";
 import mobileStyles from "./StatsDashboard.module.css";
 
@@ -25,6 +26,52 @@ export function StatsDashboard({ variant = "sidekick" }: StatsDashboardProps) {
   if (!stats) {
     if (!showEmpty) return null;
     return <EmptyState>No project stats available</EmptyState>;
+  }
+
+  if (isMobile) {
+    const taskRows = [
+      { label: "Ready", value: stats.ready_tasks },
+      { label: "Active", value: stats.in_progress_tasks },
+      { label: "Blocked", value: stats.blocked_tasks },
+      { label: "Done", value: stats.done_tasks },
+      { label: "Failed", value: stats.failed_tasks },
+    ];
+    const activityRows = [
+      { label: "Tokens", value: formatCompact(stats.total_tokens ?? 0) },
+      { label: "Cost", value: formatCardCost(stats.estimated_cost_usd ?? 0) },
+      { label: "Events", value: formatCompact(stats.total_events ?? 0) },
+      { label: "Time", value: formatSeconds(stats.total_time_seconds ?? 0) },
+      { label: "Lines", value: formatCompact(stats.lines_changed ?? 0) },
+      { label: "Specs", value: String(stats.total_specs ?? 0) },
+    ];
+
+    return (
+      <div className={mobileStyles.mobileDashboard}>
+        <section className={mobileStyles.mobileHero} aria-label="Completion">
+          <div>
+            <span className={mobileStyles.mobileHeroLabel}>Completion</span>
+            <strong className={mobileStyles.mobileHeroValue}>{Math.round(stats.completion_percentage)}%</strong>
+          </div>
+          <div className={mobileStyles.mobileHeroProgress} aria-hidden="true">
+            <span style={{ width: `${Math.min(stats.completion_percentage, 100)}%` }} />
+          </div>
+        </section>
+
+        <section className={mobileStyles.mobileSummaryGrid} aria-label="Project summary">
+          <MobileMetric value={stats.total_tasks} label="Tasks" />
+          <MobileMetric value={stats.total_agents} label="Agents" />
+          <MobileMetric value={stats.total_sessions} label="Sessions" />
+          <MobileMetric value={stats.contributors} label="Coders" />
+        </section>
+
+        <MobileList title="Task flow" rows={taskRows.map((row) => ({
+          label: row.label,
+          value: String(row.value ?? 0),
+        }))} />
+
+        <MobileList title="Activity" rows={activityRows} />
+      </div>
+    );
   }
 
   return (
@@ -60,5 +107,36 @@ export function StatsDashboard({ variant = "sidekick" }: StatsDashboardProps) {
         <StatCard value={stats.contributors} label="Coders" variant={variant} />
       </StatsGrid>
     </div>
+  );
+}
+
+function MobileMetric({ value, label }: { value: number | undefined; label: string }) {
+  return (
+    <div className={mobileStyles.mobileMetric}>
+      <span className={mobileStyles.mobileMetricValue}>{formatCompact(value ?? 0)}</span>
+      <span className={mobileStyles.mobileMetricLabel}>{label}</span>
+    </div>
+  );
+}
+
+function MobileList({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: Array<{ label: string; value: string }>;
+}) {
+  return (
+    <section className={mobileStyles.mobileList} aria-label={title}>
+      <h2>{title}</h2>
+      <div>
+        {rows.map((row) => (
+          <div key={row.label} className={mobileStyles.mobileListRow}>
+            <span>{row.label}</span>
+            <strong>{row.value}</strong>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }

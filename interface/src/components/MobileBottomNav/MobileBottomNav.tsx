@@ -1,13 +1,30 @@
-import { Brain, CheckSquare, ListTodo, BarChart3, Cpu, FolderClosed } from "lucide-react";
+import {
+  BarChart3,
+  Brain,
+  Cpu,
+  FolderClosed,
+  ListTodo,
+  MoreHorizontal,
+  Play,
+} from "lucide-react";
 import styles from "../MobileShell/MobileShell.module.css";
 
-export type MobileNavId = "agent" | "tasks" | "execution" | "files" | "process" | "stats";
+export type MobileNavId = "agent" | "files" | "tasks" | "execution" | "more";
+export type MobileMoreNavId = "process" | "stats";
 
 const MOBILE_NAV_ITEMS: Array<{ id: MobileNavId; label: string; icon: typeof Brain }> = [
   { id: "agent", label: "Agents", icon: Brain },
-  { id: "tasks", label: "Tasks", icon: ListTodo },
-  { id: "execution", label: "Execution", icon: CheckSquare },
   { id: "files", label: "Files", icon: FolderClosed },
+  { id: "tasks", label: "Tasks", icon: ListTodo },
+  { id: "execution", label: "Run", icon: Play },
+  { id: "more", label: "More", icon: MoreHorizontal },
+];
+
+export const MOBILE_MORE_NAV_ITEMS: Array<{
+  id: MobileMoreNavId;
+  label: string;
+  icon: typeof Brain;
+}> = [
   { id: "process", label: "Process", icon: Cpu },
   { id: "stats", label: "Stats", icon: BarChart3 },
 ];

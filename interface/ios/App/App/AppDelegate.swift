@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import ObjectiveC.runtime
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -8,6 +9,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        installWebViewInputAccessoryHider()
         return true
     }
 
@@ -27,6 +29,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
+        hideWebViewInputAccessoryBars()
     }
 
     func applicationWillTerminate(_ application: UIApplication) {
@@ -46,4 +49,63 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
 
+}
+
+private extension AppDelegate {
+    func installWebViewInputAccessoryHider() {
+        NotificationCenter.default.addObserver(
+            forName: UIResponder.keyboardWillShowNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.hideWebViewInputAccessoryBars()
+        }
+
+        [0.1, 0.5, 1.0].forEach { delay in
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                self?.hideWebViewInputAccessoryBars()
+            }
+        }
+    }
+
+    func hideWebViewInputAccessoryBars() {
+        guard let rootView = window?.rootViewController?.view else { return }
+        hideWebViewInputAccessoryBars(in: rootView)
+    }
+
+    func hideWebViewInputAccessoryBars(in view: UIView) {
+        let className = NSStringFromClass(type(of: view))
+        if className.contains("WKContent") {
+            replaceInputAccessoryView(for: view)
+        }
+
+        view.subviews.forEach { hideWebViewInputAccessoryBars(in: $0) }
+    }
+
+    func replaceInputAccessoryView(for view: UIView) {
+        guard let currentClass = object_getClass(view) else { return }
+        let currentClassName = NSStringFromClass(currentClass)
+        if currentClassName.hasSuffix("_AURA_NoInputAccessory") { return }
+
+        let replacementName = "\(currentClassName)_AURA_NoInputAccessory"
+        let replacementClass: AnyClass
+
+        if let existingClass = NSClassFromString(replacementName) {
+            replacementClass = existingClass
+        } else {
+            guard let allocatedClass = objc_allocateClassPair(currentClass, replacementName, 0) else { return }
+            let block: @convention(block) (AnyObject) -> AnyObject? = { _ in nil }
+            let implementation = imp_implementationWithBlock(block)
+            class_addMethod(
+                allocatedClass,
+                NSSelectorFromString("inputAccessoryView"),
+                implementation,
+                "@@:"
+            )
+            objc_registerClassPair(allocatedClass)
+            replacementClass = allocatedClass
+        }
+
+        object_setClass(view, replacementClass)
+    }
 }

@@ -18,3 +18,13 @@ export function resolveWorkspaceReturnPath(projectId: string, state: unknown) {
   }
   return resolveProjectAgentPath(projectId);
 }
+
+export function resolveSettingsReturnPath(projectId: string | null | undefined, state: unknown) {
+  if (state && typeof state === "object" && "returnTo" in state) {
+    const returnTo = (state as { returnTo?: unknown }).returnTo;
+    if (typeof returnTo === "string" && returnTo.startsWith("/") && returnTo !== "/projects/settings") {
+      return returnTo;
+    }
+  }
+  return projectId ? resolveProjectAgentPath(projectId) : "/projects";
+}

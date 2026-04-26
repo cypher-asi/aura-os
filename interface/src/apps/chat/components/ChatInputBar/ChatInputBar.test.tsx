@@ -2,12 +2,17 @@ import { createEvent, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 let mockIsStreaming = false;
+let mockIsMobileLayout = false;
 vi.mock("../../../../hooks/stream/hooks", () => ({
   useIsStreaming: () => mockIsStreaming,
 }));
 
 vi.mock("./ChatInputBar.module.css", () => ({
   default: new Proxy({}, { get: (_t, prop) => String(prop) }),
+}));
+
+vi.mock("../../../../hooks/use-aura-capabilities", () => ({
+  useAuraCapabilities: () => ({ isMobileLayout: mockIsMobileLayout }),
 }));
 
 let mockSelectedModel: string | null = null;
@@ -49,6 +54,7 @@ function makeProps(overrides: Partial<Parameters<typeof ChatInputBar>[0]> = {}) 
 
 beforeEach(() => {
   mockIsStreaming = false;
+  mockIsMobileLayout = false;
   mockSelectedModel = null;
   mockSetSelectedModel.mockClear();
   mockAddFiles.mockClear();
@@ -243,6 +249,24 @@ describe("ChatInputBar", () => {
     expect(mockSetSelectedModel).toHaveBeenCalledWith(
       "test-stream",
       "gpt-image-1",
+      undefined,
+      undefined,
+    );
+  });
+
+  it("opens the mobile model sheet and calls setSelectedModel", async () => {
+    const user = userEvent.setup();
+    mockIsMobileLayout = true;
+    mockSelectedModel = "aura-claude-opus-4-6";
+    render(<ChatInputBar {...makeProps({ machineType: "local" })} />);
+
+    await user.click(screen.getByRole("button", { name: /Opus 4\.6/i }));
+    expect(screen.getByRole("dialog", { name: "Select model" })).toBeInTheDocument();
+
+    await user.click(screen.getAllByRole("button", { name: /Sonnet 4\.6/i })[0]);
+    expect(mockSetSelectedModel).toHaveBeenCalledWith(
+      "test-stream",
+      "aura-claude-sonnet-4-6",
       undefined,
       undefined,
     );

@@ -22,6 +22,7 @@ vi.mock("./ProjectStatsView.module.css", () => ({
 }));
 
 import { ProjectStatsView } from "./ProjectStatsView";
+import { MobileProjectStatsScreen } from "../../mobile/screens/ProjectStatsScreen/ProjectStatsScreen";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -34,7 +35,7 @@ describe("ProjectStatsView", () => {
   it("renders the mobile stats route with the mobile dashboard variant", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isStandalone: true });
 
-    render(<ProjectStatsView />);
+    render(<MobileProjectStatsScreen />);
 
     expect(screen.getByText(/stats/i)).toBeInTheDocument();
     expect(screen.getByTestId("stats-dashboard")).toHaveAttribute("data-variant", "mobile");

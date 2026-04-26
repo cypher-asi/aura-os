@@ -1,83 +1,83 @@
 .root {
   display: flex;
-  flex-direction: column;
   flex: 1;
   min-height: 0;
+  flex-direction: column;
   gap: 18px;
-  padding: 16px 14px calc(24px + env(safe-area-inset-bottom));
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: var(--color-bg);
+  padding: 16px 14px calc(24px + env(safe-area-inset-bottom));
+  background: #000;
+  -webkit-overflow-scrolling: touch;
 }
 
 .header {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 8px;
 }
 
 .sectionLabel {
+  color: var(--color-text-secondary);
   font-size: 13px;
   font-weight: 650;
   letter-spacing: 0;
   text-transform: none;
-  color: var(--color-text-secondary);
 }
 
 .headerMeta {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: 8px;
 }
 
 .emptyState {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding: 14px;
-  border-radius: 12px;
+  gap: 8px;
+  padding: 13px 16px;
   border: 1px solid color-mix(in srgb, var(--color-border) 34%, transparent);
+  border-radius: 12px;
   background: color-mix(in srgb, var(--color-bg-surface) 44%, transparent);
 }
 
 .processList {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 8px;
 }
 
 .processCard {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
   width: 100%;
   min-height: 74px;
-  padding: 14px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 13px 16px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 34%, transparent);
   border-radius: 12px;
-  border: 1px solid color-mix(in srgb, var(--color-border) 42%, transparent);
-  background: color-mix(in srgb, var(--color-bg-surface) 48%, transparent);
+  background: color-mix(in srgb, var(--color-bg-surface) 44%, transparent);
   color: inherit;
   text-align: left;
 }
 
 .processCardActive {
   border-color: color-mix(in srgb, var(--color-primary) 44%, var(--color-border));
+  background: color-mix(in srgb, var(--color-bg-surface) 58%, transparent);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 16%, transparent);
-  background:
-    radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 48%),
-    color-mix(in srgb, var(--color-bg-surface) 98%, transparent);
 }
 
 .processCardTop {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
   justify-content: space-between;
+  gap: 8px;
 }
 
 .processCardTitle {
-  font-size: 1rem;
+  font-size: 15px;
   font-weight: 700;
+  line-height: 20px;
 }
 
 .processCardMeta {
@@ -85,7 +85,8 @@
   flex-wrap: wrap;
   gap: 8px 12px;
   color: var(--color-text-secondary);
-  font-size: 0.82rem;
+  font-size: 13px;
+  line-height: 18px;
 }
 
 .processCardMeta > span {
@@ -97,78 +98,50 @@
 .processCardDetail {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding-top: var(--space-2);
-  border-top: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent);
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 44%, transparent);
 }
 
 .processCardDescription {
   color: var(--color-text-secondary);
-  font-size: 0.88rem;
+  font-size: 13px;
   line-height: 1.45;
 }
 
-.detailMeta {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.detailMetaRow {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-3);
-  align-items: flex-start;
-}
-
-.detailMetaLabel {
-  color: var(--color-text-secondary);
-  font-size: 0.82rem;
-}
-
-.detailMetaValue {
-  font-size: 0.88rem;
-  text-align: right;
-}
-
-.runSection {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
+.detailMeta,
+.runSection,
 .runList {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 8px;
 }
 
+.detailMetaRow,
 .runRow {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: var(--space-3);
-  align-items: center;
+  gap: 12px;
+}
+
+.detailMetaLabel,
+.runMeta {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.detailMetaValue,
+.runStatus {
+  font-size: 13px;
+}
+
+.detailMetaValue {
+  text-align: right;
 }
 
 .runStatus {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.88rem;
-}
-
-.runMeta {
-  color: var(--color-text-secondary);
-  font-size: 0.8rem;
-}
-
-@media (max-width: 640px) {
-  .root {
-    gap: 18px;
-  }
-
-  .emptyState,
-  .processCard {
-    padding: 14px;
-  }
 }

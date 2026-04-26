@@ -1,4 +1,5 @@
 import { Modal, Drawer, Button, Spinner } from "@cypher-asi/zui";
+import type { FocusEvent } from "react";
 import type { Agent } from "../../../../shared/types";
 import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
 import { useAgentEditorForm } from "./useAgentEditorForm";
@@ -39,6 +40,33 @@ export function AgentEditorModal({
   const form = useAgentEditorForm(isOpen, agent, onClose, onSaved, closeOnSave, forceRemoteOnlyCreate);
   const isEditing = !!agent;
   const isInlineMobile = isMobileLayout && mobilePresentation === "inline";
+  const handleInlineFocus = (event: FocusEvent<HTMLDivElement>) => {
+    const scrollContainer = event.currentTarget;
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const scheduleFocusScroll = () => {
+      const setupScrollRoot = target.closest("[data-agent-setup-scroll-root='true']");
+      if (setupScrollRoot instanceof HTMLElement) {
+        const rootRect = setupScrollRoot.getBoundingClientRect();
+        const targetRect = target.getBoundingClientRect();
+        const targetTop = targetRect.top - rootRect.top + setupScrollRoot.scrollTop;
+        setupScrollRoot.scrollTo({ top: Math.max(0, targetTop - 160), behavior: "smooth" });
+      }
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      const targetTop = targetRect.top - containerRect.top + scrollContainer.scrollTop;
+      const targetScrollTop = targetTop - scrollContainer.clientHeight * 0.36;
+      scrollContainer.scrollTo({ top: Math.max(0, targetScrollTop), behavior: "smooth" });
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+    window.setTimeout(scheduleFocusScroll, 120);
+    window.setTimeout(scheduleFocusScroll, 320);
+    window.setTimeout(scheduleFocusScroll, 560);
+    window.visualViewport?.addEventListener("resize", scheduleFocusScroll, { once: true });
+    window.addEventListener("resize", scheduleFocusScroll, { once: true });
+  };
   const title = titleOverride ?? (isEditing ? "Edit Agent" : "Create Agent");
   const submitLabel = submitLabelOverride ?? (isEditing ? "Save Changes" : "Create Agent");
   const closeLabel = closeLabelOverride ?? "Cancel";
@@ -112,7 +140,7 @@ export function AgentEditorModal({
     <>
       {isInlineMobile ? (
         <div className={styles.inlineSurface}>
-          <div className={styles.inlineScroll}>
+          <div className={styles.inlineScroll} onFocusCapture={handleInlineFocus}>
             {formFields}
           </div>
           <div className={styles.inlineFooter}>

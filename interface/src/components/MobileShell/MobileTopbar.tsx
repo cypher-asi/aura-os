@@ -1,17 +1,16 @@
 import { useNavigate } from "react-router-dom";
 import { Topbar, Button } from "@cypher-asi/zui";
-import { ArrowLeft, ChevronDown, Menu, Plus, Settings } from "lucide-react";
+import { ArrowLeft, CircleUserRound, Menu, Plus, Settings } from "lucide-react";
 import { useMobileDrawerStore } from "../../stores/mobile-drawer-store";
 import { projectRootPath } from "../../utils/mobileNavigation";
 import type { MobileShellState } from "./useMobileShellState";
-import { resolveWorkspaceReturnPath } from "./mobile-shell-utils";
+import { resolveSettingsReturnPath, resolveWorkspaceReturnPath } from "./mobile-shell-utils";
 import styles from "./MobileShell.module.css";
 
 export function MobileTopbar({ state }: { state: MobileShellState }) {
   const navigate = useNavigate();
   const navOpen = useMobileDrawerStore((s) => s.navOpen);
   const setNavOpen = useMobileDrawerStore((s) => s.setNavOpen);
-  const setAccountOpen = useMobileDrawerStore((s) => s.setAccountOpen);
   const showStandaloneAgentLibraryCreate = state.isMobileClient && state.isStandaloneAgentLibraryRoot;
 
   return (
@@ -36,6 +35,15 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
                 icon={<ArrowLeft size={20} />}
                 aria-label="Back to project"
                 onClick={() => navigate(resolveWorkspaceReturnPath(state.mobileTargetProjectId, state.location.state))}
+              />
+            ) : state.location.pathname === "/projects/settings" ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                iconOnly
+                icon={<ArrowLeft size={20} />}
+                aria-label="Back to previous screen"
+                onClick={() => navigate(resolveSettingsReturnPath(state.mobileTargetProjectId, state.location.state))}
               />
             ) : state.showProjectBack && state.currentProjectId ? (
               <Button
@@ -76,7 +84,6 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
                 }
               >
                 <span className={styles.mobileTopbarTitleText}>{state.currentProject?.name ?? "Project"}</span>
-                <ChevronDown size={16} />
               </button>
             ) : state.showGlobalTitle ? (
               <span className={styles.mobileTopbarTitleButton} aria-label={state.globalTitle}>
@@ -105,9 +112,22 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
               variant="ghost"
               size="sm"
               iconOnly
+              icon={<CircleUserRound size={19} />}
+              aria-label="Open profile"
+              onClick={() => navigate("/profile")}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
               icon={<Settings size={19} />}
               aria-label="Open settings"
-              onClick={() => setAccountOpen(true)}
+              onClick={() => {
+                const returnTo = state.location.pathname === "/projects/settings"
+                  ? resolveSettingsReturnPath(state.mobileTargetProjectId, state.location.state)
+                  : state.location.pathname;
+                navigate("/projects/settings", { state: { returnTo } });
+              }}
             />
           </div>
         }

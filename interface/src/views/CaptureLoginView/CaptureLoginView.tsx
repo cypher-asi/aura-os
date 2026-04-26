@@ -106,7 +106,7 @@ export function CaptureLoginView() {
     <main className={styles.page} data-agent-surface="capture-login">
       <section className={styles.card} aria-labelledby="capture-login-title">
         <div className={styles.header}>
-          <span className={styles.eyebrow}>Aura capture mode</span>
+          <span className={styles.eyebrow}>AURA capture mode</span>
           <h1 id="capture-login-title" className={styles.title}>Prepare a screenshot session</h1>
           <p className={styles.copy}>
             This gated flow creates a short-lived demo session for changelog media automation.

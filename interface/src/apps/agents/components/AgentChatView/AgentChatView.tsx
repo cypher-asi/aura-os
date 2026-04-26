@@ -31,6 +31,7 @@ import {
 } from "../../../../utils/chat-handoff";
 import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
 import { useAgentBusy } from "../../../../hooks/use-agent-busy";
+import styles from "./AgentChatView.module.css";
 
 const AGENT_PROJECT_KEY_PREFIX = "aura-agent-project:";
 const EMPTY_PROJECTS: Project[] = [];
@@ -51,84 +52,6 @@ function persistAgentProject(agentId: string, projectId: string) {
 }
 
 const noopSend = () => {};
-
-const mobileHeaderActionStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  minHeight: 32,
-  padding: "0 10px",
-  borderRadius: 999,
-  border: "1px solid var(--color-border)",
-  background: "color-mix(in srgb, var(--color-bg-surface) 92%, transparent)",
-  color: "var(--color-text)",
-  font: "inherit",
-  fontSize: 12,
-  fontWeight: 600,
-} as const;
-
-const mobileHeaderActionsStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 8,
-} as const;
-
-const agentPickerButtonStyle = {
-  width: "100%",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  minHeight: 64,
-  padding: "14px 16px",
-  borderRadius: 16,
-  border: "1px solid var(--color-border)",
-  background: "color-mix(in srgb, var(--color-bg-surface) 96%, transparent)",
-  color: "var(--color-text)",
-  font: "inherit",
-  fontSize: 14,
-  fontWeight: 600,
-} as const;
-
-const agentPickerCardMetaStyle = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 4,
-  alignItems: "flex-start",
-  minWidth: 0,
-  flex: 1,
-} as const;
-
-const agentPickerLabelStyle = {
-  fontSize: 15,
-  fontWeight: 700,
-  color: "var(--color-text)",
-} as const;
-
-const agentPickerRoleStyle = {
-  fontSize: 13,
-  lineHeight: 1.4,
-  color: "var(--color-text-secondary)",
-} as const;
-
-const agentPickerCurrentBadgeStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "4px 10px",
-  borderRadius: 999,
-  background: "color-mix(in srgb, var(--color-primary) 12%, transparent)",
-  color: "var(--color-text)",
-  fontSize: 12,
-  fontWeight: 700,
-  flexShrink: 0,
-} as const;
-
-const agentPickerListStyle = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 10,
-  paddingTop: 6,
-} as const;
 
 function selectProjectsForAgent(agentId: string) {
   return (state: { projects: Project[]; agentsByProject: Record<string, AgentInstance[]> }) => {
@@ -457,8 +380,8 @@ function ProjectAgentChatPanel({
   const [agentPickerOpen, setAgentPickerOpen] = useState(false);
   const showAgentSwitcher = !isSessionView && projectAgents.length > 1;
   const mobileHeaderSummaryHint = agentName ? (showAgentSwitcher ? `${projectAgents.length} agents in project` : machineType === "remote"
-    ? "Open skills and runtime"
-    : "Open agent settings") : undefined;
+    ? "Remote"
+    : "Local") : undefined;
   const openAgentPicker = useCallback(() => {
     setAgentPickerOpen(true);
   }, []);
@@ -472,13 +395,19 @@ function ProjectAgentChatPanel({
     navigate(`/projects/${projectId}/agents/${nextAgentInstanceId}`);
   }, [navigate, projectId]);
   const agentPickerContent = (
-    <div style={agentPickerListStyle}>
+    <div className={styles.mobileAgentSwitcherBody}>
+      <div className={styles.mobileAgentSwitcherHeader}>
+        <span className={styles.mobileAgentSwitcherName}>Project agents</span>
+        <span className={styles.mobileAgentSwitcherMeta}>Switch who you are chatting with.</span>
+      </div>
+      <div className={styles.mobileAgentSwitcherList}>
         {projectAgents.map((agent) => {
           const isCurrentAgent = agent.agent_instance_id === agentInstanceId;
           return (
             <button
               key={agent.agent_instance_id}
               type="button"
+              className={`${styles.mobileAgentSwitcherRow} ${isCurrentAgent ? styles.mobileAgentSwitcherRowCurrent : ""}`}
               onClick={() => {
                 if (isCurrentAgent) {
                   return;
@@ -487,24 +416,16 @@ function ProjectAgentChatPanel({
               }}
               aria-label={isCurrentAgent ? `${agent.name}, current agent` : `Switch to ${agent.name}`}
               disabled={isCurrentAgent}
-              style={{
-                ...agentPickerButtonStyle,
-                border: isCurrentAgent
-                  ? "1px solid color-mix(in srgb, var(--color-primary) 42%, var(--color-border))"
-                  : agentPickerButtonStyle.border,
-                background: isCurrentAgent
-                  ? "color-mix(in srgb, var(--color-primary) 8%, var(--color-bg-surface))"
-                  : agentPickerButtonStyle.background,
-              }}
             >
-              <span style={agentPickerCardMetaStyle}>
-                <span style={agentPickerLabelStyle}>{agent.name}</span>
-                <span style={agentPickerRoleStyle}>{agent.role?.trim() || "Remote Aura agent"}</span>
+              <span className={styles.mobileAgentSwitcherCopy}>
+                <span className={styles.mobileAgentSwitcherName}>{agent.name}</span>
+                <span className={styles.mobileAgentSwitcherMeta}>{agent.role?.trim() || "Remote AURA agent"}</span>
               </span>
-              {isCurrentAgent ? <span style={agentPickerCurrentBadgeStyle}>Current</span> : null}
+              {isCurrentAgent ? <span className={styles.mobileAgentSwitcherStatus}>Current</span> : null}
             </button>
           );
         })}
+      </div>
     </div>
   );
 
@@ -538,23 +459,10 @@ function ProjectAgentChatPanel({
         selectedProjectId={projectId}
         contextUsage={isSessionView ? undefined : contextUsage}
         onNewSession={isSessionView ? undefined : handleNewSession}
-        mobileHeaderAction={(
-          <div style={mobileHeaderActionsStyle} data-mobile-header-actions>
-            {showAgentSwitcher ? (
-              <button
-                type="button"
-                onClick={openAgentPicker}
-                style={mobileHeaderActionStyle}
-              >
-                Switch
-              </button>
-            ) : null}
-          </div>
-        )}
-        mobileHeaderSummaryTo={`/projects/${projectId}/agents/${agentInstanceId}/details`}
+        onMobileHeaderSummaryClick={showAgentSwitcher ? openAgentPicker : undefined}
         mobileHeaderSummaryHint={mobileHeaderSummaryHint}
-        mobileHeaderSummaryLabel={`Open details for ${agentName ?? "this agent"}`}
-        mobileHeaderSummaryKind="details"
+        mobileHeaderSummaryLabel="Switch project agent"
+        mobileHeaderSummaryKind={showAgentSwitcher ? "switch" : "details"}
       />
       {agentPickerOpen
         ? (isMobileLayout ? (
@@ -563,6 +471,7 @@ function ProjectAgentChatPanel({
             isOpen
             onClose={closeAgentPicker}
             title="Switch agent"
+            className={styles.mobileAgentSwitcher}
             showMinimizedBar={false}
             defaultSize={360}
             maxSize={520}

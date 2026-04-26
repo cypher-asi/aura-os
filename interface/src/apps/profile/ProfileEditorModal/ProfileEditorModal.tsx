@@ -3,8 +3,10 @@ import { Modal, Input, Textarea, Button } from "@cypher-asi/zui";
 import { ImagePlus, X } from "lucide-react";
 import type { UserProfileData } from "../../../stores/profile-store";
 import { useModalInitialFocus } from "../../../hooks/use-modal-initial-focus";
+import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import { ImageCropModal } from "../../../components/ImageCropModal";
-import styles from "../../agents/components/AgentEditorModal/AgentEditorModal.module.css";
+import editorStyles from "../../agents/components/AgentEditorModal/AgentEditorModal.module.css";
+import mobileStyles from "./ProfileEditorModal.module.css";
 
 interface ProfileEditorModalProps {
   isOpen: boolean;
@@ -24,6 +26,7 @@ export function ProfileEditorModal({ isOpen, profile, onClose, onSave }: Profile
   const [cropOpen, setCropOpen] = useState(false);
   const { inputRef: nameRef, initialFocusRef } = useModalInitialFocus<HTMLInputElement>();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { isMobileLayout } = useAuraCapabilities();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -102,104 +105,134 @@ export function ProfileEditorModal({ isOpen, profile, onClose, onSave }: Profile
     fileInputRef.current?.click();
   }, []);
 
+  const form = (
+    <div className={isMobileLayout ? mobileStyles.form : editorStyles.form}>
+      <div className={isMobileLayout ? mobileStyles.avatarRow : editorStyles.avatarRow}>
+        <button
+          type="button"
+          className={isMobileLayout ? mobileStyles.avatarUpload : editorStyles.avatarUpload}
+          onClick={handleAvatarClick}
+          aria-label="Change profile image"
+        >
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt="Profile avatar"
+              className={isMobileLayout ? mobileStyles.avatarImg : editorStyles.avatarImg}
+            />
+          ) : (
+            <ImagePlus size={24} className={isMobileLayout ? mobileStyles.avatarPlaceholder : editorStyles.avatarPlaceholder} />
+          )}
+          {avatarUrl && (
+            <span
+              className={isMobileLayout ? mobileStyles.avatarRemove : editorStyles.avatarRemove}
+              onClick={(e) => { e.stopPropagation(); handleAvatarRemove(); }}
+            >
+              <X size={12} />
+            </span>
+          )}
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className={isMobileLayout ? mobileStyles.hiddenInput : editorStyles.hiddenInput}
+          onChange={handleFileSelect}
+        />
+      </div>
+
+      <div className={isMobileLayout ? mobileStyles.fieldGroup : editorStyles.fieldGroup}>
+        <label className={isMobileLayout ? mobileStyles.label : editorStyles.label}>Name *</label>
+        <Input
+          ref={nameRef}
+          value={name}
+          onChange={(e) => { setName(e.target.value); setNameError(""); }}
+          placeholder="Display name"
+          validationMessage={nameError}
+        />
+      </div>
+
+      <div className={isMobileLayout ? mobileStyles.fieldGroup : editorStyles.fieldGroup}>
+        <label className={isMobileLayout ? mobileStyles.label : editorStyles.label}>Handle</label>
+        <Input
+          value={profile.handle}
+          disabled
+          placeholder="@handle"
+        />
+      </div>
+
+      <div className={isMobileLayout ? mobileStyles.fieldGroup : editorStyles.fieldGroup}>
+        <label className={isMobileLayout ? mobileStyles.label : editorStyles.label}>Bio</label>
+        <Textarea
+          value={bio}
+          onChange={(e) => setBio(e.target.value)}
+          placeholder="Tell us about yourself..."
+          rows={isMobileLayout ? 4 : 3}
+        />
+      </div>
+
+      <div className={isMobileLayout ? mobileStyles.fieldGroup : editorStyles.fieldGroup}>
+        <label className={isMobileLayout ? mobileStyles.label : editorStyles.label}>Website</label>
+        <Input
+          value={website}
+          onChange={(e) => setWebsite(e.target.value)}
+          placeholder="https://example.com"
+        />
+      </div>
+
+      <div className={isMobileLayout ? mobileStyles.fieldGroup : editorStyles.fieldGroup}>
+        <label className={isMobileLayout ? mobileStyles.label : editorStyles.label}>Location</label>
+        <Input
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          placeholder="City, Country"
+        />
+      </div>
+    </div>
+  );
+
+  const mobileSheet = isOpen ? (
+    <div className={mobileStyles.overlay} role="dialog" aria-modal="true" aria-label="Edit Profile">
+      <button type="button" className={mobileStyles.backdrop} aria-label="Close edit profile" onClick={handleClose} />
+      <section className={mobileStyles.sheet}>
+        <div className={mobileStyles.grabber} aria-hidden="true" />
+        <header className={mobileStyles.header}>
+          <button type="button" className={mobileStyles.headerButton} onClick={handleClose}>
+            Cancel
+          </button>
+          <h2 className={mobileStyles.title}>Edit Profile</h2>
+          <button type="button" className={mobileStyles.headerButtonPrimary} onClick={handleSave}>
+            Save
+          </button>
+        </header>
+        <div className={mobileStyles.content}>{form}</div>
+      </section>
+    </div>
+  ) : null;
+
   return (
     <>
-      <Modal
-        isOpen={isOpen}
-        onClose={handleClose}
-        title="Edit Profile"
-        size="md"
-        initialFocusRef={initialFocusRef}
-        footer={
-          <div className={styles.footer}>
-            <Button variant="ghost" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={handleSave}>
-              Save Changes
-            </Button>
-          </div>
-        }
-      >
-        <div className={styles.form}>
-          <div className={styles.avatarRow}>
-            <button
-              type="button"
-              className={styles.avatarUpload}
-              onClick={handleAvatarClick}
-            >
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="Profile avatar" className={styles.avatarImg} />
-              ) : (
-                <ImagePlus size={24} className={styles.avatarPlaceholder} />
-              )}
-              {avatarUrl && (
-                <span
-                  className={styles.avatarRemove}
-                  onClick={(e) => { e.stopPropagation(); handleAvatarRemove(); }}
-                >
-                  <X size={12} />
-                </span>
-              )}
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className={styles.hiddenInput}
-              onChange={handleFileSelect}
-            />
-          </div>
-
-          <div className={styles.fieldGroup}>
-            <label className={styles.label}>Name *</label>
-            <Input
-              ref={nameRef}
-              value={name}
-              onChange={(e) => { setName(e.target.value); setNameError(""); }}
-              placeholder="Display name"
-              validationMessage={nameError}
-            />
-          </div>
-
-          <div className={styles.fieldGroup}>
-            <label className={styles.label}>Handle</label>
-            <Input
-              value={profile.handle}
-              disabled
-              placeholder="@handle"
-            />
-          </div>
-
-          <div className={styles.fieldGroup}>
-            <label className={styles.label}>Bio</label>
-            <Textarea
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="Tell us about yourself..."
-              rows={3}
-            />
-          </div>
-
-          <div className={styles.fieldGroup}>
-            <label className={styles.label}>Website</label>
-            <Input
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-              placeholder="https://example.com"
-            />
-          </div>
-
-          <div className={styles.fieldGroup}>
-            <label className={styles.label}>Location</label>
-            <Input
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="City, Country"
-            />
-          </div>
-        </div>
-      </Modal>
+      {isMobileLayout ? mobileSheet : (
+        <Modal
+          isOpen={isOpen}
+          onClose={handleClose}
+          title="Edit Profile"
+          size="md"
+          initialFocusRef={initialFocusRef}
+          footer={
+            <div className={editorStyles.footer}>
+              <Button variant="ghost" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button variant="primary" onClick={handleSave}>
+                Save Changes
+              </Button>
+            </div>
+          }
+        >
+          {form}
+        </Modal>
+      )}
 
       <ImageCropModal
         isOpen={cropOpen}

@@ -1,10 +1,15 @@
-import { Fragment, Suspense, lazy, useCallback, useState } from "react";
+import { Fragment, Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { useNavigate, useOutlet } from "react-router-dom";
 import { Button, Drawer, Text } from "@cypher-asi/zui";
 import { ChevronLeft, X } from "lucide-react";
 import { ErrorBoundary } from "../ErrorBoundary";
 import { UpdateBanner } from "../UpdateBanner";
-import { MobileBottomNav, type MobileNavId } from "../MobileBottomNav";
+import {
+  MOBILE_MORE_NAV_ITEMS,
+  MobileBottomNav,
+  type MobileMoreNavId,
+  type MobileNavId,
+} from "../MobileBottomNav";
 import { useMobileDrawerEffects } from "../../hooks/use-mobile-drawers";
 import { useMobileDrawerStore, selectDrawerOpen, selectOverlayDrawerOpen } from "../../stores/mobile-drawer-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";
@@ -49,7 +54,6 @@ export function MobileShell() {
   const ActiveProvider = state.activeApp.Provider ?? Fragment;
 
   const navOpen = useMobileDrawerStore((s) => s.navOpen);
-  const setNavOpen = useMobileDrawerStore((s) => s.setNavOpen);
   const previewOpen = useMobileDrawerStore((s) => s.previewOpen);
   const setPreviewOpen = useMobileDrawerStore((s) => s.setPreviewOpen);
   const accountOpen = useMobileDrawerStore((s) => s.accountOpen);
@@ -61,6 +65,7 @@ export function MobileShell() {
   const hostSettingsOpen = useUIModalStore((s) => s.hostSettingsOpen);
   const closeHostSettings = useUIModalStore((s) => s.closeHostSettings);
   const openHostSettings = useUIModalStore((s) => s.openHostSettings);
+  const [moreNavOpen, setMoreNavOpen] = useState(false);
   const { orgsError, membersError, integrationsError, refreshOrgs } = useOrgStore(
     useShallow((s) => ({
       orgsError: s.orgsError,
@@ -75,26 +80,70 @@ export function MobileShell() {
       refreshProjects: s.refreshProjects,
     })),
   );
-  const mobileNavActiveId: MobileNavId | null = state.mobileDestination === "agent"
+  const mobileNavActiveId: MobileNavId | null =
+    state.mobileDestination === "agent"
     || state.mobileDestination === "execution"
     || state.mobileDestination === "tasks"
     || state.mobileDestination === "files"
-    || state.mobileDestination === "process"
-    || state.mobileDestination === "stats"
-    ? state.mobileDestination
-    : null;
+      ? state.mobileDestination
+      : state.mobileDestination === "process" || state.mobileDestination === "stats"
+        ? "more"
+        : null;
 
   useMobileDrawerEffects(Boolean(PreviewPanel));
 
   const handleMobilePrimaryNavigate = useCallback((id: MobileNavId) => {
     if (!state.mobileTargetProjectId) { navigate("/projects"); return; }
+    if (id === "more") {
+      setMoreNavOpen((current) => !current);
+      return;
+    }
+    setMoreNavOpen(false);
     if (id === "agent") { navigate(projectAgentsRoute(state.mobileTargetProjectId)); return; }
-    if (id === "tasks") { navigate(projectTasksRoute(state.mobileTargetProjectId)); return; }
-    if (id === "execution") { navigate(projectWorkRoute(state.mobileTargetProjectId)); return; }
     if (id === "files") { navigate(projectFilesRoute(state.mobileTargetProjectId)); return; }
+    if (id === "tasks") { navigate(projectTasksRoute(state.mobileTargetProjectId)); return; }
+    navigate(projectWorkRoute(state.mobileTargetProjectId));
+  }, [state.mobileTargetProjectId, navigate]);
+  const handleMobileMoreNavigate = useCallback((id: MobileMoreNavId) => {
+    if (!state.mobileTargetProjectId) return;
+    setMoreNavOpen(false);
     if (id === "process") { navigate(projectProcessRoute(state.mobileTargetProjectId)); return; }
     navigate(projectStatsRoute(state.mobileTargetProjectId));
-  }, [state.mobileTargetProjectId, navigate]);
+  }, [navigate, state.mobileTargetProjectId]);
+
+  useEffect(() => {
+    setMoreNavOpen(false);
+  }, [state.location.pathname]);
+
+  useEffect(() => {
+    if (!navOpen && !moreNavOpen && !accountOpen && !previewOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (moreNavOpen) {
+        setMoreNavOpen(false);
+        return;
+      }
+      if (accountOpen) {
+        if (settingsDestination) {
+          setSettingsDestination(null);
+          return;
+        }
+        blurActiveElement();
+        setAccountOpen(false);
+        return;
+      }
+      if (previewOpen) {
+        blurActiveElement();
+        setPreviewOpen(false);
+        return;
+      }
+      if (navOpen) {
+        closeDrawers();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [accountOpen, closeDrawers, moreNavOpen, navOpen, previewOpen, setAccountOpen, setPreviewOpen, settingsDestination]);
   const connectionWarning = orgsError || projectsError || membersError || integrationsError;
   const retryWorkspaceLoad = useCallback(() => {
     void refreshOrgs();
@@ -113,7 +162,7 @@ export function MobileShell() {
               <div className={styles.mobileConnectionCopy}>
                 <Text size="sm" weight="medium">Live workspace data could not load.</Text>
                 <Text size="sm">
-                  Aura is showing saved device data while it fails to reach {hostLabel}. Retry the load or update the host before trusting what you see here.
+                  AURA is showing saved device data while it fails to reach {hostLabel}. Retry the load or update the host before trusting what you see here.
                 </Text>
               </div>
               <div className={styles.mobileConnectionActions}>
@@ -131,6 +180,23 @@ export function MobileShell() {
           {!drawerOpen && state.showProjectTitle && !state.isProjectAgentManagementRoute && (
             <div className={styles.mobileProjectTabs}>
               <MobileBottomNav activeId={mobileNavActiveId} onNavigate={handleMobilePrimaryNavigate} />
+              {moreNavOpen ? (
+                <div className={styles.mobileMoreNavMenu} role="menu" aria-label="More project sections">
+                  {MOBILE_MORE_NAV_ITEMS.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={styles.mobileMoreNavItem}
+                      data-active={state.mobileDestination === item.id ? "true" : "false"}
+                      onClick={() => handleMobileMoreNavigate(item.id)}
+                      role="menuitem"
+                    >
+                      <item.icon size={17} />
+                      <span>{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
           )}
           <div className={styles.mobileMain}>
@@ -156,11 +222,26 @@ export function MobileShell() {
             )}
           </div>
         </div>
-        {overlayDrawerOpen && <button type="button" className={styles.mobileDrawerBackdrop} aria-label="Close drawer" onClick={closeDrawers} />}
+        <button
+          type="button"
+          className={`${styles.mobileDrawerBackdrop} ${overlayDrawerOpen ? styles.mobileDrawerBackdropOpen : ""}`}
+          aria-label="Close drawer"
+          aria-hidden={!overlayDrawerOpen}
+          tabIndex={overlayDrawerOpen ? 0 : -1}
+          onClick={() => {
+            setMoreNavOpen(false);
+            closeDrawers();
+          }}
+        />
 
-        <Drawer side="left" isOpen={navOpen} onClose={() => { blurActiveElement(); setNavOpen(false); }} title="" className={styles.mobileNavDrawer} showMinimizedBar={false} defaultSize={360} maxSize={420}>
-          {navOpen && <ProjectNavigationDrawerContent />}
-        </Drawer>
+        <aside
+          className={`${styles.mobileNavDrawer} ${navOpen ? styles.mobileNavDrawerOpen : ""}`}
+          data-testid="project-navigation-drawer"
+          aria-hidden={!navOpen}
+          aria-label="Project navigation"
+        >
+          <ProjectNavigationDrawerContent />
+        </aside>
 
         {PreviewPanel && state.isPhoneLayout && previewOpen ? (
           <div className={styles.mobilePreviewSheet} role="dialog" aria-modal="true" aria-label="Preview">

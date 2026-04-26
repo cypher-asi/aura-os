@@ -16,6 +16,10 @@ import { ProjectRootRedirectView } from "../../views/ProjectRootRedirectView";
 import { ProjectStatsView } from "../../views/ProjectStatsView";
 import { ProjectTasksView } from "../../views/ProjectTasksView";
 import { ProjectWorkView } from "../../views/ProjectWorkView";
+import { MobileProjectAgentsScreen } from "../../mobile/screens/ProjectAgentsScreen/ProjectAgentsScreen";
+import { MobileProjectFilesScreen } from "../../mobile/screens/ProjectFilesScreen/ProjectFilesScreen";
+import { MobileProjectProcessScreen } from "../../mobile/screens/ProjectProcessScreen/ProjectProcessScreen";
+import { MobileProjectStatsScreen } from "../../mobile/screens/ProjectStatsScreen/ProjectStatsScreen";
 
 const HomeView = lazy(() => import("../../views/HomeView").then((m) => ({ default: m.HomeView })));
 const SettingsView = lazy(() => import("../../views/SettingsView").then((m) => ({ default: m.SettingsView })));
@@ -23,6 +27,26 @@ const SettingsView = lazy(() => import("../../views/SettingsView").then((m) => (
 function MobileOrganizationRoute() {
   const { isMobileLayout } = useAuraCapabilities();
   return isMobileLayout ? <MobileOrganizationView /> : <Navigate to="/projects" replace />;
+}
+
+function ProjectFilesRoute() {
+  const { isMobileLayout } = useAuraCapabilities();
+  return isMobileLayout ? <MobileProjectFilesScreen /> : <ProjectFilesView />;
+}
+
+function ProjectAgentsRoute() {
+  const { isMobileLayout } = useAuraCapabilities();
+  return isMobileLayout ? <MobileProjectAgentsScreen /> : <ProjectAgentsView />;
+}
+
+function ProjectProcessRoute() {
+  const { isMobileLayout } = useAuraCapabilities();
+  return isMobileLayout ? <MobileProjectProcessScreen /> : <ProjectProcessView />;
+}
+
+function ProjectStatsRoute() {
+  const { isMobileLayout } = useAuraCapabilities();
+  return isMobileLayout ? <MobileProjectStatsScreen /> : <ProjectStatsView />;
 }
 
 /**
@@ -41,7 +65,7 @@ export const projectsRoutes: RouteObject[] = [
     children: [
       { index: true, element: <ProjectRootRedirectView /> },
       { path: "agent", element: <ProjectAgentRedirectView /> },
-      { path: "agents", element: <ProjectAgentsView /> },
+      { path: "agents", element: <ProjectAgentsRoute /> },
       { path: "agents/create", element: <ProjectAgentSetupView mode="create" /> },
       { path: "agents/attach", element: <ProjectAgentSetupView mode="existing" /> },
       { path: "agents/:agentInstanceId/details", element: <ProjectAgentDetailsView /> },
@@ -49,9 +73,9 @@ export const projectsRoutes: RouteObject[] = [
       { path: "execution", element: <ExecutionView /> },
       { path: "work", element: <ProjectWorkView /> },
       { path: "tasks", element: <ProjectTasksView /> },
-      { path: "files", element: <ProjectFilesView /> },
-      { path: "process", element: <ProjectProcessView /> },
-      { path: "stats", element: <ProjectStatsView /> },
+      { path: "files", element: <ProjectFilesRoute /> },
+      { path: "process", element: <ProjectProcessRoute /> },
+      { path: "stats", element: <ProjectStatsRoute /> },
     ],
   },
 ];

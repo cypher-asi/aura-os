@@ -59,28 +59,28 @@
   min-height: 0;
   overflow: auto;
   align-items: flex-start;
-  padding: clamp(var(--space-4), 5vw, var(--space-6));
+  padding: 18px 16px calc(24px + env(safe-area-inset-bottom));
 }
 
 .mobileRemoteCard {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: 16px;
   width: 100%;
-  max-width: 32rem;
-  margin: 0 auto;
-  padding: clamp(var(--space-4), 5vw, var(--space-6));
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0)),
-    var(--color-bg-surface);
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.14);
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .mobileRemoteEyebrow {
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 13px;
+  font-weight: 650;
 }
 
 .mobileRemoteHeader {
@@ -93,8 +93,17 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--color-border-subtle);
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 42%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-bg-surface) 48%, transparent);
+}
+
+.mobileRemoteMeta :global([class*="Text"]) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .mobileRemoteActions {
@@ -198,9 +207,7 @@
 @media (max-width: 680px) {
   .container {
     overflow: hidden;
-    background:
-      radial-gradient(circle at 18% -8%, color-mix(in srgb, var(--color-primary) 8%, transparent), transparent 34%),
-      var(--color-bg);
+    background: var(--color-bg);
   }
 
   .explorerArea {
@@ -209,14 +216,10 @@
 
   .mobileRemoteRoot {
     padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
-    background:
-      radial-gradient(circle at 18% -8%, color-mix(in srgb, var(--color-primary) 8%, transparent), transparent 34%),
-      var(--color-bg);
+    background: var(--color-bg);
   }
 
   .mobilePreviewRoot {
-    background:
-      radial-gradient(circle at 18% -8%, color-mix(in srgb, var(--color-primary) 8%, transparent), transparent 34%),
-      var(--color-bg);
+    background: var(--color-bg);
   }
 }

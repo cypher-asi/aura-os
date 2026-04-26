@@ -56,7 +56,7 @@ export function LoginView() {
           <div className={styles.mobileHero}>
             <Heading level={2}><span className={styles.brand}>AURA</span></Heading>
             <Text variant="muted" size="sm" align="center" className={styles.subtitle}>
-              Connect to an Aura host, then sign in and get to work.
+              Connect to an AURA host, then sign in and get to work.
             </Text>
           </div>
         )}

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Text } from "@cypher-asi/zui";
-import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, Search, X } from "lucide-react";
 import { api } from "../../api/client";
 import { PanelSearch } from "../PanelSearch";
 import { useSidebarSearch } from "../../hooks/use-sidebar-search";
@@ -70,16 +70,11 @@ function ProjectRow({
       type="button"
       className={`${styles.mobileProjectDrawerRow} ${isActive ? styles.mobileProjectDrawerRowActive : ""}`}
       aria-current={isActive ? "page" : undefined}
-      aria-label={`Open ${project.name}`}
+      aria-label={`${isActive ? "Current project, " : ""}Open ${project.name}`}
       onClick={() => onOpen(project)}
     >
       <span className={styles.mobileProjectDrawerRowMain}>
         <span className={styles.mobileProjectDrawerTitle}>{project.name}</span>
-        {project.description?.trim() ? (
-          <span className={styles.mobileProjectDrawerRowMeta}>
-            {project.description.trim()}
-          </span>
-        ) : null}
       </span>
     </button>
   );
@@ -91,6 +86,7 @@ export function ProjectNavigationDrawerContent() {
   const orgs = useOrgStore((state) => state.orgs);
   const activeOrg = useOrgStore((state) => state.activeOrg);
   const switchOrg = useOrgStore((state) => state.switchOrg);
+  const navOpen = useMobileDrawerStore((s) => s.navOpen);
   const navigate = useNavigate();
   const location = useLocation();
   const closePreview = useSidekickStore((s) => s.closePreview);
@@ -101,8 +97,10 @@ export function ProjectNavigationDrawerContent() {
   const [loadingOrgIds, setLoadingOrgIds] = useState<Record<string, boolean>>({});
   const [failedOrgIds, setFailedOrgIds] = useState<Record<string, boolean>>({});
   const [collapsedOrgIds, setCollapsedOrgIds] = useState<Set<string>>(() => new Set());
+  const [searchOpen, setSearchOpen] = useState(false);
   const requestedOrgIdsRef = useRef<Set<string>>(new Set());
   const mountedRef = useRef(true);
+  const drawerBodyRef = useRef<HTMLDivElement | null>(null);
 
   const orgSummaries = useMemo<DrawerOrg[]>(() => {
     const byId = new Map<string, DrawerOrg>();
@@ -149,6 +147,20 @@ export function ProjectNavigationDrawerContent() {
       mountedRef.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!navOpen) return;
+    const drawerBody = drawerBodyRef.current;
+    if (!drawerBody) return;
+
+    if (typeof drawerBody.scrollTo === "function") {
+      drawerBody.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      return;
+    }
+
+    drawerBody.scrollTop = 0;
+    drawerBody.scrollLeft = 0;
+  }, [navOpen]);
 
   useEffect(() => {
     for (const org of orgSummaries) {
@@ -213,6 +225,14 @@ export function ProjectNavigationDrawerContent() {
       })
       .filter((section) => section.shouldShow);
   }, [failedOrgIds, loadingOrgIds, normalizedQuery, orgSummaries, projectsByOrgId]);
+  const cypherSection = useMemo(
+    () => sections.find((section) => /cypher/i.test(section.org.name)) ?? null,
+    [sections],
+  );
+  const primarySections = useMemo(
+    () => sections.filter((section) => section !== cypherSection),
+    [cypherSection, sections],
+  );
 
   const runDrawerNavigation = useCallback((path: string) => {
     navigate(path);
@@ -272,78 +292,98 @@ export function ProjectNavigationDrawerContent() {
   }, []);
 
   const activeQuery = query.trim();
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false);
+    setQuery("");
+  }, [setQuery]);
+
+  const renderProjectSection = (section: (typeof sections)[number]) => {
+    const isCollapsed = normalizedQuery.length === 0 && collapsedOrgIds.has(section.org.org_id);
+    const isActiveOrg = section.org.org_id === activeOrg?.org_id;
+
+    return (
+      <section key={section.org.org_id} className={styles.mobileDrawerOrgSection}>
+        <button
+          type="button"
+          className={`${styles.mobileDrawerOrgToggle} ${isActiveOrg ? styles.mobileDrawerOrgToggleActive : ""}`}
+          aria-expanded={!isCollapsed}
+          onClick={() => toggleOrg(section.org.org_id)}
+        >
+          <span className={styles.mobileDrawerOrgChevron}>
+            {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+          </span>
+          <span className={styles.mobileDrawerOrgTitle}>{section.org.name}</span>
+          <span className={styles.mobileDrawerOrgCount}>{section.totalProjects}</span>
+        </button>
+
+        {!isCollapsed ? (
+          <div className={styles.mobileDrawerOrgProjects}>
+            {section.projects.map((project) => (
+              <ProjectRow
+                key={project.project_id}
+                project={project}
+                isActive={project.project_id === currentProjectId}
+                onOpen={openProjectLanding}
+              />
+            ))}
+            {section.isLoading && section.projects.length === 0 ? (
+              <div className={styles.mobileDrawerOrgStatus}>
+                <Loader2 size={14} className="spin" />
+                <Text size="sm" variant="muted">Loading projects…</Text>
+              </div>
+            ) : null}
+            {section.didFail ? (
+              <div className={styles.mobileDrawerOrgStatus}>
+                <Text size="sm" variant="muted">Could not load this organization.</Text>
+              </div>
+            ) : null}
+            {!section.isLoading && !section.didFail && section.projects.length === 0 ? (
+              <div className={styles.mobileDrawerOrgStatus}>
+                <Text size="sm" variant="muted">
+                  {activeQuery ? "No matching projects." : "No projects yet."}
+                </Text>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </section>
+    );
+  };
+
   return (
     <div className={`${styles.mobileDrawerContent} ${styles.mobileProjectDrawerContent}`}>
       <div className={styles.mobileProjectDrawerTopbar}>
         <div className={styles.mobileProjectDrawerTopbarTitle}>
-          {currentProject?.name ?? "Projects"}
+          AURA
         </div>
       </div>
       <div className={styles.mobileDrawerSearch}>
         <div className={styles.mobileDrawerHeaderBar}>
           <div>
-            <div className={styles.mobileDrawerHeaderTitle}>Switch project</div>
+            <div className={styles.mobileDrawerHeaderTitle}>
+              {currentProject?.name ?? "Projects"}
+            </div>
           </div>
+          <button
+            type="button"
+            className={styles.mobileDrawerIconButton}
+            aria-label={searchOpen ? "Close project search" : "Search projects"}
+            onClick={searchOpen ? closeSearch : () => setSearchOpen(true)}
+          >
+            {searchOpen ? <X size={18} /> : <Search size={18} />}
+          </button>
         </div>
-        <PanelSearch
-          placeholder="Search projects..."
-          value={query}
-          onChange={setQuery}
-        />
+        {searchOpen ? (
+          <PanelSearch
+            placeholder="Search projects..."
+            value={query}
+            onChange={setQuery}
+          />
+        ) : null}
       </div>
-      <div className={styles.mobileDrawerBody}>
+      <div className={styles.mobileDrawerBody} ref={drawerBodyRef}>
         <div className={styles.mobileDrawerOrgStack} role="tree" aria-label="Project navigation">
-          {sections.map((section) => {
-            const isCollapsed = normalizedQuery.length === 0 && collapsedOrgIds.has(section.org.org_id);
-            const isActiveOrg = section.org.org_id === activeOrg?.org_id;
-            return (
-              <section key={section.org.org_id} className={styles.mobileDrawerOrgSection}>
-                <button
-                  type="button"
-                  className={`${styles.mobileDrawerOrgToggle} ${isActiveOrg ? styles.mobileDrawerOrgToggleActive : ""}`}
-                  aria-expanded={!isCollapsed}
-                  onClick={() => toggleOrg(section.org.org_id)}
-                >
-                  <span className={styles.mobileDrawerOrgChevron}>
-                    {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-                  </span>
-                  <span className={styles.mobileDrawerOrgTitle}>{section.org.name}</span>
-                  <span className={styles.mobileDrawerOrgCount}>{section.totalProjects}</span>
-                </button>
-
-                {!isCollapsed ? (
-                  <div className={styles.mobileDrawerOrgProjects}>
-                    {section.projects.map((project) => (
-                      <ProjectRow
-                        key={project.project_id}
-                        project={project}
-                        isActive={project.project_id === currentProjectId}
-                        onOpen={openProjectLanding}
-                      />
-                    ))}
-                    {section.isLoading && section.projects.length === 0 ? (
-                      <div className={styles.mobileDrawerOrgStatus}>
-                        <Loader2 size={14} className="spin" />
-                        <Text size="sm" variant="muted">Loading projects…</Text>
-                      </div>
-                    ) : null}
-                    {section.didFail ? (
-                      <div className={styles.mobileDrawerOrgStatus}>
-                        <Text size="sm" variant="muted">Could not load this organization.</Text>
-                      </div>
-                    ) : null}
-                    {!section.isLoading && !section.didFail && section.projects.length === 0 ? (
-                      <div className={styles.mobileDrawerOrgStatus}>
-                        <Text size="sm" variant="muted">
-                          {activeQuery ? "No matching projects." : "No projects yet."}
-                        </Text>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-              </section>
-            );
-          })}
+          {primarySections.map(renderProjectSection)}
 
           {sections.length === 0 ? (
             <div className={styles.mobileDrawerEmptyState}>
@@ -354,6 +394,29 @@ export function ProjectNavigationDrawerContent() {
           ) : null}
         </div>
       </div>
+      {cypherSection ? (
+        <div className={styles.mobileProjectDrawerFooter}>
+          <div className={styles.mobileCypherCard} aria-label="Cypher projects">
+            <div className={styles.mobileCypherHeader}>
+              <span className={styles.mobileCypherMark}>C</span>
+              <span className={styles.mobileCypherCopy}>
+                <span className={styles.mobileCypherTitle}>{cypherSection.org.name}</span>
+                <span className={styles.mobileCypherMeta}>{cypherSection.totalProjects} projects</span>
+              </span>
+            </div>
+            <div className={styles.mobileCypherProjects}>
+              {cypherSection.projects.map((project) => (
+                <ProjectRow
+                  key={project.project_id}
+                  project={project}
+                  isActive={project.project_id === currentProjectId}
+                  onOpen={openProjectLanding}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
