@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-26T01:10:37.678Z",
+  "generatedAt": "2026-04-26T01:41:49.337Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.389.1",
+  "version": "0.1.0-nightly.392.1",
   "date": "2026-04-25",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.389.1",
-  "lastIncludedSha": "4fd68734e5952e524b0ec83fe6a6fe36818c70df",
-  "previousProcessedSha": "63d4c89ab5bd9c8888355cc1b743dafcf6ca3d7c",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.392.1",
+  "lastIncludedSha": "88fd7cd0f5152d3171520d21e50d5260cb0175f4",
+  "previousProcessedSha": "4fd68734e5952e524b0ec83fe6a6fe36818c70df",
   "commitShas": [
     "68be945b8c85e3a7eed55a77aa3f5c4508c37ce4",
     "a69f2e303298e38e8ae0043f4bdf8673a1bebae0",
@@ -166,10 +166,19 @@
     "f67f9abff8198fb7761d3bf5e054ec6af02ce99b",
     "f7f7bc2ebd3e76cbe33f7bdf195733cfac93bd40",
     "e756ea5b5bb6ec58a1d3651e2dfbff0c50aadd94",
-    "4fd68734e5952e524b0ec83fe6a6fe36818c70df"
+    "4fd68734e5952e524b0ec83fe6a6fe36818c70df",
+    "cb96864df84901f791d5b5f7ca376734a2136f69",
+    "aac1050419d542b8408cc2c203beaf88513a8fd1",
+    "27aff59dc394732196c52ac456f1af2e0dffeeb3",
+    "fcc6c989f344e02925cff313ac271cad36acd928",
+    "12929360b77e3d26a82f8cadb86713ef88bf265f",
+    "dd065dd0be9bf49498547934c063051aaa5eec13",
+    "0f84019a9b930936f6f6037bb6ba83d02ae24e50",
+    "d55c704e81b67264be1044a810e932a195847735",
+    "88fd7cd0f5152d3171520d21e50d5260cb0175f4"
   ],
-  "rawCommitCount": 161,
-  "filteredCommitCount": 155,
+  "rawCommitCount": 172,
+  "filteredCommitCount": 164,
   "rawCommits": [
     {
       "sha": "68be945b8c85e3a7eed55a77aa3f5c4508c37ce4",
@@ -8197,6 +8206,518 @@
       "areas": [
         "Other"
       ]
+    },
+    {
+      "sha": "cb96864df84901f791d5b5f7ca376734a2136f69",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-23T13:05:52-07:00",
+      "subject": "feat(server): populate prior_failure on single-task retries (Commit C2)",
+      "body": "Pair of Commit C1 in aura-harness. Previously a single-task retry\n(user clicks Retry on a failed task) POSTed `/automaton/start` with\nno trace of the previous attempt's failure, so the harness rebuilt\n`AgenticTaskParams` with `execution_notes: \"\"` — the agent saw an\nidentical prompt to the one that had just failed. If the prompt\nshape was part of what provoked the failure, the retry reproduced\nit verbatim.\n\n- `crates/aura-os-link/src/automaton_client.rs` — extend\n  `AutomatonStartParams` with two retry-warm-up fields that mirror\n  the harness-side router body (Commit C1):\n  - `prior_failure: Option<String>` — the reason text the server\n    persisted on the previous attempt's `task_failed`.\n  - `work_log: Vec<String>` — reserved for future work-log plumbing;\n    left empty here because the server does not yet persist a\n    separate work-log history.\n  Both use `#[serde(skip_serializing_if)]` so pre-C1 harnesses (which\n  don't know these fields) keep receiving the old payload shape.\n- `apps/aura-os-server/src/handlers/dev_loop.rs::run_single_task` —\n  read `task.execution_notes` (populated by\n  `persist_task_failure_reason` on the prior attempt) via\n  `StorageClient::get_task` and forward it as `prior_failure`.\n  Initial attempts see an empty / whitespace-only `execution_notes`,\n  which is collapsed to `None` so the wire payload matches the\n  pre-C2 shape for first attempts. Storage errors are logged but do\n  not fail the retry — a cold prompt is still better than a 500.\n- Dev-loop start (`start_loop`) leaves `prior_failure: None` and\n  `work_log: Vec::new()` because the harness already derives retry\n  context from `STATE_FAILURE_REASONS` and the in-loop accumulated\n  work log; pre-populating here would double-count.\n- Sibling `AutomatonStartParams` construction sites\n  (`aura-os-process::executor::run::automaton_single`,\n  `automaton_decompose_subtask`, and `aura-os-agent-tools::exec_tools\n  ::start_dev_loop`) all set the new fields to the neutral\n  (`None` / empty) defaults so compile-time exhaustiveness catches\n  any future site that should be plumbing them too.\n\nThis is Commit C2 of the 6-commit\n`harden-llm-stream-retry-observability` plan. Commit D persists the\nstructured `TaskFailureContext` (provider request id, model,\nsse_error_type, message id) on `task_failed`; Commit E renders it\nin the UI; Commit F adds an end-to-end golden test.\n\nMade-with: Cursor",
+      "parents": [
+        "3e3dd5e3dcf3013fb0e2f33df4dc7b2c1875743b"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop.rs",
+        "crates/aura-os-agent-tools/src/tools/exec_tools.rs",
+        "crates/aura-os-link/src/automaton_client.rs",
+        "crates/aura-os-process/src/executor/run/automaton_decompose_subtask.rs",
+        "crates/aura-os-process/src/executor/run/automaton_single.rs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 65,
+        "deletions": 0
+      },
+      "committedAtMs": 1776974752000,
+      "cleanSubject": "populate prior_failure on single-task retries (Commit C2)",
+      "keywords": [
+        "populate",
+        "prior",
+        "failure",
+        "single",
+        "task",
+        "retries",
+        "commit"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-agent-tools/src",
+        "crates/aura-os-link/src",
+        "crates/aura-os-process/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Other"
+      ]
+    },
+    {
+      "sha": "aac1050419d542b8408cc2c203beaf88513a8fd1",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-23T13:11:57-07:00",
+      "subject": "feat(dev-loop): persist provider_request_id + model on task_failed",
+      "body": "Surface the structured stream-failure context emitted by aura-harness\n(provider_request_id / model / sse_error_type / message_id) as sibling\nfields on forwarded task_failed events, without touching the reason\nstring. Provides correlatable HTTP request ids for operator lookups and\na compact mono-label the UI will render alongside the reason (shipped\nin the follow-up Commit E).\n\n- Introduces TaskFailureContext with merge_into + has_any helpers.\n- extract_task_failure_context prefers structured event fields and\n  falls back to parsing the \"(model=..., msg_id=..., request_id=...):\n  <error_type>: <raw>\" fragments produced by\n  StreamAccumulator::into_response.\n- Plumbed on both the harness-forwarded task_failed path and on the\n  synthetic synthesize_task_failed path so done-without-terminal,\n  error-without-task_failed, and restart-failed all carry the same\n  siblings when the reason encodes them.\n- 6 unit tests cover full/partial fragments, structured-field priority,\n  vanilla synthesized reasons, non-snake_case error_type rejection, and\n  merge_into's skip-unpopulated behaviour.\n\nEmpty contexts produce an unchanged event shape, so existing consumers\nare unaffected.\n\nMade-with: Cursor",
+      "parents": [
+        "cb96864df84901f791d5b5f7ca376734a2136f69"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 365,
+        "deletions": 19
+      },
+      "committedAtMs": 1776975117000,
+      "cleanSubject": "persist provider_request_id + model on task_failed",
+      "keywords": [
+        "persist",
+        "provider",
+        "request",
+        "model",
+        "task",
+        "failed"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "27aff59dc394732196c52ac456f1af2e0dffeeb3",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-23T13:23:35-07:00",
+      "subject": "feat(task-output): render provider request_id + model alongside failure reason",
+      "body": "Surface the structured provider context the server now forwards on\ntask_failed events (provider_request_id / model / sse_error_type /\nmessage_id — shipped in Commit D) in the Run sidekick Completed task\nrow. Renders as a compact monospace label under the reason banner:\n\n  req=req_01ABC · claude-sonnet-4 · api_error\n\nwhich gives operators a one-glance correlator against provider and\nrouter logs without forcing them to parse the reason string. The\nmessage_id is carried on the panel entry but intentionally excluded\nfrom the compact label: it's an internal provider id, whereas\nrequest_id is the operator-facing one.\n\n- TaskFailed event type grows four optional sibling fields.\n- task-stream-bootstrap's handleTaskFailed normalises them into a\n  PanelTaskFailureContext and forwards to failTask(taskId, reason,\n  context). Accepts the legacy request_id / error_type / msg_id\n  aliases so a newer UI talking to an older server still picks them\n  up.\n- Panel store's failTask takes an optional context; sanitizeFailureContext\n  trims/drops empties and collapses all-empty to undefined so rows\n  without provider context keep their pre-Commit-E shape. Context\n  round-trips through localStorage.\n- CompletedTaskOutput renders the label only when at least one\n  user-facing field is populated (message_id alone does not trigger\n  the label). New CSS class failReasonContext uses the monospace\n  token so request ids line up visually, and a muted variant of the\n  danger color so the reason stays the primary content.\n- Eight new unit tests cover the full live path (bootstrap ->\n  store -> renderer), legacy aliases, empty-context collapse,\n  live-context-preserved-over-later-empty, and partial renders.\n\nMade-with: Cursor",
+      "parents": [
+        "aac1050419d542b8408cc2c203beaf88513a8fd1"
+      ],
+      "files": [
+        "interface/src/components/TaskOutputPanel/CompletedTaskOutput.test.tsx",
+        "interface/src/components/TaskOutputPanel/CompletedTaskOutput.tsx",
+        "interface/src/components/TaskOutputPanel/TaskOutputPanel.module.css",
+        "interface/src/components/TaskOutputPanel/TaskOutputPanel.tsx",
+        "interface/src/stores/task-output-panel-store.test.ts",
+        "interface/src/stores/task-output-panel-store.ts",
+        "interface/src/stores/task-stream-bootstrap.test.ts",
+        "interface/src/stores/task-stream-bootstrap.ts",
+        "interface/src/types/aura-events.ts"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 357,
+        "deletions": 5
+      },
+      "committedAtMs": 1776975815000,
+      "cleanSubject": "render provider request_id + model alongside failure reason",
+      "keywords": [
+        "render",
+        "provider",
+        "request",
+        "model",
+        "alongside",
+        "failure",
+        "reason"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/stores",
+        "interface/src/types"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "fcc6c989f344e02925cff313ac271cad36acd928",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-23T13:27:12-07:00",
+      "subject": "fix(dev-loop): make empty-path write gate recoverable",
+      "body": "The Definition-of-Done gate stored empty-path `write_file` / `edit_file`\nmisfires as a monotonic `u32` counter. A single misfire permanently\nfailed `task_done` even when the automaton immediately retried the same\ncall with a real path — the exact recovery the error string promised\n(\"the harness must retry with a real path before task_done\"). The\nstreaming accumulator also triple-counted each misfire because the\n`tool_call_started` / `tool_call_snapshot` / `tool_call_completed`\nphases all carry the same payload.\n\nReplace the ratchet with an `outstanding_empty_path_write_ids:\nHashSet<String>` that tracks unreconciled tool-call ids:\n\n- Dedupe phases by inserting the tool-call `id` (falling back to a\n  synthetic key when absent) so a single misfire scores once.\n- Keep the existing `empty_path_writes: u32` as pure telemetry so the\n  wire field `n_empty_path_writes` and the UI analytics stay stable.\n- Clear the outstanding set on any subsequent `tool_call_completed`\n  for `write_file` / `edit_file` that carries a real path — that's\n  positive proof the automaton heard the rejection and recovered.\n- Fail the gate only when the outstanding set is non-empty.\n- Add `n_outstanding_empty_path_writes` to the gate report so callers\n  that need the pass/fail signal can read it directly.\n\nExtract the per-event bookkeeping into a testable `record_write_event`\nand add an externally-reachable `replay_task_completion_gate` so\nregression tests can replay raw event transcripts. Pins the behaviour\nwith a replay of task 2.1 (\"Secret wrappers: `NeuralKey`,\n`ShamirShare`, `Secret<T>`\") — misfire, pathed retry, misfire, pathed\nretry, task_done — which used to fail and now passes, plus a phase-\ndedup test and an unreconciled-misfire test so the rollback path still\nfires when the automaton genuinely gives up.\n\nUpdate the executor DoD prompt so the automaton knows an empty-path\nmisfire is recoverable by re-issuing the same call with a real path in\nthe same turn.\n\nMade-with: Cursor",
+      "parents": [
+        "27aff59dc394732196c52ac456f1af2e0dffeeb3"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop.rs",
+        "apps/aura-os-server/src/lib.rs",
+        "apps/aura-os-server/src/state.rs",
+        "apps/aura-os-server/tests/dev_loop_dod_regression.rs",
+        "crates/aura-os-agent-templates/src/prompt.rs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 658,
+        "deletions": 43
+      },
+      "committedAtMs": 1776976032000,
+      "cleanSubject": "make empty-path write gate recoverable",
+      "keywords": [
+        "make",
+        "empty",
+        "path",
+        "write",
+        "gate",
+        "recoverable"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-agent-templates/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "12929360b77e3d26a82f8cadb86713ef88bf265f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-23T13:29:47-07:00",
+      "subject": "test(dev-loop): golden regression for task_failed provider context wire shape",
+      "body": "End-to-end golden test that pins the task_failed payload shape the UI's\nRun sidekick decodes. Guards the seam between Phase 8's three coupled\nchanges: the harness emitting provider_request_id + model +\nsse_error_type on stream errors (Commits A/B), the dev loop merging\nthem onto the forwarded task_failed event (Commit D), and the panel\nrendering the compact \"req=... model=... sse_error_type=...\" label\n(Commit E).\n\nSeven assertions against the public `task_failed_payload_with_context`\ntest helper cover the full plumbing matrix:\n\n- Reason-string fallback: the canonical aura-harness mid-stream error\n  string (\"stream terminated with error (model=..., msg_id=...,\n  request_id=...): api_error: ...\") hydrates all four sibling fields.\n- Structured siblings take precedence: when the harness forwards\n  HttpMeta-backed siblings (Commit B), reason-string fragments are\n  treated as fallback only.\n- Legacy aliases: older harness builds emit `request_id` /\n  `error_type` / `msg_id` siblings directly; the extractor must\n  normalise those to the canonical keys so a half-upgraded fleet\n  keeps the context label.\n- Partial sibling merge: when only provider_request_id ships from the\n  HTTP header (the other fields require a MessageStart that may not\n  have arrived), the missing fields fall back to reason-string parsing.\n- No-context passthrough: a bare infra-retry reason (\"reset: ...\") must\n  not synthesize siblings and must not grow stray keys on the payload.\n- Classifier stability: the canonical reason string must keep matching\n  `is_provider_internal_error` so the SINGLE_TASK_RESTART_BUDGET=3\n  retry ladder still activates on stream failures.\n- Full-shape golden: the UI contract pinned verbatim — if a future\n  refactor drops a field or reorders siblings, this fails first and\n  points the reader at the matching UI code.\n\nThe test does not spin up a mock harness; `run_single_task` coverage\nalready exists in dev_loop_dod_regression.rs and\nautonomous_recovery_replay.rs, and replicating that plumbing just to\nassert a JSON shape would duplicate those fixtures without catching\nanything new. Instead this pins the single serialization seam — if\nthe `task_failed` wire shape regresses, the \"req=... model=...\" label\ndisappears from the Run sidekick regardless of upstream behaviour.\n\nMade-with: Cursor",
+      "parents": [
+        "fcc6c989f344e02925cff313ac271cad36acd928"
+      ],
+      "files": [
+        "apps/aura-os-server/tests/single_task_retry_request_id_golden.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 314,
+        "deletions": 0
+      },
+      "committedAtMs": 1776976187000,
+      "cleanSubject": "golden regression for task_failed provider context wire shape",
+      "keywords": [
+        "golden",
+        "regression",
+        "task",
+        "failed",
+        "provider",
+        "context",
+        "wire",
+        "shape"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/tests"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "6f32e6808be32a9094b21d5f42cd1aa6d03493be",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T18:25:25-07:00",
+      "subject": "Merge branch 'feat/harden-llm-stream-retry-observability' into merge/all-local-work",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "4fd68734e5952e524b0ec83fe6a6fe36818c70df"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop/signals.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/start.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/streaming.rs",
+        "apps/aura-os-server/src/lib.rs",
+        "apps/aura-os-server/src/state.rs",
+        "apps/aura-os-server/tests/dev_loop_dod_regression.rs",
+        "apps/aura-os-server/tests/single_task_retry_request_id_golden.rs",
+        "crates/aura-os-harness/src/automaton_client.rs",
+        "interface/src/components/TaskOutputPanel/CompletedTaskOutput.test.tsx",
+        "interface/src/components/TaskOutputPanel/CompletedTaskOutput.tsx",
+        "interface/src/components/TaskOutputPanel/TaskOutputPanel.module.css",
+        "interface/src/components/TaskOutputPanel/TaskOutputPanel.tsx",
+        "interface/src/stores/task-output-panel-store.test.ts",
+        "interface/src/stores/task-output-panel-store.ts",
+        "interface/src/stores/task-stream-bootstrap.test.ts",
+        "interface/src/stores/task-stream-bootstrap.ts"
+      ],
+      "stats": {
+        "fileCount": 16,
+        "insertions": 983,
+        "deletions": 8
+      },
+      "committedAtMs": 1777166725000,
+      "cleanSubject": "Merge branch 'feat/harden-llm-stream-retry-observability' into merge/all-local-work",
+      "keywords": [
+        "merge",
+        "branch",
+        "feat",
+        "harden",
+        "stream",
+        "retry",
+        "observability",
+        "into",
+        "local",
+        "work"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-harness/src",
+        "interface/src/components",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "e09cc66c4dd4f3cfe4f0a91c0098c671d54cc572",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-25T18:26:24-07:00",
+      "subject": "Merge branch 'feat/harden-llm-stream-retry-observability'",
+      "body": "",
+      "parents": [
+        "6f32e6808be32a9094b21d5f42cd1aa6d03493be",
+        "12929360b77e3d26a82f8cadb86713ef88bf265f"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 0,
+        "deletions": 0
+      },
+      "committedAtMs": 1777166784000,
+      "cleanSubject": "Merge branch 'feat/harden-llm-stream-retry-observability'",
+      "keywords": [
+        "merge",
+        "branch",
+        "feat",
+        "harden",
+        "stream",
+        "retry",
+        "observability"
+      ],
+      "fileGroups": [],
+      "primaryArea": "Other",
+      "areas": []
+    },
+    {
+      "sha": "dd065dd0be9bf49498547934c063051aaa5eec13",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-25T21:28:01-04:00",
+      "subject": "feat(changelog): harden AI media capture quality",
+      "body": "",
+      "parents": [
+        "e09cc66c4dd4f3cfe4f0a91c0098c671d54cc572"
+      ],
+      "files": [
+        "interface/scripts/changelog-media-browser-use-trial.mjs",
+        "interface/scripts/changelog-media-browser-use-trial.test.mjs",
+        "interface/scripts/evaluate-changelog-media-pipeline.mjs",
+        "interface/scripts/evaluate-changelog-media-pipeline.test.mjs",
+        "interface/scripts/lib/aura-navigation-contract.mjs",
+        "interface/scripts/lib/aura-navigation-contract.test.mjs",
+        "interface/scripts/lib/changelog-media-branding.mjs",
+        "interface/scripts/lib/changelog-media-branding.test.mjs",
+        "interface/scripts/lib/changelog-media-highres-capture.mjs",
+        "interface/scripts/lib/changelog-media-highres-capture.test.mjs",
+        "interface/scripts/lib/changelog-media-planner.mjs",
+        "interface/scripts/lib/changelog-media-planner.test.mjs",
+        "interface/scripts/lib/changelog-media-quality.mjs",
+        "interface/scripts/lib/changelog-media-quality.test.mjs",
+        "interface/scripts/lib/changelog-media-seed-plan.mjs",
+        "interface/scripts/lib/changelog-media-seed-plan.test.mjs",
+        "interface/src/apps/agents/stores/agent-store.ts",
+        "interface/src/apps/feedback/FeedbackMainPanel/FeedbackMainPanel.tsx",
+        "interface/src/apps/process/stores/process-store.ts",
+        "interface/src/apps/tasks/stores/kanban-store.ts",
+        "interface/src/components/AppShell/AppShell.tsx",
+        "interface/src/hooks/use-chat-history-sync.test.ts",
+        "interface/src/hooks/use-chat-history-sync.ts",
+        "interface/src/lib/capture-bridge.test.ts",
+        "interface/src/lib/capture-bridge.ts",
+        "interface/src/lib/screenshot-bridge.ts",
+        "interface/src/stores/feed-store.ts",
+        "interface/src/stores/feedback-store.ts",
+        "interface/src/stores/notes-store.ts",
+        "interface/src/stores/projects-list-store.ts"
+      ],
+      "stats": {
+        "fileCount": 30,
+        "insertions": 2591,
+        "deletions": 1069
+      },
+      "committedAtMs": 1777166881000,
+      "cleanSubject": "harden AI media capture quality",
+      "keywords": [
+        "harden",
+        "media",
+        "capture",
+        "quality"
+      ],
+      "fileGroups": [
+        "interface/scripts/changelog-media-browser-use-trial.mjs",
+        "interface/scripts/changelog-media-browser-use-trial.test.mjs",
+        "interface/scripts/evaluate-changelog-media-pipeline.mjs",
+        "interface/scripts/evaluate-changelog-media-pipeline.test.mjs",
+        "interface/scripts/lib",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/hooks",
+        "interface/src/lib",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "0f84019a9b930936f6f6037bb6ba83d02ae24e50",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-25T21:28:01-04:00",
+      "subject": "fix(changelog): preserve accepted media proofs",
+      "body": "",
+      "parents": [
+        "dd065dd0be9bf49498547934c063051aaa5eec13"
+      ],
+      "files": [
+        "interface/scripts/evaluate-changelog-media-pipeline.mjs",
+        "interface/scripts/evaluate-changelog-media-pipeline.test.mjs",
+        "interface/scripts/lib/changelog-media-branding.mjs",
+        "interface/scripts/lib/changelog-media-seed-plan.mjs",
+        "interface/scripts/lib/changelog-media-seed-plan.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 397,
+        "deletions": 7
+      },
+      "committedAtMs": 1777166881000,
+      "cleanSubject": "preserve accepted media proofs",
+      "keywords": [
+        "preserve",
+        "accepted",
+        "media",
+        "proofs"
+      ],
+      "fileGroups": [
+        "interface/scripts/evaluate-changelog-media-pipeline.mjs",
+        "interface/scripts/evaluate-changelog-media-pipeline.test.mjs",
+        "interface/scripts/lib"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "d55c704e81b67264be1044a810e932a195847735",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-25T21:28:01-04:00",
+      "subject": "fix(changelog): target historical media backfills",
+      "body": "",
+      "parents": [
+        "0f84019a9b930936f6f6037bb6ba83d02ae24e50"
+      ],
+      "files": [
+        ".github/workflows/publish-release-changelog-media.yml",
+        "interface/scripts/publish-changelog-media.mjs",
+        "interface/scripts/publish-changelog-media.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 72,
+        "deletions": 13
+      },
+      "committedAtMs": 1777166881000,
+      "cleanSubject": "target historical media backfills",
+      "keywords": [
+        "target",
+        "historical",
+        "media",
+        "backfills"
+      ],
+      "fileGroups": [
+        ".github/workflows/publish-release-changelog-media.yml",
+        "interface/scripts/publish-changelog-media.mjs",
+        "interface/scripts/publish-changelog-media.test.mjs"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "88fd7cd0f5152d3171520d21e50d5260cb0175f4",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-25T21:28:01-04:00",
+      "subject": "fix(changelog): accept sparse shell media proofs",
+      "body": "",
+      "parents": [
+        "d55c704e81b67264be1044a810e932a195847735"
+      ],
+      "files": [
+        "interface/scripts/lib/changelog-media-quality.mjs",
+        "interface/scripts/lib/changelog-media-quality.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 32,
+        "deletions": 2
+      },
+      "committedAtMs": 1777166881000,
+      "cleanSubject": "accept sparse shell media proofs",
+      "keywords": [
+        "accept",
+        "sparse",
+        "shell",
+        "media",
+        "proofs"
+      ],
+      "fileGroups": [
+        "interface/scripts/lib"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
     }
   ],
   "batchCount": 6,
@@ -8208,36 +8729,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11512646
+          "sizeBytes": 11527736
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.389.1",
+      "version": "0.1.0-nightly.392.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.389.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.392.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 34034374
+          "sizeBytes": 34010622
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.389.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.392.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.389.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.392.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 101419512
+          "sizeBytes": 101382648
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.389.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.392.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -8247,29 +8768,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.389.1",
+      "version": "0.1.0-nightly.392.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.389.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.392.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 30545697
+          "sizeBytes": 30559603
         },
         {
-          "name": "Aura_0.1.0-nightly.389.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.392.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.389.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.392.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 30347115
+          "sizeBytes": 30353464
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.389.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.392.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -8279,29 +8800,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.389.1",
+      "version": "0.1.0-nightly.392.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.389.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.392.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 32063822
+          "sizeBytes": 32091221
         },
         {
-          "name": "Aura_0.1.0-nightly.389.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.392.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.389.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.392.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 31897955
+          "sizeBytes": 31936676
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.389.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.392.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -8311,17 +8832,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.389.1",
+      "version": "0.1.0-nightly.392.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.389.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.392.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 23120982
+          "sizeBytes": 23145175
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.389.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.392.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -8330,155 +8851,204 @@
     }
   ],
   "rendered": {
-    "title": "Concurrent agents, harness-native automation, and a cleaner desktop shell",
-    "intro": "A heavy day of platform work: Aura collapsed its dual agent stack onto the harness, hardened the autonomous dev loop against transient failures and policy denials, and rebuilt task/automation isolation so multiple agents can run in parallel per project. The desktop shell also picked up a new floating-pill look, native macOS edit shortcuts, and a real in-app browser error page.",
+    "title": "Harness-driven automation, concurrency isolation, and a redesigned desktop shell",
+    "intro": "A heavy day across the stack: the dev loop was rebuilt around the harness as the source of truth, concurrent loops and tasks were isolated per project and agent instance, and the desktop shell got a sweeping visual refresh with floating capsules, rounded corners, and consistent gaps. Reliability work tightened retry ladders, push-failure handling, and stream recovery, while the interface gained a browser error page, in-app copy buttons, and durable mid-turn chat state.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "8:52 AM",
         "started_at": "2026-04-23T15:52:23.000Z",
         "ended_at": "2026-04-25T06:17:10.000Z",
-        "title": "Autonomous dev loop becomes resilient and harness-native",
-        "summary": "A long arc of work hardened the autonomous dev loop against transient failures, policy denials, and remote-storage outages, then collapsed the legacy aura-os agent runtime onto the harness so harness terminal events are now authoritative for task completion.",
+        "title": "Dev loop rebuilt around the harness with isolated concurrent loops",
+        "summary": "A wide-ranging day reshaped automation, retries, the desktop shell, and chat resilience — culminating in retiring the legacy agent-tool stack and routing every loop through harness automatons.",
         "items": [
           {
-            "text": "The dev loop now classifies provider 5xx, stream aborts, push timeouts, and ENOSPC as transient with jittered, escalating cooldowns, retries tool calls up to 8 times against aura-harness's streaming retry loop, and routes completion-gate failures through the same infra-retry ladder so a single mid-stream blip no longer terminates a task.",
+            "text": "Retry ladders got dramatically smarter: transient 5xx and stream-terminated errors now classify as recoverable, project cooldowns escalate per-failure-class with ±20% jitter, single-task retries got a 3-attempt budget, completion-gate failures route through the infra retry path, and a dedicated tool-call retry tier (budget 8) consumes harness ToolCallRetrying / ToolCallFailed events with live \"retrying n/8\" UI on tool cards.",
             "commit_shas": [
               "9cb0c6a4bad40565d2da420a548cace23b427a35",
               "7150cd358dee087cec317f28fae8af66e72eb90c",
               "373be4278f1abfec2e8b8e96057927c612968b88",
               "88fa94efaadb840bf1ae1980cae436611c4afb16",
               "f474edc9ea30fb80e1c429114d406de94eef6129",
-              "fc08c18841b9fa283650d5020691ba7c79600185",
+              "4424201e7deb810be42504dbf4f94c5fc8605e48",
               "8e75d47b06a92e3cd44694f3510c5d1b9f62317e",
-              "e94aa5402ed8992c7cbf63768f15929c3c57c720"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Task terminal status is now decoupled from `git push`: failed pushes emit a `push_deferred` event and a per-project `project_push_stuck` banner with remediation copy, ENOSPC on Orbit trips a 15-minute capacity guard, and a new remote-push-recovery runbook documents the operator path. The stuck-agent harness signal also short-circuits tight-loop reconnects.",
-            "commit_shas": [
-              "73ab86fb8fce5c870712097b3af89bf5a7981ab3",
-              "f4425e28a34616b951ed45cb8ec78800f2c2ded0",
-              "fc08c18841b9fa283650d5020691ba7c79600185",
-              "5badbea7f4c7d142e4d3421446fea417507fb393",
               "4c01759db3f10d12c4ffeee55aea29f8a9072826"
             ],
             "confidence": "high"
           },
           {
-            "text": "The Definition-of-Done gate stopped failing recovered runs: empty-path writes only fail when nothing real ever lands, `tool_call_completed` and legacy `tool_result+snapshot` shapes both populate `files_changed`, kernel-policy denials (including the `binary_allowlist` and shell variants) emit a specific actionable diagnostic, and a new DoD retry tier with a language-neutral follow-up prompt re-prompts the agent when it skipped build/test/fmt/lint.",
+            "text": "The Definition-of-Done gate became far more forgiving and accurate: empty-path writes are now recoverable when a real write lands, files_changed is inferred from tool events, tool_call_completed and tool_result+snapshot fallbacks both feed the gate, and a new DoD retry tier with a language-neutral follow-up prompt re-prompts the agent for missing build/test/fmt/lint axes before failing terminally.",
             "commit_shas": [
               "a8e3e72acf90acb0ce4dee763801e919fc238828",
+              "fcc6c989f344e02925cff313ac271cad36acd928",
               "f1c9dce904294b4c7ad626ab053c5716b3121cdb",
               "a2c218d06680acc3a31d92d82b16cdb89909eef8",
               "87e929cffb891b6841d845d8d88880aab43df357",
-              "5760d25cac3fe1b8da1eae14ca548729f147c705",
               "70623bd716ec88205575716ce46af2a886a30648",
-              "3bdb2b4d17f7cbead72c5cb35a41b61d51624eda",
+              "3bdb2b4d17f7cbead72c5cb35a41b61d51624eda"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Push failures no longer demote tasks to failed: a new push_deferred event, project_push_stuck banner, and Orbit ENOSPC capacity guard with a 15-minute cooldown keep automation moving when the remote is out of disk, with a degraded Orbit indicator, retry-window labels, and a remote-push-recovery runbook for operators.",
+            "commit_shas": [
+              "73ab86fb8fce5c870712097b3af89bf5a7981ab3",
+              "f4425e28a34616b951ed45cb8ec78800f2c2ded0",
+              "fc08c18841b9fa283650d5020691ba7c79600185",
+              "5badbea7f4c7d142e4d3421446fea417507fb393"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Failure context is now end-to-end correlatable: provider_request_id, model, and sse_error_type are persisted on task_failed and rendered as a compact \"req=… · model=… · api_error\" label under the Run sidekick's failure reason, with single-task retries also carrying prior_failure into the next attempt's prompt.",
+            "commit_shas": [
+              "cb96864df84901f791d5b5f7ca376734a2136f69",
+              "aac1050419d542b8408cc2c203beaf88513a8fd1",
+              "27aff59dc394732196c52ac456f1af2e0dffeeb3",
+              "12929360b77e3d26a82f8cadb86713ef88bf265f",
+              "d1313496567c5a7b63360e6e2730fa1fcdaa7696"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The desktop shell got a sweeping facelift: the bottom taskbar split into three floating glass capsules, the topbar and main content became inset rounded panels, sidebar/sidekick gaps unified to consistent insets, and corner radii aligned to 20px across the chat input, taskbar, and titlebar.",
+            "commit_shas": [
+              "065b565508558af701ba32ece7a38065267ffe76",
+              "d09c1661332121685fcf0a0592e2c7739fc801da",
+              "de67ed6742fbe6ab0001fce67666590c52d857a8",
+              "8d8225f5ae1c43146e920e4fe0a027c5552b79b6",
+              "3ace217bcaa3cb8a5048d64364550aa30398ea98",
+              "07c68327c445cceb7234d156067b89a39f01ff62",
+              "b1c64532a807c636fa743a0393c1bf1fffd06029",
+              "6945fe71e415c1c769bbd89d52463075a9d19bcb",
+              "078aca500f4582bbef94dda7139d750d45582c79",
+              "84948636334055082e2592ac050a398ec443a256",
+              "21373eb9a3adefe8c9b644a3d8c5104de16c16ca",
+              "b995cb26ca6cbb650d6e8c5eb8b7a0f30e587119",
+              "eeba9fcba80cfc07852c85d52069b3dbbd5d3489",
+              "8fc9dbdddd45da5e3f03c7facb81123f9056eb5e",
+              "4474f6c94b4cffee21a12b842e443e63a8f9b820",
+              "bce7a34e13be621da435414f45dea85ae4871dd8",
+              "2251b3544201118b627b31f50eb6a2a788c1685f",
+              "fece144ebda94b9b04f8fbfbfbf4b011f77d2b38"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Desktop platform polish: macOS gained a native app menu so Cmd+C/V/X/A/Z work in WebView, a custom titlebar drag bridge fixes window dragging on Mac and Linux, the Windows drag-resize flash now paints black instead of white, and --external-harness validates the harness /health policy at boot.",
+            "commit_shas": [
+              "cc3193a6c2af192cd28fd1fb564f713756872ec7",
+              "c2294d390c344bcb7e09fee8b3c984de80e9669d",
+              "c1aad81ee46d1e02d939a0c1c3ec2b0114900664",
+              "ed55e3755ab85f621973b83e792fc62464891aef",
+              "f1f47358b39d250244917c8d4886a34a716ed191",
+              "a41c273bb2f739b84b3a56755665c07210a9f4e6",
               "71304ce19758e794bb134cdd5464844b5a9b2450"
             ],
             "confidence": "high"
           },
           {
-            "text": "The autonomous harness sidecar now ships with the policy envs the dev loop actually needs (`AURA_AUTONOMOUS_DEV_LOOP`, `AURA_ALLOW_SHELL`, a vetted default `AURA_ALLOWED_COMMANDS`), the desktop honors `--external-harness` with a /health policy probe, and harness `run_command` is now on by default in non-strict mode.",
+            "text": "Browser and chat reliability: the in-app browser now renders a branded \"Can't connect to server\" overlay on main-frame load failures, the address bar searches DuckDuckGo for unresolved input, mid-turn chat state survives page refresh via in-flight session events, and the Run pane / Task Overlay scroll-jank was eliminated with overflow-anchor.",
             "commit_shas": [
-              "a41c273bb2f739b84b3a56755665c07210a9f4e6",
-              "ed55e3755ab85f621973b83e792fc62464891aef",
-              "f1f47358b39d250244917c8d4886a34a716ed191",
-              "76d8a0581799f165d40530c520e5735508cc2014",
-              "abfb6d1e04678726cb6d238841e82201759837bb"
+              "bd92f082a75e7b509262d644cc083cd98ec5c044",
+              "1c155dea4f7e6180c3404000bfba27b86d38166c",
+              "7837adb5ac02aab9faa11f59818d38734440e615",
+              "6021e18170d3a67b647bca1a6c92c4f7921f2e2b",
+              "0244c857428796bfeb6df05e54770a3b2ea16706",
+              "07bbdc3af089ba0cdff4d92959936f75800035cb"
             ],
             "confidence": "high"
           },
           {
-            "text": "The legacy `aura-os-agent-tools` / `agent-runtime` / `agent-templates` stack and the entire process executor crate were deleted (~13k lines). Chat, automation, and scheduled work now go through `aura-os-harness` session bridges and harness automatons, with harness terminal events authoritative for task DoD and credit-exhaustion classified as terminal so the loop stops cleanly.",
+            "text": "Agent permissions and tool wiring became more forgiving: project-bound chats auto-splice ReadProject/WriteProject self-caps, project_id is injected from X-Aura-Project-Id headers (and dropped from required schemas), every capable tool now ships by default, and flat /api/tasks/:id and /api/specs/:id routes match the harness's HttpDomainApi expectations.",
             "commit_shas": [
-              "c21106bbae40901863a0bc4bb2806c6ef7524b95",
-              "9e23bbc1214d5b7e3bb61e56134b7917c65ed701",
-              "53ace2163821aa341d05eeff60e7deb1831a30cd",
-              "d8c2480273d6eddf9984ac52183d27da4fddda42",
-              "c1e87fb89b2f3c60955f6f3a3217f386878895ed",
-              "f39dc742e1ed330af0ccaf68b67f1725adc79321",
-              "49a1d454b8c250e74fde0859f332da3c92ad938b",
-              "95cd075daa5ad445f855ba68652dc7fd4bf9bc81",
-              "b43e4b8e4998ffced70f506b51e07fd86328c6d2"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Task state, retry, and the cross-agent dispatcher were unified: every transition now goes through a single `safe_transition` helper aligned with aura-storage's edge list, retries are idempotent on `ready`, project-scoped tools auto-inject `project_id` from session headers, and project self-caps are spliced for project-bound chats so non-CEO agents can call `list_specs` / `create_task` etc. without the LLM threading IDs.",
-            "commit_shas": [
-              "3809aeb807f4406c39969c2bff5907624445f37d",
-              "ef5088789aa71d08e87b70ae0714c62930214780",
-              "bde1254b5a1f970d7d0873898f94d50a90fedd52",
               "8d0d715527f30f40970bfff27b5c7d611d38837a",
               "b6a066eb11c7fb6084bfe2f67525fc0ff1453bd1",
               "def464a66cef5ff0e14be325bcb2afb16519f236",
               "13acee2289eb203c7543ddf25a4c4205d47b0b48",
-              "c477313f434900151366e375d284edf2a82d8c16"
+              "6efa695a4871233b5043c76ac248b67c7e26b8ea",
+              "c477313f434900151366e375d284edf2a82d8c16",
+              "bde1254b5a1f970d7d0873898f94d50a90fedd52"
             ],
             "confidence": "high"
           },
           {
-            "text": "A new topic-scoped `aura-os-events` + `aura-os-loops` foundation re-keys the in-memory automaton registry by `(project, agent_instance)` and exposes a `GET /api/loops` snapshot. The UI gets a unified `LoopProgress` indicator across agent rows, sidekick tabs, and per-task explorer rows, plus a 60s stall watchdog and reconnect hydration.",
+            "text": "Task state-machine transitions were unified with storage via a bridge-aware safe_transition helper, retry became idempotent on already-ready tasks, and a harness WS reader handle prevents the dev loop from exhausting the harness's 128-slot WebSocket cap on every restart.",
+            "commit_shas": [
+              "ef5088789aa71d08e87b70ae0714c62930214780",
+              "3809aeb807f4406c39969c2bff5907624445f37d",
+              "ee5d9553835274bad352de88b9088253232532f8"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "A topic-scoped EventHub and LoopRegistry now isolate chat, automation, task, process, and spec loops per (user, project, agent_instance), re-key the automaton registry and task-output cache to (ProjectId, AgentInstanceId), and feed a unified LoopProgress indicator across agent rows, the sidekick Tasks/Run tabs, and per-task explorer rows.",
             "commit_shas": [
               "9860141803426fa0ce19f57191394fbc5d71462e"
             ],
             "confidence": "high"
           },
           {
-            "text": "The desktop shell was rebuilt as floating glass pills: the bottom taskbar splits into three capsules with insets, the topbar and main content gain rounded corners and gaps that show the desktop background, the sidekick mirrors the left-menu fade, and a copy button appears on file/spec previews with a cross-OS clipboard fallback.",
+            "text": "A major architectural cleanup retired the legacy agent-tool dispatcher, runtime, and templates crates, deleted external CLI adapters (claude_code, codex, gemini_cli, opencode, cursor) leaving only aura_harness, and routed automation, chat, and scheduled processes through harness automatons — net change of roughly -27k lines across these refactors.",
             "commit_shas": [
-              "c1aad81ee46d1e02d939a0c1c3ec2b0114900664",
-              "065b565508558af701ba32ece7a38065267ffe76",
-              "d0bd776f1d183c6311c20a91aff65375cf24066a",
-              "8d8225f5ae1c43146e920e4fe0a027c5552b79b6",
-              "3ace217bcaa3cb8a5048d64364550aa30398ea98",
-              "07c68327c445cceb7234d156067b89a39f01ff62",
-              "84948636334055082e2592ac050a398ec443a256",
-              "eeba9fcba80cfc07852c85d52069b3dbbd5d3489",
-              "4474f6c94b4cffee21a12b842e443e63a8f9b820",
-              "bce7a34e13be621da435414f45dea85ae4871dd8",
-              "2251b3544201118b627b31f50eb6a2a788c1685f",
-              "fece144ebda94b9b04f8fbfbfbf4b011f77d2b38",
-              "55eb3c7ebd2d2efd25afafda1f29cdc97cc4bfc0"
+              "c21106bbae40901863a0bc4bb2806c6ef7524b95",
+              "9e23bbc1214d5b7e3bb61e56134b7917c65ed701",
+              "53ace2163821aa341d05eeff60e7deb1831a30cd",
+              "d8c2480273d6eddf9984ac52183d27da4fddda42",
+              "00d095ecde24f824e090d84e5f52da046e9ea0b9",
+              "71d182168bd72a700507af84641a9be2d67e351a",
+              "c1e87fb89b2f3c60955f6f3a3217f386878895ed",
+              "f39dc742e1ed330af0ccaf68b67f1725adc79321",
+              "b43e4b8e4998ffced70f506b51e07fd86328c6d2",
+              "49a1d454b8c250e74fde0859f332da3c92ad938b"
             ],
             "confidence": "high"
           },
           {
-            "text": "Native desktop polish: macOS now installs an app menu so Cmd+C/V/X/A/Z reach the WebView, the custom titlebar is draggable on macOS and Linux via tao's IPC, the Windows drag-resize flash paints black instead of white, and the browser surfaces a branded error overlay on `Network.loadingFailed` instead of Chromium's default page.",
+            "text": "Sidekick and chat polish: copy buttons with cross-OS clipboard support landed on file/spec previews, historical tool markers render as collapsible Blocks in completed task overlays, assistant turns no longer disappear at end-of-stream, and the loop progress spinner keeps rotating in determinate mode.",
             "commit_shas": [
-              "cc3193a6c2af192cd28fd1fb564f713756872ec7",
-              "c2294d390c344bcb7e09fee8b3c984de80e9669d",
-              "c1aad81ee46d1e02d939a0c1c3ec2b0114900664",
-              "bd92f082a75e7b509262d644cc083cd98ec5c044",
-              "7837adb5ac02aab9faa11f59818d38734440e615",
-              "1c155dea4f7e6180c3404000bfba27b86d38166c"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Chat and run-pane reliability: assistant turns survive a mid-stream refresh and tool-only turns no longer disappear at end of stream, the run pane and task overlay drop their MutationObserver-based scroll hack for `overflow-anchor` + sync `scrollTop`, retry/interrupt context is surfaced on tool cards with live `n/8` retry status, and stale active rows are reconciled against the server's loop status.",
-            "commit_shas": [
-              "6021e18170d3a67b647bca1a6c92c4f7921f2e2b",
-              "2bb8f040d49a871fc0a089f145bfe16fb05a63bd",
-              "0244c857428796bfeb6df05e54770a3b2ea16706",
-              "d1313496567c5a7b63360e6e2730fa1fcdaa7696",
-              "4424201e7deb810be42504dbf4f94c5fc8605e48",
-              "3089289dd126f6b34fbcba0a4c917f1b2aa11b4d",
-              "26ed6930f9995c72063c2033b81bd38d3f13f552",
+              "55eb3c7ebd2d2efd25afafda1f29cdc97cc4bfc0",
               "cc4781d5658d3eac076ab97802fe5f49f7ee252f",
-              "07bbdc3af089ba0cdff4d92959936f75800035cb"
+              "2bb8f040d49a871fc0a089f145bfe16fb05a63bd",
+              "ac52a806ba8820be69714547001268993faf108f",
+              "26ed6930f9995c72063c2033b81bd38d3f13f552",
+              "efa2c79841b18138a302db94977ad96947c30295",
+              "3089289dd126f6b34fbcba0a4c917f1b2aa11b4d"
             ],
             "confidence": "high"
           },
           {
-            "text": "A stale harness WS reader is now closed on every restart via an `WsReaderHandle` so the 128-slot harness cap stops filling up with 503s, and the protocol gains live tool-approval prompt/response messages plus per-agent permission overrides for the upcoming approvals UI.",
+            "text": "Project-agent rename from the sidebar context menu (and F2), credit-exhaustion now stops the dev loop terminally, no-change task completions are classified as completion-contract errors instead of triggering decomposition, and tool-input payloads are normalized so stringified arguments stop rendering as character-indexed JSON.",
             "commit_shas": [
-              "ee5d9553835274bad352de88b9088253232532f8",
-              "53b2c1628e23638bbf6c4caccb10ff7126b4a601",
-              "36362031a267d508f53e9aea2eb96429a9c6e9b8"
+              "efa2c79841b18138a302db94977ad96947c30295",
+              "95cd075daa5ad445f855ba68652dc7fd4bf9bc81",
+              "5fe69769aa7cfa48a4789330e9b1889fb9b9b420",
+              "ad5283297d23f35ab7914ba0d76188296b75775c",
+              "cc717456a39e1d957f7793f2c7d54f68cb2a74de"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "TypeScript hygiene Phase F1: EventType converted to a string-literal union, `any` replaced with `unknown` (or JsonValue) across memory, agent skill, and harness panels, non-null assertions removed across process canvas, terminal, and shell code paths, and a shared parseEventContent helper deduplicated event-store casts.",
+            "commit_shas": [
+              "d5c36d9e7fc3788cd11d1f7e4b38c36b9c7eaefa"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "11:32 PM",
+        "started_at": "2026-04-25T06:32:26.000Z",
+        "ended_at": "2026-04-25T06:32:26.000Z",
+        "title": "Shared module scaffolding for the F2 refactor",
+        "summary": "Reserved the new shared/ directory layout that subsequent F2 commits would populate.",
+        "items": [
+          {
+            "text": "Created the interface/src/shared/{ui,hooks,api,types,lib}/ scaffolding (utils/ already existed from Phase F1) so domain-neutral code has an explicit home.",
+            "commit_shas": [
+              "207756c5678e4b0805866daf79f0587c4e939532"
             ],
             "confidence": "high"
           }
@@ -8490,10 +9060,10 @@
         "started_at": "2026-04-25T06:35:53.000Z",
         "ended_at": "2026-04-25T06:35:53.000Z",
         "title": "Desktop sidecar build scoped to aura-runtime",
-        "summary": "Fixes the release pipeline's bundled aura-node build, which was failing because `--bin aura-node` couldn't resolve against the harness workspace's default-run packages.",
+        "summary": "Fixed the harness sidecar build script after Cargo's --bin resolution rules tripped on the workspace layout.",
         "items": [
           {
-            "text": "`prepare-desktop-sidecar` now passes `-p aura-runtime` alongside `--bin aura-node` so cargo can locate the binary inside the harness workspace and the desktop sidecar packaging step succeeds.",
+            "text": "prepare-desktop-sidecar.mjs now passes `-p aura-runtime` alongside `--bin aura-node` so the desktop sidecar build resolves the binary against the right package instead of failing with \"no bin target named aura-node in default-run packages\".",
             "commit_shas": [
               "4da6c8ccf761c3fd7eb6624e6c70d1302d2de472"
             ],
@@ -8506,11 +9076,11 @@
         "time_label": "11:40 PM",
         "started_at": "2026-04-25T06:40:52.000Z",
         "ended_at": "2026-04-25T07:10:51.000Z",
-        "title": "Interface scaffolding moves to shared/ for the F2 refactor",
-        "summary": "Phase F2 of the interface refactor relocates the generic, app-agnostic types, api transport, utils, lib foundations, and React hooks under `interface/src/shared/` while keeping Aura-specific modules in their original homes.",
+        "title": "Interface F2 migration into shared/",
+        "summary": "Moved the framework-agnostic types, API transport, utilities, foundational libs, and generic React hooks out of feature folders and into the new shared/ tree.",
         "items": [
           {
-            "text": "All 11 type files plus 38 generic API transport modules moved to `shared/types/` and `shared/api/`, with import paths codemodded across the interface; app-specific aggregators like `client.ts`, `feedback.ts`, and `marketplace.ts` stay in `api/` to avoid `shared/ → apps/` dependencies.",
+            "text": "Relocated all 11 generic type files (events, entities, ids, permissions, stream, etc.) and 38 framework-agnostic API modules into shared/types/ and shared/api/, leaving app-coupled aggregators (feedback, marketplace, client) and the stores-coupled streams.ts in api/.",
             "commit_shas": [
               "7304dc3012e842b317b407c5d68d5a8de759eca4",
               "2a88e8164212b04bf1b00598caa9086287681355",
@@ -8519,13 +9089,19 @@
             "confidence": "high"
           },
           {
-            "text": "Generic utilities, foundational lib modules, and pure React hooks (click-outside, scroll-anchor, ws-reconnect, etc.) moved to `shared/utils/`, `shared/lib/`, and `shared/hooks/`. An accidental hooks move that broke main was caught and reverted before landing the proper migration.",
+            "text": "Moved generic utilities (formatters, error extraction, clipboard, image cropping, text normalization, explorer-tree filters) into shared/utils/ and foundational libs (auth-token, browser-db, host-config, native-runtime, query-client, featureFlags) into shared/lib/.",
             "commit_shas": [
               "9c714cf6f8e789aa9d9dc72e0f6539759e0f3681",
-              "6be59f172f48327f7199224e835cca6e8e0d02ac",
+              "6be59f172f48327f7199224e835cca6e8e0d02ac"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Migrated app-agnostic React hooks — use-click-outside, use-delayed-empty/loading, use-overlay-scrollbar, use-scroll-anchor-v2, use-highlighted-html, use-overflow-tabs, ws-reconnect — into shared/hooks/, after a botched intermediate commit was reverted and re-landed cleanly.",
+            "commit_shas": [
               "a53d32bf432578e8400364f610904246839eb83e",
-              "2320fafe5d6c44f859bb38dcef6ec06aaf606371",
-              "08ec42c5833310ed5ecf550a08168c73e9a09350"
+              "08ec42c5833310ed5ecf550a08168c73e9a09350",
+              "2320fafe5d6c44f859bb38dcef6ec06aaf606371"
             ],
             "confidence": "high"
           }
@@ -8536,11 +9112,11 @@
         "time_label": "12:22 AM",
         "started_at": "2026-04-25T07:22:02.000Z",
         "ended_at": "2026-04-25T07:22:02.000Z",
-        "title": "Project stats panel decodes tokens, time, and lines again",
-        "summary": "Recovers the missing numbers in the project stats panel, where Tokens / Time / Lines stuck at zero while Cost moved.",
+        "title": "Project stats now decode every key shape from storage",
+        "summary": "Fixed the project stats panel where Tokens, Time, and Lines stayed at zero while Cost moved.",
         "items": [
           {
-            "text": "`ProjectStats` now accepts the camelCase, snake_case, and short-form key shapes that aura-storage's `/api/stats?scope=project` actually emits (e.g. `tokensUsed`, `inputTokens`, `costUsd`), and the response body is debug-logged so future shape drift is diagnosable.",
+            "text": "ProjectStats deserialization gained serde aliases for camelCase, snake_case, and short-form variants (tokensUsed/inputTokens/costUsd, etc.) so the storage-side stats endpoint populates total tokens, input/output tokens, cost, time, and lines correctly, with the body logged at debug level for future shape drift.",
             "commit_shas": [
               "da4436e24c3da45c4fc36d36b0b0e5838f1a2130"
             ],
@@ -8552,12 +9128,12 @@
         "batch_id": "entry-6",
         "time_label": "10:36 AM",
         "started_at": "2026-04-25T17:36:51.000Z",
-        "ended_at": "2026-04-26T00:57:49.000Z",
-        "title": "Per-instance concurrency for chat, loop, and ad-hoc task runs",
-        "summary": "A multi-commit Phase 2 lands the foundation for running a chat, an automation loop, and several ad-hoc tasks in the same project simultaneously, plus assorted UI polish, a hardened sidecar release contract, and team avatar editing.",
+        "ended_at": "2026-04-26T01:28:01.000Z",
+        "title": "Multi-instance concurrency, dropped-stream recovery, and OpenAI-driven changelog media",
+        "summary": "A second wave landed AgentInstanceRole-based concurrency, surfaced silently dropped chat streams, hardened the desktop sidecar contract, and rebuilt the changelog media pipeline around production-grade OpenAI image generation.",
         "items": [
           {
-            "text": "Agent instances gain an `AgentInstanceRole` (Chat / Loop / Executor) and `run_single_task` now spawns an ephemeral Executor-roled instance per call, so concurrent ad-hoc runs no longer collide on the per-project automaton slot. A startup janitor sweeps orphaned executor rows from previous crashes, and an integration test pins three-way concurrent operation with per-instance stop targeting only one slot.",
+            "text": "Concurrent chat, automation, and ad-hoc tasks now coexist per project: a new AgentInstanceRole (Chat/Loop/Executor) plus ephemeral Executor instances let parallel run_single_task calls, a project Loop, and chat sessions all share a project without colliding on the harness's one-turn-per-agent rule. A startup janitor sweeps orphaned executor rows and a Phase 3 integration test pins per-instance stop semantics.",
             "commit_shas": [
               "1102674d8469baf30c319ca2bd92c10b9263dfb2",
               "ae4801ead329f6cb70ab36edbfd26683647d028a",
@@ -8567,7 +9143,7 @@
             "confidence": "high"
           },
           {
-            "text": "The frontend stops cross-talk between concurrent loops: `LoopStopped`/`LoopFinished` is scoped to the event's project and agent instance so project A no longer marks project B's tasks completed, the sidekick streaming indicator tracks multiple instance IDs, and AutomationBar/useLoopControl bind to the project's resolved Loop instance instead of the URL's chat instance.",
+            "text": "Task panel and sidekick streaming state was rescoped per project and per agent instance: LoopStopped/LoopFinished no longer marks unrelated projects' tasks completed, and streamingAgentInstanceId became a list so two concurrent streams keep their indicators independently. AutomationBar/useLoopControl now bind to the project's resolved Loop instance instead of the URL's chat instance.",
             "commit_shas": [
               "510205d7227dca12afb926f24fcc0bd56b50a72d",
               "386a905b196e79021785a9ec18e1385092b8891e"
@@ -8575,51 +9151,64 @@
             "confidence": "high"
           },
           {
-            "text": "Mid-flight chat drops are now surfaced explicitly: the server emits a `stream_lagged` SSE error before closing when the harness broadcast falls behind, the client classifies both that and SSE idle timeouts into a `streamDropped` banner with retry hint, and the post-stream history grace window is widened to 5s to avoid races with `assistant_message_end` persistence.",
+            "text": "Silently dropped main-thread chat streams now surface explicitly: the server emits a stream_lagged SSE error when the harness broadcast outpaces the writer, the client classifies idle-timeout and stream_lagged as a \"Chat stream interrupted\" banner via a new SSEIdleTimeoutError type, and the post-stream history grace window grew from 1.5s to 5s to cover real persistence lag.",
             "commit_shas": [
               "15777df3e5ca1dfaf12de837cbd3e6d58c61e5fc"
             ],
             "confidence": "high"
           },
           {
-            "text": "Releases now validate the desktop updater sidecar package contract end-to-end via a new `desktop-validate` workflow, a build-time check, and a `verify-desktop` CI script — pairing with the earlier `prepare-desktop-sidecar` fixes so nightly bundles can no longer ship without the harness binary in the right shape.",
+            "text": "Release tooling tightened: the desktop updater sidecar package contract is now validated in CI (desktop-validate, release-nightly, release-stable), the changelog media workflow's skip and capture gates were hardened, and the bottom taskbar got unified TaskbarIconButton styling — later balanced with a consistent inner padding pass after edge-rounding was rolled back.",
             "commit_shas": [
-              "63d4c89ab5bd9c8888355cc1b743dafcf6ca3d7c"
+              "63d4c89ab5bd9c8888355cc1b743dafcf6ca3d7c",
+              "ee70b4b5181e7a925181c55c39cc7cf19d8e3810",
+              "6e17e330380aa15e0593b801d687abb3da012630",
+              "b4525bf68032c5549bf0c68f07e1d8367c0f9e5a"
             ],
             "confidence": "high"
           },
           {
-            "text": "Dev-loop automation runs are now counted as storage sessions (created, updated, and ended for both loop and single-task runs), so project stats reflect autonomous activity instead of only interactive chats.",
-            "commit_shas": [
-              "298bb4cf4f70ca201a33593583d7fc558e604d5c"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Team avatars can be uploaded from settings and render in the topbar selector, with a local-storage fallback for hosts that don't persist avatar updates so the override survives a refresh.",
+            "text": "Org/team avatars can now be uploaded from settings and shown in the topbar selector, with a local IndexedDB fallback for hosts that drop avatar updates. The sidekick toggle was grouped with the native window controls, the chat top fade softened, terminal got a WebGL renderer with canvas fallback and 100k scrollback, and the lucide Terminal icon was replaced with SquareTerminal across blocks, sidekick, marketplace, and skill rows.",
             "commit_shas": [
               "41c586f0674c3c3237579e2b2c137ff69df8d99c",
-              "13e44690d923fe848ff5569436ed61b6c929957c",
-              "f67f9abff8198fb7761d3bf5e054ec6af02ce99b"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Desktop shell polish: bottom taskbar pills get consistent end padding, the sidekick toggle joins the native window controls as one compact group, and the embedded terminal switches to a WebGL renderer with a 2D-canvas fallback and 100k-line scrollback.",
-            "commit_shas": [
-              "6e17e330380aa15e0593b801d687abb3da012630",
-              "b4525bf68032c5549bf0c68f07e1d8367c0f9e5a",
+              "f67f9abff8198fb7761d3bf5e054ec6af02ce99b",
               "4c5768ea46caa4b1c6bc9bf13e23506b609821ec",
               "04806b27042e1a9492943efcdfc409e4f80d4c71",
               "629e58d823a71a6687a380f36e1099b3c60a608a",
-              "f7f7bc2ebd3e76cbe33f7bdf195733cfac93bd40"
+              "f7f7bc2ebd3e76cbe33f7bdf195733cfac93bd40",
+              "e756ea5b5bb6ec58a1d3651e2dfbff0c50aadd94",
+              "e1ac283ca5ce65677891acfd0b3d2adeda449d77"
             ],
             "confidence": "high"
           },
           {
-            "text": "Changelog media capture workflow is hardened with stronger skip and capture gates so failed UI captures no longer silently produce broken release media.",
+            "text": "Dev-loop automation now creates, updates, and ends storage session rows so loop and single-task runs count toward project stats, and the capture-auth demo agent stamps the Chat instance role explicitly.",
             "commit_shas": [
-              "ee70b4b5181e7a925181c55c39cc7cf19d8e3810"
+              "298bb4cf4f70ca201a33593583d7fc558e604d5c",
+              "4fd68734e5952e524b0ec83fe6a6fe36818c70df"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The changelog media pipeline was overhauled to require OpenAI image generation (gpt-image-2, 2560x1440) for publishable assets — legacy SVG/PNG screenshot wrappers are now blocked, accepted media proofs are preserved across runs, historical backfills can be retargeted, and sparse shell-only proofs are accepted with explicit gates.",
+            "commit_shas": [
+              "dd065dd0be9bf49498547934c063051aaa5eec13",
+              "0f84019a9b930936f6f6037bb6ba83d02ae24e50",
+              "d55c704e81b67264be1044a810e932a195847735",
+              "88fd7cd0f5152d3171520d21e50d5260cb0175f4"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Desktop chrome refinements: main panel and content radii were tuned to 6px, the topbar align rail was widened to 44px to match the nav rail, terminal content keeps clearance above the sidekick fade, and pill sections regained consistent end padding.",
+            "commit_shas": [
+              "f3c91d5f18f73ecedc6f899625a6428bd22a65a8",
+              "2f2adb66f99e4e31169ab381d4c07cfcd1742c2c",
+              "27efe7a36a558cf984f6103a247cf3c5af8d9be3",
+              "711a3917f89d45b87a21773615d4c51952350b64",
+              "3ab332791b52ddef13eeb341ec1dcc04693dbe8e",
+              "13e44690d923fe848ff5569436ed61b6c929957c",
+              "629e58d823a71a6687a380f36e1099b3c60a608a"
             ],
             "confidence": "medium"
           }
@@ -8627,12 +9216,12 @@
       }
     ],
     "highlights": [
-      "Autonomous dev loop survives provider 5xx, push outages, and policy denials",
-      "Legacy agent runtime removed — everything routes through aura_harness",
-      "Concurrent chat, loop, and task runs no longer collide per project",
-      "Desktop shell redesigned as floating glass pills with macOS edit shortcuts",
-      "Mid-stream chat drops now surface a banner instead of failing silently"
+      "Harness now owns task DoD; legacy adapters and 13k+ lines of duplicate logic retired",
+      "Concurrent chat, loop, and ad-hoc tasks isolated per project and agent instance",
+      "Desktop shell redesigned with floating capsules, rounded corners, and unified gaps",
+      "Smarter retry ladders, push-deferred handling, and Orbit ENOSPC remediation",
+      "New browser error overlay, copy buttons, and crash-resistant mid-turn chat state"
     ],
-    "raw_commit_count": 155
+    "raw_commit_count": 164
   }
 }

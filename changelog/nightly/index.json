@@ -2,20 +2,20 @@
   {
     "date": "2026-04-25",
     "channel": "nightly",
-    "version": "0.1.0-nightly.389.1",
-    "title": "Concurrent agents, harness-native automation, and a cleaner desktop shell",
-    "intro": "A heavy day of platform work: Aura collapsed its dual agent stack onto the harness, hardened the autonomous dev loop against transient failures and policy denials, and rebuilt task/automation isolation so multiple agents can run in parallel per project. The desktop shell also picked up a new floating-pill look, native macOS edit shortcuts, and a real in-app browser error page.",
-    "entryCount": 5,
+    "version": "0.1.0-nightly.392.1",
+    "title": "Harness-driven automation, concurrency isolation, and a redesigned desktop shell",
+    "intro": "A heavy day across the stack: the dev loop was rebuilt around the harness as the source of truth, concurrent loops and tasks were isolated per project and agent instance, and the desktop shell got a sweeping visual refresh with floating capsules, rounded corners, and consistent gaps. Reliability work tightened retry ladders, push-failure handling, and stream recovery, while the interface gained a browser error page, in-app copy buttons, and durable mid-turn chat state.",
+    "entryCount": 6,
     "highlights": [
-      "Autonomous dev loop survives provider 5xx, push outages, and policy denials",
-      "Legacy agent runtime removed — everything routes through aura_harness",
-      "Concurrent chat, loop, and task runs no longer collide per project",
-      "Desktop shell redesigned as floating glass pills with macOS edit shortcuts",
-      "Mid-stream chat drops now surface a banner instead of failing silently"
+      "Harness now owns task DoD; legacy adapters and 13k+ lines of duplicate logic retired",
+      "Concurrent chat, loop, and ad-hoc tasks isolated per project and agent instance",
+      "Desktop shell redesigned with floating capsules, rounded corners, and unified gaps",
+      "Smarter retry ladders, push-deferred handling, and Orbit ENOSPC remediation",
+      "New browser error overlay, copy buttons, and crash-resistant mid-turn chat state"
     ],
-    "rawCommitCount": 161,
-    "generatedAt": "2026-04-26T01:10:37.678Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.389.1",
+    "rawCommitCount": 172,
+    "generatedAt": "2026-04-26T01:41:49.337Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.392.1",
     "path": "history/2026-04-25.json"
   },
   {
