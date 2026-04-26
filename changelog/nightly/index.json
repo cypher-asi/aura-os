@@ -2,21 +2,21 @@
   {
     "date": "2026-04-25",
     "channel": "nightly",
-    "version": "0.1.0-nightly.398.1",
-    "title": "Harness-led automation, concurrent loops, and a polished desktop shell",
-    "intro": "A heavy day across the stack: Aura's autonomous dev loop got a thorough reliability pass — smarter retries, better failure surfacing, and a hand-off of completion authority to the harness — followed by a major refactor that lets multiple chats, tasks, and automation loops run side-by-side per project. The desktop shell picked up floating glass capsules, rounded corners, and working Cmd+C/V on macOS, while the changelog media pipeline and release tooling got their own round of hardening.",
+    "version": "0.1.0-nightly.399.1",
+    "title": "Autonomous loop hardening, harness consolidation, and a glassier desktop shell",
+    "intro": "A heavy day across the autonomous dev loop, the harness boundary, and the desktop shell. The server learned to keep tasks running through provider 5xx storms, push outages, and harness policy lock-downs; the agent runtime collapsed onto a single aura_harness path and gained per-instance concurrency; and the interface picked up a floating glass desktop, a real browser error overlay, and tighter chat/sidekick streaming behavior. Late in the day a large refactor split the monorepo into smaller modules and moved generic frontend code into a shared/ tree.",
     "entryCount": 6,
     "highlights": [
-      "Dev loop now retries 5xx, stream aborts, and DoD misses with per-class backoff",
-      "Concurrent chat / loop / task instances no longer collide on the harness",
-      "Desktop shell redesigned with floating capsules, rounded corners, and macOS edit shortcuts",
-      "Browser address bar, in-app error page, and copy buttons across chat surfaces",
-      "Server hand-off: harness is now authoritative for task DoD and command policy",
-      "Nightly 0.1.0-nightly.398.1 shipped for macOS, Windows, and Linux"
+      "Dev loop survives provider 5xx, push outages, and DoD misfires",
+      "Harness becomes the single agent runtime; external CLI adapters removed",
+      "Per-instance concurrency lets chat, loop, and ad-hoc tasks run in parallel",
+      "Desktop shell goes floating-glass with rounded panels and a draggable titlebar",
+      "Browser gains an in-app error overlay and free-form DuckDuckGo search",
+      "Frontend monorepo gets a shared/ scaffold for types, api, hooks, utils, and lib"
     ],
-    "rawCommitCount": 188,
-    "generatedAt": "2026-04-26T05:42:28.856Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.398.1",
+    "rawCommitCount": 190,
+    "generatedAt": "2026-04-26T05:53:49.955Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.399.1",
     "path": "history/2026-04-25.json"
   },
   {
