@@ -337,6 +337,7 @@ fn mock_app_state_with_cache(cache: crate::state::ValidationCache) -> AppState {
             std::env::temp_dir().join(format!("aura-test-loop-{}-{id}", std::process::id())),
         )),
         harness_ws_slots: 128,
+        partition_agent_ids: true,
     }
 }
 

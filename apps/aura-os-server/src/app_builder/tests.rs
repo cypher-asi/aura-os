@@ -119,3 +119,67 @@ fn read_harness_ws_slots_from_env_uses_default_when_missing() {
     let _guard = EnvGuard::unset(HARNESS_WS_SLOTS_ENV);
     assert_eq!(read_harness_ws_slots_from_env(), DEFAULT_HARNESS_WS_SLOTS);
 }
+
+#[test]
+fn parse_partition_agent_ids_accepts_truthy_spellings() {
+    assert!(parse_partition_agent_ids("true"));
+    assert!(parse_partition_agent_ids("TRUE"));
+    assert!(parse_partition_agent_ids("True"));
+    assert!(parse_partition_agent_ids("1"));
+    assert!(parse_partition_agent_ids("yes"));
+    assert!(parse_partition_agent_ids("YES"));
+    assert!(parse_partition_agent_ids("  true  "));
+}
+
+#[test]
+fn parse_partition_agent_ids_accepts_falsy_spellings() {
+    assert!(!parse_partition_agent_ids("false"));
+    assert!(!parse_partition_agent_ids("FALSE"));
+    assert!(!parse_partition_agent_ids("False"));
+    assert!(!parse_partition_agent_ids("0"));
+    assert!(!parse_partition_agent_ids("no"));
+    assert!(!parse_partition_agent_ids("NO"));
+    assert!(!parse_partition_agent_ids("  false  "));
+}
+
+#[test]
+fn parse_partition_agent_ids_falls_back_to_default_on_invalid() {
+    assert_eq!(
+        parse_partition_agent_ids("not-a-bool"),
+        DEFAULT_PARTITION_AGENT_IDS
+    );
+    assert_eq!(parse_partition_agent_ids(""), DEFAULT_PARTITION_AGENT_IDS);
+    assert_eq!(
+        parse_partition_agent_ids("   "),
+        DEFAULT_PARTITION_AGENT_IDS
+    );
+    assert_eq!(parse_partition_agent_ids("2"), DEFAULT_PARTITION_AGENT_IDS);
+    assert_eq!(
+        parse_partition_agent_ids("truthy"),
+        DEFAULT_PARTITION_AGENT_IDS
+    );
+}
+
+#[test]
+fn read_partition_agent_ids_from_env_uses_default_when_missing() {
+    let _lock = env_lock().lock().unwrap_or_else(|e| e.into_inner());
+    let _guard = EnvGuard::unset(PARTITION_AGENT_IDS_ENV);
+    assert_eq!(
+        read_partition_agent_ids_from_env(),
+        DEFAULT_PARTITION_AGENT_IDS
+    );
+}
+
+#[test]
+fn read_partition_agent_ids_from_env_picks_up_false_override() {
+    let _lock = env_lock().lock().unwrap_or_else(|e| e.into_inner());
+    let _guard = EnvGuard::set(PARTITION_AGENT_IDS_ENV, "false");
+    assert!(!read_partition_agent_ids_from_env());
+}
+
+#[test]
+fn read_partition_agent_ids_from_env_picks_up_true_override() {
+    let _lock = env_lock().lock().unwrap_or_else(|e| e.into_inner());
+    let _guard = EnvGuard::set(PARTITION_AGENT_IDS_ENV, "true");
+    assert!(read_partition_agent_ids_from_env());
+}

@@ -124,7 +124,11 @@ async fn run_harness_test(
     };
     let config = SessionConfig {
         system_prompt: Some(agent.system_prompt.clone()),
-        agent_id: Some(aura_os_core::harness_agent_id(&agent.agent_id, None)),
+        agent_id: Some(aura_os_core::harness_agent_id_gated(
+            state.partition_agent_ids,
+            &agent.agent_id,
+            None,
+        )),
         template_agent_id: Some(agent.agent_id.to_string()),
         agent_name: Some(agent.name.clone()),
         model: model.clone(),

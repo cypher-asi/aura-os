@@ -272,6 +272,22 @@ pub struct AppState {
     /// the server's view is still authoritative for error messaging
     /// but the actual upstream limit may stay at the harness default.
     pub harness_ws_slots: usize,
+    /// Rollout gate for `aura_os_core::harness_agent_id` partitioning.
+    /// Read from `AURA_PARTITION_AGENT_IDS` at startup (default
+    /// `true`). When `true`, every chat / automaton / project-tool
+    /// call site sends the partitioned `{template}::{instance}`
+    /// `agent_id` built by `harness_agent_id`. When `false`, callers
+    /// fall back to the bare template id, so the upstream harness
+    /// behaves exactly like it did before the Phase-1 partitioning
+    /// landed. Operators flip this to `false` during a rolling
+    /// deploy where the matching harness build hasn't yet shipped
+    /// partitioning support; every other Phase-0-6 improvement
+    /// (busy guard, SSE error remap, queued-turn slot, capacity
+    /// error mapping) stays active regardless of the flag, and the
+    /// `template_agent_id` field on `SessionConfig` /
+    /// `AutomatonStartParams` is populated unconditionally so the
+    /// wire shape stays stable when the flag is flipped on later.
+    pub partition_agent_ids: bool,
 }
 
 impl AppState {

@@ -54,8 +54,11 @@ pub(crate) async fn send_event_stream(
     )
     .await?;
 
-    let partition_agent_id =
-        aura_os_core::harness_agent_id(&instance.agent_id, Some(&agent_instance_id));
+    let partition_agent_id = aura_os_core::harness_agent_id_gated(
+        state.partition_agent_ids,
+        &instance.agent_id,
+        Some(&agent_instance_id),
+    );
     let session_key = partition_agent_id.clone();
     let force_new = body.new_session.unwrap_or(false);
     let persist_ctx =

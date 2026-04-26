@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::http::StatusCode;
 use axum::Json;
 
-use aura_os_core::{harness_agent_id, AgentInstanceId, HarnessMode, Project, ProjectId};
+use aura_os_core::{harness_agent_id_gated, AgentInstanceId, HarnessMode, Project, ProjectId};
 use aura_os_harness::{AutomatonClient, AutomatonStartError, AutomatonStartParams};
 
 use crate::error::{ApiError, ApiResult};
@@ -180,7 +180,11 @@ pub(super) async fn build_start_params(
     };
     AutomatonStartParams {
         project_id: ctx.project_id.to_string(),
-        agent_id: Some(harness_agent_id(&ctx.agent_id, Some(&agent_instance_id))),
+        agent_id: Some(harness_agent_id_gated(
+            state.partition_agent_ids,
+            &ctx.agent_id,
+            Some(&agent_instance_id),
+        )),
         template_agent_id: Some(ctx.agent_id.to_string()),
         auth_token: jwt,
         model: ctx.model.clone(),

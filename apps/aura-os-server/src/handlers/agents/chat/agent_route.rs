@@ -64,7 +64,8 @@ pub(crate) async fn send_agent_event_stream(
     reject_if_partition_busy(&state, &agent_id, None).await?;
 
     let force_new = body.new_session.unwrap_or(false);
-    let partition_agent_id = aura_os_core::harness_agent_id(&agent_id, None);
+    let partition_agent_id =
+        aura_os_core::harness_agent_id_gated(state.partition_agent_ids, &agent_id, None);
     let session_key = partition_agent_id.clone();
     if force_new {
         remove_live_session(&state, &session_key).await;

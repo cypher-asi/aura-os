@@ -159,7 +159,8 @@ pub(crate) async fn project_tool_session_config(
     // per-project, isn't a real Aura template, and the local harness
     // doesn't need partitioning here.
     let agent_id_field = if let Some(instance) = remote_instance.as_ref() {
-        Some(aura_os_core::harness_agent_id(
+        Some(aura_os_core::harness_agent_id_gated(
+            state.partition_agent_ids,
             &instance.agent_id,
             Some(&instance.agent_instance_id),
         ))
