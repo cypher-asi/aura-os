@@ -24,6 +24,9 @@
   border: 1px solid var(--color-border);
   border-radius: var(--shell-chrome-radius, 20px);
   box-sizing: border-box;
+  /* Consistent breathing room at the start/end of every pill so icons
+     don't sit flush against the rounded corners. */
+  padding: 0 var(--space-2);
 }
 
 .left {
@@ -52,11 +55,6 @@
   overflow: hidden;
   flex-shrink: 1;
   min-width: 0;
-  /* When the pinned-agents strip is the last child of `.left`, its right edge
-     sits at the pill's rounded right corner (20px). Match that radius so the
-     rectangular overflow clip doesn't square off the rounded end. */
-  border-top-right-radius: 20px;
-  border-bottom-right-radius: 20px;
 }
 
 .openIndicator {

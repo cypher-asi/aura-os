@@ -71,32 +71,20 @@ function NavRailButton({ icon, label, selected, className, ...props }: NavRailBu
   );
 }
 
-export type TaskbarIconButtonEdge = "start" | "end" | "both";
-
 export interface TaskbarIconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon: ReactNode;
   selected?: boolean;
-  edge?: TaskbarIconButtonEdge;
   children?: ReactNode;
 }
 
 export function TaskbarIconButton({
   icon,
   selected = false,
-  edge,
   className,
   children,
   ...props
 }: TaskbarIconButtonProps) {
-  const cls = [
-    styles.taskbarBtn,
-    edge === "start" ? styles.taskbarBtnEdgeStart : "",
-    edge === "end" ? styles.taskbarBtnEdgeEnd : "",
-    edge === "both" ? styles.taskbarBtnEdgeBoth : "",
-    className ?? "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const cls = [styles.taskbarBtn, className ?? ""].filter(Boolean).join(" ");
 
   return (
     <button
@@ -241,9 +229,6 @@ interface AppNavRailProps {
   excludeIds?: string[];
   ariaLabel?: string;
   allowReorder?: boolean;
-  /** When the rail is flush against a rounded pill edge, round the first/last
-   *  taskbar icon's outer corners to 20px to match the pill. */
-  roundEdges?: { start?: boolean; end?: boolean };
 }
 
 export function AppNavRail({
@@ -252,7 +237,6 @@ export function AppNavRail({
   excludeIds = [],
   ariaLabel = "Primary navigation",
   allowReorder = false,
-  roundEdges,
 }: AppNavRailProps) {
   const apps = useAppStore((s) => s.apps);
   const activeApp = useActiveApp();
@@ -461,16 +445,11 @@ export function AppNavRail({
     return nextApps;
   }, [dragState, primaryApps, primaryAppsById]);
 
-  const navClassName = [
-    isRail ? styles.rail : isBar ? styles.bar : styles.taskbar,
-    layout === "taskbar" && roundEdges?.start ? styles.taskbarRoundedStart : "",
-    layout === "taskbar" && roundEdges?.end ? styles.taskbarRoundedEnd : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
   return (
-    <nav className={navClassName} aria-label={ariaLabel}>
+    <nav
+      className={isRail ? styles.rail : isBar ? styles.bar : styles.taskbar}
+      aria-label={ariaLabel}
+    >
       {isRail ? (
         <>
           <div className={styles.spacer} />

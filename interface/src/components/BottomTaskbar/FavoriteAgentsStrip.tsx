@@ -30,11 +30,9 @@ interface FavCtxMenu {
 
 const FavoriteAgentTaskbarItem = memo(function FavoriteAgentTaskbarItem({
   agent,
-  isLast,
   onContextMenu,
 }: {
   agent: Agent;
-  isLast: boolean;
   onContextMenu: (event: React.MouseEvent, agentId: string) => void;
 }) {
   const hasOpenWindow = useDesktopWindowStore(selectIsWindowOpen(agent.agent_id));
@@ -53,7 +51,6 @@ const FavoriteAgentTaskbarItem = memo(function FavoriteAgentTaskbarItem({
   return (
     <TaskbarIconButton
       selected={hasOpenWindow}
-      edge={isLast ? "end" : undefined}
       title={agent.name}
       aria-label={agent.name}
       onClick={handleClick}
@@ -142,11 +139,10 @@ export function FavoriteAgentsStrip() {
   return (
     <>
       <div className={styles.favorites}>
-        {favoriteAgents.map((agent, index) => (
+        {favoriteAgents.map((agent) => (
           <FavoriteAgentTaskbarItem
             key={agent.agent_id}
             agent={agent}
-            isLast={index === favoriteAgents.length - 1}
             onContextMenu={handleFavContextMenu}
           />
         ))}

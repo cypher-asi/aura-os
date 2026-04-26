@@ -179,37 +179,6 @@
   box-shadow: none !important;
 }
 
-.taskbarBtnEdgeStart,
-.taskbarBtnEdgeStart:hover {
-  border-top-left-radius: 20px;
-  border-bottom-left-radius: 20px;
-}
-
-.taskbarBtnEdgeEnd,
-.taskbarBtnEdgeEnd:hover {
-  border-top-right-radius: 20px;
-  border-bottom-right-radius: 20px;
-}
-
-.taskbarBtnEdgeBoth,
-.taskbarBtnEdgeBoth:hover {
-  border-radius: 20px;
-}
-
-/* When AppNavRail is rendered flush at the start/end of a pill section,
-   round the first/last app icon to match the pill's outer corner. */
-.taskbarRoundedStart .taskbarGroup > .taskbarBtn:first-child,
-.taskbarRoundedStart .taskbarGroup > .taskbarBtn:first-child:hover {
-  border-top-left-radius: 20px;
-  border-bottom-left-radius: 20px;
-}
-
-.taskbarRoundedEnd .taskbarGroup > .taskbarBtn:last-child,
-.taskbarRoundedEnd .taskbarGroup > .taskbarBtn:last-child:hover {
-  border-top-right-radius: 20px;
-  border-bottom-right-radius: 20px;
-}
-
 .taskbarDragOverlay {
   position: fixed;
   z-index: 2000;
