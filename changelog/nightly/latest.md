@@ -1,77 +1,77 @@
-# Autonomous dev loop hardening, harness consolidation, and a desktop shell refresh
+# Harness-led automation, concurrent loops, and a polished desktop shell
 
 - Date: `2026-04-25`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.395.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.395.1
+- Version: `0.1.0-nightly.398.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.398.1
 
-A heavy day for Aura's autonomous loop and runtime: the server now treats provider blips, push backlogs, and policy denials as recoverable instead of terminal, the dev loop and process runtime were folded onto the harness as the single execution path, and the desktop shell got a floating glass-pill makeover. Concurrent agent work was untangled with per-instance roles and topic-scoped loops, and the interface began a structural move toward a shared/ layout.
+A heavy day across the stack: Aura's autonomous dev loop got a thorough reliability pass — smarter retries, better failure surfacing, and a hand-off of completion authority to the harness — followed by a major refactor that lets multiple chats, tasks, and automation loops run side-by-side per project. The desktop shell picked up floating glass capsules, rounded corners, and working Cmd+C/V on macOS, while the changelog media pipeline and release tooling got their own round of hardening.
 
-## 8:52 AM — Autonomous dev loop becomes resilient to provider blips and push outages
+## 8:52 AM — Autonomous dev loop hardening, harness migration, and desktop shell rebuild
 
-A multi-pronged overhaul of the autonomous loop: transient provider errors, stuck git remotes, completion-gate misfires, and policy denials now flow through structured recovery paths instead of terminating tasks.
+The bulk of the day reshaped how Aura runs autonomous tasks — from retry classification through the Definition-of-Done gate — then migrated automation onto the harness adapter and gave the desktop shell a floating-capsule redesign.
 
-- Classified 5xx, stream-terminated, and rate-limited failures as transient with escalating, jittered cooldowns and per-task retry budgets, plus a stateful resume preamble so retried turns continue rather than restart from scratch. (`9cb0c6a`, `7150cd3`, `8e75d47`, `373be42`, `88fa94e`)
-- Decoupled task completion from git push: pushes that fail due to remote outages now emit push_deferred / project_push_stuck events with a runbook, and an Orbit ENOSPC guard surfaces an amber "Orbit out of disk" indicator with retry windows. (`73ab86f`, `f4425e2`, `5badbea`, `fc08c18`)
-- Made the Definition-of-Done gate recoverable: empty-path writes are forgiven once a real write lands, files_changed is inferred from tool events, and a new DoD retry tier re-prompts the agent for missing build/test/fmt/lint axes with a language-neutral note. (`fcc6c98`, `f1c9dce`, `a2c218d`, `70623bd`, `87e929c`)
-- Closed the kernel-policy denial gap end-to-end: the desktop sidecar now ships a vetted AURA_ALLOWED_COMMANDS list, external harnesses are checked at boot, and the gate emits an actionable diagnostic that the DoD retry tier refuses to loop on. (`a41c273`, `5760d25`, `f1f4735`, `3bdb2b4`, `71304ce`, `abfb6d1`)
-- Stopped tight-loop reconnects on stuck-agent terminal signals and prevented harness WebSocket slot exhaustion by closing reader handles on every restart. (`4c01759`, `ee5d955`)
-- Surfaced provider request_id, model, and SSE error type alongside task failure reasons in the Run sidekick, and propagated prior-failure context into single-task retries so the agent doesn't re-run the same prompt blind. (`cb96864`, `aac1050`, `27aff59`, `1292936`)
-- Redesigned the desktop shell around floating glass capsules: split the bottom taskbar into three pills, inset and rounded the topbar and main content, restyled the browser address bar, and added a native macOS app menu so Cmd+C/V/X/A/Z work in the WebView. (`065b565`, `d0bd776`, `8d8225f`, `b1c6453`, `8494863`, `8fc9dbd`, `7837adb`, `cc3193a`, `c2294d3`, `bce7a34`)
-- Made the harness the sole runtime: removed the legacy agent tool dispatcher, retired external CLI adapters (claude_code, codex, gemini_cli, opencode, cursor), and routed dev loop, process scheduler, and chat through harness automatons via a new aura-os-harness crate. (`c21106b`, `9e23bbc`, `53ace21`, `d8c2480`, `c1e87fb`, `f39dc74`, `b43e4b8`, `49a1d45`)
-- Preserved chat state across refresh and stream drops: in-flight assistant turns now rebuild from persisted events, the composer hides until history resolves, and tool-only turns no longer disappear at end-of-stream. (`6021e18`, `07bbdc3`, `2bb8f04`, `4c671f1`)
-- Introduced topic-scoped EventHub and LoopRegistry so chat, automation, task, and process loops are tracked per (project, agent_instance, kind), with a shared LoopProgress indicator across agent rows, sidekick tabs, and explorer rows. (`9860141`, `26ed693`, `ac52a80`)
-- Added an in-app browser error overlay for main-frame load failures and a free-form DuckDuckGo fallback when the address bar input isn't a URL. (`bd92f08`, `1c155de`)
-- Fixed run pane jank and stale rows: replaced observer-based scroll with overflow-anchor + layout-effect scrolling, demoted orphaned active rows on hydration, and lifted the cooking indicator above the bottom fade. (`0244c85`, `3089289`, `2509b9c`)
-- Unified the task state machine with aura-storage via a single safe_transition helper and added flat /tasks/:id and /specs/:id routes for harness clients, eliminating the cascade of "Invalid status transition" 400s. (`bde1254`, `ef50887`, `3809aeb`)
-- Auto-spliced project self-capabilities for project-bound agent chats and stamped X-Aura-Project-Id on cross-agent dispatch so project-scoped tools (list_specs, create_task, ...) stop being denied when the LLM omits project_id. (`8d0d715`, `b6a066e`, `def464a`, `13acee2`)
+- Dev loop now treats provider 5xx responses, stream aborts, and rate limits as transient with per-class escalating backoff plus ±20% jitter, and bumps the single-task retry budget so one mid-stream blip no longer terminally fails a user-clicked Retry. (`9cb0c6a`, `7150cd3`, `373be42`, `88fa94e`)
+- The Definition-of-Done gate got smarter: empty-path write misfires are now recoverable when a real write lands, files_changed is inferred from tool events, and kernel-policy denials short-circuit to an actionable diagnostic across all build/test/fmt/lint axes. (`a8e3e72`, `fcc6c98`, `f1c9dce`, `a2c218d`, `5760d25`, `3bdb2b4`, `71304ce`, `70623bd`)
+- Task terminal status is now decoupled from git push outcomes: failed pushes surface a `push_deferred` step and a project-level "push stuck" banner instead of demoting the task, with dedicated handling for Orbit ENOSPC including a 15-minute capacity guard and remediation copy. (`73ab86f`, `f4425e2`, `fc08c18`, `5badbea`)
+- Run-pane UX for failures and retries: tool cards live-update through harness retry events with "Writing retrying (n/8)" titles, completed task rows show provider request id / model / error type, and abandoned pending cards resolve cleanly on `task_retrying`. (`d131349`, `27aff59`, `13acee2`, `f474edc`, `4424201`, `0244c85`)
+- Task state machine unified through a single bridge-aware `safe_transition`, ready→failed and ready→ready edges made idempotent, and a flat `/api/tasks/:id` / `/api/specs/:id` surface added for harness clients that previously 404'd. (`bde1254`, `ef50887`, `3809aeb`)
+- Harness handoff: scheduled work, agent chats, and the dev loop now run through a delegated `aura-os-harness` adapter, the legacy agent-tool dispatcher and external CLI adapters (claude_code, codex, gemini_cli, opencode, cursor) were retired, and the harness is now authoritative for task DoD with aura-os only retaining verification evidence. (`c21106b`, `9e23bbc`, `53ace21`, `d8c2480`, `c1e87fb`, `f39dc74`, `b43e4b8`, `49a1d45`)
+- Desktop shell redesigned with three floating glass capsules in the bottom taskbar, rounded inset titlebar and main panel, 5px gaps between sidebar/main/sidekick, and a bottom-fade gradient — paired with a chat input that survives mid-turn refreshes and a fix to a long-standing scroll-jank loop in the sidekick. (`065b565`, `d09c166`, `8d8225f`, `3ace217`, `07c6832`, `078aca5`, `8494863`, `eeba9fc`, `8fc9dbd`, `4474f6c`, `bce7a34`, `0244c85`, `6021e18`)
+- macOS desktop fixes: a native AppKit menu now wires Cmd+C/V/X/A/Z through to the WebView, the custom titlebar drags via IPC on macOS and Linux (where `-webkit-app-region: drag` is unsupported), and a black drag-resize fill replaces the jarring white flash on Windows. (`cc3193a`, `c2294d3`, `c1aad81`)
+- New browser surface: in-app error overlay for main-frame load failures with Ask Agent / Reload, address-bar restyle as a flat pill with site-info icon, and free-form input now searches DuckDuckGo instead of being silently dropped. (`bd92f08`, `7837adb`, `1c155de`)
+- Project-bound agent chats no longer hit "Tool 'X' is not allowed": project self-caps are auto-spliced from the chat session, `X-Aura-Project-Id` is injected on cross-agent dispatch, and `project_id` was dropped from required tool schemas. (`8d0d715`, `b6a066e`, `def464a`, `13acee2`)
+- Concurrency and event isolation: chat/automation/task/process/spec loops now run on topic-scoped EventHub channels with a per-loop registry and a `/api/loops` snapshot, surfaced through a unified `LoopProgress` indicator, and harness WS sockets close cleanly on restart so the 128-slot cap stops getting exhausted. (`9860141`, `26ed693`, `ee5d955`, `ac52a80`)
+- Chat reliability and copy: mid-turn state now survives a page refresh via in-flight assistant turns and `assistant_turn_progress` events, copy buttons land on file and spec previews with a Capacitor-safe clipboard helper, and project agents can be renamed inline from the sidebar context menu. (`6021e18`, `55eb3c7`, `efa2c79`)
 
-## 11:32 PM — Frontend shared/ scaffolding seeded
+## 11:32 PM — Shared interface scaffolding for the F2 refactor
 
-A small structural step toward the F2 refactor that unblocks the larger shared/ migration later in the day.
+An empty but intentional checkpoint: reserve the `interface/src/shared/` tree for the next phase of the frontend refactor.
 
-- Reserved interface/src/shared/{ui,hooks,api,types,lib}/ with .gitkeep files so subsequent shared/ moves have stable destinations. (`207756c`)
+- Created the `shared/{ui,hooks,api,types,lib}` directories under `interface/src/` so subsequent commits can move generic modules out of feature folders without churning import paths twice. (`207756c`)
 
-## 11:35 PM — Desktop sidecar build scoped to aura-runtime
+## 11:35 PM — Desktop sidecar build now scopes aura-node correctly
 
-Release tooling fix so prepare-desktop-sidecar can locate the aura-node binary inside the harness workspace.
+Follow-up fix to the desktop release script after the harness's `--bin` resolution rules tripped up the previous run.
 
-- Disambiguated the aura-node build with -p aura-runtime after --bin-only resolution failed against non-default-run packages. (`4da6c8c`)
+- `prepare-desktop-sidecar.mjs` now builds aura-node with `-p aura-runtime --bin aura-node` so cargo no longer errors with "no bin target named aura-node in default-run packages" when the binary lives outside the workspace's default-run set. (`4da6c8c`)
 
-## 11:40 PM — Frontend shared/ migration: types, api, utils, lib, and hooks relocated
+## 11:40 PM — Frontend shared/ migration: types, api, utils, hooks, and lib
 
-The bulk of the F2 refactor: domain-neutral types, API transports, utilities, foundational lib modules, and generic React hooks moved into interface/src/shared/, with a partial revert and a careful exception for stores-coupled streams.ts.
+Bulk move of domain-neutral modules out of feature folders into `interface/src/shared/`, with one revert and one principled exception kept in `api/`.
 
-- Moved all 11 generic type files into shared/types/ and 38 framework-agnostic API transport modules into shared/api/, codemodding import paths across the interface. (`7304dc3`, `2a88e81`)
-- Relocated generic utilities (formatters, clipboard, error extraction, image cropping, text normalization), foundational lib modules (auth-token, browser-db, host-config, native-runtime, query-client, featureFlags), and app-agnostic hooks into shared/. (`9c714cf`, `6be59f1`, `a53d32b`)
-- Reverted an accidental hooks move that broke main, then kept api/streams.ts in api/ because its dependency on stores/event-store violates the shared/ rule. (`08ec42c`, `f71b9eb`)
+- Relocated all 11 generic type modules (events, entities, ids, permissions, stream, etc.) to `shared/types/`, with import paths recomputed across ~330 files to avoid colliding with sibling `types.ts` modules. (`7304dc3`)
+- Moved framework-agnostic API transport modules to `shared/api/`, leaving `feedback.ts`, `marketplace.ts`, `client.ts`, and (after a follow-up correction) `streams.ts` in `api/` because they couple to stores or app-specific aggregators. (`2a88e81`, `f71b9eb`)
+- Promoted clearly generic helpers to `shared/utils/`, `shared/lib/`, and `shared/hooks/` — covering formatters, error extraction, clipboard, browser-db, host config, query client, feature flags, and React hooks like `use-click-outside`, `use-scroll-anchor-v2`, and `ws-reconnect`. (`9c714cf`, `6be59f1`, `a53d32b`)
+- Reverted an accidental hooks duplication that moved files into `shared/hooks/` without updating call sites, restoring main to a buildable state. (`2320faf`, `08ec42c`)
 
-## 12:22 AM — Project stats panel decodes alternative key shapes
+## 12:22 AM — Project stats now show real tokens, time, and lines
 
-Fixes the stats panel showing zero tokens, time, and lines while cost moved.
+Stats panel had been silently zeroing out everything except cost; widening the storage deserializer recovers the full picture.
 
-- Added serde aliases on ProjectStats for camelCase, snake_case, and short-form variants (tokensUsed, inputTokens, costUsd, ...) and logged the raw stats body so future shape drift is diagnosable. (`da4436e`)
+- `ProjectStats` now accepts camelCase, snake_case, and short-form aliases (`tokensUsed`, `inputTokens`, `costUsd`, etc.) for tokens, cost, time, and lines, and the storage client logs the raw stats body so future shape drift is diagnosable. Unit tests pin all three naming conventions. (`da4436e`)
 
-## 10:36 AM — Per-instance concurrency, stream-drop banners, and the changelog media pipeline
+## 10:36 AM — Multi-instance concurrency, sidekick scoping, and team avatars
 
-Late-day work introduces AgentInstanceRole with ephemeral executors so concurrent runs no longer collide, surfaces dropped chat streams as a real banner, counts automation runs as sessions, and overhauls the changelog media capture pipeline.
+The afternoon push introduced per-project Loop and ephemeral Executor agent instances, scoped streaming state per project/instance, and shipped team avatar editing — alongside a deep refactor that split large Rust and TypeScript modules into focused submodules.
 
-- Added an AgentInstanceRole foundation (Chat / Loop / Executor) and made every ad-hoc task run allocate a fresh Executor-roled instance, with a startup janitor sweeping orphaned executor rows and integration tests pinning the registry-keying invariant. (`1102674`, `ae4801e`, `ed8d9f4`, `cf39422`)
-- Scoped task panel completion and sidekick streaming state per project and agent instance, and bound automation loop start/pause/resume/stop to the project's Loop instance so toggling automation no longer aborts the chat reply. (`510205d`, `386a905`)
-- Surfaced dropped main-thread chat streams instead of failing silently: server emits a synthetic stream_lagged event on broadcast lag, the client renders a dedicated "Chat stream interrupted" banner, and the post-stream history grace window is widened to 5s. (`15777df`)
-- Wired dev-loop automation into storage sessions so loop and single-task runs create, update, and end session rows for project stats counting. (`298bb4c`)
-- Added team avatar uploads with a local override fallback, swapped lucide Terminal for SquareTerminal across terminal and command surfaces, and added a WebGL terminal renderer with a 100k-line scrollback. (`41c586f`, `f67f9ab`, `e1ac283`, `04806b2`)
-- Polished the desktop shell further: unified taskbar pill icons with consistent edge rounding, grouped the sidekick toggle with native window controls, softened the chat panel top edge, and tightened pill end padding. (`6e17e33`, `b4525bf`, `4c5768e`, `f7f7bc2`)
-- Split large Rust modules (storage types, agents, browser CDP backend, integrations, protocol, server handlers including agents/chat, dev_loop streaming, orgs, specs, notes, tests) into focused submodules, and reorganized interface app components under their app folders. (`0db6ae9`, `30298f0`, `d9fb000`, `e69d5b7`, `0073ae5`, `385f037`)
-- Hardened the changelog media pipeline: validated and skipped capture workflows correctly, switched to OpenAI production-grade redraws, preserved accepted proofs, accepted sparse shell media, targeted historical backfills, and updated default models. (`ee70b4b`, `dd065dd`, `0f84019`, `d55c704`, `88fd7cd`, `c68a9a7`, `3aa805a`)
-- Validated the desktop updater sidecar package contract in CI and recovered desktop builds when node_modules is missing tsc/vite binaries. (`63d4c89`, `5c51e33`)
-- Forwarded org avatar URL patches to network metadata and surfaced storage and metadata failures from refactored process and terminal handlers. (`1c60612`, `414467d`)
+- Agent instances now carry an `AgentInstanceRole` (Chat / Loop / Executor): each `run_single_task` mints a fresh Executor row so concurrent ad-hoc runs and the project's automation loop stop colliding on the harness's "one in-flight turn per agent_id" rule, with a startup janitor that reaps orphaned Executor rows. (`1102674`, `ae4801e`, `ed8d9f4`, `cf39422`)
+- Sidekick streaming state is now scoped per project and per agent instance: `LoopStopped` for project A no longer marks project B's tasks complete, and the streaming dot tracks multiple concurrent agents instead of flickering between them. Automation Bar controls bind to the project's resolved Loop instance so Start no longer aborts an in-flight chat. (`510205d`, `386a905`)
+- Dropped main-thread chat streams now surface explicitly: the server emits a `stream_lagged` SSE event when the harness broadcast falls behind, the client classifies idle timeouts and lag as a `streamDropped` variant with a "Chat stream interrupted" banner, and the post-stream history grace window grew to 5s to absorb persistence lag. (`15777df`)
+- Team avatar editing landed: avatars can be uploaded from org settings, shown in the topbar selector, and persisted locally as a fallback for hosts that drop avatar updates. The upload field is now wired through to network org metadata. (`41c586f`, `13e4469`, `f67f9ab`, `1c60612`)
+- Sidekick terminal switched to a WebGL renderer with canvas fallback and a 100k-line scrollback, the Terminal icon was unified to lucide's SquareTerminal across the sidekick, command blocks, and skill shop, and the sidekick toggle now sits beside the native window controls as one compact group. (`04806b2`, `e1ac283`, `4c5768e`)
+- Automation runs now count as sessions in project stats — both loop runs and single-task runs create, update, and end session rows so token/cost/time accounting reflects autonomous work. (`298bb4c`)
+- Large foundation modules were split: storage types, agent service, browser CDP backend, integrations + trusted methods, and aura-protocol all moved from monolithic files into focused submodules, and the server's chat, agents, notes, org_tools, and dev_loop streaming handlers were broken up the same way. (`0db6ae9`, `30298f0`, `d9fb000`, `e69d5b7`, `0073ae5`, `385f037`)
+- Changelog media pipeline gained AI-generated production-grade media via OpenAI image redraws (gpt-image-2, 2560x1440), visual-surface clustering for candidate media, accepted-proof preservation, and historical backfill targeting through the publish workflow. (`dd065dd`, `0f84019`, `d55c704`, `88fd7cd`, `c68a9a7`, `ee70b4b`, `3aa805a`, `2730c7f`)
+- Release infrastructure: the desktop updater sidecar package contract is now validated in CI by `desktop-validate`, `release-nightly`, and `release-stable` workflows, and the desktop build script reinstalls missing tsc/vite binaries instead of skipping npm install on incomplete `node_modules`. (`63d4c89`, `5c51e33`)
+- Documentation added for the post-refactor architecture: `frontend-architecture.md` and `rust-module-conventions.md` describe the new shared/ layout and Rust module conventions, with a `lint-file-sizes.mjs` script to keep modules from growing back. (`385f037`)
 
 ## Highlights
 
-- Dev loop survives provider 5xx, stuck pushes, and tool-call retries instead of failing tasks
-- Harness becomes the single runtime; legacy agent tool dispatcher and external CLI adapters removed
-- Desktop shell redesigned around floating glass capsules with rounded corners and macOS edit shortcuts
-- Concurrent chat, automation, and ad-hoc runs now isolate per agent instance and project
-- Browser, chat, and run pane reliability fixes for stream drops, refresh state, and stale rows
+- Dev loop now retries 5xx, stream aborts, and DoD misses with per-class backoff
+- Concurrent chat / loop / task instances no longer collide on the harness
+- Desktop shell redesigned with floating capsules, rounded corners, and macOS edit shortcuts
+- Browser address bar, in-app error page, and copy buttons across chat surfaces
+- Server hand-off: harness is now authoritative for task DoD and command policy
+- Nightly 0.1.0-nightly.398.1 shipped for macOS, Windows, and Linux
 
