@@ -151,7 +151,7 @@
 }
 
 .iconTrigger [data-team="true"] {
-  background: var(--color-overlay-medium, rgba(255, 255, 255, 0.1));
+  background: #000;
   box-shadow: 0 0 0 1px #000;
 }
 
