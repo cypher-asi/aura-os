@@ -5,8 +5,8 @@ const DEFAULT_MAX_CANDIDATES = 3;
 const DEFAULT_ENTRY_CHUNK_SIZE = 20;
 const DEFAULT_PLANNER_TIMEOUT_MS = 120_000;
 const MAX_PROMPT_CHARS = 52000;
-const MIN_CAPTURE_CONFIDENCE = 0.6;
-const PREFERRED_CAPTURE_CONFIDENCE = 0.7;
+const MIN_CAPTURE_CONFIDENCE = 0.7;
+const PREFERRED_CAPTURE_CONFIDENCE = 0.75;
 const SHELL_CAPTURE_FALLBACK_APP_ID = "aura3d";
 const SHELL_CAPTURE_FALLBACK_PATH = "/3d";
 const VISUAL_OPPORTUNITY_LIMIT = 72;
@@ -18,6 +18,8 @@ const INTERNAL_REFACTOR_SUBJECT_PATTERN = /\b(?:move|moved|relocat|migrat|shared
 const INTERNAL_REFACTOR_PATTERN = /\b(?:refactor|relocat|migrat|move|moved|shared\/|generic|scaffold|directory|module scaffolding|types\/|api\/|utils\/|hooks\/|lib\/)\b/i;
 const EXPLICIT_VISIBLE_CHANGE_PATTERN = /\b(?:add|show|surface|display|render|open|select|sort|filter|redesign|restyle|polish|style|resize|layout|panel|picker|dashboard|gallery|editor|screen|visible|user-visible)\b/i;
 const EXPLICIT_REFACTOR_VISIBLE_PATTERN = /\b(?:user-visible|visible|render|display|show|screen|panel|dashboard|picker|gallery|editor|chrome|layout|style|redesign|restyle)\b/i;
+const CHANGELOG_MEDIA_INFRA_PATTERN = /\b(?:changelog media|media planner|media inference|media workflow|capture bridge|capture mode|seeded proofs?|browser use|openai|vision gates?|quality gates?|publishable media|screenshot pipeline|reconcile changelog)\b/i;
+const PUBLIC_CHANGELOG_SURFACE_PATTERN = /\b(?:website changelog|public changelog|changelog page|timeline renders?|timeline image|changelog image)\b/i;
 const DESKTOP_PRODUCT_PATTERN = /\b(?:desktop|web|browser|chat|agent|project|task|process|feedback|notes|model picker|aura 3d|3d|debug|settings|feed|integrations|marketplace)\b/i;
 const MOBILE_ONLY_PATTERN = /\b(?:mobile|android|ios|iphone|ipad|native app|apk|ipa)\b/i;
 const DESKTOP_UI_FILE_PATTERN = /^interface\/src\/(?:apps|components|views|routes|layout|features)\//;
@@ -306,6 +308,7 @@ function visualOpportunityScore(commit, itemTexts = []) {
   const uiFiles = files.filter(isDesktopUiFile);
   const text = [subject, ...itemTexts, body].filter(Boolean).join("\n");
   if (isMobileOnlyVisualText(text) && uiFiles.length === 0) return -20;
+  if (CHANGELOG_MEDIA_INFRA_PATTERN.test(text) && !PUBLIC_CHANGELOG_SURFACE_PATTERN.test(text)) return -12;
   if (LOW_SIGNAL_SUBJECT_PATTERN.test(subject) && !VISUAL_ACTION_PATTERN.test(text)) return -12;
   if (/^refactor\b|^refactor\(/i.test(subject) && INTERNAL_REFACTOR_SUBJECT_PATTERN.test(subject)) {
     return -12;
@@ -745,6 +748,8 @@ export function buildMediaPlannerPrompt({
     "- Be open to sitemap-backed screens beyond previously verified examples: if the text says a Stats, Debug, Feedback, Notes, Agents, Tasks, Process, Browser, Marketplace, Settings, or AURA 3D surface gained a visible behavior, route there with the best generic seedPlan. If it only mentions that surface incidentally, skip.",
     "- If an entry has several opportunities, choose the strongest surface cluster first, then the most static, readable, seedable desktop proof. Parent title alignment is a weak sanity check, not the decision-maker.",
     "- A media image appears at the changelog entry level, but it may be anchored to a specific changelog bullet/commit. If the parent title is broad, make the publicCaption and proofGoal explicitly name the bullet-level visual proof so the image does not feel random.",
+    "- Do not create product screenshots for changelog-media, Browser Use, capture-mode, seeded-proof, OpenAI gate, reconciliation, or media workflow infrastructure entries unless the entry explicitly says the public changelog page itself changed visually. Demo seed data created only for screenshots is not a product feature.",
+    "- Low-confidence candidates must be skipped. If a visual detail is incidental inside a broad refactor/release/backend entry, do not rescue it with a 0.60-style candidate just because a UI file appeared in the batch.",
     "- Prefer stable visual clusters such as taskbar/shell redesign, feedback sorting, stats dashboards, model pickers, 3D galleries, notes editors, and debug screens over synthetic failure/error banners unless the seedPlan can deterministically materialize the banner state.",
     "- Return at most the requested number of candidates.",
     "- Candidate screenshots must be desktop web product UI only.",

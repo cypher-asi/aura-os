@@ -77,7 +77,9 @@ test("buildMediaPlannerPrompt keeps Browser Use behind a conservative Anthropic 
   assert.match(prompt, /do not open the 3D Model tab just because the app is called AURA 3D/);
   assert.match(prompt, /transient interaction states/);
   assert.match(prompt, /context menus/);
-  assert.match(prompt, /down to 0\.60/);
+  assert.match(prompt, /down to 0\.70/);
+  assert.match(prompt, /Demo seed data created only for screenshots is not a product feature/);
+  assert.match(prompt, /Low-confidence candidates must be skipped/);
   assert.match(prompt, /publicCaption/);
   assert.match(prompt, /Curated changelog media lessons/);
   assert.match(prompt, /agents\.chat\.model_picker/);
@@ -177,6 +179,50 @@ test("deriveVisualMediaOpportunities finds visual sub-features inside broad chan
   assert.ok(opportunities.some((opportunity) => opportunity.likelyApps[0]?.id === "projects"));
   assert.ok(opportunities.every((opportunity) => opportunity.changedFiles.every((filePath) => filePath.startsWith("interface/src/"))));
   assert.equal(opportunities.some((opportunity) => opportunity.entryId === "entry-infra"), false);
+});
+
+test("deriveVisualMediaOpportunities ignores changelog media seed infrastructure as product media", () => {
+  const opportunities = deriveVisualMediaOpportunities({
+    rawCommits: [
+      {
+        sha: "media1234567890",
+        subject: "feat(changelog): improve media inference and seeded proofs",
+        files: [
+          "interface/src/apps/feedback/FeedbackMainPanel/FeedbackMainPanel.tsx",
+          "interface/scripts/evaluate-changelog-media-pipeline.mjs",
+        ],
+      },
+    ],
+    rendered: {
+      entries: [
+        {
+          batch_id: "entry-media",
+          title: "Smarter changelog media planning",
+          items: [
+            {
+              text: "Changelog media inference now uses richer seeded proofs across feedback and stats capture surfaces.",
+              commit_shas: ["media123"],
+              changed_files: ["interface/src/apps/feedback/FeedbackMainPanel/FeedbackMainPanel.tsx"],
+            },
+          ],
+        },
+      ],
+    },
+  }, {
+    sitemap: {
+      apps: [
+        {
+          id: "feedback",
+          label: "Feedback",
+          path: "/feedback",
+          keywords: ["feedback"],
+          captureSeedProfile: { runtimeSeedSupport: "supported" },
+        },
+      ],
+    },
+  });
+
+  assert.deepEqual(opportunities, []);
 });
 
 test("deriveVisualMediaSurfaceClusters promotes repeated visual surfaces inside broad changelog titles", () => {
@@ -368,7 +414,7 @@ test("normalizeMediaPlan keeps only high-confidence capture candidates and prese
   assert.equal(plan.skipped[0].category, "mobile-only");
   assert.ok(plan.skipped.some((entry) => entry.entryId === "second-strong" && entry.category === "candidate-limit"));
   assert.ok(plan.skipped.some((entry) => entry.entryId === "low" && entry.category === "too-ambiguous"));
-  assert.ok(plan.skipped.some((entry) => entry.entryId === "borderline" && entry.category === "candidate-limit"));
+  assert.ok(plan.skipped.some((entry) => entry.entryId === "borderline" && entry.category === "too-ambiguous"));
   assert.ok(plan.skipped.some((entry) => entry.entryId === "missing-target" && entry.reason.includes("sitemap-backed")));
 });
 
