@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Terminal } from "@xterm/xterm";
+import { Terminal, type ITerminalAddon } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+import { WebglAddon } from "@xterm/addon-webgl";
+import { CanvasAddon } from "@xterm/addon-canvas";
 import "@xterm/xterm/css/xterm.css";
 import type { UseTerminalReturn } from "../../hooks/use-terminal";
 import { OverlayScrollbar } from "../OverlayScrollbar";
@@ -12,6 +14,12 @@ interface XTerminalProps {
   visible: boolean;
   focused: boolean;
 }
+
+// Large scrollback so users can page back through long-running output
+// (build logs, agent runs, etc.) inside Sidekick. xterm only allocates
+// per actually-written cell, so the worst-case memory cost (~100k rows ×
+// ~200 cols) is rarely realized in practice.
+const SCROLLBACK_LINES = 100_000;
 
 function getThemeBg(): string {
   return getComputedStyle(document.documentElement).getPropertyValue("--color-bg").trim() || "#111";
@@ -70,6 +78,7 @@ export function XTerminal({ terminal: hook, visible, focused }: XTerminalProps) 
       lineHeight: 1.3,
       cursorBlink: true,
       allowProposedApi: true,
+      scrollback: SCROLLBACK_LINES,
     });
 
     const fitAddon = new FitAddon();
@@ -83,6 +92,32 @@ export function XTerminal({ terminal: hook, visible, focused }: XTerminalProps) 
 
     xtermRef.current = xterm;
     fitRef.current = fitAddon;
+
+    // Prefer the GPU-accelerated renderer so scrolling through a deep
+    // scrollback stays smooth. Fall back to the canvas renderer if WebGL
+    // fails to initialize or its context is lost (e.g. tab backgrounded).
+    let rendererAddon: ITerminalAddon | null = null;
+    const loadCanvasFallback = () => {
+      try {
+        const canvas = new CanvasAddon();
+        xterm.loadAddon(canvas);
+        rendererAddon = canvas;
+      } catch {
+        rendererAddon = null;
+      }
+    };
+    try {
+      const webgl = new WebglAddon();
+      webgl.onContextLoss(() => {
+        webgl.dispose();
+        if (rendererAddon === webgl) rendererAddon = null;
+        loadCanvasFallback();
+      });
+      xterm.loadAddon(webgl);
+      rendererAddon = webgl;
+    } catch {
+      loadCanvasFallback();
+    }
 
     requestAnimationFrame(() => {
       fitAddon.fit();
@@ -111,6 +146,8 @@ export function XTerminal({ terminal: hook, visible, focused }: XTerminalProps) 
       dataDisposable.dispose();
       outputUnsub();
       resizeObserver.disconnect();
+      rendererAddon?.dispose();
+      rendererAddon = null;
       xterm.dispose();
       viewportRef.current = null;
       xtermRef.current = null;
