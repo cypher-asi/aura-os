@@ -137,6 +137,19 @@ describe("org-store", () => {
       expect(useOrgStore.getState().activeOrg).toEqual(org2);
     });
 
+    it("applies locally saved avatar overrides after loading orgs", async () => {
+      const avatarUrl = "data:image/png;base64,local";
+      mockLocalStorage["aura-org-avatar-overrides:u1"] = JSON.stringify({
+        "org-1": avatarUrl,
+      });
+      mockApi.orgs.list.mockResolvedValue([org1, org2]);
+
+      await useOrgStore.getState().refreshOrgs();
+
+      expect(useOrgStore.getState().orgs[0].avatar_url).toBe(avatarUrl);
+      expect(useOrgStore.getState().activeOrg?.avatar_url).toBe(avatarUrl);
+    });
+
     it("clears stale members and integrations when the selected org changes", async () => {
       mockLocalStorage["aura-active-org"] = "org-2";
       mockApi.orgs.list.mockResolvedValue([org1, org2]);
@@ -253,29 +266,49 @@ describe("org-store", () => {
 
   describe("updateOrgAvatar", () => {
     it("updates the org avatar in orgs list and activeOrg", async () => {
-      const updated = { ...org1, avatar_url: "data:image/png;base64,abc" };
+      const updated = { ...org1, avatar_url: undefined };
+      const avatarUrl = "data:image/png;base64,abc";
       mockApi.orgs.update.mockResolvedValue(updated);
       useOrgStore.setState({ orgs: [org1, org2], activeOrg: org1 });
 
-      await useOrgStore.getState().updateOrgAvatar("org-1", updated.avatar_url);
+      await useOrgStore.getState().updateOrgAvatar("org-1", avatarUrl);
 
       expect(mockApi.orgs.update).toHaveBeenCalledWith("org-1", {
-        avatar_url: updated.avatar_url,
+        avatar_url: avatarUrl,
       });
-      expect(useOrgStore.getState().orgs[0].avatar_url).toBe(updated.avatar_url);
-      expect(useOrgStore.getState().activeOrg?.avatar_url).toBe(updated.avatar_url);
+      expect(mockLocalStorage["aura-org-avatar-overrides:u1"]).toBe(JSON.stringify({
+        "org-1": avatarUrl,
+      }));
+      expect(useOrgStore.getState().orgs[0].avatar_url).toBe(avatarUrl);
+      expect(useOrgStore.getState().activeOrg?.avatar_url).toBe(avatarUrl);
     });
 
     it("clears the org avatar", async () => {
       const orgWithAvatar = { ...org1, avatar_url: "data:image/png;base64,abc" };
-      const updated = { ...org1, avatar_url: undefined };
+      const updated = { ...org1, avatar_url: "data:image/png;base64,abc" };
       mockApi.orgs.update.mockResolvedValue(updated);
       useOrgStore.setState({ orgs: [orgWithAvatar, org2], activeOrg: orgWithAvatar });
 
       await useOrgStore.getState().updateOrgAvatar("org-1", null);
 
       expect(mockApi.orgs.update).toHaveBeenCalledWith("org-1", { avatar_url: null });
+      expect(mockLocalStorage["aura-org-avatar-overrides:u1"]).toBe(JSON.stringify({
+        "org-1": null,
+      }));
       expect(useOrgStore.getState().activeOrg?.avatar_url).toBeUndefined();
+    });
+
+    it("keeps the local avatar when remote save fails", async () => {
+      const avatarUrl = "data:image/png;base64,local-only";
+      mockApi.orgs.update.mockRejectedValue(new Error("unsupported"));
+      useOrgStore.setState({ orgs: [org1, org2], activeOrg: org1 });
+
+      await useOrgStore.getState().updateOrgAvatar("org-1", avatarUrl);
+
+      expect(mockLocalStorage["aura-org-avatar-overrides:u1"]).toBe(JSON.stringify({
+        "org-1": avatarUrl,
+      }));
+      expect(useOrgStore.getState().activeOrg?.avatar_url).toBe(avatarUrl);
     });
   });
 });

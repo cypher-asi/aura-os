@@ -31,8 +31,54 @@ type PersistedOrgState = {
   integrations: OrgIntegration[];
 };
 
+type OrgAvatarOverrides = Record<string, string | null>;
+
+const ORG_AVATAR_OVERRIDES_KEY_PREFIX = "aura-org-avatar-overrides:";
+
 function orgStateKey(userId: string): string {
   return `state:${userId}`;
+}
+
+function orgAvatarOverridesKey(userId: string): string {
+  return `${ORG_AVATAR_OVERRIDES_KEY_PREFIX}${userId}`;
+}
+
+function readOrgAvatarOverrides(userId: string): OrgAvatarOverrides {
+  try {
+    const raw = localStorage.getItem(orgAvatarOverridesKey(userId));
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return Object.fromEntries(
+      Object.entries(parsed).filter(([, value]) => value === null || typeof value === "string"),
+    ) as OrgAvatarOverrides;
+  } catch {
+    return {};
+  }
+}
+
+function writeOrgAvatarOverrides(userId: string, overrides: OrgAvatarOverrides): void {
+  try {
+    localStorage.setItem(orgAvatarOverridesKey(userId), JSON.stringify(overrides));
+  } catch {
+    // Local avatar persistence is a best-effort fallback for hosts that do not
+    // round-trip org avatars yet.
+  }
+}
+
+function rememberOrgAvatarOverride(userId: string, orgId: string, avatarUrl: string | null): void {
+  const overrides = readOrgAvatarOverrides(userId);
+  overrides[orgId] = avatarUrl;
+  writeOrgAvatarOverrides(userId, overrides);
+}
+
+function applyOrgAvatarOverrides(orgs: Org[], userId: string): Org[] {
+  const overrides = readOrgAvatarOverrides(userId);
+  return orgs.map((org) => (
+    Object.prototype.hasOwnProperty.call(overrides, org.org_id)
+      ? { ...org, avatar_url: overrides[org.org_id] ?? undefined }
+      : org
+  ));
 }
 
 async function hydratePersistedOrgState(userId: string): Promise<void> {
@@ -43,9 +89,10 @@ async function hydratePersistedOrgState(userId: string): Promise<void> {
   if (!cached) {
     return;
   }
-  const activeOrg = cached.orgs.find((org) => org.org_id === cached.activeOrgId) ?? cached.orgs[0] ?? null;
+  const orgs = applyOrgAvatarOverrides(cached.orgs, userId);
+  const activeOrg = orgs.find((org) => org.org_id === cached.activeOrgId) ?? orgs[0] ?? null;
   useOrgStore.setState({
-    orgs: cached.orgs,
+    orgs,
     activeOrg,
     members: cached.members,
     integrations: cached.integrations,
@@ -71,7 +118,7 @@ export const useOrgStore = create<OrgState>()((set, get) => ({
     }
     set({ orgsError: null });
     try {
-      const list = await api.orgs.list();
+      const list = applyOrgAvatarOverrides(await api.orgs.list(), user.user_id);
       const savedId = localStorage.getItem(ACTIVE_ORG_KEY);
       const match = list.find((o) => o.org_id === savedId);
       const selected = match ?? list[0] ?? null;
@@ -163,17 +210,34 @@ export const useOrgStore = create<OrgState>()((set, get) => ({
 
   renameOrg: async (orgId: string, name: string) => {
     const updated = await api.orgs.update(orgId, { name });
+    const userId = useAuthStore.getState().user?.user_id;
+    const updatedWithAvatar = userId ? applyOrgAvatarOverrides([updated], userId)[0] : updated;
     set((state) => ({
-      orgs: state.orgs.map((o) => (o.org_id === orgId ? updated : o)),
-      activeOrg: state.activeOrg?.org_id === orgId ? updated : state.activeOrg,
+      orgs: state.orgs.map((o) => (o.org_id === orgId ? updatedWithAvatar : o)),
+      activeOrg: state.activeOrg?.org_id === orgId ? updatedWithAvatar : state.activeOrg,
     }));
   },
 
   updateOrgAvatar: async (orgId: string, avatarUrl: string | null) => {
-    const updated = await api.orgs.update(orgId, { avatar_url: avatarUrl });
+    const userId = useAuthStore.getState().user?.user_id;
+    if (userId) {
+      rememberOrgAvatarOverride(userId, orgId, avatarUrl);
+    }
+    let updated: Org | null = null;
+    try {
+      updated = await api.orgs.update(orgId, { avatar_url: avatarUrl });
+    } catch (err) {
+      console.warn("Failed to save org avatar remotely; using local fallback", err);
+    }
     set((state) => ({
-      orgs: state.orgs.map((o) => (o.org_id === orgId ? updated : o)),
-      activeOrg: state.activeOrg?.org_id === orgId ? updated : state.activeOrg,
+      orgs: state.orgs.map((o) => (
+        o.org_id === orgId
+          ? { ...(updated ?? o), avatar_url: avatarUrl ?? undefined }
+          : o
+      )),
+      activeOrg: state.activeOrg?.org_id === orgId
+        ? { ...(updated ?? state.activeOrg), avatar_url: avatarUrl ?? undefined }
+        : state.activeOrg,
     }));
   },
 }));
