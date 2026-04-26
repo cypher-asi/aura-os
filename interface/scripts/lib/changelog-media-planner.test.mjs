@@ -225,6 +225,162 @@ test("deriveVisualMediaOpportunities ignores changelog media seed infrastructure
   assert.deepEqual(opportunities, []);
 });
 
+test("deriveVisualMediaOpportunities skips pricing and benchmark plumbing without picker proof", () => {
+  const opportunities = deriveVisualMediaOpportunities({
+    rawCommits: [
+      {
+        sha: "price1234567890",
+        subject: "feat(models): add Fireworks pricing coverage",
+        files: [
+          "interface/src/constants/models.ts",
+          "interface/src/lib/inference-pricing.ts",
+        ],
+      },
+    ],
+    rendered: {
+      entries: [
+        {
+          batch_id: "entry-pricing",
+          title: "Provider pricing and benchmark coverage",
+          items: [
+            {
+              text: "Fireworks open model pricing coverage was added for usage accounting.",
+              commit_shas: ["price123"],
+              changed_files: ["interface/src/constants/models.ts"],
+            },
+          ],
+        },
+      ],
+    },
+  }, {
+    sitemap: {
+      apps: [
+        {
+          id: "agents",
+          label: "Agents",
+          path: "/agents",
+          keywords: ["chat", "model picker"],
+          captureSeedProfile: { runtimeSeedSupport: "supported" },
+        },
+      ],
+    },
+  });
+
+  assert.deepEqual(opportunities, []);
+});
+
+test("deriveVisualMediaOpportunities skips mobile-scoped and changelog-validator noise", () => {
+  const opportunities = deriveVisualMediaOpportunities({
+    rawCommits: [
+      {
+        sha: "mobile123456789",
+        subject: "feat(mobile): add project agents roster",
+        files: [
+          "interface/src/mobile/components/MobileAgentsRoster.tsx",
+          "interface/android/app/src/main/AndroidManifest.xml",
+        ],
+      },
+      {
+        sha: "valid1234567890",
+        subject: "test(changelog): add changelog validator regression tests",
+        files: [
+          "interface/scripts/changelog-validator.test.mjs",
+          "interface/scripts/changelog-validator.mjs",
+        ],
+      },
+    ],
+    rendered: {
+      entries: [
+        {
+          batch_id: "entry-mobile",
+          title: "Mobile project shell redesign with a new Agents roster",
+          items: [
+            {
+              text: "Mobile project shell now includes an Agents roster.",
+              commit_shas: ["mobile123"],
+              changed_files: ["interface/src/mobile/components/MobileAgentsRoster.tsx"],
+            },
+          ],
+        },
+        {
+          batch_id: "entry-validator",
+          title: "Linux packaging retry and changelog tooling improvements",
+          items: [
+            {
+              text: "Added changelog validator regression tests.",
+              commit_shas: ["valid123"],
+              changed_files: ["interface/scripts/changelog-validator.test.mjs"],
+            },
+          ],
+        },
+      ],
+    },
+  }, {
+    sitemap: {
+      apps: [
+        {
+          id: "projects",
+          label: "Projects",
+          path: "/projects",
+          keywords: ["project", "agents"],
+          captureSeedProfile: { runtimeSeedSupport: "supported" },
+        },
+      ],
+    },
+  });
+
+  assert.deepEqual(opportunities, []);
+});
+
+test("deriveVisualMediaOpportunities keeps model catalog changes when the picker is visible proof", () => {
+  const opportunities = deriveVisualMediaOpportunities({
+    rawCommits: [
+      {
+        sha: "model1234567890",
+        subject: "feat(chat): add GPT-5.5 model support",
+        files: [
+          "interface/src/components/ChatInputBar/ChatInputBar.tsx",
+          "interface/src/constants/models.ts",
+        ],
+      },
+    ],
+    rendered: {
+      entries: [
+        {
+          batch_id: "entry-model-picker",
+          title: "GPT-5.5 available in the chat model picker",
+          items: [
+            {
+              text: "GPT-5.5 is available in the chat model picker.",
+              commit_shas: ["model123"],
+              changed_files: ["interface/src/components/ChatInputBar/ChatInputBar.tsx"],
+            },
+          ],
+        },
+      ],
+    },
+  }, {
+    sitemap: {
+      apps: [
+        {
+          id: "agents",
+          label: "Agents",
+          path: "/agents",
+          keywords: ["agent", "chat", "model picker"],
+          captureSeedProfile: {
+            runtimeSeedSupport: "supported",
+            capabilities: ["agent-chat-ready"],
+          },
+        },
+      ],
+    },
+  });
+
+  assert.equal(opportunities.length, 1);
+  assert.equal(opportunities[0].entryId, "entry-model-picker");
+  assert.equal(opportunities[0].likelyApps[0]?.id, "agents");
+});
+
 test("deriveVisualMediaSurfaceClusters promotes repeated visual surfaces inside broad changelog titles", () => {
   const changelog = {
     rawCommits: [
@@ -559,6 +715,41 @@ test("normalizeMediaPlan skips lower-priority duplicate shell fallback surfaces"
 
   assert.deepEqual(plan.candidates.map((candidate) => candidate.entryId), ["shell-a", "feedback"]);
   assert.ok(plan.skipped.some((entry) => entry.entryId === "shell-b" && entry.category === "duplicate-surface"));
+});
+
+test("normalizeMediaPlan skips lower-priority duplicate model-picker surfaces", () => {
+  const plan = normalizeMediaPlan({
+    candidates: [
+      {
+        entryId: "gpt55",
+        title: "GPT-5.5 support",
+        shouldCapture: true,
+        reason: "The Agents chat model picker shows GPT-5.5.",
+        targetAppId: "agents",
+        targetPath: "/agents",
+        proofGoal: "Show the chat composer model picker with GPT-5.5 visible.",
+        publicCaption: "GPT-5.5 is available in the model picker.",
+        confidence: 0.86,
+        changedFiles: ["interface/src/components/ChatInputBar/ChatInputBar.tsx"],
+      },
+      {
+        entryId: "deepseek",
+        title: "DeepSeek support",
+        shouldCapture: true,
+        reason: "The Agents chat model picker shows DeepSeek.",
+        targetAppId: "agents",
+        targetPath: "/agents",
+        proofGoal: "Show the chat composer model picker with DeepSeek visible.",
+        publicCaption: "DeepSeek is available in the model picker.",
+        confidence: 0.78,
+        changedFiles: ["interface/src/components/ChatInputBar/ChatInputBar.tsx"],
+      },
+    ],
+    skipped: [],
+  }, { maxCandidates: 3 });
+
+  assert.deepEqual(plan.candidates.map((candidate) => candidate.entryId), ["gpt55"]);
+  assert.ok(plan.skipped.some((entry) => entry.entryId === "deepseek" && entry.category === "duplicate-surface"));
 });
 
 test("validateMediaPlanCoverage catches planner omissions and duplicates", () => {

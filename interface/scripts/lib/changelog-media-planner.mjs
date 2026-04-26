@@ -18,10 +18,13 @@ const INTERNAL_REFACTOR_SUBJECT_PATTERN = /\b(?:move|moved|relocat|migrat|shared
 const INTERNAL_REFACTOR_PATTERN = /\b(?:refactor|relocat|migrat|move|moved|shared\/|generic|scaffold|directory|module scaffolding|types\/|api\/|utils\/|hooks\/|lib\/)\b/i;
 const EXPLICIT_VISIBLE_CHANGE_PATTERN = /\b(?:add|show|surface|display|render|open|select|sort|filter|redesign|restyle|polish|style|resize|layout|panel|picker|dashboard|gallery|editor|screen|visible|user-visible)\b/i;
 const EXPLICIT_REFACTOR_VISIBLE_PATTERN = /\b(?:user-visible|visible|render|display|show|screen|panel|dashboard|picker|gallery|editor|chrome|layout|style|redesign|restyle)\b/i;
-const CHANGELOG_MEDIA_INFRA_PATTERN = /\b(?:changelog media|media planner|media inference|media workflow|capture bridge|capture mode|seeded proofs?|browser use|openai|vision gates?|quality gates?|publishable media|screenshot pipeline|reconcile changelog)\b/i;
+const CHANGELOG_MEDIA_INFRA_PATTERN = /\b(?:changelog media|media planner|media inference|media workflow|media card|media branding|changelog validator|manual reconcile|reconcile rerun|reconcile changelog|release changelog|capture bridge|capture mode|seeded proofs?|browser use|openai|vision gates?|quality gates?|publishable media|screenshot pipeline)\b/i;
 const PUBLIC_CHANGELOG_SURFACE_PATTERN = /\b(?:website changelog|public changelog|changelog page|timeline renders?|timeline image|changelog image)\b/i;
 const DESKTOP_PRODUCT_PATTERN = /\b(?:desktop|web|browser|chat|agent|project|task|process|feedback|notes|model picker|aura 3d|3d|debug|settings|feed|integrations|marketplace)\b/i;
 const MOBILE_ONLY_PATTERN = /\b(?:mobile|android|ios|iphone|ipad|native app|apk|ipa)\b/i;
+const MOBILE_SCOPE_PATTERN = /^(?:feat|fix|style|refactor|test|chore)\(mobile\)|\bmobile[- ]only\b|\bmobile project shell\b/i;
+const PRICING_BENCHMARK_ONLY_PATTERN = /\b(?:benchmark(?:ing)?|pricing|price coverage|usage accounting|prompt cache|token fields?|cost table|model catalog|provider pricing|inference pricing)\b/i;
+const MODEL_PICKER_PROOF_PATTERN = /\b(?:model picker|model selector|model menu|chat picker|picker option|menu option|selectable model|default model|available in (?:the )?(?:chat )?(?:model )?picker|chat input wiring|chat composer|composer model)\b/i;
 const DESKTOP_UI_FILE_PATTERN = /^interface\/src\/(?:apps|components|views|routes|layout|features)\//;
 const VISUAL_SURFACE_DEFINITIONS = [
   {
@@ -244,6 +247,7 @@ export const CHANGELOG_MEDIA_PLAN_TOOL = {
                 "not-visually-provable",
                 "too-ambiguous",
                 "candidate-limit",
+                "duplicate-surface",
               ],
             },
           },
@@ -296,6 +300,16 @@ function isDesktopUiFile(filePath) {
     && !/\.test\.|\.spec\.|__tests__|\/mobile/i.test(normalized);
 }
 
+function isMobileOnlyFile(filePath) {
+  const normalized = normalizeString(filePath).toLowerCase();
+  return normalized.includes("/mobile/")
+    || normalized.includes("/android/")
+    || normalized.includes("/ios/")
+    || normalized.includes("capacitor")
+    || normalized.endsWith(".apk")
+    || normalized.endsWith(".ipa");
+}
+
 function isMobileOnlyVisualText(value) {
   const text = normalizeString(value);
   return MOBILE_ONLY_PATTERN.test(text) && !DESKTOP_PRODUCT_PATTERN.test(text);
@@ -307,9 +321,12 @@ function visualOpportunityScore(commit, itemTexts = []) {
   const files = Array.isArray(commit?.files) ? commit.files.map(normalizeString).filter(Boolean) : [];
   const uiFiles = files.filter(isDesktopUiFile);
   const text = [subject, ...itemTexts, body].filter(Boolean).join("\n");
+  const filesAreMobileOnly = files.length > 0 && files.every(isMobileOnlyFile);
+  if ((MOBILE_SCOPE_PATTERN.test(subject) || filesAreMobileOnly) && uiFiles.length === 0) return -20;
   if (isMobileOnlyVisualText(text) && uiFiles.length === 0) return -20;
   if (CHANGELOG_MEDIA_INFRA_PATTERN.test(text) && !PUBLIC_CHANGELOG_SURFACE_PATTERN.test(text)) return -12;
-  if (LOW_SIGNAL_SUBJECT_PATTERN.test(subject) && !VISUAL_ACTION_PATTERN.test(text)) return -12;
+  if (PRICING_BENCHMARK_ONLY_PATTERN.test(text) && !MODEL_PICKER_PROOF_PATTERN.test(text)) return -12;
+  if (LOW_SIGNAL_SUBJECT_PATTERN.test(subject) && (uiFiles.length === 0 || !EXPLICIT_VISIBLE_CHANGE_PATTERN.test(text))) return -12;
   if (/^refactor\b|^refactor\(/i.test(subject) && INTERNAL_REFACTOR_SUBJECT_PATTERN.test(subject)) {
     return -12;
   }
@@ -879,6 +896,21 @@ function normalizeShellChromeCandidate(candidate) {
 }
 
 function duplicateProneSurfaceKey(candidate) {
+  const text = [
+    candidate?.targetAppId,
+    candidate?.targetPath,
+    candidate?.title,
+    candidate?.proofGoal,
+    candidate?.publicCaption,
+    ...(candidate?.changedFiles || []),
+  ].join("\n");
+  if (MODEL_PICKER_PROOF_PATTERN.test(text)) {
+    return [
+      "model-picker",
+      candidate?.targetAppId || "",
+      candidate?.targetPath || "",
+    ].join(":");
+  }
   if (!isShellChromeCandidate(candidate)) return null;
   return [
     "shell-chrome",

@@ -12,6 +12,7 @@ import type {
   Project,
   Task,
 } from "../shared/types";
+import type { DebugRunMetadata } from "../shared/api/debug";
 import type { NotesTreeNode } from "../shared/api/notes";
 import type { FeedbackComment, FeedbackItem } from "../apps/feedback/types";
 import type { DisplaySessionEvent } from "../shared/types/stream";
@@ -25,6 +26,8 @@ const DEMO_PROJECT_ID = "22222222-2222-4222-8222-222222222222";
 const DEMO_AGENT_INSTANCE_ID = "capture-demo-agent-instance";
 const DEMO_PROCESS_ID = "capture-demo-process";
 const DEMO_PROCESS_RUN_ID = "capture-demo-process-run";
+const DEMO_DEBUG_RUN_ID = "capture-demo-debug-run";
+const DEMO_DEBUG_SPEC_ID = "capture-demo-debug-spec";
 const DEMO_NOTE_PATH = "Launch Plan.md";
 
 const appBasePathById = new Map(apps.map((app) => [app.id, app.basePath]));
@@ -143,6 +146,10 @@ export function resolveAuraCaptureTargetPath(request: AuraCaptureResetRequest = 
       return `/projects/${DEMO_PROJECT_ID}/stats`;
     }
     return `/projects/${DEMO_PROJECT_ID}`;
+  }
+
+  if (targetAppId === "debug" && (!explicitPath || explicitPath === "/debug")) {
+    return `/debug/${DEMO_PROJECT_ID}/runs/${DEMO_DEBUG_RUN_ID}`;
   }
 
   if (explicitPath) {
@@ -493,6 +500,10 @@ function shouldApplyProjectsSeed(seedPlan: AuraCaptureSeedPlan | null | undefine
 
 function shouldApplyFeedSeed(seedPlan: AuraCaptureSeedPlan | null | undefined, targetAppId: string | null): boolean {
   return /\b(?:app:feed|feed|timeline|activity|updates?|posts?|commit activity)\b/i.test(seedText(seedPlan, targetAppId));
+}
+
+function shouldApplyDebugSeed(seedPlan: AuraCaptureSeedPlan | null | undefined, targetAppId: string | null): boolean {
+  return /\b(?:app:debug|debug-run-populated|debug app|debug run|run detail|event timeline|diagnostics?|trace|logs?|llm calls?|iterations?|blockers?|retries?)\b/i.test(seedText(seedPlan, targetAppId));
 }
 
 function demoFeedbackItems(): FeedbackItem[] {
@@ -997,6 +1008,134 @@ async function seedFeedTimeline(): Promise<void> {
   });
 }
 
+function demoDebugRunMetadata(): DebugRunMetadata {
+  const now = Date.now();
+  return {
+    run_id: DEMO_DEBUG_RUN_ID,
+    project_id: DEMO_PROJECT_ID,
+    agent_instance_id: DEMO_AGENT_INSTANCE_ID,
+    started_at: new Date(now - 420_000).toISOString(),
+    ended_at: null,
+    status: "running",
+    tasks: [
+      {
+        task_id: "capture-debug-task-plan",
+        spec_id: DEMO_DEBUG_SPEC_ID,
+        started_at: new Date(now - 410_000).toISOString(),
+        ended_at: new Date(now - 340_000).toISOString(),
+        status: "completed",
+      },
+      {
+        task_id: "capture-debug-task-seed",
+        spec_id: DEMO_DEBUG_SPEC_ID,
+        started_at: new Date(now - 320_000).toISOString(),
+        ended_at: null,
+        status: "running",
+      },
+    ],
+    spec_ids: [DEMO_DEBUG_SPEC_ID],
+    counters: {
+      events_total: 7,
+      llm_calls: 2,
+      iterations: 3,
+      blockers: 0,
+      retries: 1,
+      tool_calls: 5,
+      task_completed: 1,
+      task_failed: 0,
+      input_tokens: 18_240,
+      output_tokens: 4_180,
+    },
+  };
+}
+
+function demoDebugEventsJsonl(): string {
+  const now = Date.now();
+  const frames = [
+    {
+      _ts: new Date(now - 380_000).toISOString(),
+      event: {
+        type: "debug.iteration",
+        title: "Planner selected visible desktop proof",
+        summary: "The run identified a seedable Debug app surface and rejected backend-only commits.",
+        task_id: "capture-debug-task-plan",
+      },
+    },
+    {
+      _ts: new Date(now - 300_000).toISOString(),
+      event: {
+        type: "debug.llm_call",
+        model: "claude-opus-4.7",
+        purpose: "Changelog media inference",
+        input_tokens: 7420,
+        output_tokens: 1220,
+      },
+    },
+    {
+      _ts: new Date(now - 220_000).toISOString(),
+      event: {
+        type: "debug.tool_call",
+        tool: "browser_use.capture",
+        status: "completed",
+        summary: "Seeded run timeline, counters, and sidekick context are visible.",
+      },
+    },
+    {
+      _ts: new Date(now - 120_000).toISOString(),
+      event: {
+        type: "debug.retry",
+        status: "resolved",
+        reason: "First crop was too broad; planner kept the same seeded surface and retried with the readable frame.",
+      },
+    },
+  ];
+  return frames.map((frame) => JSON.stringify(frame)).join("\n");
+}
+
+async function seedDebugWorkspace(): Promise<void> {
+  const { queryClient } = await import("../shared/lib/query-client");
+  const { setLastDebugProject, setLastDebugRun } = await import("../utils/storage");
+  const { useDebugSidekickStore } = await import("../apps/debug/stores/debug-sidekick-store");
+  const metadata = demoDebugRunMetadata();
+  const events = demoDebugEventsJsonl();
+  const firstRaw = events.split("\n")[0] || "";
+  const firstEvent = firstRaw ? JSON.parse(firstRaw) : null;
+
+  queryClient.setQueryData(["debug", "projects"], {
+    projects: [
+      {
+        project_id: DEMO_PROJECT_ID,
+        run_count: 1,
+        latest_run: metadata,
+      },
+    ],
+  });
+  queryClient.setQueryData(["debug", "runs", DEMO_PROJECT_ID, null], { runs: [metadata] });
+  queryClient.setQueryData(["debug", "run-metadata", DEMO_PROJECT_ID, DEMO_DEBUG_RUN_ID], metadata);
+  queryClient.setQueryData(["debug", "run-logs", DEMO_PROJECT_ID, DEMO_DEBUG_RUN_ID, "events"], events);
+  queryClient.setQueryData(["debug", "run-logs", DEMO_PROJECT_ID, DEMO_DEBUG_RUN_ID, "iterations"], events);
+  queryClient.setQueryData(["debug", "run-logs", DEMO_PROJECT_ID, DEMO_DEBUG_RUN_ID, "llm_calls"], events);
+
+  useDebugSidekickStore.setState({
+    activeTab: "run",
+    selectedEntry: firstEvent
+      ? {
+        index: 0,
+        timestamp: firstEvent._ts ?? null,
+        type: firstEvent.event?.type ?? "debug.iteration",
+        channel: "events",
+        raw: firstRaw,
+        event: firstEvent.event ?? firstEvent,
+      }
+      : null,
+    textFilter: "",
+    typeFilter: "",
+  });
+
+  setLastDebugProject(DEMO_PROJECT_ID);
+  setLastDebugRun(DEMO_PROJECT_ID, DEMO_DEBUG_RUN_ID);
+}
+
 async function seedAgentActivity(agentId: string): Promise<void> {
   const { useLoopActivityStore } = await import("../stores/loop-activity-store");
   const now = new Date().toISOString();
@@ -1167,6 +1306,15 @@ export async function applyAuraCaptureSeedPlan(
   if (shouldApplyFeedSeed(seedPlan, targetAppId)) {
     await seedFeedTimeline();
     applied.push("feed-demo-timeline");
+  }
+
+  if (shouldApplyDebugSeed(seedPlan, targetAppId)) {
+    await seedDemoProject();
+    await seedDebugWorkspace();
+    if (!applied.includes("capture-demo-project")) {
+      applied.push("capture-demo-project");
+    }
+    applied.push("debug-demo-run");
   }
 
   if (shouldApplyAura3DSeed(seedPlan, targetAppId)) {

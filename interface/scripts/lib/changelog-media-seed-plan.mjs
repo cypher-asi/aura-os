@@ -56,6 +56,10 @@ function inferSeedCapabilities(candidate = {}) {
   const wantsProjectStats = wantsProjectSurface
     && (/\b(?:stats?|metrics?|completion|tokens?|events?|sessions?|contributors?|cost|lines changed)\b/.test(text)
       || /ProjectStatsView|StatsDashboard|project-stats|stats-dashboard/i.test(changedFileText));
+  const wantsDebugSurface = appId === "debug"
+    || /^\/debug(?:\/|$)/.test(targetPath)
+    || /interface\/src\/apps\/debug\//.test(changedFileText)
+    || /\b(?:debug app|debug run|run detail|event timeline|logs?|trace|diagnostics?|run metadata|clipboard|llm calls?|iterations?|blockers?|retries?)\b/.test(text);
 
   if (appId) {
     capabilities.push(`app:${appId}`);
@@ -108,6 +112,13 @@ function inferSeedCapabilities(candidate = {}) {
     capabilities.push("project-selected");
     capabilities.push("sidekick-context-populated");
   }
+  if (wantsDebugSurface) {
+    capabilities.push("debug-run-populated");
+    capabilities.push("run-history-populated");
+    capabilities.push("project-selected");
+    capabilities.push("sidebar-list-populated");
+    capabilities.push("sidekick-context-populated");
+  }
   if (appId === "feed" || /\b(?:feed|timeline|activity|updates?|posts?|commit activity)\b/.test(text)) {
     capabilities.push("feed-timeline-populated");
     capabilities.push("proof-data-populated");
@@ -148,6 +159,7 @@ export function normalizeCaptureSeedPlan(seedPlan = null, candidate = {}) {
     ...(capabilities.includes("note-editor-populated") ? ["A note editor is open with readable markdown content before capture."] : []),
     ...(capabilities.includes("task-board-populated") ? ["A task board is populated across multiple lanes before capture."] : []),
     ...(capabilities.includes("process-graph-populated") ? ["A process graph is populated with connected nodes and run context before capture."] : []),
+    ...(capabilities.includes("debug-run-populated") ? ["A Debug run detail is populated with event timeline rows, counters, tasks, and sidekick context before capture."] : []),
     ...(capabilities.includes("feed-timeline-populated") ? ["A feed timeline is populated with realistic release activity before capture."] : []),
     ...(capabilities.includes("shell-context-populated") ? ["The desktop shell surrounds a populated product app, not an empty launcher or blank route."] : []),
     ...(capabilities.includes("sidekick-context-populated") ? ["The sidekick panel has meaningful selected-item detail instead of an empty prompt."] : []),
@@ -184,6 +196,7 @@ export function normalizeCaptureSeedPlan(seedPlan = null, candidate = {}) {
     ...(capabilities.includes("note-editor-populated") ? ["selected note has readable editor content"] : []),
     ...(capabilities.includes("task-board-populated") ? ["kanban lanes contain seeded tasks"] : []),
     ...(capabilities.includes("process-graph-populated") ? ["process canvas contains connected seeded nodes"] : []),
+    ...(capabilities.includes("debug-run-populated") ? ["debug run detail contains seeded event timeline rows, counters, and task metadata"] : []),
     ...(capabilities.includes("feed-timeline-populated") ? ["feed timeline contains seeded activity entries"] : []),
     ...(capabilities.includes("shell-context-populated") ? ["sidebar, main panel, sidekick, and bottom taskbar are all visible around product data"] : []),
     ...(capabilities.includes("active-loop-visible") ? ["loop/progress indicator is visible on a stable row or panel"] : []),

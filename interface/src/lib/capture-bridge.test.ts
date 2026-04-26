@@ -80,6 +80,16 @@ describe("capture-bridge helpers", () => {
     })).toBe("/projects/22222222-2222-4222-8222-222222222222/stats");
   });
 
+  it("routes seeded Debug captures to the demo run detail surface", () => {
+    expect(resolveAuraCaptureTargetPath({
+      targetAppId: "debug",
+      targetPath: "/debug",
+      seedPlan: {
+        capabilities: ["app:debug", "debug-run-populated", "run-history-populated"],
+      },
+    })).toBe("/debug/22222222-2222-4222-8222-222222222222/runs/capture-demo-debug-run");
+  });
+
   it("derives the target app id from a target path when the id is omitted", () => {
     expect(resolveAuraCaptureTargetAppId({ targetPath: "/notes/doc-1" })).toBe("notes");
   });
@@ -211,6 +221,7 @@ describe("capture-bridge helpers", () => {
     const { useProcessStore } = await import("../apps/process/stores/process-store");
     const { useFeedStore } = await import("../stores/feed-store");
     const { readCaptureDemoProjectStats } = await import("./capture-demo-stats");
+    const { queryClient } = await import("../shared/lib/query-client");
 
     const feedback = await applyAuraCaptureSeedPlan({
       capabilities: ["app:feedback", "feedback-board-populated", "feedback-thread-populated"],
@@ -230,6 +241,9 @@ describe("capture-bridge helpers", () => {
     const projectStats = await applyAuraCaptureSeedPlan({
       capabilities: ["app:projects", "project-selected", "project-stats-populated"],
     }, "projects");
+    const debug = await applyAuraCaptureSeedPlan({
+      capabilities: ["app:debug", "debug-run-populated", "run-history-populated", "project-selected"],
+    }, "debug");
 
     expect(feedback.applied).toContain("feedback-demo-board");
     expect(notes.applied).toContain("notes-demo-workspace");
@@ -237,11 +251,14 @@ describe("capture-bridge helpers", () => {
     expect(process.applied).toContain("process-demo-workflow");
     expect(feed.applied).toContain("feed-demo-timeline");
     expect(projectStats.applied).toContain("project-demo-stats");
+    expect(debug.applied).toContain("debug-demo-run");
     expect(useFeedbackStore.getState().items.length).toBeGreaterThan(1);
     expect(useNotesStore.getState().activeRelPath).toBe("Launch Plan.md");
     expect(useKanbanStore.getState().tasksByProject["22222222-2222-4222-8222-222222222222"]?.tasks.length).toBeGreaterThan(1);
     expect(useProcessStore.getState().nodes["capture-demo-process"]?.length).toBeGreaterThan(1);
     expect(useFeedStore.getState().liveEvents?.length).toBeGreaterThan(1);
     expect(readCaptureDemoProjectStats("22222222-2222-4222-8222-222222222222")?.total_tasks).toBeGreaterThan(1);
+    expect(queryClient.getQueryData<{ runs: unknown[] }>(["debug", "runs", "22222222-2222-4222-8222-222222222222", null])?.runs.length).toBeGreaterThan(0);
+    expect(queryClient.getQueryData<string>(["debug", "run-logs", "22222222-2222-4222-8222-222222222222", "capture-demo-debug-run", "events"])).toContain("debug.iteration");
   });
 });

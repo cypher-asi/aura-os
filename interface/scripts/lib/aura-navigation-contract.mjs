@@ -68,6 +68,11 @@ const SEEDED_CAPTURE_SURFACES = Object.freeze({
     preferredStableSurface: "Feed timeline with release activity, commit messages, and a selected update.",
     seededData: ["activity entries", "commit messages", "selected event"],
   },
+  debug: {
+    capabilities: ["debug-run-populated", "run-history-populated", "project-selected", "sidebar-list-populated", "sidekick-context-populated"],
+    preferredStableSurface: "Debug app run detail with a populated event timeline, counters, filters, and sidekick inspector.",
+    seededData: ["selected debug project", "debug run metadata", "event timeline", "run counters", "sidekick inspector"],
+  },
 });
 
 const FALLBACK_APPS = [

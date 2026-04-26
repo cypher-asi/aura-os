@@ -54,6 +54,24 @@ test("normalizeCaptureSeedPlan preserves AI-provided seed intent and deduplicate
   assert.equal(plan.notes, "Use seeded data only.");
 });
 
+test("normalizeCaptureSeedPlan derives seeded Debug run requirements", () => {
+  const plan = normalizeCaptureSeedPlan(null, {
+    title: "Debug app shows a run detail timeline",
+    targetAppId: "debug",
+    targetPath: "/debug",
+    proofGoal: "Show the Debug app run detail with event rows, counters, and sidekick context.",
+    changedFiles: ["interface/src/apps/debug/DebugRunDetailView/DebugRunDetailView.tsx"],
+  });
+
+  assert.ok(plan.capabilities.includes("app:debug"));
+  assert.ok(plan.capabilities.includes("debug-run-populated"));
+  assert.ok(plan.capabilities.includes("run-history-populated"));
+  assert.ok(plan.capabilities.includes("project-selected"));
+  assert.ok(plan.capabilities.includes("sidekick-context-populated"));
+  assert.ok(plan.requiredState.some((entry) => entry.includes("Debug run detail")));
+  assert.ok(plan.readinessSignals.some((entry) => entry.includes("debug run detail")));
+});
+
 test("normalizeCaptureSeedPlan upgrades shell captures with rich context requirements", () => {
   const plan = normalizeCaptureSeedPlan(null, {
     title: "Restyle desktop shell into floating glass capsules",
