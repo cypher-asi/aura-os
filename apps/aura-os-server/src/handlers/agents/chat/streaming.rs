@@ -252,7 +252,7 @@ async fn get_or_create_delegated_chat_session(
 ) -> ApiResult<(
     bool,
     tokio::sync::broadcast::Receiver<HarnessOutbound>,
-    tokio::sync::mpsc::UnboundedSender<aura_os_harness::HarnessInbound>,
+    aura_os_harness::HarnessCommandSender,
 )> {
     if let Some(reused) = try_reuse_session(state, key, &requested_model, &turn).await? {
         return Ok(reused);
@@ -275,7 +275,7 @@ async fn try_reuse_session(
     Option<(
         bool,
         tokio::sync::broadcast::Receiver<HarnessOutbound>,
-        tokio::sync::mpsc::UnboundedSender<aura_os_harness::HarnessInbound>,
+        aura_os_harness::HarnessCommandSender,
     )>,
 > {
     let mut reg = state.chat_sessions.lock().await;
@@ -319,7 +319,7 @@ async fn insert_delegated_chat_session(
 ) -> ApiResult<(
     bool,
     tokio::sync::broadcast::Receiver<HarnessOutbound>,
-    tokio::sync::mpsc::UnboundedSender<aura_os_harness::HarnessInbound>,
+    aura_os_harness::HarnessCommandSender,
 )> {
     let rx = started.events_rx;
     let commands_tx = started.commands_tx.clone();

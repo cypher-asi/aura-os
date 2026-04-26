@@ -1,7 +1,7 @@
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use axum::extract::{Request, State};
-use axum::http::StatusCode;
+use axum::http::{HeaderValue, Method, StatusCode};
 use axum::middleware::Next;
 use axum::response::Response;
 use axum::Json;
@@ -16,7 +16,18 @@ use crate::state::{
     persist_zero_auth_session, AppState, AuthJwt, AuthSession, AuthZeroProMeta, CachedSession,
 };
 
-const AUTH_REFRESH_TTL: std::time::Duration = std::time::Duration::from_secs(5 * 60);
+const AUTH_REFRESH_TTL: Duration = Duration::from_secs(5 * 60);
+const AUTH_STALE_FALLBACK_MAX_AGE: Duration = Duration::from_secs(30 * 60);
+const AUTH_DEGRADED_HEADER: &str = "X-Aura-Auth-Degraded";
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct AuthDegraded;
+
+struct AuthResolution {
+    session: ZeroAuthSession,
+    zero_pro_refresh_error: Option<String>,
+    degraded: bool,
+}
 
 fn map_auth_error(e: AuthError) -> (StatusCode, Json<ApiError>) {
     match e {
@@ -83,6 +94,33 @@ fn get_cached_session(state: &AppState, jwt: &str) -> Option<(ZeroAuthSession, O
     }
 }
 
+fn get_stale_cached_session(
+    state: &AppState,
+    jwt: &str,
+) -> Option<(ZeroAuthSession, Option<String>)> {
+    let entry = state.validation_cache.get(jwt)?;
+    if entry.validated_at.elapsed() <= AUTH_STALE_FALLBACK_MAX_AGE {
+        Some((entry.session.clone(), entry.zero_pro_refresh_error.clone()))
+    } else {
+        None
+    }
+}
+
+fn is_sensitive_auth_path(method: &Method, path: &str) -> bool {
+    if path.contains("/billing")
+        || path.contains("/credits/")
+        || path.ends_with("/account")
+        || path.contains("/secrets")
+        || path.contains("/secret")
+        || path.contains("/integrations")
+        || path.contains("/integration-config")
+    {
+        return true;
+    }
+
+    path.contains("/tool-actions") && *method != Method::GET
+}
+
 /// Validate a JWT against zOS and update the cache.
 async fn validate_and_cache(
     state: &AppState,
@@ -115,10 +153,15 @@ async fn resolve_session_from_jwt(
     state: &AppState,
     jwt: &str,
     allow_validation_cache: bool,
-) -> Result<(ZeroAuthSession, Option<String>), (StatusCode, Json<ApiError>)> {
+    allow_stale_fallback: bool,
+) -> Result<AuthResolution, (StatusCode, Json<ApiError>)> {
     if is_capture_access_token(jwt) {
         if let Some((session, zp)) = get_cached_session(state, jwt) {
-            return Ok((session, zp));
+            return Ok(AuthResolution {
+                session,
+                zero_pro_refresh_error: zp,
+                degraded: false,
+            });
         }
         if let Some(session) = capture_session_from_access_token(jwt) {
             state.validation_cache.insert(
@@ -129,28 +172,48 @@ async fn resolve_session_from_jwt(
                     zero_pro_refresh_error: None,
                 },
             );
-            return Ok((session, None));
+            return Ok(AuthResolution {
+                session,
+                zero_pro_refresh_error: None,
+                degraded: false,
+            });
         }
         return Err(ApiError::unauthorized("capture session expired"));
     }
 
     if allow_validation_cache {
         if let Some((session, zp)) = get_cached_session(state, jwt) {
-            return Ok((session, zp));
+            return Ok(AuthResolution {
+                session,
+                zero_pro_refresh_error: zp,
+                degraded: false,
+            });
         }
     }
 
     match validate_and_cache(state, jwt).await {
-        Ok(pair) => Ok(pair),
+        Ok((session, zero_pro_refresh_error)) => Ok(AuthResolution {
+            session,
+            zero_pro_refresh_error,
+            degraded: false,
+        }),
         Err(err) if err.0 == StatusCode::UNAUTHORIZED => Err(err),
         Err(err) => {
+            if !allow_stale_fallback {
+                return Err(err);
+            }
+
             // zOS unreachable -- try stale cache entry as fallback
-            if let Some(entry) = state.validation_cache.get(jwt) {
+            if let Some((session, zero_pro_refresh_error)) = get_stale_cached_session(state, jwt) {
                 warn!(
-                    user_id = %entry.session.user_id,
+                    user_id = %session.user_id,
                     "zOS unreachable, using stale cached session"
                 );
-                Ok((entry.session.clone(), entry.zero_pro_refresh_error.clone()))
+                Ok(AuthResolution {
+                    session,
+                    zero_pro_refresh_error,
+                    degraded: true,
+                })
             } else {
                 Err(err)
             }
@@ -168,8 +231,13 @@ pub(crate) async fn require_verified_session(
     // POST /api/auth/validate skips the in-memory TTL cache so explicit refresh always hits zOS once.
     let allow_validation_cache =
         !(req.method() == axum::http::Method::POST && req.uri().path() == "/api/auth/validate");
-    let (session, zero_pro_refresh_error) =
-        resolve_session_from_jwt(&state, &token, allow_validation_cache).await?;
+    let allow_stale_fallback = !is_sensitive_auth_path(req.method(), req.uri().path());
+    let AuthResolution {
+        session,
+        zero_pro_refresh_error,
+        degraded,
+    } = resolve_session_from_jwt(&state, &token, allow_validation_cache, allow_stale_fallback)
+        .await?;
     if !is_capture_access_token(&token) {
         persist_zero_auth_session(&state.store, &session);
     }
@@ -181,8 +249,17 @@ pub(crate) async fn require_verified_session(
     req.extensions_mut().insert(AuthZeroProMeta {
         zero_pro_refresh_error,
     });
+    if degraded {
+        req.extensions_mut().insert(AuthDegraded);
+    }
 
-    Ok(next.run(req).await)
+    let mut response = next.run(req).await;
+    if degraded {
+        response
+            .headers_mut()
+            .insert(AUTH_DEGRADED_HEADER, HeaderValue::from_static("true"));
+    }
+    Ok(response)
 }
 
 #[cfg(test)]
@@ -334,6 +411,56 @@ mod tests {
         let cache = make_cache();
         let state = mock_app_state_with_cache(cache);
         assert!(get_cached_session(&state, "nonexistent").is_none());
+    }
+
+    #[test]
+    fn get_stale_cached_session_allows_entries_within_hard_cap() {
+        let cache = make_cache();
+        insert_cached(&cache, "jwt-1", std::time::Duration::from_secs(20 * 60));
+
+        let state = mock_app_state_with_cache(cache);
+        let result = get_stale_cached_session(&state, "jwt-1");
+
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().0.user_id, "u1");
+    }
+
+    #[test]
+    fn get_stale_cached_session_rejects_entries_beyond_hard_cap() {
+        let cache = make_cache();
+        insert_cached(&cache, "jwt-1", std::time::Duration::from_secs(31 * 60));
+
+        let state = mock_app_state_with_cache(cache);
+
+        assert!(get_stale_cached_session(&state, "jwt-1").is_none());
+    }
+
+    #[test]
+    fn sensitive_auth_path_marks_billing_and_secret_routes() {
+        assert!(is_sensitive_auth_path(
+            &Method::GET,
+            "/api/orgs/org-1/credits/balance"
+        ));
+        assert!(is_sensitive_auth_path(
+            &Method::PUT,
+            "/api/orgs/org-1/integration-config"
+        ));
+        assert!(is_sensitive_auth_path(
+            &Method::PUT,
+            "/api/orgs/org-1/integrations/int-1/secret"
+        ));
+    }
+
+    #[test]
+    fn sensitive_auth_path_marks_mutating_org_tool_routes_only() {
+        assert!(is_sensitive_auth_path(
+            &Method::POST,
+            "/api/orgs/org-1/tool-actions/mcp/int-1"
+        ));
+        assert!(!is_sensitive_auth_path(
+            &Method::GET,
+            "/api/orgs/org-1/tool-actions"
+        ));
     }
 
     #[tokio::test]

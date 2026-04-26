@@ -55,8 +55,10 @@ pub struct HarnessSession {
     /// This lets domain-level events from the harness pass through even when
     /// the protocol crate has not been updated with those variants.
     pub raw_events_tx: broadcast::Sender<serde_json::Value>,
-    pub commands_tx: mpsc::UnboundedSender<InboundMessage>,
+    pub commands_tx: HarnessCommandSender,
 }
+
+pub type HarnessCommandSender = mpsc::Sender<InboundMessage>;
 
 #[async_trait]
 pub trait HarnessLink: Send + Sync {

@@ -1,10 +1,10 @@
 ﻿//! Thin session bridge for opening a harness stream and sending a turn.
 
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::broadcast;
 
 use crate::{
-    HarnessInbound, HarnessLink, HarnessOutbound, HarnessSession, MessageAttachment, SessionConfig,
-    UserMessage,
+    HarnessCommandSender, HarnessInbound, HarnessLink, HarnessOutbound, HarnessSession,
+    MessageAttachment, SessionConfig, UserMessage,
 };
 
 /// User turn payload sent through a harness session.
@@ -30,7 +30,7 @@ impl SessionBridgeTurn {
 pub struct SessionBridgeStarted {
     pub session: HarnessSession,
     pub events_rx: broadcast::Receiver<HarnessOutbound>,
-    pub commands_tx: mpsc::UnboundedSender<HarnessInbound>,
+    pub commands_tx: HarnessCommandSender,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -65,11 +65,11 @@ impl SessionBridge {
     }
 
     pub fn send_user_message(
-        commands_tx: &mpsc::UnboundedSender<HarnessInbound>,
+        commands_tx: &HarnessCommandSender,
         turn: SessionBridgeTurn,
     ) -> Result<(), SessionBridgeError> {
         commands_tx
-            .send(HarnessInbound::UserMessage(turn.user_message()))
+            .try_send(HarnessInbound::UserMessage(turn.user_message()))
             .map_err(|err| SessionBridgeError::Send(err.to_string()))
     }
 }
@@ -85,7 +85,7 @@ mod tests {
 
     #[derive(Default)]
     struct FakeHarnessLink {
-        commands_rx: Arc<Mutex<Option<mpsc::UnboundedReceiver<HarnessInbound>>>>,
+        commands_rx: Arc<Mutex<Option<mpsc::Receiver<HarnessInbound>>>>,
     }
 
     #[async_trait]
@@ -93,7 +93,7 @@ mod tests {
         async fn open_session(&self, _config: SessionConfig) -> anyhow::Result<HarnessSession> {
             let (events_tx, _) = broadcast::channel(8);
             let (raw_events_tx, _) = broadcast::channel(8);
-            let (commands_tx, commands_rx) = mpsc::unbounded_channel();
+            let (commands_tx, commands_rx) = mpsc::channel(8);
             *self.commands_rx.lock().expect("commands receiver lock") = Some(commands_rx);
             Ok(HarnessSession {
                 session_id: "session-1".to_string(),

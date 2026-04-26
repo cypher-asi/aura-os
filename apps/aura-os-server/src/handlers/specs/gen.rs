@@ -49,7 +49,7 @@ pub(crate) async fn generate_specs_summary(
 
     session
         .commands_tx
-        .send(HarnessInbound::UserMessage(UserMessage {
+        .try_send(HarnessInbound::UserMessage(UserMessage {
             content: format!("Generate specs summary for project {project_id}"),
             tool_hints: None,
             attachments: None,
@@ -101,7 +101,7 @@ async fn open_spec_gen_session(
 
     session
         .commands_tx
-        .send(HarnessInbound::UserMessage(UserMessage {
+        .try_send(HarnessInbound::UserMessage(UserMessage {
             content: format!(
                 "Generate specs for project {project_id}. Inspect the project first, then create one or more concrete specs using the available project spec tools. \
                  Every spec MUST end with a `## Definition of Done` section listing the exact build, test, format, and lint commands that must pass before any task derived from the spec can be marked done, plus 3\u{2013}7 observable acceptance criteria. \

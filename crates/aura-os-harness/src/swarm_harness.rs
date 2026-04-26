@@ -294,11 +294,11 @@ async fn parse_create_session_response(
 }
 
 fn send_session_init(
-    commands_tx: &tokio::sync::mpsc::UnboundedSender<InboundMessage>,
+    commands_tx: &tokio::sync::mpsc::Sender<InboundMessage>,
     config: &SessionConfig,
 ) -> anyhow::Result<()> {
     commands_tx
-        .send(InboundMessage::SessionInit(Box::new(build_session_init(
+        .try_send(InboundMessage::SessionInit(Box::new(build_session_init(
             config,
         ))))
         .context("swarm session_init send failed")

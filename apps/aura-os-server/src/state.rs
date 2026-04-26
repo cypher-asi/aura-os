@@ -9,14 +9,14 @@ use axum::http::request::Parts;
 use axum::http::StatusCode;
 use axum::Json;
 use dashmap::DashMap;
-use tokio::sync::{broadcast, mpsc, Mutex};
+use tokio::sync::{broadcast, Mutex};
 
 use aura_os_agents::{AgentInstanceService, AgentService};
 use aura_os_auth::AuthService;
 use aura_os_billing::BillingClient;
 use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, SessionId, TaskId, ZeroAuthSession};
 use aura_os_events::EventHub;
-use aura_os_harness::{AutomatonClient, HarnessInbound, HarnessLink, HarnessOutbound};
+use aura_os_harness::{AutomatonClient, HarnessCommandSender, HarnessLink, HarnessOutbound};
 use aura_os_integrations::IntegrationsClient;
 use aura_os_loops::LoopRegistry;
 
@@ -212,7 +212,7 @@ pub(crate) type AutomatonRegistry = Arc<Mutex<HashMap<AutomatonRegistryKey, Acti
 pub struct ChatSession {
     #[allow(dead_code)]
     pub session_id: String,
-    pub commands_tx: mpsc::UnboundedSender<HarnessInbound>,
+    pub commands_tx: HarnessCommandSender,
     pub events_tx: broadcast::Sender<HarnessOutbound>,
     pub model: Option<String>,
     /// Aura agent id that owns this session, if known at startup.

@@ -159,7 +159,7 @@ pub(crate) async fn extract_tasks(
 
     session
         .commands_tx
-        .send(HarnessInbound::UserMessage(UserMessage {
+        .try_send(HarnessInbound::UserMessage(UserMessage {
             content: format!(
                 "Extract tasks for project {project_id}. Review the existing specs, then create or update the project's tasks until the task list is populated. This workflow is only for planning, not execution: do not run commands, do not execute tasks, do not transition task states, and do not mark tasks done/failed/blocked. Never call the `extract_tasks` tool from inside this workflow because that would recursively restart task extraction. Use the spec and task CRUD/listing tools directly instead."
             ),

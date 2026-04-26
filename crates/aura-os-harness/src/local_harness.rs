@@ -1,5 +1,6 @@
 use anyhow::Context;
 use async_trait::async_trait;
+use tokio::time::Duration;
 use tracing::info;
 
 use crate::harness::{build_session_init, HarnessLink, HarnessSession, SessionConfig};
@@ -33,14 +34,19 @@ impl LocalHarness {
 #[async_trait]
 impl HarnessLink for LocalHarness {
     async fn open_session(&self, config: SessionConfig) -> anyhow::Result<HarnessSession> {
-        let (ws_stream, _) = tokio_tungstenite::connect_async(&self.ws_url())
-            .await
-            .context("local harness websocket connect failed")?;
+        let ws_url = self.ws_url();
+        let (ws_stream, _) = tokio::time::timeout(
+            Duration::from_secs(8),
+            tokio_tungstenite::connect_async(&ws_url),
+        )
+        .await
+        .map_err(|_| anyhow::anyhow!("timed out connecting to local harness websocket: {ws_url}"))?
+        .context("local harness websocket connect failed")?;
 
         let (events_tx, raw_events_tx, commands_tx) = spawn_ws_bridge(ws_stream);
 
         commands_tx
-            .send(InboundMessage::SessionInit(Box::new(build_session_init(
+            .try_send(InboundMessage::SessionInit(Box::new(build_session_init(
                 &config,
             ))))
             .context("local harness session_init send failed")?;

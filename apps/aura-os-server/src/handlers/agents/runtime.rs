@@ -294,7 +294,7 @@ async fn run_harness_test(
     let mut rx = session.events_tx.subscribe();
     session
         .commands_tx
-        .send(HarnessInbound::UserMessage(UserMessage {
+        .try_send(HarnessInbound::UserMessage(UserMessage {
             content: "Reply with exactly `hello from aura` and stop.".to_string(),
             tool_hints: None,
             attachments: None,

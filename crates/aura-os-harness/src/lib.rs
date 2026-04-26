@@ -24,7 +24,8 @@ pub use client::{
     HarnessClient, HarnessClientError, HarnessProbeResult, HarnessTxKind, SubmitTxResponse,
 };
 pub use harness::{
-    build_remote_handshake, build_session_init, HarnessLink, HarnessSession, SessionConfig,
+    build_remote_handshake, build_session_init, HarnessCommandSender, HarnessLink, HarnessSession,
+    SessionConfig,
 };
 pub use harness_url::local_harness_base_url;
 pub use local_harness::LocalHarness;
