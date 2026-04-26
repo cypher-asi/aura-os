@@ -98,7 +98,18 @@ pub fn build_session_init(cfg: &SessionConfig) -> SessionInit {
         token: cfg.token.clone(),
         project_id: cfg.project_id.clone(),
         conversation_messages: cfg.conversation_messages.clone(),
-        aura_agent_id: cfg.agent_id.clone(),
+        // Billing aggregates per *agent*, not per partition. When the
+        // caller supplies `template_agent_id` (Phase 1b+ chat call
+        // sites), `agent_id` is the `{template}::{instance}` partition
+        // string used solely for the harness turn-lock; the billing
+        // header must stay on the stable template id. Pre-Phase-1b
+        // callers leave `template_agent_id` as `None` and we fall back
+        // to `agent_id` (which is still the bare template), preserving
+        // the historical billing semantics.
+        aura_agent_id: cfg
+            .template_agent_id
+            .clone()
+            .or_else(|| cfg.agent_id.clone()),
         aura_session_id: cfg.aura_session_id.clone(),
         aura_org_id: cfg.aura_org_id.clone(),
         agent_id: cfg.agent_id.clone(),

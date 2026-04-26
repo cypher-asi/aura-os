@@ -54,7 +54,8 @@ pub(crate) async fn send_agent_event_stream(
     }
 
     let force_new = body.new_session.unwrap_or(false);
-    let session_key = format!("agent:{agent_id}");
+    let partition_agent_id = aura_os_core::harness_agent_id(&agent_id, None);
+    let session_key = partition_agent_id.clone();
     if force_new {
         remove_live_session(&state, &session_key).await;
     }
@@ -96,7 +97,8 @@ pub(crate) async fn send_agent_event_stream(
             &agent.system_prompt,
             project_state_snapshot.as_deref(),
         )),
-        agent_id: Some(agent_id.to_string()),
+        agent_id: Some(partition_agent_id),
+        template_agent_id: Some(agent_id.to_string()),
         user_id: Some(auth_session.user_id.clone()),
         agent_name: Some(agent.name.clone()),
         model: model.clone(),

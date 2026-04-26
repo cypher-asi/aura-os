@@ -175,7 +175,7 @@ pub(crate) async fn reset_agent_session(
     AuthJwt(jwt): AuthJwt,
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<StatusCode> {
-    let session_key = format!("agent:{agent_id}");
+    let session_key = aura_os_core::harness_agent_id(&agent_id, None);
     remove_live_session(&state, &session_key).await;
     let _ = setup_agent_chat_persistence(&state, &agent_id, "", &jwt, true).await;
     info!(%agent_id, "Agent chat session reset");
@@ -187,8 +187,36 @@ pub(crate) async fn reset_instance_session(
     AuthJwt(jwt): AuthJwt,
     Path((project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
 ) -> ApiResult<StatusCode> {
-    let session_key = format!("instance:{agent_instance_id}");
-    remove_live_session(&state, &session_key).await;
+    // Resolve the parent template id so the in-memory session_key matches
+    // the partition the chat route stored under
+    // (`{template}::{agent_instance_id}`). On lookup failure we fall
+    // through to persistence-only reset — the live session (if any) will
+    // self-heal on the next chat turn or on server restart, rather than
+    // leaving a stale entry that masks a real "reset failed" signal to
+    // the caller. Best-effort matches the spirit of
+    // `invalidate_chat_sessions_for_agent`.
+    let live_session_key = match state
+        .agent_instance_service
+        .get_instance(&project_id, &agent_instance_id)
+        .await
+    {
+        Ok(instance) => Some(aura_os_core::harness_agent_id(
+            &instance.agent_id,
+            Some(&agent_instance_id),
+        )),
+        Err(e) => {
+            warn!(
+                %project_id,
+                %agent_instance_id,
+                error = %e,
+                "Instance reset: cannot resolve parent template; skipping in-memory eviction",
+            );
+            None
+        }
+    };
+    if let Some(key) = live_session_key {
+        remove_live_session(&state, &key).await;
+    }
     let _ =
         setup_project_chat_persistence(&state, &project_id, &agent_instance_id, &jwt, true).await;
     info!(%agent_instance_id, "Instance chat session reset");

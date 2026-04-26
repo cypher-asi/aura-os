@@ -260,10 +260,19 @@ async fn get_or_create_delegated_chat_session(
 
     let harness = state.harness_for(harness_mode);
     let session_agent_id = session_config.agent_id.clone();
+    let session_template_agent_id = session_config.template_agent_id.clone();
     let started = SessionBridge::open_and_send_user_message(harness, session_config, turn)
         .await
         .map_err(map_session_bridge_start_error(key, harness_mode))?;
-    insert_delegated_chat_session(state, key, requested_model, session_agent_id, started).await
+    insert_delegated_chat_session(
+        state,
+        key,
+        requested_model,
+        session_agent_id,
+        session_template_agent_id,
+        started,
+    )
+    .await
 }
 
 async fn try_reuse_session(
@@ -315,6 +324,7 @@ async fn insert_delegated_chat_session(
     key: &str,
     requested_model: Option<String>,
     session_agent_id: Option<String>,
+    session_template_agent_id: Option<String>,
     started: SessionBridgeStarted,
 ) -> ApiResult<(
     bool,
@@ -332,6 +342,7 @@ async fn insert_delegated_chat_session(
             events_tx: started.session.events_tx,
             model: requested_model,
             agent_id: session_agent_id,
+            template_agent_id: session_template_agent_id,
         },
     );
     Ok((true, rx, commands_tx))

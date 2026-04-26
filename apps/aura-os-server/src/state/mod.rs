@@ -110,17 +110,27 @@ pub struct ChatSession {
     pub commands_tx: HarnessCommandSender,
     pub events_tx: broadcast::Sender<HarnessOutbound>,
     pub model: Option<String>,
-    /// Aura agent id that owns this session, if known at startup.
+    /// Upstream harness `agent_id` partition key for this session.
     ///
-    /// Populated from `SessionConfig::agent_id` when the session is
-    /// first opened. Used by the permissions-update flow in
-    /// `handlers::agents::crud::update_agent` to invalidate every live
-    /// session owned by a given agent — direct `agent:{id}` sessions
-    /// *and* any `instance:{id}` sessions whose underlying agent's
-    /// capability bundle just changed — so the next chat turn cold-
-    /// starts with a fresh `installed_tools` list via the unified
-    /// `build_session_tools` filter.
+    /// Populated from `SessionConfig::agent_id`. After Phase 1b this
+    /// is the partitioned `{template}::{instance}` (or
+    /// `{template}::default`) string built by
+    /// `aura_os_core::harness_agent_id`, NOT the bare template id.
+    /// Treated as opaque by every consumer in this module — use
+    /// `template_agent_id` below for any logic that needs to identify
+    /// "all sessions owned by this agent template".
     pub agent_id: Option<String>,
+    /// Stable Aura template id this session was opened against.
+    ///
+    /// Populated from `SessionConfig::template_agent_id`. Used by the
+    /// permissions-update flow in
+    /// `handlers::agents::crud::update_agent` to invalidate every live
+    /// session owned by a given agent template — direct bare-agent
+    /// sessions *and* any project-instance sessions whose underlying
+    /// agent's capability bundle just changed — so the next chat turn
+    /// cold-starts with a fresh `installed_tools` list via the unified
+    /// `build_session_tools` filter.
+    pub template_agent_id: Option<String>,
 }
 
 impl ChatSession {

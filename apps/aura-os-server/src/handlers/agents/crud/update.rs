@@ -263,24 +263,26 @@ fn apply_local_overrides(
 /// `POST /api/.../chat` cold-starts through `setup_agent_chat_persistence`
 /// and sends the freshly normalized permissions bundle to the harness.
 ///
-/// Scope of invalidation: every live `ChatSession` whose `agent_id` matches
-/// this agent — including both the direct `agent:{id}` session and any
-/// project-bound `instance:{id}` sessions whose underlying agent is this
-/// one. Back-reference via `ChatSession::agent_id` (populated in
-/// `get_or_create_chat_session` from `SessionConfig::agent_id`) so we can
-/// resolve all affected sessions from a single in-memory sweep instead of a
-/// per-key storage round-trip. Best-effort: lock contention failures are
-/// silently dropped rather than failing the update — the worst case is a
-/// stale session that will self-correct on the next `reset_*_session` call
-/// or a server restart.
+/// Scope of invalidation: every live `ChatSession` whose
+/// `template_agent_id` matches this agent — including both the direct
+/// bare-agent session (`{template}::default` partition) and any
+/// project-bound instance sessions (`{template}::{instance}` partition)
+/// whose underlying agent template is this one. Back-reference via
+/// `ChatSession::template_agent_id` (populated in
+/// `get_or_create_chat_session` from `SessionConfig::template_agent_id`)
+/// so we can resolve all affected sessions from a single in-memory sweep
+/// instead of a per-key storage round-trip. Best-effort: lock contention
+/// failures are silently dropped rather than failing the update — the
+/// worst case is a stale session that will self-correct on the next
+/// `reset_*_session` call or a server restart.
 async fn invalidate_chat_sessions_for_agent(state: &AppState, agent_id: &AgentId) {
-    let target_agent_id = agent_id.to_string();
+    let target_template_id = agent_id.to_string();
     let mut reg = state.chat_sessions.lock().await;
     let keys_to_drop: Vec<String> = reg
         .iter()
         .filter_map(|(key, session)| {
-            let owner = session.agent_id.as_deref()?;
-            (owner == target_agent_id).then(|| key.clone())
+            let owner = session.template_agent_id.as_deref()?;
+            (owner == target_template_id).then(|| key.clone())
         })
         .collect();
     for key in keys_to_drop {

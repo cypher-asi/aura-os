@@ -48,7 +48,9 @@ pub(crate) async fn send_event_stream(
 
     reject_if_automaton_running(&state, &project_id, &agent_instance_id).await?;
 
-    let session_key = format!("instance:{agent_instance_id}");
+    let partition_agent_id =
+        aura_os_core::harness_agent_id(&instance.agent_id, Some(&agent_instance_id));
+    let session_key = partition_agent_id.clone();
     let force_new = body.new_session.unwrap_or(false);
     let persist_ctx =
         setup_project_chat_persistence(&state, &project_id, &agent_instance_id, &jwt, force_new)
@@ -100,7 +102,8 @@ pub(crate) async fn send_event_stream(
 
     let config = SessionConfig {
         system_prompt: Some(system_prompt),
-        agent_id: Some(instance.agent_id.to_string()),
+        agent_id: Some(partition_agent_id),
+        template_agent_id: Some(instance.agent_id.to_string()),
         user_id: Some(auth_session.user_id.clone()),
         agent_name: Some(instance.name.clone()),
         model: model.clone(),
