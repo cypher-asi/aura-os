@@ -14,7 +14,7 @@ use tokio::sync::{broadcast, mpsc, Mutex};
 use aura_os_agents::{AgentInstanceService, AgentService};
 use aura_os_auth::AuthService;
 use aura_os_billing::BillingClient;
-use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, TaskId, ZeroAuthSession};
+use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, SessionId, TaskId, ZeroAuthSession};
 use aura_os_events::EventHub;
 use aura_os_harness::{AutomatonClient, HarnessInbound, HarnessLink, HarnessOutbound};
 use aura_os_integrations::IntegrationsClient;
@@ -187,6 +187,18 @@ pub struct ActiveAutomaton {
     /// via `registry.lock().await.get_mut(&aiid)` from the forwarder
     /// task — same pattern as `paused`.
     pub current_task_id: Option<String>,
+    /// Storage `Session` id materialised for this automation run via
+    /// `SessionService::create_session`, or `None` when no session
+    /// could be created (e.g. tests without a configured storage
+    /// client). Populated by `start_loop` / `run_single_task` so the
+    /// forwarder can hand the same id to `record_task_worked` on
+    /// `task_started` events and to `end_session` on terminal status.
+    /// Cold-start `start_loop` calls also use this for adopted-reuse:
+    /// when the registry already has a live forwarder for the same
+    /// `(project_id, agent_instance_id, automaton_id)` we reuse the
+    /// existing session id instead of opening a fresh one, so adoption
+    /// doesn't double-count `total_sessions` on the project stats.
+    pub session_id: Option<SessionId>,
 }
 /// Composite key for the automaton registry. Including `ProjectId`
 /// guarantees that two projects can never collide on the same

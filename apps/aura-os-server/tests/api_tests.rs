@@ -1870,6 +1870,7 @@ async fn loop_stop_clears_registry_even_when_harness_unreachable() {
                 alive: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
                 forwarder: None,
                 current_task_id: None,
+                session_id: None,
             },
         );
     }
@@ -1935,6 +1936,7 @@ async fn parallel_automatons_coexist_under_distinct_agent_instance_ids() {
             alive: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
             forwarder: None,
             current_task_id: None,
+            session_id: None,
         }
     }
 
@@ -1956,10 +1958,7 @@ async fn parallel_automatons_coexist_under_distinct_agent_instance_ids() {
 
     {
         let reg = state.automaton_registry.lock().await;
-        let in_project = reg
-            .keys()
-            .filter(|(p, _)| *p == pid)
-            .count();
+        let in_project = reg.keys().filter(|(p, _)| *p == pid).count();
         assert_eq!(
             in_project, 3,
             "registry must hold one slot per (project_id, agent_instance_id)"

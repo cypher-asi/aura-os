@@ -1,6 +1,7 @@
 ﻿mod adapter;
 mod control;
 mod registry;
+mod session;
 mod signals;
 mod start;
 mod streaming;

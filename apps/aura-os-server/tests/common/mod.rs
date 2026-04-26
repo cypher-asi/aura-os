@@ -250,7 +250,10 @@ pub fn build_test_app_from_store(
         runtime_agent_state,
         network_client.clone(),
     ));
-    let session_service = Arc::new(SessionService::new(store.clone(), 0.8, 200_000));
+    let session_service = Arc::new(
+        SessionService::new(store.clone(), 0.8, 200_000)
+            .with_storage_client(storage_client.clone()),
+    );
 
     let swarm_harness: Arc<dyn HarnessLink> = Arc::new(SwarmHarness::new(
         "http://localhost:19800".to_string(),

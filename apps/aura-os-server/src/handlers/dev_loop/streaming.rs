@@ -6,7 +6,7 @@ use std::sync::{
 
 use tracing::warn;
 
-use aura_os_core::{AgentInstanceId, ProjectId, TaskId};
+use aura_os_core::{AgentInstanceId, ProjectId, SessionId, SessionStatus, TaskId};
 use aura_os_events::{DomainEvent, LegacyJsonEvent, LoopStatus};
 use aura_os_harness::{collect_automaton_events, AutomatonClient};
 use aura_os_loops::LoopHandle;
@@ -14,6 +14,7 @@ use aura_os_storage::UpdateTaskRequest;
 
 use crate::state::{AppState, CachedTaskOutput};
 
+use super::session::{end_session, record_task_worked};
 use super::signals::is_insufficient_credits_failure_for_tests;
 use super::types::ForwarderContext;
 
@@ -28,11 +29,38 @@ pub(crate) fn emit_domain_event(
     agent_instance_id: AgentInstanceId,
     extra: serde_json::Value,
 ) {
+    emit_domain_event_with_session(
+        state,
+        event_type,
+        project_id,
+        agent_instance_id,
+        None,
+        extra,
+    );
+}
+
+/// Same as [`emit_domain_event`] but also stamps the routing
+/// `session_id` so subscribers filtering by session topic (e.g. the
+/// chat persistence pipeline, downstream stats consumers) receive the
+/// loop event without having to peek into the JSON payload.
+pub(crate) fn emit_domain_event_with_session(
+    state: &AppState,
+    event_type: &str,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+    session_id: Option<SessionId>,
+    extra: serde_json::Value,
+) {
     let mut event = serde_json::json!({
         "type": event_type,
         "project_id": project_id.to_string(),
         "agent_instance_id": agent_instance_id.to_string(),
     });
+    if let Some(session_id) = session_id {
+        if let Some(object) = event.as_object_mut() {
+            object.insert("session_id".to_string(), session_id.to_string().into());
+        }
+    }
     if let (Some(base), Some(extra)) = (event.as_object_mut(), extra.as_object()) {
         for (key, value) in extra {
             base.insert(key.clone(), value.clone());
@@ -44,7 +72,7 @@ pub(crate) fn emit_domain_event(
         .publish(DomainEvent::LegacyJson(LegacyJsonEvent {
             project_id: Some(project_id),
             agent_instance_id: Some(agent_instance_id),
-            session_id: None,
+            session_id,
             loop_id: None,
             payload: event,
         }));
@@ -64,6 +92,7 @@ pub(super) fn spawn_event_forwarder(ctx: ForwarderContext) -> tokio::task::Abort
             timeout,
             loop_handle,
             jwt,
+            session_id,
         } = ctx;
         let loop_handle = Arc::new(loop_handle);
         let jwt = jwt.map(Arc::new);
@@ -106,6 +135,7 @@ pub(super) fn spawn_event_forwarder(ctx: ForwarderContext) -> tokio::task::Abort
                     event,
                     &event_type,
                     jwt.as_ref().map(|j| j.as_str()),
+                    session_id,
                 )
                 .await;
             });
@@ -115,39 +145,82 @@ pub(super) fn spawn_event_forwarder(ctx: ForwarderContext) -> tokio::task::Abort
         remove_matching_registry_entry(&state, project_id, agent_instance_id, &automaton_id).await;
         let insufficient_credits_reason = completion
             .failure_message()
-            .filter(|message| is_insufficient_credits_failure_for_tests(message));
+            .filter(|message| is_insufficient_credits_failure_for_tests(message))
+            .map(str::to_string);
         // Terminal methods take `&self` via the shared `Arc<LoopHandle>`
         // so the spawned event handlers can still hold clones without
         // blocking close. Only one terminal call actually fires — the
         // atomic `closed` flag dedupes.
-        if insufficient_credits_reason.is_some() || completion.is_success() {
+        let succeeded = insufficient_credits_reason.is_some() || completion.is_success();
+        if succeeded {
             loop_handle.mark_completed().await;
         } else {
             loop_handle
                 .mark_failed(completion.failure_message().map(str::to_string))
                 .await;
         }
-        emit_domain_event(
-            &state,
-            if insufficient_credits_reason.is_some() || completion.is_success() {
-                "loop_finished"
+        // Mirror the harness loop outcome onto the storage `Session`
+        // we minted in `start_loop` / `run_single_task` so the
+        // Sidekick "Sessions" stat reflects automation activity and
+        // each row carries an honest `Completed` / `Failed` status
+        // instead of dangling forever in `Active`.
+        if let Some(session_id) = session_id {
+            let status = if succeeded {
+                SessionStatus::Completed
             } else {
-                "task_failed"
-            },
+                SessionStatus::Failed
+            };
+            end_session(
+                &state.session_service,
+                project_id,
+                agent_instance_id,
+                session_id,
+                status,
+            )
+            .await;
+        }
+        emit_loop_terminal_event(
+            &state,
             project_id,
             agent_instance_id,
-            insufficient_credits_reason.map_or_else(
-                || serde_json::json!({}),
-                |reason| {
-                    serde_json::json!({
-                        "outcome": "insufficient_credits",
-                        "reason": reason,
-                    })
-                },
-            ),
+            session_id,
+            succeeded,
+            insufficient_credits_reason,
         );
     });
     handle.abort_handle()
+}
+
+fn emit_loop_terminal_event(
+    state: &AppState,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+    session_id: Option<SessionId>,
+    succeeded: bool,
+    insufficient_credits_reason: Option<String>,
+) {
+    let event_type = if succeeded {
+        "loop_finished"
+    } else {
+        "task_failed"
+    };
+    let extra = insufficient_credits_reason.map_or_else(
+        || serde_json::json!({}),
+        |reason| {
+            serde_json::json!({
+                "outcome": "insufficient_credits",
+                "reason": reason,
+            })
+        },
+    );
+    emit_domain_event_with_session(
+        state,
+        event_type,
+        project_id,
+        agent_instance_id,
+        session_id,
+        extra,
+    );
 }
 
 /// Translate a harness event type into a [`LoopActivity`] transition.
@@ -247,6 +320,7 @@ async fn remove_matching_registry_entry(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn record_event_side_effects(
     state: &AppState,
     project_id: ProjectId,
@@ -255,6 +329,7 @@ async fn record_event_side_effects(
     event: serde_json::Value,
     event_type: &str,
     jwt: Option<&str>,
+    session_id: Option<SessionId>,
 ) {
     let task_id = event
         .get("task_id")
@@ -266,6 +341,7 @@ async fn record_event_side_effects(
         project_id,
         agent_instance_id,
         task_id.as_deref(),
+        session_id,
     );
     let _ = state.event_broadcast.send(enriched.clone());
     state
@@ -273,7 +349,7 @@ async fn record_event_side_effects(
         .publish(DomainEvent::LegacyJson(LegacyJsonEvent {
             project_id: Some(project_id),
             agent_instance_id: Some(agent_instance_id),
-            session_id: None,
+            session_id,
             loop_id: None,
             payload: enriched,
         }));
@@ -283,6 +359,20 @@ async fn record_event_side_effects(
             if let Some(task_id) = task_id.as_ref() {
                 seed_task_output(state, project_id, agent_instance_id, task_id).await;
                 set_current_task(state, project_id, agent_instance_id, Some(task_id.clone())).await;
+                // Increment `tasks_worked_count` on the storage
+                // session so the per-session stat reflects automation
+                // activity in addition to chat. Skipped silently when
+                // no session was minted (tests, missing storage).
+                if let Some(session_id) = session_id {
+                    record_task_worked(
+                        &state.session_service,
+                        project_id,
+                        agent_instance_id,
+                        session_id,
+                        task_id,
+                    )
+                    .await;
+                }
             }
         }
         "task_completed" => {
@@ -373,6 +463,7 @@ fn enrich_event(
     project_id: ProjectId,
     agent_instance_id: AgentInstanceId,
     task_id: Option<&str>,
+    session_id: Option<SessionId>,
 ) -> serde_json::Value {
     let mut enriched = event;
     if let Some(object) = enriched.as_object_mut() {
@@ -386,6 +477,11 @@ fn enrich_event(
             object
                 .entry("task_id".to_string())
                 .or_insert_with(|| task_id.to_string().into());
+        }
+        if let Some(session_id) = session_id {
+            object
+                .entry("session_id".to_string())
+                .or_insert_with(|| session_id.to_string().into());
         }
     }
     enriched

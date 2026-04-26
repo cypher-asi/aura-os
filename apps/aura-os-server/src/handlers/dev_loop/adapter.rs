@@ -16,6 +16,7 @@ use crate::state::{ActiveAutomaton, AppState, AuthJwt, AuthSession};
 
 use super::control::control_loop;
 use super::registry::{can_reuse_forwarder, replace_registry_entry, status_response};
+use super::session::{begin_session, existing_session_id};
 use super::start::{build_start_params, map_start_error, resolve_start_context, start_or_adopt};
 pub(crate) use super::streaming::emit_domain_event;
 use super::streaming::{seed_task_output, spawn_event_forwarder};
@@ -81,9 +82,14 @@ pub(crate) async fn start_loop(
 ) -> ApiResult<(StatusCode, Json<LoopStatusResponse>)> {
     crate::handlers::billing::require_credits(&state, &jwt).await?;
     let agent_instance_id = resolve_loop_instance_id(&state, project_id, &params).await?;
-    let ctx =
-        resolve_start_context(&state, project_id, agent_instance_id, &jwt, params.model.clone())
-            .await?;
+    let ctx = resolve_start_context(
+        &state,
+        project_id,
+        agent_instance_id,
+        &jwt,
+        params.model.clone(),
+    )
+    .await?;
     // Clone the JWT for the forwarder before `build_start_params`
     // consumes it. The forwarder uses it for background writes to
     // aura-storage (e.g. persisting `tasks.execution_notes` when a
@@ -108,6 +114,27 @@ pub(crate) async fn start_loop(
             Json(status_response(&state, project_id, Some(agent_instance_id)).await),
         ));
     }
+
+    // If we're adopting an existing harness automaton that just lost
+    // its forwarder (e.g. server restart), reuse the storage session
+    // already stashed on the registry entry instead of opening a new
+    // one — otherwise `total_sessions` doubles every adoption. Cold
+    // starts always materialise a fresh session.
+    let reused_session_id =
+        existing_session_id(&state, project_id, agent_instance_id, &started.automaton_id).await;
+    let session_id = if reused_session_id.is_some() {
+        reused_session_id
+    } else {
+        begin_session(
+            &state,
+            project_id,
+            agent_instance_id,
+            None,
+            Some(session.0.user_id.clone()),
+            ctx.model.clone(),
+        )
+        .await
+    };
 
     replace_registry_entry(&state, project_id, agent_instance_id).await;
     let (events_tx, ws_reader_handle) = connect_with_retries(
@@ -139,6 +166,7 @@ pub(crate) async fn start_loop(
         timeout: LOOP_STREAM_TIMEOUT,
         loop_handle,
         jwt: Some(forwarder_jwt),
+        session_id,
     });
     state.automaton_registry.lock().await.insert(
         (project_id, agent_instance_id),
@@ -150,6 +178,7 @@ pub(crate) async fn start_loop(
             alive,
             forwarder: Some(forwarder),
             current_task_id: None,
+            session_id,
         },
     );
     state
@@ -248,22 +277,16 @@ pub(crate) async fn run_single_task(
         .map_err(|e| ApiError::internal(format!("allocating ephemeral executor: {e}")))?;
     let ephemeral_instance_id = ephemeral.agent_instance_id;
 
-    let ctx = resolve_start_context(
-        &state,
-        project_id,
-        template_instance_id,
-        &jwt,
-        params.model,
-    )
-    .await
-    .inspect_err(|_| {
-        // Best-effort: don't leak the row we just created if context
-        // resolution fails before we even reach the harness.
-        let svc = state.agent_instance_service.clone();
-        tokio::spawn(async move {
-            let _ = svc.delete_instance(&ephemeral_instance_id).await;
-        });
-    })?;
+    let ctx = resolve_start_context(&state, project_id, template_instance_id, &jwt, params.model)
+        .await
+        .inspect_err(|_| {
+            // Best-effort: don't leak the row we just created if context
+            // resolution fails before we even reach the harness.
+            let svc = state.agent_instance_service.clone();
+            tokio::spawn(async move {
+                let _ = svc.delete_instance(&ephemeral_instance_id).await;
+            });
+        })?;
     let task_id_str = task_id.to_string();
     // Clone the JWT for the forwarder before `build_start_params` moves
     // it; see `start_loop` for the motivation.
@@ -287,6 +310,20 @@ pub(crate) async fn run_single_task(
     )
     .await
     .map_err(|e| ApiError::bad_gateway(format!("connecting task automaton stream: {e}")))?;
+
+    // Single-task runs always mint a fresh ephemeral agent instance,
+    // so they always need a fresh storage session — there's nothing
+    // to adopt. Tagging it with `active_task_id` lets the storage
+    // backend correlate the session with the task it was minted for.
+    let session_id = begin_session(
+        &state,
+        project_id,
+        ephemeral_instance_id,
+        Some(task_id),
+        Some(session.0.user_id.clone()),
+        ctx.model.clone(),
+    )
+    .await;
 
     seed_task_output(&state, project_id, ephemeral_instance_id, &task_id_str).await;
     emit_domain_event(
@@ -321,6 +358,7 @@ pub(crate) async fn run_single_task(
         timeout: TASK_STREAM_TIMEOUT,
         loop_handle,
         jwt: Some(forwarder_jwt),
+        session_id,
     });
     // No `replace_registry_entry`: the ephemeral id is freshly minted,
     // there is nothing to displace, and concurrent task runs are
@@ -336,6 +374,7 @@ pub(crate) async fn run_single_task(
             alive,
             forwarder: Some(forwarder),
             current_task_id: Some(task_id_str),
+            session_id,
         },
     );
     // Schedule a best-effort cleanup of the ephemeral `project_agents`
@@ -392,10 +431,7 @@ async fn resolve_run_template(
 /// drops the storage row. Failures are logged at `warn` and ignored —
 /// the row at worst becomes a stale catalogue entry that the next
 /// janitor pass can sweep.
-async fn spawn_ephemeral_executor_reaper(
-    state: AppState,
-    ephemeral_instance_id: AgentInstanceId,
-) {
+async fn spawn_ephemeral_executor_reaper(state: AppState, ephemeral_instance_id: AgentInstanceId) {
     const TTL: Duration = Duration::from_secs(8 * 60 * 60);
     const POLL: Duration = Duration::from_secs(15);
     tokio::spawn(async move {

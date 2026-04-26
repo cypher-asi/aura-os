@@ -4,7 +4,7 @@ use std::time::Duration;
 use serde::Deserialize;
 use tokio::sync::broadcast;
 
-use aura_os_core::{AgentId, AgentInstanceId, Project, ProjectId};
+use aura_os_core::{AgentId, AgentInstanceId, Project, ProjectId, SessionId};
 use aura_os_harness::{AutomatonClient, WsReaderHandle};
 use aura_os_loops::LoopHandle;
 
@@ -65,4 +65,15 @@ pub(super) struct ForwarderContext {
     /// silently in that case. Expiry is tolerated: if storage rejects
     /// the write with 401, the forwarder logs a warning and moves on.
     pub(super) jwt: Option<String>,
+    /// Storage `Session` id created for this automation run, if any.
+    ///
+    /// When set, the forwarder routes harness lifecycle events into
+    /// `SessionService` so `total_sessions` and `tasks_worked_count`
+    /// reflect automation activity (mirroring what the chat path
+    /// already does). On `task_started` we increment
+    /// `tasks_worked_count`, on terminal status we transition the
+    /// session to `Completed` / `Failed`. The id is also used to
+    /// stamp outgoing `LegacyJsonEvent.session_id` so subscribers can
+    /// correlate live events with the persisted session.
+    pub(super) session_id: Option<SessionId>,
 }
