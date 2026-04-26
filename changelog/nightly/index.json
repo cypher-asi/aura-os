@@ -2,20 +2,21 @@
   {
     "date": "2026-04-25",
     "channel": "nightly",
-    "version": "0.1.0-nightly.393.1",
-    "title": "Harness-driven automation, concurrent loops, and a floating desktop shell",
-    "intro": "A heavy day for the autonomy stack: Aura's dev loop was rebuilt around the harness as the source of truth, legacy tool dispatchers and external CLI adapters were retired, and concurrent chats, automation loops, and ad-hoc task runs can now coexist per project. The desktop shell got a coordinated visual pass into floating glass panels, the run pane and chat got several reliability fixes, and the interface began a structured move into a shared/ module layout.",
+    "version": "0.1.0-nightly.394.1",
+    "title": "Harness consolidation, parallel automatons, and a refreshed desktop shell",
+    "intro": "A heavy day for Aura's foundations: the dev loop finally hands authority for task completion to the harness, the legacy agent-tool dispatcher is gone, and concurrent chat / loop / executor work no longer collide on a single agent slot. The desktop shell also gets a comprehensive glass-pill makeover, and a long tail of streaming, retry, and policy fixes makes autonomous runs noticeably more resilient.",
     "entryCount": 5,
     "highlights": [
-      "Dev loop rebuilt on harness automatons with concurrent Loop + Executor instances per project",
-      "External CLI adapters and the legacy agent tool dispatcher removed in favor of aura_harness",
-      "Desktop shell redesigned into floating glass capsules with unified corner radii",
-      "Run pane, chat stream, and tool cards hardened against drops, retries, and cross-project bleed",
-      "Interface began structured migration to interface/src/shared/{types,api,utils,lib,hooks}/"
+      "Harness becomes the single source of truth for task DoD",
+      "Concurrent loops, chats, and ad-hoc task runs now run in parallel without collisions",
+      "Desktop shell redesigned around floating glass pills with consistent radii and gaps",
+      "Browser address bar gains DuckDuckGo fallback and a full in-app error overlay",
+      "Dev-loop hardening: ENOSPC guard, kernel-policy diagnostics, push decoupled from task status",
+      "Frontend reorganized into shared/ with literal-union EventType and stricter typing"
     ],
-    "rawCommitCount": 173,
-    "generatedAt": "2026-04-26T02:17:23.518Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.393.1",
+    "rawCommitCount": 183,
+    "generatedAt": "2026-04-26T02:56:55.759Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.394.1",
     "path": "history/2026-04-25.json"
   },
   {
