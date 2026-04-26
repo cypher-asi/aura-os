@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-26T01:41:49.337Z",
+  "generatedAt": "2026-04-26T02:17:23.518Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.392.1",
+  "version": "0.1.0-nightly.393.1",
   "date": "2026-04-25",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.392.1",
-  "lastIncludedSha": "88fd7cd0f5152d3171520d21e50d5260cb0175f4",
-  "previousProcessedSha": "4fd68734e5952e524b0ec83fe6a6fe36818c70df",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.393.1",
+  "lastIncludedSha": "c68a9a7c46174f3f77c4f307624a2b4e3d30ec67",
+  "previousProcessedSha": "88fd7cd0f5152d3171520d21e50d5260cb0175f4",
   "commitShas": [
     "68be945b8c85e3a7eed55a77aa3f5c4508c37ce4",
     "a69f2e303298e38e8ae0043f4bdf8673a1bebae0",
@@ -175,10 +175,11 @@
     "dd065dd0be9bf49498547934c063051aaa5eec13",
     "0f84019a9b930936f6f6037bb6ba83d02ae24e50",
     "d55c704e81b67264be1044a810e932a195847735",
-    "88fd7cd0f5152d3171520d21e50d5260cb0175f4"
+    "88fd7cd0f5152d3171520d21e50d5260cb0175f4",
+    "c68a9a7c46174f3f77c4f307624a2b4e3d30ec67"
   ],
-  "rawCommitCount": 172,
-  "filteredCommitCount": 164,
+  "rawCommitCount": 173,
+  "filteredCommitCount": 165,
   "rawCommits": [
     {
       "sha": "68be945b8c85e3a7eed55a77aa3f5c4508c37ce4",
@@ -8718,6 +8719,54 @@
       "areas": [
         "Other"
       ]
+    },
+    {
+      "sha": "c68a9a7c46174f3f77c4f307624a2b4e3d30ec67",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-25T21:59:50-04:00",
+      "subject": "fix(changelog): use latest media model defaults",
+      "body": "",
+      "parents": [
+        "88fd7cd0f5152d3171520d21e50d5260cb0175f4"
+      ],
+      "files": [
+        ".github/workflows/publish-release-changelog-media.yml",
+        "interface/scripts/changelog-media-browser-use-trial.mjs",
+        "interface/scripts/changelog-media-browser-use-trial.test.mjs",
+        "interface/scripts/evaluate-changelog-media-pipeline.mjs",
+        "interface/scripts/evaluate-changelog-media-pipeline.test.mjs",
+        "interface/scripts/lib/changelog-media-quality.mjs",
+        "interface/scripts/lib/changelog-media-quality.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 13,
+        "deletions": 10
+      },
+      "committedAtMs": 1777168790000,
+      "cleanSubject": "use latest media model defaults",
+      "keywords": [
+        "latest",
+        "media",
+        "model",
+        "defaults"
+      ],
+      "fileGroups": [
+        ".github/workflows/publish-release-changelog-media.yml",
+        "interface/scripts/changelog-media-browser-use-trial.mjs",
+        "interface/scripts/changelog-media-browser-use-trial.test.mjs",
+        "interface/scripts/evaluate-changelog-media-pipeline.mjs",
+        "interface/scripts/evaluate-changelog-media-pipeline.test.mjs",
+        "interface/scripts/lib"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Release Infrastructure"
+      ]
     }
   ],
   "batchCount": 6,
@@ -8729,36 +8778,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11527736
+          "sizeBytes": 11527748
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.392.1",
+      "version": "0.1.0-nightly.393.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.392.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.393.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 34010622
+          "sizeBytes": 34012306
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.392.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.393.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.392.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.393.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 101382648
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.392.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.393.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -8768,29 +8817,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.392.1",
+      "version": "0.1.0-nightly.393.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.392.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.393.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 30559603
+          "sizeBytes": 30560959
         },
         {
-          "name": "Aura_0.1.0-nightly.392.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.393.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.392.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.393.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 30353464
+          "sizeBytes": 30356880
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.392.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.393.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -8800,29 +8849,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.392.1",
+      "version": "0.1.0-nightly.393.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.392.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.393.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 32091221
+          "sizeBytes": 32090879
         },
         {
-          "name": "Aura_0.1.0-nightly.392.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.393.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.392.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.393.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 31936676
+          "sizeBytes": 31935212
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.392.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.393.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -8832,17 +8881,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.392.1",
+      "version": "0.1.0-nightly.393.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.392.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.393.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 23145175
+          "sizeBytes": 23149204
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.392.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.393.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -8851,33 +8900,55 @@
     }
   ],
   "rendered": {
-    "title": "Harness-driven automation, concurrency isolation, and a redesigned desktop shell",
-    "intro": "A heavy day across the stack: the dev loop was rebuilt around the harness as the source of truth, concurrent loops and tasks were isolated per project and agent instance, and the desktop shell got a sweeping visual refresh with floating capsules, rounded corners, and consistent gaps. Reliability work tightened retry ladders, push-failure handling, and stream recovery, while the interface gained a browser error page, in-app copy buttons, and durable mid-turn chat state.",
+    "title": "Harness-driven automation, concurrent loops, and a floating desktop shell",
+    "intro": "A heavy day for the autonomy stack: Aura's dev loop was rebuilt around the harness as the source of truth, legacy tool dispatchers and external CLI adapters were retired, and concurrent chats, automation loops, and ad-hoc task runs can now coexist per project. The desktop shell got a coordinated visual pass into floating glass panels, the run pane and chat got several reliability fixes, and the interface began a structured move into a shared/ module layout.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "8:52 AM",
         "started_at": "2026-04-23T15:52:23.000Z",
         "ended_at": "2026-04-25T06:17:10.000Z",
-        "title": "Dev loop rebuilt around the harness with isolated concurrent loops",
-        "summary": "A wide-ranging day reshaped automation, retries, the desktop shell, and chat resilience — culminating in retiring the legacy agent-tool stack and routing every loop through harness automatons.",
+        "title": "Harness becomes the source of truth for tasks, loops, and tools",
+        "summary": "The bulk of the day reshaped autonomy: hardened the DoD gate and retry ladders, then replaced the in-server dev loop, agent tool dispatcher, and external CLI adapters with a single aura_harness pathway, while the desktop shell and chat surfaces got a coordinated UX pass.",
         "items": [
           {
-            "text": "Retry ladders got dramatically smarter: transient 5xx and stream-terminated errors now classify as recoverable, project cooldowns escalate per-failure-class with ±20% jitter, single-task retries got a 3-attempt budget, completion-gate failures route through the infra retry path, and a dedicated tool-call retry tier (budget 8) consumes harness ToolCallRetrying / ToolCallFailed events with live \"retrying n/8\" UI on tool cards.",
+            "text": "Rebuilt the dev loop around harness automatons: removed ~9k lines of in-server orchestration in favor of a thin adapter that delegates execution, recovery decisions, and DoD to the harness, and split the result into focused adapter/control/registry/streaming/signals modules.",
             "commit_shas": [
-              "9cb0c6a4bad40565d2da420a548cace23b427a35",
-              "7150cd358dee087cec317f28fae8af66e72eb90c",
-              "373be4278f1abfec2e8b8e96057927c612968b88",
-              "88fa94efaadb840bf1ae1980cae436611c4afb16",
-              "f474edc9ea30fb80e1c429114d406de94eef6129",
-              "4424201e7deb810be42504dbf4f94c5fc8605e48",
-              "8e75d47b06a92e3cd44694f3510c5d1b9f62317e",
-              "4c01759db3f10d12c4ffeee55aea29f8a9072826"
+              "d8c2480273d6eddf9984ac52183d27da4fddda42",
+              "00d095ecde24f824e090d84e5f52da046e9ea0b9",
+              "71d182168bd72a700507af84641a9be2d67e351a",
+              "c1e87fb89b2f3c60955f6f3a3217f386878895ed",
+              "f39dc742e1ed330af0ccaf68b67f1725adc79321",
+              "49a1d454b8c250e74fde0859f332da3c92ad938b",
+              "c21106bbae40901863a0bc4bb2806c6ef7524b95",
+              "9e23bbc1214d5b7e3bb61e56134b7917c65ed701"
             ],
             "confidence": "high"
           },
           {
-            "text": "The Definition-of-Done gate became far more forgiving and accurate: empty-path writes are now recoverable when a real write lands, files_changed is inferred from tool events, tool_call_completed and tool_result+snapshot fallbacks both feed the gate, and a new DoD retry tier with a language-neutral follow-up prompt re-prompts the agent for missing build/test/fmt/lint axes before failing terminally.",
+            "text": "Retired the legacy agent tool dispatcher and external CLI agent adapters (claude_code, codex, gemini_cli, opencode, cursor); aura_harness is now the only supported runtime, with non-aura_harness adapters explicitly rejected and per-adapter UI, evals, and docs stripped out.",
+            "commit_shas": [
+              "53ace2163821aa341d05eeff60e7deb1831a30cd",
+              "b43e4b8e4998ffced70f506b51e07fd86328c6d2",
+              "c6174bb6fc5f9fb3bf51cc69173287f378fcd09c"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Hardened the autonomy retry stack before the rewrite: classified 5xx and stream-terminator errors as transient, added per-class cooldown escalation with jitter, a per-tool-call retry budget consuming tool_call_failed, and a stateful retry preamble so restarted automatons resume instead of redoing setup.",
+            "commit_shas": [
+              "9cb0c6a4bad40565d2da420a548cace23b427a35",
+              "7150cd358dee087cec317f28fae8af66e72eb90c",
+              "8e75d47b06a92e3cd44694f3510c5d1b9f62317e",
+              "f474edc9ea30fb80e1c429114d406de94eef6129",
+              "4424201e7deb810be42504dbf4f94c5fc8605e48",
+              "373be4278f1abfec2e8b8e96057927c612968b88",
+              "88fa94efaadb840bf1ae1980cae436611c4afb16"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Made the Definition-of-Done gate recoverable and accurate: empty-path write misfires no longer terminally fail when a real-path write lands, files_changed is inferred from tool events, tool_result + tool_call_snapshot is accepted as a fallback shape, and a DoD retry tier with a language-neutral follow-up prompt re-prompts agents that skipped a verification axis.",
             "commit_shas": [
               "a8e3e72acf90acb0ce4dee763801e919fc238828",
               "fcc6c989f344e02925cff313ac271cad36acd928",
@@ -8890,7 +8961,7 @@
             "confidence": "high"
           },
           {
-            "text": "Push failures no longer demote tasks to failed: a new push_deferred event, project_push_stuck banner, and Orbit ENOSPC capacity guard with a 15-minute cooldown keep automation moving when the remote is out of disk, with a degraded Orbit indicator, retry-window labels, and a remote-push-recovery runbook for operators.",
+            "text": "Decoupled task completion from git push and added an Orbit ENOSPC guard: push failures emit push_deferred and project_push_stuck instead of demoting tasks to failed, with a 15-minute Orbit cooldown, an amber UI degraded indicator, and a remote-push-recovery runbook.",
             "commit_shas": [
               "73ab86fb8fce5c870712097b3af89bf5a7981ab3",
               "f4425e28a34616b951ed45cb8ec78800f2c2ded0",
@@ -8900,21 +8971,61 @@
             "confidence": "high"
           },
           {
-            "text": "Failure context is now end-to-end correlatable: provider_request_id, model, and sse_error_type are persisted on task_failed and rendered as a compact \"req=… · model=… · api_error\" label under the Run sidekick's failure reason, with single-task retries also carrying prior_failure into the next attempt's prompt.",
+            "text": "Aligned aura-os with run_command-by-default and closed the binary_allowlist policy gap: the desktop sidecar ships a vetted AURA_ALLOWED_COMMANDS default, the external-harness probe checks /health policy fields, and DoD diagnostics now name the actual env knobs to set instead of \"no build step was run\".",
             "commit_shas": [
-              "cb96864df84901f791d5b5f7ca376734a2136f69",
-              "aac1050419d542b8408cc2c203beaf88513a8fd1",
-              "27aff59dc394732196c52ac456f1af2e0dffeeb3",
-              "12929360b77e3d26a82f8cadb86713ef88bf265f",
-              "d1313496567c5a7b63360e6e2730fa1fcdaa7696"
+              "a41c273bb2f739b84b3a56755665c07210a9f4e6",
+              "5760d25cac3fe1b8da1eae14ca548729f147c705",
+              "f1f47358b39d250244917c8d4886a34a716ed191",
+              "76d8a0581799f165d40530c520e5735508cc2014",
+              "71304ce19758e794bb134cdd5464844b5a9b2450",
+              "abfb6d1e04678726cb6d238841e82201759837bb",
+              "d29f24882dfdb2f6122c31f1ba194d7fd8dfa9f5",
+              "ed55e3755ab85f621973b83e792fc62464891aef"
             ],
             "confidence": "high"
           },
           {
-            "text": "The desktop shell got a sweeping facelift: the bottom taskbar split into three floating glass capsules, the topbar and main content became inset rounded panels, sidebar/sidekick gaps unified to consistent insets, and corner radii aligned to 20px across the chat input, taskbar, and titlebar.",
+            "text": "Introduced topic-scoped EventHub and LoopRegistry crates plus a /api/loops snapshot, re-keyed the in-memory automaton and task-output caches by (project, agent_instance) and (project, task), and rendered a unified LoopProgress indicator across agent rows, sidekick tabs, and per-task explorer rows.",
+            "commit_shas": [
+              "9860141803426fa0ce19f57191394fbc5d71462e",
+              "ac52a806ba8820be69714547001268993faf108f",
+              "61eb58681e48570916502bae31e4001580c5f5a9",
+              "82f93b319e8e96e531c6c10dcbdb7e2b9ab26350"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Unified the task state machine with storage via a safe_transition planner, added flat /api/tasks and /api/specs routes for harness clients, and made retry idempotent on ready so the dev loop's \"Invalid status transition\" 400 spew goes away.",
+            "commit_shas": [
+              "3809aeb807f4406c39969c2bff5907624445f37d",
+              "bd92f082a75e7b509262d644cc083cd98ec5c044",
+              "ef5088789aa71d08e87b70ae0714c62930214780"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Plumbed structured failure context (provider_request_id, model, sse_error_type) end-to-end on task_failed and rendered it as a compact \"req=… · model=… · api_error\" label under the failure reason in the Run sidekick, with a golden test pinning the wire shape.",
+            "commit_shas": [
+              "aac1050419d542b8408cc2c203beaf88513a8fd1",
+              "27aff59dc394732196c52ac456f1af2e0dffeeb3",
+              "12929360b77e3d26a82f8cadb86713ef88bf265f",
+              "cb96864df84901f791d5b5f7ca376734a2136f69"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Stopped a tight-loop reconnect on terminal harness errors and a harness WS slot leak: agent-stuck signals now classify as terminal, and AutomatonClient returns an RAII WsReaderHandle that closes the previous socket on every retry/adopt.",
+            "commit_shas": [
+              "4c01759db3f10d12c4ffeee55aea29f8a9072826",
+              "ee5d9553835274bad352de88b9088253232532f8"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Repainted the desktop shell into floating glass capsules: the bottom taskbar is split into three pills, the topbar and main panel float with rounded corners and a 2–5px gap that lets the desktop background show through, and corner radii are unified to 20px.",
             "commit_shas": [
               "065b565508558af701ba32ece7a38065267ffe76",
-              "d09c1661332121685fcf0a0592e2c7739fc801da",
+              "d0bd776f1d183c6311c20a91aff65375cf24066a",
               "de67ed6742fbe6ab0001fce67666590c52d857a8",
               "8d8225f5ae1c43146e920e4fe0a027c5552b79b6",
               "3ace217bcaa3cb8a5048d64364550aa30398ea98",
@@ -8930,233 +9041,90 @@
               "4474f6c94b4cffee21a12b842e443e63a8f9b820",
               "bce7a34e13be621da435414f45dea85ae4871dd8",
               "2251b3544201118b627b31f50eb6a2a788c1685f",
-              "fece144ebda94b9b04f8fbfbfbf4b011f77d2b38"
+              "fece144ebda94b9b04f8fbfbfbf4b011f77d2b38",
+              "2b608a7e5c6fd2519a74619b33b7d06a92d04464",
+              "d973798e1fbcc19de7b4a23a9cff978335a859f5"
             ],
             "confidence": "high"
           },
           {
-            "text": "Desktop platform polish: macOS gained a native app menu so Cmd+C/V/X/A/Z work in WebView, a custom titlebar drag bridge fixes window dragging on Mac and Linux, the Windows drag-resize flash now paints black instead of white, and --external-harness validates the harness /health policy at boot.",
+            "text": "Rewrote run-pane and task-overlay scrolling around overflow-anchor + layout-effect commits to eliminate stream jank, reconciled stale active rows, lifted the cooking indicator above the bottom fade, and reserved space so trailing rows stay readable.",
             "commit_shas": [
-              "cc3193a6c2af192cd28fd1fb564f713756872ec7",
-              "c2294d390c344bcb7e09fee8b3c984de80e9669d",
-              "c1aad81ee46d1e02d939a0c1c3ec2b0114900664",
-              "ed55e3755ab85f621973b83e792fc62464891aef",
-              "f1f47358b39d250244917c8d4886a34a716ed191",
-              "a41c273bb2f739b84b3a56755665c07210a9f4e6",
-              "71304ce19758e794bb134cdd5464844b5a9b2450"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Browser and chat reliability: the in-app browser now renders a branded \"Can't connect to server\" overlay on main-frame load failures, the address bar searches DuckDuckGo for unresolved input, mid-turn chat state survives page refresh via in-flight session events, and the Run pane / Task Overlay scroll-jank was eliminated with overflow-anchor.",
-            "commit_shas": [
-              "bd92f082a75e7b509262d644cc083cd98ec5c044",
-              "1c155dea4f7e6180c3404000bfba27b86d38166c",
-              "7837adb5ac02aab9faa11f59818d38734440e615",
-              "6021e18170d3a67b647bca1a6c92c4f7921f2e2b",
               "0244c857428796bfeb6df05e54770a3b2ea16706",
-              "07bbdc3af089ba0cdff4d92959936f75800035cb"
+              "3089289dd126f6b34fbcba0a4c917f1b2aa11b4d",
+              "2509b9c8e46157069537d5cad6420a4eadce558c",
+              "5019432a9bbd143f23e8a8eb886d66b3bab9482d",
+              "bf02505fbcc7dcd9760de2f0af2fb11957f128bc",
+              "206097d58359ab3fc22ccf8f197ee5e3444793c2",
+              "09b84247d3390a19e010d1d9f2386faba5073319"
             ],
             "confidence": "high"
           },
           {
-            "text": "Agent permissions and tool wiring became more forgiving: project-bound chats auto-splice ReadProject/WriteProject self-caps, project_id is injected from X-Aura-Project-Id headers (and dropped from required schemas), every capable tool now ships by default, and flat /api/tasks/:id and /api/specs/:id routes match the harness's HttpDomainApi expectations.",
+            "text": "Recovered mid-turn chat state across reloads: the server now emits an in_flight flag and throttled assistant_turn_progress, and the client preserves \"tool calls only\" turns, guards a 1.5s grace window against history races, and persists the sidekick preview in the URL.",
+            "commit_shas": [
+              "6021e18170d3a67b647bca1a6c92c4f7921f2e2b",
+              "2bb8f040d49a871fc0a089f145bfe16fb05a63bd",
+              "4c671f105a53782cfb8864d1274671727d7d1f3f"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Surfaced live tool-card retry state from harness ToolCallRetrying / ToolCallFailed events as \"Writing retrying (n/8)…\" and a \"retried n/max\" header on final failure, replacing the stuck \"Writing code…\" during upstream 5xx storms.",
+            "commit_shas": [
+              "4424201e7deb810be42504dbf4f94c5fc8605e48",
+              "d1313496567c5a7b63360e6e2730fa1fcdaa7696"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Tightened agent permissions and tool dispatch: project self-caps are auto-spliced on project-bound chats (with a persist_ctx fallback), every cross-agent dispatch stamps X-Aura-Project-Id and injects it server-side, and project_id was dropped from required schemas so the LLM no longer has to thread it.",
             "commit_shas": [
               "8d0d715527f30f40970bfff27b5c7d611d38837a",
               "b6a066eb11c7fb6084bfe2f67525fc0ff1453bd1",
               "def464a66cef5ff0e14be325bcb2afb16519f236",
               "13acee2289eb203c7543ddf25a4c4205d47b0b48",
               "6efa695a4871233b5043c76ac248b67c7e26b8ea",
-              "c477313f434900151366e375d284edf2a82d8c16",
-              "bde1254b5a1f970d7d0873898f94d50a90fedd52"
+              "c477313f434900151366e375d284edf2a82d8c16"
             ],
             "confidence": "high"
           },
           {
-            "text": "Task state-machine transitions were unified with storage via a bridge-aware safe_transition helper, retry became idempotent on already-ready tasks, and a harness WS reader handle prevents the dev loop from exhausting the harness's 128-slot WebSocket cap on every restart.",
+            "text": "Polished the desktop and browser surfaces: a native macOS app menu wires up Cmd+C/V/X/A/Z, custom titlebar drag works on macOS/Linux via tao IPC, the address bar restyles to a flat pill with DuckDuckGo fallback search, and main-frame load failures render a branded in-app error overlay instead of Chromium's.",
             "commit_shas": [
-              "ef5088789aa71d08e87b70ae0714c62930214780",
-              "3809aeb807f4406c39969c2bff5907624445f37d",
-              "ee5d9553835274bad352de88b9088253232532f8"
+              "cc3193a6c2af192cd28fd1fb564f713756872ec7",
+              "c2294d390c344bcb7e09fee8b3c984de80e9669d",
+              "7837adb5ac02aab9faa11f59818d38734440e615",
+              "1c155dea4f7e6180c3404000bfba27b86d38166c",
+              "bd92f082a75e7b509262d644cc083cd98ec5c044",
+              "c1aad81ee46d1e02d939a0c1c3ec2b0114900664",
+              "ed55e3755ab85f621973b83e792fc62464891aef",
+              "55eb3c7ebd2d2efd25afafda1f29cdc97cc4bfc0"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           },
           {
-            "text": "A topic-scoped EventHub and LoopRegistry now isolate chat, automation, task, process, and spec loops per (user, project, agent_instance), re-key the automaton registry and task-output cache to (ProjectId, AgentInstanceId), and feed a unified LoopProgress indicator across agent rows, the sidekick Tasks/Run tabs, and per-task explorer rows.",
-            "commit_shas": [
-              "9860141803426fa0ce19f57191394fbc5d71462e"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "A major architectural cleanup retired the legacy agent-tool dispatcher, runtime, and templates crates, deleted external CLI adapters (claude_code, codex, gemini_cli, opencode, cursor) leaving only aura_harness, and routed automation, chat, and scheduled processes through harness automatons — net change of roughly -27k lines across these refactors.",
-            "commit_shas": [
-              "c21106bbae40901863a0bc4bb2806c6ef7524b95",
-              "9e23bbc1214d5b7e3bb61e56134b7917c65ed701",
-              "53ace2163821aa341d05eeff60e7deb1831a30cd",
-              "d8c2480273d6eddf9984ac52183d27da4fddda42",
-              "00d095ecde24f824e090d84e5f52da046e9ea0b9",
-              "71d182168bd72a700507af84641a9be2d67e351a",
-              "c1e87fb89b2f3c60955f6f3a3217f386878895ed",
-              "f39dc742e1ed330af0ccaf68b67f1725adc79321",
-              "b43e4b8e4998ffced70f506b51e07fd86328c6d2",
-              "49a1d454b8c250e74fde0859f332da3c92ad938b"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Sidekick and chat polish: copy buttons with cross-OS clipboard support landed on file/spec previews, historical tool markers render as collapsible Blocks in completed task overlays, assistant turns no longer disappear at end-of-stream, and the loop progress spinner keeps rotating in determinate mode.",
+            "text": "Added a chat copy button with cross-OS clipboard, hoisted live task status into a shared zustand store to fix a render-time setState loop, and stopped repeated sidekick output hydration from churning the event store.",
             "commit_shas": [
               "55eb3c7ebd2d2efd25afafda1f29cdc97cc4bfc0",
-              "cc4781d5658d3eac076ab97802fe5f49f7ee252f",
-              "2bb8f040d49a871fc0a089f145bfe16fb05a63bd",
-              "ac52a806ba8820be69714547001268993faf108f",
               "26ed6930f9995c72063c2033b81bd38d3f13f552",
-              "efa2c79841b18138a302db94977ad96947c30295",
-              "3089289dd126f6b34fbcba0a4c917f1b2aa11b4d"
+              "09b84247d3390a19e010d1d9f2386faba5073319"
             ],
             "confidence": "high"
           },
           {
-            "text": "Project-agent rename from the sidebar context menu (and F2), credit-exhaustion now stops the dev loop terminally, no-change task completions are classified as completion-contract errors instead of triggering decomposition, and tool-input payloads are normalized so stringified arguments stop rendering as character-indexed JSON.",
+            "text": "Introduced a delegated harness adapter crate (aura-os-harness) and tri-state tool approval + permission protocol messages, laying the groundwork for live tool catalogs and ask-state approvals.",
             "commit_shas": [
-              "efa2c79841b18138a302db94977ad96947c30295",
-              "95cd075daa5ad445f855ba68652dc7fd4bf9bc81",
-              "5fe69769aa7cfa48a4789330e9b1889fb9b9b420",
-              "ad5283297d23f35ab7914ba0d76188296b75775c",
-              "cc717456a39e1d957f7793f2c7d54f68cb2a74de"
+              "c21106bbae40901863a0bc4bb2806c6ef7524b95",
+              "53b2c1628e23638bbf6c4caccb10ff7126b4a601",
+              "36362031a267d508f53e9aea2eb96429a9c6e9b8"
             ],
             "confidence": "high"
           },
           {
-            "text": "TypeScript hygiene Phase F1: EventType converted to a string-literal union, `any` replaced with `unknown` (or JsonValue) across memory, agent skill, and harness panels, non-null assertions removed across process canvas, terminal, and shell code paths, and a shared parseEventContent helper deduplicated event-store casts.",
+            "text": "Phase F1 of the TS refactor converted EventType to a literal union, replaced any with unknown across the memory and skill APIs, dropped non-null assertions, and centralized parseEventContent in shared/utils.",
             "commit_shas": [
               "d5c36d9e7fc3788cd11d1f7e4b38c36b9c7eaefa"
-            ],
-            "confidence": "high"
-          }
-        ],
-        "media": {
-          "schemaVersion": 1,
-          "status": "published",
-          "type": "image",
-          "assetPath": "assets/changelog/nightly/2026-04-25/entry-1-c86c94096327.png",
-          "alt": "Dev loop rebuilt around the harness with isolated concurrent loops",
-          "caption": "The desktop shell got a sweeping facelift with floating glass taskbar capsules, inset rounded panels, and unified corner radii across the chat input, taskbar, and titlebar.",
-          "width": 2560,
-          "height": 1440,
-          "bytes": 2651034,
-          "sourceCommitShas": [
-            "9cb0c6a4bad40565d2da420a548cace23b427a35",
-            "7150cd358dee087cec317f28fae8af66e72eb90c",
-            "373be4278f1abfec2e8b8e96057927c612968b88",
-            "88fa94efaadb840bf1ae1980cae436611c4afb16",
-            "f474edc9ea30fb80e1c429114d406de94eef6129",
-            "4424201e7deb810be42504dbf4f94c5fc8605e48",
-            "8e75d47b06a92e3cd44694f3510c5d1b9f62317e",
-            "4c01759db3f10d12c4ffeee55aea29f8a9072826",
-            "a8e3e72acf90acb0ce4dee763801e919fc238828",
-            "fcc6c989f344e02925cff313ac271cad36acd928",
-            "f1c9dce904294b4c7ad626ab053c5716b3121cdb",
-            "a2c218d06680acc3a31d92d82b16cdb89909eef8",
-            "87e929cffb891b6841d845d8d88880aab43df357",
-            "70623bd716ec88205575716ce46af2a886a30648",
-            "3bdb2b4d17f7cbead72c5cb35a41b61d51624eda",
-            "73ab86fb8fce5c870712097b3af89bf5a7981ab3",
-            "f4425e28a34616b951ed45cb8ec78800f2c2ded0",
-            "fc08c18841b9fa283650d5020691ba7c79600185",
-            "5badbea7f4c7d142e4d3421446fea417507fb393",
-            "cb96864df84901f791d5b5f7ca376734a2136f69",
-            "aac1050419d542b8408cc2c203beaf88513a8fd1",
-            "27aff59dc394732196c52ac456f1af2e0dffeeb3",
-            "12929360b77e3d26a82f8cadb86713ef88bf265f",
-            "d1313496567c5a7b63360e6e2730fa1fcdaa7696",
-            "065b565508558af701ba32ece7a38065267ffe76",
-            "d09c1661332121685fcf0a0592e2c7739fc801da",
-            "de67ed6742fbe6ab0001fce67666590c52d857a8",
-            "8d8225f5ae1c43146e920e4fe0a027c5552b79b6",
-            "3ace217bcaa3cb8a5048d64364550aa30398ea98",
-            "07c68327c445cceb7234d156067b89a39f01ff62",
-            "b1c64532a807c636fa743a0393c1bf1fffd06029",
-            "6945fe71e415c1c769bbd89d52463075a9d19bcb",
-            "078aca500f4582bbef94dda7139d750d45582c79",
-            "84948636334055082e2592ac050a398ec443a256",
-            "21373eb9a3adefe8c9b644a3d8c5104de16c16ca",
-            "b995cb26ca6cbb650d6e8c5eb8b7a0f30e587119",
-            "eeba9fcba80cfc07852c85d52069b3dbbd5d3489",
-            "8fc9dbdddd45da5e3f03c7facb81123f9056eb5e",
-            "4474f6c94b4cffee21a12b842e443e63a8f9b820",
-            "bce7a34e13be621da435414f45dea85ae4871dd8",
-            "2251b3544201118b627b31f50eb6a2a788c1685f",
-            "fece144ebda94b9b04f8fbfbfbf4b011f77d2b38",
-            "cc3193a6c2af192cd28fd1fb564f713756872ec7",
-            "c2294d390c344bcb7e09fee8b3c984de80e9669d",
-            "c1aad81ee46d1e02d939a0c1c3ec2b0114900664",
-            "ed55e3755ab85f621973b83e792fc62464891aef",
-            "f1f47358b39d250244917c8d4886a34a716ed191",
-            "a41c273bb2f739b84b3a56755665c07210a9f4e6",
-            "71304ce19758e794bb134cdd5464844b5a9b2450",
-            "bd92f082a75e7b509262d644cc083cd98ec5c044",
-            "1c155dea4f7e6180c3404000bfba27b86d38166c",
-            "7837adb5ac02aab9faa11f59818d38734440e615",
-            "6021e18170d3a67b647bca1a6c92c4f7921f2e2b",
-            "0244c857428796bfeb6df05e54770a3b2ea16706",
-            "07bbdc3af089ba0cdff4d92959936f75800035cb",
-            "8d0d715527f30f40970bfff27b5c7d611d38837a",
-            "b6a066eb11c7fb6084bfe2f67525fc0ff1453bd1",
-            "def464a66cef5ff0e14be325bcb2afb16519f236",
-            "13acee2289eb203c7543ddf25a4c4205d47b0b48",
-            "6efa695a4871233b5043c76ac248b67c7e26b8ea",
-            "c477313f434900151366e375d284edf2a82d8c16",
-            "bde1254b5a1f970d7d0873898f94d50a90fedd52",
-            "ef5088789aa71d08e87b70ae0714c62930214780",
-            "3809aeb807f4406c39969c2bff5907624445f37d",
-            "ee5d9553835274bad352de88b9088253232532f8",
-            "9860141803426fa0ce19f57191394fbc5d71462e",
-            "c21106bbae40901863a0bc4bb2806c6ef7524b95",
-            "9e23bbc1214d5b7e3bb61e56134b7917c65ed701",
-            "53ace2163821aa341d05eeff60e7deb1831a30cd",
-            "d8c2480273d6eddf9984ac52183d27da4fddda42",
-            "00d095ecde24f824e090d84e5f52da046e9ea0b9",
-            "71d182168bd72a700507af84641a9be2d67e351a",
-            "c1e87fb89b2f3c60955f6f3a3217f386878895ed",
-            "f39dc742e1ed330af0ccaf68b67f1725adc79321",
-            "b43e4b8e4998ffced70f506b51e07fd86328c6d2",
-            "49a1d454b8c250e74fde0859f332da3c92ad938b",
-            "55eb3c7ebd2d2efd25afafda1f29cdc97cc4bfc0",
-            "cc4781d5658d3eac076ab97802fe5f49f7ee252f",
-            "2bb8f040d49a871fc0a089f145bfe16fb05a63bd",
-            "ac52a806ba8820be69714547001268993faf108f",
-            "26ed6930f9995c72063c2033b81bd38d3f13f552",
-            "efa2c79841b18138a302db94977ad96947c30295",
-            "3089289dd126f6b34fbcba0a4c917f1b2aa11b4d",
-            "95cd075daa5ad445f855ba68652dc7fd4bf9bc81",
-            "5fe69769aa7cfa48a4789330e9b1889fb9b9b420",
-            "ad5283297d23f35ab7914ba0d76188296b75775c",
-            "cc717456a39e1d957f7793f2c7d54f68cb2a74de",
-            "d5c36d9e7fc3788cd11d1f7e4b38c36b9c7eaefa"
-          ],
-          "gates": {
-            "rawQuality": "accepted",
-            "rawVision": "accepted",
-            "brandedQuality": "accepted",
-            "brandedVision": "accepted"
-          },
-          "updatedAt": "2026-04-26T01:55:55.505Z"
-        }
-      },
-      {
-        "batch_id": "entry-2",
-        "time_label": "11:32 PM",
-        "started_at": "2026-04-25T06:32:26.000Z",
-        "ended_at": "2026-04-25T06:32:26.000Z",
-        "title": "Shared module scaffolding for the F2 refactor",
-        "summary": "Reserved the new shared/ directory layout that subsequent F2 commits would populate.",
-        "items": [
-          {
-            "text": "Created the interface/src/shared/{ui,hooks,api,types,lib}/ scaffolding (utils/ already existed from Phase F1) so domain-neutral code has an explicit home.",
-            "commit_shas": [
-              "207756c5678e4b0805866daf79f0587c4e939532"
             ],
             "confidence": "high"
           }
@@ -9167,11 +9135,11 @@
         "time_label": "11:35 PM",
         "started_at": "2026-04-25T06:35:53.000Z",
         "ended_at": "2026-04-25T06:35:53.000Z",
-        "title": "Desktop sidecar build scoped to aura-runtime",
-        "summary": "Fixed the harness sidecar build script after Cargo's --bin resolution rules tripped on the workspace layout.",
+        "title": "Desktop sidecar build scoped to the right package",
+        "summary": "Late-night fix to the release prep script so the bundled aura-node sidecar builds against aura-runtime instead of failing with \"no bin target named aura-node\".",
         "items": [
           {
-            "text": "prepare-desktop-sidecar.mjs now passes `-p aura-runtime` alongside `--bin aura-node` so the desktop sidecar build resolves the binary against the right package instead of failing with \"no bin target named aura-node in default-run packages\".",
+            "text": "prepare-desktop-sidecar.mjs now passes -p aura-runtime alongside --bin aura-node so cargo can resolve the binary in the harness workspace and the desktop installer build stops failing.",
             "commit_shas": [
               "4da6c8ccf761c3fd7eb6624e6c70d1302d2de472"
             ],
@@ -9184,20 +9152,26 @@
         "time_label": "11:40 PM",
         "started_at": "2026-04-25T06:40:52.000Z",
         "ended_at": "2026-04-25T07:10:51.000Z",
-        "title": "Interface F2 migration into shared/",
-        "summary": "Moved the framework-agnostic types, API transport, utilities, foundational libs, and generic React hooks out of feature folders and into the new shared/ tree.",
+        "title": "Migration into interface/src/shared/ for types, api, utils, lib, and hooks",
+        "summary": "Phase F2 of the interface refactor relocated domain-neutral modules out of interface/src/{types,api,utils,lib,hooks}/ into a new shared/ tree, with one false start that was reverted before landing the hooks move cleanly.",
         "items": [
           {
-            "text": "Relocated all 11 generic type files (events, entities, ids, permissions, stream, etc.) and 38 framework-agnostic API modules into shared/types/ and shared/api/, leaving app-coupled aggregators (feedback, marketplace, client) and the stores-coupled streams.ts in api/.",
+            "text": "Moved all 11 type DTOs (aura-events, entities, enums, events, ids, permissions, stream, …) into interface/src/shared/types/ and rewrote import paths across the codebase.",
             "commit_shas": [
-              "7304dc3012e842b317b407c5d68d5a8de759eca4",
+              "7304dc3012e842b317b407c5d68d5a8de759eca4"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Relocated framework-agnostic API transports to shared/api/ (keeping app-specific aggregators in interface/src/api/) and later kept api/streams.ts in api/ because it imports stores/event-store handlers and would otherwise violate the shared/ no-stores rule.",
+            "commit_shas": [
               "2a88e8164212b04bf1b00598caa9086287681355",
               "f71b9eb8cf1f56475952977b8e664f71d313e817"
             ],
             "confidence": "high"
           },
           {
-            "text": "Moved generic utilities (formatters, error extraction, clipboard, image cropping, text normalization, explorer-tree filters) into shared/utils/ and foundational libs (auth-token, browser-db, host-config, native-runtime, query-client, featureFlags) into shared/lib/.",
+            "text": "Moved generic utilities (formatters, error extraction, clipboard, image cropping, text normalization, explorer-tree filtering) and foundational lib modules (auth-token, browser-db, host-config, native-runtime, query-client, featureFlags) into shared/utils/ and shared/lib/.",
             "commit_shas": [
               "9c714cf6f8e789aa9d9dc72e0f6539759e0f3681",
               "6be59f172f48327f7199224e835cca6e8e0d02ac"
@@ -9205,7 +9179,7 @@
             "confidence": "high"
           },
           {
-            "text": "Migrated app-agnostic React hooks — use-click-outside, use-delayed-empty/loading, use-overlay-scrollbar, use-scroll-anchor-v2, use-highlighted-html, use-overflow-tabs, ws-reconnect — into shared/hooks/, after a botched intermediate commit was reverted and re-landed cleanly.",
+            "text": "Moved generic React hooks (use-click-outside, use-delayed-empty/loading, use-overlay-scrollbar, use-scroll-anchor-v2, use-highlighted-html, use-overflow-tabs, ws-reconnect) into shared/hooks/, after reverting an earlier CI-retrigger commit that had moved the files without rewriting their import sites.",
             "commit_shas": [
               "a53d32bf432578e8400364f610904246839eb83e",
               "08ec42c5833310ed5ecf550a08168c73e9a09350",
@@ -9220,11 +9194,11 @@
         "time_label": "12:22 AM",
         "started_at": "2026-04-25T07:22:02.000Z",
         "ended_at": "2026-04-25T07:22:02.000Z",
-        "title": "Project stats now decode every key shape from storage",
-        "summary": "Fixed the project stats panel where Tokens, Time, and Lines stayed at zero while Cost moved.",
+        "title": "Project stats now decode tokens, time, and lines across key shapes",
+        "summary": "The project stats panel was showing Cost moving while Tokens, Time, and Lines stayed at zero; the storage client now accepts the camelCase, snake_case, and short-form keys aura-storage actually emits.",
         "items": [
           {
-            "text": "ProjectStats deserialization gained serde aliases for camelCase, snake_case, and short-form variants (tokensUsed/inputTokens/costUsd, etc.) so the storage-side stats endpoint populates total tokens, input/output tokens, cost, time, and lines correctly, with the body logged at debug level for future shape drift.",
+            "text": "ProjectStats gained serde aliases (tokensUsed, inputTokens, costUsd, …) for total/input/output tokens, cost, time, and lines; the stats body is also fetched as text with a debug log so future shape drift is diagnosable, with unit tests pinning all three naming conventions.",
             "commit_shas": [
               "da4436e24c3da45c4fc36d36b0b0e5838f1a2130"
             ],
@@ -9236,22 +9210,23 @@
         "batch_id": "entry-6",
         "time_label": "10:36 AM",
         "started_at": "2026-04-25T17:36:51.000Z",
-        "ended_at": "2026-04-26T01:28:01.000Z",
-        "title": "Multi-instance concurrency, dropped-stream recovery, and OpenAI-driven changelog media",
-        "summary": "A second wave landed AgentInstanceRole-based concurrency, surfaced silently dropped chat streams, hardened the desktop sidecar contract, and rebuilt the changelog media pipeline around production-grade OpenAI image generation.",
+        "ended_at": "2026-04-26T01:59:50.000Z",
+        "title": "Concurrent agent instances per project and a hardened changelog media pipeline",
+        "summary": "A second wave of platform work: agent instances gained Chat/Loop/Executor roles so chats, automation, and ad-hoc task runs no longer collide on the harness's one-turn-per-agent rule, while the changelog media capture pipeline was rebuilt around OpenAI image generation and stricter quality gates.",
         "items": [
           {
-            "text": "Concurrent chat, automation, and ad-hoc tasks now coexist per project: a new AgentInstanceRole (Chat/Loop/Executor) plus ephemeral Executor instances let parallel run_single_task calls, a project Loop, and chat sessions all share a project without colliding on the harness's one-turn-per-agent rule. A startup janitor sweeps orphaned executor rows and a Phase 3 integration test pins per-instance stop semantics.",
+            "text": "Added an AgentInstanceRole foundation (Chat/Loop/Executor) and used it to allocate ephemeral Executor instances per ad-hoc run, lazily promote a Chat instance to the project's Loop, and sweep orphaned executor rows at startup — so two parallel chats, multiple concurrent task runs, and one automation loop per project all coexist.",
             "commit_shas": [
               "1102674d8469baf30c319ca2bd92c10b9263dfb2",
               "ae4801ead329f6cb70ab36edbfd26683647d028a",
               "ed8d9f4198497ea645ff84d7cb9209035529e71f",
-              "cf39422d88c134add9073af8925a0635b963aeab"
+              "cf39422d88c134add9073af8925a0635b963aeab",
+              "4fd68734e5952e524b0ec83fe6a6fe36818c70df"
             ],
             "confidence": "high"
           },
           {
-            "text": "Task panel and sidekick streaming state was rescoped per project and per agent instance: LoopStopped/LoopFinished no longer marks unrelated projects' tasks completed, and streamingAgentInstanceId became a list so two concurrent streams keep their indicators independently. AutomationBar/useLoopControl now bind to the project's resolved Loop instance instead of the URL's chat instance.",
+            "text": "Scoped task panel and sidekick streaming state per project and agent instance, replaced the single streamingAgentInstanceId with a list, and bound automation-bar Start/Pause/Resume/Stop to the project's Loop instance so a chat reply no longer collides with a loop start.",
             "commit_shas": [
               "510205d7227dca12afb926f24fcc0bd56b50a72d",
               "386a905b196e79021785a9ec18e1385092b8891e"
@@ -9259,77 +9234,76 @@
             "confidence": "high"
           },
           {
-            "text": "Silently dropped main-thread chat streams now surface explicitly: the server emits a stream_lagged SSE error when the harness broadcast outpaces the writer, the client classifies idle-timeout and stream_lagged as a \"Chat stream interrupted\" banner via a new SSEIdleTimeoutError type, and the post-stream history grace window grew from 1.5s to 5s to cover real persistence lag.",
+            "text": "Surfaced dropped main-thread chat streams instead of failing silently: the SSE writer logs lagged broadcasts and emits a synthetic stream_lagged error, the client renders a dedicated \"Chat stream interrupted\" banner with retry hint, and the post-stream history grace window grew from 1.5s to 5s.",
             "commit_shas": [
               "15777df3e5ca1dfaf12de837cbd3e6d58c61e5fc"
             ],
             "confidence": "high"
           },
           {
-            "text": "Release tooling tightened: the desktop updater sidecar package contract is now validated in CI (desktop-validate, release-nightly, release-stable), the changelog media workflow's skip and capture gates were hardened, and the bottom taskbar got unified TaskbarIconButton styling — later balanced with a consistent inner padding pass after edge-rounding was rolled back.",
-            "commit_shas": [
-              "63d4c89ab5bd9c8888355cc1b743dafcf6ca3d7c",
-              "ee70b4b5181e7a925181c55c39cc7cf19d8e3810",
-              "6e17e330380aa15e0593b801d687abb3da012630",
-              "b4525bf68032c5549bf0c68f07e1d8367c0f9e5a"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Org/team avatars can now be uploaded from settings and shown in the topbar selector, with a local IndexedDB fallback for hosts that drop avatar updates. The sidekick toggle was grouped with the native window controls, the chat top fade softened, terminal got a WebGL renderer with canvas fallback and 100k scrollback, and the lucide Terminal icon was replaced with SquareTerminal across blocks, sidekick, marketplace, and skill rows.",
-            "commit_shas": [
-              "41c586f0674c3c3237579e2b2c137ff69df8d99c",
-              "f67f9abff8198fb7761d3bf5e054ec6af02ce99b",
-              "4c5768ea46caa4b1c6bc9bf13e23506b609821ec",
-              "04806b27042e1a9492943efcdfc409e4f80d4c71",
-              "629e58d823a71a6687a380f36e1099b3c60a608a",
-              "f7f7bc2ebd3e76cbe33f7bdf195733cfac93bd40",
-              "e756ea5b5bb6ec58a1d3651e2dfbff0c50aadd94",
-              "e1ac283ca5ce65677891acfd0b3d2adeda449d77"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Dev-loop automation now creates, updates, and ends storage session rows so loop and single-task runs count toward project stats, and the capture-auth demo agent stamps the Chat instance role explicitly.",
+            "text": "Counted automation runs as sessions in storage so loop and single-task runs feed project stats, and added team avatar editing with a local-fallback override for hosts that drop avatar updates.",
             "commit_shas": [
               "298bb4cf4f70ca201a33593583d7fc558e604d5c",
-              "4fd68734e5952e524b0ec83fe6a6fe36818c70df"
+              "41c586f0674c3c3237579e2b2c137ff69df8d99c",
+              "f67f9abff8198fb7761d3bf5e054ec6af02ce99b",
+              "13e44690d923fe848ff5569436ed61b6c929957c"
             ],
             "confidence": "high"
           },
           {
-            "text": "The changelog media pipeline was overhauled to require OpenAI image generation (gpt-image-2, 2560x1440) for publishable assets — legacy SVG/PNG screenshot wrappers are now blocked, accepted media proofs are preserved across runs, historical backfills can be retargeted, and sparse shell-only proofs are accepted with explicit gates.",
+            "text": "Added a WebGL terminal renderer with a canvas fallback and 100k scrollback, swapped the sidekick terminal/command iconography to lucide's SquareTerminal, and grouped the sidekick drawer toggle with the native window controls.",
             "commit_shas": [
+              "04806b27042e1a9492943efcdfc409e4f80d4c71",
+              "e1ac283ca5ce65677891acfd0b3d2adeda449d77",
+              "4c5768ea46caa4b1c6bc9bf13e23506b609821ec",
+              "629e58d823a71a6687a380f36e1099b3c60a608a"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Validated the desktop updater sidecar package contract in CI and the desktop build, so a misshapen sidecar archive can no longer ship into a nightly or stable updater bundle.",
+            "commit_shas": [
+              "63d4c89ab5bd9c8888355cc1b743dafcf6ca3d7c"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Rebuilt the changelog media capture pipeline around OpenAI gpt-image-2 production redraws with stricter quality, branding, and seed-plan gates, accepted sparse shell media proofs, preserved accepted proofs, and added historical media backfill targeting plus model-default updates.",
+            "commit_shas": [
+              "ee70b4b5181e7a925181c55c39cc7cf19d8e3810",
               "dd065dd0be9bf49498547934c063051aaa5eec13",
               "0f84019a9b930936f6f6037bb6ba83d02ae24e50",
               "d55c704e81b67264be1044a810e932a195847735",
-              "88fd7cd0f5152d3171520d21e50d5260cb0175f4"
+              "88fd7cd0f5152d3171520d21e50d5260cb0175f4",
+              "c68a9a7c46174f3f77c4f307624a2b4e3d30ec67"
             ],
             "confidence": "high"
           },
           {
-            "text": "Desktop chrome refinements: main panel and content radii were tuned to 6px, the topbar align rail was widened to 44px to match the nav rail, terminal content keeps clearance above the sidekick fade, and pill sections regained consistent end padding.",
+            "text": "Polished the floating desktop shell further: rounded the main panel and content corners, aligned chrome heights, gave bottom taskbar pills consistent end padding, and softened the chat panel's top fade.",
             "commit_shas": [
               "f3c91d5f18f73ecedc6f899625a6428bd22a65a8",
               "2f2adb66f99e4e31169ab381d4c07cfcd1742c2c",
               "27efe7a36a558cf984f6103a247cf3c5af8d9be3",
               "711a3917f89d45b87a21773615d4c51952350b64",
+              "6e17e330380aa15e0593b801d687abb3da012630",
+              "b4525bf68032c5549bf0c68f07e1d8367c0f9e5a",
               "3ab332791b52ddef13eeb341ec1dcc04693dbe8e",
-              "13e44690d923fe848ff5569436ed61b6c929957c",
-              "629e58d823a71a6687a380f36e1099b3c60a608a"
+              "f7f7bc2ebd3e76cbe33f7bdf195733cfac93bd40",
+              "e756ea5b5bb6ec58a1d3651e2dfbff0c50aadd94"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           }
         ]
       }
     ],
     "highlights": [
-      "Harness now owns task DoD; legacy adapters and 13k+ lines of duplicate logic retired",
-      "Concurrent chat, loop, and ad-hoc tasks isolated per project and agent instance",
-      "Desktop shell redesigned with floating capsules, rounded corners, and unified gaps",
-      "Smarter retry ladders, push-deferred handling, and Orbit ENOSPC remediation",
-      "New browser error overlay, copy buttons, and crash-resistant mid-turn chat state"
+      "Dev loop rebuilt on harness automatons with concurrent Loop + Executor instances per project",
+      "External CLI adapters and the legacy agent tool dispatcher removed in favor of aura_harness",
+      "Desktop shell redesigned into floating glass capsules with unified corner radii",
+      "Run pane, chat stream, and tool cards hardened against drops, retries, and cross-project bleed",
+      "Interface began structured migration to interface/src/shared/{types,api,utils,lib,hooks}/"
     ],
-    "raw_commit_count": 164
+    "raw_commit_count": 165
   }
 }

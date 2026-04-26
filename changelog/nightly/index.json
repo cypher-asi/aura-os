@@ -2,20 +2,20 @@
   {
     "date": "2026-04-25",
     "channel": "nightly",
-    "version": "0.1.0-nightly.392.1",
-    "title": "Harness-driven automation, concurrency isolation, and a redesigned desktop shell",
-    "intro": "A heavy day across the stack: the dev loop was rebuilt around the harness as the source of truth, concurrent loops and tasks were isolated per project and agent instance, and the desktop shell got a sweeping visual refresh with floating capsules, rounded corners, and consistent gaps. Reliability work tightened retry ladders, push-failure handling, and stream recovery, while the interface gained a browser error page, in-app copy buttons, and durable mid-turn chat state.",
-    "entryCount": 6,
+    "version": "0.1.0-nightly.393.1",
+    "title": "Harness-driven automation, concurrent loops, and a floating desktop shell",
+    "intro": "A heavy day for the autonomy stack: Aura's dev loop was rebuilt around the harness as the source of truth, legacy tool dispatchers and external CLI adapters were retired, and concurrent chats, automation loops, and ad-hoc task runs can now coexist per project. The desktop shell got a coordinated visual pass into floating glass panels, the run pane and chat got several reliability fixes, and the interface began a structured move into a shared/ module layout.",
+    "entryCount": 5,
     "highlights": [
-      "Harness now owns task DoD; legacy adapters and 13k+ lines of duplicate logic retired",
-      "Concurrent chat, loop, and ad-hoc tasks isolated per project and agent instance",
-      "Desktop shell redesigned with floating capsules, rounded corners, and unified gaps",
-      "Smarter retry ladders, push-deferred handling, and Orbit ENOSPC remediation",
-      "New browser error overlay, copy buttons, and crash-resistant mid-turn chat state"
+      "Dev loop rebuilt on harness automatons with concurrent Loop + Executor instances per project",
+      "External CLI adapters and the legacy agent tool dispatcher removed in favor of aura_harness",
+      "Desktop shell redesigned into floating glass capsules with unified corner radii",
+      "Run pane, chat stream, and tool cards hardened against drops, retries, and cross-project bleed",
+      "Interface began structured migration to interface/src/shared/{types,api,utils,lib,hooks}/"
     ],
-    "rawCommitCount": 172,
-    "generatedAt": "2026-04-26T01:41:49.337Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.392.1",
+    "rawCommitCount": 173,
+    "generatedAt": "2026-04-26T02:17:23.518Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.393.1",
     "path": "history/2026-04-25.json"
   },
   {
