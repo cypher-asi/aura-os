@@ -3,7 +3,7 @@
 
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tracing::{info, warn};
 
 use crate::harness::binary::resolve_managed_harness_binary;
@@ -70,7 +70,14 @@ pub(crate) fn maybe_spawn_local_harness_sidecar(data_dir: &Path) -> Option<Child
         command.env("ORBIT_URL", orbit_url);
     }
 
-    spawn_and_wait_for_health(command, &harness_url, &harness_binary)
+    let child = spawn_and_wait_for_health(command, &harness_url, &harness_binary);
+    if child.is_none() {
+        std::env::remove_var("AURA_HARNESS_BIN");
+        if explicit_harness_url.is_none() {
+            std::env::remove_var("LOCAL_HARNESS_URL");
+        }
+    }
+    child
 }
 
 fn spawn_and_wait_for_health(
@@ -81,20 +88,52 @@ fn spawn_and_wait_for_health(
     match command.spawn() {
         Ok(child) => {
             let pid = child.id();
-            let deadline = std::time::Instant::now() + Duration::from_secs(10);
-            while std::time::Instant::now() < deadline {
-                if probe_http_ok(harness_url, "/health") {
-                    info!(pid, url = %harness_url, binary = %harness_binary.display(), "started managed local harness sidecar");
-                    return Some(child);
-                }
-                std::thread::sleep(Duration::from_millis(250));
+            if wait_for_harness_health(Duration::from_secs(10), Duration::from_millis(250), || {
+                probe_http_ok(harness_url, "/health")
+            }) {
+                info!(pid, url = %harness_url, binary = %harness_binary.display(), "started managed local harness sidecar");
+                return Some(child);
             }
             warn!(pid, url = %harness_url, binary = %harness_binary.display(), "managed local harness sidecar did not become healthy before timeout");
-            Some(child)
+            stop_unhealthy_local_harness(child);
+            None
         }
         Err(error) => {
             warn!(%error, binary = %harness_binary.display(), "failed to start managed local harness sidecar");
             None
+        }
+    }
+}
+
+fn wait_for_harness_health(
+    timeout: Duration,
+    poll_interval: Duration,
+    mut probe: impl FnMut() -> bool,
+) -> bool {
+    let deadline = Instant::now() + timeout;
+    while Instant::now() < deadline {
+        if probe() {
+            return true;
+        }
+        std::thread::sleep(poll_interval);
+    }
+    false
+}
+
+fn stop_unhealthy_local_harness(mut child: Child) {
+    let pid = child.id();
+    match child.try_wait() {
+        Ok(Some(_)) => {}
+        Ok(None) => {
+            if let Err(error) = child.kill() {
+                warn!(%error, pid, "failed to stop unhealthy bundled local harness sidecar");
+            }
+            if let Err(error) = child.wait() {
+                warn!(%error, pid, "failed to wait for unhealthy bundled local harness sidecar");
+            }
+        }
+        Err(error) => {
+            warn!(%error, pid, "failed to query unhealthy bundled local harness sidecar");
         }
     }
 }
@@ -153,5 +192,29 @@ pub(crate) fn stop_managed_local_harness(managed_local_harness: &mut Option<Chil
         Err(error) => {
             warn!(%error, pid = child.id(), "failed to query bundled local harness sidecar");
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::wait_for_harness_health;
+    use std::time::Duration;
+
+    #[test]
+    fn wait_for_harness_health_returns_true_when_probe_passes() {
+        assert!(wait_for_harness_health(
+            Duration::from_millis(10),
+            Duration::ZERO,
+            || true,
+        ));
+    }
+
+    #[test]
+    fn wait_for_harness_health_returns_false_after_deadline() {
+        assert!(!wait_for_harness_health(
+            Duration::ZERO,
+            Duration::ZERO,
+            || true,
+        ));
     }
 }
