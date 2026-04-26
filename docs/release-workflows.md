@@ -52,6 +52,8 @@ Purpose:
 - publish release summaries and checksums
 
 This is the automatic desktop distribution path for `main`.
+It does not build or attach mobile APKs; automatic APK publication belongs to
+the separate `Mobile Nightly GitHub Release` workflow.
 
 ### `Desktop Stable Release`
 

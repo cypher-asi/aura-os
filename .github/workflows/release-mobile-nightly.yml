@@ -97,8 +97,14 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Materialize Android upload keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > /tmp/aura-android-upload.jks
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "ANDROID_KEYSTORE_BASE64 is required to materialize the Android upload keystore." >&2
+            exit 1
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > /tmp/aura-android-upload.jks
           echo "ANDROID_KEYSTORE_PATH=/tmp/aura-android-upload.jks" >> "$GITHUB_ENV"
 
       - name: Verify Android release secrets
