@@ -10490,7 +10490,61 @@
             ],
             "confidence": "medium"
           }
-        ]
+        ],
+        "media": {
+          "schemaVersion": 1,
+          "status": "published",
+          "type": "image",
+          "assetPath": "assets/changelog/nightly/2026-04-25/entry-6-f1ce6ca10419.png",
+          "alt": "Per-instance concurrency, dropped-stream recovery, and a major module split",
+          "caption": "The bottom taskbar now uses unified icon buttons with consistent hover and edge styling, and the desktop topbar groups the sidekick toggle next to the native window controls.",
+          "width": 2560,
+          "height": 1440,
+          "bytes": 667575,
+          "sourceCommitShas": [
+            "1102674d8469baf30c319ca2bd92c10b9263dfb2",
+            "ae4801ead329f6cb70ab36edbfd26683647d028a",
+            "ed8d9f4198497ea645ff84d7cb9209035529e71f",
+            "cf39422d88c134add9073af8925a0635b963aeab",
+            "386a905b196e79021785a9ec18e1385092b8891e",
+            "510205d7227dca12afb926f24fcc0bd56b50a72d",
+            "4fd68734e5952e524b0ec83fe6a6fe36818c70df",
+            "15777df3e5ca1dfaf12de837cbd3e6d58c61e5fc",
+            "e69d5b7fc2b0f88265fb9b209fa10bfb16c5cfac",
+            "d9fb000fcba89a7876254e2d9f616c501fd24ee7",
+            "30298f00e65bd655617a3b58202e164cc0b6a688",
+            "0db6ae92feedcc31b34096c89f03c46cc3f3651d",
+            "0073ae53530accb21da56b6326929f636bde659d",
+            "385f037946441b3077f9542fd65f5ac147a7a116",
+            "298bb4cf4f70ca201a33593583d7fc558e604d5c",
+            "41c586f0674c3c3237579e2b2c137ff69df8d99c",
+            "f67f9abff8198fb7761d3bf5e054ec6af02ce99b",
+            "1c6061225553552014a05d42eb694ad223e116dd",
+            "04806b27042e1a9492943efcdfc409e4f80d4c71",
+            "6e17e330380aa15e0593b801d687abb3da012630",
+            "b4525bf68032c5549bf0c68f07e1d8367c0f9e5a",
+            "4c5768ea46caa4b1c6bc9bf13e23506b609821ec",
+            "e1ac283ca5ce65677891acfd0b3d2adeda449d77",
+            "63d4c89ab5bd9c8888355cc1b743dafcf6ca3d7c",
+            "5c51e337edee04ac97bf83ea10f70d9d9d48a0da",
+            "ee70b4b5181e7a925181c55c39cc7cf19d8e3810",
+            "dd065dd0be9bf49498547934c063051aaa5eec13",
+            "0f84019a9b930936f6f6037bb6ba83d02ae24e50",
+            "d55c704e81b67264be1044a810e932a195847735",
+            "88fd7cd0f5152d3171520d21e50d5260cb0175f4",
+            "c68a9a7c46174f3f77c4f307624a2b4e3d30ec67",
+            "3aa805a52e4b99fd270a81b37430205de54df49e",
+            "2730c7f723a9666ff58ef721aa34bbb439f76d5e",
+            "9ea2845ef306afc04f704a1daa9ff566511b94cc"
+          ],
+          "gates": {
+            "rawQuality": "accepted",
+            "rawVision": "accepted",
+            "brandedQuality": "accepted",
+            "brandedVision": "accepted"
+          },
+          "updatedAt": "2026-04-26T06:04:03.798Z"
+        }
       }
     ],
     "highlights": [
