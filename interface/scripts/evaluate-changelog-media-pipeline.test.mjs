@@ -47,7 +47,7 @@ test("resolveCaptureApiBaseUrl prefers explicit API origins", async () => {
 test("assessMediaModelQuality blocks non-Opus models from producing publishable media", () => {
   const gate = assessMediaModelQuality({
     anthropicModel: "claude-sonnet-4-6",
-    browserUseModel: "claude-opus-4.6",
+    browserUseModel: "claude-opus-4.7",
     visionJudgeModel: "claude-haiku-4-5",
   });
 

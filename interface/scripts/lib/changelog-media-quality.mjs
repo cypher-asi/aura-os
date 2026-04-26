@@ -409,7 +409,7 @@ function evaluateVisionJudgment(judgment, { stage = "raw" } = {}) {
 
 export async function judgeChangelogMediaWithOpenAI({
   apiKey,
-  model = "gpt-5.2",
+  model = "gpt-5.5",
   imagePath,
   referenceImagePath = null,
   candidate,

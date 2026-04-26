@@ -261,7 +261,7 @@ test("judgeChangelogMediaWithOpenAI uses Responses image input and strict JSON s
   let requestBody = null;
   const report = await judgeChangelogMediaWithOpenAI({
     apiKey: "test-key",
-    model: "gpt-5.2",
+    model: "gpt-5.5",
     imagePath: screenshotPath,
     candidate: {
       entryId: "entry-1",
@@ -302,7 +302,7 @@ test("judgeChangelogMediaWithOpenAI uses Responses image input and strict JSON s
   assert.equal(report.ok, true);
   assert.equal(report.status, "accepted");
   assert.equal(report.judgment.score, 0.92);
-  assert.equal(requestBody.model, "gpt-5.2");
+  assert.equal(requestBody.model, "gpt-5.5");
   assert.equal(requestBody.input[0].content[0].type, "input_text");
   assert.equal(requestBody.input[0].content[1].type, "input_image");
   assert.match(requestBody.input[0].content[1].image_url, /^data:image\/png;base64,/);

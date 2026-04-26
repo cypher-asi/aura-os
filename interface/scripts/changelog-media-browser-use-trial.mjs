@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 import { buildAuraNavigationContract } from "./lib/aura-navigation-contract.mjs";
 import { loadLocalEnv } from "./lib/load-local-env.mjs";
 
-export const DEFAULT_BROWSER_USE_MODEL = "claude-opus-4.6";
+export const DEFAULT_BROWSER_USE_MODEL = "claude-opus-4.7";
 export const DEFAULT_BROWSER_USE_TIMEOUT_MS = 10 * 60 * 1000;
 export const DEFAULT_BROWSER_USE_INTERVAL_MS = 2 * 1000;
 const DEFAULT_DESKTOP_VIEWPORT = Object.freeze({ width: 1920, height: 1080 });
