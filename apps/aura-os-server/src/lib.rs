@@ -488,6 +488,50 @@ pub mod phase7_test_support {
     /// ([`crate::reconciler::DEFAULT_MAX_RETRIES_PER_TASK`]) so callers
     /// that don't yet persist a per-task budget stay in lockstep with
     /// `handlers::dev_loop`'s `MAX_RETRIES_PER_TASK`.
+    /// Extract the structured provider-failure context that the dev loop
+    /// plumbs onto `task_failed` events, in the exact shape the UI sees:
+    /// a JSON object with optional `provider_request_id`, `model`,
+    /// `sse_error_type`, and `message_id` siblings next to the human-
+    /// readable `reason`.
+    ///
+    /// `event_sibling_fields` is merged into the synthetic `task_failed`
+    /// event *before* context extraction, so callers can exercise both
+    /// the "harness emitted structured siblings" path and the
+    /// "classic reason-string-only" fallback through a single entry
+    /// point. Pass `None` to exercise the fallback path on its own.
+    ///
+    /// The returned payload is the same object the UI decodes (see
+    /// `interface/src/stores/task-stream-bootstrap.ts::handleTaskFailed`),
+    /// so integration tests can assert against the full wire shape
+    /// without reaching into private handler internals.
+    pub fn task_failed_payload_with_context(
+        task_id: &str,
+        reason: &str,
+        event_sibling_fields: Option<&serde_json::Map<String, serde_json::Value>>,
+    ) -> serde_json::Value {
+        let mut synthetic = serde_json::json!({
+            "task_id": task_id,
+            "reason": reason,
+        });
+        if let Some(extra) = event_sibling_fields {
+            if let Some(obj) = synthetic.as_object_mut() {
+                for (k, v) in extra {
+                    obj.insert(k.clone(), v.clone());
+                }
+            }
+        }
+        let ctx = crate::handlers::dev_loop::extract_task_failure_context(
+            &synthetic,
+            Some(reason),
+        );
+        if ctx.has_any() {
+            if let Some(obj) = synthetic.as_object_mut() {
+                ctx.merge_into(obj);
+            }
+        }
+        synthetic
+    }
+
     pub fn reconcile_decision(
         git_steps: &[serde_json::Value],
         failure_class: &str,

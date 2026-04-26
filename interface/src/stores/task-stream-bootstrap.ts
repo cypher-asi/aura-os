@@ -368,12 +368,29 @@ function handleTaskFailed(e: AuraEventOfType<typeof EventType.TaskFailed>): void
     (typeof raw.error === "string" && raw.error) ||
     (typeof raw.message === "string" && raw.message) ||
     null;
+  // Structured provider context plumbed by the server's
+  // `extract_task_failure_context` as sibling fields on the event.
+  // Forwarded into the panel store so `CompletedTaskOutput` can
+  // render a compact `req=… · model=… · type=…` label under the
+  // reason. We also accept the historical `request_id` /
+  // `error_type` / `msg_id` aliases so a pre-Commit-D server still
+  // round-trips cleanly through a newer UI.
+  const pickStr = (k: string): string | undefined =>
+    typeof raw[k] === "string" && (raw[k] as string).trim().length > 0
+      ? (raw[k] as string).trim()
+      : undefined;
+  const failureContext = {
+    providerRequestId: pickStr("provider_request_id") ?? pickStr("request_id"),
+    model: pickStr("model"),
+    sseErrorType: pickStr("sse_error_type") ?? pickStr("error_type"),
+    messageId: pickStr("message_id") ?? pickStr("msg_id"),
+  };
   finalizeStream(refs, setters, abortRef, isStreamingByTask.get(taskId) ?? false, {
     reason: "failed",
     message: reason ?? undefined,
   });
   isStreamingByTask.delete(taskId);
-  useTaskOutputPanelStore.getState().failTask(taskId, reason);
+  useTaskOutputPanelStore.getState().failTask(taskId, reason, failureContext);
   // Mirror the status into the per-task status store. A `null`
   // reason intentionally leaves the existing `liveFailReason`
   // untouched (matching the panel store's behaviour) so a synthetic

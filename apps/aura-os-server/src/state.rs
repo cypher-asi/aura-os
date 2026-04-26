@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
@@ -314,6 +314,12 @@ pub struct CachedTaskOutput {
     /// died mid-call) are harmless — they just pin a small amount of
     /// memory until the task output cache is dropped.
     pub tool_input_snapshots: HashMap<String, ToolInputSnapshotEntry>,
+    /// Set of tool-call identifiers that were observed emitting a
+    /// `write_file` / `edit_file` with an empty or missing `path` and
+    /// have *not* yet been reconciled by a subsequent successful pathed
+    /// write/edit. Kept as diagnostic state for retry observability; the
+    /// harness owns Definition-of-Done decisions.
+    pub outstanding_empty_path_write_ids: HashSet<String>,
 }
 
 /// Cached `(name, input)` pair from a `tool_call_snapshot` event,

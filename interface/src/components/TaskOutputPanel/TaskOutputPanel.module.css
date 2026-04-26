@@ -295,6 +295,29 @@
   word-break: break-word;
 }
 
+/*
+ * Compact "req=req_01 · claude-sonnet-4 · api_error" label rendered
+ * under the failure reason. Monospace so request ids line up visually,
+ * muted so the human-readable reason stays the primary content.
+ */
+.failReasonContext {
+  margin-top: 4px;
+  font-family: var(
+    --font-mono,
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    monospace
+  );
+  font-size: 10px;
+  color: color-mix(in srgb, var(--color-danger, #ef4444) 70%, var(--color-text-muted, #888));
+  opacity: 0.75;
+  user-select: text;
+  word-break: break-all;
+}
+
 /* ── Empty state ── */
 
 .emptyState {

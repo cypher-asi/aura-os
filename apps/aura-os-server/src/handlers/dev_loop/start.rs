@@ -182,6 +182,8 @@ pub(super) async fn build_start_params(
             .project
             .as_ref()
             .and_then(|project| project.git_branch.clone()),
+        prior_failure: None,
+        work_log: Vec::new(),
         installed_tools,
         installed_integrations,
     }

@@ -15,7 +15,7 @@ use aura_os_storage::UpdateTaskRequest;
 use crate::state::{AppState, CachedTaskOutput};
 
 use super::session::{end_session, record_task_worked};
-use super::signals::is_insufficient_credits_failure_for_tests;
+use super::signals::{extract_task_failure_context, is_insufficient_credits_failure_for_tests};
 use super::types::ForwarderContext;
 
 /// Publish an event into both the legacy `event_broadcast` firehose and
@@ -336,13 +336,22 @@ async fn record_event_side_effects(
         .and_then(|value| value.as_str())
         .map(str::to_string)
         .or(fallback_task_id);
-    let enriched = enrich_event(
+    let mut enriched = enrich_event(
         event.clone(),
         project_id,
         agent_instance_id,
         task_id.as_deref(),
         session_id,
     );
+    if event_type == "task_failed" {
+        let reason = extract_task_failure_reason(&enriched);
+        let ctx = extract_task_failure_context(&enriched, reason.as_deref());
+        if ctx.has_any() {
+            if let Some(object) = enriched.as_object_mut() {
+                ctx.merge_into(object);
+            }
+        }
+    }
     let _ = state.event_broadcast.send(enriched.clone());
     state
         .event_hub

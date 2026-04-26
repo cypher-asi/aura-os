@@ -128,6 +128,65 @@ describe("task-stream-bootstrap: handleTaskFailed reason extraction", () => {
     expect(entry.status).toBe("failed");
     expect(entry.failureReason).toBeUndefined();
   });
+
+  it("captures the structured provider failure context from sibling fields", () => {
+    seedActiveTask("t1");
+    dispatch({
+      type: EventType.TaskFailed,
+      content: {
+        task_id: "t1",
+        reason: "stream terminated",
+        provider_request_id: "req_01ABC",
+        model: "claude-sonnet-4",
+        sse_error_type: "api_error",
+        message_id: "msg_01",
+      },
+      project_id: "p1",
+    } as unknown as AuraEvent);
+
+    const entry = useTaskOutputPanelStore.getState().tasks[0];
+    expect(entry.failureContext?.providerRequestId).toBe("req_01ABC");
+    expect(entry.failureContext?.model).toBe("claude-sonnet-4");
+    expect(entry.failureContext?.sseErrorType).toBe("api_error");
+    expect(entry.failureContext?.messageId).toBe("msg_01");
+  });
+
+  it("accepts legacy request_id / error_type / msg_id aliases on the event", () => {
+    // Pre-Commit-D servers (and any downstream that didn't migrate to
+    // the new names yet) emit `request_id` / `error_type` / `msg_id`
+    // as siblings. Keep them round-tripping so a newer UI still shows
+    // the label when talking to an older server.
+    seedActiveTask("t1");
+    dispatch({
+      type: EventType.TaskFailed,
+      content: {
+        task_id: "t1",
+        reason: "stream terminated",
+        request_id: "req_legacy",
+        error_type: "overloaded_error",
+        msg_id: "msg_legacy",
+      },
+      project_id: "p1",
+    } as unknown as AuraEvent);
+
+    const entry = useTaskOutputPanelStore.getState().tasks[0];
+    expect(entry.failureContext?.providerRequestId).toBe("req_legacy");
+    expect(entry.failureContext?.sseErrorType).toBe("overloaded_error");
+    expect(entry.failureContext?.messageId).toBe("msg_legacy");
+  });
+
+  it("leaves failureContext undefined when no structured fields are present", () => {
+    seedActiveTask("t1");
+    dispatch({
+      type: EventType.TaskFailed,
+      content: { task_id: "t1", reason: "plain reason" },
+      project_id: "p1",
+    } as unknown as AuraEvent);
+
+    expect(
+      useTaskOutputPanelStore.getState().tasks[0].failureContext,
+    ).toBeUndefined();
+  });
 });
 
 describe("task-stream-bootstrap: task_retrying resolves pending tool cards", () => {
