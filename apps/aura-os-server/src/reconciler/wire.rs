@@ -1,4 +1,4 @@
-use super::{ReconcileAction, TerminalReason};
+use super::{DoneReason, ReconcileAction, TerminalReason};
 
 impl ReconcileAction {
     pub fn to_json(&self) -> serde_json::Value {
@@ -18,6 +18,10 @@ impl ReconcileAction {
                 "action": "mark_terminal",
                 "reason": reason.as_label(),
             }),
+            Self::MarkDone { reason } => serde_json::json!({
+                "action": "mark_done",
+                "reason": reason.as_label(),
+            }),
             Self::Noop => serde_json::json!({ "action": "noop" }),
         }
     }
@@ -31,6 +35,14 @@ impl TerminalReason {
             Self::CommitFailed => "commit_failed",
             Self::DecomposeDisabled => "decompose_disabled",
             Self::CompletionContract => "completion_contract",
+        }
+    }
+}
+
+impl DoneReason {
+    fn as_label(&self) -> &'static str {
+        match self {
+            Self::TestEvidenceAccepted => "test_evidence_accepted",
         }
     }
 }

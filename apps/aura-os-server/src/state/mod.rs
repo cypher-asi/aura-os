@@ -46,7 +46,9 @@ pub(crate) use caches::{
     CachedAgentDiscovery, CreditCache, CreditCacheRef, TaskOutputCache, ValidationCache,
     AGENT_DISCOVERY_TTL,
 };
-pub use caches::{CachedSession, CachedTaskOutput};
+#[cfg(test)]
+pub(crate) use caches::CACHE_ENTRY_MAX_AGE;
+pub use caches::{CachedSession, CachedTaskOutput, TestPassEvidence};
 
 #[cfg(test)]
 mod tests;

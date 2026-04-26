@@ -61,6 +61,7 @@ fn recommended_action_from_state(
     recovery_point: Option<&TaskRecoveryPoint>,
     latest_signal: Option<&HarnessSignal>,
     has_live_automaton: bool,
+    has_test_pass_evidence: bool,
 ) -> Option<serde_json::Value> {
     let effective_state;
     let state_ref = match sync_state {
@@ -74,6 +75,7 @@ fn recommended_action_from_state(
     inputs.recovery_point = recovery_point;
     inputs.latest_signal = latest_signal;
     inputs.has_live_automaton = has_live_automaton;
+    inputs.has_test_pass_evidence = has_test_pass_evidence;
     let action = decide_reconcile_action(&inputs);
     (!matches!(action, ReconcileAction::Noop)).then(|| action.to_json())
 }
@@ -219,10 +221,16 @@ pub(crate) fn task_output_from_events(
     }
 
     let latest_signal = latest_signal_for_task(task_id_str, events);
+    // Persisted-event reconstruction has no access to the live cache,
+    // so test-pass evidence is implicitly absent here. The override
+    // path runs from the streaming side-effects; this advisory render
+    // path only needs to mirror the harness verdict for already-failed
+    // tasks the user is inspecting.
     let recommended_action = recommended_action_from_state(
         sync_state.as_ref(),
         recovery_point.as_ref(),
         latest_signal.as_ref(),
+        false,
         false,
     );
     let response = TaskOutputResponse {
@@ -340,11 +348,13 @@ pub(crate) async fn get_task_output(
                     (!entry.git_steps.is_empty()).then(|| derive_sync_state(&entry.git_steps))
                 });
             let recovery_point = sync_state.as_ref().and_then(derive_recovery_point);
+            let has_test_pass_evidence = entry.test_pass_evidence.is_some();
             let recommended_action = recommended_action_from_state(
                 sync_state.as_ref(),
                 recovery_point.as_ref(),
                 None,
                 true,
+                has_test_pass_evidence,
             );
             let response = TaskOutputResponse {
                 output: entry.live_output.clone(),

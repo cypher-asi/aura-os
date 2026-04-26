@@ -400,6 +400,31 @@ pub fn reconcile_decision(
     has_live_automaton: bool,
     auto_decompose_disabled: bool,
 ) -> serde_json::Value {
+    reconcile_decision_with_test_evidence(
+        git_steps,
+        failure_class,
+        retry_count,
+        max_retries,
+        has_live_automaton,
+        auto_decompose_disabled,
+        false,
+    )
+}
+
+/// Same as [`reconcile_decision`] but lets tests opt the
+/// "tests-as-truth" gate on by passing `has_test_pass_evidence: true`.
+/// When the failure is a `CompletionContract`, this rewrites the
+/// terminal verdict into a successful `mark_done` with reason
+/// `test_evidence_accepted`. Other failure classes are unaffected.
+pub fn reconcile_decision_with_test_evidence(
+    git_steps: &[serde_json::Value],
+    failure_class: &str,
+    retry_count: u32,
+    max_retries: u32,
+    has_live_automaton: bool,
+    auto_decompose_disabled: bool,
+    has_test_pass_evidence: bool,
+) -> serde_json::Value {
     let sync_state = crate::sync_state::derive_sync_state(git_steps);
     let recovery_point = crate::sync_state::derive_recovery_point(&sync_state);
     let failure_signal = match failure_class {
@@ -442,5 +467,83 @@ pub fn reconcile_decision(
     inputs.latest_signal = failure_signal.as_ref();
     inputs.has_live_automaton = has_live_automaton;
     inputs.auto_decompose_disabled = auto_decompose_disabled;
+    inputs.has_test_pass_evidence = has_test_pass_evidence;
     crate::reconciler::decide_reconcile_action(&inputs).to_json()
+}
+
+/// Re-export of the test-evidence detector so external integration
+/// tests can exercise the same recognizer the dev-loop uses without
+/// reaching into private handler internals.
+pub fn is_successful_test_run_event(event_type: &str, event: &serde_json::Value) -> bool {
+    crate::handlers::dev_loop::is_successful_test_run_event(event_type, event)
+}
+
+/// Re-export of the recognizer label so tests can verify which runner
+/// satisfied [`is_successful_test_run_event`].
+pub fn recognized_test_runner_label(command: &str) -> Option<&'static str> {
+    crate::handlers::dev_loop::recognized_test_runner_label(command)
+}
+
+/// Replay a raw sequence of streamed `tool_call_*` events through the
+/// dev-loop's empty-path-writes bookkeeping and ask the harness-owned
+/// completion gate for a verdict.
+///
+/// The harness now owns Definition-of-Done (see
+/// `completion_validation_failure_reason_with_empty_path_writes_for_tests`),
+/// so this helper always returns `None` for callers that pass through
+/// recovered or fully-evidenced histories — mirroring the deferred
+/// behaviour of the live gate. Kept as a public surface so existing
+/// regression tests can still call it without compile breakage after
+/// the production helpers were split out across modules.
+///
+/// The replay is performed against the `outstanding_empty_path_write_ids`
+/// bookkeeping recorded in [`crate::state::CachedTaskOutput`]: empty-
+/// path writes are recorded by tool-call id and reconciled when a
+/// subsequent successful pathed write/edit lands. The reconciled count
+/// is forwarded to the underlying gate, which currently treats it as
+/// diagnostic history only.
+pub fn replay_task_completion_gate(
+    events: &[(String, serde_json::Value)],
+    live_output: &str,
+    files_changed: &[&str],
+    n_build_steps: usize,
+    n_test_steps: usize,
+    n_format_steps: usize,
+    n_lint_steps: usize,
+) -> Option<String> {
+    use std::collections::HashSet;
+    let mut outstanding: HashSet<String> = HashSet::new();
+    let mut had_pathed_write_or_edit = false;
+    for (event_type, event) in events {
+        let id = event
+            .get("id")
+            .and_then(|v| v.as_str())
+            .map(str::to_string);
+        if is_empty_path_write_event(event_type, event) {
+            if let Some(id) = id.clone() {
+                outstanding.insert(id);
+            }
+            continue;
+        }
+        if event_type == "tool_call_completed" {
+            if let Some((_path, _op)) =
+                crate::handlers::dev_loop::successful_write_event_path_for_tests(event_type, event)
+            {
+                had_pathed_write_or_edit = true;
+            }
+        }
+    }
+    if had_pathed_write_or_edit {
+        outstanding.clear();
+    }
+    let n_empty_path = outstanding.len() as u32;
+    completion_validation_reason_with_empty_path_writes(
+        live_output,
+        files_changed,
+        n_build_steps,
+        n_test_steps,
+        n_format_steps,
+        n_lint_steps,
+        n_empty_path,
+    )
 }

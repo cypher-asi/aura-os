@@ -244,7 +244,14 @@ fn task_21_empty_path_misfire_then_retry_passes_the_gate() {
 }
 
 #[test]
-fn empty_path_misfire_without_recovery_still_fails_the_gate() {
+fn empty_path_misfire_without_recovery_defers_to_harness_dod() {
+    // Pre-existing test, updated to reflect the harness-owns-DoD
+    // design (`completion_validation_failure_reason_with_empty_path_writes_for_tests`
+    // is intentionally inert — see the docstring on that function in
+    // `dev_loop/signals.rs`). aura-os keeps empty-path-write history
+    // for diagnostic display only; the harness decides whether the
+    // run satisfied DoD. The matching positive case lives at
+    // `completion_gate_accepts_harness_terminal_state_despite_empty_path_write_history`.
     let events = vec![
         (
             "tool_call_started".to_string(),
@@ -271,11 +278,12 @@ fn empty_path_misfire_without_recovery_still_fails_the_gate() {
         1,
         1,
         1,
-    )
-    .expect("unreconciled misfire must fail the gate");
+    );
     assert!(
-        reason.contains("empty or missing \"path\""),
-        "rejection must name the empty-path failure mode, got: {reason}"
+        reason.is_none(),
+        "aura-os defers DoD to the harness; an unreconciled empty-path write \
+         is diagnostic history, not a DoD-blocking failure. Got rejection: \
+         {reason:?}"
     );
 }
 
@@ -293,4 +301,179 @@ fn completion_gate_accepts_source_edit_without_local_verification_evidence() {
         reason.is_none(),
         "aura-os must not reject source edits based on local verification counters"
     );
+}
+
+// ---------------------------------------------------------------------------
+// Tests-as-truth completion gate
+//
+// Regression for task `4.4 Deterministic CBOR AAD builder` (run id
+// 9995d958-c193-4998-b5d3-d5b9f4092a45), which failed with
+// "agent execution error: task completed without any file operations —
+// completion not verified" even though the implementation already
+// existed and was covered by tests in `crates/zero-crypto`.
+//
+// The fix introduces a third valid completion path next to file-edit
+// evidence and explicit `no_changes_needed: true`: a successful
+// invocation of a recognized test runner (cargo test / pnpm vitest /
+// pytest / ...) accumulated during the run is itself accepted as
+// completion evidence. The reconciler then bridges the harness
+// `CompletionContract` failure into a `mark_done` action with reason
+// `test_evidence_accepted` rather than a terminal failure.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_runner_detector_accepts_canonical_passing_invocations() {
+    for cmd in [
+        "cargo test -p zero-crypto",
+        "cargo nextest run --workspace",
+        "pnpm vitest run",
+        "pnpm jest --runInBand",
+        "pytest -xvs tests/",
+        "python -m pytest -q",
+        "go test ./...",
+        "mix test",
+        "bun test",
+        "yarn test",
+        "pnpm test",
+        "npm test --silent",
+    ] {
+        let event = json!({
+            "name": "run_command",
+            "input": { "command": cmd },
+            "output": { "exit_code": 0 },
+        });
+        assert!(
+            tsp::is_successful_test_run_event("tool_call_completed", &event),
+            "{cmd}: must register as test-pass evidence"
+        );
+        assert!(
+            tsp::recognized_test_runner_label(cmd).is_some(),
+            "{cmd}: must produce a stable runner label"
+        );
+    }
+}
+
+#[test]
+fn test_runner_detector_rejects_build_only_and_failing_runs() {
+    let no_run = json!({
+        "name": "run_command",
+        "input": { "command": "cargo test --no-run" },
+        "output": { "exit_code": 0 },
+    });
+    assert!(
+        !tsp::is_successful_test_run_event("tool_call_completed", &no_run),
+        "`cargo test --no-run` compiles tests but does not run them — must not gate completion"
+    );
+
+    let cargo_check = json!({
+        "name": "run_command",
+        "input": { "command": "cargo check --workspace" },
+        "output": { "exit_code": 0 },
+    });
+    assert!(
+        !tsp::is_successful_test_run_event("tool_call_completed", &cargo_check),
+        "type-check-only commands must not gate completion"
+    );
+
+    let failing = json!({
+        "name": "run_command",
+        "input": { "command": "cargo test" },
+        "output": { "exit_code": 101 },
+    });
+    assert!(
+        !tsp::is_successful_test_run_event("tool_call_completed", &failing),
+        "non-zero exit must disqualify the evidence"
+    );
+
+    let errored = json!({
+        "name": "run_command",
+        "is_error": true,
+        "input": { "command": "cargo test" },
+        "output": { "exit_code": 0 },
+    });
+    assert!(
+        !tsp::is_successful_test_run_event("tool_call_completed", &errored),
+        "tool-call error flag must disqualify the evidence even if exit_code is 0"
+    );
+}
+
+#[test]
+fn test_runner_detector_ignores_non_shell_tool_calls() {
+    // `write_file` adapters occasionally carry a synthetic `command`
+    // string in their input; the gate must ignore them so we don't
+    // accidentally accept "wrote a file with the word `cargo test` in
+    // it" as a passing test run.
+    let write = json!({
+        "name": "write_file",
+        "input": { "command": "cargo test", "path": "src/lib.rs" },
+        "output": { "exit_code": 0 },
+    });
+    assert!(!tsp::is_successful_test_run_event("tool_call_completed", &write));
+}
+
+#[test]
+fn reconciler_overrides_completion_contract_when_test_evidence_present() {
+    // Harness verdict says CompletionContract; without evidence we mark
+    // the task terminal as "completion_contract".
+    let without_evidence = tsp::reconcile_decision_with_test_evidence(
+        &[],
+        "completion_contract",
+        0,
+        3,
+        false,
+        false,
+        /* has_test_pass_evidence */ false,
+    );
+    assert_eq!(
+        without_evidence,
+        json!({
+            "action": "mark_terminal",
+            "reason": "completion_contract",
+        }),
+        "no test evidence: keep harness verdict as a terminal completion-contract failure"
+    );
+
+    // With evidence we override into a successful no-edit completion.
+    let with_evidence = tsp::reconcile_decision_with_test_evidence(
+        &[],
+        "completion_contract",
+        0,
+        3,
+        false,
+        false,
+        /* has_test_pass_evidence */ true,
+    );
+    assert_eq!(
+        with_evidence,
+        json!({
+            "action": "mark_done",
+            "reason": "test_evidence_accepted",
+        }),
+        "test-pass evidence must override CompletionContract into a Done transition"
+    );
+}
+
+#[test]
+fn reconciler_does_not_override_other_failure_classes_with_test_evidence() {
+    // Test-pass evidence is specifically for the "no file edits"
+    // contract failure. It must not paper over other failure classes.
+    for class in ["truncation", "rate_limited", "push_timeout", "other"] {
+        let decision = tsp::reconcile_decision_with_test_evidence(
+            &[],
+            class,
+            0,
+            3,
+            false,
+            false,
+            /* has_test_pass_evidence */ true,
+        );
+        let action = decision
+            .get("action")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        assert_ne!(
+            action, "mark_done",
+            "{class}: test-pass evidence must not override non-completion-contract failures"
+        );
+    }
 }

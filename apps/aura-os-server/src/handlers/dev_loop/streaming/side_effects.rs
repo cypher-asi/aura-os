@@ -4,16 +4,19 @@
 
 use std::str::FromStr;
 
-use tracing::warn;
+use tracing::{info, warn};
 
-use aura_os_core::{AgentInstanceId, ProjectId, SessionId, TaskId};
+use aura_os_core::{AgentInstanceId, ProjectId, SessionId, TaskId, TaskStatus};
 use aura_os_events::{DomainEvent, LegacyJsonEvent};
 use aura_os_storage::UpdateTaskRequest;
 
-use crate::state::{AppState, CachedTaskOutput};
+use crate::state::{AppState, CachedTaskOutput, TestPassEvidence};
 
 use super::super::session::record_task_worked;
-use super::super::signals::extract_task_failure_context;
+use super::super::signals::{
+    extract_task_failure_context, is_completion_contract_failure_for_tests,
+    is_successful_test_run_event, recognized_test_runner_label,
+};
 
 #[allow(clippy::too_many_arguments)]
 pub(super) async fn record_event_side_effects(
@@ -47,7 +50,36 @@ pub(super) async fn record_event_side_effects(
             }
         }
     }
-    let _ = state.event_broadcast.send(enriched.clone());
+
+    // Tests-as-truth override: if this is a CompletionContract
+    // `task_failed` and we accumulated successful test-runner evidence
+    // earlier in the run, transition the task to Done in storage and
+    // **replace** the broadcast payload with a synthetic
+    // `task_completed`. Doing this before any broadcast avoids
+    // briefly showing the failure to live subscribers when we already
+    // know we're going to override it.
+    let mut effective_event_type: &str = event_type;
+    let mut broadcast_payload = enriched;
+    if event_type == "task_failed" {
+        if let (Some(task_id_str), Some(jwt)) = (task_id.as_deref(), jwt) {
+            if let Some(synthetic) = maybe_apply_test_evidence_override(
+                state,
+                project_id,
+                agent_instance_id,
+                task_id_str,
+                jwt,
+                &event,
+                session_id,
+            )
+            .await
+            {
+                broadcast_payload = synthetic;
+                effective_event_type = "task_completed";
+            }
+        }
+    }
+
+    let _ = state.event_broadcast.send(broadcast_payload.clone());
     state
         .event_hub
         .publish(DomainEvent::LegacyJson(LegacyJsonEvent {
@@ -55,14 +87,14 @@ pub(super) async fn record_event_side_effects(
             agent_instance_id: Some(agent_instance_id),
             session_id,
             loop_id: None,
-            payload: enriched,
+            payload: broadcast_payload,
         }));
 
     apply_event_side_effect(
         state,
         project_id,
         agent_instance_id,
-        event_type,
+        effective_event_type,
         task_id.as_deref(),
         &event,
         jwt,
@@ -121,6 +153,11 @@ async fn apply_event_side_effect(
                 persist_task_failure_reason(state, jwt, task_id, event).await;
             }
         }
+        "tool_call_completed" => {
+            if let Some(task_id) = task_id {
+                record_test_pass_evidence(state, project_id, task_id, event).await;
+            }
+        }
         "text_delta" => {
             if let Some((task_id, text)) = task_id.zip(event_text(event)) {
                 append_task_output(state, project_id, task_id, text).await;
@@ -133,6 +170,158 @@ async fn apply_event_side_effect(
         }
         _ => {}
     }
+}
+
+/// Accumulate evidence when the harness reports a successful test-runner
+/// invocation. Idempotent: replays of the same event reset the
+/// `recorded_at` timestamp but do not double-count anything.
+async fn record_test_pass_evidence(
+    state: &AppState,
+    project_id: ProjectId,
+    task_id: &str,
+    event: &serde_json::Value,
+) {
+    if !is_successful_test_run_event("tool_call_completed", event) {
+        return;
+    }
+    let Some(key) = parse_task_key(project_id, task_id) else {
+        return;
+    };
+    let command = event
+        .get("input")
+        .and_then(|input| {
+            input
+                .get("command")
+                .or_else(|| input.get("cmd"))
+                .or_else(|| input.get("shell_command"))
+        })
+        .and_then(|v| v.as_str())
+        .map(str::to_string)
+        .or_else(|| {
+            event
+                .get("input")
+                .and_then(|input| input.get("args"))
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str())
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                })
+        })
+        .unwrap_or_default();
+    let Some(runner) = recognized_test_runner_label(&command) else {
+        return;
+    };
+    let evidence = TestPassEvidence {
+        runner,
+        command,
+        recorded_at: chrono::Utc::now().to_rfc3339(),
+    };
+    let mut cache = state.task_output_cache.lock().await;
+    let entry = cache.entry(key).or_default();
+    entry.test_pass_evidence = Some(evidence);
+}
+
+/// Override path for `task_failed` events whose reason matches the
+/// completion-contract classifier. Returns `Some(synthetic)` when the
+/// task was transitioned to `Done` and the caller should broadcast the
+/// returned `task_completed` payload **instead** of the original
+/// failure event. Returns `None` when no override applied (no
+/// evidence, override already fired, classifier rejected the reason,
+/// storage unavailable, bridge transition failed, ...), in which case
+/// the caller continues with normal failure persistence and broadcast.
+///
+/// `_session_id` is reserved for routing — the caller already plumbs
+/// it through the broadcast envelope, so the synthetic payload only
+/// needs the in-payload `task_id` / `project_id` keys to satisfy the
+/// existing UI handlers.
+async fn maybe_apply_test_evidence_override(
+    state: &AppState,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+    task_id: &str,
+    jwt: &str,
+    event: &serde_json::Value,
+    _session_id: Option<SessionId>,
+) -> Option<serde_json::Value> {
+    let reason = extract_task_failure_reason(event)?;
+    if !is_completion_contract_failure_for_tests(&reason) {
+        return None;
+    }
+
+    let key = parse_task_key(project_id, task_id)?;
+
+    let evidence = {
+        let mut cache = state.task_output_cache.lock().await;
+        let entry = cache.get_mut(&key)?;
+        if entry.completion_override_applied {
+            return None;
+        }
+        let evidence = entry.test_pass_evidence.clone()?;
+        // Optimistically claim the override slot before issuing the
+        // storage transition so a concurrent re-emit (WS reconnect)
+        // doesn't enter the bridge twice.
+        entry.completion_override_applied = true;
+        evidence
+    };
+
+    let storage = state.storage_client.as_ref()?;
+
+    info!(
+        %task_id,
+        runner = evidence.runner,
+        command = %evidence.command,
+        "overriding harness CompletionContract failure with test-pass evidence"
+    );
+
+    if let Err(error) =
+        aura_os_tasks::safe_transition(storage, jwt, task_id, TaskStatus::Done).await
+    {
+        warn!(
+            %task_id,
+            %error,
+            "failed to bridge task to Done after test-evidence override; \
+             leaving harness verdict in place"
+        );
+        // Re-arm the override flag so a subsequent retry can try again
+        // rather than silently swallowing the failure.
+        let mut cache = state.task_output_cache.lock().await;
+        if let Some(entry) = cache.get_mut(&key) {
+            entry.completion_override_applied = false;
+        }
+        return None;
+    }
+
+    let notes = format!(
+        "Completed via passing tests ({}). Command: `{}`",
+        evidence.runner, evidence.command
+    );
+    let update = UpdateTaskRequest {
+        execution_notes: Some(notes.clone()),
+        ..Default::default()
+    };
+    if let Err(error) = storage.update_task(task_id, jwt, &update).await {
+        warn!(
+            %task_id,
+            %error,
+            "failed to persist test-evidence execution_notes"
+        );
+    }
+
+    Some(serde_json::json!({
+        "type": "task_completed",
+        "task_id": task_id,
+        "project_id": project_id.to_string(),
+        "agent_instance_id": agent_instance_id.to_string(),
+        "outcome": "test_evidence_accepted",
+        "execution_notes": notes,
+        "test_pass_evidence": {
+            "runner": evidence.runner,
+            "command": evidence.command,
+            "recorded_at": evidence.recorded_at,
+        },
+    }))
 }
 
 /// Extract the fail reason from a `task_failed` event. Checks the same

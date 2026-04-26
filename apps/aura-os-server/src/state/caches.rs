@@ -35,7 +35,7 @@ pub(crate) fn clear_zero_auth_session(store: &SettingsStore) {
 }
 
 /// Maximum age before a cached entry is considered expired and eligible for eviction.
-const CACHE_ENTRY_MAX_AGE: std::time::Duration = std::time::Duration::from_secs(10 * 60);
+pub(crate) const CACHE_ENTRY_MAX_AGE: std::time::Duration = std::time::Duration::from_secs(10 * 60);
 
 /// How often the background eviction task runs.
 const CACHE_EVICTION_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5 * 60);
@@ -143,6 +143,35 @@ pub struct CachedTaskOutput {
     /// write/edit. Kept as diagnostic state for retry observability; the
     /// harness owns Definition-of-Done decisions.
     pub outstanding_empty_path_write_ids: HashSet<String>,
+    /// Most recent successful test-runner invocation observed in the
+    /// stream (cargo test / pnpm vitest / pytest / ...). When set, the
+    /// completion gate accepts a `task_done` without file edits as a
+    /// successful completion via test-pass evidence — see
+    /// [`super::super::handlers::dev_loop::signals::is_successful_test_run_event`].
+    pub test_pass_evidence: Option<TestPassEvidence>,
+    /// True once the dev-loop's `CompletionContract` override has fired
+    /// for this task (we transitioned the task to `Done` on the back of
+    /// `test_pass_evidence`). Kept so a subsequent `task_failed` re-emit
+    /// from a reconnect doesn't re-run the bridge or double-emit a
+    /// synthetic `task_completed`.
+    pub completion_override_applied: bool,
+}
+
+/// Snapshot of the most recent successful test-runner invocation that
+/// the dev-loop observed for a task. Stored on [`CachedTaskOutput`] and
+/// projected into the synthetic `task_completed` event when the gate
+/// accepts a no-edit completion via test-pass evidence.
+#[derive(Clone, Debug, Default)]
+pub struct TestPassEvidence {
+    /// Stable runner label from
+    /// `signals::recognized_test_runner_label` — e.g. `"cargo test"`,
+    /// `"vitest"`, `"pytest"`. Used in UI strings and persisted notes.
+    pub runner: &'static str,
+    /// Verbatim command text the harness passed to the shell tool, so
+    /// retrospection can verify *which* test target was exercised.
+    pub command: String,
+    /// Wall-clock UTC timestamp (RFC 3339) of when the evidence landed.
+    pub recorded_at: String,
 }
 
 /// Cached `(name, input)` pair from a `tool_call_snapshot` event,

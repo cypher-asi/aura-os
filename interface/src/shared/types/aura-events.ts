@@ -414,6 +414,19 @@ export type AuraEvent = AuraEventBase & (
   | { type: typeof EventType.TaskCompleted; content: {
       task_id: string;
       task_title?: string;
+      /**
+       * Why the task was treated as complete. Recognised values:
+       *   - `"insufficient_credits"` — credits-exhaustion shutdown (see
+       *     `dev_loop/streaming/credits.rs`).
+       *   - `"test_evidence_accepted"` — the harness reported a
+       *     `CompletionContract` failure (no file edits, no
+       *     `no_changes_needed: true`) but the dev-loop observed at
+       *     least one successful test-runner invocation during the run,
+       *     so the server bridged the task to `Done` instead. The
+       *     synthetic event carries `test_pass_evidence` describing
+       *     which runner satisfied the gate.
+       *   - any other string — open-ended status the harness emitted.
+       */
       outcome?: string;
       execution_notes?: string;
       duration_ms?: number;
@@ -425,6 +438,16 @@ export type AuraEvent = AuraEventBase & (
       model?: string;
       parse_retries?: number;
       build_fix_attempts?: number;
+      /**
+       * Present only when `outcome === "test_evidence_accepted"`.
+       * Identifies the test-runner invocation the gate accepted as
+       * proof of completion.
+       */
+      test_pass_evidence?: {
+        runner: string;
+        command: string;
+        recorded_at: string;
+      };
     } }
   | { type: typeof EventType.TaskFailed; content: {
       task_id: string;

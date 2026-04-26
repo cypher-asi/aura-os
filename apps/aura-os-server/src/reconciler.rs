@@ -15,6 +15,12 @@ pub struct ReconcileInputs<'a> {
     pub max_retries: u32,
     pub has_live_automaton: bool,
     pub auto_decompose_disabled: bool,
+    /// True when the dev-loop accumulated at least one successful
+    /// test-runner invocation (cargo test / pnpm vitest / pytest /
+    /// ...) for this task. The "tests-as-truth" gate uses this to
+    /// override a `CompletionContract` failure into a successful
+    /// no-edit completion: passing tests are themselves verification.
+    pub has_test_pass_evidence: bool,
 }
 
 impl<'a> ReconcileInputs<'a> {
@@ -27,6 +33,7 @@ impl<'a> ReconcileInputs<'a> {
             max_retries: DEFAULT_MAX_RETRIES_PER_TASK,
             has_live_automaton: false,
             auto_decompose_disabled: false,
+            has_test_pass_evidence: false,
         }
     }
 
@@ -47,6 +54,13 @@ pub enum ReconcileAction {
     MarkTerminal {
         reason: TerminalReason,
     },
+    /// Tests-as-truth: the harness reported a `CompletionContract`
+    /// failure (no file edits, no `no_changes_needed: true`) but the
+    /// dev-loop accumulated successful test-runner evidence during the
+    /// run, so the task is bridged to `Done` instead of failing.
+    MarkDone {
+        reason: DoneReason,
+    },
     Noop,
 }
 
@@ -57,6 +71,14 @@ pub enum TerminalReason {
     CommitFailed,
     DecomposeDisabled,
     CompletionContract,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum DoneReason {
+    /// Successful test-runner invocation observed during the run; a
+    /// `task_done` without file edits is accepted as a valid no-op
+    /// completion.
+    TestEvidenceAccepted,
 }
 
 pub fn decide_reconcile_action(inputs: &ReconcileInputs<'_>) -> ReconcileAction {
@@ -103,9 +125,17 @@ pub fn decide_reconcile_action(inputs: &ReconcileInputs<'_>) -> ReconcileAction 
                 budget_exhausted()
             }
         }
-        HarnessFailureKind::CompletionContract => ReconcileAction::MarkTerminal {
-            reason: TerminalReason::CompletionContract,
-        },
+        HarnessFailureKind::CompletionContract => {
+            if inputs.has_test_pass_evidence {
+                ReconcileAction::MarkDone {
+                    reason: DoneReason::TestEvidenceAccepted,
+                }
+            } else {
+                ReconcileAction::MarkTerminal {
+                    reason: TerminalReason::CompletionContract,
+                }
+            }
+        }
         HarnessFailureKind::PushTimeout | HarnessFailureKind::Other => {
             if inputs.retry_budget_remaining() {
                 ReconcileAction::RetryTask

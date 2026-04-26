@@ -49,6 +49,12 @@ export interface TaskLiveStatus {
    * task row — when both are present the live reason wins, but the
    * persisted notes are used as a reload-safe fallback by
    * `useTaskStatus`.
+   *
+   * Note: when the dev-loop bridges a `CompletionContract` failure to
+   * `Done` via test-pass evidence (outcome `"test_evidence_accepted"`),
+   * the server emits a synthetic `TaskCompleted` event — not a
+   * `TaskFailed` — so this field stays `null` for those runs and the
+   * UI reads the success reason from `TaskCompleted.execution_notes`.
    */
   liveFailReason: string | null;
 }
