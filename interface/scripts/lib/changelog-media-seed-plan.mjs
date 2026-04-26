@@ -84,6 +84,7 @@ function inferSeedCapabilities(candidate = {}) {
   }
   if (wantsAura3DAssetSurface) {
     capabilities.push("asset-gallery-populated");
+    capabilities.push("generated-result-visible");
   }
   if (wantsAura3DImageGallery) {
     capabilities.push("image-gallery-populated");
@@ -164,6 +165,7 @@ export function normalizeCaptureSeedPlan(seedPlan = null, candidate = {}) {
     ...(capabilities.includes("project-summary-populated") ? ["The selected project has realistic specs, tasks, and an assigned agent before capture."] : []),
     ...(capabilities.includes("project-stats-populated") ? ["The selected project stats dashboard has non-zero completion, task, cost, token, event, and contributor metrics before capture."] : []),
     ...(capabilities.includes("image-gallery-populated") ? ["A generated image preview and gallery are populated before capture."] : []),
+    ...(capabilities.includes("generated-result-visible") ? ["At least one realistic generated result is visible before capture, with readable nearby product context."] : []),
     ...(capabilities.includes("model-source-image-populated") ? ["A source image is selected so the 3D model surface is not an empty placeholder."] : []),
     ...(capabilities.includes("agent-chat-ready") ? ["A seeded agent is selected with a populated chat transcript before capture."] : []),
     ...(capabilities.includes("feedback-board-populated") ? ["A feedback board is populated with realistic idea cards, votes, statuses, and a selected item before capture."] : []),
@@ -202,6 +204,7 @@ export function normalizeCaptureSeedPlan(seedPlan = null, candidate = {}) {
     "target app route is active",
     "no blocking modal or placeholder state is visible",
     ...(capabilities.includes("image-gallery-populated") ? ["generated image preview and image gallery are visible"] : []),
+    ...(capabilities.includes("generated-result-visible") ? ["generated result proof is visible and not an empty placeholder"] : []),
     ...(capabilities.includes("model-source-image-populated") ? ["source image for 3D conversion is visible"] : []),
     ...(capabilities.includes("agent-chat-ready") ? ["selected agent chat transcript is populated"] : []),
     ...(capabilities.includes("project-summary-populated") ? ["selected project has visible summary, specs, tasks, or agent context"] : []),

@@ -27,7 +27,7 @@ const SEEDED_CAPTURE_SURFACES = Object.freeze({
     seededData: ["selected agent", "chat transcript", "agent sidebar rows", "profile sidekick"],
   },
   aura3d: {
-    capabilities: ["asset-gallery-populated", "image-gallery-populated", "project-selected"],
+    capabilities: ["asset-gallery-populated", "image-gallery-populated", "generated-result-visible", "project-selected"],
     preferredStableSurface: "Generated Image gallery with a selected demo project, selected image, and visible sidekick thumbnails.",
     seededData: ["selected project", "generated image preview", "image gallery thumbnails"],
   },

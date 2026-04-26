@@ -65,6 +65,7 @@ test("buildMediaPlannerPrompt keeps Browser Use behind a conservative Anthropic 
   assert.match(prompt, /isolated widget/);
   assert.match(prompt, /Browser Use should receive fewer, better candidates/);
   assert.match(prompt, /provider pricing, model catalog, routing, config, or API plumbing/);
+  assert.match(prompt, /Backend or storage fixes may be valid media candidates/);
   assert.match(prompt, /Visual opportunity index from raw commits and changelog bullets/);
   assert.match(prompt, /Visual surface clusters from commits and changelog bullets/);
   assert.match(prompt, /Parent title alignment is a weak sanity check/);
@@ -77,6 +78,7 @@ test("buildMediaPlannerPrompt keeps Browser Use behind a conservative Anthropic 
   assert.match(prompt, /do not open the 3D Model tab just because the app is called AURA 3D/);
   assert.match(prompt, /transient interaction states/);
   assert.match(prompt, /context menus/);
+  assert.match(prompt, /micro-style-only changes/);
   assert.match(prompt, /down to 0\.70/);
   assert.match(prompt, /Demo seed data created only for screenshots is not a product feature/);
   assert.match(prompt, /Low-confidence candidates must be skipped/);
@@ -398,6 +400,160 @@ test("deriveVisualMediaOpportunities keeps model catalog changes when the picker
   assert.equal(opportunities.length, 1);
   assert.equal(opportunities[0].entryId, "entry-model-picker");
   assert.equal(opportunities[0].likelyApps[0]?.id, "agents");
+});
+
+test("deriveVisualMediaOpportunities keeps backend fixes that explicitly repair visible UI state", () => {
+  const opportunities = deriveVisualMediaOpportunities({
+    rawCommits: [
+      {
+        sha: "statsfix123456",
+        subject: "fix(stats): decode project token/cost/lines/time across key shapes",
+        body: "The project stats panel showed Tokens, Time, and Lines stuck at zero. Decode all aliases so the dashboard numbers display correctly.",
+        files: [
+          "crates/aura-os-storage/src/client/stats.rs",
+          "crates/aura-os-storage/src/types.rs",
+        ],
+      },
+    ],
+    rendered: {
+      entries: [
+        {
+          batch_id: "entry-stats",
+          title: "Project stats decode tokens, time, and lines correctly",
+          items: [
+            {
+              text: "The project stats panel now displays non-zero token, time, cost, and line metrics.",
+              commit_shas: ["statsfix"],
+              changed_files: ["crates/aura-os-storage/src/client/stats.rs"],
+            },
+          ],
+        },
+      ],
+    },
+  }, {
+    sitemap: {
+      apps: [
+        {
+          id: "projects",
+          label: "Projects",
+          path: "/projects",
+          keywords: ["project", "stats", "dashboard", "metrics"],
+          captureSeedProfile: {
+            runtimeSeedSupport: "supported",
+            capabilities: ["project-stats-populated"],
+          },
+        },
+      ],
+    },
+  });
+
+  assert.equal(opportunities.length, 1);
+  assert.equal(opportunities[0].entryId, "entry-stats");
+  assert.equal(opportunities[0].likelyApps[0]?.id, "projects");
+});
+
+test("deriveVisualMediaOpportunities skips micro-style-only and transient visual changes", () => {
+  const opportunities = deriveVisualMediaOpportunities({
+    rawCommits: [
+      {
+        sha: "border123456789",
+        subject: "style(tasks): darken block border token in task output",
+        files: ["interface/src/apps/tasks/components/TaskOutput.module.css"],
+      },
+      {
+        sha: "hover1234567890",
+        subject: "style(chat): polish hover focus ring on preview overlay",
+        files: ["interface/src/apps/agents/components/AgentChat/PreviewOverlay.module.css"],
+      },
+      {
+        sha: "rename12345678",
+        subject: "feat(files): add F2 inline rename focus state",
+        files: ["interface/src/components/FileExplorer/FileRow.tsx"],
+      },
+    ],
+    rendered: {
+      entries: [
+        {
+          batch_id: "entry-style",
+          title: "Task and chat visual polish",
+          items: [
+            {
+              text: "Task output borders and chat preview focus rings were polished.",
+              commit_shas: ["border123", "hover123", "rename123"],
+              changed_files: ["interface/src/apps/tasks/components/TaskOutput.module.css"],
+            },
+          ],
+        },
+      ],
+    },
+  }, {
+    sitemap: {
+      apps: [
+        {
+          id: "tasks",
+          label: "Tasks",
+          path: "/tasks",
+          keywords: ["task", "output", "border"],
+          captureSeedProfile: { runtimeSeedSupport: "supported" },
+        },
+        {
+          id: "agents",
+          label: "Agents",
+          path: "/agents",
+          keywords: ["chat", "preview"],
+          captureSeedProfile: { runtimeSeedSupport: "supported" },
+        },
+      ],
+    },
+  });
+
+  assert.deepEqual(opportunities, []);
+});
+
+test("deriveVisualMediaOpportunities still keeps durable screen-level visual redesigns", () => {
+  const opportunities = deriveVisualMediaOpportunities({
+    rawCommits: [
+      {
+        sha: "taskbar123456",
+        subject: "style(taskbar): redesign bottom taskbar into floating capsules",
+        files: [
+          "interface/src/components/BottomTaskbar/BottomTaskbar.tsx",
+          "interface/src/components/BottomTaskbar/BottomTaskbar.module.css",
+        ],
+      },
+    ],
+    rendered: {
+      entries: [
+        {
+          batch_id: "entry-taskbar",
+          title: "Desktop taskbar redesign",
+          items: [
+            {
+              text: "The bottom taskbar now uses floating capsules around populated app content.",
+              commit_shas: ["taskbar123"],
+              changed_files: ["interface/src/components/BottomTaskbar/BottomTaskbar.module.css"],
+            },
+          ],
+        },
+      ],
+    },
+  }, {
+    sitemap: {
+      apps: [
+        {
+          id: "aura3d",
+          label: "AURA 3D",
+          path: "/3d",
+          keywords: ["taskbar", "desktop shell", "gallery"],
+          captureSeedProfile: { runtimeSeedSupport: "supported" },
+        },
+      ],
+    },
+  });
+
+  assert.equal(opportunities.length, 1);
+  assert.equal(opportunities[0].entryId, "entry-taskbar");
+  assert.equal(opportunities[0].likelyApps[0]?.id, "aura3d");
 });
 
 test("deriveVisualMediaSurfaceClusters promotes repeated visual surfaces inside broad changelog titles", () => {

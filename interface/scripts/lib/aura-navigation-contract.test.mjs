@@ -24,6 +24,7 @@ test("listAuraNavigationApps extracts apps and agent-facing handles from the reg
   assert.ok(agents?.captureSeedProfile?.capabilities.includes("agent-chat-ready"));
   assert.equal(aura3d?.sourceContext?.baseRouteKind, "placeholder");
   assert.ok(aura3d?.captureSeedProfile?.capabilities.includes("image-gallery-populated"));
+  assert.ok(aura3d?.captureSeedProfile?.capabilities.includes("generated-result-visible"));
   assert.match(aura3d?.captureSeedProfile?.preferredStableSurface || "", /Generated Image gallery/);
   assert.equal(projects?.captureSeedProfile?.runtimeSeedSupport, "supported");
   assert.ok(projects?.captureSeedProfile?.capabilities.includes("project-stats-populated"));

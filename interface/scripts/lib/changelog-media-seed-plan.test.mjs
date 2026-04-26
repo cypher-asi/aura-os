@@ -18,8 +18,10 @@ test("normalizeCaptureSeedPlan derives generic capabilities without feature-spec
   assert.ok(plan.capabilities.includes("proof-data-populated"));
   assert.ok(plan.capabilities.includes("asset-gallery-populated"));
   assert.ok(plan.capabilities.includes("image-gallery-populated"));
+  assert.ok(plan.capabilities.includes("generated-result-visible"));
   assert.ok(plan.requiredState.some((entry) => entry.includes("meaningful proof data")));
   assert.ok(plan.requiredState.some((entry) => entry.includes("generated image preview")));
+  assert.ok(plan.requiredState.some((entry) => entry.includes("realistic generated result")));
   assert.ok(plan.proofBoundary.some((entry) => entry.includes("feature evidence")));
   assert.ok(plan.contextBoundary.some((entry) => entry.includes("recognizable product")));
   assert.ok(plan.avoid.includes("isolated widget without product context"));
@@ -145,6 +147,7 @@ test("normalizeCaptureSeedPlan does not infer tasks from generic board or ready 
   assert.ok(feedbackPlan.capabilities.includes("feedback-board-populated"));
   assert.ok(!feedbackPlan.capabilities.includes("task-board-populated"));
   assert.ok(aura3dPlan.capabilities.includes("image-gallery-populated"));
+  assert.ok(aura3dPlan.capabilities.includes("generated-result-visible"));
   assert.ok(!aura3dPlan.capabilities.includes("task-board-populated"));
 });
 

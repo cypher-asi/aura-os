@@ -13,6 +13,11 @@ const VISUAL_OPPORTUNITY_LIMIT = 72;
 const VISUAL_SURFACE_CLUSTER_LIMIT = 24;
 const VISUAL_ACTION_PATTERN = /\b(?:add|adds|added|launch|launched|ship|shipped|new|introduce|introduced|debut|debuted|scaffold|scaffolded|redesign|redesigned|rebuild|rebuilt|revamp|sort|sorted|filter|filtered|reorder|ordered|group|grouped|search|viewer|picker|selector|modal|composer|panel|sidebar|sidekick|taskbar|toolbar|dashboard|stats|metrics|chart|table|tabs|feed|feedback|notes|browser|debug app|aura 3d|3d|model picker|model selector|webgl|marketplace|integrations|profile|settings|gallery|lightbox|kanban|process canvas|desktop shell|chrome|window controls|copy button|inline rename|context menu|avatar|update control|browser tab|error page)\b/i;
 const VISUAL_STYLE_PATTERN = /\b(?:style|polish|align|size|round|gap|border|radius|background|layout|height|width|hover|focus|icon|floating|capsule)\b/i;
+const MICRO_STYLE_ONLY_PATTERN = /\b(?:border(?:s)?|border token|color token|design token|token|radius|corner radii|gap(?:s)?|spacing|padding|margin|hover|focus|focus ring|outline|shadow|opacity|font smoothing|antialias(?:ed|ing)?|anti-aliased)\b/i;
+const SCREEN_LEVEL_STYLE_PATTERN = /\b(?:redesign|redesigned|rebuild|rebuilt|revamp|layout|taskbar|toolbar|titlebar|window controls|desktop shell|shell chrome|sidebar|panel|dashboard|gallery|picker|modal|screen|view|route|tab(?:s|bed)?|card|list|table|chart|editor|composer|thread|board|kanban|canvas|viewer)\b/i;
+const TRANSIENT_INTERACTION_PATTERN = /\b(?:context menu|right[- ]click|hover-only|hover state|focus-only|focus ring|keyboard focus|drag(?:ging)?|resize handle|f2 rename|inline rename|temporary popover|flash(?:ing)?)\b/i;
+const DURABLE_INTERACTION_PATTERN = /\b(?:open by default|persistent|persisted|saved|selected|modal|panel|picker|settings|menu list|list row|card|thread|dashboard|table|gallery|editor|composer)\b/i;
+const VISIBLE_UI_BUG_FIX_PATTERN = /\b(?:(?:panel|dashboard|picker|menu|screen|view|composer|gallery|board|table|chart|list|card|metric|counter|number|stats?)s?.*(?:show|shows|showed|display|displays|displayed|render|renders|rendered|visible|stuck|zero|blank|empty|missing|wrong|incorrect)|(?:show|shows|showed|display|displays|displayed|render|renders|rendered|visible|stuck|zero|blank|empty|missing|wrong|incorrect).*(?:panel|dashboard|picker|menu|screen|view|composer|gallery|board|table|chart|list|card|metric|counter|number|stats?)s?)\b/i;
 const LOW_SIGNAL_SUBJECT_PATTERN = /\b(?:retrigger|merge|rustfmt|lint|format|move generic|shared\/|types\/|api\/|utils\/|hooks\/|ci|workflow|release asset|gh-pages|test|tests|fixture|rubric|docs?)\b/i;
 const INTERNAL_REFACTOR_SUBJECT_PATTERN = /\b(?:move|moved|relocat|migrat|shared\/|generic|scaffold|types\/|api\/|utils\/|hooks\/|lib\/)\b/i;
 const INTERNAL_REFACTOR_PATTERN = /\b(?:refactor|relocat|migrat|move|moved|shared\/|generic|scaffold|directory|module scaffolding|types\/|api\/|utils\/|hooks\/|lib\/)\b/i;
@@ -315,6 +320,25 @@ function isMobileOnlyVisualText(value) {
   return MOBILE_ONLY_PATTERN.test(text) && !DESKTOP_PRODUCT_PATTERN.test(text);
 }
 
+function isMicroStyleOnlyChange({ subject, text, files }) {
+  if (!MICRO_STYLE_ONLY_PATTERN.test(text)) return false;
+  if (/\b(?:add|adds|added|new|show|surface|display|render|sort|filter|viewer|picker|selector|gallery|dashboard|board|thread|model picker|aura 3d|webgl)\b/i.test(text)) {
+    return false;
+  }
+  if (SCREEN_LEVEL_STYLE_PATTERN.test(text) && !/\b(?:token|hover|focus|font smoothing|antialias|anti-aliased)\b/i.test(text)) {
+    return false;
+  }
+  const styleFileOnly = files.length > 0 && files.every((filePath) => (
+    /\.(?:css|scss|sass|less)$/i.test(filePath)
+    || /\b(?:theme|tokens?|variables?|styles?)\b/i.test(filePath)
+  ));
+  return styleFileOnly || /^style\b|^style\(/i.test(subject);
+}
+
+function isTransientOnlyChange(text) {
+  return TRANSIENT_INTERACTION_PATTERN.test(text) && !DURABLE_INTERACTION_PATTERN.test(text);
+}
+
 function visualOpportunityScore(commit, itemTexts = []) {
   const subject = normalizeString(commit?.subject || commit?.cleanSubject);
   const body = normalizeString(commit?.body);
@@ -328,6 +352,8 @@ function visualOpportunityScore(commit, itemTexts = []) {
   if (isMobileOnlyVisualText(text) && uiFiles.length === 0) return -20;
   if (CHANGELOG_MEDIA_INFRA_PATTERN.test(text) && !PUBLIC_CHANGELOG_SURFACE_PATTERN.test(text)) return -12;
   if (PRICING_BENCHMARK_ONLY_PATTERN.test(text) && !MODEL_PICKER_PROOF_PATTERN.test(text)) return -12;
+  if (isTransientOnlyChange(text)) return -10;
+  if (isMicroStyleOnlyChange({ subject, text, files })) return -10;
   if (LOW_SIGNAL_SUBJECT_PATTERN.test(subject) && (uiFiles.length === 0 || !EXPLICIT_VISIBLE_CHANGE_PATTERN.test(text))) return -12;
   if (/^refactor\b|^refactor\(/i.test(subject) && INTERNAL_REFACTOR_SUBJECT_PATTERN.test(subject)) {
     return -12;
@@ -340,6 +366,7 @@ function visualOpportunityScore(commit, itemTexts = []) {
   if (VISUAL_ACTION_PATTERN.test(text)) score += 12;
   if (/^(?:feat\b|feat\(|style\b|style\(|ui\b|ui\(|desktop-shell\b|add\b|make\b|show\b|move\b|route\b|wire\b|redesign\b|rebuild\b|introduc)/i.test(subject)) score += 8;
   if (/^fix\b|^fix\(/i.test(subject) && VISUAL_STYLE_PATTERN.test(subject)) score += 5;
+  if (/^fix\b|^fix\(/i.test(subject) && VISIBLE_UI_BUG_FIX_PATTERN.test(text)) score += 6;
   if (uiFiles.length > 0) score += Math.min(8, uiFiles.length * 2);
   if (/\b(?:app|surface|screen|route|panel|picker|viewer|modal|dashboard|gallery|composer|sidekick|taskbar|layout|shell)\b/i.test(text)) score += 4;
   if (/^refactor\b/i.test(subject) && !/\b(?:app shell|route-driven|feedback|notes|desktop|screen|ui)\b/i.test(subject)) score -= 8;
@@ -774,9 +801,11 @@ export function buildMediaPlannerPrompt({
     "- Candidate screenshots must be desktop web product UI only.",
     "- Skip login, auth, sign-in, onboarding, mobile-only, native app, Android, iOS, backend-only, infra-only, release pipeline, dependency, test-only, docs-only, refactor-only, and invisible bug-fix changes.",
     "- Skip provider pricing, model catalog, routing, config, or API plumbing changes unless the changelog explicitly describes a user-visible desktop UI change such as a new option in a picker, menu, settings panel, gallery, editor, or dashboard.",
+    "- Backend or storage fixes may be valid media candidates only when the changelog explicitly says a visible desktop panel, dashboard, picker, table, chart, metric, or screen was blank, wrong, zero, missing, or now displays correctly.",
     "- Skip entries that are not meaningfully provable in one static desktop screenshot.",
     "- Skip entries whose only likely proof is a default/empty state such as 'will appear here', 'pick a project', 'select a run', or an otherwise unseeded list/detail view.",
     "- Skip transient interaction states such as hover-only UI, context menus, F2 rename fields, drag/resize states, flashing native-window paint, or keyboard-focus-only affordances unless the sitemap exposes durable data-agent proof/action handles and the seedPlan can deterministically make that state visible.",
+    "- Skip micro-style-only changes such as token propagation, one-off border/radius/gap/color/hover/focus tweaks, or font-smoothing changes unless the commit describes a broader durable screen-level redesign, layout change, taskbar/shell change, or visible product control/result that will be obvious in one static screenshot.",
     "- Prefer high-confidence product features that can be located from the generated sitemap and changed files.",
     "- Use each sitemap app's captureSeedProfile to choose seedPlan capabilities; if the screen would otherwise be empty, request the matching seeded demo state before capture.",
     "- Treat captureSeedProfile.runtimeSeedSupport='supported' as the safest path. If an app has unknown seed support but the changed files, route hints, and product wording clearly identify a desktop surface, you may still return it as a candidate with an explicit seedPlan that describes the missing data/readiness requirements; the downstream quality gates will decide whether it publishes.",

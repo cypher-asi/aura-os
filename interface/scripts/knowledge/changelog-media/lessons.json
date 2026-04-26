@@ -185,6 +185,117 @@
         ],
         "lastValidated": "2026-04-25"
       }
+    },
+    {
+      "id": "micro-style-needs-durable-proof",
+      "status": "promoted",
+      "surface": "general.micro_style_filter",
+      "targetAppId": "*",
+      "targetPath": "*",
+      "aliases": [
+        "border token",
+        "color token",
+        "corner radius",
+        "panel gap",
+        "hover state",
+        "focus ring",
+        "font smoothing"
+      ],
+      "changedFileHints": [
+        "*.module.css",
+        "theme",
+        "tokens",
+        "variables"
+      ],
+      "mediaSignals": [
+        "A style change should receive media only when it produces a durable, screen-level visual difference such as a redesigned taskbar, shell, panel layout, dashboard, picker, gallery, or visible product control."
+      ],
+      "skipSignals": [
+        "One-off border, radius, gap, color token, hover, focus, or font-smoothing changes are usually not changelog media candidates because the proof is too subtle for one static screenshot.",
+        "Transient-only interaction states should be skipped unless a durable open state can be seeded deterministically."
+      ],
+      "seedPlan": {
+        "capabilities": [
+          "proof-data-populated"
+        ],
+        "requiredState": [
+          "If a visual style change is selected, the target app must be populated enough that the changed surface is obvious without relying on a pixel-perfect comparison."
+        ],
+        "proofBoundary": [
+          "The changed visual surface must be clear at normal changelog-card size, not only after zooming into a tiny border or token."
+        ],
+        "contextBoundary": [
+          "Keep the surrounding screen-level product context so the visual change reads as a product improvement."
+        ]
+      },
+      "captureGuidance": [
+        "Prefer durable visual redesigns over micro-polish.",
+        "Do not spend Browser Use budget on tiny token propagation unless the screenshot can show a broader visible product outcome."
+      ],
+      "qualityGuidance": [
+        "Reject media where the only visible claim is a barely perceptible border, gap, hover, focus, radius, or color-token tweak."
+      ],
+      "evidence": {
+        "source": "review of skipped/failed historical changelog media entries",
+        "examples": [
+          "Darker block border on run and task output sections",
+          "Chat border token propagated into sidekick and preview overlays"
+        ],
+        "lastValidated": "2026-04-26"
+      }
+    },
+    {
+      "id": "visible-backend-fix-can-seed-ui-proof",
+      "status": "promoted",
+      "surface": "general.visible_backend_fix",
+      "targetAppId": "*",
+      "targetPath": "*",
+      "aliases": [
+        "stats panel stuck at zero",
+        "dashboard numbers display correctly",
+        "visible panel bug",
+        "wrong metrics",
+        "missing table data"
+      ],
+      "changedFileHints": [
+        "crates/",
+        "apps/aura-os-server/src",
+        "interface/src/api"
+      ],
+      "mediaSignals": [
+        "A backend, storage, or API fix can receive media when the changelog explicitly says a desktop panel, dashboard, table, chart, picker, metric, or screen was blank, wrong, zero, missing, or now displays correctly."
+      ],
+      "skipSignals": [
+        "Backend plumbing with no explicit visible UI symptom or visible desktop result should remain text-only."
+      ],
+      "seedPlan": {
+        "capabilities": [
+          "proof-data-populated"
+        ],
+        "requiredState": [
+          "Seed the affected desktop surface with realistic data that makes the corrected value, row, metric, or rendered result visible."
+        ],
+        "proofBoundary": [
+          "The visible corrected state must be readable in the screenshot."
+        ],
+        "contextBoundary": [
+          "Keep the surrounding dashboard, panel, table, chart, or selected app context visible."
+        ]
+      },
+      "captureGuidance": [
+        "Use the UI symptom described in the changelog as the proof, not the backend implementation detail.",
+        "Prefer surfaces with supported captureSeedProfile data so the bug fix does not render as an empty/default screen."
+      ],
+      "qualityGuidance": [
+        "Reject if the screenshot only proves navigation to the app, not the corrected visible state."
+      ],
+      "evidence": {
+        "source": "review of historical changelog entries where backend fixes changed visible stats output",
+        "examples": [
+          "Project stats decode tokens, time, and lines correctly"
+        ],
+        "lastValidated": "2026-04-26"
+      }
     }
   ]
 }
