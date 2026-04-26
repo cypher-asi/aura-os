@@ -1,6 +1,7 @@
 pub mod entities;
 pub mod enums;
 pub mod expertise;
+pub mod harness_id;
 pub mod helpers;
 pub mod ids;
 pub mod listing_status;
@@ -31,6 +32,7 @@ pub use enums::{
     OrgRole, ProcessEventStatus, ProcessNodeType, ProcessRunStatus, ProcessRunTrigger,
     ProjectStatus, SessionStatus, StepStatus, TaskStatus,
 };
+pub use harness_id::harness_agent_id;
 pub use helpers::{extract_fenced_json, fuzzy_search_replace, parse_dt};
 pub use ids::{
     AgentId, AgentInstanceId, OrgId, ProcessArtifactId, ProcessEventId, ProcessFolderId, ProcessId,

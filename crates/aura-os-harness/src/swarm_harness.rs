@@ -288,6 +288,13 @@ async fn parse_create_session_response(
     let status = response.status();
     let body = response.text().await?;
     if !status.is_success() {
+        // TODO(phase 0.5): when the gateway returns 4xx with a body
+        // containing "turn is currently in progress" (or a structured
+        // `turn_in_progress` code), surface that as a typed error
+        // variant — e.g. by parsing the body into an `ErrorMsg`-shaped
+        // struct here and bubbling it as a dedicated error so the
+        // server can call `remap_harness_error_to_api` instead of
+        // pattern-matching on this flattened anyhow string.
         anyhow::bail!("swarm create session failed with {}: {}", status, body);
     }
     serde_json::from_str(&body).map_err(Into::into)
