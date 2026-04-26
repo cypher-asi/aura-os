@@ -175,8 +175,7 @@ pub(crate) async fn reset_agent_session(
     AuthJwt(jwt): AuthJwt,
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<StatusCode> {
-    let session_key =
-        aura_os_core::harness_agent_id_gated(state.partition_agent_ids, &agent_id, None);
+    let session_key = aura_os_core::harness_agent_id(&agent_id, None);
     remove_live_session(&state, &session_key).await;
     let _ = setup_agent_chat_persistence(&state, &agent_id, "", &jwt, true).await;
     info!(%agent_id, "Agent chat session reset");
@@ -201,8 +200,7 @@ pub(crate) async fn reset_instance_session(
         .get_instance(&project_id, &agent_instance_id)
         .await
     {
-        Ok(instance) => Some(aura_os_core::harness_agent_id_gated(
-            state.partition_agent_ids,
+        Ok(instance) => Some(aura_os_core::harness_agent_id(
             &instance.agent_id,
             Some(&agent_instance_id),
         )),

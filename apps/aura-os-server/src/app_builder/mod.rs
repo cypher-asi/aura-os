@@ -104,61 +104,6 @@ pub(crate) fn read_harness_ws_slots_from_env() -> usize {
     parse_harness_ws_slots(env_opt(HARNESS_WS_SLOTS_ENV).as_deref())
 }
 
-/// Env var the server reads at startup to gate the
-/// `aura_os_core::harness_agent_id` partitioning end-to-end. When set
-/// to `false` (case-insensitive `false|0|no`), every chat / automaton
-/// / project-tool call site falls back to the bare template id, so
-/// the upstream harness behaves exactly like it did before Phase 1.
-/// When unset or set to `true|1|yes`, partitioning is on (the
-/// default). Held in one place so the parser, the AppState wiring,
-/// and the doc-comment all agree on the spelling.
-pub(crate) const PARTITION_AGENT_IDS_ENV: &str = "AURA_PARTITION_AGENT_IDS";
-
-/// Default state of the partitioning gate. `true` matches
-/// production: partitioning is on out of the box. Operators flip
-/// the env var to `false` only during a rolling deploy where the
-/// matching harness build hasn't yet shipped.
-pub(crate) const DEFAULT_PARTITION_AGENT_IDS: bool = true;
-
-/// Parse `AURA_PARTITION_AGENT_IDS` from a raw string. Accepts
-/// `true|false`, `1|0`, `yes|no` (case-insensitive). Anything else
-/// — including the empty string — is treated as a misconfiguration:
-/// we warn and fall back to [`DEFAULT_PARTITION_AGENT_IDS`] so a
-/// typo doesn't silently flip behavior in either direction.
-pub(crate) fn parse_partition_agent_ids(raw: &str) -> bool {
-    let trimmed = raw.trim();
-    match trimmed.to_ascii_lowercase().as_str() {
-        "true" | "1" | "yes" => true,
-        "false" | "0" | "no" => false,
-        _ => {
-            warn!(
-                value = trimmed,
-                default = DEFAULT_PARTITION_AGENT_IDS,
-                "AURA_PARTITION_AGENT_IDS is not a recognised boolean (true/false, 1/0, yes/no); falling back to default"
-            );
-            DEFAULT_PARTITION_AGENT_IDS
-        }
-    }
-}
-
-/// Read [`PARTITION_AGENT_IDS_ENV`] from the environment, returning
-/// the parsed value or [`DEFAULT_PARTITION_AGENT_IDS`] when unset.
-/// Logs an `info!` line on every call so the resolved value is
-/// visible in startup logs alongside the rest of the harness
-/// configuration.
-pub(crate) fn read_partition_agent_ids_from_env() -> bool {
-    let value = match env_opt(PARTITION_AGENT_IDS_ENV) {
-        Some(raw) => parse_partition_agent_ids(&raw),
-        None => DEFAULT_PARTITION_AGENT_IDS,
-    };
-    info!(
-        partition_agent_ids = value,
-        env_var = PARTITION_AGENT_IDS_ENV,
-        "Configured harness agent_id partitioning gate (when false, callers send the bare template id; flip during a rolling deploy where the harness side hasn't shipped support yet)"
-    );
-    value
-}
-
 pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
     let data_dir = store_path
         .parent()
@@ -197,7 +142,6 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         env_var = HARNESS_WS_SLOTS_ENV,
         "Configured upstream harness WS-slot cap (used for harness_capacity_exhausted operator message and forwarded to autospawned child)"
     );
-    let partition_agent_ids = read_partition_agent_ids_from_env();
 
     ensure_local_harness_running();
 
@@ -311,7 +255,6 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         agent_event_listener,
         loop_log,
         harness_ws_slots,
-        partition_agent_ids,
     })
 }
 

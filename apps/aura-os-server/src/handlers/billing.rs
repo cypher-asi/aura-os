@@ -332,7 +332,6 @@ mod tests {
                     store_dir.path().join("loop_logs"),
                 )),
                 harness_ws_slots: 128,
-                partition_agent_ids: true,
             },
             store_dir,
         )

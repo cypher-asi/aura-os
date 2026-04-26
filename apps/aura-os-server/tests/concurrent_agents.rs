@@ -28,7 +28,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use aura_os_core::{harness_agent_id, harness_agent_id_gated, AgentId, AgentInstanceId, ProjectId};
+use aura_os_core::{harness_agent_id, AgentId, AgentInstanceId, ProjectId};
 use aura_os_harness::test_support::FakeHarness;
 use aura_os_harness::{
     AssistantMessageEnd, FilesChanged, HarnessOutbound, SessionBridge, SessionBridgeError,
@@ -73,39 +73,6 @@ fn cfg_for(template: &AgentId, instance: Option<&AgentInstanceId>) -> SessionCon
         template_agent_id: Some(template.to_string()),
         ..Default::default()
     }
-}
-
-/// Test fixture that mirrors what every chat / automaton / project-tool
-/// call site does after Phase 7 of the robust-concurrent-agent-infra
-/// plan: derive the upstream `agent_id` through `harness_agent_id_gated`,
-/// passing the rollout flag (`AppState::partition_agent_ids`). The
-/// `template_agent_id` field is populated regardless of the flag so
-/// the wire shape stays stable when operators flip the flag on later.
-///
-/// Tests that want the flag-on default call this with `enabled = true`
-/// (matching production); the flag-off variant below calls it with
-/// `enabled = false` to confirm the flag actually flips behavior
-/// end-to-end without falling back to a separate code path.
-fn cfg_for_with_partition_flag(
-    enabled: bool,
-    template: &AgentId,
-    instance: Option<&AgentInstanceId>,
-) -> SessionConfig {
-    SessionConfig {
-        agent_id: Some(harness_agent_id_gated(enabled, template, instance)),
-        template_agent_id: Some(template.to_string()),
-        ..Default::default()
-    }
-}
-
-/// Convenience wrapper for tests that override the partition flag.
-/// Equivalent to `cfg_for_with_partition_flag(false, …)` — names the
-/// intent at the call site.
-fn cfg_for_with_partition_disabled(
-    template: &AgentId,
-    instance: Option<&AgentInstanceId>,
-) -> SessionConfig {
-    cfg_for_with_partition_flag(false, template, instance)
 }
 
 /// Receive events from a session until we observe the first `TextDelta`,
@@ -264,120 +231,6 @@ async fn concurrent_chat_same_agent_multi_instance() {
     assert_eq!(
         sorted, expected,
         "observed agent_ids must equal the partitioned ids built by harness_agent_id"
-    );
-}
-
-// ---------------------------------------------------------------------------
-// 1b-rollout) Same-template instances collapse onto one partition when
-//             AURA_PARTITION_AGENT_IDS=false (the rollout opt-out).
-// ---------------------------------------------------------------------------
-
-/// Phase-7 rollout flag: when an operator sets
-/// `AURA_PARTITION_AGENT_IDS=false` (i.e. `AppState::partition_agent_ids
-/// = false`), every chat / automaton / project-tool call site must
-/// fall back to the bare template id, so two AgentInstances of one
-/// template share a single harness `agent_id` instead of hashing to
-/// distinct partitions. This pins the flag-off contract end-to-end on
-/// the same `FakeHarness` seam that proves the partitioning contract
-/// in [`concurrent_chat_same_agent_multi_instance`] above — when the
-/// flag is OFF, both instances end up with the same observed
-/// `agent_id`, and when the flag is ON, they don't.
-///
-/// This is the regression guard that confirms the env var actually
-/// controls the upstream wire shape: a future refactor that wires
-/// the flag in only one place but forgets to thread it through
-/// would either drop one of the bare-template fallbacks (failing
-/// this test) or drop one of the partition derivations (failing the
-/// flag-on test 1b).
-#[tokio::test]
-async fn flag_off_same_template_instances_share_partition_agent_id() {
-    let fake = FakeHarness::new();
-    fake.set_script(vec![text_delta("hi"), assistant_end()])
-        .await;
-
-    let template = AgentId::new();
-    let instance_a = AgentInstanceId::new();
-    let instance_b = AgentInstanceId::new();
-
-    let cfg_a = cfg_for_with_partition_disabled(&template, Some(&instance_a));
-    let cfg_b = cfg_for_with_partition_disabled(&template, Some(&instance_b));
-
-    assert_eq!(
-        cfg_a.agent_id, cfg_b.agent_id,
-        "with the flag off, every instance of one template must collapse onto the bare template id"
-    );
-    assert_eq!(
-        cfg_a.agent_id.as_deref(),
-        Some(template.to_string().as_str()),
-        "with the flag off, the upstream agent_id must equal the bare template (no `::instance` suffix)"
-    );
-    assert_eq!(
-        cfg_a.template_agent_id, cfg_b.template_agent_id,
-        "template_agent_id must be populated regardless of the flag"
-    );
-    assert_eq!(
-        cfg_a.template_agent_id.as_deref(),
-        Some(template.to_string().as_str()),
-    );
-
-    let _sa = SessionBridge::open_and_send_user_message(&fake, cfg_a, turn("hi-a"))
-        .await
-        .expect("open A");
-    let _sb = SessionBridge::open_and_send_user_message(&fake, cfg_b, turn("hi-b"))
-        .await
-        .expect("open B");
-
-    let agent_ids = fake.observed_agent_ids().await;
-    assert_eq!(agent_ids.len(), 2, "fake harness saw two SessionInits");
-    assert_eq!(
-        agent_ids[0], agent_ids[1],
-        "with the flag off both SessionInits must carry the same bare-template agent_id"
-    );
-    assert_eq!(
-        agent_ids[0].as_deref(),
-        Some(template.to_string().as_str()),
-        "observed agent_id with the flag off must equal the bare template id"
-    );
-}
-
-/// Symmetric to the test above: with the flag ON (the production
-/// default mirrored by `AppState::partition_agent_ids = true`), two
-/// instances of one template MUST hash to distinct partition
-/// `agent_id`s. This is essentially a re-run of
-/// [`concurrent_chat_same_agent_multi_instance`] using the same
-/// `cfg_for_with_partition_flag` helper as the flag-off variant, so
-/// both halves of the rollout switch are covered by the same
-/// fixture.
-#[tokio::test]
-async fn flag_on_same_template_instances_split_into_distinct_partitions() {
-    let fake = FakeHarness::new();
-    fake.set_script(vec![text_delta("hi"), assistant_end()])
-        .await;
-
-    let template = AgentId::new();
-    let instance_a = AgentInstanceId::new();
-    let instance_b = AgentInstanceId::new();
-
-    let cfg_a = cfg_for_with_partition_flag(true, &template, Some(&instance_a));
-    let cfg_b = cfg_for_with_partition_flag(true, &template, Some(&instance_b));
-
-    assert_ne!(
-        cfg_a.agent_id, cfg_b.agent_id,
-        "with the flag on, every instance of one template must hash to a distinct partition agent_id"
-    );
-
-    let _sa = SessionBridge::open_and_send_user_message(&fake, cfg_a, turn("hi-a"))
-        .await
-        .expect("open A");
-    let _sb = SessionBridge::open_and_send_user_message(&fake, cfg_b, turn("hi-b"))
-        .await
-        .expect("open B");
-
-    let agent_ids = fake.observed_agent_ids().await;
-    assert_eq!(agent_ids.len(), 2);
-    assert_ne!(
-        agent_ids[0], agent_ids[1],
-        "with the flag on, two AgentInstances of one template must produce distinct partition agent_ids"
     );
 }
 
