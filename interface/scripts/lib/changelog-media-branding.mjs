@@ -198,6 +198,74 @@ export async function createOpenAIProductionMediaImage({
   };
 }
 
+export function createPixelPreservedProductionMediaImage({
+  inputImagePath,
+  outputPath,
+  reason = "Created a pixel-preserved production proof from the accepted raw product screenshot.",
+} = {}) {
+  if (!inputImagePath || !fs.existsSync(inputImagePath)) {
+    return {
+      status: "blocked",
+      reason: "A source screenshot is required for pixel-preserved production media.",
+    };
+  }
+  if (!outputPath) {
+    throw new Error("outputPath is required.");
+  }
+
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.copyFileSync(inputImagePath, outputPath);
+  const dimensions = readPngDimensionsFromFile(outputPath);
+  const sourceDimensions = readPngDimensionsFromFile(inputImagePath);
+  return {
+    status: "created",
+    reason,
+    asset: {
+      path: outputPath,
+      format: "png",
+      dimensions: {
+        width: dimensions.width,
+        height: dimensions.height,
+      },
+      bytes: dimensions.bytes,
+      layout: {
+        aspectRatio: dimensions.width / dimensions.height,
+        labelLines: 0,
+        titleLines: 0,
+        subtitleLines: 0,
+        maxTitleLines: 0,
+        maxSubtitleLines: 0,
+        screenshot: {
+          x: 0,
+          y: 0,
+          width: dimensions.width,
+          height: dimensions.height,
+        },
+      },
+      embeddedScreenshot: {
+        path: inputImagePath,
+        width: sourceDimensions.width,
+        height: sourceDimensions.height,
+        bytes: sourceDimensions.bytes,
+        renderedWidth: sourceDimensions.width,
+        renderedHeight: sourceDimensions.height,
+        scale: 1,
+        treatment: "pixel-preserved-production-proof",
+      },
+      preview: {
+        path: outputPath,
+        format: "png",
+        dimensions: {
+          width: dimensions.width,
+          height: dimensions.height,
+        },
+        bytes: dimensions.bytes,
+      },
+      treatment: "pixel-preserved-production-proof",
+    },
+  };
+}
+
 export function assessBrandedMediaAsset(asset) {
   const concerns = [];
   if (!asset?.path || !fs.existsSync(asset.path)) {

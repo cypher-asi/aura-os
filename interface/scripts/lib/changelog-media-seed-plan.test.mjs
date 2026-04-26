@@ -87,8 +87,55 @@ test("normalizeCaptureSeedPlan keeps AURA 3D shell proof on populated image stat
   assert.ok(plan.capabilities.includes("app:aura3d"));
   assert.ok(plan.capabilities.includes("image-gallery-populated"));
   assert.ok(plan.capabilities.includes("shell-context-populated"));
+  assert.ok(!plan.capabilities.includes("task-board-populated"));
   assert.ok(!plan.capabilities.includes("model-source-image-populated"));
   assert.ok(plan.readinessSignals.includes("generated image preview and image gallery are visible"));
+});
+
+test("normalizeCaptureSeedPlan does not infer tasks from generic board or ready wording", () => {
+  const feedbackPlan = normalizeCaptureSeedPlan(null, {
+    title: "Feedback board shows review ready statuses",
+    targetAppId: "feedback",
+    targetPath: "/feedback",
+    proofGoal: "Show feedback cards with status pills and comments ready for review.",
+    changedFiles: ["interface/src/apps/feedback/FeedbackMainPanel/FeedbackMainPanel.tsx"],
+  });
+  const aura3dPlan = normalizeCaptureSeedPlan(null, {
+    title: "AURA 3D generated image gallery is ready for capture",
+    targetAppId: "aura3d",
+    targetPath: "/3d",
+    proofGoal: "Show generated image previews and gallery thumbnails.",
+    changedFiles: ["interface/src/apps/aura3d/Aura3DApp.tsx"],
+  });
+
+  assert.ok(feedbackPlan.capabilities.includes("feedback-board-populated"));
+  assert.ok(!feedbackPlan.capabilities.includes("task-board-populated"));
+  assert.ok(aura3dPlan.capabilities.includes("image-gallery-populated"));
+  assert.ok(!aura3dPlan.capabilities.includes("task-board-populated"));
+});
+
+test("normalizeCaptureSeedPlan does not infer AURA 3D gallery state from generic model or preview wording", () => {
+  const modelPickerPlan = normalizeCaptureSeedPlan(null, {
+    title: "Add GPT-5.5 model support",
+    targetAppId: "agents",
+    targetPath: "/agents",
+    proofGoal: "Show GPT-5.5 in the chat model picker.",
+    changedFiles: ["interface/src/components/ChatInputBar/ChatInputBar.tsx"],
+  });
+  const filePreviewPlan = normalizeCaptureSeedPlan(null, {
+    title: "Add copy button to file previews in chat",
+    targetAppId: "agents",
+    targetPath: "/agents",
+    proofGoal: "Show a file preview block with its copy button in a chat transcript.",
+    changedFiles: ["interface/src/components/Block/renderers/FileBlock.tsx"],
+  });
+
+  assert.ok(modelPickerPlan.capabilities.includes("agent-chat-ready"));
+  assert.ok(!modelPickerPlan.capabilities.includes("asset-gallery-populated"));
+  assert.ok(!modelPickerPlan.capabilities.includes("image-gallery-populated"));
+  assert.ok(filePreviewPlan.capabilities.includes("agent-chat-ready"));
+  assert.ok(!filePreviewPlan.capabilities.includes("asset-gallery-populated"));
+  assert.ok(!filePreviewPlan.capabilities.includes("image-gallery-populated"));
 });
 
 test("normalizeCaptureSeedPlan opens the AURA 3D model surface only for explicit model proof", () => {

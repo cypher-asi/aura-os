@@ -658,6 +658,189 @@ test("runChangelogMediaEvaluation creates branded media only after quality and v
   }
 });
 
+test("runChangelogMediaEvaluation falls back to pixel-preserved proof when OpenAI redraw drifts", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-eval-"));
+  const changelogPath = path.join(tempDir, "latest.json");
+  fs.writeFileSync(changelogPath, JSON.stringify({
+    rawCommits: [
+      {
+        sha: "abc123456789",
+        subject: "feat(feedback): add threaded review board",
+        files: ["interface/src/apps/feedback/FeedbackMainPanel/FeedbackMainPanel.tsx"],
+      },
+    ],
+    rendered: {
+      entries: [
+        {
+          batch_id: "entry-1",
+          title: "Feedback board shows threaded review context",
+          summary: "Feedback cards and comments are visible together.",
+          items: [
+            {
+              text: "Added a threaded feedback review board.",
+              commit_shas: ["abc123456789"],
+              changed_files: ["interface/src/apps/feedback/FeedbackMainPanel/FeedbackMainPanel.tsx"],
+            },
+          ],
+        },
+      ],
+    },
+  }));
+  const screenshotPath = path.join(tempDir, "browser-use.png");
+  writeStructuredPng(screenshotPath, 2560, 1440);
+
+  const previousAnthropic = process.env.ANTHROPIC_API_KEY;
+  const previousOpenAI = process.env.OPENAI_API_KEY;
+  const previousBrowserUse = process.env.BROWSER_USE_API_KEY;
+  const previousCaptureSecret = process.env.AURA_CHANGELOG_CAPTURE_SECRET;
+  process.env.ANTHROPIC_API_KEY = "test-key";
+  process.env.OPENAI_API_KEY = "openai-test-key";
+  process.env.BROWSER_USE_API_KEY = "browser-use-test-key";
+  process.env.AURA_CHANGELOG_CAPTURE_SECRET = "capture-secret-with-enough-entropy";
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({
+    ok: true,
+    async json() {
+      return {
+        content: [
+          {
+            type: "tool_use",
+            name: "submit_changelog_media_plan",
+            input: {
+              candidates: [
+                {
+                  entryId: "entry-1",
+                  title: "Feedback board shows threaded review context",
+                  shouldCapture: true,
+                  reason: "The feedback board is visible desktop UI.",
+                  targetAppId: "feedback",
+                  targetPath: "/feedback",
+                  proofGoal: "Show the populated feedback board and selected thread.",
+                  publicCaption: "Feedback cards and threaded comments are visible together.",
+                  confidence: 0.89,
+                  changedFiles: ["interface/src/apps/feedback/FeedbackMainPanel/FeedbackMainPanel.tsx"],
+                },
+              ],
+              skipped: [],
+            },
+          },
+        ],
+      };
+    },
+  });
+
+  try {
+    const report = await runChangelogMediaEvaluation({
+      changelogFile: changelogPath,
+      outputDir: path.join(tempDir, "out"),
+      baseUrl: "https://example.com",
+      maxCandidates: 1,
+      preflightCaptureAuthImpl: async () => ({ ok: true, concerns: [], loginStatus: 200, sessionStatus: 201 }),
+      requestCaptureSessionImpl: async () => ({
+        ok: true,
+        sessionStatus: 201,
+        concerns: [],
+        session: { access_token: "aura-capture:test-token" },
+      }),
+      runBrowserUseTaskImpl: async () => ({
+        ok: true,
+        provider: "browser-use-cloud",
+        output: {
+          shouldCapture: true,
+          targetAppId: "feedback",
+          targetPath: "/feedback",
+          proofSurface: "Feedback board",
+          proofVisible: true,
+          visibleProof: ["Feedback cards and selected thread comments are visible."],
+          screenshotDescription: "Aura desktop feedback board with a selected thread.",
+          desktopLayoutVisible: true,
+          mobileLayoutVisible: false,
+          concerns: [],
+        },
+        screenshot: {
+          path: screenshotPath,
+          dimensions: { width: 2560, height: 1440 },
+        },
+        messages: [],
+      }),
+      runHighResolutionCaptureImpl: async () => ({
+        ok: true,
+        status: "captured",
+        provider: "aura-high-res-browser-camera",
+        output: {
+          shouldCapture: true,
+          targetAppId: "feedback",
+          targetPath: "/feedback",
+          proofSurface: "Feedback board",
+          proofVisible: true,
+          visibleProof: ["Feedback cards and selected thread comments are visible."],
+          screenshotDescription: "High-resolution Aura desktop feedback board with a selected thread.",
+          desktopLayoutVisible: true,
+          mobileLayoutVisible: false,
+          concerns: [],
+        },
+        screenshot: {
+          path: screenshotPath,
+          dimensions: { width: 2560, height: 1440 },
+        },
+      }),
+      visionJudgeImpl: async ({ stage }) => {
+        if (stage === "branded") {
+          return {
+            ok: false,
+            status: "rejected",
+            concerns: ["Vision judge reported generated text drift."],
+            judgment: {
+              pass: false,
+              score: 0.42,
+              reasons: ["The generated redraw changed visible feedback copy."],
+              visibleProof: ["Feedback board is present but text drifted."],
+              rejectionCategory: "other",
+              textIntegrity: "materially-changed",
+              hallucinatedText: ["Generated redraw changed visible feedback copy."],
+            },
+          };
+        }
+        return {
+          ok: true,
+          status: "accepted",
+          concerns: [],
+          judgment: {
+            pass: true,
+            score: 0.91,
+            reasons: ["The feedback board and selected thread are visible and readable."],
+            visibleProof: ["Feedback cards and selected thread comments are visible."],
+            rejectionCategory: null,
+          },
+        };
+      },
+      productionImageImpl: fakeProductionImageImpl,
+    });
+
+    assert.equal(report.counts.captureAccepted, 1);
+    assert.equal(report.counts.publishReady, 1);
+    assert.equal(report.counts.publishableMediaAssets, 1);
+    const branding = report.captureResults[0].branding;
+    assert.equal(branding.status, "created");
+    assert.equal(branding.fallbackFor.brandedVisionStatus, "rejected");
+    assert.equal(branding.asset.embeddedScreenshot.treatment, "pixel-preserved-production-proof");
+    assert.equal(report.captureResults[0].brandedVisionGate.status, "accepted");
+    assert.equal(report.publishableMedia.assets[0].source.generatedPngPath, null);
+    assert.equal(report.publishableMedia.assets[0].source.brandedPngPath, branding.asset.preview.path);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previousAnthropic === undefined) delete process.env.ANTHROPIC_API_KEY;
+    else process.env.ANTHROPIC_API_KEY = previousAnthropic;
+    if (previousOpenAI === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = previousOpenAI;
+    if (previousBrowserUse === undefined) delete process.env.BROWSER_USE_API_KEY;
+    else process.env.BROWSER_USE_API_KEY = previousBrowserUse;
+    if (previousCaptureSecret === undefined) delete process.env.AURA_CHANGELOG_CAPTURE_SECRET;
+    else process.env.AURA_CHANGELOG_CAPTURE_SECRET = previousCaptureSecret;
+  }
+});
+
 test("runChangelogMediaEvaluation requires OpenAI before attempting publishable media", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-eval-"));
   const changelogPath = path.join(tempDir, "latest.json");

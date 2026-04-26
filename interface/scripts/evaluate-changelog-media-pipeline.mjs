@@ -30,6 +30,7 @@ import {
 import {
   assessBrandedMediaAsset,
   createOpenAIProductionMediaImage,
+  createPixelPreservedProductionMediaImage,
 } from "./lib/changelog-media-branding.mjs";
 import {
   assessChangelogMediaQuality,
@@ -394,6 +395,57 @@ async function createBrandingArtifact({
       reason: error instanceof Error ? error.message : String(error),
     };
   }
+}
+
+function buildPixelPreservedBrandingFallback({
+  screenshot,
+  outputDir,
+  rejectedBranding,
+  rejectedBrandedVisionGate,
+}) {
+  const generated = createPixelPreservedProductionMediaImage({
+    inputImagePath: screenshot?.path,
+    outputPath: path.join(outputDir, "pixel-preserved-production-media.png"),
+    reason: "OpenAI redraw was unsafe, so Aura is publishing the accepted raw proof pixels without crop, resize, or generated text.",
+  });
+  if (generated.status !== "created") {
+    return {
+      ...generated,
+      quality: {
+        ok: false,
+        status: generated.status || "failed",
+        concerns: [generated.reason || "Pixel-preserved production media fallback failed."],
+      },
+    };
+  }
+  const quality = assessBrandedMediaAsset(generated.asset);
+  return {
+    status: quality.ok ? "created" : "rejected",
+    reason: quality.ok
+      ? generated.reason
+      : "Pixel-preserved production media failed structural quality checks.",
+    asset: generated.asset,
+    quality,
+    fallbackFor: {
+      brandingStatus: rejectedBranding?.status || null,
+      brandingReason: rejectedBranding?.reason || null,
+      brandingGeneration: rejectedBranding?.generation || rejectedBranding?.asset?.generation || null,
+      brandedVisionStatus: rejectedBrandedVisionGate?.status || null,
+      brandedVisionConcerns: Array.isArray(rejectedBrandedVisionGate?.concerns)
+        ? rejectedBrandedVisionGate.concerns
+        : [],
+    },
+  };
+}
+
+function shouldUsePixelPreservedBrandingFallback({
+  rawVisionAccepted,
+  branding,
+  brandedVisionGate,
+}) {
+  if (!rawVisionAccepted) return false;
+  if (branding?.status !== "created" || branding?.asset?.generation?.provider !== "openai") return false;
+  return brandedVisionGate?.status === "rejected" || brandedVisionGate?.ok === false;
 }
 
 function isShellOrLayoutProofCandidate(candidate = null) {
@@ -918,7 +970,7 @@ export async function runChangelogMediaEvaluation({
     const rawVisionAccepted = visionGate.ok === true && visionGate.status === "accepted";
     const rawVisionRepairable = rawVisionCanBeRepairedByImageGeneration(visionGate, candidate);
     const sourceAcceptedForProductionImage = Boolean(qualityGate.ok && (rawVisionAccepted || rawVisionRepairable));
-    const branding = sourceAcceptedForProductionImage
+    let branding = sourceAcceptedForProductionImage
       ? await createBrandingArtifact({
         candidate,
         screenshot: proofResult.screenshot,
@@ -934,11 +986,11 @@ export async function runChangelogMediaEvaluation({
         captureAccepted: false,
         screenshot: proofResult.screenshot,
       });
-    const preservedBrandingVisionGate = reuseRawVisionGateForPreservedBranding({
+    let preservedBrandingVisionGate = reuseRawVisionGateForPreservedBranding({
       visionGate,
       branding,
     });
-    const brandedVisionGate = preservedBrandingVisionGate
+    let brandedVisionGate = preservedBrandingVisionGate
       || (branding.status === "created" && branding.asset?.path && visionJudge
         ? await resolvedVisionJudgeImpl({
           apiKey: visionApiKey,
@@ -958,6 +1010,30 @@ export async function runChangelogMediaEvaluation({
             : ["Branded vision judge skipped because no accepted branded asset was created."],
           judgment: null,
         });
+    if (shouldUsePixelPreservedBrandingFallback({
+      rawVisionAccepted,
+      branding,
+      brandedVisionGate,
+    })) {
+      const rejectedBranding = branding;
+      const rejectedBrandedVisionGate = brandedVisionGate;
+      branding = buildPixelPreservedBrandingFallback({
+        screenshot: proofResult.screenshot,
+        outputDir: candidateDir,
+        rejectedBranding,
+        rejectedBrandedVisionGate,
+      });
+      preservedBrandingVisionGate = reuseRawVisionGateForPreservedBranding({
+        visionGate,
+        branding,
+      });
+      brandedVisionGate = preservedBrandingVisionGate || {
+        ok: false,
+        status: "blocked",
+        concerns: ["Pixel-preserved fallback could not reuse accepted raw vision proof."],
+        judgment: null,
+      };
+    }
     const brandedVisionAccepted = brandedVisionGate.ok === true && brandedVisionGate.status === "accepted";
     const captureAccepted = Boolean(sourceAcceptedForProductionImage && brandedVisionAccepted);
     const publishReady = Boolean(sourceAcceptedForProductionImage && branding.status === "created" && branding.quality?.ok && brandedVisionAccepted);

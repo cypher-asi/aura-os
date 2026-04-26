@@ -29,8 +29,24 @@ function inferSeedCapabilities(candidate = {}) {
   const appId = normalizeString(candidate.targetAppId);
   const targetPath = normalizeString(candidate.targetPath);
   const text = candidateText(candidate);
+  const changedFileText = (Array.isArray(candidate.changedFiles) ? candidate.changedFiles : []).join("\n").toLowerCase();
+  const targetsAura3D = appId === "aura3d"
+    || /^\/3d(?:\/|$)/.test(targetPath)
+    || /interface\/src\/apps\/aura3d\//.test(changedFileText);
   const wantsShellContext = /\b(?:desktop shell|shell chrome|bottom taskbar|taskbar|sidebar|sidekick|floating[- ]glass|floating panel|desktop layout)\b/.test(text);
   const wantsAura3DModelSurface = /\b(?:image\s*(?:to|->|→)\s*(?:3d|model)|3d\s+model|webgl|viewer|convert|conversion|source image|model preview)\b/.test(text);
+  const wantsAura3DAssetSurface = targetsAura3D
+    || /\b(?:aura\s*3d|aura3d|3d\s+asset|3d\s+model|webgl|glb|image\s*(?:to|->|→)\s*(?:3d|model)|generated\s+image\s+gallery|generated\s+3d)\b/.test(text);
+  const wantsAura3DImageGallery = targetsAura3D
+    || /\b(?:aura\s*3d.*(?:image|gallery)|generated\s+image\s+gallery|3d\s+generated\s+image|image\s*(?:to|->|→)\s*(?:3d|model))\b/.test(text);
+  const wantsTaskBoard = appId === "tasks"
+    || /^\/tasks(?:\/|$)/.test(targetPath)
+    || /interface\/src\/apps\/tasks\//.test(changedFileText)
+    || /\b(?:task(?:s| board)?|kanban|lanes?)\b/.test(text);
+  const wantsProcessGraph = appId === "process"
+    || /^\/process(?:\/|$)/.test(targetPath)
+    || /interface\/src\/apps\/process\//.test(changedFileText)
+    || /\b(?:processes?|workflow|nodes?|graph|run history)\b/.test(text);
 
   if (appId) {
     capabilities.push(`app:${appId}`);
@@ -38,10 +54,10 @@ function inferSeedCapabilities(candidate = {}) {
   if (targetPath.includes(":projectId") || /^\/projects(?:\/|$)/.test(targetPath) || /\bproject\b/.test(text)) {
     capabilities.push("project-selected");
   }
-  if (appId === "aura3d" || /\b(?:artifact|asset|gallery|generated|image|model|3d|viewer|preview)\b/.test(text)) {
+  if (wantsAura3DAssetSurface) {
     capabilities.push("asset-gallery-populated");
   }
-  if (appId === "aura3d" || /\b(?:image gallery|generated image|asset gallery|image preview)\b/.test(text)) {
+  if (wantsAura3DImageGallery) {
     capabilities.push("image-gallery-populated");
   }
   if (appId === "aura3d" && wantsAura3DModelSurface && !wantsShellContext) {
@@ -62,13 +78,13 @@ function inferSeedCapabilities(candidate = {}) {
     capabilities.push("project-selected");
     capabilities.push("sidekick-context-populated");
   }
-  if (appId === "tasks" || /\b(?:tasks?|kanban|lane|board|ready|in progress|blocked|done)\b/.test(text)) {
+  if (wantsTaskBoard) {
     capabilities.push("task-board-populated");
     capabilities.push("project-selected");
     capabilities.push("sidebar-list-populated");
     capabilities.push("sidekick-context-populated");
   }
-  if (appId === "process" || /\b(?:processes?|workflow|nodes?|graph|automation|run history)\b/.test(text)) {
+  if (wantsProcessGraph) {
     capabilities.push("process-graph-populated");
     capabilities.push("run-history-populated");
     capabilities.push("project-selected");
