@@ -740,6 +740,36 @@ describe("stream/handlers", () => {
       expect(result[0].content).toContain("connection lost");
     });
 
+    it("preserves create_spec markdown when the model call times out", () => {
+      const refs = makeRefs();
+      refs.toolCalls.current = [
+        {
+          id: "tc1",
+          name: "create_spec",
+          input: {
+            title: "01: Foundation",
+            markdown_contents: "# 01: Foundation\n\nLong draft body",
+          },
+          pending: true,
+          started: true,
+        },
+      ];
+      const setters = makeSetters();
+
+      handleStreamError(refs, setters, "Model call timed out after 180s");
+
+      const lastCall = setters.calls.setEvents[setters.calls.setEvents.length - 1];
+      const updater = lastCall as (prev: unknown[]) => unknown[];
+      const result = updater([]) as Array<{ toolCalls?: ToolCallEntry[] }>;
+      const tool = result[0].toolCalls?.[0];
+
+      expect(tool?.pending).toBe(false);
+      expect(tool?.isError).toBe(true);
+      expect(tool?.input.markdown_contents).toContain("Long draft body");
+      expect(tool?.result).toContain("Spec draft preserved after model timeout");
+      expect(tool?.result).toContain("Model call timed out after 180s");
+    });
+
     it("normalizes insufficient credits errors into a purchase prompt", () => {
       const refs = makeRefs();
       const setters = makeSetters();

@@ -329,6 +329,10 @@ fn render_project_context(
         "IMPORTANT: For filesystem and command tools, treat the project root as `.` and always use paths relative to that root. \
          Never pass `/` or any other absolute host path to list_files, find_files, read_file, write_file, or run_command.\n\n",
     );
+    ctx.push_str(
+        "IMPORTANT: When creating or updating specs, put the markdown only in the `markdown_contents` tool argument and keep visible assistant text to a short preview. \
+         Create large or multi-phase plans as multiple focused specs, one `create_spec` call at a time, instead of one huge markdown payload.\n\n",
+    );
     ctx
 }
 
@@ -336,7 +340,8 @@ fn render_project_context_fallback(project_id: &ProjectId) -> String {
     format!(
         "<project_context>\nproject_id: {}\n</project_context>\n\n\
          IMPORTANT: When calling tools that accept a project_id parameter, always use the project_id above.\n\n\
-         IMPORTANT: For filesystem and command tools, treat the project root as `.` and always use relative paths. Never pass `/` or any other absolute host path.\n\n",
+         IMPORTANT: For filesystem and command tools, treat the project root as `.` and always use relative paths. Never pass `/` or any other absolute host path.\n\n\
+         IMPORTANT: When creating or updating specs, put the markdown only in the `markdown_contents` tool argument and keep visible assistant text to a short preview. Create large or multi-phase plans as multiple focused specs, one `create_spec` call at a time, instead of one huge markdown payload.\n\n",
         project_id,
     )
 }

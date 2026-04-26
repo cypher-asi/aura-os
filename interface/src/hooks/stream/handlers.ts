@@ -32,6 +32,8 @@ interface PendingToolResolution {
   result?: string;
 }
 
+const SPEC_WRITE_TOOL_NAMES = new Set(["create_spec", "update_spec"]);
+
 interface FinalizeStreamOptions {
   reason?: FinalizeStreamReason;
   message?: string;
@@ -381,6 +383,33 @@ function resolveToolCallInEvents(
   });
 }
 
+function getSpecDraftContent(tc: ToolCallEntry): string {
+  const markdown = tc.input.markdown_contents;
+  if (typeof markdown === "string" && markdown.trim()) return markdown;
+  const draftPreview = tc.input.draft_preview;
+  if (typeof draftPreview === "string" && draftPreview.trim()) return draftPreview;
+  return "";
+}
+
+function isModelCallTimeout(message: string): boolean {
+  return /model call timed out/i.test(message) || /timed out after\s+\d+s/i.test(message);
+}
+
+function pendingToolResult(tc: ToolCallEntry, resolution: PendingToolResolution): string | undefined {
+  if (resolution.result === undefined) return undefined;
+  if (!resolution.isError || !SPEC_WRITE_TOOL_NAMES.has(tc.name)) {
+    return resolution.result;
+  }
+
+  const draft = getSpecDraftContent(tc);
+  if (!draft) return resolution.result;
+
+  const prefix = isModelCallTimeout(resolution.result)
+    ? "Spec draft preserved after model timeout."
+    : "Spec draft preserved after stream error.";
+  return `${prefix} The draft was not confirmed saved before the stream ended. Copy the markdown above or retry with a smaller spec.\n\n${resolution.result}`;
+}
+
 /**
  * Fail all pending tool calls in already-saved events.
  */
@@ -395,17 +424,18 @@ function resolvePendingToolCallsInEvents(
       changed = true;
       return {
         ...evt,
-        toolCalls: evt.toolCalls.map((tc) =>
-          tc.pending
+        toolCalls: evt.toolCalls.map((tc) => {
+          const result = pendingToolResult(tc, resolution);
+          return tc.pending
             ? {
                 ...tc,
                 pending: false,
                 started: false,
                 isError: resolution.isError,
-                ...(resolution.result !== undefined ? { result: resolution.result } : {}),
+                ...(result !== undefined ? { result } : {}),
               }
-            : tc,
-        ),
+            : tc;
+        }),
       };
     });
     return changed ? next : prev;
@@ -932,17 +962,18 @@ function resolvePendingToolCalls(
     resolvePendingToolCallsInEvents(setters, resolution);
     return;
   }
-  refs.toolCalls.current = refs.toolCalls.current.map((tc) =>
-    tc.pending
+  refs.toolCalls.current = refs.toolCalls.current.map((tc) => {
+    const result = pendingToolResult(tc, resolution);
+    return tc.pending
       ? {
           ...tc,
           pending: false,
           started: false,
           isError: resolution.isError,
-          ...(resolution.result !== undefined ? { result: resolution.result } : {}),
+          ...(result !== undefined ? { result } : {}),
         }
-      : tc,
-  );
+      : tc;
+  });
   resolvePendingToolCallsInEvents(setters, resolution);
 }
 
@@ -1038,6 +1069,8 @@ export function handleStreamError(
   setters.setActiveToolCalls([...refs.toolCalls.current]);
 
   const { savedThinking, savedThinkingDuration } = snapshotThinking(refs);
+  const savedToolCalls = snapshotToolCalls(refs);
+  const savedTimeline = snapshotTimeline(refs);
   const prefix = refs.streamBuffer.current
     ? refs.streamBuffer.current + "\n\n"
     : "";
@@ -1050,10 +1083,10 @@ export function handleStreamError(
         ? prefix + message
         : prefix + `*Error: ${message}*`,
       displayVariant,
-      toolCalls: snapshotToolCalls(refs),
+      toolCalls: savedToolCalls,
       thinkingText: savedThinking,
       thinkingDurationMs: savedThinkingDuration,
-      timeline: snapshotTimeline(refs),
+      timeline: savedTimeline,
     },
   ]);
   resetStreamBuffers(refs, setters);
