@@ -382,6 +382,14 @@ fn agent_routes() -> Router<AppState> {
             delete(agents::remove_agent_project_binding),
         )
         .route(
+            "/api/agents/:agent_id/delegate_task",
+            post(agents::delegate_agent_task),
+        )
+        .route(
+            "/api/agents/:agent_id/state_snapshot",
+            get(agents::get_agent_state_snapshot),
+        )
+        .route(
             "/api/agents/:agent_id/remote_agent/state",
             get(swarm::get_remote_agent_state),
         )

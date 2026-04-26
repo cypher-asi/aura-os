@@ -1,4 +1,5 @@
 mod chat;
+mod control;
 mod conversions;
 mod crud;
 mod home_project;
@@ -14,6 +15,7 @@ pub(crate) use chat::{
     list_agent_events, list_agent_events_paginated, list_events, reset_agent_session,
     reset_instance_session, send_agent_event_stream, send_event_stream,
 };
+pub(crate) use control::{delegate_agent_task, get_agent_state_snapshot};
 pub(crate) use crud::{
     create_agent, delete_agent, get_agent, list_agent_project_bindings, list_agents,
     recover_remote_agent_pipeline, remove_agent_project_binding, update_agent,
