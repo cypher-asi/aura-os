@@ -60,6 +60,12 @@ function inferSeedCapabilities(candidate = {}) {
     || /^\/debug(?:\/|$)/.test(targetPath)
     || /interface\/src\/apps\/debug\//.test(changedFileText)
     || /\b(?:debug app|debug run|run detail|event timeline|logs?|trace|diagnostics?|run metadata|clipboard|llm calls?|iterations?|blockers?|retries?)\b/.test(text);
+  const wantsProfileSurface = appId === "profile"
+    || /^\/profile(?:\/|$)/.test(targetPath)
+    || /interface\/src\/(?:apps\/profile|components\/(?:OrgSettings|OrgSelector|Avatar|BottomTaskbar)|stores\/ui-modal-store)\//.test(changedFileText)
+    || /\b(?:profile|account summary|team settings|org settings|team avatar|team name|members|invites|billing settings|preferences?)\b/.test(text);
+  const wantsTeamSettingsModal = wantsProfileSurface
+    && /\b(?:team settings|org settings|team avatar|team name|members|invites|billing settings|preferences?)\b/.test(text);
 
   if (appId) {
     capabilities.push(`app:${appId}`);
@@ -119,6 +125,13 @@ function inferSeedCapabilities(candidate = {}) {
     capabilities.push("sidebar-list-populated");
     capabilities.push("sidekick-context-populated");
   }
+  if (wantsProfileSurface) {
+    capabilities.push("profile-summary-populated");
+    capabilities.push("sidekick-context-populated");
+  }
+  if (wantsTeamSettingsModal) {
+    capabilities.push("team-settings-open");
+  }
   if (appId === "feed" || /\b(?:feed|timeline|activity|updates?|posts?|commit activity)\b/.test(text)) {
     capabilities.push("feed-timeline-populated");
     capabilities.push("proof-data-populated");
@@ -160,6 +173,8 @@ export function normalizeCaptureSeedPlan(seedPlan = null, candidate = {}) {
     ...(capabilities.includes("task-board-populated") ? ["A task board is populated across multiple lanes before capture."] : []),
     ...(capabilities.includes("process-graph-populated") ? ["A process graph is populated with connected nodes and run context before capture."] : []),
     ...(capabilities.includes("debug-run-populated") ? ["A Debug run detail is populated with event timeline rows, counters, tasks, and sidekick context before capture."] : []),
+    ...(capabilities.includes("profile-summary-populated") ? ["A profile/account surface is populated with user and team context before capture."] : []),
+    ...(capabilities.includes("team-settings-open") ? ["The Team Settings modal is open to the relevant section before capture."] : []),
     ...(capabilities.includes("feed-timeline-populated") ? ["A feed timeline is populated with realistic release activity before capture."] : []),
     ...(capabilities.includes("shell-context-populated") ? ["The desktop shell surrounds a populated product app, not an empty launcher or blank route."] : []),
     ...(capabilities.includes("sidekick-context-populated") ? ["The sidekick panel has meaningful selected-item detail instead of an empty prompt."] : []),
@@ -197,6 +212,8 @@ export function normalizeCaptureSeedPlan(seedPlan = null, candidate = {}) {
     ...(capabilities.includes("task-board-populated") ? ["kanban lanes contain seeded tasks"] : []),
     ...(capabilities.includes("process-graph-populated") ? ["process canvas contains connected seeded nodes"] : []),
     ...(capabilities.includes("debug-run-populated") ? ["debug run detail contains seeded event timeline rows, counters, and task metadata"] : []),
+    ...(capabilities.includes("profile-summary-populated") ? ["profile/account surface contains seeded user and team context"] : []),
+    ...(capabilities.includes("team-settings-open") ? ["Team Settings modal is open and not in a loading-only state"] : []),
     ...(capabilities.includes("feed-timeline-populated") ? ["feed timeline contains seeded activity entries"] : []),
     ...(capabilities.includes("shell-context-populated") ? ["sidebar, main panel, sidekick, and bottom taskbar are all visible around product data"] : []),
     ...(capabilities.includes("active-loop-visible") ? ["loop/progress indicator is visible on a stable row or panel"] : []),

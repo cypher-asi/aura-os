@@ -72,6 +72,22 @@ test("normalizeCaptureSeedPlan derives seeded Debug run requirements", () => {
   assert.ok(plan.readinessSignals.some((entry) => entry.includes("debug run detail")));
 });
 
+test("normalizeCaptureSeedPlan derives profile and Team Settings requirements", () => {
+  const plan = normalizeCaptureSeedPlan(null, {
+    title: "Team Settings general section shows build version",
+    targetAppId: "profile",
+    targetPath: "/profile",
+    proofGoal: "Show Team Settings with the General section populated.",
+    changedFiles: ["interface/src/components/OrgSettingsGeneral/OrgSettingsGeneral.tsx"],
+  });
+
+  assert.ok(plan.capabilities.includes("app:profile"));
+  assert.ok(plan.capabilities.includes("profile-summary-populated"));
+  assert.ok(plan.capabilities.includes("team-settings-open"));
+  assert.ok(plan.requiredState.some((entry) => entry.includes("Team Settings modal")));
+  assert.ok(plan.readinessSignals.some((entry) => entry.includes("Team Settings modal")));
+});
+
 test("normalizeCaptureSeedPlan upgrades shell captures with rich context requirements", () => {
   const plan = normalizeCaptureSeedPlan(null, {
     title: "Restyle desktop shell into floating glass capsules",

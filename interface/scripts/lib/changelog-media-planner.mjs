@@ -130,8 +130,8 @@ const VISUAL_SURFACE_DEFINITIONS = [
   {
     key: "settings-profile",
     label: "Settings and profile",
-    appId: "settings",
-    path: "/settings",
+    appId: "profile",
+    path: "/profile",
     patterns: [
       /\b(?:settings|profile|avatar|org selector|team avatar|credentials|preferences?)\b/i,
       /interface\/src\/(?:apps\/profile|components\/(?:Avatar|OrgSelector|OrgSettingsPanel)|views\/Settings)\//i,
@@ -322,7 +322,9 @@ function visualOpportunityScore(commit, itemTexts = []) {
   const uiFiles = files.filter(isDesktopUiFile);
   const text = [subject, ...itemTexts, body].filter(Boolean).join("\n");
   const filesAreMobileOnly = files.length > 0 && files.every(isMobileOnlyFile);
-  if ((MOBILE_SCOPE_PATTERN.test(subject) || filesAreMobileOnly) && uiFiles.length === 0) return -20;
+  if (MOBILE_SCOPE_PATTERN.test(subject) && !/\b(?:desktop|web|browser)\b/i.test(text)) return -20;
+  if (MOBILE_ONLY_PATTERN.test(text) && !/\b(?:desktop|web|browser)\b/i.test(text)) return -20;
+  if (filesAreMobileOnly && uiFiles.length === 0) return -20;
   if (isMobileOnlyVisualText(text) && uiFiles.length === 0) return -20;
   if (CHANGELOG_MEDIA_INFRA_PATTERN.test(text) && !PUBLIC_CHANGELOG_SURFACE_PATTERN.test(text)) return -12;
   if (PRICING_BENCHMARK_ONLY_PATTERN.test(text) && !MODEL_PICKER_PROOF_PATTERN.test(text)) return -12;

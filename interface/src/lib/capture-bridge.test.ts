@@ -162,6 +162,21 @@ describe("capture-bridge helpers", () => {
     ).toBe(true);
   });
 
+  it("seeds profile context and opens Team Settings when requested", async () => {
+    const { useOrgStore } = await import("../stores/org-store");
+    const { useUIModalStore } = await import("../stores/ui-modal-store");
+
+    const result = await applyAuraCaptureSeedPlan({
+      capabilities: ["app:profile", "profile-summary-populated", "team-settings-open"],
+      requiredState: ["The Team Settings modal is open to the General section."],
+    }, "profile");
+
+    expect(result.applied).toContain("team-settings-demo");
+    expect(useOrgStore.getState().activeOrg?.name).toBe("Aura Launch Team");
+    expect(useOrgStore.getState().members.length).toBeGreaterThan(1);
+    expect(useUIModalStore.getState().orgSettingsOpen).toBe(true);
+  });
+
   it("resolves requested chat seed models from the live model catalog", async () => {
     const result = await applyAuraCaptureSeedPlan({
       capabilities: ["app:agents", "agent-chat-ready", "model-picker-open"],

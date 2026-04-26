@@ -4,6 +4,9 @@ import { AURA_MANAGED_CHAT_MODELS } from "../constants/models";
 import type {
   Agent,
   AgentInstance,
+  Org,
+  OrgIntegration,
+  OrgMember,
   Process,
   ProcessEvent,
   ProcessNode,
@@ -504,6 +507,14 @@ function shouldApplyFeedSeed(seedPlan: AuraCaptureSeedPlan | null | undefined, t
 
 function shouldApplyDebugSeed(seedPlan: AuraCaptureSeedPlan | null | undefined, targetAppId: string | null): boolean {
   return /\b(?:app:debug|debug-run-populated|debug app|debug run|run detail|event timeline|diagnostics?|trace|logs?|llm calls?|iterations?|blockers?|retries?)\b/i.test(seedText(seedPlan, targetAppId));
+}
+
+function shouldApplyProfileSeed(seedPlan: AuraCaptureSeedPlan | null | undefined, targetAppId: string | null): boolean {
+  return /\b(?:app:profile|profile-summary-populated|profile|account summary|team settings|org settings|team avatar|team name|members|invites|billing settings)\b/i.test(seedText(seedPlan, targetAppId));
+}
+
+function shouldOpenTeamSettings(seedPlan: AuraCaptureSeedPlan | null | undefined, targetAppId: string | null): boolean {
+  return /\b(?:team-settings-open|team settings|org settings|team avatar|team name|members|invites|billing settings)\b/i.test(seedText(seedPlan, targetAppId));
 }
 
 function demoFeedbackItems(): FeedbackItem[] {
@@ -1136,6 +1147,98 @@ async function seedDebugWorkspace(): Promise<void> {
   setLastDebugRun(DEMO_PROJECT_ID, DEMO_DEBUG_RUN_ID);
 }
 
+function demoOrg(): Org {
+  const now = new Date().toISOString();
+  return {
+    org_id: "capture-demo-org",
+    name: "Aura Launch Team",
+    owner_user_id: "capture-demo-user",
+    slug: "aura-launch",
+    description: "Seeded team settings context for changelog screenshots.",
+    avatar_url: undefined,
+    billing_email: "ops@aura.example",
+    billing: null,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+function demoOrgMembers(currentUserId = "capture-demo-user"): OrgMember[] {
+  const now = new Date().toISOString();
+  return [
+    {
+      org_id: "capture-demo-org",
+      user_id: currentUserId,
+      display_name: "Maya Chen",
+      role: "owner",
+      avatar_url: undefined,
+      credit_budget: 5000,
+      joined_at: now,
+    },
+    {
+      org_id: "capture-demo-org",
+      user_id: "capture-demo-release-agent",
+      display_name: "Release Scout",
+      role: "admin",
+      avatar_url: undefined,
+      credit_budget: 2500,
+      joined_at: now,
+    },
+  ];
+}
+
+function demoOrgIntegrations(): OrgIntegration[] {
+  const now = new Date().toISOString();
+  return [
+    {
+      integration_id: "capture-demo-openai",
+      org_id: "capture-demo-org",
+      name: "OpenAI",
+      provider: "openai",
+      kind: "workspace_connection",
+      default_model: "gpt-5.2",
+      provider_config: null,
+      has_secret: true,
+      enabled: true,
+      secret_last4: "demo",
+      created_at: now,
+      updated_at: now,
+    },
+  ];
+}
+
+async function seedProfileWorkspace(
+  seedPlan: AuraCaptureSeedPlan | null | undefined,
+  targetAppId: string | null,
+): Promise<void> {
+  const { useAuthStore } = await import("../stores/auth-store");
+  const { useOrgStore } = await import("../stores/org-store");
+  const { useUIModalStore } = await import("../stores/ui-modal-store");
+  const currentUserId = useAuthStore.getState().user?.network_user_id
+    || useAuthStore.getState().user?.user_id
+    || "capture-demo-user";
+  const org = demoOrg();
+  useOrgStore.setState({
+    orgs: [org],
+    activeOrg: org,
+    members: demoOrgMembers(currentUserId),
+    integrations: demoOrgIntegrations(),
+    isLoading: false,
+    orgsError: null,
+    membersError: null,
+    integrationsError: null,
+  });
+  if (shouldOpenTeamSettings(seedPlan, targetAppId)) {
+    useUIModalStore.setState({
+      orgSettingsOpen: true,
+      orgInitialSection: undefined,
+      buyCreditsOpen: false,
+      hostSettingsOpen: false,
+      appsModalOpen: false,
+    });
+  }
+}
+
 async function seedAgentActivity(agentId: string): Promise<void> {
   const { useLoopActivityStore } = await import("../stores/loop-activity-store");
   const now = new Date().toISOString();
@@ -1315,6 +1418,11 @@ export async function applyAuraCaptureSeedPlan(
       applied.push("capture-demo-project");
     }
     applied.push("debug-demo-run");
+  }
+
+  if (shouldApplyProfileSeed(seedPlan, targetAppId)) {
+    await seedProfileWorkspace(seedPlan, targetAppId);
+    applied.push(shouldOpenTeamSettings(seedPlan, targetAppId) ? "team-settings-demo" : "profile-demo-context");
   }
 
   if (shouldApplyAura3DSeed(seedPlan, targetAppId)) {

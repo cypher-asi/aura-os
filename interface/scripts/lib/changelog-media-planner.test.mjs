@@ -288,6 +288,14 @@ test("deriveVisualMediaOpportunities skips mobile-scoped and changelog-validator
           "interface/scripts/changelog-validator.mjs",
         ],
       },
+      {
+        sha: "selector1234567",
+        subject: "feat(chat): add mobile model selector",
+        files: [
+          "interface/src/components/ChatInputBar/ChatInputBar.tsx",
+          "interface/src/components/ChatInputBar/ChatInputBar.module.css",
+        ],
+      },
     ],
     rendered: {
       entries: [
@@ -310,6 +318,17 @@ test("deriveVisualMediaOpportunities skips mobile-scoped and changelog-validator
               text: "Added changelog validator regression tests.",
               commit_shas: ["valid123"],
               changed_files: ["interface/scripts/changelog-validator.test.mjs"],
+            },
+          ],
+        },
+        {
+          batch_id: "entry-mobile-shared",
+          title: "Mobile chat model selector",
+          items: [
+            {
+              text: "Mobile chat now has a dedicated model selector.",
+              commit_shas: ["selector123"],
+              changed_files: ["interface/src/components/ChatInputBar/ChatInputBar.tsx"],
             },
           ],
         },
@@ -466,6 +485,55 @@ test("deriveVisualMediaSurfaceClusters promotes repeated visual surfaces inside 
   assert.ok(shellCluster.score > 40);
   assert.match(shellCluster.guidance.join("\n"), /parent changelog title is placement context/);
   assert.ok(shellCluster.subjects.some((subject) => subject.includes("bottom taskbar")));
+});
+
+test("deriveVisualMediaSurfaceClusters maps Team Settings proof to the Profile app route", () => {
+  const opportunities = deriveVisualMediaOpportunities({
+    rawCommits: [
+      {
+        sha: "team1234567890",
+        subject: "feat(settings): show build version in Team Settings general section",
+        files: [
+          "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.tsx",
+          "interface/src/components/OrgSettingsGeneral/OrgSettingsGeneral.tsx",
+        ],
+      },
+    ],
+    rendered: {
+      entries: [
+        {
+          batch_id: "entry-settings",
+          title: "Team Settings general section shows build metadata",
+          items: [
+            {
+              text: "Team Settings now shows the app build version in General.",
+              commit_shas: ["team123"],
+              changed_files: ["interface/src/components/OrgSettingsGeneral/OrgSettingsGeneral.tsx"],
+            },
+          ],
+        },
+      ],
+    },
+  }, {
+    sitemap: {
+      apps: [
+        {
+          id: "profile",
+          label: "Profile",
+          path: "/profile",
+          keywords: ["profile", "account", "settings", "team"],
+          captureSeedProfile: {
+            runtimeSeedSupport: "supported",
+            capabilities: ["profile-summary-populated", "team-settings-open"],
+          },
+        },
+      ],
+    },
+  });
+  const clusters = deriveVisualMediaSurfaceClusters(opportunities);
+
+  assert.equal(clusters[0]?.preferredTargetAppId, "profile");
+  assert.equal(clusters[0]?.preferredTargetPath, "/profile");
 });
 
 test("deriveVisualMediaSurfaceClusters does not emit empty desktop fallback clusters", () => {

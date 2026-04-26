@@ -73,6 +73,11 @@ const SEEDED_CAPTURE_SURFACES = Object.freeze({
     preferredStableSurface: "Debug app run detail with a populated event timeline, counters, filters, and sidekick inspector.",
     seededData: ["selected debug project", "debug run metadata", "event timeline", "run counters", "sidekick inspector"],
   },
+  profile: {
+    capabilities: ["profile-summary-populated", "team-settings-open", "sidekick-context-populated"],
+    preferredStableSurface: "Profile screen with seeded account context, or Team Settings modal opened over a populated desktop route when settings are the proof.",
+    seededData: ["user profile", "active team", "team members", "team settings general section"],
+  },
 });
 
 const FALLBACK_APPS = [
