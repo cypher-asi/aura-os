@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-04-26",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.401.1",
+    "title": "Aura-managed model routing, persistent shell, and harness hardening",
+    "intro": "Tonight's nightly collapses model traffic onto the Aura proxy, makes the desktop shell feel steadier between apps, and tightens how the server and harness handle backpressure, stale auth, and unhealthy sidecars. A new in-chat image generation tool and a reworked Run pane round out the user-visible changes.",
+    "entryCount": 6,
+    "highlights": [
+      "All model traffic now routes through the Aura proxy",
+      "Middle panel stays mounted across app switches",
+      "Harness sidecar fails closed when unhealthy",
+      "In-chat generate_image tool with gpt-image-2 default"
+    ],
+    "rawCommitCount": 24,
+    "generatedAt": "2026-04-26T08:18:47.319Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.401.1",
+    "path": "history/2026-04-26.json"
+  },
+  {
     "date": "2026-04-25",
     "channel": "nightly",
     "version": "0.1.0-nightly.399.1",
