@@ -2,19 +2,20 @@
   {
     "date": "2026-04-26",
     "channel": "nightly",
-    "version": "0.1.0-nightly.402.1",
-    "title": "Aura-managed model routing, persistent shell, and tighter agent permissions",
-    "intro": "A dense nightly that consolidates model traffic behind the Aura proxy, eliminates the wallpaper flash when switching apps, and hardens the agent runtime — from harness sidecar startup to permission defaults. The bulk of the day is a long Interface and Core Rust thread, with a small late patch to changelog tooling.",
+    "version": "0.1.0-nightly.403.1",
+    "title": "Aura-managed models, sturdier streams, and a persistent desktop shell",
+    "intro": "A heavy day across the stack: chat agents gained a native image-generation tool while every model request was consolidated onto the Aura proxy, the desktop shell stopped flashing on app switches, and the server hardened auth, harness backpressure, and stream recovery. A large internal split of oversized server and Rust modules sets up cleaner ownership without changing behavior.",
     "entryCount": 6,
     "highlights": [
-      "All model traffic now routes through the Aura proxy",
-      "Middle panel stays mounted across app switches — no more wallpaper flash",
-      "Desktop fails closed when the local harness sidecar is unhealthy",
-      "Spec drafts survive model timeouts; Run pane shows loop tasks again"
+      "generate_image tool and gpt-image-2 default",
+      "All model traffic now flows through the Aura proxy",
+      "Persistent middle panel removes app-switch flash",
+      "Harness sidecar fails closed on unhealthy startup",
+      "Run pane restored from authoritative project tasks"
     ],
-    "rawCommitCount": 25,
-    "generatedAt": "2026-04-26T17:25:25.594Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.402.1",
+    "rawCommitCount": 26,
+    "generatedAt": "2026-04-26T18:23:43.354Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.403.1",
     "path": "history/2026-04-26.json"
   },
   {
