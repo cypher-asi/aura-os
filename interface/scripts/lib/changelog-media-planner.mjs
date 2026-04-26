@@ -831,6 +831,7 @@ function isShellChromeCandidate(candidate) {
 function normalizeShellChromeCandidate(candidate) {
   if (!isShellChromeCandidate(candidate)) return candidate;
   const needsRouteRewrite = candidate.targetAppId === "desktop" || candidate.targetPath === "/desktop";
+  if (!needsRouteRewrite) return candidate;
   const seedPlan = normalizeCaptureSeedPlan(candidate.seedPlan, {
     ...candidate,
     targetAppId: SHELL_CAPTURE_FALLBACK_APP_ID,
@@ -877,6 +878,34 @@ function normalizeShellChromeCandidate(candidate) {
   };
 }
 
+function duplicateProneSurfaceKey(candidate) {
+  if (!isShellChromeCandidate(candidate)) return null;
+  return [
+    "shell-chrome",
+    candidate?.targetAppId || "",
+    candidate?.targetPath || "",
+  ].join(":");
+}
+
+function selectMediaCandidates(eligibleCandidates, maxCandidates) {
+  const candidates = [];
+  const duplicateSurfaceSkips = new Map();
+  const seenDuplicateProneSurfaces = new Set();
+  for (const candidate of eligibleCandidates) {
+    if (candidates.length >= maxCandidates) break;
+    const duplicateSurfaceKey = duplicateProneSurfaceKey(candidate);
+    if (duplicateSurfaceKey && seenDuplicateProneSurfaces.has(duplicateSurfaceKey)) {
+      duplicateSurfaceSkips.set(candidate.entryId, duplicateSurfaceKey);
+      continue;
+    }
+    candidates.push(candidate);
+    if (duplicateSurfaceKey) {
+      seenDuplicateProneSurfaces.add(duplicateSurfaceKey);
+    }
+  }
+  return { candidates, duplicateSurfaceSkips };
+}
+
 export function normalizeMediaPlan(plan, { maxCandidates = DEFAULT_MAX_CANDIDATES } = {}) {
   const normalizedCandidates = (Array.isArray(plan?.candidates) ? plan.candidates : [])
     .filter((candidate) => candidate?.shouldCapture === true)
@@ -909,19 +938,23 @@ export function normalizeMediaPlan(plan, { maxCandidates = DEFAULT_MAX_CANDIDATE
   const eligibleCandidates = uniqueCandidates
     .filter((candidate) => candidate.confidence >= MIN_CAPTURE_CONFIDENCE && candidate.targetAppId && candidate.targetPath)
     .sort((left, right) => right.confidence - left.confidence || left.title.localeCompare(right.title));
-  const candidates = eligibleCandidates.slice(0, maxCandidates);
+  const { candidates, duplicateSurfaceSkips } = selectMediaCandidates(eligibleCandidates, maxCandidates);
   const selectedCandidateIds = new Set(candidates.map((candidate) => candidate.entryId));
   const candidateFallbackSkips = uniqueCandidates
     .filter((candidate) => !selectedCandidateIds.has(candidate.entryId))
     .map((candidate) => ({
       entryId: candidate.entryId,
       title: candidate.title,
-      reason: !candidate.targetAppId || !candidate.targetPath
+      reason: duplicateSurfaceSkips.has(candidate.entryId)
+        ? "Candidate targets the same shell/chrome screenshot surface as a higher-priority media candidate in this changelog batch."
+        : !candidate.targetAppId || !candidate.targetPath
         ? "Planner did not provide a sitemap-backed target app and path."
         : candidate.confidence < MIN_CAPTURE_CONFIDENCE
         ? `Planner confidence ${candidate.confidence.toFixed(2)} is below the capture threshold.`
         : "Candidate was lower priority than the selected media budget.",
-      category: !candidate.targetAppId || !candidate.targetPath || candidate.confidence < MIN_CAPTURE_CONFIDENCE ? "too-ambiguous" : "candidate-limit",
+      category: duplicateSurfaceSkips.has(candidate.entryId)
+        ? "duplicate-surface"
+        : !candidate.targetAppId || !candidate.targetPath || candidate.confidence < MIN_CAPTURE_CONFIDENCE ? "too-ambiguous" : "candidate-limit",
     }));
 
   const skipped = (Array.isArray(plan?.skipped) ? plan.skipped : [])

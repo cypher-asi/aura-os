@@ -30,15 +30,17 @@ function inferSeedCapabilities(candidate = {}) {
   const targetPath = normalizeString(candidate.targetPath);
   const text = candidateText(candidate);
   const changedFileText = (Array.isArray(candidate.changedFiles) ? candidate.changedFiles : []).join("\n").toLowerCase();
+  const explicitlyTargetsDifferentApp = appId && appId !== "aura3d" && !/^\/3d(?:\/|$)/.test(targetPath);
   const targetsAura3D = appId === "aura3d"
     || /^\/3d(?:\/|$)/.test(targetPath)
-    || /interface\/src\/apps\/aura3d\//.test(changedFileText);
+    || (!explicitlyTargetsDifferentApp && /interface\/src\/apps\/aura3d\//.test(changedFileText));
   const wantsShellContext = /\b(?:desktop shell|shell chrome|bottom taskbar|taskbar|sidebar|sidekick|floating[- ]glass|floating panel|desktop layout)\b/.test(text);
-  const wantsAura3DModelSurface = /\b(?:image\s*(?:to|->|→)\s*(?:3d|model)|3d\s+model|webgl|viewer|convert|conversion|source image|model preview)\b/.test(text);
-  const wantsAura3DAssetSurface = targetsAura3D
-    || /\b(?:aura\s*3d|aura3d|3d\s+asset|3d\s+model|webgl|glb|image\s*(?:to|->|→)\s*(?:3d|model)|generated\s+image\s+gallery|generated\s+3d)\b/.test(text);
-  const wantsAura3DImageGallery = targetsAura3D
-    || /\b(?:aura\s*3d.*(?:image|gallery)|generated\s+image\s+gallery|3d\s+generated\s+image|image\s*(?:to|->|→)\s*(?:3d|model))\b/.test(text);
+  const wantsAura3DModelSurface = !explicitlyTargetsDifferentApp
+    && /\b(?:image\s*(?:to|->|→)\s*(?:3d|model)|3d\s+model|webgl|viewer|convert|conversion|source image|model preview)\b/.test(text);
+  const wantsAura3DAssetSurface = !explicitlyTargetsDifferentApp && (targetsAura3D
+    || /\b(?:aura\s*3d|aura3d|3d\s+asset|3d\s+model|webgl|glb|image\s*(?:to|->|→)\s*(?:3d|model)|generated\s+image\s+gallery|generated\s+3d)\b/.test(text));
+  const wantsAura3DImageGallery = !explicitlyTargetsDifferentApp && (targetsAura3D
+    || /\b(?:aura\s*3d.*(?:image|gallery)|generated\s+image\s+gallery|3d\s+generated\s+image|image\s*(?:to|->|→)\s*(?:3d|model))\b/.test(text));
   const wantsTaskBoard = appId === "tasks"
     || /^\/tasks(?:\/|$)/.test(targetPath)
     || /interface\/src\/apps\/tasks\//.test(changedFileText)

@@ -480,6 +480,87 @@ test("normalizeMediaPlan does not route non-shell proofs because the reason ment
   assert.equal(plan.candidates[0].targetPath, "/agents");
 });
 
+test("normalizeMediaPlan preserves explicit app targets even when broad release text mentions shell", () => {
+  const plan = normalizeMediaPlan({
+    candidates: [
+      {
+        entryId: "models",
+        title: "Aura-proxied models, persistent shell, and generate_image",
+        shouldCapture: true,
+        reason: "The selected visual proof is the Agents chat model picker with gpt-image-2 visible.",
+        targetAppId: "agents",
+        targetPath: "/agents",
+        proofGoal: "Show the Agents chat composer with the model picker open and gpt-image-2 visible.",
+        publicCaption: "gpt-image-2 is visible in the chat picker.",
+        confidence: 0.82,
+        changedFiles: [
+          "interface/src/components/AppShell/AppShell.tsx",
+          "interface/src/constants/models.ts",
+          "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx",
+        ],
+        seedPlan: {
+          capabilities: ["app:agents", "agent-chat-ready", "model-picker-open", "proof-data-populated"],
+          requiredState: ["The chat composer model picker is open."],
+        },
+      },
+    ],
+    skipped: [],
+  }, { maxCandidates: 1 });
+
+  assert.equal(plan.candidates.length, 1);
+  assert.equal(plan.candidates[0].targetAppId, "agents");
+  assert.equal(plan.candidates[0].targetPath, "/agents");
+  assert.ok(plan.candidates[0].seedPlan.capabilities.includes("app:agents"));
+  assert.ok(!plan.candidates[0].seedPlan.capabilities.includes("app:aura3d"));
+});
+
+test("normalizeMediaPlan skips lower-priority duplicate shell fallback surfaces", () => {
+  const plan = normalizeMediaPlan({
+    candidates: [
+      {
+        entryId: "shell-a",
+        title: "Desktop shell spacing tightened",
+        shouldCapture: true,
+        reason: "Visible desktop shell chrome and bottom taskbar change.",
+        targetAppId: "desktop",
+        targetPath: "/desktop",
+        proofGoal: "Show the bottom taskbar and desktop shell spacing.",
+        publicCaption: "The desktop shell spacing is tighter.",
+        confidence: 0.9,
+        changedFiles: ["interface/src/components/DesktopShell/DesktopShell.tsx"],
+      },
+      {
+        entryId: "shell-b",
+        title: "Taskbar capsules redesigned",
+        shouldCapture: true,
+        reason: "Visible desktop shell chrome and taskbar capsule change.",
+        targetAppId: "desktop",
+        targetPath: "/desktop",
+        proofGoal: "Show the same bottom taskbar shell chrome.",
+        publicCaption: "The taskbar capsules have a cleaner design.",
+        confidence: 0.86,
+        changedFiles: ["interface/src/components/BottomTaskbar/BottomTaskbar.tsx"],
+      },
+      {
+        entryId: "feedback",
+        title: "Feedback sort control",
+        shouldCapture: true,
+        reason: "Feedback board sorting is visible and seedable.",
+        targetAppId: "feedback",
+        targetPath: "/feedback",
+        proofGoal: "Show the feedback board with the sort control visible.",
+        publicCaption: "Feedback can now be sorted from the board.",
+        confidence: 0.8,
+        changedFiles: ["interface/src/apps/feedback/FeedbackMainPanel.tsx"],
+      },
+    ],
+    skipped: [],
+  }, { maxCandidates: 3 });
+
+  assert.deepEqual(plan.candidates.map((candidate) => candidate.entryId), ["shell-a", "feedback"]);
+  assert.ok(plan.skipped.some((entry) => entry.entryId === "shell-b" && entry.category === "duplicate-surface"));
+});
+
 test("validateMediaPlanCoverage catches planner omissions and duplicates", () => {
   const coverage = validateMediaPlanCoverage({
     candidates: [{ entryId: "entry-1" }],

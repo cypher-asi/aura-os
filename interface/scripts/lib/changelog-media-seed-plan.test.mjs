@@ -138,6 +138,30 @@ test("normalizeCaptureSeedPlan does not infer AURA 3D gallery state from generic
   assert.ok(!filePreviewPlan.capabilities.includes("image-gallery-populated"));
 });
 
+test("normalizeCaptureSeedPlan does not inherit AURA 3D seed state for explicit agent picker targets", () => {
+  const plan = normalizeCaptureSeedPlan({
+    capabilities: ["app:agents", "agent-chat-ready", "model-picker-open", "proof-data-populated"],
+    requiredState: ["The chat composer model picker is open."],
+  }, {
+    title: "Aura-proxied models, persistent shell, and generate_image",
+    targetAppId: "agents",
+    targetPath: "/agents",
+    proofGoal: "Show the Agents chat composer with gpt-image-2 visible in the model picker.",
+    publicCaption: "gpt-image-2 is visible in the chat picker.",
+    changedFiles: [
+      "interface/src/constants/models.ts",
+      "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx",
+      "interface/src/stores/aura3d-store.ts",
+    ],
+  });
+
+  assert.ok(plan.capabilities.includes("app:agents"));
+  assert.ok(plan.capabilities.includes("agent-chat-ready"));
+  assert.ok(!plan.capabilities.includes("app:aura3d"));
+  assert.ok(!plan.capabilities.includes("asset-gallery-populated"));
+  assert.ok(!plan.capabilities.includes("image-gallery-populated"));
+});
+
 test("normalizeCaptureSeedPlan opens the AURA 3D model surface only for explicit model proof", () => {
   const plan = normalizeCaptureSeedPlan(null, {
     title: "New AURA 3D image to 3D model viewer",
