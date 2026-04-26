@@ -1532,7 +1532,45 @@
             ],
             "confidence": "medium"
           }
-        ]
+        ],
+        "media": {
+          "schemaVersion": 1,
+          "status": "published",
+          "type": "image",
+          "assetPath": "assets/changelog/nightly/2026-04-26/entry-4-dc721533d988.png",
+          "alt": "Aura-proxied models, persistent shell, and a hardened agent runtime",
+          "caption": "All model traffic now routes through the Aura proxy, so the chat model picker collapses into a single Aura group.",
+          "width": 2560,
+          "height": 1440,
+          "bytes": 2517774,
+          "sourceCommitShas": [
+            "8b9fbd91027bf0aabd509cc09335f4f20426ff86",
+            "c48f16047c9461f11398007e6c6073962fdb8a9c",
+            "03c14491d814e1218c049605a76d5b17de4ba79f",
+            "1a897b8ce8fa711e7632229ee72e7b5421acf208",
+            "9fbbd1de1b95fd0c91d6176f6fa54f9f051946e5",
+            "2af35f3033f53d8908d160bca48d3b2f28da9b67",
+            "442fd8ae79ef347fb53963cc0e1ec23adae74fdc",
+            "fbb75204dae01158c2af9ddd0983ddaafaa2593f",
+            "272818e34de377e76922d04e9501fad6f16cfa4b",
+            "fe50f6a8c8a03bae08cf4d27a8a97d40944811a1",
+            "6c1393cad429613410b2b37709527fbf49aa002c",
+            "5ba2be2db5103f5adc6002be484f79706c5ef90b",
+            "b9f19d329a58cf9b88853a4babe01c4eff2ff567",
+            "7b0b4c0918a533ac6b9bdbe4d4f706603703217b",
+            "1e9b8eedf3e22be3db90835c72ef4ef689411927",
+            "d4e0fa3ae38d89994c05a525885edd44a549833d",
+            "9d3f6f37a11b633660ccab9aa931937a284bd3a8",
+            "06af9e7769c39f448d92e349136fc4139d7c497b"
+          ],
+          "gates": {
+            "rawQuality": "accepted",
+            "rawVision": "accepted",
+            "brandedQuality": "accepted",
+            "brandedVision": "accepted"
+          },
+          "updatedAt": "2026-04-26T17:32:54.585Z"
+        }
       },
       {
         "batch_id": "entry-5",
