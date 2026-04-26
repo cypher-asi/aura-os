@@ -4,12 +4,13 @@
 use aura_os_harness::HarnessOutbound;
 use serde_json::{json, Value};
 use tokio::sync::broadcast;
-use tracing::{info, warn};
+use tracing::warn;
 
 use super::event_bus::publish_assistant_message_end_event;
 use super::persist::ChatPersistCtx;
 use super::persist_task::{
-    flush_text_segment, message_id_for_synth, message_id_str, persist_event, PersistTaskState,
+    flush_text_segment, log_stream_summary, message_id_for_synth, message_id_str, persist_event,
+    PersistTaskState,
 };
 
 /// Dispatch a single harness outbound event. Returns `true` when the
@@ -21,6 +22,7 @@ pub(super) async fn handle_outbound(
     ctx: &ChatPersistCtx,
     event_bus: &broadcast::Sender<Value>,
     evt: &HarnessOutbound,
+    model: Option<&str>,
 ) -> bool {
     match evt {
         HarnessOutbound::AssistantMessageStart(start) => {
@@ -48,11 +50,11 @@ pub(super) async fn handle_outbound(
             true
         }
         HarnessOutbound::AssistantMessageEnd(end) => {
-            handle_message_end(state, ctx, event_bus, end).await;
+            handle_message_end(state, ctx, event_bus, end, model).await;
             false
         }
         HarnessOutbound::Error(err) => {
-            handle_error(state, ctx, event_bus, err).await;
+            handle_error(state, ctx, event_bus, err, model).await;
             false
         }
         HarnessOutbound::SessionReady(_)
@@ -86,6 +88,8 @@ async fn handle_message_start(
 }
 
 async fn handle_text_delta(state: &mut PersistTaskState, ctx: &ChatPersistCtx, text: &str) {
+    state.text_delta_count += 1;
+    state.total_text_bytes += text.len();
     state.full_text.push_str(text);
     state.text_segment.push_str(text);
     if persist_event(
@@ -104,6 +108,8 @@ async fn handle_text_delta(state: &mut PersistTaskState, ctx: &ChatPersistCtx, t
 }
 
 async fn handle_thinking_delta(state: &mut PersistTaskState, ctx: &ChatPersistCtx, thinking: &str) {
+    state.thinking_delta_count += 1;
+    state.total_thinking_bytes += thinking.len();
     state.thinking_buf.push_str(thinking);
     if persist_event(
         ctx,
@@ -126,6 +132,7 @@ async fn handle_tool_use_start(
     id: &str,
     name: &str,
 ) {
+    state.tool_use_count += 1;
     flush_text_segment(state);
     state.last_tool_use_id = id.to_string();
     state.content_blocks.push(json!({
@@ -249,6 +256,7 @@ async fn handle_message_end(
     ctx: &ChatPersistCtx,
     event_bus: &broadcast::Sender<Value>,
     end: &aura_os_harness::AssistantMessageEnd,
+    model: Option<&str>,
 ) {
     flush_text_segment(state);
     let payload = json!({
@@ -269,14 +277,15 @@ async fn handle_message_end(
         state.persisted_events += 1;
         state.end_persisted = true;
         publish_assistant_message_end_event(event_bus, ctx, &end.message_id);
+        log_stream_summary(
+            state,
+            ctx,
+            model,
+            &end.stop_reason,
+            false,
+            "assistant_message_end",
+        );
     }
-    info!(
-        session_id = %ctx.session_id,
-        persisted_events = state.persisted_events,
-        content_blocks = state.content_blocks.len(),
-        stop_reason = %end.stop_reason,
-        "Persisted assistant turn events"
-    );
 }
 
 async fn handle_error(
@@ -284,6 +293,7 @@ async fn handle_error(
     ctx: &ChatPersistCtx,
     event_bus: &broadcast::Sender<Value>,
     err: &aura_os_harness::ErrorMsg,
+    model: Option<&str>,
 ) {
     if persist_event(
         ctx,
@@ -309,7 +319,7 @@ async fn handle_error(
         return;
     }
 
-    synthesize_error_message_end(state, ctx, event_bus, err).await;
+    synthesize_error_message_end(state, ctx, event_bus, err, model).await;
 }
 
 /// If the harness errored before producing any text, thinking, or
@@ -324,6 +334,7 @@ async fn synthesize_error_message_end(
     ctx: &ChatPersistCtx,
     event_bus: &broadcast::Sender<Value>,
     err: &aura_os_harness::ErrorMsg,
+    model: Option<&str>,
 ) {
     let err_summary = if err.message.trim().is_empty() {
         format!("(agent error: {})", err.code)
@@ -350,6 +361,7 @@ async fn synthesize_error_message_end(
         state.persisted_events += 1;
         state.end_persisted = true;
         publish_assistant_message_end_event(event_bus, ctx, message_id_str(state));
+        log_stream_summary(state, ctx, model, "error", true, "error");
         warn!(
             session_id = %ctx.session_id,
             error_code = %err.code,

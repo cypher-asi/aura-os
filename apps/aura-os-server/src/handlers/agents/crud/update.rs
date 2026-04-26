@@ -254,16 +254,14 @@ fn apply_local_overrides(
 /// off this agent so a later chat turn re-evaluates the freshly-saved
 /// `permissions` bundle.
 ///
-/// Why this is needed: harness sessions cache the `installed_tools` list
-/// they were seeded with at startup, and the dispatcher caches
-/// `AgentPermissions` per stamped-agent-id to avoid reloading on every tool
-/// call. Without invalidation, toggling a capability in the UI takes effect
-/// only on the next process restart — which surfaced as the reported "I
-/// enabled caps but the tools never appeared" regression. The next
-/// `POST /api/.../chat` will cold-start a new session via
-/// `setup_agent_chat_persistence` and re-seed tools through
-/// `build_cross_agent_tools`, which now flows through the unified
-/// capability-aware `build_session_tools` filter.
+/// Why this is needed: harness sessions cache the server `installed_tools`
+/// list and the native tool definitions they were seeded with at startup.
+/// Cross-agent tools are harness-native and are surfaced by
+/// `visible_tools_with_permissions` from `SessionConfig.agent_permissions`;
+/// without invalidation, toggling a capability in the UI would not affect
+/// the visible tool set until a fresh session starts. The next
+/// `POST /api/.../chat` cold-starts through `setup_agent_chat_persistence`
+/// and sends the freshly normalized permissions bundle to the harness.
 ///
 /// Scope of invalidation: every live `ChatSession` whose `agent_id` matches
 /// this agent — including both the direct `agent:{id}` session and any

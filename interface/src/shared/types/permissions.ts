@@ -95,17 +95,18 @@ export const CAPABILITY_LABELS: Record<
 > = {
   spawnAgent: {
     label: "Spawn agents",
-    description: "Create new agents.",
+    description: "Create new agents. Enables harness tools: spawn_agent and task.",
     Icon: Plus,
   },
   controlAgent: {
     label: "Control agents",
-    description: "Send messages, pause, and stop other agents.",
+    description:
+      "Send messages, pause, and stop other agents. Enables harness tools: send_to_agent, agent_lifecycle, and delegate_task.",
     Icon: Gamepad2,
   },
   readAgent: {
     label: "Read agents",
-    description: "Inspect agent state and transcripts.",
+    description: "Inspect agent state and transcripts. Enables harness tool: get_agent_state.",
     Icon: Eye,
   },
   manageOrgMembers: {

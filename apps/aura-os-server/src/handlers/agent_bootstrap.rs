@@ -264,7 +264,8 @@ pub(crate) async fn setup_ceo_agent(
         // `permissions` column for agents, leaving the canonical CEO
         // with an empty permissions bundle on read. That breaks
         // `is_ceo_preset()`-gated code paths (Permissions tab toggles,
-        // `build_cross_agent_tools` manifest, etc.). Best-effort patch
+        // harness-native tool visibility from
+        // `SessionConfig.agent_permissions`, etc.). Best-effort patch
         // the network copy so the fix sticks; the in-memory `Agent`
         // returned to the caller is further repaired by
         // `conversions::agent_from_network` so the UI is correct even

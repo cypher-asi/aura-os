@@ -5,7 +5,7 @@
 use aura_os_harness::HarnessOutbound;
 use serde_json::{json, Value};
 use tokio::sync::broadcast;
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 
 use super::constants::ASSISTANT_TURN_PROGRESS_THROTTLE;
 use super::event_bus::{
@@ -28,6 +28,11 @@ pub(super) struct PersistTaskState {
     pub(super) last_tool_use_id: String,
     pub(super) persisted_events: u32,
     pub(super) end_persisted: bool,
+    pub(super) text_delta_count: u32,
+    pub(super) thinking_delta_count: u32,
+    pub(super) tool_use_count: u32,
+    pub(super) total_text_bytes: usize,
+    pub(super) total_thinking_bytes: usize,
     last_progress_at: Option<std::time::Instant>,
 }
 
@@ -43,6 +48,11 @@ impl PersistTaskState {
             last_tool_use_id: String::new(),
             persisted_events: 0,
             end_persisted: false,
+            text_delta_count: 0,
+            thinking_delta_count: 0,
+            tool_use_count: 0,
+            total_text_bytes: 0,
+            total_thinking_bytes: 0,
             last_progress_at: None,
         }
     }
@@ -52,21 +62,24 @@ pub(crate) fn spawn_chat_persist_task(
     rx: broadcast::Receiver<HarnessOutbound>,
     ctx: ChatPersistCtx,
     event_bus: broadcast::Sender<Value>,
+    model: Option<String>,
 ) {
-    tokio::spawn(async move { run_persist_loop(rx, ctx, event_bus).await });
+    tokio::spawn(async move { run_persist_loop(rx, ctx, event_bus, model).await });
 }
 
 async fn run_persist_loop(
     mut rx: broadcast::Receiver<HarnessOutbound>,
     ctx: ChatPersistCtx,
     event_bus: broadcast::Sender<Value>,
+    model: Option<String>,
 ) {
     let mut state = PersistTaskState::new();
     loop {
         match rx.recv().await {
             Ok(evt) => {
                 state.seq += 1;
-                let produced_progress = handle_outbound(&mut state, &ctx, &event_bus, &evt).await;
+                let produced_progress =
+                    handle_outbound(&mut state, &ctx, &event_bus, &evt, model.as_deref()).await;
                 if matches!(
                     evt,
                     HarnessOutbound::AssistantMessageEnd(_) | HarnessOutbound::Error(_)
@@ -87,7 +100,7 @@ async fn run_persist_loop(
             }
         }
     }
-    finalize_if_needed(&mut state, &ctx, &event_bus).await;
+    finalize_if_needed(&mut state, &ctx, &event_bus, model.as_deref()).await;
 }
 
 fn maybe_publish_progress(
@@ -128,6 +141,7 @@ async fn finalize_if_needed(
     state: &mut PersistTaskState,
     ctx: &ChatPersistCtx,
     event_bus: &broadcast::Sender<Value>,
+    model: Option<&str>,
 ) {
     if state.end_persisted {
         return;
@@ -161,6 +175,7 @@ async fn finalize_if_needed(
     if persist_event(ctx, "assistant_message_end", end_payload).await {
         state.persisted_events += 1;
         publish_assistant_message_end_event(event_bus, ctx, message_id_str(state));
+        log_stream_summary(state, ctx, model, "aborted", true, "broadcast_closed");
     }
     warn!(
         session_id = %ctx.session_id,
@@ -195,6 +210,33 @@ pub(super) fn message_id_str(state: &PersistTaskState) -> &str {
     } else {
         state.message_id.as_str()
     }
+}
+
+pub(super) fn log_stream_summary(
+    state: &PersistTaskState,
+    ctx: &ChatPersistCtx,
+    model: Option<&str>,
+    stop_reason: &str,
+    synthesized: bool,
+    terminal_event: &str,
+) {
+    info!(
+        session_id = %ctx.session_id,
+        project_agent_id = %ctx.project_agent_id,
+        agent_id = ?ctx.agent_id,
+        model = ?model,
+        text_delta_count = state.text_delta_count,
+        thinking_delta_count = state.thinking_delta_count,
+        tool_use_count = state.tool_use_count,
+        total_text_bytes = state.total_text_bytes,
+        total_thinking_bytes = state.total_thinking_bytes,
+        persisted_events = state.persisted_events,
+        content_blocks = state.content_blocks.len(),
+        stop_reason,
+        synthesized,
+        terminal_event,
+        "assistant stream output summary",
+    );
 }
 
 pub(super) async fn persist_event(ctx: &ChatPersistCtx, event_type: &str, content: Value) -> bool {

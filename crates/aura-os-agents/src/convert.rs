@@ -234,8 +234,8 @@ mod tests {
         // hit by the project-agent-instance chat path. When the
         // network record has empty permissions but the agent is
         // clearly the CEO (name + role both "CEO"), we must return
-        // the canonical preset so `build_cross_agent_tools` takes the
-        // CEO branch and emits the full manifest.
+        // the canonical preset so `SessionConfig.agent_permissions`
+        // lets the harness expose its capability-gated native tools.
         let net = minimal_network_agent("CEO", Some("CEO"));
         let agent = network_agent_to_core(&net);
         assert!(

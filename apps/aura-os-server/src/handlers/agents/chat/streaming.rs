@@ -161,6 +161,9 @@ pub(super) async fn open_harness_chat_stream(
         tool_hints: None,
         attachments: dto_attachments_to_protocol(&attachments),
     };
+    let persist_model = requested_model
+        .clone()
+        .or_else(|| session_config.model.clone());
     let (is_new, rx, _) = get_or_create_delegated_chat_session(
         state,
         &session_key,
@@ -179,7 +182,12 @@ pub(super) async fn open_harness_chat_stream(
     // `useChatHistorySync` for the consumer.
     publish_user_message_event(&state.event_broadcast, &ctx, persisted_user_evt.id.as_str());
 
-    spawn_chat_persist_task(persist_rx, ctx, state.event_broadcast.clone());
+    spawn_chat_persist_task(
+        persist_rx,
+        ctx,
+        state.event_broadcast.clone(),
+        persist_model,
+    );
 
     let stream = build_sse_stream(rx, is_new);
     let boxed: SseStream = Box::pin(stream);

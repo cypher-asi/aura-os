@@ -231,6 +231,26 @@ describe("PermissionsTab", () => {
     });
   });
 
+  it("surfaces harness-gated agent capability toggles", () => {
+    const agent = makeAgent();
+    render(<PermissionsTab agent={agent} isOwnAgent />);
+
+    expect(
+      screen.getByRole("switch", { name: /Spawn agents/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/spawn_agent and task/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("switch", { name: /Control agents/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/send_to_agent, agent_lifecycle, and delegate_task/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("switch", { name: /Read agents/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/get_agent_state/i)).toBeInTheDocument();
+  });
+
   it("coalesces rapid toggles back to the saved state without firing a PUT", async () => {
     const agent = makeAgent();
     render(<PermissionsTab agent={agent} isOwnAgent />);

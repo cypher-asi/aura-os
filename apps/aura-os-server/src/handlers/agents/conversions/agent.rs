@@ -114,11 +114,11 @@ fn derive_expertise(net: &NetworkAgent, tags: &[String]) -> Vec<String> {
 /// Older aura-network deployments didn't persist the `permissions` column
 /// for agents, so `NetworkAgent.permissions` deserializes to the default
 /// (empty) [`AgentPermissions`] via `#[serde(default)]`. When the rest of
-/// the server reads that record, callers like [`build_cross_agent_tools`]
-/// (the former in-process agent runtime) and the Permissions sidekick toggles key off
+/// the server reads that record, the harness-native tool catalog and the
+/// Permissions sidekick toggles both key off
 /// [`AgentPermissions::is_ceo_preset`] — so a CEO with an empty bundle
-/// ends up with zero cross-agent tools installed and every capability
-/// toggle rendered as "off", even though the agent is clearly the CEO.
+/// loses its capability-gated native tools and every capability toggle
+/// renders as "off", even though the agent is clearly the CEO.
 ///
 /// The canonical "this is a CEO" signal is
 /// [`AgentPermissions::is_ceo_preset`] on the stored bundle. When that
@@ -134,7 +134,6 @@ fn derive_expertise(net: &NetworkAgent, tags: &[String]) -> Vec<String> {
 /// canonical spec from the former in-process agent runtime, which sat above
 /// `aura-os-agents` in the crate graph.
 ///
-/// [`build_cross_agent_tools`]: crate::handlers::agents::workspace_tools
 fn effective_permissions_and_classifier(
     net: &NetworkAgent,
 ) -> (AgentPermissions, Option<IntentClassifierSpec>) {
@@ -148,12 +147,11 @@ fn effective_permissions_and_classifier(
             agent_id = %net.id,
             "CEO agent has non-preset permissions in network record; applying read-time preset"
         );
-        // CEO agents no longer ship an IntentClassifierSpec — the CEO
-        // cross-agent tool list is a static allowlist (see
-        // the old CEO core-tool allowlist). Preserve whatever
-        // the network record carries (typically `None`) so legacy
-        // deployments that still have a stored classifier don't have it
-        // retroactively clobbered by the read-time repair path.
+        // CEO agents no longer ship an IntentClassifierSpec. Native
+        // cross-agent tool visibility is derived by the harness from
+        // `SessionConfig.agent_permissions`, so preserve whatever the
+        // network record carries (typically `None`) and avoid
+        // retroactively clobbering legacy stored classifiers.
         return (permissions, net.intent_classifier.clone());
     }
     (permissions, net.intent_classifier.clone())

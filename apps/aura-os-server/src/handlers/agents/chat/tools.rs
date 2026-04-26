@@ -1,6 +1,10 @@
-//! Build the `installed_tools` payload shipped to the harness
-//! `SessionConfig`. Phase 3 removed the legacy cross-agent dispatcher,
-//! so the server only contributes workspace and integration tools here.
+//! Build the server-contributed `installed_tools` payload shipped to
+//! the harness `SessionConfig`.
+//!
+//! This list is intentionally limited to workspace and integration
+//! tools. Capability-gated native agent tools such as `send_to_agent`
+//! are owned by the harness catalog and become visible through
+//! `visible_tools_with_permissions` using `SessionConfig.agent_permissions`.
 
 use aura_os_core::{AgentPermissions, OrgId};
 use aura_os_harness::InstalledTool;
@@ -23,10 +27,9 @@ pub(super) struct InstalledToolsCtx<'a> {
 
 /// Build the `installed_tools` payload for a harness chat session.
 ///
-/// Phase 3 removes the legacy cross-agent dispatcher. Domain
-/// operations now remain reachable to the harness through its own
-/// delegated domain API, so the server only contributes workspace and
-/// integration tools here.
+/// The returned manifest is server-tool-only. Cross-agent capabilities
+/// are expressed through `SessionConfig.agent_permissions`; the harness
+/// uses that bundle to expose its native agent tools.
 pub(super) async fn build_session_installed_tools(
     ctx: &InstalledToolsCtx<'_>,
     _permissions: &AgentPermissions,

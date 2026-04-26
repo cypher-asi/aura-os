@@ -331,9 +331,9 @@ fn resolve_effective_project_id(
 /// When the turn is project-bound (either explicitly via the body or
 /// implicitly via the persistence context), splice the self-project
 /// `ReadProject` / `WriteProject` caps into the agent's normalized
-/// bundle so project-scoped tools survive the
-/// `permissions_satisfy_requirements` filter in
-/// `build_cross_agent_tools`.
+/// bundle so the harness receives `SessionConfig.agent_permissions`
+/// that let `visible_tools_with_permissions` expose the matching
+/// project-scoped native tools.
 fn normalize_agent_perms(
     agent: &aura_os_core::Agent,
     effective_project_id: Option<&str>,

@@ -15,9 +15,8 @@
 //!
 //! There are two independent sources of duplicates we defend against:
 //!
-//! 1. Server-side name collisions between workspace tools and
-//!    cross-agent tools (both manifests happen to emit a name like
-//!    `list_specs`). Handled by [`dedupe_installed_tools_by_name`].
+//! 1. Server-side name collisions between workspace and integration
+//!    tools. Handled by [`dedupe_installed_tools_by_name`].
 //!
 //! 2. Collisions between a tool the server ships in `installed_tools`
 //!    and a native tool the external harness sidecar (`aura_node`)
@@ -106,18 +105,14 @@ const HARNESS_NATIVE_TOOL_NAMES: &[&str] = &[
     "check_budget",
     "record_usage",
     // NOTE: cross_agent_catalog_entries (spawn_agent, send_to_agent,
-    // agent_lifecycle, get_agent_state, delegate_task) are deliberately
-    // NOT listed here. The harness registers them with non-empty
-    // `required_capabilities` via `cross_agent_catalog_entries()`
-    // (aura-harness/crates/aura-tools/src/catalog.rs:103-114). But its
-    // `populate_tool_definitions` (aura-harness/crates/aura-node/src/
-    // session/ws_handler.rs:395-398) calls `visible_tools(
-    // ToolProfile::Agent, _)`, which forwards `None` for permissions
-    // and so filters every capability-gated entry out before it reaches
-    // the session's `tool_definitions`. Listing them here would strip
-    // the only copy the LLM ever sees — that was the previous bug: the
-    // CEO reported "I don't have a messaging tool" even though
-    // `build_cross_agent_tools` emits `send_to_agent` for the ceo_preset.
+    // agent_lifecycle, get_agent_state, delegate_task, task) are
+    // deliberately NOT listed here. They are capability-gated
+    // harness-native tools surfaced through `visible_tools_with_permissions`
+    // using `SessionConfig.agent_permissions`, not server-shipped
+    // `InstalledTool`s. Listing them here would strip a server workspace
+    // or integration tool with the same name without providing any
+    // replacement in `installed_tools`, and could mask permission-gating
+    // bugs in the harness-native catalog.
 ];
 
 /// Drop any `InstalledTool` whose name is claimed natively by the
@@ -189,7 +184,7 @@ pub(crate) fn dedupe_and_log_installed_tools(
     }
 
     // Step 2: dedupe by name (first occurrence wins) so workspace
-    // tools win over any identically-named cross-agent tool.
+    // tools win over later server-contributed entries with the same name.
     let duplicates = dedupe_installed_tools_by_name(tools);
     if !duplicates.is_empty() {
         warn!(
@@ -255,15 +250,12 @@ mod tests {
 
     #[test]
     fn strip_harness_native_drops_unconditionally_visible_names_only() {
-        // The strip list covers names the harness advertises through
-        // `visible_tools(ToolProfile::Agent, _)` — i.e. entries with
-        // empty `required_capabilities`. Cross-agent tools
-        // (`send_to_agent`, `spawn_agent`, etc.) are registered with
-        // capability gates and `visible_tools` forwards `None` for
-        // permissions, so they never reach the harness's session
-        // `tool_definitions` and must SURVIVE the strip — otherwise
-        // the LLM never sees `send_to_agent` at all and the CEO tells
-        // the user it can't message agents.
+        // The strip list covers names the harness advertises
+        // unconditionally in the Agent profile. Cross-agent tools
+        // (`send_to_agent`, `spawn_agent`, etc.) are capability-gated
+        // harness-native tools exposed through `visible_tools_with_permissions`
+        // from `SessionConfig.agent_permissions`, so they must not be
+        // treated as server-shipped installed tools.
         let mut tools = vec![
             tool_named("list_org_integrations"), // server-only, keep
             tool_named("read_file"),             // harness core, drop
@@ -316,11 +308,11 @@ mod tests {
 
     #[test]
     fn send_to_agent_survives_strip_for_ceo_preset() {
-        // Regression for the Agents-app CEO bug: `build_cross_agent_tools`
-        // emits `send_to_agent` for the ceo_preset, and the harness's
-        // native copy is hidden from `populate_tool_definitions`
-        // (capability gate + `None` permissions), so stripping this
-        // name server-side would leave the LLM with no messaging tool.
+        // Regression for the Agents-app CEO bug: cross-agent names are
+        // harness-native and capability-gated from
+        // `SessionConfig.agent_permissions`. Server-side stripping must
+        // not include them, or diagnostics would hide the real harness
+        // visibility path.
         let mut tools = vec![
             tool_named("send_to_agent"),
             tool_named("spawn_agent"),
@@ -397,10 +389,9 @@ mod tests {
 
     #[test]
     fn dedupe_keeps_first_occurrence_and_drops_later_duplicates() {
-        // Scenario: a workspace manifest exposes `list_agents` with an
-        // org-scoped endpoint, and the CEO preset's cross-agent tool
-        // manifest also emits `list_agents`. Without dedup the harness
-        // ships both to the LLM API and the request 400s with
+        // Scenario: two server-contributed manifests expose
+        // `list_agents` with different endpoints. Without dedup the
+        // harness ships both to the LLM API and the request 400s with
         // `"tools: Tool names must be unique."`.
         let mut workspace_list_agents = tool_named("list_agents");
         workspace_list_agents.endpoint = "workspace-endpoint".to_string();
@@ -425,7 +416,7 @@ mod tests {
         assert_eq!(names, vec!["list_agents", "send_to_agent"]);
         assert_eq!(
             tools[0].endpoint, "workspace-endpoint",
-            "first-occurrence wins so the workspace (org-scoped) endpoint is preserved over the cross-agent copy"
+            "first-occurrence wins so the workspace (org-scoped) endpoint is preserved over the later duplicate"
         );
     }
 }

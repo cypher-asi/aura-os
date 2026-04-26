@@ -1,6 +1,10 @@
 //! Diagnostic endpoint for the server-contributed tools shipped to the
-//! harness. Legacy cross-agent dispatcher rows were removed in
-//! Phase 3; domain operations are delegated inside the harness.
+//! harness in `installed_tools`.
+//!
+//! This endpoint intentionally reports only workspace and integration
+//! tools. Harness-native tools such as `send_to_agent` are not
+//! `installed_tools`; the harness exposes them from its catalog through
+//! `visible_tools_with_permissions` using `SessionConfig.agent_permissions`.
 
 use axum::extract::{Path, State};
 use axum::Json;
