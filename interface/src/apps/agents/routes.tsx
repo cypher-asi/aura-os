@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components -- route modules mix lazy components and route tables by design */
 import type { RouteObject } from "react-router-dom";
-import { AgentChatView } from "../../components/AgentChatView";
+import { AgentChatView } from "./components/AgentChatView";
 import { AgentIndexRedirect } from "./AgentIndexRedirect";
 
 /**

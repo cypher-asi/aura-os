@@ -2,7 +2,7 @@ import { InlineRenameInput } from "../InlineRenameInput";
 import { DeleteProjectModal } from "../DeleteProjectModal";
 import { DeleteAgentInstanceModal } from "../DeleteAgentInstanceModal";
 import { ProjectSettingsModal } from "../ProjectSettingsModal";
-import { AgentSelectorModal } from "../AgentSelectorModal";
+import { AgentSelectorModal } from "../../apps/agents/components/AgentSelectorModal";
 import type { useProjectListActions } from "../../hooks/use-project-list-actions";
 
 interface Props {

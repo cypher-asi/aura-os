@@ -5,7 +5,7 @@ import { Link2, Sparkles } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { ApiClientError, api } from "../../api/client";
 import { Avatar } from "../../components/Avatar";
-import { AgentEditorModal } from "../../components/AgentEditorModal";
+import { AgentEditorModal } from "../../apps/agents/components/AgentEditorModal";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useProjectsList } from "../../apps/projects/useProjectsList";
 import { useProjectsListStore } from "../../stores/projects-list-store";

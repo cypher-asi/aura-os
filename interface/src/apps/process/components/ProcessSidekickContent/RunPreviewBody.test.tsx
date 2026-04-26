@@ -84,11 +84,11 @@ vi.mock("../../../../shared/api/process", () => ({
   },
 }));
 
-vi.mock("../../../../components/StreamingBubble", () => ({
+vi.mock("../../../chat/components/StreamingBubble", () => ({
   StreamingBubble: () => <div>Streaming bubble</div>,
 }));
 
-vi.mock("../../../../components/MessageBubble", () => ({
+vi.mock("../../../chat/components/MessageBubble", () => ({
   MessageBubble: ({ message }: { message: { id: string } }) => <div>Message {message.id}</div>,
 }));
 

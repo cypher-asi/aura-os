@@ -92,7 +92,7 @@ vi.mock("../../../components/EmptyState", () => ({
   EmptyState: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock("../../../components/AgentEditorModal", () => ({
+vi.mock("../components/AgentEditorModal", () => ({
   AgentEditorModal: ({
     isOpen,
     onSaved,

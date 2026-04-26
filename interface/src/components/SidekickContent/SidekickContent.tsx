@@ -25,7 +25,7 @@ import { useTerminalTarget } from "../../hooks/use-terminal-target";
 import { InfoPanel } from "./InfoPanel";
 import styles from "../Sidekick/Sidekick.module.css";
 
-const BrowserPanel = lazy(() => import("../BrowserPanel"));
+const BrowserPanel = lazy(() => import("../../apps/browser/components/BrowserPanel"));
 import overlayStyles from "../PreviewOverlay/PreviewOverlay.module.css";
 
 const SEARCH_PLACEHOLDERS: Record<string, string> = {

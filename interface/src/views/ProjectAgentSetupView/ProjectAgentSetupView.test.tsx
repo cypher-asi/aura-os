@@ -108,7 +108,7 @@ vi.mock("../../api/client", () => ({
   },
 }));
 
-vi.mock("../../components/AgentEditorModal", () => ({
+vi.mock("../../apps/agents/components/AgentEditorModal", () => ({
   AgentEditorModal: (props: Parameters<typeof mockAgentEditorModal>[0]) => mockAgentEditorModal(props),
 }));
 
@@ -258,7 +258,7 @@ describe("ProjectAgentSetupView", () => {
     render(
       <Routes>
         <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
-        <Route path="/projects/:projectId/agent" element={<div>Project agent landing</div>} />
+        <Route path="/projects/:projectId/agents" element={<div>Project agent landing</div>} />
       </Routes>,
       { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
     );

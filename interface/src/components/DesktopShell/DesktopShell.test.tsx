@@ -165,7 +165,7 @@ vi.mock("../../apps/registry", () => ({
   ],
 }));
 
-vi.mock("../AgentWindow/AgentWindow", () => ({
+vi.mock("../../apps/agents/components/AgentWindow/AgentWindow", () => ({
   AgentWindow: ({
     win,
     isFocused,

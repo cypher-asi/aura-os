@@ -350,7 +350,7 @@ test("runChangelogMediaEvaluation creates branded media only after quality and v
       {
         sha: "abc123456789",
         subject: "feat(chat): add GPT-5.5 model picker option",
-        files: ["interface/src/components/ChatInputBar/ChatInputBar.tsx"],
+        files: ["interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx"],
       },
     ],
     rendered: {
@@ -363,7 +363,7 @@ test("runChangelogMediaEvaluation creates branded media only after quality and v
             {
               text: "Added GPT-5.5 to the model picker.",
               commit_shas: ["abc123456789"],
-              changed_files: ["interface/src/components/ChatInputBar/ChatInputBar.tsx"],
+              changed_files: ["interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx"],
             },
           ],
         },
@@ -404,7 +404,7 @@ test("runChangelogMediaEvaluation creates branded media only after quality and v
                   proofGoal: "Open the chat model picker and show GPT-5.5.",
                   publicCaption: "GPT-5.5 is now available directly from the chat model picker.",
                   confidence: 0.91,
-                  changedFiles: ["interface/src/components/ChatInputBar/ChatInputBar.tsx"],
+                  changedFiles: ["interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx"],
                 },
               ],
               skipped: [],
@@ -542,7 +542,7 @@ test("runChangelogMediaEvaluation does not publish when vision judge is disabled
       {
         sha: "abc123456789",
         subject: "feat(chat): add GPT-5.5 model picker option",
-        files: ["interface/src/components/ChatInputBar/ChatInputBar.tsx"],
+        files: ["interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx"],
       },
     ],
     rendered: {
@@ -555,7 +555,7 @@ test("runChangelogMediaEvaluation does not publish when vision judge is disabled
             {
               text: "Added GPT-5.5 to the model picker.",
               commit_shas: ["abc123456789"],
-              changed_files: ["interface/src/components/ChatInputBar/ChatInputBar.tsx"],
+              changed_files: ["interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx"],
             },
           ],
         },
@@ -593,7 +593,7 @@ test("runChangelogMediaEvaluation does not publish when vision judge is disabled
                   proofGoal: "Open the chat model picker and show GPT-5.5.",
                   publicCaption: "GPT-5.5 is now available directly from the chat model picker.",
                   confidence: 0.91,
-                  changedFiles: ["interface/src/components/ChatInputBar/ChatInputBar.tsx"],
+                  changedFiles: ["interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx"],
                 },
               ],
               skipped: [],

@@ -41,7 +41,7 @@ import { useDesktopWindowStore } from "../../stores/desktop-window-store";
 import styles from "./DesktopShell.module.css";
 
 const DesktopWindowLayer = lazy(() =>
-  import("../AgentWindow").then((module) => ({ default: module.DesktopWindowLayer })),
+  import("../../apps/agents/components/AgentWindow").then((module) => ({ default: module.DesktopWindowLayer })),
 );
 const HostSettingsModal = lazy(() =>
   import("../HostSettingsModal").then((module) => ({ default: module.HostSettingsModal })),

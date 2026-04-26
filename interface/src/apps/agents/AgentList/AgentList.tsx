@@ -5,7 +5,7 @@ import { Menu, Modal, Button } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
 import { Pencil, Pin, PinOff, Star, StarOff, Trash2 } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
-import { AgentEditorModal } from "../../../components/AgentEditorModal";
+import { AgentEditorModal } from "../components/AgentEditorModal";
 import { ProjectsPlusButton } from "../../../components/ProjectsPlusButton";
 import { AgentConversationRow } from "../AgentConversationRow";
 import { useProfileStatusStore } from "../../../stores/profile-status-store";

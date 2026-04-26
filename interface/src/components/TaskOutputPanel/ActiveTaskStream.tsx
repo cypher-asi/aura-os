@@ -11,7 +11,7 @@ import {
   useTimeline,
   useProgressText,
 } from "../../hooks/stream/hooks";
-import { LLMStreamOutput } from "../LLMOutput";
+import { LLMStreamOutput } from "../../apps/chat/components/LLMOutput";
 import { CookingIndicator } from "../CookingIndicator";
 import styles from "./TaskOutputPanel.module.css";
 

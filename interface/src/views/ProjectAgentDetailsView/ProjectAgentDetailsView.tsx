@@ -4,7 +4,7 @@ import { Badge, Text } from "@cypher-asi/zui";
 import { Activity, Bot, ChevronDown, Cloud, KeyRound, Minus, Monitor, Plus, Server, Zap } from "lucide-react";
 import { Avatar } from "../../components/Avatar";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
-import { useProjectAgentState } from "../../components/ChatView/useProjectAgentState";
+import { useProjectAgentState } from "../../apps/chat/components/ChatView/useProjectAgentState";
 import { api } from "../../api/client";
 import { useRemoteAgentState } from "../../hooks/use-remote-agent-state";
 import { projectAgentChatRoute } from "../../utils/mobileNavigation";

@@ -2,7 +2,7 @@
 import { lazy } from "react";
 import { Navigate, type RouteObject } from "react-router-dom";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
-import { AgentChatView } from "../../components/AgentChatView";
+import { AgentChatView } from "../agents/components/AgentChatView";
 import { MobileOrganizationView } from "../../views/MobileOrganizationView";
 import { ExecutionView } from "../../views/ExecutionView";
 import { ProjectAgentDetailsView } from "../../views/ProjectAgentDetailsView";

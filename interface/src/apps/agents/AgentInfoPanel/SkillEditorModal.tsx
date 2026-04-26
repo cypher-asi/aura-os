@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { Modal, Input, Textarea, Button, Spinner, Text } from "@cypher-asi/zui";
 import { api } from "../../../api/client";
-import styles from "../../../components/AgentEditorModal/AgentEditorModal.module.css";
+import styles from "../components/AgentEditorModal/AgentEditorModal.module.css";
 
 interface SkillEditorModalProps {
   isOpen: boolean;

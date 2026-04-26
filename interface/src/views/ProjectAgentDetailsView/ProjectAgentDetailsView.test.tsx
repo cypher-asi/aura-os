@@ -20,7 +20,7 @@ vi.mock("../../hooks/use-aura-capabilities", () => ({
   useAuraCapabilities: () => mockUseAuraCapabilities(),
 }));
 
-vi.mock("../../components/ChatView/useProjectAgentState", () => ({
+vi.mock("../../apps/chat/components/ChatView/useProjectAgentState", () => ({
   useProjectAgentState: () => mockUseProjectAgentState(),
 }));
 

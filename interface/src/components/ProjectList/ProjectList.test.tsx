@@ -175,7 +175,7 @@ vi.mock("../DeleteAgentInstanceModal", () => ({
 vi.mock("../ProjectSettingsModal", () => ({
   ProjectSettingsModal: () => null,
 }));
-vi.mock("../AgentSelectorModal", () => ({
+vi.mock("../../apps/agents/components/AgentSelectorModal", () => ({
   AgentSelectorModal: () => null,
 }));
 

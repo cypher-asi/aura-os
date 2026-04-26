@@ -41,13 +41,13 @@ vi.mock("../../hooks/stream/hooks", () => ({
   useStreamEvents: () => streamEventsState,
 }));
 
-vi.mock("../MessageBubble", () => ({
+vi.mock("../../apps/chat/components/MessageBubble", () => ({
   MessageBubble: ({ message }: { message: { id: string; content: string } }) => (
     <div data-testid="message-bubble">{message.content}</div>
   ),
 }));
 
-vi.mock("../LLMOutput", () => ({
+vi.mock("../../apps/chat/components/LLMOutput", () => ({
   LLMOutput: ({ content }: { content: string }) => (
     <div data-testid="llm-output">{content}</div>
   ),

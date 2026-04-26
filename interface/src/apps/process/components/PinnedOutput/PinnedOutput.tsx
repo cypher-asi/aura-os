@@ -7,7 +7,7 @@ import { useProcessStore } from "../../stores/process-store";
 import { formatOutputContent } from "../NodeOutputTab/node-output-utils";
 import { SegmentedContent } from "../../../../components/SegmentedContent";
 import styles from "../../../../components/Preview/Preview.module.css";
-import mdStyles from "../../../../components/MessageBubble/MessageBubble.module.css";
+import mdStyles from "../../../chat/components/MessageBubble/MessageBubble.module.css";
 
 const PIN_TRUNCATE = 400;
 

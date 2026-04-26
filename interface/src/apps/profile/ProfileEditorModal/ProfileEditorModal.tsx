@@ -4,7 +4,7 @@ import { ImagePlus, X } from "lucide-react";
 import type { UserProfileData } from "../../../stores/profile-store";
 import { useModalInitialFocus } from "../../../hooks/use-modal-initial-focus";
 import { ImageCropModal } from "../../../components/ImageCropModal";
-import styles from "../../../components/AgentEditorModal/AgentEditorModal.module.css";
+import styles from "../../agents/components/AgentEditorModal/AgentEditorModal.module.css";
 
 interface ProfileEditorModalProps {
   isOpen: boolean;

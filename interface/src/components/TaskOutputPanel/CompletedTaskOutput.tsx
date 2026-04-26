@@ -7,8 +7,8 @@ import {
 } from "../../stores/task-output-panel-store";
 import { useTaskOutputView } from "../../hooks/use-task-output-view";
 import { extractErrorMessage } from "../../shared/utils/extract-error-message";
-import { MessageBubble } from "../MessageBubble";
-import { LLMOutput } from "../LLMOutput";
+import { MessageBubble } from "../../apps/chat/components/MessageBubble";
+import { LLMOutput } from "../../apps/chat/components/LLMOutput";
 import styles from "./TaskOutputPanel.module.css";
 
 interface CompletedTaskOutputProps {

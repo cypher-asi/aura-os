@@ -2,8 +2,8 @@
 import { useCallback, useLayoutEffect, useState, type RefObject } from "react";
 import { GroupCollapsible } from "@cypher-asi/zui";
 import { ClipboardCopy, Check, Loader2 } from "lucide-react";
-import { MessageBubble } from "../MessageBubble";
-import { StreamingBubble } from "../StreamingBubble";
+import { MessageBubble } from "../../apps/chat/components/MessageBubble";
+import { StreamingBubble } from "../../apps/chat/components/StreamingBubble";
 import {
   useStreamEvents,
   useIsStreaming,

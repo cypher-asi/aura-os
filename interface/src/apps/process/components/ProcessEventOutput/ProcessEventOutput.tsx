@@ -1,7 +1,7 @@
 import { useMemo, useState, useCallback } from "react";
 import { Copy, Check } from "lucide-react";
 import type { ProcessEvent } from "../../../../shared/types";
-import { LLMOutput } from "../../../../components/LLMOutput";
+import { LLMOutput } from "../../../chat/components/LLMOutput";
 import { monoBox, prettyPrintIfJson } from "../NodeOutputTab/node-output-utils";
 import { buildProcessEventDisplay } from "./process-event-display";
 
