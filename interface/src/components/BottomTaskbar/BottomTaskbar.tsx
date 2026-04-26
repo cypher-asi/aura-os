@@ -15,6 +15,7 @@ import { getTaskbarAppsCollapsed, setTaskbarAppsCollapsed } from "../../utils/st
 import { formatCredits } from "../../shared/utils/format";
 import { AppNavRail, TaskbarIconButton, TASKBAR_ICON_SIZE } from "../AppNavRail";
 import { useCreditBalance } from "../CreditsBadge/useCreditBalance";
+import { useFavoriteAgents } from "../../apps/agents/stores";
 import { FavoriteAgentsStrip } from "./FavoriteAgentsStrip";
 import styles from "./BottomTaskbar.module.css";
 
@@ -41,6 +42,7 @@ export function BottomTaskbar() {
   const [collapsed, setCollapsed] = useState(() => getTaskbarAppsCollapsed());
   const [creditsExpanded, setCreditsExpanded] = useState(false);
   const creditsLabel = credits !== null ? formatCredits(credits) : "---";
+  const hasFavoriteAgents = useFavoriteAgents().length > 0;
 
   const toggleAppsCollapsed = () => {
     setCollapsed((current) => {
@@ -55,6 +57,7 @@ export function BottomTaskbar() {
       <div className={styles.left}>
         <TaskbarIconButton
           selected={activeApp.id === "desktop"}
+          edge={hasFavoriteAgents ? "start" : "both"}
           icon={<Circle size={TASKBAR_ICON_SIZE} />}
           title="Desktop"
           aria-label="Desktop"
@@ -74,6 +77,7 @@ export function BottomTaskbar() {
           layout="taskbar"
           allowReorder
           excludeIds={["profile"]}
+          roundEdges={{ start: true }}
           {...(collapsed && { includeIds: ["agents", "projects"] })}
         />
         <TaskbarIconButton
@@ -83,6 +87,7 @@ export function BottomTaskbar() {
           onClick={openAppsModal}
         />
         <TaskbarIconButton
+          edge="end"
           icon={
             collapsed ? (
               <ChevronRight size={TASKBAR_CHEVRON_SIZE} />
@@ -98,6 +103,7 @@ export function BottomTaskbar() {
       <div className={styles.right}>
         <div className={styles.rightPrimary}>
           <TaskbarIconButton
+            edge="start"
             icon={
               creditsExpanded ? (
                 <ChevronRight size={TASKBAR_CHEVRON_SIZE} />

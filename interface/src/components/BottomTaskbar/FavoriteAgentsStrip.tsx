@@ -4,6 +4,7 @@ import { StarOff, X } from "lucide-react";
 import { Menu } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
 import { Avatar } from "../Avatar";
+import { TaskbarIconButton } from "../AppNavRail";
 import { useFavoriteAgents, useAgentStore } from "../../apps/agents/stores";
 import { useAvatarState } from "../../hooks/use-avatar-state";
 import { useProfileStatusStore } from "../../stores/profile-status-store";
@@ -29,9 +30,11 @@ interface FavCtxMenu {
 
 const FavoriteAgentTaskbarItem = memo(function FavoriteAgentTaskbarItem({
   agent,
+  isLast,
   onContextMenu,
 }: {
   agent: Agent;
+  isLast: boolean;
   onContextMenu: (event: React.MouseEvent, agentId: string) => void;
 }) {
   const hasOpenWindow = useDesktopWindowStore(selectIsWindowOpen(agent.agent_id));
@@ -48,23 +51,26 @@ const FavoriteAgentTaskbarItem = memo(function FavoriteAgentTaskbarItem({
   }, [agent.agent_id, closeDesktopWindow, hasOpenWindow, openOrFocus]);
 
   return (
-    <button
-      type="button"
-      className={`${styles.favoriteBtn}${hasOpenWindow ? ` ${styles.favoriteBtnOpen}` : ""}`}
+    <TaskbarIconButton
+      selected={hasOpenWindow}
+      edge={isLast ? "end" : undefined}
       title={agent.name}
+      aria-label={agent.name}
       onClick={handleClick}
       onContextMenu={(event) => onContextMenu(event, agent.agent_id)}
+      icon={
+        <Avatar
+          avatarUrl={agent.icon ?? undefined}
+          name={agent.name}
+          type="agent"
+          size={20}
+          status={status}
+          isLocal={isLocal}
+        />
+      }
     >
-      <Avatar
-        avatarUrl={agent.icon ?? undefined}
-        name={agent.name}
-        type="agent"
-        size={20}
-        status={status}
-        isLocal={isLocal}
-      />
       {hasOpenWindow && <span className={styles.openIndicator} />}
-    </button>
+    </TaskbarIconButton>
   );
 });
 
@@ -136,10 +142,11 @@ export function FavoriteAgentsStrip() {
   return (
     <>
       <div className={styles.favorites}>
-        {favoriteAgents.map((agent) => (
+        {favoriteAgents.map((agent, index) => (
           <FavoriteAgentTaskbarItem
             key={agent.agent_id}
             agent={agent}
+            isLast={index === favoriteAgents.length - 1}
             onContextMenu={handleFavContextMenu}
           />
         ))}

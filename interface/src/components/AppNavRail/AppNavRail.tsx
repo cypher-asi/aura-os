@@ -11,7 +11,6 @@ import {
 } from "react";
 import { createPortal, flushSync } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@cypher-asi/zui";
 import type { AuraApp } from "../../apps/types";
 import { getOrderedTaskbarApps, useAppStore } from "../../stores/app-store";
 import { useActiveApp } from "../../hooks/use-active-app";
@@ -72,28 +71,44 @@ function NavRailButton({ icon, label, selected, className, ...props }: NavRailBu
   );
 }
 
+export type TaskbarIconButtonEdge = "start" | "end" | "both";
+
+export interface TaskbarIconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  icon: ReactNode;
+  selected?: boolean;
+  edge?: TaskbarIconButtonEdge;
+  children?: ReactNode;
+}
+
 export function TaskbarIconButton({
   icon,
   selected = false,
+  edge,
   className,
+  children,
   ...props
-}: Omit<NavRailButtonProps, "label">) {
-  const cls = [styles.taskbarBtn, className ?? ""]
+}: TaskbarIconButtonProps) {
+  const cls = [
+    styles.taskbarBtn,
+    edge === "start" ? styles.taskbarBtnEdgeStart : "",
+    edge === "end" ? styles.taskbarBtnEdgeEnd : "",
+    edge === "both" ? styles.taskbarBtnEdgeBoth : "",
+    className ?? "",
+  ]
     .filter(Boolean)
     .join(" ");
 
   return (
-    <Button
+    <button
       type="button"
-      variant="ghost"
-      size="sm"
-      iconOnly
-      icon={icon}
-      selected={selected}
-      aria-pressed={selected}
       className={cls}
+      aria-pressed={selected}
+      data-selected={selected || undefined}
       {...props}
-    />
+    >
+      {icon}
+      {children}
+    </button>
   );
 }
 
@@ -199,10 +214,9 @@ function SortableTaskbarAppButton({
   style,
 }: SortableTaskbarAppButtonProps) {
   return (
-    <button
-      type="button"
-      className={styles.taskbarBtn}
-      data-selected={selected}
+    <TaskbarIconButton
+      icon={<app.icon size={TASKBAR_ICON_SIZE} />}
+      selected={selected}
       data-taskbar-app-id={app.id}
       data-agent-role="app-launcher"
       data-agent-app-id={app.id}
@@ -217,9 +231,7 @@ function SortableTaskbarAppButton({
       onPointerDown={(event) => onPointerDown(event, app.id)}
       onMouseEnter={app.onPrefetch}
       onFocus={app.onPrefetch}
-    >
-      <app.icon size={TASKBAR_ICON_SIZE} />
-    </button>
+    />
   );
 }
 
@@ -229,6 +241,9 @@ interface AppNavRailProps {
   excludeIds?: string[];
   ariaLabel?: string;
   allowReorder?: boolean;
+  /** When the rail is flush against a rounded pill edge, round the first/last
+   *  taskbar icon's outer corners to 20px to match the pill. */
+  roundEdges?: { start?: boolean; end?: boolean };
 }
 
 export function AppNavRail({
@@ -237,6 +252,7 @@ export function AppNavRail({
   excludeIds = [],
   ariaLabel = "Primary navigation",
   allowReorder = false,
+  roundEdges,
 }: AppNavRailProps) {
   const apps = useAppStore((s) => s.apps);
   const activeApp = useActiveApp();
@@ -445,11 +461,16 @@ export function AppNavRail({
     return nextApps;
   }, [dragState, primaryApps, primaryAppsById]);
 
+  const navClassName = [
+    isRail ? styles.rail : isBar ? styles.bar : styles.taskbar,
+    layout === "taskbar" && roundEdges?.start ? styles.taskbarRoundedStart : "",
+    layout === "taskbar" && roundEdges?.end ? styles.taskbarRoundedEnd : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <nav
-      className={isRail ? styles.rail : isBar ? styles.bar : styles.taskbar}
-      aria-label={ariaLabel}
-    >
+    <nav className={navClassName} aria-label={ariaLabel}>
       {isRail ? (
         <>
           <div className={styles.spacer} />
