@@ -6,6 +6,7 @@ import { processApi } from "../../../../shared/api/process";
 import { ProcessCanvas } from "../ProcessCanvas";
 import type { ReactNode } from "react";
 import { useProcessMainPanelLiveEvents } from "./useProcessMainPanelLiveEvents";
+import styles from "./ProcessMainPanel.module.css";
 
 const EMPTY_NODES: never[] = [];
 const EMPTY_CONNECTIONS: never[] = [];
@@ -65,11 +66,11 @@ export function ProcessMainPanel({ children }: { children?: ReactNode }) {
   }, [process, processId, runs, fetchRuns]);
 
   if (!processId || !process) {
-    return <div style={{ height: "100%" }}>{children}</div>;
+    return <div className={styles.emptyHost}>{children}</div>;
   }
 
   return (
-    <div style={{ position: "relative", height: "100%", overflow: "hidden" }}>
+    <div className={styles.canvasHost}>
       <ProcessCanvas
         processId={processId}
         processNodes={processNodes}

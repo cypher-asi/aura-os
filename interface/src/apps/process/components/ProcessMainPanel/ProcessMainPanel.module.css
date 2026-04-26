@@ -1,0 +1,9 @@
+.emptyHost {
+  height: 100%;
+}
+
+.canvasHost {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+}

@@ -2,43 +2,38 @@ import {
   Fragment,
   Suspense,
   useCallback,
-  useEffect,
   lazy,
-  useLayoutEffect,
   useRef,
   useState,
 } from "react";
-import { createPortal } from "react-dom";
 import { useOutlet } from "react-router-dom";
-import { Topbar, Button } from "@cypher-asi/zui";
-import { Server } from "lucide-react";
 import { Lane, type LaneResizeControls } from "../Lane";
 import { ResponsiveMainLane } from "../ResponsiveMainLane";
 import { BottomTaskbar } from "../BottomTaskbar";
-import { OrgSelector } from "../OrgSelector";
 import { ErrorBoundary } from "../ErrorBoundary";
 import { UpdateBanner } from "../UpdateBanner";
-import { PanelSearch } from "../PanelSearch";
-import { WindowControls } from "../WindowControls";
 import { useActiveApp } from "../../hooks/use-active-app";
-import { useSidebarSearch } from "../../hooks/use-sidebar-search";
 import { apps } from "../../apps/registry";
 
 import { useAppUIStore } from "../../stores/app-ui-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useDesktopBackgroundStore } from "../../stores/desktop-background-store";
 import { useShallow } from "zustand/react/shallow";
-import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
-import { windowCommand } from "../../lib/windowCommand";
 import { LeftMenu } from "../../features/left-menu";
 import {
-  SIDEKICK_MAX_WIDTH,
-  SIDEKICK_MIN_WIDTH,
-  getSidekickTargetWidth,
   persistSidekickWidth,
   readStoredSidekickWidth,
 } from "./desktop-shell-sidekick";
 import { useDesktopWindowStore } from "../../stores/desktop-window-store";
+import { BackgroundLayer } from "./BackgroundLayer";
+import { DesktopTitlebar } from "./DesktopTitlebar";
+import { PersistentSidekickLane } from "./PersistentSidekickLane";
+import { SidebarSearchInput } from "./SidebarSearchInput";
+import { SidekickPortalBridge } from "./SidekickPortalBridge";
+import {
+  useLeftPanelWidthCssVar,
+  useSidekickWidthRetargeting,
+} from "./desktop-shell-effects";
 import styles from "./DesktopShell.module.css";
 
 const DesktopWindowLayer = lazy(() =>
@@ -64,116 +59,8 @@ function blurActiveElement() {
   }
 }
 
-function BackgroundLayer() {
-  const mode = useDesktopBackgroundStore((s) => s.mode);
-  const color = useDesktopBackgroundStore((s) => s.color);
-  const imageDataUrl = useDesktopBackgroundStore((s) => s.imageDataUrl);
-  const hydrated = useDesktopBackgroundStore((s) => s.hydrated);
-
-  if (!hydrated || mode === "none") return null;
-  if (mode === "image" && !imageDataUrl) return null;
-
-  const style: React.CSSProperties =
-    mode === "color"
-      ? { backgroundColor: color }
-      : { backgroundImage: `url(${imageDataUrl})`, backgroundSize: "cover", backgroundPosition: "center" };
-
-  return <div className={styles.backgroundLayer} style={style} />;
-}
-
-function SidebarSearchInput() {
-  const { query, setQuery, action } = useSidebarSearch();
-  const activeApp = useActiveApp();
-
-  return (
-    <PanelSearch
-      placeholder={activeApp.searchPlaceholder ?? "Search"}
-      value={query}
-      onChange={setQuery}
-      action={action}
-    />
-  );
-}
-
-function SidekickPortalBridge({
-  headerTarget,
-  panelTarget,
-}: {
-  headerTarget: HTMLDivElement | null;
-  panelTarget: HTMLDivElement | null;
-}) {
-  const activeApp = useActiveApp();
-  const { SidekickPanel, SidekickTaskbar } = activeApp;
-
-  if (!SidekickPanel || !panelTarget) return null;
-
-  return (
-    <>
-      {SidekickTaskbar && headerTarget
-        ? createPortal(<SidekickTaskbar />, headerTarget)
-        : null}
-      {createPortal(<SidekickPanel />, panelTarget)}
-    </>
-  );
-}
-
-function PersistentSidekickLane({
-  resizeControlsRef,
-  collapsed,
-  defaultWidth,
-  showHeaderSlot,
-  onResizeEnd,
-  onHeaderTargetChange,
-  onPanelTargetChange,
-}: {
-  resizeControlsRef?: { current: LaneResizeControls | null };
-  collapsed: boolean;
-  defaultWidth: number;
-  showHeaderSlot: boolean;
-  onResizeEnd: (size: number) => void;
-  onHeaderTargetChange: (node: HTMLDivElement | null) => void;
-  onPanelTargetChange: (node: HTMLDivElement | null) => void;
-}) {
-  return (
-    <Lane
-      resizable
-      resizePosition="left"
-      defaultWidth={defaultWidth}
-      minWidth={SIDEKICK_MIN_WIDTH}
-      maxWidth={SIDEKICK_MAX_WIDTH}
-      storageKey={null}
-      collapsible
-      collapsed={collapsed}
-      animateResizeRelease={false}
-      resizeControlsRef={resizeControlsRef}
-      onResizeEnd={onResizeEnd}
-      className={styles.sidekickLane}
-      header={
-        showHeaderSlot ? (
-          <div
-            ref={onHeaderTargetChange}
-            className={styles.sidekickHeaderSlot}
-            data-agent-surface="sidekick-header"
-            aria-label="Sidekick header"
-          />
-        ) : undefined
-      }
-    >
-      <div className={styles.sidekickPanels}>
-        <div
-          ref={onPanelTargetChange}
-          className={styles.sidekickPanelSlot}
-          data-agent-surface="sidekick-panel"
-          aria-label="Sidekick panel"
-        />
-      </div>
-    </Lane>
-  );
-}
-
 export function DesktopShell() {
   const activeApp = useActiveApp();
-  const { features } = useAuraCapabilities();
   const visitedAppIds = useAppUIStore((s) => s.visitedAppIds);
   const sidekickCollapsed = useAppUIStore((s) => s.sidekickCollapsed);
   const toggleSidekick = useAppUIStore((s) => s.toggleSidekick);
@@ -244,109 +131,18 @@ export function DesktopShell() {
     [activeApp.id],
   );
 
-
-  // Keep `--left-panel-width` in sync with the actual sidebar width.
-  //
-  // We measure synchronously in a layout effect (before paint) whenever the
-  // active app or desktop-mode collapse state changes, because the CSS var
-  // drives horizontal centering in app panels (e.g. Notes' centerColumn). If
-  // the var lagged the sidebar's width by a frame, the first paint after an
-  // app switch would position content against the previous sidebar width —
-  // producing a visible flicker as text jumps to its final column.
-  //
-  // The ResizeObserver then handles ongoing resize drags; it also writes the
-  // var synchronously (no rAF batching) so paints during a drag stay aligned.
-  useLayoutEffect(() => {
-    const el = leftPanelRef.current;
-    if (!el) return;
-    const width = Math.round(el.getBoundingClientRect().width);
-    document.documentElement.style.setProperty("--left-panel-width", `${width}px`);
-  }, [isDesktop, activeApp.id]);
-
-  useEffect(() => {
-    const el = leftPanelRef.current;
-    if (!el) return;
-    let lastWidth = -1;
-    const ro = new ResizeObserver(([entry]) => {
-      const rawWidth = entry.contentBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
-      const nextWidth = Math.round(rawWidth);
-      if (nextWidth === lastWidth) return;
-      lastWidth = nextWidth;
-      document.documentElement.style.setProperty("--left-panel-width", `${nextWidth}px`);
-    });
-    ro.observe(el);
-    return () => {
-      ro.disconnect();
-    };
-  }, []);
-
-  // Retarget the sidekick Lane whenever the active app changes so each app
-  // restores the width the user chose for it.
-  //
-  // The `mainPanelHost` div now stays mounted across app switches (it sits
-  // outside the per-app `ActiveProvider`), so width measurements are stable.
-  // Timing can still be tricky during suspense fallbacks where the inner
-  // content briefly renders nothing — in that case the host can momentarily
-  // measure zero width while flex-sized children are absent. To handle this:
-  //
-  // - `appliedSidekickAppIdRef` tracks which app's width is currently on the
-  //   Lane. We only mark an app as applied after a successful `setSize`, so
-  //   if prerequisites (main panel, sidekick controls, non-zero width) are
-  //   missing, a later effect run retries the apply.
-  // - The first render short-circuits because `sidekickInitialWidth` (passed
-  //   as Lane's `defaultWidth`) already applied the initial app's width.
-  //
-  // A ResizeObserver also watches the main panel for the rare case where it
-  // mounts with width 0 (e.g. during suspense fallback) and later lays out.
-  useLayoutEffect(() => {
-    if (appliedSidekickAppIdRef.current === null) {
-      appliedSidekickAppIdRef.current = activeApp.id;
-      return;
-    }
-    if (appliedSidekickAppIdRef.current === activeApp.id) return;
-    if (!mainPanelEl) return;
-    const sidekickResizeControls = sidekickResizeControlsRef.current;
-    if (!sidekickResizeControls) return;
-
-    const mainWidth = Math.round(mainPanelEl.getBoundingClientRect().width);
-    if (mainWidth <= 0) {
-      if (typeof ResizeObserver === "undefined") return;
-      const observer = new ResizeObserver(() => {
-        if (appliedSidekickAppIdRef.current === activeApp.id) {
-          observer.disconnect();
-          return;
-        }
-        const controls = sidekickResizeControlsRef.current;
-        if (!controls) return;
-        const observedWidth = Math.round(
-          mainPanelEl.getBoundingClientRect().width,
-        );
-        if (observedWidth <= 0) return;
-        const currentSidekickWidth = sidekickCollapsed ? 0 : controls.getSize();
-        controls.setSize(
-          getSidekickTargetWidth(activeApp.id, {
-            mainWidth: observedWidth,
-            currentSidekickWidth,
-          }),
-        );
-        appliedSidekickAppIdRef.current = activeApp.id;
-        observer.disconnect();
-      });
-      observer.observe(mainPanelEl);
-      return () => observer.disconnect();
-    }
-
-    const currentSidekickWidth = sidekickCollapsed
-      ? 0
-      : sidekickResizeControls.getSize();
-    sidekickResizeControls.setSize(
-      getSidekickTargetWidth(activeApp.id, {
-        mainWidth,
-        currentSidekickWidth,
-      }),
-    );
-    appliedSidekickAppIdRef.current = activeApp.id;
-  }, [activeApp.id, sidekickCollapsed, mainPanelEl]);
+  useLeftPanelWidthCssVar({
+    leftPanelRef,
+    isDesktop,
+    activeAppId: activeApp.id,
+  });
+  useSidekickWidthRetargeting({
+    activeAppId: activeApp.id,
+    sidekickCollapsed,
+    mainPanelEl,
+    sidekickResizeControlsRef,
+    appliedSidekickAppIdRef,
+  });
 
   return (
     <>
@@ -356,29 +152,10 @@ export function DesktopShell() {
         data-agent-context="desktop-shell"
       >
         <BackgroundLayer />
-        <Topbar
-          className={`titlebar-drag ${styles.topbarAlignRail} ${styles.topbarBlur}`}
-          onDoubleClick={() => windowCommand("maximize")}
-          icon={<OrgSelector variant="icon" />}
-          title={<span className="titlebar-center" style={{ userSelect: "none" }}><img src="/AURA_logo_text_mark.png" alt="AURA" draggable={false} style={{ height: 11, display: "block", userSelect: "none", pointerEvents: "none" }} /></span>}
-          actions={(
-            <div className={styles.titleActions} onDoubleClick={(e) => e.stopPropagation()}>
-              {features.hostRetargeting && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  iconOnly
-                  icon={<Server size={16} />}
-                  aria-label="Open host settings"
-                  onClick={openHostSettings}
-                />
-              )}
-              <WindowControls
-                sidekickCollapsed={sidekickCollapsed}
-                onToggleSidekick={toggleSidekick}
-              />
-            </div>
-          )}
+        <DesktopTitlebar
+          sidekickCollapsed={sidekickCollapsed}
+          onToggleSidekick={toggleSidekick}
+          onOpenHostSettings={openHostSettings}
         />
         <UpdateBanner />
 

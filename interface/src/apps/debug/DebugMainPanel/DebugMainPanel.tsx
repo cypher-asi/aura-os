@@ -30,23 +30,8 @@ export function DebugMainPanel({ children }: Props) {
  */
 export function DebugEmptyView() {
   return (
-    <div
-      style={{
-        padding: "48px",
-        color: "var(--color-text-muted)",
-        fontSize: 13,
-        lineHeight: 1.6,
-      }}
-    >
-      <h2
-        style={{
-          color: "var(--color-text-primary)",
-          fontSize: 18,
-          marginBottom: 12,
-        }}
-      >
-        Debug runs
-      </h2>
+    <div className={styles.emptyState}>
+      <h2 className={styles.emptyStateTitle}>Debug runs</h2>
       <p>
         Every dev-loop run is written to disk as a bundle containing events,
         LLM calls, iterations, blockers, and retries. Pick a project on the

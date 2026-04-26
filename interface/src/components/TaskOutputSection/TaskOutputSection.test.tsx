@@ -77,7 +77,7 @@ vi.mock("../../stores/project-action-store", () => ({
   useProjectActions: () => null,
 }));
 
-vi.mock("../../apps/chat/components/MessageBubble", () => ({
+vi.mock("../ChatOutput", () => ({
   MessageBubble: ({
     message,
     isStreaming,
@@ -91,9 +91,6 @@ vi.mock("../../apps/chat/components/MessageBubble", () => ({
       data-streaming={isStreaming ? "true" : "false"}
     />
   ),
-}));
-
-vi.mock("../../apps/chat/components/StreamingBubble", () => ({
   StreamingBubble: ({ showPhaseIndicator }: { showPhaseIndicator?: boolean }) => (
     <div
       data-testid="streaming-bubble"

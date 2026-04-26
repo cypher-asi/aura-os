@@ -166,6 +166,17 @@
   gap: var(--space-2);
 }
 
+.titleCenter {
+  user-select: none;
+}
+
+.titleLogo {
+  height: 11px;
+  display: block;
+  user-select: none;
+  pointer-events: none;
+}
+
 .topbarAlignRail {
   padding-left: 0;
   padding-right: 0;

@@ -5,6 +5,7 @@ import { AgentInfoPanel } from "../AgentInfoPanel";
 import { setLastStandaloneAgentId } from "../../../utils/storage";
 import { useAgents, useSelectedAgent } from "../stores";
 import { useTerminalTarget } from "../../../hooks/use-terminal-target";
+import styles from "./AgentMainPanel.module.css";
 
 export function AgentMainPanel({ children }: { children?: ReactNode }) {
   const { agentId } = useParams<{ agentId: string }>();
@@ -43,16 +44,10 @@ export function AgentMainPanel({ children }: { children?: ReactNode }) {
     // chat transcript's `overflow-y: auto` viewport collapses, killing wheel
     // scrolling on the standalone agent chat.
     <div
+      className={styles.surface}
       data-agent-surface="agent-chat-panel"
       data-agent-context="agent-chat-product-context"
       data-agent-agent-id={agentId ?? ""}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        flex: 1,
-        minWidth: 0,
-        minHeight: 0,
-      }}
     >
       {children ?? <AgentInfoPanel />}
     </div>
