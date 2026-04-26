@@ -143,6 +143,22 @@ pub struct ChatSession {
     /// cold-starts with a fresh `installed_tools` list via the unified
     /// `build_session_tools` filter.
     pub template_agent_id: Option<String>,
+    /// Per-partition turn slot. Held for the duration of one user-message
+    /// turn so a second turn arriving on the same partition queues
+    /// (waits for the active turn to terminate) instead of racing the WS
+    /// writer and triggering the upstream "turn in progress" error.
+    ///
+    /// Released by a sentinel task that watches the harness broadcast for
+    /// the terminal event of each turn (`AssistantMessageEnd` / `Error`).
+    /// See `chat::turn_slot` for the implementation.
+    pub turn_slot: Arc<Mutex<()>>,
+    /// Number of turn-slot acquirers currently in flight on this
+    /// partition (the one holding the lock plus any queued waiters).
+    /// Bounds the queue depth at 1 waiter: when this counter is already
+    /// `>= 2` a third concurrent send is rejected with
+    /// `ApiError::agent_busy { reason: "queue full" }` instead of
+    /// stacking unbounded behind the mutex.
+    pub turn_pending_count: Arc<std::sync::atomic::AtomicUsize>,
 }
 
 impl ChatSession {
