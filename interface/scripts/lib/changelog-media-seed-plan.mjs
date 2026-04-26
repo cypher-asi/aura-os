@@ -47,12 +47,28 @@ function inferSeedCapabilities(candidate = {}) {
     || /^\/process(?:\/|$)/.test(targetPath)
     || /interface\/src\/apps\/process\//.test(changedFileText)
     || /\b(?:processes?|workflow|nodes?|graph|run history)\b/.test(text);
+  const wantsProjectSurface = appId === "projects"
+    || /^\/projects(?:\/|$)/.test(targetPath)
+    || /interface\/src\/(?:apps\/projects|views\/project|components\/project|queries\/project|stores\/projects-list-store)\//.test(changedFileText)
+    || /\b(?:project workspace|project stats|project summary|project navigation|project list|specs?|project tasks?)\b/.test(text);
+  const wantsProjectStats = wantsProjectSurface
+    && (/\b(?:stats?|metrics?|completion|tokens?|events?|sessions?|contributors?|cost|lines changed)\b/.test(text)
+      || /ProjectStatsView|StatsDashboard|project-stats|stats-dashboard/i.test(changedFileText));
 
   if (appId) {
     capabilities.push(`app:${appId}`);
   }
   if (targetPath.includes(":projectId") || /^\/projects(?:\/|$)/.test(targetPath) || /\bproject\b/.test(text)) {
     capabilities.push("project-selected");
+  }
+  if (wantsProjectSurface) {
+    capabilities.push("project-summary-populated");
+    capabilities.push("sidebar-list-populated");
+    capabilities.push("sidekick-context-populated");
+  }
+  if (wantsProjectStats) {
+    capabilities.push("project-stats-populated");
+    capabilities.push("run-history-populated");
   }
   if (wantsAura3DAssetSurface) {
     capabilities.push("asset-gallery-populated");
@@ -119,6 +135,8 @@ export function normalizeCaptureSeedPlan(seedPlan = null, candidate = {}) {
   const requiredState = unique([
     ...(Array.isArray(explicit.requiredState) ? explicit.requiredState : []),
     ...(capabilities.includes("project-selected") ? ["A demo project is selected before capture."] : []),
+    ...(capabilities.includes("project-summary-populated") ? ["The selected project has realistic specs, tasks, and an assigned agent before capture."] : []),
+    ...(capabilities.includes("project-stats-populated") ? ["The selected project stats dashboard has non-zero completion, task, cost, token, event, and contributor metrics before capture."] : []),
     ...(capabilities.includes("image-gallery-populated") ? ["A generated image preview and gallery are populated before capture."] : []),
     ...(capabilities.includes("model-source-image-populated") ? ["A source image is selected so the 3D model surface is not an empty placeholder."] : []),
     ...(capabilities.includes("agent-chat-ready") ? ["A seeded agent is selected with a populated chat transcript before capture."] : []),
@@ -157,6 +175,8 @@ export function normalizeCaptureSeedPlan(seedPlan = null, candidate = {}) {
     ...(capabilities.includes("image-gallery-populated") ? ["generated image preview and image gallery are visible"] : []),
     ...(capabilities.includes("model-source-image-populated") ? ["source image for 3D conversion is visible"] : []),
     ...(capabilities.includes("agent-chat-ready") ? ["selected agent chat transcript is populated"] : []),
+    ...(capabilities.includes("project-summary-populated") ? ["selected project has visible summary, specs, tasks, or agent context"] : []),
+    ...(capabilities.includes("project-stats-populated") ? ["project stats dashboard has non-zero metric cards and completion progress"] : []),
     ...(capabilities.includes("feedback-board-populated") ? ["feedback board has multiple visible cards"] : []),
     ...(capabilities.includes("feedback-thread-populated") ? ["selected feedback thread has comments"] : []),
     ...(capabilities.includes("note-editor-populated") ? ["selected note has readable editor content"] : []),

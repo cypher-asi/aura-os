@@ -47,8 +47,12 @@ export function StatCard({
   const title = fmtFn || fmt ? safeValue.toLocaleString() : undefined;
   const valueColorClass =
     accent === "success" ? styles.statCardValueSuccess : styles.statCardValueColor;
+  const proofId = `project-stat-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
   return (
-    <div className={cx(styles.statCard, isMobile && mobileStyles.mobileStatCard)}>
+    <div
+      className={cx(styles.statCard, isMobile && mobileStyles.mobileStatCard)}
+      data-agent-proof={proofId}
+    >
       <div
         className={cx(
           styles.statValue,
@@ -122,7 +126,10 @@ export function ProgressBar({
 }) {
   const isMobile = variant === "mobile";
   return (
-    <div className={cx(styles.completionRow, isMobile && mobileStyles.mobileCompletionRow)}>
+    <div
+      className={cx(styles.completionRow, isMobile && mobileStyles.mobileCompletionRow)}
+      data-agent-proof="project-completion-progress"
+    >
       <div
         className={cx(styles.progressBarContainer, isMobile && mobileStyles.mobileProgressBarContainer)}
         style={{ flex: 1 }}

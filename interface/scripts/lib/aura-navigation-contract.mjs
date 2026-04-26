@@ -31,6 +31,18 @@ const SEEDED_CAPTURE_SURFACES = Object.freeze({
     preferredStableSurface: "Generated Image gallery with a selected demo project, selected image, and visible sidekick thumbnails.",
     seededData: ["selected project", "generated image preview", "image gallery thumbnails"],
   },
+  projects: {
+    capabilities: [
+      "project-selected",
+      "project-stats-populated",
+      "project-summary-populated",
+      "run-history-populated",
+      "sidebar-list-populated",
+      "sidekick-context-populated",
+    ],
+    preferredStableSurface: "Selected project workspace with populated stats, active work context, and project navigation visible.",
+    seededData: ["selected project", "project stats", "task summary", "assigned agent", "project navigation"],
+  },
   feedback: {
     capabilities: ["feedback-board-populated", "feedback-thread-populated", "sidebar-list-populated", "sidekick-context-populated"],
     preferredStableSurface: "Feedback board with multiple idea cards, vote counts, status pills, and a selected comment thread.",
@@ -188,6 +200,17 @@ function extractMatches(source, pattern, limit = DEFAULT_APP_LIMIT) {
   return unique([...String(source || "").matchAll(pattern)].map((entry) => entry[1]), limit);
 }
 
+function extractJsxAttributeStringValues(source, attributeName, limit = DEFAULT_APP_LIMIT) {
+  const escapedAttribute = escapeRegex(attributeName);
+  const directPattern = new RegExp(`${escapedAttribute}\\s*=\\s*"([^"]+)"`, "g");
+  const expressionPattern = new RegExp(`${escapedAttribute}\\s*=\\s*\\{([^}]+)\\}`, "g");
+  return unique([
+    ...[...String(source || "").matchAll(directPattern)].map((entry) => entry[1]),
+    ...[...String(source || "").matchAll(expressionPattern)]
+      .flatMap((entry) => [...entry[1].matchAll(/"([^"]+)"/g)].map((match) => match[1])),
+  ], limit);
+}
+
 function escapeRegex(value) {
   return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -212,6 +235,71 @@ async function walkSourceFiles(dirPath) {
     }
   }
   return files;
+}
+
+async function resolveRouteImportPath(routeDir, specifier) {
+  if (!specifier.startsWith(".")) return null;
+  const resolved = path.resolve(routeDir, specifier);
+  const candidates = [
+    resolved,
+    `${resolved}.tsx`,
+    `${resolved}.ts`,
+    path.join(resolved, "index.tsx"),
+    path.join(resolved, "index.ts"),
+  ];
+  for (const candidate of candidates) {
+    const stat = await fs.stat(candidate).catch(() => null);
+    if (stat?.isFile() || stat?.isDirectory()) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+async function collectImportedSourceFiles(filePath, seen, depth = 0) {
+  if (depth > 4 || seen.has(filePath) || seen.size > 420) return [];
+  seen.add(filePath);
+
+  const stat = await fs.stat(filePath).catch(() => null);
+  if (!stat) return [];
+  if (stat.isDirectory()) {
+    const files = await walkSourceFiles(filePath);
+    const nested = [];
+    for (const file of files) {
+      nested.push(...await collectImportedSourceFiles(file, seen, depth + 1));
+    }
+    return unique([...files, ...nested], 420);
+  }
+  if (!stat.isFile() || !/\.[cm]?[jt]sx?$/.test(filePath)) return [];
+
+  const source = await fs.readFile(filePath, "utf8").catch(() => "");
+  const imported = [];
+  for (const match of source.matchAll(/(?:from\s+["']([^"']+)["']|import\(\s*["']([^"']+)["']\s*\))/g)) {
+    const specifier = match[1] || match[2];
+    const resolved = await resolveRouteImportPath(path.dirname(filePath), specifier);
+    if (!resolved) continue;
+    imported.push(resolved);
+    imported.push(...await collectImportedSourceFiles(resolved, seen, depth + 1));
+  }
+  return unique([filePath, ...imported], 420);
+}
+
+async function routeOwnedSourceFiles(routePath, routeSource) {
+  const routeDir = path.dirname(routePath);
+  const files = [];
+  const seen = new Set();
+  for (const match of routeSource.matchAll(/from\s+["']([^"']+)["']/g)) {
+    const resolved = await resolveRouteImportPath(routeDir, match[1]);
+    if (!resolved) continue;
+    const stat = await fs.stat(resolved).catch(() => null);
+    if (stat?.isDirectory()) {
+      files.push(...await walkSourceFiles(resolved));
+    } else if (stat?.isFile()) {
+      files.push(resolved);
+    }
+    files.push(...await collectImportedSourceFiles(resolved, seen));
+  }
+  return unique(files, 420);
 }
 
 function routeTokensForApp(app) {
@@ -354,15 +442,18 @@ async function inspectAppSource(app) {
   const appDir = path.join(APPS_ROOT, app.id);
   const routePath = path.join(appDir, "routes.tsx");
   const routeSource = await fs.readFile(routePath, "utf8").catch(() => "");
-  const files = await walkSourceFiles(appDir);
+  const files = unique([
+    ...await walkSourceFiles(appDir),
+    ...await routeOwnedSourceFiles(routePath, routeSource),
+  ], 420);
   const source = (await Promise.all(files.map((filePath) => fs.readFile(filePath, "utf8").catch(() => "")))).join("\n");
-  const ariaLabels = extractMatches(source, /aria-label\s*=\s*"([^"]+)"/g, 32);
-  const surfaces = extractMatches(source, /data-agent-surface\s*=\s*"([^"]+)"/g, 32);
-  const contexts = extractMatches(source, /data-agent-context\s*=\s*"([^"]+)"/g, 32);
-  const contextAnchors = extractMatches(source, /data-agent-context-anchor\s*=\s*"([^"]+)"/g, 32);
-  const actions = extractMatches(source, /data-agent-action\s*=\s*"([^"]+)"/g, 32);
-  const fields = extractMatches(source, /data-agent-field\s*=\s*"([^"]+)"/g, 32);
-  const proofSignals = extractMatches(source, /data-agent-proof\s*=\s*"([^"]+)"/g, 32);
+  const ariaLabels = extractJsxAttributeStringValues(source, "aria-label", 32);
+  const surfaces = extractJsxAttributeStringValues(source, "data-agent-surface", 32);
+  const contexts = extractJsxAttributeStringValues(source, "data-agent-context", 32);
+  const contextAnchors = extractJsxAttributeStringValues(source, "data-agent-context-anchor", 32);
+  const actions = extractJsxAttributeStringValues(source, "data-agent-action", 32);
+  const fields = extractJsxAttributeStringValues(source, "data-agent-field", 32);
+  const proofSignals = extractJsxAttributeStringValues(source, "data-agent-proof", 32);
 
   return {
     appDir: toRepoRelativePath(appDir),

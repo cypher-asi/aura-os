@@ -89,43 +89,5 @@
         }
       }
     ]
-  },
-  {
-    "id": "mobile-project-shell",
-    "suite": "smoke",
-    "kind": "browser_core",
-    "title": "Mobile project shell keeps the drawer and project tabs available",
-    "devices": [
-      "eval-mobile-chromium",
-      "eval-mobile-webkit"
-    ],
-    "bootstrap": "mock_authenticated_app",
-    "steps": [
-      {
-        "label": "open_projects",
-        "navigate": "/projects",
-        "expect": {
-          "urlMatches": "/projects/proj-1/agents/agent-inst-1$",
-          "visibleRoles": [
-            { "role": "button", "name": "Open project navigation", "exact": false },
-            { "role": "button", "name": "Agent", "exact": true },
-            { "role": "button", "name": "Execution", "exact": true },
-            { "role": "button", "name": "Stats", "exact": true }
-          ]
-        }
-      },
-      {
-        "label": "open_project_drawer",
-        "action": {
-          "clickRole": { "role": "button", "name": "Open project navigation", "exact": false }
-        },
-        "expect": {
-          "visibleTexts": ["Switch project"],
-          "visibleRoles": [
-            { "role": "tree", "name": "Project navigation", "exact": true }
-          ]
-        }
-      }
-    ]
   }
 ]

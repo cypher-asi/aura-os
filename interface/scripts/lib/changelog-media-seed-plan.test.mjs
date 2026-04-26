@@ -180,6 +180,13 @@ test("normalizeCaptureSeedPlan asks for seeded data on non-empty app surfaces", 
     proofGoal: "Show connected workflow nodes and run history.",
     changedFiles: ["interface/src/apps/process/components/ProcessCanvas/ProcessCanvas.tsx"],
   });
+  const projectStatsPlan = normalizeCaptureSeedPlan(null, {
+    title: "Project stats now decode every key shape",
+    targetAppId: "projects",
+    targetPath: "/projects",
+    proofGoal: "Show the populated project stats dashboard with completion and metric cards.",
+    changedFiles: ["interface/src/views/ProjectStatsView/ProjectStatsView.tsx"],
+  });
 
   assert.ok(feedbackPlan.capabilities.includes("feedback-board-populated"));
   assert.ok(feedbackPlan.capabilities.includes("feedback-thread-populated"));
@@ -188,4 +195,7 @@ test("normalizeCaptureSeedPlan asks for seeded data on non-empty app surfaces", 
   assert.ok(tasksPlan.capabilities.includes("task-board-populated"));
   assert.ok(processPlan.capabilities.includes("process-graph-populated"));
   assert.ok(processPlan.capabilities.includes("run-history-populated"));
+  assert.ok(projectStatsPlan.capabilities.includes("project-summary-populated"));
+  assert.ok(projectStatsPlan.capabilities.includes("project-stats-populated"));
+  assert.ok(projectStatsPlan.requiredState.some((entry) => entry.includes("non-zero completion")));
 });

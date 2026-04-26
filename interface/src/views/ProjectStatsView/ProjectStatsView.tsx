@@ -12,11 +12,24 @@ export function ProjectStatsView() {
   }
 
   if (!isMobileLayout) {
-    return <StatsDashboard />;
+    return (
+      <div
+        data-agent-surface="project-stats-view"
+        data-agent-proof="project-stats-dashboard-populated"
+        data-agent-context-anchor="project-stats-view"
+      >
+        <StatsDashboard />
+      </div>
+    );
   }
 
   return (
-    <div className={styles.root}>
+    <div
+      className={styles.root}
+      data-agent-surface="project-stats-view"
+      data-agent-proof="project-stats-dashboard-populated"
+      data-agent-context-anchor="project-stats-view"
+    >
       <section className={styles.section}>
         <div className={styles.sectionLabel}>STATS</div>
         <StatsDashboard variant="mobile" />

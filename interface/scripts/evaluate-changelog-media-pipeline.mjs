@@ -10,6 +10,8 @@ import {
   buildAuraNavigationSitemap,
 } from "./lib/aura-navigation-contract.mjs";
 import {
+  deriveVisualMediaOpportunities,
+  deriveVisualMediaSurfaceClusters,
   extractChangelogMediaEntries,
   planChangelogMediaWithAnthropic,
 } from "./lib/changelog-media-planner.mjs";
@@ -731,6 +733,12 @@ export async function runChangelogMediaEvaluation({
     ? allChangelogEntries
     : allChangelogEntries.filter((entry) => !entry.mediaPublished);
   const existingPublishedMediaCount = allChangelogEntries.length - changelogEntries.length;
+  const allowedEntryIds = new Set(changelogEntries.map((entry) => entry.entryId));
+  const visualOpportunities = deriveVisualMediaOpportunities(changelog, {
+    sitemap,
+    allowedEntryIds,
+  });
+  const visualSurfaceClusters = deriveVisualMediaSurfaceClusters(visualOpportunities);
   const changedFiles = deriveChangedFilesFromChangelog(changelog);
   const commitLog = deriveCommitLogFromChangelog(changelog);
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
@@ -749,6 +757,8 @@ export async function runChangelogMediaEvaluation({
   fs.mkdirSync(outputDir, { recursive: true });
   writeJson(path.join(outputDir, "aura-navigation-sitemap.json"), sitemap);
   writeJson(path.join(outputDir, "changelog-media-knowledge.json"), learnedKnowledge);
+  writeJson(path.join(outputDir, "visual-media-opportunities.json"), visualOpportunities);
+  writeJson(path.join(outputDir, "visual-surface-clusters.json"), visualSurfaceClusters);
 
   const planning = changelogEntries.length > 0
     ? await planChangelogMediaWithAnthropic({
@@ -759,6 +769,8 @@ export async function runChangelogMediaEvaluation({
       learnedKnowledge,
       commitLog,
       changedFiles,
+      visualOpportunities,
+      visualSurfaceClusters,
       maxCandidates,
       entryChunkSize,
       timeoutMs: plannerTimeoutMs,
@@ -1099,6 +1111,8 @@ export async function runChangelogMediaEvaluation({
       existingPublishedMedia: existingPublishedMediaCount,
       rawCommits: Array.isArray(changelog?.rawCommits) ? changelog.rawCommits.length : 0,
       changedFiles: changedFiles.length,
+      visualOpportunities: visualOpportunities.length,
+      visualSurfaceClusters: visualSurfaceClusters.length,
       plannedCandidates: planning.plan.candidates.length,
       skippedByPlanner: planning.plan.skipped.length,
       plannerMissingEntries: planning.coverage.missing.length,

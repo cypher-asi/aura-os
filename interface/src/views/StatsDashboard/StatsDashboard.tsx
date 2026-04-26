@@ -28,7 +28,11 @@ export function StatsDashboard({ variant = "sidekick" }: StatsDashboardProps) {
   }
 
   return (
-    <div className={cx(styles.dashboardPadding, isMobile && mobileStyles.mobileDashboard)}>
+    <div
+      className={cx(styles.dashboardPadding, isMobile && mobileStyles.mobileDashboard)}
+      data-agent-surface="project-stats-dashboard"
+      data-agent-context-anchor="project-stats-dashboard"
+    >
       <SectionHeader first variant={variant}>Completion</SectionHeader>
       <ProgressBar percentage={stats.completion_percentage} variant={variant} />
 

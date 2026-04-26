@@ -15,6 +15,7 @@ export function FeedbackSidekickHeader() {
       className={styles.header}
       data-demo-shot="feedback-sidekick-header"
       data-agent-surface="feedback-thread-header"
+      data-agent-context-anchor="feedback-thread-header"
       data-agent-item-id={item.id}
       data-agent-item-title={item.title}
       aria-label={`Feedback thread header for ${item.title}`}
