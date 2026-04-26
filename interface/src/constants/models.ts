@@ -117,6 +117,8 @@ export const AVAILABLE_MODELS: ModelOption[] = [
   ...IMAGE_MODELS,
 ];
 
+const CHAT_MODELS: ModelOption[] = AVAILABLE_MODELS.filter((m) => m.mode === "chat");
+
 const KNOWN_MODELS: ModelOption[] = [
   ...AVAILABLE_MODELS,
   ...LEGACY_HIDDEN_CHAT_MODELS,
@@ -192,7 +194,7 @@ export function availableModelsForAdapter(_adapterType?: string): ModelOption[] 
   // The `_adapterType` argument is preserved on the public signature so call
   // sites do not need to change. External CLI adapters are no longer
   // supported, so every adapter resolves to the same Aura-managed list.
-  return AVAILABLE_MODELS;
+  return CHAT_MODELS;
 }
 
 export function defaultModelForAdapter(

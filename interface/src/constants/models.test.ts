@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  availableModelsForAdapter,
+  getModelsForMode,
   hasAgentScopedModel,
   loadPersistedModel,
   persistModel,
@@ -83,6 +85,23 @@ describe("model persistence", () => {
 
   it("normalizes raw GPT-5.5 to the Aura-managed chat model", () => {
     expect(loadPersistedModel("default", "gpt-5.5")).toBe("aura-gpt-5-5");
+  });
+
+  it("keeps image models out of the chat adapter model list", () => {
+    expect(availableModelsForAdapter("default").map((m) => m.id)).not.toContain(
+      "gpt-image-2",
+    );
+    expect(getModelsForMode("image").map((m) => m.id)).toContain("gpt-image-2");
+  });
+
+  it("ignores persisted image models for chat defaults", () => {
+    persistModel("gpt-image-2", "default", "agent-image");
+    expect(loadPersistedModel("default", null, "agent-image")).not.toBe(
+      "gpt-image-2",
+    );
+    expect(loadPersistedModel("default", null, "agent-image")).toBe(
+      "aura-claude-sonnet-4-6",
+    );
   });
 
   it("ignores a stored agent value that isn't a known model", () => {

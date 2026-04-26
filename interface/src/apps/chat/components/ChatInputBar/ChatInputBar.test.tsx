@@ -204,6 +204,49 @@ describe("ChatInputBar", () => {
     expect(screen.getAllByText("GPT-OSS 120B")[0]).toBeInTheDocument();
   });
 
+  it("does not show image-only models in the chat model picker", async () => {
+    const user = userEvent.setup();
+    mockSelectedModel = "aura-gpt-5-4";
+    render(<ChatInputBar {...makeProps()} />);
+
+    await user.click(screen.getAllByText("GPT-5.4")[0]);
+    await user.click(screen.getAllByText("Show all models")[0]);
+
+    expect(screen.queryByText("GPT Image 2")).not.toBeInTheDocument();
+  });
+
+  it("shows image models after the image command is selected", async () => {
+    const user = userEvent.setup();
+    mockSelectedModel = "gpt-image-2";
+    render(
+      <ChatInputBar
+        {...makeProps({
+          selectedCommands: [
+            {
+              id: "generate_image",
+              label: "Image",
+              description: "Generate an image from a text prompt",
+              category: "Generation",
+            },
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByText("/image mode")).toBeInTheDocument();
+    expect(screen.getAllByText("GPT Image 2")[0]).toBeInTheDocument();
+
+    await user.click(screen.getAllByText("GPT Image 2")[0]);
+    await user.click(screen.getAllByText("GPT Image 1")[0]);
+
+    expect(mockSetSelectedModel).toHaveBeenCalledWith(
+      "test-stream",
+      "gpt-image-1",
+      undefined,
+      undefined,
+    );
+  });
+
   it("renders attachment previews", () => {
     const attachment: AttachmentItem = {
       id: "a1",
