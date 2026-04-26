@@ -1,60 +1,60 @@
-# Aura-managed model routing, persistent shell, and harness hardening
+# Aura-managed model routing, persistent shell, and tighter agent permissions
 
 - Date: `2026-04-26`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.401.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.401.1
+- Version: `0.1.0-nightly.402.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.402.1
 
-Tonight's nightly collapses model traffic onto the Aura proxy, makes the desktop shell feel steadier between apps, and tightens how the server and harness handle backpressure, stale auth, and unhealthy sidecars. A new in-chat image generation tool and a reworked Run pane round out the user-visible changes.
+A dense nightly that consolidates model traffic behind the Aura proxy, eliminates the wallpaper flash when switching apps, and hardens the agent runtime — from harness sidecar startup to permission defaults. The bulk of the day is a long Interface and Core Rust thread, with a small late patch to changelog tooling.
 
-## 7:49 PM — Recoverable spec drafts on model timeout
+## 7:49 PM — Spec drafts survive model timeouts
 
-Streamed spec markdown is now preserved when create_spec times out, and agent stream output gets clearer server-side observability.
+Streamed spec markdown is now recoverable when create_spec stalls, plus richer agent stream logging on the server.
 
-- Timed-out spec drafts are kept recoverable instead of being discarded, and agents are nudged away from oversized spec payloads that triggered the timeouts in the first place. (`11cc781`)
-- Agent stream output now emits summary logs on the server, making it easier to diagnose chat and tool dispatch issues across persistence, streaming, and tool dedupe paths. (`285f4bc`)
+- Timed-out spec drafts are preserved instead of discarded, so a model timeout during create_spec no longer wipes the in-progress markdown, and agents are nudged away from oversized spec payloads. (`11cc781`)
+- Server-side agent streaming now logs output summaries across the chat, persistence, and tool dispatch paths to make stuck or malformed runs easier to diagnose. (`285f4bc`)
 
 ## 8:14 PM — Desktop fails closed on an unhealthy harness sidecar
 
-The desktop app no longer launches against a broken local harness — if the startup health probe never passes, the managed sidecar process is killed.
+The desktop app no longer continues with a broken local harness when the startup probe never passes.
 
-- On Desktop, the managed local harness sidecar is now terminated when its startup health probe never succeeds, preventing the app from proceeding with a wedged backend. (`e2d0540`)
+- If the managed local harness sidecar fails its startup health probe, the desktop now kills the process and aborts launch instead of proceeding with a half-initialized backend. (`e2d0540`)
 
-## 8:18 PM — Smoother task output streaming via shared IndexedDB connection
+## 8:18 PM — Smoother task output streaming in the browser
 
-Streaming task output no longer thrashes browser storage: the IndexedDB connection is reused and cache writes are debounced.
+IndexedDB and cache writes were reworked to remove jank during long task streams.
 
-- Task-output cache writes are debounced and the IndexedDB handle is shared across operations, eliminating the parse-and-rewrite churn on localStorage during active streams. (`bac6cf2`)
+- Browser storage now reuses a single shared IndexedDB connection and debounces task-output cache writes, so streaming updates stop repeatedly reopening the DB and rewriting localStorage on every chunk. (`bac6cf2`)
 
-## 8:24 PM — Bounded backpressure and stricter stale-auth handling
+## 8:24 PM — Aura-proxied models, persistent shell, and a hardened agent runtime
 
-The server caps stale auth fallback for sensitive routes and gives the harness WebSocket bridge bounded commands with explicit delivery errors.
+The night's main thread: model routing collapses to the Aura proxy, the desktop shell keeps the middle panel mounted across navigations, image generation gets a first-class agent tool, and server/harness internals are tightened around permissions, backpressure, and module boundaries.
 
-- Stale auth fallback is now capped and sensitive routes fail closed, reducing the window where expired sessions could still reach privileged handlers. (`272818e`)
-- Harness WebSocket commands are bounded with explicit delivery errors and redacted frame logging, so backpressure surfaces as a real error instead of a silent stall. (`272818e`)
+- All model traffic now routes through the Aura proxy: the org_integration BYOK path and direct Anthropic/OpenAI/Gemini/xAI/OpenRouter catalog entries are gone, the chat model picker collapses to a single Aura group, and legacy org-backed agents are migrated in the editor. (`8b9fbd9`)
+- Switching apps no longer flashes the wallpaper through: the visible main lane is lifted into DesktopShell so the middle panel keeps DOM identity across navigations, with a bareMainPanel escape hatch for the Desktop app's transparent surface. (`c48f160`)
+- Image generation gets a first-class agent capability: gpt-image-2 is now the default in IMAGE_MODELS and the chat/aura3d pickers, a provider-less generate_image workspace tool lets agents fulfil prompts like "create an image of a cat" without the /image slash command, and image-only models are filtered out of the chat model picker. (`03c1449`, `1a897b8`)
+- Agent permissions are tightened end-to-end: list_agents is exposed as a first-class capability for CEO and permission UI bundles, dev-loop runs receive the same normalized permission bundle as chat sessions, and missing or empty permissions default to the canonical full-access set so harness sessions get process invocation unless explicitly narrowed. (`9fbbd1d`, `2af35f3`, `442fd8a`, `fbb7520`)
+- Server and harness reliability: stale auth fallback is bounded, sensitive routes fail closed, harness WebSocket commands gain bounded backpressure with explicit delivery errors and redacted frame logging, and new agent control callback endpoints land alongside the runtime changes. (`272818e`, `fe50f6a`)
+- Run pane regressions are fixed: rows are seeded from the authoritative project task list so reloads and cleared local storage no longer hide completed/failed/active runs, and the pane is now project-scoped so loop runs show up regardless of which chat agent is being viewed. (`6c1393c`, `5ba2be2`)
+- Agent input bar polish: the "/ for commands" hint is suppressed in narrow floating agent windows so the orbit/environment indicators stop wrapping onto a second line, while image and 3D mode labels are kept. (`b9f19d3`)
+- Large internal restructuring: oversized server modules (app_builder, auth_guard, error, router, generation, state) and Rust crates (entities, permissions, sessions, tasks, network types) are split into focused submodules, stream handlers and event subscriptions are broken up on the interface side, and shell/output components are clarified — preserving behavior while shrinking the largest files. (`7b0b4c0`, `1e9b8ee`, `d4e0fa3`, `9d3f6f3`, `06af9e7`)
 
-## 8:58 PM — Aura-proxied models, persistent shell, and a generate_image tool
+## 1:06 AM — Desktop sidecar build re-triggered after harness ListAgents fix
 
-The biggest batch of the day collapses model providers onto the Aura proxy, keeps the middle panel mounted across navigations, ships in-chat image generation, and restores the Run pane for loop tasks.
+A CI nudge to rebuild desktop sidecars against the new list_agents capability.
 
-- All model traffic now routes through the Aura proxy: BYOK org_integration auth and direct Anthropic/OpenAI/Gemini/xAI/OpenRouter catalog entries are gone, the chat picker collapses to a single Aura group, and legacy org-backed agents are migrated by the agent editor. (`8b9fbd9`)
-- Switching apps no longer flashes the wallpaper through: the ResponsiveMainLane is lifted into the desktop shell so the middle panel keeps DOM identity across navigations, with a bareMainPanel opt-out for the Desktop app's wallpaper-bleed surface. (`c48f160`, `9d3f6f3`)
-- Chat agents can now fulfil natural-language requests like "create an image of a cat" through a new provider-less generate_image workspace tool, and gpt-image-2 is promoted to the default for both the chat picker and the aura3d Image Generation app. Image-only models are also kept out of the chat model picker. (`03c1449`, `1a897b8`)
-- The Run pane now reflects loop runs again: it queries the panel store by project instead of the viewed chat's agentInstanceId, and seeds rows from the authoritative project task list so reloads or cleared local storage no longer hide completed, failed, or active runs. (`6c1393c`, `5ba2be2`)
-- Agent permissions are normalized to a canonical full-access set when missing, dev-loop runs now receive the same permission bundle as chat sessions, and list_agents is exposed as a first-class capability that permission UI bundles can grant explicitly. (`442fd8a`, `2af35f3`, `9fbbd1d`, `fbb7520`)
-- New agent control callback endpoints land on the server, and floating agent windows hide the "/ for commands" hint so the input bar no longer wraps onto a second line in narrow chat surfaces. (`fe50f6a`, `b9f19d3`)
-- Large-scale internal restructuring split oversized server, crate, and stream-handler modules and routed billing and leaderboard caches through the query layer — no behavior change, but a meaningful reduction in single-file complexity that will make the next round of changes safer. (`7b0b4c0`, `1e9b8ee`, `d4e0fa3`, `06af9e7`)
+- Re-triggered the desktop sidecar build so installers pick up the harness ListAgents capability landed earlier in the day. (`9cd6bb3`)
 
-## 1:06 AM — Re-triggered desktop sidecar build for the ListAgents fix
+## 10:12 AM — Changelog media planner preserves seeded targets
 
-A CI re-trigger picks up the new ListAgents harness capability in the desktop sidecar build.
+A small fix to the changelog tooling that drives release media planning.
 
-- Release infrastructure re-ran the desktop sidecar build so the freshly added ListAgents harness capability is included in the packaged Mac, Windows, and Linux artifacts for this nightly. (`9cd6bb3`)
+- The changelog media planner now preserves its seeded targets instead of dropping them, keeping release media plans stable across runs. (`697ed98`)
 
 ## Highlights
 
 - All model traffic now routes through the Aura proxy
-- Middle panel stays mounted across app switches
-- Harness sidecar fails closed when unhealthy
-- In-chat generate_image tool with gpt-image-2 default
+- Middle panel stays mounted across app switches — no more wallpaper flash
+- Desktop fails closed when the local harness sidecar is unhealthy
+- Spec drafts survive model timeouts; Run pane shows loop tasks again
 
