@@ -322,7 +322,7 @@ function isMobileOnlyVisualText(value) {
 
 function isMicroStyleOnlyChange({ subject, text, files }) {
   if (!MICRO_STYLE_ONLY_PATTERN.test(text)) return false;
-  if (/\b(?:add|adds|added|new|show|surface|display|render|sort|filter|viewer|picker|selector|gallery|dashboard|board|thread|model picker|aura 3d|webgl)\b/i.test(text)) {
+  if (/\b(?:add|adds|added|new|sort|filter|viewer|picker|selector|gallery|dashboard|board|thread|model picker|aura 3d|webgl)\b/i.test(text)) {
     return false;
   }
   if (SCREEN_LEVEL_STYLE_PATTERN.test(text) && !/\b(?:token|hover|focus|font smoothing|antialias|anti-aliased)\b/i.test(text)) {

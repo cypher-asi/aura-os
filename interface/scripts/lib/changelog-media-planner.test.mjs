@@ -466,6 +466,15 @@ test("deriveVisualMediaOpportunities skips micro-style-only and transient visual
         files: ["interface/src/apps/agents/components/AgentChat/PreviewOverlay.module.css"],
       },
       {
+        sha: "token1234567890",
+        subject: "style(ui): match chat border token inside sidekick and preview overlays",
+        body: "Propagate the chat border token so tables, blocks, and output sections render with the same subtle outline.",
+        files: [
+          "interface/src/components/PreviewOverlay/PreviewOverlay.module.css",
+          "interface/src/components/Sidekick/Sidekick.module.css",
+        ],
+      },
+      {
         sha: "rename12345678",
         subject: "feat(files): add F2 inline rename focus state",
         files: ["interface/src/components/FileExplorer/FileRow.tsx"],
