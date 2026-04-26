@@ -17,8 +17,15 @@ pub trait JwtProvider: Send + Sync {
     fn get_jwt(&self) -> Option<String>;
 }
 
-// TODO: replace with explicit re-exports
-pub use entities::*;
+pub use entities::{
+    effective_auth_source, Agent, AgentInstance, AgentOrchestration, AgentOrchestrationStep,
+    AgentRuntimeConfig, BillingAccount, BuildStepRecord, ChatContentBlock, CheckoutSessionResponse,
+    CreditBalance, CreditTransaction, FileChangeSummary, Follow, IndividualTestResult,
+    IntegrationConfig, ObsidianConfig, Org, OrgBilling, OrgIntegration, OrgIntegrationKind,
+    Process, ProcessArtifact, ProcessEvent, ProcessFolder, ProcessNode, ProcessNodeConnection,
+    ProcessRun, Project, RuntimeAgentState, Session, SessionEvent, Spec, Task, TestStepRecord,
+    TransactionsResponse, WebSearchConfig, ZeroAuthSession,
+};
 pub use enums::{
     AgentInstanceRole, AgentStatus, ArtifactType, ChatRole, HarnessMode, OrchestrationStatus,
     OrgRole, ProcessEventStatus, ProcessNodeType, ProcessRunStatus, ProcessRunTrigger,
