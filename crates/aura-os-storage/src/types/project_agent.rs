@@ -34,6 +34,8 @@ pub struct StorageProjectAgent {
     pub total_input_tokens: Option<u64>,
     #[serde(default)]
     pub total_output_tokens: Option<u64>,
+    #[serde(default)]
+    pub instance_role: Option<String>,
     /// Snapshot of the parent Agent's permissions at instance-creation
     /// time. Persisted so a cold reload doesn't silently fall back to
     /// an empty bundle when the parent Agent lookup fails.
@@ -67,6 +69,8 @@ pub struct CreateProjectAgentRequest {
     pub icon: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub harness: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub instance_role: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub permissions: Option<aura_os_core::AgentPermissions>,
     #[serde(skip_serializing_if = "Option::is_none")]
