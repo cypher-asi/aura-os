@@ -2,21 +2,20 @@
   {
     "date": "2026-04-25",
     "channel": "nightly",
-    "version": "0.1.0-nightly.394.1",
-    "title": "Harness consolidation, parallel automatons, and a refreshed desktop shell",
-    "intro": "A heavy day for Aura's foundations: the dev loop finally hands authority for task completion to the harness, the legacy agent-tool dispatcher is gone, and concurrent chat / loop / executor work no longer collide on a single agent slot. The desktop shell also gets a comprehensive glass-pill makeover, and a long tail of streaming, retry, and policy fixes makes autonomous runs noticeably more resilient.",
-    "entryCount": 5,
+    "version": "0.1.0-nightly.395.1",
+    "title": "Autonomous dev loop hardening, harness consolidation, and a desktop shell refresh",
+    "intro": "A heavy day for Aura's autonomous loop and runtime: the server now treats provider blips, push backlogs, and policy denials as recoverable instead of terminal, the dev loop and process runtime were folded onto the harness as the single execution path, and the desktop shell got a floating glass-pill makeover. Concurrent agent work was untangled with per-instance roles and topic-scoped loops, and the interface began a structural move toward a shared/ layout.",
+    "entryCount": 6,
     "highlights": [
-      "Harness becomes the single source of truth for task DoD",
-      "Concurrent loops, chats, and ad-hoc task runs now run in parallel without collisions",
-      "Desktop shell redesigned around floating glass pills with consistent radii and gaps",
-      "Browser address bar gains DuckDuckGo fallback and a full in-app error overlay",
-      "Dev-loop hardening: ENOSPC guard, kernel-policy diagnostics, push decoupled from task status",
-      "Frontend reorganized into shared/ with literal-union EventType and stricter typing"
+      "Dev loop survives provider 5xx, stuck pushes, and tool-call retries instead of failing tasks",
+      "Harness becomes the single runtime; legacy agent tool dispatcher and external CLI adapters removed",
+      "Desktop shell redesigned around floating glass capsules with rounded corners and macOS edit shortcuts",
+      "Concurrent chat, automation, and ad-hoc runs now isolate per agent instance and project",
+      "Browser, chat, and run pane reliability fixes for stream drops, refresh state, and stale rows"
     ],
-    "rawCommitCount": 183,
-    "generatedAt": "2026-04-26T02:56:55.759Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.394.1",
+    "rawCommitCount": 184,
+    "generatedAt": "2026-04-26T04:47:46.177Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.395.1",
     "path": "history/2026-04-25.json"
   },
   {
