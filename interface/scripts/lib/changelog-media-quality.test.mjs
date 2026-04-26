@@ -223,7 +223,8 @@ test("buildVisionJudgePrompt defines an independent strict review", () => {
   });
 
   assert.match(prompt, /independent quality judge/);
-  assert.match(prompt, /not a login, loading, placeholder, empty, or error page/);
+  assert.match(prompt, /not a login, loading, or error page/);
+  assert.match(prompt, /For product feature proof, it is not a placeholder or empty state/);
   assert.match(prompt, /Judge the visible product proof, not internal routing metadata/);
   assert.match(prompt, /targetAppId\/targetPath are verified by deterministic gates outside the image/);
   assert.match(prompt, /pixelated/);
@@ -234,6 +235,22 @@ test("buildVisionJudgePrompt defines an independent strict review", () => {
   assert.match(prompt, /easy to find without zooming/);
   assert.match(prompt, /public-facing/);
   assert.match(prompt, /Return strict JSON/);
+});
+
+test("buildVisionJudgePrompt allows sparse support state for shell layout proof", () => {
+  const prompt = buildVisionJudgePrompt({
+    candidate: {
+      entryId: "entry-shell",
+      title: "Floating glass desktop shell with capsule taskbar",
+      proofGoal: "Show the refreshed floating desktop shell with rounded panels and a three-capsule bottom taskbar.",
+    },
+    stage: "raw",
+  });
+
+  assert.match(prompt, /primaryProofKind": "desktop-shell-layout"/);
+  assert.match(prompt, /Do not reject solely because the supporting app content is sparse/);
+  assert.match(prompt, /bottom taskbar capsules/);
+  assert.doesNotMatch(prompt, /For product feature proof, it is not a placeholder or empty state/);
 });
 
 test("judgeChangelogMediaWithOpenAI uses Responses image input and strict JSON schema", async () => {

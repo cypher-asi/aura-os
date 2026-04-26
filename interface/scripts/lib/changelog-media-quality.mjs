@@ -232,6 +232,15 @@ export function assessChangelogMediaQuality({
 
 export function buildVisionJudgePrompt({ candidate, stage = "raw", hasReferenceImage = false } = {}) {
   const isRawStage = stage === "raw";
+  const candidateText = [
+    candidate?.title,
+    candidate?.proofGoal,
+    candidate?.reason,
+    candidate?.publicCaption,
+    ...(Array.isArray(candidate?.seedPlan?.proofBoundary) ? candidate.seedPlan.proofBoundary : []),
+    ...(Array.isArray(candidate?.seedPlan?.contextBoundary) ? candidate.seedPlan.contextBoundary : []),
+  ].filter(Boolean).join("\n").toLowerCase();
+  const isShellLayoutProof = /\b(?:desktop shell|shell chrome|bottom taskbar|taskbar|floating[- ]glass|inset panels?|rounded panels?|sidebar gaps?|sidekick gaps?|three[- ]capsule|capsule taskbar|layout)\b/.test(candidateText);
   return [
     "You are the independent quality judge for an Aura changelog media asset.",
     "",
@@ -249,11 +258,15 @@ export function buildVisionJudgePrompt({ candidate, stage = "raw", hasReferenceI
       targetAppId: candidate?.targetAppId || null,
       targetPath: candidate?.targetPath || null,
       stage,
+      primaryProofKind: isShellLayoutProof ? "desktop-shell-layout" : "product-feature",
     }, null, 2),
     "",
     "Pass only if all are true:",
     "- It shows desktop Aura product UI, not mobile UI.",
-    "- It is not a login, loading, placeholder, empty, or error page.",
+    "- It is not a login, loading, or error page.",
+    isShellLayoutProof
+      ? "- This is a desktop shell/layout proof. Do not reject solely because the supporting app content is sparse, placeholder-like, or lightly seeded if the visible shell/layout change itself is clear: topbar, rounded panels, sidebar/sidekick gaps, bottom taskbar capsules, or floating glass chrome."
+      : "- For product feature proof, it is not a placeholder or empty state.",
     "- The screenshot visibly proves the changelog entry.",
     "- Judge the visible product proof, not internal routing metadata. Do not reject only because the target app id, route, file path, or literal app name is not printed onscreen; targetAppId/targetPath are verified by deterministic gates outside the image.",
     "- Reject soft, compressed, pixelated, tiny, or low-resolution product UI even when the right screen is technically visible.",
