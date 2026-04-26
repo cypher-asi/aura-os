@@ -104,58 +104,6 @@
         "completionPercentage": 0,
         "totalTimeSeconds": 0
       }
-    },
-    {
-      "scenarioId": "mobile-project-shell",
-      "title": "Mobile project shell keeps the drawer and project tabs available",
-      "suite": "smoke",
-      "kind": "browser_core",
-      "device": "eval-mobile-chromium",
-      "bundleId": "browser-smoke-default",
-      "success": true,
-      "counts": {
-        "specs": 0,
-        "tasks": 0,
-        "doneTasks": 0,
-        "failedTasks": 0,
-        "artifactChecks": 0
-      },
-      "metrics": {
-        "totalDurationMs": 944,
-        "totalSteps": 3,
-        "totalTokens": 0,
-        "estimatedCostUsd": 0,
-        "buildSteps": 0,
-        "testSteps": 0,
-        "completionPercentage": 0,
-        "totalTimeSeconds": 0
-      }
-    },
-    {
-      "scenarioId": "mobile-project-shell",
-      "title": "Mobile project shell keeps the drawer and project tabs available",
-      "suite": "smoke",
-      "kind": "browser_core",
-      "device": "eval-mobile-webkit",
-      "bundleId": "browser-smoke-default",
-      "success": true,
-      "counts": {
-        "specs": 0,
-        "tasks": 0,
-        "doneTasks": 0,
-        "failedTasks": 0,
-        "artifactChecks": 0
-      },
-      "metrics": {
-        "totalDurationMs": 644,
-        "totalSteps": 3,
-        "totalTokens": 0,
-        "estimatedCostUsd": 0,
-        "buildSteps": 0,
-        "testSteps": 0,
-        "completionPercentage": 0,
-        "totalTimeSeconds": 0
-      }
     }
   ]
 }
