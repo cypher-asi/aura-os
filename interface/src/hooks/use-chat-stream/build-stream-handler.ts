@@ -2,6 +2,8 @@ import React from "react";
 import { api } from "../../api/client";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { useProjectActions } from "../../stores/project-action-store";
+import { useAutomationLoopStore } from "../../stores/automation-loop-store";
+import type { ProjectId } from "../../shared/types";
 import type { StreamEventHandler } from "../../api/streams";
 import type { AuraEvent } from "../../shared/types/aura-events";
 import { EventType } from "../../shared/types/aura-events";
@@ -53,37 +55,52 @@ export interface DispatchDeps {
   pendingTaskIdsRef: React.MutableRefObject<string[]>;
 }
 
-/** Mirrors the play button (POST /loop/*). Server is authoritative; avoid extra start calls when status already shows a loop. */
+/** Mirrors the play button (POST /loop/*). Server is authoritative; avoid extra start calls when status already shows a loop.
+ *
+ * Loop control here always targets the project's `Loop`-role agent
+ * instance, NOT the chat surface's `agentInstanceId`. Sending the
+ * chat instance id would either collide with the in-flight chat turn
+ * (harness "one in-flight turn per agent_id" rule) or — worse — turn
+ * the chat thread into a loop runner. We omit the id on start so the
+ * backend resolves / creates the canonical loop instance, capture it
+ * in the shared store, and use the bound id for pause / resume / stop.
+ */
 async function bridgeLoopToolResult(
   name: string,
   isError: boolean,
   projectId: string,
-  agentInstanceId: string | undefined,
   selectedModel: string | null | undefined,
 ) {
   if (isError) return;
+  const loopStore = useAutomationLoopStore.getState();
+  const boundLoopId = loopStore.loopByProject[projectId] ?? null;
   switch (name) {
     case "start_dev_loop": {
       try {
         const status = await api.getLoopStatus(projectId);
         if ((status.active_agent_instances?.length ?? 0) > 0) {
-          if (status.paused) await api.resumeLoop(projectId, agentInstanceId);
+          if (status.paused) await api.resumeLoop(projectId, boundLoopId ?? undefined);
           return;
         }
-        await api.startLoop(projectId, agentInstanceId, selectedModel);
+        const res = await api.startLoop(projectId, undefined, selectedModel);
+        if (res.agent_instance_id) {
+          useAutomationLoopStore
+            .getState()
+            .setLoopAgent(projectId as ProjectId, res.agent_instance_id);
+        }
       } catch {
         /* ignore; automation bar / WS will reflect server state */
       }
       break;
     }
     case "pause_dev_loop":
-      api.pauseLoop(projectId, agentInstanceId).catch(() => {});
+      api.pauseLoop(projectId, boundLoopId ?? undefined).catch(() => {});
       break;
     case "stop_dev_loop":
-      api.stopLoop(projectId, agentInstanceId).catch(() => {});
+      api.stopLoop(projectId, boundLoopId ?? undefined).catch(() => {});
       break;
     case "resume_dev_loop":
-      api.resumeLoop(projectId, agentInstanceId).catch(() => {});
+      api.resumeLoop(projectId, boundLoopId ?? undefined).catch(() => {});
       break;
   }
 }
@@ -166,7 +183,7 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
             .getState()
             .bumpEstimatedTokens(coreKey, approxTokensFromText(c.result));
         }
-        void bridgeLoopToolResult(c.name, c.is_error, projectId, agentInstanceId, selectedModel);
+        void bridgeLoopToolResult(c.name, c.is_error, projectId, selectedModel);
         if (c.name === "create_spec") {
           if (c.is_error) removePendingArtifact(c.id, pendingSpecIdsRef, (id) => sidekickRef.current.removeSpec(id));
           else promotePendingSpec(c, projectId, sidekickRef.current, pendingSpecIdsRef);

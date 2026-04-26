@@ -7,6 +7,7 @@ import { useChatUI } from "../../stores/chat-ui-store";
 import { projectChatHistoryKey } from "../../stores/chat-history-store";
 import { useTaskOutputPanelStore } from "../../stores/task-output-panel-store";
 import { useLiveTaskIdsStore } from "../../stores/live-task-ids-store";
+import { useAutomationLoopStore } from "../../stores/automation-loop-store";
 import type { ProjectId } from "../../shared/types";
 import { EventType } from "../../shared/types/aura-events";
 
@@ -85,9 +86,15 @@ function errorMessage(err: unknown, fallback: string): string {
 export function useAutomationStatus(projectId: ProjectId): AutomationStatusData {
   const subscribe = useEventStore((s) => s.subscribe);
   const connected = useEventStore((s) => s.connected);
-  const { agentInstanceId } = useParams<{ agentInstanceId: string }>();
+  // The URL's agentInstanceId is the *chat* surface the user is
+  // currently viewing — keeping that around for the chat-ui-store
+  // model selector. The loop runs on a separate `Loop`-role
+  // instance; see `boundLoopId` below.
+  const { agentInstanceId: chatAgentInstanceId } = useParams<{ agentInstanceId: string }>();
   const streamKey =
-    projectId && agentInstanceId ? projectChatHistoryKey(projectId, agentInstanceId) : null;
+    projectId && chatAgentInstanceId
+      ? projectChatHistoryKey(projectId, chatAgentInstanceId)
+      : null;
   const { selectedModel } = useChatUI(streamKey ?? "__automation-status__");
   const [activeAgents, setActiveAgents] = useState<string[]>([]);
   const [paused, setPaused] = useState(false);
@@ -95,6 +102,14 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
   const [preparing, setPreparing] = useState(false);
   const [confirmStop, setConfirmStop] = useState(false);
   const [stopError, setStopError] = useState<string | null>(null);
+
+  // Bound `Loop`-role agent instance id for this project. Read by all
+  // pause / resume / stop paths so the harness's "one in-flight turn
+  // per agent_id" rule never collides with the active chat thread or
+  // a parallel ad-hoc task run (each of which keeps its own
+  // `agent_instance_id`).
+  const boundLoopId = useAutomationLoopStore((s) => s.loopByProject[projectId] ?? null);
+  const setBoundLoopId = useAutomationLoopStore((s) => s.setLoopAgent);
 
   const isForProject = useCallback(
     (event: { project_id?: string }) => event.project_id === projectId,
@@ -122,6 +137,26 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
 
   useEffect(() => { fetchLoopStatus(); }, [fetchLoopStatus]);
 
+  // Hydrate the bound Loop instance id from the project's agent
+  // instances on mount. We run this independently of the loop status
+  // fetch so the pause / stop buttons can target the right agent
+  // even on the very first render after a refresh — before the user
+  // has interacted with Start. Failure (offline, fresh project) is
+  // non-fatal: the next `startLoop` response refreshes the binding.
+  useEffect(() => {
+    let cancelled = false;
+    api.listAgentInstances(projectId)
+      .then((instances) => {
+        if (cancelled) return;
+        const loop = instances.find((i) => i.instance_role === "loop");
+        setBoundLoopId(projectId, loop?.agent_instance_id ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, setBoundLoopId]);
+
   const prevConnectedRef = useRef(connected);
   useEffect(() => {
     if (connected && !prevConnectedRef.current) fetchLoopStatus();
@@ -147,6 +182,10 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
         if (agentId) setActiveAgents((prev) => prev.filter((id) => id !== agentId));
         else setActiveAgents([]);
         setPaused(false); setStarting(false); setPreparing(false);
+        // The Loop-role row itself is persistent, so we keep
+        // `boundLoopId` populated — the next Start reuses the same
+        // instance. We only clear it when the row is deleted, which
+        // happens via `LoopFinished` for terminal lifecycles.
       }),
       subscribe(EventType.LoopFinished, (e) => {
         if (!isForProject(e)) return;
@@ -171,7 +210,10 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
   const handleStart = useCallback(async () => {
     if (paused) {
       try {
-        const res = await api.resumeLoop(projectId, agentInstanceId);
+        // Pause/resume always target the bound Loop instance so we
+        // never accidentally resume an ephemeral executor or the
+        // chat thread the user is currently viewing.
+        const res = await api.resumeLoop(projectId, boundLoopId ?? undefined);
         if (res.active_agent_instances) setActiveAgents(res.active_agent_instances);
         setPaused(false);
         hydrateUiFromLoopStartResponse(res, projectId);
@@ -192,8 +234,24 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
     setStarting(true);
     setPreparing(true);
     try {
-      const res = await api.startLoop(projectId, agentInstanceId, selectedModel);
+      // Omit `agent_instance_id`: the backend resolves to the
+      // project's `Loop`-role instance via
+      // `ensure_default_loop_instance`, lazily creating one if this
+      // is the first Start in the project. Passing the URL's
+      // currently-viewed chat agent here would force the loop onto
+      // that chat instance and the harness's "one in-flight turn per
+      // agent_id" policy would silently abort either the chat reply
+      // or the next loop turn — exactly the regression we're fixing.
+      const res = await api.startLoop(projectId, undefined, selectedModel);
       if (res.active_agent_instances) setActiveAgents(res.active_agent_instances);
+      // Capture the Loop instance the backend resolved to so all
+      // subsequent pause / resume / stop calls scope themselves to
+      // it. `start_loop` populates `agent_instance_id` on the
+      // response with the resolved id, regardless of whether we
+      // passed one in.
+      if (res.agent_instance_id) {
+        setBoundLoopId(projectId, res.agent_instance_id);
+      }
       setPaused(false);
       setStarting(false);
       // Seed the Run panel row + Tasks list "live" dot from the response
@@ -204,14 +262,14 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
       if (isInsufficientCreditsError(err)) dispatchInsufficientCredits();
       console.error("Failed to start loop", err);
     }
-  }, [projectId, agentInstanceId, paused, selectedModel]);
+  }, [projectId, paused, selectedModel, boundLoopId, setBoundLoopId]);
 
   const handlePause = useCallback(async () => {
     try {
-      await api.pauseLoop(projectId, agentInstanceId);
+      await api.pauseLoop(projectId, boundLoopId ?? undefined);
       setPreparing(false);
     } catch (err) { console.error("Failed to pause loop", err); }
-  }, [projectId, agentInstanceId]);
+  }, [projectId, boundLoopId]);
 
   const handleStop = useCallback(() => {
     setStopError(null);
@@ -231,7 +289,12 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
     setStarting(false);
     setPreparing(false);
     try {
-      const res = await api.stopLoop(projectId, agentInstanceId);
+      // Always scope Stop to the bound Loop instance. A
+      // project-wide stop (boundLoopId === null) would also tear
+      // down ephemeral task executors running concurrently in the
+      // same project — the regression Phase 2's per-instance
+      // registry was built to fix.
+      const res = await api.stopLoop(projectId, boundLoopId ?? undefined);
       setActiveAgents(res.active_agent_instances ?? []);
       setPaused(Boolean(res.paused));
       fetchLoopStatus();
@@ -243,7 +306,7 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
       // optimistic clear.
       fetchLoopStatus();
     }
-  }, [projectId, agentInstanceId, fetchLoopStatus]);
+  }, [projectId, boundLoopId, fetchLoopStatus]);
 
   return {
     status, agentCount: activeAgents.length,

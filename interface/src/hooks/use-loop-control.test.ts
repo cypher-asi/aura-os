@@ -33,6 +33,8 @@ const mockGetLoopStatus = vi.fn();
 const mockStartLoop = vi.fn();
 const mockPauseLoop = vi.fn();
 const mockStopLoop = vi.fn();
+const mockResumeLoop = vi.fn();
+const mockListAgentInstances = vi.fn();
 
 vi.mock("../api/client", () => ({
   api: {
@@ -40,19 +42,32 @@ vi.mock("../api/client", () => ({
     startLoop: (...args: unknown[]) => mockStartLoop(...args),
     pauseLoop: (...args: unknown[]) => mockPauseLoop(...args),
     stopLoop: (...args: unknown[]) => mockStopLoop(...args),
+    resumeLoop: (...args: unknown[]) => mockResumeLoop(...args),
+    listAgentInstances: (...args: unknown[]) => mockListAgentInstances(...args),
   },
 }));
 
 import { useLoopControl } from "./use-loop-control";
+import { useAutomationLoopStore } from "../stores/automation-loop-store";
 
 describe("useLoopControl", () => {
   beforeEach(() => {
     subscribeMap.clear();
     mockConnected = true;
+    useAutomationLoopStore.getState().reset();
     mockGetLoopStatus.mockReset().mockResolvedValue({ active_agent_instances: [], paused: false });
-    mockStartLoop.mockReset().mockResolvedValue(undefined);
+    mockStartLoop
+      .mockReset()
+      .mockResolvedValue({ active_agent_instances: ["loop-agent-1"], agent_instance_id: "loop-agent-1" });
     mockPauseLoop.mockReset().mockResolvedValue(undefined);
     mockStopLoop.mockReset().mockResolvedValue(undefined);
+    mockResumeLoop.mockReset().mockResolvedValue(undefined);
+    // Default project: chat agent + Loop-role instance already
+    // exists. handlePause / handleStop should target `loop-agent-1`.
+    mockListAgentInstances.mockReset().mockResolvedValue([
+      { agent_instance_id: "agent-1", instance_role: "chat" },
+      { agent_instance_id: "loop-agent-1", instance_role: "loop" },
+    ]);
   });
 
   it("returns initial state with no project", () => {
@@ -93,14 +108,17 @@ describe("useLoopControl", () => {
     });
   });
 
-  it("handleStart calls API and updates state", async () => {
+  it("handleStart calls API without an agent id so the backend resolves the Loop instance", async () => {
     const { result } = renderHook(() => useLoopControl("proj-1"));
+    // Wait for the on-mount listAgentInstances() before triggering
+    // start, so the bound id is hydrated for the assertion below.
+    await waitFor(() => expect(mockListAgentInstances).toHaveBeenCalledWith("proj-1"));
 
     await act(async () => {
       await result.current.handleStart();
     });
 
-    expect(mockStartLoop).toHaveBeenCalledWith("proj-1", "agent-1", "aura-gpt-4.1");
+    expect(mockStartLoop).toHaveBeenCalledWith("proj-1", undefined, "aura-gpt-4.1");
     expect(result.current.loopRunning).toBe(true);
     expect(result.current.loopPaused).toBe(false);
   });
@@ -109,6 +127,7 @@ describe("useLoopControl", () => {
     mockStartLoop.mockRejectedValue(new Error("server down"));
 
     const { result } = renderHook(() => useLoopControl("proj-1"));
+    await waitFor(() => expect(mockListAgentInstances).toHaveBeenCalledWith("proj-1"));
 
     await act(async () => {
       await result.current.handleStart();
@@ -117,18 +136,21 @@ describe("useLoopControl", () => {
     expect(result.current.error).toBe("server down");
   });
 
-  it("handlePause calls API and updates state", async () => {
+  it("handlePause targets the bound Loop instance, not the URL chat agent", async () => {
     const { result } = renderHook(() => useLoopControl("proj-1"));
+    await waitFor(() => expect(mockListAgentInstances).toHaveBeenCalledWith("proj-1"));
 
     await act(async () => {
       await result.current.handlePause();
     });
 
-    expect(mockPauseLoop).toHaveBeenCalledWith("proj-1", "agent-1");
+    expect(mockPauseLoop).toHaveBeenCalledWith("proj-1", "loop-agent-1");
+    expect(mockPauseLoop).not.toHaveBeenCalledWith("proj-1", "agent-1");
   });
 
-  it("handleStop calls API and resets state", async () => {
+  it("handleStop targets the bound Loop instance, not the URL chat agent", async () => {
     const { result } = renderHook(() => useLoopControl("proj-1"));
+    await waitFor(() => expect(mockListAgentInstances).toHaveBeenCalledWith("proj-1"));
 
     await act(async () => {
       await result.current.handleStart();
@@ -138,7 +160,8 @@ describe("useLoopControl", () => {
       await result.current.handleStop();
     });
 
-    expect(mockStopLoop).toHaveBeenCalledWith("proj-1", "agent-1");
+    expect(mockStopLoop).toHaveBeenCalledWith("proj-1", "loop-agent-1");
+    expect(mockStopLoop).not.toHaveBeenCalledWith("proj-1", "agent-1");
   });
 
   it("does nothing on handleStart when projectId is undefined", async () => {

@@ -33,6 +33,8 @@ const mockGetLoopStatus = vi.fn();
 const mockStartLoop = vi.fn();
 const mockPauseLoop = vi.fn();
 const mockStopLoop = vi.fn();
+const mockResumeLoop = vi.fn();
+const mockListAgentInstances = vi.fn();
 
 vi.mock("../../api/client", () => ({
   api: {
@@ -40,6 +42,8 @@ vi.mock("../../api/client", () => ({
     startLoop: (...args: unknown[]) => mockStartLoop(...args),
     pauseLoop: (...args: unknown[]) => mockPauseLoop(...args),
     stopLoop: (...args: unknown[]) => mockStopLoop(...args),
+    resumeLoop: (...args: unknown[]) => mockResumeLoop(...args),
+    listAgentInstances: (...args: unknown[]) => mockListAgentInstances(...args),
   },
   isInsufficientCreditsError: () => false,
   dispatchInsufficientCredits: vi.fn(),
@@ -70,6 +74,7 @@ vi.mock("../../stores/chat-ui-store", () => ({
 }));
 
 import { AutomationBar } from "../AutomationBar";
+import { useAutomationLoopStore } from "../../stores/automation-loop-store";
 import type { ProjectId } from "../../shared/types";
 
 function renderBar(projectId: ProjectId = "proj-1" as ProjectId) {
@@ -87,7 +92,15 @@ function renderBar(projectId: ProjectId = "proj-1" as ProjectId) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  useAutomationLoopStore.getState().reset();
   mockGetLoopStatus.mockResolvedValue({ active_agent_instances: [], paused: false });
+  // The bar resolves the project's `Loop`-role instance on mount so
+  // pause/resume/stop scope to it; default to a mature project that
+  // already has one.
+  mockListAgentInstances.mockResolvedValue([
+    { agent_instance_id: "agent-1", instance_role: "chat" },
+    { agent_instance_id: "loop-agent-1", instance_role: "loop" },
+  ]);
 });
 
 describe("AutomationBar", () => {
@@ -120,27 +133,67 @@ describe("AutomationBar", () => {
     });
   });
 
-  it("start button calls api.startLoop with the active Aura model", async () => {
+  it("start button calls api.startLoop without an agent id so the backend resolves the Loop instance", async () => {
     const user = userEvent.setup();
-    mockStartLoop.mockResolvedValue({ active_agent_instances: ["a1"] });
+    mockStartLoop.mockResolvedValue({
+      active_agent_instances: ["loop-agent-1"],
+      agent_instance_id: "loop-agent-1",
+    });
     renderBar();
+    // Wait for the on-mount listAgentInstances() to settle so the
+    // hook has hydrated `boundLoopId` before we click.
+    await waitFor(() => expect(mockListAgentInstances).toHaveBeenCalledWith("proj-1"));
 
     await user.click(screen.getByTitle("Start"));
-    expect(mockStartLoop).toHaveBeenCalledWith("proj-1", "agent-1", "aura-gpt-4.1");
+    expect(mockStartLoop).toHaveBeenCalledWith("proj-1", undefined, "aura-gpt-4.1");
   });
 
-  it("pause button calls api.pauseLoop", async () => {
+  it("captures the resolved Loop agent id from startLoop and routes pause/stop through it", async () => {
     const user = userEvent.setup();
-    mockGetLoopStatus.mockResolvedValue({ active_agent_instances: ["a1"], paused: false });
+    // Project starts with no Loop instance — the backend creates one
+    // on first start and returns its id, which the bar must reuse for
+    // every subsequent control call.
+    mockListAgentInstances.mockResolvedValue([
+      { agent_instance_id: "agent-1", instance_role: "chat" },
+    ]);
+    mockStartLoop.mockResolvedValue({
+      active_agent_instances: ["loop-agent-fresh"],
+      agent_instance_id: "loop-agent-fresh",
+    });
+    mockPauseLoop.mockResolvedValue({
+      active_agent_instances: ["loop-agent-fresh"],
+      paused: true,
+    });
+    renderBar();
+    await waitFor(() => expect(mockListAgentInstances).toHaveBeenCalled());
+
+    await user.click(screen.getByTitle("Start"));
+    await waitFor(() =>
+      expect(useAutomationLoopStore.getState().getLoopAgent("proj-1" as ProjectId)).toBe(
+        "loop-agent-fresh",
+      ),
+    );
+
+    await user.click(screen.getByTitle("Pause"));
+    expect(mockPauseLoop).toHaveBeenCalledWith("proj-1", "loop-agent-fresh");
+  });
+
+  it("pause button targets the bound Loop instance rather than the URL chat agent", async () => {
+    const user = userEvent.setup();
+    mockGetLoopStatus.mockResolvedValue({
+      active_agent_instances: ["loop-agent-1"],
+      paused: false,
+    });
     mockPauseLoop.mockResolvedValue(undefined);
     renderBar();
+    await waitFor(() => expect(mockListAgentInstances).toHaveBeenCalledWith("proj-1"));
 
     await waitFor(() => {
       expect(screen.getByTitle("Pause")).toBeEnabled();
     });
 
     await user.click(screen.getByTitle("Pause"));
-    expect(mockPauseLoop).toHaveBeenCalledWith("proj-1", "agent-1");
+    expect(mockPauseLoop).toHaveBeenCalledWith("proj-1", "loop-agent-1");
   });
 
   it("stop button shows confirmation dialog", async () => {
@@ -157,11 +210,15 @@ describe("AutomationBar", () => {
     expect(screen.getByText(/Stop autonomous execution/)).toBeInTheDocument();
   });
 
-  it("confirming stop calls api.stopLoop", async () => {
+  it("confirming stop calls api.stopLoop against the bound Loop instance", async () => {
     const user = userEvent.setup();
-    mockGetLoopStatus.mockResolvedValue({ active_agent_instances: ["a1"], paused: false });
+    mockGetLoopStatus.mockResolvedValue({
+      active_agent_instances: ["loop-agent-1"],
+      paused: false,
+    });
     mockStopLoop.mockResolvedValue({ active_agent_instances: [] });
     renderBar();
+    await waitFor(() => expect(mockListAgentInstances).toHaveBeenCalledWith("proj-1"));
 
     await waitFor(() => {
       expect(screen.getByTitle("Stop")).toBeEnabled();
@@ -172,7 +229,7 @@ describe("AutomationBar", () => {
     await user.click(confirmBtn);
 
     await waitFor(() => {
-      expect(mockStopLoop).toHaveBeenCalledWith("proj-1", "agent-1");
+      expect(mockStopLoop).toHaveBeenCalledWith("proj-1", "loop-agent-1");
     });
   });
 
@@ -221,6 +278,29 @@ describe("AutomationBar", () => {
     await waitFor(() => {
       expect(screen.getByTitle("Resume")).toBeEnabled();
     });
+  });
+
+  it("resume routes through the bound Loop instance, not the URL chat agent", async () => {
+    const user = userEvent.setup();
+    mockGetLoopStatus.mockResolvedValue({
+      active_agent_instances: ["loop-agent-1"],
+      paused: true,
+    });
+    mockResumeLoop.mockResolvedValue({
+      active_agent_instances: ["loop-agent-1"],
+      paused: false,
+    });
+    renderBar();
+    await waitFor(() => expect(mockListAgentInstances).toHaveBeenCalledWith("proj-1"));
+
+    await waitFor(() => {
+      expect(screen.getByTitle("Resume")).toBeEnabled();
+    });
+
+    await user.click(screen.getByTitle("Resume"));
+    expect(mockResumeLoop).toHaveBeenCalledWith("proj-1", "loop-agent-1");
+    // The chat surface's `agent-1` must never be passed to a loop control call.
+    expect(mockResumeLoop).not.toHaveBeenCalledWith("proj-1", "agent-1");
   });
 
   it("shows agent count when more than 1 agent", async () => {
