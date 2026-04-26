@@ -520,10 +520,7 @@ pub mod phase7_test_support {
                 }
             }
         }
-        let ctx = crate::handlers::dev_loop::extract_task_failure_context(
-            &synthetic,
-            Some(reason),
-        );
+        let ctx = crate::handlers::dev_loop::extract_task_failure_context(&synthetic, Some(reason));
         if ctx.has_any() {
             if let Some(obj) = synthetic.as_object_mut() {
                 ctx.merge_into(obj);

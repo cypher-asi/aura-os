@@ -110,13 +110,9 @@ fn task_failed_payload_prefers_structured_event_fields_over_reason_parsing() {
         "sse_error_type".into(),
         Value::String("overloaded_error".into()),
     );
-    siblings.insert(
-        "message_id".into(),
-        Value::String("msg_from_stream".into()),
-    );
+    siblings.insert("message_id".into(), Value::String("msg_from_stream".into()));
 
-    let payload =
-        task_failed_payload_with_context("task-abc", HARNESS_REASON, Some(&siblings));
+    let payload = task_failed_payload_with_context("task-abc", HARNESS_REASON, Some(&siblings));
     let obj = payload
         .as_object()
         .expect("task_failed payload is a JSON object");
@@ -202,7 +198,10 @@ fn task_failed_payload_drops_context_when_unavailable() {
         .as_object()
         .expect("task_failed payload is a JSON object");
 
-    assert_eq!(obj.get("reason").and_then(Value::as_str), Some("reset: connection closed"));
+    assert_eq!(
+        obj.get("reason").and_then(Value::as_str),
+        Some("reset: connection closed")
+    );
     assert!(
         obj.get("provider_request_id").is_none(),
         "no provider context is available on a bare reset; must stay absent"
@@ -240,7 +239,9 @@ fn harness_reason_still_routes_through_provider_internal_error_retry_path() {
     // list accidentally makes the predicate trivially true, this
     // regression assertion catches it.
     assert!(
-        !is_provider_internal_error("task reached implementation phase but no file operations completed"),
+        !is_provider_internal_error(
+            "task reached implementation phase but no file operations completed"
+        ),
         "truncation-style failures must not be absorbed into the provider-internal-error bucket",
     );
 }
@@ -258,8 +259,7 @@ fn partial_sibling_fields_merge_without_clobbering_siblings_from_reason() {
         Value::String("req_header_only".into()),
     );
 
-    let payload =
-        task_failed_payload_with_context("task-abc", HARNESS_REASON, Some(&partial));
+    let payload = task_failed_payload_with_context("task-abc", HARNESS_REASON, Some(&partial));
     let obj = payload
         .as_object()
         .expect("task_failed payload is a JSON object");

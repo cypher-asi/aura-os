@@ -10,8 +10,7 @@ use aura_os_core::listing_status::AgentListingStatus;
 use aura_os_core::{
     Agent, AgentId, AgentInstance, AgentInstanceId, AgentInstanceRole, AgentPermissions,
     AgentStatus, ChatRole, OrgId, Project, ProjectId, ProjectStatus, SessionEvent, SessionEventId,
-    SessionId, TaskId,
-    ZeroAuthSession,
+    SessionId, TaskId, ZeroAuthSession,
 };
 
 use crate::dto::AuthSessionResponse;

@@ -371,7 +371,9 @@ pub(crate) async fn update_org(
             .map(|name| name.trim().to_string())
             .filter(|name| !name.is_empty()),
         description: None,
-        avatar_url: req.avatar_url.map(|avatar_url| avatar_url.unwrap_or_default()),
+        avatar_url: req
+            .avatar_url
+            .map(|avatar_url| avatar_url.unwrap_or_default()),
     };
     let net_org = client
         .update_org(&org_id_str, &jwt, &net_req)
