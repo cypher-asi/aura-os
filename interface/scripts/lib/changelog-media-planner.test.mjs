@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   buildMediaPlannerPrompt,
   deriveVisualMediaOpportunities,
+  deriveVisualMediaSurfaceClusters,
   extractChangelogMediaEntries,
   normalizeMediaPlan,
   parseAnthropicMediaPlanResponse,
@@ -65,10 +66,13 @@ test("buildMediaPlannerPrompt keeps Browser Use behind a conservative Anthropic 
   assert.match(prompt, /Browser Use should receive fewer, better candidates/);
   assert.match(prompt, /provider pricing, model catalog, routing, config, or API plumbing/);
   assert.match(prompt, /Visual opportunity index from raw commits and changelog bullets/);
+  assert.match(prompt, /Visual surface clusters from commits and changelog bullets/);
+  assert.match(prompt, /Parent title alignment is a weak sanity check/);
   assert.match(prompt, /concrete user-visible screen, control, picker, sort\/filter behavior/);
   assert.match(prompt, /mere mention of an app name/);
   assert.match(prompt, /do not target \/desktop/);
   assert.match(prompt, /populated, visually rich desktop app route/);
+  assert.match(prompt, /Keep shell\/chrome target and proof wording consistent/);
   assert.match(prompt, /image-gallery-populated/);
   assert.match(prompt, /do not open the 3D Model tab just because the app is called AURA 3D/);
   assert.match(prompt, /transient interaction states/);
@@ -173,6 +177,119 @@ test("deriveVisualMediaOpportunities finds visual sub-features inside broad chan
   assert.ok(opportunities.some((opportunity) => opportunity.likelyApps[0]?.id === "projects"));
   assert.ok(opportunities.every((opportunity) => opportunity.changedFiles.every((filePath) => filePath.startsWith("interface/src/"))));
   assert.equal(opportunities.some((opportunity) => opportunity.entryId === "entry-infra"), false);
+});
+
+test("deriveVisualMediaSurfaceClusters promotes repeated visual surfaces inside broad changelog titles", () => {
+  const changelog = {
+    rawCommits: [
+      {
+        sha: "taskbar111111",
+        subject: "style(taskbar): split bottom taskbar into three floating capsules",
+        files: [
+          "interface/src/components/BottomTaskbar/BottomTaskbar.module.css",
+          "interface/src/components/BottomTaskbar/BottomTaskbar.tsx",
+        ],
+      },
+      {
+        sha: "taskbar222222",
+        subject: "style(taskbar): float the bar with 4px inset and tighten side capsules",
+        files: ["interface/src/components/BottomTaskbar/BottomTaskbar.module.css"],
+      },
+      {
+        sha: "shell3333333",
+        subject: "style(shell): unify desktop corner radii and tighten panel gaps",
+        files: ["interface/src/components/DesktopShell/DesktopShell.module.css"],
+      },
+    ],
+    rendered: {
+      entries: [
+        {
+          batch_id: "entry-dev-loop",
+          title: "Dev loop rebuilt around the harness with isolated concurrent loops",
+          items: [
+            {
+              text: "Desktop shell now uses a redesigned floating taskbar with three glass capsules.",
+              commit_shas: ["taskbar111"],
+              changed_files: ["interface/src/components/BottomTaskbar/BottomTaskbar.module.css"],
+            },
+            {
+              text: "Taskbar side capsules have tighter spacing and clearer separation.",
+              commit_shas: ["taskbar222"],
+              changed_files: ["interface/src/components/BottomTaskbar/BottomTaskbar.module.css"],
+            },
+            {
+              text: "Desktop panels share the same rounded shell geometry.",
+              commit_shas: ["shell333"],
+              changed_files: ["interface/src/components/DesktopShell/DesktopShell.module.css"],
+            },
+          ],
+        },
+      ],
+    },
+  };
+
+  const opportunities = deriveVisualMediaOpportunities(changelog, {
+    sitemap: {
+      apps: [
+        {
+          id: "aura3d",
+          label: "AURA 3D",
+          path: "/3d",
+          keywords: ["aura 3d", "gallery", "desktop shell", "taskbar"],
+          captureSeedProfile: {
+            runtimeSeedSupport: "supported",
+            preferredStableSurface: "generated Image gallery",
+            capabilities: ["image-gallery-populated", "asset-gallery-populated"],
+          },
+        },
+        {
+          id: "agents",
+          label: "Agents",
+          path: "/agents",
+          keywords: ["agent", "chat"],
+          captureSeedProfile: { runtimeSeedSupport: "supported" },
+        },
+      ],
+    },
+    allowedEntryIds: new Set(["entry-dev-loop"]),
+  });
+  const clusters = deriveVisualMediaSurfaceClusters(opportunities);
+  const shellCluster = clusters.find((cluster) => cluster.surfaceKey === "desktop-shell-taskbar");
+
+  assert.ok(shellCluster);
+  assert.equal(shellCluster.entryId, "entry-dev-loop");
+  assert.equal(shellCluster.preferredTargetAppId, "aura3d");
+  assert.equal(shellCluster.preferredTargetPath, "/3d");
+  assert.ok(shellCluster.opportunityCount >= 2);
+  assert.ok(shellCluster.score > 40);
+  assert.match(shellCluster.guidance.join("\n"), /parent changelog title is placement context/);
+  assert.ok(shellCluster.subjects.some((subject) => subject.includes("bottom taskbar")));
+});
+
+test("deriveVisualMediaSurfaceClusters does not emit empty desktop fallback clusters", () => {
+  const clusters = deriveVisualMediaSurfaceClusters([
+    {
+      opportunityId: "entry-1:desktop-platform",
+      entryId: "entry-1",
+      entryTitle: "Desktop platform polish",
+      itemText: "Desktop platform now accepts a runtime flag for external harness use.",
+      subject: "feat(desktop): honor --external-harness CLI flag",
+      score: 24,
+      confidenceHint: 0.8,
+      desktopEligible: true,
+      changedFiles: [],
+      likelyApps: [
+        {
+          id: "desktop",
+          label: "Desktop",
+          path: "/desktop",
+          score: 12,
+        },
+      ],
+    },
+  ]);
+
+  assert.deepEqual(clusters, []);
 });
 
 test("normalizeMediaPlan keeps only high-confidence capture candidates and preserves coverage under the cap", () => {

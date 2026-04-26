@@ -8,6 +8,7 @@ import { buildAuraNavigationSitemap } from "./lib/aura-navigation-contract.mjs";
 import {
   buildMediaPlannerPrompt,
   deriveVisualMediaOpportunities,
+  deriveVisualMediaSurfaceClusters,
   extractChangelogMediaEntries,
   planChangelogMediaWithAnthropic,
 } from "./lib/changelog-media-planner.mjs";
@@ -119,6 +120,7 @@ export async function main(argv = process.argv.slice(2)) {
     sitemap,
     allowedEntryIds,
   });
+  const visualSurfaceClusters = deriveVisualMediaSurfaceClusters(visualOpportunities);
   const changedFiles = [...new Set([
     ...readChangedFiles(args),
     ...deriveChangedFilesFromChangelog(changelog),
@@ -141,6 +143,7 @@ export async function main(argv = process.argv.slice(2)) {
   writeJson(path.join(outputDir, "aura-navigation-sitemap.json"), sitemap);
   writeJson(path.join(outputDir, "changelog-media-knowledge.json"), learnedKnowledge);
   writeJson(path.join(outputDir, "visual-media-opportunities.json"), visualOpportunities);
+  writeJson(path.join(outputDir, "visual-surface-clusters.json"), visualSurfaceClusters);
 
   if (changelogEntries.length === 0) {
     const emptyPlan = { schemaVersion: 1, generatedAt: new Date().toISOString(), candidates: [], skipped: [] };
@@ -159,6 +162,7 @@ export async function main(argv = process.argv.slice(2)) {
       skippedCount: 0,
       forcedSkippedCount: 0,
       visualOpportunityCount: visualOpportunities.length,
+      visualSurfaceClusterCount: visualSurfaceClusters.length,
       existingPublishedMediaCount,
       coverage: { ok: true, missing: [], duplicate: [], unknown: [] },
       attemptCount: 0,
@@ -177,6 +181,7 @@ export async function main(argv = process.argv.slice(2)) {
       commitLog,
       changedFiles,
       visualOpportunities,
+      visualSurfaceClusters,
       maxCandidates,
     });
     fs.writeFileSync(path.join(outputDir, "anthropic-media-planner-prompt.md"), `${prompt}\n`, "utf8");
@@ -189,6 +194,7 @@ export async function main(argv = process.argv.slice(2)) {
       existingPublishedMediaCount,
       changedFileCount: changedFiles.length,
       visualOpportunityCount: visualOpportunities.length,
+      visualSurfaceClusterCount: visualSurfaceClusters.length,
       sitemapAppCount: sitemap.coverage.appCount,
       sitemapGapCount: sitemap.coverage.appGaps.length,
       outputDir,
@@ -207,6 +213,7 @@ export async function main(argv = process.argv.slice(2)) {
     commitLog,
     changedFiles,
     visualOpportunities,
+    visualSurfaceClusters,
     maxCandidates,
     entryChunkSize,
   });
@@ -225,6 +232,7 @@ export async function main(argv = process.argv.slice(2)) {
     skippedCount: result.plan.skipped.length,
     forcedSkippedCount: result.forcedSkipped?.length || 0,
     visualOpportunityCount: visualOpportunities.length,
+    visualSurfaceClusterCount: visualSurfaceClusters.length,
     existingPublishedMediaCount,
     coverage: result.coverage,
     attemptCount: result.attempts.length,

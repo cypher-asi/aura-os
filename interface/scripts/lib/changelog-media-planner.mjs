@@ -9,7 +9,8 @@ const MIN_CAPTURE_CONFIDENCE = 0.6;
 const PREFERRED_CAPTURE_CONFIDENCE = 0.7;
 const SHELL_CAPTURE_FALLBACK_APP_ID = "aura3d";
 const SHELL_CAPTURE_FALLBACK_PATH = "/3d";
-const VISUAL_OPPORTUNITY_LIMIT = 48;
+const VISUAL_OPPORTUNITY_LIMIT = 72;
+const VISUAL_SURFACE_CLUSTER_LIMIT = 24;
 const VISUAL_ACTION_PATTERN = /\b(?:add|adds|added|launch|launched|ship|shipped|new|introduce|introduced|debut|debuted|scaffold|scaffolded|redesign|redesigned|rebuild|rebuilt|revamp|sort|sorted|filter|filtered|reorder|ordered|group|grouped|search|viewer|picker|selector|modal|composer|panel|sidebar|sidekick|taskbar|toolbar|dashboard|stats|metrics|chart|table|tabs|feed|feedback|notes|browser|debug app|aura 3d|3d|model picker|model selector|webgl|marketplace|integrations|profile|settings|gallery|lightbox|kanban|process canvas|desktop shell|chrome|window controls|copy button|inline rename|context menu|avatar|update control|browser tab|error page)\b/i;
 const VISUAL_STYLE_PATTERN = /\b(?:style|polish|align|size|round|gap|border|radius|background|layout|height|width|hover|focus|icon|floating|capsule)\b/i;
 const LOW_SIGNAL_SUBJECT_PATTERN = /\b(?:retrigger|merge|rustfmt|lint|format|move generic|shared\/|types\/|api\/|utils\/|hooks\/|ci|workflow|release asset|gh-pages|test|tests|fixture|rubric|docs?)\b/i;
@@ -20,6 +21,128 @@ const EXPLICIT_REFACTOR_VISIBLE_PATTERN = /\b(?:user-visible|visible|render|disp
 const DESKTOP_PRODUCT_PATTERN = /\b(?:desktop|web|browser|chat|agent|project|task|process|feedback|notes|model picker|aura 3d|3d|debug|settings|feed|integrations|marketplace)\b/i;
 const MOBILE_ONLY_PATTERN = /\b(?:mobile|android|ios|iphone|ipad|native app|apk|ipa)\b/i;
 const DESKTOP_UI_FILE_PATTERN = /^interface\/src\/(?:apps|components|views|routes|layout|features)\//;
+const VISUAL_SURFACE_DEFINITIONS = [
+  {
+    key: "desktop-shell-taskbar",
+    label: "Desktop shell and taskbar",
+    appId: SHELL_CAPTURE_FALLBACK_APP_ID,
+    path: SHELL_CAPTURE_FALLBACK_PATH,
+    patterns: [
+      /\b(?:desktop shell|shell chrome|bottom taskbar|taskbar|floating (?:glass )?capsules?|pill(?:s| edge| end)|sidekick toggle|window controls|topbar|titlebar|corner radii|panel gaps?|browser address bar|flat pill|inset rounded)\b/i,
+      /interface\/src\/components\/(?:BottomTaskbar|DesktopShell|WindowControls|BrowserAddressBar|AppNavRail|SidekickTaskbar)\//i,
+    ],
+  },
+  {
+    key: "agent-chat",
+    label: "Agent chat and transcript",
+    appId: "agents",
+    path: "/agents",
+    patterns: [
+      /\b(?:agent chat|chat transcript|message bubble|composer|assistant turn|chat stream|stream interrupted|model picker|conversation row|agent row|copy button|file preview|spec preview)\b/i,
+      /interface\/src\/(?:apps\/agents|components\/(?:AgentChatView|MessageBubble|ChatInputBar|ChatPanel|AgentConversationRow|Block\/renderers))\//i,
+    ],
+  },
+  {
+    key: "feedback-board",
+    label: "Feedback board",
+    appId: "feedback",
+    path: "/feedback",
+    patterns: [
+      /\b(?:feedback|idea cards?|votes?|comments?|thread|board|status|sort(?:ed|ing)?|filter(?:ed|ing)?)\b/i,
+      /interface\/src\/apps\/feedback\//i,
+    ],
+  },
+  {
+    key: "project-stats",
+    label: "Project stats dashboard",
+    appId: "projects",
+    path: "/projects",
+    patterns: [
+      /\b(?:project stats|stats dashboard|metrics?|tokens?|cost|completion|contributors?|lines changed|sessions?)\b/i,
+      /interface\/src\/(?:views\/(?:ProjectStatsView|StatsDashboard)|components\/StatCard)\//i,
+    ],
+  },
+  {
+    key: "aura3d-gallery",
+    label: "AURA 3D gallery",
+    appId: "aura3d",
+    path: "/3d",
+    patterns: [
+      /\b(?:aura\s*3d|3d model|webgl|generated image|image gallery|asset gallery|source image|viewer)\b/i,
+      /interface\/src\/apps\/aura3d\//i,
+    ],
+  },
+  {
+    key: "notes-editor",
+    label: "Notes editor",
+    appId: "notes",
+    path: "/notes",
+    patterns: [
+      /\b(?:notes?|editor|markdown|document|comments panel|table of contents|toc)\b/i,
+      /interface\/src\/apps\/notes\//i,
+    ],
+  },
+  {
+    key: "tasks-board",
+    label: "Task board and run sidekick",
+    appId: "tasks",
+    path: "/tasks",
+    patterns: [
+      /\b(?:task board|kanban|task card|run sidekick|run pane|task output|retrying|loop progress|push stuck|orbit out of disk)\b/i,
+      /interface\/src\/(?:apps\/tasks|components\/(?:Task|PushStuckBanner|OrbitStatusIndicator|GitStepItem|LoopProgress))\//i,
+    ],
+  },
+  {
+    key: "process-canvas",
+    label: "Process canvas",
+    appId: "process",
+    path: "/process",
+    patterns: [
+      /\b(?:process canvas|process graph|nodes?|workflow|edges?|run history)\b/i,
+      /interface\/src\/apps\/process\//i,
+    ],
+  },
+  {
+    key: "feed-timeline",
+    label: "Feed timeline",
+    appId: "feed",
+    path: "/feed",
+    patterns: [
+      /\b(?:feed|timeline|activity|leaderboard|release activity|posts?)\b/i,
+      /interface\/src\/apps\/feed\//i,
+    ],
+  },
+  {
+    key: "debug-app",
+    label: "Debug app",
+    appId: "debug",
+    path: "/debug",
+    patterns: [
+      /\b(?:debug app|debug run|logs?|trace|diagnostics?|run detail|clipboard)\b/i,
+      /interface\/src\/apps\/debug\//i,
+    ],
+  },
+  {
+    key: "settings-profile",
+    label: "Settings and profile",
+    appId: "settings",
+    path: "/settings",
+    patterns: [
+      /\b(?:settings|profile|avatar|org selector|team avatar|credentials|preferences?)\b/i,
+      /interface\/src\/(?:apps\/profile|components\/(?:Avatar|OrgSelector|OrgSettingsPanel)|views\/Settings)\//i,
+    ],
+  },
+  {
+    key: "marketplace",
+    label: "Marketplace",
+    appId: "marketplace",
+    path: "/marketplace",
+    patterns: [
+      /\b(?:marketplace|skill shop|agent talent|hire|integrations?)\b/i,
+      /interface\/src\/apps\/marketplace\//i,
+    ],
+  },
+];
 const ENTRY_ALIGNMENT_STOP_WORDS = new Set([
   "the",
   "and",
@@ -254,6 +377,198 @@ function entryAlignmentDetails({ entryTitle, itemText, subject }) {
   };
 }
 
+function scoreSurfaceDefinition(definition, opportunity = {}) {
+  const directText = [
+    opportunity.subject,
+    ...(Array.isArray(opportunity.changedFiles) ? opportunity.changedFiles : []),
+  ].filter(Boolean).join("\n");
+  const bulletText = normalizeString(opportunity.itemText);
+  let score = 0;
+  let directMatch = false;
+  for (const pattern of definition.patterns) {
+    if (pattern.test(directText)) {
+      score += 12;
+      directMatch = true;
+    }
+    if (pattern.test(bulletText)) score += 4;
+  }
+  if ((opportunity.likelyApps || []).some((app) => app.id === definition.appId)) score += directMatch ? 4 : 2;
+  if (!directMatch && score < 8) return 0;
+  return score;
+}
+
+function fallbackSurfaceForOpportunity(opportunity = {}) {
+  const topApp = Array.isArray(opportunity.likelyApps) ? opportunity.likelyApps[0] : null;
+  if (topApp?.id === "desktop" || topApp?.path === "/desktop") {
+    return {
+      key: "unknown",
+      label: "Unknown visual surface",
+      appId: null,
+      path: null,
+      score: 0,
+    };
+  }
+  if (topApp?.id && topApp?.path) {
+    return {
+      key: `app:${topApp.id}`,
+      label: topApp.label || topApp.id,
+      appId: topApp.id,
+      path: topApp.path,
+      score: 2,
+    };
+  }
+  return {
+    key: "unknown",
+    label: "Unknown visual surface",
+    appId: null,
+    path: null,
+    score: 0,
+  };
+}
+
+function visualSurfaceForOpportunity(opportunity = {}) {
+  const best = VISUAL_SURFACE_DEFINITIONS
+    .map((definition) => ({
+      ...definition,
+      score: scoreSurfaceDefinition(definition, opportunity),
+    }))
+    .filter((definition) => definition.score > 0)
+    .sort((left, right) => right.score - left.score || left.label.localeCompare(right.label))[0];
+  if (best) {
+    return {
+      key: best.key,
+      label: best.label,
+      appId: best.appId,
+      path: best.path,
+      score: best.score,
+    };
+  }
+  return fallbackSurfaceForOpportunity(opportunity);
+}
+
+function aggregateClusterApps(opportunities, surface) {
+  const apps = new Map();
+  if (surface.appId && surface.path) {
+    apps.set(surface.appId, {
+      id: surface.appId,
+      label: surface.label,
+      path: surface.path,
+      score: 20,
+      source: "surface-definition",
+    });
+  }
+  for (const opportunity of opportunities) {
+    for (const app of opportunity.likelyApps || []) {
+      if (!app?.id || !app?.path) continue;
+      const previous = apps.get(app.id) || {
+        id: app.id,
+        label: app.label,
+        path: app.path,
+        score: 0,
+        runtimeSeedSupport: app.runtimeSeedSupport,
+        preferredStableSurface: app.preferredStableSurface,
+      };
+      apps.set(app.id, {
+        ...previous,
+        score: previous.score + (Number(app.score) || 0),
+        runtimeSeedSupport: previous.runtimeSeedSupport || app.runtimeSeedSupport,
+        preferredStableSurface: previous.preferredStableSurface || app.preferredStableSurface,
+      });
+    }
+  }
+  return [...apps.values()]
+    .sort((left, right) => right.score - left.score || String(left.label).localeCompare(String(right.label)))
+    .slice(0, 4);
+}
+
+function strongestOpportunity(opportunities) {
+  return [...opportunities].sort((left, right) => (
+    right.score - left.score
+    || (right.entryAlignment?.score || 0) - (left.entryAlignment?.score || 0)
+    || String(left.subject).localeCompare(String(right.subject))
+  ))[0] || null;
+}
+
+export function deriveVisualMediaSurfaceClusters(visualOpportunities = [], {
+  maxClusters = VISUAL_SURFACE_CLUSTER_LIMIT,
+} = {}) {
+  const groups = new Map();
+  for (const opportunity of Array.isArray(visualOpportunities) ? visualOpportunities : []) {
+    if (!opportunity?.entryId || opportunity.desktopEligible === false) continue;
+    const surface = visualSurfaceForOpportunity(opportunity);
+    if (!surface.appId || !surface.path || surface.key === "unknown") continue;
+    const groupKey = `${opportunity.entryId}:${surface.key}`;
+    const group = groups.get(groupKey) || {
+      entryId: opportunity.entryId,
+      entryTitle: opportunity.entryTitle,
+      surfaceKey: surface.key,
+      surfaceLabel: surface.label,
+      preferredTargetAppId: surface.appId,
+      preferredTargetPath: surface.path,
+      opportunities: [],
+    };
+    group.opportunities.push(opportunity);
+    groups.set(groupKey, group);
+  }
+
+  return [...groups.values()]
+    .map((group) => {
+      const opportunities = group.opportunities;
+      const representative = strongestOpportunity(opportunities);
+      const opportunityCount = opportunities.length;
+      const uniqueSubjects = unique(opportunities.map((opportunity) => opportunity.subject), 10);
+      const uniqueBullets = unique(opportunities.map((opportunity) => opportunity.itemText), 6);
+      const changedFiles = unique(opportunities.flatMap((opportunity) => opportunity.changedFiles || []), 16);
+      const likelyApps = aggregateClusterApps(opportunities, {
+        appId: group.preferredTargetAppId,
+        path: group.preferredTargetPath,
+        label: group.surfaceLabel,
+      });
+      const explicitClusterBonus = opportunityCount >= 2 ? 16 : 0;
+      const shellClusterBonus = group.surfaceKey === "desktop-shell-taskbar" ? 8 : 0;
+      const clusterScore = opportunities.reduce((sum, opportunity) => sum + opportunity.score, 0)
+        + explicitClusterBonus
+        + shellClusterBonus
+        + Math.min(20, opportunityCount * 4);
+      return {
+        clusterId: `${group.entryId}:${group.surfaceKey}`,
+        entryId: group.entryId,
+        entryTitle: group.entryTitle,
+        surfaceKey: group.surfaceKey,
+        surfaceLabel: group.surfaceLabel,
+        preferredTargetAppId: group.preferredTargetAppId,
+        preferredTargetPath: group.preferredTargetPath,
+        opportunityCount,
+        score: clusterScore,
+        confidenceHint: Math.min(0.95, Math.max(0.58, clusterScore / 120)),
+        representative: representative
+          ? {
+            opportunityId: representative.opportunityId,
+            subject: representative.subject,
+            itemText: representative.itemText,
+            commitSha: representative.commitSha,
+            entryAlignment: representative.entryAlignment,
+          }
+          : null,
+        subjects: uniqueSubjects,
+        bullets: uniqueBullets,
+        likelyApps,
+        changedFiles,
+        guidance: [
+          opportunityCount >= 2 ? "Multiple commits/bullets point at the same visual surface; treat this as stronger than parent-title wording alone." : "Single visible opportunity; require strong proof and seedability.",
+          group.surfaceKey === "desktop-shell-taskbar" ? "For shell/taskbar proof, capture a populated app route so the chrome is visible around real product content." : "",
+          "Use the specific bullet/commit as the media anchor; the parent changelog title is placement context, not the primary proof.",
+        ].filter(Boolean),
+      };
+    })
+    .sort((left, right) => (
+      right.score - left.score
+      || right.opportunityCount - left.opportunityCount
+      || String(left.surfaceLabel).localeCompare(String(right.surfaceLabel))
+    ))
+    .slice(0, maxClusters);
+}
+
 function entryItemsByCommit(changelog) {
   const renderedEntries = Array.isArray(changelog?.rendered?.entries)
     ? changelog.rendered.entries
@@ -410,6 +725,7 @@ export function buildMediaPlannerPrompt({
   commitLog = "",
   changedFiles = [],
   visualOpportunities = [],
+  visualSurfaceClusters = [],
   maxCandidates = DEFAULT_MAX_CANDIDATES,
   retryInstruction = "",
 } = {}) {
@@ -423,11 +739,13 @@ export function buildMediaPlannerPrompt({
     "- Every changelog entry must appear exactly once: either in candidates or in skipped.",
     "- If an entry mixes a visible desktop product feature with infra/release work, classify it by the visible desktop product feature and make the proofGoal focus only on that feature.",
     "- Use the visual opportunity index as discovery evidence for visual sub-features hidden inside broad changelog entries. If a high-scoring opportunity has an entryId, likely sitemap app, desktop UI files, and seedable proof, prefer targeting that sub-feature instead of skipping the whole entry as too broad.",
+    "- Use the visual surface clusters before the flat opportunity list. A cluster means multiple commits/bullets point at the same visible UI surface, so it is usually a better media anchor than an isolated candidate selected from the parent title.",
     "- The visual opportunity index is a hint, not permission to publish weak media: keep final candidate quality strict and skip opportunities that are mobile-only, non-static, unseedable, or not user-visible.",
     "- A visible feature means the changelog/commit describes a concrete user-visible screen, control, picker, sort/filter behavior, dashboard/stat, table, chart, gallery, editor, panel, or durable state/result that can be shown in Aura. A mere mention of an app name, module, API, storage type, or internal service is not enough.",
     "- Be open to sitemap-backed screens beyond previously verified examples: if the text says a Stats, Debug, Feedback, Notes, Agents, Tasks, Process, Browser, Marketplace, Settings, or AURA 3D surface gained a visible behavior, route there with the best generic seedPlan. If it only mentions that surface incidentally, skip.",
-    "- If an entry has several opportunities, choose the one with the strongest entryAlignment first, then the most static, readable, seedable desktop proof. Do not attach decorative shell/chrome media to a broad entry whose headline is about a different feature unless the headline or main bullet clearly names that chrome change.",
-    "- A media image appears at the changelog entry level, so the chosen proof must feel honest next to that entry's title and bullets. If only a tiny side-detail is visual while the entry headline is about backend/concurrency/release work, skip instead of publishing misleading media.",
+    "- If an entry has several opportunities, choose the strongest surface cluster first, then the most static, readable, seedable desktop proof. Parent title alignment is a weak sanity check, not the decision-maker.",
+    "- A media image appears at the changelog entry level, but it may be anchored to a specific changelog bullet/commit. If the parent title is broad, make the publicCaption and proofGoal explicitly name the bullet-level visual proof so the image does not feel random.",
+    "- Prefer stable visual clusters such as taskbar/shell redesign, feedback sorting, stats dashboards, model pickers, 3D galleries, notes editors, and debug screens over synthetic failure/error banners unless the seedPlan can deterministically materialize the banner state.",
     "- Return at most the requested number of candidates.",
     "- Candidate screenshots must be desktop web product UI only.",
     "- Skip login, auth, sign-in, onboarding, mobile-only, native app, Android, iOS, backend-only, infra-only, release pipeline, dependency, test-only, docs-only, refactor-only, and invisible bug-fix changes.",
@@ -441,6 +759,7 @@ export function buildMediaPlannerPrompt({
     "- Do not invent routes or product states that are not supported by the sitemap or commit context.",
     "- Candidates must include a targetAppId and targetPath from the sitemap. If no sitemap target exists, skip the entry.",
     "- For desktop shell, chrome, layout, taskbar, sidebar, sidekick, or floating-panel changes, do not target /desktop because it can be an empty launcher shell. Target a populated, visually rich desktop app route from the sitemap instead. Prefer AURA 3D (/3d) on the generated Image gallery surface for shell/layout proof because seeded image content makes panel boundaries and chrome more legible; use Agents only when the change itself is agent/chat-specific.",
+    "- Keep shell/chrome target and proof wording consistent: if targetAppId is aura3d, the proofGoal may describe taskbar/topbar/sidebar chrome around the AURA 3D image gallery, but it must not instruct Browser Use to anchor the shot on Agents, Tasks, Projects, or another app surface.",
     "- For AURA 3D, request image-gallery-populated for stable visual proof. Only request model-source-image-populated when the changelog explicitly needs the 3D model/source-image conversion surface; do not open the 3D Model tab just because the app is called AURA 3D.",
     "- Candidates should include a seedPlan that describes generic capture-state capabilities, not a one-off script. Prefer capabilities like app:<id>, project-selected, proof-data-populated, image-gallery-populated, asset-gallery-populated, agent-chat-ready, feedback-board-populated, feedback-thread-populated, notes-tree-populated, note-editor-populated, task-board-populated, process-graph-populated, feed-timeline-populated, run-history-populated, model-picker-open, settings-panel-open, generated-result-visible, feature-toggle-enabled.",
     "- The seedPlan must describe the state/data needed before capture so the browser does not land on empty/default UI. If the feature needs data to be visible, request realistic demo data for the target surface.",
@@ -468,6 +787,9 @@ export function buildMediaPlannerPrompt({
     "",
     "Visual opportunity index from raw commits and changelog bullets:",
     truncateText(JSON.stringify(visualOpportunities || [], null, 2), 18000),
+    "",
+    "Visual surface clusters from commits and changelog bullets:",
+    truncateText(JSON.stringify(visualSurfaceClusters || [], null, 2), 18000),
     "",
     "Commit log excerpt:",
     truncateText(commitLog, 16000),
@@ -724,6 +1046,14 @@ function visualOpportunitiesForEntries(visualOpportunities = [], changelogEntrie
     .filter((opportunity) => entryIds.has(normalizeString(opportunity?.entryId)));
 }
 
+function visualSurfaceClustersForEntries(visualSurfaceClusters = [], changelogEntries = []) {
+  const entryIds = new Set((Array.isArray(changelogEntries) ? changelogEntries : [])
+    .map((entry) => normalizeString(entry.entryId))
+    .filter(Boolean));
+  return (Array.isArray(visualSurfaceClusters) ? visualSurfaceClusters : [])
+    .filter((cluster) => entryIds.has(normalizeString(cluster?.entryId)));
+}
+
 async function fetchWithTimeout(fetchImpl, url, options, { timeoutMs, label } = {}) {
   const resolvedTimeoutMs = Math.max(10, Number(timeoutMs) || DEFAULT_PLANNER_TIMEOUT_MS);
   const controller = new AbortController();
@@ -758,6 +1088,7 @@ async function planChangelogMediaChunkWithAnthropic({
   commitLog = "",
   changedFiles = [],
   visualOpportunities = [],
+  visualSurfaceClusters = [],
   maxCandidates = DEFAULT_MAX_CANDIDATES,
   fetchImpl = fetch,
   timeoutMs = DEFAULT_PLANNER_TIMEOUT_MS,
@@ -774,6 +1105,7 @@ async function planChangelogMediaChunkWithAnthropic({
       commitLog,
       changedFiles,
       visualOpportunities,
+      visualSurfaceClusters,
       maxCandidates,
       retryInstruction: [
         chunkLabel ? `Planning chunk: ${chunkLabel}.` : "",
@@ -861,6 +1193,7 @@ export async function planChangelogMediaWithAnthropic({
   commitLog = "",
   changedFiles = [],
   visualOpportunities = [],
+  visualSurfaceClusters = [],
   maxCandidates = DEFAULT_MAX_CANDIDATES,
   entryChunkSize = DEFAULT_ENTRY_CHUNK_SIZE,
   timeoutMs = DEFAULT_PLANNER_TIMEOUT_MS,
@@ -893,6 +1226,7 @@ export async function planChangelogMediaWithAnthropic({
       commitLog,
       changedFiles,
       visualOpportunities: visualOpportunitiesForEntries(visualOpportunities, chunk),
+      visualSurfaceClusters: visualSurfaceClustersForEntries(visualSurfaceClusters, chunk),
       maxCandidates,
       fetchImpl,
       timeoutMs,
@@ -932,6 +1266,7 @@ export async function planChangelogMediaWithAnthropic({
         commitLog,
         changedFiles,
         visualOpportunities: visualOpportunitiesForEntries(visualOpportunities, chunk),
+        visualSurfaceClusters: visualSurfaceClustersForEntries(visualSurfaceClusters, chunk),
         maxCandidates,
         fetchImpl,
         timeoutMs,
