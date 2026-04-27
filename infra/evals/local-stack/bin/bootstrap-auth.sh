@@ -50,21 +50,6 @@ resolve_source_access_token() {
     return 0
   fi
 
-  if [[ -n "${AURA_EVAL_ACCESS_TOKEN:-}" ]]; then
-    printf '%s\n' "$AURA_EVAL_ACCESS_TOKEN"
-    return 0
-  fi
-
-  if [[ -n "${AURA_ACCESS_TOKEN:-}" ]]; then
-    printf '%s\n' "$AURA_ACCESS_TOKEN"
-    return 0
-  fi
-
-  if [[ -n "${AURA_NETWORK_AUTH_TOKEN:-}" ]]; then
-    printf '%s\n' "$AURA_NETWORK_AUTH_TOKEN"
-    return 0
-  fi
-
   if [[ -d "$source_data_dir" ]]; then
     if token="$(cargo run -q -p aura-os-server --bin print-auth-token -- "$source_data_dir" 2>/dev/null)"; then
       if [[ -n "$token" ]]; then
@@ -82,6 +67,24 @@ resolve_source_access_token() {
       printf '%s\n' "$token"
       return 0
     fi
+  fi
+
+  # Compatibility fallback only. Eval/local dev tokens can be accepted by the
+  # isolated stack while still failing aura-router proxy auth, so prefer the
+  # real app session above unless an operator uses AURA_STACK_SOURCE_ACCESS_TOKEN.
+  if [[ -n "${AURA_EVAL_ACCESS_TOKEN:-}" ]]; then
+    printf '%s\n' "$AURA_EVAL_ACCESS_TOKEN"
+    return 0
+  fi
+
+  if [[ -n "${AURA_ACCESS_TOKEN:-}" ]]; then
+    printf '%s\n' "$AURA_ACCESS_TOKEN"
+    return 0
+  fi
+
+  if [[ -n "${AURA_NETWORK_AUTH_TOKEN:-}" ]]; then
+    printf '%s\n' "$AURA_NETWORK_AUTH_TOKEN"
+    return 0
   fi
 
   return 1
@@ -104,9 +107,9 @@ if ! access_token="$(resolve_source_access_token)"; then
   echo "Could not resolve a source Aura auth token." >&2
   echo "Checked, in order:" >&2
   echo "  1. AURA_STACK_SOURCE_ACCESS_TOKEN" >&2
-  echo "  2. AURA_EVAL_ACCESS_TOKEN / AURA_ACCESS_TOKEN / AURA_NETWORK_AUTH_TOKEN" >&2
-  echo "  3. persisted session in $source_data_dir" >&2
-  echo "  4. legacy endpoint at $source_base_url/api/auth/access-token" >&2
+  echo "  2. persisted session in $source_data_dir" >&2
+  echo "  3. legacy endpoint at $source_base_url/api/auth/access-token" >&2
+  echo "  4. AURA_EVAL_ACCESS_TOKEN / AURA_ACCESS_TOKEN / AURA_NETWORK_AUTH_TOKEN" >&2
   exit 1
 fi
 

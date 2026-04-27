@@ -1,6 +1,6 @@
 //! Workspace path / harness session resolution for project tools.
 
-use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId};
+use aura_os_core::{AgentInstance, AgentInstanceId, HarnessMode, ProjectId};
 use aura_os_harness::SessionConfig;
 
 use crate::handlers::agents::conversions_pub::resolve_workspace_path;
@@ -98,16 +98,12 @@ pub(crate) async fn project_tool_session_config(
     jwt: &str,
     user_id: Option<&str>,
 ) -> SessionConfig {
-    let remote_instance = if harness_mode == HarnessMode::Swarm {
-        if let Some(agent_instance_id) = agent_instance_id {
-            state
-                .agent_instance_service
-                .get_instance(project_id, &agent_instance_id)
-                .await
-                .ok()
-        } else {
-            None
-        }
+    let agent_instance = if let Some(agent_instance_id) = agent_instance_id {
+        state
+            .agent_instance_service
+            .get_instance(project_id, &agent_instance_id)
+            .await
+            .ok()
     } else {
         None
     };
@@ -149,44 +145,93 @@ pub(crate) async fn project_tool_session_config(
         }
         None => None,
     };
-    // Phase 1c: partition the upstream harness `agent_id` per
-    // `AgentInstance` so a project-tool session (spec gen / task
-    // extraction) running against the same template as a chat or
-    // dev-loop session can no longer collide on the harness's
-    // "one in-flight turn per agent_id" rule. The stable template id
-    // is preserved in `template_agent_id` for skill / permissions /
-    // billing lookup. The local-mode synthetic id
-    // (`{tool_agent_name}-{project_id}`) is left bare: it's already
-    // per-project, isn't a real Aura template, and the local harness
-    // doesn't need partitioning here.
-    let agent_id_field = if let Some(instance) = remote_instance.as_ref() {
-        Some(aura_os_core::harness_agent_id(
+    // Swarm project tools use the normal template::instance partition.
+    // Local project tools keep their synthetic per-project partition so
+    // spec/task extraction cannot collide with chat/dev-loop turns, but
+    // still carry the real template id/model/permissions metadata.
+    let agent_id_field = match (harness_mode, agent_instance.as_ref()) {
+        (HarnessMode::Swarm, Some(instance)) => Some(aura_os_core::harness_agent_id(
             &instance.agent_id,
             Some(&instance.agent_instance_id),
-        ))
-    } else if harness_mode == HarnessMode::Local {
-        Some(format!("{tool_agent_name}-{project_id}"))
-    } else {
-        None
+        )),
+        (HarnessMode::Local, _) => Some(format!("{tool_agent_name}-{project_id}")),
+        (HarnessMode::Swarm, None) => None,
     };
-    let template_agent_id_field = remote_instance
+    let template_agent_id_field = agent_instance
         .as_ref()
         .map(|instance| instance.agent_id.to_string());
+    let model = effective_project_tool_model(agent_instance.as_ref());
+    let agent_permissions = agent_instance
+        .as_ref()
+        .map(|instance| {
+            instance
+                .permissions
+                .clone()
+                .normalized_for_identity(&instance.name, Some(instance.role.as_str()))
+                .into()
+        })
+        .unwrap_or_default();
     SessionConfig {
         agent_id: agent_id_field,
         template_agent_id: template_agent_id_field,
         agent_name: Some(
-            remote_instance
+            agent_instance
                 .as_ref()
                 .map(|instance| instance.name.clone())
                 .unwrap_or_else(|| tool_agent_name.to_string()),
         ),
+        model,
         token: Some(jwt.to_string()),
         user_id: user_id.map(ToString::to_string),
         project_id: Some(project_id.to_string()),
         project_path,
         installed_tools,
         installed_integrations,
+        aura_org_id: agent_instance
+            .as_ref()
+            .and_then(|instance| instance.org_id.as_ref())
+            .map(ToString::to_string),
+        agent_permissions,
+        intent_classifier: agent_instance
+            .as_ref()
+            .and_then(|instance| instance.intent_classifier.clone()),
         ..Default::default()
+    }
+}
+
+fn effective_project_tool_model(instance: Option<&AgentInstance>) -> Option<String> {
+    instance.and_then(|instance| {
+        first_non_empty_model(instance.default_model.as_deref(), instance.model.as_deref())
+    })
+}
+
+fn first_non_empty_model(default_model: Option<&str>, model: Option<&str>) -> Option<String> {
+    default_model
+        .into_iter()
+        .chain(model)
+        .map(str::trim)
+        .find(|value| !value.is_empty())
+        .map(str::to_string)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::first_non_empty_model;
+
+    #[test]
+    fn project_tool_model_prefers_non_empty_default_model() {
+        assert_eq!(
+            first_non_empty_model(Some(" aura-claude-opus-4-7 "), Some("claude-opus-4-6"))
+                .as_deref(),
+            Some("aura-claude-opus-4-7")
+        );
+    }
+
+    #[test]
+    fn project_tool_model_falls_back_to_instance_model() {
+        assert_eq!(
+            first_non_empty_model(Some("  "), Some(" aura-claude-sonnet-4-5 ")).as_deref(),
+            Some("aura-claude-sonnet-4-5")
+        );
     }
 }
