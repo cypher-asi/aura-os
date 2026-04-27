@@ -15,38 +15,6 @@ source "$script_dir/common.sh"
 stack_load_env
 stack_validate_modes
 
-# Mirror the .env parser the main aura-os app uses to seed the harness
-# child (apps/aura-os-server/src/app_builder/harness_autospawn.rs:181-198
-# `parse_env_file` + lines 102-109 spawn loop): line by line, skip
-# comments and blank lines, split on the first `=`, and ALWAYS export so
-# the harness's own .env can override the spawn-stage env exports above
-# it — exactly the way `cmd.env(key, val)` overwrites prior `cmd.env`
-# calls in the desktop spawn. The stack URL re-exports below the call
-# site re-stamp the values that must win over the .env (mirroring
-# `derive_harness_url_overrides`).
-_load_harness_dotenv() {
-  local env_file="$1"
-  [[ -f "$env_file" ]] || return 0
-  local line key val
-  while IFS= read -r line || [[ -n "$line" ]]; do
-    case "$line" in
-      ''|\#*) continue ;;
-    esac
-    if [[ "$line" != *=* ]]; then
-      continue
-    fi
-    key="${line%%=*}"
-    val="${line#*=}"
-    # Trim leading/trailing whitespace from key.
-    key="${key#"${key%%[![:space:]]*}"}"
-    key="${key%"${key##*[![:space:]]}"}"
-    if [[ -z "$key" || -z "$val" ]]; then
-      continue
-    fi
-    export "$key=$val"
-  done < "$env_file"
-}
-
 if [[ ! -d "$AURA_STACK_RUNTIME_DIR" ]]; then
   "$script_dir/render-envs.sh"
 fi
@@ -121,54 +89,50 @@ if [[ -n "$runtime_env" ]]; then
 fi
 
 if [[ "$service" == "harness" ]]; then
-  # Mirror apps/aura-os-server/src/app_builder/harness_autospawn.rs
-  # `maybe_spawn_local_harness` exactly. The desktop sets only the
-  # spawn-port env (BIND_ADDR / BIND_PORT), an optional WS-slot cap,
-  # then loads the harness's own .env (which may override the
-  # spawn-stage env), then layers `derive_harness_url_overrides` so
-  # stack URLs win over the .env. Anything else (RUST_LOG override,
-  # AURA_ANTHROPIC_MODEL pin, AURA_DEBUG_CLOUDFLARE_DUMP_DIR, the
-  # AURA_STACK_HARNESS_LLM_* override block) is intentionally NOT set
-  # here — the desktop never sets any of them, so the harness has no
-  # opportunity to emit the symptoms (verbose tool_call_snapshot
-  # stream, cf-block-*.html disk fill, model pinning, retry-storm
-  # debug WARNs) that those env vars unlock.
-
-  # Stage 1: spawn-port env — mirrors harness_autospawn.rs:76-77.
-  export BIND_ADDR="127.0.0.1:${AURA_STACK_HARNESS_PORT}"
-  export BIND_PORT="${AURA_STACK_HARNESS_PORT}"
-  # Eval-only addition: AURA_DATA_DIR isolates harness state to the
-  # `.runtime/` runtime dir instead of the per-user data dir the
-  # desktop binary defaults to. The desktop IS the user, so its
-  # default is correct there; we cannot share that state across eval
-  # runs without contaminating the user's main aura install.
+  # Mirror the production desktop sidecar
+  # (apps/aura-os-desktop/src/harness/sidecar.rs:63-66): export only
+  # the env vars that must win, then `exec` the harness binary which
+  # calls `dotenvy::dotenv()` on startup (aura-harness/src/main.rs:49)
+  # to load the rest of `aura-harness/.env`. `dotenvy::dotenv()` is
+  # non-overriding, so anything we export here wins; everything we
+  # don't (LLM routing, router URL, internal-service token, Tavily
+  # key, enable_cmd_tools, tools.toml path) flows through unchanged
+  # — exactly what the bundled desktop sidecar does.
+  #
+  # Earlier revisions of this branch tried to mirror the dev-fallback
+  # autospawn in `apps/aura-os-server/src/app_builder/harness_autospawn.rs`
+  # by exporting `BIND_ADDR` / `BIND_PORT`, but the harness's
+  # `NodeConfig::from_env` reads `AURA_LISTEN_ADDR` FIRST and falls
+  # back to `BIND_ADDR` only when the former is unset
+  # (`aura-harness/crates/aura-runtime/src/config/mod.rs:212`). With
+  # the harness's own `.env` baking `AURA_LISTEN_ADDR=127.0.0.1:8080`,
+  # the autospawn-style exports always lost to the .env; the
+  # production sidecar already gets this right by exporting
+  # `AURA_LISTEN_ADDR` directly.
+  export AURA_LISTEN_ADDR="127.0.0.1:${AURA_STACK_HARNESS_PORT}"
+  # Isolate harness state to `.runtime/` instead of the per-user data
+  # dir the harness defaults to — same reason the desktop sidecar
+  # passes its own `AURA_DATA_DIR` (sidecar.rs:66).
   export AURA_DATA_DIR="${AURA_STACK_RUNTIME_DIR}/aura-harness-data"
-  # Optional WS-slot cap forwarding — mirrors autospawn lines 93-97.
+  # Optional WS-slot cap forwarding — propagates the eval operator's
+  # configured cap into the harness child so both ends agree on the
+  # semaphore size. Matches the conditional forward in
+  # `harness_autospawn.rs:93-97`.
   if [[ -n "${AURA_STACK_HARNESS_WS_SLOTS:-}" ]]; then
     export AURA_HARNESS_WS_SLOTS="$AURA_STACK_HARNESS_WS_SLOTS"
   fi
 
-  # Stage 2: load harness's own .env. Mirrors autospawn lines
-  # 102-109: `parse_env_file` + per-pair `cmd.env(key, val)` so .env
-  # entries OVERRIDE the spawn-stage env. `_load_harness_dotenv` was
-  # updated to be overriding for this reason. This is what picks up
-  # AURA_LLM_ROUTING, AURA_ROUTER_URL, INTERNAL_SERVICE_TOKEN,
-  # TAVILY_API_KEY, ENABLE_CMD_TOOLS, TOOLS_CONFIG, etc. — exactly
-  # the same set the desktop autospawn picks up.
-  _load_harness_dotenv "$workdir/.env"
-
-  # Stage 3: stack URL re-overrides — mirrors
-  # `derive_harness_url_overrides` (autospawn lines 240-267). Stack
-  # URLs win over harness .env. AURA_OS_SERVER_URL is always
-  # re-stamped because the harness .env's baked `:3100` default
+  # Stack URL overrides. AURA_OS_SERVER_URL is always re-stamped
+  # because the harness .env's baked `http://127.0.0.1:3100` default
   # routes domain writes to a dead port whenever
   # AURA_STACK_AURA_OS_PORT is anything other than 3100, producing
-  # the silent `domain_ok({"ok":false,...})` failure the autospawn
-  # comment block warns about. The other URLs are only re-exported
-  # when this stack actually has a value for them — when a service
-  # is `disabled`, `stack_resolved_url` returns empty, and we leave
-  # the harness .env's production default alone (matching the
-  # desktop's "only emit when we have a confident value" stance).
+  # the silent `domain_ok({"ok":false,...})` failure that
+  # `harness_autospawn::derive_harness_url_overrides` (autospawn
+  # lines 240-267) calls out. The other URLs are only forwarded when
+  # this stack actually has values for them — when a service is
+  # `disabled`, `stack_resolved_url` returns empty, and we leave the
+  # harness .env's production default alone (matching the desktop's
+  # "only emit when we have a confident value" stance).
   export AURA_OS_SERVER_URL="$(stack_local_url aura_os)"
   network_url="$(stack_resolved_url network)"
   if [[ -n "$network_url" ]]; then
