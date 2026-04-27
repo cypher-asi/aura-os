@@ -2,17 +2,18 @@
   {
     "date": "2026-04-27",
     "channel": "nightly",
-    "version": "0.1.0-nightly.409.1",
-    "title": "Token stats and per-project cost attribution restored",
-    "intro": "Today's nightly closes a long-standing gap that left the dashboard's Tokens stat stuck at zero and quietly excluded several LLM round-trips from per-project cost rollups. The fix re-wires task-completion persistence and stamps the missing attribution headers on summary and tool-session calls.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.410.1",
+    "title": "Dashboard stats finally reflect real agent work",
+    "intro": "Today's nightly closes two long-standing gaps in the project dashboard: tokens and lines of code written by agents were quietly being dropped on the floor before they reached storage. Both the Tokens and Lines stats now persist end-to-end, with cost attribution wired through the previously silent summary and tool-session paths.",
+    "entryCount": 2,
     "highlights": [
-      "Dashboard Tokens stat now reflects real task usage",
-      "Session summaries and tool sessions count toward per-project cost"
+      "Tokens stat no longer reads zero on completed tasks",
+      "Lines stat now survives multi-turn tasks via per-path diff merging",
+      "Session summaries and tool sessions now attribute cost to the right project"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-04-27T16:24:38.703Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.409.1",
+    "rawCommitCount": 2,
+    "generatedAt": "2026-04-27T21:44:09.144Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.410.1",
     "path": "history/2026-04-27.json"
   },
   {

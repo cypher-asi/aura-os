@@ -3,19 +3,20 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-27T16:24:38.703Z",
+  "generatedAt": "2026-04-27T21:44:09.144Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.409.1",
+  "version": "0.1.0-nightly.410.1",
   "date": "2026-04-27",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.409.1",
-  "lastIncludedSha": "c4435e0407f4640a974c7e824080a5d68c866071",
-  "previousProcessedSha": "a0c1c97b829c4fee8e2b3f96d52d3d1abfa0c06a",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.410.1",
+  "lastIncludedSha": "c3848e270402c641e7e3fb86542781dc5575ea47",
+  "previousProcessedSha": "c4435e0407f4640a974c7e824080a5d68c866071",
   "commitShas": [
-    "c4435e0407f4640a974c7e824080a5d68c866071"
+    "c4435e0407f4640a974c7e824080a5d68c866071",
+    "c3848e270402c641e7e3fb86542781dc5575ea47"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 2,
+  "filteredCommitCount": 2,
   "rawCommits": [
     {
       "sha": "c4435e0407f4640a974c7e824080a5d68c866071",
@@ -57,9 +58,54 @@
       "areas": [
         "Other"
       ]
+    },
+    {
+      "sha": "c3848e270402c641e7e3fb86542781dc5575ea47",
+      "author": {
+        "name": "DomW",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-04-27T22:31:02+01:00",
+      "subject": "fix(stats): wire files_changed cache + merge per-turn diffs (Lines stat) (#6)",
+      "body": "* feat(protocol): add per-path line diffs to FilesChanged\n\nAdds a new `diffs: Vec<FileDiff>` field to `FilesChanged` that runs\nalongside the existing `created` / `modified` / `deleted` path lists.\nEach `FileDiff` carries `path`, `lines_added`, and `lines_removed`.\n\nBackward-compat by design:\n* `#[serde(default, skip_serializing_if = \"Vec::is_empty\")]` keeps the\n  wire format byte-identical when no diffs are computed, so older\n  decoders that only know about the path lists keep working untouched.\n* `FilesChanged` keeps its existing `Default` derive — every consumer\n  that builds the struct via `..Default::default()` continues to\n  compile without changes.\n* `is_empty()` semantics intentionally unchanged: an emit-only diff\n  array with no path entries is treated as empty so the live UI's\n  \"did anything change this turn?\" check keeps the old behavior.\n\nAlso re-exports `FileDiff` from the crate root next to the existing\n`FilesChanged` re-export so harness-side consumers don't need to\nimport from `aura_protocol::server::FileDiff`.\n\nPairs with the upcoming aura-harness commit that populates these\ndiffs from the harness's `edit_file` line-count math, and the\naura-os-server commit that reads them into the persisted task cache.\n\n* feat(stats): populate per-task files_changed cache from assistant events\n\nCloses the dashboard's \"Lines = 0\" gap end-to-end: the persistent\nside of the dev-loop's `task_output_cache.files_changed` field has\ndocumented `Populated from assistant_message_end` semantics since the\nstreaming refactor, but no production code path was actually writing\nthe event payload into the cache. As a result `cached.files_changed`\nwas always empty, `persist_task_output`'s files_changed branch never\nfired, `tasks.files_changed` JSONB stayed null, and the per-project\nstats endpoint summed 0 lines no matter how much code the agent\nwrote.\n\nThis commit wires the canonical signal (#1 in the doc-comment on\n`CachedTaskOutput.files_changed`):\n\n* `record_event_side_effects` now invokes a new `record_files_changed`\n  helper alongside `update_usage_cache` whenever an\n  `assistant_message_end` event carries a `task_id`. Other events in\n  the existing match arm (`token_usage` / `usage` / `session_usage`)\n  still skip the files-changed branch — only `assistant_message_end`\n  carries the cumulative `FilesChanged` payload from the harness.\n* `record_files_changed` extracts the `created` / `modified` /\n  `deleted` path lists, joins each entry against the new `diffs`\n  array (populated by the harness's `edit_file` line-counting path),\n  and writes a typed `Vec<StorageTaskFileChangeSummary>` into the\n  cache. Paths without a matching diff entry stay at 0/0 — the\n  dashboard reads zero counts as \"unknown\", not \"no change\".\n* The summary build logic is extracted into a pure function\n  `build_files_changed_summary` so it can be unit-tested without\n  spinning up an `AppState` (heavyweight in this crate). Four new\n  tests cover the contract: path-list grouping, diff-by-path join,\n  empty-input short-circuit, and clamp-on-overflow for pathological\n  `lines_added`/`lines_removed` values that exceed `u32::MAX`.\n\nIdempotency: the cache field is overwritten (not appended) on every\n`assistant_message_end` so out-of-order or retried event delivery is\nharmless. The harness emits the cumulative net effect once per turn —\nthere is no incremental-append semantics to preserve.\n\nSignal #2 in the doc-comment (recovery via `tool_call_completed`\nevents when a runtime adapter ships an empty `FilesChanged`) is\nintentionally still not wired here — current adapters all emit a\npopulated `FilesChanged`, so the fallback adds risk without value\ntoday. If a future adapter regresses, signal #2 can land as a\nfollow-up that reuses the same `StorageTaskFileChangeSummary`\ntarget shape.\n\n* fix(stats): merge per-turn files_changed instead of overwriting\n\nCloses a real bug introduced by the previous \"populate per-task\nfiles_changed cache\" commit (84d7ec2d): the cache field was being\n*overwritten* on every assistant_message_end, but the harness emits\nthat event per-turn, not cumulatively. So a multi-turn task that\nedited src/lib.rs in turn 1 and src/main.rs in turn 2 would persist\nonly the turn-2 entry — the turn-1 lib.rs edit silently disappeared.\n\nMulti-turn execution is the dominant pattern in dev-loop tasks, so\nunder the original wiring the dashboard's Lines stat would routinely\nunder-count by a turn-count multiple even when the data was being\nemitted correctly upstream.\n\nThis commit replaces the overwrite with a per-path merge that mirrors\nthe within-turn collapse rules aura-agent already enforces in\n`record_file_change`. Specifically:\n\n* `merge_file_change(target, incoming)` — adds the incoming summary\n  to the cache vector; if the path already exists the rows are\n  collapsed (op via `collapse_op`, lines summed via saturating_add).\n* `collapse_op(existing, incoming)` — pure function returning the\n  post-merge `op` string. Mirrors aura-agent's kind transition table\n  one-to-one:\n    - Create + Modify  → Create\n    - Create + Delete  → None (entry dropped — net effect \"no file\")\n    - Modify + Modify  → Modify\n    - Modify + Delete  → Delete\n    - Delete + Create  → Modify\n    - Delete + Modify  → Modify\n  Idempotent same-op pairs (Create/Create, Delete/Delete) hold steady;\n  unknown op strings fall through to a defensive \"incoming wins\" with\n  a final \"modify\" fallback so contract drift can never panic.\n\nSaturating_add on every line-count merge guards the pathological\noverflow case identical to aura-agent's behaviour.\n\n13 new unit tests cover the full kind-transition matrix, three\nmerge_file_change scenarios (insert / sum / drop), the saturating\noverflow guard, the unknown-op fallbacks, and a four-step regression\ncase that simulates exactly the multi-turn pattern that was failing\nbefore this commit (3 paths surviving across 4 merges with summed\ncounts and preserved Create kind).\n\nThe 304 existing aura-os-server lib tests all still pass under this\nbranch.",
+      "parents": [
+        "c4435e0407f4640a974c7e824080a5d68c866071"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop/streaming/side_effects.rs",
+        "crates/aura-protocol/src/lib.rs",
+        "crates/aura-protocol/src/server.rs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 440,
+        "deletions": 3
+      },
+      "committedAtMs": 1777325462000,
+      "cleanSubject": "wire files_changed cache + merge per-turn diffs (Lines stat) (#6)",
+      "keywords": [
+        "wire",
+        "files",
+        "changed",
+        "cache",
+        "merge",
+        "turn",
+        "diffs",
+        "lines",
+        "stat"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-protocol/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Other"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 2,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -68,36 +114,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11551192
+          "sizeBytes": 11551160
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.409.1",
+      "version": "0.1.0-nightly.410.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.409.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.410.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 34308804
+          "sizeBytes": 34313898
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.409.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.410.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.409.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.410.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 101648888
+          "sizeBytes": 101665272
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.409.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.410.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -107,29 +153,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.409.1",
+      "version": "0.1.0-nightly.410.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.409.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.410.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 30882001
+          "sizeBytes": 30887879
         },
         {
-          "name": "Aura_0.1.0-nightly.409.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.410.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.409.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.410.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 30682209
+          "sizeBytes": 30699326
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.409.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.410.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -139,29 +185,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.409.1",
+      "version": "0.1.0-nightly.410.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.409.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.410.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 32414942
+          "sizeBytes": 32446505
         },
         {
-          "name": "Aura_0.1.0-nightly.409.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.410.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.409.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.410.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 32263625
+          "sizeBytes": 32302997
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.409.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.410.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -171,17 +217,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.409.1",
+      "version": "0.1.0-nightly.410.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.409.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.410.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 23376316
+          "sizeBytes": 23391510
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.409.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.410.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -190,35 +236,59 @@
     }
   ],
   "rendered": {
-    "title": "Token stats and per-project cost attribution restored",
-    "intro": "Today's nightly closes a long-standing gap that left the dashboard's Tokens stat stuck at zero and quietly excluded several LLM round-trips from per-project cost rollups. The fix re-wires task-completion persistence and stamps the missing attribution headers on summary and tool-session calls.",
+    "title": "Dashboard stats finally reflect real agent work",
+    "intro": "Today's nightly closes two long-standing gaps in the project dashboard: tokens and lines of code written by agents were quietly being dropped on the floor before they reached storage. Both the Tokens and Lines stats now persist end-to-end, with cost attribution wired through the previously silent summary and tool-session paths.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "9:09 AM",
         "started_at": "2026-04-27T16:09:19.000Z",
         "ended_at": "2026-04-27T16:09:19.000Z",
-        "title": "Task token usage now persists on completion and failure",
-        "summary": "A dormant persistence path is finally wired up so token counts and task output stop being silently dropped when tasks finish, and previously unattributed router calls now carry the headers needed for per-project cost aggregation.",
+        "title": "Tokens stat and per-project cost attribution wired up",
+        "summary": "Token usage cached during a task is now actually persisted on completion, and previously header-less LLM calls are stamped for per-project cost rollups.",
         "items": [
           {
-            "text": "Task completion and failure handlers now drain the in-memory task output cache into aura-storage, so accumulated input/output tokens, files-changed, and live output actually land on the task record instead of being discarded — the root cause behind the dashboard's Tokens stat showing 0.",
+            "text": "Task completion and failure handlers now drain the in-memory token cache into aura-storage via a new persist_cached_task_output helper, fixing the dashboard's Tokens stat reading 0 because persist_task_output had been dead code with no callers.",
             "commit_shas": [
               "c4435e0407f4640a974c7e824080a5d68c866071"
             ],
             "confidence": "high"
           },
           {
-            "text": "Session summary generation now stamps x-aura-session-id, x-aura-project-id, and x-aura-agent-id on its router call, threading project and agent IDs from the URL so the resulting token usage is no longer recorded with a null project_id and dropped from per-project cost rollups.",
+            "text": "Session summary generation and project tool sessions (spec-generate, task-extract) now stamp x-aura-session-id, x-aura-project-id, and x-aura-agent-id / aura_org_id on router calls so their cost is no longer silently excluded from per-project aggregation.",
             "commit_shas": [
               "c4435e0407f4640a974c7e824080a5d68c866071"
             ],
             "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "2:31 PM",
+        "started_at": "2026-04-27T21:31:02.000Z",
+        "ended_at": "2026-04-27T21:31:02.000Z",
+        "title": "Lines stat survives multi-turn tasks with per-path diff merging",
+        "summary": "The protocol now carries per-file line diffs, the server persists them into the task cache on each assistant turn, and a per-path merge prevents later turns from clobbering earlier edits.",
+        "items": [
+          {
+            "text": "Extended the FilesChanged protocol with a backward-compatible diffs array carrying lines_added and lines_removed per path, with serde defaults that keep older decoders byte-identical on the wire.",
+            "commit_shas": [
+              "c3848e270402c641e7e3fb86542781dc5575ea47"
+            ],
+            "confidence": "high"
           },
           {
-            "text": "Tool sessions used by spec-generate and task-extract now resolve and attach the project's aura_org_id, and aura-router has been loosened to accept project_id alone, so utility tool calls without a live storage session still get attributed to the right project.",
+            "text": "assistant_message_end events now populate the per-task files_changed cache by joining created/modified/deleted path lists against the new diffs, closing the dashboard's Lines = 0 gap where tasks.files_changed was staying null end-to-end.",
             "commit_shas": [
-              "c4435e0407f4640a974c7e824080a5d68c866071"
+              "c3848e270402c641e7e3fb86542781dc5575ea47"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Replaced the per-turn overwrite with a per-path merge mirroring aura-agent's record_file_change collapse rules (Create+Modify→Create, Create+Delete drops, etc.) with saturating line-count addition, so multi-turn tasks no longer under-count by a turn-count multiple.",
+            "commit_shas": [
+              "c3848e270402c641e7e3fb86542781dc5575ea47"
             ],
             "confidence": "high"
           }
@@ -226,9 +296,10 @@
       }
     ],
     "highlights": [
-      "Dashboard Tokens stat now reflects real task usage",
-      "Session summaries and tool sessions count toward per-project cost"
+      "Tokens stat no longer reads zero on completed tasks",
+      "Lines stat now survives multi-turn tasks via per-path diff merging",
+      "Session summaries and tool sessions now attribute cost to the right project"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 2
   }
 }
