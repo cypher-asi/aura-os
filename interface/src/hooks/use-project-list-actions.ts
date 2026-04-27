@@ -264,6 +264,30 @@ export function useProjectListActions() {
     [setProjects],
   );
 
+  const [restoreLoadingIds, setRestoreLoadingIds] = useState<string[]>([]);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+
+  const handleRestore = useCallback(
+    async (project: Project) => {
+      setRestoreError(null);
+      setRestoreLoadingIds((prev) => [...prev, project.project_id]);
+      try {
+        await api.restoreProject(project.project_id);
+        await refreshProjects();
+      } catch (err) {
+        console.error("Failed to restore project", err);
+        const message = getApiErrorMessage(err);
+        const details = getApiErrorDetails(err);
+        setRestoreError(details ? `${message} ${details}` : message);
+      } finally {
+        setRestoreLoadingIds((prev) =>
+          prev.filter((id) => id !== project.project_id),
+        );
+      }
+    },
+    [refreshProjects],
+  );
+
   return {
     ctxMenu, setCtxMenu, ctxMenuRef,
     renameTarget, setRenameTarget,
@@ -273,6 +297,9 @@ export function useProjectListActions() {
     agentSelectorProjectId, setAgentSelectorProjectId, pendingCreatedAgent,
     creatingGeneralAgentProjectIds,
     archivingAgentInstanceIds,
+    restoreLoadingIds,
+    restoreError,
+    setRestoreError,
     handleAddAgent,
     handleQuickAddAgent,
     handleMenuAction,
@@ -282,5 +309,6 @@ export function useProjectListActions() {
     handleAgentCreated,
     handleArchiveAgent,
     handleProjectSaved,
+    handleRestore,
   };
 }

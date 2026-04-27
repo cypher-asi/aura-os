@@ -40,6 +40,17 @@ vi.mock("../api/client", () => ({
   api: {
     updateProject: vi.fn().mockResolvedValue({}),
     deleteProject: vi.fn().mockResolvedValue(undefined),
+    restoreProject: vi.fn().mockResolvedValue({
+      project_id: "p-deleted",
+      org_id: "org-1",
+      name: "Restored",
+      description: "",
+      folder: null,
+      status: "active",
+      visibility: "private",
+      created_at: "",
+      updated_at: "",
+    }),
     deleteAgentInstance: vi.fn().mockResolvedValue(undefined),
     createGeneralAgentInstance: vi.fn().mockResolvedValue({
       agent_instance_id: "general-ai",
@@ -366,5 +377,52 @@ describe("useProjectListActions", () => {
 
     expect(mockSetProjects).toHaveBeenCalled();
     expect(result.current.settingsTarget).toBeNull();
+  });
+
+  it("handleRestore calls api.restoreProject and refreshes the list", async () => {
+    const { result } = renderHook(() => useProjectListActions(), { wrapper });
+    const target = {
+      project_id: "p-deleted",
+      org_id: "o-1",
+      name: "Lost",
+      description: "",
+      current_status: "deleted",
+      created_at: "",
+      updated_at: "",
+    };
+
+    await act(async () => {
+      await result.current.handleRestore(target);
+    });
+
+    expect(api.restoreProject).toHaveBeenCalledWith("p-deleted");
+    expect(mockRefreshProjects).toHaveBeenCalled();
+    expect(result.current.restoreError).toBeNull();
+    expect(result.current.restoreLoadingIds).toEqual([]);
+  });
+
+  it("handleRestore surfaces API errors via restoreError", async () => {
+    (api.restoreProject as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new ApiClientError(409, {
+        error: "Project is not deleted",
+        code: "INVALID_STATE",
+        details: null,
+      }),
+    );
+    const { result } = renderHook(() => useProjectListActions(), { wrapper });
+
+    await act(async () => {
+      await result.current.handleRestore({
+        project_id: "p-deleted",
+        org_id: "o-1",
+        name: "Lost",
+        description: "",
+        current_status: "deleted",
+        created_at: "",
+        updated_at: "",
+      });
+    });
+
+    expect(result.current.restoreError).toContain("Project is not deleted");
   });
 });
