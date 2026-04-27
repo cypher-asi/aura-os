@@ -49,7 +49,6 @@ cd "$repo_root"
 # shellcheck disable=SC1091
 . "$repo_root/infra/evals/external/bin/load-env.sh"
 external_bench_load_env "$repo_root"
-export AURA_EVAL_PRESERVE_ACCESS_TOKEN="${AURA_EVAL_PRESERVE_ACCESS_TOKEN:-1}"
 if [ -n "${AURA_STACK_AURA_OS_DATA_DIR:-}" ]; then
     mkdir -p "$AURA_STACK_AURA_OS_DATA_DIR/store"
 fi
