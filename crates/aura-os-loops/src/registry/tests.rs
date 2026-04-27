@@ -23,7 +23,7 @@ async fn opening_a_loop_emits_loop_opened() {
     let _handle = registry.open(loop_id.clone());
 
     let evt = rx.recv().await.expect("opened");
-    assert!(matches!(evt, DomainEvent::LoopOpened(p) if p.loop_id == loop_id));
+    assert!(matches!(evt.as_ref(), DomainEvent::LoopOpened(p) if p.loop_id == loop_id));
     assert_eq!(registry.len(), 1);
 }
 
@@ -39,9 +39,9 @@ async fn dropping_handle_without_terminal_publishes_cancelled() {
         let _h = registry.open(loop_id);
     }
     let opened = rx.recv().await.unwrap();
-    assert!(matches!(opened, DomainEvent::LoopOpened(_)));
+    assert!(matches!(opened.as_ref(), DomainEvent::LoopOpened(_)));
     let ended = rx.recv().await.unwrap();
-    match ended {
+    match ended.as_ref() {
         DomainEvent::LoopEnded(p) => assert_eq!(p.activity.status, LoopStatus::Cancelled),
         other => panic!("expected LoopEnded, got {other:?}"),
     }
@@ -69,7 +69,7 @@ async fn transitions_publish_activity_changed() {
         .await;
 
     let evt = rx.recv().await.unwrap();
-    match evt {
+    match evt.as_ref() {
         DomainEvent::LoopActivityChanged(p) => {
             assert_eq!(p.activity.status, LoopStatus::Running);
             assert_eq!(p.activity.percent, Some(0.25));
@@ -80,7 +80,7 @@ async fn transitions_publish_activity_changed() {
     handle.mark_completed().await;
     let evt = rx.recv().await.unwrap();
     assert!(matches!(
-        evt,
+        evt.as_ref(),
         DomainEvent::LoopEnded(p) if p.activity.status == LoopStatus::Completed
     ));
     assert_eq!(registry.len(), 0);
@@ -110,7 +110,10 @@ async fn transition_throttles_same_status_updates() {
         .mark_running(Some(0.1), Some("thinking".into()))
         .await;
     let first = rx.recv().await.unwrap();
-    assert!(matches!(first, DomainEvent::LoopActivityChanged(_)));
+    assert!(matches!(
+        first.as_ref(),
+        DomainEvent::LoopActivityChanged(_)
+    ));
 
     // A burst of same-status transitions within the throttle window
     // should NOT publish more events.
@@ -135,7 +138,7 @@ async fn transition_throttles_same_status_updates() {
         .await
         .expect("status change must bypass throttle")
         .expect("event");
-    match after_status_change {
+    match after_status_change.as_ref() {
         DomainEvent::LoopActivityChanged(p) => {
             assert_eq!(p.activity.status, LoopStatus::WaitingTool);
         }
@@ -154,11 +157,14 @@ async fn transition_throttles_same_status_updates() {
         .await
         .expect("throttle must release after window")
         .expect("event");
-    assert!(matches!(after_window, DomainEvent::LoopActivityChanged(_)));
+    assert!(matches!(
+        after_window.as_ref(),
+        DomainEvent::LoopActivityChanged(_)
+    ));
 
     handle.mark_completed().await;
     let end = rx.recv().await.unwrap();
-    assert!(matches!(end, DomainEvent::LoopEnded(_)));
+    assert!(matches!(end.as_ref(), DomainEvent::LoopEnded(_)));
 }
 
 #[tokio::test]

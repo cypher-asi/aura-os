@@ -41,7 +41,7 @@ pub(crate) fn spawn_loop_events_bridge(
         // immediately.
         let _guard = guard;
         while let Some(event) = rx.recv().await {
-            let Some(json) = render_event(&event) else {
+            let Some(json) = render_event(event.as_ref()) else {
                 continue;
             };
             let _ = broadcast.send(json);

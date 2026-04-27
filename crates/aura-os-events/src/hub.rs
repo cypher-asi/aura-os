@@ -70,7 +70,8 @@ impl SubscriptionFilter {
 }
 
 type SubscriberId = Uuid;
-type Sender = mpsc::UnboundedSender<DomainEvent>;
+type SharedDomainEvent = Arc<DomainEvent>;
+type Sender = mpsc::UnboundedSender<SharedDomainEvent>;
 
 struct Subscriber {
     sender: Sender,
@@ -107,6 +108,7 @@ impl EventHub {
         if topics.is_empty() {
             return;
         }
+        let event = Arc::new(event);
         let mut dead: Vec<SubscriberId> = Vec::new();
         for entry in self.inner.subscribers.iter() {
             let subscriber = entry.value();
@@ -130,7 +132,10 @@ impl EventHub {
     pub fn subscribe(
         &self,
         filter: SubscriptionFilter,
-    ) -> (SubscriptionGuard, mpsc::UnboundedReceiver<DomainEvent>) {
+    ) -> (
+        SubscriptionGuard,
+        mpsc::UnboundedReceiver<SharedDomainEvent>,
+    ) {
         self.subscribe_inner(filter, false)
     }
 
@@ -139,7 +144,12 @@ impl EventHub {
     /// rebroadcaster) that must observe the full event stream. Normal
     /// callers should use [`EventHub::subscribe`] with a filter.
     #[must_use]
-    pub fn subscribe_all(&self) -> (SubscriptionGuard, mpsc::UnboundedReceiver<DomainEvent>) {
+    pub fn subscribe_all(
+        &self,
+    ) -> (
+        SubscriptionGuard,
+        mpsc::UnboundedReceiver<SharedDomainEvent>,
+    ) {
         self.subscribe_inner(SubscriptionFilter::empty(), true)
     }
 
@@ -147,7 +157,10 @@ impl EventHub {
         &self,
         filter: SubscriptionFilter,
         accept_all: bool,
-    ) -> (SubscriptionGuard, mpsc::UnboundedReceiver<DomainEvent>) {
+    ) -> (
+        SubscriptionGuard,
+        mpsc::UnboundedReceiver<SharedDomainEvent>,
+    ) {
         let (sender, receiver) = mpsc::unbounded_channel();
         let id = Uuid::new_v4();
         self.inner.subscribers.insert(
@@ -227,7 +240,7 @@ mod tests {
         hub.publish(activity_event(l2));
 
         let received = rx1.recv().await.expect("expected a single event");
-        match received {
+        match received.as_ref() {
             DomainEvent::LoopActivityChanged(p) => assert_eq!(p.loop_id, l1),
             other => panic!("unexpected variant: {other:?}"),
         }
@@ -254,7 +267,7 @@ mod tests {
         hub.publish(activity_event(foreign_loop));
 
         let received = rx.recv().await.expect("expected one event");
-        match received {
+        match received.as_ref() {
             DomainEvent::LoopActivityChanged(p) => assert_eq!(p.loop_id, our_loop),
             other => panic!("unexpected variant: {other:?}"),
         }
@@ -295,8 +308,8 @@ mod tests {
         }));
 
         let first = rx.recv().await.expect("opened");
-        assert!(matches!(first, DomainEvent::LoopOpened(_)));
+        assert!(matches!(first.as_ref(), DomainEvent::LoopOpened(_)));
         let second = rx.recv().await.expect("ended");
-        assert!(matches!(second, DomainEvent::LoopEnded(_)));
+        assert!(matches!(second.as_ref(), DomainEvent::LoopEnded(_)));
     }
 }
