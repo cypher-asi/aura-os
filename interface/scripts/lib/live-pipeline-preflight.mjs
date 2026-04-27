@@ -153,6 +153,56 @@ async function timedStep(onStep, step, fn) {
   }
 }
 
+// Names that must never be carried into the ephemeral copy of a
+// persistent fixture. Each preflight run must start from a hermetic
+// snapshot so prior runs cannot poison the next: `hello.txt` is the
+// task's expected output (its presence pre-empts the agent's write
+// and triggers the same-turn write-blocked detector); `.git` would
+// import prior commits/HEAD that the dev-loop git tooling would diff
+// against; `node_modules` and friends are bulky and irrelevant.
+const FIXTURE_COPY_SKIP_NAMES = new Set([
+  ".git",
+  "node_modules",
+  ".cache",
+  "dist",
+  "build",
+  // Run-artifacts: `hello.txt` is the task's expected output (its
+  // presence pre-empts the agent's first write and trips the
+  // same-turn write-blocked detector); `spec/` is gitignored mirror
+  // output written by `mirror_spec_best_effort` after spec generation
+  // — leftover slugs from prior runs accumulate here and confuse the
+  // task extractor.
+  "hello.txt",
+  "spec",
+]);
+
+// Recursively copy `srcDir` to `destDir`, skipping any entry whose
+// basename is in `FIXTURE_COPY_SKIP_NAMES`. Used to materialise a
+// hermetic per-run snapshot of a persistent fixture. We deliberately
+// avoid `fs.cp` filter callbacks because the supported signature
+// changed across Node 18/20 and we want consistent behaviour.
+async function copyFixtureSnapshot(srcDir, destDir) {
+  await fs.mkdir(destDir, { recursive: true });
+  const entries = await fs.readdir(srcDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (FIXTURE_COPY_SKIP_NAMES.has(entry.name)) continue;
+    const srcPath = path.join(srcDir, entry.name);
+    const destPath = path.join(destDir, entry.name);
+    if (entry.isDirectory()) {
+      await copyFixtureSnapshot(srcPath, destPath);
+    } else if (entry.isSymbolicLink()) {
+      const target = await fs.readlink(srcPath);
+      await fs.symlink(target, destPath).catch(async () => {
+        // On Windows without developer mode, symlinks may fail; fall
+        // back to copying the dereferenced contents.
+        await fs.copyFile(srcPath, destPath);
+      });
+    } else {
+      await fs.copyFile(srcPath, destPath);
+    }
+  }
+}
+
 async function ensureFixtureDir(fixtureDir) {
   if (typeof fixtureDir !== "string" || fixtureDir.length === 0) {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "aura-preflight-"));
@@ -172,6 +222,11 @@ async function ensureFixtureDir(fixtureDir) {
       ].join("\n"),
       "utf8",
     );
+    // Tiny `node -e` scripts so `npm run build` / `npm run test`
+    // succeed without an `npm install` step. Matches the persistent
+    // `interface/tests/e2e/evals/fixtures/preflight-minimal/package.json`
+    // and aligns with the project record's build/test commands so the
+    // dev-loop completion gate's test-runner escape hatch fires.
     await fs.writeFile(
       path.join(tempRoot, "package.json"),
       JSON.stringify(
@@ -179,7 +234,10 @@ async function ensureFixtureDir(fixtureDir) {
           name: "aura-preflight-fixture",
           private: true,
           version: "0.0.0",
-          scripts: { build: "echo ok", test: "echo ok" },
+          scripts: {
+            build: "node -e \"console.log('preflight build ok')\"",
+            test: "node -e \"console.log('preflight test ok')\"",
+          },
         },
         null,
         2,
@@ -209,7 +267,23 @@ async function ensureFixtureDir(fixtureDir) {
       `fixtureDir is not accessible: ${fixtureDir} (${cause instanceof Error ? cause.message : String(cause)})`,
     );
   }
-  return { fixtureDir, ephemeral: false };
+  // Materialise a hermetic per-run snapshot so prior runs (stale
+  // `hello.txt`, an inherited `.git`, leftover build outputs) cannot
+  // poison this preflight. The original persistent fixture stays
+  // untouched and source-controlled; the tmp copy is removed by the
+  // outer `finally` block via the `ephemeral` flag.
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "aura-preflight-fixture-"));
+  try {
+    await copyFixtureSnapshot(fixtureDir, tempRoot);
+  } catch (cause) {
+    await fs.rm(tempRoot, { recursive: true, force: true }).catch(() => {});
+    const message = cause instanceof Error ? cause.message : String(cause);
+    throw new StepFailure(
+      "validate_fixture",
+      `failed to snapshot fixture ${fixtureDir} into ${tempRoot}: ${message}`,
+    );
+  }
+  return { fixtureDir: tempRoot, ephemeral: true };
 }
 
 // `loop_start` runs `validate_workspace_is_initialised` server-side and
@@ -479,8 +553,11 @@ export async function runLivePipelinePreflight(options = {}) {
         name: "Aura-Preflight",
         role: "Engineer",
         personality: "Methodical, careful, preflight-only.",
-        system_prompt:
+        system_prompt: [
           "You are AURA running a fast preflight task. Make the smallest possible change to satisfy requirements.md.",
+          "",
+          "Completion contract: when a task is verification-only and your work intentionally produces no file edits (for example, \"confirm no other files were modified\"), you MUST call `task_done` with `no_changes_needed: true`. Otherwise the dev-loop completion gate rejects `task_done` because there are no file operations to verify.",
+        ].join("\n"),
         machine_type: runtimeConfig.machineType,
         adapter_type: runtimeConfig.adapterType,
         environment: runtimeConfig.environment,
@@ -504,8 +581,16 @@ export async function runLivePipelinePreflight(options = {}) {
         org_id: orgRecord.value.org_id,
         name: `Aura Preflight ${Date.now()}`,
         description: "Live preflight project (auto-cleanup).",
-        build_command: "echo ok",
-        test_command: "echo ok",
+        // Use the actual package.json scripts (which are tiny `node -e
+        // "console.log(...)"` invocations, see fixture). This keeps the
+        // project record consistent with the spec markdown (which tells
+        // the agent that `npm run build` / `npm run test` must keep
+        // passing) and lets the dev-loop completion gate's
+        // test-runner escape hatch fire naturally on verification-only
+        // tasks. `node` and `npm` are both in the harness's
+        // autonomous-dev-loop binary allowlist.
+        build_command: "npm run build",
+        test_command: "npm run test",
         local_workspace_path: fixtureDir,
       });
       if (!created?.project_id) {
