@@ -171,6 +171,19 @@ pub(crate) async fn project_tool_session_config(
     let template_agent_id_field = remote_instance
         .as_ref()
         .map(|instance| instance.agent_id.to_string());
+    // Project-tool sessions (task-extract, spec-generate, etc.) don't
+    // have a live aura-storage session row — they're one-off harness
+    // invocations. But the router still needs `x-aura-org-id` to
+    // attribute their cost to the project's org. Resolve and stamp it
+    // here. `aura_session_id` stays None (no storage session); the
+    // loosened router accepts `project_id` alone for cost attribution
+    // so that's enough.
+    let aura_org_id = state
+        .project_service
+        .get_project(project_id)
+        .ok()
+        .map(|p| p.org_id.to_string());
+
     SessionConfig {
         agent_id: agent_id_field,
         template_agent_id: template_agent_id_field,
@@ -185,6 +198,7 @@ pub(crate) async fn project_tool_session_config(
         project_path,
         installed_tools,
         installed_integrations,
+        aura_org_id,
         ..Default::default()
     }
 }
