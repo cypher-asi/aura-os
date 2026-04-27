@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-26T23:38:21.112Z",
+  "generatedAt": "2026-04-27T04:16:52.959Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.407.1",
+  "version": "0.1.0-nightly.408.1",
   "date": "2026-04-26",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.407.1",
-  "lastIncludedSha": "e6885326051714e383700336c8bf4860b9c28c00",
-  "previousProcessedSha": "80889ffa1883d10db4e80bc6543bfdf6b1e08b20",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.408.1",
+  "lastIncludedSha": "a0c1c97b829c4fee8e2b3f96d52d3d1abfa0c06a",
+  "previousProcessedSha": "e6885326051714e383700336c8bf4860b9c28c00",
   "commitShas": [
     "285f4bcbbfe4bcce4097f676885ce5a9de6a9c77",
     "11cc7815ab83ca128f6cf2dd5805ce40fd620891",
@@ -41,10 +41,23 @@
     "7941c911853825aaee6ff771916614548ba39428",
     "80889ffa1883d10db4e80bc6543bfdf6b1e08b20",
     "8b9c3106198e8baf42e5a824d59f8d1f01a74a03",
-    "e6885326051714e383700336c8bf4860b9c28c00"
+    "e6885326051714e383700336c8bf4860b9c28c00",
+    "b89880807cc05f6a640a49b760843b98f241ec83",
+    "d0b0c53e6c847429774ceb017bd697dd9eea4945",
+    "04f9e5884d6afbfcf6ac3755b75d4bfe02976f5e",
+    "4553edf42ac241bc24c15bbb77a88bbb836e73a6",
+    "bb3f3c4402819c1c28eaadab05204e7ef5a8a5ca",
+    "4416794cefbb5651c5e035314039b2c570b6a079",
+    "3517fca9452949a874984f5f0edb9d42f304ef48",
+    "415baf247670342bbd410656d63d4429a171759f",
+    "9d459c62af271c4846f67c6701484a4a2fe7123d",
+    "0091faa3b37a787e8bb56a778bb8c2a35584bc10",
+    "badccfa1feee8fc190f13fb31d6c47c770cc27ac",
+    "e8a5c7333ae3159a52eba274ae2f4e3c7a158fdd",
+    "a0c1c97b829c4fee8e2b3f96d52d3d1abfa0c06a"
   ],
-  "rawCommitCount": 31,
-  "filteredCommitCount": 30,
+  "rawCommitCount": 44,
+  "filteredCommitCount": 43,
   "rawCommits": [
     {
       "sha": "285f4bcbbfe4bcce4097f676885ce5a9de6a9c77",
@@ -1662,6 +1675,691 @@
         "Interface",
         "Other"
       ]
+    },
+    {
+      "sha": "b89880807cc05f6a640a49b760843b98f241ec83",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T21:01:59-07:00",
+      "subject": "feat(dev-loop): accept passing tests as task-completion proof",
+      "body": "Adds a 'tests-as-truth' completion path so a CompletionContract\nfailure (task_done with no file edits) is bridged to Done when the\nevent stream contains at least one successful test runner invocation\n(cargo test, pnpm test, vitest, pytest, go test, ...). The dev_loop\nside-effect pipeline now records TestPassEvidence per task, the\nreconciler grows a MarkDone(TestEvidenceAccepted) verdict, and the\nserver suppresses the synthetic task_failed in favor of a synthetic\ntask_completed carrying the test_pass_evidence payload. The interface\nevent types and task-status store are updated to surface the new\noutcome, and dev_loop_dod_regression covers the detector + reconciler\noverride + harness-owns-DoD deference for empty-path writes.\n\nDrive-by: re-export CACHE_ENTRY_MAX_AGE under cfg(test) and fix the\nauth_guard tests import so 'cargo test --lib' compiles after the\nprior refactor that moved get_cached_session into the cache submodule.\n\nMade-with: Cursor",
+      "parents": [
+        "e6885326051714e383700336c8bf4860b9c28c00"
+      ],
+      "files": [
+        "apps/aura-os-server/src/auth_guard/tests.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/signals.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/streaming/side_effects.rs",
+        "apps/aura-os-server/src/handlers/tasks/output.rs",
+        "apps/aura-os-server/src/lib/phase7_test_support.rs",
+        "apps/aura-os-server/src/reconciler.rs",
+        "apps/aura-os-server/src/reconciler/wire.rs",
+        "apps/aura-os-server/src/state/caches.rs",
+        "apps/aura-os-server/src/state/mod.rs",
+        "apps/aura-os-server/tests/dev_loop_dod_regression/completion.rs",
+        "interface/src/shared/types/aura-events.ts",
+        "interface/src/stores/task-status-store.ts"
+      ],
+      "stats": {
+        "fileCount": 12,
+        "insertions": 885,
+        "deletions": 19
+      },
+      "committedAtMs": 1777262519000,
+      "cleanSubject": "accept passing tests as task-completion proof",
+      "keywords": [
+        "accept",
+        "passing",
+        "tests",
+        "task",
+        "completion",
+        "proof"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "interface/src/shared",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "d0b0c53e6c847429774ceb017bd697dd9eea4945",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T21:01:59-07:00",
+      "subject": "feat(concurrency): phase 0 — harness_agent_id helper, session tracing, turn_in_progress remap",
+      "body": "Foundation for partitioning the upstream harness `agent_id` per\nAgentInstance. Adds:\n- `aura_os_core::harness_agent_id(template, instance)` helper, the\n  single source of truth for the `{template}::{instance}` partition\n  format used in upcoming phases.\n- `tracing::info!` on every harness session open with the partition\n  key, billing ids, so we can prove from logs which sessions share\n  turn-locks.\n- `remap_harness_error_to_api` in chat::errors that recognizes the\n  raw \"turn is currently in progress\" upstream string (and the\n  `turn_in_progress` code) and surfaces it as a structured\n  `ApiError::agent_busy` instead of leaking the harness wording.\n\nNo behavior change: callers still pass the bare template id for\n`SessionConfig.agent_id`. Phase 1 will start using the partition\nhelper at the call sites.\n\nPer the spec's \"simpler scope option\", the helper lives in\nchat::errors only; the swarm HTTP path keeps its anyhow-string\nerror today and gets a TODO(phase 0.5) breadcrumb so a follow-up\npatch can converge those paths onto a structured wire shape.\n\nRefs: c:\\Users\\n3o\\.cursor\\plans\\robust-concurrent-agent-infra_74e43e47.plan.md\nMade-with: Cursor",
+      "parents": [
+        "b89880807cc05f6a640a49b760843b98f241ec83"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/errors.rs",
+        "crates/aura-os-core/src/harness_id.rs",
+        "crates/aura-os-core/src/lib.rs",
+        "crates/aura-os-harness/src/session.rs",
+        "crates/aura-os-harness/src/swarm_harness.rs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 188,
+        "deletions": 1
+      },
+      "committedAtMs": 1777262519000,
+      "cleanSubject": "phase 0 — harness_agent_id helper, session tracing, turn_in_progress remap",
+      "keywords": [
+        "phase",
+        "harness",
+        "agent",
+        "helper",
+        "session",
+        "tracing",
+        "turn",
+        "progress",
+        "remap"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-core/src",
+        "crates/aura-os-harness/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Other"
+      ]
+    },
+    {
+      "sha": "04f9e5884d6afbfcf6ac3755b75d4bfe02976f5e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T21:01:59-07:00",
+      "subject": "feat(concurrency): phase 1a - add template_agent_id to SessionInit/SessionConfig",
+      "body": "Extends the harness wire protocol with an optional `template_agent_id`\nfield on `SessionInit` and `SessionConfig`. Phase 1b/1c will start\nsetting it: `agent_id` becomes the partitioned `{template}::{instance}`\nkey (the harness turn-lock), `template_agent_id` carries the stable\ntemplate id for skill / permissions / billing lookup.\n\n- Adds `SessionInit::template_agent_id: Option<String>` (skip_serializing_if).\n- Adds `SessionConfig::template_agent_id: Option<String>` and\n  threads it through `build_session_init`.\n- Adds `template_agent_id` to the swarm `POST /v1/agents` body so\n  the gateway can persist it alongside the partition agent record.\n- Replaces the Phase-0 TODO in `session.rs` tracing with the now-\n  available `template_agent_id` field.\n\nNo behavior change: every caller still leaves `template_agent_id`\nas `None` and `agent_id` as the bare template, so traffic is\nidentical to pre-Phase-0. Phase 1b switches the call sites.\n\nMade-with: Cursor",
+      "parents": [
+        "d0b0c53e6c847429774ceb017bd697dd9eea4945"
+      ],
+      "files": [
+        "crates/aura-os-harness/src/harness.rs",
+        "crates/aura-os-harness/src/session.rs",
+        "crates/aura-os-harness/src/swarm_harness.rs",
+        "crates/aura-protocol/src/client.rs"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 23,
+        "deletions": 4
+      },
+      "committedAtMs": 1777262519000,
+      "cleanSubject": "phase 1a - add template_agent_id to SessionInit/SessionConfig",
+      "keywords": [
+        "phase",
+        "template",
+        "agent",
+        "sessioninit",
+        "sessionconfig"
+      ],
+      "fileGroups": [
+        "crates/aura-os-harness/src",
+        "crates/aura-protocol/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "4553edf42ac241bc24c15bbb77a88bbb836e73a6",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T21:01:59-07:00",
+      "subject": "feat(concurrency): phase 1b — partition harness agent_id at chat call sites",
+      "body": "Activates the partitioning helper at every chat-side `SessionConfig`\nconstruction. Each `AgentInstance` now gets its own upstream harness\nturn-lock by setting `agent_id = harness_agent_id(template, Some(instance))`\nand preserving the template id in `template_agent_id` for skill /\npermissions / billing lookup.\n\n- `instance_route.rs`: partition key for both `SessionConfig.agent_id`\n  and the in-memory `chat_sessions` registry key. Two AgentInstances\n  of the same template no longer collide upstream.\n- `agent_route.rs` (legacy bare-agent chat): uses `{template}::default`\n  partition so it sits on a stable separate slot from any project-\n  bound instance.\n- `runtime.rs` smoke test: same pattern.\n- `setup.rs::reset_{agent,instance}_session`: rebuild the in-memory\n  `session_key` with the same `harness_agent_id` form the chat routes\n  store under, otherwise reset would silently fail to evict the live\n  session. The instance variant resolves the parent template via\n  `agent_instance_service.get_instance` to compute the partition.\n\nConsumer impact on the `chat_sessions` registry:\n\n- `state::ChatSession` now carries both `agent_id` (the partition\n  string, opaque) and a new `template_agent_id` (the stable Aura\n  template id). The doc-comment on `ChatSession::agent_id` is updated\n  to spell out the partition semantics.\n- `streaming.rs::insert_delegated_chat_session` threads\n  `SessionConfig::template_agent_id` through to the new field.\n- `crud::update::invalidate_chat_sessions_for_agent` switches its\n  ownership filter from `session.agent_id == template_id` to\n  `session.template_agent_id == template_id`. Without this, a\n  permissions toggle would no longer evict any live session because\n  every key now contains the partition suffix. Doc-comment updated to\n  match.\n\nBilling header preservation:\n\n- `aura-os-harness::build_session_init` now derives `aura_agent_id`\n  (the X-Aura-Agent-Id billing header) from `template_agent_id` first\n  and falls back to `agent_id`. Pre-Phase-1b callers leave\n  `template_agent_id = None` and still ship the bare template (no\n  behavior change). Phase-1b chat call sites ship the template id, so\n  billing keeps aggregating per agent rather than per partition.\n\nOut of scope (deferred):\n\n- The automaton / dev-loop adapter (`start_loop` / `run_single_task`)\n  still passes the bare template id — Phase 1c partitions those.\n- `projects_helpers::session::project_tool_session_config` is the\n  spec-gen / task-extraction tool-session path; left alone for the\n  same Phase 1c sweep.\n\nVerification:\n\n- `cargo check -p aura-os-server` clean.\n- `cargo check -p aura-os-harness` clean.\n- `cargo test -p aura-os-server --lib`: 267 passed.\n- `cargo test -p aura-os-harness --lib`: 25 passed.\n\nMade-with: Cursor",
+      "parents": [
+        "04f9e5884d6afbfcf6ac3755b75d4bfe02976f5e"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/agent_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/setup.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/streaming.rs",
+        "apps/aura-os-server/src/handlers/agents/crud/update.rs",
+        "apps/aura-os-server/src/handlers/agents/runtime.rs",
+        "apps/aura-os-server/src/state/mod.rs",
+        "crates/aura-os-harness/src/harness.rs"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 99,
+        "deletions": 31
+      },
+      "committedAtMs": 1777262519000,
+      "cleanSubject": "phase 1b — partition harness agent_id at chat call sites",
+      "keywords": [
+        "phase",
+        "partition",
+        "harness",
+        "agent",
+        "chat",
+        "call",
+        "sites"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-harness/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "bb3f3c4402819c1c28eaadab05204e7ef5a8a5ca",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T21:01:59-07:00",
+      "subject": "feat(concurrency): phase 1c - partition harness agent_id at automaton + project-tool sites",
+      "body": "Completes the per-AgentInstance partitioning. The automaton path\n(start_loop, run_single_task) and the project-tool session helper\nnow send `harness_agent_id(template, Some(instance))` as the upstream\n`agent_id`, and `template_agent_id` carries the stable template id\nfor skill / permissions / billing lookup.\n\n- `AutomatonStartParams` gains `agent_id: Option<String>` and\n  `template_agent_id: Option<String>` (additive wire fields, both\n  `skip_serializing_if = Option::is_none`, so pre-Phase-1c harnesses\n  - which derive `agent_id` from the URL path - keep accepting the\n  payload until they ship structured-body support).\n- `start_loop`: partition derived from `(template, agent_instance_id)`.\n- `run_single_task`: partition derived from\n  `(template, ephemeral_instance_id)`, so concurrent task runs of\n  the same template are now genuinely independent at the harness\n  turn-lock layer (matching the Aura-side ephemeral-instance model).\n- `project_tool_session_config`: the swarm-mode `remote_instance`\n  branch now sends `harness_agent_id(instance.agent_id,\n  Some(instance.agent_instance_id))` and `template_agent_id =\n  instance.agent_id`. The local-mode synthetic id\n  (`{tool_agent_name}-{project_id}`) is left bare on purpose - it is\n  already per-project, isn't a real Aura template, and the local\n  harness doesn't need partitioning here. Documented inline.\n- `ActiveAutomaton`: no harness-bound `agent_id` field exists\n  (per-instance harness control flows via `automaton_id` on the\n  pre-built `harness_base_url` client), so step 6 of the plan is a\n  no-op for this struct.\n\nSanity grep `agent_id:\\s*Some\\(.*\\.agent_id\\.` over\ncrates/aura-os-harness/src and apps/aura-os-server/src reports only:\n- `template_agent_id: Some(...agent_id.to_string())` lines (correct\n  template-id placement on the new field), and\n- `aura_os_storage::CreateSessionEventRequest.agent_id:\n  Some(ctx.project_agent_id.clone())` in chat persist - this is the\n  storage event-row `agent_id`, not a harness session/start param,\n  so it is intentionally left untouched.\n\nAfter this phase, every outbound `agent_id` to the upstream harness\nis a partition. Phase 2 surfaces a structured agent_busy on the\nlegacy chat route, and Phase 3 adds intra-partition serialization.\n\nVerification:\n\n- `cargo check -p aura-os-harness` clean.\n- `cargo check -p aura-os-server` clean.\n- `cargo test -p aura-os-harness --lib`: 25 passed.\n- `cargo test -p aura-os-server --lib`: 267 passed.\n- `cargo check -p aura-os-server --tests` clean (only pre-existing\n  unused-import warnings unrelated to this phase).\n\nMade-with: Cursor",
+      "parents": [
+        "4553edf42ac241bc24c15bbb77a88bbb836e73a6"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop/adapter.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/start.rs",
+        "apps/aura-os-server/src/handlers/projects_helpers/session.rs",
+        "crates/aura-os-harness/src/automaton_client.rs",
+        "crates/aura-os-harness/src/automaton_client/tests.rs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 63,
+        "deletions": 10
+      },
+      "committedAtMs": 1777262519000,
+      "cleanSubject": "phase 1c - partition harness agent_id at automaton + project-tool sites",
+      "keywords": [
+        "phase",
+        "partition",
+        "harness",
+        "agent",
+        "automaton",
+        "project",
+        "tool",
+        "sites"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-harness/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "4416794cefbb5651c5e035314039b2c570b6a079",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T21:01:59-07:00",
+      "subject": "feat(concurrency): phase 2 — shared busy guard + SSE harness-error remap",
+      "body": "Closes the two remaining leak paths for the raw upstream\n\"A turn is currently in progress; send cancel first\" string after\nPhase 1 partitioned the harness `agent_id`:\n\n- Extracts the chat-vs-automation conflict guard into\n  `chat::busy::reject_if_partition_busy`. The instance route keeps\n  its strict `(project_id, instance)` check; the legacy bare-agent\n  route now scans `automaton_registry` by `template_agent_id` and\n  refuses with `ApiError::agent_busy` when any of its instances are\n  running an automaton.\n- `ActiveAutomaton` gains a `template_agent_id` field so the cross-\n  partition check is O(N) without async lookups under the registry\n  lock; populated by every `automaton_registry.insert(...)` site\n  (start_loop, run_single_task).\n- SSE forwarder (`harness_broadcast_to_sse` / `harness_event_to_sse`)\n  intercepts `HarnessOutbound::Error` events whose code/message\n  matches the harness turn-in-progress pattern and remaps them to a\n  structured `agent_busy` SSE event before closing the stream, so\n  the UI never sees the raw harness wording.\n- Adds unit tests for the new busy guard.\n\nMade-with: Cursor",
+      "parents": [
+        "bb3f3c4402819c1c28eaadab05204e7ef5a8a5ca"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/agent_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/busy.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/errors.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/streaming.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/adapter.rs",
+        "apps/aura-os-server/src/state/mod.rs",
+        "apps/aura-os-server/tests/api_tests/loop_stop.rs"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 361,
+        "deletions": 53
+      },
+      "committedAtMs": 1777262519000,
+      "cleanSubject": "phase 2 — shared busy guard + SSE harness-error remap",
+      "keywords": [
+        "phase",
+        "shared",
+        "busy",
+        "guard",
+        "harness",
+        "error",
+        "remap"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "3517fca9452949a874984f5f0edb9d42f304ef48",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T21:01:59-07:00",
+      "subject": "feat(concurrency): phase 3 — per-partition turn slot with queued SSE hint",
+      "body": "Serializes user-message sends on a single ChatSession partition so\nback-to-back chat turns can no longer race the upstream harness\nturn-lock and trigger the \"turn in progress\" error mid-stream.\n\n- `ChatSession.turn_slot: Arc<Mutex<()>>` is held for the duration\n  of one user-message turn. Released by a per-turn sentinel task\n  that watches the harness broadcast for `AssistantMessageEnd` or\n  `Error` (the same set used as `should_close` in\n  `harness_broadcast_to_sse`).\n- Queue bound: at most one waiter pending. A third concurrent send\n  on the same partition surfaces `ApiError::agent_busy` with a\n  \"queue full\" reason instead of stacking unbounded.\n- SSE prefix gains a `progress: queued` event when the call was\n  queued, so the UI can render \"Queued behind current turn\"\n  distinct from the existing `progress: connecting`. Cross-partition\n  traffic is unaffected and still runs in parallel.\n- Adds `chat::turn_slot` module with tests for slot acquisition and\n  release on terminal events / broadcast close.\n\nMade-with: Cursor",
+      "parents": [
+        "4416794cefbb5651c5e035314039b2c570b6a079"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/streaming.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/turn_slot.rs",
+        "apps/aura-os-server/src/state/mod.rs"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 697,
+        "deletions": 38
+      },
+      "committedAtMs": 1777262519000,
+      "cleanSubject": "phase 3 — per-partition turn slot with queued SSE hint",
+      "keywords": [
+        "phase",
+        "partition",
+        "turn",
+        "slot",
+        "with",
+        "queued",
+        "hint"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "415baf247670342bbd410656d63d4429a171759f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T21:03:54-07:00",
+      "subject": "feat(concurrency): phase 4 — frontend agent-busy uniformity + queued progress hint",
+      "body": "Surfaces the Phase 2 / Phase 3 server-side improvements to the UI:\n\n- `useAgentBusy`: detects `code: \"agent_busy\"` uniformly across the\n  bare-agent and instance chat routes (Phase 2), exposes\n  `automaton_id` so the consumer can render a \"Stop the loop to\n  chat\" affordance, and distinguishes a \"queue full\" reason from\n  the automation-running reason for accurate copy.\n- `api/client.ts::isAgentBusyError`: returns structured info instead\n  of a boolean and adds the harness raw-string fallback so older\n  servers without the SSE remap still surface a clean error.\n- `ChatInputBar` (and the SSE consumer): handles\n  `progress { stage: \"queued\" }` with an inline \"Queued behind\n  current turn…\" hint distinct from the busy spinner; clears as\n  soon as the first text/tool delta arrives.\n- `harness-protocol.ts`: mirrors the optional `template_agent_id`\n  field added to `SessionInit` in Phase 1a so the hand-maintained\n  TS shape matches the Rust wire.\n\nTests added for the new hook signals and the queued-state UI.\n\nMade-with: Cursor",
+      "parents": [
+        "3517fca9452949a874984f5f0edb9d42f304ef48"
+      ],
+      "files": [
+        "interface/src/api/client.ts",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/hooks/stream/handlers/lifecycle.ts",
+        "interface/src/hooks/use-agent-busy.ts",
+        "interface/src/shared/api/core.test.ts",
+        "interface/src/shared/api/core.ts",
+        "interface/src/shared/types/harness-protocol.ts",
+        "interface/src/utils/streaming.ts"
+      ],
+      "stats": {
+        "fileCount": 11,
+        "insertions": 574,
+        "deletions": 29
+      },
+      "committedAtMs": 1777262634000,
+      "cleanSubject": "phase 4 — frontend agent-busy uniformity + queued progress hint",
+      "keywords": [
+        "phase",
+        "frontend",
+        "agent",
+        "busy",
+        "uniformity",
+        "queued",
+        "progress",
+        "hint"
+      ],
+      "fileGroups": [
+        "interface/src/api",
+        "interface/src/apps",
+        "interface/src/hooks",
+        "interface/src/shared",
+        "interface/src/utils"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "9d459c62af271c4846f67c6701484a4a2fe7123d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T21:03:54-07:00",
+      "subject": "test(concurrency): phase 5 - concurrent-agents integration + stress tests + role doc refresh",
+      "body": "Validates the Phase 1-3 partitioning contract end-to-end:\n\n- `concurrent_agents.rs` integration tests:\n  - `concurrent_chat_distinct_agents` - two templates run interleaved.\n  - `concurrent_chat_same_agent_multi_instance` - two instances of\n    one template send distinct `agent_id` partitions and interleave.\n  - `chat_during_automation_isolated_instance` - chat on instance B\n    succeeds while instance A is automating; chat on instance A\n    refuses with `agent_busy { automaton_id }`.\n  - `same_partition_second_turn_queues` - second send emits the\n    Phase-3 `progress: queued` SSE prefix before its first delta.\n  - `same_partition_third_turn_rejects` - third concurrent send\n    surfaces `agent_busy` with the queue-full reason.\n- `concurrent_agents_stress_test.rs` (`#[ignore]`-gated): 32 parallel\n  chat partitions, asserts wall-clock <= 2x single-stream duration\n  and zero `turn_in_progress` / `queue_full` observed. Run with\n  `cargo test --release --test concurrent_agents_stress_test\n  -- --include-ignored`.\n- Test scaffold: `aura_os_harness::test_support::FakeHarness`\n  records every `SessionInit` it sees and replays scripted\n  `OutboundMessage` streams on configurable delays, so the tests\n  assert directly on partition `agent_id`s and timing.\n- `AgentInstanceRole` doc-comment in `aura-os-core::enums` rewritten\n  to describe the post-Phase-3 reality (each role gets its own\n  partition via `harness_agent_id`) instead of the in-progress\n  language from before.\n\nAlso adds a `streaming::tests::harness_turn_in_progress_remapped_to_agent_busy_sse_event`\nregression test that drives `harness_broadcast_to_sse` with a\n`turn_in_progress` error and asserts the SSE output is a clean\n`agent_busy` event with no leakage of the raw harness wording.\n\nTooling:\n- `aura-os-harness` gains a `test-support` Cargo feature gating\n  `FakeHarness` for downstream consumers; the server crate opts in\n  via its `[dev-dependencies]`.\n- `BusyMatch`, `evaluate_partition_busy`, `acquire_turn_slot`,\n  `TurnSlotAcquired/Guard/QueueFull`, `MAX_PENDING_TURNS`, and\n  `harness_broadcast_to_sse` are promoted from `pub(super)` /\n  `pub(crate)` to `pub` and re-exported through the existing\n  `handlers::agents::chat_pub` and `handlers_test_support` seams.\n\nMade-with: Cursor",
+      "parents": [
+        "415baf247670342bbd410656d63d4429a171759f"
+      ],
+      "files": [
+        "apps/aura-os-server/Cargo.toml",
+        "apps/aura-os-server/src/handlers/agents/chat/busy.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/streaming.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/turn_slot.rs",
+        "apps/aura-os-server/src/handlers/agents/mod.rs",
+        "apps/aura-os-server/src/lib/handlers_test_support.rs",
+        "apps/aura-os-server/tests/concurrent_agents.rs",
+        "apps/aura-os-server/tests/concurrent_agents_stress_test.rs",
+        "crates/aura-os-core/src/enums.rs",
+        "crates/aura-os-harness/Cargo.toml",
+        "crates/aura-os-harness/src/lib.rs",
+        "crates/aura-os-harness/src/test_support.rs"
+      ],
+      "stats": {
+        "fileCount": 13,
+        "insertions": 1148,
+        "deletions": 24
+      },
+      "committedAtMs": 1777262634000,
+      "cleanSubject": "phase 5 - concurrent-agents integration + stress tests + role doc refresh",
+      "keywords": [
+        "phase",
+        "concurrent",
+        "agents",
+        "integration",
+        "stress",
+        "tests",
+        "role",
+        "refresh"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/Cargo.toml",
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-core/src",
+        "crates/aura-os-harness/Cargo.toml",
+        "crates/aura-os-harness/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "0091faa3b37a787e8bb56a778bb8c2a35584bc10",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T21:03:55-07:00",
+      "subject": "feat(concurrency): phase 6 — configurable WS slot cap + clean capacity-exhausted error",
+      "body": "Closes the last operational gap from the partitioning plan: the\nupstream `aura-node` WS slot cap is now configurable end-to-end\nand exhaustion surfaces a structured error instead of a raw 503.\n\n- `AURA_HARNESS_WS_SLOTS` env var (default 128) controls the\n  upstream concurrent-session cap. Read on the server via\n  `app_builder::parse_harness_ws_slots`, exported on `AppState`,\n  and forwarded to the autospawned local harness child process\n  so the value matches end-to-end. Zero / non-numeric values\n  warn-and-default.\n- New `aura_os_harness::HarnessError::CapacityExhausted` variant\n  detects upstream 503 / WS close 1013 (Try Again Later) at\n  session-open time in both `swarm_harness::parse_create_session_response`\n  (matches structured `code: capacity_exhausted` JSON or opaque\n  503 bodies) and `local_harness::open_session` (matches\n  `tungstenite::Error::Http` 503 and 1013 close-frame display\n  strings). Wrapped via `anyhow::Error::new` so callers recover\n  the typed cause via `downcast_ref`.\n- New `SessionBridgeError::CapacityExhausted(String)` propagates\n  the typed cause through `SessionBridge::open_and_send_user_message`\n  for chat / handler call sites.\n- New `ApiError::harness_capacity_exhausted(cap)` returns a 503\n  with `code: \"harness_capacity_exhausted\"`, structured\n  `{ configured_cap, retry_after_seconds }` data, and a clear\n  user-visible message. Wired into every harness session-open\n  call site:\n    * `chat::streaming::open_harness_chat_stream` (typed bridge\n      error -> `map_session_bridge_error`).\n    * `handlers::agents::runtime::test_agent_runtime`,\n      `handlers::specs::gen` and `handlers::tasks::extraction`\n      (anyhow::Error -> `chat::errors::map_harness_error_to_api`\n       with a context-specific fallback closure).\n    * `handlers::dev_loop::start::map_start_error` /\n      `handlers::dev_loop::adapter::{start_loop, run_single_task}`\n      via `AutomatonStartError::Response { status: 503 }` heuristic.\n- `FakeHarness::set_capacity_limit` lets integration tests drive\n  the cap-exhausted path without a real upstream harness.\n- Frontend: new `isHarnessCapacityExhaustedError` predicate parses\n  the structured 503 payload; `useAgentBusy` surfaces a\n  `server_busy` reason with `retryAfterSeconds`; the SSE error\n  handler classifies it as `harnessCapacityExhaustedError` and\n  renders \"Server is busy — try again in N seconds.\" instead of\n  leaking the raw 503.\n- Tests: env-var parsing (default / blank / zero / non-numeric /\n  valid), `ApiError::harness_capacity_exhausted` shape,\n  `map_harness_error_to_api` capacity vs fallback,\n  `map_session_bridge_error` capacity vs send, and an end-to-end\n  `FakeHarness` integration test that verifies the bridge\n  surfaces `SessionBridgeError::CapacityExhausted` once the cap\n  is hit.\n\nFOLLOW-UP: the upstream `aura-node` harness binary is expected\nto read `AURA_HARNESS_WS_SLOTS` to size its semaphore. If the\nbuild in use does not yet honour the env var, the server's view\nof the cap stays consistent for operator messaging, but the\nactual upstream limit may stay at the harness default until that\nside is patched. We do not own that source here.\n\nMade-with: Cursor",
+      "parents": [
+        "9d459c62af271c4846f67c6701484a4a2fe7123d"
+      ],
+      "files": [
+        "Cargo.lock",
+        "apps/aura-os-server/Cargo.toml",
+        "apps/aura-os-server/src/app_builder/harness_autospawn.rs",
+        "apps/aura-os-server/src/app_builder/mod.rs",
+        "apps/aura-os-server/src/app_builder/tests.rs",
+        "apps/aura-os-server/src/auth_guard/tests.rs",
+        "apps/aura-os-server/src/error/mod.rs",
+        "apps/aura-os-server/src/error/tests.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/errors.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/streaming.rs",
+        "apps/aura-os-server/src/handlers/agents/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/runtime.rs",
+        "apps/aura-os-server/src/handlers/billing.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/adapter.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/start.rs",
+        "apps/aura-os-server/src/handlers/specs/gen.rs",
+        "apps/aura-os-server/src/handlers/tasks/extraction.rs",
+        "apps/aura-os-server/src/state/mod.rs",
+        "apps/aura-os-server/tests/common/mod.rs",
+        "apps/aura-os-server/tests/concurrent_agents.rs",
+        "crates/aura-os-harness/src/error.rs",
+        "crates/aura-os-harness/src/lib.rs",
+        "crates/aura-os-harness/src/local_harness.rs",
+        "crates/aura-os-harness/src/session.rs",
+        "crates/aura-os-harness/src/swarm_harness.rs",
+        "crates/aura-os-harness/src/test_support.rs",
+        "interface/src/api/client.ts",
+        "interface/src/hooks/stream/handlers.test.ts",
+        "interface/src/hooks/stream/handlers/lifecycle.ts",
+        "interface/src/hooks/use-agent-busy.ts",
+        "interface/src/hooks/use-agent-chat-stream.test.ts",
+        "interface/src/hooks/use-chat-stream.test.ts",
+        "interface/src/shared/api/core.test.ts",
+        "interface/src/shared/api/core.ts",
+        "interface/src/shared/types/stream.ts"
+      ],
+      "stats": {
+        "fileCount": 36,
+        "insertions": 959,
+        "deletions": 46
+      },
+      "committedAtMs": 1777262635000,
+      "cleanSubject": "phase 6 — configurable WS slot cap + clean capacity-exhausted error",
+      "keywords": [
+        "phase",
+        "configurable",
+        "slot",
+        "clean",
+        "capacity",
+        "exhausted",
+        "error"
+      ],
+      "fileGroups": [
+        "Cargo.lock",
+        "apps/aura-os-server/Cargo.toml",
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-harness/src",
+        "interface/src/api",
+        "interface/src/hooks",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "badccfa1feee8fc190f13fb31d6c47c770cc27ac",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T21:03:55-07:00",
+      "subject": "feat(concurrency): rollout flag — AURA_PARTITION_AGENT_IDS gates harness_agent_id partitioning",
+      "body": "Adds a single env var that operators flip to opt out of Phase-1\npartitioning when their harness deployment hasn't yet shipped\nmatching support, leaving every other Phase-0-6 improvement\n(busy guard, SSE error remap, queued turn slot, capacity-exhausted\nmapping) intact.\n\n- `AURA_PARTITION_AGENT_IDS` (default `true`) is parsed at startup\n  with case-insensitive `true|false|yes|no|1|0` semantics, logged\n  at INFO, and exposed on `AppState.partition_agent_ids`.\n- `aura_os_core::harness_agent_id_gated(enabled, template, instance)`\n  returns the partition id when enabled, the bare template id when\n  not. Every chat / automaton / project-tool call site now reads\n  through this helper, so flipping the flag flips the upstream\n  `agent_id` shape end-to-end.\n- `template_agent_id` is set to `Some(template)` regardless of the\n  flag — harmless redundancy when off, keeps the wire stable when\n  the flag is flipped on.\n- Adds an integration-test variant that verifies flag-off behavior\n  (both instances share the bare template id, partitioning\n  disabled) and confirms the existing flag-on tests still hold.\n\nAfter this lands, the recommended rollout is:\n1. Deploy server with `AURA_PARTITION_AGENT_IDS=false`.\n2. Deploy the matching harness build.\n3. Flip the flag to `true` (or unset for the default).\n4. Watch logs / metrics; revert by setting back to `false` if needed.\n\nMade-with: Cursor",
+      "parents": [
+        "0091faa3b37a787e8bb56a778bb8c2a35584bc10"
+      ],
+      "files": [
+        "apps/aura-os-server/src/app_builder/mod.rs",
+        "apps/aura-os-server/src/app_builder/tests.rs",
+        "apps/aura-os-server/src/auth_guard/tests.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/agent_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/setup.rs",
+        "apps/aura-os-server/src/handlers/agents/runtime.rs",
+        "apps/aura-os-server/src/handlers/billing.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/start.rs",
+        "apps/aura-os-server/src/handlers/projects_helpers/session.rs",
+        "apps/aura-os-server/src/state/mod.rs",
+        "apps/aura-os-server/tests/common/mod.rs",
+        "apps/aura-os-server/tests/concurrent_agents.rs",
+        "crates/aura-os-core/src/harness_id.rs",
+        "crates/aura-os-core/src/lib.rs",
+        "docs/runbooks/partition-agent-ids-rollout.md"
+      ],
+      "stats": {
+        "fileCount": 16,
+        "insertions": 534,
+        "deletions": 17
+      },
+      "committedAtMs": 1777262635000,
+      "cleanSubject": "rollout flag — AURA_PARTITION_AGENT_IDS gates harness_agent_id partitioning",
+      "keywords": [
+        "rollout",
+        "flag",
+        "aura",
+        "partition",
+        "agent",
+        "gates",
+        "harness",
+        "partitioning"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-core/src",
+        "docs/runbooks/partition-agent-ids-rollout.md"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust",
+        "Docs"
+      ]
+    },
+    {
+      "sha": "e8a5c7333ae3159a52eba274ae2f4e3c7a158fdd",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T21:03:55-07:00",
+      "subject": "refactor(concurrency): remove AURA_PARTITION_AGENT_IDS flag — integrate partitioning unconditionally",
+      "body": "The partitioning helper is wire-backward-compatible by construction:\nold harnesses see `{template}::{instance}` as a distinct agent_id\nand turn-lock it separately, and the optional `template_agent_id`\nfield is ignored where unsupported. There is no rollout risk to\nleaving partitioning always-on, so the flag is dead complexity.\n\n- Drops `AURA_PARTITION_AGENT_IDS` env var, its parser, and the\n  startup log line.\n- Drops `AppState.partition_agent_ids` and removes the flag from\n  every test fixture.\n- Drops `aura_os_core::harness_agent_id_gated`; every call site\n  now uses `harness_agent_id(template, instance)` directly.\n- Drops the flag-off integration test variants — flag-on\n  partitioning is already covered by\n  `concurrent_chat_same_agent_multi_instance` and friends.\n- Removes the partition-agent-ids rollout runbook.\n\nMade-with: Cursor",
+      "parents": [
+        "badccfa1feee8fc190f13fb31d6c47c770cc27ac"
+      ],
+      "files": [
+        "apps/aura-os-server/src/app_builder/mod.rs",
+        "apps/aura-os-server/src/app_builder/tests.rs",
+        "apps/aura-os-server/src/auth_guard/tests.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/agent_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/setup.rs",
+        "apps/aura-os-server/src/handlers/agents/runtime.rs",
+        "apps/aura-os-server/src/handlers/billing.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/start.rs",
+        "apps/aura-os-server/src/handlers/projects_helpers/session.rs",
+        "apps/aura-os-server/src/state/mod.rs",
+        "apps/aura-os-server/tests/common/mod.rs",
+        "apps/aura-os-server/tests/concurrent_agents.rs",
+        "crates/aura-os-core/src/harness_id.rs",
+        "crates/aura-os-core/src/lib.rs",
+        "docs/runbooks/partition-agent-ids-rollout.md"
+      ],
+      "stats": {
+        "fileCount": 16,
+        "insertions": 11,
+        "deletions": 530
+      },
+      "committedAtMs": 1777262635000,
+      "cleanSubject": "remove AURA_PARTITION_AGENT_IDS flag — integrate partitioning unconditionally",
+      "keywords": [
+        "remove",
+        "aura",
+        "partition",
+        "agent",
+        "flag",
+        "integrate",
+        "partitioning",
+        "unconditionally"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-core/src",
+        "docs/runbooks/partition-agent-ids-rollout.md"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust",
+        "Docs"
+      ]
+    },
+    {
+      "sha": "a0c1c97b829c4fee8e2b3f96d52d3d1abfa0c06a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T21:03:55-07:00",
+      "subject": "feat(chat): hoist [auto-build] / [task_done test gate] prose markers into CommandBlocks",
+      "body": "The expander in `tool-markers.ts` only matched the legacy\n`[tool: NAME(arg) -> ok|error]` shape, so prose markers like\n`[auto-build: cargo check --workspace --tests]` and\n`[task_done test gate: PASSED in 3761ms - 173 passed, 0 failed, 3 skipped]`\nfell through to `SegmentedContent` and rendered as raw markdown\ninstead of collapsible Block cards.\n\nAdd a second regex for the `[<gate>: <body>]` pseudo-tool shape\n(`auto-build`, `task_done test gate`) and emit them as synthetic\n`run_command` entries so the existing CommandBlock renderer picks\nthem up. PASSED/FAILED bodies set `result`/`isError`. A pairing\npass merges consecutive announcement + result markers from the same\ngate into one card so each gate renders as a single block instead\nof two stacked stubs.\n\nStreaming-tail trimming in `trimIncompleteToolMarkerTail` now also\nrecognizes incomplete pseudo-tool prefixes so half-typed\n`[auto-build: cargo che` doesn't flicker before the closing `]`\narrives.\n\nMade-with: Cursor",
+      "parents": [
+        "e8a5c7333ae3159a52eba274ae2f4e3c7a158fdd"
+      ],
+      "files": [
+        "interface/src/utils/tool-markers.test.ts",
+        "interface/src/utils/tool-markers.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 390,
+        "deletions": 20
+      },
+      "committedAtMs": 1777262635000,
+      "cleanSubject": "hoist [auto-build] / [task_done test gate] prose markers into CommandBlocks",
+      "keywords": [
+        "hoist",
+        "auto",
+        "build",
+        "task",
+        "done",
+        "test",
+        "gate",
+        "prose",
+        "markers",
+        "into",
+        "commandblocks"
+      ],
+      "fileGroups": [
+        "interface/src/utils"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 6,
@@ -1673,36 +2371,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11549308
+          "sizeBytes": 11551164
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.407.1",
+      "version": "0.1.0-nightly.408.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.407.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.408.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 34225290
+          "sizeBytes": 34298374
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.407.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.408.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.407.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.408.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 101562872
+          "sizeBytes": 101632504
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.407.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.408.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -1712,29 +2410,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.407.1",
+      "version": "0.1.0-nightly.408.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.407.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.408.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 30767442
+          "sizeBytes": 30844498
         },
         {
-          "name": "Aura_0.1.0-nightly.407.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.408.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.407.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.408.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 30566657
+          "sizeBytes": 30647287
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.407.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.408.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1744,29 +2442,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.407.1",
+      "version": "0.1.0-nightly.408.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.407.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.408.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 32310091
+          "sizeBytes": 32374317
         },
         {
-          "name": "Aura_0.1.0-nightly.407.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.408.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.407.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.408.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 32145439
+          "sizeBytes": 32216455
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.407.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.408.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1776,17 +2474,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.407.1",
+      "version": "0.1.0-nightly.408.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.407.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.408.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 23334505
+          "sizeBytes": 23355712
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.407.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.408.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -1795,26 +2493,26 @@
     }
   ],
   "rendered": {
-    "title": "Mobile iOS goes first-class, model traffic unifies on Aura",
-    "intro": "A heavy day across the stack: a brand-new first-class iOS experience landed alongside a desktop-isolation follow-up, agents now route exclusively through the Aura proxy, and a wide reliability sweep tightened streaming, permissions, and the harness sidecar. Server and Rust internals were also reorganized to keep the platform maintainable as it grows.",
+    "title": "Concurrent agents, mobile iOS, and a unified Aura model proxy",
+    "intro": "A heavy day across the stack: chat agents now run concurrently without colliding on harness turn-locks, iOS gets a proper first-class mobile shell isolated from desktop, model traffic consolidates onto the Aura proxy, and a long thread of reliability work hardens harness sidecar startup, capacity exhaustion, and dev-loop completion.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "7:49 PM",
         "started_at": "2026-04-26T02:49:15.000Z",
         "ended_at": "2026-04-26T03:00:25.000Z",
-        "title": "Recoverable spec drafts and richer agent stream logs",
-        "summary": "Streaming spec creation now survives model timeouts, and server-side agent stream output gained summary logging for easier debugging.",
+        "title": "Recoverable spec drafts on model timeout",
+        "summary": "Streamed spec markdown is preserved when create_spec is interrupted, and agent stream output gains better server-side observability.",
         "items": [
           {
-            "text": "Streamed spec markdown is preserved when create_spec times out, so users no longer lose drafted specs to model interruptions, with guidance to keep payload sizes in check.",
+            "text": "Timed-out create_spec runs no longer discard the partially streamed markdown — drafts stay recoverable in the interface, and agents are steered away from oversized spec payloads.",
             "commit_shas": [
               "11cc7815ab83ca128f6cf2dd5805ce40fd620891"
             ],
             "confidence": "high"
           },
           {
-            "text": "Agent chat streaming, persistence, and tool dispatch paths now emit output summaries to make production agent runs easier to trace.",
+            "text": "Server now logs structured agent stream output summaries across the chat, persistence, and tool dispatch paths to make production debugging less guesswork.",
             "commit_shas": [
               "285f4bcbbfe4bcce4097f676885ce5a9de6a9c77"
             ],
@@ -1827,11 +2525,11 @@
         "time_label": "8:14 PM",
         "started_at": "2026-04-26T03:14:25.000Z",
         "ended_at": "2026-04-26T03:14:25.000Z",
-        "title": "Desktop harness sidecar fails closed on unhealthy startup",
-        "summary": "The desktop app no longer continues with a broken local harness when the startup health probe never passes.",
+        "title": "Desktop refuses to launch with a broken local harness",
+        "summary": "The Desktop app now fails closed when the managed local harness sidecar never passes its startup health probe.",
         "items": [
           {
-            "text": "The managed local harness sidecar is now killed if it never passes its startup health check, preventing the desktop from booting into a silently broken agent runtime.",
+            "text": "If the local harness sidecar fails its startup health check, Desktop kills the managed process instead of proceeding with a half-broken backend, preventing a class of confusing post-launch errors on Mac, Windows, and Linux.",
             "commit_shas": [
               "e2d054010b2929f6eaca48caac6fc879da6f7699"
             ],
@@ -1844,11 +2542,11 @@
         "time_label": "8:18 PM",
         "started_at": "2026-04-26T03:18:42.000Z",
         "ended_at": "2026-04-26T07:45:17.000Z",
-        "title": "Aura proxy becomes the only path for model traffic",
-        "summary": "A wide-ranging session covering a unified model-routing refactor, persistent middle panel, run-pane fixes, permission plumbing, and large internal module splits.",
+        "title": "Aura-proxied models, generate_image, and a steadier desktop shell",
+        "summary": "A wide push consolidates model traffic onto the Aura proxy, ships a built-in image generation tool, and tightens the desktop shell, run pane, and streaming internals.",
         "items": [
           {
-            "text": "All chat agents now route through the Aura-managed proxy: the BYOK org_integration auth path and direct Anthropic/OpenAI/Gemini/xAI/OpenRouter catalog entries were removed, the chat model picker collapsed to a single Aura group, and image-only models are filtered out of the chat picker.",
+            "text": "All model traffic now routes through the Aura proxy: BYOK org-integration auth and direct provider catalog entries (Anthropic, OpenAI, Gemini, xAI, OpenRouter) are dropped, the chat model picker collapses to a single Aura group, and image-only models are filtered out of the chat picker.",
             "commit_shas": [
               "8b9fbd91027bf0aabd509cc09335f4f20426ff86",
               "1a897b8ce8fa711e7632229ee72e7b5421acf208"
@@ -1856,22 +2554,22 @@
             "confidence": "high"
           },
           {
-            "text": "gpt-image-2 is now the default image model and a new provider-less generate_image tool lets chat agents fulfill natural-language image requests without needing the /image slash command, with mock-router tests covering the streaming happy path and error cases.",
+            "text": "gpt-image-2 becomes the default image model, and a new provider-less generate_image workspace tool lets chat agents fulfill natural-language image requests without the /image slash command, with mock-router tests covering happy path and upstream errors.",
             "commit_shas": [
               "03c14491d814e1218c049605a76d5b17de4ba79f"
             ],
             "confidence": "high"
           },
           {
-            "text": "The middle panel is lifted into the desktop shell and stays mounted across app switches, eliminating the wallpaper-flash size snap during navigation; a new bareMainPanel flag preserves the Desktop app's transparent surface.",
+            "text": "The middle panel now stays mounted across app switches via a persistent DesktopShell main lane, eliminating the wallpaper-flash on navigation, while floating agent windows hide the cramped '/ for commands' hint.",
             "commit_shas": [
               "c48f16047c9461f11398007e6c6073962fdb8a9c",
-              "9d3f6f37a11b633660ccab9aa931937a284bd3a8"
+              "b9f19d329a58cf9b88853a4babe01c4eff2ff567"
             ],
             "confidence": "high"
           },
           {
-            "text": "Run pane reliability improved: completed/failed/active runs are seeded from the authoritative project task list so reloads no longer hide history, and the pane now scopes by project so loop runs show up regardless of which chat agent is being viewed.",
+            "text": "Run pane reliability: rows are seeded from the authoritative project task list so reloads or cleared local storage no longer hide completed runs, and loop-instance tasks now appear regardless of the chat agent currently being viewed.",
             "commit_shas": [
               "6c1393cad429613410b2b37709527fbf49aa002c",
               "5ba2be2db5103f5adc6002be484f79706c5ef90b"
@@ -1879,46 +2577,40 @@
             "confidence": "high"
           },
           {
-            "text": "Task output streaming feels smoother: a shared IndexedDB connection plus debounced cache writes stop streaming updates from repeatedly parsing and rewriting localStorage.",
+            "text": "Task output persistence stops repeatedly parsing localStorage during streaming by reusing a single IndexedDB connection and debouncing cache writes, noticeably reducing jank on long runs.",
             "commit_shas": [
               "bac6cf2527a9282aa0f1273c7d351459b8fcad2b"
             ],
             "confidence": "high"
           },
           {
-            "text": "Server hardening capped stale auth fallbacks, made sensitive routes fail closed, and bounded harness WebSocket commands with explicit delivery errors and redacted frame logging.",
+            "text": "Server hardening: stale auth fallback is capped, sensitive routes fail closed, harness WebSocket commands are now bounded with explicit delivery errors and redacted frame logging, and dev-loop runs receive the same normalized agent permissions as chat sessions.",
             "commit_shas": [
-              "272818e34de377e76922d04e9501fad6f16cfa4b"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Agent permissions are now consistent across surfaces: dev-loop runs receive the same normalized capability bundle as chat sessions, missing permission bundles default to canonical full access, list_agents is a first-class capability, and new agent control callback endpoints expose runtime hooks.",
-            "commit_shas": [
+              "272818e34de377e76922d04e9501fad6f16cfa4b",
               "2af35f3033f53d8908d160bca48d3b2f28da9b67",
-              "442fd8ae79ef347fb53963cc0e1ec23adae74fdc",
-              "9fbbd1de1b95fd0c91d6176f6fa54f9f051946e5",
-              "fe50f6a8c8a03bae08cf4d27a8a97d40944811a1",
-              "fbb75204dae01158c2af9ddd0983ddaafaa2593f"
+              "442fd8ae79ef347fb53963cc0e1ec23adae74fdc"
             ],
             "confidence": "high"
           },
           {
-            "text": "Floating agent windows hide the '/ for commands' hint via a new compact ChatPanel/ChatInputBar flag so the input bar stops wrapping in narrow surfaces, while image/3D mode indicators remain.",
+            "text": "list_agents is promoted to a first-class agent capability and new agent control callback endpoints land on the server, giving permission UI and orchestration explicit, granular handles.",
             "commit_shas": [
-              "b9f19d329a58cf9b88853a4babe01c4eff2ff567"
+              "9fbbd1de1b95fd0c91d6176f6fa54f9f051946e5",
+              "fe50f6a8c8a03bae08cf4d27a8a97d40944811a1"
             ],
             "confidence": "high"
           },
           {
-            "text": "Large server, crate, and interface modules were broken up — app_builder, auth_guard, error, generation, router, core entities, sessions, storage testutil, task service, and stream handlers — and billing/leaderboard caches were moved behind queries, keeping the codebase navigable as the platform grows.",
+            "text": "Large internal restructuring across server, crates, and the interface (auth_guard, app_builder, error mapping, entities, permissions, stream handlers, billing/leaderboard queries) sets up the day's later concurrency and capacity work without changing user-facing behavior.",
             "commit_shas": [
               "7b0b4c0918a533ac6b9bdbe4d4f706603703217b",
               "1e9b8eedf3e22be3db90835c72ef4ef689411927",
+              "9d3f6f37a11b633660ccab9aa931937a284bd3a8",
+              "06af9e7769c39f448d92e349136fc4139d7c497b",
               "d4e0fa3ae38d89994c05a525885edd44a549833d",
-              "06af9e7769c39f448d92e349136fc4139d7c497b"
+              "fbb75204dae01158c2af9ddd0983ddaafaa2593f"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           }
         ],
         "media": {
@@ -1965,12 +2657,29 @@
         "batch_id": "entry-4",
         "time_label": "1:06 AM",
         "started_at": "2026-04-26T08:06:16.000Z",
-        "ended_at": "2026-04-26T08:06:16.000Z",
-        "title": "CI re-trigger after harness ListAgents fix",
-        "summary": "A pipeline re-run picked up the new list_agents capability for the desktop sidecar build.",
+        "ended_at": "2026-04-26T18:50:16.000Z",
+        "title": "Smarter changelog media planner",
+        "summary": "The internal changelog media-seeding pipeline learns from past misses and stops emitting low-signal candidates.",
         "items": [
           {
-            "text": "Desktop sidecar build was re-triggered to ensure the harness ListAgents fix is included in shipped artifacts.",
+            "text": "Media planner now preserves intended targets, hardens its inference seeding against navigation-contract drift, and broadens surface coverage so generated changelog media maps to the right screens.",
+            "commit_shas": [
+              "697ed9849eb3e37d9e9d51bdbad76014e17fd804",
+              "4561db06922d1f0ec0c344670c9fb97cb701b74f",
+              "61020504157ff20b82161795439cb5014a8e8dce"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "A new lessons knowledge file lets the planner learn from historical media misses, and token-only candidates are now skipped to avoid noisy seed plans.",
+            "commit_shas": [
+              "7941c911853825aaee6ff771916614548ba39428",
+              "80889ffa1883d10db4e80bc6543bfdf6b1e08b20"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "CI re-triggered the desktop sidecar build after the harness ListAgents capability fix to confirm green packaging.",
             "commit_shas": [
               "9cd6bb3c57d04f1701387da8963292aeb85b3bb6"
             ],
@@ -1980,20 +2689,23 @@
       },
       {
         "batch_id": "entry-5",
-        "time_label": "10:12 AM",
-        "started_at": "2026-04-26T17:12:57.000Z",
-        "ended_at": "2026-04-26T18:50:16.000Z",
-        "title": "Changelog media planner gets smarter and more accurate",
-        "summary": "A focused pass on the changelog media tooling improved how surfaces are inferred, seeded, and validated, reducing missed or wrong screenshots in release notes.",
+        "time_label": "4:16 PM",
+        "started_at": "2026-04-26T23:16:08.000Z",
+        "ended_at": "2026-04-26T23:24:48.000Z",
+        "title": "iOS becomes a first-class platform with a clean desktop boundary",
+        "summary": "Aura ships a real mobile iOS experience — dedicated screens, chat input, drawer, and bottom nav — and then isolates it from desktop so neither side regresses.",
         "items": [
           {
-            "text": "Media planner now preserves declared targets, hardens inference seeding, broadens surface coverage, and learns from historical misses via a lessons store, while filtering out token-only candidates that produced low-signal matches.",
+            "text": "First-class iOS views land across project agents, files, tasks, run, process, stats, profile, and settings, with a redesigned MobileChatHeader, MobileChatInputBar, MobileShell, drawer, and bottom nav, all validated against an iPhone simulator signoff matrix.",
             "commit_shas": [
-              "697ed9849eb3e37d9e9d51bdbad76014e17fd804",
-              "4561db06922d1f0ec0c344670c9fb97cb701b74f",
-              "61020504157ff20b82161795439cb5014a8e8dce",
-              "7941c911853825aaee6ff771916614548ba39428",
-              "80889ffa1883d10db4e80bc6543bfdf6b1e08b20"
+              "8b9c3106198e8baf42e5a824d59f8d1f01a74a03"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Mobile code is then extracted into a dedicated interface/src/mobile tree with a mobile-boundary test, a separate MobileSettingsView, and an explicit isMobileLayout route switch — fixing a regression where /projects/settings briefly rendered the mobile screen on desktop and proven by a route-by-route desktop signoff pass.",
+            "commit_shas": [
+              "e6885326051714e383700336c8bf4860b9c28c00"
             ],
             "confidence": "high"
           }
@@ -2001,30 +2713,70 @@
       },
       {
         "batch_id": "entry-6",
-        "time_label": "4:16 PM",
-        "started_at": "2026-04-26T23:16:08.000Z",
-        "ended_at": "2026-04-26T23:24:48.000Z",
-        "title": "First-class iOS mobile views with desktop isolation",
-        "summary": "A dedicated mobile iOS experience shipped with its own shell, screens, and chat surfaces, followed by an isolation pass that prevents mobile changes from leaking into the desktop layout.",
+        "time_label": "9:01 PM",
+        "started_at": "2026-04-27T04:01:59.000Z",
+        "ended_at": "2026-04-27T04:03:55.000Z",
+        "title": "Per-instance harness partitioning ends 'turn in progress' collisions",
+        "summary": "A multi-phase concurrency overhaul gives each AgentInstance its own upstream harness turn-lock, queues serialized turns cleanly, and surfaces capacity errors as structured states in the UI.",
         "items": [
           {
-            "text": "iOS becomes a first-class target with a Capacitor config, AppDelegate, dedicated mobile chat header and input bar, and full project screens for Agents, Files, Process, and Stats — validated against an iPhone simulator sign-off matrix covering navigation, drawers, keyboard behavior, and tab transitions.",
+            "text": "Each AgentInstance now sends a partitioned {template}::{instance} agent_id upstream, with template_agent_id preserved for skill, permissions, and billing lookups across chat routes, automaton start/run, project-tool sessions, and the in-memory chat session registry — two instances of the same template can finally run in parallel without colliding on the harness turn-lock.",
             "commit_shas": [
-              "8b9c3106198e8baf42e5a824d59f8d1f01a74a03"
+              "d0b0c53e6c847429774ceb017bd697dd9eea4945",
+              "04f9e5884d6afbfcf6ac3755b75d4bfe02976f5e",
+              "4553edf42ac241bc24c15bbb77a88bbb836e73a6",
+              "bb3f3c4402819c1c28eaadab05204e7ef5a8a5ca"
             ],
             "confidence": "high"
           },
           {
-            "text": "Mobile code was relocated under interface/src/mobile (shell, navigation, screens, chat, files), with new MobileSettingsView and MobileChatPanel; the desktop SettingsView was restored after a regression where the mobile settings screen had replaced it on /projects/settings.",
+            "text": "A shared busy guard plus an SSE-level remap converts raw harness 'A turn is currently in progress' strings into a structured agent_busy event, and a per-partition turn slot serializes back-to-back sends with a one-deep queue and a queued progress hint instead of erroring mid-stream.",
             "commit_shas": [
-              "e6885326051714e383700336c8bf4860b9c28c00"
+              "4416794cefbb5651c5e035314039b2c570b6a079",
+              "3517fca9452949a874984f5f0edb9d42f304ef48"
             ],
             "confidence": "high"
           },
           {
-            "text": "A mobile-boundary test and route-level isMobileLayout switch enforce that desktop routes never render mobile chrome, backed by a desktop regression sign-off matrix across agents, projects, files, tasks, run, process, stats, feed, profile, integrations, and settings.",
+            "text": "The chat input now renders 'Queued behind current turn…' distinct from the busy spinner, useAgentBusy detects agent_busy uniformly across both chat routes (with a 'Stop the loop to chat' affordance and queue-full vs automation-running reasons), and harness-protocol TS mirrors the new template_agent_id wire field.",
             "commit_shas": [
-              "e6885326051714e383700336c8bf4860b9c28c00"
+              "415baf247670342bbd410656d63d4429a171759f"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "AURA_HARNESS_WS_SLOTS (default 128) makes the upstream concurrent-session cap configurable end-to-end, and capacity exhaustion now surfaces as a structured 503 with retry_after_seconds rendered in the UI as 'Server is busy — try again in N seconds.' instead of a raw 503.",
+            "commit_shas": [
+              "0091faa3b37a787e8bb56a778bb8c2a35584bc10"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "End-to-end concurrent_agents integration tests plus a 32-partition stress test (≤2x single-stream wall clock, zero turn_in_progress observed) validate the contract, backed by a new FakeHarness scaffold that records SessionInits and replays scripted streams.",
+            "commit_shas": [
+              "9d459c62af271c4846f67c6701484a4a2fe7123d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "An AURA_PARTITION_AGENT_IDS rollout flag was briefly added and then removed once the wire turned out to be backward-compatible by construction, leaving partitioning unconditionally on.",
+            "commit_shas": [
+              "badccfa1feee8fc190f13fb31d6c47c770cc27ac",
+              "e8a5c7333ae3159a52eba274ae2f4e3c7a158fdd"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Dev-loop completion gains a 'tests-as-truth' path: a CompletionContract failure with no file edits is bridged to Done when the event stream contains a successful test runner invocation (cargo test, pnpm test, vitest, pytest, go test, …), with the synthetic task_failed replaced by a task_completed carrying TestPassEvidence.",
+            "commit_shas": [
+              "b89880807cc05f6a640a49b760843b98f241ec83"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Chat now renders [auto-build: …] and [task_done test gate: …] prose markers as collapsible CommandBlock cards (with PASSED/FAILED state) instead of raw markdown, and trims half-typed pseudo-tool prefixes during streaming to avoid flicker.",
+            "commit_shas": [
+              "a0c1c97b829c4fee8e2b3f96d52d3d1abfa0c06a"
             ],
             "confidence": "high"
           }
@@ -2032,12 +2784,12 @@
       }
     ],
     "highlights": [
-      "First-class iOS mobile experience",
-      "All model traffic unified through the Aura proxy",
-      "Desktop harness sidecar fails closed on bad health",
-      "Natural-language image generation via new tool",
-      "Server and crate modules restructured for maintainability"
+      "Per-instance harness partitioning unblocks truly concurrent agents",
+      "First-class iOS mobile views with desktop isolation",
+      "All model traffic routes through the Aura proxy",
+      "Dev-loop accepts passing tests as completion proof",
+      "Configurable WS slot cap with clean capacity-exhausted errors"
     ],
-    "raw_commit_count": 30
+    "raw_commit_count": 43
   }
 }

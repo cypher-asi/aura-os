@@ -2,20 +2,20 @@
   {
     "date": "2026-04-26",
     "channel": "nightly",
-    "version": "0.1.0-nightly.407.1",
-    "title": "Mobile iOS goes first-class, model traffic unifies on Aura",
-    "intro": "A heavy day across the stack: a brand-new first-class iOS experience landed alongside a desktop-isolation follow-up, agents now route exclusively through the Aura proxy, and a wide reliability sweep tightened streaming, permissions, and the harness sidecar. Server and Rust internals were also reorganized to keep the platform maintainable as it grows.",
+    "version": "0.1.0-nightly.408.1",
+    "title": "Concurrent agents, mobile iOS, and a unified Aura model proxy",
+    "intro": "A heavy day across the stack: chat agents now run concurrently without colliding on harness turn-locks, iOS gets a proper first-class mobile shell isolated from desktop, model traffic consolidates onto the Aura proxy, and a long thread of reliability work hardens harness sidecar startup, capacity exhaustion, and dev-loop completion.",
     "entryCount": 6,
     "highlights": [
-      "First-class iOS mobile experience",
-      "All model traffic unified through the Aura proxy",
-      "Desktop harness sidecar fails closed on bad health",
-      "Natural-language image generation via new tool",
-      "Server and crate modules restructured for maintainability"
+      "Per-instance harness partitioning unblocks truly concurrent agents",
+      "First-class iOS mobile views with desktop isolation",
+      "All model traffic routes through the Aura proxy",
+      "Dev-loop accepts passing tests as completion proof",
+      "Configurable WS slot cap with clean capacity-exhausted errors"
     ],
-    "rawCommitCount": 31,
-    "generatedAt": "2026-04-26T23:38:21.112Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.407.1",
+    "rawCommitCount": 44,
+    "generatedAt": "2026-04-27T04:16:52.959Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.408.1",
     "path": "history/2026-04-26.json"
   },
   {
