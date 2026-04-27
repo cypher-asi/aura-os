@@ -2,6 +2,11 @@
 
 set -euo pipefail
 
+# When launched as an absolute Git-for-Windows bash.exe from PowerShell, PATH may
+# not include the Unix helper directory that contains dirname/sed/curl.
+PATH="/usr/bin:/bin:$PATH"
+export PATH
+
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck disable=SC1091
 source "$script_dir/common.sh"
