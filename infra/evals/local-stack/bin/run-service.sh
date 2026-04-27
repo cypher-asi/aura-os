@@ -86,6 +86,16 @@ if [[ "$service" == "harness" ]]; then
   export AURA_NETWORK_URL="$(stack_resolved_url network)"
   export AURA_STORAGE_URL="$(stack_resolved_url storage)"
   export ORBIT_URL="$(stack_resolved_url orbit)"
+  # Point the harness at THIS stack's aura-os-server. The harness's `.env`
+  # ships with `AURA_OS_SERVER_URL=http://127.0.0.1:3100`, which silently
+  # routes spec/task/log writes from `HttpDomainApi` to a dead port whenever
+  # the local stack runs on its default `:3190` (or any other configured
+  # port). The failed POST gets wrapped in a `domain_ok({"ok":false,...})`
+  # envelope with `is_error=false`, so the LLM perceives it as a soft
+  # failure and loops `list_specs` ↔ `create_spec` until `max_turns`. The
+  # surface symptom is `[preflight] FAIL list_specs ... returned 0 specs`
+  # after an apparently-successful spec_stream.
+  export AURA_OS_SERVER_URL="$(stack_local_url aura_os)"
   # Match the main app's local harness behavior: route through aura-router and
   # let each SessionInit provide the user's token. Only set a process-wide
   # router JWT when the operator explicitly opts into one.
