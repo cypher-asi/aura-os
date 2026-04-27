@@ -8,7 +8,7 @@ use tracing::{info, warn};
 
 use aura_os_core::{AgentInstanceId, ProjectId, SessionId, TaskId, TaskStatus};
 use aura_os_events::{DomainEvent, LegacyJsonEvent};
-use aura_os_storage::UpdateTaskRequest;
+use aura_os_storage::{StorageTaskFileChangeSummary, UpdateTaskRequest};
 
 use crate::state::{AppState, CachedTaskOutput, TestPassEvidence};
 
@@ -176,8 +176,13 @@ async fn apply_event_side_effect(
             }
         }
         "token_usage" | "assistant_message_end" | "usage" | "session_usage" => {
-            if let Some(task_id) = task_id {
+            if let Some(task_id) = task_id.as_deref() {
                 update_usage_cache(state, project_id, task_id, event).await;
+            }
+            if event_type == "assistant_message_end" {
+                if let Some(task_id) = task_id.as_deref() {
+                    record_files_changed(state, project_id, task_id, event).await;
+                }
             }
         }
         _ => {}
@@ -503,6 +508,103 @@ async fn update_usage_cache(
     }
 }
 
+/// Drain `assistant_message_end.files_changed` into the per-task cache.
+///
+/// Closes the long-standing "Lines = 0" dashboard gap. The cache field
+/// has documented `Populated from … assistant_message_end` semantics
+/// since the dev-loop refactor, but no production code path was
+/// actually wiring the event payload into the cache — leaving
+/// `cached.files_changed` always-empty and so `tasks.files_changed`
+/// always-empty too.
+///
+/// Reads the protocol-typed `created` / `modified` / `deleted` arrays
+/// for the file list, then joins per-path against the new `diffs`
+/// array (which the harness populates from `edit_file` line counts) to
+/// fill `lines_added` / `lines_removed` on the persisted summary. Paths
+/// without a `diffs` entry fall through to 0 — that's the "unknown"
+/// signal the dashboard should treat as missing data, not as a real
+/// zero-line change.
+///
+/// Idempotency: the cache field is rebuilt from scratch on every
+/// `assistant_message_end`, so out-of-order delivery is harmless. We
+/// keep the most recently received summary because the harness emits
+/// the event once per turn with the cumulative net effect — there is
+/// no incremental-append semantics to preserve.
+async fn record_files_changed(
+    state: &AppState,
+    project_id: ProjectId,
+    task_id: &str,
+    event: &serde_json::Value,
+) {
+    let Some(key) = parse_task_key(project_id, task_id) else {
+        return;
+    };
+    let Some(files) = event.get("files_changed") else {
+        return;
+    };
+    let summary = build_files_changed_summary(files);
+    if summary.is_empty() {
+        return;
+    }
+
+    let mut cache = state.task_output_cache.lock().await;
+    let entry = cache.entry(key).or_default();
+    entry.files_changed = summary;
+}
+
+/// Pure conversion from a `files_changed` JSON payload (as emitted on
+/// `assistant_message_end`) to the typed summary the cache stores.
+///
+/// Joins per-path against the `diffs` array (sent by the harness for
+/// tools that compute a real line diff — currently `edit_file`) to fill
+/// `lines_added` / `lines_removed`. Paths without a matching diff entry
+/// keep counts at 0; consumers must read 0 as "unknown" rather than
+/// "no change".
+fn build_files_changed_summary(files: &serde_json::Value) -> Vec<StorageTaskFileChangeSummary> {
+    let lookup_lines = |path: &str| -> (u32, u32) {
+        let Some(diffs) = files.get("diffs").and_then(|v| v.as_array()) else {
+            return (0, 0);
+        };
+        for diff in diffs {
+            if diff.get("path").and_then(|v| v.as_str()) == Some(path) {
+                let added = diff
+                    .get("lines_added")
+                    .and_then(serde_json::Value::as_u64)
+                    .unwrap_or(0);
+                let removed = diff
+                    .get("lines_removed")
+                    .and_then(serde_json::Value::as_u64)
+                    .unwrap_or(0);
+                return (
+                    u32::try_from(added).unwrap_or(u32::MAX),
+                    u32::try_from(removed).unwrap_or(u32::MAX),
+                );
+            }
+        }
+        (0, 0)
+    };
+
+    let mut summary: Vec<StorageTaskFileChangeSummary> = Vec::new();
+    for (op, field) in [
+        ("create", "created"),
+        ("modify", "modified"),
+        ("delete", "deleted"),
+    ] {
+        if let Some(paths) = files.get(field).and_then(|v| v.as_array()) {
+            for path in paths.iter().filter_map(|v| v.as_str()) {
+                let (lines_added, lines_removed) = lookup_lines(path);
+                summary.push(StorageTaskFileChangeSummary {
+                    op: op.to_string(),
+                    path: path.to_string(),
+                    lines_added,
+                    lines_removed,
+                });
+            }
+        }
+    }
+    summary
+}
+
 /// Parse a free-form task id string into a typed cache key. Returns
 /// `None` for non-UUID task ids; the caller silently drops the entry
 /// in that case (legacy harness payloads occasionally carry synthetic
@@ -542,4 +644,77 @@ async fn persist_cached_task_output(
         &cached,
     )
     .await;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_files_changed_summary;
+    use serde_json::json;
+
+    #[test]
+    fn build_files_changed_summary_groups_paths_by_op() {
+        let files = json!({
+            "created": ["src/new.rs"],
+            "modified": ["src/lib.rs"],
+            "deleted": ["src/old.rs"],
+        });
+        let summary = build_files_changed_summary(&files);
+        assert_eq!(summary.len(), 3);
+        assert_eq!(summary[0].op, "create");
+        assert_eq!(summary[0].path, "src/new.rs");
+        assert_eq!(summary[1].op, "modify");
+        assert_eq!(summary[2].op, "delete");
+        // No diffs supplied -> counts default to 0 across the board.
+        assert!(summary.iter().all(|s| s.lines_added == 0));
+        assert!(summary.iter().all(|s| s.lines_removed == 0));
+    }
+
+    #[test]
+    fn build_files_changed_summary_joins_diffs_by_path() {
+        let files = json!({
+            "created": [],
+            "modified": ["src/lib.rs", "src/main.rs"],
+            "deleted": [],
+            "diffs": [
+                {"path": "src/lib.rs", "lines_added": 12, "lines_removed": 3},
+                // src/main.rs intentionally absent — exercises the
+                // "unknown" / 0-fallback branch.
+            ],
+        });
+        let summary = build_files_changed_summary(&files);
+        assert_eq!(summary.len(), 2);
+
+        let lib = summary.iter().find(|s| s.path == "src/lib.rs").unwrap();
+        assert_eq!(lib.lines_added, 12);
+        assert_eq!(lib.lines_removed, 3);
+
+        let main = summary.iter().find(|s| s.path == "src/main.rs").unwrap();
+        assert_eq!(main.lines_added, 0);
+        assert_eq!(main.lines_removed, 0);
+    }
+
+    #[test]
+    fn build_files_changed_summary_returns_empty_when_no_paths() {
+        let files = json!({
+            "created": [],
+            "modified": [],
+            "deleted": [],
+        });
+        assert!(build_files_changed_summary(&files).is_empty());
+    }
+
+    #[test]
+    fn build_files_changed_summary_clamps_pathological_line_counts() {
+        let files = json!({
+            "modified": ["x"],
+            "diffs": [
+                // u32::MAX + 1 — out-of-range u32 should clamp, not panic.
+                {"path": "x", "lines_added": 4_294_967_296u64, "lines_removed": 0},
+            ],
+        });
+        let summary = build_files_changed_summary(&files);
+        assert_eq!(summary.len(), 1);
+        assert_eq!(summary[0].lines_added, u32::MAX);
+        assert_eq!(summary[0].lines_removed, 0);
+    }
 }
