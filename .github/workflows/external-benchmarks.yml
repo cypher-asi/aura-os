@@ -1,0 +1,315 @@
+name: External Benchmarks
+
+# This workflow runs AURA against public coding benchmarks (SWE-bench Verified
+# and Terminal-Bench 2 Core). It is **manual-only** (`workflow_dispatch`).
+# These runs spin up a full local AURA stack plus large Docker images for the
+# benchmark harnesses, so they are too slow and too expensive to run on push
+# or pull_request.
+#
+# Runner choice:
+#   We require a self-hosted runner with the `aura-bench` label. Public
+#   GitHub-hosted runners (ubuntu-latest et al.) cannot fit the SWE-bench or
+#   Terminal-Bench Docker image sets plus AURA's local stack inside their
+#   ~14 GB disk and 6-hour wallclock caps. If you have a beefier runner pool,
+#   you can swap `runs-on: [self-hosted, aura-bench]` for `runs-on: ubuntu-latest`
+#   for `subset: smoke` only — at your own risk. Anything bigger than smoke
+#   on a hosted runner will run out of disk well before the harness finishes.
+#
+# Local-stack contract:
+#   The runner is assumed to have been pre-provisioned with the AURA local
+#   stack helper at infra/evals/local-stack/bin/run-one-shot.sh. Bringing
+#   that up is the runner operator's responsibility; this workflow only
+#   invokes the helper if it exists and otherwise fails fast with a clear
+#   error.
+#
+# Cost guard:
+#   AURA_BENCH_MAX_USD is enforced inside the SWE-bench driver
+#   (run-swebench.mjs). Terminal-Bench does not yet enforce a cumulative
+#   cap inside the script, so for the TB lane the env var is best-effort
+#   only and primarily used to cap individual session lengths.
+
+on:
+  workflow_dispatch:
+    inputs:
+      benchmark:
+        description: "Which benchmark to run"
+        required: true
+        default: "swebench"
+        type: choice
+        options:
+          - swebench
+          - tbench
+          - both
+      subset:
+        description: "Subset to run (smoke|verified for SWE-bench, full for TB, custom for instance_ids)"
+        required: true
+        default: "smoke"
+        type: choice
+        options:
+          - smoke
+          - verified
+          - full
+          - custom
+      instance_ids:
+        description: "Optional comma-separated instance IDs (forwarded as --instance-ids)"
+        required: false
+        default: ""
+        type: string
+      max_usd:
+        description: "Cost cap forwarded as AURA_BENCH_MAX_USD (USD)"
+        required: false
+        default: "5"
+        type: string
+      keep_entities:
+        description: "Keep AURA entities after the run (sets AURA_EVAL_KEEP_ENTITIES=1)"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: external-benchmarks-${{ github.ref }}-${{ inputs.benchmark }}-${{ inputs.subset }}
+  cancel-in-progress: false
+
+jobs:
+  swebench:
+    if: inputs.benchmark == 'swebench' || inputs.benchmark == 'both'
+    runs-on: [self-hosted, aura-bench]
+    timeout-minutes: 600
+    env:
+      AURA_EVAL_API_BASE_URL: http://127.0.0.1:3190
+      AURA_EVAL_ACCESS_TOKEN: ${{ secrets.AURA_EVAL_ACCESS_TOKEN }}
+      AURA_EVAL_STORAGE_URL: ${{ secrets.AURA_EVAL_STORAGE_URL }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      AURA_BENCH_MAX_USD: ${{ inputs.max_usd }}
+      AURA_EVAL_KEEP_ENTITIES: ${{ inputs.keep_entities && '1' || '' }}
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip wheels for the swebench harness
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-swebench
+
+      - name: Install swebench harness
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install swebench
+
+      - name: Install Node dependencies (interface workspace)
+        working-directory: interface
+        shell: bash
+        run: npm ci
+
+      - name: Start AURA local stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          script="infra/evals/local-stack/bin/run-one-shot.sh"
+          if [ -x "$script" ]; then
+            "$script"
+          else
+            echo "::error file=$script::AURA local-stack helper is missing or not executable."
+            echo "::error::This workflow assumes the self-hosted runner is pre-provisioned with $script."
+            exit 1
+          fi
+
+      - name: Run SWE-bench
+        shell: bash
+        env:
+          INPUT_INSTANCE_IDS: ${{ inputs.instance_ids }}
+          INPUT_SUBSET: ${{ inputs.subset }}
+        run: |
+          set -euo pipefail
+          chmod +x infra/evals/external/swebench/bin/run.sh
+          if [ -n "${INPUT_INSTANCE_IDS}" ]; then
+            ./infra/evals/external/swebench/bin/run.sh "${INPUT_SUBSET}" --instance-ids "${INPUT_INSTANCE_IDS}"
+          else
+            ./infra/evals/external/swebench/bin/run.sh "${INPUT_SUBSET}"
+          fi
+
+      - name: Resolve newest run dir
+        id: latest
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="infra/evals/reports/external/swebench_verified"
+          latest_dir=""
+          if [ -d "$base" ]; then
+            latest_dir=$(ls -1dt "$base"/aura-* 2>/dev/null | head -n1 || true)
+          fi
+          if [ -z "$latest_dir" ] || [ ! -f "$latest_dir/score.json" ]; then
+            echo "::warning::no score.json found under $base"
+            echo "score_file=" >> "$GITHUB_OUTPUT"
+            echo "run_dir=" >> "$GITHUB_OUTPUT"
+          else
+            echo "score_file=$latest_dir/score.json" >> "$GITHUB_OUTPUT"
+            echo "run_dir=$latest_dir" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Compare to baseline (writes step summary)
+        if: always() && steps.latest.outputs.score_file != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          node infra/evals/external/bin/post-pr-comment.mjs \
+            --benchmark swebench_verified \
+            --score-file "${{ steps.latest.outputs.score_file }}" \
+            --baseline infra/evals/reports/external/swebench_verified/baseline.json \
+            --output "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload run artifacts
+        if: always() && steps.latest.outputs.run_dir != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: swebench-${{ inputs.subset }}-${{ github.run_id }}
+          path: ${{ steps.latest.outputs.run_dir }}
+          if-no-files-found: warn
+          retention-days: 30
+
+  tbench:
+    if: inputs.benchmark == 'tbench' || inputs.benchmark == 'both'
+    runs-on: [self-hosted, aura-bench]
+    timeout-minutes: 360
+    env:
+      AURA_EVAL_API_BASE_URL: http://127.0.0.1:3190
+      AURA_EVAL_ACCESS_TOKEN: ${{ secrets.AURA_EVAL_ACCESS_TOKEN }}
+      AURA_EVAL_STORAGE_URL: ${{ secrets.AURA_EVAL_STORAGE_URL }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      AURA_BENCH_MAX_USD: ${{ inputs.max_usd }}
+      AURA_EVAL_KEEP_ENTITIES: ${{ inputs.keep_entities && '1' || '' }}
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip wheels for terminal-bench
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-tbench
+
+      - name: Install terminal-bench harness
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install terminal-bench
+
+      - name: Install Node dependencies (interface workspace)
+        working-directory: interface
+        shell: bash
+        run: npm ci
+
+      - name: Start AURA local stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          script="infra/evals/local-stack/bin/run-one-shot.sh"
+          if [ -x "$script" ]; then
+            "$script"
+          else
+            echo "::error file=$script::AURA local-stack helper is missing or not executable."
+            echo "::error::This workflow assumes the self-hosted runner is pre-provisioned with $script."
+            exit 1
+          fi
+
+      - name: Run Terminal-Bench
+        shell: bash
+        env:
+          INPUT_INSTANCE_IDS: ${{ inputs.instance_ids }}
+          INPUT_SUBSET: ${{ inputs.subset }}
+        run: |
+          set -euo pipefail
+          chmod +x infra/evals/external/tbench/bin/run-tbench.sh
+          # The TB wrapper takes its subset as the first positional argument.
+          # Map "custom" -> "smoke" since the wrapper only accepts smoke|full;
+          # individual instance IDs are forwarded via TB_EXTRA_ARGS.
+          subset="${INPUT_SUBSET}"
+          extra=""
+          if [ "${subset}" = "custom" ]; then
+            subset="smoke"
+          fi
+          if [ -n "${INPUT_INSTANCE_IDS}" ]; then
+            # tb run accepts --task-id flags for individual tasks.
+            ids="${INPUT_INSTANCE_IDS}"
+            tb_args=""
+            IFS=',' read -ra parsed <<< "${ids}"
+            for tid in "${parsed[@]}"; do
+              trimmed="$(echo "${tid}" | xargs)"
+              if [ -n "${trimmed}" ]; then
+                tb_args="${tb_args} --task-id ${trimmed}"
+              fi
+            done
+            extra="${tb_args}"
+          fi
+          TB_EXTRA_ARGS="${extra}" ./infra/evals/external/tbench/bin/run-tbench.sh "${subset}"
+
+      - name: Resolve newest run dir
+        id: latest
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="infra/evals/reports/external/tbench_2_core"
+          latest_dir=""
+          if [ -d "$base" ]; then
+            latest_dir=$(ls -1dt "$base"/aura-* 2>/dev/null | head -n1 || true)
+          fi
+          if [ -z "$latest_dir" ] || [ ! -f "$latest_dir/score.json" ]; then
+            echo "::warning::no score.json found under $base"
+            echo "score_file=" >> "$GITHUB_OUTPUT"
+            echo "run_dir=" >> "$GITHUB_OUTPUT"
+          else
+            echo "score_file=$latest_dir/score.json" >> "$GITHUB_OUTPUT"
+            echo "run_dir=$latest_dir" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Compare to baseline (writes step summary)
+        if: always() && steps.latest.outputs.score_file != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          node infra/evals/external/bin/post-pr-comment.mjs \
+            --benchmark tbench_2_core \
+            --score-file "${{ steps.latest.outputs.score_file }}" \
+            --baseline infra/evals/reports/external/tbench_2_core/baseline.json \
+            --output "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload run artifacts
+        if: always() && steps.latest.outputs.run_dir != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: tbench-${{ inputs.subset }}-${{ github.run_id }}
+          path: ${{ steps.latest.outputs.run_dir }}
+          if-no-files-found: warn
+          retention-days: 30

@@ -1,0 +1,16 @@
+{
+  "benchmark": "swebench_verified",
+  "subset": "verified",
+  "instance_count": 0,
+  "aura_version": null,
+  "claude_model": null,
+  "cost_usd": 0,
+  "total_tokens": 0,
+  "wallclock_seconds": 0,
+  "score": null,
+  "resolved": 0,
+  "not_resolved": 0,
+  "tests_directory_hits_stripped_total": 0,
+  "confidence_note": "No baseline yet — first run will populate this.",
+  "instances": []
+}

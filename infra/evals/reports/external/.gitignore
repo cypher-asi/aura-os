@@ -1,0 +1,10 @@
+# Per-run output directories produced by SWE-bench / Terminal-Bench wrappers.
+# Run dirs are named `aura-<short-sha>-<YYYYMMDD>-<HHMMSS>`.
+*/aura-*-*-*-*/
+# Also catch the actual aura-<sha>-<YYYYMMDD>-<HHMMSS> shape (3 dash-separated
+# segments after the `aura-` prefix) emitted by the current bin/run scripts.
+*/aura-*-*-*/
+
+# Always keep the tracked placeholders.
+!**/baseline.json
+!**/.gitkeep

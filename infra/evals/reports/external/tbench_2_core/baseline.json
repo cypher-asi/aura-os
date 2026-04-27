@@ -1,0 +1,13 @@
+{
+  "benchmark": "tbench_2_core",
+  "subset": "full",
+  "instance_count": 0,
+  "aura_version": null,
+  "claude_model": null,
+  "cost_usd": 0,
+  "total_tokens": 0,
+  "wallclock_seconds": 0,
+  "score": null,
+  "confidence_note": "No baseline yet — first run will populate this.",
+  "instances": []
+}
