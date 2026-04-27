@@ -3,7 +3,6 @@ import { api } from "../../api/client";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { useProjectActions } from "../../stores/project-action-store";
 import type { ChatAttachment } from "../../api/streams";
-import { generateImageStream, generate3dStream } from "../../api/streams";
 import type { GenerationMode } from "../../constants/models";
 
 import {
@@ -41,7 +40,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
   }, [projectId, agentInstanceId, core.key]);
 
   const sendMessage = useCallback(
-    async (content: string, action: string | null = null, selectedModel?: string | null, attachments?: ChatAttachment[], commands?: string[], _projectIdOverride?: string, generationMode?: GenerationMode) => {
+    async (content: string, action: string | null = null, selectedModel?: string | null, attachments?: ChatAttachment[], commands?: string[], _projectIdOverride?: string, _generationMode?: GenerationMode) => {
       if (!projectId || !agentInstanceId || getIsStreaming(core.key)) return;
       const trimmed = content.trim();
       if (!trimmed && !action && !(attachments && attachments.length > 0)) return;
@@ -74,29 +73,21 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
       });
 
       try {
-        if (generationMode === "image") {
-          await generateImageStream(trimmed, selectedModel, attachments, handler, controller.signal, projectId);
-        } else if (generationMode === "3d") {
-          const imgUrl = attachments?.find((a) => a.type === "image")
-            ? `data:${attachments[0].media_type};base64,${attachments[0].data}`
-            : trimmed;
-          await generate3dStream(imgUrl, trimmed, handler, controller.signal, projectId);
-        } else {
-          const shouldStartNewSession = nextSendStartsNewSessionRef.current;
-          nextSendStartsNewSessionRef.current = false;
-          await api.sendEventStream(
-            projectId,
-            agentInstanceId,
-            userMsg.content,
-            action,
-            selectedModel,
-            attachments,
-            handler,
-            controller.signal,
-            commands,
-            shouldStartNewSession,
-          );
-        }
+        const modelForTurn = _generationMode ? null : selectedModel;
+        const shouldStartNewSession = nextSendStartsNewSessionRef.current;
+        nextSendStartsNewSessionRef.current = false;
+        await api.sendEventStream(
+          projectId,
+          agentInstanceId,
+          userMsg.content,
+          action,
+          modelForTurn,
+          attachments,
+          handler,
+          controller.signal,
+          commands,
+          shouldStartNewSession,
+        );
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         handleStreamError(refs, setters, err);

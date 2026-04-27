@@ -1,7 +1,6 @@
 import { useRef, useCallback, useEffect } from "react";
 import { api } from "../api/client";
 import type { ChatAttachment, StreamEventHandler } from "../api/streams";
-import { generateImageStream, generate3dStream } from "../api/streams";
 import type { GenerationMode } from "../constants/models";
 import { buildContentBlocks, buildAttachmentLabel } from "./attachment-helpers";
 import type { Spec, Task } from "../shared/types";
@@ -67,7 +66,7 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
       attachments?: ChatAttachment[],
       commands?: string[],
       projectId?: string,
-      generationMode?: GenerationMode,
+      _generationMode?: GenerationMode,
     ) => {
       if (!agentId || getIsStreaming(core.key)) return;
       const trimmed = content.trim();
@@ -185,29 +184,21 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
       };
 
       try {
-        if (generationMode === "image") {
-          await generateImageStream(trimmed, selectedModel, attachments, handler, controller.signal, projectId);
-        } else if (generationMode === "3d") {
-          const imgUrl = attachments?.find((a) => a.type === "image")
-            ? `data:${attachments[0].media_type};base64,${attachments[0].data}`
-            : trimmed;
-          await generate3dStream(imgUrl, trimmed, handler, controller.signal, projectId);
-        } else {
-          const shouldStartNewSession = nextSendStartsNewSessionRef.current;
-          nextSendStartsNewSessionRef.current = false;
-          await api.agents.sendEventStream(
-            agentId,
-            userMsg.content,
-            action,
-            selectedModel,
-            attachments,
-            handler,
-            controller.signal,
-            commands,
-            projectId,
-            shouldStartNewSession,
-          );
-        }
+        const modelForTurn = _generationMode ? null : selectedModel;
+        const shouldStartNewSession = nextSendStartsNewSessionRef.current;
+        nextSendStartsNewSessionRef.current = false;
+        await api.agents.sendEventStream(
+          agentId,
+          userMsg.content,
+          action,
+          modelForTurn,
+          attachments,
+          handler,
+          controller.signal,
+          commands,
+          projectId,
+          shouldStartNewSession,
+        );
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         handleStreamError(refs, setters, err);

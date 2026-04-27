@@ -46,6 +46,34 @@
     }
   },
   {
+    "name": "generate_3d_model",
+    "description": "Generate a 3D model from an image URL or image data URI using the configured 3D generation pipeline. Returns the hosted GLB URL and artifact metadata. Use this whenever the user asks to create, render, or generate a 3D model.",
+    "promptSignature": "generate_3d_model(image_url, prompt?, project_id?, parent_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "image_url": {
+          "type": "string",
+          "description": "Source image URL or data URI to convert into a 3D model."
+        },
+        "prompt": {
+          "type": "string",
+          "description": "Optional text prompt or guidance for the 3D model."
+        },
+        "project_id": {
+          "type": "string",
+          "description": "Optional project id for artifact storage."
+        },
+        "parent_id": {
+          "type": "string",
+          "description": "Optional source image artifact id to link the generated model to."
+        }
+      },
+      "required": ["image_url"]
+    }
+  },
+  {
     "name": "github_list_repos",
     "provider": "github",
     "description": "List GitHub repositories accessible through a saved org integration.",

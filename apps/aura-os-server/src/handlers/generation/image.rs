@@ -10,7 +10,8 @@ use crate::error::{ApiError, ApiResult};
 use crate::handlers::billing;
 use crate::state::{AppState, AuthJwt};
 
-use super::router_proxy::{proxy_sse_stream, router_url};
+use super::harness_stream::open_generation_stream;
+use super::router_proxy::router_url;
 use super::sse::SseResponse;
 
 pub(crate) async fn generate_image_stream(
@@ -21,28 +22,22 @@ pub(crate) async fn generate_image_stream(
     billing::require_credits(&state, &jwt).await?;
     info!(model = ?body.model, "Image generation stream requested");
 
-    let url = format!("{}/v1/generate-image/stream", router_url(&state));
-
-    let mut payload = json!({
-        "prompt": body.prompt,
-    });
-    if let Some(model) = &body.model {
-        payload["model"] = json!(model);
-    }
-    if let Some(size) = &body.size {
-        payload["size"] = json!(size);
-    }
-    if let Some(images) = &body.images {
-        payload["images"] = json!(images);
-    }
-    if let Some(project_id) = &body.project_id {
-        payload["projectId"] = json!(project_id);
-    }
-    if let Some(is_iteration) = body.is_iteration {
-        payload["isIteration"] = json!(is_iteration);
-    }
-
-    proxy_sse_stream(&url, &jwt, payload, "image").await
+    open_generation_stream(
+        state,
+        jwt,
+        aura_protocol::GenerationRequest {
+            mode: "image".to_string(),
+            prompt: Some(body.prompt),
+            model: body.model,
+            size: body.size,
+            image_url: None,
+            images: body.images,
+            project_id: body.project_id,
+            parent_id: None,
+            is_iteration: body.is_iteration,
+        },
+    )
+    .await
 }
 
 /// Default model used by the chat-agent `generate_image` tool when the

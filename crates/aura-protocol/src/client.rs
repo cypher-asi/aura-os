@@ -264,7 +264,8 @@ pub struct ToolApprovalResponse {
 /// - `mode == "image"`: uses `prompt` (required), `model`, `size`, `images`, `is_iteration`
 /// - `mode == "3d"`:    uses `image_url` (required), `prompt` (optional hint)
 ///
-/// Both modes accept `project_id` for artifact storage.
+/// Both modes accept `project_id` for artifact storage. 3D generation also
+/// accepts `parent_id` to link a generated model to a source image artifact.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "typescript", derive(TS), ts(export))]
 pub struct GenerationRequest {
@@ -281,6 +282,8 @@ pub struct GenerationRequest {
     pub images: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub project_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub is_iteration: Option<bool>,
 }
