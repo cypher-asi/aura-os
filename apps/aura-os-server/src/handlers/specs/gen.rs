@@ -20,7 +20,7 @@ use crate::handlers::agents::chat::errors::map_harness_error_to_api;
 use super::super::projects_helpers::project_tool_session_config;
 use super::{load_generated_specs, resolve_harness_mode, specs_changed_since, SpecQueryParams};
 use crate::error::{ApiError, ApiResult};
-use crate::state::{AppState, AuthJwt};
+use crate::state::{AppState, AuthJwt, AuthSession};
 
 const SSE_NO_BUFFERING_HEADERS: [(&str, HeaderValue); 1] =
     [("X-Accel-Buffering", HeaderValue::from_static("no"))];
@@ -28,6 +28,7 @@ const SSE_NO_BUFFERING_HEADERS: [(&str, HeaderValue); 1] =
 pub(crate) async fn generate_specs_summary(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
     Path(project_id): Path<ProjectId>,
     Query(params): Query<SpecQueryParams>,
 ) -> ApiResult<Json<aura_os_core::Project>> {
@@ -42,6 +43,7 @@ pub(crate) async fn generate_specs_summary(
         mode,
         params.agent_instance_id,
         &jwt,
+        Some(&session.user_id),
     )
     .await;
     let session = harness.open_session(session_config).await.map_err(|e| {
@@ -84,6 +86,7 @@ async fn open_spec_gen_session(
     harness_mode: HarnessMode,
     agent_instance_id: Option<AgentInstanceId>,
     jwt: &str,
+    user_id: &str,
 ) -> ApiResult<aura_os_harness::HarnessSession> {
     super::super::billing::require_credits(state, jwt).await?;
 
@@ -95,6 +98,7 @@ async fn open_spec_gen_session(
         harness_mode,
         agent_instance_id,
         jwt,
+        Some(user_id),
     )
     .await;
     let session = harness.open_session(session_config).await.map_err(|e| {
@@ -123,14 +127,22 @@ async fn open_spec_gen_session(
 pub(crate) async fn generate_specs(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
     Path(project_id): Path<ProjectId>,
     Query(params): Query<SpecQueryParams>,
 ) -> ApiResult<Json<Vec<Spec>>> {
     info!(%project_id, "Spec generation requested");
     let mode = resolve_harness_mode(&state, &project_id, &params).await?;
     let baseline_specs = load_generated_specs(&state, &project_id, &jwt).await?;
-    let session =
-        open_spec_gen_session(&state, &project_id, mode, params.agent_instance_id, &jwt).await?;
+    let session = open_spec_gen_session(
+        &state,
+        &project_id,
+        mode,
+        params.agent_instance_id,
+        &jwt,
+        &session.user_id,
+    )
+    .await?;
     let mut rx = session.events_tx.subscribe();
 
     while let Ok(event) = rx.recv().await {
@@ -166,6 +178,7 @@ pub(crate) async fn generate_specs(
 pub(crate) async fn generate_specs_stream(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
     Path(project_id): Path<ProjectId>,
     Query(params): Query<SpecQueryParams>,
 ) -> ApiResult<(
@@ -174,8 +187,15 @@ pub(crate) async fn generate_specs_stream(
 )> {
     info!(%project_id, "Streaming spec generation requested");
     let mode = resolve_harness_mode(&state, &project_id, &params).await?;
-    let session =
-        open_spec_gen_session(&state, &project_id, mode, params.agent_instance_id, &jwt).await?;
+    let session = open_spec_gen_session(
+        &state,
+        &project_id,
+        mode,
+        params.agent_instance_id,
+        &jwt,
+        &session.user_id,
+    )
+    .await?;
 
     let stream = tokio_stream::wrappers::BroadcastStream::new(session.events_tx.subscribe())
         .filter_map(|r| r.ok())

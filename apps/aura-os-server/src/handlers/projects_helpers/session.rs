@@ -96,6 +96,7 @@ pub(crate) async fn project_tool_session_config(
     harness_mode: HarnessMode,
     agent_instance_id: Option<AgentInstanceId>,
     jwt: &str,
+    user_id: Option<&str>,
 ) -> SessionConfig {
     let remote_instance = if harness_mode == HarnessMode::Swarm {
         if let Some(agent_instance_id) = agent_instance_id {
@@ -181,6 +182,7 @@ pub(crate) async fn project_tool_session_config(
                 .unwrap_or_else(|| tool_agent_name.to_string()),
         ),
         token: Some(jwt.to_string()),
+        user_id: user_id.map(ToString::to_string),
         project_id: Some(project_id.to_string()),
         project_path,
         installed_tools,

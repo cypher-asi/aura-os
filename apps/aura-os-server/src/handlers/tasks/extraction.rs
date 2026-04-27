@@ -11,7 +11,7 @@ use super::common::storage_task_to_task;
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::chat::errors::map_harness_error_to_api;
 use crate::handlers::projects_helpers::project_tool_session_config;
-use crate::state::{AppState, AuthJwt};
+use crate::state::{AppState, AuthJwt, AuthSession};
 
 const TASK_RESULT_POLL_INTERVAL: Duration = Duration::from_millis(250);
 const TASK_RESULT_POLL_TIMEOUT: Duration = Duration::from_secs(5);
@@ -124,6 +124,7 @@ pub(crate) async fn get_task(
 pub(crate) async fn extract_tasks(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
     Path(project_id): Path<ProjectId>,
     Query(params): Query<TaskQueryParams>,
 ) -> ApiResult<Json<Vec<Task>>> {
@@ -151,6 +152,7 @@ pub(crate) async fn extract_tasks(
         harness_mode,
         params.agent_instance_id,
         &jwt,
+        Some(&session.user_id),
     )
     .await;
     let session = harness.open_session(session_config).await.map_err(|e| {
