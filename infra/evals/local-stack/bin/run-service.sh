@@ -86,16 +86,16 @@ if [[ "$service" == "harness" ]]; then
   export AURA_NETWORK_URL="$(stack_resolved_url network)"
   export AURA_STORAGE_URL="$(stack_resolved_url storage)"
   export ORBIT_URL="$(stack_resolved_url orbit)"
-  export AURA_LLM_ROUTING="$AURA_STACK_HARNESS_LLM_ROUTING"
-  if [[ -n "${AURA_STACK_ROUTER_URL:-}" ]]; then
-    export AURA_ROUTER_URL="$AURA_STACK_ROUTER_URL"
+  # Local evals always route LLM calls through aura-router. Prefer an explicit
+  # router JWT, but fall back to the benchmark token bootstrapped into auth.env
+  # so the harness uses the same session as aura-os-server.
+  export AURA_LLM_ROUTING="proxy"
+  export AURA_ROUTER_URL="${AURA_STACK_ROUTER_URL:-https://aura-router.onrender.com}"
+  if [[ -z "${AURA_STACK_AURA_ROUTER_JWT:-}" && -f "$AURA_STACK_RUNTIME_DIR/auth.env" ]]; then
+    # shellcheck disable=SC1090
+    source "$AURA_STACK_RUNTIME_DIR/auth.env"
   fi
-  if [[ -n "${AURA_STACK_AURA_ROUTER_JWT:-}" ]]; then
-    export AURA_ROUTER_JWT="$AURA_STACK_AURA_ROUTER_JWT"
-  fi
-  if [[ -n "${AURA_STACK_ANTHROPIC_API_KEY:-}" ]]; then
-    export AURA_ANTHROPIC_API_KEY="$AURA_STACK_ANTHROPIC_API_KEY"
-  fi
+  export AURA_ROUTER_JWT="${AURA_STACK_AURA_ROUTER_JWT:-${AURA_EVAL_ACCESS_TOKEN:-}}"
   export AURA_ANTHROPIC_MODEL="$AURA_STACK_ANTHROPIC_MODEL"
   export RUST_LOG="$AURA_STACK_HARNESS_LOG_LEVEL"
   mkdir -p "$AURA_DATA_DIR"
