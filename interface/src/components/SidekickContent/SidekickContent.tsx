@@ -16,16 +16,18 @@ import { StatsDashboard } from "../../views/StatsDashboard";
 import { SessionList } from "../../views/SessionList";
 import { SidekickLog } from "../../views/SidekickLog";
 import { FileExplorer } from "../FileExplorer";
-import {
-  RunSidekickPane,
-  TerminalSidekickPane,
-} from "../TaskOutputPanel";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
 import { InfoPanel } from "./InfoPanel";
 import styles from "../Sidekick/Sidekick.module.css";
 
 const BrowserPanel = lazy(() => import("../../apps/browser/components/BrowserPanel"));
+const RunSidekickPane = lazy(() =>
+  import("../TaskOutputPanel").then((m) => ({ default: m.RunSidekickPane })),
+);
+const TerminalSidekickPane = lazy(() =>
+  import("../TaskOutputPanel").then((m) => ({ default: m.TerminalSidekickPane })),
+);
 import overlayStyles from "../PreviewOverlay/PreviewOverlay.module.css";
 
 const SEARCH_PLACEHOLDERS: Record<string, string> = {
@@ -121,15 +123,24 @@ export function SidekickContent() {
   ) : (
     <EmptyState>{filesEmptyMessage}</EmptyState>
   );
+  const sidekickPaneFallback = (
+    <div style={{ padding: 16, color: "var(--color-text-muted)", fontSize: 12 }}>
+      Loading...
+    </div>
+  );
   const activeContent =
     activeTab === "terminal" ? (
-      <TerminalSidekickPane />
+      <Suspense fallback={sidekickPaneFallback}>
+        <TerminalSidekickPane />
+      </Suspense>
     ) : activeTab === "browser" ? (
-      <Suspense fallback={null}>
+      <Suspense fallback={sidekickPaneFallback}>
         <BrowserPanel projectId={projectId} />
       </Suspense>
     ) : activeTab === "run" ? (
-      <RunSidekickPane />
+      <Suspense fallback={sidekickPaneFallback}>
+        <RunSidekickPane />
+      </Suspense>
     ) : activeTab === "specs" ? (
       <SpecList searchQuery={searchQuery} />
     ) : activeTab === "tasks" ? (

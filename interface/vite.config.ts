@@ -82,6 +82,7 @@ export default defineConfig(({ mode, command }) => {
       ],
     },
     build: {
+      sourcemap: false,
       rollupOptions: {
         output: {
           manualChunks(id) {
@@ -106,11 +107,13 @@ export default defineConfig(({ mode, command }) => {
             if (id.includes("/@xyflow/")) {
               return "diagram-vendor";
             }
+            if (id.includes("/highlight.js/")) {
+              return "highlight-vendor";
+            }
             if (
               id.includes("/react-markdown/") ||
               id.includes("/remark-gfm/") ||
-              id.includes("/rehype-highlight/") ||
-              id.includes("/highlight.js/")
+              id.includes("/rehype-highlight/")
             ) {
               return "markdown-vendor";
             }

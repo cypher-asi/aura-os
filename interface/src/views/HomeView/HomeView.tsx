@@ -56,7 +56,13 @@ export function HomeView() {
   }
 
   if (loadingProjects && projects.length === 0) {
-    return null;
+    return (
+      <PageEmptyState
+        icon={<Rocket size={32} />}
+        title="Loading projects"
+        description="Preparing your workspace..."
+      />
+    );
   }
 
   return (

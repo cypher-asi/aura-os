@@ -60,10 +60,27 @@ function LastAppRedirect() {
   return <Navigate to={getInitialShellPath(lastAppId, previousPath)} replace />;
 }
 
+function RouteFallback() {
+  return (
+    <div
+      aria-busy="true"
+      style={{
+        minHeight: "100%",
+        display: "grid",
+        placeItems: "center",
+        color: "var(--color-text-muted)",
+        fontSize: 12,
+      }}
+    >
+      Loading...
+    </div>
+  );
+}
+
 /** Keeps AppShell chrome visible while lazy shell routes load (avoids full-app Suspense fallback). */
 function ShellOutletSuspense() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<RouteFallback />}>
       <Outlet />
     </Suspense>
   );
@@ -170,7 +187,7 @@ function AppRoutes({ showShell }: { showShell: boolean }) {
       <Route
         path="ide"
         element={
-          <Suspense fallback={null}>
+          <Suspense fallback={<RouteFallback />}>
             <IdeView />
           </Suspense>
         }
@@ -180,7 +197,7 @@ function AppRoutes({ showShell }: { showShell: boolean }) {
           <Route
             path="invite/:token"
             element={
-              <Suspense fallback={null}>
+              <Suspense fallback={<RouteFallback />}>
                 <InviteAcceptView />
               </Suspense>
             }
