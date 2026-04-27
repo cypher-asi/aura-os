@@ -183,6 +183,8 @@ pub(crate) async fn generate_session_summary(
     router_url: &str,
     jwt: &str,
     session_id: &str,
+    project_id: &str,
+    agent_id: &str,
 ) -> Result<String, String> {
     let events = storage
         .list_events(session_id, jwt, None, None)
@@ -227,9 +229,16 @@ pub(crate) async fn generate_session_summary(
         "messages": [{"role": "user", "content": transcript}],
     });
 
+    // Stamp the aura-* attribution headers so this LLM round-trip's tokens
+    // and cost land on the right session/project. Without these, the
+    // router falls back to None for project_id and the row is excluded
+    // from per-project cost aggregation.
     let resp = http
         .post(format!("{router_url}/v1/messages"))
         .bearer_auth(jwt)
+        .header("x-aura-session-id", session_id)
+        .header("x-aura-project-id", project_id)
+        .header("x-aura-agent-id", agent_id)
         .json(&req_body)
         .send()
         .await
@@ -277,7 +286,7 @@ pub(crate) async fn generate_session_summary(
 pub(crate) async fn summarize_session(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
-    Path((_project_id, _agent_instance_id, session_id)): Path<(
+    Path((project_id, agent_instance_id, session_id)): Path<(
         ProjectId,
         AgentInstanceId,
         SessionId,
@@ -286,6 +295,8 @@ pub(crate) async fn summarize_session(
     let storage = state.require_storage_client()?;
 
     let sid = session_id.to_string();
+    let pid = project_id.to_string();
+    let aid = agent_instance_id.to_string();
     info!(%session_id, "Session summary generation requested");
 
     let summary = generate_session_summary(
@@ -294,6 +305,8 @@ pub(crate) async fn summarize_session(
         &state.agent_runtime.router_url,
         &jwt,
         &sid,
+        &pid,
+        &aid,
     )
     .await
     .map_err(|e| ApiError::internal(format!("summarizing session: {e}")))?;
