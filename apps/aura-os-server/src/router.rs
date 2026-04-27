@@ -235,11 +235,21 @@ fn project_routes() -> Router<AppState> {
             "/api/projects/import",
             post(projects::create_imported_project),
         )
+        // /api/projects/deleted must come before /:project_id so it isn't
+        // captured by the dynamic segment.
+        .route(
+            "/api/projects/deleted",
+            get(projects::list_deleted_projects),
+        )
         .route(
             "/api/projects/:project_id",
             get(projects::get_project)
                 .put(projects::update_project)
                 .delete(projects::delete_project),
+        )
+        .route(
+            "/api/projects/:project_id/restore",
+            post(projects::restore_project),
         )
         .route(
             "/api/projects/:project_id/archive",

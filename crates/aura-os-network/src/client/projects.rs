@@ -58,4 +58,32 @@ impl NetworkClient {
         )
         .await
     }
+
+    /// Restore a soft-deleted project. Returns the restored project with
+    /// `status='active'`.
+    pub async fn restore_project(
+        &self,
+        project_id: &str,
+        jwt: &str,
+    ) -> Result<NetworkProject, NetworkError> {
+        self.post_authed(
+            &format!("{}/api/projects/{}/restore", self.base_url, project_id),
+            jwt,
+            &serde_json::json!({}),
+        )
+        .await
+    }
+
+    /// List soft-deleted projects in the org. Used by the recovery UI.
+    pub async fn list_deleted_projects_by_org(
+        &self,
+        org_id: &str,
+        jwt: &str,
+    ) -> Result<Vec<NetworkProject>, NetworkError> {
+        self.get_authed(
+            &format!("{}/api/projects/deleted?org_id={}", self.base_url, org_id),
+            jwt,
+        )
+        .await
+    }
 }

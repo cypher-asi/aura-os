@@ -10,9 +10,9 @@ use crate::error::{map_network_error, ApiError, ApiResult, UpstreamErrorContext}
 use crate::state::{AppState, AuthJwt};
 
 use super::projects_helpers::{
-    build_local_shadow, canonical_workspace_path, ensure_canonical_workspace_dir,
-    ensure_local_shadow, normalize_project_workspace, project_from_network, slugify,
-    to_project_input, write_imported_files, ListProjectsQuery,
+    build_local_shadow, ensure_canonical_workspace_dir, ensure_local_shadow,
+    normalize_project_workspace, project_from_network, slugify, to_project_input,
+    write_imported_files, ListProjectsQuery,
 };
 
 pub(crate) async fn list_all_projects_from_network(
@@ -375,8 +375,11 @@ pub(crate) async fn delete_project(
             _ => ApiError::internal(format!("verifying project exists: {e}")),
         })?;
 
-    // Delete remotely first so that a rejection (e.g. project has agent
-    // children) prevents us from removing the local copy.
+    // aura-network's DELETE is now soft-delete: it flips status to
+    // 'deleted' and leaves all linked rows intact. The local mirror is
+    // removed below so the project disappears from the active project
+    // list, but we deliberately keep the workspace directory on disk so
+    // restoring brings back the agent-generated code.
     if let Some(client) = &state.network_client {
         client
             .delete_project(&project_id.to_string(), &jwt)
@@ -389,20 +392,82 @@ pub(crate) async fn delete_project(
         .delete_project(&project_id)
         .map_err(|e| ApiError::internal(format!("deleting project: {e}")))?;
 
-    // Clean up local workspace directory (best-effort)
-    let workspace = canonical_workspace_path(&state.data_dir, &project_id);
-    if workspace.exists() {
-        if let Err(e) = tokio::fs::remove_dir_all(&workspace).await {
-            tracing::warn!(
-                project_id = %project_id,
-                path = %workspace.display(),
-                error = %e,
-                "failed to remove workspace directory"
-            );
-        }
-    }
-
+    // Workspace directory intentionally preserved — restore_project relies on
+    // it to bring back the project's files.
     Ok(StatusCode::NO_CONTENT)
+}
+
+/// Restore a soft-deleted project. Calls aura-network's restore endpoint,
+/// rehydrates the local shadow from the network response, and returns the
+/// restored project.
+pub(crate) async fn restore_project(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path(project_id): Path<ProjectId>,
+) -> ApiResult<Json<Project>> {
+    let client = state.require_network_client()?;
+    let net = client
+        .restore_project(&project_id.to_string(), &jwt)
+        .await
+        .map_err(map_network_error)?;
+
+    let local = state.project_service.get_project(&project_id).ok();
+    let project = normalize_project_workspace(
+        &state,
+        &project_from_network(&net, local.as_ref())?,
+    );
+    ensure_local_shadow(&state, &project);
+    Ok(Json(project))
+}
+
+/// Returns soft-deleted projects in the user's orgs. Drives the "Deleted
+/// Projects" recovery section in the project list UI.
+pub(crate) async fn list_deleted_projects(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Query(query): Query<ListProjectsQuery>,
+) -> ApiResult<Json<Vec<Project>>> {
+    let client = state.require_network_client()?;
+
+    let net_projects = if let Some(ref org_id) = query.org_id {
+        client
+            .list_deleted_projects_by_org(&org_id.to_string(), &jwt)
+            .await
+            .map_err(map_network_error)?
+    } else {
+        // Fan out across all orgs, mirroring list_all_projects_from_network.
+        let orgs = client.list_orgs(&jwt).await.map_err(map_network_error)?;
+        let futs = orgs
+            .iter()
+            .map(|org| client.list_deleted_projects_by_org(&org.id, &jwt));
+        let results = futures_util::future::join_all(futs).await;
+        let mut acc = Vec::new();
+        for r in results {
+            acc.extend(r.map_err(map_network_error)?);
+        }
+        acc
+    };
+
+    // Don't ensure_local_shadow for deleted projects — they should not
+    // re-appear in the active project list. Caller can map them as needed
+    // for the recovery UI; we still normalize workspace paths so the UI
+    // can show "where the files would land if restored".
+    let projects: Vec<Project> = net_projects
+        .iter()
+        .map(|net| {
+            let local =
+                net.id.parse::<ProjectId>().ok().and_then(|project_id| {
+                    state.project_service.get_project(&project_id).ok()
+                });
+            let project = normalize_project_workspace(
+                &state,
+                &project_from_network(net, local.as_ref())?,
+            );
+            Ok(project)
+        })
+        .collect::<ApiResult<_>>()?;
+
+    Ok(Json(projects))
 }
 
 /// Translate upstream delete-project errors into user-actionable responses.
