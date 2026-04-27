@@ -54,11 +54,29 @@ export function parseArgs(argv) {
     keepEntities: false,
     stripTestEdits: true,
     concurrency: 1,
+    resume: false,
+    resumeValue: null,
+    resumeIncludeErrors: false,
   };
 
   for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
+    const raw = argv[i];
+    // Allow inline --flag=value for the few flags where it's natural.
+    let arg = raw;
+    let inlineValue = null;
+    if (typeof raw === "string" && raw.startsWith("--")) {
+      const eqIdx = raw.indexOf("=");
+      if (eqIdx > 0) {
+        arg = raw.slice(0, eqIdx);
+        inlineValue = raw.slice(eqIdx + 1);
+      }
+    }
     const next = () => {
+      if (inlineValue !== null) {
+        const v = inlineValue;
+        inlineValue = null;
+        return v;
+      }
       const value = argv[i + 1];
       if (value === undefined) {
         throw new Error(`Missing value for ${arg}`);
@@ -108,12 +126,34 @@ export function parseArgs(argv) {
         args.concurrency = Math.min(4, Math.floor(value));
         break;
       }
+      case "--resume": {
+        args.resume = true;
+        // Accept --resume=VALUE, or --resume VALUE when the next arg does not
+        // look like another flag. Bare --resume means "auto-pick most recent".
+        if (inlineValue !== null) {
+          args.resumeValue = inlineValue;
+          inlineValue = null;
+        } else {
+          const peek = argv[i + 1];
+          if (typeof peek === "string" && !peek.startsWith("--")) {
+            args.resumeValue = peek;
+            i += 1;
+          }
+        }
+        break;
+      }
+      case "--resume-include-errors":
+        args.resumeIncludeErrors = true;
+        break;
       case "--help":
       case "-h":
         args.help = true;
         break;
       default:
-        throw new Error(`Unknown argument: ${arg}`);
+        throw new Error(`Unknown argument: ${raw}`);
+    }
+    if (inlineValue !== null) {
+      throw new Error(`Unexpected inline value for ${arg}`);
     }
   }
 
@@ -134,6 +174,11 @@ function printHelp() {
       `  --keep-entities         do not delete the AURA entities after each instance\n` +
       `  --no-strip-test-edits   keep hunks under tests/, test/, test_*.py, *_test.py\n` +
       `  --concurrency N         run up to N (max 4) instances in parallel\n` +
+      `  --resume [RUN_ID|DIR]   reuse an existing run dir; with no value, pick the most\n` +
+      `                          recent aura-* dir under infra/evals/reports/external/\n` +
+      `                          swebench_verified/. Already-recorded instances are skipped.\n` +
+      `  --resume-include-errors when resuming, also skip instances whose prior status was\n` +
+      `                          agent_error (default: re-run them)\n` +
       `  -h, --help              print this help\n`,
   );
 }
@@ -447,7 +492,32 @@ function runGit(args, options = {}) {
   };
 }
 
+async function workspaceLooksReusable(destDir, baseCommit) {
+  // Reusable iff the directory exists, has a .git, and HEAD is the requested
+  // commit. This lets a resumed run skip the (slow) re-clone while still
+  // catching anything stale (different base_commit, partial clone, etc.).
+  try {
+    const gitStat = await fs.stat(path.join(destDir, ".git"));
+    if (!gitStat.isDirectory() && !gitStat.isFile()) return false;
+  } catch {
+    return false;
+  }
+  const headResult = runGit(["rev-parse", "HEAD"], { cwd: destDir });
+  if (headResult.code !== 0) return false;
+  const head = headResult.stdout.trim();
+  return head === baseCommit;
+}
+
 async function shallowCloneInstance(repo, baseCommit, destDir, log) {
+  if (await workspaceLooksReusable(destDir, baseCommit)) {
+    log(`reused existing workspace at ${destDir} (HEAD=${baseCommit})`);
+    return { ok: true, reused: true };
+  }
+
+  // Stale or partial state: wipe so `git clone` has a clean target. force:true
+  // tolerates a missing dir; recursive removes any prior agent edits, which
+  // are already captured (or not) in the prior runs/<id>.json.
+  await fs.rm(destDir, { recursive: true, force: true });
   await fs.mkdir(destDir, { recursive: true });
   const url = `https://github.com/${repo}.git`;
 
@@ -491,7 +561,7 @@ async function shallowCloneInstance(repo, baseCommit, destDir, log) {
   }
   log(`checked out FETCH_HEAD`);
 
-  return { ok: true };
+  return { ok: true, reused: false };
 }
 
 async function captureWorkspaceDiff(workspaceDir, baseCommit) {
@@ -609,6 +679,203 @@ async function writeJson(filePath, value) {
   await fs.writeFile(filePath, JSON.stringify(value, null, 2), "utf8");
 }
 
+// ---------------------------------------------------------------------------
+// Resume helpers
+// ---------------------------------------------------------------------------
+
+export const SWEBENCH_RUNS_PARENT = path.join(
+  "infra",
+  "evals",
+  "reports",
+  "external",
+  "swebench_verified",
+);
+
+export function defaultRunsParentDir(rootDir) {
+  return path.join(rootDir, SWEBENCH_RUNS_PARENT);
+}
+
+export async function findLatestRunDir(parentDir) {
+  let entries;
+  try {
+    entries = await fs.readdir(parentDir, { withFileTypes: true });
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+  const candidates = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (!entry.name.startsWith("aura-")) continue;
+    const fullPath = path.join(parentDir, entry.name);
+    try {
+      const stat = await fs.stat(fullPath);
+      candidates.push({ path: fullPath, mtimeMs: stat.mtimeMs });
+    } catch {
+      // ignore stat failures (race / permission); skip the entry.
+    }
+  }
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
+  return candidates[0].path;
+}
+
+export async function resolveResumeOutDir({ resumeValue, explicitOut, rootDir }) {
+  // Precedence: explicit --out beats anything if it exists; then resumeValue
+  // (path or RUN_ID); then auto-pick latest under the standard reports dir.
+  if (explicitOut) {
+    const resolved = path.resolve(explicitOut);
+    try {
+      const stat = await fs.stat(resolved);
+      if (stat.isDirectory()) return resolved;
+    } catch {
+      // fall through to other resolution strategies
+    }
+    throw new Error(
+      `--out ${explicitOut} does not exist; cannot resume into a missing directory`,
+    );
+  }
+
+  if (resumeValue) {
+    // Treat as path if it contains a separator or is absolute.
+    const looksLikePath = path.isAbsolute(resumeValue)
+      || resumeValue.includes("/")
+      || resumeValue.includes("\\");
+    if (looksLikePath) {
+      const candidates = [path.resolve(resumeValue)];
+      if (rootDir) candidates.push(path.resolve(rootDir, resumeValue));
+      for (const candidate of candidates) {
+        try {
+          const stat = await fs.stat(candidate);
+          if (stat.isDirectory()) return candidate;
+        } catch {
+          // try next candidate
+        }
+      }
+      throw new Error(`resume target '${resumeValue}' does not exist`);
+    }
+    // RUN_ID: resolve under the standard reports directory.
+    const candidate = path.join(defaultRunsParentDir(rootDir), resumeValue);
+    try {
+      const stat = await fs.stat(candidate);
+      if (stat.isDirectory()) return candidate;
+    } catch {
+      // fall through to error
+    }
+    throw new Error(`resume target '${candidate}' does not exist`);
+  }
+
+  // Auto-pick: most recently modified aura-* under the reports parent dir.
+  const parent = defaultRunsParentDir(rootDir);
+  const latest = await findLatestRunDir(parent);
+  if (!latest) {
+    throw new Error(
+      `--resume specified but no aura-* run directories were found under ${parent}`,
+    );
+  }
+  return latest;
+}
+
+const RESUMABLE_FINAL_STATUSES = new Set([
+  "agent_complete",
+  "clone_error",
+  "skipped_cost_cap",
+]);
+
+export async function loadCompletedInstanceIds(outDir, { includeErrors = false } = {}) {
+  const runsDir = path.join(outDir, "runs");
+  const ids = new Set();
+  let entries;
+  try {
+    entries = await fs.readdir(runsDir, { withFileTypes: true });
+  } catch (error) {
+    if (error.code === "ENOENT") return ids;
+    throw error;
+  }
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+    let parsed;
+    try {
+      const text = await fs.readFile(path.join(runsDir, entry.name), "utf8");
+      parsed = JSON.parse(text);
+    } catch {
+      continue;
+    }
+    if (!parsed || typeof parsed.instance_id !== "string") continue;
+    const status = typeof parsed.status === "string" ? parsed.status : "";
+    if (RESUMABLE_FINAL_STATUSES.has(status)) {
+      ids.add(parsed.instance_id);
+      continue;
+    }
+    if (includeErrors && status === "agent_error") {
+      ids.add(parsed.instance_id);
+    }
+  }
+  return ids;
+}
+
+export async function loadPriorRunRecords(outDir) {
+  const runsDir = path.join(outDir, "runs");
+  const out = new Map();
+  let entries;
+  try {
+    entries = await fs.readdir(runsDir, { withFileTypes: true });
+  } catch (error) {
+    if (error.code === "ENOENT") return out;
+    throw error;
+  }
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+    try {
+      const text = await fs.readFile(path.join(runsDir, entry.name), "utf8");
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed.instance_id === "string") {
+        out.set(parsed.instance_id, parsed);
+      }
+    } catch {
+      // skip unreadable / malformed files
+    }
+  }
+  return out;
+}
+
+export async function readDriverSummaryIfExists(outDir) {
+  const filePath = path.join(outDir, "driver-summary.json");
+  try {
+    const text = await fs.readFile(filePath, "utf8");
+    return JSON.parse(text);
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    return null;
+  }
+}
+
+export async function loadPredictionInstanceIds(outDir) {
+  const filePath = path.join(outDir, "predictions.jsonl");
+  let text;
+  try {
+    text = await fs.readFile(filePath, "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") return new Set();
+    throw error;
+  }
+  const ids = new Set();
+  const lines = text.split("\n");
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed && typeof parsed.instance_id === "string") {
+        ids.add(parsed.instance_id);
+      }
+    } catch {
+      // ignore malformed lines
+    }
+  }
+  return ids;
+}
+
 async function runOneInstance({
   instance,
   args,
@@ -618,6 +885,7 @@ async function runOneInstance({
   log,
   costState,
   resultsRef,
+  recordedPredictionIds,
 }) {
   const startedAt = new Date();
   const instanceId = instance.instance_id;
@@ -625,6 +893,19 @@ async function runOneInstance({
   const workspaceDir = path.join(instanceDir, "workspace");
   const runRecordPath = path.join(outDir, "runs", `${instanceId}.json`);
   const predictionsPath = path.join(outDir, "predictions.jsonl");
+
+  const writePrediction = async (record) => {
+    if (recordedPredictionIds && recordedPredictionIds.has(instanceId)) {
+      // The previous attempt already wrote a prediction for this id (e.g. a
+      // clone_error retry). The harness scores the first matching line, so
+      // skip the append rather than emit a duplicate that diverges from
+      // runs/<id>.json.
+      log(`predictions.jsonl already has ${instanceId}; skipping append`);
+      return;
+    }
+    await appendJsonl(predictionsPath, record);
+    if (recordedPredictionIds) recordedPredictionIds.add(instanceId);
+  };
 
   const baseRecord = {
     instance_id: instanceId,
@@ -665,7 +946,7 @@ async function runOneInstance({
     baseRecord.wallclock_seconds =
       (Date.now() - startedAt.getTime()) / 1000;
     await writeJson(runRecordPath, baseRecord);
-    await appendJsonl(predictionsPath, {
+    await writePrediction({
       instance_id: instanceId,
       model_name_or_path: "AURA",
       model_patch: "",
@@ -757,7 +1038,7 @@ async function runOneInstance({
   baseRecord.wallclock_seconds = (Date.now() - startedAt.getTime()) / 1000;
 
   // 7. Persist outputs.
-  await appendJsonl(predictionsPath, {
+  await writePrediction({
     instance_id: instanceId,
     model_name_or_path: "AURA",
     model_patch: modelPatch,
@@ -855,9 +1136,29 @@ async function main(rawArgv) {
   }
 
   const runId = newRunId();
-  const outDir = args.out
-    ? path.resolve(args.out)
-    : path.join(driverDir, ".runtime", runId);
+  let outDir;
+  let resumed = false;
+  if (args.resume) {
+    try {
+      outDir = await resolveResumeOutDir({
+        resumeValue: args.resumeValue,
+        explicitOut: args.out,
+        rootDir: repoRoot,
+      });
+    } catch (error) {
+      process.stderr.write(`Error: ${error.message}\n`);
+      process.exit(2);
+      return;
+    }
+    resumed = true;
+    process.stderr.write(
+      `[swebench] resume: reusing run directory ${outDir}\n`,
+    );
+  } else {
+    outDir = args.out
+      ? path.resolve(args.out)
+      : path.join(driverDir, ".runtime", runId);
+  }
 
   await fs.mkdir(outDir, { recursive: true });
   const workRoot = path.join(outDir, "work");
@@ -873,12 +1174,38 @@ async function main(rawArgv) {
     return;
   }
 
-  const selected = applyInstanceFilters(manifestRecords, args);
+  let selected = applyInstanceFilters(manifestRecords, args);
+
+  // Build the dedup set up-front so workers (sequential or pooled) can avoid
+  // double-appending to predictions.jsonl when a prior attempt already wrote
+  // a row for the same instance id.
+  const recordedPredictionIds = await loadPredictionInstanceIds(outDir);
+
+  if (resumed) {
+    const totalBeforeResume = selected.length;
+    const completedIds = await loadCompletedInstanceIds(outDir, {
+      includeErrors: args.resumeIncludeErrors,
+    });
+    if (completedIds.size > 0) {
+      selected = selected.filter(
+        (instance) => !completedIds.has(instance.instance_id),
+      );
+    }
+    const skipped = totalBeforeResume - selected.length;
+    process.stderr.write(
+      `[swebench] resume: skipping ${skipped}/${totalBeforeResume} instances already recorded`
+        + (args.resumeIncludeErrors ? " (including agent_error)" : "")
+        + "\n",
+    );
+  }
+
   if (selected.length === 0) {
     process.stderr.write(
-      `No instances matched the supplied filters (subset=${args.subset}).\n`,
+      resumed
+        ? `[swebench] resume: nothing left to do; all selected instances already recorded in ${outDir}\n`
+        : `No instances matched the supplied filters (subset=${args.subset}).\n`,
     );
-    process.exit(1);
+    process.exit(resumed ? 0 : 1);
     return;
   }
 
@@ -936,6 +1263,7 @@ async function main(rawArgv) {
       log: (msg) => log(instance.instance_id, msg),
       costState,
       resultsRef,
+      recordedPredictionIds,
     });
     if (
       Number.isFinite(costCap)
@@ -955,7 +1283,22 @@ async function main(rawArgv) {
   const finishedAt = new Date();
   const wallclockSeconds = (finishedAt.getTime() - startedAt.getTime()) / 1000;
 
-  // Aggregate.
+  // Aggregate. On a resume, fold prior runs/*.json records that we did not
+  // re-process into the totals so driver-summary.json reflects the full run
+  // rather than just this invocation.
+  const recordsById = new Map();
+  for (const record of resultsRef.records) {
+    if (record && typeof record.instance_id === "string") {
+      recordsById.set(record.instance_id, record);
+    }
+  }
+  if (resumed) {
+    const priorRecords = await loadPriorRunRecords(outDir);
+    for (const [id, prior] of priorRecords) {
+      if (!recordsById.has(id)) recordsById.set(id, prior);
+    }
+  }
+
   const statusCounts = {
     agent_complete: 0,
     agent_error: 0,
@@ -966,7 +1309,7 @@ async function main(rawArgv) {
   let totalCost = 0;
   let totalTokens = 0;
   let totalStripped = 0;
-  for (const record of resultsRef.records) {
+  for (const record of recordsById.values()) {
     statusCounts[record.status] = (statusCounts[record.status] ?? 0) + 1;
     totalCost += Number(record.cost_usd ?? 0);
     totalTokens += Number(record.total_tokens ?? 0);
@@ -976,11 +1319,15 @@ async function main(rawArgv) {
     for (const m of richModels) claudeModels.add(m);
   }
 
+  const priorSummary = resumed
+    ? await readDriverSummaryIfExists(outDir)
+    : null;
+
   const summary = {
-    run_id: runId,
+    run_id: priorSummary?.run_id ?? runId,
     subset: args.subset,
-    instance_count: resultsRef.records.length,
-    started_at: startedAt.toISOString(),
+    instance_count: recordsById.size,
+    started_at: priorSummary?.started_at ?? startedAt.toISOString(),
     finished_at: finishedAt.toISOString(),
     wallclock_seconds: wallclockSeconds,
     aura_version: readAuraVersion(),
@@ -991,6 +1338,7 @@ async function main(rawArgv) {
     tests_directory_hits_stripped_total: totalStripped,
     aborted_due_to_cost_cap: costState.aborted,
     out_dir: outDir,
+    resumed: resumed || undefined,
   };
 
   await writeJson(path.join(outDir, "driver-summary.json"), summary);

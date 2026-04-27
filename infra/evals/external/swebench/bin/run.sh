@@ -24,6 +24,15 @@
 #   AURA_BENCH_PREFLIGHT_SPEC_TIMEOUT_MS optional, default 120000 (2 min)
 #   AURA_BENCH_PREFLIGHT_FIXTURE    optional, default interface/tests/e2e/evals/fixtures/preflight-minimal
 #   AURA_EVAL_USER_EMAIL/PASSWORD   set by interactive zOS login prompt
+#
+# Resume:
+#   ./infra/evals/external/swebench/bin/run.sh smoke --resume
+#       Reuse the most recently modified aura-* run directory under
+#       infra/evals/reports/external/swebench_verified/. Already-recorded
+#       instance ids are skipped; the harness re-uses the same RUN_ID so its
+#       reports stay aligned with the prior run.
+#   ./infra/evals/external/swebench/bin/run.sh smoke --resume aura-<sha>-<ts>
+#       Resume a specific RUN_ID (or pass an absolute / repo-relative path).
 
 set -eu
 
@@ -437,6 +446,43 @@ if [ "$#" -gt 0 ]; then
     esac
 fi
 
+# Pre-scan extra args for --resume so the wrapper knows whether to mint a fresh
+# OUT_DIR or reuse an existing one. We do not strip the flag from "$@" -- the
+# Node driver re-parses and applies the same resume semantics. Forms accepted:
+#   --resume                 (auto-pick most recent run dir)
+#   --resume <RUN_ID|path>   (space-separated value)
+#   --resume=<RUN_ID|path>   (inline value)
+RESUME_FLAG=""
+RESUME_VALUE=""
+__prev=""
+for __a in "$@"; do
+    if [ "$__prev" = "--resume" ]; then
+        __prev=""
+        case "$__a" in
+            --*) ;;
+            *)
+                RESUME_VALUE="$__a"
+                continue
+                ;;
+        esac
+    fi
+    case "$__a" in
+        --resume)
+            RESUME_FLAG=1
+            __prev="--resume"
+            ;;
+        --resume=*)
+            RESUME_FLAG=1
+            RESUME_VALUE=${__a#--resume=}
+            __prev=""
+            ;;
+        *)
+            __prev=""
+            ;;
+    esac
+done
+unset __a __prev
+
 # Preflight: node >= 22.
 if ! command -v node >/dev/null 2>&1; then
     err "node is required but not on PATH"
@@ -493,13 +539,50 @@ info "preflight ok: node=$node_version free=${free_gb}GB"
 # with backend calls if local tooling is wrong.
 preflight_live_pipeline
 
-# Build run id and out dir.
-git_sha=$(git rev-parse --short=12 HEAD 2>/dev/null || echo "unknown")
-ts=$(date +%Y%m%d-%H%M%S)
-RUN_ID="aura-${git_sha}-${ts}"
-OUT_DIR="infra/evals/reports/external/swebench_verified/${RUN_ID}"
-mkdir -p "$OUT_DIR"
-info "run_id=${RUN_ID} out=${OUT_DIR}"
+# Build run id and out dir. Either reuse an existing run on --resume, or mint
+# a fresh dir keyed by the current git short-sha and timestamp.
+swebench_runs_dir="infra/evals/reports/external/swebench_verified"
+if [ -n "$RESUME_FLAG" ]; then
+    if [ -n "$RESUME_VALUE" ]; then
+        case "$RESUME_VALUE" in
+            /*|*/*|*\\*)
+                # Path-like value: accept absolute, repo-relative, or as-is.
+                if [ -d "$RESUME_VALUE" ]; then
+                    OUT_DIR="$RESUME_VALUE"
+                elif [ -d "$repo_root/$RESUME_VALUE" ]; then
+                    OUT_DIR="$repo_root/$RESUME_VALUE"
+                else
+                    err "resume target '$RESUME_VALUE' does not exist"
+                fi
+                ;;
+            *)
+                # RUN_ID: resolve under the standard reports directory.
+                OUT_DIR="$swebench_runs_dir/$RESUME_VALUE"
+                if [ ! -d "$OUT_DIR" ]; then
+                    err "resume target '$OUT_DIR' does not exist"
+                fi
+                ;;
+        esac
+    else
+        # No value: auto-pick the most recently modified aura-* run directory.
+        if [ ! -d "$swebench_runs_dir" ]; then
+            err "no run directory found at $swebench_runs_dir; nothing to resume"
+        fi
+        OUT_DIR=$(ls -1dt "$swebench_runs_dir"/aura-* 2>/dev/null | head -n 1 || true)
+        if [ -z "$OUT_DIR" ] || [ ! -d "$OUT_DIR" ]; then
+            err "no aura-* run directories under $swebench_runs_dir; nothing to resume"
+        fi
+    fi
+    RUN_ID=$(basename "$OUT_DIR")
+    info "resume: reusing run_id=${RUN_ID} out=${OUT_DIR}"
+else
+    git_sha=$(git rev-parse --short=12 HEAD 2>/dev/null || echo "unknown")
+    ts=$(date +%Y%m%d-%H%M%S)
+    RUN_ID="aura-${git_sha}-${ts}"
+    OUT_DIR="$swebench_runs_dir/${RUN_ID}"
+    mkdir -p "$OUT_DIR"
+    info "run_id=${RUN_ID} out=${OUT_DIR}"
+fi
 
 # Generate dataset manifest if missing.
 manifest="infra/evals/external/swebench/datasets/${SUBSET}.jsonl"

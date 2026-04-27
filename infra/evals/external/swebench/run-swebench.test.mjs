@@ -1,11 +1,19 @@
 import assert from "node:assert/strict";
+import { promises as fs } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
 
 import {
   BENCHMARK_DIRECTIVES,
   buildRequirementsMd,
+  findLatestRunDir,
+  loadCompletedInstanceIds,
+  loadPredictionInstanceIds,
+  loadPriorRunRecords,
   parseArgs,
   parseDiffFiles,
+  resolveResumeOutDir,
   runWithPool,
   stripTestEditsFromDiff,
 } from "./run-swebench.mjs";
@@ -222,6 +230,248 @@ test("parseArgs supports the documented CLI flags", () => {
 
 test("parseArgs rejects unknown flags", () => {
   assert.throws(() => parseArgs(["--bogus"]), /Unknown argument/);
+});
+
+test("parseArgs supports bare --resume (auto-pick latest)", () => {
+  const parsed = parseArgs(["--subset", "smoke", "--resume"]);
+  assert.equal(parsed.resume, true);
+  assert.equal(parsed.resumeValue, null);
+  assert.equal(parsed.resumeIncludeErrors, false);
+});
+
+test("parseArgs supports --resume <run-id> (space-separated)", () => {
+  const parsed = parseArgs(["--resume", "aura-abc-20260101-000000", "--limit", "5"]);
+  assert.equal(parsed.resume, true);
+  assert.equal(parsed.resumeValue, "aura-abc-20260101-000000");
+  assert.equal(parsed.limit, 5);
+});
+
+test("parseArgs supports --resume=<run-id> (inline value)", () => {
+  const parsed = parseArgs(["--resume=aura-zzz-1"]);
+  assert.equal(parsed.resume, true);
+  assert.equal(parsed.resumeValue, "aura-zzz-1");
+});
+
+test("parseArgs treats --resume followed by another flag as bare", () => {
+  const parsed = parseArgs(["--resume", "--limit", "3"]);
+  assert.equal(parsed.resume, true);
+  assert.equal(parsed.resumeValue, null);
+  assert.equal(parsed.limit, 3);
+});
+
+test("parseArgs parses --resume-include-errors", () => {
+  const parsed = parseArgs(["--resume", "--resume-include-errors"]);
+  assert.equal(parsed.resume, true);
+  assert.equal(parsed.resumeIncludeErrors, true);
+});
+
+async function makeTempRunDir() {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "swebench-resume-"));
+  await fs.mkdir(path.join(dir, "runs"), { recursive: true });
+  return dir;
+}
+
+async function writeRunRecord(outDir, instanceId, partial) {
+  await fs.writeFile(
+    path.join(outDir, "runs", `${instanceId}.json`),
+    JSON.stringify({ instance_id: instanceId, ...partial }, null, 2),
+    "utf8",
+  );
+}
+
+test("loadCompletedInstanceIds picks final statuses and skips agent_error by default", async () => {
+  const dir = await makeTempRunDir();
+  try {
+    await writeRunRecord(dir, "a__a-1", { status: "agent_complete" });
+    await writeRunRecord(dir, "a__a-2", { status: "clone_error" });
+    await writeRunRecord(dir, "a__a-3", { status: "skipped_cost_cap" });
+    await writeRunRecord(dir, "a__a-4", { status: "agent_error" });
+
+    const ids = await loadCompletedInstanceIds(dir);
+    assert.deepEqual(
+      Array.from(ids).sort(),
+      ["a__a-1", "a__a-2", "a__a-3"],
+    );
+
+    const idsWithErrors = await loadCompletedInstanceIds(dir, {
+      includeErrors: true,
+    });
+    assert.deepEqual(
+      Array.from(idsWithErrors).sort(),
+      ["a__a-1", "a__a-2", "a__a-3", "a__a-4"],
+    );
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("loadCompletedInstanceIds returns empty set when runs/ is missing", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "swebench-resume-"));
+  try {
+    const ids = await loadCompletedInstanceIds(dir);
+    assert.equal(ids.size, 0);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("loadPredictionInstanceIds parses each line and ignores blanks/junk", async () => {
+  const dir = await makeTempRunDir();
+  try {
+    const lines = [
+      JSON.stringify({ instance_id: "x__x-1", model_patch: "" }),
+      "",
+      "not-json",
+      JSON.stringify({ instance_id: "x__x-2", model_patch: "patch" }),
+      "",
+    ];
+    await fs.writeFile(
+      path.join(dir, "predictions.jsonl"),
+      `${lines.join("\n")}\n`,
+      "utf8",
+    );
+    const ids = await loadPredictionInstanceIds(dir);
+    assert.deepEqual(Array.from(ids).sort(), ["x__x-1", "x__x-2"]);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("loadPriorRunRecords loads every parseable runs/*.json keyed by instance_id", async () => {
+  const dir = await makeTempRunDir();
+  try {
+    await writeRunRecord(dir, "p__p-1", { status: "agent_complete", cost_usd: 0.5 });
+    await writeRunRecord(dir, "p__p-2", { status: "agent_error", cost_usd: 0.25 });
+    await fs.writeFile(path.join(dir, "runs", "garbage.json"), "{ not json", "utf8");
+
+    const map = await loadPriorRunRecords(dir);
+    assert.equal(map.size, 2);
+    assert.equal(map.get("p__p-1").status, "agent_complete");
+    assert.equal(map.get("p__p-2").cost_usd, 0.25);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("findLatestRunDir picks the most recently modified aura-* directory", async () => {
+  const parent = await fs.mkdtemp(path.join(os.tmpdir(), "swebench-runs-"));
+  try {
+    const older = path.join(parent, "aura-old-20240101-000000");
+    const newer = path.join(parent, "aura-new-20260101-000000");
+    const unrelated = path.join(parent, "not-a-run");
+    await fs.mkdir(older);
+    await fs.mkdir(newer);
+    await fs.mkdir(unrelated);
+    const past = new Date("2024-01-01T00:00:00Z");
+    const future = new Date("2026-01-01T00:00:00Z");
+    await fs.utimes(older, past, past);
+    await fs.utimes(newer, future, future);
+
+    const latest = await findLatestRunDir(parent);
+    assert.equal(latest, newer);
+  } finally {
+    await fs.rm(parent, { recursive: true, force: true });
+  }
+});
+
+test("findLatestRunDir returns null when the parent does not exist", async () => {
+  const ghost = path.join(os.tmpdir(), `swebench-no-such-${process.pid}-${Date.now()}`);
+  const latest = await findLatestRunDir(ghost);
+  assert.equal(latest, null);
+});
+
+test("resolveResumeOutDir auto-picks the most recent run when no value is given", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "swebench-root-"));
+  try {
+    const parent = path.join(
+      root,
+      "infra",
+      "evals",
+      "reports",
+      "external",
+      "swebench_verified",
+    );
+    const runDir = path.join(parent, "aura-zzz-20260101-000000");
+    await fs.mkdir(runDir, { recursive: true });
+
+    const resolved = await resolveResumeOutDir({
+      resumeValue: null,
+      explicitOut: null,
+      rootDir: root,
+    });
+    assert.equal(resolved, runDir);
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test("resolveResumeOutDir resolves a RUN_ID under the standard reports dir", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "swebench-root-"));
+  try {
+    const parent = path.join(
+      root,
+      "infra",
+      "evals",
+      "reports",
+      "external",
+      "swebench_verified",
+    );
+    const runDir = path.join(parent, "aura-id-1");
+    await fs.mkdir(runDir, { recursive: true });
+
+    const resolved = await resolveResumeOutDir({
+      resumeValue: "aura-id-1",
+      explicitOut: null,
+      rootDir: root,
+    });
+    assert.equal(resolved, runDir);
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test("resolveResumeOutDir accepts an absolute path value", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "swebench-explicit-"));
+  try {
+    const resolved = await resolveResumeOutDir({
+      resumeValue: dir,
+      explicitOut: null,
+      rootDir: os.tmpdir(),
+    });
+    assert.equal(resolved, dir);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("resolveResumeOutDir throws with a clear message when the target is missing", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "swebench-root-"));
+  try {
+    await assert.rejects(
+      resolveResumeOutDir({
+        resumeValue: "aura-does-not-exist",
+        explicitOut: null,
+        rootDir: root,
+      }),
+      /resume target .* does not exist/,
+    );
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test("resolveResumeOutDir prefers an explicit --out when it exists", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "swebench-explicit-"));
+  try {
+    const resolved = await resolveResumeOutDir({
+      resumeValue: "aura-something-else",
+      explicitOut: dir,
+      rootDir: os.tmpdir(),
+    });
+    assert.equal(resolved, dir);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
 });
 
 test("runWithPool runs items in parallel up to the concurrency cap", async () => {

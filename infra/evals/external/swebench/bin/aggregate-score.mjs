@@ -215,6 +215,66 @@ async function loadDriverRecords(runDir) {
   return out;
 }
 
+export function synthesizeSummaryFromRecords(runDir, recordsMap) {
+  // Best-effort reconstruction used when the driver was killed before writing
+  // driver-summary.json. We pull totals out of runs/*.json (which the driver
+  // writes incrementally) and fill in defaults for fields we cannot recover.
+  const records = Array.from(recordsMap.values());
+  const statusCounts = {
+    agent_complete: 0,
+    agent_error: 0,
+    clone_error: 0,
+    skipped_cost_cap: 0,
+  };
+  let totalCost = 0;
+  let totalTokens = 0;
+  let totalStripped = 0;
+  let started = null;
+  let finished = null;
+  const claudeModels = new Set();
+  let inferredSubset = null;
+  for (const record of records) {
+    const status = record.status ?? "";
+    statusCounts[status] = (statusCounts[status] ?? 0) + 1;
+    totalCost += Number(record.cost_usd ?? 0);
+    totalTokens += Number(record.total_tokens ?? 0);
+    totalStripped += Number(record.patch?.tests_directory_hits_stripped ?? 0);
+    if (record.started_at) {
+      const t = Date.parse(record.started_at);
+      if (Number.isFinite(t) && (started === null || t < started)) started = t;
+    }
+    if (record.finished_at) {
+      const t = Date.parse(record.finished_at);
+      if (Number.isFinite(t) && (finished === null || t > finished)) finished = t;
+    }
+    const richModels = record.aura_payload?.richUsageSummary?.models ?? [];
+    for (const m of richModels) claudeModels.add(m);
+    if (!inferredSubset && typeof record.scenario?.kind === "string") {
+      inferredSubset = "custom";
+    }
+  }
+  const wallclock = started !== null && finished !== null && finished >= started
+    ? (finished - started) / 1000
+    : 0;
+  return {
+    run_id: path.basename(runDir),
+    subset: inferredSubset ?? "custom",
+    instance_count: records.length,
+    started_at: started !== null ? new Date(started).toISOString() : null,
+    finished_at: finished !== null ? new Date(finished).toISOString() : null,
+    wallclock_seconds: wallclock,
+    aura_version: null,
+    claude_model: Array.from(claudeModels).sort().join(",") || null,
+    cost_usd: totalCost,
+    total_tokens: totalTokens,
+    status_counts: statusCounts,
+    tests_directory_hits_stripped_total: totalStripped,
+    aborted_due_to_cost_cap: false,
+    out_dir: runDir,
+    synthesized: true,
+  };
+}
+
 function buildConfidenceNote(subset, instanceCount) {
   if (subset === "verified") return "";
   if (instanceCount <= 50) {
@@ -250,16 +310,26 @@ async function main(rawArgv) {
   }
 
   const runDir = path.resolve(args.out);
-  const summary = await readJsonIfExists(path.join(runDir, "driver-summary.json"));
-  if (!summary) {
-    process.stderr.write(
-      `Error: ${path.join(runDir, "driver-summary.json")} is missing; cannot aggregate.\n`,
-    );
-    process.exit(1);
-    return;
-  }
-
+  let summary = await readJsonIfExists(path.join(runDir, "driver-summary.json"));
   const driverRecords = await loadDriverRecords(runDir);
+  if (!summary) {
+    if (driverRecords.size === 0) {
+      process.stderr.write(
+        `Error: ${path.join(runDir, "driver-summary.json")} is missing and ${path.join(runDir, "runs")} has no records; cannot aggregate.\n`,
+      );
+      process.exit(1);
+      return;
+    }
+    summary = synthesizeSummaryFromRecords(runDir, driverRecords);
+    await fs.writeFile(
+      path.join(runDir, "driver-summary.json"),
+      JSON.stringify(summary, null, 2),
+      "utf8",
+    );
+    process.stderr.write(
+      `[aggregate-score] driver-summary.json was missing; synthesized from ${driverRecords.size} runs/*.json file(s)\n`,
+    );
+  }
   const { report, perInstance } = await loadHarnessReport(runDir);
   const harnessIndex = buildHarnessIndex(report, perInstance);
 

@@ -122,6 +122,15 @@ node infra/evals/external/swebench/bin/fetch-dataset.mjs --subset verified
 # --- SWE-bench, narrow to specific instance ids ------------------------
 ./infra/evals/external/swebench/bin/run.sh smoke --instance-ids django__django-12345
 
+# --- SWE-bench, resume the most recent run after a crash/SIGINT --------
+# With no value, --resume picks the most recently modified aura-* directory
+# under infra/evals/reports/external/swebench_verified/. Already-recorded
+# instances are skipped; agent_error rows are retried (pass
+# --resume-include-errors to keep them too). Pass an explicit RUN_ID to
+# resume a specific run instead of the latest.
+./infra/evals/external/swebench/bin/run.sh verified --resume
+./infra/evals/external/swebench/bin/run.sh verified --resume aura-<sha>-<ts>
+
 # --- Terminal-Bench smoke (10 tasks) ---------------------------------
 ./infra/evals/external/tbench/bin/run-tbench.sh smoke
 
@@ -197,6 +206,42 @@ Initial baselines are placeholder `score: null` files at
 full-subset run should replace them via a manual commit. The PR-comment
 script handles missing baselines gracefully (renders the table with `—` in
 the baseline/delta columns).
+
+## Resuming a killed run
+
+SWE-bench writes per-instance state incrementally (`runs/<id>.json` and
+appends to `predictions.jsonl`) as soon as each instance finishes, but
+`driver-summary.json` and `score.json` are only produced at the end. If
+the driver, the host, or your network dies mid-run you can pick up exactly
+where you left off:
+
+```sh
+# Reuse the most recently modified aura-* run directory.
+./infra/evals/external/swebench/bin/run.sh verified --resume
+
+# Or reuse a specific run directory by its RUN_ID.
+./infra/evals/external/swebench/bin/run.sh verified --resume aura-<sha>-<ts>
+```
+
+Behavior:
+
+- `--resume` (no value) auto-picks the latest run dir under
+  `infra/evals/reports/external/swebench_verified/`. Pass a `RUN_ID` or an
+  absolute / repo-relative path to choose a different one.
+- The wrapper reuses the prior `RUN_ID` as the harness `--run_id` so the
+  Docker scoring report stays aligned with the prior partial outputs.
+- The driver scans `runs/*.json` and skips any instance whose status is
+  `agent_complete`, `clone_error`, or `skipped_cost_cap`. `agent_error`
+  instances are re-run by default; pass `--resume-include-errors` to also
+  treat them as final.
+- Per-instance workspaces (`work/<id>/workspace/`) are reused when their
+  `HEAD` already matches `base_commit`; otherwise the driver wipes the
+  directory and re-clones. Either way, you do not need to clean up by hand.
+- `predictions.jsonl` is deduplicated by `instance_id` so a retried row
+  never produces a double-append (which would confuse the harness scorer).
+- If the driver was killed before writing `driver-summary.json`,
+  `aggregate-score.mjs` now synthesizes one from `runs/*.json` so
+  `score.json` is always produced.
 
 ## Confidence and reporting hygiene
 
