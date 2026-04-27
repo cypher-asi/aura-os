@@ -1,5 +1,5 @@
 .sidebarRoot {
-  --left-menu-fade-height: 72px;
+  --left-menu-fade-height: 36px;
   position: relative;
   display: flex;
   flex-direction: column;

@@ -123,7 +123,7 @@
 }
 
 .sidekickPanelSlot {
-  --sidekick-fade-height: 72px;
+  --sidekick-fade-height: 36px;
   position: relative;
   flex: 1;
   min-width: 0;

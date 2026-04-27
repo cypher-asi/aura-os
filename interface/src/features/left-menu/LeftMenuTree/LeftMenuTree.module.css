@@ -1,5 +1,5 @@
 .root {
-  --left-menu-fade-height: 72px;
+  --left-menu-fade-height: 36px;
   --left-menu-selected-bg: var(--color-overlay-subtle);
   position: relative;
   display: flex;

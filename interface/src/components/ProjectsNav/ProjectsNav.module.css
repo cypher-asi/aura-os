@@ -1,5 +1,5 @@
 .root {
-  --projects-nav-fade-height: 72px;
+  --projects-nav-fade-height: 36px;
   position: relative;
   display: flex;
   flex-direction: column;
