@@ -216,6 +216,48 @@ describe("useChatHistorySync", () => {
     expect(resetEvents).not.toHaveBeenCalled();
   });
 
+  it("keeps transient stream errors when history catches up", async () => {
+    const caughtUpHistory: DisplaySessionEvent[] = [
+      { id: "evt-user", role: "user", content: "hello" },
+      { id: "evt-assistant", role: "assistant", content: "" },
+    ];
+    mocks.useChatHistory.mockReturnValue({
+      events: caughtUpHistory,
+      status: "ready",
+      error: null,
+    });
+    mocks.state.entries["agent:agent-1"] = {
+      events: caughtUpHistory,
+      status: "ready",
+      fetchedAt: Date.now(),
+      error: null,
+      lastMessageAt: "2026-04-13T00:01:00Z",
+    };
+    mocks.getStreamEntry.mockReturnValue({
+      events: [
+        { id: "temp-user", role: "user", content: "hello" },
+        { id: "error-1", role: "assistant", content: "*Error: failed*" },
+      ],
+    });
+
+    const resetEvents = vi.fn();
+    renderHook(() =>
+      useChatHistorySync({
+        historyKey: "agent:agent-1",
+        streamKey: "agent-1",
+        fetchFn: vi.fn(async () => []),
+        resetEvents,
+        hydrateToStream: false,
+      }),
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(resetEvents).not.toHaveBeenCalledWith([], {
+      allowWhileStreaming: true,
+    });
+  });
+
   it("does not fetch server history during capture sessions", async () => {
     screenshotBridgeMocks.isAuraCaptureSessionActive.mockReturnValue(true);
     const resetEvents = vi.fn();

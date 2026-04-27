@@ -43,10 +43,6 @@ pub(crate) async fn send_event_stream(
     require_credits_for_auth_source(&state, &jwt, &instance.auth_source).await?;
     info!(%project_id, %agent_instance_id, action = ?body.action, "Message stream requested");
 
-    // `body.commands` is accepted for API compatibility but not yet wired
-    // through to the harness — preserve the original chat.rs behavior.
-    let _ = body.commands;
-
     reject_if_partition_busy(
         &state,
         &instance.agent_id,
@@ -120,6 +116,7 @@ pub(crate) async fn send_event_stream(
         aura_org_id: instance.org_id.as_ref().map(|o| o.to_string()),
         aura_session_id: persist_ctx.as_ref().map(|c| c.session_id.clone()),
         provider_config: build_harness_provider_config(
+            instance.harness_mode(),
             &instance.auth_source,
             None,
             model.as_deref(),
@@ -141,6 +138,7 @@ pub(crate) async fn send_event_stream(
             requested_model: body.model,
             persist_ctx,
             attachments: body.attachments,
+            commands: body.commands,
         },
     )
     .await

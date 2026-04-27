@@ -4,7 +4,7 @@ use axum::extract::{Path, State};
 use axum::Json;
 use tokio::time::timeout;
 
-use aura_os_core::{Agent, AgentId};
+use aura_os_core::{Agent, AgentId, HarnessMode};
 use aura_os_harness::{
     HarnessInbound, HarnessOutbound, SessionConfig, SessionProviderConfig, SessionUsage,
     UserMessage,
@@ -59,10 +59,7 @@ pub(crate) async fn test_agent_runtime(
     }))
 }
 
-pub(crate) fn effective_model(
-    agent: &Agent,
-    override_model: Option<String>,
-) -> Option<String> {
+pub(crate) fn effective_model(agent: &Agent, override_model: Option<String>) -> Option<String> {
     override_model
         .filter(|value| !value.trim().is_empty())
         .or_else(|| {
@@ -83,10 +80,15 @@ fn non_empty_string(value: &str) -> Option<String> {
 }
 
 pub(crate) fn build_harness_provider_config(
+    harness_mode: HarnessMode,
     _auth_source: &str,
     _integration: Option<()>,
     model: Option<&str>,
 ) -> ApiResult<Option<SessionProviderConfig>> {
+    if harness_mode == HarnessMode::Local {
+        return Ok(None);
+    }
+
     let default_model = model
         .map(str::trim)
         .filter(|value| !value.is_empty())
@@ -130,6 +132,7 @@ async fn run_harness_test(
         model: model.clone(),
         token: Some(jwt.to_string()),
         provider_config: build_harness_provider_config(
+            agent.harness_mode(),
             &agent.auth_source,
             None,
             model.as_deref(),
@@ -195,3 +198,36 @@ async fn run_harness_test(
     Ok(turn)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn local_harness_omits_provider_config() {
+        let config = build_harness_provider_config(
+            HarnessMode::Local,
+            "aura",
+            None,
+            Some("claude-sonnet-4"),
+        )
+        .expect("provider config should build");
+
+        assert!(config.is_none());
+    }
+
+    #[test]
+    fn swarm_harness_uses_aura_proxy_provider_config() {
+        let config = build_harness_provider_config(
+            HarnessMode::Swarm,
+            "aura",
+            None,
+            Some("claude-sonnet-4"),
+        )
+        .expect("provider config should build")
+        .expect("swarm should receive provider config");
+
+        assert_eq!(config.provider, "aura_proxy");
+        assert_eq!(config.routing_mode.as_deref(), Some("proxy"));
+        assert_eq!(config.default_model.as_deref(), Some("claude-sonnet-4"));
+    }
+}

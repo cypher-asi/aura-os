@@ -134,6 +134,22 @@ pub(super) struct OpenChatStreamArgs {
     pub(super) requested_model: Option<String>,
     pub(super) persist_ctx: Option<ChatPersistCtx>,
     pub(super) attachments: Option<Vec<ChatAttachmentDto>>,
+    pub(super) commands: Option<Vec<String>>,
+}
+
+pub(super) fn tool_hints_from_commands(commands: Option<&[String]>) -> Option<Vec<String>> {
+    let mut hints = Vec::new();
+    for command in commands.unwrap_or(&[]) {
+        let hint = match command.as_str() {
+            "generate_image" => "generate_image",
+            "generate_3d" | "generate_3d_model" => "generate_3d_model",
+            _ => continue,
+        };
+        if !hints.iter().any(|existing| existing == hint) {
+            hints.push(hint.to_string());
+        }
+    }
+    (!hints.is_empty()).then_some(hints)
 }
 
 pub(super) async fn open_harness_chat_stream(
@@ -148,6 +164,7 @@ pub(super) async fn open_harness_chat_stream(
         requested_model,
         persist_ctx,
         attachments,
+        commands,
     } = args;
 
     // Guiding invariant: no silent success. If the inbound user message
@@ -177,7 +194,7 @@ pub(super) async fn open_harness_chat_stream(
 
     let turn = SessionBridgeTurn {
         content: user_content,
-        tool_hints: None,
+        tool_hints: tool_hints_from_commands(commands.as_deref()),
         attachments: dto_attachments_to_protocol(&attachments),
     };
     let persist_model = requested_model
@@ -301,13 +318,14 @@ fn build_sse_stream(
         // this into the chat composer; until then the event is a
         // no-op for older clients that ignore unknown progress
         // stages.
-        if let Ok(progress_event) = Event::default()
-            .event("progress")
-            .json_data(serde_json::json!({
-                "type":"progress",
-                "stage":"queued",
-                "message":"Queued behind current turn",
-            }))
+        if let Ok(progress_event) =
+            Event::default()
+                .event("progress")
+                .json_data(serde_json::json!({
+                    "type":"progress",
+                    "stage":"queued",
+                    "message":"Queued behind current turn",
+                }))
         {
             prefix.push(Ok(progress_event));
         }
@@ -481,7 +499,7 @@ mod tests {
     use tokio::sync::{broadcast, Mutex};
 
     use super::super::turn_slot::acquire_turn_slot;
-    use super::{build_sse_stream, harness_broadcast_to_sse};
+    use super::{build_sse_stream, harness_broadcast_to_sse, tool_hints_from_commands};
 
     fn end_event() -> HarnessOutbound {
         HarnessOutbound::AssistantMessageEnd(AssistantMessageEnd {
@@ -505,6 +523,38 @@ mod tests {
         // bytes), which is the only way to inspect a constructed Event
         // without going through the IntoResponse path.
         format!("{:?}", event)
+    }
+
+    #[test]
+    fn tool_hints_from_commands_maps_generation_commands() {
+        let commands = vec![
+            "generate_image".to_string(),
+            "generate_3d".to_string(),
+            "unknown".to_string(),
+        ];
+
+        assert_eq!(
+            tool_hints_from_commands(Some(&commands)),
+            Some(vec![
+                "generate_image".to_string(),
+                "generate_3d_model".to_string(),
+            ]),
+        );
+    }
+
+    #[test]
+    fn tool_hints_from_commands_dedupes_and_ignores_unknowns() {
+        let commands = vec![
+            "generate_image".to_string(),
+            "generate_image".to_string(),
+            "not_a_tool".to_string(),
+        ];
+
+        assert_eq!(
+            tool_hints_from_commands(Some(&commands)),
+            Some(vec!["generate_image".to_string()]),
+        );
+        assert_eq!(tool_hints_from_commands(None), None);
     }
 
     #[tokio::test]
@@ -572,13 +622,7 @@ mod tests {
 
         let stream = build_sse_stream(rx, /* is_new */ true, /* was_queued */ true);
         tokio::pin!(stream);
-        let first = dump(
-            &stream
-                .next()
-                .await
-                .expect("connecting event")
-                .expect("ok"),
-        );
+        let first = dump(&stream.next().await.expect("connecting event").expect("ok"));
         let second = dump(&stream.next().await.expect("queued event").expect("ok"));
         assert!(
             first.contains("connecting"),
@@ -609,8 +653,7 @@ mod tests {
 
         let slot_2 = Arc::clone(&slot);
         let counter_2 = Arc::clone(&counter);
-        let second_handle =
-            tokio::spawn(async move { acquire_turn_slot(slot_2, counter_2).await });
+        let second_handle = tokio::spawn(async move { acquire_turn_slot(slot_2, counter_2).await });
 
         tokio::time::sleep(Duration::from_millis(20)).await;
         assert!(
@@ -708,7 +751,9 @@ mod tests {
             "remapped event must surface the structured `agent_busy` code, got: {body}"
         );
         assert!(
-            !body.to_ascii_lowercase().contains("turn is currently in progress")
+            !body
+                .to_ascii_lowercase()
+                .contains("turn is currently in progress")
                 && !body.contains("turn_in_progress"),
             "remapped event must NOT leak the raw harness wording, got: {body}"
         );

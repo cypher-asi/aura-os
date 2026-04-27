@@ -47,6 +47,12 @@ const PROGRESS_REFETCH_DEBOUNCE_MS = 250;
  */
 const STREAM_FINISH_GRACE_MS = 5000;
 
+function hasTransientStreamError(events: DisplaySessionEvent[]): boolean {
+  return events.some((event) =>
+    event.id.startsWith("error-") || event.displayVariant != null
+  );
+}
+
 interface ChatHistorySyncOptions {
   historyKey: string | undefined;
   streamKey: string;
@@ -365,6 +371,9 @@ export function useChatHistorySync({
     // many messages. This prevents a flash where stream events are wiped
     // before the server has finished persisting the assistant reply.
     if (historyMessages.length < streamCount) {
+      return;
+    }
+    if (hasTransientStreamError(streamEntry?.events ?? [])) {
       return;
     }
 

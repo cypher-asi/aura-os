@@ -43,10 +43,6 @@ pub(crate) async fn send_agent_event_stream(
     require_credits_for_auth_source(&state, &jwt, &agent.auth_source).await?;
     info!(%agent_id, action = ?body.action, "Agent message stream requested");
 
-    // `body.commands` is accepted for API compatibility but not yet wired
-    // through to the harness — preserve the original chat.rs behavior.
-    let _ = body.commands;
-
     if agent.adapter_type != "aura_harness" {
         return Err(ApiError::bad_request(format!(
             "adapter `{}` is no longer supported; only `aura_harness` agents can be chatted with",
@@ -118,6 +114,7 @@ pub(crate) async fn send_agent_event_stream(
         aura_org_id: agent.org_id.as_ref().map(|o| o.to_string()),
         aura_session_id: persist_ctx.as_ref().map(|c| c.session_id.clone()),
         provider_config: build_harness_provider_config(
+            agent.harness_mode(),
             &agent.auth_source,
             None,
             model.as_deref(),
@@ -139,6 +136,7 @@ pub(crate) async fn send_agent_event_stream(
             requested_model: body.model,
             persist_ctx,
             attachments: body.attachments,
+            commands: body.commands,
         },
     )
     .await
