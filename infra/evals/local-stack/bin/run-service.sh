@@ -15,12 +15,15 @@ source "$script_dir/common.sh"
 stack_load_env
 stack_validate_modes
 
-# Mirror the .env parser the main aura-os app uses to seed the harness child
-# (apps/aura-os-server/src/app_builder/harness_autospawn.rs:181-198): line by
-# line, skip comments and blank lines, split on the first `=`, only export
-# keys that are not already set in the current environment so explicit
-# stack-level exports continue to win for stack-specific overrides like
-# AURA_OS_SERVER_URL, AURA_LISTEN_ADDR, AURA_DATA_DIR, etc.
+# Mirror the .env parser the main aura-os app uses to seed the harness
+# child (apps/aura-os-server/src/app_builder/harness_autospawn.rs:181-198
+# `parse_env_file` + lines 102-109 spawn loop): line by line, skip
+# comments and blank lines, split on the first `=`, and ALWAYS export so
+# the harness's own .env can override the spawn-stage env exports above
+# it — exactly the way `cmd.env(key, val)` overwrites prior `cmd.env`
+# calls in the desktop spawn. The stack URL re-exports below the call
+# site re-stamp the values that must win over the .env (mirroring
+# `derive_harness_url_overrides`).
 _load_harness_dotenv() {
   local env_file="$1"
   [[ -f "$env_file" ]] || return 0
@@ -40,9 +43,7 @@ _load_harness_dotenv() {
     if [[ -z "$key" || -z "$val" ]]; then
       continue
     fi
-    if [[ -z "${!key:-}" ]]; then
-      export "$key=$val"
-    fi
+    export "$key=$val"
   done < "$env_file"
 }
 
@@ -120,79 +121,66 @@ if [[ -n "$runtime_env" ]]; then
 fi
 
 if [[ "$service" == "harness" ]]; then
-  # Stack-owned settings: control-plane URLs, listen addr, data dir. These
-  # MUST win over whatever aura-harness/.env says, so we export them first
-  # and rely on `_load_harness_dotenv`'s "skip if already set" semantics.
-  export AURA_LISTEN_ADDR="127.0.0.1:${AURA_STACK_HARNESS_PORT}"
-  export AURA_DATA_DIR="${AURA_STACK_RUNTIME_DIR}/aura-harness-data"
-  export AURA_NETWORK_URL="$(stack_resolved_url network)"
-  export AURA_STORAGE_URL="$(stack_resolved_url storage)"
-  export ORBIT_URL="$(stack_resolved_url orbit)"
-  # Point the harness at THIS stack's aura-os-server. The harness's `.env`
-  # ships with `AURA_OS_SERVER_URL=http://127.0.0.1:3100`, which silently
-  # routes spec/task/log writes from `HttpDomainApi` to a dead port whenever
-  # the local stack runs on its default `:3190` (or any other configured
-  # port). The failed POST gets wrapped in a `domain_ok({"ok":false,...})`
-  # envelope with `is_error=false`, so the LLM perceives it as a soft
-  # failure and loops `list_specs` ↔ `create_spec` until `max_turns`. The
-  # surface symptom is `[preflight] FAIL list_specs ... returned 0 specs`
-  # after an apparently-successful spec_stream.
-  export AURA_OS_SERVER_URL="$(stack_local_url aura_os)"
-  export RUST_LOG="$AURA_STACK_HARNESS_LOG_LEVEL"
-  # Eval pipeline pins a model regardless of LLM routing; harness `.env`
-  # leaves it commented out, so we always set it.
-  export AURA_ANTHROPIC_MODEL="$AURA_STACK_ANTHROPIC_MODEL"
-  # Diagnostic: when the LLM proxy returns a Cloudflare HTML challenge, the
-  # harness writes the full body to this dir so we can identify *which* edge
-  # blocked (Render's Cloudflare on inbound vs upstream Anthropic Cloudflare
-  # passed through aura-router). Cheap to keep on; the file is only written
-  # on the rare 403 + cloudflare_html=true path.
-  export AURA_DEBUG_CLOUDFLARE_DUMP_DIR="${AURA_STACK_RUNTIME_DIR}/cloudflare-dumps"
+  # Mirror apps/aura-os-server/src/app_builder/harness_autospawn.rs
+  # `maybe_spawn_local_harness` exactly. The desktop sets only the
+  # spawn-port env (BIND_ADDR / BIND_PORT), an optional WS-slot cap,
+  # then loads the harness's own .env (which may override the
+  # spawn-stage env), then layers `derive_harness_url_overrides` so
+  # stack URLs win over the .env. Anything else (RUST_LOG override,
+  # AURA_ANTHROPIC_MODEL pin, AURA_DEBUG_CLOUDFLARE_DUMP_DIR, the
+  # AURA_STACK_HARNESS_LLM_* override block) is intentionally NOT set
+  # here — the desktop never sets any of them, so the harness has no
+  # opportunity to emit the symptoms (verbose tool_call_snapshot
+  # stream, cf-block-*.html disk fill, model pinning, retry-storm
+  # debug WARNs) that those env vars unlock.
 
-  # Mirror harness_autospawn.rs: read aura-harness/.env and merge any keys
-  # not already set, picking up AURA_LLM_ROUTING, AURA_ROUTER_URL,
-  # INTERNAL_SERVICE_TOKEN, TAVILY_API_KEY, ENABLE_CMD_TOOLS, TOOLS_CONFIG,
-  # etc. The harness binary also runs `dotenvy::dotenv()` from cwd, but it
-  # is non-overriding and only sees this same file — doing it here makes
-  # the stack flow explicit and matches what `harness_autospawn.rs` does
-  # before spawning the desktop's local harness child. By default this
-  # leaves LLM routing identical to the desktop's local harness path:
-  # proxy → aura-router using the per-session token sent by aura-os-server.
+  # Stage 1: spawn-port env — mirrors harness_autospawn.rs:76-77.
+  export BIND_ADDR="127.0.0.1:${AURA_STACK_HARNESS_PORT}"
+  export BIND_PORT="${AURA_STACK_HARNESS_PORT}"
+  # Eval-only addition: AURA_DATA_DIR isolates harness state to the
+  # `.runtime/` runtime dir instead of the per-user data dir the
+  # desktop binary defaults to. The desktop IS the user, so its
+  # default is correct there; we cannot share that state across eval
+  # runs without contaminating the user's main aura install.
+  export AURA_DATA_DIR="${AURA_STACK_RUNTIME_DIR}/aura-harness-data"
+  # Optional WS-slot cap forwarding — mirrors autospawn lines 93-97.
+  if [[ -n "${AURA_STACK_HARNESS_WS_SLOTS:-}" ]]; then
+    export AURA_HARNESS_WS_SLOTS="$AURA_STACK_HARNESS_WS_SLOTS"
+  fi
+
+  # Stage 2: load harness's own .env. Mirrors autospawn lines
+  # 102-109: `parse_env_file` + per-pair `cmd.env(key, val)` so .env
+  # entries OVERRIDE the spawn-stage env. `_load_harness_dotenv` was
+  # updated to be overriding for this reason. This is what picks up
+  # AURA_LLM_ROUTING, AURA_ROUTER_URL, INTERNAL_SERVICE_TOKEN,
+  # TAVILY_API_KEY, ENABLE_CMD_TOOLS, TOOLS_CONFIG, etc. — exactly
+  # the same set the desktop autospawn picks up.
   _load_harness_dotenv "$workdir/.env"
 
-  # --- Optional stack-level overrides for LLM routing ---------------------
-  # The desktop autospawn flow does NOT override any of these — it inherits
-  # whatever the harness's `.env` configured. We follow that by default.
-  # When CF on aura-router persistently rule-blocks the eval host, set
-  # AURA_STACK_HARNESS_LLM_ROUTING=direct + AURA_STACK_ANTHROPIC_API_KEY in
-  # stack.env to bypass the router for this run only. See stack.env.example
-  # for the full escape-valve recipe.
-  if [[ -n "${AURA_STACK_HARNESS_LLM_ROUTING:-}" ]]; then
-    export AURA_LLM_ROUTING="$AURA_STACK_HARNESS_LLM_ROUTING"
+  # Stage 3: stack URL re-overrides — mirrors
+  # `derive_harness_url_overrides` (autospawn lines 240-267). Stack
+  # URLs win over harness .env. AURA_OS_SERVER_URL is always
+  # re-stamped because the harness .env's baked `:3100` default
+  # routes domain writes to a dead port whenever
+  # AURA_STACK_AURA_OS_PORT is anything other than 3100, producing
+  # the silent `domain_ok({"ok":false,...})` failure the autospawn
+  # comment block warns about. The other URLs are only re-exported
+  # when this stack actually has a value for them — when a service
+  # is `disabled`, `stack_resolved_url` returns empty, and we leave
+  # the harness .env's production default alone (matching the
+  # desktop's "only emit when we have a confident value" stance).
+  export AURA_OS_SERVER_URL="$(stack_local_url aura_os)"
+  network_url="$(stack_resolved_url network)"
+  if [[ -n "$network_url" ]]; then
+    export AURA_NETWORK_URL="$network_url"
   fi
-  if [[ -n "${AURA_STACK_ROUTER_URL:-}" ]]; then
-    export AURA_ROUTER_URL="$AURA_STACK_ROUTER_URL"
+  storage_url="$(stack_resolved_url storage)"
+  if [[ -n "$storage_url" ]]; then
+    export AURA_STORAGE_URL="$storage_url"
   fi
-  if [[ -n "${AURA_STACK_ANTHROPIC_API_KEY:-}" ]]; then
-    export AURA_ANTHROPIC_API_KEY="$AURA_STACK_ANTHROPIC_API_KEY"
-  fi
-  # Only export AURA_ROUTER_JWT when explicitly set. Exporting an empty
-  # string short-circuits `aura_agent::session_bootstrap::load_auth_token`'s
-  # CredentialStore fallback (it returns `Some("")` instead of `None`),
-  # which sends an empty `Bearer ` to aura-router and triggers an upstream
-  # Cloudflare HTML 403 on the proxy → Anthropic hop. The IDE flow leaves
-  # this unset; we match that.
-  if [[ -n "${AURA_STACK_AURA_ROUTER_JWT:-}" ]]; then
-    export AURA_ROUTER_JWT="$AURA_STACK_AURA_ROUTER_JWT"
-  fi
-  # Optional knob to throttle the harness's CloudflareBlock retry storm.
-  # `aura-reasoner/src/anthropic/config.rs` reads AURA_LLM_MAX_RETRIES from
-  # env (default 8). When the WAF on aura-router rule-blocks the eval IP,
-  # eight retries with exponential backoff (250ms→30s) compound the block
-  # for tens of minutes per tool call. Set this to 1 or 2 in stack.env when
-  # the eval host trips the WAF.
-  if [[ -n "${AURA_STACK_HARNESS_LLM_MAX_RETRIES:-}" ]]; then
-    export AURA_LLM_MAX_RETRIES="$AURA_STACK_HARNESS_LLM_MAX_RETRIES"
+  orbit_url="$(stack_resolved_url orbit)"
+  if [[ -n "$orbit_url" ]]; then
+    export ORBIT_URL="$orbit_url"
   fi
 
   mkdir -p "$AURA_DATA_DIR"
