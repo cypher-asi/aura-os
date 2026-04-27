@@ -508,6 +508,24 @@ pub struct FilesChanged {
     pub created: Vec<String>,
     pub modified: Vec<String>,
     pub deleted: Vec<String>,
+    /// Per-file line-count diffs. Populated by aura-harness's edit/write
+    /// tools when content-aware tools mutate files. Empty for tool changes
+    /// the harness cannot diff (e.g. arbitrary bash commands). Optional and
+    /// backward-compatible: older aura-harness builds emit no diffs and
+    /// older aura-code builds simply ignore the field.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub diffs: Vec<FileDiff>,
+}
+
+/// Per-file line-count diff. Aggregated by aura-code into
+/// `tasks.files_changed` JSONB so the dashboard's "Lines" stat reflects
+/// real edits instead of zero.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "typescript", derive(TS), ts(export))]
+pub struct FileDiff {
+    pub path: String,
+    pub lines_added: u32,
+    pub lines_removed: u32,
 }
 
 impl FilesChanged {
