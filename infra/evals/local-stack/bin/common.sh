@@ -82,6 +82,11 @@ stack_load_env() {
   # aura-reasoner). Lower this when CF on aura-router is persistently
   # blocking — aggressive retries reinforce the WAF block.
   export AURA_STACK_HARNESS_LLM_MAX_RETRIES="${AURA_STACK_HARNESS_LLM_MAX_RETRIES:-}"
+  # `bin/preflight-llm.sh` invocation policy. Default `fail` aborts
+  # bootstrap with an actionable diagnosis when the LLM path is broken
+  # (CF WAF block, 401, 5xx, network). `warn` prints the diagnosis but
+  # lets startup continue. `skip` bypasses the probe entirely.
+  export AURA_STACK_LLM_PREFLIGHT="${AURA_STACK_LLM_PREFLIGHT:-fail}"
   export AURA_STACK_AURA_OS_DATA_DIR="${AURA_STACK_AURA_OS_DATA_DIR:-$AURA_STACK_RUNTIME_DIR/aura-app}"
 
   stack_apply_preset

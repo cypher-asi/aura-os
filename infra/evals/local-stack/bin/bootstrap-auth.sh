@@ -51,6 +51,37 @@ is_local_dev_jwt() {
   esac
 }
 
+json_escape() {
+  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
+login_with_credentials() {
+  if [[ -z "${AURA_EVAL_USER_EMAIL:-}" || -z "${AURA_EVAL_USER_PASSWORD:-}" ]]; then
+    return 1
+  fi
+
+  email="$(json_escape "$AURA_EVAL_USER_EMAIL")"
+  password="$(json_escape "$AURA_EVAL_USER_PASSWORD")"
+  payload="$(printf '{"email":"%s","password":"%s"}' "$email" "$password")"
+  login_response="$(
+    curl \
+      --silent \
+      --show-error \
+      --fail \
+      -H 'Content-Type: application/json' \
+      -d "$payload" \
+      "$target_base_url/api/auth/login"
+  )" || return 1
+
+  token="$(
+    printf '%s' "$login_response" | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p'
+  )"
+  if [[ -z "$token" ]]; then
+    return 1
+  fi
+  printf '%s\n' "$token"
+}
+
 resolve_source_access_token() {
   if [[ -n "${AURA_STACK_SOURCE_ACCESS_TOKEN:-}" ]]; then
     printf '%s\n' "$AURA_STACK_SOURCE_ACCESS_TOKEN"
@@ -97,7 +128,7 @@ resolve_source_access_token() {
 }
 
 if [[ "${1:-}" == "--check" ]]; then
-  if resolve_source_access_token >/dev/null; then
+  if resolve_source_access_token >/dev/null || [[ -n "${AURA_EVAL_USER_EMAIL:-}" && -n "${AURA_EVAL_USER_PASSWORD:-}" ]]; then
     exit 0
   fi
   exit 1
@@ -110,13 +141,17 @@ fi
 
 echo "Resolving source auth token"
 if ! access_token="$(resolve_source_access_token)"; then
-  echo "Could not resolve a source Aura auth token." >&2
-  echo "Checked, in order:" >&2
-  echo "  1. AURA_STACK_SOURCE_ACCESS_TOKEN" >&2
-  echo "  2. persisted session in $source_data_dir" >&2
-  echo "  3. legacy endpoint at $source_base_url/api/auth/access-token" >&2
-  echo "  4. env token aliases only when AURA_STACK_ALLOW_ENV_SOURCE_TOKEN=1" >&2
-  exit 1
+  echo "No source token found; attempting zOS login via $target_base_url/api/auth/login"
+  if ! access_token="$(login_with_credentials)"; then
+    echo "Could not resolve a source Aura auth token or log in with credentials." >&2
+    echo "Checked, in order:" >&2
+    echo "  1. AURA_STACK_SOURCE_ACCESS_TOKEN" >&2
+    echo "  2. persisted session in $source_data_dir" >&2
+    echo "  3. legacy endpoint at $source_base_url/api/auth/access-token" >&2
+    echo "  4. env token aliases only when AURA_STACK_ALLOW_ENV_SOURCE_TOKEN=1" >&2
+    echo "  5. AURA_EVAL_USER_EMAIL / AURA_EVAL_USER_PASSWORD via /api/auth/login" >&2
+    exit 1
+  fi
 fi
 
 if [[ -z "$access_token" ]]; then
@@ -125,11 +160,14 @@ if [[ -z "$access_token" ]]; then
 fi
 
 if is_local_dev_jwt "$access_token" && [[ "${AURA_STACK_ALLOW_LOCAL_AUTH_TOKEN:-}" != "1" ]]; then
-  echo "Resolved source auth token looks like a local/dev HS256 token." >&2
-  echo "That token can pass the isolated stack but fails aura-router proxy auth." >&2
-  echo "Use the real app session, set AURA_STACK_AUTH_SOURCE_DATA_DIR, or set AURA_STACK_SOURCE_ACCESS_TOKEN." >&2
-  echo "Set AURA_STACK_ALLOW_LOCAL_AUTH_TOKEN=1 only for offline/local-router tests." >&2
-  exit 1
+  echo "Resolved source auth token looks like a local/dev HS256 token; attempting zOS login via $target_base_url/api/auth/login"
+  if ! access_token="$(login_with_credentials)"; then
+    echo "Resolved source auth token looks like a local/dev HS256 token." >&2
+    echo "That token can pass the isolated stack but fails aura-router proxy auth." >&2
+    echo "Use the real app session, set AURA_STACK_AUTH_SOURCE_DATA_DIR, set AURA_STACK_SOURCE_ACCESS_TOKEN, or set AURA_EVAL_USER_EMAIL/AURA_EVAL_USER_PASSWORD." >&2
+    echo "Set AURA_STACK_ALLOW_LOCAL_AUTH_TOKEN=1 only for offline/local-router tests." >&2
+    exit 1
+  fi
 fi
 
 echo "Importing session into $target_base_url"
@@ -170,3 +208,11 @@ chmod +x "$auth_env_file"
 
 echo "Local Aura auth bootstrap complete."
 echo "  wrote benchmark auth token to $auth_env_file"
+
+# Probe the LLM path the harness will actually use, so a misconfigured
+# proxy / Cloudflare WAF block / 5xx surfaces here in seconds with a
+# clear diagnosis rather than after the harness has spent its 8-attempt
+# retry budget on every tool call. Set AURA_STACK_LLM_PREFLIGHT=skip in
+# stack.env to disable, or =warn to log without blocking startup.
+echo
+AURA_EVAL_ACCESS_TOKEN="$access_token" "$script_dir/preflight-llm.sh" "$access_token"
