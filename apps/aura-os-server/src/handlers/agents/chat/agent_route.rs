@@ -10,6 +10,7 @@ use tracing::{error, info, warn};
 
 use crate::dto::SendChatRequest;
 use crate::error::{ApiError, ApiResult};
+use crate::handlers::projects_helpers::{is_project_tool_action, project_tool_max_turns};
 use crate::state::{AppState, AuthJwt};
 
 use super::busy::reject_if_partition_busy;
@@ -98,6 +99,12 @@ pub(crate) async fn send_agent_event_stream(
     let installed_integrations =
         installed_workspace_integrations(agent.org_id.as_ref(), org_integrations.as_deref());
 
+    // Mirror the cap applied in `instance_route.rs::send_event_stream`:
+    // tool-driven actions like `generate_specs` get bounded so a
+    // runaway loop returns instead of stalling past Node's default
+    // `headersTimeout`. Interactive chat stays uncapped.
+    let max_turns = is_project_tool_action(body.action.as_deref()).then(project_tool_max_turns);
+
     let config = SessionConfig {
         system_prompt: Some(append_project_state_to_system_prompt(
             &agent.system_prompt,
@@ -108,6 +115,7 @@ pub(crate) async fn send_agent_event_stream(
         user_id: Some(auth_session.user_id.clone()),
         agent_name: Some(agent.name.clone()),
         model: model.clone(),
+        max_turns,
         token: Some(jwt.clone()),
         conversation_messages,
         project_id: body.project_id.clone(),

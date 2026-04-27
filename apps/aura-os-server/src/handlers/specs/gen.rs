@@ -290,26 +290,23 @@ fn harness_specs_to_sse(
     session: HarnessSession,
     rx: broadcast::Receiver<HarnessOutbound>,
 ) -> impl futures_core::Stream<Item = Result<Event, Infallible>> + Send {
-    stream::unfold(
-        (session, rx, false),
-        |(session, mut rx, done)| async move {
-            if done {
-                return None;
-            }
-            loop {
-                match rx.recv().await {
-                    Ok(evt) => {
-                        let terminal = matches!(
-                            evt,
-                            HarnessOutbound::AssistantMessageEnd(_) | HarnessOutbound::Error(_)
-                        );
-                        let event = super::super::sse::harness_event_to_sse(&evt);
-                        return Some((event, (session, rx, terminal)));
-                    }
-                    Err(broadcast::error::RecvError::Lagged(_)) => continue,
-                    Err(broadcast::error::RecvError::Closed) => return None,
+    stream::unfold((session, rx, false), |(session, mut rx, done)| async move {
+        if done {
+            return None;
+        }
+        loop {
+            match rx.recv().await {
+                Ok(evt) => {
+                    let terminal = matches!(
+                        evt,
+                        HarnessOutbound::AssistantMessageEnd(_) | HarnessOutbound::Error(_)
+                    );
+                    let event = super::super::sse::harness_event_to_sse(&evt);
+                    return Some((event, (session, rx, terminal)));
                 }
+                Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                Err(broadcast::error::RecvError::Closed) => return None,
             }
-        },
-    )
+        }
+    })
 }

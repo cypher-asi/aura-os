@@ -12,7 +12,9 @@ use tracing::info;
 use crate::dto::SendChatRequest;
 use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::handlers::billing::require_credits_for_auth_source;
-use crate::handlers::projects_helpers::resolve_agent_instance_workspace_path;
+use crate::handlers::projects_helpers::{
+    is_project_tool_action, project_tool_max_turns, resolve_agent_instance_workspace_path,
+};
 use crate::state::{AppState, AuthJwt};
 
 use super::busy::reject_if_partition_busy;
@@ -102,6 +104,17 @@ pub(crate) async fn send_event_stream(
     let installed_integrations =
         installed_workspace_integrations(instance.org_id.as_ref(), org_integrations.as_deref());
 
+    // Cap agentic steps for non-interactive tool flows like
+    // `generate_specs` so a degenerate `list_specs` ↔ `create_spec`
+    // loop returns within seconds instead of stalling for ~5 minutes
+    // until Node's default `headersTimeout` trips and surfaces as the
+    // opaque `TypeError: fetch failed` (see
+    // `infra/evals/local-stack/.runtime/logs/harness.log` from the
+    // 2026-04-27 SWE-bench `astropy__astropy-12907` repro). Real
+    // interactive chat (`action == None | "chat" | "plan"`) stays
+    // uncapped.
+    let max_turns = is_project_tool_action(body.action.as_deref()).then(project_tool_max_turns);
+
     let config = SessionConfig {
         system_prompt: Some(system_prompt),
         agent_id: Some(partition_agent_id),
@@ -109,6 +122,7 @@ pub(crate) async fn send_event_stream(
         user_id: Some(auth_session.user_id.clone()),
         agent_name: Some(instance.name.clone()),
         model: model.clone(),
+        max_turns,
         token: Some(jwt),
         conversation_messages,
         project_id: Some(pid_str),

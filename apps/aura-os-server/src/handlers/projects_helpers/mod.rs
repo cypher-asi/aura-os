@@ -21,7 +21,8 @@ pub(crate) use paths::{
     canonical_workspace_path, ensure_canonical_workspace_dir, slugify, write_imported_files,
 };
 pub(crate) use session::{
-    project_tool_deadline, project_tool_session_config, resolve_agent_instance_workspace_path,
+    is_project_tool_action, project_tool_deadline, project_tool_max_turns,
+    project_tool_session_config, resolve_agent_instance_workspace_path,
     resolve_project_tool_workspace_path,
 };
 pub(crate) use validation::{validate_workspace_is_initialised, WorkspacePreflightError};

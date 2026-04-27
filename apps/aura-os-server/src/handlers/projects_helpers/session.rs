@@ -119,6 +119,31 @@ pub(crate) fn project_tool_max_turns() -> u32 {
     parse_project_tool_max_turns(std::env::var("AURA_PROJECT_TOOL_MAX_TURNS").ok().as_deref())
 }
 
+/// Whether `SendChatRequest.action` corresponds to a non-interactive
+/// project-tool workflow that should be subject to the same agentic
+/// step cap as the dedicated `/specs/generate` and `/tasks/extract`
+/// endpoints.
+///
+/// The benchmark and live-pipeline preflight drivers issue spec
+/// generation through the chat instance route with
+/// `action: "generate_specs"` (see
+/// `interface/scripts/lib/benchmark-api-runner.mjs` and
+/// `live-pipeline-preflight.mjs`). Without a cap the LLM can land in
+/// the same `list_specs` ↔ `create_spec` loop that previously
+/// surfaced as `TypeError: fetch failed` once Node's default
+/// `headersTimeout` tripped. Interactive chat actions
+/// (`None`, `Some("chat")`, `Some("plan")`) deliberately stay
+/// uncapped — long human-in-the-loop conversations need many turns.
+pub(crate) fn is_project_tool_action(action: Option<&str>) -> bool {
+    match action.map(str::trim) {
+        Some(s) => matches!(
+            s.to_ascii_lowercase().as_str(),
+            "generate_specs" | "regenerate_specs_summary" | "extract_tasks"
+        ),
+        None => false,
+    }
+}
+
 /// Read `AURA_PROJECT_TOOL_DEADLINE_SECS`, defaulting to
 /// [`DEFAULT_PROJECT_TOOL_DEADLINE_SECS`]. Empty / non-numeric / zero
 /// values fall back to the default rather than disabling the cap.
@@ -318,8 +343,9 @@ mod tests {
     use std::time::Duration;
 
     use super::{
-        first_non_empty_model, parse_project_tool_deadline, parse_project_tool_max_turns,
-        DEFAULT_PROJECT_TOOL_DEADLINE_SECS, DEFAULT_PROJECT_TOOL_MAX_TURNS,
+        first_non_empty_model, is_project_tool_action, parse_project_tool_deadline,
+        parse_project_tool_max_turns, DEFAULT_PROJECT_TOOL_DEADLINE_SECS,
+        DEFAULT_PROJECT_TOOL_MAX_TURNS,
     };
     use crate::handlers::agents::chat::{render_project_context, render_project_context_fallback};
     use aura_os_core::ProjectId;
@@ -364,6 +390,26 @@ mod tests {
             parse_project_tool_deadline(Some(" 60 ")),
             Duration::from_secs(60)
         );
+    }
+
+    #[test]
+    fn is_project_tool_action_recognises_known_tool_flows() {
+        assert!(is_project_tool_action(Some("generate_specs")));
+        assert!(is_project_tool_action(Some("extract_tasks")));
+        assert!(is_project_tool_action(Some("regenerate_specs_summary")));
+        // Casing / whitespace tolerance keeps callers from accidentally
+        // bypassing the cap by sending uppercase from a UI control.
+        assert!(is_project_tool_action(Some("Generate_Specs")));
+        assert!(is_project_tool_action(Some("  generate_specs  ")));
+    }
+
+    #[test]
+    fn is_project_tool_action_leaves_interactive_chat_uncapped() {
+        assert!(!is_project_tool_action(None));
+        assert!(!is_project_tool_action(Some("")));
+        assert!(!is_project_tool_action(Some("chat")));
+        assert!(!is_project_tool_action(Some("plan")));
+        assert!(!is_project_tool_action(Some("send")));
     }
 
     #[test]
