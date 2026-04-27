@@ -119,6 +119,12 @@ export const projectsApi = {
     }),
   deleteProject: (id: ProjectId) =>
     apiFetch<void>(`/api/projects/${id}`, { method: "DELETE" }),
+  restoreProject: (id: ProjectId) =>
+    apiFetch<Project>(`/api/projects/${id}/restore`, { method: "POST" }),
+  listDeletedProjects: (orgId?: string) => {
+    const qs = orgId ? `?org_id=${encodeURIComponent(orgId)}` : "";
+    return apiFetch<Project[]>(`/api/projects/deleted${qs}`);
+  },
   archiveProject: (id: ProjectId) =>
     apiFetch<Project>(`/api/projects/${id}/archive`, { method: "POST" }),
 
