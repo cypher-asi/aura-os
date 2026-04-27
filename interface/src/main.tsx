@@ -17,7 +17,7 @@ import { initWebVitalsLite } from "./lib/perf/web-vitals-lite";
 import { installPreloadRecovery } from "./lib/preload-recovery";
 import { installNativeTitlebarDrag } from "./lib/native-titlebar-drag";
 import { syncQueryHostOriginToStorage } from "./shared/lib/host-config";
-import { signalDesktopReady } from "./lib/desktop-ready";
+import { signalDesktopReady, signalDesktopSplashReady } from "./lib/desktop-ready";
 import { awaitInitialShellAppReady } from "./lib/boot-shell";
 import { purgeLegacyChatHistoryFallback } from "./shared/lib/browser-db";
 import { bootstrapTaskStreamSubscriptions } from "./stores/task-stream-bootstrap";
@@ -31,16 +31,8 @@ installPreloadRecovery();
 // WKWebView (macOS) and WebKitGTK (Linux). Install a JS fallback that
 // routes titlebar pointerdown into the existing native-drag IPC.
 installNativeTitlebarDrag();
-// Earlier builds mirrored chat transcripts into localStorage as an IDB
-// fallback; on long runs that blew the ~5 MB quota and spammed the console
-// with `QuotaExceededError`. Clean the stale mirrors out on boot.
-purgeLegacyChatHistoryFallback();
 
 markAppEntry();
-initWebVitalsLite();
-installDevPerfHelpers();
-
-registerServiceWorker();
 
 // Register the app-scoped task stream subscribers BEFORE the first
 // component render. Waiting until a component's useEffect runs lets the
@@ -64,19 +56,19 @@ createRoot(rootEl).render(
 );
 markReactRootRenderScheduled();
 
-// Tie the desktop window's first visibility to BOTH (a) React's first committed
-// paint, and (b) resolution of the initial shell app's lazy module (see
-// `App.tsx` → `preloadInitialShellApp`). Waiting on just first paint reveals a
-// window whose first frame contains only shell chrome — the initial route's
-// `Suspense` boundary renders `fallback={null}` while its module is still in
-// flight, producing a visible "empty shell, then content fills in" blink. By
-// joining on the preload Promise (which has its own ~400ms safety timeout so it
-// can never deadlock the reveal), the very first on-screen frame already
-// contains route content.
-//
-// `App`'s first render is already the correct branch (authenticated → shell,
-// otherwise → login) because of the synchronous boot-auth seed in
-// `auth-token.ts`, so the branch is stable by the time we reveal.
+function scheduleIdle(callback: () => void): void {
+  if (typeof window === "undefined") {
+    setTimeout(callback, 0);
+    return;
+  }
+  const ric = window.requestIdleCallback?.bind(window);
+  if (ric) {
+    ric(callback, { timeout: 2_000 });
+    return;
+  }
+  setTimeout(callback, 0);
+}
+
 function schedulePostFirstPaint(callback: () => void): void {
   if (typeof window === "undefined") {
     setTimeout(callback, 0);
@@ -89,8 +81,35 @@ function schedulePostFirstPaint(callback: () => void): void {
   }
   raf(() => raf(callback));
 }
+
+function hideBootSplash(): void {
+  if (typeof document === "undefined") return;
+  const splash = document.getElementById("aura-splash");
+  document.documentElement.classList.add("aura-app-ready");
+  if (!splash) return;
+  window.setTimeout(() => {
+    splash.classList.add("aura-splash-hidden");
+  }, 220);
+}
+
+scheduleIdle(() => {
+  initWebVitalsLite();
+  installDevPerfHelpers();
+  registerServiceWorker();
+  // Earlier builds mirrored chat transcripts into localStorage as an IDB
+  // fallback; on long runs that blew the ~5 MB quota and spammed the console
+  // with `QuotaExceededError`. Clean the stale mirrors outside the first paint.
+  purgeLegacyChatHistoryFallback();
+});
+
 schedulePostFirstPaint(() => {
+  signalDesktopSplashReady();
+
+  // Keep the app-ready signal tied to the existing authenticated-shell preload
+  // gate. The native window can show the auth-neutral splash early, while the
+  // actual app frame is revealed only after the initial route module is ready.
   void awaitInitialShellAppReady().then(() => {
+    hideBootSplash();
     signalDesktopReady();
   });
 });

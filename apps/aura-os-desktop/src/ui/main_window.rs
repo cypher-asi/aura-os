@@ -19,9 +19,13 @@ pub(crate) fn ipc_handler(
 ) -> impl Fn(wry::http::Request<String>) + 'static {
     move |req: wry::http::Request<String>| {
         let msg = req.body().trim();
-        if msg == "ready" {
-            debug!("IPC ready signal");
+        if matches!(msg, "splash-ready" | "ready") {
+            debug!(message = msg, "IPC window reveal signal");
             let _ = proxy.send_event(UserEvent::ShowWindow { window_id });
+            return;
+        }
+        if msg == "app-ready" {
+            debug!("IPC app-ready signal");
             return;
         }
         let cmd = match msg {
