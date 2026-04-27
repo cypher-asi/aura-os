@@ -190,13 +190,35 @@ pub struct FileOp {
     pub operation: String,
 }
 
+/// Per-file diff metadata that runs alongside the path lists in
+/// [`FilesChanged`]. Optional and additive: senders that don't compute
+/// line counts (older harnesses, write/delete tool paths) simply omit
+/// the entry, and consumers must treat "no entry for path" / "0 / 0"
+/// as "unknown", not "no change".
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "typescript", derive(TS), ts(export))]
+pub struct FileDiff {
+    pub path: String,
+    pub lines_added: u32,
+    pub lines_removed: u32,
+}
+
 /// Summary of file mutations during a turn.
+///
+/// `diffs` is a parallel list of per-path line-count metadata. It lives
+/// alongside `created` / `modified` / `deleted` (rather than replacing
+/// them) so older clients that only know about the path lists keep
+/// working untouched. The serde default + skip_if_empty pair keeps the
+/// wire format byte-identical when no diffs are computed, preserving
+/// JSON-shape compatibility with any pinned schemas.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "typescript", derive(TS), ts(export))]
 pub struct FilesChanged {
     pub created: Vec<String>,
     pub modified: Vec<String>,
     pub deleted: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub diffs: Vec<FileDiff>,
 }
 
 impl FilesChanged {
