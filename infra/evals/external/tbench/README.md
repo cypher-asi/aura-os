@@ -33,13 +33,14 @@ tb run
 - Python 3.11+ with `pip install terminal-bench`.
 - Node 22+ on `PATH` (the same `.nvmrc` AURA uses for the rest of the stack).
 - An AURA backend reachable at `AURA_EVAL_API_BASE_URL` (default `http://127.0.0.1:3190`).
-- `AURA_EVAL_ACCESS_TOKEN` exported in the shell that launches `run-tbench.sh`.
+- `AURA_EVAL_ACCESS_TOKEN` exported in the shell that launches `run-tbench.sh`,
+  or present in repo `.env` / local-stack `.runtime/auth.env`.
 
 ## Running
 
 ```bash
-export AURA_EVAL_ACCESS_TOKEN=...               # required
-export AURA_EVAL_API_BASE_URL=http://127.0.0.1:3190  # optional override
+# Optional overrides; by default these are loaded from .env / local-stack runtime env.
+export AURA_EVAL_API_BASE_URL=http://127.0.0.1:3190
 
 # 10-task sanity run
 ./infra/evals/external/tbench/bin/run-tbench.sh smoke
@@ -59,6 +60,35 @@ Useful environment knobs:
 | `AURA_BENCH_BUILD_COMMAND` | placeholder echo | Forwarded into the in-memory scenario as the project build command. |
 | `AURA_BENCH_TEST_COMMAND` | placeholder echo | Forwarded into the in-memory scenario as the project test command. |
 | `TB_EXTRA_ARGS` | _(empty)_ | Verbatim extra args appended to `tb run`. |
+| `AURA_BENCH_SKIP_LIVE_PREFLIGHT` | `0` | Set to `1` to skip the live pipeline preflight (auth/spec/tasks/dev-loop on a tiny fixture). |
+| `AURA_BENCH_PREFLIGHT_LOOP_TIMEOUT_MS` | `180000` | Cap for the preflight dev-loop wait. |
+| `AURA_BENCH_PREFLIGHT_SPEC_TIMEOUT_MS` | `120000` | Cap for the preflight SSE spec-generation stream. |
+| `AURA_BENCH_PREFLIGHT_FIXTURE` | `interface/tests/e2e/evals/fixtures/preflight-minimal` | Override the preflight fixture directory. |
+
+## Preflight: live pipeline
+
+Before `tb run` is invoked, the runner shells out to
+`node interface/scripts/preflight-live-pipeline.mjs` to actually exercise
+every vital backend path used by Terminal-Bench tasks against the running
+stack:
+
+1. `GET /api/auth/session` and `POST /api/auth/import-access-token`
+2. List/create the `Aura Preflight` org
+3. Create a harness agent + project (import-by-reference of a tiny fixture)
+4. Drive `POST /api/projects/:id/agents/:aid/events/stream` with
+   `action=generate_specs` (the SSE chat path; this is the failure mode
+   the inline comment in `interface/scripts/lib/benchmark-api-runner.mjs`
+   warns about)
+5. Confirm `>= 1` spec materialized via `GET /api/projects/:id/specs`
+6. `POST /api/projects/:id/tasks/extract` and confirm `>= 1` task
+7. `POST /api/projects/:id/loop/start` and poll `/tasks` until at least
+   one task reaches a terminal state (`done`/`failed`/`blocked`)
+8. `GET /api/projects/:id/stats` + the agent-instance sessions endpoint
+9. Cleanup of every entity the preflight created
+
+Each step is timed and logged. The runner aborts before `tb run` if any
+step fails, so a broken router proxy, missing model, or harness adapter
+regression is caught in 1-2 minutes instead of after a multi-hour run.
 
 ## Output layout
 

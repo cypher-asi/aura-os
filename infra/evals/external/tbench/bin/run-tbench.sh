@@ -6,7 +6,7 @@
 #   ./infra/evals/external/tbench/bin/run-tbench.sh full
 #
 # Honored environment variables:
-#   AURA_EVAL_ACCESS_TOKEN          (required)
+#   AURA_EVAL_ACCESS_TOKEN          (required, loaded from .env/auth.env if present)
 #   AURA_EVAL_API_BASE_URL          (default http://127.0.0.1:3190)
 #   AURA_EVAL_STORAGE_URL           (optional)
 #   AURA_BENCH_LOOP_TIMEOUT_SECONDS (default 1500)
@@ -16,6 +16,9 @@
 #   TB_EXTRA_ARGS                   (extra args appended verbatim to tb run)
 
 set -eu
+
+PATH="/usr/bin:/bin:$PATH"
+export PATH
 
 usage() {
     printf 'Usage: %s {smoke|full}\n' "$0" >&2
@@ -41,6 +44,15 @@ die() {
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 if [ -z "$REPO_ROOT" ]; then
     die "must be run inside a git checkout (git rev-parse --show-toplevel failed)"
+fi
+
+# Load repo .env files and local-stack runtime auth, if present.
+# shellcheck disable=SC1091
+. "$REPO_ROOT/infra/evals/external/bin/load-env.sh"
+external_bench_load_env "$REPO_ROOT"
+export AURA_EVAL_PRESERVE_ACCESS_TOKEN="${AURA_EVAL_PRESERVE_ACCESS_TOKEN:-1}"
+if [ -n "${AURA_STACK_AURA_OS_DATA_DIR:-}" ]; then
+    mkdir -p "$AURA_STACK_AURA_OS_DATA_DIR/store"
 fi
 
 # --- Preflight ---------------------------------------------------------------
@@ -109,6 +121,19 @@ required_kb=$((20 * 1024 * 1024))
 if [ "$disk_kb" -lt "$required_kb" ]; then
     have_gb=$((disk_kb / 1024 / 1024))
     die "less than 20 GB free on $disk_target (have ~${have_gb} GB); aborting"
+fi
+
+# Live pipeline preflight: actually exercise spec generation, task extraction,
+# and the dev loop on a tiny fixture so we fail fast instead of after a long
+# Terminal-Bench task. Honors AURA_BENCH_SKIP_LIVE_PREFLIGHT=1 as an opt-out.
+if [ "${AURA_BENCH_SKIP_LIVE_PREFLIGHT:-0}" = "1" ]; then
+    printf 'run-tbench: skipping live pipeline preflight (AURA_BENCH_SKIP_LIVE_PREFLIGHT=1)\n' >&2
+else
+    printf 'run-tbench: running live pipeline preflight (auth/spec/tasks/dev-loop)\n' >&2
+    if ! node "$REPO_ROOT/interface/scripts/preflight-live-pipeline.mjs"; then
+        die "live pipeline preflight failed; aborting before tb run"
+    fi
+    printf 'run-tbench: live pipeline preflight ok\n' >&2
 fi
 
 # --- Subset -> TB CLI args ---------------------------------------------------

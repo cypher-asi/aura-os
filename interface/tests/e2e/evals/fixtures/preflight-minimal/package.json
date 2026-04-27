@@ -1,0 +1,9 @@
+{
+  "name": "aura-preflight-minimal",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "build": "node -e \"console.log('preflight build ok')\"",
+    "test": "node -e \"console.log('preflight test ok')\""
+  }
+}
