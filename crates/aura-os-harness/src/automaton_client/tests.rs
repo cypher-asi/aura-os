@@ -127,6 +127,8 @@ fn automaton_start_params_serializes_agent_permissions() {
         },
         prior_failure: None,
         work_log: Vec::new(),
+        aura_org_id: None,
+        aura_session_id: None,
     };
 
     let value = serde_json::to_value(params).expect("serialize params");

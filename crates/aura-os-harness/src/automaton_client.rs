@@ -144,6 +144,26 @@ pub struct AutomatonStartParams {
     /// harnesses see the old payload shape.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub work_log: Vec<String>,
+    /// Org UUID forwarded to the harness so the outbound Anthropic
+    /// proxy request carries an `X-Aura-Org-Id` header. The chat path
+    /// already sets this via `SessionConfig::aura_org_id`
+    /// (see `crates/aura-os-harness/src/harness.rs`); the dev-loop
+    /// / single-task path went without it until now, which left
+    /// `aura-router` (and Cloudflare in front of it) without per-org
+    /// bucketing context for automation runs and made eval bursts
+    /// trip the WAF rule earlier than interactive chat from the same
+    /// account. Skipped on the wire when `None` so older harnesses
+    /// (which `#[serde(default)]` the field) still accept the payload.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aura_org_id: Option<String>,
+    /// Storage session UUID forwarded to the harness so the outbound
+    /// Anthropic proxy request carries an `X-Aura-Session-Id` header.
+    /// Generated per-automaton-start so router / billing telemetry can
+    /// distinguish concurrent automation runs of the same agent.
+    /// Skipped on the wire when `None`; pre-existing harnesses ignore
+    /// it via `#[serde(default)]`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aura_session_id: Option<String>,
 }
 
 #[derive(Debug, thiserror::Error)]

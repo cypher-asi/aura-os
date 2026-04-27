@@ -178,6 +178,31 @@ pub(super) async fn build_start_params(
         }
         None => None,
     };
+    // Resolve the project's org so the harness can forward
+    // `X-Aura-Org-Id` on outbound `/v1/messages` calls. The chat path
+    // populates this via `SessionConfig::aura_org_id` from the agent
+    // instance's `org_id`; for dev-loop runs the project (already on
+    // `StartContext`) is the canonical org owner — instances are
+    // scoped to a single project, so `project.org_id` matches
+    // `instance.org_id` and saves a redundant lookup.
+    //
+    // Why this matters: without this header `aura-router` falls back
+    // to IP-bucket rate limiting, which is exactly what the eval
+    // local-stack was hitting (Cloudflare WAF on
+    // `aura-router.onrender.com` tripping on bursty automation
+    // traffic that interactive chat from the same account never
+    // reproduces).
+    let aura_org_id = ctx
+        .project
+        .as_ref()
+        .map(|project| project.org_id.to_string());
+    // Per-automaton session UUID. Router/billing aggregate by
+    // (org_id, session_id), so generating a fresh id per start
+    // gives concurrent runs of the same agent distinct telemetry
+    // partitions — same shape as `SessionConfig::aura_session_id`
+    // for chat (which uses the persisted chat-session id).
+    let aura_session_id = Some(uuid::Uuid::new_v4().to_string());
+
     AutomatonStartParams {
         project_id: ctx.project_id.to_string(),
         agent_id: Some(harness_agent_id(&ctx.agent_id, Some(&agent_instance_id))),
@@ -196,6 +221,8 @@ pub(super) async fn build_start_params(
         installed_tools,
         installed_integrations,
         agent_permissions: (&ctx.permissions).into(),
+        aura_org_id,
+        aura_session_id,
     }
 }
 
@@ -318,15 +345,12 @@ fn response_body_is_capacity_exhausted(body: &str) -> bool {
     let Ok(parsed) = serde_json::from_str::<serde_json::Value>(trimmed) else {
         return true;
     };
-    let code = parsed
-        .get("code")
-        .and_then(|v| v.as_str())
-        .or_else(|| {
-            parsed
-                .get("error")
-                .and_then(|err| err.get("code"))
-                .and_then(|v| v.as_str())
-        });
+    let code = parsed.get("code").and_then(|v| v.as_str()).or_else(|| {
+        parsed
+            .get("error")
+            .and_then(|err| err.get("code"))
+            .and_then(|v| v.as_str())
+    });
     match code {
         Some(c) if c.eq_ignore_ascii_case("capacity_exhausted") => true,
         Some(_) => false,
