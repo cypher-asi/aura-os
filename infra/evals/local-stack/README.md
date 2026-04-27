@@ -102,7 +102,7 @@ The most important one is:
 AURA_STACK_AUTH_COOKIE_SECRET=...
 ```
 
-Local `aura-network`, `aura-storage`, and `orbit` accept the same zOS JWT family Aura already uses. In practice that means the local services need the shared cookie secret so they can validate the HS256 tokens the Aura app stores after login.
+Local `aura-network`, `aura-storage`, and `orbit` accept the same zOS JWT family Aura already uses. In production that means services need the shared cookie secret so they can validate the HS256 tokens the Aura app stores after login. The local-stack renderer enables explicit development trust flags for local `aura-network` and `aura-storage`, so developer machines can reuse a real Aura session without needing the production cookie secret.
 
 You can also flip individual services to remote mode:
 

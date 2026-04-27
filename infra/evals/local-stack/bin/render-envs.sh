@@ -2,6 +2,11 @@
 
 set -euo pipefail
 
+# When launched as an absolute Git-for-Windows bash.exe from PowerShell, PATH may
+# not include the Unix helper directory that contains dirname and friends.
+PATH="/usr/bin:/bin:$PATH"
+export PATH
+
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck disable=SC1091
 source "$script_dir/common.sh"
@@ -58,6 +63,7 @@ write_export "$network_env" "AUTH_COOKIE_SECRET" "$AURA_STACK_AUTH_COOKIE_SECRET
 write_export "$network_env" "INTERNAL_SERVICE_TOKEN" "$AURA_STACK_INTERNAL_SERVICE_TOKEN"
 write_export "$network_env" "CORS_ORIGINS" "$AURA_STACK_CORS_ORIGINS"
 write_export "$network_env" "LOG_LEVEL" "$AURA_STACK_NETWORK_LOG_LEVEL"
+write_export "$network_env" "AURA_NETWORK_DEV_TRUST_TOKENS" "1"
 write_export "$network_env" "ZOS_API_URL" "$AURA_STACK_ZOS_API_URL"
 write_optional_export "$network_env" "ZOS_API_INTERNAL_TOKEN" "$AURA_STACK_ZOS_API_INTERNAL_TOKEN"
 write_optional_export "$network_env" "AURA_STORAGE_URL" "$storage_url"
@@ -71,6 +77,7 @@ write_export "$storage_env" "AUTH_COOKIE_SECRET" "$AURA_STACK_AUTH_COOKIE_SECRET
 write_export "$storage_env" "INTERNAL_SERVICE_TOKEN" "$AURA_STACK_INTERNAL_SERVICE_TOKEN"
 write_export "$storage_env" "CORS_ORIGINS" "$AURA_STACK_CORS_ORIGINS"
 write_export "$storage_env" "RUST_LOG" "$AURA_STACK_STORAGE_LOG_LEVEL"
+write_export "$storage_env" "AURA_STORAGE_DEV_TRUST_TOKENS" "1"
 write_optional_export "$storage_env" "AURA_NETWORK_URL" "$network_url"
 write_optional_export "$storage_env" "AURA_NETWORK_TOKEN" "$AURA_STACK_INTERNAL_SERVICE_TOKEN"
 
