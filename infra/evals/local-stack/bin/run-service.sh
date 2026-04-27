@@ -15,6 +15,37 @@ source "$script_dir/common.sh"
 stack_load_env
 stack_validate_modes
 
+# Mirror the .env parser the main aura-os app uses to seed the harness child
+# (apps/aura-os-server/src/app_builder/harness_autospawn.rs:181-198): line by
+# line, skip comments and blank lines, split on the first `=`, only export
+# keys that are not already set in the current environment so explicit
+# stack-level exports continue to win for stack-specific overrides like
+# AURA_OS_SERVER_URL, AURA_LISTEN_ADDR, AURA_DATA_DIR, etc.
+_load_harness_dotenv() {
+  local env_file="$1"
+  [[ -f "$env_file" ]] || return 0
+  local line key val
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    case "$line" in
+      ''|\#*) continue ;;
+    esac
+    if [[ "$line" != *=* ]]; then
+      continue
+    fi
+    key="${line%%=*}"
+    val="${line#*=}"
+    # Trim leading/trailing whitespace from key.
+    key="${key#"${key%%[![:space:]]*}"}"
+    key="${key%"${key##*[![:space:]]}"}"
+    if [[ -z "$key" || -z "$val" ]]; then
+      continue
+    fi
+    if [[ -z "${!key:-}" ]]; then
+      export "$key=$val"
+    fi
+  done < "$env_file"
+}
+
 if [[ ! -d "$AURA_STACK_RUNTIME_DIR" ]]; then
   "$script_dir/render-envs.sh"
 fi
@@ -55,7 +86,15 @@ case "$service" in
       exit 1
     fi
     workdir="$(stack_service_dir harness)"
-    command=(cargo run -- run --ui none)
+    # Mirror harness_autospawn.rs: aura-os main app spawns the harness with
+    # `--release` (apps/aura-os-server/src/app_builder/harness_autospawn.rs:74).
+    # Set AURA_STACK_HARNESS_BUILD_PROFILE=debug to opt out for faster
+    # iteration during stack development.
+    if [[ "${AURA_STACK_HARNESS_BUILD_PROFILE:-release}" == "release" ]]; then
+      command=(cargo run --release -- run --ui none)
+    else
+      command=(cargo run -- run --ui none)
+    fi
     ;;
   aura-os)
     runtime_env="$AURA_STACK_RUNTIME_DIR/aura-os.env"
@@ -101,9 +140,30 @@ if [[ "$service" == "harness" ]]; then
   # router JWT when the operator explicitly opts into one.
   export AURA_LLM_ROUTING="proxy"
   export AURA_ROUTER_URL="${AURA_STACK_ROUTER_URL:-https://aura-router.onrender.com}"
-  export AURA_ROUTER_JWT="$AURA_STACK_AURA_ROUTER_JWT"
+  # Mirror harness_autospawn.rs: only export AURA_ROUTER_JWT when explicitly
+  # set. Exporting an empty string short-circuits
+  # `aura_agent::session_bootstrap::load_auth_token`'s CredentialStore
+  # fallback (it returns `Some("")` instead of `None`), which sends an empty
+  # `Bearer ` to aura-router and triggers an upstream Cloudflare HTML 403 on
+  # the proxy → Anthropic hop. The IDE flow leaves this unset; we match that.
+  if [[ -n "${AURA_STACK_AURA_ROUTER_JWT:-}" ]]; then
+    export AURA_ROUTER_JWT="$AURA_STACK_AURA_ROUTER_JWT"
+  fi
   export AURA_ANTHROPIC_MODEL="$AURA_STACK_ANTHROPIC_MODEL"
   export RUST_LOG="$AURA_STACK_HARNESS_LOG_LEVEL"
+  # Diagnostic: when the LLM proxy returns a Cloudflare HTML challenge, the
+  # harness writes the full body to this dir so we can identify *which* edge
+  # blocked (Render's Cloudflare on inbound vs upstream Anthropic Cloudflare
+  # passed through aura-router). Cheap to keep on; the file is only written
+  # on the rare 403 + cloudflare_html=true path.
+  export AURA_DEBUG_CLOUDFLARE_DUMP_DIR="${AURA_STACK_RUNTIME_DIR}/cloudflare-dumps"
+  # Mirror harness_autospawn.rs: read the harness's own .env and merge any
+  # keys we have not already set, picking up INTERNAL_SERVICE_TOKEN,
+  # TAVILY_API_KEY, ENABLE_CMD_TOOLS, TOOLS_CONFIG, etc. The harness binary
+  # also runs `dotenvy::dotenv()` from cwd, but it is non-overriding and
+  # only sees this same file — doing it here makes the stack flow explicit
+  # and matches the IDE flow's pre-spawn behaviour.
+  _load_harness_dotenv "$workdir/.env"
   mkdir -p "$AURA_DATA_DIR"
 fi
 
