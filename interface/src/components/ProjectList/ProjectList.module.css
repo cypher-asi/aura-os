@@ -4,6 +4,26 @@
   height: 100%;
 }
 
+.deletedProjectsLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 6px 12px;
+  padding: 4px 6px;
+  font-size: 11px;
+  color: var(--zui-text-muted, rgba(255, 255, 255, 0.5));
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  align-self: flex-start;
+  border-radius: 4px;
+}
+
+.deletedProjectsLink:hover {
+  color: var(--zui-text, rgba(255, 255, 255, 0.85));
+  background: var(--zui-surface-hover, rgba(255, 255, 255, 0.05));
+}
+
 .explorerWrap {
   position: relative;
   flex: 1;

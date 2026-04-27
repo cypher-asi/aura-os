@@ -1,0 +1,1 @@
+export { DeletedProjectsModal } from "./DeletedProjectsModal";

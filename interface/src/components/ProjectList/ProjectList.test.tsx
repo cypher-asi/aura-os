@@ -174,6 +174,9 @@ vi.mock("../ProjectSettingsModal", () => ({
 vi.mock("../AgentSelectorModal", () => ({
   AgentSelectorModal: () => null,
 }));
+vi.mock("../DeletedProjectsModal", () => ({
+  DeletedProjectsModal: () => null,
+}));
 
 vi.mock("./ProjectList.module.css", () => ({
   default: new Proxy({}, { get: (_t, prop) => String(prop) }),
