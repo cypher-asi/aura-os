@@ -238,6 +238,62 @@ let _ws: { close: () => void } | null = null;
 
 /** Pending idle/timer handle for deferred connect (cancel on logout / disconnect). */
 let _deferredConnectHandle: number | undefined;
+let _engineEventFrame: number | null = null;
+const queuedEngineEvents: AuraEvent[] = [];
+
+const IMMEDIATE_ENGINE_EVENTS = new Set<EventType>([
+  EventType.TaskStarted,
+  EventType.TaskCompleted,
+  EventType.TaskFailed,
+  EventType.LoopStopped,
+  EventType.LoopFinished,
+  EventType.LoopEnded,
+]);
+
+function canScheduleEngineEventFrame(): boolean {
+  return (
+    import.meta.env.MODE !== "test" &&
+    typeof window !== "undefined" &&
+    typeof window.requestAnimationFrame === "function" &&
+    typeof window.cancelAnimationFrame === "function"
+  );
+}
+
+function flushQueuedEngineEvents(): void {
+  _engineEventFrame = null;
+  const events = queuedEngineEvents.splice(0);
+  for (const event of events) {
+    handleEngineEvent(event);
+  }
+}
+
+function cancelQueuedEngineEventFrame(): void {
+  if (_engineEventFrame === null || !canScheduleEngineEventFrame()) {
+    _engineEventFrame = null;
+    return;
+  }
+  window.cancelAnimationFrame(_engineEventFrame);
+  _engineEventFrame = null;
+}
+
+function handleSocketEngineEvent(event: AuraEvent): void {
+  if (!canScheduleEngineEventFrame()) {
+    handleEngineEvent(event);
+    return;
+  }
+
+  if (IMMEDIATE_ENGINE_EVENTS.has(event.type)) {
+    cancelQueuedEngineEventFrame();
+    flushQueuedEngineEvents();
+    handleEngineEvent(event);
+    return;
+  }
+
+  queuedEngineEvents.push(event);
+  if (_engineEventFrame === null) {
+    _engineEventFrame = window.requestAnimationFrame(flushQueuedEngineEvents);
+  }
+}
 
 function cancelDeferredEventSocketConnect(): void {
   if (_deferredConnectHandle === undefined) return;
@@ -282,6 +338,8 @@ export function scheduleDeferredEventSocketConnect(): void {
 
 export function disconnectEventSocket() {
   cancelDeferredEventSocketConnect();
+  cancelQueuedEngineEventFrame();
+  flushQueuedEngineEvents();
   _ws?.close();
   _ws = null;
 }
@@ -313,7 +371,7 @@ export function connectEventSocket() {
             agent_id: raw.agent_instance_id as string | undefined,
           },
         );
-        handleEngineEvent(event);
+        handleSocketEngineEvent(event);
       } catch (error) {
         if (import.meta.env.DEV) {
           console.warn("Dropped malformed WS event payload", { error, data });
@@ -344,6 +402,8 @@ export function connectEventSocket() {
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
+    cancelQueuedEngineEventFrame();
+    flushQueuedEngineEvents();
     _ws?.close();
     _ws = null;
   });
