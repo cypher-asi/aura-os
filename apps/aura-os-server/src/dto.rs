@@ -62,8 +62,21 @@ pub(crate) struct CreateImportedProjectRequest {
     pub local_workspace_path: Option<String>,
 }
 
+// Frontend (`interface/src/shared/api/tasks.ts`) and the existing
+// integration tests POST `{"new_status": ...}`, so that stays the
+// canonical name. The harness's `HttpDomainApi::transition_task` POSTs
+// `{"status": ...}` (matching aura-storage's internal request shape),
+// which used to 422 with "missing field `new_status`". Every dev-loop
+// transition (`pending` -> `in_progress`, `in_progress` -> `done`,
+// `pending` -> `failed`, retry sync, ...) silently failed. Locally the
+// loop reported `Dev loop finished outcome=all_tasks_blocked completed=3
+// failed=1`, but server-side the task records never left their initial
+// state, so `[preflight] FAIL loop_progress ... no task reached a
+// terminal state within 180000ms`. Accept either field name with a
+// serde alias so both clients deserialize cleanly.
 #[derive(Debug, Deserialize)]
 pub(crate) struct TransitionTaskRequest {
+    #[serde(alias = "status")]
     pub new_status: TaskStatus,
 }
 
@@ -474,5 +487,31 @@ impl AuthSessionResponse {
         let mut response = Self::from(result.session);
         response.zero_pro_refresh_error = result.zero_pro_refresh_error;
         response
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Frontend client (`interface/src/shared/api/tasks.ts`) and the
+    /// aura-os-server integration tests POST `{ new_status: "..." }`.
+    /// Guards that path against the alias regression.
+    #[test]
+    fn transition_task_request_accepts_new_status() {
+        let req: TransitionTaskRequest =
+            serde_json::from_str(r#"{ "new_status": "in_progress" }"#).expect("new_status decodes");
+        assert_eq!(req.new_status, TaskStatus::InProgress);
+    }
+
+    /// Harness `HttpDomainApi::transition_task` POSTs `{ status: "..." }`
+    /// (matching aura-storage's internal request shape). Without the
+    /// alias every dev-loop transition 422'd and tasks stayed pending
+    /// server-side forever -- surfacing as `loop_progress` timeouts.
+    #[test]
+    fn transition_task_request_accepts_legacy_status_alias() {
+        let req: TransitionTaskRequest =
+            serde_json::from_str(r#"{ "status": "done" }"#).expect("status alias decodes");
+        assert_eq!(req.new_status, TaskStatus::Done);
     }
 }
