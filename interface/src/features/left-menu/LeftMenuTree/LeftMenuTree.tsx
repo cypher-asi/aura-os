@@ -32,7 +32,7 @@ interface LeftMenuTreeProps {
 }
 
 const ROW_HEIGHT = 28;
-const VIRTUALIZE_AFTER = 30;
+const VIRTUALIZE_AFTER = 0;
 const DRAG_START_THRESHOLD_PX = 6;
 
 type RootButtonRect = {

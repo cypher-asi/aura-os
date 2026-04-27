@@ -241,6 +241,7 @@ export const apps: AuraApp[] = [
       hasSidekickTaskbar: true,
       hasPreviewPanel: true,
       hasPreviewHeader: true,
+      includePrefetch: true,
     },
   ),
   createAppDefinition(
@@ -263,6 +264,7 @@ export const apps: AuraApp[] = [
       hasPreviewPanel: true,
       hasPreviewHeader: true,
       hasProvider: true,
+      includePrefetch: true,
     },
   ),
   createAppDefinition(
