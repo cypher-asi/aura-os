@@ -86,6 +86,27 @@ describe("chat-history-store", () => {
       await Promise.all([p1, p2]);
       expect(fetchFn).toHaveBeenCalledTimes(1);
     });
+
+    it("caps retained events per history entry", async () => {
+      const msgs = Array.from({ length: 501 }, (_, i) => makeMsg(`m${i}`));
+      await useChatHistoryStore.getState().fetchHistory("long", makeFetchFn(msgs));
+
+      const events = useChatHistoryStore.getState().entries.long.events;
+      expect(events).toHaveLength(500);
+      expect(events[0].id).toBe("m1");
+      expect(events.at(-1)?.id).toBe("m500");
+    });
+
+    it("caps retained history entries", async () => {
+      for (let i = 0; i < 9; i += 1) {
+        await useChatHistoryStore.getState().fetchHistory(`k${i}`, makeFetchFn([makeMsg(`m${i}`)]));
+      }
+
+      const keys = Object.keys(useChatHistoryStore.getState().entries);
+      expect(keys).toHaveLength(8);
+      expect(keys).not.toContain("k0");
+      expect(keys).toContain("k8");
+    });
   });
 
   describe("prefetchHistory", () => {
