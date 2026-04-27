@@ -6,6 +6,8 @@ import test from "node:test";
 
 import {
   createBenchmarkClient,
+  fetchWithTimeout,
+  resolveApiFetchTimeoutMs,
   runScenario,
   summarizeSessionUsage,
   walkFixtureDir,
@@ -162,6 +164,70 @@ test("storageJson resolves to an empty array when no storageUrl is set", async (
   });
   const events = await client.storageJson("session-id");
   assert.deepEqual(events, []);
+});
+
+test("resolveApiFetchTimeoutMs returns the default when env is unset or invalid", () => {
+  assert.equal(resolveApiFetchTimeoutMs(undefined), 360_000);
+  assert.equal(resolveApiFetchTimeoutMs(""), 360_000);
+  assert.equal(resolveApiFetchTimeoutMs("   "), 360_000);
+  assert.equal(resolveApiFetchTimeoutMs("not-a-number"), 360_000);
+  assert.equal(resolveApiFetchTimeoutMs("0"), 360_000);
+  assert.equal(resolveApiFetchTimeoutMs("-5"), 360_000);
+});
+
+test("resolveApiFetchTimeoutMs honors explicit positive values", () => {
+  assert.equal(resolveApiFetchTimeoutMs("250"), 250);
+  assert.equal(resolveApiFetchTimeoutMs(" 60000 "), 60_000);
+  assert.equal(resolveApiFetchTimeoutMs("123.9"), 123);
+});
+
+test("fetchWithTimeout aborts hung requests and rewrites the error", async () => {
+  // Bind a TCP listener that accepts connections but never replies, so
+  // `fetch` is forced to wait for headers until our timeout fires. This
+  // is the exact failure mode that previously surfaced as the cryptic
+  // `TypeError: fetch failed` once Node's default `headersTimeout` (5
+  // minutes) trips.
+  const { createServer } = await import("node:net");
+  const sockets = new Set();
+  const server = createServer((socket) => {
+    sockets.add(socket);
+    socket.on("close", () => sockets.delete(socket));
+  });
+  server.unref();
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address();
+  const url = `http://127.0.0.1:${port}/`;
+
+  try {
+    await assert.rejects(
+      () => fetchWithTimeout(url, {}, 75),
+      (err) => {
+        assert.match(err.message, /aborted after 75ms/);
+        assert.equal(err.code, "AURA_BENCH_FETCH_TIMEOUT");
+        return true;
+      },
+    );
+  } finally {
+    for (const socket of sockets) socket.destroy();
+    sockets.clear();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("fetchWithTimeout propagates upstream AbortSignal aborts unchanged", async () => {
+  const controller = new AbortController();
+  controller.abort(new Error("upstream cancel"));
+  await assert.rejects(
+    // Use an unroutable address to fail fast on any platform that
+    // doesn't honour pre-aborted signals before opening a socket.
+    () => fetchWithTimeout("http://127.0.0.1:1/", { signal: controller.signal }, 1_000),
+    (err) => {
+      // Upstream-aborted requests must NOT be rewritten as a timeout —
+      // callers rely on the original AbortError surface.
+      assert.notEqual(err.code, "AURA_BENCH_FETCH_TIMEOUT");
+      return true;
+    },
+  );
 });
 
 test("runScenario is a function and rejects when options.client is missing", async () => {

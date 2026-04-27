@@ -1,5 +1,7 @@
 //! Workspace path / harness session resolution for project tools.
 
+use std::time::Duration;
+
 use aura_os_core::{AgentInstance, AgentInstanceId, HarnessMode, ProjectId};
 use aura_os_harness::SessionConfig;
 
@@ -64,6 +66,68 @@ pub(crate) async fn resolve_agent_instance_workspace_path(
         }
     }
     None
+}
+
+/// Default agentic-step ceiling for project-tool LLM sessions
+/// (spec generation, spec summary, task extraction).
+///
+/// Without a cap, a degenerate model can loop on read-only tools
+/// (e.g. `list_specs`) until the JS-side `fetch` trips Node's default
+/// 5 minute `headersTimeout` and surfaces as the cryptic `fetch failed`.
+/// Healthy spec-gen runs in this codebase complete in ~14 tool calls
+/// (see the SWE-bench astropy__astropy-12907 trace at
+/// `infra/evals/local-stack/.runtime/logs/aura-os.log`), and the
+/// existing harness-session-runner already defaults to 16 turns
+/// for ad-hoc CLI sessions. 40 leaves comfortable headroom for the
+/// chained spec → tasks workflow on real benchmarks while still
+/// cutting off a runaway in well under 4 minutes at the observed
+/// ~3 s/call cadence.
+const DEFAULT_PROJECT_TOOL_MAX_TURNS: u32 = 40;
+
+/// Default wall-clock deadline for project-tool LLM sessions.
+///
+/// Strictly less than Node's undici `headersTimeout` (300 s) so the
+/// server is the one that fails first on a stalled session and the
+/// JS client gets a typed HTTP error instead of `TypeError: fetch
+/// failed`.
+const DEFAULT_PROJECT_TOOL_DEADLINE_SECS: u64 = 240;
+
+/// Pure parser for the `AURA_PROJECT_TOOL_MAX_TURNS` env value. Empty /
+/// non-numeric / zero values fall back to the default rather than
+/// disabling the cap. Split out from [`project_tool_max_turns`] so the
+/// parsing rules are unit-testable without mutating process env state.
+fn parse_project_tool_max_turns(raw: Option<&str>) -> u32 {
+    raw.and_then(|v| v.trim().parse::<u32>().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(DEFAULT_PROJECT_TOOL_MAX_TURNS)
+}
+
+/// Pure parser for the `AURA_PROJECT_TOOL_DEADLINE_SECS` env value.
+/// Same fall-back rules as [`parse_project_tool_max_turns`].
+fn parse_project_tool_deadline(raw: Option<&str>) -> Duration {
+    let secs = raw
+        .and_then(|v| v.trim().parse::<u64>().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(DEFAULT_PROJECT_TOOL_DEADLINE_SECS);
+    Duration::from_secs(secs)
+}
+
+/// Read `AURA_PROJECT_TOOL_MAX_TURNS`, defaulting to
+/// [`DEFAULT_PROJECT_TOOL_MAX_TURNS`]. Empty / non-numeric / zero
+/// values fall back to the default rather than disabling the cap.
+pub(crate) fn project_tool_max_turns() -> u32 {
+    parse_project_tool_max_turns(std::env::var("AURA_PROJECT_TOOL_MAX_TURNS").ok().as_deref())
+}
+
+/// Read `AURA_PROJECT_TOOL_DEADLINE_SECS`, defaulting to
+/// [`DEFAULT_PROJECT_TOOL_DEADLINE_SECS`]. Empty / non-numeric / zero
+/// values fall back to the default rather than disabling the cap.
+pub(crate) fn project_tool_deadline() -> Duration {
+    parse_project_tool_deadline(
+        std::env::var("AURA_PROJECT_TOOL_DEADLINE_SECS")
+            .ok()
+            .as_deref(),
+    )
 }
 
 pub(crate) async fn resolve_project_tool_workspace_path(
@@ -214,6 +278,7 @@ pub(crate) async fn project_tool_session_config(
                 .unwrap_or_else(|| tool_agent_name.to_string()),
         ),
         model,
+        max_turns: Some(project_tool_max_turns()),
         token: Some(jwt.to_string()),
         user_id: user_id.map(ToString::to_string),
         project_id: Some(project_id.to_string()),
@@ -250,9 +315,65 @@ fn first_non_empty_model(default_model: Option<&str>, model: Option<&str>) -> Op
 
 #[cfg(test)]
 mod tests {
-    use super::first_non_empty_model;
+    use std::time::Duration;
+
+    use super::{
+        first_non_empty_model, parse_project_tool_deadline, parse_project_tool_max_turns,
+        DEFAULT_PROJECT_TOOL_DEADLINE_SECS, DEFAULT_PROJECT_TOOL_MAX_TURNS,
+    };
     use crate::handlers::agents::chat::{render_project_context, render_project_context_fallback};
     use aura_os_core::ProjectId;
+
+    #[test]
+    fn parse_max_turns_uses_explicit_positive_values() {
+        assert_eq!(parse_project_tool_max_turns(Some("12")), 12);
+        assert_eq!(parse_project_tool_max_turns(Some("  64  ")), 64);
+    }
+
+    #[test]
+    fn parse_max_turns_falls_back_for_invalid_or_zero_values() {
+        assert_eq!(
+            parse_project_tool_max_turns(None),
+            DEFAULT_PROJECT_TOOL_MAX_TURNS
+        );
+        assert_eq!(
+            parse_project_tool_max_turns(Some("")),
+            DEFAULT_PROJECT_TOOL_MAX_TURNS
+        );
+        assert_eq!(
+            parse_project_tool_max_turns(Some("   ")),
+            DEFAULT_PROJECT_TOOL_MAX_TURNS
+        );
+        assert_eq!(
+            parse_project_tool_max_turns(Some("abc")),
+            DEFAULT_PROJECT_TOOL_MAX_TURNS
+        );
+        assert_eq!(
+            parse_project_tool_max_turns(Some("0")),
+            DEFAULT_PROJECT_TOOL_MAX_TURNS
+        );
+    }
+
+    #[test]
+    fn parse_deadline_uses_explicit_positive_values() {
+        assert_eq!(
+            parse_project_tool_deadline(Some("1")),
+            Duration::from_secs(1)
+        );
+        assert_eq!(
+            parse_project_tool_deadline(Some(" 60 ")),
+            Duration::from_secs(60)
+        );
+    }
+
+    #[test]
+    fn parse_deadline_falls_back_for_invalid_or_zero_values() {
+        let default = Duration::from_secs(DEFAULT_PROJECT_TOOL_DEADLINE_SECS);
+        assert_eq!(parse_project_tool_deadline(None), default);
+        assert_eq!(parse_project_tool_deadline(Some("")), default);
+        assert_eq!(parse_project_tool_deadline(Some("nope")), default);
+        assert_eq!(parse_project_tool_deadline(Some("0")), default);
+    }
 
     #[test]
     fn project_tool_model_prefers_non_empty_default_model() {

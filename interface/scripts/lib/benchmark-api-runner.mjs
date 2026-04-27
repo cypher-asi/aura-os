@@ -46,6 +46,74 @@ function safeJsonParse(value) {
   }
 }
 
+const DEFAULT_API_FETCH_TIMEOUT_MS = 360_000;
+
+/**
+ * Read `AURA_BENCH_FETCH_TIMEOUT_MS`, defaulting to 360s (6 min).
+ *
+ * The server-side project-tool deadline (see
+ * `apps/aura-os-server/src/handlers/projects_helpers/session.rs`) caps
+ * spec-gen / task-extract at 240s, and Node's undici `headersTimeout`
+ * defaults to 300s. The client timeout deliberately sits above both so
+ * the server is the one that fails first with a typed HTTP error
+ * instead of letting the JS client surface a cryptic
+ * `TypeError: fetch failed`.
+ *
+ * Empty / non-numeric / non-positive values fall back to the default.
+ */
+export function resolveApiFetchTimeoutMs(envValue) {
+  const raw = typeof envValue === "string" ? envValue.trim() : "";
+  if (!raw) return DEFAULT_API_FETCH_TIMEOUT_MS;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_API_FETCH_TIMEOUT_MS;
+  return Math.floor(parsed);
+}
+
+/**
+ * `fetch` wrapper that enforces a wall-clock timeout via `AbortController`
+ * and rewrites the resulting `AbortError` into a clear, attributable
+ * message. This replaces relying on Node's default `headersTimeout`
+ * (which surfaces as the opaque `TypeError: fetch failed`).
+ */
+export async function fetchWithTimeout(url, init, timeoutMs) {
+  const ms = Number.isFinite(timeoutMs) && timeoutMs > 0
+    ? Math.floor(timeoutMs)
+    : DEFAULT_API_FETCH_TIMEOUT_MS;
+  const controller = new AbortController();
+  const upstreamSignal = init && init.signal;
+  if (upstreamSignal) {
+    if (upstreamSignal.aborted) {
+      controller.abort(upstreamSignal.reason);
+    } else {
+      upstreamSignal.addEventListener(
+        "abort",
+        () => controller.abort(upstreamSignal.reason),
+        { once: true },
+      );
+    }
+  }
+  const timer = setTimeout(() => {
+    controller.abort(new Error(`request exceeded ${ms}ms timeout`));
+  }, ms);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (err) {
+    if (controller.signal.aborted && (!upstreamSignal || !upstreamSignal.aborted)) {
+      const reason = controller.signal.reason;
+      const detail = reason instanceof Error ? reason.message : String(reason ?? "");
+      const wrapped = new Error(
+        `fetch ${url} aborted after ${ms}ms: ${detail || "client-side timeout"}`,
+      );
+      wrapped.cause = err;
+      wrapped.code = "AURA_BENCH_FETCH_TIMEOUT";
+      throw wrapped;
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function* sseEvents(response) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
@@ -113,14 +181,19 @@ export function createBenchmarkClient(options = {}) {
     },
 
     async apiJson(method, endpoint, body) {
-      const response = await fetch(`${this.apiBaseUrl}${endpoint}`, {
-        method,
-        headers: authHeaders(
-          this.accessToken,
-          body == null ? {} : { "Content-Type": "application/json" },
-        ),
-        body: body == null ? undefined : JSON.stringify(body),
-      });
+      const timeoutMs = resolveApiFetchTimeoutMs(process.env.AURA_BENCH_FETCH_TIMEOUT_MS);
+      const response = await fetchWithTimeout(
+        `${this.apiBaseUrl}${endpoint}`,
+        {
+          method,
+          headers: authHeaders(
+            this.accessToken,
+            body == null ? {} : { "Content-Type": "application/json" },
+          ),
+          body: body == null ? undefined : JSON.stringify(body),
+        },
+        timeoutMs,
+      );
       const text = await response.text();
       if (!response.ok) {
         throw new Error(`${method} ${endpoint} failed with ${response.status}: ${text}`);

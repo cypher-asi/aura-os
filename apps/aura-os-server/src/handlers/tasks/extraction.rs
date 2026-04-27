@@ -10,7 +10,7 @@ use aura_os_harness::{HarnessInbound, HarnessOutbound, UserMessage};
 use super::common::storage_task_to_task;
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::chat::errors::map_harness_error_to_api;
-use crate::handlers::projects_helpers::project_tool_session_config;
+use crate::handlers::projects_helpers::{project_tool_deadline, project_tool_session_config};
 use crate::state::{AppState, AuthJwt, AuthSession};
 
 const TASK_RESULT_POLL_INTERVAL: Duration = Duration::from_millis(250);
@@ -173,23 +173,61 @@ pub(crate) async fn extract_tasks(
         .map_err(|e| ApiError::internal(format!("sending task extract command: {e}")))?;
 
     let mut rx = session.events_tx.subscribe();
-    while let Ok(event) = rx.recv().await {
-        match event {
-            HarnessOutbound::AssistantMessageEnd(_) => {
-                return Ok(Json(load_extracted_tasks(&state, &project_id, &jwt).await?));
+    let deadline = project_tool_deadline();
+    let extraction_loop = async {
+        while let Ok(event) = rx.recv().await {
+            match event {
+                HarnessOutbound::AssistantMessageEnd(_) => return ExtractionOutcome::Completed,
+                HarnessOutbound::Error(err) => return ExtractionOutcome::HarnessError(err.message),
+                _ => continue,
             }
-            HarnessOutbound::Error(err) => {
-                let tasks = load_extracted_tasks(&state, &project_id, &jwt).await?;
-                if tasks_changed_since(&baseline_tasks, &tasks) {
-                    return Ok(Json(tasks));
-                }
-                return Err(ApiError::internal(err.message));
+        }
+        ExtractionOutcome::StreamEnded
+    };
+
+    match tokio::time::timeout(deadline, extraction_loop).await {
+        Ok(ExtractionOutcome::Completed) => {
+            Ok(Json(load_extracted_tasks(&state, &project_id, &jwt).await?))
+        }
+        Ok(ExtractionOutcome::HarnessError(message)) => {
+            // Even on a harness error the LLM may have already populated
+            // some tasks via tool calls before failing — surface those if
+            // present so the caller doesn't lose partial progress.
+            let tasks = load_extracted_tasks(&state, &project_id, &jwt).await?;
+            if tasks_changed_since(&baseline_tasks, &tasks) {
+                Ok(Json(tasks))
+            } else {
+                Err(ApiError::internal(message))
             }
-            _ => continue,
+        }
+        Ok(ExtractionOutcome::StreamEnded) => Err(ApiError::internal(
+            "task extraction stream ended without result",
+        )),
+        Err(_) => {
+            // Wall-clock deadline exceeded — recover any tasks the LLM
+            // managed to persist before the loop stalled, otherwise
+            // surface a clear timeout error so the JS client doesn't
+            // see Node's default `headersTimeout` as `fetch failed`.
+            tracing::warn!(
+                project_id = %project_id,
+                deadline_secs = deadline.as_secs(),
+                "task extraction deadline exceeded; returning best-effort task list"
+            );
+            let tasks = load_extracted_tasks(&state, &project_id, &jwt).await?;
+            if tasks_changed_since(&baseline_tasks, &tasks) {
+                Ok(Json(tasks))
+            } else {
+                Err(ApiError::internal(format!(
+                    "task extraction exceeded {}s deadline without producing tasks",
+                    deadline.as_secs()
+                )))
+            }
         }
     }
+}
 
-    Err(ApiError::internal(
-        "task extraction stream ended without result",
-    ))
+enum ExtractionOutcome {
+    Completed,
+    HarnessError(String),
+    StreamEnded,
 }
