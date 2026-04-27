@@ -120,6 +120,9 @@ if [[ -n "$runtime_env" ]]; then
 fi
 
 if [[ "$service" == "harness" ]]; then
+  # Stack-owned settings: control-plane URLs, listen addr, data dir. These
+  # MUST win over whatever aura-harness/.env says, so we export them first
+  # and rely on `_load_harness_dotenv`'s "skip if already set" semantics.
   export AURA_LISTEN_ADDR="127.0.0.1:${AURA_STACK_HARNESS_PORT}"
   export AURA_DATA_DIR="${AURA_STACK_RUNTIME_DIR}/aura-harness-data"
   export AURA_NETWORK_URL="$(stack_resolved_url network)"
@@ -135,35 +138,63 @@ if [[ "$service" == "harness" ]]; then
   # surface symptom is `[preflight] FAIL list_specs ... returned 0 specs`
   # after an apparently-successful spec_stream.
   export AURA_OS_SERVER_URL="$(stack_local_url aura_os)"
-  # Match the main app's local harness behavior: route through aura-router and
-  # let each SessionInit provide the user's token. Only set a process-wide
-  # router JWT when the operator explicitly opts into one.
-  export AURA_LLM_ROUTING="proxy"
-  export AURA_ROUTER_URL="${AURA_STACK_ROUTER_URL:-https://aura-router.onrender.com}"
-  # Mirror harness_autospawn.rs: only export AURA_ROUTER_JWT when explicitly
-  # set. Exporting an empty string short-circuits
-  # `aura_agent::session_bootstrap::load_auth_token`'s CredentialStore
-  # fallback (it returns `Some("")` instead of `None`), which sends an empty
-  # `Bearer ` to aura-router and triggers an upstream Cloudflare HTML 403 on
-  # the proxy → Anthropic hop. The IDE flow leaves this unset; we match that.
-  if [[ -n "${AURA_STACK_AURA_ROUTER_JWT:-}" ]]; then
-    export AURA_ROUTER_JWT="$AURA_STACK_AURA_ROUTER_JWT"
-  fi
-  export AURA_ANTHROPIC_MODEL="$AURA_STACK_ANTHROPIC_MODEL"
   export RUST_LOG="$AURA_STACK_HARNESS_LOG_LEVEL"
+  # Eval pipeline pins a model regardless of LLM routing; harness `.env`
+  # leaves it commented out, so we always set it.
+  export AURA_ANTHROPIC_MODEL="$AURA_STACK_ANTHROPIC_MODEL"
   # Diagnostic: when the LLM proxy returns a Cloudflare HTML challenge, the
   # harness writes the full body to this dir so we can identify *which* edge
   # blocked (Render's Cloudflare on inbound vs upstream Anthropic Cloudflare
   # passed through aura-router). Cheap to keep on; the file is only written
   # on the rare 403 + cloudflare_html=true path.
   export AURA_DEBUG_CLOUDFLARE_DUMP_DIR="${AURA_STACK_RUNTIME_DIR}/cloudflare-dumps"
-  # Mirror harness_autospawn.rs: read the harness's own .env and merge any
-  # keys we have not already set, picking up INTERNAL_SERVICE_TOKEN,
-  # TAVILY_API_KEY, ENABLE_CMD_TOOLS, TOOLS_CONFIG, etc. The harness binary
-  # also runs `dotenvy::dotenv()` from cwd, but it is non-overriding and
-  # only sees this same file — doing it here makes the stack flow explicit
-  # and matches the IDE flow's pre-spawn behaviour.
+
+  # Mirror harness_autospawn.rs: read aura-harness/.env and merge any keys
+  # not already set, picking up AURA_LLM_ROUTING, AURA_ROUTER_URL,
+  # INTERNAL_SERVICE_TOKEN, TAVILY_API_KEY, ENABLE_CMD_TOOLS, TOOLS_CONFIG,
+  # etc. The harness binary also runs `dotenvy::dotenv()` from cwd, but it
+  # is non-overriding and only sees this same file — doing it here makes
+  # the stack flow explicit and matches what `harness_autospawn.rs` does
+  # before spawning the desktop's local harness child. By default this
+  # leaves LLM routing identical to the desktop's local harness path:
+  # proxy → aura-router using the per-session token sent by aura-os-server.
   _load_harness_dotenv "$workdir/.env"
+
+  # --- Optional stack-level overrides for LLM routing ---------------------
+  # The desktop autospawn flow does NOT override any of these — it inherits
+  # whatever the harness's `.env` configured. We follow that by default.
+  # When CF on aura-router persistently rule-blocks the eval host, set
+  # AURA_STACK_HARNESS_LLM_ROUTING=direct + AURA_STACK_ANTHROPIC_API_KEY in
+  # stack.env to bypass the router for this run only. See stack.env.example
+  # for the full escape-valve recipe.
+  if [[ -n "${AURA_STACK_HARNESS_LLM_ROUTING:-}" ]]; then
+    export AURA_LLM_ROUTING="$AURA_STACK_HARNESS_LLM_ROUTING"
+  fi
+  if [[ -n "${AURA_STACK_ROUTER_URL:-}" ]]; then
+    export AURA_ROUTER_URL="$AURA_STACK_ROUTER_URL"
+  fi
+  if [[ -n "${AURA_STACK_ANTHROPIC_API_KEY:-}" ]]; then
+    export AURA_ANTHROPIC_API_KEY="$AURA_STACK_ANTHROPIC_API_KEY"
+  fi
+  # Only export AURA_ROUTER_JWT when explicitly set. Exporting an empty
+  # string short-circuits `aura_agent::session_bootstrap::load_auth_token`'s
+  # CredentialStore fallback (it returns `Some("")` instead of `None`),
+  # which sends an empty `Bearer ` to aura-router and triggers an upstream
+  # Cloudflare HTML 403 on the proxy → Anthropic hop. The IDE flow leaves
+  # this unset; we match that.
+  if [[ -n "${AURA_STACK_AURA_ROUTER_JWT:-}" ]]; then
+    export AURA_ROUTER_JWT="$AURA_STACK_AURA_ROUTER_JWT"
+  fi
+  # Optional knob to throttle the harness's CloudflareBlock retry storm.
+  # `aura-reasoner/src/anthropic/config.rs` reads AURA_LLM_MAX_RETRIES from
+  # env (default 8). When the WAF on aura-router rule-blocks the eval IP,
+  # eight retries with exponential backoff (250ms→30s) compound the block
+  # for tens of minutes per tool call. Set this to 1 or 2 in stack.env when
+  # the eval host trips the WAF.
+  if [[ -n "${AURA_STACK_HARNESS_LLM_MAX_RETRIES:-}" ]]; then
+    export AURA_LLM_MAX_RETRIES="$AURA_STACK_HARNESS_LLM_MAX_RETRIES"
+  fi
+
   mkdir -p "$AURA_DATA_DIR"
 fi
 

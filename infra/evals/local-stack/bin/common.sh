@@ -70,10 +70,18 @@ stack_load_env() {
   export AURA_STACK_ORBIT_LOG_LEVEL="${AURA_STACK_ORBIT_LOG_LEVEL:-info}"
   export AURA_STACK_HARNESS_LOG_LEVEL="${AURA_STACK_HARNESS_LOG_LEVEL:-info}"
 
-  export AURA_STACK_HARNESS_LLM_ROUTING="${AURA_STACK_HARNESS_LLM_ROUTING:-proxy}"
+  # Empty default mirrors `harness_autospawn.rs`: the desktop's autospawn
+  # flow does not override the harness's own .env for LLM routing, and we
+  # match that here. Set in stack.env to override (e.g. `direct` to bypass
+  # aura-router when its Cloudflare WAF rule-blocks the eval IP).
+  export AURA_STACK_HARNESS_LLM_ROUTING="${AURA_STACK_HARNESS_LLM_ROUTING:-}"
   export AURA_STACK_AURA_ROUTER_JWT="${AURA_STACK_AURA_ROUTER_JWT:-}"
   export AURA_STACK_ANTHROPIC_API_KEY="${AURA_STACK_ANTHROPIC_API_KEY:-}"
   export AURA_STACK_ANTHROPIC_MODEL="${AURA_STACK_ANTHROPIC_MODEL:-aura-claude-opus-4-7}"
+  # Optional override for `AURA_LLM_MAX_RETRIES` (default 8 in
+  # aura-reasoner). Lower this when CF on aura-router is persistently
+  # blocking — aggressive retries reinforce the WAF block.
+  export AURA_STACK_HARNESS_LLM_MAX_RETRIES="${AURA_STACK_HARNESS_LLM_MAX_RETRIES:-}"
   export AURA_STACK_AURA_OS_DATA_DIR="${AURA_STACK_AURA_OS_DATA_DIR:-$AURA_STACK_RUNTIME_DIR/aura-app}"
 
   stack_apply_preset
