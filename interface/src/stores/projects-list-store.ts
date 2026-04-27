@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { Agent, AgentInstance, Project } from "../types";
+import { api } from "../api/client";
 import { queryClient } from "../lib/query-client";
 import {
   dedupeProjects,
@@ -78,10 +79,17 @@ interface ProjectsListState {
   agentsByProject: Record<string, AgentInstance[]>;
   loadingAgentsByProject: Record<string, boolean>;
   newProjectModalOpen: boolean;
+  /// Soft-deleted projects in the active org. Loaded on demand by the
+  /// recovery UI; not persisted or query-cached because the list is only
+  /// shown when the user explicitly opens the "Deleted Projects" section.
+  deletedProjects: Project[];
+  loadingDeletedProjects: boolean;
+  deletedProjectsError: string | null;
 
   setProjects: (updater: Project[] | ((prev: Project[]) => Project[])) => void;
   saveProjectOrder: (orderedIds: string[]) => void;
   refreshProjects: () => Promise<void>;
+  refreshDeletedProjects: () => Promise<void>;
   setAgentsByProject: (
     updater:
       | Record<string, AgentInstance[]>
@@ -165,6 +173,9 @@ export const useProjectsListStore = create<ProjectsListState>()((set, get) => ({
   newProjectModalOpen:
     typeof window !== "undefined" &&
     window.sessionStorage.getItem(NEW_PROJECT_MODAL_STORAGE_KEY) === "1",
+  deletedProjects: [],
+  loadingDeletedProjects: false,
+  deletedProjectsError: null,
 
   setProjects: (updater) => {
     set((state) => ({
@@ -227,6 +238,24 @@ export const useProjectsListStore = create<ProjectsListState>()((set, get) => ({
       if (useAuthStore.getState().user) {
         markFirstProjectsDataReady();
       }
+    }
+  },
+
+  refreshDeletedProjects: async () => {
+    const orgId = getActiveOrgId();
+    set({ loadingDeletedProjects: true, deletedProjectsError: null });
+    try {
+      const projects = await api.listDeletedProjects(orgId);
+      set({ deletedProjects: projects, loadingDeletedProjects: false });
+    } catch (error) {
+      console.error("Failed to load deleted projects", error);
+      set({
+        loadingDeletedProjects: false,
+        deletedProjectsError:
+          error instanceof Error
+            ? error.message
+            : "Could not load deleted projects.",
+      });
     }
   },
 
