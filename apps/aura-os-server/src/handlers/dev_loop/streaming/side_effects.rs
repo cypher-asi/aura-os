@@ -140,6 +140,15 @@ async fn apply_event_side_effect(
         }
         "task_completed" => {
             set_current_task(state, project_id, agent_instance_id, None).await;
+            // Drain the in-memory `task_output_cache` (tokens, files-
+            // changed, live output, build/test/git steps) into the
+            // persisted aura-storage task record + session events.
+            // Without this, tokens accumulated in `update_usage_cache`
+            // are silently discarded when the cache is evicted,
+            // leaving the dashboard "Tokens" stat at 0.
+            if let (Some(task_id), Some(jwt)) = (task_id, jwt) {
+                persist_cached_task_output(state, project_id, jwt, task_id).await;
+            }
         }
         "task_failed" => {
             set_current_task(state, project_id, agent_instance_id, None).await;
@@ -151,6 +160,9 @@ async fn apply_event_side_effect(
             // reason to render (the hook has nothing to seed from).
             if let (Some(task_id), Some(jwt)) = (task_id, jwt) {
                 persist_task_failure_reason(state, jwt, task_id, event).await;
+                // Same accumulator drain as task_completed: failed tasks
+                // also have token usage that should appear in stats.
+                persist_cached_task_output(state, project_id, jwt, task_id).await;
             }
         }
         "tool_call_completed" => {
@@ -497,4 +509,37 @@ async fn update_usage_cache(
 /// `"runner-<n>"` ids that should not pollute the cache).
 fn parse_task_key(project_id: ProjectId, task_id: &str) -> Option<(ProjectId, TaskId)> {
     TaskId::from_str(task_id).ok().map(|tid| (project_id, tid))
+}
+
+/// Drain the in-memory accumulator for `task_id` and persist it to
+/// aura-storage via `persist_task_output`. Called once per task on
+/// `task_completed` or `task_failed`.
+///
+/// Bridges the live-event accumulator (`task_output_cache`) to the
+/// persisted `tasks` row + session events. The cache entry is removed
+/// after persistence so the in-memory map doesn't grow unbounded
+/// across task completions.
+async fn persist_cached_task_output(
+    state: &AppState,
+    project_id: ProjectId,
+    jwt: &str,
+    task_id: &str,
+) {
+    let Some(key) = parse_task_key(project_id, task_id) else {
+        return;
+    };
+    let cached = {
+        let mut cache = state.task_output_cache.lock().await;
+        cache.remove(&key)
+    };
+    let Some(cached) = cached else {
+        return;
+    };
+    crate::persistence::persist_task_output(
+        state.storage_client.as_ref(),
+        Some(jwt),
+        task_id,
+        &cached,
+    )
+    .await;
 }
