@@ -87,6 +87,16 @@ if [[ "$service" == "harness" ]]; then
   export AURA_STORAGE_URL="$(stack_resolved_url storage)"
   export ORBIT_URL="$(stack_resolved_url orbit)"
   export AURA_LLM_ROUTING="$AURA_STACK_HARNESS_LLM_ROUTING"
+  if [[ -n "${AURA_STACK_ROUTER_URL:-}" ]]; then
+    export AURA_ROUTER_URL="$AURA_STACK_ROUTER_URL"
+  fi
+  if [[ -n "${AURA_STACK_AURA_ROUTER_JWT:-}" ]]; then
+    export AURA_ROUTER_JWT="$AURA_STACK_AURA_ROUTER_JWT"
+  fi
+  if [[ -n "${AURA_STACK_ANTHROPIC_API_KEY:-}" ]]; then
+    export AURA_ANTHROPIC_API_KEY="$AURA_STACK_ANTHROPIC_API_KEY"
+  fi
+  export AURA_ANTHROPIC_MODEL="$AURA_STACK_ANTHROPIC_MODEL"
   export RUST_LOG="$AURA_STACK_HARNESS_LOG_LEVEL"
   mkdir -p "$AURA_DATA_DIR"
 fi
