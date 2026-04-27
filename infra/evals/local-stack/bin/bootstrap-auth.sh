@@ -44,6 +44,13 @@ default_aura_data_dir() {
 
 source_data_dir="${AURA_STACK_AUTH_SOURCE_DATA_DIR:-$(default_aura_data_dir)}"
 
+is_local_dev_jwt() {
+  case "$1" in
+    eyJhbGciOiJIUzI1Ni*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 resolve_source_access_token() {
   if [[ -n "${AURA_STACK_SOURCE_ACCESS_TOKEN:-}" ]]; then
     printf '%s\n' "$AURA_STACK_SOURCE_ACCESS_TOKEN"
@@ -69,22 +76,21 @@ resolve_source_access_token() {
     fi
   fi
 
-  # Compatibility fallback only. Eval/local dev tokens can be accepted by the
-  # isolated stack while still failing aura-router proxy auth, so prefer the
-  # real app session above unless an operator uses AURA_STACK_SOURCE_ACCESS_TOKEN.
-  if [[ -n "${AURA_EVAL_ACCESS_TOKEN:-}" ]]; then
-    printf '%s\n' "$AURA_EVAL_ACCESS_TOKEN"
-    return 0
-  fi
+  if [[ "${AURA_STACK_ALLOW_ENV_SOURCE_TOKEN:-}" == "1" ]]; then
+    if [[ -n "${AURA_EVAL_ACCESS_TOKEN:-}" ]]; then
+      printf '%s\n' "$AURA_EVAL_ACCESS_TOKEN"
+      return 0
+    fi
 
-  if [[ -n "${AURA_ACCESS_TOKEN:-}" ]]; then
-    printf '%s\n' "$AURA_ACCESS_TOKEN"
-    return 0
-  fi
+    if [[ -n "${AURA_ACCESS_TOKEN:-}" ]]; then
+      printf '%s\n' "$AURA_ACCESS_TOKEN"
+      return 0
+    fi
 
-  if [[ -n "${AURA_NETWORK_AUTH_TOKEN:-}" ]]; then
-    printf '%s\n' "$AURA_NETWORK_AUTH_TOKEN"
-    return 0
+    if [[ -n "${AURA_NETWORK_AUTH_TOKEN:-}" ]]; then
+      printf '%s\n' "$AURA_NETWORK_AUTH_TOKEN"
+      return 0
+    fi
   fi
 
   return 1
@@ -109,12 +115,20 @@ if ! access_token="$(resolve_source_access_token)"; then
   echo "  1. AURA_STACK_SOURCE_ACCESS_TOKEN" >&2
   echo "  2. persisted session in $source_data_dir" >&2
   echo "  3. legacy endpoint at $source_base_url/api/auth/access-token" >&2
-  echo "  4. AURA_EVAL_ACCESS_TOKEN / AURA_ACCESS_TOKEN / AURA_NETWORK_AUTH_TOKEN" >&2
+  echo "  4. env token aliases only when AURA_STACK_ALLOW_ENV_SOURCE_TOKEN=1" >&2
   exit 1
 fi
 
 if [[ -z "$access_token" ]]; then
   echo "Resolved source auth token was empty" >&2
+  exit 1
+fi
+
+if is_local_dev_jwt "$access_token" && [[ "${AURA_STACK_ALLOW_LOCAL_AUTH_TOKEN:-}" != "1" ]]; then
+  echo "Resolved source auth token looks like a local/dev HS256 token." >&2
+  echo "That token can pass the isolated stack but fails aura-router proxy auth." >&2
+  echo "Use the real app session, set AURA_STACK_AUTH_SOURCE_DATA_DIR, or set AURA_STACK_SOURCE_ACCESS_TOKEN." >&2
+  echo "Set AURA_STACK_ALLOW_LOCAL_AUTH_TOKEN=1 only for offline/local-router tests." >&2
   exit 1
 fi
 

@@ -246,10 +246,11 @@ different source.
 The benchmark auth env written by this step is
 `evals/local-stack/.runtime/auth.env` and contains `AURA_EVAL_ACCESS_TOKEN`.
 That is the eval-facing token name. Existing `AURA_EVAL_ACCESS_TOKEN`,
-`AURA_ACCESS_TOKEN`, and `AURA_NETWORK_AUTH_TOKEN` values are accepted only as a
-last-resort compatibility fallback; use `AURA_STACK_SOURCE_ACCESS_TOKEN` for an
-explicit override. This keeps stale local eval tokens from shadowing the real
-app session used by aura-router.
+`AURA_ACCESS_TOKEN`, and `AURA_NETWORK_AUTH_TOKEN` values are ignored by default
+when selecting the source token; set `AURA_STACK_ALLOW_ENV_SOURCE_TOKEN=1` only
+when you intentionally want to bootstrap from those aliases. Local/dev HS256
+tokens are rejected unless `AURA_STACK_ALLOW_LOCAL_AUTH_TOKEN=1`, because they
+can pass the isolated stack while failing aura-router proxy auth.
 
 At that point the typical local URLs are:
 
