@@ -78,16 +78,29 @@ pub(crate) async fn retry_task(
         })
 }
 
+// Accept both camelCase and snake_case bodies so the frontend (snake_case)
+// AND the harness's `HttpDomainApi::create_task` (camelCase, plus the legacy
+// `dependencyTaskIds` name) deserialize cleanly. Without this, harness POSTs
+// landed as 422 "missing field `spec_id`", which the harness wrapped in
+// `domain_ok({"ok":false,"error":"HTTP 422: ..."})` — an `is_error=false`
+// soft failure that the LLM read as "the task didn't save, try again", looping
+// `create_task` ↔ `list_tasks` until the wall-clock deadline. The surface
+// symptom was `[preflight] FAIL extract_tasks ... 0 tasks` after a 95s spin.
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct CreateTaskBody {
     pub title: String,
+    #[serde(alias = "spec_id")]
     pub spec_id: String,
     pub description: Option<String>,
     pub status: Option<String>,
+    #[serde(alias = "order_index")]
     pub order_index: Option<i32>,
+    #[serde(alias = "dependency_ids", alias = "dependencyTaskIds")]
     pub dependency_ids: Option<Vec<String>>,
+    #[serde(alias = "assigned_agent_instance_id")]
     pub assigned_agent_instance_id: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "skip_auto_decompose")]
     pub skip_auto_decompose: bool,
 }
 
@@ -170,12 +183,16 @@ pub(crate) async fn create_task(
 }
 
 #[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct UpdateTaskBody {
     pub title: Option<String>,
     pub description: Option<String>,
     pub status: Option<String>,
+    #[serde(alias = "order_index")]
     pub order_index: Option<i32>,
+    #[serde(alias = "dependency_ids", alias = "dependencyTaskIds")]
     pub dependency_ids: Option<Vec<String>>,
+    #[serde(alias = "assigned_agent_instance_id")]
     pub assigned_agent_instance_id: Option<String>,
 }
 
@@ -319,5 +336,115 @@ mod tests {
             Some(vec![TaskStatus::Ready])
         );
         assert!(compute_bridge(TaskStatus::Done, TaskStatus::Ready).is_none());
+    }
+
+    /// Frontend (`interface/src/shared/api/tasks.ts`) and the server's own
+    /// integration tests use snake_case bodies; this guards that path from
+    /// regressing while we add camelCase support.
+    #[test]
+    fn create_task_body_accepts_snake_case() {
+        let body: CreateTaskBody = serde_json::from_str(
+            r#"{
+                "title": "T",
+                "spec_id": "s",
+                "description": "d",
+                "status": "backlog",
+                "order_index": 3,
+                "dependency_ids": ["a", "b"],
+                "assigned_agent_instance_id": "ai",
+                "skip_auto_decompose": true
+            }"#,
+        )
+        .expect("snake_case body should deserialize");
+        assert_eq!(body.title, "T");
+        assert_eq!(body.spec_id, "s");
+        assert_eq!(body.description.as_deref(), Some("d"));
+        assert_eq!(body.order_index, Some(3));
+        assert_eq!(
+            body.dependency_ids.as_deref(),
+            Some(&["a".to_string(), "b".to_string()][..])
+        );
+        assert_eq!(body.assigned_agent_instance_id.as_deref(), Some("ai"));
+        assert!(body.skip_auto_decompose);
+    }
+
+    /// Harness `HttpDomainApi::create_task` sends a camelCase body. We add
+    /// `rename_all = "camelCase"` so it deserializes natively without round-
+    /// tripping through aliases.
+    #[test]
+    fn create_task_body_accepts_canonical_camel_case() {
+        let body: CreateTaskBody = serde_json::from_str(
+            r#"{
+                "title": "T",
+                "specId": "s",
+                "description": "d",
+                "orderIndex": 3,
+                "dependencyIds": ["a"],
+                "assignedAgentInstanceId": "ai",
+                "skipAutoDecompose": true
+            }"#,
+        )
+        .expect("camelCase body should deserialize");
+        assert_eq!(body.spec_id, "s");
+        assert_eq!(body.order_index, Some(3));
+        assert_eq!(body.dependency_ids.as_deref(), Some(&["a".to_string()][..]));
+        assert!(body.skip_auto_decompose);
+    }
+
+    /// The current harness build literally serializes `dependencyTaskIds`
+    /// (its own legacy name from before the field was renamed to
+    /// `dependency_ids` everywhere else). Without this alias every harness
+    /// `create_task` 422'd with "missing field `spec_id`" because serde
+    /// stopped at the first unknown key, the harness wrapped the failure in
+    /// a soft `domain_ok` envelope, and the LLM looped until the deadline —
+    /// the regression that surfaced as `extract_tasks ... 0 tasks`.
+    #[test]
+    fn create_task_body_accepts_legacy_dependency_task_ids_alias() {
+        let body: CreateTaskBody = serde_json::from_str(
+            r#"{
+                "title": "T",
+                "specId": "s",
+                "description": "d",
+                "dependencyTaskIds": ["a", "b"],
+                "orderIndex": 0
+            }"#,
+        )
+        .expect("dependencyTaskIds alias should deserialize");
+        assert_eq!(body.spec_id, "s");
+        assert_eq!(
+            body.dependency_ids.as_deref(),
+            Some(&["a".to_string(), "b".to_string()][..])
+        );
+    }
+
+    #[test]
+    fn update_task_body_accepts_snake_and_camel_case() {
+        let snake: UpdateTaskBody = serde_json::from_str(
+            r#"{
+                "title": "T",
+                "order_index": 1,
+                "dependency_ids": ["a"],
+                "assigned_agent_instance_id": "ai"
+            }"#,
+        )
+        .expect("snake_case update body should deserialize");
+        assert_eq!(snake.order_index, Some(1));
+        assert_eq!(snake.assigned_agent_instance_id.as_deref(), Some("ai"));
+
+        let camel: UpdateTaskBody = serde_json::from_str(
+            r#"{
+                "title": "T",
+                "orderIndex": 2,
+                "dependencyTaskIds": ["b"],
+                "assignedAgentInstanceId": "ai2"
+            }"#,
+        )
+        .expect("camelCase update body should deserialize");
+        assert_eq!(camel.order_index, Some(2));
+        assert_eq!(
+            camel.dependency_ids.as_deref(),
+            Some(&["b".to_string()][..])
+        );
+        assert_eq!(camel.assigned_agent_instance_id.as_deref(), Some("ai2"));
     }
 }
