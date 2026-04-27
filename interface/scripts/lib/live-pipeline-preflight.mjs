@@ -24,9 +24,13 @@
 // instance, agent, integration, org). Each step is timed and emits a
 // structured `{ step, status, elapsedMs, details }` record via `onStep`.
 
+import { execFile } from "node:child_process";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
 
 const DEFAULT_LOOP_TIMEOUT_MS = 180_000;
 const DEFAULT_POLL_INTERVAL_MS = 4_000;
@@ -208,6 +212,70 @@ async function ensureFixtureDir(fixtureDir) {
   return { fixtureDir, ephemeral: false };
 }
 
+// `loop_start` runs `validate_workspace_is_initialised` server-side and
+// rejects any workspace without a `.git` entry. The persistent
+// `interface/tests/e2e/evals/fixtures/preflight-minimal` fixture isn't
+// itself a repo (it's source-controlled inside aura-os), and the
+// ephemeral tmp-dir path doesn't init one either, so loop_start used to
+// 400 with `workspace at ... is not a git repository`. Idempotently
+// `git init` + create an initial commit so the validator passes and the
+// dev loop has a HEAD to diff/commit against. Skips silently when a
+// `.git` already exists (e.g. operator pre-cloned a real repo).
+async function ensureWorkspaceIsGitRepo(fixtureDir) {
+  const gitPath = path.join(fixtureDir, ".git");
+  try {
+    await fs.stat(gitPath);
+    return { initialized: false };
+  } catch (cause) {
+    if (cause?.code !== "ENOENT") {
+      throw new StepFailure(
+        "init_fixture_repo",
+        `failed to inspect ${gitPath}: ${cause instanceof Error ? cause.message : String(cause)}`,
+      );
+    }
+  }
+  // `-c user.{name,email}=...` scopes the identity to this invocation
+  // only, so we don't depend on the operator having global git config
+  // and we don't pollute their machine config either. `--no-gpg-sign`
+  // keeps the commit non-interactive on machines where commit signing
+  // is enabled by default. We deliberately do NOT pass `-b main`: that
+  // would require git >= 2.28 and the dev loop doesn't care about the
+  // initial branch name.
+  const identityFlags = [
+    "-c", "user.name=Aura Preflight",
+    "-c", "user.email=preflight@aura.local",
+    "-c", "commit.gpgsign=false",
+    "-c", "tag.gpgsign=false",
+  ];
+  try {
+    await execFileAsync("git", [...identityFlags, "init", "-q"], { cwd: fixtureDir });
+    await execFileAsync("git", [...identityFlags, "add", "-A"], { cwd: fixtureDir });
+    await execFileAsync(
+      "git",
+      [
+        ...identityFlags,
+        "commit",
+        "-q",
+        "--allow-empty",
+        "--no-gpg-sign",
+        "-m",
+        "preflight base",
+      ],
+      { cwd: fixtureDir },
+    );
+  } catch (cause) {
+    const message = cause instanceof Error
+      ? `${cause.message}${cause.stderr ? `\nstderr: ${String(cause.stderr).trim()}` : ""}`
+      : String(cause);
+    throw new StepFailure(
+      "init_fixture_repo",
+      `failed to initialise ${fixtureDir} as a git repo: ${message}`,
+      { hint: "ensure git is on PATH and the fixture directory is writable" },
+    );
+  }
+  return { initialized: true };
+}
+
 async function deleteIgnoringMissing(client, endpoint) {
   if (!endpoint) return { ok: true, status: 0, skipped: true };
   try {
@@ -333,6 +401,11 @@ export async function runLivePipelinePreflight(options = {}) {
   });
 
   try {
+    await timedStep(onStep, "init_fixture_repo", async () => {
+      const { initialized } = await ensureWorkspaceIsGitRepo(fixtureDir);
+      return { detailsForLog: { initialized } };
+    });
+
     await timedStep(onStep, "auth_session", async () => {
       const session = await client.apiJson("GET", "/api/auth/session");
       if (!session) {

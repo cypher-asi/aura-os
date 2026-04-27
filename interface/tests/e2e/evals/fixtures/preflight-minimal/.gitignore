@@ -1,0 +1,12 @@
+# `interface/scripts/lib/live-pipeline-preflight.mjs` turns this fixture
+# into a git repo at preflight time so `loop_start` (which requires a
+# `.git` entry) can succeed. None of that runtime state should appear
+# in the parent aura-os repo's `git status`.
+.git/
+
+# Created by the dev loop when it satisfies `requirements.md`.
+hello.txt
+
+# Mirrored spec markdown that aura-os-server lands on disk per
+# `mirror_spec_best_effort` after spec generation.
+spec/
