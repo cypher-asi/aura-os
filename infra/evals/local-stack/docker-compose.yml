@@ -67,7 +67,7 @@ services:
       AURA_ROUTER_URL: "${AURA_STACK_ROUTER_URL:-}"
       AURA_ROUTER_JWT: "${AURA_STACK_AURA_ROUTER_JWT:-}"
       AURA_ANTHROPIC_API_KEY: "${AURA_STACK_ANTHROPIC_API_KEY:-}"
-      AURA_ANTHROPIC_MODEL: "${AURA_STACK_ANTHROPIC_MODEL:-claude-opus-4-6}"
+      AURA_ANTHROPIC_MODEL: "${AURA_STACK_ANTHROPIC_MODEL:-aura-claude-opus-4-7}"
       RUST_LOG: "${AURA_STACK_HARNESS_LOG_LEVEL:-info}"
     volumes:
       - aura_harness_data:/data

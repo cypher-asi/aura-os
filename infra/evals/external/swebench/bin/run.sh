@@ -16,6 +16,7 @@
 #   AURA_BENCH_AGENT_MACHINE_TYPE   optional ("local")
 #   AURA_BENCH_BUILD_COMMAND        optional placeholder build command
 #   AURA_BENCH_TEST_COMMAND         optional placeholder test command
+#   AURA_EVAL_AGENT_DEFAULT_MODEL   optional model for created benchmark agents
 
 set -eu
 
