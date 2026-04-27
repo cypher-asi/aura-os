@@ -10,6 +10,27 @@ const DEFAULT_IGNORE_PATTERNS = Object.freeze([
   ".pytest_cache/**",
 ]);
 
+const FULL_ACCESS_CAPABILITIES = Object.freeze([
+  "spawnAgent",
+  "controlAgent",
+  "readAgent",
+  "listAgents",
+  "manageOrgMembers",
+  "manageBilling",
+  "invokeProcess",
+  "postToFeed",
+  "generateMedia",
+  "readAllProjects",
+  "writeAllProjects",
+]);
+
+export function fullAccessAgentPermissions() {
+  return {
+    scope: { orgs: [], projects: [], agent_ids: [] },
+    capabilities: FULL_ACCESS_CAPABILITIES.map((type) => ({ type })),
+  };
+}
+
 function authHeaders(accessToken, extra = {}) {
   return {
     Authorization: `Bearer ${accessToken}`,
@@ -69,7 +90,26 @@ export function createBenchmarkClient(options = {}) {
       });
 
       if (response.ok) {
-        this.logStep("access token imported", { apiBaseUrl: this.apiBaseUrl });
+        const text = await response.text();
+        const payload = text ? JSON.parse(text) : null;
+        if (process.env.AURA_EVAL_PRESERVE_ACCESS_TOKEN === "1") {
+          this.logStep("access token imported", {
+            apiBaseUrl: this.apiBaseUrl,
+            adoptedImportedToken: false,
+            preservedConfiguredToken: true,
+          });
+          return;
+        }
+        const importedToken = typeof payload?.access_token === "string"
+          ? payload.access_token.trim()
+          : "";
+        if (importedToken) {
+          this.accessToken = importedToken;
+        }
+        this.logStep("access token imported", {
+          apiBaseUrl: this.apiBaseUrl,
+          adoptedImportedToken: Boolean(importedToken),
+        });
         return;
       }
 
@@ -204,6 +244,111 @@ function shouldIgnoreDirectory(relativePosix, matchers) {
     if (matcher.regex.test(`${relativePosix}/.placeholder`)) return true;
   }
   return false;
+}
+
+function asTitle(value, fallback) {
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : fallback;
+}
+
+function entityId(entity, keys) {
+  for (const key of keys) {
+    const value = entity?.[key];
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  return "";
+}
+
+function orderValue(entity) {
+  const value = Number(entity?.order_index ?? entity?.orderIndex);
+  return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER;
+}
+
+function progressPercent(done, total) {
+  if (!Number.isFinite(total) || total <= 0) return 0;
+  return Math.max(0, Math.min(100, Math.round((done / total) * 100)));
+}
+
+function sortedSpecs(specs) {
+  return [...(Array.isArray(specs) ? specs : [])].sort((a, b) => {
+    const orderDelta = orderValue(a) - orderValue(b);
+    if (orderDelta !== 0) return orderDelta;
+    return asTitle(a?.title, "").localeCompare(asTitle(b?.title, ""));
+  });
+}
+
+function specIndexMap(specs) {
+  return new Map(
+    sortedSpecs(specs).map((spec, index) => [
+      entityId(spec, ["spec_id", "specId", "id"]),
+      index + 1,
+    ]),
+  );
+}
+
+function sortedTasks(tasks, specs = []) {
+  const specOrder = specIndexMap(specs);
+  return [...(Array.isArray(tasks) ? tasks : [])].sort((a, b) => {
+    const specA = specOrder.get(entityId(a, ["spec_id", "specId"])) ?? Number.MAX_SAFE_INTEGER;
+    const specB = specOrder.get(entityId(b, ["spec_id", "specId"])) ?? Number.MAX_SAFE_INTEGER;
+    if (specA !== specB) return specA - specB;
+    const orderDelta = orderValue(a) - orderValue(b);
+    if (orderDelta !== 0) return orderDelta;
+    return asTitle(a?.title, "").localeCompare(asTitle(b?.title, ""));
+  });
+}
+
+function taskStatus(task) {
+  return asTitle(task?.status, "unknown").toLowerCase();
+}
+
+function isTerminalTask(task) {
+  return ["done", "failed", "blocked"].includes(taskStatus(task));
+}
+
+function pickCurrentTask(tasks) {
+  const priority = ["in_progress", "ready", "pending", "todo", "backlog", "blocked", "failed", "done"];
+  for (const status of priority) {
+    const match = tasks.find((task) => taskStatus(task) === status);
+    if (match) return match;
+  }
+  return tasks[0] ?? null;
+}
+
+function progressSummaryForTask(task, tasks, specs) {
+  const orderedTasks = sortedTasks(tasks, specs);
+  const orderedSpecs = sortedSpecs(specs);
+  const currentTask = task ?? pickCurrentTask(orderedTasks);
+  const taskIndex = currentTask ? orderedTasks.findIndex((candidate) => candidate === currentTask) + 1 : 0;
+  const specOrder = specIndexMap(orderedSpecs);
+  const specId = entityId(currentTask, ["spec_id", "specId"]);
+  const specIndex = specOrder.get(specId) ?? null;
+  const terminalCount = orderedTasks.filter(isTerminalTask).length;
+
+  return {
+    taskId: entityId(currentTask, ["task_id", "taskId", "id"]),
+    title: asTitle(currentTask?.title, currentTask ? "Untitled task" : "No task"),
+    status: currentTask ? taskStatus(currentTask) : "none",
+    current: taskIndex,
+    total: orderedTasks.length,
+    percent: progressPercent(terminalCount, orderedTasks.length),
+    completed: terminalCount,
+    specId,
+    specCurrent: specIndex,
+    specTotal: orderedSpecs.length,
+  };
+}
+
+function emitProgress(onProgress, event) {
+  if (!onProgress) return;
+  try {
+    onProgress(event);
+  } catch {
+    // Ignore listener errors so they cannot break the pipeline.
+  }
 }
 
 export async function walkFixtureDir(absoluteDir, options = {}) {
@@ -468,12 +613,41 @@ async function createEvalIntegration(client, orgId, runtimeConfig) {
   return client.apiJson("POST", `/api/orgs/${orgId}/integrations`, payload);
 }
 
-async function pollForLoopCompletion(client, projectId, timeoutMs, pollIntervalMs) {
+async function pollForLoopCompletion(
+  client,
+  projectId,
+  timeoutMs,
+  pollIntervalMs,
+  progressContext = {},
+) {
   const deadline = Date.now() + timeoutMs;
   let latestTasks = [];
+  let lastProgressKey = "";
 
   while (Date.now() < deadline) {
     latestTasks = await client.apiJson("GET", `/api/projects/${projectId}/tasks`);
+    const summary = progressSummaryForTask(null, latestTasks, progressContext.specs);
+    const progressKey = [
+      summary.current,
+      summary.total,
+      summary.completed,
+      summary.status,
+      summary.taskId,
+      summary.specCurrent,
+      summary.specTotal,
+    ].join(":");
+    if (progressKey !== lastProgressKey) {
+      lastProgressKey = progressKey;
+      emitProgress(progressContext.onProgress, {
+        step: "task_progress",
+        summary: `Task ${summary.current}/${summary.total} ${summary.percent}% ${summary.status}: ${summary.title}`,
+        details: {
+          phase: "task",
+          kind: "loop_progress",
+          ...summary,
+        },
+      });
+    }
     const allTerminal = latestTasks.length > 0
       && latestTasks.every((task) => ["done", "failed", "blocked"].includes(task.status));
     if (allTerminal) return latestTasks;
@@ -571,13 +745,7 @@ export async function runScenario(scenario, options) {
 
   const recordStep = (step, summary, details) => {
     operationLog.push({ step, summary });
-    if (onProgress) {
-      try {
-        onProgress(details === undefined ? { step, summary } : { step, summary, details });
-      } catch {
-        // Ignore listener errors so they cannot break the pipeline.
-      }
-    }
+    emitProgress(onProgress, details === undefined ? { step, summary } : { step, summary, details });
   };
 
   let org = null;
@@ -598,13 +766,17 @@ export async function runScenario(scenario, options) {
     await client.ensureImportedAccessToken();
 
     const fixturePath = resolveFixturePath(scenario, fixturesDir);
-    const files = await walkFixtureDir(fixturePath, {
-      ignore: Array.isArray(fixtureIgnore) ? fixtureIgnore : undefined,
-    });
+    const importByReference = scenario.project?.importByReference === true;
+    const files = importByReference
+      ? []
+      : await walkFixtureDir(fixturePath, {
+        ignore: Array.isArray(fixtureIgnore) ? fixtureIgnore : undefined,
+      });
     client.logStep("fixture prepared", {
       scenarioId: scenario.id,
       fileCount: files.length,
       fixturePath,
+      importByReference,
     });
 
     org = await resolveEvalOrg(client, orgName);
@@ -649,18 +821,21 @@ export async function runScenario(scenario, options) {
       default_model: runtimeConfig.defaultModel || null,
       skills: [],
       icon: null,
+      permissions: scenario.agentTemplate.permissions ?? fullAccessAgentPermissions(),
     });
     client.logStep("agent created", { agentId: agent.agent_id });
     recordStep("create_agent", `Created agent ${agent.agent_id}`, { agentId: agent.agent_id });
 
-    client.logStep("creating project", { projectName });
-    project = await client.apiJson("POST", "/api/projects/import", {
+    client.logStep("creating project", { projectName, importByReference });
+    const projectEndpoint = importByReference ? "/api/projects" : "/api/projects/import";
+    project = await client.apiJson("POST", projectEndpoint, {
       org_id: org.org_id,
       name: projectName,
       description: scenario.project.description,
-      files,
+      ...(importByReference ? {} : { files }),
       build_command: scenario.project.buildCommand,
       test_command: scenario.project.testCommand,
+      local_workspace_path: importByReference ? fixturePath : undefined,
     });
     client.logStep("project created", { projectId: project.project_id });
     recordStep(
@@ -687,6 +862,22 @@ export async function runScenario(scenario, options) {
     );
     client.logStep("specs generated", { count: specs.length });
     recordStep("create_spec", `Generated ${specs.length} specs`, { count: specs.length });
+    sortedSpecs(specs).forEach((spec, index, orderedSpecs) => {
+      emitProgress(onProgress, {
+        step: "spec_progress",
+        summary: `Spec ${index + 1}/${orderedSpecs.length} ${progressPercent(index + 1, orderedSpecs.length)}% ready: ${asTitle(spec.title, "Untitled spec")}`,
+        details: {
+          phase: "spec",
+          kind: "spec_ready",
+          specId: entityId(spec, ["spec_id", "specId", "id"]),
+          title: asTitle(spec.title, "Untitled spec"),
+          current: index + 1,
+          total: orderedSpecs.length,
+          percent: progressPercent(index + 1, orderedSpecs.length),
+          status: "ready",
+        },
+      });
+    });
 
     tasks = await client.apiJson(
       "POST",
@@ -694,6 +885,18 @@ export async function runScenario(scenario, options) {
     );
     client.logStep("tasks extracted", { count: tasks.length });
     recordStep("create_tasks", `Extracted ${tasks.length} tasks`, { count: tasks.length });
+    sortedTasks(tasks, specs).forEach((task, index, orderedTasks) => {
+      const taskProgress = progressSummaryForTask(task, orderedTasks, specs);
+      emitProgress(onProgress, {
+        step: "task_progress",
+        summary: `Task ${taskProgress.current}/${taskProgress.total} ${taskProgress.percent}% ${taskProgress.status}: ${taskProgress.title}`,
+        details: {
+          phase: "task",
+          kind: "task_planned",
+          ...taskProgress,
+        },
+      });
+    });
 
     await client.apiJson(
       "POST",
@@ -707,6 +910,7 @@ export async function runScenario(scenario, options) {
       project.project_id,
       scenario.timeouts.loopCompletionMs,
       scenario.timeouts.pollIntervalMs,
+      { onProgress, specs },
     );
     const doneCount = completedTasks.filter((task) => task.status === "done").length;
     const failedCount = completedTasks.filter((task) => task.status === "failed").length;

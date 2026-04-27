@@ -34,6 +34,31 @@ info() {
     printf '[swebench-run] %s\n' "$1" >&2
 }
 
+HARNESS_LOG_FOLLOWER_PID=""
+
+stop_harness_log_follower() {
+    if [ -n "$HARNESS_LOG_FOLLOWER_PID" ]; then
+        kill "$HARNESS_LOG_FOLLOWER_PID" >/dev/null 2>&1 || true
+        wait "$HARNESS_LOG_FOLLOWER_PID" 2>/dev/null || true
+        HARNESS_LOG_FOLLOWER_PID=""
+    fi
+}
+
+start_harness_log_follower() {
+    if [ "${AURA_BENCH_HARNESS_LOGS:-1}" = "0" ]; then
+        return 0
+    fi
+    harness_log_file="${AURA_BENCH_HARNESS_LOG_FILE:-${AURA_STACK_LOG_DIR:-$repo_root/infra/evals/local-stack/.runtime/logs}/harness.log}"
+    info "following harness logs from ${harness_log_file} (set AURA_BENCH_HARNESS_LOGS=0 to disable)"
+    node infra/evals/external/bin/follow-harness-log.mjs \
+        --file "$harness_log_file" \
+        --from-end \
+        --label "harness" &
+    HARNESS_LOG_FOLLOWER_PID=$!
+}
+
+trap 'stop_harness_log_follower' EXIT
+
 # Resolve repo root: prefer git, fall back to a relative path.
 case "$0" in
     */*) script_dir=${0%/*} ;;
@@ -149,6 +174,7 @@ fi
 
 # Run the driver. Forward any extra args (e.g. --instance-ids ...).
 info "starting AURA driver"
+start_harness_log_follower
 set +e
 node infra/evals/external/swebench/run-swebench.mjs \
     --subset "$SUBSET" \
@@ -156,6 +182,7 @@ node infra/evals/external/swebench/run-swebench.mjs \
     "$@"
 driver_status=$?
 set -e
+stop_harness_log_follower
 if [ "$driver_status" -ne 0 ]; then
     info "driver exited with status $driver_status; continuing to harness with whatever predictions were produced"
 fi

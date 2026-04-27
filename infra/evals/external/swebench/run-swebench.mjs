@@ -256,6 +256,42 @@ function rejoinChunks(chunks, originalDiff) {
   return joined;
 }
 
+function compactTitle(title, maxLength = 96) {
+  const normalized = String(title ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, maxLength - 1)}…`;
+}
+
+function formatProgressEvent(event) {
+  const details = event?.details;
+  if (!details || typeof details !== "object") {
+    return `${event.step}: ${event.summary ?? event.step}`;
+  }
+
+  if (details.phase === "spec") {
+    const current = details.current ?? "?";
+    const total = details.total ?? "?";
+    const percent = details.percent ?? 0;
+    const status = details.status ?? "status";
+    return `spec ${current}/${total} ${percent}% ${status}: ${compactTitle(details.title)}`;
+  }
+
+  if (details.phase === "task") {
+    const current = details.current ?? "?";
+    const total = details.total ?? "?";
+    const percent = details.percent ?? 0;
+    const status = details.status ?? "status";
+    const specPart = Number.isFinite(details.specCurrent) && Number.isFinite(details.specTotal)
+      ? ` spec ${details.specCurrent}/${details.specTotal}`
+      : "";
+    return `task ${current}/${total} ${percent}% ${status}${specPart}: ${compactTitle(details.title)}`;
+  }
+
+  return `${event.step}: ${event.summary ?? event.step}`;
+}
+
 export function parseDiffFiles(diff) {
   const chunks = splitDiffIntoChunks(diff);
   const files = new Set();
@@ -659,10 +695,7 @@ async function runOneInstance({
       keepEntities: args.keepEntities,
       fixtureIgnore: PYTHON_FIXTURE_IGNORE,
       onProgress: (event) => {
-        const summary = event.summary ?? event.step;
-        process.stderr.write(
-          `[swebench ${instanceId}] ${event.step}: ${summary}\n`,
-        );
+        process.stderr.write(`[swebench ${instanceId}] ${formatProgressEvent(event)}\n`);
       },
     });
     log(`AURA pipeline finished (runId=${auraPayload.runId})`);
