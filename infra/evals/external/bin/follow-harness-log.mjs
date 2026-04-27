@@ -3,8 +3,13 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 
 const POLL_MS = 500;
-const SNAPSHOT_MIN_MS = 1500;
-const SNAPSHOT_MIN_BYTES = 1024;
+
+// Operators can opt back into raw passthrough for unmatched lines and
+// chatty INFO fallthrough by exporting AURA_BENCH_HARNESS_LOG_VERBOSE=1.
+// The default surface is intentionally narrow: drafting / queued / ok /
+// failed plus startup banners and ERROR/WARN. Everything else is dropped
+// so a single bench run reads as a clean timeline at a glance.
+const VERBOSE = process.env.AURA_BENCH_HARNESS_LOG_VERBOSE === "1";
 
 function parseArgs(argv) {
   const args = {
@@ -55,6 +60,19 @@ const color = {
   cyan: (value) => useColor ? `\x1b[36m${value}\x1b[0m` : value,
 };
 
+// The harness binary forces ANSI colors on `tracing` output even when its
+// stderr is redirected to a file (RUST_LOG_STYLE/auto-detect both end up
+// emitting CSI sequences in `harness.log`). Without stripping them every
+// regex below — line shape, level extraction, key=value parsing — fails
+// against the wrapped tokens (`\u001b[3mraw_input_bytes\u001b[0m\u001b[2m=\u001b[0m`)
+// and we drop into the raw passthrough fallback for every line, which
+// floods the operator with the noisy `tool_call_snapshot` stream we
+// specifically exist to throttle.
+const ANSI_PATTERN = /\x1b\[[0-9;]*[A-Za-z]/g;
+function stripAnsi(value) {
+  return value.replace(ANSI_PATTERN, "");
+}
+
 function redact(value) {
   return value
     .replace(/\bBearer\s+[A-Za-z0-9._~+/-]+=*/g, "Bearer <redacted>")
@@ -73,6 +91,15 @@ function bytes(value) {
   if (!Number.isFinite(n) || n < 0) return "?";
   if (n < 1024) return `${n}B`;
   return `${(n / 1024).toFixed(1)}KB`;
+}
+
+// `tracing` defaults to `<timestamp>  <LEVEL> <module::path>: <msg>`. We
+// don't care about the module path and stripping it lets prefix matches
+// like `rest.startsWith("forwarding tool_call_snapshot ")` work whether
+// the binary was built with `.with_target(true)` or not.
+const MODULE_PATH = /^[\w:]+:\s+/;
+function stripModulePath(rest) {
+  return rest.replace(MODULE_PATH, "");
 }
 
 function shortTime(timestamp) {
@@ -111,22 +138,56 @@ function formatErrorLine(label, timestamp, level, rest) {
   return `${prefix(label, timestamp, level)} ${summary}`;
 }
 
+// Whitelist of bare INFO messages we surface even when they don't carry
+// structured fields. Anything not in this set is dropped at INFO unless
+// VERBOSE is on. Match prefix-only so trailing `tracing` field bags
+// (`key=val ...`) don't disqualify the line.
+const INFO_BANNERS = [
+  "LLM provider ready",
+  "WebSocket connection opened",
+  "harness session opened",
+  "harness session closed",
+  "opening harness session",
+  "session ready",
+  "listening on",
+  "health check ok",
+];
+
 class Formatter {
   constructor(label) {
     this.label = label;
-    this.snapshots = new Map();
+    // Per-tool 'drafting in progress' flag. Keyed by tool name (the
+    // upstream snapshot log emits `tool=<name>` but no `tool_use_id`).
+    // We emit one `drafting <tool>` line on first sight and drop every
+    // subsequent snapshot for that tool until either the queued or
+    // completed terminal event arrives, at which point the next call
+    // can draft afresh. This is what keeps the operator from drowning
+    // in per-token streaming noise without losing the "something is
+    // happening" signal.
+    this.drafting = new Set();
   }
 
-  format(line) {
+  format(rawLine) {
+    const stripped = stripAnsi(rawLine).replace(/\s+$/, "");
+    // Tracing's `Pretty` formatter (and a few of our own indented
+    // multiline emit sites) start with whitespace; `^(\S+)` would
+    // otherwise route those straight to the raw passthrough.
+    const line = stripped.replace(/^\s+/, "");
     const match = /^(\S+)\s+([A-Z]+)\s+(.*)$/.exec(line);
     if (!match) {
-      return `${color.dim(`[${this.label}]`)} ${redact(line)}`;
+      return VERBOSE
+        ? `${color.dim(`[${this.label}]`)} ${redact(line)}`
+        : null;
     }
 
-    const [, timestamp, level, rest] = match;
+    const [, timestamp, level, rawRest] = match;
+    const rest = stripModulePath(rawRest);
 
     if (level === "ERROR" || level === "WARN") {
-      return formatErrorLine(this.label, timestamp, level, rest);
+      // Pass the un-stripped rest so `formatErrorLine` can still pull
+      // the module path out as the `component` summary (e.g.
+      // `aura_anthropic::client`).
+      return formatErrorLine(this.label, timestamp, level, rawRest);
     }
 
     if (rest.startsWith("forwarding tool_call_snapshot ")) {
@@ -141,6 +202,7 @@ class Formatter {
     if (rest.startsWith("Tool requested by model ")) {
       const tool = kv(rest, "tool_name") ?? "unknown_tool";
       const isWrite = kv(rest, "is_write") === "true";
+      this.drafting.delete(tool);
       return `${prefix(this.label, timestamp, level)} queued ${tool} (${isWrite ? "write" : "read"})`;
     }
 
@@ -149,49 +211,28 @@ class Formatter {
       const failed = kv(rest, "is_error") === "true";
       const resultLen = kv(rest, "result_len");
       const status = failed ? color.red("failed") : color.green("ok");
-      const result = resultLen == null ? "" : ` result=${bytes(resultLen)}`;
+      const result = resultLen == null ? "" : ` ${bytes(resultLen)}`;
+      this.drafting.delete(tool);
       return `${prefix(this.label, timestamp, level)} ${status} ${tool}${result}`;
     }
 
-    if (
-      /LLM provider ready|WebSocket connection opened|session|health|started|listening/i.test(rest)
-    ) {
-      return `${prefix(this.label, timestamp, level)} ${redact(rest)}`;
+    if (INFO_BANNERS.some((banner) => rest.startsWith(banner))) {
+      const head = rest.split(/\s+[a-z_]+=/)[0];
+      return `${prefix(this.label, timestamp, level)} ${head}`;
     }
 
-    return null;
+    return VERBOSE
+      ? `${prefix(this.label, timestamp, level)} ${redact(rest)}`
+      : null;
   }
 
   formatToolSnapshot(timestamp, level, rest) {
     const tool = kv(rest, "tool") ?? "unknown_tool";
-    const rawBytes = Number(kv(rest, "raw_input_bytes") ?? 0);
-    const markdownLen = Number(kv(rest, "markdown_len") ?? 0);
-    const contentLen = Number(kv(rest, "content_len") ?? 0);
-    const now = Date.parse(timestamp);
-    const previous = this.snapshots.get(tool);
-
-    if (
-      previous
-      && Number.isFinite(now)
-      && now - previous.timestampMs < SNAPSHOT_MIN_MS
-      && Math.abs(markdownLen - previous.markdownLen) < SNAPSHOT_MIN_BYTES
-      && Math.abs(contentLen - previous.contentLen) < SNAPSHOT_MIN_BYTES
-    ) {
+    if (this.drafting.has(tool)) {
       return null;
     }
-
-    this.snapshots.set(tool, {
-      timestampMs: Number.isFinite(now) ? now : Date.now(),
-      markdownLen,
-      contentLen,
-    });
-
-    const draft = markdownLen > 0
-      ? `markdown=${bytes(markdownLen)}`
-      : contentLen > 0
-        ? `content=${bytes(contentLen)}`
-        : `input=${bytes(rawBytes)}`;
-    return `${prefix(this.label, timestamp, level)} drafting ${tool} ${draft}`;
+    this.drafting.add(tool);
+    return `${prefix(this.label, timestamp, level)} drafting ${tool}`;
   }
 }
 
