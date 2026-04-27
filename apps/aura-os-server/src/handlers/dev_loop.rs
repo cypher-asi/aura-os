@@ -1213,6 +1213,30 @@ fn extract_files_changed(event: &serde_json::Value) -> Vec<StorageTaskFileChange
         return Vec::new();
     };
 
+    // Build a path -> (lines_added, lines_removed) lookup from the protocol's
+    // optional `diffs` array. Older harness builds emit no diffs, so the
+    // lookup is empty and counts default to 0 — same behaviour as before.
+    let line_counts: std::collections::HashMap<String, (u32, u32)> = files_changed
+        .get("diffs")
+        .and_then(serde_json::Value::as_array)
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|entry| {
+                    let path = entry.get("path")?.as_str()?.to_string();
+                    let added = entry
+                        .get("lines_added")
+                        .and_then(serde_json::Value::as_u64)
+                        .unwrap_or(0) as u32;
+                    let removed = entry
+                        .get("lines_removed")
+                        .and_then(serde_json::Value::as_u64)
+                        .unwrap_or(0) as u32;
+                    Some((path, (added, removed)))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
     [
         ("create", "created"),
         ("modify", "modified"),
@@ -1220,17 +1244,22 @@ fn extract_files_changed(event: &serde_json::Value) -> Vec<StorageTaskFileChange
     ]
     .into_iter()
     .flat_map(|(op, key)| {
+        let line_counts = &line_counts;
         files_changed
             .get(key)
             .and_then(serde_json::Value::as_array)
             .into_iter()
             .flatten()
             .filter_map(move |value| {
-                value.as_str().map(|path| StorageTaskFileChangeSummary {
-                    op: op.to_string(),
-                    path: path.to_string(),
-                    lines_added: 0,
-                    lines_removed: 0,
+                value.as_str().map(|path| {
+                    let (lines_added, lines_removed) =
+                        line_counts.get(path).copied().unwrap_or((0, 0));
+                    StorageTaskFileChangeSummary {
+                        op: op.to_string(),
+                        path: path.to_string(),
+                        lines_added,
+                        lines_removed,
+                    }
                 })
             })
     })
@@ -2310,6 +2339,14 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                         if let (Some(session_id), Some(turn_usage)) =
                             (current_session_id, extract_turn_usage(&event))
                         {
+                            // Don't pass cumulative token totals here — the
+                            // router atomically increments sessions tokens on
+                            // every successful LLM round-trip via aura-storage's
+                            // /internal/sessions/:id/tokens endpoint, so a
+                            // SET-based write here would race with those
+                            // increments. Per-turn input/output deltas + the
+                            // context-utilization estimate still flow through
+                            // for event-stream consumers that watch them.
                             if let Err(error) = session_service
                                 .update_context_usage(UpdateContextUsageParams {
                                     project_id,
@@ -2317,8 +2354,8 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                     session_id,
                                     input_tokens: turn_usage.input_tokens,
                                     output_tokens: turn_usage.output_tokens,
-                                    total_input_tokens: turn_usage.cumulative_input_tokens,
-                                    total_output_tokens: turn_usage.cumulative_output_tokens,
+                                    total_input_tokens: None,
+                                    total_output_tokens: None,
                                     context_usage_estimate: turn_usage.context_utilization,
                                 })
                                 .await
@@ -2896,11 +2933,13 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
 
                                 if let (Some(sc), Some(j)) = (storage_client.clone(), jwt.clone()) {
                                     let sid = session_id.to_string();
+                                    let pid = project_id.to_string();
+                                    let aid = agent_instance_id.to_string();
                                     let rurl = router_url.clone();
                                     let hclient = http_client.clone();
                                     tokio::spawn(async move {
                                         if let Err(e) = super::agents::generate_session_summary(
-                                            &sc, &hclient, &rurl, &j, &sid,
+                                            &sc, &hclient, &rurl, &j, &sid, &pid, &aid,
                                         )
                                         .await
                                         {
@@ -3244,11 +3283,13 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
 
                         if let (Some(sc), Some(j)) = (storage_client.clone(), jwt.clone()) {
                             let sid = session_id.to_string();
+                            let pid = project_id.to_string();
+                            let aid = agent_instance_id.to_string();
                             let rurl = router_url.clone();
                             let hclient = http_client.clone();
                             tokio::spawn(async move {
                                 if let Err(e) = super::agents::generate_session_summary(
-                                    &sc, &hclient, &rurl, &j, &sid,
+                                    &sc, &hclient, &rurl, &j, &sid, &pid, &aid,
                                 )
                                 .await
                                 {
@@ -4733,6 +4774,40 @@ mod tests {
         assert!(files
             .iter()
             .any(|file| file.op == "delete" && file.path == "src/old.rs"));
+
+        // Without diffs, line counts default to 0 (older harness builds).
+        assert!(files.iter().all(|f| f.lines_added == 0 && f.lines_removed == 0));
+    }
+
+    #[test]
+    fn extracts_line_counts_from_diffs() {
+        // New harness builds emit per-file diffs alongside the path lists.
+        // extract_files_changed must merge them so the dashboard "Lines"
+        // stat receives non-zero values.
+        let event = serde_json::json!({
+            "type": "assistant_message_end",
+            "files_changed": {
+                "created": ["src/new.rs"],
+                "modified": ["src/lib.rs"],
+                "deleted": ["src/old.rs"],
+                "diffs": [
+                    { "path": "src/new.rs", "lines_added": 12, "lines_removed": 0 },
+                    { "path": "src/lib.rs", "lines_added": 3,  "lines_removed": 1 }
+                ]
+            }
+        });
+
+        let files = extract_files_changed(&event);
+        let new_rs = files.iter().find(|f| f.path == "src/new.rs").unwrap();
+        assert_eq!(new_rs.lines_added, 12);
+        assert_eq!(new_rs.lines_removed, 0);
+        let lib_rs = files.iter().find(|f| f.path == "src/lib.rs").unwrap();
+        assert_eq!(lib_rs.lines_added, 3);
+        assert_eq!(lib_rs.lines_removed, 1);
+        // Path missing from diffs (old.rs) keeps zero counts.
+        let old_rs = files.iter().find(|f| f.path == "src/old.rs").unwrap();
+        assert_eq!(old_rs.lines_added, 0);
+        assert_eq!(old_rs.lines_removed, 0);
     }
 
     #[test]
