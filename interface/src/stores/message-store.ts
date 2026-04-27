@@ -3,6 +3,7 @@ import { useShallow } from "zustand/react/shallow";
 import type { DisplaySessionEvent } from "../shared/types/stream";
 
 const EMPTY_MESSAGES: DisplaySessionEvent[] = [];
+const MAX_MESSAGES_PER_THREAD = 500;
 
 interface MessageStoreState {
   /** Normalized map: message ID -> message */
@@ -22,6 +23,29 @@ interface MessageStoreState {
   getThreadMessages: (threadKey: string) => DisplaySessionEvent[];
   /** Clear a thread */
   clearThread: (threadKey: string) => void;
+}
+
+function trimThreadIds(ids: string[]): string[] {
+  return ids.length > MAX_MESSAGES_PER_THREAD ? ids.slice(-MAX_MESSAGES_PER_THREAD) : ids;
+}
+
+function dropUnreferencedMessages(
+  messages: Record<string, DisplaySessionEvent>,
+  orderedIds: Record<string, string[]>,
+): Record<string, DisplaySessionEvent> {
+  const retained = new Set<string>();
+  for (const ids of Object.values(orderedIds)) {
+    for (const id of ids) retained.add(id);
+  }
+  let changed = false;
+  const next = { ...messages };
+  for (const id of Object.keys(next)) {
+    if (!retained.has(id)) {
+      delete next[id];
+      changed = true;
+    }
+  }
+  return changed ? next : messages;
 }
 
 export const useMessageStore = create<MessageStoreState>()((set, get) => ({
@@ -45,8 +69,11 @@ export const useMessageStore = create<MessageStoreState>()((set, get) => ({
       }
 
       return {
-        messages: newMessages,
-        orderedIds: { ...s.orderedIds, [threadKey]: newIds },
+        messages: dropUnreferencedMessages(newMessages, {
+          ...s.orderedIds,
+          [threadKey]: trimThreadIds(newIds),
+        }),
+        orderedIds: { ...s.orderedIds, [threadKey]: trimThreadIds(newIds) },
       };
     });
   },
@@ -66,12 +93,14 @@ export const useMessageStore = create<MessageStoreState>()((set, get) => ({
         }
       }
 
+      const nextIds = trimThreadIds([...prependedIds, ...existingIds]);
+      const nextOrderedIds = {
+        ...s.orderedIds,
+        [threadKey]: nextIds,
+      };
       return {
-        messages: newMessages,
-        orderedIds: {
-          ...s.orderedIds,
-          [threadKey]: [...prependedIds, ...existingIds],
-        },
+        messages: dropUnreferencedMessages(newMessages, nextOrderedIds),
+        orderedIds: nextOrderedIds,
       };
     });
   },
@@ -85,12 +114,13 @@ export const useMessageStore = create<MessageStoreState>()((set, get) => ({
           orderedIds: s.orderedIds,
         };
       }
+      const nextOrderedIds = {
+        ...s.orderedIds,
+        [threadKey]: trimThreadIds([...existingIds, msg.id]),
+      };
       return {
-        messages: { ...s.messages, [msg.id]: msg },
-        orderedIds: {
-          ...s.orderedIds,
-          [threadKey]: [...existingIds, msg.id],
-        },
+        messages: dropUnreferencedMessages({ ...s.messages, [msg.id]: msg }, nextOrderedIds),
+        orderedIds: nextOrderedIds,
       };
     });
   },
@@ -105,9 +135,10 @@ export const useMessageStore = create<MessageStoreState>()((set, get) => ({
         ids.push(msg.id);
       }
 
+      const nextOrderedIds = { ...s.orderedIds, [threadKey]: trimThreadIds(ids) };
       return {
-        messages: newMessages,
-        orderedIds: { ...s.orderedIds, [threadKey]: ids },
+        messages: dropUnreferencedMessages(newMessages, nextOrderedIds),
+        orderedIds: nextOrderedIds,
       };
     });
   },

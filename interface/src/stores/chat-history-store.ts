@@ -51,6 +51,8 @@ type ChatHistoryState = {
 
 const HISTORY_TTL_MS = 30_000;
 const ERROR_TTL_MS = 10_000;
+const MAX_HISTORY_ENTRIES = 8;
+const MAX_HISTORY_EVENTS_PER_ENTRY = 500;
 
 /**
  * Shape we round-trip through IndexedDB for a single history key.
@@ -68,14 +70,37 @@ function persistHistoryToCache(
   events: DisplaySessionEvent[],
   lastMessageAt: string | null,
 ): void {
+  const boundedEvents = boundHistoryEvents(events);
   const payload: PersistedHistory = {
-    events,
+    events: boundedEvents,
     lastMessageAt,
     persistedAt: Date.now(),
   };
   void browserDbSet(BROWSER_DB_STORES.chatHistory, key, payload).catch((err) => {
     console.warn("[chat-history] persist failed for", key, err);
   });
+}
+
+function boundHistoryEvents(events: DisplaySessionEvent[]): DisplaySessionEvent[] {
+  return events.length > MAX_HISTORY_EVENTS_PER_ENTRY
+    ? events.slice(-MAX_HISTORY_EVENTS_PER_ENTRY)
+    : events;
+}
+
+function withBoundedHistoryEntry(
+  entries: Record<string, HistoryEntry>,
+  key: string,
+  entry: HistoryEntry,
+): Record<string, HistoryEntry> {
+  const next = { ...entries, [key]: { ...entry, events: boundHistoryEvents(entry.events) } };
+  const keys = Object.keys(next);
+  if (keys.length <= MAX_HISTORY_ENTRIES) return next;
+  for (const staleKey of keys) {
+    if (staleKey === key) continue;
+    delete next[staleKey];
+    if (Object.keys(next).length <= MAX_HISTORY_ENTRIES) break;
+  }
+  return next;
 }
 
 export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
@@ -104,16 +129,17 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
 
     if (!entry || entry.status !== "ready") {
       set((s) => ({
-        entries: {
-          ...s.entries,
-          [key]: {
+        entries: withBoundedHistoryEntry(
+          s.entries,
+          key,
+          {
             events: entry?.events ?? EMPTY_EVENTS,
             status: "loading",
             fetchedAt: entry?.fetchedAt ?? 0,
             error: null,
             lastMessageAt: entry?.lastMessageAt ?? null,
           },
-        },
+        ),
       }));
     }
 
@@ -123,34 +149,37 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
         staleTime: opts?.force ? 0 : CHAT_HISTORY_STALE_TIME_MS,
       })
       .then((data) => {
+        const events = boundHistoryEvents(data.events);
         set((s) => ({
-          entries: {
-            ...s.entries,
-            [key]: {
-              events: data.events,
+          entries: withBoundedHistoryEntry(
+            s.entries,
+            key,
+            {
+              events,
               status: "ready",
               fetchedAt: Date.now(),
               error: null,
               lastMessageAt: data.lastMessageAt,
             },
-          },
+          ),
         }));
-        useMessageStore.getState().setThread(key, data.events);
-        persistHistoryToCache(key, data.events, data.lastMessageAt);
+        useMessageStore.getState().setThread(key, events);
+        persistHistoryToCache(key, events, data.lastMessageAt);
       })
       .catch((err: unknown) => {
         const message = err instanceof Error ? err.message : "Failed to fetch history";
         set((s) => ({
-          entries: {
-            ...s.entries,
-            [key]: {
+          entries: withBoundedHistoryEntry(
+            s.entries,
+            key,
+            {
               events: entry?.events ?? EMPTY_EVENTS,
               status: "error",
               fetchedAt: Date.now(),
               error: message,
               lastMessageAt: entry?.lastMessageAt ?? null,
             },
-          },
+          ),
         }));
       });
 
@@ -188,16 +217,17 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
     });
     useMessageStore.getState().clearThread(key);
     set((s) => ({
-      entries: {
-        ...s.entries,
-        [key]: {
+      entries: withBoundedHistoryEntry(
+        s.entries,
+        key,
+        {
           events: EMPTY_EVENTS,
           status: "ready",
           fetchedAt: Date.now(),
           error: null,
           lastMessageAt: null,
         },
-      },
+      ),
     }));
     void browserDbDelete(BROWSER_DB_STORES.chatHistory, key).catch(() => {});
   },
@@ -221,11 +251,13 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
     // than the cache — bail out.
     if (get().entries[key]?.status === "ready") return;
 
+    const events = boundHistoryEvents(persisted.events);
     set((s) => ({
-      entries: {
-        ...s.entries,
-        [key]: {
-          events: persisted.events,
+      entries: withBoundedHistoryEntry(
+        s.entries,
+        key,
+        {
+          events,
           status: "ready",
           // Mark as stale (persistedAt is typically older than the TTL)
           // so the caller's subsequent `fetchHistory(key, fn)` still
@@ -238,9 +270,9 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
           error: null,
           lastMessageAt: persisted.lastMessageAt ?? null,
         },
-      },
+      ),
     }));
-    useMessageStore.getState().setThread(key, persisted.events);
+    useMessageStore.getState().setThread(key, events);
   },
 }));
 
