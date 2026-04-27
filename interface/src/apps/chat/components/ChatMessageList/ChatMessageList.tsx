@@ -179,12 +179,7 @@ export function ChatMessageList({
           <div
             key={msg.id}
             data-message-id={msg.id}
-            style={{
-              contentVisibility: "auto",
-              containIntrinsicSize: "120px",
-              display: "flex",
-              width: "100%",
-            }}
+            style={{ display: "flex", width: "100%" }}
           >
             <MessageBubble
               message={msg}
