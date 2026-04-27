@@ -1,11 +1,18 @@
 use axum::extract::{Query, State};
 use axum::Json;
 use chrono::DateTime;
+use futures_util::{stream, StreamExt};
 use serde::{Deserialize, Serialize};
 
-use crate::error::ApiResult;
+use crate::error::{ApiError, ApiResult};
 use crate::handlers::projects;
 use crate::state::{AppState, AuthJwt};
+
+const DEFAULT_LOG_LIMIT: usize = 1000;
+const MAX_LOG_LIMIT: usize = 5000;
+const MAX_AGGREGATED_PROJECTS: usize = 50;
+const MAX_LOG_FETCH_CONCURRENCY: usize = 8;
+const PER_PROJECT_LOG_FETCH_SLACK: usize = 50;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct LogEntriesQuery {
@@ -23,15 +30,31 @@ async fn aggregate_storage_logs(
     storage: &aura_os_storage::StorageClient,
     jwt: &str,
     project_ids: &[String],
+    limit: usize,
 ) -> Vec<PersistedLogEntry> {
-    let log_futs: Vec<_> = project_ids
-        .iter()
-        .map(|pid| storage.list_log_entries(pid, jwt, None, None, None))
-        .collect();
-    let log_results = futures_util::future::join_all(log_futs).await;
+    let project_count = project_ids.len().max(1);
+    let per_project_limit = if project_count == 1 {
+        limit
+    } else {
+        limit
+            .div_ceil(project_count)
+            .saturating_add(PER_PROJECT_LOG_FETCH_SLACK)
+            .min(MAX_LOG_LIMIT)
+    } as u32;
 
     let mut entries = Vec::new();
-    for (result, project_id) in log_results.into_iter().zip(project_ids.iter()) {
+    let log_results = stream::iter(project_ids.iter().cloned())
+        .map(|project_id| async move {
+            let result = storage
+                .list_log_entries(&project_id, jwt, None, Some(per_project_limit), None)
+                .await;
+            (project_id, result)
+        })
+        .buffer_unordered(MAX_LOG_FETCH_CONCURRENCY)
+        .collect::<Vec<_>>()
+        .await;
+
+    for (project_id, result) in log_results {
         match result {
             Ok(storage_logs) => {
                 for sl in &storage_logs {
@@ -69,7 +92,7 @@ pub(crate) async fn list_log_entries(
     AuthJwt(jwt): AuthJwt,
     Query(query): Query<LogEntriesQuery>,
 ) -> ApiResult<Json<Vec<PersistedLogEntry>>> {
-    let limit = query.limit.unwrap_or(1000).min(5000);
+    let limit = query.limit.unwrap_or(DEFAULT_LOG_LIMIT).min(MAX_LOG_LIMIT);
 
     if let Some(ref storage) = state.storage_client {
         let project_ids: Vec<String> = if let Some(ref pid) = query.project_id {
@@ -82,8 +105,13 @@ pub(crate) async fn list_log_entries(
                 .map(|p| p.project_id.to_string())
                 .collect()
         };
+        if query.project_id.is_none() && project_ids.len() > MAX_AGGREGATED_PROJECTS {
+            return Err(ApiError::bad_request(format!(
+                "log aggregation is limited to {MAX_AGGREGATED_PROJECTS} projects; pass project_id to narrow the request"
+            )));
+        }
 
-        let mut entries = aggregate_storage_logs(storage, &jwt, &project_ids).await;
+        let mut entries = aggregate_storage_logs(storage, &jwt, &project_ids, limit).await;
         entries.sort_by(|a, b| a.timestamp_ms.cmp(&b.timestamp_ms));
         if entries.len() > limit {
             entries = entries.split_off(entries.len() - limit);

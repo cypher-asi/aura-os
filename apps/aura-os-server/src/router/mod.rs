@@ -5,6 +5,7 @@ use axum::middleware;
 use axum::routing::get;
 use axum::Router;
 use tower::ServiceBuilder;
+use tower_http::compression::CompressionLayer;
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
@@ -83,13 +84,24 @@ pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathB
     match interface_dir {
         Some(dir) => {
             let index = dir.join("index.html");
+            let assets = dir.join("assets");
+            let asset_service = ServiceBuilder::new()
+                .layer(CompressionLayer::new())
+                .layer(SetResponseHeaderLayer::overriding(
+                    axum::http::header::CACHE_CONTROL,
+                    HeaderValue::from_static("public, max-age=31536000, immutable"),
+                ))
+                .service(ServeDir::new(assets));
             let serve = ServiceBuilder::new()
+                .layer(CompressionLayer::new())
                 .layer(SetResponseHeaderLayer::overriding(
                     axum::http::header::CACHE_CONTROL,
                     HeaderValue::from_static("no-cache"),
                 ))
                 .service(ServeDir::new(&dir).fallback(ServeFile::new(index)));
-            api_router.fallback_service(serve)
+            api_router
+                .nest_service("/assets", asset_service)
+                .fallback_service(serve)
         }
         None => api_router,
     }

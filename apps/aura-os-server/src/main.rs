@@ -55,9 +55,10 @@ async fn main() {
     aura_os_server::ensure_user_bins_on_path();
 
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-            EnvFilter::new("aura_os_server=debug,aura_services=debug,tower_http=debug,info")
-        }))
+        .with_env_filter(
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("aura_os_server=info,tower_http=warn,info")),
+        )
         .init();
 
     let data_dir = default_data_dir();
