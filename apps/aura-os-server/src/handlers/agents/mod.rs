@@ -26,7 +26,7 @@ pub(crate) use instances::{
     create_agent_instance, delete_agent_instance, get_agent_instance, list_agent_instances,
     update_agent_instance,
 };
-pub(crate) use runtime::test_agent_runtime;
+pub(crate) use runtime::{build_harness_provider_config, test_agent_runtime};
 pub(crate) use sessions::{
     delete_session, get_agent_context_usage, get_instance_context_usage, get_session,
     list_project_sessions, list_session_events, list_session_tasks, list_sessions,

@@ -30,7 +30,9 @@ mod tests;
 pub(crate) use agent_route::send_agent_event_stream;
 pub(crate) use discovery::{find_matching_project_agents, storage_session_sort_key};
 pub(crate) use events::{list_agent_events, list_agent_events_paginated, list_events};
-pub(crate) use instance_route::send_event_stream;
+pub(crate) use instance_route::{build_project_system_prompt, send_event_stream};
+#[cfg(test)]
+pub(crate) use instance_route::{render_project_context, render_project_context_fallback};
 pub(crate) use setup::{reset_agent_session, reset_instance_session};
 
 pub use busy::{evaluate_partition_busy, BusyMatch};

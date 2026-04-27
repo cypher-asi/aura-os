@@ -38,6 +38,52 @@ function authHeaders(accessToken, extra = {}) {
   };
 }
 
+function safeJsonParse(value) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+async function* sseEvents(response) {
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    while (true) {
+      const lfIdx = buffer.indexOf("\n\n");
+      const crlfIdx = buffer.indexOf("\r\n\r\n");
+      let sep = -1;
+      let sepLen = 0;
+      if (lfIdx !== -1 && (crlfIdx === -1 || lfIdx < crlfIdx)) {
+        sep = lfIdx;
+        sepLen = 2;
+      } else if (crlfIdx !== -1) {
+        sep = crlfIdx;
+        sepLen = 4;
+      }
+      if (sep === -1) break;
+      const frame = buffer.slice(0, sep);
+      buffer = buffer.slice(sep + sepLen);
+      let eventType = "message";
+      const dataLines = [];
+      for (const line of frame.split(/\r?\n/)) {
+        if (line.startsWith("event:")) {
+          eventType = line.slice(6).replace(/^ /, "");
+        } else if (line.startsWith("data:")) {
+          dataLines.push(line.slice(5).replace(/^ /, ""));
+        }
+      }
+      const dataText = dataLines.length > 0 ? dataLines.join("\n") : null;
+      yield { eventType, data: dataText !== null ? safeJsonParse(dataText) : null };
+    }
+  }
+}
+
 export function createBenchmarkClient(options = {}) {
   const apiBaseUrl = typeof options.apiBaseUrl === "string" ? options.apiBaseUrl.trim() : "";
   const accessToken = typeof options.accessToken === "string" ? options.accessToken.trim() : "";
@@ -856,10 +902,52 @@ export async function runScenario(scenario, options) {
       { agentInstanceId: agentInstance.agent_instance_id },
     );
 
-    specs = await client.apiJson(
-      "POST",
-      `/api/projects/${project.project_id}/specs/generate?agent_instance_id=${agentInstance.agent_instance_id}`,
+    // Drive spec generation through the same chat events stream the
+    // desktop UI uses. The dedicated `/specs/generate/stream` endpoint
+    // still works, but its `SessionConfig` shape was structurally
+    // different from the chat path which made the upstream proxy
+    // 403 on the post-tool-result LLM call under SWE-bench load. The
+    // chat events stream goes through `send_event_stream` -> the same
+    // session builder the working chat surface uses, so the LLM
+    // request signature is identical to a successful interactive turn.
+    const specsRes = await fetch(
+      `${client.apiBaseUrl}/api/projects/${project.project_id}`
+        + `/agents/${agentInstance.agent_instance_id}/events/stream`,
+      {
+        method: "POST",
+        headers: authHeaders(client.accessToken, {
+          Accept: "text/event-stream",
+          "Content-Type": "application/json",
+        }),
+        body: JSON.stringify({
+          content: "Generate specs for this project",
+          action: "generate_specs",
+        }),
+      },
     );
+    if (!specsRes.ok) {
+      const body = await specsRes.text().catch(() => "");
+      throw new Error(`spec stream HTTP ${specsRes.status}: ${body}`);
+    }
+    let specStreamError = null;
+    for await (const { eventType, data } of sseEvents(specsRes)) {
+      if (eventType === "assistant_message_end") {
+        break;
+      } else if (eventType === "error") {
+        specStreamError = typeof data?.message === "string" && data.message.length > 0
+          ? data.message
+          : "spec stream error";
+        break;
+      }
+    }
+    const specsList = await client.apiJson(
+      "GET",
+      `/api/projects/${project.project_id}/specs`,
+    );
+    specs = Array.isArray(specsList) ? specsList : [];
+    if (specs.length === 0 && specStreamError) {
+      throw new Error(specStreamError);
+    }
     client.logStep("specs generated", { count: specs.length });
     recordStep("create_spec", `Generated ${specs.length} specs`, { count: specs.length });
     sortedSpecs(specs).forEach((spec, index, orderedSpecs) => {

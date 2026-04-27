@@ -45,7 +45,7 @@ pub(crate) async fn generate_specs_summary(
         &jwt,
         Some(&session.user_id),
     )
-    .await;
+    .await?;
     let session = harness.open_session(session_config).await.map_err(|e| {
         map_harness_error_to_api(&e, state.harness_ws_slots, |err| {
             ApiError::internal(format!("opening spec summary session: {err}"))
@@ -100,7 +100,7 @@ async fn open_spec_gen_session(
         jwt,
         Some(user_id),
     )
-    .await;
+    .await?;
     let session = harness.open_session(session_config).await.map_err(|e| {
         map_harness_error_to_api(&e, state.harness_ws_slots, |err| {
             ApiError::internal(format!("opening spec gen session: {err}"))

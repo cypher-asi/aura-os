@@ -154,7 +154,7 @@ pub(crate) async fn extract_tasks(
         &jwt,
         Some(&session.user_id),
     )
-    .await;
+    .await?;
     let session = harness.open_session(session_config).await.map_err(|e| {
         map_harness_error_to_api(&e, state.harness_ws_slots, |err| {
             ApiError::internal(format!("opening task extraction session: {err}"))

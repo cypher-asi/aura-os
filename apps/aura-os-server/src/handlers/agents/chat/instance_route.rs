@@ -251,7 +251,7 @@ fn installed_workspace_integrations(
     }
 }
 
-pub(super) fn build_project_system_prompt(
+pub(crate) fn build_project_system_prompt(
     state: &AppState,
     project_id: &ProjectId,
     agent_prompt: &str,
@@ -264,7 +264,7 @@ pub(super) fn build_project_system_prompt(
     format!("{}{}", project_ctx, agent_prompt)
 }
 
-fn render_project_context(
+pub(crate) fn render_project_context(
     project_id: &ProjectId,
     name: &str,
     description: &str,
@@ -293,7 +293,7 @@ fn render_project_context(
     ctx
 }
 
-fn render_project_context_fallback(project_id: &ProjectId) -> String {
+pub(crate) fn render_project_context_fallback(project_id: &ProjectId) -> String {
     format!(
         "<project_context>\nproject_id: {}\n</project_context>\n\n\
          IMPORTANT: When calling tools that accept a project_id parameter, always use the project_id above.\n\n\

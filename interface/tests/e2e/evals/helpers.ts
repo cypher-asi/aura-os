@@ -435,6 +435,74 @@ async function apiJson<T>(
   return JSON.parse(text) as T;
 }
 
+type SseFrame = { eventType: string; data: unknown };
+
+function safeJsonParse(s: string): unknown {
+  try {
+    return JSON.parse(s);
+  } catch {
+    return null;
+  }
+}
+
+async function* sseEvents(stream: ReadableStream<Uint8Array>): AsyncGenerator<SseFrame> {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    for (;;) {
+      const lf = buffer.indexOf("\n\n");
+      const crlf = buffer.indexOf("\r\n\r\n");
+      const sep = lf === -1 ? crlf : crlf === -1 ? lf : Math.min(lf, crlf);
+      if (sep === -1) break;
+      const sepLen = buffer.startsWith("\r\n\r\n", sep) ? 4 : 2;
+      const frame = buffer.slice(0, sep);
+      buffer = buffer.slice(sep + sepLen);
+      let eventType = "message";
+      const dataLines: string[] = [];
+      for (const line of frame.split(/\r?\n/)) {
+        if (line.startsWith("event:")) eventType = line.slice(6).trim();
+        else if (line.startsWith("data:")) dataLines.push(line.slice(5).replace(/^ /, ""));
+      }
+      const data = dataLines.length ? safeJsonParse(dataLines.join("\n")) : null;
+      yield { eventType, data };
+    }
+  }
+}
+
+async function apiStreamSse(
+  page: Page,
+  method: "POST",
+  url: string,
+  body?: unknown,
+): Promise<AsyncGenerator<SseFrame>> {
+  const jwt = await page.evaluate(() => window.localStorage.getItem("aura-jwt"));
+  const headers: Record<string, string> = { Accept: "text/event-stream" };
+  if (jwt) headers.Authorization = `Bearer ${jwt}`;
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const response = await page.request.fetch(url, {
+    method,
+    headers,
+    data: body === undefined ? undefined : JSON.stringify(body),
+    failOnStatusCode: false,
+  });
+  if (!response.ok()) {
+    const text = await response.text();
+    throw new Error(`${method} ${url} failed with ${response.status()}: ${text}`);
+  }
+  const buffer = await response.body();
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new Uint8Array(buffer));
+      controller.close();
+    },
+  });
+  return sseEvents(stream);
+}
+
 async function authedAbsoluteJson<T>(
   page: Page,
   method: "GET" | "POST" | "DELETE",
@@ -1097,13 +1165,40 @@ export async function runLiveBenchmarkScenario(
       1800,
     );
 
-    specs = await timedStep(results, "create_spec", () =>
-      apiJson<unknown[]>(
+    specs = await timedStep(results, "create_spec", async () => {
+      // Mirror the desktop chat path: drive spec generation through
+      // the agent instance's chat events stream so the harness opens
+      // the same `SessionConfig` it does for working chat turns. The
+      // dedicated `/specs/generate/stream` endpoint still exists for
+      // other consumers — see `project_tool_session_config` for why
+      // these two surfaces now share the same prompt + provider config.
+      const frames = await apiStreamSse(
         page,
         "POST",
-        `/api/projects/${project.project_id}/specs/generate?agent_instance_id=${agentInstance.agent_instance_id}`,
-      ),
-    );
+        `/api/projects/${project.project_id}/agents/${agentInstance.agent_instance_id}/events/stream`,
+        { content: "Generate specs for this project", action: "generate_specs" },
+      );
+      let streamError: string | null = null;
+      for await (const { eventType, data } of frames) {
+        if (eventType === "assistant_message_end") {
+          break;
+        } else if (eventType === "error" || eventType === "spec_gen_failed") {
+          const message = (data as { message?: unknown } | null)?.message;
+          streamError = typeof message === "string" ? message : "spec stream error";
+          break;
+        }
+      }
+      const persisted = await apiJson<unknown[]>(
+        page,
+        "GET",
+        `/api/projects/${project.project_id}/specs`,
+      );
+      const result: unknown[] = Array.isArray(persisted) ? persisted : [];
+      if (result.length === 0 && streamError) {
+        throw new Error(streamError);
+      }
+      return result;
+    });
     if (specs.length === 0) {
       throw new Error(`Spec generation returned no specs for project ${project.project_id}`);
     }

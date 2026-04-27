@@ -3,6 +3,9 @@
 use aura_os_core::{AgentInstance, AgentInstanceId, HarnessMode, ProjectId};
 use aura_os_harness::SessionConfig;
 
+use crate::error::ApiResult;
+use crate::handlers::agents::build_harness_provider_config;
+use crate::handlers::agents::chat::build_project_system_prompt;
 use crate::handlers::agents::conversions_pub::resolve_workspace_path;
 use crate::handlers::agents::tool_dedupe::dedupe_and_log_installed_tools;
 use crate::handlers::agents::workspace_tools::{
@@ -89,6 +92,14 @@ pub(crate) async fn resolve_project_tool_workspace_path(
 }
 
 /// Build a standard project tool session config with JWT propagation.
+///
+/// Mirrors the structural shape of the desktop chat session built in
+/// [`crate::handlers::agents::chat::instance_route::send_event_stream`]:
+/// the project-aware `system_prompt` and the harness `provider_config`
+/// must be present so the LLM request signature matches the working
+/// chat path. Without them, the SWE-bench eval pipeline was hitting
+/// recurring Cloudflare 403s on the post-tool-result LLM call when
+/// running spec-gen / task-extract under Swarm.
 pub(crate) async fn project_tool_session_config(
     state: &AppState,
     project_id: &ProjectId,
@@ -97,7 +108,7 @@ pub(crate) async fn project_tool_session_config(
     agent_instance_id: Option<AgentInstanceId>,
     jwt: &str,
     user_id: Option<&str>,
-) -> SessionConfig {
+) -> ApiResult<SessionConfig> {
     let agent_instance = if let Some(agent_instance_id) = agent_instance_id {
         state
             .agent_instance_service
@@ -171,7 +182,29 @@ pub(crate) async fn project_tool_session_config(
                 .into()
         })
         .unwrap_or_default();
-    SessionConfig {
+    // Mirror the chat path: build the same `<project_context>` block +
+    // template prompt the agent instance gets on the chat surface so the
+    // first LLM call has identical structure (system prompt, provider
+    // config, tools). Without this, the harness sent a structurally
+    // different request that the upstream proxy was 403-ing under load.
+    let agent_template_prompt = agent_instance
+        .as_ref()
+        .map(|instance| instance.system_prompt.as_str())
+        .unwrap_or("");
+    let system_prompt = Some(build_project_system_prompt(
+        state,
+        project_id,
+        agent_template_prompt,
+        project_path.as_deref(),
+    ));
+    let auth_source = agent_instance
+        .as_ref()
+        .map(|instance| instance.auth_source.as_str())
+        .unwrap_or("aura");
+    let provider_config =
+        build_harness_provider_config(harness_mode, auth_source, None, model.as_deref())?;
+    Ok(SessionConfig {
+        system_prompt,
         agent_id: agent_id_field,
         template_agent_id: template_agent_id_field,
         agent_name: Some(
@@ -185,6 +218,7 @@ pub(crate) async fn project_tool_session_config(
         user_id: user_id.map(ToString::to_string),
         project_id: Some(project_id.to_string()),
         project_path,
+        provider_config,
         installed_tools,
         installed_integrations,
         aura_org_id: agent_instance
@@ -196,7 +230,7 @@ pub(crate) async fn project_tool_session_config(
             .as_ref()
             .and_then(|instance| instance.intent_classifier.clone()),
         ..Default::default()
-    }
+    })
 }
 
 fn effective_project_tool_model(instance: Option<&AgentInstance>) -> Option<String> {
@@ -217,6 +251,8 @@ fn first_non_empty_model(default_model: Option<&str>, model: Option<&str>) -> Op
 #[cfg(test)]
 mod tests {
     use super::first_non_empty_model;
+    use crate::handlers::agents::chat::{render_project_context, render_project_context_fallback};
+    use aura_os_core::ProjectId;
 
     #[test]
     fn project_tool_model_prefers_non_empty_default_model() {
@@ -233,5 +269,56 @@ mod tests {
             first_non_empty_model(Some("  "), Some(" aura-claude-sonnet-4-5 ")).as_deref(),
             Some("aura-claude-sonnet-4-5")
         );
+    }
+
+    /// `project_tool_session_config` now mirrors the chat path by
+    /// composing its `system_prompt` from the same render helpers.
+    /// These tests pin the project_context formatting (project_id +
+    /// IMPORTANT reminders) so the prompt the LLM sees during spec-gen
+    /// and task-extract stays structurally identical to the chat
+    /// surface — that's what stops the upstream proxy from 403-ing on
+    /// the post-tool-result LLM call. Wiring a full `AppState` for an
+    /// end-to-end `build_project_system_prompt` test was deemed too
+    /// heavy; testing the rendering helpers it delegates to gives us
+    /// the same coverage cheaply.
+    #[test]
+    fn project_context_renders_id_and_important_reminders() {
+        let project_id = ProjectId::new();
+        let rendered = render_project_context(
+            &project_id,
+            "test-project",
+            "a project for tests",
+            Some("/tmp/workspace"),
+        );
+
+        assert!(rendered.contains("<project_context>"));
+        assert!(rendered.contains("</project_context>"));
+        assert!(
+            rendered.contains(&project_id.to_string()),
+            "expected project_id in rendered context: {rendered}"
+        );
+        assert!(
+            rendered.contains("project_name: test-project"),
+            "expected project name line: {rendered}"
+        );
+        assert!(
+            rendered.contains("workspace: /tmp/workspace"),
+            "expected workspace line: {rendered}"
+        );
+        let important_count = rendered.matches("IMPORTANT:").count();
+        assert!(
+            important_count >= 3,
+            "expected three IMPORTANT reminders, got {important_count}: {rendered}"
+        );
+    }
+
+    #[test]
+    fn project_context_fallback_keeps_id_and_important_reminders() {
+        let project_id = ProjectId::new();
+        let rendered = render_project_context_fallback(&project_id);
+
+        assert!(rendered.contains("<project_context>"));
+        assert!(rendered.contains(&project_id.to_string()));
+        assert!(rendered.contains("IMPORTANT:"));
     }
 }
