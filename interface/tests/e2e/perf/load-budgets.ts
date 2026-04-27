@@ -7,6 +7,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export type PerfBudgets = {
   startupMs: {
     maxDeltaFromEntry: Record<string, number>;
+    authenticatedMaxDeltaFromEntry: Record<string, number>;
   };
   webVitals: {
     loginRoute: {

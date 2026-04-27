@@ -4,6 +4,10 @@
     "maxDeltaFromEntry": {
       "aura:app:react:root-render-scheduled": 5000,
       "aura:auth:session-restore:complete": 12000
+    },
+    "authenticatedMaxDeltaFromEntry": {
+      "aura:ui:shell:visible": 7000,
+      "aura:data:projects:initial-ready": 15000
     }
   },
   "webVitals": {

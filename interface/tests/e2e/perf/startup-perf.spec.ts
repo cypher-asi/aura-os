@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { mockAuthenticatedApp } from "../helpers/mockAuthenticatedApp";
 import { deltaFromEntry, loadPerfBudgets } from "./load-budgets";
 
 const budgets = loadPerfBudgets();
@@ -48,5 +49,39 @@ test.describe("startup instrumentation", () => {
       expect(vitals!.lcpMs, "LCP (ms)").toBeLessThanOrEqual(maxLcpMsWhenPresent);
     }
     expect(vitals!.cls, "CLS").toBeLessThanOrEqual(maxCls);
+  });
+
+  test("authenticated projects route records shell and data readiness within startup budgets", async ({ page }) => {
+    await mockAuthenticatedApp(page);
+    await page.goto("/projects");
+
+    await expect
+      .poll(
+        async () => {
+          return await page.evaluate(() => {
+            const marks = window.__AURA_PERF__?.marks;
+            return (
+              marks?.["aura:ui:shell:visible"] != null &&
+              marks?.["aura:data:projects:initial-ready"] != null
+            );
+          });
+        },
+        { timeout: 30_000 },
+      )
+      .toBe(true);
+
+    const snapshot = await page.evaluate(() => window.__AURA_PERF__);
+    expect(snapshot?.marks["aura:app:entry"]).toBeDefined();
+    expect(snapshot?.marks["aura:ui:shell:visible"]).toBeDefined();
+    expect(snapshot?.marks["aura:data:projects:initial-ready"]).toBeDefined();
+    expect(snapshot?.firstProjectsRefreshComplete).toBe(true);
+
+    const marks = snapshot!.marks;
+    for (const [markName, maxDelta] of Object.entries(
+      budgets.startupMs.authenticatedMaxDeltaFromEntry,
+    )) {
+      const d = deltaFromEntry(marks, markName);
+      expect(d, `${markName} Δ from aura:app:entry`).toBeLessThanOrEqual(maxDelta);
+    }
   });
 });
