@@ -79,23 +79,6 @@ external_bench_load_env() {
         external_bench__load_env_file "$env_file"
     done
 
-    if [ -z "${AURA_EVAL_ACCESS_TOKEN:-}" ]; then
-        if [ -n "${AURA_ACCESS_TOKEN:-}" ]; then
-            AURA_EVAL_ACCESS_TOKEN="$AURA_ACCESS_TOKEN"
-            export AURA_EVAL_ACCESS_TOKEN
-        elif [ -n "${AURA_NETWORK_AUTH_TOKEN:-}" ]; then
-            AURA_EVAL_ACCESS_TOKEN="$AURA_NETWORK_AUTH_TOKEN"
-            export AURA_EVAL_ACCESS_TOKEN
-        elif [ -n "${AURA_STACK_AURA_OS_DATA_DIR:-}" ] && command -v cargo >/dev/null 2>&1; then
-            if token=$(cargo run -q -p aura-os-server --bin print-auth-token -- "$AURA_STACK_AURA_OS_DATA_DIR" 2>/dev/null); then
-                if [ -n "$token" ]; then
-                    AURA_EVAL_ACCESS_TOKEN="$token"
-                    export AURA_EVAL_ACCESS_TOKEN
-                fi
-            fi
-        fi
-    fi
-
     if [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -n "${AURA_STACK_ANTHROPIC_API_KEY:-}" ]; then
         ANTHROPIC_API_KEY="$AURA_STACK_ANTHROPIC_API_KEY"
         export ANTHROPIC_API_KEY

@@ -7,7 +7,7 @@
 #   ./infra/evals/external/swebench/bin/run.sh --instance-ids django__django-12345
 #
 # Environment:
-#   AURA_EVAL_ACCESS_TOKEN          required, loaded from .env/auth.env if present
+#   AURA_EVAL_ACCESS_TOKEN          set by zOS login during startup
 #   AURA_EVAL_API_BASE_URL          optional (defaults to http://127.0.0.1:3190)
 #   AURA_EVAL_STORAGE_URL           optional
 #   AURA_BENCH_LOOP_TIMEOUT_MS      optional (default 1500000 = 25 min)
@@ -17,6 +17,8 @@
 #   AURA_BENCH_BUILD_COMMAND        optional placeholder build command
 #   AURA_BENCH_TEST_COMMAND         optional placeholder test command
 #   AURA_EVAL_AGENT_DEFAULT_MODEL   optional model for created benchmark agents
+#   AURA_BENCH_SKIP_API_PREFLIGHT   optional, set 1 to skip API auth/org checks
+#   AURA_EVAL_USER_EMAIL/PASSWORD   set by interactive zOS login prompt
 
 set -eu
 
@@ -32,6 +34,244 @@ err() {
 
 info() {
     printf '[swebench-run] %s\n' "$1" >&2
+}
+
+api_base_url() {
+    printf '%s' "${AURA_EVAL_API_BASE_URL:-http://127.0.0.1:3190}" | sed 's:/*$::'
+}
+
+api_get() {
+    endpoint="$1"
+    output_file="$2"
+    status_file="$3"
+    base_url=$(api_base_url)
+    curl \
+        --silent \
+        --show-error \
+        --output "$output_file" \
+        --write-out '%{http_code}' \
+        --connect-timeout 5 \
+        --max-time 20 \
+        -H "Authorization: Bearer ${AURA_EVAL_ACCESS_TOKEN}" \
+        "${base_url}${endpoint}" >"$status_file"
+}
+
+json_escape() {
+    printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
+windows_clipboard_text() {
+    if ! command -v powershell.exe >/dev/null 2>&1; then
+        return 1
+    fi
+    powershell.exe -NoProfile -Command "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-Clipboard -Raw" 2>/dev/null |
+        sed 's/\r$//' |
+        awk 'BEGIN { ORS="" } { if (NR > 1) printf "\n"; printf "%s", $0 }'
+}
+
+append_masked_password_text() {
+    text="$1"
+    while [ -n "$text" ]; do
+        char=${text%"${text#?}"}
+        text=${text#?}
+        case "$char" in
+            [[:print:]])
+                value="${value}${char}"
+                printf '*' > /dev/tty
+                ;;
+        esac
+    done
+}
+
+read_masked_password() {
+    value=""
+    in_bracketed_paste=0
+    while IFS= read -r -s -n 1 char < /dev/tty; do
+        case "$char" in
+            ""|$'\r'|$'\n')
+                break
+                ;;
+            $'\177'|$'\b')
+                if [ -n "$value" ]; then
+                    value=${value%?}
+                    printf '\b \b' > /dev/tty
+                fi
+                ;;
+            $'\026')
+                if clipboard="$(windows_clipboard_text)"; then
+                    append_masked_password_text "$clipboard"
+                fi
+                ;;
+            $'\033')
+                sequence=""
+                while IFS= read -r -s -n 1 next < /dev/tty; do
+                    sequence="${sequence}${next}"
+                    case "$sequence" in
+                        "[200~")
+                            in_bracketed_paste=1
+                            break
+                            ;;
+                        "[201~")
+                            in_bracketed_paste=0
+                            break
+                            ;;
+                    esac
+                    if [ "${#sequence}" -ge 5 ]; then
+                        break
+                    fi
+                done
+                ;;
+            *)
+                case "$char" in
+                    [[:print:]])
+                        append_masked_password_text "$char"
+                        ;;
+                    *)
+                        if [ "$in_bracketed_paste" -eq 1 ]; then
+                            append_masked_password_text "$char"
+                        fi
+                        ;;
+                esac
+                ;;
+        esac
+    done
+    printf '%s' "$value"
+}
+
+prompt_eval_login_credentials() {
+    if [ ! -r /dev/tty ]; then
+        return 1
+    fi
+
+    info "enter zOS login credentials"
+    printf 'zOS email: ' > /dev/tty
+    IFS= read -r AURA_EVAL_USER_EMAIL < /dev/tty || return 1
+    if [ -z "$AURA_EVAL_USER_EMAIL" ]; then
+        return 1
+    fi
+    export AURA_EVAL_USER_EMAIL
+
+    printf 'zOS password: ' > /dev/tty
+    AURA_EVAL_USER_PASSWORD="$(read_masked_password)"
+    printf '\n' > /dev/tty
+    if [ -z "$AURA_EVAL_USER_PASSWORD" ]; then
+        return 1
+    fi
+    export AURA_EVAL_USER_PASSWORD
+}
+
+login_eval_api() {
+    prompt_eval_login_credentials || return 1
+    if ! command -v curl >/dev/null 2>&1; then
+        err "curl is required for zOS login"
+    fi
+
+    email=$(json_escape "$AURA_EVAL_USER_EMAIL")
+    password=$(json_escape "$AURA_EVAL_USER_PASSWORD")
+    payload=$(printf '{"email":"%s","password":"%s"}' "$email" "$password")
+    tmp_login_body=$(mktemp)
+    tmp_login_status=$(mktemp)
+    base_url=$(api_base_url)
+    if ! curl \
+        --silent \
+        --show-error \
+        --output "$tmp_login_body" \
+        --write-out '%{http_code}' \
+        --connect-timeout 5 \
+        --max-time 30 \
+        -H 'Content-Type: application/json' \
+        -d "$payload" \
+        "${base_url}/api/auth/login" >"$tmp_login_status"
+    then
+        rm -f "$tmp_login_body" "$tmp_login_status"
+        return 1
+    fi
+
+    status=$(cat "$tmp_login_status")
+    if [ "$status" != "200" ]; then
+        body=$(sed 's/[[:cntrl:]]//g' "$tmp_login_body" | cut -c 1-240)
+        rm -f "$tmp_login_body" "$tmp_login_status"
+        err "zOS login failed with HTTP ${status}: ${body}"
+    fi
+
+    token=$(sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p' "$tmp_login_body")
+    rm -f "$tmp_login_body" "$tmp_login_status"
+    if [ -z "$token" ]; then
+        err "zOS login response did not include access_token"
+    fi
+    AURA_EVAL_ACCESS_TOKEN="$token"
+    export AURA_EVAL_ACCESS_TOKEN
+    info "zOS login succeeded via $(api_base_url)/api/auth/login"
+}
+
+preflight_eval_api() {
+    if [ "${AURA_BENCH_SKIP_API_PREFLIGHT:-0}" = "1" ]; then
+        info "skipping API preflight because AURA_BENCH_SKIP_API_PREFLIGHT=1"
+        return 0
+    fi
+
+    if ! command -v curl >/dev/null 2>&1; then
+        err "curl is required for API preflight"
+    fi
+
+    tmp_body=$(mktemp)
+    tmp_status=$(mktemp)
+    trap 'stop_harness_log_follower; rm -f "$tmp_body" "$tmp_status"' EXIT
+
+    if ! api_get "/api/auth/session" "$tmp_body" "$tmp_status"; then
+        err "API preflight could not reach $(api_base_url)/api/auth/session"
+    fi
+    status=$(cat "$tmp_status")
+    if [ "$status" != "200" ]; then
+        body=$(sed 's/[[:cntrl:]]//g' "$tmp_body" | cut -c 1-240)
+        err "API preflight auth failed with HTTP ${status}: ${body}"
+    fi
+
+    if ! api_get "/api/orgs" "$tmp_body" "$tmp_status"; then
+        err "API preflight could not reach $(api_base_url)/api/orgs"
+    fi
+    status=$(cat "$tmp_status")
+    if [ "$status" != "200" ]; then
+        body=$(sed 's/[[:cntrl:]]//g' "$tmp_body" | cut -c 1-240)
+        err "API preflight org lookup failed with HTTP ${status}: ${body}"
+    fi
+
+    rm -f "$tmp_body" "$tmp_status"
+    trap 'stop_harness_log_follower' EXIT
+    info "API preflight ok: auth/session and org lookup succeeded"
+}
+
+free_disk_gb() {
+    df_target="$1"
+    if ! df_output=$(df -k "$df_target" 2>/dev/null); then
+        err "could not run 'df -k' on $df_target"
+    fi
+    free_kb=$(printf '%s\n' "$df_output" | awk 'NR==2 {print $4} NR>2 {print $4; exit}')
+    if [ -z "${free_kb:-}" ]; then
+        err "could not parse free space from df output"
+    fi
+    printf '%s' $(( free_kb / 1024 / 1024 ))
+}
+
+preflight_disk_space() {
+    df_target="$1"
+    free_gb=$(free_disk_gb "$df_target")
+    if [ "$free_gb" -ge 20 ]; then
+        return 0
+    fi
+
+    info "less than 20 GB free on the work-dir partition (~${free_gb} GB); running 'docker system prune'"
+    if ! command -v docker >/dev/null 2>&1; then
+        err "less than 20 GB free on the work-dir partition (~${free_gb} GB), and docker is not on PATH for cleanup"
+    fi
+    if ! docker system prune; then
+        err "docker system prune failed; still less than 20 GB free on the work-dir partition (~${free_gb} GB)"
+    fi
+
+    free_gb=$(free_disk_gb "$df_target")
+    if [ "$free_gb" -lt 20 ]; then
+        err "less than 20 GB free on the work-dir partition after docker system prune (~${free_gb} GB)"
+    fi
 }
 
 HARNESS_LOG_FOLLOWER_PID=""
@@ -78,6 +318,13 @@ external_bench_load_env "$repo_root"
 if [ -n "${AURA_STACK_AURA_OS_DATA_DIR:-}" ]; then
     mkdir -p "$AURA_STACK_AURA_OS_DATA_DIR/store"
 fi
+
+# Preflight: zOS login. Keep this before tool and Docker checks so interactive
+# runs fail fast on auth instead of waiting on local benchmark setup.
+if ! login_eval_api; then
+    err "zOS login requires an interactive terminal"
+fi
+preflight_eval_api
 
 # Parse subset argument: first positional argument unless it starts with "--".
 SUBSET="smoke"
@@ -138,24 +385,9 @@ if [ "$SKIP_SWEBENCH_HARNESS" -eq 0 ]; then
 fi
 
 # Preflight: free disk space >= 20 GB.
-df_target="$repo_root"
-if ! df_output=$(df -k "$df_target" 2>/dev/null); then
-    err "could not run 'df -k' on $df_target"
-fi
-free_kb=$(printf '%s\n' "$df_output" | awk 'NR==2 {print $4} NR>2 {print $4; exit}')
-if [ -z "${free_kb:-}" ]; then
-    err "could not parse free space from df output"
-fi
-free_gb=$(( free_kb / 1024 / 1024 ))
-if [ "$free_gb" -lt 20 ]; then
-    err "less than 20 GB free on the work-dir partition (~${free_gb} GB)"
-fi
+preflight_disk_space "$repo_root"
+free_gb=$(free_disk_gb "$repo_root")
 info "preflight ok: node=$node_version free=${free_gb}GB"
-
-# Preflight: access token.
-if [ -z "${AURA_EVAL_ACCESS_TOKEN:-}" ]; then
-    err "AURA_EVAL_ACCESS_TOKEN is not set; bring up the local stack and bootstrap a token first"
-fi
 
 # Build run id and out dir.
 git_sha=$(git rev-parse --short=12 HEAD 2>/dev/null || echo "unknown")
@@ -219,4 +451,3 @@ score_path="$OUT_DIR/score.json"
 if [ -f "$score_path" ]; then
     info "score.json: $score_path"
 fi
-info "tip: if disk usage is high, run 'docker system prune' to reclaim space"
