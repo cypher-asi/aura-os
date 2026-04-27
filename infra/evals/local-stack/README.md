@@ -233,7 +233,21 @@ Seed the isolated Aura server with an existing local Aura login:
 ./evals/local-stack/bin/bootstrap-auth.sh
 ```
 
-By default that reuses the persisted session from your local Aura app data directory and imports it into the isolated Aura server on `http://127.0.0.1:3190`. Override `AURA_STACK_AUTH_SOURCE_DATA_DIR`, `AURA_STACK_AUTH_SOURCE_URL`, or `AURA_STACK_SOURCE_ACCESS_TOKEN` in `stack.env` if you want to bootstrap from a different source.
+By default that reuses the persisted session from your local Aura app data
+directory and imports it into the isolated Aura server on
+`http://127.0.0.1:3190`. The source data directory follows the same
+`AURA_DATA_DIR` convention as the core app: `%LOCALAPPDATA%/aura` on Windows,
+`~/Library/Application Support/aura` on macOS, and
+`${XDG_DATA_HOME:-~/.local/share}/aura` on Linux. Override
+`AURA_STACK_AUTH_SOURCE_DATA_DIR`, `AURA_STACK_AUTH_SOURCE_URL`, or
+`AURA_STACK_SOURCE_ACCESS_TOKEN` in `stack.env` if you want to bootstrap from a
+different source.
+
+The benchmark auth env written by this step is
+`evals/local-stack/.runtime/auth.env` and contains `AURA_EVAL_ACCESS_TOKEN`.
+That is the eval-facing token name; `AURA_ACCESS_TOKEN` and
+`AURA_NETWORK_AUTH_TOKEN` are also accepted as source-token aliases for
+compatibility with local developer tooling.
 
 At that point the typical local URLs are:
 

@@ -15,12 +15,53 @@ stack_load_env
 
 target_base_url="$(stack_local_url aura_os)"
 source_base_url="${AURA_STACK_AUTH_SOURCE_URL:-http://127.0.0.1:3100}"
-source_data_dir="${AURA_STACK_AUTH_SOURCE_DATA_DIR:-$HOME/Library/Application Support/aura}"
 auth_env_file="$AURA_STACK_RUNTIME_DIR/auth.env"
+
+default_aura_data_dir() {
+  case "$(uname -s 2>/dev/null || printf unknown)" in
+    MINGW*|MSYS*|CYGWIN*)
+      if [[ -n "${LOCALAPPDATA:-}" ]]; then
+        if command -v cygpath >/dev/null 2>&1; then
+          cygpath -u "$LOCALAPPDATA/aura"
+        else
+          printf '%s/aura\n' "$LOCALAPPDATA"
+        fi
+        return 0
+      fi
+      ;;
+    Darwin*)
+      printf '%s/Library/Application Support/aura\n' "$HOME"
+      return 0
+      ;;
+  esac
+
+  if [[ -n "${XDG_DATA_HOME:-}" ]]; then
+    printf '%s/aura\n' "$XDG_DATA_HOME"
+  else
+    printf '%s/.local/share/aura\n' "$HOME"
+  fi
+}
+
+source_data_dir="${AURA_STACK_AUTH_SOURCE_DATA_DIR:-$(default_aura_data_dir)}"
 
 resolve_source_access_token() {
   if [[ -n "${AURA_STACK_SOURCE_ACCESS_TOKEN:-}" ]]; then
     printf '%s\n' "$AURA_STACK_SOURCE_ACCESS_TOKEN"
+    return 0
+  fi
+
+  if [[ -n "${AURA_EVAL_ACCESS_TOKEN:-}" ]]; then
+    printf '%s\n' "$AURA_EVAL_ACCESS_TOKEN"
+    return 0
+  fi
+
+  if [[ -n "${AURA_ACCESS_TOKEN:-}" ]]; then
+    printf '%s\n' "$AURA_ACCESS_TOKEN"
+    return 0
+  fi
+
+  if [[ -n "${AURA_NETWORK_AUTH_TOKEN:-}" ]]; then
+    printf '%s\n' "$AURA_NETWORK_AUTH_TOKEN"
     return 0
   fi
 
@@ -63,8 +104,9 @@ if ! access_token="$(resolve_source_access_token)"; then
   echo "Could not resolve a source Aura auth token." >&2
   echo "Checked, in order:" >&2
   echo "  1. AURA_STACK_SOURCE_ACCESS_TOKEN" >&2
-  echo "  2. persisted session in $source_data_dir" >&2
-  echo "  3. legacy endpoint at $source_base_url/api/auth/access-token" >&2
+  echo "  2. AURA_EVAL_ACCESS_TOKEN / AURA_ACCESS_TOKEN / AURA_NETWORK_AUTH_TOKEN" >&2
+  echo "  3. persisted session in $source_data_dir" >&2
+  echo "  4. legacy endpoint at $source_base_url/api/auth/access-token" >&2
   exit 1
 fi
 

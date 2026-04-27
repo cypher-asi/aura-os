@@ -68,6 +68,10 @@ Supported aliases:
 
 - `AURA_EVAL_ACCESS_TOKEN` can be supplied directly, or via
   `AURA_ACCESS_TOKEN` / `AURA_NETWORK_AUTH_TOKEN`.
+- `infra/evals/local-stack/bin/bootstrap-auth.sh` writes the imported token to
+  `.runtime/auth.env` as `AURA_EVAL_ACCESS_TOKEN`. When no explicit source
+  token is supplied, it reads the core app's persisted `zero_auth_session`
+  from the platform default Aura data directory.
 - `ANTHROPIC_API_KEY` can be supplied directly, or via
   `AURA_STACK_ANTHROPIC_API_KEY`.
 - `AURA_EVAL_API_BASE_URL` is inferred from `AURA_STACK_AURA_OS_PORT`
