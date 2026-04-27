@@ -24,12 +24,14 @@ scope, your call).
 The workflow runs on a self-hosted runner labeled `aura-bench`. Make sure
 the runner host has these set up before the first dispatch:
 
-1. **`AURA_EVAL_ACCESS_TOKEN` available to the local-stack helper.** The
-   helper at `infra/evals/local-stack/bin/run-one-shot.sh` (operator
-   responsibility — out of scope for this workflow) needs the token in
-   its own environment, since it's the process that bootstraps the AURA
-   API. Either bake it into the runner's user environment, or have the
-   helper read it from the same secret as the workflow.
+1. **Benchmark env files available to the runner.** Local benchmark
+   scripts automatically load repo `.env`, repo `.env.local`,
+   `infra/evals/local-stack/stack.env`,
+   `infra/evals/local-stack/.runtime/evals.env`, and
+   `infra/evals/local-stack/.runtime/auth.env` when those files exist.
+   The local-stack auth bootstrap writes `AURA_EVAL_ACCESS_TOKEN` into
+   `.runtime/auth.env`, so you usually do not need to export it manually
+   after the stack has bootstrapped auth.
 2. **Docker daemon running** with at least 20 GB of free disk on the
    partition that holds the repository checkout. Both `bin/run.sh`
    wrappers preflight this and fail fast otherwise.
@@ -43,6 +45,33 @@ the runner host has these set up before the first dispatch:
    workflow installs `terminal-bench` via pip, which provides the `tb`
    entrypoint, but the runner user's `PATH` must include the pip user
    bin directory.
+
+## Local `.env` loading
+
+The external benchmark lane reads the same local env sources as the
+developer stack:
+
+1. `<repo>/.env`
+2. `<repo>/.env.local`
+3. `infra/evals/local-stack/stack.env`
+4. `infra/evals/local-stack/.runtime/evals.env`
+5. `infra/evals/local-stack/.runtime/auth.env`
+
+Existing shell or process environment variables win over file values for
+most keys. Auth token keys are refreshed from the benchmark env files so a
+stale exported token does not shadow local-stack `.runtime/auth.env`. The
+POSIX shell wrappers load these files before preflight, which makes the common
+`./bin/run.sh smoke` path work without an extra `export AURA_EVAL_ACCESS_TOKEN=...`
+command.
+
+Supported aliases:
+
+- `AURA_EVAL_ACCESS_TOKEN` can be supplied directly, or via
+  `AURA_ACCESS_TOKEN` / `AURA_NETWORK_AUTH_TOKEN`.
+- `ANTHROPIC_API_KEY` can be supplied directly, or via
+  `AURA_STACK_ANTHROPIC_API_KEY`.
+- `AURA_EVAL_API_BASE_URL` is inferred from `AURA_STACK_AURA_OS_PORT`
+  when not set.
 
 ## Why the workflow is `workflow_dispatch`-only
 

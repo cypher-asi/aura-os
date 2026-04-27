@@ -7,7 +7,7 @@
 #   ./infra/evals/external/swebench/bin/run.sh --instance-ids django__django-12345
 #
 # Environment:
-#   AURA_EVAL_ACCESS_TOKEN          required
+#   AURA_EVAL_ACCESS_TOKEN          required, loaded from .env/auth.env if present
 #   AURA_EVAL_API_BASE_URL          optional (defaults to http://127.0.0.1:3190)
 #   AURA_EVAL_STORAGE_URL           optional
 #   AURA_BENCH_LOOP_TIMEOUT_MS      optional (default 1500000 = 25 min)
@@ -19,6 +19,11 @@
 
 set -eu
 
+# When launched as an absolute Git-for-Windows sh.exe from PowerShell, PATH may
+# not include the Unix helper directory that contains dirname/sed/awk/df.
+PATH="/usr/bin:/bin:$PATH"
+export PATH
+
 err() {
     printf '[swebench-run] error: %s\n' "$1" >&2
     exit 1
@@ -29,12 +34,25 @@ info() {
 }
 
 # Resolve repo root: prefer git, fall back to a relative path.
-script_path=$(cd "$(dirname "$0")" && pwd)
+case "$0" in
+    */*) script_dir=${0%/*} ;;
+    *) script_dir=. ;;
+esac
+script_path=$(cd "$script_dir" && pwd)
 repo_root=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
 if [ -z "$repo_root" ]; then
-    repo_root=$(cd "$script_path/../../../.." && pwd)
+    repo_root=$(cd "$script_path/../../../../.." && pwd)
 fi
 cd "$repo_root"
+
+# Load repo .env files and local-stack runtime auth, if present.
+# shellcheck disable=SC1091
+. "$repo_root/infra/evals/external/bin/load-env.sh"
+external_bench_load_env "$repo_root"
+export AURA_EVAL_PRESERVE_ACCESS_TOKEN="${AURA_EVAL_PRESERVE_ACCESS_TOKEN:-1}"
+if [ -n "${AURA_STACK_AURA_OS_DATA_DIR:-}" ]; then
+    mkdir -p "$AURA_STACK_AURA_OS_DATA_DIR/store"
+fi
 
 # Parse subset argument: first positional argument unless it starts with "--".
 SUBSET="smoke"
@@ -63,6 +81,19 @@ fi
 if ! command -v python3 >/dev/null 2>&1; then
     err "python3 is required but not on PATH"
 fi
+if ! python_platform=$(python3 - <<'PY'
+import sys
+
+print(sys.platform)
+PY
+); then
+    err "could not inspect python3 platform"
+fi
+case "$python_platform" in
+    win32|cygwin|msys*)
+        err "SWE-bench harness requires Linux/macOS Python; native Windows Python lacks the Unix 'resource' module. Run from WSL2 or another Linux environment."
+        ;;
+esac
 if ! python3 -m pip show swebench >/dev/null 2>&1 && ! pip3 show swebench >/dev/null 2>&1; then
     err "the swebench Python package is not installed; run: pip3 install swebench"
 fi

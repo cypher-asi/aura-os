@@ -76,13 +76,17 @@ Common to both lanes:
 | Python | 3.11 | swebench harness, tbench `tb` CLI |
 | Docker | running daemon | swebench harness, tbench containers |
 | AURA backend | reachable via `AURA_EVAL_API_BASE_URL` (default `http://127.0.0.1:3190`) | both |
-| `AURA_EVAL_ACCESS_TOKEN` | exported in shell | both |
+| `AURA_EVAL_ACCESS_TOKEN` | exported in shell or loaded from `.env` / local-stack `.runtime/auth.env` | both |
 
 SWE-bench-only:
 
 ```sh
 pip install swebench
 ```
+
+On Windows, run the SWE-bench lane from WSL2 or another Linux environment.
+The upstream harness imports the Unix-only Python `resource` module, so native
+Windows Python cannot execute the official scorer.
 
 Terminal-Bench-only:
 
@@ -95,12 +99,12 @@ See [`SECRETS.md`](./SECRETS.md) for the matching GitHub Actions secrets.
 ## Quick start
 
 Bring up the AURA local stack first (in a separate shell) — the benchmark
-drivers expect `aura-os-server` reachable at `AURA_EVAL_API_BASE_URL`. Then:
+drivers expect `aura-os-server` reachable at `AURA_EVAL_API_BASE_URL`.
+The runners automatically load repo `.env`, `.env.local`, local-stack
+`stack.env`, and local-stack `.runtime/auth.env`, so the common path does
+not require manually exporting the eval token.
 
 ```bash
-# Mint or import an access token:
-export AURA_EVAL_ACCESS_TOKEN=...
-
 # Optional: cap Claude spend at $5 across the run.
 export AURA_BENCH_MAX_USD=5
 

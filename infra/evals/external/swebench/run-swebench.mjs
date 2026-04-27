@@ -20,6 +20,7 @@ import {
   createBenchmarkClient,
   runScenario,
 } from "../../../../interface/scripts/lib/benchmark-api-runner.mjs";
+import { loadExternalBenchmarkEnv } from "../bin/load-env.mjs";
 
 const currentFile = fileURLToPath(import.meta.url);
 const driverDir = path.dirname(currentFile);
@@ -536,6 +537,7 @@ function buildScenario(instance, workspaceDir) {
       name: `Aura SWE-bench ${id}`,
       description: `SWE-bench Verified instance ${id}`,
       fixtureAbsolutePath: workspaceDir,
+      importByReference: true,
       buildCommand:
         process.env.AURA_BENCH_BUILD_COMMAND
           ?? `python -c "print('SWE-bench AURA build placeholder')"`,
@@ -786,6 +788,8 @@ function newRunId() {
 }
 
 async function main(rawArgv) {
+  loadExternalBenchmarkEnv({ repoRoot });
+
   const argv = rawArgv ?? process.argv.slice(2);
   let args;
   try {
@@ -811,7 +815,7 @@ async function main(rawArgv) {
 
   if (!accessToken) {
     process.stderr.write(
-      "Error: AURA_EVAL_ACCESS_TOKEN is not set. Bring up the local stack and bootstrap an access token first.\n",
+      "Error: AURA_EVAL_ACCESS_TOKEN is not set in the environment, repo .env, or local-stack .runtime/auth.env. Bring up the local stack and bootstrap auth first.\n",
     );
     process.exit(2);
     return;
