@@ -76,6 +76,8 @@ if [ "${node_major:-0}" -lt 22 ]; then
     err "node >= 22 is required (found $node_version)"
 fi
 
+SKIP_SWEBENCH_HARNESS=0
+
 # Preflight: python3 + swebench harness.
 if ! command -v python3 >/dev/null 2>&1; then
     err "python3 is required but not on PATH"
@@ -90,19 +92,23 @@ PY
 fi
 case "$python_platform" in
     win32|cygwin|msys*)
-        err "SWE-bench harness requires Linux/macOS Python; native Windows Python lacks the Unix 'resource' module. Run from WSL2 or another Linux environment."
+        SKIP_SWEBENCH_HARNESS=1
+        info "native Windows Python detected; AURA driver will run, but the official SWE-bench harness will be skipped because it requires Linux/macOS Python"
         ;;
 esac
-if ! python3 -m pip show swebench >/dev/null 2>&1 && ! pip3 show swebench >/dev/null 2>&1; then
+if [ "$SKIP_SWEBENCH_HARNESS" -eq 0 ] && ! python3 -m pip show swebench >/dev/null 2>&1 && ! pip3 show swebench >/dev/null 2>&1; then
     err "the swebench Python package is not installed; run: pip3 install swebench"
 fi
 
-# Preflight: docker daemon.
-if ! command -v docker >/dev/null 2>&1; then
-    err "docker is required but not on PATH"
-fi
-if ! docker info >/dev/null 2>&1; then
-    err "docker daemon does not respond to 'docker info'; start Docker first"
+# Preflight: docker daemon. Required only by the official scorer; the AURA
+# driver can still emit predictions and per-instance artifacts without it.
+if [ "$SKIP_SWEBENCH_HARNESS" -eq 0 ]; then
+    if ! command -v docker >/dev/null 2>&1; then
+        err "docker is required but not on PATH"
+    fi
+    if ! docker info >/dev/null 2>&1; then
+        err "docker daemon does not respond to 'docker info'; start Docker first"
+    fi
 fi
 
 # Preflight: free disk space >= 20 GB.
@@ -156,7 +162,9 @@ fi
 # Run the swebench harness. We don't fail the wrapper if the harness fails;
 # partial results are still useful.
 predictions="$OUT_DIR/predictions.jsonl"
-if [ ! -f "$predictions" ]; then
+if [ "$SKIP_SWEBENCH_HARNESS" -eq 1 ]; then
+    info "skipping swebench harness on native Windows Python; run this directory from WSL2/Linux for official resolved/not_resolved scoring"
+elif [ ! -f "$predictions" ]; then
     info "no predictions.jsonl produced; skipping harness"
 else
     info "running swebench harness"
