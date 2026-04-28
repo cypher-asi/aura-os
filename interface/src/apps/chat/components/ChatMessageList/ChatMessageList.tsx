@@ -76,6 +76,13 @@ export function ChatMessageList({
   );
 
   const nowStreaming = isStreaming || !!streamingText || !!thinkingText || activeToolCalls.length > 0;
+  const liveAssistantBubbleHasText = !!streamingText || !!thinkingText;
+  const visibleMessages =
+    liveAssistantBubbleHasText &&
+    messages.length > 0 &&
+    messages[messages.length - 1].role === "assistant"
+      ? messages.slice(0, -1)
+      : messages;
   const prevStreamingRef = useRef(nowStreaming);
   const justFinalizedIdRef = useRef<string | null>(null);
 
@@ -166,30 +173,32 @@ export function ChatMessageList({
           )}
         </div>
       )}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: density === "mobile" ? 6 : 2,
-          flexShrink: 0,
-        }}
-      >
-        {/* eslint-disable-next-line react-hooks/refs -- reading justFinalizedIdRef.current here is part of the intentional render-phase pattern documented above the transition detection */}
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            data-message-id={msg.id}
-            style={{ display: "flex", width: "100%" }}
-          >
-            <MessageBubble
-              message={msg}
-              isStreaming={isStreaming && msg.id.startsWith("stream-")}
-              initialThinkingExpanded={msg.id === justFinalizedIdRef.current}
-              initialActivitiesExpanded={msg.id === justFinalizedIdRef.current}
-            />
-          </div>
-        ))}
-      </div>
+      {visibleMessages.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: density === "mobile" ? 6 : 2,
+            flexShrink: 0,
+          }}
+        >
+          {/* eslint-disable-next-line react-hooks/refs -- reading justFinalizedIdRef.current here is part of the intentional render-phase pattern documented above the transition detection */}
+          {visibleMessages.map((msg) => (
+            <div
+              key={msg.id}
+              data-message-id={msg.id}
+              style={{ display: "flex", width: "100%" }}
+            >
+              <MessageBubble
+                message={msg}
+                isStreaming={isStreaming && msg.id.startsWith("stream-")}
+                initialThinkingExpanded={msg.id === justFinalizedIdRef.current}
+                initialActivitiesExpanded={msg.id === justFinalizedIdRef.current}
+              />
+            </div>
+          ))}
+        </div>
+      )}
       {nowStreaming && (
         <div>
           <StreamingBubble

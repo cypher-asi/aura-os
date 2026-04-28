@@ -242,6 +242,27 @@ describe("ChatMessageList", () => {
     expect(scrollRef.current.scrollTop).toBe(1000);
   });
 
+  it("does not render the trailing assistant message twice while live text is streaming", () => {
+    mockStreamEntry.isStreaming = true;
+    mockStreamEntry.streamingText = "partial output";
+    const scrollRef = makeScrollRef();
+
+    render(
+      <ChatMessageList
+        messages={[
+          makeMessage("temp-user", "testing", "user"),
+          makeMessage("stream-assistant", "partial output"),
+        ]}
+        streamKey="stream-1"
+        scrollRef={scrollRef}
+      />,
+    );
+
+    expect(screen.getByTestId("bubble-temp-user")).toBeInTheDocument();
+    expect(screen.queryByTestId("bubble-stream-assistant")).not.toBeInTheDocument();
+    expect(screen.getByTestId("streaming-bubble")).toBeInTheDocument();
+  });
+
   it("expands thinking / activities on the just-finalized message when a stream ends", () => {
     mockStreamEntry.isStreaming = true;
     mockStreamEntry.streamingText = "partial output";
