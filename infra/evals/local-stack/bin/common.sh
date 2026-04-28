@@ -82,6 +82,17 @@ stack_load_env() {
   # aura-reasoner). Lower this when CF on aura-router is persistently
   # blocking — aggressive retries reinforce the WAF block.
   export AURA_STACK_HARNESS_LLM_MAX_RETRIES="${AURA_STACK_HARNESS_LLM_MAX_RETRIES:-}"
+  # Operator overrides for the harness's `task_done` test gate. Use
+  # `AURA_STACK_HARNESS_DOD_DISABLE_TEST_GATE=1` for quick scripted
+  # experiments (e.g. SWE-bench, where the official Docker scorer runs
+  # the real tests after the patch is produced and the local gate is
+  # redundant). `AURA_STACK_HARNESS_DOD_TEST_COMMAND` redirects the gate
+  # to a specific command when the project record's `test_command` or
+  # the manifest auto-detect picks the wrong one. See
+  # `aura-harness/crates/aura-agent/src/task_executor/mod.rs` for the
+  # underlying `AURA_DOD_*` env vars these forward to.
+  export AURA_STACK_HARNESS_DOD_DISABLE_TEST_GATE="${AURA_STACK_HARNESS_DOD_DISABLE_TEST_GATE:-}"
+  export AURA_STACK_HARNESS_DOD_TEST_COMMAND="${AURA_STACK_HARNESS_DOD_TEST_COMMAND:-}"
   # `bin/preflight-llm.sh` invocation policy. Default `fail` aborts
   # bootstrap with an actionable diagnosis when the LLM path is broken
   # (CF WAF block, 401, 5xx, network). `warn` prints the diagnosis but
@@ -247,6 +258,12 @@ stack_mkdir_runtime() {
   mkdir -p "$AURA_STACK_AURA_OS_DATA_DIR"
   mkdir -p "$AURA_STACK_PID_DIR"
   mkdir -p "$AURA_STACK_LOG_DIR"
+  # Diagnostic dir for Cloudflare 403 / WAF challenge bodies. The
+  # aura-harness Anthropic provider writes the full HTML response
+  # here when AURA_DEBUG_CLOUDFLARE_DUMP_DIR is set; we plumb the
+  # variable through from render-envs.sh so failed runs leave a
+  # `cf-block-<ts>.html` for post-mortem (Ray ID + rule label).
+  mkdir -p "$AURA_STACK_RUNTIME_DIR/cloudflare-dumps"
 }
 
 stack_check_command() {

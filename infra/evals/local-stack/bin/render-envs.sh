@@ -114,6 +114,14 @@ else
 fi
 write_optional_export "$aura_os_env" "AURA_ROUTER_URL" "$AURA_STACK_ROUTER_URL"
 write_optional_export "$aura_os_env" "Z_BILLING_URL" "$AURA_STACK_BILLING_URL"
+# When the aura-harness child gets a 403 cf-html response from
+# `aura-router.onrender.com`, dump the full HTML body so the Ray ID
+# / managed-rule label is recoverable post-mortem. The aura-os-server
+# parent forwards its env into the spawned harness (see
+# `apps/aura-os-server/src/app_builder/harness_autospawn.rs`), so
+# exporting here is sufficient — no need to duplicate in the harness
+# `.env`.
+write_export "$aura_os_env" "AURA_DEBUG_CLOUDFLARE_DUMP_DIR" "$AURA_STACK_RUNTIME_DIR/cloudflare-dumps"
 
 write_header "$evals_env"
 write_export "$evals_env" "AURA_EVAL_LIVE" "1"

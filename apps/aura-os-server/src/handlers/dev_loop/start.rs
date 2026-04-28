@@ -196,12 +196,24 @@ pub(super) async fn build_start_params(
         .project
         .as_ref()
         .map(|project| project.org_id.to_string());
-    // Per-automaton session UUID. Router/billing aggregate by
-    // (org_id, session_id), so generating a fresh id per start
-    // gives concurrent runs of the same agent distinct telemetry
-    // partitions — same shape as `SessionConfig::aura_session_id`
-    // for chat (which uses the persisted chat-session id).
-    let aura_session_id = Some(uuid::Uuid::new_v4().to_string());
+    // Stable per-(project, agent-instance, task) session UUID. The
+    // router / Cloudflare WAF buckets by `(IP, X-Aura-Session-Id)`
+    // when scoring "is this automated traffic?", so a fresh
+    // `Uuid::new_v4()` per dev-loop start made every restart look
+    // like a brand-new client — and the swebench eval, which
+    // recreates the dev-loop on every tick / failure, kept tripping
+    // the managed-rule challenge that the desktop app's stable chat
+    // session never hits. Deriving from the (project, instance,
+    // task) tuple keeps the session id constant across restarts of
+    // the same logical run while still partitioning concurrent runs
+    // of different instances or tasks for billing / telemetry —
+    // mirroring `SessionConfig::aura_session_id` for chat (which
+    // reuses the persisted chat-session id across reconnects).
+    let aura_session_id = Some(stable_dev_loop_session_id(
+        &ctx.project_id.to_string(),
+        &agent_instance_id.to_string(),
+        task_id.as_deref(),
+    ));
 
     AutomatonStartParams {
         project_id: ctx.project_id.to_string(),
@@ -224,6 +236,35 @@ pub(super) async fn build_start_params(
         aura_org_id,
         aura_session_id,
     }
+}
+
+/// Derive a stable session UUID for the (project, agent-instance, task)
+/// tuple that owns this dev-loop run.
+///
+/// The harness forwards this string as the `X-Aura-Session-Id` header on
+/// every outbound `/v1/messages` call. Cloudflare's WAF in front of
+/// `aura-router.onrender.com` scores requests partly on per-session
+/// novelty: a brand-new session id arriving with a 60+ KB POST from a
+/// non-browser User-Agent looks indistinguishable from automated abuse,
+/// and the eval pipeline (which restarts the dev loop on every tick /
+/// failure) was generating one fresh `Uuid::new_v4()` per start, hot-pathing
+/// the managed challenge that the desktop app's stable chat session never
+/// touches.
+///
+/// Using `Uuid::new_v5` over a fixed namespace + a `(project, instance,
+/// task)` payload keeps the id constant for any restart of the same
+/// logical run while still keeping concurrent runs of distinct
+/// instances / tasks on distinct billing partitions. The DNS namespace is
+/// arbitrary — any well-known constant works since we never round-trip
+/// the namespace itself.
+pub(super) fn stable_dev_loop_session_id(
+    project_id: &str,
+    agent_instance_id: &str,
+    task_id: Option<&str>,
+) -> String {
+    let task_segment = task_id.unwrap_or("dev_loop");
+    let payload = format!("aura-os/dev-loop:{project_id}:{agent_instance_id}:{task_segment}");
+    uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_DNS, payload.as_bytes()).to_string()
 }
 
 fn resolve_git_repo_url(project: Option<&Project>) -> Option<String> {
@@ -355,5 +396,77 @@ fn response_body_is_capacity_exhausted(body: &str) -> bool {
         Some(c) if c.eq_ignore_ascii_case("capacity_exhausted") => true,
         Some(_) => false,
         None => true,
+    }
+}
+
+#[cfg(test)]
+mod stable_session_id_tests {
+    use super::stable_dev_loop_session_id;
+
+    const PROJECT: &str = "36d4494f-75df-4c02-84d5-07aef06d2569";
+    const INSTANCE: &str = "29c9ee0f-3e81-4f00-8ad0-a1ae0e29a586";
+
+    #[test]
+    fn stable_across_restarts_for_same_tuple() {
+        // The whole point: same (project, instance, task) → same UUID
+        // every time, so Cloudflare's per-session WAF score doesn't
+        // restart from zero on every dev-loop tick.
+        let a = stable_dev_loop_session_id(PROJECT, INSTANCE, None);
+        let b = stable_dev_loop_session_id(PROJECT, INSTANCE, None);
+        assert_eq!(a, b, "session id must be deterministic for the same tuple");
+        // Sanity: it parses as a UUID.
+        assert!(
+            uuid::Uuid::parse_str(&a).is_ok(),
+            "must produce a valid UUID"
+        );
+    }
+
+    #[test]
+    fn distinct_per_project() {
+        let a = stable_dev_loop_session_id("11111111-1111-1111-1111-111111111111", INSTANCE, None);
+        let b = stable_dev_loop_session_id("22222222-2222-2222-2222-222222222222", INSTANCE, None);
+        assert_ne!(a, b, "different projects must get distinct session ids");
+    }
+
+    #[test]
+    fn distinct_per_agent_instance() {
+        let a = stable_dev_loop_session_id(PROJECT, "aaaaaaaa-1111-1111-1111-111111111111", None);
+        let b = stable_dev_loop_session_id(PROJECT, "bbbbbbbb-2222-2222-2222-222222222222", None);
+        assert_ne!(
+            a, b,
+            "different agent instances must get distinct session ids"
+        );
+    }
+
+    #[test]
+    fn distinct_dev_loop_vs_task_run() {
+        // A dev-loop run and a task-runner run on the same project/
+        // instance are different logical sessions for billing — and
+        // crucially the task-runner is short-lived, so it must not
+        // poison the long-lived dev-loop's per-session WAF score.
+        let dev = stable_dev_loop_session_id(PROJECT, INSTANCE, None);
+        let task = stable_dev_loop_session_id(PROJECT, INSTANCE, Some("task-123"));
+        assert_ne!(dev, task);
+    }
+
+    #[test]
+    fn distinct_per_task() {
+        let a = stable_dev_loop_session_id(PROJECT, INSTANCE, Some("task-aaa"));
+        let b = stable_dev_loop_session_id(PROJECT, INSTANCE, Some("task-bbb"));
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn does_not_collide_with_chat_namespace() {
+        // The chat path uses `persist_ctx.session_id` which is itself a
+        // random `Uuid::new_v4()` minted at chat creation. There's no
+        // way to deterministically prove no collision against random
+        // ids, but we can at least confirm our v5 output never equals
+        // the well-known nil UUID — the only "easy" foot-gun if the
+        // namespace were ever swapped for `Uuid::nil()` and the input
+        // were empty.
+        let nil = uuid::Uuid::nil().to_string();
+        let id = stable_dev_loop_session_id(PROJECT, INSTANCE, None);
+        assert_ne!(id, nil);
     }
 }
