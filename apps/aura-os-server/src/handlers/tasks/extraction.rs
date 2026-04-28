@@ -1,5 +1,5 @@
-use axum::extract::{Path, Query, State};
 use axum::Json;
+use axum::extract::{Path, Query, State};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::time::Duration;
@@ -61,6 +61,22 @@ fn tasks_changed_since(before: &[Task], after: &[Task]) -> bool {
             .get(&task.task_id)
             .map_or(true, |updated_at| *updated_at != task.updated_at)
     })
+}
+
+fn task_extraction_prompt(project_id: impl std::fmt::Display) -> String {
+    format!(
+        "Extract tasks for project {project_id}. Review the existing specs, then create or update \
+         the project's tasks until the task list is populated. This workflow is only for planning, \
+         not execution: do not run commands, do not execute tasks, do not transition task states, \
+         and do not mark tasks done/failed/blocked. Prefer actionable implementation tasks with \
+         concrete source files or acceptance evidence. Fold inspection or verification into the \
+         implementation task when possible. Do not create a standalone verification-only task unless \
+         it genuinely requires no source edits; if you do, its description must explicitly tell the \
+         executor to call `task_done` with `no_changes_needed: true` and notes explaining why no file \
+         changes are needed. Never call the `extract_tasks` tool from inside this workflow because \
+         that would recursively restart task extraction. Use the spec and task CRUD/listing tools \
+         directly instead."
+    )
 }
 
 pub(crate) async fn list_tasks(
@@ -164,9 +180,7 @@ pub(crate) async fn extract_tasks(
     session
         .commands_tx
         .try_send(HarnessInbound::UserMessage(UserMessage {
-            content: format!(
-                "Extract tasks for project {project_id}. Review the existing specs, then create or update the project's tasks until the task list is populated. This workflow is only for planning, not execution: do not run commands, do not execute tasks, do not transition task states, and do not mark tasks done/failed/blocked. Never call the `extract_tasks` tool from inside this workflow because that would recursively restart task extraction. Use the spec and task CRUD/listing tools directly instead."
-            ),
+            content: task_extraction_prompt(&project_id),
             tool_hints: None,
             attachments: None,
         }))
@@ -230,4 +244,21 @@ enum ExtractionOutcome {
     Completed,
     HarnessError(String),
     StreamEnded,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::task_extraction_prompt;
+
+    #[test]
+    fn task_extraction_prompt_guides_no_change_verification_tasks() {
+        let prompt = task_extraction_prompt("project-123");
+
+        assert!(prompt.contains("project project-123"));
+        assert!(prompt.contains("Fold inspection or verification into the implementation task"));
+        assert!(prompt.contains("standalone verification-only task"));
+        assert!(prompt.contains("task_done"));
+        assert!(prompt.contains("no_changes_needed: true"));
+        assert!(prompt.contains("Never call the `extract_tasks` tool"));
+    }
 }
