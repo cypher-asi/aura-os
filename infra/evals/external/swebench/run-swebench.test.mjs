@@ -13,8 +13,11 @@ import {
   loadPriorRunRecords,
   parseArgs,
   parseDiffFiles,
+  resolveSwebenchProjectCommand,
   resolveResumeOutDir,
   runWithPool,
+  SWEBENCH_DEFAULT_PROJECT_COMMAND,
+  stripBenchmarkArtifactsFromDiff,
   stripTestEditsFromDiff,
 } from "./run-swebench.mjs";
 
@@ -29,6 +32,20 @@ test("BENCHMARK_DIRECTIVES is a single shared constant", () => {
   assert.equal(typeof BENCHMARK_DIRECTIVES, "string");
   assert.match(BENCHMARK_DIRECTIVES, /Benchmark constraints/);
   assert.match(BENCHMARK_DIRECTIVES, /Do not modify or delete any existing test files/);
+});
+
+test("SWE-bench project command defaults to quote-safe live preflight shape", () => {
+  assert.equal(resolveSwebenchProjectCommand("AURA_BENCH_BUILD_COMMAND", {}), "node --version");
+  assert.equal(resolveSwebenchProjectCommand("AURA_BENCH_TEST_COMMAND", {
+    AURA_BENCH_TEST_COMMAND: "   ",
+  }), "node --version");
+  assert.equal(SWEBENCH_DEFAULT_PROJECT_COMMAND, "node --version");
+});
+
+test("SWE-bench project command honours explicit operator overrides", () => {
+  assert.equal(resolveSwebenchProjectCommand("AURA_BENCH_TEST_COMMAND", {
+    AURA_BENCH_TEST_COMMAND: "python -m pytest -q",
+  }), "python -m pytest -q");
 });
 
 test("buildRequirementsMd emits the expected sections without hints", () => {
@@ -199,6 +216,44 @@ test("stripTestEditsFromDiff is a no-op when no hunks touch tests", () => {
 test("stripTestEditsFromDiff handles empty input", () => {
   assert.deepEqual(stripTestEditsFromDiff(""), { patch: "", strippedHunks: 0 });
   assert.deepEqual(stripTestEditsFromDiff(null), { patch: "", strippedHunks: 0 });
+});
+
+test("stripBenchmarkArtifactsFromDiff removes benchmark setup files only", () => {
+  const diff = [
+    "diff --git a/requirements.md b/requirements.md",
+    "new file mode 100644",
+    "index 0000000..1111111",
+    "--- /dev/null",
+    "+++ b/requirements.md",
+    "@@ -0,0 +1 @@",
+    "+benchmark prompt",
+    "diff --git a/spec/01-fix.md b/spec/01-fix.md",
+    "new file mode 100644",
+    "index 0000000..2222222",
+    "--- /dev/null",
+    "+++ b/spec/01-fix.md",
+    "@@ -0,0 +1 @@",
+    "+generated spec",
+    "diff --git a/src/foo.py b/src/foo.py",
+    "index 3333333..4444444 100644",
+    "--- a/src/foo.py",
+    "+++ b/src/foo.py",
+    "@@ -1 +1,2 @@",
+    " keep",
+    "+keep-me",
+    "",
+  ].join("\n");
+
+  const result = stripBenchmarkArtifactsFromDiff(diff);
+  assert.equal(result.strippedHunks, 2);
+  assert.match(result.patch, /diff --git a\/src\/foo\.py b\/src\/foo\.py/);
+  assert.ok(!/requirements\.md/.test(result.patch));
+  assert.ok(!/spec\/01-fix\.md/.test(result.patch));
+});
+
+test("stripBenchmarkArtifactsFromDiff handles empty input", () => {
+  assert.deepEqual(stripBenchmarkArtifactsFromDiff(""), { patch: "", strippedHunks: 0 });
+  assert.deepEqual(stripBenchmarkArtifactsFromDiff(null), { patch: "", strippedHunks: 0 });
 });
 
 test("parseArgs supports the documented CLI flags", () => {

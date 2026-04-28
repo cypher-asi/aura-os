@@ -42,6 +42,15 @@ export const BENCHMARK_DIRECTIVES = `## Benchmark constraints
 
 const STATUS_BLOCKED_CLOUDFLARE = "blocked_cloudflare";
 const STATUS_SKIPPED_CLOUDFLARE = "skipped_cloudflare_block";
+export const SWEBENCH_DEFAULT_PROJECT_COMMAND = "node --version";
+
+export function resolveSwebenchProjectCommand(envName, env = process.env) {
+  const configured = env?.[envName];
+  if (typeof configured === "string" && configured.trim().length > 0) {
+    return configured;
+  }
+  return SWEBENCH_DEFAULT_PROJECT_COMMAND;
+}
 
 // ---------------------------------------------------------------------------
 // CLI
@@ -245,6 +254,21 @@ function isTestPath(rawPath) {
   return false;
 }
 
+function normalizeDiffPath(rawPath) {
+  if (!rawPath || rawPath === "/dev/null") return null;
+  let cleaned = rawPath.trim().replace(/\\/g, "/");
+  if (cleaned.startsWith("a/") || cleaned.startsWith("b/")) {
+    cleaned = cleaned.slice(2);
+  }
+  return cleaned.length > 0 ? cleaned : null;
+}
+
+function isBenchmarkArtifactPath(rawPath) {
+  const cleaned = normalizeDiffPath(rawPath);
+  if (!cleaned) return false;
+  return cleaned === "requirements.md" || cleaned.startsWith("spec/");
+}
+
 function parseDiffHeaderPaths(headerLine) {
   // headerLine looks like: "diff --git a/foo/bar.py b/foo/bar.py"
   const prefix = "diff --git ";
@@ -361,6 +385,28 @@ function isCloudflareBlockError(error) {
     || isCloudflareBlockText(error.cause?.message);
 }
 
+function cloudflareBlockReasonFromPayload(payload) {
+  if (!payload || typeof payload !== "object") return null;
+  if (isCloudflareBlockText(JSON.stringify(payload.taskOutputs ?? {}))) {
+    return "Cloudflare block surfaced in task output";
+  }
+
+  const failedTasks = Number(payload.counts?.failedTasks ?? 0);
+  const doneTasks = Number(payload.counts?.doneTasks ?? 0);
+  const totalTokens = Number(payload.metrics?.totalTokens ?? 0);
+  const buildSteps = Number(payload.metrics?.buildSteps ?? 0);
+  const testSteps = Number(payload.metrics?.testSteps ?? 0);
+  const unavailableOutputs = Object.values(payload.taskOutputs ?? {})
+    .filter((output) => output && typeof output === "object")
+    .every((output) => output.unavailable === true);
+
+  if (failedTasks > 0 && doneTasks === 0 && totalTokens === 0 && buildSteps === 0 && testSteps === 0 && unavailableOutputs) {
+    return "All dev-loop tasks failed before producing output or token usage, consistent with the Cloudflare-blocked harness path";
+  }
+
+  return null;
+}
+
 function conservativeConcurrency(args) {
   if (process.env.AURA_BENCH_ALLOW_PARALLEL === "1") {
     return args.concurrency;
@@ -434,6 +480,58 @@ export function stripTestEditsFromDiff(diff) {
     patch: rejoinChunks(kept, typeof diff === "string" ? diff : ""),
     strippedHunks,
   };
+}
+
+export function stripBenchmarkArtifactsFromDiff(diff) {
+  const chunks = splitDiffIntoChunks(diff);
+  if (chunks.length === 0) {
+    return { patch: typeof diff === "string" ? diff : "", strippedHunks: 0 };
+  }
+
+  const kept = [];
+  let strippedHunks = 0;
+
+  for (const chunk of chunks) {
+    const { oldPath, newPath } = parseDiffHeaderPaths(chunk.header);
+    const { minus, plus } = extractMinusPlusPaths(chunk.lines);
+    const candidates = [oldPath, newPath, minus, plus]
+      .map(normalizeDiffPath)
+      .filter(Boolean);
+
+    if (candidates.some((value) => isBenchmarkArtifactPath(value))) {
+      strippedHunks += 1;
+      continue;
+    }
+    kept.push(chunk);
+  }
+
+  return {
+    patch: rejoinChunks(kept, typeof diff === "string" ? diff : ""),
+    strippedHunks,
+  };
+}
+
+function classifyAuraOutcome(payload) {
+  if (!payload || typeof payload !== "object") return null;
+  const doneTasks = Number(payload.counts?.doneTasks ?? 0);
+  const failedTasks = Number(payload.counts?.failedTasks ?? 0);
+  const taskCount = Number(payload.counts?.tasks ?? 0);
+
+  if (failedTasks > 0) {
+    return {
+      status: "agent_error",
+      message: `AURA dev loop finished with ${failedTasks} failed task(s) and ${doneTasks} done task(s)`,
+    };
+  }
+
+  if (taskCount > 0 && doneTasks === 0) {
+    return {
+      status: "agent_error",
+      message: "AURA dev loop finished without any done tasks",
+    };
+  }
+
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -675,12 +773,8 @@ function buildScenario(instance, workspaceDir) {
       description: `SWE-bench Verified instance ${id}`,
       fixtureAbsolutePath: workspaceDir,
       importByReference: true,
-      buildCommand:
-        process.env.AURA_BENCH_BUILD_COMMAND
-          ?? `python -c "print('SWE-bench AURA build placeholder')"`,
-      testCommand:
-        process.env.AURA_BENCH_TEST_COMMAND
-          ?? `python -c "print('SWE-bench AURA test placeholder')"`,
+      buildCommand: resolveSwebenchProjectCommand("AURA_BENCH_BUILD_COMMAND"),
+      testCommand: resolveSwebenchProjectCommand("AURA_BENCH_TEST_COMMAND"),
       artifactChecks: [],
     },
     timeouts: {
@@ -1011,6 +1105,13 @@ async function runOneInstance({
       },
     });
     log(`AURA pipeline finished (runId=${auraPayload.runId})`);
+    const blockReason = cloudflareBlockReasonFromPayload(auraPayload);
+    if (blockReason) {
+      costState.blocked = true;
+      costState.blockReason = blockReason;
+      auraError = new Error(blockReason);
+      log("Cloudflare-like task failure detected; stopping additional SWE-bench scheduling");
+    }
   } catch (error) {
     auraError = error instanceof Error ? error : new Error(String(error));
     log(`AURA pipeline threw: ${auraError.message}`);
@@ -1046,8 +1147,28 @@ async function runOneInstance({
       log(`stripped ${strippedHunks} hunks under test paths`);
     }
   }
+  const artifactStripped = stripBenchmarkArtifactsFromDiff(modelPatch);
+  modelPatch = artifactStripped.patch;
+  if (artifactStripped.strippedHunks > 0) {
+    log(`stripped ${artifactStripped.strippedHunks} benchmark setup artifact hunks`);
+  }
+  if (auraError && (isCloudflareBlockError(auraError) || cloudflareBlockReasonFromPayload(auraPayload))) {
+    modelPatch = "";
+    log("discarded patch because the run ended in a provider/proxy block");
+  }
 
   const filesChanged = parseDiffFiles(modelPatch);
+  const outcomeFailure = classifyAuraOutcome(auraPayload);
+  if (!auraError && outcomeFailure) {
+    auraError = new Error(outcomeFailure.message);
+    log(`AURA pipeline produced a failed outcome: ${outcomeFailure.message}`);
+  }
+  if (!auraError && modelPatch.length === 0) {
+    auraError = new Error(
+      "AURA dev loop completed without source changes after filtering benchmark artifacts and test edits",
+    );
+    log("AURA pipeline produced no source patch");
+  }
   baseRecord.patch = {
     lines:
       modelPatch.length === 0
@@ -1056,12 +1177,14 @@ async function runOneInstance({
     files_changed: filesChanged.length,
     files_changed_list: filesChanged,
     tests_directory_hits_stripped: strippedHunks,
+    benchmark_artifact_hunks_stripped: artifactStripped.strippedHunks,
     empty: modelPatch.length === 0,
   };
 
   // 6. Determine status.
   if (auraError) {
     baseRecord.status = isCloudflareBlockError(auraError)
+      || cloudflareBlockReasonFromPayload(auraPayload)
       ? STATUS_BLOCKED_CLOUDFLARE
       : "agent_error";
     baseRecord.error = auraError.message;
