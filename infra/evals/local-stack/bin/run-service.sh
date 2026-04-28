@@ -122,6 +122,34 @@ if [[ "$service" == "harness" ]]; then
     export AURA_HARNESS_WS_SLOTS="$AURA_STACK_HARNESS_WS_SLOTS"
   fi
 
+  # Forward the Cloudflare-block dump dir to the harness child.
+  #
+  # `render-envs.sh` writes `AURA_DEBUG_CLOUDFLARE_DUMP_DIR` into
+  # `aura-os.env` because the production sidecar path autospawns the
+  # harness from inside `aura-os-server` and inherits the parent env.
+  # In the local-stack the harness runs as a *sibling* process started
+  # by this script — no env file is sourced for the harness branch —
+  # so the dump dir env var never reaches the binary, the
+  # `if let Ok(dir) = std::env::var("AURA_DEBUG_CLOUDFLARE_DUMP_DIR")`
+  # branch in
+  # `aura-harness/crates/aura-reasoner/src/anthropic/provider.rs:217`
+  # never fires, and `cloudflare-dumps/` stays empty after a CF block.
+  # Exporting it here mirrors what the autospawn would have done.
+  export AURA_DEBUG_CLOUDFLARE_DUMP_DIR="${AURA_STACK_RUNTIME_DIR}/cloudflare-dumps"
+  mkdir -p "$AURA_DEBUG_CLOUDFLARE_DUMP_DIR"
+
+  # Same plumbing for the LLM retry / routing knobs that
+  # `render-envs.sh` writes into `aura-os.env`. The harness reads
+  # them directly (see `aura-harness/crates/aura-reasoner/src/anthropic/
+  # config.rs::AnthropicConfig`), so they have to be in the harness's
+  # process env, not just aura-os's.
+  if [[ -n "${AURA_STACK_HARNESS_LLM_MAX_RETRIES:-}" ]]; then
+    export AURA_LLM_MAX_RETRIES="$AURA_STACK_HARNESS_LLM_MAX_RETRIES"
+  fi
+  if [[ -n "${AURA_STACK_HARNESS_LLM_ROUTING:-}" ]]; then
+    export AURA_LLM_ROUTING="$AURA_STACK_HARNESS_LLM_ROUTING"
+  fi
+
   # Stack URL overrides. AURA_OS_SERVER_URL is always re-stamped
   # because the harness .env's baked `http://127.0.0.1:3100` default
   # routes domain writes to a dead port whenever

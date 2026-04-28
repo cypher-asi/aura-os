@@ -100,6 +100,15 @@ pub struct AutomatonStartParams {
     /// the payload.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub agent_id: Option<String>,
+    /// Stable template agent UUID forwarded to the harness for
+    /// `X-Aura-Agent-Id` on proxy `/v1/messages` calls.
+    ///
+    /// `agent_id` is a partition/turn-lock key for automata; the proxy
+    /// billing identity must match chat's `SessionInit::aura_agent_id`
+    /// and stay on the template agent so SWE-bench/dev-loop requests
+    /// hit the same router bucket as the main Aura OS app.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aura_agent_id: Option<String>,
     /// Template agent id for harness skill / permissions / billing
     /// lookup when `agent_id` carries a partition key
     /// (`{template}::{instance}`). When `None`, the harness falls back

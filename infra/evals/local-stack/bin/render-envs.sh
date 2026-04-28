@@ -123,6 +123,38 @@ write_optional_export "$aura_os_env" "Z_BILLING_URL" "$AURA_STACK_BILLING_URL"
 # `.env`.
 write_export "$aura_os_env" "AURA_DEBUG_CLOUDFLARE_DUMP_DIR" "$AURA_STACK_RUNTIME_DIR/cloudflare-dumps"
 
+# Forward LLM retry / routing controls into the autospawned harness.
+#
+# stack.env exposes these as `AURA_STACK_HARNESS_LLM_*` precisely so an
+# operator can cap retries (the harness defaults `AURA_LLM_MAX_RETRIES`
+# to 8, which compounds a single Cloudflare blip on aura-router into a
+# multi-second WAF-reinforcing retry storm) and explicitly keep routing
+# on the Aura proxy path. They were previously read into
+# the parent shell env by `common.sh::stack_load_env` but never
+# rendered into the aura-os-server runtime env, so the autospawn's
+# env-inheritance path silently dropped them and the harness fell back
+# to the upstream defaults.
+#
+# The harness's own `.env` does NOT define `AURA_LLM_MAX_RETRIES`, so a
+# value set here passes straight through `harness_autospawn.rs`'s
+# .env-overlay step (the overlay only re-applies keys present in
+# `aura-harness/.env`, which means parent-env values for unmentioned
+# keys win). `AURA_STACK_HARNESS_LLM_ROUTING` is validated in
+# `common.sh` and may only be unset or `proxy` for this stack.
+write_optional_export "$aura_os_env" "AURA_LLM_MAX_RETRIES" "$AURA_STACK_HARNESS_LLM_MAX_RETRIES"
+write_optional_export "$aura_os_env" "AURA_LLM_ROUTING" "$AURA_STACK_HARNESS_LLM_ROUTING"
+write_optional_export "$aura_os_env" "AURA_ROUTER_JWT" "$AURA_STACK_AURA_ROUTER_JWT"
+
+# Test-gate operator overrides documented in
+# `aura-harness/crates/aura-agent/src/task_executor/mod.rs`. These let an
+# operator bypass or redirect the `task_done` hard gate when the project
+# manifest lies about the right test command (e.g. SWE-bench Python repos
+# whose imported project record stores a `python -c` placeholder but where
+# the harness's auto-detect picks up some other manifest in the workspace).
+# Forwarded via the same parent-env-inheritance path the autospawn uses.
+write_optional_export "$aura_os_env" "AURA_DOD_DISABLE_TEST_GATE" "$AURA_STACK_HARNESS_DOD_DISABLE_TEST_GATE"
+write_optional_export "$aura_os_env" "AURA_DOD_TEST_COMMAND" "$AURA_STACK_HARNESS_DOD_TEST_COMMAND"
+
 write_header "$evals_env"
 write_export "$evals_env" "AURA_EVAL_LIVE" "1"
 write_export "$evals_env" "AURA_EVAL_BASE_URL" "$AURA_STACK_EVAL_BASE_URL"

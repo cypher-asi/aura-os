@@ -8,9 +8,9 @@
 # opaque "complete_streaming ... cloudflare_html=true" retry storm:
 #
 #   - Cloudflare WAF block (HTML body) → IP-level CF deny at onrender.com
-#       edge; bypass with direct mode or wait for TTL
+#       edge; reduce retries / worker burst and wait for TTL or clear the rule
 #   - 401 with non-CF body              → JWT not accepted by aura-router
-#       (refresh via bootstrap-auth.sh) or invalid Anthropic key
+#       (refresh via bootstrap-auth.sh)
 #   - 403 with non-CF body              → upstream auth rejection at the
 #       proxy (rare; usually billing / org missing)
 #   - 5xx                               → router cold-start / outage
@@ -20,8 +20,8 @@
 # Mirrors the request shape the harness builds in
 # `aura-reasoner/src/anthropic/provider.rs` build_request: POST
 # /v1/messages with `anthropic-version: 2023-06-01`, JSON body, and
-# either `Authorization: Bearer {jwt}` (proxy) or `x-api-key: {key}`
-# (direct). A `max_tokens=1` payload keeps the probe cost negligible.
+# `Authorization: Bearer {jwt}` through the Aura router/proxy. A
+# `max_tokens=1` payload keeps the probe cost negligible.
 #
 # Invocation:
 #   preflight-llm.sh                    # uses AURA_EVAL_ACCESS_TOKEN
@@ -71,11 +71,9 @@ if [[ "${AURA_STACK_HARNESS_MODE:-}" != "local" ]]; then
   exit 0
 fi
 
-# Effective LLM routing the harness will use. AURA_STACK_HARNESS_LLM_ROUTING
-# wins when set; otherwise we assume the harness's own default ("proxy"
-# per `aura-reasoner/src/anthropic/config.rs`). We don't read
-# aura-harness/.env here because the merge happens later in run-service.sh
-# and parsing it from this side would duplicate that logic.
+# Effective LLM routing the harness will use. SWE-bench evals must stay
+# on the Aura router/proxy path, so anything else is rejected before the
+# harness can start a long retry storm.
 effective_routing="${AURA_STACK_HARNESS_LLM_ROUTING:-proxy}"
 
 case "$effective_routing" in
@@ -91,20 +89,10 @@ case "$effective_routing" in
     target_url="$router_url/v1/messages"
     target_label="aura-router proxy at $router_url"
     ;;
-  direct)
-    api_key="${AURA_STACK_ANTHROPIC_API_KEY:-${AURA_ANTHROPIC_API_KEY:-${ANTHROPIC_API_KEY:-}}}"
-    if [[ -z "$api_key" ]]; then
-      echo "[preflight-llm] FAIL: direct mode but no Anthropic API key set." >&2
-      echo "  Set AURA_STACK_ANTHROPIC_API_KEY in stack.env (or ANTHROPIC_API_KEY in env)." >&2
-      bail
-    fi
-    auth_header="x-api-key: $api_key"
-    target_url="https://api.anthropic.com/v1/messages"
-    target_label="Anthropic direct at api.anthropic.com"
-    ;;
   *)
-    echo "[preflight-llm] WARN: unknown effective routing '$effective_routing'; skipping probe." >&2
-    exit 0
+    echo "[preflight-llm] FAIL: unsupported AURA_STACK_HARNESS_LLM_ROUTING='$effective_routing'." >&2
+    echo "  SWE-bench evals must use the Aura router/proxy path: set AURA_STACK_HARNESS_LLM_ROUTING=proxy or leave it unset." >&2
+    bail
     ;;
 esac
 
@@ -158,14 +146,11 @@ print_cf_block_remediation() {
   [[ -n "$ray" ]] && echo "    Cloudflare Ray ID: $ray" >&2
   [[ -n "$ip" ]]  && echo "    Blocked egress IP: $ip" >&2
   echo >&2
-  echo "  Remediation (any of):" >&2
-  echo "    a) Bypass aura-router by switching the eval to direct mode" >&2
-  echo "       (in infra/evals/local-stack/stack.env):" >&2
-  echo "         AURA_STACK_HARNESS_LLM_ROUTING=direct" >&2
-  echo "         AURA_STACK_ANTHROPIC_API_KEY=sk-ant-..." >&2
-  echo "    b) Throttle the retry storm that reinforces the WAF block:" >&2
+  echo "  Remediation:" >&2
+  echo "    a) Throttle the retry storm that reinforces the WAF block:" >&2
   echo "         AURA_STACK_HARNESS_LLM_MAX_RETRIES=1" >&2
-  echo "       and wait for the WAF TTL (typically 1-24h) to elapse." >&2
+  echo "    b) Reduce SWE-bench worker concurrency and wait for the WAF TTL" >&2
+  echo "       (typically 1-24h) to elapse." >&2
   echo "    c) Have the router/Render owner clear the rule for this IP/Ray ID." >&2
 }
 
@@ -191,11 +176,7 @@ case "$http_status" in
       print_cf_block_remediation
     else
       print_body_excerpt
-      if [[ "$effective_routing" == "proxy" ]]; then
-        echo "  Refresh the JWT via bootstrap-auth.sh, or check AURA_STACK_AURA_ROUTER_JWT." >&2
-      else
-        echo "  Verify AURA_STACK_ANTHROPIC_API_KEY is current and has billing enabled." >&2
-      fi
+      echo "  Refresh the JWT via bootstrap-auth.sh, or check AURA_STACK_AURA_ROUTER_JWT." >&2
     fi
     bail
     ;;

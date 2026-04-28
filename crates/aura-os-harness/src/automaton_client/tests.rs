@@ -112,6 +112,7 @@ fn automaton_start_params_serializes_agent_permissions() {
     let params = AutomatonStartParams {
         project_id: "project-1".into(),
         agent_id: None,
+        aura_agent_id: None,
         template_agent_id: None,
         auth_token: None,
         model: None,
@@ -137,6 +138,39 @@ fn automaton_start_params_serializes_agent_permissions() {
         value["agent_permissions"]["capabilities"][0]["type"],
         "invokeProcess"
     );
+}
+
+#[test]
+fn automaton_start_params_serializes_proxy_identity_context() {
+    let params = AutomatonStartParams {
+        project_id: "project-1".into(),
+        agent_id: Some("template-1::instance-1".into()),
+        aura_agent_id: Some("template-1".into()),
+        template_agent_id: Some("template-1".into()),
+        auth_token: Some("jwt".into()),
+        model: None,
+        workspace_root: None,
+        task_id: None,
+        git_repo_url: None,
+        git_branch: None,
+        installed_tools: None,
+        installed_integrations: None,
+        agent_permissions: AgentPermissionsWire::default(),
+        prior_failure: None,
+        work_log: Vec::new(),
+        aura_org_id: Some("org-1".into()),
+        aura_session_id: Some("session-1".into()),
+    };
+
+    let value = serde_json::to_value(params).expect("serialize params");
+
+    assert_eq!(value["project_id"], "project-1");
+    assert_eq!(value["agent_id"], "template-1::instance-1");
+    assert_eq!(value["aura_agent_id"], "template-1");
+    assert_eq!(value["template_agent_id"], "template-1");
+    assert_eq!(value["aura_org_id"], "org-1");
+    assert_eq!(value["aura_session_id"], "session-1");
+    assert_eq!(value["auth_token"], "jwt");
 }
 
 #[test]
