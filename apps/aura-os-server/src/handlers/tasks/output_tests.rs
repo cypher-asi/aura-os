@@ -114,6 +114,59 @@ fn task_output_from_events_derives_sync_state_from_legacy_git_steps() {
 }
 
 #[test]
+fn task_output_from_events_keeps_committed_push_timeout_retryable() {
+    let task_id = uuid::Uuid::new_v4().to_string();
+    let response = task_output_from_events(
+        &task_id,
+        &[
+            session_event(
+                "git_committed",
+                &task_id,
+                serde_json::json!({
+                    "commit_sha": "abc123",
+                    "branch": "main",
+                    "remote": "origin",
+                }),
+            ),
+            session_event(
+                "tool_call_completed",
+                &task_id,
+                serde_json::json!({
+                    "name": "git_commit_push",
+                    "is_error": true,
+                    "reason": "Tool timed out after 120000ms",
+                }),
+            ),
+            session_event(
+                "task_completed",
+                &task_id,
+                serde_json::json!({
+                    "summary": "implementation complete",
+                }),
+            ),
+        ],
+    )
+    .expect("response should be hydrated from raw git event");
+
+    assert_eq!(response.sync_checkpoints.len(), 1);
+    assert_eq!(
+        response
+            .sync_state
+            .as_ref()
+            .map(|state| state.last_commit_sha.as_deref()),
+        Some(Some("abc123")),
+    );
+    assert_eq!(
+        response.recommended_action,
+        Some(serde_json::json!({
+            "action": "retry_push",
+            "commit_sha": "abc123",
+            "retry_safe": true,
+        })),
+    );
+}
+
+#[test]
 fn task_output_from_events_recommends_decompose_for_truncation_failure() {
     let task_id = uuid::Uuid::new_v4().to_string();
     let response = task_output_from_events(

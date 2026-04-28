@@ -76,10 +76,10 @@ fn checkpoint_phase(kind: &str) -> Option<&'static str> {
     match kind {
         "task_started" => Some("executing"),
         "task_retrying" => Some("retrying"),
-        "git_committed" => Some("committed"),
+        "git_committed" | "commit_created" => Some("committed"),
         "git_commit_failed" => Some("commit_failed"),
-        "git_pushed" => Some("pushed"),
-        "git_push_failed" => Some("push_failed"),
+        "git_pushed" | "push_succeeded" => Some("pushed"),
+        "git_push_failed" | "push_failed" => Some("push_failed"),
         "task_completed" => Some("completed"),
         "task_failed" => Some("failed"),
         _ => None,
@@ -278,6 +278,32 @@ mod tests {
         let recovery = derive_recovery_point(&state).expect("push failure should be retryable");
         assert_eq!(recovery.kind, TaskRecoveryPointKind::RetryPush);
         assert_eq!(recovery.commit_sha, "abc12345");
+    }
+
+    #[test]
+    fn derives_push_failed_state_from_commit_push_tool_timeout() {
+        let checkpoints = vec![
+            TaskSyncCheckpoint {
+                kind: "git_committed".into(),
+                phase: Some("committed".into()),
+                commit_sha: Some("abc12345".into()),
+                ..Default::default()
+            },
+            TaskSyncCheckpoint {
+                kind: "git_push_failed".into(),
+                phase: Some("push_failed".into()),
+                reason: Some("Tool timed out after 120000ms".into()),
+                ..Default::default()
+            },
+        ];
+
+        let state = derive_sync_state_from_checkpoints(&checkpoints).expect("state");
+
+        assert_eq!(state.status, TaskSyncStatus::PushFailed);
+        assert_eq!(state.last_commit_sha.as_deref(), Some("abc12345"));
+        assert!(state.retry_safe);
+        assert_eq!(state.orphaned_commits, vec!["abc12345".to_string()]);
+        assert!(state.needs_reconciliation);
     }
 
     #[test]

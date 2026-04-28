@@ -132,9 +132,13 @@ impl HarnessSignal {
             ),
             Self::ToolResult {
                 is_error: true,
+                name,
                 reason,
                 ..
-            } => Some(classify_failure(reason.as_deref())),
+            } => Some(classify_tool_result_failure(
+                name.as_deref(),
+                reason.as_deref(),
+            )),
             _ => None,
         }
     }
@@ -182,6 +186,20 @@ pub fn classify_failure(reason: Option<&str>) -> HarnessFailureKind {
     }
 }
 
+fn classify_tool_result_failure(name: Option<&str>, reason: Option<&str>) -> HarnessFailureKind {
+    if name == Some("git_commit_push")
+        && reason
+            .map(|reason| {
+                let reason = reason.to_ascii_lowercase();
+                reason.contains("timeout") || reason.contains("timed out")
+            })
+            .unwrap_or(false)
+    {
+        return HarnessFailureKind::PushTimeout;
+    }
+    classify_failure(reason)
+}
+
 fn is_completion_contract_failure(reason: &str) -> bool {
     let mentions_task_done =
         reason.contains("task_done") || reason.contains("completing this task");
@@ -197,7 +215,9 @@ fn is_completion_contract_failure(reason: &str) -> bool {
 
 fn is_push_timeout(reason: &str) -> bool {
     let reason = reason.to_ascii_lowercase();
-    reason.contains("git") && reason.contains("push") && reason.contains("timeout")
+    reason.contains("git")
+        && reason.contains("push")
+        && (reason.contains("timeout") || reason.contains("timed out"))
 }
 
 fn task_id(value: &serde_json::Value) -> Option<String> {
@@ -217,7 +237,17 @@ fn commit_sha(value: &serde_json::Value) -> Option<String> {
 }
 
 fn reason(value: &serde_json::Value) -> Option<String> {
-    string_field(value, &["reason", "error", "message", "failure_class"])
+    string_field(
+        value,
+        &[
+            "reason",
+            "error",
+            "message",
+            "result",
+            "result_preview",
+            "failure_class",
+        ],
+    )
 }
 
 fn string_field(value: &serde_json::Value, keys: &[&str]) -> Option<String> {
@@ -299,6 +329,22 @@ mod tests {
                 ..
             } if sha == "abc123"
         ));
+    }
+
+    #[test]
+    fn classifies_git_commit_push_tool_timeout_as_push_timeout() {
+        let signal = HarnessSignal::from_event(
+            "tool_call_completed",
+            &serde_json::json!({
+                "task_id": "task-1",
+                "name": "git_commit_push",
+                "is_error": true,
+                "result": "Tool timed out after 120000ms",
+            }),
+        )
+        .expect("signal");
+
+        assert_eq!(signal.failure_kind(), Some(HarnessFailureKind::PushTimeout));
     }
 
     #[test]

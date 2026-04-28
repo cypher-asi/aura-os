@@ -11,6 +11,9 @@ use aura_os_events::{DomainEvent, LegacyJsonEvent};
 use aura_os_storage::UpdateTaskRequest;
 
 use crate::state::{AppState, CachedTaskOutput, TestPassEvidence};
+use crate::sync_state::{
+    checkpoint_from_git_step, derive_sync_state_from_checkpoints, TaskSyncCheckpoint,
+};
 
 use super::super::session::record_task_worked;
 use super::super::signals::{
@@ -156,6 +159,13 @@ async fn apply_event_side_effect(
         "tool_call_completed" => {
             if let Some(task_id) = task_id {
                 record_test_pass_evidence(state, project_id, task_id, event).await;
+                record_git_commit_push_timeout(state, project_id, task_id, event).await;
+            }
+        }
+        "git_committed" | "commit_created" | "git_commit_failed" | "git_pushed"
+        | "push_succeeded" | "git_push_failed" | "push_failed" => {
+            if let Some(task_id) = task_id {
+                record_git_checkpoint(state, project_id, task_id, event_type, event).await;
             }
         }
         "text_delta" => {
@@ -170,6 +180,127 @@ async fn apply_event_side_effect(
         }
         _ => {}
     }
+}
+
+async fn record_git_checkpoint(
+    state: &AppState,
+    project_id: ProjectId,
+    task_id: &str,
+    event_type: &str,
+    event: &serde_json::Value,
+) {
+    let mut step = event.clone();
+    if let Some(object) = step.as_object_mut() {
+        object
+            .entry("type".to_string())
+            .or_insert_with(|| event_type.to_string().into());
+    }
+    let Some(checkpoint) = checkpoint_from_git_step(&step) else {
+        return;
+    };
+    record_sync_checkpoint(state, project_id, task_id, step, checkpoint).await;
+}
+
+async fn record_git_commit_push_timeout(
+    state: &AppState,
+    project_id: ProjectId,
+    task_id: &str,
+    event: &serde_json::Value,
+) {
+    if !is_git_commit_push_timeout(event) {
+        return;
+    }
+    let reason = event_reason(event).unwrap_or_else(|| "git_commit_push timed out".to_string());
+    let Some(key) = parse_task_key(project_id, task_id) else {
+        return;
+    };
+
+    let mut cache = state.task_output_cache.lock().await;
+    let entry = cache.entry(key).or_default();
+    let commit_sha = entry
+        .sync_state
+        .as_ref()
+        .and_then(|state| state.last_commit_sha.clone())
+        .or_else(|| {
+            entry
+                .sync_checkpoints
+                .iter()
+                .rev()
+                .find_map(|checkpoint| checkpoint.commit_sha.clone())
+        });
+    let checkpoint = TaskSyncCheckpoint {
+        kind: "git_push_failed".to_string(),
+        phase: Some("push_failed".to_string()),
+        commit_sha,
+        reason: Some(reason.clone()),
+        ..Default::default()
+    };
+    let step = serde_json::json!({
+        "type": "git_push_failed",
+        "commit_sha": checkpoint.commit_sha.clone(),
+        "reason": reason,
+    });
+    record_sync_checkpoint_locked(entry, step, checkpoint);
+}
+
+async fn record_sync_checkpoint(
+    state: &AppState,
+    project_id: ProjectId,
+    task_id: &str,
+    step: serde_json::Value,
+    checkpoint: TaskSyncCheckpoint,
+) {
+    let Some(key) = parse_task_key(project_id, task_id) else {
+        return;
+    };
+    let mut cache = state.task_output_cache.lock().await;
+    let entry = cache.entry(key).or_default();
+    record_sync_checkpoint_locked(entry, step, checkpoint);
+}
+
+fn record_sync_checkpoint_locked(
+    entry: &mut CachedTaskOutput,
+    step: serde_json::Value,
+    checkpoint: TaskSyncCheckpoint,
+) {
+    if !entry.sync_checkpoints.contains(&checkpoint) {
+        entry.sync_checkpoints.push(checkpoint);
+    }
+    if !entry.git_steps.contains(&step) {
+        entry.git_steps.push(step);
+    }
+    entry.sync_state = derive_sync_state_from_checkpoints(&entry.sync_checkpoints);
+}
+
+fn is_git_commit_push_timeout(event: &serde_json::Value) -> bool {
+    event
+        .get("is_error")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false)
+        && event
+            .get("name")
+            .or_else(|| event.get("tool_name"))
+            .and_then(|value| value.as_str())
+            == Some("git_commit_push")
+        && event_reason(event)
+            .map(|reason| {
+                let reason = reason.to_ascii_lowercase();
+                reason.contains("timeout") || reason.contains("timed out")
+            })
+            .unwrap_or(false)
+}
+
+fn event_reason(event: &serde_json::Value) -> Option<String> {
+    ["reason", "message", "error", "result", "result_preview"]
+        .into_iter()
+        .find_map(|key| {
+            event
+                .get(key)
+                .and_then(|value| value.as_str())
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(str::to_string)
+        })
 }
 
 /// Accumulate evidence when the harness reports a successful test-runner

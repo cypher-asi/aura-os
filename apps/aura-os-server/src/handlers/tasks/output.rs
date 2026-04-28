@@ -297,6 +297,30 @@ fn hydrate_checkpoint_state(
             .cloned()
             .and_then(|value| serde_json::from_value(value).ok());
     }
+    if matches!(
+        evt.event_type.as_deref(),
+        Some(
+            "git_committed"
+                | "commit_created"
+                | "git_commit_failed"
+                | "git_pushed"
+                | "push_succeeded"
+                | "git_push_failed"
+                | "push_failed"
+        )
+    ) {
+        let mut step = content.clone();
+        if let Some(object) = step.as_object_mut() {
+            if let Some(event_type) = evt.event_type.as_deref() {
+                object
+                    .entry("type")
+                    .or_insert_with(|| serde_json::Value::String(event_type.to_string()));
+            }
+        }
+        if let Some(checkpoint) = checkpoint_from_git_step(&step) {
+            sync_checkpoints.push(checkpoint);
+        }
+    }
 }
 
 async fn fetch_task_output_from_storage(
