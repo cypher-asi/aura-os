@@ -109,8 +109,70 @@ test("aggregate-score main() synthesizes driver-summary.json from runs/ when mis
     );
     assert.equal(score.benchmark, "swebench_verified");
     assert.equal(score.instance_count, 1);
+    assert.equal(score.scoring_mode, "driver_predictions_only");
+    assert.equal(score.official_harness_ran, false);
+    assert.match(score.scoring_note, /Official SWE-bench hidden-test scoring did not run/);
     assert.equal(score.instances.length, 1);
     assert.equal(score.instances[0].instance_id, "a__a-1");
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("aggregate-score marks official scoring when harness report is present", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "swebench-agg-harness-"));
+  try {
+    await fs.mkdir(path.join(dir, "runs"), { recursive: true });
+    await fs.mkdir(path.join(dir, "harness-report"), { recursive: true });
+    await fs.writeFile(
+      path.join(dir, "driver-summary.json"),
+      JSON.stringify({
+        run_id: "aura-test",
+        subset: "smoke",
+        instance_count: 1,
+        cost_usd: 0,
+        total_tokens: 0,
+        wallclock_seconds: 1,
+      }),
+      "utf8",
+    );
+    await fs.writeFile(
+      path.join(dir, "runs", "a__a-1.json"),
+      JSON.stringify({
+        instance_id: "a__a-1",
+        repo: "a/a",
+        base_commit: "deadbeef",
+        status: "agent_complete",
+        patch: {
+          lines: 4,
+          files_changed: 1,
+          files_changed_list: ["src/a.py"],
+          tests_directory_hits_stripped: 0,
+          empty: false,
+        },
+      }),
+      "utf8",
+    );
+    await fs.writeFile(
+      path.join(dir, "harness-report", "report.json"),
+      JSON.stringify({
+        total_instances: 1,
+        resolved_instances: ["a__a-1"],
+        submitted_instances: ["a__a-1"],
+      }),
+      "utf8",
+    );
+
+    await main(["--out", dir]);
+
+    const score = JSON.parse(
+      await fs.readFile(path.join(dir, "score.json"), "utf8"),
+    );
+    assert.equal(score.scoring_mode, "official_harness");
+    assert.equal(score.official_harness_ran, true);
+    assert.equal(score.scoring_note, "");
+    assert.equal(score.resolved, 1);
+    assert.equal(score.instances[0].status, "resolved");
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }

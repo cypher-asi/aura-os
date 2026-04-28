@@ -103,9 +103,11 @@ async function loadHarnessReport(runDir) {
   // Look for a top-level report.json in harness-report/, or fall back to a
   // walk over per-instance JSON files.
   const harnessDir = path.join(runDir, "harness-report");
+  let foundHarnessOutput = false;
   const topLevel = await readJsonIfExists(path.join(harnessDir, "report.json"));
+  if (topLevel) foundHarnessOutput = true;
   if (looksLikeTopLevelReport(topLevel)) {
-    return { report: topLevel, perInstance: {} };
+    return { report: topLevel, perInstance: {}, foundHarnessOutput };
   }
 
   const perInstance = {};
@@ -115,6 +117,7 @@ async function loadHarnessReport(runDir) {
     if (path.basename(file) === "report.json") continue;
     const content = await readJsonIfExists(file);
     if (!content || typeof content !== "object") continue;
+    foundHarnessOutput = true;
     if (looksLikeTopLevelReport(content) && !looksLikeTopLevelReport(aggregate)) {
       aggregate = content;
       continue;
@@ -136,6 +139,7 @@ async function loadHarnessReport(runDir) {
       const candidate = await readJsonIfExists(
         path.join(harnessDir, entry.name, "report.json"),
       );
+      if (candidate) foundHarnessOutput = true;
       if (looksLikeTopLevelReport(candidate)) {
         aggregate = candidate;
         break;
@@ -143,7 +147,7 @@ async function loadHarnessReport(runDir) {
     }
   }
 
-  return { report: aggregate ?? {}, perInstance };
+  return { report: aggregate ?? {}, perInstance, foundHarnessOutput };
 }
 
 function buildHarnessIndex(report, perInstance) {
@@ -157,8 +161,13 @@ function buildHarnessIndex(report, perInstance) {
 
   if (report && typeof report === "object") {
     const buckets = {
-      resolved: report.resolved_ids ?? report.resolved ?? [],
-      not_resolved: report.unresolved_ids ?? report.unresolved ?? [],
+      resolved: report.resolved_ids ?? report.resolved_instances ?? report.resolved ?? [],
+      not_resolved:
+        report.unresolved_ids
+        ?? report.unresolved_instances
+        ?? report.not_resolved_instances
+        ?? report.unresolved
+        ?? [],
       error: report.error_ids ?? report.error ?? [],
       submitted: report.submitted_ids ?? report.submitted_instances ?? [],
     };
@@ -330,8 +339,9 @@ async function main(rawArgv) {
       `[aggregate-score] driver-summary.json was missing; synthesized from ${driverRecords.size} runs/*.json file(s)\n`,
     );
   }
-  const { report, perInstance } = await loadHarnessReport(runDir);
+  const { report, perInstance, foundHarnessOutput } = await loadHarnessReport(runDir);
   const harnessIndex = buildHarnessIndex(report, perInstance);
+  const officialHarnessRan = foundHarnessOutput;
 
   const ids = new Set([
     ...driverRecords.keys(),
@@ -383,6 +393,11 @@ async function main(rawArgv) {
   const score = {
     benchmark: "swebench_verified",
     subset: summary.subset ?? "custom",
+    scoring_mode: officialHarnessRan ? "official_harness" : "driver_predictions_only",
+    official_harness_ran: officialHarnessRan,
+    scoring_note: officialHarnessRan
+      ? ""
+      : "Official SWE-bench hidden-test scoring did not run; this score only reflects AURA driver output and generated predictions. Run predictions.jsonl through the official SWE-bench harness on Linux, WSL, or macOS for resolved/not_resolved results.",
     instance_count: instanceCount,
     aura_version: summary.aura_version ?? null,
     claude_model: summary.claude_model ?? null,
@@ -403,6 +418,7 @@ async function main(rawArgv) {
 
   process.stdout.write(
     `subset=${score.subset} instances=${instanceCount} resolved=${resolvedCount} ` +
+      `mode=${score.scoring_mode} ` +
       `resolved_pct=${score.score}% cost=$${score.cost_usd} tokens=${score.total_tokens} ` +
       `wallclock=${score.wallclock_seconds}s -> ${scorePath}\n`,
   );
