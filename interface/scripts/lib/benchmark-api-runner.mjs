@@ -983,44 +983,67 @@ export async function runScenario(scenario, options) {
     // chat events stream goes through `send_event_stream` -> the same
     // session builder the working chat surface uses, so the LLM
     // request signature is identical to a successful interactive turn.
-    const specsRes = await fetch(
-      `${client.apiBaseUrl}/api/projects/${project.project_id}`
-        + `/agents/${agentInstance.agent_instance_id}/events/stream`,
-      {
-        method: "POST",
-        headers: authHeaders(client.accessToken, {
-          Accept: "text/event-stream",
-          "Content-Type": "application/json",
-        }),
-        body: JSON.stringify({
-          content: "Generate specs for this project",
-          action: "generate_specs",
-        }),
-      },
+    const specStreamTimeoutMs = resolveApiFetchTimeoutMs(
+      process.env.AURA_BENCH_SPEC_STREAM_TIMEOUT_MS
+        ?? process.env.AURA_BENCH_FETCH_TIMEOUT_MS,
     );
-    if (!specsRes.ok) {
-      const body = await specsRes.text().catch(() => "");
-      throw new Error(`spec stream HTTP ${specsRes.status}: ${body}`);
-    }
-    let specStreamError = null;
-    for await (const { eventType, data } of sseEvents(specsRes)) {
-      if (eventType === "assistant_message_end") {
-        break;
-      } else if (eventType === "error") {
-        specStreamError = typeof data?.message === "string" && data.message.length > 0
-          ? data.message
-          : "spec stream error";
-        break;
+    const specStreamController = new AbortController();
+    const specStreamTimer = setTimeout(() => {
+      specStreamController.abort(new Error(`spec stream exceeded ${specStreamTimeoutMs}ms timeout`));
+    }, specStreamTimeoutMs);
+    let specsRes;
+    try {
+      specsRes = await fetch(
+        `${client.apiBaseUrl}/api/projects/${project.project_id}`
+          + `/agents/${agentInstance.agent_instance_id}/events/stream`,
+        {
+          method: "POST",
+          headers: authHeaders(client.accessToken, {
+            Accept: "text/event-stream",
+            "Content-Type": "application/json",
+          }),
+          body: JSON.stringify({
+            content: "Generate specs for this project",
+            action: "generate_specs",
+          }),
+          signal: specStreamController.signal,
+        },
+      );
+      if (!specsRes.ok) {
+        const body = await specsRes.text().catch(() => "");
+        throw new Error(`spec stream HTTP ${specsRes.status}: ${body}`);
       }
+      let specStreamError = null;
+      for await (const { eventType, data } of sseEvents(specsRes)) {
+        if (eventType === "assistant_message_end") {
+          break;
+        } else if (eventType === "error") {
+          specStreamError = typeof data?.message === "string" && data.message.length > 0
+            ? data.message
+            : "spec stream error";
+          break;
+        }
+      }
+      if (specStreamError) {
+        throw new Error(specStreamError);
+      }
+    } catch (error) {
+      if (specStreamController.signal.aborted) {
+        const reason = specStreamController.signal.reason;
+        const detail = reason instanceof Error ? reason.message : String(reason ?? "");
+        throw new Error(detail || `spec stream exceeded ${specStreamTimeoutMs}ms timeout`, {
+          cause: error,
+        });
+      }
+      throw error;
+    } finally {
+      clearTimeout(specStreamTimer);
     }
     const specsList = await client.apiJson(
       "GET",
       `/api/projects/${project.project_id}/specs`,
     );
     specs = Array.isArray(specsList) ? specsList : [];
-    if (specs.length === 0 && specStreamError) {
-      throw new Error(specStreamError);
-    }
     client.logStep("specs generated", { count: specs.length });
     recordStep("create_spec", `Generated ${specs.length} specs`, { count: specs.length });
     sortedSpecs(specs).forEach((spec, index, orderedSpecs) => {

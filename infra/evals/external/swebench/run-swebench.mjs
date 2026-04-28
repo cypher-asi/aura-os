@@ -40,6 +40,9 @@ export const BENCHMARK_DIRECTIVES = `## Benchmark constraints
 - The local test environment is NOT pre-configured. Do not run pytest unless you can confirm the dependencies are installed. Reason from the codebase instead.
 `;
 
+const STATUS_BLOCKED_CLOUDFLARE = "blocked_cloudflare";
+const STATUS_SKIPPED_CLOUDFLARE = "skipped_cloudflare_block";
+
 // ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
@@ -173,7 +176,8 @@ function printHelp() {
       `  --out DIR               write predictions/runs/driver-summary into DIR\n` +
       `  --keep-entities         do not delete the AURA entities after each instance\n` +
       `  --no-strip-test-edits   keep hunks under tests/, test/, test_*.py, *_test.py\n` +
-      `  --concurrency N         run up to N (max 4) instances in parallel\n` +
+      `  --concurrency N         request up to N instances in parallel (max 4;\n` +
+      `                          effective max is 1 unless AURA_BENCH_ALLOW_PARALLEL=1)\n` +
       `  --resume [RUN_ID|DIR]   reuse an existing run dir; with no value, pick the most\n` +
       `                          recent aura-* dir under infra/evals/reports/external/\n` +
       `                          swebench_verified/. Already-recorded instances are skipped.\n` +
@@ -335,6 +339,33 @@ function formatProgressEvent(event) {
   }
 
   return `${event.step}: ${event.summary ?? event.step}`;
+}
+
+function isCloudflareBlockText(value) {
+  const text = String(value ?? "").toLowerCase();
+  if (!text) return false;
+  return text.includes("cloudflare block")
+    || text.includes("cloudflare html")
+    || text.includes("cf-ray")
+    || text.includes("attention required")
+    || text.includes("data-translate=\"block_headline\"")
+    || text.includes("llm proxy returned cloudflare block")
+    || (text.includes("403") && text.includes("<!doctype html"))
+    || (text.includes("403 forbidden") && text.includes("cloudflare"));
+}
+
+function isCloudflareBlockError(error) {
+  if (!error) return false;
+  return isCloudflareBlockText(error.message)
+    || isCloudflareBlockText(error.stack)
+    || isCloudflareBlockText(error.cause?.message);
+}
+
+function conservativeConcurrency(args) {
+  if (process.env.AURA_BENCH_ALLOW_PARALLEL === "1") {
+    return args.concurrency;
+  }
+  return 1;
 }
 
 export function parseDiffFiles(diff) {
@@ -983,6 +1014,11 @@ async function runOneInstance({
   } catch (error) {
     auraError = error instanceof Error ? error : new Error(String(error));
     log(`AURA pipeline threw: ${auraError.message}`);
+    if (isCloudflareBlockError(auraError)) {
+      costState.blocked = true;
+      costState.blockReason = auraError.message;
+      log("Cloudflare block detected; stopping additional SWE-bench scheduling");
+    }
   }
 
   baseRecord.aura_payload = auraPayload;
@@ -1025,7 +1061,9 @@ async function runOneInstance({
 
   // 6. Determine status.
   if (auraError) {
-    baseRecord.status = "agent_error";
+    baseRecord.status = isCloudflareBlockError(auraError)
+      ? STATUS_BLOCKED_CLOUDFLARE
+      : "agent_error";
     baseRecord.error = auraError.message;
   } else {
     baseRecord.status = "agent_complete";
@@ -1224,13 +1262,43 @@ async function main(rawArgv) {
   const costCap = process.env.AURA_BENCH_MAX_USD
     ? Number(process.env.AURA_BENCH_MAX_USD)
     : null;
-  const costState = { totalCostUsd: 0, aborted: false };
+  const costState = {
+    totalCostUsd: 0,
+    aborted: false,
+    blocked: false,
+    blockReason: "",
+  };
   const resultsRef = { records: [] };
 
   const log = (instanceId, msg) =>
     process.stderr.write(`[swebench ${instanceId}] ${msg}\n`);
 
   const worker = async (instance) => {
+    if (costState.blocked) {
+      const skipped = {
+        instance_id: instance.instance_id,
+        repo: instance.repo,
+        base_commit: instance.base_commit,
+        status: STATUS_SKIPPED_CLOUDFLARE,
+        skipped_reason: costState.blockReason
+          ? `Cloudflare block already detected: ${costState.blockReason}`
+          : "Cloudflare block already detected",
+        started_at: new Date().toISOString(),
+        finished_at: new Date().toISOString(),
+        wallclock_seconds: 0,
+        cost_usd: 0,
+        total_tokens: 0,
+        patch: {
+          lines: 0,
+          files_changed: 0,
+          files_changed_list: [],
+          tests_directory_hits_stripped: 0,
+          empty: true,
+        },
+      };
+      resultsRef.records.push(skipped);
+      return skipped;
+    }
     if (costState.aborted) {
       const skipped = {
         instance_id: instance.instance_id,
@@ -1278,7 +1346,13 @@ async function main(rawArgv) {
     return record;
   };
 
-  await runWithPool(selected, args.concurrency, worker);
+  const effectiveConcurrency = conservativeConcurrency(args);
+  if (effectiveConcurrency < args.concurrency) {
+    process.stderr.write(
+      `[swebench] conservative scheduling: requested concurrency=${args.concurrency}, effective concurrency=${effectiveConcurrency} (set AURA_BENCH_ALLOW_PARALLEL=1 to opt in to parallel instances)\n`,
+    );
+  }
+  await runWithPool(selected, effectiveConcurrency, worker);
 
   const finishedAt = new Date();
   const wallclockSeconds = (finishedAt.getTime() - startedAt.getTime()) / 1000;
@@ -1302,8 +1376,10 @@ async function main(rawArgv) {
   const statusCounts = {
     agent_complete: 0,
     agent_error: 0,
+    [STATUS_BLOCKED_CLOUDFLARE]: 0,
     clone_error: 0,
     skipped_cost_cap: 0,
+    [STATUS_SKIPPED_CLOUDFLARE]: 0,
   };
   const claudeModels = new Set();
   let totalCost = 0;

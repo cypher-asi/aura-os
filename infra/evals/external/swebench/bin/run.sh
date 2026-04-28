@@ -18,6 +18,7 @@
 #   AURA_BENCH_TEST_COMMAND         optional placeholder test command
 #   AURA_EVAL_AGENT_DEFAULT_MODEL   optional model for created benchmark agents
 #   AURA_BENCH_SKIP_API_PREFLIGHT   optional, set 1 to skip API auth/org checks
+#   AURA_BENCH_SKIP_LLM_PREFLIGHT   optional, set 1 to skip the direct LLM probe
 #   AURA_BENCH_SKIP_LIVE_PREFLIGHT  optional, set 1 to skip the live pipeline
 #                                   preflight (auth/spec/tasks/dev-loop)
 #   AURA_BENCH_PREFLIGHT_LOOP_TIMEOUT_MS optional, default 180000 (3 min)
@@ -329,6 +330,29 @@ preflight_eval_api() {
     info "API preflight ok: auth/session and org lookup succeeded"
 }
 
+preflight_llm_path() {
+    if [ "${AURA_BENCH_SKIP_LLM_PREFLIGHT:-0}" = "1" ]; then
+        info "skipping LLM preflight (AURA_BENCH_SKIP_LLM_PREFLIGHT=1)"
+        return 0
+    fi
+    if [ "${AURA_BENCH_SKIP_API_PREFLIGHT:-0}" = "1" ]; then
+        info "skipping LLM preflight (AURA_BENCH_SKIP_API_PREFLIGHT=1)"
+        return 0
+    fi
+    if [ ! -x "$repo_root/infra/evals/local-stack/bin/preflight-llm.sh" ]; then
+        info "skipping LLM preflight (local-stack preflight script not found)"
+        return 0
+    fi
+    if [ -z "${AURA_STACK_HARNESS_LLM_MAX_RETRIES:-}" ]; then
+        info "AURA_STACK_HARNESS_LLM_MAX_RETRIES is unset; set it to 1 before starting the local stack for conservative SWE-bench retry behavior"
+    fi
+
+    info "running LLM preflight (single request before long benchmark)"
+    if ! "$repo_root/infra/evals/local-stack/bin/preflight-llm.sh" "$AURA_EVAL_ACCESS_TOKEN"; then
+        err "LLM preflight failed; aborting before SWE-bench can amplify provider/proxy errors"
+    fi
+    info "LLM preflight ok"
+}
 # Live pipeline preflight: actually exercise spec generation, task extraction,
 # and the dev loop on a tiny fixture so we fail fast instead of after a long
 # benchmark task. Honors AURA_BENCH_SKIP_LIVE_PREFLIGHT=1 as an opt-out.
@@ -537,6 +561,7 @@ info "preflight ok: node=$node_version free=${free_gb}GB"
 # is what catches broken router/proxy/harness wiring before we burn an hour
 # on the actual benchmark. Runs after tool/disk checks so we don't bother
 # with backend calls if local tooling is wrong.
+preflight_llm_path
 preflight_live_pipeline
 
 # Build run id and out dir. Either reuse an existing run on --resume, or mint
