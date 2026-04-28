@@ -38,6 +38,7 @@ export const BENCHMARK_DIRECTIVES = `## Benchmark constraints
 - Do not add new dependencies; install only what is already declared in the repo.
 - Make the smallest viable change. Most fixes are 1-3 files and under ~30 lines.
 - The local test environment is NOT pre-configured. Do not run pytest unless you can confirm the dependencies are installed. Reason from the codebase instead.
+- Before any \`write_file\`, \`edit_file\`, or \`delete_file\`, briefly inspect the relevant code and call \`submit_plan\` with the target files so the harness unlocks file operations.
 - Fold inspection/verification into the implementation task when possible. Do not create a standalone verification-only task unless it genuinely needs no source edits.
 - Completion contract: if a task genuinely requires no file changes, call \`task_done\` with \`no_changes_needed: true\` and explain why in the notes. Otherwise the dev-loop completion gate rejects \`task_done\` because there are no file operations to verify.
 `;
@@ -765,7 +766,7 @@ function buildScenario(instance, workspaceDir) {
       role: "Engineer",
       personality: "Methodical, careful, benchmark-focused.",
       systemPrompt:
-        "You are AURA running a single SWE-bench Verified instance. Read requirements.md first. Make the smallest patch that fixes the described bug. Do not edit existing tests. Fold inspection and verification into the implementation work when possible. If a task genuinely requires no file changes, finish it with task_done and no_changes_needed: true plus notes explaining why.",
+        "You are AURA running a single SWE-bench Verified instance. Read requirements.md first. Make the smallest patch that fixes the described bug. Do not edit existing tests. Before any write_file, edit_file, or delete_file, briefly inspect the relevant code and call submit_plan with the target files so the harness unlocks file operations. Fold inspection and verification into the implementation work when possible. If a task genuinely requires no file changes, finish it with task_done and no_changes_needed: true plus notes explaining why.",
       machineType: process.env.AURA_BENCH_AGENT_MACHINE_TYPE ?? "local",
       adapterType: "aura_harness",
       environment: "local_host",

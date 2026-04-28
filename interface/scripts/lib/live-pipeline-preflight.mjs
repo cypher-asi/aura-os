@@ -222,11 +222,11 @@ async function ensureFixtureDir(fixtureDir) {
       ].join("\n"),
       "utf8",
     );
-    // Tiny `node -e` scripts so `npm run build` / `npm run test`
-    // succeed without an `npm install` step. Matches the persistent
-    // `interface/tests/e2e/evals/fixtures/preflight-minimal/package.json`
-    // and aligns with the project record's build/test commands so the
-    // dev-loop completion gate's test-runner escape hatch fires.
+    // Tiny `node -e` scripts so the agent can demonstrate
+    // `npm run build` / `npm run test` without an `npm install` step.
+    // The project record below intentionally uses `node --version`
+    // for its direct harness gates so this preflight stays portable on
+    // Windows hosts where npm's `.cmd` shim may not resolve.
     await fs.writeFile(
       path.join(tempRoot, "package.json"),
       JSON.stringify(
@@ -581,16 +581,39 @@ export async function runLivePipelinePreflight(options = {}) {
         org_id: orgRecord.value.org_id,
         name: `Aura Preflight ${Date.now()}`,
         description: "Live preflight project (auto-cleanup).",
-        // Use the actual package.json scripts (which are tiny `node -e
-        // "console.log(...)"` invocations, see fixture). This keeps the
-        // project record consistent with the spec markdown (which tells
-        // the agent that `npm run build` / `npm run test` must keep
-        // passing) and lets the dev-loop completion gate's
-        // test-runner escape hatch fire naturally on verification-only
-        // tasks. `node` and `npm` are both in the harness's
-        // autonomous-dev-loop binary allowlist.
-        build_command: "npm run build",
-        test_command: "npm run test",
+        // Use `node --version` (a single bare flag, no embedded
+        // strings) for both gates so the preflight survives Windows'
+        // argv parsing.
+        //
+        // Why not `node -e "..."` like the fixture's package.json
+        // scripts? The harness build/test runner takes the configured
+        // command and `split_whitespace`s it before
+        // `Command::new(parts[0]).args(&parts[1..])` — there's no
+        // shell to honour quote groups. A script with spaces inside
+        // the quoted body (e.g. `node -e "console.log('preflight build
+        // ok')"`) gets sliced into ["node","-e","\"console.log('preflight",
+        // "build","ok')\""] and node receives an unterminated string
+        // literal. Single-token args dodge the issue entirely.
+        //
+        // Why not `npm run build` / `npm run test`? Rust's
+        // `Command::new("npm")` on Windows ignores `PATHEXT` so the
+        // `.cmd` shim that ships with Node never resolves, and the
+        // gate reports `program not found`. The proper fix lives in
+        // the harness (see `aura-harness/crates/aura-agent/src/verify/
+        // runner.rs` — `windows_resolve_program` resolves `PATHEXT`
+        // before spawning); pinning the preflight commands to `node`
+        // directly here keeps the fast sanity check green even on a
+        // host where the harness binary hasn't been rebuilt yet,
+        // because Rust's bare-name PATH search *does* find `node.exe`.
+        //
+        // The fixture's package.json keeps its `node -e
+        // "console.log(...)"` scripts intact so the agent can still
+        // demonstrate `npm run build` / `npm run test` via
+        // `run_command` once the harness PATHEXT fix is live; only
+        // the project record commands (which the harness invokes
+        // directly) are pinned to portable single-token form.
+        build_command: "node --version",
+        test_command: "node --version",
         local_workspace_path: fixtureDir,
       });
       if (!created?.project_id) {
@@ -735,10 +758,10 @@ export async function runLivePipelinePreflight(options = {}) {
           `/api/projects/${project.value.project_id}/tasks`,
         );
         lastSeen = Array.isArray(latest) ? latest : [];
-        const anyTerminal = lastSeen.some((task) =>
+        const allTerminal = lastSeen.length > 0 && lastSeen.every((task) =>
           ["done", "failed", "blocked"].includes(String(task?.status ?? "").toLowerCase()),
         );
-        if (anyTerminal) {
+        if (allTerminal) {
           return {
             value: lastSeen,
             detailsForLog: {
@@ -751,7 +774,7 @@ export async function runLivePipelinePreflight(options = {}) {
       }
       throw new StepFailure(
         "loop_progress",
-        `no task reached a terminal state within ${loopTimeoutMs}ms`,
+        `not all tasks reached a terminal state within ${loopTimeoutMs}ms`,
         {
           hint: "check the harness adapter logs (AURA_STACK_LOG_DIR/harness.log)",
           lastStatuses: (lastSeen ?? []).map((t) => t?.status),

@@ -32,6 +32,7 @@ test("BENCHMARK_DIRECTIVES is a single shared constant", () => {
   assert.equal(typeof BENCHMARK_DIRECTIVES, "string");
   assert.match(BENCHMARK_DIRECTIVES, /Benchmark constraints/);
   assert.match(BENCHMARK_DIRECTIVES, /Do not modify or delete any existing test files/);
+  assert.match(BENCHMARK_DIRECTIVES, /call `submit_plan` with the target files/);
   assert.match(BENCHMARK_DIRECTIVES, /Fold inspection\/verification into the implementation task/);
   assert.match(BENCHMARK_DIRECTIVES, /no_changes_needed: true/);
 });

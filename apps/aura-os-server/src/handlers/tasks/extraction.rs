@@ -69,13 +69,15 @@ fn task_extraction_prompt(project_id: impl std::fmt::Display) -> String {
          the project's tasks until the task list is populated. This workflow is only for planning, \
          not execution: do not run commands, do not execute tasks, do not transition task states, \
          and do not mark tasks done/failed/blocked. Prefer actionable implementation tasks with \
-         concrete source files or acceptance evidence. Fold inspection or verification into the \
-         implementation task when possible. Do not create a standalone verification-only task unless \
-         it genuinely requires no source edits; if you do, its description must explicitly tell the \
-         executor to call `task_done` with `no_changes_needed: true` and notes explaining why no file \
-         changes are needed. Never call the `extract_tasks` tool from inside this workflow because \
-         that would recursively restart task extraction. Use the spec and task CRUD/listing tools \
-         directly instead."
+         concrete source files or acceptance evidence. Task descriptions for implementation work \
+         must tell the executor to briefly inspect, call `submit_plan` with the target files, and \
+         only then use `write_file`, `edit_file`, or `delete_file`. Fold inspection or verification \
+         into the implementation task when possible. Do not create a standalone verification-only \
+         task unless it genuinely requires no source edits; if you do, its description must explicitly \
+         tell the executor to call `task_done` with `no_changes_needed: true` and notes explaining why \
+         no file changes are needed. Never call the `extract_tasks` tool from inside this workflow \
+         because that would recursively restart task extraction. Use the spec and task CRUD/listing \
+         tools directly instead."
     )
 }
 
@@ -256,6 +258,8 @@ mod tests {
 
         assert!(prompt.contains("project project-123"));
         assert!(prompt.contains("Fold inspection or verification into the implementation task"));
+        assert!(prompt.contains("call `submit_plan` with the target files"));
+        assert!(prompt.contains("`write_file`, `edit_file`, or `delete_file`"));
         assert!(prompt.contains("standalone verification-only task"));
         assert!(prompt.contains("task_done"));
         assert!(prompt.contains("no_changes_needed: true"));
