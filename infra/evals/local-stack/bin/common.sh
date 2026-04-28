@@ -70,12 +70,10 @@ stack_load_env() {
   export AURA_STACK_ORBIT_LOG_LEVEL="${AURA_STACK_ORBIT_LOG_LEVEL:-info}"
   export AURA_STACK_HARNESS_LOG_LEVEL="${AURA_STACK_HARNESS_LOG_LEVEL:-info}"
 
-  # Empty default mirrors `harness_autospawn.rs`: the desktop's autospawn
-  # flow does not override the harness's own .env for LLM routing, and we
-  # match that here. SWE-bench evals must stay on the Aura router/proxy path.
-  export AURA_STACK_HARNESS_LLM_ROUTING="${AURA_STACK_HARNESS_LLM_ROUTING:-}"
+  # `aura-harness` only supports the Aura router/proxy LLM path now;
+  # there is no routing knob to forward.
   export AURA_STACK_AURA_ROUTER_JWT="${AURA_STACK_AURA_ROUTER_JWT:-}"
-  export AURA_STACK_ANTHROPIC_MODEL="${AURA_STACK_ANTHROPIC_MODEL:-aura-claude-opus-4-7}"
+  export AURA_STACK_DEFAULT_MODEL="${AURA_STACK_DEFAULT_MODEL:-${AURA_STACK_ANTHROPIC_MODEL:-aura-claude-opus-4-7}}"
   # Optional override for `AURA_LLM_MAX_RETRIES` (default 8 in
   # aura-reasoner). Lower this when CF on aura-router is persistently
   # blocking — aggressive retries reinforce the WAF block.
@@ -148,13 +146,6 @@ stack_validate_modes() {
     host|docker) ;;
     *)
       echo "Invalid AURA_STACK_HARNESS_RUNTIME: ${AURA_STACK_HARNESS_RUNTIME}. Expected host or docker." >&2
-      exit 1
-      ;;
-  esac
-  case "$AURA_STACK_HARNESS_LLM_ROUTING" in
-    ""|proxy) ;;
-    *)
-      echo "Invalid AURA_STACK_HARNESS_LLM_ROUTING: ${AURA_STACK_HARNESS_LLM_ROUTING}. SWE-bench evals must use proxy routing." >&2
       exit 1
       ;;
   esac

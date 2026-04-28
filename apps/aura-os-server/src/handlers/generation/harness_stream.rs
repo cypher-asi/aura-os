@@ -1,7 +1,7 @@
 use std::convert::Infallible;
 
 use aura_os_core::HarnessMode;
-use aura_os_harness::{HarnessInbound, HarnessOutbound, SessionConfig, SessionProviderConfig};
+use aura_os_harness::{HarnessInbound, HarnessOutbound, SessionConfig, SessionModelOverrides};
 use aura_protocol::GenerationRequest;
 use axum::response::sse::{Event, KeepAlive, Sse};
 use futures_util::stream;
@@ -25,12 +25,7 @@ pub(super) async fn open_generation_stream(
         agent_name: Some("Generation".to_string()),
         token: Some(jwt),
         project_id: request.project_id.clone(),
-        provider_config: Some(SessionProviderConfig {
-            provider: "aura_proxy".to_string(),
-            routing_mode: Some("proxy".to_string()),
-            upstream_provider_family: None,
-            api_key: None,
-            base_url: None,
+        provider_overrides: Some(SessionModelOverrides {
             default_model: request.model.clone(),
             fallback_model: None,
             prompt_caching_enabled: Some(true),

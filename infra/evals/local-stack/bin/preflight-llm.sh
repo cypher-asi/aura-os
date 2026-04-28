@@ -71,43 +71,31 @@ if [[ "${AURA_STACK_HARNESS_MODE:-}" != "local" ]]; then
   exit 0
 fi
 
-# Effective LLM routing the harness will use. SWE-bench evals must stay
-# on the Aura router/proxy path, so anything else is rejected before the
-# harness can start a long retry storm.
-effective_routing="${AURA_STACK_HARNESS_LLM_ROUTING:-proxy}"
-
-case "$effective_routing" in
-  proxy)
-    router_url="${AURA_STACK_ROUTER_URL:-https://aura-router.onrender.com}"
-    token="${1:-${AURA_EVAL_ACCESS_TOKEN:-${AURA_STACK_AURA_ROUTER_JWT:-}}}"
-    if [[ -z "$token" ]]; then
-      echo "[preflight-llm] FAIL: proxy mode but no JWT available." >&2
-      echo "  Run bootstrap-auth.sh first, set AURA_EVAL_ACCESS_TOKEN, or set AURA_STACK_AURA_ROUTER_JWT." >&2
-      bail
-    fi
-    auth_header="Authorization: Bearer $token"
-    target_url="$router_url/v1/messages"
-    target_label="aura-router proxy at $router_url"
-    ;;
-  *)
-    echo "[preflight-llm] FAIL: unsupported AURA_STACK_HARNESS_LLM_ROUTING='$effective_routing'." >&2
-    echo "  SWE-bench evals must use the Aura router/proxy path: set AURA_STACK_HARNESS_LLM_ROUTING=proxy or leave it unset." >&2
-    bail
-    ;;
-esac
+# aura-harness only supports the Aura router/proxy LLM path. The probe
+# always targets aura-router with a Bearer JWT.
+router_url="${AURA_STACK_ROUTER_URL:-https://aura-router.onrender.com}"
+token="${1:-${AURA_EVAL_ACCESS_TOKEN:-${AURA_STACK_AURA_ROUTER_JWT:-}}}"
+if [[ -z "$token" ]]; then
+  echo "[preflight-llm] FAIL: no router JWT available." >&2
+  echo "  Run bootstrap-auth.sh first, set AURA_EVAL_ACCESS_TOKEN, or set AURA_STACK_AURA_ROUTER_JWT." >&2
+  bail
+fi
+auth_header="Authorization: Bearer $token"
+target_url="$router_url/v1/messages"
+target_label="aura-router proxy at $router_url"
 
 if ! command -v curl >/dev/null 2>&1; then
   echo "[preflight-llm] WARN: curl not on PATH; cannot probe $target_label." >&2
   bail
 fi
 
-model="${AURA_STACK_ANTHROPIC_MODEL:-aura-claude-opus-4-7}"
+model="${AURA_STACK_DEFAULT_MODEL:-${AURA_STACK_ANTHROPIC_MODEL:-aura-claude-opus-4-7}}"
 probe_body=$(printf '{"model":"%s","max_tokens":1,"messages":[{"role":"user","content":"."}]}' "$model")
 
 tmp_body=$(mktemp)
 trap 'rm -f "$tmp_body"' EXIT
 
-echo "[preflight-llm] probing $target_label (model=$model, routing=$effective_routing)"
+echo "[preflight-llm] probing $target_label (model=$model)"
 
 set +e
 http_status=$(

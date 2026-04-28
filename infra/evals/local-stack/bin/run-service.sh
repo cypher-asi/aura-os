@@ -146,9 +146,6 @@ if [[ "$service" == "harness" ]]; then
   if [[ -n "${AURA_STACK_HARNESS_LLM_MAX_RETRIES:-}" ]]; then
     export AURA_LLM_MAX_RETRIES="$AURA_STACK_HARNESS_LLM_MAX_RETRIES"
   fi
-  if [[ -n "${AURA_STACK_HARNESS_LLM_ROUTING:-}" ]]; then
-    export AURA_LLM_ROUTING="$AURA_STACK_HARNESS_LLM_ROUTING"
-  fi
 
   # Stack URL overrides. AURA_OS_SERVER_URL is always re-stamped
   # because the harness .env's baked `http://127.0.0.1:3100` default

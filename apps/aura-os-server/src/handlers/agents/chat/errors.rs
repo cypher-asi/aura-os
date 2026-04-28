@@ -149,14 +149,6 @@ pub(crate) fn map_harness_error_to_api(
 pub(super) fn map_harness_session_startup_error(message: &str) -> (StatusCode, Json<ApiError>) {
     let normalized = message.to_ascii_lowercase();
 
-    if normalized.contains("invalid_provider_config")
-        || normalized.contains("unsupported session provider")
-    {
-        return ApiError::bad_gateway(format!(
-            "agent runtime provider is not supported by this harness: {message}"
-        ));
-    }
-
     if normalized.contains("swarm gateway is not configured") {
         return ApiError::service_unavailable(
             "remote agent runtime is not configured (SWARM_BASE_URL)",
@@ -315,15 +307,5 @@ mod tests {
         let (status, Json(body)) = map_session_bridge_error(err, 128);
         assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
         assert_ne!(body.code, "harness_capacity_exhausted");
-    }
-
-    #[test]
-    fn map_startup_error_explains_unsupported_provider_config() {
-        let (status, Json(body)) = map_harness_session_startup_error(
-            "Harness error during init (invalid_provider_config): unsupported session provider `aura_proxy`",
-        );
-
-        assert_eq!(status, StatusCode::BAD_GATEWAY);
-        assert!(body.error.contains("provider is not supported"));
     }
 }

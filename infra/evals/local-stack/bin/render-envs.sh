@@ -139,10 +139,9 @@ write_export "$aura_os_env" "AURA_DEBUG_CLOUDFLARE_DUMP_DIR" "$AURA_STACK_RUNTIM
 # value set here passes straight through `harness_autospawn.rs`'s
 # .env-overlay step (the overlay only re-applies keys present in
 # `aura-harness/.env`, which means parent-env values for unmentioned
-# keys win). `AURA_STACK_HARNESS_LLM_ROUTING` is validated in
-# `common.sh` and may only be unset or `proxy` for this stack.
+# keys win). LLM routing is fixed to the Aura proxy path in
+# aura-harness; there is no routing knob to forward.
 write_optional_export "$aura_os_env" "AURA_LLM_MAX_RETRIES" "$AURA_STACK_HARNESS_LLM_MAX_RETRIES"
-write_optional_export "$aura_os_env" "AURA_LLM_ROUTING" "$AURA_STACK_HARNESS_LLM_ROUTING"
 write_optional_export "$aura_os_env" "AURA_ROUTER_JWT" "$AURA_STACK_AURA_ROUTER_JWT"
 
 # Test-gate operator overrides documented in
@@ -160,7 +159,7 @@ write_export "$evals_env" "AURA_EVAL_LIVE" "1"
 write_export "$evals_env" "AURA_EVAL_BASE_URL" "$AURA_STACK_EVAL_BASE_URL"
 write_export "$evals_env" "AURA_EVAL_API_BASE_URL" "$(stack_local_url aura_os)"
 write_export "$evals_env" "AURA_EVAL_BUNDLE_ID" "$AURA_STACK_EVAL_BUNDLE_ID"
-write_export "$evals_env" "AURA_EVAL_AGENT_DEFAULT_MODEL" "$AURA_STACK_ANTHROPIC_MODEL"
+write_export "$evals_env" "AURA_EVAL_AGENT_DEFAULT_MODEL" "$AURA_STACK_DEFAULT_MODEL"
 write_optional_export "$evals_env" "AURA_EVAL_STORAGE_URL" "$storage_url"
 if stack_is_local harness; then
   write_export "$evals_env" "AURA_EVAL_AGENT_MACHINE_TYPE" "local"

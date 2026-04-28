@@ -6,7 +6,6 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fmt;
 
 #[cfg(feature = "typescript")]
 use ts_rs::TS;
@@ -113,9 +112,11 @@ pub struct SessionInit {
     pub template_agent_id: Option<String>,
     /// Originating end-user id for resolving and persisting tool defaults.
     pub user_id: String,
-    /// Optional per-session provider override for BYOK/runtime isolation.
+    /// Optional per-session model overrides applied on top of the
+    /// harness's env-default router config. `None` means "use the
+    /// harness's defaults verbatim".
     #[serde(default)]
-    pub provider_config: Option<SessionProviderConfig>,
+    pub provider_overrides: Option<SessionModelOverrides>,
     /// Optional keyword-driven intent classifier spec. When present the harness
     /// narrows the per-turn tool surface based on each user message using the
     /// same tier-1 / tier-2 domain rules aura-os used to run in-process for
@@ -165,49 +166,27 @@ pub struct IntentClassifierRule {
     pub keywords: Vec<String>,
 }
 
-/// Optional per-session routing override used by Aura proxy runtime resolution.
-#[derive(Clone, Serialize, Deserialize)]
+/// Per-session model overrides applied on top of the harness's
+/// env-default router config.
+///
+/// All LLM traffic flows through aura-router (the AURA proxy) using a
+/// per-request JWT; there is no direct-provider path, so this struct
+/// only carries knobs that still mean something for proxy routing:
+/// model name, fallback model, prompt-caching toggle. `None` on a field
+/// means "leave the harness default unchanged".
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "typescript", derive(TS), ts(export))]
-pub struct SessionProviderConfig {
-    /// Provider identifier for the Aura-managed proxy.
-    pub provider: String,
-    /// Optional routing mode (`proxy`).
-    #[serde(default)]
-    pub routing_mode: Option<String>,
-    /// Deprecated upstream provider family hint. Aura OS leaves provider
-    /// selection to the harness/proxy layer.
-    #[serde(default)]
-    pub upstream_provider_family: Option<String>,
-    /// Deprecated direct-provider API key. Aura OS does not send provider keys.
-    #[serde(default)]
-    pub api_key: Option<String>,
-    /// Deprecated explicit base URL override.
-    #[serde(default)]
-    pub base_url: Option<String>,
-    /// Optional provider default model for this session.
+pub struct SessionModelOverrides {
+    /// Optional default model for this session.
     #[serde(default)]
     pub default_model: Option<String>,
-    /// Optional fallback model.
+    /// Optional fallback model used on 429/529 retries.
     #[serde(default)]
     pub fallback_model: Option<String>,
-    /// Optional prompt-caching toggle override.
+    /// Optional override for whether Anthropic prompt-caching directives
+    /// should be attached.
     #[serde(default)]
     pub prompt_caching_enabled: Option<bool>,
-}
-
-impl fmt::Debug for SessionProviderConfig {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SessionProviderConfig")
-            .field("provider", &self.provider)
-            .field("routing_mode", &self.routing_mode)
-            .field("upstream_provider_family", &self.upstream_provider_family)
-            .field("api_key", &self.api_key.as_ref().map(|_| "<redacted>"))
-            .field("base_url", &self.base_url)
-            .field("default_model", &self.default_model)
-            .field("fallback_model", &self.fallback_model)
-            .field("prompt_caching_enabled", &self.prompt_caching_enabled)
-            .finish()
-    }
 }
 
 /// Payload for `user_message`.

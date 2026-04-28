@@ -41,7 +41,7 @@ pub mod server;
 
 pub use client::{
     ApprovalResponse, ConversationMessage, GenerationRequest, InboundMessage, IntentClassifierRule,
-    IntentClassifierSpec, MessageAttachment, SessionInit, SessionProviderConfig,
+    IntentClassifierSpec, MessageAttachment, SessionInit, SessionModelOverrides,
     ToolApprovalResponse, UserMessage,
 };
 pub use common::{ToolApprovalDecision, ToolApprovalRemember, ToolStateWire};

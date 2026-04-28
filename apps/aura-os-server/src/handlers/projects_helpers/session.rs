@@ -6,7 +6,7 @@ use aura_os_core::{AgentInstance, AgentInstanceId, HarnessMode, ProjectId};
 use aura_os_harness::SessionConfig;
 
 use crate::error::ApiResult;
-use crate::handlers::agents::build_harness_provider_config;
+use crate::handlers::agents::session_model_overrides;
 use crate::handlers::agents::chat::build_project_system_prompt;
 use crate::handlers::agents::conversions_pub::resolve_workspace_path;
 use crate::handlers::agents::tool_dedupe::dedupe_and_log_installed_tools;
@@ -286,12 +286,7 @@ pub(crate) async fn project_tool_session_config(
         agent_template_prompt,
         project_path.as_deref(),
     ));
-    let auth_source = agent_instance
-        .as_ref()
-        .map(|instance| instance.auth_source.as_str())
-        .unwrap_or("aura");
-    let provider_config =
-        build_harness_provider_config(harness_mode, auth_source, None, model.as_deref())?;
+    let provider_overrides = session_model_overrides(model.as_deref());
     Ok(SessionConfig {
         system_prompt,
         agent_id: agent_id_field,
@@ -308,7 +303,7 @@ pub(crate) async fn project_tool_session_config(
         user_id: user_id.map(ToString::to_string),
         project_id: Some(project_id.to_string()),
         project_path,
-        provider_config,
+        provider_overrides,
         installed_tools,
         installed_integrations,
         aura_org_id: agent_instance

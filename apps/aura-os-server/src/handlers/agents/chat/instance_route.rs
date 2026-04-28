@@ -28,7 +28,7 @@ use super::streaming::{open_harness_chat_stream, OpenChatStreamArgs};
 use super::tools::{build_session_installed_tools, InstalledToolsCtx};
 use super::types::SseResponse;
 
-use super::super::runtime::build_harness_provider_config;
+use super::super::runtime::session_model_overrides;
 
 pub(crate) async fn send_event_stream(
     State(state): State<AppState>,
@@ -129,12 +129,7 @@ pub(crate) async fn send_event_stream(
         project_path,
         aura_org_id: instance.org_id.as_ref().map(|o| o.to_string()),
         aura_session_id: persist_ctx.as_ref().map(|c| c.session_id.clone()),
-        provider_config: build_harness_provider_config(
-            instance.harness_mode(),
-            &instance.auth_source,
-            None,
-            model.as_deref(),
-        )?,
+        provider_overrides: session_model_overrides(model.as_deref()),
         installed_tools,
         installed_integrations,
         agent_permissions: (&normalized_instance_perms).into(),

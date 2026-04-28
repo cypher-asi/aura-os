@@ -4,7 +4,7 @@ use tokio::sync::{broadcast, mpsc};
 use aura_protocol::{
     AgentPermissionsWire, AgentToolPermissionsWire, ConversationMessage, InboundMessage,
     InstalledIntegration, IntentClassifierSpec, OutboundMessage, SessionInit,
-    SessionProviderConfig,
+    SessionModelOverrides,
 };
 
 #[derive(Default)]
@@ -37,8 +37,9 @@ pub struct SessionConfig {
     pub aura_session_id: Option<String>,
     /// Org UUID for X-Aura-Org-Id billing header.
     pub aura_org_id: Option<String>,
-    /// Optional per-session provider override for Aura BYOK.
-    pub provider_config: Option<SessionProviderConfig>,
+    /// Optional per-session model overrides applied on top of the
+    /// harness env-default router config.
+    pub provider_overrides: Option<SessionModelOverrides>,
     /// Capability + scope bundle the harness must enforce for this
     /// session. Defaults to [`AgentPermissionsWire::default`] (empty
     /// capabilities, universe scope) when the caller does not populate
@@ -115,7 +116,7 @@ pub fn build_session_init(cfg: &SessionConfig) -> SessionInit {
         agent_id: cfg.agent_id.clone(),
         template_agent_id: cfg.template_agent_id.clone(),
         user_id: cfg.user_id.clone().unwrap_or_default(),
-        provider_config: cfg.provider_config.clone(),
+        provider_overrides: cfg.provider_overrides.clone(),
         intent_classifier: cfg.intent_classifier.clone(),
         agent_permissions: cfg.agent_permissions.clone(),
         tool_permissions: cfg.tool_permissions.clone(),

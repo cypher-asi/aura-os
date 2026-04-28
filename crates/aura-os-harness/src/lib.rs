@@ -49,7 +49,7 @@ pub use aura_protocol::{
     FileOp, FilesChanged, InboundMessage as HarnessInbound, InstalledIntegration, InstalledTool,
     InstalledToolIntegrationRequirement, InstalledToolRuntimeAuth, InstalledToolRuntimeExecution,
     InstalledToolRuntimeIntegration, InstalledToolRuntimeProviderExecution, MessageAttachment,
-    OutboundMessage as HarnessOutbound, SessionInit, SessionProviderConfig, SessionReady,
+    OutboundMessage as HarnessOutbound, SessionInit, SessionModelOverrides, SessionReady,
     SessionUsage, SkillInfo, TextDelta, ThinkingDelta, ToolAuth, ToolCallSnapshot, ToolInfo,
     ToolResultMsg, ToolUseStart, UserMessage,
 };

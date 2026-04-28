@@ -73,7 +73,6 @@ mkdir -p "$cache_off_data_dir" "$(dirname "$cache_off_log")"
   export AURA_NETWORK_URL="$(stack_resolved_url network)"
   export AURA_STORAGE_URL="$(stack_resolved_url storage)"
   export ORBIT_URL="$(stack_resolved_url orbit)"
-  export AURA_LLM_ROUTING="$AURA_STACK_HARNESS_LLM_ROUTING"
   export RUST_LOG="$AURA_STACK_HARNESS_LOG_LEVEL"
   export AURA_DISABLE_PROMPT_CACHING=1
   exec cargo run -- run --ui none

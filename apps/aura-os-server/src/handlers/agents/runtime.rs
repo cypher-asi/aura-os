@@ -4,9 +4,9 @@ use axum::extract::{Path, State};
 use axum::Json;
 use tokio::time::timeout;
 
-use aura_os_core::{Agent, AgentId, HarnessMode};
+use aura_os_core::{Agent, AgentId};
 use aura_os_harness::{
-    HarnessInbound, HarnessOutbound, SessionConfig, SessionProviderConfig, SessionUsage,
+    HarnessInbound, HarnessOutbound, SessionConfig, SessionModelOverrides, SessionUsage,
     UserMessage,
 };
 
@@ -79,30 +79,22 @@ fn non_empty_string(value: &str) -> Option<String> {
     }
 }
 
-pub(crate) fn build_harness_provider_config(
-    harness_mode: HarnessMode,
-    _auth_source: &str,
-    _integration: Option<()>,
-    model: Option<&str>,
-) -> ApiResult<Option<SessionProviderConfig>> {
-    if harness_mode == HarnessMode::Local {
-        return Ok(None);
-    }
-
+/// Build the per-session model overrides Aura OS sends to the harness.
+///
+/// LLM traffic always flows through aura-router with a per-request JWT;
+/// there is no provider/routing toggle on the wire. Returns `None` when
+/// no model is set, which tells the harness to use its env defaults
+/// verbatim.
+pub(crate) fn session_model_overrides(model: Option<&str>) -> Option<SessionModelOverrides> {
     let default_model = model
         .map(str::trim)
         .filter(|value| !value.is_empty())
-        .map(str::to_string);
-    Ok(Some(SessionProviderConfig {
-        provider: "aura_proxy".to_string(),
-        routing_mode: Some("proxy".to_string()),
-        upstream_provider_family: None,
-        api_key: None,
-        base_url: None,
-        default_model,
+        .map(str::to_string)?;
+    Some(SessionModelOverrides {
+        default_model: Some(default_model),
         fallback_model: None,
         prompt_caching_enabled: Some(true),
-    }))
+    })
 }
 
 async fn run_harness_test(
@@ -131,12 +123,7 @@ async fn run_harness_test(
         agent_name: Some(agent.name.clone()),
         model: model.clone(),
         token: Some(jwt.to_string()),
-        provider_config: build_harness_provider_config(
-            agent.harness_mode(),
-            &agent.auth_source,
-            None,
-            model.as_deref(),
-        )?,
+        provider_overrides: session_model_overrides(model.as_deref()),
         installed_tools,
         installed_integrations,
         ..Default::default()
@@ -203,31 +190,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn local_harness_omits_provider_config() {
-        let config = build_harness_provider_config(
-            HarnessMode::Local,
-            "aura",
-            None,
-            Some("claude-sonnet-4"),
-        )
-        .expect("provider config should build");
-
-        assert!(config.is_none());
+    fn session_model_overrides_populates_default_model() {
+        let overrides = session_model_overrides(Some("claude-sonnet-4"))
+            .expect("model present should produce overrides");
+        assert_eq!(overrides.default_model.as_deref(), Some("claude-sonnet-4"));
+        assert_eq!(overrides.prompt_caching_enabled, Some(true));
     }
 
     #[test]
-    fn swarm_harness_uses_aura_proxy_provider_config() {
-        let config = build_harness_provider_config(
-            HarnessMode::Swarm,
-            "aura",
-            None,
-            Some("claude-sonnet-4"),
-        )
-        .expect("provider config should build")
-        .expect("swarm should receive provider config");
-
-        assert_eq!(config.provider, "aura_proxy");
-        assert_eq!(config.routing_mode.as_deref(), Some("proxy"));
-        assert_eq!(config.default_model.as_deref(), Some("claude-sonnet-4"));
+    fn session_model_overrides_returns_none_for_blank_model() {
+        assert!(session_model_overrides(None).is_none());
+        assert!(session_model_overrides(Some("")).is_none());
+        assert!(session_model_overrides(Some("   ")).is_none());
     }
 }
