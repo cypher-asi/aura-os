@@ -81,7 +81,7 @@ pub(crate) async fn login(
     let user_id = result.session.user_id.clone();
     let is_zero_pro = result.session.is_zero_pro;
     tokio::spawn(async move {
-        grant_signup_credits(&user_id, is_zero_pro).await;
+        grant_signup_credits(&user_id, is_zero_pro, None).await;
     });
 
     Ok(Json(AuthSessionResponse::from_auth_result(result)))
@@ -109,24 +109,19 @@ pub(crate) async fn register(
         },
     );
 
-    // Fire-and-forget: grant signup credits on first AURA login (same as login handler).
+    // Fire-and-forget: grant signup credits on first AURA login.
+    // If user entered a real invite code, store the inviter so referral
+    // credits fire when this user subscribes to a paid plan (not on signup).
     let user_id = result.session.user_id.clone();
     let is_zero_pro = result.session.is_zero_pro;
+    let referred_by = if !is_default_invite_code(&req.invite_code) {
+        result.inviter_user_id.clone()
+    } else {
+        None
+    };
     tokio::spawn(async move {
-        grant_signup_credits(&user_id, is_zero_pro).await;
+        grant_signup_credits(&user_id, is_zero_pro, referred_by.as_deref()).await;
     });
-
-    // Fire-and-forget: grant referral credits if user entered a real invite code.
-    // The inviter comes from the zos-api finalize response.
-    // Default invite code does NOT trigger referral credits.
-    if !is_default_invite_code(&req.invite_code) {
-        if let Some(inviter_id) = result.inviter_user_id.clone() {
-            let invitee_id = result.session.user_id.clone();
-            tokio::spawn(async move {
-                grant_referral_credits(&invitee_id, &inviter_id).await;
-            });
-        }
-    }
 
     Ok(Json(AuthSessionResponse::from_auth_result(result)))
 }
@@ -146,7 +141,9 @@ fn is_default_invite_code(code: &str) -> bool {
 
 /// Grant one-time signup credits on first AURA login. Idempotent — z-billing
 /// checks `signup_grant_at` and only grants once per user.
-async fn grant_signup_credits(user_id: &str, is_zero_pro: bool) {
+/// If `referred_by` is set, stores the inviter ID on the account for
+/// deferred referral credits (triggered when user subscribes).
+async fn grant_signup_credits(user_id: &str, is_zero_pro: bool, referred_by: Option<&str>) {
     let (billing_url, api_key) = match billing_service_config() {
         Some(config) => config,
         None => return,
@@ -157,7 +154,7 @@ async fn grant_signup_credits(user_id: &str, is_zero_pro: bool) {
         .post(format!("{billing_url}/v1/credits/signup-grant"))
         .header("x-api-key", &api_key)
         .header("x-service-name", "aura-os-server")
-        .json(&serde_json::json!({ "user_id": user_id, "is_zero_pro": is_zero_pro }))
+        .json(&serde_json::json!({ "user_id": user_id, "is_zero_pro": is_zero_pro, "referred_by": referred_by }))
         .send()
         .await
     {
@@ -173,36 +170,7 @@ async fn grant_signup_credits(user_id: &str, is_zero_pro: bool) {
     }
 }
 
-/// Grant referral credits to both inviter and invitee.
-async fn grant_referral_credits(invitee_id: &str, inviter_id: &str) {
-    let (billing_url, api_key) = match billing_service_config() {
-        Some(config) => config,
-        None => return,
-    };
 
-    let client = reqwest::Client::new();
-    match client
-        .post(format!("{billing_url}/v1/credits/referral-grant"))
-        .header("x-api-key", &api_key)
-        .header("x-service-name", "aura-os-server")
-        .json(&serde_json::json!({
-            "inviter_user_id": inviter_id,
-            "invitee_user_id": invitee_id,
-        }))
-        .send()
-        .await
-    {
-        Ok(resp) if resp.status().is_success() => {
-            tracing::info!(invitee_id = %invitee_id, inviter_id = %inviter_id, "Referral credit grant issued");
-        }
-        Ok(resp) => {
-            tracing::warn!(invitee_id = %invitee_id, inviter_id = %inviter_id, status = %resp.status(), "Referral grant response");
-        }
-        Err(e) => {
-            tracing::warn!(invitee_id = %invitee_id, inviter_id = %inviter_id, error = %e, "Failed to reach z-billing for referral grant");
-        }
-    }
-}
 
 /// Get z-billing service URL and API key. Returns None if not configured.
 fn billing_service_config() -> Option<(String, String)> {

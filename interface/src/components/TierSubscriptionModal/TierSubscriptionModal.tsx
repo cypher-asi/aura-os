@@ -38,7 +38,7 @@ const TIERS: TierInfo[] = [
     price: "$20/mo",
     monthlyTopUp: "5,000",
     dailyReward: "100",
-    referralReward: "7,500",
+    referralReward: "5,000",
     features: [
       "Everything in Mortal, plus:",
       "Monthly credit allowance",
@@ -51,7 +51,7 @@ const TIERS: TierInfo[] = [
     price: "$60/mo",
     monthlyTopUp: "12,000",
     dailyReward: "200",
-    referralReward: "10,000",
+    referralReward: "5,000",
     features: [
       "Everything in Pro, plus:",
       "3x credits for frontier models",
@@ -63,7 +63,7 @@ const TIERS: TierInfo[] = [
     price: "$200/mo",
     monthlyTopUp: "40,000",
     dailyReward: "400",
-    referralReward: "15,000",
+    referralReward: "5,000",
     features: [
       "Everything in Crusader, plus:",
       "20x usage on frontier models",

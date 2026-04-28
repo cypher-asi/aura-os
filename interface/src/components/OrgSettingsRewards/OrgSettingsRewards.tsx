@@ -49,8 +49,8 @@ export function OrgSettingsRewards() {
       <div className={styles.settingsGroup}>
         <div className={rewardStyles.inviteCodeSection}>
           <p className={rewardStyles.description}>
-            Share your invite code with others. When someone signs up using your
-            code, you both earn bonus credits.
+            Share your invite code with others. When someone you invite
+            subscribes to a paid plan, you both earn bonus credits.
           </p>
           <div className={rewardStyles.codeRow}>
             {loading ? (
@@ -107,7 +107,7 @@ export function OrgSettingsRewards() {
           <div className={styles.rowInfo}>
             <span className={styles.rowLabel}>Referral Bonus</span>
             <span className={styles.rowDescription}>
-              Earned when someone signs up with your invite code. Higher tiers earn more.
+              Earned when someone you invited subscribes to a paid plan.
             </span>
           </div>
           <div className={styles.rowControl}>
