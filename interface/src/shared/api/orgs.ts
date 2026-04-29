@@ -70,7 +70,7 @@ export const orgsApi = {
   createPortalSession: () =>
     apiFetch<{ url: string }>("/api/subscriptions/portal", { method: "POST" }),
   getSubscriptionStatus: () =>
-    apiFetch<{ plan: string; is_subscribed: boolean; monthly_credits: number }>("/api/subscriptions/me"),
+    apiFetch<{ plan: string; is_subscribed: boolean; monthly_credits: number; current_period_end?: string }>("/api/subscriptions/me"),
   listIntegrations: (orgId: string) =>
     apiFetch<OrgIntegration[]>(`/api/orgs/${orgId}/integrations`),
   createIntegration: (

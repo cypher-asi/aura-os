@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input, Button } from "@cypher-asi/zui";
 import type { OrgBilling, CreditBalance } from "../../shared/types";
 import type { CheckoutPollingStatus } from "../../hooks/use-checkout-polling";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { NATIVE_BILLING_MESSAGE } from "../../lib/billing";
+import { orgsApi } from "../../shared/api/orgs";
 import styles from "../OrgSettingsPanel/OrgSettingsPanel.module.css";
 import billingStyles from "./OrgSettingsBilling.module.css";
 
@@ -40,6 +41,13 @@ export function OrgSettingsBilling({
 }: Props) {
   const { isNativeApp } = useAuraCapabilities();
   const [customAmount, setCustomAmount] = useState("");
+  const [periodEnd, setPeriodEnd] = useState<string | null>(null);
+
+  useEffect(() => {
+    orgsApi.getSubscriptionStatus()
+      .then((s) => { if (s.current_period_end) setPeriodEnd(s.current_period_end); })
+      .catch(() => {});
+  }, []);
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
 
   const customNum = parseFloat(customAmount);
@@ -116,6 +124,19 @@ export function OrgSettingsBilling({
             )}
           </div>
         </div>
+        {periodEnd && (
+          <div className={styles.settingsRow}>
+            <div className={styles.rowInfo}>
+              <span className={styles.rowLabel}>Next Billing Date</span>
+              <span className={styles.rowDescription}>
+                Next monthly Z credit top-up
+              </span>
+            </div>
+            <div className={styles.rowControl}>
+              {new Date(periodEnd).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Purchase Credits */}
