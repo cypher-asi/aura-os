@@ -44,6 +44,7 @@ export function OrgSettingsBilling({
   const [periodEnd, setPeriodEnd] = useState<string | null>(null);
   const [periodLoading, setPeriodLoading] = useState(true);
   const [isPaidPlan, setIsPaidPlan] = useState(false);
+  const [isActive, setIsActive] = useState(false);
 
   useEffect(() => {
     setPeriodLoading(true);
@@ -51,6 +52,7 @@ export function OrgSettingsBilling({
       .then((s) => {
         if (s.current_period_end) setPeriodEnd(s.current_period_end);
         setIsPaidPlan(s.plan !== "mortal");
+        setIsActive(s.is_subscribed);
       })
       .catch(() => {})
       .finally(() => setPeriodLoading(false));
@@ -119,7 +121,7 @@ export function OrgSettingsBilling({
           <div className={styles.rowInfo}>
             <span className={styles.rowLabel}>Current Plan</span>
             <span className={styles.rowDescription}>
-              Your active subscription
+              {isPaidPlan && !isActive ? "Cancels at end of period" : "Your active subscription"}
             </span>
           </div>
           <div className={styles.rowControl}>
@@ -134,9 +136,9 @@ export function OrgSettingsBilling({
         {isPaidPlan && (
           <div className={styles.settingsRow}>
             <div className={styles.rowInfo}>
-              <span className={styles.rowLabel}>Next Billing Date</span>
+              <span className={styles.rowLabel}>{isActive ? "Next Billing Date" : "Plan Ends"}</span>
               <span className={styles.rowDescription}>
-                Next monthly Z credit top-up
+                {isActive ? "Next monthly Z credit top-up" : "Your plan will revert to Mortal"}
               </span>
             </div>
             <div className={styles.rowControl}>
