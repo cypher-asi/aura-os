@@ -43,6 +43,7 @@ export function OrgSettingsBilling({
   const [periodLoading, setPeriodLoading] = useState(true);
   const [isPaidPlan, setIsPaidPlan] = useState(false);
   const [isActive, setIsActive] = useState(false);
+  const [subPlan, setSubPlan] = useState<string | null>(null);
 
   const fetchSubscription = useCallback(() => {
     setPeriodLoading(true);
@@ -51,6 +52,7 @@ export function OrgSettingsBilling({
         if (s.current_period_end) setPeriodEnd(s.current_period_end);
         setIsPaidPlan(s.plan !== "mortal");
         setIsActive(s.is_subscribed);
+        setSubPlan(s.plan);
       })
       .catch(() => {})
       .finally(() => setPeriodLoading(false));
@@ -134,7 +136,7 @@ export function OrgSettingsBilling({
             </span>
           </div>
           <div className={styles.rowControl} style={{ marginLeft: "auto" }}>
-            <span className={styles.roleBadge}>{periodLoading ? "..." : balance?.plan ?? billing?.plan ?? "mortal"}</span>
+            <span className={styles.roleBadge}>{periodLoading ? "..." : subPlan ?? balance?.plan ?? "mortal"}</span>
             {onUpgrade && (
               <Button variant="ghost" size="sm" onClick={onUpgrade} style={{ padding: 0, display: "flex", justifyContent: "flex-end" }}>
                 Change Plan
