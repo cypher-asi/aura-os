@@ -7,6 +7,7 @@ use tokio::sync::broadcast;
 use aura_os_core::{AgentId, AgentInstanceId, AgentPermissions, Project, ProjectId, SessionId};
 use aura_os_harness::{AutomatonClient, WsReaderHandle};
 use aura_os_loops::LoopHandle;
+use aura_protocol::IntentClassifierSpec;
 
 use crate::state::AppState;
 
@@ -26,6 +27,9 @@ pub(super) struct StartContext {
     /// for `LoopId` construction so loop events can be filtered by
     /// `AgentId` topic in addition to `AgentInstanceId`.
     pub(super) agent_id: AgentId,
+    pub(super) agent_system_prompt: String,
+    pub(super) agent_org_id: Option<aura_os_core::OrgId>,
+    pub(super) intent_classifier: Option<IntentClassifierSpec>,
     /// Permission bundle applied to the harness automaton kernel policy.
     /// Mirrors the chat path's session permissions so capability-gated
     /// tools like `run_command` behave consistently in dev-loop runs.

@@ -116,6 +116,11 @@ fn automaton_start_params_serializes_agent_permissions() {
         template_agent_id: None,
         auth_token: None,
         model: None,
+        system_prompt: None,
+        provider_overrides: None,
+        user_id: None,
+        intent_classifier: None,
+        max_turns: None,
         workspace_root: None,
         task_id: None,
         git_repo_url: None,
@@ -148,7 +153,16 @@ fn automaton_start_params_serializes_proxy_identity_context() {
         aura_agent_id: Some("template-1".into()),
         template_agent_id: Some("template-1".into()),
         auth_token: Some("jwt".into()),
-        model: None,
+        model: Some("aura-claude-opus-4-7".into()),
+        system_prompt: Some("project-aware prompt".into()),
+        provider_overrides: Some(aura_protocol::SessionModelOverrides {
+            default_model: Some("aura-claude-opus-4-7".into()),
+            fallback_model: None,
+            prompt_caching_enabled: Some(true),
+        }),
+        user_id: Some("user-1".into()),
+        intent_classifier: None,
+        max_turns: Some(40),
         workspace_root: None,
         task_id: None,
         git_repo_url: None,
@@ -171,6 +185,15 @@ fn automaton_start_params_serializes_proxy_identity_context() {
     assert_eq!(value["aura_org_id"], "org-1");
     assert_eq!(value["aura_session_id"], "session-1");
     assert_eq!(value["auth_token"], "jwt");
+    assert_eq!(value["model"], "aura-claude-opus-4-7");
+    assert_eq!(value["system_prompt"], "project-aware prompt");
+    assert_eq!(
+        value["provider_overrides"]["default_model"],
+        "aura-claude-opus-4-7"
+    );
+    assert_eq!(value["provider_overrides"]["prompt_caching_enabled"], true);
+    assert_eq!(value["user_id"], "user-1");
+    assert_eq!(value["max_turns"], 40);
 }
 
 #[test]

@@ -19,7 +19,10 @@ use crate::runner::automaton_event_kinds::DONE;
 
 mod event_normalization;
 
-use aura_protocol::{AgentPermissionsWire, InstalledIntegration, InstalledTool};
+use aura_protocol::{
+    AgentPermissionsWire, InstalledIntegration, InstalledTool, IntentClassifierSpec,
+    SessionModelOverrides,
+};
 use event_normalization::normalize_automaton_event;
 
 /// Handle that keeps the harness WebSocket connection opened by
@@ -120,6 +123,26 @@ pub struct AutomatonStartParams {
     pub auth_token: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
+    /// Full project-aware system prompt, mirroring `SessionInit::system_prompt`.
+    /// The harness uses this to shape the first automaton LLM request the same
+    /// way chat/spec sessions are shaped.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub system_prompt: Option<String>,
+    /// Optional per-session model/router overrides. Dev-loop automata must carry
+    /// the same prompt-cache/model override envelope as `SessionInit` so the
+    /// router sees an equivalent request shape.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub provider_overrides: Option<SessionModelOverrides>,
+    /// Originating end-user id for resolving user-scoped tool defaults.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_id: Option<String>,
+    /// Optional keyword-driven tool classifier mirrored from the chat session
+    /// init path.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub intent_classifier: Option<IntentClassifierSpec>,
+    /// Agentic-turn ceiling for the automaton's initial task executor session.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_turns: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub workspace_root: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

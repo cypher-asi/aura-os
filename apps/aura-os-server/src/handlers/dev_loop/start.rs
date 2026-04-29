@@ -7,12 +7,15 @@ use aura_os_core::{harness_agent_id, AgentInstanceId, HarnessMode, Project, Proj
 use aura_os_harness::{AutomatonClient, AutomatonStartError, AutomatonStartParams};
 
 use crate::error::{ApiError, ApiResult};
+use crate::handlers::agents::chat::build_project_system_prompt;
+use crate::handlers::agents::session_model_overrides;
 use crate::handlers::agents::tool_dedupe::dedupe_and_log_installed_tools;
 use crate::handlers::agents::workspace_tools::{
     installed_workspace_app_tools, installed_workspace_integrations_for_org_with_token,
 };
 use crate::handlers::projects_helpers::{
-    resolve_agent_instance_workspace_path, slugify, validate_workspace_is_initialised,
+    project_tool_max_turns, resolve_agent_instance_workspace_path, slugify,
+    validate_workspace_is_initialised,
 };
 use crate::state::AppState;
 
@@ -71,6 +74,9 @@ pub(super) async fn resolve_start_context(
         model,
         workspace_root,
         agent_id: agent_instance.agent_id,
+        agent_system_prompt: agent_instance.system_prompt,
+        agent_org_id: agent_instance.org_id,
+        intent_classifier: agent_instance.intent_classifier,
         permissions,
     })
 }
@@ -155,6 +161,7 @@ pub(super) async fn build_start_params(
     ctx: &StartContext,
     agent_instance_id: AgentInstanceId,
     jwt: Option<String>,
+    user_id: Option<String>,
     task_id: Option<String>,
 ) -> AutomatonStartParams {
     let installed_tools = match jwt.as_deref().zip(ctx.project.as_ref().map(|p| &p.org_id)) {
@@ -193,9 +200,14 @@ pub(super) async fn build_start_params(
     // traffic that interactive chat from the same account never
     // reproduces).
     let aura_org_id = ctx
-        .project
+        .agent_org_id
         .as_ref()
-        .map(|project| project.org_id.to_string());
+        .map(ToString::to_string)
+        .or_else(|| {
+            ctx.project
+                .as_ref()
+                .map(|project| project.org_id.to_string())
+        });
     // Stable per-(project, agent-instance, task) session UUID. The
     // router / Cloudflare WAF buckets by `(IP, X-Aura-Session-Id)`
     // when scoring "is this automated traffic?", so a fresh
@@ -222,6 +234,16 @@ pub(super) async fn build_start_params(
         template_agent_id: Some(ctx.agent_id.to_string()),
         auth_token: jwt,
         model: ctx.model.clone(),
+        system_prompt: Some(build_project_system_prompt(
+            state,
+            &ctx.project_id,
+            &ctx.agent_system_prompt,
+            Some(&ctx.workspace_root),
+        )),
+        provider_overrides: session_model_overrides(ctx.model.as_deref()),
+        user_id,
+        intent_classifier: ctx.intent_classifier.clone(),
+        max_turns: Some(project_tool_max_turns()),
         workspace_root: Some(ctx.workspace_root.clone()),
         task_id,
         git_repo_url: resolve_git_repo_url(ctx.project.as_ref()),

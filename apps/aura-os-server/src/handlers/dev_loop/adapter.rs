@@ -96,8 +96,15 @@ pub(crate) async fn start_loop(
     // `task_failed` event arrives so the fail reason survives page
     // reloads, not just live WS subscribers).
     let forwarder_jwt = jwt.clone();
-    let start_params =
-        build_start_params(&state, &ctx, agent_instance_id, Some(jwt), None).await;
+    let start_params = build_start_params(
+        &state,
+        &ctx,
+        agent_instance_id,
+        Some(jwt),
+        Some(session.0.user_id.clone()),
+        None,
+    )
+    .await;
     let started = start_or_adopt(&ctx.client, start_params, state.harness_ws_slots).await?;
 
     if started.adopted
@@ -301,6 +308,7 @@ pub(crate) async fn run_single_task(
                 &ctx,
                 ephemeral_instance_id,
                 Some(jwt),
+                Some(session.0.user_id.clone()),
                 Some(task_id_str.clone()),
             )
             .await,
