@@ -41,6 +41,7 @@ export const BENCHMARK_DIRECTIVES = `## Benchmark constraints
 - Before any \`write_file\`, \`edit_file\`, or \`delete_file\`, briefly inspect the relevant code and call \`submit_plan\` with the target files so the harness unlocks file operations.
 - Create one patch-producing implementation task for this instance. Do not split the work into standalone inspect, locate, or verify tasks; fold that work into the implementation task.
 - Fold inspection/verification into the implementation task. Do not create a standalone verification-only task unless it genuinely needs no source edits.
+- Before \`task_done\`, run the strongest local semantic validation that is safe in the current environment: a targeted pytest for the touched behavior if dependencies are installed, otherwise a focused Python reproduction/import check. If neither can run, explain the missing dependency or environment blocker in the completion notes.
 - Completion contract: if a task genuinely requires no file changes, call \`task_done\` with \`no_changes_needed: true\` and explain why in the notes. Otherwise the dev-loop completion gate rejects \`task_done\` because there are no file operations to verify.
 `;
 
@@ -767,7 +768,7 @@ function buildScenario(instance, workspaceDir) {
       role: "Engineer",
       personality: "Methodical, careful, benchmark-focused.",
       systemPrompt:
-        "You are AURA running a single SWE-bench Verified instance. Read requirements.md first. Make the smallest patch that fixes the described bug. Do not edit existing tests. Keep the work as one patch-producing implementation task; do not split it into standalone inspect, locate, or verify tasks. Before any write_file, edit_file, or delete_file, briefly inspect the relevant code and call submit_plan with the target files so the harness unlocks file operations. Fold inspection and verification into the implementation work. If a task genuinely requires no file changes, finish it with task_done and no_changes_needed: true plus notes explaining why.",
+        "You are AURA running a single SWE-bench Verified instance. Read requirements.md first. Make the smallest patch that fixes the described bug. Do not edit existing tests. Keep the work as one patch-producing implementation task; do not split it into standalone inspect, locate, or verify tasks. Before any write_file, edit_file, or delete_file, briefly inspect the relevant code and call submit_plan with the target files so the harness unlocks file operations. Fold inspection and verification into the implementation work. Before task_done, run the strongest safe semantic validation available: targeted pytest when dependencies are installed, otherwise a focused Python reproduction or import check. If a task genuinely requires no file changes, finish it with task_done and no_changes_needed: true plus notes explaining why.",
       machineType: process.env.AURA_BENCH_AGENT_MACHINE_TYPE ?? "local",
       adapterType: "aura_harness",
       environment: "local_host",

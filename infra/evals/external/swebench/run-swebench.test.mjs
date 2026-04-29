@@ -36,6 +36,8 @@ test("BENCHMARK_DIRECTIVES is a single shared constant", () => {
   assert.match(BENCHMARK_DIRECTIVES, /Create one patch-producing implementation task/);
   assert.match(BENCHMARK_DIRECTIVES, /standalone inspect, locate, or verify tasks/);
   assert.match(BENCHMARK_DIRECTIVES, /Fold inspection\/verification into the implementation task/);
+  assert.match(BENCHMARK_DIRECTIVES, /strongest local semantic validation/);
+  assert.match(BENCHMARK_DIRECTIVES, /targeted pytest/);
   assert.match(BENCHMARK_DIRECTIVES, /no_changes_needed: true/);
 });
 
