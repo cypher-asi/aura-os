@@ -103,6 +103,13 @@
   font-weight: 500;
 }
 
+.loadingState {
+  text-align: center;
+  color: var(--color-text-muted, #888);
+  padding: var(--space-6, 24px) 0;
+  font-size: var(--text-sm, 14px);
+}
+
 .footerNote {
   font-size: var(--text-2xs, 11px);
   color: var(--color-text-muted, #888);

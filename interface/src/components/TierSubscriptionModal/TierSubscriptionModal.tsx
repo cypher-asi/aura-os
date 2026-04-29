@@ -73,20 +73,23 @@ const TIERS: TierInfo[] = [
 ];
 
 export function TierSubscriptionModal({ isOpen, onClose }: Props) {
-  const [currentPlan, setCurrentPlan] = useState("mortal");
+  const [currentPlan, setCurrentPlan] = useState<string | null>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [planLoading, setPlanLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
+    setPlanLoading(true);
     orgsApi
       .getSubscriptionStatus()
       .then((status) => {
         setCurrentPlan(status.plan);
         setIsSubscribed(status.is_subscribed);
       })
-      .catch(() => {});
+      .catch(() => { setCurrentPlan("mortal"); })
+      .finally(() => setPlanLoading(false));
   }, [isOpen]);
 
   const handleSubscribe = async (planId: string) => {
@@ -125,6 +128,10 @@ export function TierSubscriptionModal({ isOpen, onClose }: Props) {
       <div className={styles.root}>
         {error && <div className={styles.error}>{error}</div>}
 
+        {planLoading ? (
+          <div className={styles.loadingState}>Loading plan details...</div>
+        ) : (
+        <>
         <div className={styles.tierGrid}>
           {TIERS.map((tier) => {
             const isCurrent = tier.id === currentPlan;
@@ -191,6 +198,8 @@ export function TierSubscriptionModal({ isOpen, onClose }: Props) {
         <p className={styles.footerNote}>
           When you upgrade mid-cycle, you'll be charged the prorated price difference and receive the corresponding difference in Z credits for the remainder of your billing period.
         </p>
+        </>
+        )}
       </div>
     </Modal>
   );
