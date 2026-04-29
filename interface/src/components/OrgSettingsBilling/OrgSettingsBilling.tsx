@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Input, Button } from "@cypher-asi/zui";
 import type { OrgBilling, CreditBalance } from "../../shared/types";
 import type { CheckoutPollingStatus } from "../../hooks/use-checkout-polling";
@@ -46,7 +46,7 @@ export function OrgSettingsBilling({
   const [isPaidPlan, setIsPaidPlan] = useState(false);
   const [isActive, setIsActive] = useState(false);
 
-  useEffect(() => {
+  const fetchSubscription = useCallback(() => {
     setPeriodLoading(true);
     orgsApi.getSubscriptionStatus()
       .then((s) => {
@@ -57,6 +57,17 @@ export function OrgSettingsBilling({
       .catch(() => {})
       .finally(() => setPeriodLoading(false));
   }, []);
+
+  useEffect(() => { fetchSubscription(); }, [fetchSubscription]);
+
+  // Auto-refresh when user returns to tab (e.g. after Stripe checkout/portal)
+  useEffect(() => {
+    const handler = () => {
+      if (document.visibilityState === "visible") fetchSubscription();
+    };
+    document.addEventListener("visibilitychange", handler);
+    return () => document.removeEventListener("visibilitychange", handler);
+  }, [fetchSubscription]);
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
 
   const customNum = parseFloat(customAmount);

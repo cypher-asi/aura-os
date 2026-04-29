@@ -51,5 +51,14 @@ export function useCreditBalance(): CreditBalanceResult {
     return () => window.removeEventListener(CREDITS_UPDATED_EVENT, handler);
   }, [fetchBalance]);
 
+  // Auto-refresh when user returns to tab (e.g. after Stripe checkout in new tab)
+  useEffect(() => {
+    const handler = () => {
+      if (document.visibilityState === "visible") fetchBalance();
+    };
+    document.addEventListener("visibilitychange", handler);
+    return () => document.removeEventListener("visibilitychange", handler);
+  }, [fetchBalance]);
+
   return { credits, balanceFormatted };
 }
