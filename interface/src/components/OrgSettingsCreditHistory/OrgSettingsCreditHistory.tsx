@@ -96,7 +96,7 @@ export function OrgSettingsCreditHistory() {
             </div>
             <div className={styles.settingsRow}>
               <div className={styles.rowInfo}>
-                <span className={styles.rowLabel}>Monthly Allowance</span>
+                <span className={styles.rowLabel}>Monthly Plan Top-Up</span>
               </div>
               <div className={styles.rowControl}>
                 {subscription ? `${subscription.monthly_credits.toLocaleString()} Z` : "---"}
