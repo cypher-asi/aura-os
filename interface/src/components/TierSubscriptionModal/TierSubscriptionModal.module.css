@@ -1,5 +1,5 @@
 .root {
-  padding: var(--space-3);
+  padding: var(--space-2) var(--space-3);
   overflow-x: hidden;
 }
 
@@ -12,7 +12,7 @@
 .tierGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .tierCard {
@@ -20,7 +20,7 @@
   flex-direction: column;
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-1) var(--space-2);
   background: transparent;
 }
 
@@ -77,7 +77,7 @@
 .features {
   list-style: none;
   padding: 0;
-  margin: 0 0 var(--space-2);
+  margin: 0 0 var(--space-1);
   flex: 1;
 }
 
@@ -101,4 +101,12 @@
   font-size: 12px;
   color: var(--color-accent, #4aeaa8);
   font-weight: 500;
+}
+
+.footerNote {
+  font-size: var(--text-2xs, 11px);
+  color: var(--color-text-muted, #888);
+  text-align: center;
+  margin-top: var(--space-3);
+  line-height: 1.5;
 }
