@@ -68,17 +68,17 @@ export function OrgSettingsBilling({
     <>
       <h2 className={styles.sectionTitle}>Billing</h2>
       <p className={billingStyles.billingIntro}>
-        Subscribe to a tier for monthly credit allowances and enhanced rewards, or purchase credits as you go.
+        Subscribe to a tier for monthly Z credit allowances and enhanced rewards, or purchase Z credits as you go.
       </p>
 
       {/* Credit Balance — shown first */}
-      <div className={styles.settingsGroupLabel}>Credits</div>
+      <div className={styles.settingsGroupLabel}>Z Credits</div>
       <div className={styles.settingsGroup}>
         <div className={styles.settingsRow}>
           <div className={styles.rowInfo}>
             <span className={styles.rowLabel}>Current Balance</span>
             <span className={styles.rowDescription}>
-              Credits available for AI usage
+              Z credits available for AI usage
             </span>
           </div>
           <div className={styles.rowControl}>
@@ -91,7 +91,7 @@ export function OrgSettingsBilling({
                       <button className={billingStyles.retryLink} onClick={onRetryBalance}>Retry</button>
                     </span>
                   : balance !== null
-                    ? `${balance.balance_cents.toLocaleString()} credits`
+                    ? `${balance.balance_cents.toLocaleString()} Z credits`
                     : "---"}
             </span>
           </div>
@@ -108,7 +108,7 @@ export function OrgSettingsBilling({
             </span>
           </div>
           <div className={styles.rowControl}>
-            <span className={styles.roleBadge}>{billing?.plan ?? "mortal"}</span>
+            <span className={styles.roleBadge}>{balance?.plan ?? billing?.plan ?? "mortal"}</span>
             {onUpgrade && (
               <Button variant="ghost" size="sm" onClick={onUpgrade} style={{ marginLeft: 8 }}>
                 Change Plan
@@ -116,27 +116,12 @@ export function OrgSettingsBilling({
             )}
           </div>
         </div>
-        {isAdminOrOwner && (
-          <div className={billingStyles.billingEmailSection}>
-            <div className={styles.rowInfo}>
-              <span className={styles.rowLabel}>Billing Email</span>
-              <span className={styles.rowDescription}>
-                Tied to your ZERO account. Invoices and receipts are sent here.
-              </span>
-            </div>
-            <div className={billingStyles.billingEmailRow}>
-              <span className={billingStyles.billingEmailValue}>
-                {billingEmail || "—"}
-              </span>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Purchase Credits */}
       {isAdminOrOwner && !isNativeApp && (
         <>
-          <div className={styles.settingsGroupLabel}>Buy Credits</div>
+          <div className={styles.settingsGroupLabel}>Buy Z Credits</div>
           <div className={styles.settingsGroup}>
             <div className={billingStyles.presetRow}>
               {PRESETS.map((amount) => (
@@ -215,8 +200,8 @@ export function OrgSettingsBilling({
       {!isNativeApp && pollingStatus !== "idle" && (
         <div className={billingStyles.pollingStatus}>
           {pollingStatus === "polling" && "Waiting for payment confirmation..."}
-          {pollingStatus === "success" && "Payment confirmed! Credits updated."}
-          {pollingStatus === "timeout" && "Payment not yet confirmed. Credits will appear once the payment is processed."}
+          {pollingStatus === "success" && "Payment confirmed! Z credits updated."}
+          {pollingStatus === "timeout" && "Payment not yet confirmed. Z credits will appear once the payment is processed."}
         </div>
       )}
     </>

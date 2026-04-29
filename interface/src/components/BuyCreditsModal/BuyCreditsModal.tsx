@@ -77,7 +77,7 @@ export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="BUY CREDITS" size="md" footer={footer}>
+    <Modal isOpen={isOpen} onClose={onClose} title="BUY Z CREDITS" size="md" footer={footer}>
       <div className={styles.content}>
         <div className={styles.balanceRow}>
           <div className={styles.balanceValue}>{balanceDisplay}</div>
@@ -146,9 +146,9 @@ export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
         {!isNativeApp && pollingStatus !== "idle" && (
           <div className={styles.pollingStatus}>
             {pollingStatus === "polling" && "Waiting for payment confirmation..."}
-            {pollingStatus === "success" && "Payment confirmed! Credits updated."}
+            {pollingStatus === "success" && "Payment confirmed! Z credits updated."}
             {pollingStatus === "timeout" &&
-              "Payment not yet confirmed. Credits will appear once the payment is processed."}
+              "Payment not yet confirmed. Z credits will appear once the payment is processed."}
           </div>
         )}
       </div>

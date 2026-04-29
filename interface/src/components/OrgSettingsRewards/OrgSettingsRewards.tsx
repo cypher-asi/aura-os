@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@cypher-asi/zui";
 import { Copy, Check, Gift } from "lucide-react";
-import { authApi } from "../../api/auth";
+import { authApi } from "../../shared/api/auth";
 import styles from "../OrgSettingsPanel/OrgSettingsPanel.module.css";
 import rewardStyles from "./OrgSettingsRewards.module.css";
 
@@ -50,7 +50,7 @@ export function OrgSettingsRewards() {
         <div className={rewardStyles.inviteCodeSection}>
           <p className={rewardStyles.description}>
             Share your invite code with others. When someone you invite
-            subscribes to a paid plan, you both earn bonus credits.
+            subscribes to a paid plan, you both earn bonus Z credits.
           </p>
           <div className={rewardStyles.codeRow}>
             {loading ? (
@@ -77,7 +77,7 @@ export function OrgSettingsRewards() {
       </div>
 
       {/* Free Credits Info */}
-      <div className={styles.settingsGroupLabel}>Free Credits</div>
+      <div className={styles.settingsGroupLabel}>Free Z Credits</div>
       <div className={styles.settingsGroup}>
         <div className={styles.settingsRow}>
           <div className={styles.rowInfo}>
@@ -87,7 +87,7 @@ export function OrgSettingsRewards() {
             </span>
           </div>
           <div className={styles.rowControl}>
-            <span className={rewardStyles.creditAmount}>5,000 credits</span>
+            <span className={rewardStyles.creditAmount}>5,000 Z credits</span>
           </div>
         </div>
         <div className={styles.settingsRow}>
@@ -99,7 +99,7 @@ export function OrgSettingsRewards() {
           </div>
           <div className={styles.rowControl}>
             <span className={rewardStyles.creditAmount}>
-              {dailyCredits.toLocaleString()} credits/day
+              {dailyCredits.toLocaleString()} Z credits/day
             </span>
           </div>
         </div>
@@ -112,7 +112,7 @@ export function OrgSettingsRewards() {
           </div>
           <div className={styles.rowControl}>
             <span className={rewardStyles.creditAmount}>
-              {referralBonus.toLocaleString()} credits
+              {referralBonus.toLocaleString()} Z credits
             </span>
           </div>
         </div>
@@ -123,8 +123,8 @@ export function OrgSettingsRewards() {
         <div className={rewardStyles.proPromo}>
           <Gift size={16} />
           <span>
-            Upgrade your tier to earn more daily credits, higher referral
-            bonuses, and monthly credit allowances.
+            Upgrade your tier to earn more daily Z credits and monthly
+            credit allowances.
           </span>
         </div>
       </div>
