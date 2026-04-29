@@ -631,6 +631,14 @@ if [ "$driver_status" -ne 0 ]; then
     info "driver exited with status $driver_status; continuing to harness with whatever predictions were produced"
 fi
 
+blocked_count="$(node -e "const fs=require('fs'); const p=process.argv[1]; let s={}; try{s=JSON.parse(fs.readFileSync(p,'utf8'))}catch{}; const c=s.status_counts||{}; console.log((c.blocked_cloudflare||0)+(c.skipped_cloudflare_block||0));" "$OUT_DIR/driver-summary.json")"
+if [ "${blocked_count:-0}" -gt 0 ] && [ "${AURA_BENCH_SCORE_PARTIAL_ON_BLOCK:-0}" != "1" ]; then
+    info "provider Cloudflare block detected in ${blocked_count} instance(s); skipping SWE-bench scoring so this run is not reported as unresolved"
+    info "retry after the block clears, or set AURA_BENCH_SCORE_PARTIAL_ON_BLOCK=1 to score any predictions that were produced before the block"
+    info "driver-summary.json: $OUT_DIR/driver-summary.json"
+    exit 75
+fi
+
 # Run the swebench harness. We don't fail the wrapper if the harness fails;
 # partial results are still useful.
 predictions="$OUT_DIR/predictions.jsonl"

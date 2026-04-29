@@ -61,6 +61,13 @@ export function resolveSwebenchProjectCommand(envName, env = process.env) {
     : SWEBENCH_DEFAULT_BUILD_COMMAND;
 }
 
+export function shouldWritePredictionForStatus(status) {
+  return ![
+    STATUS_BLOCKED_CLOUDFLARE,
+    STATUS_SKIPPED_CLOUDFLARE,
+  ].includes(status);
+}
+
 // ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
@@ -1281,11 +1288,15 @@ async function runOneInstance({
   baseRecord.wallclock_seconds = (Date.now() - startedAt.getTime()) / 1000;
 
   // 7. Persist outputs.
-  await writePrediction({
-    instance_id: instanceId,
-    model_name_or_path: "AURA",
-    model_patch: modelPatch,
-  });
+  if (shouldWritePredictionForStatus(baseRecord.status)) {
+    await writePrediction({
+      instance_id: instanceId,
+      model_name_or_path: "AURA",
+      model_patch: modelPatch,
+    });
+  } else {
+    log(`skipped prediction for ${baseRecord.status}; retry after provider block clears`);
+  }
   await writeJson(runRecordPath, baseRecord);
   log(
     `done ${instanceId} status=${baseRecord.status} cost=$${baseRecord.cost_usd.toFixed(

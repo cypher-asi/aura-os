@@ -17,6 +17,7 @@ import {
   resolveSwebenchProjectCommand,
   resolveResumeOutDir,
   runWithPool,
+  shouldWritePredictionForStatus,
   SWEBENCH_DEFAULT_BUILD_COMMAND,
   SWEBENCH_DEFAULT_TEST_COMMAND,
   stripBenchmarkArtifactsFromDiff,
@@ -58,6 +59,13 @@ test("SWE-bench project command honours explicit operator overrides", () => {
   assert.equal(resolveSwebenchProjectCommand("AURA_BENCH_TEST_COMMAND", {
     AURA_BENCH_TEST_COMMAND: "python -m pytest -q",
   }), "python -m pytest -q");
+});
+
+test("Cloudflare-blocked statuses do not write predictions", () => {
+  assert.equal(shouldWritePredictionForStatus("agent_complete"), true);
+  assert.equal(shouldWritePredictionForStatus("agent_error"), true);
+  assert.equal(shouldWritePredictionForStatus("blocked_cloudflare"), false);
+  assert.equal(shouldWritePredictionForStatus("skipped_cloudflare_block"), false);
 });
 
 test("buildRequirementsMd emits the expected sections without hints", () => {
