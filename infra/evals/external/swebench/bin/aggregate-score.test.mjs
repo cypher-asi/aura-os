@@ -4,7 +4,12 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { synthesizeSummaryFromRecords, main } from "./aggregate-score.mjs";
+import {
+  buildPostmortem,
+  failureBucket,
+  synthesizeSummaryFromRecords,
+  main,
+} from "./aggregate-score.mjs";
 
 test("synthesizeSummaryFromRecords folds totals and date bounds from runs/*.json", () => {
   const records = new Map([
@@ -54,6 +59,39 @@ test("synthesizeSummaryFromRecords copes with empty input", () => {
   assert.equal(summary.cost_usd, 0);
   assert.equal(summary.started_at, null);
   assert.equal(summary.finished_at, null);
+});
+
+test("buildPostmortem buckets unresolved instances by likely failure mode", () => {
+  const postmortem = buildPostmortem({
+    benchmark: "swebench_verified",
+    subset: "smoke",
+    scoring_mode: "official_harness",
+    official_harness_ran: true,
+    resolved: 1,
+    not_resolved: 3,
+    score: 25,
+    instances: [
+      { instance_id: "a__a-1", status: "resolved" },
+      { instance_id: "a__a-2", status: "agent_error", files_changed: 1 },
+      { instance_id: "a__a-3", status: "not_resolved", files_changed: 0 },
+      {
+        instance_id: "a__a-4",
+        status: "not_resolved",
+        files_changed: 1,
+        failed_to_pass_results: { failure: ["test_bug"] },
+      },
+    ],
+  });
+
+  assert.equal(failureBucket({ status: "resolved" }), "resolved");
+  assert.equal(postmortem.buckets.resolved, 1);
+  assert.equal(postmortem.buckets.dev_loop_failure, 1);
+  assert.equal(postmortem.buckets.empty_or_filtered_patch, 1);
+  assert.equal(postmortem.buckets.hidden_test_failure, 1);
+  assert.deepEqual(
+    postmortem.unresolved.map((entry) => entry.instance_id),
+    ["a__a-2", "a__a-3", "a__a-4"],
+  );
 });
 
 test("aggregate-score main() synthesizes driver-summary.json from runs/ when missing", async () => {
@@ -114,6 +152,15 @@ test("aggregate-score main() synthesizes driver-summary.json from runs/ when mis
     assert.match(score.scoring_note, /Official SWE-bench hidden-test scoring did not run/);
     assert.equal(score.instances.length, 1);
     assert.equal(score.instances[0].instance_id, "a__a-1");
+    const postmortem = JSON.parse(
+      await fs.readFile(path.join(dir, "postmortem.json"), "utf8"),
+    );
+    assert.equal(postmortem.scoring_mode, "driver_predictions_only");
+    assert.equal(postmortem.buckets.not_resolved ?? 0, 0);
+    assert.match(
+      await fs.readFile(path.join(dir, "postmortem.md"), "utf8"),
+      /SWE-bench Postmortem/,
+    );
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }
@@ -173,6 +220,10 @@ test("aggregate-score marks official scoring when harness report is present", as
     assert.equal(score.scoring_note, "");
     assert.equal(score.resolved, 1);
     assert.equal(score.instances[0].status, "resolved");
+    const postmortem = JSON.parse(
+      await fs.readFile(path.join(dir, "postmortem.json"), "utf8"),
+    );
+    assert.equal(postmortem.buckets.resolved, 1);
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }

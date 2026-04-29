@@ -295,6 +295,82 @@ function buildConfidenceNote(subset, instanceCount) {
   return "";
 }
 
+export function failureBucket(instance) {
+  if (instance.status === "resolved") return "resolved";
+  if (instance.status === "agent_error" || instance.failed_tasks > 0) {
+    return "dev_loop_failure";
+  }
+  if (instance.files_changed === 0) return "empty_or_filtered_patch";
+  if (instance.tests_directory_hits_stripped > 0) return "test_edit_stripped";
+  if (instance.failed_to_pass_results) return "hidden_test_failure";
+  return "unresolved_patch_quality";
+}
+
+export function buildPostmortem(score) {
+  const buckets = {};
+  const unresolved = [];
+  for (const instance of score.instances ?? []) {
+    const bucket = failureBucket(instance);
+    buckets[bucket] = (buckets[bucket] ?? 0) + 1;
+    if (bucket !== "resolved") {
+      unresolved.push({
+        instance_id: instance.instance_id,
+        status: instance.status,
+        bucket,
+        files_changed: instance.files_changed,
+        model_patch_lines: instance.model_patch_lines,
+        task_count: instance.task_count,
+        done_tasks: instance.done_tasks,
+        failed_tasks: instance.failed_tasks,
+        tests_directory_hits_stripped: instance.tests_directory_hits_stripped,
+        failed_to_pass_results: instance.failed_to_pass_results,
+      });
+    }
+  }
+  return {
+    benchmark: score.benchmark,
+    subset: score.subset,
+    scoring_mode: score.scoring_mode,
+    official_harness_ran: score.official_harness_ran,
+    resolved: score.resolved,
+    not_resolved: score.not_resolved,
+    score: score.score,
+    buckets,
+    unresolved,
+  };
+}
+
+function renderPostmortemMarkdown(postmortem) {
+  const lines = [
+    "# SWE-bench Postmortem",
+    "",
+    `Score: ${postmortem.resolved}/${postmortem.resolved + postmortem.not_resolved} (${postmortem.score}%)`,
+    `Mode: ${postmortem.scoring_mode}`,
+    "",
+    "## Buckets",
+    "",
+    "| Bucket | Count |",
+    "| --- | ---: |",
+  ];
+  for (const [bucket, count] of Object.entries(postmortem.buckets)) {
+    lines.push(`| ${bucket} | ${count} |`);
+  }
+  lines.push(
+    "",
+    "## Unresolved Instances",
+    "",
+    "| Instance | Bucket | Status | Files | Lines | Tasks | Failed Tasks |",
+    "| --- | --- | --- | ---: | ---: | ---: | ---: |",
+  );
+  for (const entry of postmortem.unresolved) {
+    lines.push(
+      `| ${entry.instance_id} | ${entry.bucket} | ${entry.status} | ${entry.files_changed ?? 0} | ${entry.model_patch_lines ?? 0} | ${entry.task_count ?? 0} | ${entry.failed_tasks ?? 0} |`,
+    );
+  }
+  lines.push("");
+  return lines.join("\n");
+}
+
 async function main(rawArgv) {
   let args;
   try {
@@ -382,6 +458,9 @@ async function main(rawArgv) {
       wallclock_seconds: Number(driver?.wallclock_seconds ?? 0),
       max_context_utilization: Number(auraMetrics.maxContextUtilization ?? 0),
       file_change_count: Number(auraMetrics.fileChangeCount ?? 0),
+      task_count: Number(driver?.aura_payload?.counts?.tasks ?? 0),
+      done_tasks: Number(driver?.aura_payload?.counts?.doneTasks ?? 0),
+      failed_tasks: Number(driver?.aura_payload?.counts?.failedTasks ?? 0),
     });
   }
 
@@ -415,6 +494,17 @@ async function main(rawArgv) {
 
   const scorePath = path.join(runDir, "score.json");
   await fs.writeFile(scorePath, JSON.stringify(score, null, 2), "utf8");
+  const postmortem = buildPostmortem(score);
+  await fs.writeFile(
+    path.join(runDir, "postmortem.json"),
+    JSON.stringify(postmortem, null, 2),
+    "utf8",
+  );
+  await fs.writeFile(
+    path.join(runDir, "postmortem.md"),
+    renderPostmortemMarkdown(postmortem),
+    "utf8",
+  );
 
   process.stdout.write(
     `subset=${score.subset} instances=${instanceCount} resolved=${resolvedCount} ` +
