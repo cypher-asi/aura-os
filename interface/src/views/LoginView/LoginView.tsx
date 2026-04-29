@@ -1,25 +1,15 @@
 import {
   Panel,
-  Button,
   Heading,
   Text,
-  Spinner,
   Topbar,
-  Badge,
 } from "@cypher-asi/zui";
-import { lazy, Suspense } from "react";
-import { HOST_BADGE_VARIANT, useLoginForm } from "./use-login-form";
+import { useLoginForm } from "./use-login-form";
 import { LoginForm } from "./LoginForm";
 import { ResetPasswordForm } from "./ResetPasswordForm";
 import { windowCommand } from "../../lib/windowCommand";
 import { WindowControls } from "../../components/WindowControls";
 import styles from "./LoginView.module.css";
-
-const HostSettingsModal = lazy(() =>
-  import("../../components/HostSettingsModal").then((module) => ({
-    default: module.HostSettingsModal,
-  })),
-);
 
 export function LoginView() {
   // Route-level guarding in `App.tsx` guarantees this component only mounts
@@ -56,14 +46,14 @@ export function LoginView() {
           <div className={styles.mobileHero}>
             <Heading level={2}><span className={styles.brand}>AURA</span></Heading>
             <Text variant="muted" size="sm" align="center" className={styles.subtitle}>
-              Connect to an AURA host, then sign in and get to work.
+              Sign in or create an account to get started.
             </Text>
           </div>
         )}
         <Panel variant="solid" border="solid" borderRadius="lg" className={`${styles.card} ${f.isMobileLayout ? styles.cardMobile : ""}`}>
           {!f.isMobileLayout && (
             <Text align="center" className={styles.cardTitle}>
-              Login with ZERO Pro
+              Login to AURA
             </Text>
           )}
 
@@ -71,35 +61,6 @@ export function LoginView() {
             <div className={styles.mobileSectionHeader}>
               <div className={styles.mobileSectionHeaderRow}>
                 <Heading level={4}>Sign in</Heading>
-                {f.showCompactHostStatus && (
-                  <Button variant="ghost" size="sm" className={styles.mobileHostButton} onClick={f.openHostSettings}>
-                    <span className={styles.mobileHostButtonLabel}>Host</span>
-                    <span className={`${styles.mobileHostStatusDot} ${f.status === "online" || f.status === "auth_required" ? styles.mobileHostStatusDotOnline : styles.mobileHostStatusDotOffline}`} />
-                    <span>{f.status.replace(/_/g, " ")}</span>
-                  </Button>
-                )}
-              </div>
-              {!f.showCompactHostStatus && (
-                <Text variant="muted" size="sm" className={styles.mobileSectionEyebrow}>Host</Text>
-              )}
-            </div>
-          )}
-
-          {f.features.hostRetargeting && !f.showCompactHostStatus && (
-            <div className={`${styles.hostCard} ${f.showHostWarning ? styles.hostCardWarning : ""} ${f.isMobileLayout ? styles.hostCardMobile : ""}`}>
-              <div className={styles.hostCardTop}>
-                <div className={styles.hostCardText}>
-                  <Text size="sm" weight="medium">{f.hostStatus.title}</Text>
-                  <Text variant="muted" size="sm" className={styles.hostLabel}>{f.hostLabel}</Text>
-                </div>
-                <Badge variant={HOST_BADGE_VARIANT[f.status]}>{f.status.replace(/_/g, " ")}</Badge>
-              </div>
-              <Text variant="muted" size="sm">{f.hostStatus.detail}</Text>
-              <div className={`${styles.hostActions} ${f.isMobileLayout ? styles.hostActionsMobile : ""}`}>
-                <Button variant="ghost" size="sm" onClick={f.openHostSettings}>Change host</Button>
-                <Button variant="ghost" size="sm" onClick={f.handleRefreshHost} disabled={f.hostRefreshing} icon={f.hostRefreshing ? <Spinner size="sm" /> : undefined}>
-                  {f.hostRefreshing ? "Checking..." : "Retry check"}
-                </Button>
               </div>
             </div>
           )}
@@ -136,11 +97,6 @@ export function LoginView() {
         </Panel>
       </div>
 
-      {f.features.hostRetargeting && f.hostSettingsOpen ? (
-        <Suspense fallback={null}>
-          <HostSettingsModal isOpen={f.hostSettingsOpen} onClose={f.closeHostSettings} />
-        </Suspense>
-      ) : null}
     </div>
   );
 }
