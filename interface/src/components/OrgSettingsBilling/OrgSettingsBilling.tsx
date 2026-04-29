@@ -10,7 +10,6 @@ import billingStyles from "./OrgSettingsBilling.module.css";
 
 interface Props {
   billing: OrgBilling | null;
-  billingEmail: string;
   isAdminOrOwner: boolean;
   balance: CreditBalance | null;
   balanceLoading: boolean;
@@ -28,7 +27,6 @@ const MAX_USD = 1000;
 
 export function OrgSettingsBilling({
   billing,
-  billingEmail,
   isAdminOrOwner,
   balance,
   balanceLoading,

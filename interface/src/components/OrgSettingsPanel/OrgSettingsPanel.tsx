@@ -55,7 +55,7 @@ function OrgSettingsContent({ data, onUpgrade }: { data: ReturnType<typeof useOr
         <OrgSettingsRewards />
       )}
       {data.section === "billing" && (
-        <OrgSettingsBilling billing={data.billing} billingEmail={data.billingEmail} isAdminOrOwner={data.isAdminOrOwner} balance={data.balance} balanceLoading={data.balanceLoading} balanceError={data.balanceError} checkoutError={data.checkoutError} pollingStatus={data.pollingStatus} onPurchase={data.handlePurchase} onRetryBalance={data.loadCreditBalance} onUpgrade={onUpgrade} />
+        <OrgSettingsBilling billing={data.billing} isAdminOrOwner={data.isAdminOrOwner} balance={data.balance} balanceLoading={data.balanceLoading} balanceError={data.balanceError} checkoutError={data.checkoutError} pollingStatus={data.pollingStatus} onPurchase={data.handlePurchase} onRetryBalance={data.loadCreditBalance} onUpgrade={onUpgrade} />
       )}
       {data.section === "credit-history" && (
         <OrgSettingsCreditHistory />
