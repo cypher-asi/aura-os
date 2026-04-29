@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Modal, Button } from "@cypher-asi/zui";
-import { orgsApi } from "../../api/orgs";
+import { orgsApi } from "../../shared/api/orgs";
 import styles from "./TierSubscriptionModal.module.css";
 
 interface Props {
@@ -35,7 +35,7 @@ const TIERS: TierInfo[] = [
   {
     id: "pro",
     name: "Pro",
-    price: "$20/mo",
+    price: "$10/mo",
     monthlyTopUp: "5,000",
     dailyReward: "100",
     referralReward: "5,000",
@@ -91,11 +91,16 @@ export function TierSubscriptionModal({ isOpen, onClose }: Props) {
 
   const handleSubscribe = async (planId: string) => {
     if (planId === "mortal") return;
+    // If already subscribed, open portal to change plan instead of new checkout
+    if (isSubscribed || currentPlan !== "mortal") {
+      return handleManage();
+    }
     setLoading(true);
     setError(null);
     try {
       const { url } = await orgsApi.createSubscriptionCheckout(planId);
-      window.location.href = url;
+      window.open(url, "_blank");
+      setLoading(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to start checkout");
       setLoading(false);
@@ -107,7 +112,8 @@ export function TierSubscriptionModal({ isOpen, onClose }: Props) {
     setError(null);
     try {
       const { url } = await orgsApi.createPortalSession();
-      window.location.href = url;
+      window.open(url, "_blank");
+      setLoading(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to open portal");
       setLoading(false);
@@ -155,7 +161,7 @@ export function TierSubscriptionModal({ isOpen, onClose }: Props) {
 
                 <div className={styles.tierAction}>
                   {isCurrent ? (
-                    isSubscribed ? (
+                    isSubscribed || currentPlan !== "mortal" ? (
                       <Button
                         variant="ghost"
                         size="sm"
