@@ -75,6 +75,7 @@ export function parseArgs(argv) {
     resume: false,
     resumeValue: null,
     resumeIncludeErrors: false,
+    retryUnresolvedFrom: null,
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -163,6 +164,9 @@ export function parseArgs(argv) {
       case "--resume-include-errors":
         args.resumeIncludeErrors = true;
         break;
+      case "--retry-unresolved-from":
+        args.retryUnresolvedFrom = next();
+        break;
       case "--help":
       case "-h":
         args.help = true;
@@ -198,6 +202,9 @@ function printHelp() {
       `                          swebench_verified/. Already-recorded instances are skipped.\n` +
       `  --resume-include-errors when resuming, also skip instances whose prior status was\n` +
       `                          agent_error (default: re-run them)\n` +
+      `  --retry-unresolved-from DIR\n` +
+      `                          run only unresolved instances from a prior score.json and\n` +
+      `                          append their official failure context to requirements.md\n` +
       `  -h, --help              print this help\n`,
   );
 }
@@ -206,7 +213,17 @@ function printHelp() {
 // requirements.md
 // ---------------------------------------------------------------------------
 
-export function buildRequirementsMd(instance) {
+function formatRetryValue(value) {
+  if (value == null) return "";
+  if (typeof value === "string") return value.trim();
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
+export function buildRequirementsMd(instance, retryContext = null) {
   if (!instance || typeof instance !== "object") {
     throw new Error("buildRequirementsMd: instance is required");
   }
@@ -231,6 +248,29 @@ export function buildRequirementsMd(instance) {
 
   if (hintsText.length > 0) {
     sections.push("", "## Discussion (issue hints)", "", hintsText);
+  }
+
+  if (retryContext) {
+    const retryLines = [
+      `Prior status: ${retryContext.status ?? "unresolved"}`,
+      retryContext.failed_to_pass_results
+        ? `Failed-to-pass results:\n${formatRetryValue(retryContext.failed_to_pass_results)}`
+        : "",
+      retryContext.passed_to_pass_results
+        ? `Passed-to-pass results:\n${formatRetryValue(retryContext.passed_to_pass_results)}`
+        : "",
+      retryContext.previous_patch_summary
+        ? `Previous patch summary: ${retryContext.previous_patch_summary}`
+        : "",
+    ].filter((line) => line.trim().length > 0);
+    sections.push(
+      "",
+      "## Previous official evaluation",
+      "",
+      "This is a repair attempt for an unresolved prior run. Use the official failure context below to fix the previous patch rather than starting from scratch.",
+      "",
+      ...retryLines,
+    );
   }
 
   sections.push("", BENCHMARK_DIRECTIVES.trimEnd(), "");
@@ -810,6 +850,15 @@ async function writeJson(filePath, value) {
   await fs.writeFile(filePath, JSON.stringify(value, null, 2), "utf8");
 }
 
+async function readJsonIfExists(filePath) {
+  try {
+    return JSON.parse(await fs.readFile(filePath, "utf8"));
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Resume helpers
 // ---------------------------------------------------------------------------
@@ -981,6 +1030,28 @@ export async function readDriverSummaryIfExists(outDir) {
   }
 }
 
+export async function loadRetryUnresolvedContexts(runDir) {
+  const score = await readJsonIfExists(path.join(runDir, "score.json"));
+  if (!score || !Array.isArray(score.instances)) {
+    throw new Error(`retry source ${runDir} has no score.json with instances`);
+  }
+  const contexts = new Map();
+  for (const entry of score.instances) {
+    if (!entry || typeof entry.instance_id !== "string") continue;
+    if (entry.status === "resolved") continue;
+    contexts.set(entry.instance_id, {
+      status: entry.status ?? "not_resolved",
+      failed_to_pass_results: entry.failed_to_pass_results ?? null,
+      passed_to_pass_results: entry.passed_to_pass_results ?? null,
+      previous_patch_summary: [
+        `${entry.model_patch_lines ?? 0} patch lines`,
+        `${entry.files_changed ?? 0} files changed`,
+      ].join(", "),
+    });
+  }
+  return contexts;
+}
+
 export async function loadPredictionInstanceIds(outDir) {
   const filePath = path.join(outDir, "predictions.jsonl");
   let text;
@@ -1017,6 +1088,7 @@ async function runOneInstance({
   costState,
   resultsRef,
   recordedPredictionIds,
+  retryContexts,
 }) {
   const startedAt = new Date();
   const instanceId = instance.instance_id;
@@ -1087,7 +1159,8 @@ async function runOneInstance({
   }
 
   // 2. Write requirements.md inside the workspace root.
-  const requirementsMd = buildRequirementsMd(instance);
+  const retryContext = retryContexts?.get(instanceId) ?? null;
+  const requirementsMd = buildRequirementsMd(instance, retryContext);
   await fs.writeFile(
     path.join(workspaceDir, "requirements.md"),
     requirementsMd,
@@ -1342,6 +1415,15 @@ async function main(rawArgv) {
   }
 
   let selected = applyInstanceFilters(manifestRecords, args);
+  let retryContexts = new Map();
+  if (args.retryUnresolvedFrom) {
+    const retryDir = path.resolve(args.retryUnresolvedFrom);
+    retryContexts = await loadRetryUnresolvedContexts(retryDir);
+    selected = selected.filter((instance) => retryContexts.has(instance.instance_id));
+    process.stderr.write(
+      `[swebench] retry-unresolved: selected ${selected.length} instance(s) from ${retryDir}\n`,
+    );
+  }
 
   // Build the dedup set up-front so workers (sequential or pooled) can avoid
   // double-appending to predictions.jsonl when a prior attempt already wrote
@@ -1461,6 +1543,7 @@ async function main(rawArgv) {
       costState,
       resultsRef,
       recordedPredictionIds,
+      retryContexts,
     });
     if (
       Number.isFinite(costCap)

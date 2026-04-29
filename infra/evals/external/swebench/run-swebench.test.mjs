@@ -11,6 +11,7 @@ import {
   loadCompletedInstanceIds,
   loadPredictionInstanceIds,
   loadPriorRunRecords,
+  loadRetryUnresolvedContexts,
   parseArgs,
   parseDiffFiles,
   resolveSwebenchProjectCommand,
@@ -83,6 +84,18 @@ test("buildRequirementsMd handles whitespace-only hints by omitting the section"
     hints_text: "   \n\n   ",
   });
   assert.ok(!/## Discussion \(issue hints\)/.test(md));
+});
+
+test("buildRequirementsMd includes retry context when provided", () => {
+  const md = buildRequirementsMd(SAMPLE_INSTANCE, {
+    status: "not_resolved",
+    failed_to_pass_results: { failure: ["test_regression"] },
+    previous_patch_summary: "12 patch lines, 1 files changed",
+  });
+  assert.match(md, /## Previous official evaluation/);
+  assert.match(md, /Prior status: not_resolved/);
+  assert.match(md, /test_regression/);
+  assert.match(md, /Previous patch summary: 12 patch lines, 1 files changed/);
 });
 
 test("buildRequirementsMd throws when instance is missing", () => {
@@ -281,6 +294,8 @@ test("parseArgs supports the documented CLI flags", () => {
     "--no-strip-test-edits",
     "--concurrency",
     "8",
+    "--retry-unresolved-from",
+    "/tmp/score-run",
   ]);
   assert.equal(parsed.subset, "smoke");
   assert.equal(parsed.limit, 5);
@@ -290,6 +305,7 @@ test("parseArgs supports the documented CLI flags", () => {
   assert.equal(parsed.keepEntities, true);
   assert.equal(parsed.stripTestEdits, false);
   assert.equal(parsed.concurrency, 4); // capped at 4
+  assert.equal(parsed.retryUnresolvedFrom, "/tmp/score-run");
 });
 
 test("parseArgs rejects unknown flags", () => {
@@ -396,6 +412,37 @@ test("loadPredictionInstanceIds parses each line and ignores blanks/junk", async
     );
     const ids = await loadPredictionInstanceIds(dir);
     assert.deepEqual(Array.from(ids).sort(), ["x__x-1", "x__x-2"]);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("loadRetryUnresolvedContexts selects unresolved score entries", async () => {
+  const dir = await makeTempRunDir();
+  try {
+    await fs.writeFile(
+      path.join(dir, "score.json"),
+      JSON.stringify({
+        instances: [
+          { instance_id: "a__a-1", status: "resolved", model_patch_lines: 3, files_changed: 1 },
+          {
+            instance_id: "a__a-2",
+            status: "not_resolved",
+            model_patch_lines: 9,
+            files_changed: 2,
+            failed_to_pass_results: { failure: ["test_bug"] },
+          },
+          { instance_id: "a__a-3", status: "agent_error" },
+        ],
+      }),
+      "utf8",
+    );
+
+    const contexts = await loadRetryUnresolvedContexts(dir);
+    assert.deepEqual(Array.from(contexts.keys()).sort(), ["a__a-2", "a__a-3"]);
+    assert.equal(contexts.get("a__a-2").status, "not_resolved");
+    assert.deepEqual(contexts.get("a__a-2").failed_to_pass_results, { failure: ["test_bug"] });
+    assert.equal(contexts.get("a__a-2").previous_patch_summary, "9 patch lines, 2 files changed");
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }
