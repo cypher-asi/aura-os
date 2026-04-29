@@ -42,11 +42,18 @@ export function OrgSettingsBilling({
   const { isNativeApp } = useAuraCapabilities();
   const [customAmount, setCustomAmount] = useState("");
   const [periodEnd, setPeriodEnd] = useState<string | null>(null);
+  const [periodLoading, setPeriodLoading] = useState(true);
+  const [isPaidPlan, setIsPaidPlan] = useState(false);
 
   useEffect(() => {
+    setPeriodLoading(true);
     orgsApi.getSubscriptionStatus()
-      .then((s) => { if (s.current_period_end) setPeriodEnd(s.current_period_end); })
-      .catch(() => {});
+      .then((s) => {
+        if (s.current_period_end) setPeriodEnd(s.current_period_end);
+        setIsPaidPlan(s.plan !== "mortal");
+      })
+      .catch(() => {})
+      .finally(() => setPeriodLoading(false));
   }, []);
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
 
@@ -124,7 +131,7 @@ export function OrgSettingsBilling({
             )}
           </div>
         </div>
-        {periodEnd && (
+        {isPaidPlan && (
           <div className={styles.settingsRow}>
             <div className={styles.rowInfo}>
               <span className={styles.rowLabel}>Next Billing Date</span>
@@ -133,7 +140,9 @@ export function OrgSettingsBilling({
               </span>
             </div>
             <div className={styles.rowControl}>
-              {new Date(periodEnd).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+              {periodLoading ? "Loading..." : periodEnd
+                ? new Date(periodEnd).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+                : "---"}
             </div>
           </div>
         )}
