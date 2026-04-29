@@ -17,7 +17,8 @@ import {
   resolveSwebenchProjectCommand,
   resolveResumeOutDir,
   runWithPool,
-  SWEBENCH_DEFAULT_PROJECT_COMMAND,
+  SWEBENCH_DEFAULT_BUILD_COMMAND,
+  SWEBENCH_DEFAULT_TEST_COMMAND,
   stripBenchmarkArtifactsFromDiff,
   stripTestEditsFromDiff,
 } from "./run-swebench.mjs";
@@ -33,23 +34,24 @@ test("BENCHMARK_DIRECTIVES is a single shared constant", () => {
   assert.equal(typeof BENCHMARK_DIRECTIVES, "string");
   assert.match(BENCHMARK_DIRECTIVES, /Benchmark constraints/);
   assert.match(BENCHMARK_DIRECTIVES, /Do not modify or delete any existing test files/);
+  assert.match(BENCHMARK_DIRECTIVES, /run the repository test suite/);
+  assert.match(BENCHMARK_DIRECTIVES, /full configured test command/);
   assert.match(BENCHMARK_DIRECTIVES, /call `submit_plan` with the target files/);
   assert.match(BENCHMARK_DIRECTIVES, /Create one patch-producing implementation task/);
   assert.match(BENCHMARK_DIRECTIVES, /standalone inspect, locate, or verify tasks/);
   assert.match(BENCHMARK_DIRECTIVES, /Fold inspection\/verification into the implementation task/);
-  assert.match(BENCHMARK_DIRECTIVES, /strongest local semantic validation/);
-  assert.match(BENCHMARK_DIRECTIVES, /targeted pytest/);
   assert.match(BENCHMARK_DIRECTIVES, /self-review the final patch/);
   assert.match(BENCHMARK_DIRECTIVES, /re-read every changed source file/);
   assert.match(BENCHMARK_DIRECTIVES, /no_changes_needed: true/);
 });
 
-test("SWE-bench project command defaults to quote-safe live preflight shape", () => {
+test("SWE-bench project commands default to real test gate and quote-safe build", () => {
   assert.equal(resolveSwebenchProjectCommand("AURA_BENCH_BUILD_COMMAND", {}), "node --version");
   assert.equal(resolveSwebenchProjectCommand("AURA_BENCH_TEST_COMMAND", {
     AURA_BENCH_TEST_COMMAND: "   ",
-  }), "node --version");
-  assert.equal(SWEBENCH_DEFAULT_PROJECT_COMMAND, "node --version");
+  }), "python -m pytest");
+  assert.equal(SWEBENCH_DEFAULT_BUILD_COMMAND, "node --version");
+  assert.equal(SWEBENCH_DEFAULT_TEST_COMMAND, "python -m pytest");
 });
 
 test("SWE-bench project command honours explicit operator overrides", () => {

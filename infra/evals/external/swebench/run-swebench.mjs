@@ -37,25 +37,28 @@ export const BENCHMARK_DIRECTIVES = `## Benchmark constraints
 - Do not modify or delete any existing test files (anything under \`tests/\`, \`test/\`, or files matching \`test_*.py\` / \`*_test.py\`). The reviewer applies a hidden test patch and will fail the run if existing tests are altered.
 - Do not add new dependencies; install only what is already declared in the repo.
 - Make the smallest viable change. Most fixes are 1-3 files and under ~30 lines.
-- The local test environment is NOT pre-configured. Do not run pytest unless you can confirm the dependencies are installed. Reason from the codebase instead.
+- After changing source code, run the repository test suite with the configured project test command and make it pass before \`task_done\`. If the environment cannot run the suite because dependencies are missing or setup is broken, stop and explain the blocker in completion notes.
 - Before any \`write_file\`, \`edit_file\`, or \`delete_file\`, briefly inspect the relevant code and call \`submit_plan\` with the target files so the harness unlocks file operations.
 - Create one patch-producing implementation task for this instance. Do not split the work into standalone inspect, locate, or verify tasks; fold that work into the implementation task.
 - Fold inspection/verification into the implementation task. Do not create a standalone verification-only task unless it genuinely needs no source edits.
-- Before \`task_done\`, run the strongest local semantic validation that is safe in the current environment: a targeted pytest for the touched behavior if dependencies are installed, otherwise a focused Python reproduction/import check. If neither can run, explain the missing dependency or environment blocker in the completion notes.
+- Before \`task_done\`, run the full configured test command. If the full suite is too slow after it starts, also run the strongest targeted semantic validation available and record both outcomes.
 - Before \`task_done\`, self-review the final patch: re-read every changed source file, compare the diff to the problem statement, confirm no existing tests or dependencies were changed, and remove any placeholder/debug code.
 - Completion contract: if a task genuinely requires no file changes, call \`task_done\` with \`no_changes_needed: true\` and explain why in the notes. Otherwise the dev-loop completion gate rejects \`task_done\` because there are no file operations to verify.
 `;
 
 const STATUS_BLOCKED_CLOUDFLARE = "blocked_cloudflare";
 const STATUS_SKIPPED_CLOUDFLARE = "skipped_cloudflare_block";
-export const SWEBENCH_DEFAULT_PROJECT_COMMAND = "node --version";
+export const SWEBENCH_DEFAULT_BUILD_COMMAND = "node --version";
+export const SWEBENCH_DEFAULT_TEST_COMMAND = "python -m pytest";
 
 export function resolveSwebenchProjectCommand(envName, env = process.env) {
   const configured = env?.[envName];
   if (typeof configured === "string" && configured.trim().length > 0) {
     return configured;
   }
-  return SWEBENCH_DEFAULT_PROJECT_COMMAND;
+  return envName === "AURA_BENCH_TEST_COMMAND"
+    ? SWEBENCH_DEFAULT_TEST_COMMAND
+    : SWEBENCH_DEFAULT_BUILD_COMMAND;
 }
 
 // ---------------------------------------------------------------------------
@@ -809,7 +812,7 @@ function buildScenario(instance, workspaceDir) {
       role: "Engineer",
       personality: "Methodical, careful, benchmark-focused.",
       systemPrompt:
-        "You are AURA running a single SWE-bench Verified instance. Read requirements.md first. Make the smallest patch that fixes the described bug. Do not edit existing tests. Keep the work as one patch-producing implementation task; do not split it into standalone inspect, locate, or verify tasks. Before any write_file, edit_file, or delete_file, briefly inspect the relevant code and call submit_plan with the target files so the harness unlocks file operations. Fold inspection and verification into the implementation work. Before task_done, run the strongest safe semantic validation available: targeted pytest when dependencies are installed, otherwise a focused Python reproduction or import check. Before task_done, self-review the final patch by re-reading every changed source file, comparing the diff to the problem statement, confirming no existing tests or dependencies changed, and removing placeholder/debug code. If a task genuinely requires no file changes, finish it with task_done and no_changes_needed: true plus notes explaining why.",
+        "You are AURA running a single SWE-bench Verified instance. Read requirements.md first. Make the smallest patch that fixes the described bug. Do not edit existing tests. Keep the work as one patch-producing implementation task; do not split it into standalone inspect, locate, or verify tasks. Before any write_file, edit_file, or delete_file, briefly inspect the relevant code and call submit_plan with the target files so the harness unlocks file operations. Fold inspection and verification into the implementation work. After changing source code and before task_done, run the configured project test command for the full suite and make it pass. If the suite cannot run because the environment is missing dependencies or setup, stop and explain the blocker in completion notes; if it is too slow after starting, also run the strongest targeted semantic validation available and record both outcomes. Before task_done, self-review the final patch by re-reading every changed source file, comparing the diff to the problem statement, confirming no existing tests or dependencies changed, and removing placeholder/debug code. If a task genuinely requires no file changes, finish it with task_done and no_changes_needed: true plus notes explaining why.",
       machineType: process.env.AURA_BENCH_AGENT_MACHINE_TYPE ?? "local",
       adapterType: "aura_harness",
       environment: "local_host",
@@ -834,7 +837,7 @@ function buildScenario(instance, workspaceDir) {
       requireNoFailedTasks: false,
       requireAnyDoneTasks: false,
       requireBuildSteps: false,
-      requireTestSteps: false,
+      requireTestSteps: true,
       statsTexts: [],
     },
   };
