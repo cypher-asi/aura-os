@@ -124,10 +124,10 @@ export function OrgSettingsBilling({
               {isPaidPlan && !isActive ? "Cancels at end of period" : "Your active subscription"}
             </span>
           </div>
-          <div className={styles.rowControl}>
-            <span className={styles.roleBadge}>{balance?.plan ?? billing?.plan ?? "mortal"}</span>
+          <div className={styles.rowControl} style={{ marginLeft: "auto" }}>
+            <span className={styles.roleBadge}>{periodLoading ? "..." : balance?.plan ?? billing?.plan ?? "mortal"}</span>
             {onUpgrade && (
-              <Button variant="ghost" size="sm" onClick={onUpgrade} style={{ marginLeft: 8 }}>
+              <Button variant="ghost" size="sm" onClick={onUpgrade} style={{ padding: 0, display: "flex", justifyContent: "flex-end" }}>
                 Change Plan
               </Button>
             )}
