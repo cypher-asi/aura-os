@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { Button } from "@cypher-asi/zui";
-import { Copy, Check, Gift } from "lucide-react";
+import { Gift } from "lucide-react";
 import { authApi } from "../../shared/api/auth";
 import styles from "../OrgSettingsPanel/OrgSettingsPanel.module.css";
 import rewardStyles from "./OrgSettingsRewards.module.css";
@@ -47,30 +46,22 @@ export function OrgSettingsRewards() {
       {/* Invite Code */}
       <div className={styles.settingsGroupLabel}>Your Invite Code</div>
       <div className={styles.settingsGroup}>
-        <div className={rewardStyles.inviteCodeSection}>
-          <p className={rewardStyles.description}>
-            Share your invite code with others. When someone you invite
-            subscribes to a paid plan, you both earn bonus Z credits.
-          </p>
-          <div className={rewardStyles.codeRow}>
+        <div className={styles.settingsRow}>
+          <div className={styles.rowInfo}>
+            <span className={styles.rowLabel}>Invite Code</span>
+            <span className={styles.rowDescription}>
+              Share with others. When they subscribe, you both earn bonus Z credits.
+            </span>
+          </div>
+          <div className={styles.rowControl}>
             {loading ? (
               <span className={rewardStyles.codeLoading}>Loading...</span>
             ) : inviteCode ? (
-              <>
-                <code className={rewardStyles.codeValue}>{inviteCode}</code>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  icon={copied ? <Check size={14} /> : <Copy size={14} />}
-                  onClick={handleCopy}
-                >
-                  {copied ? "Copied" : "Copy"}
-                </Button>
-              </>
+              <code className={rewardStyles.codeClickable} onClick={handleCopy}>
+                {copied ? "Copied!" : inviteCode}
+              </code>
             ) : (
-              <span className={rewardStyles.codeLoading}>
-                Unable to load invite code
-              </span>
+              <span className={rewardStyles.codeLoading}>Unavailable</span>
             )}
           </div>
         </div>

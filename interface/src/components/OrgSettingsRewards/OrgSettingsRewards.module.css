@@ -26,8 +26,26 @@
   user-select: all;
 }
 
+.codeClickable {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-2xs, 11px);
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: opacity 0.15s;
+  min-width: 120px;
+  text-align: center;
+}
+
+.codeClickable:hover {
+  opacity: 0.8;
+}
+
 .codeLoading {
-  font-size: 13px;
+  font-size: var(--text-2xs, 11px);
   color: var(--color-text-muted);
 }
 
