@@ -2,19 +2,19 @@
   {
     "date": "2026-04-29",
     "channel": "nightly",
-    "version": "0.1.0-nightly.413.1",
-    "title": "Open signups, tiered subscriptions, and a new credits economy",
-    "intro": "Today's nightly opens AURA up beyond Zero Pro: any authenticated user can now sign in, registration is back with optional invite codes, and a full tier-based subscription flow ships alongside a new Z credits economy. The login screen and team settings get a sizable cleanup to match.",
-    "entryCount": 4,
+    "version": "0.1.0-nightly.416.1",
+    "title": "Open signup, tier subscriptions, and Z credits land",
+    "intro": "Today's nightly opens AURA up beyond Zero Pro and rolls out the foundations of the new tier-based billing system. Account creation is back with optional invite codes, a tier subscription modal and Z credits dashboard ship in settings, and a long tail of polish tightens the billing, rewards, and login experience.",
+    "entryCount": 5,
     "highlights": [
-      "Access opened to all authenticated users, Pro gate removed",
-      "Registration restored with optional invite codes and referral capture",
-      "New tier subscription modal, Stripe portal, and Z credits across billing",
-      "Z Credit History and redesigned Rewards section in team settings"
+      "Zero Pro gate removed — any authenticated user can use AURA",
+      "Tier subscriptions, Stripe portal, and Z credit history shipped",
+      "Invite-code signup with deferred referral rewards on paid plans",
+      "Login screen simplified — host controls retired"
     ],
-    "rawCommitCount": 28,
-    "generatedAt": "2026-04-29T11:30:37.790Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.413.1",
+    "rawCommitCount": 31,
+    "generatedAt": "2026-04-29T12:07:59.690Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.416.1",
     "path": "history/2026-04-29.json"
   },
   {

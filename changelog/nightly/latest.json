@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-29T11:30:37.790Z",
+  "generatedAt": "2026-04-29T12:07:59.690Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.413.1",
+  "version": "0.1.0-nightly.416.1",
   "date": "2026-04-29",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.413.1",
-  "lastIncludedSha": "72eac5f412d1cf6da560b1c2875e9fac09345393",
-  "previousProcessedSha": "c3848e270402c641e7e3fb86542781dc5575ea47",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.416.1",
+  "lastIncludedSha": "4336baaaa618de3196c73e71d8a1db05f42e193c",
+  "previousProcessedSha": "72eac5f412d1cf6da560b1c2875e9fac09345393",
   "commitShas": [
     "b9155d5740ee3718a34a612fd08869efb6169d18",
     "54d32a301de16194755e12477086a452a1a8a3c0",
@@ -39,10 +39,13 @@
     "fb4f098a37a3eced638c6b8a25f294483e648366",
     "075f5b7945e8ad838becced79df7dd0e2ac48307",
     "9fdb2322efb7585fc23bdec8cfeca45a6455413e",
-    "72eac5f412d1cf6da560b1c2875e9fac09345393"
+    "72eac5f412d1cf6da560b1c2875e9fac09345393",
+    "4c8f0f64a288923a6ba30f9c0548c1e5a945286e",
+    "78ebe5f5ae9e95c1ed8ebf92d83bb3e5e19dbe42",
+    "4336baaaa618de3196c73e71d8a1db05f42e193c"
   ],
-  "rawCommitCount": 28,
-  "filteredCommitCount": 28,
+  "rawCommitCount": 31,
+  "filteredCommitCount": 31,
   "rawCommits": [
     {
       "sha": "b9155d5740ee3718a34a612fd08869efb6169d18",
@@ -1240,9 +1243,120 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "4c8f0f64a288923a6ba30f9c0548c1e5a945286e",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-04-29T12:37:49+01:00",
+      "subject": "rename Monthly Allowance to Monthly Plan Top-Up in credit history",
+      "body": "",
+      "parents": [
+        "72eac5f412d1cf6da560b1c2875e9fac09345393"
+      ],
+      "files": [
+        "interface/src/components/OrgSettingsCreditHistory/OrgSettingsCreditHistory.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1777462669000,
+      "cleanSubject": "rename Monthly Allowance to Monthly Plan Top-Up in credit history",
+      "keywords": [
+        "rename",
+        "monthly",
+        "allowance",
+        "plan",
+        "credit",
+        "history"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "78ebe5f5ae9e95c1ed8ebf92d83bb3e5e19dbe42",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-04-29T12:47:05+01:00",
+      "subject": "fix plan badge not updating on tab return",
+      "body": "Use subscription status plan instead of balance plan for the\nbadge, ensuring it updates via the visibility change handler.",
+      "parents": [
+        "4c8f0f64a288923a6ba30f9c0548c1e5a945286e"
+      ],
+      "files": [
+        "interface/src/components/OrgSettingsBilling/OrgSettingsBilling.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 3,
+        "deletions": 1
+      },
+      "committedAtMs": 1777463225000,
+      "cleanSubject": "fix plan badge not updating on tab return",
+      "keywords": [
+        "plan",
+        "badge",
+        "updating",
+        "return"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "4336baaaa618de3196c73e71d8a1db05f42e193c",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-04-29T12:55:19+01:00",
+      "subject": "Revert \"fix plan badge not updating on tab return\"",
+      "body": "This reverts commit 78ebe5f5ae9e95c1ed8ebf92d83bb3e5e19dbe42.",
+      "parents": [
+        "78ebe5f5ae9e95c1ed8ebf92d83bb3e5e19dbe42"
+      ],
+      "files": [
+        "interface/src/components/OrgSettingsBilling/OrgSettingsBilling.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 3
+      },
+      "committedAtMs": 1777463719000,
+      "cleanSubject": "Revert \"fix plan badge not updating on tab return\"",
+      "keywords": [
+        "revert",
+        "plan",
+        "badge",
+        "updating",
+        "return"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
-  "batchCount": 4,
+  "batchCount": 5,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -1251,36 +1365,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11554432
+          "sizeBytes": 11554436
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.413.1",
+      "version": "0.1.0-nightly.416.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.413.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.416.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 34432598
+          "sizeBytes": 34437780
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.413.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.416.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.413.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.416.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 101751288
+          "sizeBytes": 101730808
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.413.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.416.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -1290,29 +1404,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.413.1",
+      "version": "0.1.0-nightly.416.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.413.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.416.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 30975614
+          "sizeBytes": 30972627
         },
         {
-          "name": "Aura_0.1.0-nightly.413.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.416.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.413.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.416.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 30772935
+          "sizeBytes": 30770454
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.413.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.416.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1322,29 +1436,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.413.1",
+      "version": "0.1.0-nightly.416.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.413.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.416.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 32457655
+          "sizeBytes": 32457982
         },
         {
-          "name": "Aura_0.1.0-nightly.413.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.416.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.413.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.416.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 32301869
+          "sizeBytes": 32299084
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.413.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.416.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1354,17 +1468,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.413.1",
+      "version": "0.1.0-nightly.416.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.413.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.416.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 23445482
+          "sizeBytes": 23435677
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.413.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.416.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -1373,43 +1487,37 @@
     }
   ],
   "rendered": {
-    "title": "Open signups, tiered subscriptions, and a new credits economy",
-    "intro": "Today's nightly opens AURA up beyond Zero Pro: any authenticated user can now sign in, registration is back with optional invite codes, and a full tier-based subscription flow ships alongside a new Z credits economy. The login screen and team settings get a sizable cleanup to match.",
+    "title": "Open signup, tier subscriptions, and Z credits land",
+    "intro": "Today's nightly opens AURA up beyond Zero Pro and rolls out the foundations of the new tier-based billing system. Account creation is back with optional invite codes, a tier subscription modal and Z credits dashboard ship in settings, and a long tail of polish tightens the billing, rewards, and login experience.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:23 AM",
         "started_at": "2026-04-28T09:23:54.000Z",
         "ended_at": "2026-04-28T09:37:00.000Z",
-        "title": "Access opens up: Pro gate removed and registration returns",
-        "summary": "AURA drops the Zero Pro gate, brings back account creation with optional invite codes, and lays the groundwork for signup and referral credit grants.",
+        "title": "Open signup with invite codes and credit grants",
+        "summary": "AURA drops its Zero Pro paywall, brings back account creation, and wires up signup and referral credit grants through z-billing.",
         "items": [
           {
-            "text": "Removed the Zero Pro / access-granted check from RequireAuth so any authenticated user can enter the app, with backend enforcement now controlled by the REQUIRE_ZERO_PRO env var.",
+            "text": "Removed the Zero Pro gate from RequireAuth and restored the Create Account tab with an optional invite code; entered codes are validated against zos-api and sanitized server-side against path traversal, while blank codes silently fall back to a default.",
             "commit_shas": [
-              "b9155d5740ee3718a34a612fd08869efb6169d18"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Restored the Create Account tab on the login screen with an optional invite code: blank codes silently use a default, entered codes are validated against zos-api and sanitized server-side to prevent path traversal.",
-            "commit_shas": [
+              "b9155d5740ee3718a34a612fd08869efb6169d18",
               "54d32a301de16194755e12477086a452a1a8a3c0"
             ],
             "confidence": "high"
           },
           {
-            "text": "Wired up signup and referral credit grants to z-billing, then refactored the flow to grant signup credits on first AURA login (idempotent via signup_grant_at) and resolve the inviter from the existing zos-api finalize response instead of trusting the frontend.",
+            "text": "Added fire-and-forget signup and referral credit grants via z-billing, then refactored so signup credits fire on first AURA login (idempotent via signup_grant_at) and the inviter is resolved from the zos-api finalize response instead of trusted from the frontend.",
             "commit_shas": [
               "b1d693b419f164b1ff32688d2f2c3786be9327cd",
               "530106492a384b64833b9aa04d5f5cbfae06a4ee",
-              "2dac03c8706a2305a0147ac4c6c8eb203e028ffd",
-              "bd26448027195120ca177b2af312e97a475d8c31"
+              "bd26448027195120ca177b2af312e97a475d8c31",
+              "2dac03c8706a2305a0147ac4c6c8eb203e028ffd"
             ],
             "confidence": "high"
           },
           {
-            "text": "Introduced a new Rewards section in team settings showing your invite code and referral perks, fixed the billing plan badge fallback, unified credit purchase presets, and corrected the zos-api invite proxy path.",
+            "text": "Introduced a Rewards section in org settings showing the user's invite code and referral incentives, and corrected the zos-api invite proxy paths so validation and code fetch hit the right routes.",
             "commit_shas": [
               "5ceeb3cd55398be395a785dbb8bbcafa85ae6003",
               "d225766f92f6b3a64c1864fe11729c637f083deb"
@@ -1423,32 +1531,32 @@
         "time_label": "2:37 AM",
         "started_at": "2026-04-28T09:37:00.000Z",
         "ended_at": "2026-04-28T09:41:33.000Z",
-        "title": "Tier subscriptions, Stripe portal, and the move to Mortal",
-        "summary": "A full tier subscription flow lands with a new modal, Stripe checkout and customer portal endpoints, and a switch from Zero Pro framing to the new Mortal-and-up tier system.",
+        "title": "Tier subscriptions and the Mortal plan baseline",
+        "summary": "Billing pivots from Zero Pro to a tier system, with a new subscription modal, Stripe checkout/portal endpoints, and referral rewards deferred until a paid subscription.",
         "items": [
           {
-            "text": "Reframed Rewards and Billing around the new tier system: 50 daily credits and a flat 5,000-credit referral bonus on Mortal, tier-based upgrade messaging in place of Zero Pro references, and the plan badge fallback updated to 'mortal'.",
+            "text": "Reframed Rewards and Billing around the new tier system: Mortal becomes the default plan with 50 daily credits and a flat 5,000-credit referral bonus, replacing Zero Pro upsell copy and the old 'free' plan badge fallback.",
             "commit_shas": [
               "a87a82df53a2f62a2322038fd1357eb77cf86ab5"
             ],
             "confidence": "high"
           },
           {
-            "text": "Shipped the TierSubscriptionModal alongside new server endpoints for subscription checkout, Stripe Customer Portal sessions, and subscription status, plus billing UI polish and a credits display.",
+            "text": "Shipped a TierSubscriptionModal plus backend routes for /api/subscriptions/checkout, /portal, and /me, giving users an in-app upgrade flow that hands off to Stripe Checkout and the Customer Portal.",
             "commit_shas": [
               "499d791571a477c747457c8bec1738bff31399e5"
             ],
             "confidence": "high"
           },
           {
-            "text": "Deferred referral credits until the invited user actually subscribes to a paid plan: signup grants now carry a referred_by field, the dead grant_referral_credits path is gone, and Rewards/tier copy reflects the subscription-triggered reward.",
+            "text": "Deferred referral credits to subscription time: signup now passes referred_by to z-billing and rewards only fire when an invited user upgrades to a paid plan, with UI copy updated to match.",
             "commit_shas": [
               "6ab2683398192e79fae5169316aabb5ccd6aba66"
             ],
             "confidence": "high"
           },
           {
-            "text": "Made the zos-api URL configurable via ZOS_API_URL with a sensible default, matching the env-var pattern used elsewhere and unblocking local and staging overrides.",
+            "text": "Made the zos-api URL configurable via ZOS_API_URL env var with a sane default, matching the env-driven pattern used elsewhere in the server.",
             "commit_shas": [
               "37dd0604dd0759c020ad2f66dec49e12aea50210"
             ],
@@ -1461,25 +1569,25 @@
         "time_label": "1:53 AM",
         "started_at": "2026-04-29T08:53:47.000Z",
         "ended_at": "2026-04-29T09:36:38.000Z",
-        "title": "Login screen cleanup and Z credits in team settings",
-        "summary": "The login view sheds its host-targeting controls, billing and rewards rebrand to Z credits, and a new Z Credit History section gives users a transparent view of their balance and transactions.",
+        "title": "Z credits dashboard and login screen cleanup",
+        "summary": "Settings gain a full Z credit history view and next-billing-date row, while the login screen drops Zero Pro branding and host-switching controls.",
         "items": [
           {
-            "text": "Cleaned up the login screen by removing the Change Host card, host status badge, and HostSettingsModal, and rebranded the title from 'Login with ZERO Pro' to 'Login to AURA' with refreshed mobile copy.",
+            "text": "Stripped the Change Host card, host status badge, and HostSettingsModal from the login view and rebranded it from 'Login with ZERO Pro' to 'Login to AURA' with refreshed mobile copy.",
             "commit_shas": [
               "8ede1caf75dd1909bfce6a45d18f0398be5ae2d0"
             ],
             "confidence": "high"
           },
           {
-            "text": "Set the Pro tier launch price to $10 (with the matching legacy Stripe price), to be reverted to $20 once the Zero Pro migration completes.",
+            "text": "Added a Z Credit History settings section showing balance, plan, monthly allowance, member-since, and a full transaction list with type labels and running balance.",
             "commit_shas": [
-              "0002a8e9ed7eb20a8db830e729efceedec4a141b"
+              "8f7739dc46d6e2fad369c3c93695aaf57ccedd51"
             ],
             "confidence": "high"
           },
           {
-            "text": "Rebranded credits as 'Z credits' across billing, rewards and the buy-credits modal, dropped the redundant billing email row in favor of the Stripe portal, and added a 'Next Billing Date' field driven by current_period_end for paid subscribers.",
+            "text": "Renamed credits to 'Z credits' across billing, rewards, and the buy-credits modal, removed the redundant billing email row (managed via Stripe portal), and surfaced a Next Billing Date row for paid subscribers.",
             "commit_shas": [
               "dda0c137a2126100f1ae204423488b3027196327",
               "4871bafb0721610e204d18b3b31d8a33b4951df1"
@@ -1487,10 +1595,10 @@
             "confidence": "high"
           },
           {
-            "text": "Added a Z Credit History section to team settings showing balance, plan, status, monthly allowance and a full transaction list, and redesigned the invite code as an inline click-to-copy element with consistent typography across Rewards and Billing.",
+            "text": "Redesigned the invite code as an inline click-to-copy element with 'Copied!' feedback and fixed-width to prevent layout shift, and dropped Pro tier price to a temporary $10 launch price pending the Zero Pro migration.",
             "commit_shas": [
-              "8f7739dc46d6e2fad369c3c93695aaf57ccedd51",
               "248a2aa84be20be3fb52549cbd3c8e87816db030",
+              "0002a8e9ed7eb20a8db830e729efceedec4a141b",
               "507679b80d02ba40c3c543eb3643312e72ea93e4",
               "3c4e8aaf3d84c09abe86e03f2f33803b1c5292d7"
             ],
@@ -1503,35 +1611,35 @@
         "time_label": "2:39 AM",
         "started_at": "2026-04-29T09:39:42.000Z",
         "ended_at": "2026-04-29T11:18:02.000Z",
-        "title": "Billing UI states: cancellation, proration, and post-checkout refresh",
-        "summary": "Billing and subscription surfaces gain proper loading, cancellation and proration states, and AURA now silently refreshes balance and subscription status when users return from Stripe.",
+        "title": "Subscription state, cancellations, and tab-return refresh",
+        "summary": "Billing UI gains proper loading states, cancellation messaging, proration hints, and auto-refresh after Stripe round-trips.",
         "items": [
           {
-            "text": "Billing now renders a dedicated row for paid plans with a 'Loading...' placeholder and surfaces cancellation clearly, swapping 'Next Billing Date' for a 'Plan Ends' message that explains the revert to Mortal at period end.",
+            "text": "Billing settings now render plan, badge, and next-billing-date rows with explicit loading states for paid users and hide the date for Mortal, eliminating layout flashes during fetch.",
             "commit_shas": [
               "5c1d7f612d55092ab94720838284e7c47a052832",
-              "98df74d0cafeca47536d82a362831878578feb51"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Polished the tier subscription modal with proration explainer copy, tightened spacing, and added a loading state that prevents a brief Mortal flash before the real plan resolves; the billing plan badge and Change Plan button get matching loading alignment.",
-            "commit_shas": [
-              "cc6d7d0aa2f36a91e5760be640faaf06bc84bc83",
               "70de31b7991427f851520d2ed35bb4690262eeb1",
               "fb4f098a37a3eced638c6b8a25f294483e648366"
             ],
             "confidence": "high"
           },
           {
-            "text": "When the AURA tab regains visibility (for example after a Stripe checkout or portal session in another tab), credit balance and subscription status are silently refetched, removing the need for a manual reload.",
+            "text": "Surfaced subscription cancellation state in the UI with a 'Cancels at end of period' description and a 'Plan Ends' row explaining the revert to Mortal, plus added proration info to the tier modal.",
+            "commit_shas": [
+              "98df74d0cafeca47536d82a362831878578feb51",
+              "cc6d7d0aa2f36a91e5760be640faaf06bc84bc83"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Auto-refresh credit balance and subscription status when the AURA tab regains focus, so users returning from Stripe checkout or the customer portal see the new state without reloading.",
             "commit_shas": [
               "075f5b7945e8ad838becced79df7dd0e2ac48307"
             ],
             "confidence": "high"
           },
           {
-            "text": "Fixed a build break by adding the new rewards and credit-history sections to the settings Section type, dropped the unused billingEmail prop, and updated the core browser smoke test to match the host-control-free login screen.",
+            "text": "Fixed the build by registering the new rewards and credit-history sections in the settings panel's Section type and updated e2e smoke tests to match the host-control-free login screen.",
             "commit_shas": [
               "9fdb2322efb7585fc23bdec8cfeca45a6455413e",
               "72eac5f412d1cf6da560b1c2875e9fac09345393"
@@ -1539,14 +1647,39 @@
             "confidence": "medium"
           }
         ]
+      },
+      {
+        "batch_id": "entry-5",
+        "time_label": "4:37 AM",
+        "started_at": "2026-04-29T11:37:49.000Z",
+        "ended_at": "2026-04-29T11:55:19.000Z",
+        "title": "Plan badge refresh attempt reverted",
+        "summary": "A small label change ships, but a plan-badge refresh fix is rolled back the same hour it landed.",
+        "items": [
+          {
+            "text": "Renamed 'Monthly Allowance' to 'Monthly Plan Top-Up' in the credit history view to better describe the recurring grant.",
+            "commit_shas": [
+              "4c8f0f64a288923a6ba30f9c0548c1e5a945286e"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Attempted to fix the plan badge not updating on tab return by sourcing it from subscription status instead of balance, then reverted the change in the same window pending a better fix.",
+            "commit_shas": [
+              "78ebe5f5ae9e95c1ed8ebf92d83bb3e5e19dbe42",
+              "4336baaaa618de3196c73e71d8a1db05f42e193c"
+            ],
+            "confidence": "high"
+          }
+        ]
       }
     ],
     "highlights": [
-      "Access opened to all authenticated users, Pro gate removed",
-      "Registration restored with optional invite codes and referral capture",
-      "New tier subscription modal, Stripe portal, and Z credits across billing",
-      "Z Credit History and redesigned Rewards section in team settings"
+      "Zero Pro gate removed — any authenticated user can use AURA",
+      "Tier subscriptions, Stripe portal, and Z credit history shipped",
+      "Invite-code signup with deferred referral rewards on paid plans",
+      "Login screen simplified — host controls retired"
     ],
-    "raw_commit_count": 28
+    "raw_commit_count": 31
   }
 }

@@ -1,52 +1,58 @@
-# Open signups, tiered subscriptions, and a new credits economy
+# Open signup, tier subscriptions, and Z credits land
 
 - Date: `2026-04-29`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.413.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.413.1
+- Version: `0.1.0-nightly.416.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.416.1
 
-Today's nightly opens AURA up beyond Zero Pro: any authenticated user can now sign in, registration is back with optional invite codes, and a full tier-based subscription flow ships alongside a new Z credits economy. The login screen and team settings get a sizable cleanup to match.
+Today's nightly opens AURA up beyond Zero Pro and rolls out the foundations of the new tier-based billing system. Account creation is back with optional invite codes, a tier subscription modal and Z credits dashboard ship in settings, and a long tail of polish tightens the billing, rewards, and login experience.
 
-## 2:23 AM — Access opens up: Pro gate removed and registration returns
+## 2:23 AM — Open signup with invite codes and credit grants
 
-AURA drops the Zero Pro gate, brings back account creation with optional invite codes, and lays the groundwork for signup and referral credit grants.
+AURA drops its Zero Pro paywall, brings back account creation, and wires up signup and referral credit grants through z-billing.
 
-- Removed the Zero Pro / access-granted check from RequireAuth so any authenticated user can enter the app, with backend enforcement now controlled by the REQUIRE_ZERO_PRO env var. (`b9155d5`)
-- Restored the Create Account tab on the login screen with an optional invite code: blank codes silently use a default, entered codes are validated against zos-api and sanitized server-side to prevent path traversal. (`54d32a3`)
-- Wired up signup and referral credit grants to z-billing, then refactored the flow to grant signup credits on first AURA login (idempotent via signup_grant_at) and resolve the inviter from the existing zos-api finalize response instead of trusting the frontend. (`b1d693b`, `5301064`, `2dac03c`, `bd26448`)
-- Introduced a new Rewards section in team settings showing your invite code and referral perks, fixed the billing plan badge fallback, unified credit purchase presets, and corrected the zos-api invite proxy path. (`5ceeb3c`, `d225766`)
+- Removed the Zero Pro gate from RequireAuth and restored the Create Account tab with an optional invite code; entered codes are validated against zos-api and sanitized server-side against path traversal, while blank codes silently fall back to a default. (`b9155d5`, `54d32a3`)
+- Added fire-and-forget signup and referral credit grants via z-billing, then refactored so signup credits fire on first AURA login (idempotent via signup_grant_at) and the inviter is resolved from the zos-api finalize response instead of trusted from the frontend. (`b1d693b`, `5301064`, `bd26448`, `2dac03c`)
+- Introduced a Rewards section in org settings showing the user's invite code and referral incentives, and corrected the zos-api invite proxy paths so validation and code fetch hit the right routes. (`5ceeb3c`, `d225766`)
 
-## 2:37 AM — Tier subscriptions, Stripe portal, and the move to Mortal
+## 2:37 AM — Tier subscriptions and the Mortal plan baseline
 
-A full tier subscription flow lands with a new modal, Stripe checkout and customer portal endpoints, and a switch from Zero Pro framing to the new Mortal-and-up tier system.
+Billing pivots from Zero Pro to a tier system, with a new subscription modal, Stripe checkout/portal endpoints, and referral rewards deferred until a paid subscription.
 
-- Reframed Rewards and Billing around the new tier system: 50 daily credits and a flat 5,000-credit referral bonus on Mortal, tier-based upgrade messaging in place of Zero Pro references, and the plan badge fallback updated to 'mortal'. (`a87a82d`)
-- Shipped the TierSubscriptionModal alongside new server endpoints for subscription checkout, Stripe Customer Portal sessions, and subscription status, plus billing UI polish and a credits display. (`499d791`)
-- Deferred referral credits until the invited user actually subscribes to a paid plan: signup grants now carry a referred_by field, the dead grant_referral_credits path is gone, and Rewards/tier copy reflects the subscription-triggered reward. (`6ab2683`)
-- Made the zos-api URL configurable via ZOS_API_URL with a sensible default, matching the env-var pattern used elsewhere and unblocking local and staging overrides. (`37dd060`)
+- Reframed Rewards and Billing around the new tier system: Mortal becomes the default plan with 50 daily credits and a flat 5,000-credit referral bonus, replacing Zero Pro upsell copy and the old 'free' plan badge fallback. (`a87a82d`)
+- Shipped a TierSubscriptionModal plus backend routes for /api/subscriptions/checkout, /portal, and /me, giving users an in-app upgrade flow that hands off to Stripe Checkout and the Customer Portal. (`499d791`)
+- Deferred referral credits to subscription time: signup now passes referred_by to z-billing and rewards only fire when an invited user upgrades to a paid plan, with UI copy updated to match. (`6ab2683`)
+- Made the zos-api URL configurable via ZOS_API_URL env var with a sane default, matching the env-driven pattern used elsewhere in the server. (`37dd060`)
 
-## 1:53 AM — Login screen cleanup and Z credits in team settings
+## 1:53 AM — Z credits dashboard and login screen cleanup
 
-The login view sheds its host-targeting controls, billing and rewards rebrand to Z credits, and a new Z Credit History section gives users a transparent view of their balance and transactions.
+Settings gain a full Z credit history view and next-billing-date row, while the login screen drops Zero Pro branding and host-switching controls.
 
-- Cleaned up the login screen by removing the Change Host card, host status badge, and HostSettingsModal, and rebranded the title from 'Login with ZERO Pro' to 'Login to AURA' with refreshed mobile copy. (`8ede1ca`)
-- Set the Pro tier launch price to $10 (with the matching legacy Stripe price), to be reverted to $20 once the Zero Pro migration completes. (`0002a8e`)
-- Rebranded credits as 'Z credits' across billing, rewards and the buy-credits modal, dropped the redundant billing email row in favor of the Stripe portal, and added a 'Next Billing Date' field driven by current_period_end for paid subscribers. (`dda0c13`, `4871baf`)
-- Added a Z Credit History section to team settings showing balance, plan, status, monthly allowance and a full transaction list, and redesigned the invite code as an inline click-to-copy element with consistent typography across Rewards and Billing. (`8f7739d`, `248a2aa`, `507679b`, `3c4e8aa`)
+- Stripped the Change Host card, host status badge, and HostSettingsModal from the login view and rebranded it from 'Login with ZERO Pro' to 'Login to AURA' with refreshed mobile copy. (`8ede1ca`)
+- Added a Z Credit History settings section showing balance, plan, monthly allowance, member-since, and a full transaction list with type labels and running balance. (`8f7739d`)
+- Renamed credits to 'Z credits' across billing, rewards, and the buy-credits modal, removed the redundant billing email row (managed via Stripe portal), and surfaced a Next Billing Date row for paid subscribers. (`dda0c13`, `4871baf`)
+- Redesigned the invite code as an inline click-to-copy element with 'Copied!' feedback and fixed-width to prevent layout shift, and dropped Pro tier price to a temporary $10 launch price pending the Zero Pro migration. (`248a2aa`, `0002a8e`, `507679b`, `3c4e8aa`)
 
-## 2:39 AM — Billing UI states: cancellation, proration, and post-checkout refresh
+## 2:39 AM — Subscription state, cancellations, and tab-return refresh
 
-Billing and subscription surfaces gain proper loading, cancellation and proration states, and AURA now silently refreshes balance and subscription status when users return from Stripe.
+Billing UI gains proper loading states, cancellation messaging, proration hints, and auto-refresh after Stripe round-trips.
 
-- Billing now renders a dedicated row for paid plans with a 'Loading...' placeholder and surfaces cancellation clearly, swapping 'Next Billing Date' for a 'Plan Ends' message that explains the revert to Mortal at period end. (`5c1d7f6`, `98df74d`)
-- Polished the tier subscription modal with proration explainer copy, tightened spacing, and added a loading state that prevents a brief Mortal flash before the real plan resolves; the billing plan badge and Change Plan button get matching loading alignment. (`cc6d7d0`, `70de31b`, `fb4f098`)
-- When the AURA tab regains visibility (for example after a Stripe checkout or portal session in another tab), credit balance and subscription status are silently refetched, removing the need for a manual reload. (`075f5b7`)
-- Fixed a build break by adding the new rewards and credit-history sections to the settings Section type, dropped the unused billingEmail prop, and updated the core browser smoke test to match the host-control-free login screen. (`9fdb232`, `72eac5f`)
+- Billing settings now render plan, badge, and next-billing-date rows with explicit loading states for paid users and hide the date for Mortal, eliminating layout flashes during fetch. (`5c1d7f6`, `70de31b`, `fb4f098`)
+- Surfaced subscription cancellation state in the UI with a 'Cancels at end of period' description and a 'Plan Ends' row explaining the revert to Mortal, plus added proration info to the tier modal. (`98df74d`, `cc6d7d0`)
+- Auto-refresh credit balance and subscription status when the AURA tab regains focus, so users returning from Stripe checkout or the customer portal see the new state without reloading. (`075f5b7`)
+- Fixed the build by registering the new rewards and credit-history sections in the settings panel's Section type and updated e2e smoke tests to match the host-control-free login screen. (`9fdb232`, `72eac5f`)
+
+## 4:37 AM — Plan badge refresh attempt reverted
+
+A small label change ships, but a plan-badge refresh fix is rolled back the same hour it landed.
+
+- Renamed 'Monthly Allowance' to 'Monthly Plan Top-Up' in the credit history view to better describe the recurring grant. (`4c8f0f6`)
+- Attempted to fix the plan badge not updating on tab return by sourcing it from subscription status instead of balance, then reverted the change in the same window pending a better fix. (`78ebe5f`, `4336baa`)
 
 ## Highlights
 
-- Access opened to all authenticated users, Pro gate removed
-- Registration restored with optional invite codes and referral capture
-- New tier subscription modal, Stripe portal, and Z credits across billing
-- Z Credit History and redesigned Rewards section in team settings
+- Zero Pro gate removed — any authenticated user can use AURA
+- Tier subscriptions, Stripe portal, and Z credit history shipped
+- Invite-code signup with deferred referral rewards on paid plans
+- Login screen simplified — host controls retired
 
