@@ -2,17 +2,18 @@
   {
     "date": "2026-04-30",
     "channel": "nightly",
-    "version": "0.1.0-nightly.417.1",
-    "title": "Pro tier returns to $20/month",
-    "intro": "A quiet day with a single user-visible change: the Pro subscription tier is back at its standard $20/month price now that the underlying migration has wrapped up.",
+    "version": "0.1.0-nightly.420.1",
+    "title": "Pro tier returns to $20 with legacy pricing preserved",
+    "intro": "Today's nightly closes out the Pro tier pricing migration. The headline price moves back to $20/month, while early Zero Pro subscribers keep their original $10/month rate, now clearly surfaced in the subscription UI.",
     "entryCount": 1,
     "highlights": [
-      "Pro tier priced at $20/mo in the subscription modal",
-      "Pricing migration complete"
+      "Pro tier price restored to $20/mo",
+      "Legacy $10/mo rate preserved for Zero Pro OG subscribers",
+      "Credit history label clarified to 'Monthly Plan Top-Up'"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-04-30T16:39:33.404Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.417.1",
+    "rawCommitCount": 4,
+    "generatedAt": "2026-04-30T18:13:28.798Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.420.1",
     "path": "history/2026-04-30.json"
   },
   {

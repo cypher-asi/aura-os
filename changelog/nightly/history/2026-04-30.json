@@ -3,19 +3,22 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-30T16:39:33.404Z",
+  "generatedAt": "2026-04-30T18:13:28.798Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.417.1",
+  "version": "0.1.0-nightly.420.1",
   "date": "2026-04-30",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.417.1",
-  "lastIncludedSha": "cbf003bec0f4907753480903cb975f07cff6c14c",
-  "previousProcessedSha": "4336baaaa618de3196c73e71d8a1db05f42e193c",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.420.1",
+  "lastIncludedSha": "d777b4bc71a6f1fd8d3b8467a615a1d56f6518ff",
+  "previousProcessedSha": "cbf003bec0f4907753480903cb975f07cff6c14c",
   "commitShas": [
-    "cbf003bec0f4907753480903cb975f07cff6c14c"
+    "cbf003bec0f4907753480903cb975f07cff6c14c",
+    "d9776a3f3fdb41162e347b97966bb59d9103ef6f",
+    "dadfd29970ae5e46e103002239a3f7d978ee3d94",
+    "d777b4bc71a6f1fd8d3b8467a615a1d56f6518ff"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 4,
+  "filteredCommitCount": 4,
   "rawCommits": [
     {
       "sha": "cbf003bec0f4907753480903cb975f07cff6c14c",
@@ -53,6 +56,124 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "d9776a3f3fdb41162e347b97966bb59d9103ef6f",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-04-30T18:29:54+01:00",
+      "subject": "add legacy pricing note to tier modal for Zero Pro OG users",
+      "body": "",
+      "parents": [
+        "cbf003bec0f4907753480903cb975f07cff6c14c"
+      ],
+      "files": [
+        "interface/src/components/TierSubscriptionModal/TierSubscriptionModal.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 0
+      },
+      "committedAtMs": 1777570194000,
+      "cleanSubject": "add legacy pricing note to tier modal for Zero Pro OG users",
+      "keywords": [
+        "legacy",
+        "pricing",
+        "note",
+        "tier",
+        "modal",
+        "zero",
+        "users"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "dadfd29970ae5e46e103002239a3f7d978ee3d94",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-04-30T18:42:10+01:00",
+      "subject": "show legacy price note on Pro card, rename Monthly Allowance to Monthly Plan Top-Up",
+      "body": "",
+      "parents": [
+        "d9776a3f3fdb41162e347b97966bb59d9103ef6f"
+      ],
+      "files": [
+        "interface/src/components/OrgSettingsCreditHistory/OrgSettingsCreditHistory.tsx",
+        "interface/src/components/TierSubscriptionModal/TierSubscriptionModal.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 4,
+        "deletions": 1
+      },
+      "committedAtMs": 1777570930000,
+      "cleanSubject": "show legacy price note on Pro card, rename Monthly Allowance to Monthly Plan Top-Up",
+      "keywords": [
+        "show",
+        "legacy",
+        "price",
+        "note",
+        "card",
+        "rename",
+        "monthly",
+        "allowance",
+        "plan"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "d777b4bc71a6f1fd8d3b8467a615a1d56f6518ff",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-04-30T18:52:59+01:00",
+      "subject": "fix: legacy price note on own line below price",
+      "body": "",
+      "parents": [
+        "dadfd29970ae5e46e103002239a3f7d978ee3d94"
+      ],
+      "files": [
+        "interface/src/components/TierSubscriptionModal/TierSubscriptionModal.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1777571579000,
+      "cleanSubject": "legacy price note on own line below price",
+      "keywords": [
+        "legacy",
+        "price",
+        "note",
+        "line",
+        "below"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 1,
@@ -64,36 +185,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11554444
+          "sizeBytes": 11554540
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.417.1",
+      "version": "0.1.0-nightly.420.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.417.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.420.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 34430620
+          "sizeBytes": 34435746
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.417.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.420.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.417.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.420.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 101747192
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.417.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.420.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -103,29 +224,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.417.1",
+      "version": "0.1.0-nightly.420.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.417.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.420.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 30976106
+          "sizeBytes": 30975251
         },
         {
-          "name": "Aura_0.1.0-nightly.417.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.420.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.417.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.420.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 30775525
+          "sizeBytes": 30775032
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.417.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.420.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -135,29 +256,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.417.1",
+      "version": "0.1.0-nightly.420.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.417.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.420.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 32456867
+          "sizeBytes": 32460211
         },
         {
-          "name": "Aura_0.1.0-nightly.417.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.420.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.417.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.420.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 32301901
+          "sizeBytes": 32300828
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.417.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.420.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -167,17 +288,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.417.1",
+      "version": "0.1.0-nightly.420.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.417.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.420.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 23447962
+          "sizeBytes": 23445341
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.417.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.420.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -186,21 +307,37 @@
     }
   ],
   "rendered": {
-    "title": "Pro tier returns to $20/month",
-    "intro": "A quiet day with a single user-visible change: the Pro subscription tier is back at its standard $20/month price now that the underlying migration has wrapped up.",
+    "title": "Pro tier returns to $20 with legacy pricing preserved",
+    "intro": "Today's nightly closes out the Pro tier pricing migration. The headline price moves back to $20/month, while early Zero Pro subscribers keep their original $10/month rate, now clearly surfaced in the subscription UI.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "9:16 AM",
         "started_at": "2026-04-30T16:16:12.000Z",
-        "ended_at": "2026-04-30T16:16:12.000Z",
-        "title": "Pro tier price restored to $20/month",
-        "summary": "With the pricing migration finished, the subscription modal once again shows the Pro plan at its standard rate.",
+        "ended_at": "2026-04-30T17:52:59.000Z",
+        "title": "Pro tier pricing migration wraps up with legacy rate grandfathered",
+        "summary": "The Pro tier returns to its $20/mo headline price now that the migration is complete, and the subscription modal explicitly grandfathers Zero Pro OG subscribers at $10/mo.",
         "items": [
           {
-            "text": "The Tier Subscription modal now displays Pro at $20/mo (up from the temporary $10/mo), reflecting completion of the pricing migration.",
+            "text": "Restored the Pro tier headline price to $20/mo in the subscription modal as the pricing migration finishes.",
             "commit_shas": [
               "cbf003bec0f4907753480903cb975f07cff6c14c"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added a legacy pricing note so Zero Pro OG subscribers see that their original $10/mo rate is preserved — both as a footer note in the tier modal and as an inline note on the Pro card itself.",
+            "commit_shas": [
+              "d9776a3f3fdb41162e347b97966bb59d9103ef6f",
+              "dadfd29970ae5e46e103002239a3f7d978ee3d94",
+              "d777b4bc71a6f1fd8d3b8467a615a1d56f6518ff"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Renamed the credit history entry 'Monthly Allowance' to 'Monthly Plan Top-Up' in org settings for clearer billing language.",
+            "commit_shas": [
+              "dadfd29970ae5e46e103002239a3f7d978ee3d94"
             ],
             "confidence": "high"
           }
@@ -208,9 +345,10 @@
       }
     ],
     "highlights": [
-      "Pro tier priced at $20/mo in the subscription modal",
-      "Pricing migration complete"
+      "Pro tier price restored to $20/mo",
+      "Legacy $10/mo rate preserved for Zero Pro OG subscribers",
+      "Credit history label clarified to 'Monthly Plan Top-Up'"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 4
   }
 }
