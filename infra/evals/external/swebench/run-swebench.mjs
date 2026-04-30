@@ -32,7 +32,10 @@ const currentFile = fileURLToPath(import.meta.url);
 const driverDir = path.dirname(currentFile);
 const repoRoot = path.resolve(driverDir, "..", "..", "..", "..");
 
+export const SWEBENCH_VENV_DIR = ".venv-swebench";
+
 const PYTHON_FIXTURE_IGNORE = Object.freeze([
+  `**/${SWEBENCH_VENV_DIR}/**`,
   "**/__pycache__/**",
   "**/*.pyc",
   "**/.pytest_cache/**",
@@ -48,6 +51,7 @@ export const BENCHMARK_DIRECTIVES = `## Benchmark constraints
 - Create one patch-producing implementation task for this instance. Do not split the work into standalone inspect, locate, or verify tasks; fold that work into the implementation task.
 - Fold inspection/verification into the implementation task. Do not create a standalone verification-only task unless it genuinely needs no source edits.
 - Before \`task_done\`, run the full configured test command. If the full suite is too slow after it starts, also run the strongest targeted semantic validation available and record both outcomes.
+- Use the configured benchmark Python command for verification; do not switch to global Python or patch build/version/logger/compiler files to work around local environment setup.
 - Before \`task_done\`, self-review the final patch: re-read every changed source file, compare the diff to the problem statement, confirm no existing tests or dependencies were changed, and remove any placeholder/debug code.
 - Completion contract: if a task genuinely requires no file changes, call \`task_done\` with \`no_changes_needed: true\` and explain why in the notes. Otherwise the dev-loop completion gate rejects \`task_done\` because there are no file operations to verify.
 `;
@@ -58,6 +62,7 @@ export const STATUS_VERIFICATION_ENVIRONMENT_BLOCKED = "verification_environment
 export const STATUS_AGENT_PATCH_POLLUTED = "agent_patch_polluted";
 export const SWEBENCH_DEFAULT_BUILD_COMMAND = "node --version";
 export const SWEBENCH_DEFAULT_TEST_COMMAND = "python -m pytest";
+const MAX_BETWEEN_STEP_WAIT_MS = 1_000;
 
 export function resolveSwebenchProjectCommand(envName, env = process.env) {
   const configured = env?.[envName];
@@ -67,6 +72,189 @@ export function resolveSwebenchProjectCommand(envName, env = process.env) {
   return envName === "AURA_BENCH_TEST_COMMAND"
     ? SWEBENCH_DEFAULT_TEST_COMMAND
     : SWEBENCH_DEFAULT_BUILD_COMMAND;
+}
+
+function splitCommandLine(value) {
+  const text = String(value ?? "").trim();
+  if (!text) return [];
+  const matches = text.match(/"([^"]+)"|'([^']+)'|[^\s]+/g) ?? [];
+  return matches.map((part) => {
+    if (
+      (part.startsWith('"') && part.endsWith('"'))
+      || (part.startsWith("'") && part.endsWith("'"))
+    ) {
+      return part.slice(1, -1);
+    }
+    return part;
+  });
+}
+
+function commandForShell(parts) {
+  return parts.map((part) => {
+    const value = String(part);
+    if (/^[A-Za-z0-9_./:=+-]+$/.test(value)) return value;
+    return `"${value.replaceAll('"', '\\"')}"`;
+  }).join(" ");
+}
+
+function runProcess(command, args, options = {}) {
+  const result = spawnSync(command, args, {
+    stdio: ["ignore", "pipe", "pipe"],
+    cwd: options.cwd,
+    encoding: "utf8",
+    maxBuffer: options.maxBuffer ?? 32 * 1024 * 1024,
+    timeout: options.timeoutMs,
+  });
+  if (result.error) {
+    return { code: -1, stdout: result.stdout ?? "", stderr: result.error.message };
+  }
+  return {
+    code: result.status ?? -1,
+    stdout: result.stdout ?? "",
+    stderr: result.stderr ?? "",
+  };
+}
+
+function pythonCandidatesForWorkspace(workspaceDir, env = process.env, platform = process.platform) {
+  const configured = splitCommandLine(env?.AURA_BENCH_PYTHON);
+  if (configured.length > 0) {
+    return [{ command: configured[0], args: configured.slice(1), source: "AURA_BENCH_PYTHON" }];
+  }
+  if (platform === "win32") {
+    return [
+      { command: "py", args: ["-3.10"], source: "py -3.10" },
+      { command: "py", args: ["-3.9"], source: "py -3.9" },
+      { command: "py", args: ["-3.11"], source: "py -3.11" },
+      { command: "python", args: [], source: "python" },
+    ];
+  }
+  return [
+    { command: "python3.10", args: [], source: "python3.10" },
+    { command: "python3.9", args: [], source: "python3.9" },
+    { command: "python3", args: [], source: "python3" },
+    { command: "python", args: [], source: "python" },
+  ];
+}
+
+export function resolveSwebenchPython(workspaceDir, env = process.env, platform = process.platform) {
+  const attempts = [];
+  for (const candidate of pythonCandidatesForWorkspace(workspaceDir, env, platform)) {
+    const version = runProcess(candidate.command, [...candidate.args, "--version"], {
+      cwd: workspaceDir,
+      timeoutMs: 15_000,
+    });
+    const output = `${version.stdout}\n${version.stderr}`.trim();
+    attempts.push({ source: candidate.source, code: version.code, output });
+    if (version.code !== 0) continue;
+    const match = output.match(/Python\s+(\d+)\.(\d+)\.(\d+)/i);
+    if (!match) continue;
+    const major = Number(match[1]);
+    const minor = Number(match[2]);
+    if (major === 3 && minor >= 9 && minor <= 11) {
+      return {
+        ok: true,
+        command: candidate.command,
+        args: candidate.args,
+        source: candidate.source,
+        version: match[0],
+        attempts,
+      };
+    }
+  }
+  return {
+    ok: false,
+    reason: "No compatible Python interpreter found for native SWE-bench verification. Install Python 3.9-3.11, set AURA_BENCH_PYTHON, or run from WSL/Linux.",
+    attempts,
+  };
+}
+
+export function swebenchVenvPythonPath(workspaceDir, platform = process.platform) {
+  return platform === "win32"
+    ? path.join(workspaceDir, SWEBENCH_VENV_DIR, "Scripts", "python.exe")
+    : path.join(workspaceDir, SWEBENCH_VENV_DIR, "bin", "python");
+}
+
+export async function bootstrapSwebenchPythonEnv(workspaceDir, {
+  env = process.env,
+  platform = process.platform,
+  log = () => {},
+} = {}) {
+  if (platform !== "win32" && env?.AURA_BENCH_FORCE_PYTHON_VENV !== "1") {
+    return {
+      ok: true,
+      skipped: true,
+      testCommand: resolveSwebenchProjectCommand("AURA_BENCH_TEST_COMMAND", env),
+    };
+  }
+  if (env?.AURA_BENCH_SKIP_PYTHON_VENV === "1") {
+    return {
+      ok: true,
+      skipped: true,
+      testCommand: resolveSwebenchProjectCommand("AURA_BENCH_TEST_COMMAND", env),
+    };
+  }
+  const resolved = resolveSwebenchPython(workspaceDir, env, platform);
+  if (!resolved.ok) {
+    return { ok: false, stage: "resolve_python", reason: resolved.reason, attempts: resolved.attempts };
+  }
+
+  const venvDir = path.join(workspaceDir, SWEBENCH_VENV_DIR);
+  const venvPython = swebenchVenvPythonPath(workspaceDir, platform);
+  if (!env?.AURA_BENCH_REUSE_PYTHON_VENV) {
+    await fs.rm(venvDir, { recursive: true, force: true });
+  }
+  const create = runProcess(resolved.command, [...resolved.args, "-m", "venv", venvDir], {
+    cwd: workspaceDir,
+    timeoutMs: 120_000,
+  });
+  if (create.code !== 0) {
+    return {
+      ok: false,
+      stage: "create_venv",
+      reason: create.stderr || create.stdout || `venv creation exited ${create.code}`,
+      python: resolved,
+    };
+  }
+  log(`python env: created ${SWEBENCH_VENV_DIR} with ${resolved.source} (${resolved.version})`);
+
+  if (env?.AURA_BENCH_BOOTSTRAP_PYTHON_DEPS !== "0") {
+    const install = runProcess(venvPython, [
+      "-m",
+      "pip",
+      "install",
+      "--disable-pip-version-check",
+      "pytest",
+      "-e",
+      ".",
+    ], {
+      cwd: workspaceDir,
+      timeoutMs: 600_000,
+      maxBuffer: 128 * 1024 * 1024,
+    });
+    if (install.code !== 0) {
+      return {
+        ok: false,
+        stage: "install_deps",
+        reason: install.stderr || install.stdout || `pip install exited ${install.code}`,
+        python: resolved,
+      };
+    }
+    log("python env: installed pytest and editable project");
+  }
+
+  return {
+    ok: true,
+    python: resolved,
+    venvDir,
+    venvPython,
+    testCommand: `${commandForShell([venvPython])} -m pytest`,
+  };
+}
+
+function betweenStepWaitMs(value, fallback = MAX_BETWEEN_STEP_WAIT_MS) {
+  const parsed = Number(value ?? fallback);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.min(Math.floor(parsed), MAX_BETWEEN_STEP_WAIT_MS);
 }
 
 export function shouldWritePredictionForStatus(status) {
@@ -330,7 +518,10 @@ function normalizeDiffPath(rawPath) {
 function isBenchmarkArtifactPath(rawPath) {
   const cleaned = normalizeDiffPath(rawPath);
   if (!cleaned) return false;
-  return cleaned === "requirements.md" || cleaned.startsWith("spec/");
+  return cleaned === "requirements.md"
+    || cleaned.startsWith("spec/")
+    || cleaned === SWEBENCH_VENV_DIR
+    || cleaned.startsWith(`${SWEBENCH_VENV_DIR}/`);
 }
 
 function parseDiffHeaderPaths(headerLine) {
@@ -946,6 +1137,20 @@ async function shallowCloneInstance(repo, baseCommit, destDir, log) {
   return { ok: true, reused: false };
 }
 
+async function excludeBenchmarkArtifactsFromWorkspace(workspaceDir) {
+  const excludePath = path.join(workspaceDir, ".git", "info", "exclude");
+  const entry = `\n# AURA SWE-bench local verification artifacts\n/${SWEBENCH_VENV_DIR}/\n`;
+  try {
+    const current = await fs.readFile(excludePath, "utf8");
+    if (current.includes(`/${SWEBENCH_VENV_DIR}/`)) return;
+    await fs.appendFile(excludePath, entry, "utf8");
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+    await fs.mkdir(path.dirname(excludePath), { recursive: true });
+    await fs.writeFile(excludePath, entry.trimStart(), "utf8");
+  }
+}
+
 async function captureWorkspaceDiff(workspaceDir, baseCommit) {
   const addResult = runGit(["add", "-A"], { cwd: workspaceDir });
   if (addResult.code !== 0) {
@@ -995,8 +1200,13 @@ export function readAuraVersion() {
 // Per-instance pipeline
 // ---------------------------------------------------------------------------
 
-export function buildScenario(instance, workspaceDir) {
+export function buildScenario(instance, workspaceDir, options = {}) {
   const id = instance.instance_id;
+  const testCommand = options.testCommand
+    ?? resolveSwebenchProjectCommand("AURA_BENCH_TEST_COMMAND");
+  const venvInstruction = options.pythonEnv?.testCommand
+    ? ` Use the prepared benchmark Python environment for verification: \`${options.pythonEnv.testCommand}\`. Do not use global Python for this instance.`
+    : "";
   return {
     id: `swebench-${id}`,
     suite: "external_benchmark",
@@ -1016,7 +1226,9 @@ export function buildScenario(instance, workspaceDir) {
       role: "Engineer",
       personality: "Methodical, careful, benchmark-focused.",
       systemPrompt:
-        "You are AURA running a single SWE-bench Verified instance. Read requirements.md first. Make the smallest patch that fixes the described bug. Do not edit existing tests. Keep the work as one patch-producing implementation task; do not split it into standalone inspect, locate, or verify tasks. Before any write_file, edit_file, or delete_file, briefly inspect the relevant code and call submit_plan with the target files so the harness unlocks file operations. Fold inspection and verification into the implementation work. After changing source code and before task_done, run the configured project test command for the full suite and make it pass. If the suite cannot run because the environment is missing dependencies or setup, stop and explain the blocker in completion notes; if it is too slow after starting, also run the strongest targeted semantic validation available and record both outcomes. Before task_done, self-review the final patch by re-reading every changed source file, comparing the diff to the problem statement, confirming no existing tests or dependencies changed, and removing placeholder/debug code. If a task genuinely requires no file changes, finish it with task_done and no_changes_needed: true plus notes explaining why.",
+        "You are AURA running a single SWE-bench Verified instance. Read requirements.md first. Make the smallest patch that fixes the described bug. Do not edit existing tests. Keep the work as one patch-producing implementation task; do not split it into standalone inspect, locate, or verify tasks. Before any write_file, edit_file, or delete_file, briefly inspect the relevant code and call submit_plan with the target files so the harness unlocks file operations. Fold inspection and verification into the implementation work. After changing source code and before task_done, run the configured project test command for the full suite and make it pass."
+        + venvInstruction
+        + " If the suite cannot run because the environment is missing dependencies or setup, stop and explain the blocker in completion notes; do not patch build metadata, version files, compiler shims, logger/warning code, or dependency configuration merely to work around local verification environment problems unless the SWE-bench issue explicitly asks for those files. If the suite is too slow after starting, also run the strongest targeted semantic validation available and record both outcomes. Before task_done, self-review the final patch by re-reading every changed source file, comparing the diff to the problem statement, confirming no existing tests or dependencies changed, and removing placeholder/debug code. If a task genuinely requires no file changes, finish it with task_done and no_changes_needed: true plus notes explaining why.",
       machineType: process.env.AURA_BENCH_AGENT_MACHINE_TYPE ?? "local",
       adapterType: "aura_harness",
       environment: "local_host",
@@ -1027,7 +1239,7 @@ export function buildScenario(instance, workspaceDir) {
       fixtureAbsolutePath: workspaceDir,
       importByReference: true,
       buildCommand: resolveSwebenchProjectCommand("AURA_BENCH_BUILD_COMMAND"),
-      testCommand: resolveSwebenchProjectCommand("AURA_BENCH_TEST_COMMAND"),
+      testCommand,
       artifactChecks: [],
     },
     timeouts: {
@@ -1035,10 +1247,8 @@ export function buildScenario(instance, workspaceDir) {
       loopCompletionMs: Number(
         process.env.AURA_BENCH_LOOP_TIMEOUT_MS ?? 1500000,
       ),
-      pollIntervalMs: 5000,
-      modelCooldownMs: Number(
-        process.env.AURA_BENCH_MODEL_COOLDOWN_MS ?? 60000,
-      ),
+      pollIntervalMs: MAX_BETWEEN_STEP_WAIT_MS,
+      modelCooldownMs: betweenStepWaitMs(process.env.AURA_BENCH_MODEL_COOLDOWN_MS),
     },
     verification: {
       requireNoFailedTasks: false,
@@ -1370,7 +1580,47 @@ async function runOneInstance({
     return baseRecord;
   }
 
-  // 2. Write requirements.md inside the workspace root.
+  await excludeBenchmarkArtifactsFromWorkspace(workspaceDir);
+
+  // 2. Prepare the Python verification environment before the agent sees the
+  // workspace. This prevents native Windows runs from falling through to a
+  // global Python that cannot run older SWE-bench projects like Astropy.
+  const pythonEnv = await bootstrapSwebenchPythonEnv(workspaceDir, {
+    log: (msg) => log(`[python] ${msg}`),
+  });
+  baseRecord.python_environment = pythonEnv.ok
+    ? {
+      ok: true,
+      skipped: pythonEnv.skipped ?? false,
+      source: pythonEnv.python?.source ?? null,
+      version: pythonEnv.python?.version ?? null,
+      test_command: pythonEnv.testCommand,
+    }
+    : pythonEnv;
+  if (!pythonEnv.ok) {
+    baseRecord.status = STATUS_VERIFICATION_ENVIRONMENT_BLOCKED;
+    baseRecord.error = pythonEnv.reason;
+    baseRecord.patch.verification_environment = {
+      blocked: true,
+      reason: pythonEnv.reason,
+      platform: process.platform,
+      evidence: [`python_env_${pythonEnv.stage}`],
+      attempts: pythonEnv.attempts,
+    };
+    baseRecord.finished_at = new Date().toISOString();
+    baseRecord.wallclock_seconds = (Date.now() - startedAt.getTime()) / 1000;
+    await writeJson(runRecordPath, baseRecord);
+    await writePrediction({
+      instance_id: instanceId,
+      model_name_or_path: "AURA",
+      model_patch: "",
+    });
+    resultsRef.records.push(baseRecord);
+    log(`verification environment blocked (${pythonEnv.stage}): ${pythonEnv.reason}`);
+    return baseRecord;
+  }
+
+  // 3. Write requirements.md inside the workspace root.
   const retryContext = retryContexts?.get(instanceId) ?? null;
   const requirementsMd = buildRequirementsMd(instance, retryContext);
   await fs.writeFile(
@@ -1380,8 +1630,11 @@ async function runOneInstance({
   );
   log(`wrote requirements.md`);
 
-  // 3. Build scenario and run.
-  const scenario = buildScenario(instance, workspaceDir);
+  // 4. Build scenario and run.
+  const scenario = buildScenario(instance, workspaceDir, {
+    testCommand: pythonEnv.testCommand,
+    pythonEnv,
+  });
   baseRecord.scenario = scenario;
 
   let auraPayload = null;

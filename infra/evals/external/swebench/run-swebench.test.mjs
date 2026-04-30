@@ -8,6 +8,7 @@ import {
   BENCHMARK_DIRECTIVES,
   STATUS_AGENT_PATCH_POLLUTED,
   STATUS_VERIFICATION_ENVIRONMENT_BLOCKED,
+  bootstrapSwebenchPythonEnv,
   buildScenario,
   buildRequirementsMd,
   detectVerificationEnvironmentBlock,
@@ -26,8 +27,10 @@ import {
   shouldWritePredictionForStatus,
   SWEBENCH_DEFAULT_BUILD_COMMAND,
   SWEBENCH_DEFAULT_TEST_COMMAND,
+  SWEBENCH_VENV_DIR,
   stripBenchmarkArtifactsFromDiff,
   stripTestEditsFromDiff,
+  swebenchVenvPythonPath,
 } from "./run-swebench.mjs";
 import { extractTypedFailureReport } from "./lib/request-contract-reporting.mjs";
 
@@ -66,6 +69,44 @@ test("SWE-bench project command honours explicit operator overrides", () => {
   assert.equal(resolveSwebenchProjectCommand("AURA_BENCH_TEST_COMMAND", {
     AURA_BENCH_TEST_COMMAND: "python -m pytest -q",
   }), "python -m pytest -q");
+});
+
+test("buildScenario can route the test gate through a prepared venv", () => {
+  const scenario = buildScenario(SAMPLE_INSTANCE, "/tmp/workspace", {
+    testCommand: "\"/tmp/workspace/.venv-swebench/bin/python\" -m pytest",
+    pythonEnv: {
+      testCommand: "\"/tmp/workspace/.venv-swebench/bin/python\" -m pytest",
+    },
+  });
+
+  assert.equal(
+    scenario.project.testCommand,
+    "\"/tmp/workspace/.venv-swebench/bin/python\" -m pytest",
+  );
+  assert.match(scenario.agentTemplate.systemPrompt, /prepared benchmark Python environment/);
+  assert.match(scenario.agentTemplate.systemPrompt, /Do not use global Python/);
+});
+
+test("swebenchVenvPythonPath returns platform-specific venv python paths", () => {
+  assert.equal(
+    swebenchVenvPythonPath("C:/tmp/workspace", "win32").replaceAll("\\", "/"),
+    `C:/tmp/workspace/${SWEBENCH_VENV_DIR}/Scripts/python.exe`,
+  );
+  assert.equal(
+    swebenchVenvPythonPath("/tmp/workspace", "linux").replaceAll("\\", "/"),
+    `/tmp/workspace/${SWEBENCH_VENV_DIR}/bin/python`,
+  );
+});
+
+test("bootstrapSwebenchPythonEnv only auto-enables venv on native Windows", async () => {
+  const result = await bootstrapSwebenchPythonEnv("/tmp/workspace", {
+    env: {},
+    platform: "linux",
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.skipped, true);
+  assert.equal(result.testCommand, "python -m pytest");
 });
 
 test("Cloudflare-blocked statuses do not write predictions", () => {
@@ -118,11 +159,15 @@ test("SWE-bench scenarios cool down between task extraction and loop start", () 
   try {
     delete process.env.AURA_BENCH_MODEL_COOLDOWN_MS;
     const scenario = buildScenario(SAMPLE_INSTANCE, "/tmp/workspace");
-    assert.equal(scenario.timeouts.modelCooldownMs, 60_000);
+    assert.equal(scenario.timeouts.modelCooldownMs, 1_000);
 
     process.env.AURA_BENCH_MODEL_COOLDOWN_MS = "1234";
     const overridden = buildScenario(SAMPLE_INSTANCE, "/tmp/workspace");
-    assert.equal(overridden.timeouts.modelCooldownMs, 1234);
+    assert.equal(overridden.timeouts.modelCooldownMs, 1_000);
+
+    process.env.AURA_BENCH_MODEL_COOLDOWN_MS = "250";
+    const faster = buildScenario(SAMPLE_INSTANCE, "/tmp/workspace");
+    assert.equal(faster.timeouts.modelCooldownMs, 250);
   } finally {
     if (previous === undefined) {
       delete process.env.AURA_BENCH_MODEL_COOLDOWN_MS;
@@ -345,6 +390,31 @@ test("stripBenchmarkArtifactsFromDiff removes benchmark setup files only", () =>
   assert.match(result.patch, /diff --git a\/src\/foo\.py b\/src\/foo\.py/);
   assert.ok(!/requirements\.md/.test(result.patch));
   assert.ok(!/spec\/01-fix\.md/.test(result.patch));
+});
+
+test("stripBenchmarkArtifactsFromDiff removes local SWE-bench venv artifacts", () => {
+  const diff = [
+    `diff --git a/${SWEBENCH_VENV_DIR}/pyvenv.cfg b/${SWEBENCH_VENV_DIR}/pyvenv.cfg`,
+    "new file mode 100644",
+    "--- /dev/null",
+    `+++ b/${SWEBENCH_VENV_DIR}/pyvenv.cfg`,
+    "@@ -0,0 +1 @@",
+    "+home = C:/Python310",
+    "diff --git a/src/module.py b/src/module.py",
+    "index 1111111..2222222 100644",
+    "--- a/src/module.py",
+    "+++ b/src/module.py",
+    "@@ -1 +1 @@",
+    "-old",
+    "+new",
+    "",
+  ].join("\n");
+
+  const result = stripBenchmarkArtifactsFromDiff(diff);
+
+  assert.equal(result.strippedHunks, 1);
+  assert.match(result.patch, /src\/module.py/);
+  assert.doesNotMatch(result.patch, /pyvenv\.cfg/);
 });
 
 test("stripBenchmarkArtifactsFromDiff handles empty input", () => {
