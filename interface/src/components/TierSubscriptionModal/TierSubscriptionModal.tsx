@@ -197,6 +197,7 @@ export function TierSubscriptionModal({ isOpen, onClose }: Props) {
         </div>
         <p className={styles.footerNote}>
           When you upgrade mid-cycle, you'll be charged the prorated price difference and receive the corresponding difference in Z credits for the remainder of your billing period.
+          If you originally subscribed to Zero Pro via ZERO, your legacy $10/mo rate is preserved.
         </p>
         </>
         )}
