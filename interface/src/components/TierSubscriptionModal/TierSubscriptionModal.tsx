@@ -35,7 +35,7 @@ const TIERS: TierInfo[] = [
   {
     id: "pro",
     name: "Pro",
-    price: "$10/mo",
+    price: "$20/mo",
     monthlyTopUp: "5,000",
     dailyReward: "100",
     referralReward: "5,000",
