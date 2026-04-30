@@ -408,7 +408,10 @@ fn test_runner_detector_ignores_non_shell_tool_calls() {
         "input": { "command": "cargo test", "path": "src/lib.rs" },
         "output": { "exit_code": 0 },
     });
-    assert!(!tsp::is_successful_test_run_event("tool_call_completed", &write));
+    assert!(!tsp::is_successful_test_run_event(
+        "tool_call_completed",
+        &write
+    ));
 }
 
 #[test]

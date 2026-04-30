@@ -21,6 +21,10 @@
 #   AURA_BENCH_SKIP_LLM_PREFLIGHT   optional, set 1 to skip the direct LLM probe
 #   AURA_BENCH_SKIP_LIVE_PREFLIGHT  optional, set 1 to skip the live pipeline
 #                                   preflight (auth/spec/tasks/dev-loop)
+#   AURA_BENCH_SKIP_PHASE0_MOCK_PREFLIGHT optional, set 1 to skip the
+#                                   SWE-shaped mock automation preflight
+#   AURA_BENCH_SKIP_PHASE1_PROFILE_ANALYSIS optional, set 1 to skip the
+#                                   request-profile success/failure matrix
 #   AURA_BENCH_PREFLIGHT_LOOP_TIMEOUT_MS optional, default 180000 (3 min)
 #   AURA_BENCH_PREFLIGHT_SPEC_TIMEOUT_MS optional, default 120000 (2 min)
 #   AURA_BENCH_PREFLIGHT_FIXTURE    optional, default interface/tests/e2e/evals/fixtures/preflight-minimal
@@ -60,6 +64,11 @@ api_get() {
     output_file="$2"
     status_file="$3"
     base_url=$(api_base_url)
+    # Capture curl's stderr so transport failures surface the real
+    # libcurl error (e.g. "Failed to connect ... Connection refused")
+    # instead of a generic "request failed". The caller is responsible
+    # for cleaning up $status_file.err.
+    err_file="${status_file}.err"
     curl \
         --silent \
         --show-error \
@@ -68,7 +77,15 @@ api_get() {
         --connect-timeout 5 \
         --max-time 20 \
         -H "Authorization: Bearer ${AURA_EVAL_ACCESS_TOKEN}" \
-        "${base_url}${endpoint}" >"$status_file"
+        "${base_url}${endpoint}" >"$status_file" 2>"$err_file"
+    rc=$?
+    if [ "$rc" -ne 0 ]; then
+        AURA_EVAL_CURL_ERROR=$(sed 's/[[:cntrl:]]//g' "$err_file" | cut -c 1-240)
+    else
+        AURA_EVAL_CURL_ERROR=""
+    fi
+    rm -f "$err_file"
+    return "$rc"
 }
 
 json_escape() {
@@ -86,81 +103,83 @@ eval_credentials_path() {
     printf '%s/swebench-credentials.env' "$runtime_dir"
 }
 
-windows_clipboard_text() {
-    if ! command -v powershell.exe >/dev/null 2>&1; then
-        return 1
-    fi
-    powershell.exe -NoProfile -Command "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-Clipboard -Raw" 2>/dev/null |
-        sed 's/\r$//' |
-        awk 'BEGIN { ORS="" } { if (NR > 1) printf "\n"; printf "%s", $0 }'
-}
-
-append_masked_password_text() {
-    text="$1"
-    while [ -n "$text" ]; do
-        char=${text%"${text#?}"}
-        text=${text#?}
-        case "$char" in
-            [[:print:]])
-                value="${value}${char}"
-                printf '*' > /dev/tty
-                ;;
-        esac
-    done
-}
-
 read_masked_password() {
+    # Read a password from the user, preserving paste support across the
+    # hosts the eval driver actually runs from. We tried two earlier
+    # designs that both broke paste in Cursor's embedded terminal:
+    #
+    #   1. Byte-by-byte `read -r -s -n 1` with a custom Ctrl+V handler
+    #      that shelled out to `Get-Clipboard -Raw`, asterisk masking,
+    #      and best-effort bracketed-paste detection. Cursor's terminal
+    #      does not always frame pastes with `ESC[200~`/`ESC[201~`, so
+    #      pasted bytes streamed in faster than the per-keystroke loop
+    #      could consume them and characters were dropped mid-password.
+    #      `Get-Clipboard -Raw` also appended the platform line ending,
+    #      so the outer `read` treated the trailing `\r`/`\n` as Enter
+    #      and the cached creds in `swebench-credentials.env` were
+    #      truncated, then rejected by `/api/auth/login` on every run.
+    #
+    #   2. Plain `IFS= read -r -s value < /dev/tty`. This works for
+    #      typing and for paste in mintty / Linux / macOS, but in
+    #      Cursor's embedded terminal under a PowerShell host calling
+    #      `sh.exe`, Ctrl+V is delivered by Cursor's IDE-level
+    #      "terminal: paste" action and consumed by the parent
+    #      PowerShell console-input parser; once `sh.exe` is the
+    #      foreground process those pasted bytes do not reach bash's
+    #      canonical line buffer in a usable form. The prompt sits
+    #      waiting until Enter is pressed and then returns an empty
+    #      string, which produces a misleading "zOS login requires an
+    #      interactive terminal" error.
+    #
+    # The fix is to delegate the password prompt back to PowerShell
+    # when it is on PATH (i.e. on Windows). `Read-Host -AsSecureString`
+    # reads through the Win32 console APIs that already handled the
+    # Ctrl+V keystroke, so paste works reliably and we get per-character
+    # `*` masking for free. We capture the resulting plaintext on
+    # stdout, strip any platform-appended `\r`/`\n`, and return it.
+    #
+    # The bash silent-read path is kept as the fallback for hosts
+    # without `powershell.exe` (Linux, macOS, containers). On those
+    # platforms terminal paste is already reliable; we additionally
+    # strip trailing `\r` (CRLF clipboards) and bracketed-paste markers
+    # `ESC[200~ ... ESC[201~` defensively in case a parent shell left
+    # DECSET 2004 enabled in the current terminal session.
+    if command -v powershell.exe >/dev/null 2>&1; then
+        ps_value=$(
+            powershell.exe -NoProfile -NoLogo -Command '
+                $ErrorActionPreference = "Stop"
+                $secure = Read-Host -AsSecureString
+                $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+                try {
+                    [Console]::Out.Write(
+                        [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr))
+                } finally {
+                    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+                }
+            ' 2>/dev/null
+        ) || ps_value=""
+        if [ -n "$ps_value" ]; then
+            ps_value=${ps_value%$'\r'}
+            ps_value=${ps_value%$'\n'}
+            ps_value=${ps_value%$'\r'}
+            # PowerShell already echoed `\r\n` when the user pressed
+            # Enter, so do not advance the cursor again.
+            printf '%s' "$ps_value"
+            return 0
+        fi
+    fi
+
     value=""
-    in_bracketed_paste=0
-    while IFS= read -r -s -n 1 char < /dev/tty; do
-        case "$char" in
-            ""|$'\r'|$'\n')
-                break
-                ;;
-            $'\177'|$'\b')
-                if [ -n "$value" ]; then
-                    value=${value%?}
-                    printf '\b \b' > /dev/tty
-                fi
-                ;;
-            $'\026')
-                if clipboard="$(windows_clipboard_text)"; then
-                    append_masked_password_text "$clipboard"
-                fi
-                ;;
-            $'\033')
-                sequence=""
-                while IFS= read -r -s -n 1 next < /dev/tty; do
-                    sequence="${sequence}${next}"
-                    case "$sequence" in
-                        "[200~")
-                            in_bracketed_paste=1
-                            break
-                            ;;
-                        "[201~")
-                            in_bracketed_paste=0
-                            break
-                            ;;
-                    esac
-                    if [ "${#sequence}" -ge 5 ]; then
-                        break
-                    fi
-                done
-                ;;
-            *)
-                case "$char" in
-                    [[:print:]])
-                        append_masked_password_text "$char"
-                        ;;
-                    *)
-                        if [ "$in_bracketed_paste" -eq 1 ]; then
-                            append_masked_password_text "$char"
-                        fi
-                        ;;
-                esac
-                ;;
-        esac
-    done
+    IFS= read -r -s value < /dev/tty
+    value=${value%$'\r'}
+    case "$value" in
+        $'\033[200~'*) value=${value#$'\033[200~'} ;;
+    esac
+    case "$value" in
+        *$'\033[201~') value=${value%$'\033[201~'} ;;
+    esac
+    # `read -s` swallows the Enter; advance the cursor for the caller.
+    printf '\n' > /dev/tty
     printf '%s' "$value"
 }
 
@@ -178,8 +197,10 @@ prompt_eval_login_credentials() {
     export AURA_EVAL_USER_EMAIL
 
     printf 'zOS password: ' > /dev/tty
+    # `read_masked_password` is responsible for advancing the cursor to
+    # the next line itself, because the PowerShell path already echoes
+    # a newline when the user submits and the bash fallback does not.
     AURA_EVAL_USER_PASSWORD="$(read_masked_password)"
-    printf '\n' > /dev/tty
     if [ -z "$AURA_EVAL_USER_PASSWORD" ]; then
         return 1
     fi
@@ -205,8 +226,9 @@ attempt_login_with_credentials() {
     payload=$(printf '{"email":"%s","password":"%s"}' "$email" "$password")
     tmp_login_body=$(mktemp)
     tmp_login_status=$(mktemp)
+    tmp_login_err=$(mktemp)
     base_url=$(api_base_url)
-    if ! curl \
+    curl \
         --silent \
         --show-error \
         --output "$tmp_login_body" \
@@ -215,12 +237,25 @@ attempt_login_with_credentials() {
         --max-time 30 \
         -H 'Content-Type: application/json' \
         -d "$payload" \
-        "${base_url}/api/auth/login" >"$tmp_login_status" 2>/dev/null
-    then
-        rm -f "$tmp_login_body" "$tmp_login_status"
-        AURA_EVAL_LOGIN_ERROR="curl request to ${base_url}/api/auth/login failed"
+        "${base_url}/api/auth/login" >"$tmp_login_status" 2>"$tmp_login_err"
+    curl_rc=$?
+    if [ "$curl_rc" -ne 0 ]; then
+        # Surface libcurl's actual diagnostic so connection refused /
+        # DNS / TLS / timeout errors are immediately visible. Without
+        # this the user only sees "request failed" and has to re-run
+        # curl manually to figure out what went wrong; the most common
+        # case here is the local aura-os-server not listening on
+        # ${base_url} yet.
+        curl_err=$(sed 's/[[:cntrl:]]//g' "$tmp_login_err" | cut -c 1-240)
+        rm -f "$tmp_login_body" "$tmp_login_status" "$tmp_login_err"
+        if [ -n "$curl_err" ]; then
+            AURA_EVAL_LOGIN_ERROR="curl exit ${curl_rc} contacting ${base_url}/api/auth/login: ${curl_err}"
+        else
+            AURA_EVAL_LOGIN_ERROR="curl exit ${curl_rc} contacting ${base_url}/api/auth/login (no stderr; is the local aura-os-server running on ${base_url}?)"
+        fi
         return 1
     fi
+    rm -f "$tmp_login_err"
 
     status=$(cat "$tmp_login_status")
     if [ "$status" != "200" ]; then
@@ -308,7 +343,7 @@ preflight_eval_api() {
     trap 'stop_harness_log_follower; rm -f "$tmp_body" "$tmp_status"' EXIT
 
     if ! api_get "/api/auth/session" "$tmp_body" "$tmp_status"; then
-        err "API preflight could not reach $(api_base_url)/api/auth/session"
+        err "API preflight could not reach $(api_base_url)/api/auth/session: ${AURA_EVAL_CURL_ERROR:-no stderr from curl; is the local aura-os-server running?}"
     fi
     status=$(cat "$tmp_status")
     if [ "$status" != "200" ]; then
@@ -317,7 +352,7 @@ preflight_eval_api() {
     fi
 
     if ! api_get "/api/orgs" "$tmp_body" "$tmp_status"; then
-        err "API preflight could not reach $(api_base_url)/api/orgs"
+        err "API preflight could not reach $(api_base_url)/api/orgs: ${AURA_EVAL_CURL_ERROR:-no stderr from curl; is the local aura-os-server running?}"
     fi
     status=$(cat "$tmp_status")
     if [ "$status" != "200" ]; then
@@ -353,6 +388,7 @@ preflight_llm_path() {
     fi
     info "LLM preflight ok"
 }
+
 # Live pipeline preflight: actually exercise spec generation, task extraction,
 # and the dev loop on a tiny fixture so we fail fast instead of after a long
 # benchmark task. Honors AURA_BENCH_SKIP_LIVE_PREFLIGHT=1 as an opt-out.
@@ -370,6 +406,58 @@ preflight_live_pipeline() {
         err "live pipeline preflight failed; aborting before long benchmark"
     fi
     info "live pipeline preflight ok"
+}
+
+# Phase 0 content-shape probe: run a full autonomous loop on synthetic
+# SWE-shaped content before the real driver. The existing live preflight above
+# is the baseline minimal loop; this second pass keeps the same stack/auth path
+# and changes only the fixture content profile, helping distinguish content
+# formation problems from router/auth availability.
+preflight_phase0_mock_automation() {
+    if [ "${AURA_BENCH_SKIP_LIVE_PREFLIGHT:-0}" = "1" ]; then
+        info "skipping phase 0 mock automation preflight (AURA_BENCH_SKIP_LIVE_PREFLIGHT=1)"
+        return 0
+    fi
+    if [ "${AURA_BENCH_SKIP_PHASE0_MOCK_PREFLIGHT:-0}" = "1" ]; then
+        info "skipping phase 0 mock automation preflight (AURA_BENCH_SKIP_PHASE0_MOCK_PREFLIGHT=1)"
+        return 0
+    fi
+    if ! command -v node >/dev/null 2>&1; then
+        err "node is required for phase 0 mock automation preflight"
+    fi
+    info "running phase 0 mock automation preflight (SWE-shaped content)"
+    if ! node "$repo_root/interface/scripts/preflight-live-pipeline.mjs" --fixture-profile swe_shaped_mock; then
+        err "phase 0 mock automation preflight failed; compare against the minimal live preflight to classify content vs transport"
+    fi
+    info "phase 0 mock automation preflight ok"
+}
+
+run_phase1_profile_analysis() {
+    if [ "${AURA_BENCH_SKIP_PHASE1_PROFILE_ANALYSIS:-0}" = "1" ]; then
+        info "skipping phase 1 request-profile analysis (AURA_BENCH_SKIP_PHASE1_PROFILE_ANALYSIS=1)"
+        return 0
+    fi
+    if ! command -v node >/dev/null 2>&1; then
+        info "skipping phase 1 request-profile analysis; node is not on PATH"
+        return 0
+    fi
+    phase1_debug_log="${AURA_PHASE1_DEBUG_LOG:-$repo_root/debug-95fd5c.log}"
+    if [ ! -f "$phase1_debug_log" ]; then
+        info "skipping phase 1 request-profile analysis; debug log not found: $phase1_debug_log"
+        return 0
+    fi
+    info "running phase 1 request-profile analysis"
+    if node infra/evals/external/swebench/bin/analyze-request-profiles.mjs \
+        --out "$OUT_DIR" \
+        --debug-log "$phase1_debug_log" \
+        --driver-summary "$OUT_DIR/driver-summary.json"
+    then
+        info "phase 1 request-profile analysis: $OUT_DIR/phase1-request-profile-analysis.md"
+        phase1_contract="$(node -e "const fs=require('fs'); const p=process.argv[1]; let s={}; try{s=JSON.parse(fs.readFileSync(p,'utf8'))}catch{}; const rc=s.request_contract||{}; const counts=rc.verdict_counts||{}; const countText=Object.entries(counts).map(([k,v])=>k+'='+v).join(', '); console.log(rc.available ? ('available acceptance='+rc.acceptance+' '+countText) : 'not available (core classifier/profile telemetry was not emitted)');" "$OUT_DIR/phase1-request-profile-analysis.json")"
+        info "phase 1 request contract verdicts: $phase1_contract"
+    else
+        info "phase 1 request-profile analysis failed; continuing with benchmark result handling"
+    fi
 }
 
 free_disk_gb() {
@@ -563,6 +651,7 @@ info "preflight ok: node=$node_version free=${free_gb}GB"
 # with backend calls if local tooling is wrong.
 preflight_llm_path
 preflight_live_pipeline
+preflight_phase0_mock_automation
 
 # Build run id and out dir. Either reuse an existing run on --resume, or mint
 # a fresh dir keyed by the current git short-sha and timestamp.
@@ -631,9 +720,13 @@ if [ "$driver_status" -ne 0 ]; then
     info "driver exited with status $driver_status; continuing to harness with whatever predictions were produced"
 fi
 
+run_phase1_profile_analysis
+
 blocked_count="$(node -e "const fs=require('fs'); const p=process.argv[1]; let s={}; try{s=JSON.parse(fs.readFileSync(p,'utf8'))}catch{}; const c=s.status_counts||{}; console.log((c.blocked_cloudflare||0)+(c.skipped_cloudflare_block||0));" "$OUT_DIR/driver-summary.json")"
 if [ "${blocked_count:-0}" -gt 0 ] && [ "${AURA_BENCH_SCORE_PARTIAL_ON_BLOCK:-0}" != "1" ]; then
     info "provider Cloudflare block detected in ${blocked_count} instance(s); skipping SWE-bench scoring so this run is not reported as unresolved"
+    typed_failure="$(node -e "const fs=require('fs'), path=require('path'); const out=process.argv[1]; const runs=path.join(out,'runs'); let messages=[]; try{for(const f of fs.readdirSync(runs)){if(!f.endsWith('.json'))continue; const r=JSON.parse(fs.readFileSync(path.join(runs,f),'utf8')); if(r.status==='blocked_cloudflare') messages.push((r.failure_report&&r.failure_report.message)||r.error||r.instance_id);}}catch{} console.log(messages.slice(0,3).join(' | ') || 'no typed failure detail found in runs/*.json');" "$OUT_DIR")"
+    info "typed block reason: $typed_failure"
     info "retry after the block clears, or set AURA_BENCH_SCORE_PARTIAL_ON_BLOCK=1 to score any predictions that were produced before the block"
     info "driver-summary.json: $OUT_DIR/driver-summary.json"
     exit 75

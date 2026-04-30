@@ -32,8 +32,22 @@ const apiBaseUrl = process.env.AURA_EVAL_API_BASE_URL?.trim()
   || "http://127.0.0.1:3190";
 const accessToken = process.env.AURA_EVAL_ACCESS_TOKEN?.trim() || "";
 const storageUrl = process.env.AURA_EVAL_STORAGE_URL?.trim() || "";
-const fixtureDir = process.env.AURA_BENCH_PREFLIGHT_FIXTURE?.trim()
-  || defaultFixtureDir;
+const args = process.argv.slice(2);
+let fixtureProfile = process.env.AURA_BENCH_PREFLIGHT_FIXTURE_PROFILE?.trim() || "minimal";
+for (let i = 0; i < args.length; i += 1) {
+  const arg = args[i];
+  if (arg === "--fixture-profile" && args[i + 1]) {
+    fixtureProfile = args[i + 1];
+    i += 1;
+  } else if (arg.startsWith("--fixture-profile=")) {
+    fixtureProfile = arg.slice("--fixture-profile=".length);
+  }
+}
+const usesGeneratedFixture = fixtureProfile && fixtureProfile !== "minimal";
+const requireLoopDone = usesGeneratedFixture;
+const fixtureDir = usesGeneratedFixture
+  ? ""
+  : (process.env.AURA_BENCH_PREFLIGHT_FIXTURE?.trim() || defaultFixtureDir);
 
 if (!accessToken) {
   process.stderr.write(
@@ -62,17 +76,24 @@ async function main() {
   });
 
   process.stderr.write(
-    `[preflight] live pipeline preflight against ${apiBaseUrl}\n`,
+    `[preflight] live pipeline preflight against ${apiBaseUrl} (fixtureProfile=${fixtureProfile})\n`,
   );
 
   try {
     const result = await runLivePipelinePreflight({
       client,
       fixtureDir,
+      fixtureProfile,
+      requireLoopDone,
       onStep: logStep,
     });
     process.stdout.write(
-      `${JSON.stringify({ ok: true, totalElapsedMs: result.totalElapsedMs })}\n`,
+      `${JSON.stringify({
+        ok: true,
+        fixtureProfile,
+        totalElapsedMs: result.totalElapsedMs,
+        requestContract: result.requestContract,
+      })}\n`,
     );
     process.exit(0);
   } catch (error) {

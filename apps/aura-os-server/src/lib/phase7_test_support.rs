@@ -515,10 +515,7 @@ pub fn replay_task_completion_gate(
     let mut outstanding: HashSet<String> = HashSet::new();
     let mut had_pathed_write_or_edit = false;
     for (event_type, event) in events {
-        let id = event
-            .get("id")
-            .and_then(|v| v.as_str())
-            .map(str::to_string);
+        let id = event.get("id").and_then(|v| v.as_str()).map(str::to_string);
         if is_empty_path_write_event(event_type, event) {
             if let Some(id) = id.clone() {
                 outstanding.insert(id);

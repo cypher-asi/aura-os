@@ -337,15 +337,12 @@ fn is_capacity_exhausted_response(status: StatusCode, body: &str) -> bool {
         // taxonomy.
         return true;
     };
-    let code = parsed
-        .get("code")
-        .and_then(|v| v.as_str())
-        .or_else(|| {
-            parsed
-                .get("error")
-                .and_then(|err| err.get("code"))
-                .and_then(|v| v.as_str())
-        });
+    let code = parsed.get("code").and_then(|v| v.as_str()).or_else(|| {
+        parsed
+            .get("error")
+            .and_then(|err| err.get("code"))
+            .and_then(|v| v.as_str())
+    });
     match code {
         Some(c) if c.eq_ignore_ascii_case("capacity_exhausted") => true,
         Some(_) => false,

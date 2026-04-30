@@ -119,8 +119,9 @@ pub(crate) fn spawn_turn_slot_release(
     tokio::spawn(async move {
         loop {
             match events_rx.recv().await {
-                Ok(HarnessOutbound::AssistantMessageEnd(_))
-                | Ok(HarnessOutbound::Error(_)) => break,
+                Ok(HarnessOutbound::AssistantMessageEnd(_)) | Ok(HarnessOutbound::Error(_)) => {
+                    break
+                }
                 Ok(_) => continue,
                 Err(broadcast::error::RecvError::Lagged(_)) => continue,
                 Err(broadcast::error::RecvError::Closed) => break,
@@ -226,9 +227,8 @@ mod tests {
             .expect("first acquire");
         let second_slot = Arc::clone(&slot);
         let second_counter = Arc::clone(&counter);
-        let second_handle = tokio::spawn(async move {
-            acquire_turn_slot(second_slot, second_counter).await
-        });
+        let second_handle =
+            tokio::spawn(async move { acquire_turn_slot(second_slot, second_counter).await });
 
         tokio::time::sleep(Duration::from_millis(20)).await;
         assert_eq!(
@@ -268,7 +268,9 @@ mod tests {
 
         spawn_turn_slot_release(acquired.guard, events_rx);
 
-        events_tx.send(assistant_end()).expect("send terminal event");
+        events_tx
+            .send(assistant_end())
+            .expect("send terminal event");
 
         let next = tokio::time::timeout(Duration::from_millis(200), async {
             loop {

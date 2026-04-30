@@ -156,9 +156,7 @@ impl ApiError {
     /// `retry_after_seconds`) so the UI can render a "Server is busy"
     /// banner and retry button instead of leaking the raw upstream
     /// 503. Phase 6 of the robust-concurrent-agent-infra plan.
-    pub(crate) fn harness_capacity_exhausted(
-        configured_cap: usize,
-    ) -> (StatusCode, Json<Self>) {
+    pub(crate) fn harness_capacity_exhausted(configured_cap: usize) -> (StatusCode, Json<Self>) {
         let message = format!(
             "Harness is at its concurrent-session limit ({configured_cap}). Please retry in a moment."
         );

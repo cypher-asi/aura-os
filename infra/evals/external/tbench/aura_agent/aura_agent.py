@@ -74,6 +74,107 @@ _DEFAULT_NODE_BIN = "node"
 _BRIDGE_BUFFER_SECONDS = 60
 
 
+def _parse_env_line(line: str) -> tuple[str, str] | None:
+    stripped = line.strip()
+    if not stripped or stripped.startswith("#"):
+        return None
+    if stripped.startswith("export "):
+        stripped = stripped[len("export ") :].strip()
+    if "=" not in stripped:
+        return None
+    key, value = stripped.split("=", 1)
+    key = key.strip()
+    if not key or not (key[0].isalpha() or key[0] == "_"):
+        return None
+    if not all(ch.isalnum() or ch == "_" for ch in key):
+        return None
+    value = value.strip()
+    if (
+        len(value) >= 2
+        and ((value[0] == value[-1] == '"') or (value[0] == value[-1] == "'"))
+    ):
+        value = value[1:-1]
+    return key, value
+
+
+def _load_env_file(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    for line in path.read_text(encoding="utf-8").splitlines():
+        parsed = _parse_env_line(line)
+        if parsed is None:
+            continue
+        key, value = parsed
+        os.environ.setdefault(key, value)
+    return True
+
+
+def _load_external_benchmark_env(repo_root: Path) -> list[Path]:
+    if os.environ.get("AURA_BENCH_LOAD_ENV") == "0":
+        return []
+
+    local_stack_dir = repo_root / "infra" / "evals" / "local-stack"
+    runtime_dir = Path(
+        os.environ.get("AURA_STACK_RUNTIME_DIR", str(local_stack_dir / ".runtime"))
+    )
+    candidates = [
+        repo_root / ".env",
+        repo_root / ".env.local",
+        local_stack_dir / "stack.env",
+        runtime_dir / "evals.env",
+        runtime_dir / "auth.env",
+    ]
+    loaded = [path for path in candidates if _load_env_file(path)]
+
+    if not os.environ.get("AURA_EVAL_ACCESS_TOKEN"):
+        for alias in ("AURA_ACCESS_TOKEN", "AURA_NETWORK_AUTH_TOKEN"):
+            alias_value = os.environ.get(alias, "").strip()
+            if alias_value:
+                os.environ["AURA_EVAL_ACCESS_TOKEN"] = alias_value
+                break
+
+    if not os.environ.get("AURA_EVAL_ACCESS_TOKEN") and os.environ.get(
+        "AURA_STACK_AURA_OS_DATA_DIR"
+    ):
+        try:
+            completed = subprocess.run(
+                [
+                    "cargo",
+                    "run",
+                    "-q",
+                    "-p",
+                    "aura-os-server",
+                    "--bin",
+                    "print-auth-token",
+                    "--",
+                    os.environ["AURA_STACK_AURA_OS_DATA_DIR"],
+                ],
+                cwd=repo_root,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            token = completed.stdout.strip()
+            if token:
+                os.environ["AURA_EVAL_ACCESS_TOKEN"] = token
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            pass
+
+    if not os.environ.get("ANTHROPIC_API_KEY") and os.environ.get(
+        "AURA_STACK_ANTHROPIC_API_KEY"
+    ):
+        os.environ["ANTHROPIC_API_KEY"] = os.environ["AURA_STACK_ANTHROPIC_API_KEY"]
+
+    if not os.environ.get("AURA_EVAL_API_BASE_URL") and os.environ.get(
+        "AURA_STACK_AURA_OS_PORT"
+    ):
+        os.environ["AURA_EVAL_API_BASE_URL"] = (
+            f"http://127.0.0.1:{os.environ['AURA_STACK_AURA_OS_PORT']}"
+        )
+
+    return loaded
+
+
 @dataclass(frozen=True)
 class _AuraAgentConfig:
     """Resolved configuration for a single AuraAgent instance."""
@@ -144,6 +245,9 @@ def _resolve_results_dir(explicit: str | None, repo_root: Path) -> Path:
 
 
 def _build_config() -> _AuraAgentConfig:
+    repo_root = _resolve_repo_root(os.environ.get("AURA_BENCH_REPO_ROOT"))
+    _load_external_benchmark_env(repo_root)
+
     api_base_url = (
         os.environ.get("AURA_EVAL_API_BASE_URL", "").strip() or _DEFAULT_API_BASE_URL
     )
@@ -157,7 +261,6 @@ def _build_config() -> _AuraAgentConfig:
     node_bin = (
         os.environ.get("AURA_BENCH_BRIDGE_NODE", "").strip() or _DEFAULT_NODE_BIN
     )
-    repo_root = _resolve_repo_root(os.environ.get("AURA_BENCH_REPO_ROOT"))
     results_dir = _resolve_results_dir(
         os.environ.get("AURA_BENCH_TBENCH_RESULTS_DIR"), repo_root
     )

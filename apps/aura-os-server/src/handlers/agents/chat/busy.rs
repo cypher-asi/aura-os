@@ -211,7 +211,10 @@ mod tests {
             (project_a, aiid_a),
             entry(template, "auto-paused", true, true),
         );
-        reg.insert((project_b, aiid_b), entry(template, "auto-dead", false, false));
+        reg.insert(
+            (project_b, aiid_b),
+            entry(template, "auto-dead", false, false),
+        );
 
         assert!(evaluate_partition_busy(&reg, &template, None).is_none());
     }

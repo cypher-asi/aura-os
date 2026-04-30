@@ -148,13 +148,20 @@ fn task_output_from_events_keeps_committed_push_timeout_retryable() {
     )
     .expect("response should be hydrated from raw git event");
 
-    assert_eq!(response.sync_checkpoints.len(), 1);
+    assert_eq!(response.sync_checkpoints.len(), 2);
     assert_eq!(
         response
             .sync_state
             .as_ref()
-            .map(|state| state.last_commit_sha.as_deref()),
-        Some(Some("abc123")),
+            .map(|state| state.status.clone()),
+        Some(crate::sync_state::TaskSyncStatus::PushFailed),
+    );
+    assert_eq!(
+        response
+            .sync_state
+            .as_ref()
+            .and_then(|state| state.last_commit_sha.as_deref()),
+        Some("abc123"),
     );
     assert_eq!(
         response.recommended_action,

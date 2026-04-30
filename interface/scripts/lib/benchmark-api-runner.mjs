@@ -69,6 +69,28 @@ export function resolveApiFetchTimeoutMs(envValue) {
   return Math.floor(parsed);
 }
 
+export function resolveModelCooldownMs(envValue) {
+  if (typeof envValue === "number") {
+    return Number.isFinite(envValue) && envValue > 0 ? Math.floor(envValue) : 0;
+  }
+  const raw = typeof envValue === "string" ? envValue.trim() : "";
+  if (!raw) return 0;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+  return Math.floor(parsed);
+}
+
+async function sleep(ms) {
+  if (!Number.isFinite(ms) || ms <= 0) return;
+  await new Promise((resolve) => setTimeout(resolve, Math.floor(ms)));
+}
+
+function benchmarkVerificationError(message, partialPayload) {
+  const error = new Error(message);
+  error.auraPayload = partialPayload;
+  return error;
+}
+
 /**
  * `fetch` wrapper that enforces a wall-clock timeout via `AbortController`
  * and rewrites the resulting `AbortError` into a clear, attributable
@@ -516,10 +538,15 @@ export async function walkFixtureDir(absoluteDir, options = {}) {
 
 export function sumBuildAndTestSteps(outputs) {
   return Object.values(outputs).reduce(
-    (summary, output) => ({
-      buildSteps: summary.buildSteps + (output.build_steps?.length ?? 0),
-      testSteps: summary.testSteps + (output.test_steps?.length ?? 0),
-    }),
+    (summary, output) => {
+      const text = typeof output?.output === "string" ? output.output : "";
+      const buildMarkers = [...text.matchAll(/^\[auto-build:/gm)].length;
+      const testGateMarkers = [...text.matchAll(/^\[task_done test gate:/gm)].length;
+      return {
+        buildSteps: summary.buildSteps + Math.max(output?.build_steps?.length ?? 0, buildMarkers),
+        testSteps: summary.testSteps + Math.max(output?.test_steps?.length ?? 0, testGateMarkers),
+      };
+    },
     { buildSteps: 0, testSteps: 0 },
   );
 }
@@ -1082,6 +1109,23 @@ export async function runScenario(scenario, options) {
       });
     });
 
+    const modelCooldownMs = resolveModelCooldownMs(
+      scenario.timeouts?.modelCooldownMs ?? process.env.AURA_BENCH_MODEL_COOLDOWN_MS,
+    );
+    if (modelCooldownMs > 0) {
+      client.logStep("model cooldown", {
+        after: "task extraction",
+        before: "loop start",
+        ms: modelCooldownMs,
+      });
+      recordStep(
+        "model_cooldown",
+        `Waiting ${modelCooldownMs}ms before autonomous loop`,
+        { after: "task extraction", before: "loop start", ms: modelCooldownMs },
+      );
+      await sleep(modelCooldownMs);
+    }
+
     await client.apiJson(
       "POST",
       `/api/projects/${project.project_id}/loop/start?agent_instance_id=${agentInstance.agent_instance_id}`,
@@ -1177,37 +1221,7 @@ export async function runScenario(scenario, options) {
     const tokenSummary = sumSessionTokens(sessions);
     const doneTasks = completedTasks.filter((task) => task.status === "done");
     const failedTasks = completedTasks.filter((task) => task.status === "failed");
-
-    const verification = scenario.verification ?? {};
-    if (verification.requireAnyDoneTasks && doneTasks.length === 0) {
-      throw new Error("Benchmark finished without any done tasks");
-    }
-    if (verification.requireNoFailedTasks && failedTasks.length > 0) {
-      throw new Error(
-        `Benchmark had failed tasks: ${failedTasks.map((task) => task.title).join(", ")}`,
-      );
-    }
-    if (verification.requireBuildSteps && stepSummary.buildSteps === 0) {
-      throw new Error("Benchmark finished without any build steps recorded");
-    }
-    if (verification.requireTestSteps && stepSummary.testSteps === 0) {
-      throw new Error("Benchmark finished without any test steps recorded");
-    }
-
-    const cleanup = keepEntities
-      ? { enabled: false, results: [] }
-      : {
-        enabled: true,
-        results: await client.cleanupEntities({
-          projectId: project.project_id,
-          agentId: agent.agent_id,
-          agentInstanceId: agentInstance.agent_instance_id,
-          orgId: org.org_id,
-          integrationId: integration?.integration_id ?? null,
-        }),
-      };
-
-    return {
+    const partialPayload = {
       scenarioId: scenario.id,
       title: scenario.title,
       suite: scenario.suite,
@@ -1263,7 +1277,6 @@ export async function runScenario(scenario, options) {
       projectStats,
       richUsageSummary,
       artifactChecks,
-      cleanup,
       taskStatuses: completedTasks.map((task) => ({
         taskId: task.task_id,
         title: task.title,
@@ -1272,6 +1285,50 @@ export async function runScenario(scenario, options) {
         totalOutputTokens: task.total_output_tokens,
       })),
       taskOutputs: outputs,
+    };
+
+    const verification = scenario.verification ?? {};
+    if (verification.requireAnyDoneTasks && doneTasks.length === 0) {
+      throw benchmarkVerificationError(
+        "Benchmark finished without any done tasks",
+        partialPayload,
+      );
+    }
+    if (verification.requireNoFailedTasks && failedTasks.length > 0) {
+      throw benchmarkVerificationError(
+        `Benchmark had failed tasks: ${failedTasks.map((task) => task.title).join(", ")}`,
+        partialPayload,
+      );
+    }
+    if (verification.requireBuildSteps && stepSummary.buildSteps === 0) {
+      throw benchmarkVerificationError(
+        "Benchmark finished without any build steps recorded",
+        partialPayload,
+      );
+    }
+    if (verification.requireTestSteps && stepSummary.testSteps === 0) {
+      throw benchmarkVerificationError(
+        "Benchmark finished without any test steps recorded",
+        partialPayload,
+      );
+    }
+
+    const cleanup = keepEntities
+      ? { enabled: false, results: [] }
+      : {
+        enabled: true,
+        results: await client.cleanupEntities({
+          projectId: project.project_id,
+          agentId: agent.agent_id,
+          agentInstanceId: agentInstance.agent_instance_id,
+          orgId: org.org_id,
+          integrationId: integration?.integration_id ?? null,
+        }),
+      };
+
+    return {
+      ...partialPayload,
+      cleanup,
     };
   } catch (error) {
     client.logStep("scenario failed", {

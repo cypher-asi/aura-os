@@ -111,8 +111,10 @@ class AuraAgentInitTests(unittest.TestCase):
             "AURA_BENCH_REPO_ROOT",
             "AURA_BENCH_TBENCH_RESULTS_DIR",
             "AURA_BENCH_RUN_ID",
+            "AURA_BENCH_LOAD_ENV",
         ):
             os.environ.pop(key, None)
+        os.environ["AURA_BENCH_LOAD_ENV"] = "0"
         self._results_tmpdir = tempfile.mkdtemp(prefix="aura-tbench-test-results-")
 
     def tearDown(self):

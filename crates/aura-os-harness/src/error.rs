@@ -60,7 +60,11 @@ impl HarnessError {
     /// `SessionBridgeError::Open`).
     #[must_use]
     pub fn is_capacity_exhausted(err: &anyhow::Error) -> bool {
-        err.chain()
-            .any(|cause| matches!(cause.downcast_ref::<HarnessError>(), Some(Self::CapacityExhausted)))
+        err.chain().any(|cause| {
+            matches!(
+                cause.downcast_ref::<HarnessError>(),
+                Some(Self::CapacityExhausted)
+            )
+        })
     }
 }

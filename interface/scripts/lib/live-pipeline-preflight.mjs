@@ -30,12 +30,20 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
+import {
+  describeRequestContractSummary,
+  extractRequestContractReports,
+  summarizeRequestContractReports,
+} from "../../../infra/evals/external/swebench/lib/request-contract-reporting.mjs";
+
 const execFileAsync = promisify(execFile);
 
 const DEFAULT_LOOP_TIMEOUT_MS = 180_000;
 const DEFAULT_POLL_INTERVAL_MS = 4_000;
 const DEFAULT_SPEC_STREAM_TIMEOUT_MS = 120_000;
 const DEFAULT_PREFLIGHT_ORG_NAME = "Aura Preflight";
+const FIXTURE_PROFILE_MINIMAL = "minimal";
+const FIXTURE_PROFILE_SWE_SHAPED_MOCK = "swe_shaped_mock";
 
 const FULL_ACCESS_CAPABILITIES = Object.freeze([
   "spawnAgent",
@@ -58,6 +66,79 @@ function fullAccessPermissions() {
   };
 }
 
+function fixtureProfileLabel(profile) {
+  const value = String(profile ?? "").trim();
+  return value || FIXTURE_PROFILE_MINIMAL;
+}
+
+function requirementsForFixtureProfile(profile) {
+  const selected = fixtureProfileLabel(profile);
+  if (selected !== FIXTURE_PROFILE_SWE_SHAPED_MOCK) {
+    return [
+      "# Preflight task",
+      "",
+      "Create a file named `hello.txt` whose contents are exactly the single line:",
+      "",
+      "```",
+      "hello",
+      "```",
+      "",
+      "Treat this as a single implementation task. Do not create a separate verification task.",
+      "",
+    ];
+  }
+
+  return [
+    "# SWE-shaped mock issue",
+    "",
+    "Repository: mock/astropy-like",
+    "Base commit: 0000000000000000000000000000000000000000",
+    "Instance: mock__mock-00001",
+    "",
+    "## Problem Statement",
+    "",
+    "A nested compound model expression is treated incorrectly when a right-hand branch",
+    "returns a plain ndarray-like separability block. The implementation should preserve",
+    "the right branch shape when stacking left and right components.",
+    "",
+    "Observed failure from the user report:",
+    "",
+    "```text",
+    "E       AssertionError: separability_matrix returned an incorrectly nested matrix",
+    "E       expected [[ True, False, False, False],",
+    "E                 [False,  True, False, False],",
+    "E                 [False, False,  True,  True ]]",
+    "E       got      [[ True, False, False, False],",
+    "E                 [False,  True, False, False],",
+    "E                 [False, False,  True, False]]",
+    "```",
+    "",
+    "## Relevant Files",
+    "",
+    "- `mock_modeling/separable.py`",
+    "- `tests/test_separable.py`",
+    "",
+    "## Expected Work",
+    "",
+    "1. Inspect the existing helper that stacks left and right separability blocks.",
+    "2. Make the smallest code change needed to preserve nested right-hand ndarray blocks.",
+    "3. Add or update a focused test that would fail before the fix.",
+    "4. Run the available test command before calling `task_done`.",
+    "",
+    "## Constraints",
+    "",
+    "- Do not rewrite unrelated modeling behavior.",
+    "- Do not add network access, external dependencies, or generated artifacts.",
+    "- Keep changes scoped to the files listed above unless inspection proves another",
+    "  file is the correct owner.",
+    "",
+    "This is synthetic preflight content. It intentionally resembles a SWE-bench issue",
+    "shape while remaining small and safe. The goal is to exercise the autonomous loop's",
+    "request formation before the real benchmark driver starts.",
+    "",
+  ];
+}
+
 function authHeaders(accessToken, extra = {}) {
   return {
     Authorization: `Bearer ${accessToken}`,
@@ -71,6 +152,32 @@ function safeJsonParse(value) {
   } catch {
     return null;
   }
+}
+
+function requestContractSummaryFromPreflightSurfaces(...surfaces) {
+  const inputs = [];
+  const visit = (value) => {
+    if (!value || typeof value !== "object") return;
+    inputs.push(value);
+    for (const key of [
+      "request_contract",
+      "requestContract",
+      "request_contract_verdict",
+      "requestContractVerdict",
+      "classifier_verdict",
+      "classifierVerdict",
+      "request_contract_reports",
+      "requestContractReports",
+      "model_content_profiles",
+      "modelContentProfiles",
+    ]) {
+      const nested = value[key];
+      if (Array.isArray(nested)) nested.forEach(visit);
+      else visit(nested);
+    }
+  };
+  surfaces.forEach(visit);
+  return summarizeRequestContractReports(extractRequestContractReports(inputs, "preflight"));
 }
 
 async function* sseEvents(response) {
@@ -203,47 +310,67 @@ async function copyFixtureSnapshot(srcDir, destDir) {
   }
 }
 
-async function ensureFixtureDir(fixtureDir) {
-  if (typeof fixtureDir !== "string" || fixtureDir.length === 0) {
-    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "aura-preflight-"));
+async function writeFixtureFiles(tempRoot, profile) {
+  await fs.writeFile(
+    path.join(tempRoot, "requirements.md"),
+    requirementsForFixtureProfile(profile).join("\n"),
+    "utf8",
+  );
+  // Tiny `node -e` scripts so the agent can demonstrate
+  // `npm run build` / `npm run test` without an `npm install` step.
+  // The project record below intentionally uses `node --version`
+  // for its direct harness gates so this preflight stays portable on
+  // Windows hosts where npm's `.cmd` shim may not resolve.
+  await fs.writeFile(
+    path.join(tempRoot, "package.json"),
+    JSON.stringify(
+      {
+        name: "aura-preflight-fixture",
+        private: true,
+        version: "0.0.0",
+        scripts: {
+          build: "node -e \"console.log('preflight build ok')\"",
+          test: "node -e \"console.log('preflight test ok')\"",
+        },
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+
+  if (fixtureProfileLabel(profile) === FIXTURE_PROFILE_SWE_SHAPED_MOCK) {
+    await fs.mkdir(path.join(tempRoot, "mock_modeling"), { recursive: true });
+    await fs.mkdir(path.join(tempRoot, "tests"), { recursive: true });
     await fs.writeFile(
-      path.join(tempRoot, "requirements.md"),
+      path.join(tempRoot, "mock_modeling", "separable.py"),
       [
-        "# Preflight task",
-        "",
-        "Create a file named `hello.txt` whose contents are exactly the single line:",
-        "",
-        "```",
-        "hello",
-        "```",
-        "",
-        "Do not modify any other files.",
+        "def cstack(left, right):",
+        "    \"\"\"Mock separability stack helper used by preflight.\"\"\"",
+        "    return [left, right]",
         "",
       ].join("\n"),
       "utf8",
     );
-    // Tiny `node -e` scripts so the agent can demonstrate
-    // `npm run build` / `npm run test` without an `npm install` step.
-    // The project record below intentionally uses `node --version`
-    // for its direct harness gates so this preflight stays portable on
-    // Windows hosts where npm's `.cmd` shim may not resolve.
     await fs.writeFile(
-      path.join(tempRoot, "package.json"),
-      JSON.stringify(
-        {
-          name: "aura-preflight-fixture",
-          private: true,
-          version: "0.0.0",
-          scripts: {
-            build: "node -e \"console.log('preflight build ok')\"",
-            test: "node -e \"console.log('preflight test ok')\"",
-          },
-        },
-        null,
-        2,
-      ),
+      path.join(tempRoot, "tests", "test_separable.py"),
+      [
+        "from mock_modeling.separable import cstack",
+        "",
+        "",
+        "def test_cstack_preserves_right_branch():",
+        "    assert cstack([[True]], [[False, True]]) == [[[True]], [[False, True]]]",
+        "",
+      ].join("\n"),
       "utf8",
     );
+  }
+}
+
+async function ensureFixtureDir(fixtureDir, profile = FIXTURE_PROFILE_MINIMAL) {
+  if (typeof fixtureDir !== "string" || fixtureDir.length === 0) {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "aura-preflight-"));
+    await writeFixtureFiles(tempRoot, profile);
     return { fixtureDir: tempRoot, ephemeral: true };
   }
   if (!path.isAbsolute(fixtureDir)) {
@@ -455,8 +582,10 @@ export async function runLivePipelinePreflight(options = {}) {
       ?? process.env.AURA_BENCH_PREFLIGHT_SPEC_TIMEOUT_MS
       ?? DEFAULT_SPEC_STREAM_TIMEOUT_MS,
   );
+  const fixtureProfile = fixtureProfileLabel(options.fixtureProfile);
+  const requireLoopDone = Boolean(options.requireLoopDone);
 
-  const { fixtureDir, ephemeral } = await ensureFixtureDir(options.fixtureDir);
+  const { fixtureDir, ephemeral } = await ensureFixtureDir(options.fixtureDir, fixtureProfile);
 
   const startedAt = Date.now();
   const ids = {
@@ -466,12 +595,20 @@ export async function runLivePipelinePreflight(options = {}) {
     projectId: null,
     agentInstanceId: null,
   };
+  let requestContractSummary = summarizeRequestContractReports([]);
 
   emit(onStep, {
     step: "preflight_start",
     status: "ok",
     elapsedMs: 0,
-    details: { fixtureDir, ephemeral, loopTimeoutMs, specStreamTimeoutMs },
+    details: {
+      fixtureDir,
+      ephemeral,
+      fixtureProfile,
+      loopTimeoutMs,
+      specStreamTimeoutMs,
+      requireLoopDone,
+    },
   });
 
   try {
@@ -762,6 +899,17 @@ export async function runLivePipelinePreflight(options = {}) {
           ["done", "failed", "blocked"].includes(String(task?.status ?? "").toLowerCase()),
         );
         if (allTerminal) {
+          const statuses = lastSeen.map((t) => String(t?.status ?? "").toLowerCase());
+          if (requireLoopDone && statuses.some((status) => status !== "done")) {
+            throw new StepFailure(
+              "loop_progress",
+              "phase 0 mock automation reached a non-done terminal state",
+              {
+                statuses,
+                hint: "a failed/blocked task here indicates the autonomous loop failed before completing the controlled mock task",
+              },
+            );
+          }
           return {
             value: lastSeen,
             detailsForLog: {
@@ -794,10 +942,13 @@ export async function runLivePipelinePreflight(options = {}) {
         ),
       ]);
       const sessionList = Array.isArray(sessions) ? sessions : [];
+      requestContractSummary = requestContractSummaryFromPreflightSurfaces(stats, sessionList);
       return {
         detailsForLog: {
           totalTokens: Number(stats?.total_tokens ?? 0),
           sessionCount: sessionList.length,
+          requestContractAcceptance: requestContractSummary.acceptance,
+          requestContractVerdicts: requestContractSummary.verdict_counts,
         },
       };
     });
@@ -807,9 +958,15 @@ export async function runLivePipelinePreflight(options = {}) {
       step: "preflight_complete",
       status: "ok",
       elapsedMs: totalElapsedMs,
-      details: { fixtureDir, ephemeral },
+      details: {
+        fixtureDir,
+        ephemeral,
+        requestContractAcceptance: requestContractSummary.acceptance,
+        requestContract: requestContractSummary,
+        requestContractSummary: describeRequestContractSummary(requestContractSummary),
+      },
     });
-    return { ok: true, totalElapsedMs };
+    return { ok: true, totalElapsedMs, requestContract: requestContractSummary };
   } finally {
     await cleanupCreatedEntities(client, ids, onStep);
     if (ephemeral) {

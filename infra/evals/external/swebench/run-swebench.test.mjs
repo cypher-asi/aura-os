@@ -6,14 +6,20 @@ import test from "node:test";
 
 import {
   BENCHMARK_DIRECTIVES,
+  STATUS_AGENT_PATCH_POLLUTED,
+  STATUS_VERIFICATION_ENVIRONMENT_BLOCKED,
+  buildScenario,
   buildRequirementsMd,
+  detectVerificationEnvironmentBlock,
   findLatestRunDir,
+  guardSwebenchPredictionPatch,
   loadCompletedInstanceIds,
   loadPredictionInstanceIds,
   loadPriorRunRecords,
   loadRetryUnresolvedContexts,
   parseArgs,
   parseDiffFiles,
+  requestContractSummaryFromPayload,
   resolveSwebenchProjectCommand,
   resolveResumeOutDir,
   runWithPool,
@@ -23,6 +29,7 @@ import {
   stripBenchmarkArtifactsFromDiff,
   stripTestEditsFromDiff,
 } from "./run-swebench.mjs";
+import { extractTypedFailureReport } from "./lib/request-contract-reporting.mjs";
 
 const SAMPLE_INSTANCE = {
   instance_id: "django__django-12345",
@@ -64,8 +71,65 @@ test("SWE-bench project command honours explicit operator overrides", () => {
 test("Cloudflare-blocked statuses do not write predictions", () => {
   assert.equal(shouldWritePredictionForStatus("agent_complete"), true);
   assert.equal(shouldWritePredictionForStatus("agent_error"), true);
+  assert.equal(shouldWritePredictionForStatus(STATUS_AGENT_PATCH_POLLUTED), true);
+  assert.equal(shouldWritePredictionForStatus(STATUS_VERIFICATION_ENVIRONMENT_BLOCKED), true);
   assert.equal(shouldWritePredictionForStatus("blocked_cloudflare"), false);
   assert.equal(shouldWritePredictionForStatus("skipped_cloudflare_block"), false);
+});
+
+test("request contract payload summaries accept forward-compatible classifier shapes", () => {
+  const summary = requestContractSummaryFromPayload({
+    requestContractReports: [
+      {
+        verdict: "Accept",
+        requestKind: "DevLoopBootstrap",
+        contentSignature: "sig-ok",
+      },
+      {
+        verdict: "Block",
+        request_kind: "ProjectToolTaskExtract",
+        content_signature: "sig-bad",
+        reasons: [{ code: "MissingStableSessionId", message: "project tool session id is empty" }],
+      },
+    ],
+  });
+
+  assert.equal(summary.available, true);
+  assert.equal(summary.acceptance, "fail");
+  assert.equal(summary.accepted, 1);
+  assert.equal(summary.blocked, 1);
+  assert.equal(summary.first_blocked.request_kind, "ProjectToolTaskExtract");
+  assert.deepEqual(summary.verdict_counts, { accept: 1, block: 1 });
+});
+
+test("typed failure reports compact Cloudflare HTML into actionable local output", () => {
+  const html = "<!DOCTYPE html><html><title>Attention Required! | Cloudflare</title>"
+    + "<span>cf-ray: abc123-SJC</span></html>";
+  const report = extractTypedFailureReport({ error: new Error(`spec stream HTTP 403: ${html}`) });
+
+  assert.equal(report.type, "cloudflare_block");
+  assert.match(report.message, /Cloudflare HTML 403/);
+  assert.match(report.message, /cf-ray=abc123-SJC/);
+  assert.ok(!report.message.includes("<!DOCTYPE html>"));
+});
+
+test("SWE-bench scenarios cool down between task extraction and loop start", () => {
+  const previous = process.env.AURA_BENCH_MODEL_COOLDOWN_MS;
+  try {
+    delete process.env.AURA_BENCH_MODEL_COOLDOWN_MS;
+    const scenario = buildScenario(SAMPLE_INSTANCE, "/tmp/workspace");
+    assert.equal(scenario.timeouts.modelCooldownMs, 60_000);
+
+    process.env.AURA_BENCH_MODEL_COOLDOWN_MS = "1234";
+    const overridden = buildScenario(SAMPLE_INSTANCE, "/tmp/workspace");
+    assert.equal(overridden.timeouts.modelCooldownMs, 1234);
+  } finally {
+    if (previous === undefined) {
+      delete process.env.AURA_BENCH_MODEL_COOLDOWN_MS;
+    } else {
+      process.env.AURA_BENCH_MODEL_COOLDOWN_MS = previous;
+    }
+  }
 });
 
 test("buildRequirementsMd emits the expected sections without hints", () => {
@@ -286,6 +350,88 @@ test("stripBenchmarkArtifactsFromDiff removes benchmark setup files only", () =>
 test("stripBenchmarkArtifactsFromDiff handles empty input", () => {
   assert.deepEqual(stripBenchmarkArtifactsFromDiff(""), { patch: "", strippedHunks: 0 });
   assert.deepEqual(stripBenchmarkArtifactsFromDiff(null), { patch: "", strippedHunks: 0 });
+});
+
+test("guardSwebenchPredictionPatch strips latest Astropy environment workaround pollution", async () => {
+  const predictionPath = path.resolve(
+    "infra/evals/reports/external/swebench_verified",
+    "aura-3901736b4bf5-20260429-193041",
+    "predictions.jsonl",
+  );
+  const [line] = (await fs.readFile(predictionPath, "utf8"))
+    .split(/\r?\n/)
+    .filter(Boolean);
+  const prediction = JSON.parse(line);
+
+  const result = guardSwebenchPredictionPatch({
+    patch: prediction.model_patch,
+    instance: {
+      instance_id: "astropy__astropy-12907",
+      problem_statement: "Separability matrix for nested compound models is incorrect.",
+    },
+    auraPayload: {
+      taskOutputs: {
+        task: {
+          output: "The astropy environment has issues unrelated to my change: LoggingError and broken extension build with new MSVC.",
+        },
+      },
+    },
+    platform: "win32",
+  });
+
+  assert.equal(result.status, STATUS_AGENT_PATCH_POLLUTED);
+  assert.deepEqual(
+    result.polluted_files.sort(),
+    ["astropy/logger.py", "astropy/utils/_compiler.py"],
+  );
+  assert.deepEqual(result.preserved_files, ["astropy/modeling/separable.py"]);
+  assert.match(result.patch, /diff --git a\/astropy\/modeling\/separable\.py b\/astropy\/modeling\/separable\.py/);
+  assert.match(result.patch, /cright\[-right\.shape\[0\]:, -right\.shape\[1\]:\] = right/);
+  assert.ok(!/astropy\/logger\.py/.test(result.patch));
+  assert.ok(!/astropy\/utils\/_compiler\.py/.test(result.patch));
+  assert.equal(result.environment.blocked, true);
+});
+
+test("guardSwebenchPredictionPatch preserves logger edits when the issue is about logging", () => {
+  const diff = [
+    "diff --git a/astropy/logger.py b/astropy/logger.py",
+    "index 1111111..2222222 100644",
+    "--- a/astropy/logger.py",
+    "+++ b/astropy/logger.py",
+    "@@ -1 +1,2 @@",
+    " keep",
+    "+raise LoggingError('real logging bug')",
+    "",
+  ].join("\n");
+
+  const result = guardSwebenchPredictionPatch({
+    patch: diff,
+    instance: {
+      problem_statement: "Astropy logger emits incorrect warnings when logging is enabled.",
+    },
+    platform: "linux",
+  });
+
+  assert.equal(result.status, null);
+  assert.deepEqual(result.polluted_files, []);
+  assert.equal(result.patch, diff);
+});
+
+test("detectVerificationEnvironmentBlock marks native Windows setup failures as typed blockers", () => {
+  const result = detectVerificationEnvironmentBlock({
+    auraPayload: {
+      taskOutputs: {
+        task: {
+          output: "The test infrastructure cannot run due to LoggingError and a broken extension build with new MSVC.",
+        },
+      },
+    },
+    platform: "win32",
+  });
+
+  assert.equal(result.blocked, true);
+  assert.equal(result.platform, "win32");
+  assert.ok(result.evidence.includes("agent_reported_environment_blocker"));
 });
 
 test("parseArgs supports the documented CLI flags", () => {

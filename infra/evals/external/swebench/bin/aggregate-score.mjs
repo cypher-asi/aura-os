@@ -93,6 +93,12 @@ function normalizeStatus(harnessEntry, driverRecord) {
     return harnessEntry.resolved ? "resolved" : "not_resolved";
   }
   if (harnessEntry && harnessEntry.status === "resolved") return "resolved";
+  if (driverRecord && driverRecord.status === "agent_patch_polluted") {
+    return "agent_patch_polluted";
+  }
+  if (driverRecord && driverRecord.status === "verification_environment_blocked") {
+    return "verification_environment_blocked";
+  }
   if (harnessEntry && harnessEntry.error) return "harness_error";
   if (driverRecord && driverRecord.status === "agent_error") return "agent_error";
   if (driverRecord && driverRecord.patch?.empty) return "not_resolved";
@@ -232,6 +238,8 @@ export function synthesizeSummaryFromRecords(runDir, recordsMap) {
   const statusCounts = {
     agent_complete: 0,
     agent_error: 0,
+    agent_patch_polluted: 0,
+    verification_environment_blocked: 0,
     clone_error: 0,
     skipped_cost_cap: 0,
   };
@@ -297,6 +305,10 @@ function buildConfidenceNote(subset, instanceCount) {
 
 export function failureBucket(instance) {
   if (instance.status === "resolved") return "resolved";
+  if (instance.status === "agent_patch_polluted") return "agent_patch_polluted";
+  if (instance.status === "verification_environment_blocked") {
+    return "verification_environment_blocked";
+  }
   if (instance.status === "agent_error" || instance.failed_tasks > 0) {
     return "dev_loop_failure";
   }
@@ -418,6 +430,7 @@ async function main(rawArgv) {
   const { report, perInstance, foundHarnessOutput } = await loadHarnessReport(runDir);
   const harnessIndex = buildHarnessIndex(report, perInstance);
   const officialHarnessRan = foundHarnessOutput;
+  const nativeWindowsDriverOnly = !officialHarnessRan && process.platform === "win32";
 
   const ids = new Set([
     ...driverRecords.keys(),
@@ -461,6 +474,8 @@ async function main(rawArgv) {
       task_count: Number(driver?.aura_payload?.counts?.tasks ?? 0),
       done_tasks: Number(driver?.aura_payload?.counts?.doneTasks ?? 0),
       failed_tasks: Number(driver?.aura_payload?.counts?.failedTasks ?? 0),
+      patch_pollution_guard: driver?.patch?.pollution_guard ?? null,
+      verification_environment: driver?.patch?.verification_environment ?? null,
     });
   }
 
@@ -472,11 +487,18 @@ async function main(rawArgv) {
   const score = {
     benchmark: "swebench_verified",
     subset: summary.subset ?? "custom",
-    scoring_mode: officialHarnessRan ? "official_harness" : "driver_predictions_only",
+    scoring_mode: officialHarnessRan
+      ? "official_harness"
+      : nativeWindowsDriverOnly
+        ? "driver_only_native_windows"
+        : "driver_predictions_only",
     official_harness_ran: officialHarnessRan,
+    official_results_available: officialHarnessRan,
     scoring_note: officialHarnessRan
       ? ""
-      : "Official SWE-bench hidden-test scoring did not run; this score only reflects AURA driver output and generated predictions. Run predictions.jsonl through the official SWE-bench harness on Linux, WSL, or macOS for resolved/not_resolved results.",
+      : nativeWindowsDriverOnly
+        ? "Native Windows run is driver-only plumbing validation. It is not an official SWE-bench resolved/not_resolved score; run predictions.jsonl through the official SWE-bench harness under WSL, Linux, or macOS."
+        : "Official SWE-bench hidden-test scoring did not run; this score only reflects AURA driver output and generated predictions. Run predictions.jsonl through the official SWE-bench harness on Linux, WSL, or macOS for resolved/not_resolved results.",
     instance_count: instanceCount,
     aura_version: summary.aura_version ?? null,
     claude_model: summary.claude_model ?? null,

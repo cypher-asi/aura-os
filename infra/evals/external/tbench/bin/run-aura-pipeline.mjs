@@ -34,9 +34,11 @@ import {
   createBenchmarkClient,
   runScenario,
 } from "../../../../../interface/scripts/lib/benchmark-api-runner.mjs";
+import { loadExternalBenchmarkEnv } from "../../bin/load-env.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const repoRoot = path.resolve(__dirname, "..", "..", "..", "..", "..");
 
 function emitStatus(status) {
   process.stdout.write(`${JSON.stringify(status)}\n`);
@@ -132,6 +134,7 @@ function buildScenario(payload) {
       name: `Aura T-Bench ${taskId}`,
       description: `T-Bench task ${taskId}`,
       fixtureAbsolutePath: workspaceDir,
+      importByReference: true,
       buildCommand,
       testCommand,
       artifactChecks: [],
@@ -175,6 +178,8 @@ async function writeRequirementsFile(workspaceDir, taskId, taskDescription) {
 }
 
 async function main() {
+  loadExternalBenchmarkEnv({ repoRoot });
+
   const [, , payloadPath] = process.argv;
   let runId = null;
   let payload;
@@ -186,10 +191,20 @@ async function main() {
   }
 
   try {
-    const apiBaseUrl = requireString(payload.aura_api_base_url, "aura_api_base_url");
-    const accessToken = requireString(payload.aura_access_token, "aura_access_token");
+    const apiBaseUrl = String(payload.aura_api_base_url || "").trim()
+      || process.env.AURA_EVAL_API_BASE_URL?.trim()
+      || "http://127.0.0.1:3190";
+    const accessToken = String(payload.aura_access_token || "").trim()
+      || process.env.AURA_EVAL_ACCESS_TOKEN?.trim()
+      || "";
     const storageUrl =
-      typeof payload.aura_storage_url === "string" ? payload.aura_storage_url : "";
+      String(payload.aura_storage_url || "").trim()
+      || process.env.AURA_EVAL_STORAGE_URL?.trim()
+      || "";
+
+    if (!accessToken) {
+      throw new Error("Missing aura_access_token and AURA_EVAL_ACCESS_TOKEN is not set.");
+    }
 
     const scenario = buildScenario(payload);
     runId = scenario.id;

@@ -227,7 +227,7 @@ pub(super) async fn build_start_params(
         task_id.as_deref(),
     ));
 
-    AutomatonStartParams {
+    let params = AutomatonStartParams {
         project_id: ctx.project_id.to_string(),
         agent_id: Some(harness_agent_id(&ctx.agent_id, Some(&agent_instance_id))),
         aura_agent_id: Some(ctx.agent_id.to_string()),
@@ -258,8 +258,58 @@ pub(super) async fn build_start_params(
         agent_permissions: (&ctx.permissions).into(),
         aura_org_id,
         aura_session_id,
-    }
+    };
+
+    // #region agent log
+    debug_log_session_shape(
+        "build_start_params",
+        "H1-H5-devloop",
+        &serde_json::json!({
+            "path": "dev_loop",
+            "model": params.model.as_deref().unwrap_or("<none>"),
+            "has_aura_org_id": params.aura_org_id.is_some(),
+            "aura_org_id_len": params.aura_org_id.as_deref().map(str::len).unwrap_or(0),
+            "has_aura_session_id": params.aura_session_id.is_some(),
+            "aura_session_id_len": params.aura_session_id.as_deref().map(str::len).unwrap_or(0),
+            "has_aura_agent_id": params.aura_agent_id.is_some(),
+            "has_template_agent_id": params.template_agent_id.is_some(),
+            "has_partition_agent_id": params.agent_id.is_some(),
+            "has_auth_token": params.auth_token.is_some(),
+            "auth_token_len": params.auth_token.as_deref().map(str::len).unwrap_or(0),
+            "system_prompt_len": params.system_prompt.as_deref().map(str::len).unwrap_or(0),
+            "has_provider_overrides": params.provider_overrides.is_some(),
+            "has_intent_classifier": params.intent_classifier.is_some(),
+            "max_turns": params.max_turns,
+            "installed_tools_count": params.installed_tools.as_ref().map(Vec::len).unwrap_or(0),
+            "installed_integrations_count": params.installed_integrations.as_ref().map(Vec::len).unwrap_or(0),
+            "has_workspace_root": params.workspace_root.is_some(),
+            "task_id_present": params.task_id.is_some(),
+            "project_id_len": params.project_id.len(),
+        }),
+    );
+    // #endregion
+
+    params
 }
+
+// #region agent log
+fn debug_log_session_shape(location: &str, hypothesis_id: &str, data: &serde_json::Value) {
+    use std::io::Write;
+    let line = serde_json::json!({
+        "sessionId": "95fd5c",
+        "hypothesisId": hypothesis_id,
+        "location": format!("apps/aura-os-server/src/handlers/dev_loop/start.rs::{location}"),
+        "message": "session-shape snapshot",
+        "timestamp": chrono::Utc::now().timestamp_millis(),
+        "data": data,
+    });
+    let _ = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(r"C:\code\aura-os\debug-95fd5c.log")
+        .and_then(|mut f| writeln!(f, "{line}"));
+}
+// #endregion
 
 /// Derive a stable session UUID for the (project, agent-instance, task)
 /// tuple that owns this dev-loop run.

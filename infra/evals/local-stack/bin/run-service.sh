@@ -146,6 +146,16 @@ if [[ "$service" == "harness" ]]; then
   if [[ -n "${AURA_STACK_HARNESS_LLM_MAX_RETRIES:-}" ]]; then
     export AURA_LLM_MAX_RETRIES="$AURA_STACK_HARNESS_LLM_MAX_RETRIES"
   fi
+  if [[ -n "${AURA_STACK_HARNESS_LLM_MIN_REQUEST_INTERVAL_MS:-}" ]]; then
+    export AURA_LLM_MIN_REQUEST_INTERVAL_MS="$AURA_STACK_HARNESS_LLM_MIN_REQUEST_INTERVAL_MS"
+  fi
+  if [[ -n "${AURA_STACK_HARNESS_LLM_EMERGENCY_BODY_CAP_BYTES:-}" ]]; then
+    export AURA_LLM_EMERGENCY_BODY_CAP_BYTES="$AURA_STACK_HARNESS_LLM_EMERGENCY_BODY_CAP_BYTES"
+  fi
+  if [[ -n "${AURA_STACK_HARNESS_LLM_DEBUG_REQUEST_DUMP_DIR:-}" ]]; then
+    export AURA_LLM_DEBUG_REQUEST_DUMP_DIR="$AURA_STACK_HARNESS_LLM_DEBUG_REQUEST_DUMP_DIR"
+    mkdir -p "$AURA_LLM_DEBUG_REQUEST_DUMP_DIR"
+  fi
 
   # Stack URL overrides. AURA_OS_SERVER_URL is always re-stamped
   # because the harness .env's baked `http://127.0.0.1:3100` default

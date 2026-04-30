@@ -2,13 +2,17 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { loadExternalBenchmarkEnv } from "../../infra/evals/external/bin/load-env.mjs";
 import { createBenchmarkClient, runScenario } from "./lib/benchmark-api-runner.mjs";
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(currentDir, "..", "..");
 const interfaceRoot = path.resolve(currentDir, "..");
 const scenariosPath = path.join(interfaceRoot, "tests/e2e/evals/scenarios/live-benchmark.json");
 const fixturesDir = path.join(interfaceRoot, "tests/e2e/evals/fixtures");
 const resultsDir = path.join(interfaceRoot, "test-results");
+
+loadExternalBenchmarkEnv({ repoRoot });
 
 const apiBaseUrl = process.env.AURA_EVAL_API_BASE_URL?.trim()
   || process.env.AURA_EVAL_BASE_URL?.trim()
@@ -18,7 +22,9 @@ const accessToken = process.env.AURA_EVAL_ACCESS_TOKEN?.trim() || "";
 const verbose = process.env.AURA_EVAL_VERBOSE === "1";
 
 if (!accessToken) {
-  throw new Error("Set AURA_EVAL_ACCESS_TOKEN before running the API benchmark.");
+  throw new Error(
+    "Set AURA_EVAL_ACCESS_TOKEN in the environment, repo .env, or local-stack .runtime/auth.env before running the API benchmark.",
+  );
 }
 
 const grepPattern = process.argv[2]?.trim() || "";

@@ -321,6 +321,47 @@ fn hydrate_checkpoint_state(
             sync_checkpoints.push(checkpoint);
         }
     }
+    if matches_task("tool_call_completed") && is_git_commit_push_timeout(content) {
+        sync_checkpoints.push(TaskSyncCheckpoint {
+            kind: "git_push_failed".to_string(),
+            phase: Some("push_failed".to_string()),
+            commit_sha: sync_checkpoints
+                .iter()
+                .rev()
+                .find_map(|checkpoint| checkpoint.commit_sha.clone()),
+            reason: event_reason(content),
+            ..Default::default()
+        });
+    }
+}
+
+fn is_git_commit_push_timeout(event: &serde_json::Value) -> bool {
+    event
+        .get("is_error")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false)
+        && event
+            .get("name")
+            .or_else(|| event.get("tool_name"))
+            .and_then(|value| value.as_str())
+            == Some("git_commit_push")
+        && event_reason(event).is_some_and(|reason| {
+            let reason = reason.to_ascii_lowercase();
+            reason.contains("timeout") || reason.contains("timed out")
+        })
+}
+
+fn event_reason(event: &serde_json::Value) -> Option<String> {
+    ["reason", "message", "error", "result", "result_preview"]
+        .into_iter()
+        .find_map(|key| {
+            event
+                .get(key)
+                .and_then(|value| value.as_str())
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(str::to_string)
+        })
 }
 
 async fn fetch_task_output_from_storage(

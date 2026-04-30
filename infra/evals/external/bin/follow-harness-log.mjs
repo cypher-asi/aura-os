@@ -212,8 +212,13 @@ class Formatter {
       const resultLen = kv(rest, "result_len");
       const status = failed ? color.red("failed") : color.green("ok");
       const result = resultLen == null ? "" : ` ${bytes(resultLen)}`;
+      // The harness emits `result_preview` only on errors. Surface it
+      // inline so a single bench timeline reveals *why* a tool rejected
+      // instead of forcing the operator to grep `harness.log`.
+      const preview = failed ? kv(rest, "result_preview") : null;
+      const previewSuffix = preview ? ` ${color.dim("—")} ${redact(preview)}` : "";
       this.drafting.delete(tool);
-      return `${prefix(this.label, timestamp, level)} ${status} ${tool}${result}`;
+      return `${prefix(this.label, timestamp, level)} ${status} ${tool}${result}${previewSuffix}`;
     }
 
     if (INFO_BANNERS.some((banner) => rest.startsWith(banner))) {

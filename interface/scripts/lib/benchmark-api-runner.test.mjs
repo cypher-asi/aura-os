@@ -8,8 +8,10 @@ import {
   createBenchmarkClient,
   fetchWithTimeout,
   resolveApiFetchTimeoutMs,
+  resolveModelCooldownMs,
   runScenario,
   summarizeSessionUsage,
+  sumBuildAndTestSteps,
   walkFixtureDir,
 } from "./benchmark-api-runner.mjs";
 
@@ -179,6 +181,31 @@ test("resolveApiFetchTimeoutMs honors explicit positive values", () => {
   assert.equal(resolveApiFetchTimeoutMs("250"), 250);
   assert.equal(resolveApiFetchTimeoutMs(" 60000 "), 60_000);
   assert.equal(resolveApiFetchTimeoutMs("123.9"), 123);
+});
+
+test("resolveModelCooldownMs defaults off and honors positive values", () => {
+  assert.equal(resolveModelCooldownMs(undefined), 0);
+  assert.equal(resolveModelCooldownMs(""), 0);
+  assert.equal(resolveModelCooldownMs("0"), 0);
+  assert.equal(resolveModelCooldownMs("-1"), 0);
+  assert.equal(resolveModelCooldownMs("not-a-number"), 0);
+  assert.equal(resolveModelCooldownMs(" 1500.9 "), 1500);
+  assert.equal(resolveModelCooldownMs(2500.8), 2500);
+});
+
+test("sumBuildAndTestSteps counts harness output markers", () => {
+  const summary = sumBuildAndTestSteps({
+    task1: {
+      output: [
+        "[auto-build: node --version]",
+        "[tool: run_command -> ok]",
+        "[task_done test gate: python -m pytest (source: project config)]",
+      ].join("\n"),
+    },
+  });
+
+  assert.equal(summary.buildSteps, 1);
+  assert.equal(summary.testSteps, 1);
 });
 
 test("fetchWithTimeout aborts hung requests and rewrites the error", async () => {

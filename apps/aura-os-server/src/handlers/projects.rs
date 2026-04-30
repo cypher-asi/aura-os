@@ -191,6 +191,12 @@ pub(crate) async fn create_imported_project(
         local_workspace_path,
     } = req;
 
+    let import_by_reference = files.is_empty()
+        && local_workspace_path
+            .as_deref()
+            .map(str::trim)
+            .is_some_and(|path| !path.is_empty());
+
     let local_req = CreateProjectRequest {
         org_id,
         name,
@@ -206,8 +212,10 @@ pub(crate) async fn create_imported_project(
     };
 
     let (status, Json(project)) = create_project_impl(&state, &local_req, None, &jwt).await?;
-    let workspace_root = ensure_canonical_workspace_dir(&state.data_dir, &project.project_id)?;
-    write_imported_files(&workspace_root, files).await?;
+    if !import_by_reference {
+        let workspace_root = ensure_canonical_workspace_dir(&state.data_dir, &project.project_id)?;
+        write_imported_files(&workspace_root, files).await?;
+    }
 
     Ok((status, Json(project)))
 }

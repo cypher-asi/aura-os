@@ -7,6 +7,7 @@ import test from "node:test";
 import {
   buildPostmortem,
   failureBucket,
+  normalizeStatus,
   synthesizeSummaryFromRecords,
   main,
 } from "./aggregate-score.mjs";
@@ -84,6 +85,11 @@ test("buildPostmortem buckets unresolved instances by likely failure mode", () =
   });
 
   assert.equal(failureBucket({ status: "resolved" }), "resolved");
+  assert.equal(failureBucket({ status: "agent_patch_polluted" }), "agent_patch_polluted");
+  assert.equal(
+    failureBucket({ status: "verification_environment_blocked" }),
+    "verification_environment_blocked",
+  );
   assert.equal(postmortem.buckets.resolved, 1);
   assert.equal(postmortem.buckets.dev_loop_failure, 1);
   assert.equal(postmortem.buckets.empty_or_filtered_patch, 1);
@@ -91,6 +97,21 @@ test("buildPostmortem buckets unresolved instances by likely failure mode", () =
   assert.deepEqual(
     postmortem.unresolved.map((entry) => entry.instance_id),
     ["a__a-2", "a__a-3", "a__a-4"],
+  );
+});
+
+test("normalizeStatus preserves typed driver guardrail outcomes without official harness results", () => {
+  assert.equal(
+    normalizeStatus(null, { status: "agent_patch_polluted" }),
+    "agent_patch_polluted",
+  );
+  assert.equal(
+    normalizeStatus(null, { status: "verification_environment_blocked" }),
+    "verification_environment_blocked",
+  );
+  assert.equal(
+    normalizeStatus({ resolved: true }, { status: "agent_patch_polluted" }),
+    "resolved",
   );
 });
 
@@ -147,15 +168,23 @@ test("aggregate-score main() synthesizes driver-summary.json from runs/ when mis
     );
     assert.equal(score.benchmark, "swebench_verified");
     assert.equal(score.instance_count, 1);
-    assert.equal(score.scoring_mode, "driver_predictions_only");
+    assert.equal(
+      score.scoring_mode,
+      process.platform === "win32" ? "driver_only_native_windows" : "driver_predictions_only",
+    );
     assert.equal(score.official_harness_ran, false);
-    assert.match(score.scoring_note, /Official SWE-bench hidden-test scoring did not run/);
+    assert.match(
+      score.scoring_note,
+      process.platform === "win32"
+        ? /Native Windows run is driver-only plumbing validation/
+        : /Official SWE-bench hidden-test scoring did not run/,
+    );
     assert.equal(score.instances.length, 1);
     assert.equal(score.instances[0].instance_id, "a__a-1");
     const postmortem = JSON.parse(
       await fs.readFile(path.join(dir, "postmortem.json"), "utf8"),
     );
-    assert.equal(postmortem.scoring_mode, "driver_predictions_only");
+    assert.equal(postmortem.scoring_mode, score.scoring_mode);
     assert.equal(postmortem.buckets.not_resolved ?? 0, 0);
     assert.match(
       await fs.readFile(path.join(dir, "postmortem.md"), "utf8"),

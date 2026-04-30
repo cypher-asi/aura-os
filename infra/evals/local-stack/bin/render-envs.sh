@@ -142,6 +142,9 @@ write_export "$aura_os_env" "AURA_DEBUG_CLOUDFLARE_DUMP_DIR" "$AURA_STACK_RUNTIM
 # keys win). LLM routing is fixed to the Aura proxy path in
 # aura-harness; there is no routing knob to forward.
 write_optional_export "$aura_os_env" "AURA_LLM_MAX_RETRIES" "$AURA_STACK_HARNESS_LLM_MAX_RETRIES"
+write_optional_export "$aura_os_env" "AURA_LLM_MIN_REQUEST_INTERVAL_MS" "$AURA_STACK_HARNESS_LLM_MIN_REQUEST_INTERVAL_MS"
+write_optional_export "$aura_os_env" "AURA_LLM_EMERGENCY_BODY_CAP_BYTES" "$AURA_STACK_HARNESS_LLM_EMERGENCY_BODY_CAP_BYTES"
+write_optional_export "$aura_os_env" "AURA_LLM_DEBUG_REQUEST_DUMP_DIR" "$AURA_STACK_HARNESS_LLM_DEBUG_REQUEST_DUMP_DIR"
 write_optional_export "$aura_os_env" "AURA_ROUTER_JWT" "$AURA_STACK_AURA_ROUTER_JWT"
 
 # Test-gate operator overrides documented in

@@ -106,8 +106,9 @@ async fn concurrent_agents_stress_32_partitions() {
     fake.set_chunk_delay(CHUNK_DELAY).await;
 
     let template = AgentId::new();
-    let instance_ids: Vec<AgentInstanceId> =
-        (0..PARTITION_COUNT).map(|_| AgentInstanceId::new()).collect();
+    let instance_ids: Vec<AgentInstanceId> = (0..PARTITION_COUNT)
+        .map(|_| AgentInstanceId::new())
+        .collect();
 
     // Single-stream baseline: open one session, wait for it to finish.
     // We use this number to compare against the parallel batch below.
@@ -145,13 +146,9 @@ async fn concurrent_agents_stress_32_partitions() {
                 template_agent_id: Some(template.to_string()),
                 ..Default::default()
             };
-            SessionBridge::open_and_send_user_message(
-                &fake,
-                cfg,
-                turn(&format!("parallel-{i}")),
-            )
-            .await
-            .map_err(|e| format!("open partition {i}: {e}"))
+            SessionBridge::open_and_send_user_message(&fake, cfg, turn(&format!("parallel-{i}")))
+                .await
+                .map_err(|e| format!("open partition {i}: {e}"))
         }
     });
     let started_sessions: Vec<_> = join_all(opens)
@@ -159,11 +156,14 @@ async fn concurrent_agents_stress_32_partitions() {
         .into_iter()
         .collect::<Result<_, _>>()
         .expect("every partition opened cleanly");
-    let drains = started_sessions.into_iter().enumerate().map(|(i, s)| async move {
-        drain_until_end(s)
-            .await
-            .map_err(|e| format!("partition {i}: {e}"))
-    });
+    let drains = started_sessions
+        .into_iter()
+        .enumerate()
+        .map(|(i, s)| async move {
+            drain_until_end(s)
+                .await
+                .map_err(|e| format!("partition {i}: {e}"))
+        });
     let outcomes = join_all(drains).await;
     let parallel_wall = parallel_started_at.elapsed();
 

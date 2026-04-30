@@ -43,13 +43,13 @@ mod auth_extractors;
 mod caches;
 
 pub(crate) use auth_extractors::{AuthJwt, AuthSession, AuthZeroProMeta};
+#[cfg(test)]
+pub(crate) use caches::CACHE_ENTRY_MAX_AGE;
 pub(crate) use caches::{
     clear_zero_auth_session, persist_zero_auth_session, spawn_cache_eviction, AgentDiscoveryCache,
     CachedAgentDiscovery, CreditCache, CreditCacheRef, TaskOutputCache, ValidationCache,
     AGENT_DISCOVERY_TTL,
 };
-#[cfg(test)]
-pub(crate) use caches::CACHE_ENTRY_MAX_AGE;
 pub use caches::{CachedSession, CachedTaskOutput, TestPassEvidence};
 
 #[cfg(test)]

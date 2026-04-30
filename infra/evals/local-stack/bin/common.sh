@@ -74,10 +74,31 @@ stack_load_env() {
   # there is no routing knob to forward.
   export AURA_STACK_AURA_ROUTER_JWT="${AURA_STACK_AURA_ROUTER_JWT:-}"
   export AURA_STACK_DEFAULT_MODEL="${AURA_STACK_DEFAULT_MODEL:-${AURA_STACK_ANTHROPIC_MODEL:-aura-claude-opus-4-7}}"
-  # Optional override for `AURA_LLM_MAX_RETRIES` (default 8 in
-  # aura-reasoner). Lower this when CF on aura-router is persistently
-  # blocking — aggressive retries reinforce the WAF block.
-  export AURA_STACK_HARNESS_LLM_MAX_RETRIES="${AURA_STACK_HARNESS_LLM_MAX_RETRIES:-}"
+  # Local eval traffic runs through Cloudflare in front of aura-router.
+  # Keep the default retry cap low so a single edge block does not turn
+  # into a tight retry burst that reinforces the WAF score.
+  export AURA_STACK_HARNESS_LLM_MAX_RETRIES="${AURA_STACK_HARNESS_LLM_MAX_RETRIES:-1}"
+  # The managed router's public Render edge can WAF-block dense local
+  # automation bursts before aura-router gets a chance to return a
+  # canonical 429/400. Keep SWE/local-stack LLM egress paced by default;
+  # set to 0 for private/local router endpoints.
+  export AURA_STACK_HARNESS_LLM_MIN_REQUEST_INTERVAL_MS="${AURA_STACK_HARNESS_LLM_MIN_REQUEST_INTERVAL_MS:-2500}"
+  # Cloudflare WAF in front of aura-router has been observed to 403 on
+  # chat-path bodies above ~37-38KB (49 tools + accumulated tool results
+  # in spec/task generation). The harness ships an emergency body cap that
+  # truncates the largest text block in the last user message before the
+  # request leaves the host. We default to 32KB here — well under the
+  # observed cliff and above the typical dev-loop ceiling (~22KB) — so
+  # only oversized chat-path requests get trimmed. Set to `0` to disable.
+  # See `aura-harness/crates/aura-reasoner/src/anthropic/provider.rs::maybe_apply_emergency_body_cap`.
+  # Default cap lowered from 32768 to 24576 after the WAF was observed
+  # rejecting bodies as small as ~32KB when content patterns are dense
+  # (Python code blocks, file paths, escaped `&` operators). 24KB gives
+  # ~8KB of headroom below the empirical cliff and still preserves the
+  # last user message's largest payload after truncation. Operators can
+  # raise/lower via AURA_STACK_HARNESS_LLM_EMERGENCY_BODY_CAP_BYTES.
+  export AURA_STACK_HARNESS_LLM_EMERGENCY_BODY_CAP_BYTES="${AURA_STACK_HARNESS_LLM_EMERGENCY_BODY_CAP_BYTES:-24576}"
+  export AURA_STACK_HARNESS_LLM_DEBUG_REQUEST_DUMP_DIR="${AURA_STACK_HARNESS_LLM_DEBUG_REQUEST_DUMP_DIR:-$AURA_STACK_RUNTIME_DIR/llm-request-dumps}"
   # Operator overrides for the harness's `task_done` test gate. Use
   # `AURA_STACK_HARNESS_DOD_DISABLE_TEST_GATE=1` for quick scripted
   # experiments (e.g. SWE-bench, where the official Docker scorer runs
@@ -260,6 +281,7 @@ stack_mkdir_runtime() {
   # variable through from render-envs.sh so failed runs leave a
   # `cf-block-<ts>.html` for post-mortem (Ray ID + rule label).
   mkdir -p "$AURA_STACK_RUNTIME_DIR/cloudflare-dumps"
+  mkdir -p "$AURA_STACK_HARNESS_LLM_DEBUG_REQUEST_DUMP_DIR"
 }
 
 stack_check_command() {

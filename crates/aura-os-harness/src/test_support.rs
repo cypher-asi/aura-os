@@ -305,7 +305,8 @@ mod tests {
     #[tokio::test]
     async fn open_session_records_session_init_with_agent_id() {
         let fake = FakeHarness::new();
-        fake.set_script(vec![text_delta("hi"), assistant_end()]).await;
+        fake.set_script(vec![text_delta("hi"), assistant_end()])
+            .await;
 
         let cfg = SessionConfig {
             agent_id: Some("template::partition-a".into()),
@@ -361,10 +362,9 @@ mod tests {
             ..Default::default()
         };
         let started_at = Instant::now();
-        let mut started =
-            SessionBridge::open_and_send_user_message(&fake, cfg, turn("hi"))
-                .await
-                .expect("open");
+        let mut started = SessionBridge::open_and_send_user_message(&fake, cfg, turn("hi"))
+            .await
+            .expect("open");
         let _evt = started.events_rx.recv().await.expect("first event");
         let elapsed = started_at.elapsed();
         assert!(

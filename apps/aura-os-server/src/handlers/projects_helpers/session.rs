@@ -6,9 +6,9 @@ use aura_os_core::{AgentInstance, AgentInstanceId, HarnessMode, ProjectId};
 use aura_os_harness::SessionConfig;
 
 use crate::error::ApiResult;
-use crate::handlers::agents::session_model_overrides;
 use crate::handlers::agents::chat::build_project_system_prompt;
 use crate::handlers::agents::conversions_pub::resolve_workspace_path;
+use crate::handlers::agents::session_model_overrides;
 use crate::handlers::agents::tool_dedupe::dedupe_and_log_installed_tools;
 use crate::handlers::agents::workspace_tools::{
     installed_workspace_app_tools, installed_workspace_integrations_for_org_with_token,
@@ -287,7 +287,7 @@ pub(crate) async fn project_tool_session_config(
         project_path.as_deref(),
     ));
     let provider_overrides = session_model_overrides(model.as_deref());
-    Ok(SessionConfig {
+    let cfg = SessionConfig {
         system_prompt,
         agent_id: agent_id_field,
         template_agent_id: template_agent_id_field,
@@ -310,18 +310,83 @@ pub(crate) async fn project_tool_session_config(
             .as_ref()
             .and_then(|instance| instance.org_id.as_ref())
             .map(ToString::to_string),
+        aura_session_id: Some(stable_project_tool_session_id(
+            project_id,
+            agent_instance_id.as_ref(),
+            tool_agent_name,
+        )),
         agent_permissions,
         intent_classifier: agent_instance
             .as_ref()
             .and_then(|instance| instance.intent_classifier.clone()),
         ..Default::default()
-    })
+    };
+
+    // #region agent log
+    debug_log_project_tool_shape(tool_agent_name, &cfg);
+    // #endregion
+
+    Ok(cfg)
 }
+
+// #region agent log
+fn debug_log_project_tool_shape(tool_agent_name: &str, config: &SessionConfig) {
+    use std::io::Write;
+    let data = serde_json::json!({
+        "path": "project_tool_session",
+        "tool_agent_name": tool_agent_name,
+        "model": config.model.as_deref().unwrap_or("<none>"),
+        "has_aura_org_id": config.aura_org_id.is_some(),
+        "aura_org_id_len": config.aura_org_id.as_deref().map(str::len).unwrap_or(0),
+        "has_aura_session_id": config.aura_session_id.is_some(),
+        "aura_session_id_len": config.aura_session_id.as_deref().map(str::len).unwrap_or(0),
+        "has_agent_id": config.agent_id.is_some(),
+        "has_template_agent_id": config.template_agent_id.is_some(),
+        "has_token": config.token.is_some(),
+        "token_len": config.token.as_deref().map(str::len).unwrap_or(0),
+        "system_prompt_len": config.system_prompt.as_deref().map(str::len).unwrap_or(0),
+        "has_provider_overrides": config.provider_overrides.is_some(),
+        "has_intent_classifier": config.intent_classifier.is_some(),
+        "has_tool_permissions": config.tool_permissions.is_some(),
+        "has_conversation_messages": config.conversation_messages.is_some(),
+        "max_turns": config.max_turns,
+        "installed_tools_count": config.installed_tools.as_ref().map(Vec::len).unwrap_or(0),
+        "installed_integrations_count": config.installed_integrations.as_ref().map(Vec::len).unwrap_or(0),
+        "has_project_id": config.project_id.is_some(),
+        "has_project_path": config.project_path.is_some(),
+    });
+    let line = serde_json::json!({
+        "sessionId": "95fd5c",
+        "hypothesisId": "H1-H5-projecttool",
+        "location": "apps/aura-os-server/src/handlers/projects_helpers/session.rs::project_tool_session_config",
+        "message": "session-shape snapshot",
+        "timestamp": chrono::Utc::now().timestamp_millis(),
+        "data": data,
+    });
+    let _ = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(r"C:\code\aura-os\debug-95fd5c.log")
+        .and_then(|mut f| writeln!(f, "{line}"));
+}
+// #endregion
 
 fn effective_project_tool_model(instance: Option<&AgentInstance>) -> Option<String> {
     instance.and_then(|instance| {
         first_non_empty_model(instance.default_model.as_deref(), instance.model.as_deref())
     })
+}
+
+fn stable_project_tool_session_id(
+    project_id: &ProjectId,
+    agent_instance_id: Option<&AgentInstanceId>,
+    tool_agent_name: &str,
+) -> String {
+    let instance_segment = agent_instance_id
+        .map(ToString::to_string)
+        .unwrap_or_else(|| "no-agent-instance".to_string());
+    let payload = format!("aura-os/project-tool:{project_id}:{instance_segment}:{tool_agent_name}");
+    uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_DNS, payload.as_bytes()).to_string()
 }
 
 fn first_non_empty_model(default_model: Option<&str>, model: Option<&str>) -> Option<String> {
@@ -339,11 +404,11 @@ mod tests {
 
     use super::{
         first_non_empty_model, is_project_tool_action, parse_project_tool_deadline,
-        parse_project_tool_max_turns, DEFAULT_PROJECT_TOOL_DEADLINE_SECS,
-        DEFAULT_PROJECT_TOOL_MAX_TURNS,
+        parse_project_tool_max_turns, stable_project_tool_session_id,
+        DEFAULT_PROJECT_TOOL_DEADLINE_SECS, DEFAULT_PROJECT_TOOL_MAX_TURNS,
     };
     use crate::handlers::agents::chat::{render_project_context, render_project_context_fallback};
-    use aura_os_core::ProjectId;
+    use aura_os_core::{AgentInstanceId, ProjectId};
 
     #[test]
     fn parse_max_turns_uses_explicit_positive_values() {
@@ -431,6 +496,25 @@ mod tests {
             first_non_empty_model(Some("  "), Some(" aura-claude-sonnet-4-5 ")).as_deref(),
             Some("aura-claude-sonnet-4-5")
         );
+    }
+
+    #[test]
+    fn stable_project_tool_session_id_is_deterministic() {
+        let project_id = ProjectId::new();
+        let instance_id = AgentInstanceId::new();
+        let a = stable_project_tool_session_id(&project_id, Some(&instance_id), "task-extract");
+        let b = stable_project_tool_session_id(&project_id, Some(&instance_id), "task-extract");
+        assert_eq!(a, b);
+        uuid::Uuid::parse_str(&a).expect("session id should parse as uuid");
+    }
+
+    #[test]
+    fn stable_project_tool_session_id_partitions_tool_flows() {
+        let project_id = ProjectId::new();
+        let instance_id = AgentInstanceId::new();
+        let specs = stable_project_tool_session_id(&project_id, Some(&instance_id), "spec-gen");
+        let tasks = stable_project_tool_session_id(&project_id, Some(&instance_id), "task-extract");
+        assert_ne!(specs, tasks);
     }
 
     /// `project_tool_session_config` now mirrors the chat path by

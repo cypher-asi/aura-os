@@ -54,12 +54,12 @@ impl HarnessLink for LocalHarness {
             Ok(ok) => ok,
             Err(err) => {
                 if is_capacity_exhausted_ws_error(&err) {
-                    return Err(anyhow::Error::new(HarnessError::CapacityExhausted).context(
-                        format!("local harness websocket connect rejected: {err}"),
-                    ));
+                    return Err(anyhow::Error::new(HarnessError::CapacityExhausted)
+                        .context(format!("local harness websocket connect rejected: {err}")));
                 }
-                return Err(anyhow::Error::new(err)
-                    .context("local harness websocket connect failed"));
+                return Err(
+                    anyhow::Error::new(err).context("local harness websocket connect failed")
+                );
             }
         };
 

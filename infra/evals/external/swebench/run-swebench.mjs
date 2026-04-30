@@ -21,6 +21,12 @@ import {
   runScenario,
 } from "../../../../interface/scripts/lib/benchmark-api-runner.mjs";
 import { loadExternalBenchmarkEnv } from "../bin/load-env.mjs";
+import {
+  describeRequestContractSummary,
+  extractRequestContractReports,
+  extractTypedFailureReport,
+  summarizeRequestContractReports,
+} from "./lib/request-contract-reporting.mjs";
 
 const currentFile = fileURLToPath(import.meta.url);
 const driverDir = path.dirname(currentFile);
@@ -48,6 +54,8 @@ export const BENCHMARK_DIRECTIVES = `## Benchmark constraints
 
 const STATUS_BLOCKED_CLOUDFLARE = "blocked_cloudflare";
 const STATUS_SKIPPED_CLOUDFLARE = "skipped_cloudflare_block";
+export const STATUS_VERIFICATION_ENVIRONMENT_BLOCKED = "verification_environment_blocked";
+export const STATUS_AGENT_PATCH_POLLUTED = "agent_patch_polluted";
 export const SWEBENCH_DEFAULT_BUILD_COMMAND = "node --version";
 export const SWEBENCH_DEFAULT_TEST_COMMAND = "python -m pytest";
 
@@ -463,6 +471,36 @@ function cloudflareBlockReasonFromPayload(payload) {
   return null;
 }
 
+function requestContractInputsFromPayload(payload) {
+  if (!payload || typeof payload !== "object") return [];
+  const inputs = [
+    payload,
+    payload.request_contract,
+    payload.requestContract,
+    payload.request_contract_verdict,
+    payload.requestContractVerdict,
+    payload.classifier_verdict,
+    payload.classifierVerdict,
+  ].filter(Boolean);
+  for (const key of [
+    "request_contract_reports",
+    "requestContractReports",
+    "model_content_profiles",
+    "modelContentProfiles",
+    "classifier_verdicts",
+    "classifierVerdicts",
+  ]) {
+    if (Array.isArray(payload[key])) inputs.push(...payload[key]);
+  }
+  return inputs;
+}
+
+export function requestContractSummaryFromPayload(payload) {
+  return summarizeRequestContractReports(
+    extractRequestContractReports(requestContractInputsFromPayload(payload), "aura-payload"),
+  );
+}
+
 function conservativeConcurrency(args) {
   if (process.env.AURA_BENCH_ALLOW_PARALLEL === "1") {
     return args.concurrency;
@@ -564,6 +602,165 @@ export function stripBenchmarkArtifactsFromDiff(diff) {
   return {
     patch: rejoinChunks(kept, typeof diff === "string" ? diff : ""),
     strippedHunks,
+  };
+}
+
+function issueMentionsPathOrTopic(instance, filePath, topics = []) {
+  const issueText = [
+    instance?.problem_statement,
+    instance?.hints_text,
+  ].filter(Boolean).join("\n").toLowerCase();
+  if (!issueText) return false;
+
+  const normalized = normalizeDiffPath(filePath);
+  const basename = normalized ? path.posix.basename(normalized).toLowerCase() : "";
+  const stem = basename.replace(/\.[^.]+$/, "");
+  const candidates = [
+    normalized?.toLowerCase(),
+    basename,
+    stem,
+    ...topics.map((topic) => String(topic).toLowerCase()),
+  ].filter((value) => value && value.length >= 3);
+
+  return candidates.some((candidate) => issueText.includes(candidate));
+}
+
+function diffChunkPath(chunk) {
+  const { oldPath, newPath } = parseDiffHeaderPaths(chunk.header);
+  const { minus, plus } = extractMinusPlusPaths(chunk.lines);
+  return [newPath, plus, oldPath, minus]
+    .map(normalizeDiffPath)
+    .find(Boolean) ?? null;
+}
+
+function addedDiffText(chunk) {
+  return chunk.lines
+    .filter((line) => line.startsWith("+") && !line.startsWith("+++ "))
+    .map((line) => line.slice(1))
+    .join("\n");
+}
+
+function classifyPollutedChunk(chunk, instance) {
+  const filePath = diffChunkPath(chunk);
+  if (!filePath) return null;
+  const normalized = filePath.replace(/\\/g, "/");
+  const basename = path.posix.basename(normalized).toLowerCase();
+  const lowerPath = normalized.toLowerCase();
+  const addedText = addedDiffText(chunk).toLowerCase();
+  const fullText = chunk.lines.join("\n").toLowerCase();
+
+  const reasons = [];
+  if (/^_(compiler|version)\.py$/i.test(basename)) {
+    reasons.push("generated_python_build_metadata");
+  }
+  if (/(^|\/)(setup\.py|setup\.cfg|pyproject\.toml|meson\.build|cmakelists\.txt)$/i.test(lowerPath)) {
+    reasons.push("build_system_workaround");
+  }
+  if (/(\bmsvc\b|visual c\+\+|distutils|setuptools|compiler = ['"]unknown['"])/i.test(addedText)) {
+    reasons.push("native_build_workaround");
+  }
+  if (
+    basename === "logger.py"
+    && /(loggingerror|warnings\.showwarning|disable_warnings_logging|exception_logging_enabled)/i.test(fullText)
+    && !issueMentionsPathOrTopic(instance, normalized, ["logger", "logging", "warning", "warnings"])
+  ) {
+    reasons.push("unrelated_logger_environment_workaround");
+  }
+
+  if (reasons.length === 0) return null;
+  if (
+    !reasons.includes("unrelated_logger_environment_workaround")
+    && issueMentionsPathOrTopic(instance, normalized)
+  ) {
+    return null;
+  }
+
+  return { path: normalized, reasons };
+}
+
+function taskOutputText(auraPayload) {
+  const outputs = auraPayload?.taskOutputs;
+  if (!outputs || typeof outputs !== "object") return "";
+  return Object.values(outputs)
+    .map((output) => {
+      if (typeof output === "string") return output;
+      if (!output || typeof output !== "object") return "";
+      return [
+        output.output,
+        output.error,
+        ...(Array.isArray(output.test_steps)
+          ? output.test_steps.map((step) => step?.output ?? step?.error ?? "")
+          : []),
+        ...(Array.isArray(output.build_steps)
+          ? output.build_steps.map((step) => step?.output ?? step?.error ?? "")
+          : []),
+      ].filter(Boolean).join("\n");
+    })
+    .join("\n");
+}
+
+export function detectVerificationEnvironmentBlock({ auraPayload, platform = process.platform } = {}) {
+  const text = taskOutputText(auraPayload).toLowerCase();
+  const nativeWindows = platform === "win32";
+  const unsupportedEnvironment =
+    /\benvironment has issues unrelated\b/.test(text)
+    || /\btest infrastructure cannot run\b/.test(text)
+    || /\bcannot run due to\b/.test(text)
+    || /\bbroken extension build\b/.test(text)
+    || /\bvisual c\+\+\b|\bmsvc\b|\bnmake\b/.test(text)
+    || /\bloggingerror\b/.test(text);
+
+  if (!nativeWindows || !unsupportedEnvironment) {
+    return { blocked: false, reason: null, platform, evidence: [] };
+  }
+
+  const evidence = [];
+  if (/\bvisual c\+\+\b|\bmsvc\b|\bnmake\b/.test(text)) evidence.push("native_windows_compiler_failure");
+  if (/\bloggingerror\b/.test(text)) evidence.push("astropy_logging_import_failure");
+  if (/\benvironment has issues unrelated\b|\btest infrastructure cannot run\b|\bcannot run due to\b/.test(text)) {
+    evidence.push("agent_reported_environment_blocker");
+  }
+
+  return {
+    blocked: true,
+    reason: "Native Windows/local verification environment cannot run this SWE-bench suite; official validation requires Linux, WSL, or macOS.",
+    platform,
+    evidence,
+  };
+}
+
+export function guardSwebenchPredictionPatch({ patch, instance, auraPayload = null, platform = process.platform } = {}) {
+  const originalPatch = typeof patch === "string" ? patch : "";
+  const chunks = splitDiffIntoChunks(originalPatch);
+  const kept = [];
+  const polluted = [];
+
+  for (const chunk of chunks) {
+    const classification = classifyPollutedChunk(chunk, instance);
+    if (classification) {
+      polluted.push(classification);
+      continue;
+    }
+    kept.push(chunk);
+  }
+
+  const cleanedPatch = polluted.length > 0 ? rejoinChunks(kept, originalPatch) : originalPatch;
+  const preservedFiles = parseDiffFiles(cleanedPatch);
+  const environment = detectVerificationEnvironmentBlock({ auraPayload, platform });
+
+  return {
+    ok: polluted.length === 0,
+    status: polluted.length > 0
+      ? STATUS_AGENT_PATCH_POLLUTED
+      : environment.blocked
+        ? STATUS_VERIFICATION_ENVIRONMENT_BLOCKED
+        : null,
+    patch: cleanedPatch,
+    polluted_files: polluted.map((entry) => entry.path),
+    polluted_hunks: polluted.length,
+    pollution: polluted,
+    preserved_files: preservedFiles,
+    environment,
   };
 }
 
@@ -798,7 +995,7 @@ export function readAuraVersion() {
 // Per-instance pipeline
 // ---------------------------------------------------------------------------
 
-function buildScenario(instance, workspaceDir) {
+export function buildScenario(instance, workspaceDir) {
   const id = instance.instance_id;
   return {
     id: `swebench-${id}`,
@@ -839,6 +1036,9 @@ function buildScenario(instance, workspaceDir) {
         process.env.AURA_BENCH_LOOP_TIMEOUT_MS ?? 1500000,
       ),
       pollIntervalMs: 5000,
+      modelCooldownMs: Number(
+        process.env.AURA_BENCH_MODEL_COOLDOWN_MS ?? 60000,
+      ),
     },
     verification: {
       requireNoFailedTasks: false,
@@ -1130,6 +1330,7 @@ async function runOneInstance({
     status: "agent_error",
     scenario: null,
     aura_payload: null,
+    request_contract: null,
     patch: {
       lines: 0,
       files_changed: 0,
@@ -1138,6 +1339,7 @@ async function runOneInstance({
       empty: true,
     },
     error: null,
+    failure_report: null,
     cost_usd: 0,
     total_tokens: 0,
   };
@@ -1203,15 +1405,27 @@ async function runOneInstance({
     }
   } catch (error) {
     auraError = error instanceof Error ? error : new Error(String(error));
+    if (error && typeof error === "object" && error.auraPayload) {
+      auraPayload = error.auraPayload;
+      baseRecord.aura_payload_recovered_from_error = true;
+    }
     log(`AURA pipeline threw: ${auraError.message}`);
-    if (isCloudflareBlockError(auraError)) {
+    const blockReason = isCloudflareBlockError(auraError)
+      ? auraError.message
+      : cloudflareBlockReasonFromPayload(auraPayload);
+    if (blockReason) {
       costState.blocked = true;
-      costState.blockReason = auraError.message;
+      costState.blockReason = blockReason;
       log("Cloudflare block detected; stopping additional SWE-bench scheduling");
     }
   }
 
   baseRecord.aura_payload = auraPayload;
+  const requestContractSummary = requestContractSummaryFromPayload(auraPayload);
+  baseRecord.request_contract = requestContractSummary;
+  if (requestContractSummary.available) {
+    log(describeRequestContractSummary(requestContractSummary));
+  }
 
   // 4. Capture diff.
   const diffOutcome = await captureWorkspaceDiff(
@@ -1246,13 +1460,26 @@ async function runOneInstance({
     log("discarded patch because the run ended in a provider/proxy block");
   }
 
+  const predictionGuard = guardSwebenchPredictionPatch({
+    patch: modelPatch,
+    instance,
+    auraPayload,
+  });
+  if (predictionGuard.polluted_hunks > 0) {
+    modelPatch = predictionGuard.patch;
+    log(
+      `stripped ${predictionGuard.polluted_hunks} polluted environment workaround hunk(s): `
+        + predictionGuard.polluted_files.join(", "),
+    );
+  }
+
   const filesChanged = parseDiffFiles(modelPatch);
   const outcomeFailure = classifyAuraOutcome(auraPayload);
   if (!auraError && outcomeFailure) {
     auraError = new Error(outcomeFailure.message);
     log(`AURA pipeline produced a failed outcome: ${outcomeFailure.message}`);
   }
-  if (!auraError && modelPatch.length === 0) {
+  if (!auraError && modelPatch.length === 0 && !predictionGuard.status) {
     auraError = new Error(
       "AURA dev loop completed without source changes after filtering benchmark artifacts and test edits",
     );
@@ -1267,16 +1494,43 @@ async function runOneInstance({
     files_changed_list: filesChanged,
     tests_directory_hits_stripped: strippedHunks,
     benchmark_artifact_hunks_stripped: artifactStripped.strippedHunks,
+    pollution_guard: {
+      status: predictionGuard.status,
+      polluted_hunks: predictionGuard.polluted_hunks,
+      polluted_files: predictionGuard.polluted_files,
+      preserved_files: predictionGuard.preserved_files,
+      pollution: predictionGuard.pollution,
+    },
+    verification_environment: predictionGuard.environment,
     empty: modelPatch.length === 0,
   };
 
   // 6. Determine status.
   if (auraError) {
+    const failureReport = extractTypedFailureReport({
+      error: auraError,
+      payload: auraPayload,
+      requestContractSummary,
+    });
     baseRecord.status = isCloudflareBlockError(auraError)
       || cloudflareBlockReasonFromPayload(auraPayload)
       ? STATUS_BLOCKED_CLOUDFLARE
       : "agent_error";
-    baseRecord.error = auraError.message;
+    baseRecord.error = failureReport.message;
+    baseRecord.failure_report = failureReport;
+    log(`typed failure: ${failureReport.message}`);
+  } else if (predictionGuard.status) {
+    const failureReport = extractTypedFailureReport({
+      error: new Error(predictionGuard.status === STATUS_AGENT_PATCH_POLLUTED
+        ? `agent_patch_polluted: ${predictionGuard.polluted_files.join(", ")}`
+        : `${predictionGuard.status}: ${predictionGuard.environment.reason}`),
+      requestContractSummary,
+    });
+    baseRecord.status = predictionGuard.status;
+    baseRecord.error = predictionGuard.status === STATUS_AGENT_PATCH_POLLUTED
+      ? `Prediction patch contained environment workaround pollution in: ${predictionGuard.polluted_files.join(", ")}`
+      : predictionGuard.environment.reason;
+    baseRecord.failure_report = failureReport;
   } else {
     baseRecord.status = "agent_complete";
   }
@@ -1603,6 +1857,8 @@ async function main(rawArgv) {
     agent_complete: 0,
     agent_error: 0,
     [STATUS_BLOCKED_CLOUDFLARE]: 0,
+    [STATUS_AGENT_PATCH_POLLUTED]: 0,
+    [STATUS_VERIFICATION_ENVIRONMENT_BLOCKED]: 0,
     clone_error: 0,
     skipped_cost_cap: 0,
     [STATUS_SKIPPED_CLOUDFLARE]: 0,
@@ -1611,14 +1867,43 @@ async function main(rawArgv) {
   let totalCost = 0;
   let totalTokens = 0;
   let totalStripped = 0;
+  const requestContractTotals = {
+    available: false,
+    total: 0,
+    accepted: 0,
+    blocked: 0,
+    verdict_counts: {},
+    request_kind_counts: {},
+    acceptance: "not_available",
+    first_blocked: null,
+  };
   for (const record of recordsById.values()) {
     statusCounts[record.status] = (statusCounts[record.status] ?? 0) + 1;
     totalCost += Number(record.cost_usd ?? 0);
     totalTokens += Number(record.total_tokens ?? 0);
     totalStripped +=
       Number(record.patch?.tests_directory_hits_stripped ?? 0);
+    if (record.request_contract?.available) {
+      const contract = record.request_contract;
+      requestContractTotals.available = true;
+      requestContractTotals.total += Number(contract.total ?? 0);
+      requestContractTotals.accepted += Number(contract.accepted ?? 0);
+      requestContractTotals.blocked += Number(contract.blocked ?? 0);
+      requestContractTotals.first_blocked ??= contract.first_blocked ?? null;
+      for (const [verdict, count] of Object.entries(contract.verdict_counts ?? {})) {
+        requestContractTotals.verdict_counts[verdict] =
+          (requestContractTotals.verdict_counts[verdict] ?? 0) + Number(count ?? 0);
+      }
+      for (const [kind, count] of Object.entries(contract.request_kind_counts ?? {})) {
+        requestContractTotals.request_kind_counts[kind] =
+          (requestContractTotals.request_kind_counts[kind] ?? 0) + Number(count ?? 0);
+      }
+    }
     const richModels = record.aura_payload?.richUsageSummary?.models ?? [];
     for (const m of richModels) claudeModels.add(m);
+  }
+  if (requestContractTotals.available) {
+    requestContractTotals.acceptance = requestContractTotals.blocked > 0 ? "fail" : "pass";
   }
 
   const priorSummary = resumed
@@ -1638,6 +1923,7 @@ async function main(rawArgv) {
     total_tokens: totalTokens,
     status_counts: statusCounts,
     tests_directory_hits_stripped_total: totalStripped,
+    request_contract: requestContractTotals,
     aborted_due_to_cost_cap: costState.aborted,
     out_dir: outDir,
     resumed: resumed || undefined,
@@ -1651,6 +1937,7 @@ async function main(rawArgv) {
       cost_usd: Number(totalCost.toFixed(4)),
       stripped: totalStripped,
       wallclock_seconds: Number(wallclockSeconds.toFixed(1)),
+      request_contract: describeRequestContractSummary(summary.request_contract),
     })}\n`,
   );
   process.stdout.write(`${path.join(outDir, "driver-summary.json")}\n`);

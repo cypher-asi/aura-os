@@ -354,10 +354,7 @@ pub(crate) fn task_done_declares_no_changes_needed_for_tests(
 /// 3. The command text must contain a recognized test-runner needle and
 ///    must not be one of the deny-listed build/check forms (e.g.
 ///    `--no-run`, `cargo build`, `cargo check`).
-pub(crate) fn is_successful_test_run_event(
-    event_type: &str,
-    event: &serde_json::Value,
-) -> bool {
+pub(crate) fn is_successful_test_run_event(event_type: &str, event: &serde_json::Value) -> bool {
     if event_type != "tool_call_completed" {
         return false;
     }
@@ -685,7 +682,11 @@ mod test_evidence_tests {
                 is_successful_test_run_event("tool_call_completed", &event),
                 "expected detection for {cmd}",
             );
-            assert_eq!(recognized_test_runner_label(cmd), Some(label), "label for {cmd}");
+            assert_eq!(
+                recognized_test_runner_label(cmd),
+                Some(label),
+                "label for {cmd}"
+            );
         }
     }
 
@@ -697,7 +698,10 @@ mod test_evidence_tests {
             &nonzero_exit
         ));
         let errored = run_command("run_command", "cargo test", 0, true);
-        assert!(!is_successful_test_run_event("tool_call_completed", &errored));
+        assert!(!is_successful_test_run_event(
+            "tool_call_completed",
+            &errored
+        ));
     }
 
     #[test]

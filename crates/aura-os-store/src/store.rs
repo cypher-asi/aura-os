@@ -89,6 +89,7 @@ impl SettingsStore {
 
     fn persist_cf(dir: &Path, cf_name: &str, map: &CfMap) -> StoreResult<()> {
         use base64::Engine;
+        fs::create_dir_all(dir)?;
         let encoded: BTreeMap<&str, String> = map
             .iter()
             .map(|(k, v)| {

@@ -137,6 +137,15 @@ pub(crate) async fn send_event_stream(
         ..Default::default()
     };
 
+    // #region agent log
+    debug_log_session_shape_chat(
+        "send_event_stream",
+        "H1-H5-chat",
+        body.action.as_deref().unwrap_or("<none>"),
+        &config,
+    );
+    // #endregion
+
     open_harness_chat_stream(
         &state,
         OpenChatStreamArgs {
@@ -301,6 +310,54 @@ pub(crate) fn render_project_context(
     );
     ctx
 }
+
+// #region agent log
+fn debug_log_session_shape_chat(
+    location: &str,
+    hypothesis_id: &str,
+    action: &str,
+    config: &SessionConfig,
+) {
+    use std::io::Write;
+    let data = serde_json::json!({
+        "path": "chat_events_stream",
+        "action": action,
+        "model": config.model.as_deref().unwrap_or("<none>"),
+        "has_aura_org_id": config.aura_org_id.is_some(),
+        "aura_org_id_len": config.aura_org_id.as_deref().map(str::len).unwrap_or(0),
+        "has_aura_session_id": config.aura_session_id.is_some(),
+        "aura_session_id_len": config.aura_session_id.as_deref().map(str::len).unwrap_or(0),
+        "has_agent_id": config.agent_id.is_some(),
+        "has_template_agent_id": config.template_agent_id.is_some(),
+        "has_token": config.token.is_some(),
+        "token_len": config.token.as_deref().map(str::len).unwrap_or(0),
+        "system_prompt_len": config.system_prompt.as_deref().map(str::len).unwrap_or(0),
+        "has_provider_overrides": config.provider_overrides.is_some(),
+        "has_intent_classifier": config.intent_classifier.is_some(),
+        "has_tool_permissions": config.tool_permissions.is_some(),
+        "has_conversation_messages": config.conversation_messages.is_some(),
+        "conversation_messages_count": config.conversation_messages.as_ref().map(Vec::len).unwrap_or(0),
+        "max_turns": config.max_turns,
+        "installed_tools_count": config.installed_tools.as_ref().map(Vec::len).unwrap_or(0),
+        "installed_integrations_count": config.installed_integrations.as_ref().map(Vec::len).unwrap_or(0),
+        "has_project_id": config.project_id.is_some(),
+        "has_project_path": config.project_path.is_some(),
+    });
+    let line = serde_json::json!({
+        "sessionId": "95fd5c",
+        "hypothesisId": hypothesis_id,
+        "location": format!("apps/aura-os-server/src/handlers/agents/chat/instance_route.rs::{location}"),
+        "message": "session-shape snapshot",
+        "timestamp": chrono::Utc::now().timestamp_millis(),
+        "data": data,
+    });
+    let _ = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(r"C:\code\aura-os\debug-95fd5c.log")
+        .and_then(|mut f| writeln!(f, "{line}"));
+}
+// #endregion
 
 pub(crate) fn render_project_context_fallback(project_id: &ProjectId) -> String {
     format!(
