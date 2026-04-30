@@ -145,7 +145,7 @@ export function TierSubscriptionModal({ isOpen, onClose }: Props) {
                 <div className={styles.tierHeader}>
                   <h3 className={styles.tierName}>{tier.name}</h3>
                   <span className={styles.tierPrice}>{tier.price}</span>
-                  {tier.priceNote && <span className={styles.creditNote}>{tier.priceNote}</span>}
+                  {tier.priceNote && <div className={styles.creditNote}>{tier.priceNote}</div>}
                 </div>
 
                 <div className={styles.tierCredits}>
