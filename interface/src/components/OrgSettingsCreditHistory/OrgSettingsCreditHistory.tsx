@@ -14,7 +14,7 @@ interface SubscriptionInfo {
 const TYPE_LABELS: Record<string, string> = {
   signupgrant: "Welcome Bonus",
   dailygrant: "Daily Reward",
-  monthlyallowance: "Monthly Allowance",
+  monthlyallowance: "Monthly Plan Top-Up",
   referralbonus: "Referral Bonus",
   purchase: "Credit Purchase",
   usage: "Usage",

@@ -12,6 +12,7 @@ interface TierInfo {
   id: string;
   name: string;
   price: string;
+  priceNote?: string;
   monthlyTopUp: string;
   dailyReward: string;
   referralReward: string;
@@ -36,6 +37,7 @@ const TIERS: TierInfo[] = [
     id: "pro",
     name: "Pro",
     price: "$20/mo",
+    priceNote: "$10/mo for Zero Pro OG subscribers",
     monthlyTopUp: "5,000",
     dailyReward: "100",
     referralReward: "5,000",
@@ -143,6 +145,7 @@ export function TierSubscriptionModal({ isOpen, onClose }: Props) {
                 <div className={styles.tierHeader}>
                   <h3 className={styles.tierName}>{tier.name}</h3>
                   <span className={styles.tierPrice}>{tier.price}</span>
+                  {tier.priceNote && <span className={styles.creditNote}>{tier.priceNote}</span>}
                 </div>
 
                 <div className={styles.tierCredits}>
