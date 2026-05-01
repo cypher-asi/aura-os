@@ -10,7 +10,7 @@ import { useCheckoutPolling } from "../../hooks/use-checkout-polling";
 import { CREDITS_UPDATED_EVENT } from "../CreditsBadge";
 import { NATIVE_BILLING_MESSAGE } from "../../lib/billing";
 
-type Section = "general" | "members" | "invites" | "billing" | "rewards" | "credit-history";
+type Section = "general" | "members" | "invites" | "billing" | "rewards" | "credit-history" | "privacy";
 
 export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
   const { isNativeApp } = useAuraCapabilities();

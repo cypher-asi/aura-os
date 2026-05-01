@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Modal, Button } from "@cypher-asi/zui";
 import { orgsApi } from "../../shared/api/orgs";
+import { track } from "../../lib/analytics";
 import styles from "./TierSubscriptionModal.module.css";
 
 interface Props {
@@ -104,6 +105,7 @@ export function TierSubscriptionModal({ isOpen, onClose }: Props) {
     setError(null);
     try {
       const { url } = await orgsApi.createSubscriptionCheckout(planId);
+      track("subscription_started", { plan: planId });
       window.open(url, "_blank");
       setLoading(false);
     } catch (e) {

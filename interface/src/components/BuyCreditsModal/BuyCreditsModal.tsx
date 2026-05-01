@@ -4,6 +4,7 @@ import { useBuyCreditsData } from "./useBuyCreditsData";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { NATIVE_BILLING_MESSAGE } from "../../lib/billing";
 import { formatCredits } from "../../shared/utils/format";
+import { track } from "../../lib/analytics";
 import styles from "./BuyCreditsModal.module.css";
 
 interface Props {
@@ -51,7 +52,10 @@ export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
   };
 
   const handlePurchaseClick = () => {
-    if (effectiveAmount !== null) handlePurchase(effectiveAmount);
+    if (effectiveAmount !== null) {
+      track("credits_purchased", { amount_usd: effectiveAmount });
+      handlePurchase(effectiveAmount);
+    }
   };
 
   const handleOpenBilling = () => {
