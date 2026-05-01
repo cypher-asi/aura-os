@@ -3,22 +3,96 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-30T18:13:28.798Z",
+  "generatedAt": "2026-05-01T02:54:35.862Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.420.1",
+  "version": "0.1.0-nightly.421.1",
   "date": "2026-04-30",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.420.1",
-  "lastIncludedSha": "d777b4bc71a6f1fd8d3b8467a615a1d56f6518ff",
-  "previousProcessedSha": "cbf003bec0f4907753480903cb975f07cff6c14c",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.421.1",
+  "lastIncludedSha": "e46714fd6bad53b81c4e8ed6385b2a8ee20fa32c",
+  "previousProcessedSha": "d777b4bc71a6f1fd8d3b8467a615a1d56f6518ff",
   "commitShas": [
     "cbf003bec0f4907753480903cb975f07cff6c14c",
     "d9776a3f3fdb41162e347b97966bb59d9103ef6f",
     "dadfd29970ae5e46e103002239a3f7d978ee3d94",
-    "d777b4bc71a6f1fd8d3b8467a615a1d56f6518ff"
+    "d777b4bc71a6f1fd8d3b8467a615a1d56f6518ff",
+    "63a3e98a34d1b0defc2a3b70c6bf078a7e0cbc0b",
+    "9f76ae2d630d44fcdfe91864edb6915cb9ac7119",
+    "a776d7417a3a36a41b7a30fae0b0dab4824e2bdc",
+    "162698d5c96713d4945ff8ce6bda0a21de95ae67",
+    "4993abfe54d034dd1082dfdf49c498dd2f1622f7",
+    "4b7565ef491652360da42c6f5932514269c72bab",
+    "3ee409c924cbe8d64160cc6c3b7c05c49c698916",
+    "1eca7c566df95ba4cf7b915461916a8f1430462b",
+    "ecae9742fd631fd79dc505320a6362018d2ba558",
+    "f88e1aa85beeadf5098f13b7f1365f63213d675b",
+    "acd1773f68cf9fb56aadbca3f2753cb5b80ca52b",
+    "85290bc7d46ecf1f0a53c1b60edf7a413aa7e9e8",
+    "b63828936bb7d24f33b01212eec49a95527bdff7",
+    "27caa020eaead2cb5f185f5068428550ca83c19c",
+    "5bb4cb3fbf24159ed5883e2d501b158905f9fc93",
+    "b32d0aa8b1d54c0f76e80cbe72e36f790201ac6f",
+    "bea6a03580d74c4a5026907e9f985f4658417a14",
+    "ba018d51f04f6602afbc50f992ca44b5ff6f9e14",
+    "1e50bd6f3a37f9b342a28603d48b805dd1bb5e7a",
+    "7b003e388ebc24b88e6660844bd52ae871a1a102",
+    "8cca9e82fd2ab67f4cff633532ba7f2e72b200a5",
+    "5e19d275dff5cd23888e8a3338b860702adfa5d3",
+    "d89b1b76f8929f0f11fd1bce77016eeade8ff9c3",
+    "089e38bcf6d3940553ef174b500d9f7c1b2217fb",
+    "7bbe3e11f01738522695f579a7b591f55a6f645a",
+    "6a8062eff02a8a55cbfa5fa099549aa2b85b6d33",
+    "6ca179b81fbc5a06c3c82232b728c067a993a009",
+    "576c900a21fb4ee5460844b6371da7e1b3873c97",
+    "f00ffc8d6ce994ca4b2cba43d45ceb48d6dad6aa",
+    "6ac686005f6bc8b121f6852bdc7dbc96440b5c3d",
+    "95d4dfc32d140496b0f34eb0f47fcb588e626376",
+    "37f218042d8b38f8530dd4d556480c9c3f30316c",
+    "85aa438f29d76e832e766ea58229fc412ae7c70a",
+    "d968e0ac363416ab7b77d05d6168e764d08be41f",
+    "89b23f75937184bd019403962f4062728fec7e77",
+    "4d137da72aeb5ee3d1b7ba65600f50a69ca5a803",
+    "4b80362d2b792ae6e5c1f0b1f33ef261836d0451",
+    "32a9a192bea04e51a25aec79b341ca001522976c",
+    "9f8c598c1f856d9fa59de96495c0fd5ef00d4a89",
+    "ba31352c95b67d419cc23055e4090a9ddf4cf6c6",
+    "5a03bfac857150949c863051f94101a951e7c6fe",
+    "c6a03cc2cb9bddcd7937bb9a5c951ec4daffff14",
+    "42503fcd3a6329c8a849a129d84555ca5a5ebbc2",
+    "5f412eaa0b15452d9b8086ba686f056cabe6a760",
+    "984af20c209ec161133fc31c53f0f2cae74ace27",
+    "1ddf91e8c5b65eeb6b2fe8a85f48b9e56e0e5ed0",
+    "8d00651af7d19d963ef6aea535f8a95cb4b08015",
+    "ad54c9234c21c0522c79df28a71cd50bedf48863",
+    "fc2ca01faaae66ef702502524e049936b83b35c7",
+    "4df41219291481d7f52de6f798f47a4427d20b8c",
+    "3153bd05ccf785bd45a9a49a564be5eff3859295",
+    "4ab682821d98b7cdd3d7df2bac67f100fcbfc39f",
+    "40cd88288ae2018f798cb85ffb887a85a5c0e5a9",
+    "a1aa55a76196fb5cf3d7fc6873cbf5f44bd232f0",
+    "982a6777dc27fae113fd651fdc814d2471df5f22",
+    "fc6438bce4cc00699bdcd026055ae39750ace180",
+    "879112d06e844a6881b711881a64f5926b46f572",
+    "5698a2fa8bcdfc6823252a2747b40ab49394370e",
+    "e42f98a6f2043773cb57ff8c1304f05ba535f560",
+    "3762db77201a58fc3e36da1ec899518fe8aa6c1c",
+    "2b86cd0738d0307bd0c65aec107b3ce1a2c6e1d4",
+    "0ed86284bbdb66a78be8c474f58a5fd98090eb6a",
+    "139dbda9b8f940a60bfc64a4ca9f8e5ced0a1a2d",
+    "d03116035b166c3b121f28bdb2da1bcd31e4370d",
+    "07e4753884a3ccd3234e115a0ea7b7d3d3c6d79d",
+    "64ca62aaee2aaa19f1347a712fafb706ebd197c7",
+    "9e5bf10028175649b7498692d7299dbeddc5cec0",
+    "310f3c74c1daeb7b136ab8d776ac02f27ec7c73f",
+    "3901736b4bf5a512bd11556d7c177c1f14ccc378",
+    "4cffca5f1cdf998fbcceebc8434c9749563eadf4",
+    "74726eea7910ff7e485ea18951d94a7bf25cd9fb",
+    "e22a0b3741f34b8ea9ca76034a174391206e9314",
+    "4b95a86a21b142a00ba6135ce0abe4c45abedb1f",
+    "56e3e8506e68ef0421f26a3939f3f37fa1e92e9e"
   ],
-  "rawCommitCount": 4,
-  "filteredCommitCount": 4,
+  "rawCommitCount": 79,
+  "filteredCommitCount": 78,
   "rawCommits": [
     {
       "sha": "cbf003bec0f4907753480903cb975f07cff6c14c",
@@ -174,9 +248,3167 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "63a3e98a34d1b0defc2a3b70c6bf078a7e0cbc0b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T21:35:06-07:00",
+      "subject": "test(perf): add authenticated startup guardrails",
+      "body": "Capture shell and project-data readiness budgets so cold-open work can preserve the no-login-flash authenticated path.\n\nMade-with: Cursor",
+      "parents": [
+        "a0c1c97b829c4fee8e2b3f96d52d3d1abfa0c06a"
+      ],
+      "files": [
+        "docs/performance-wave-0-baseline.md",
+        "interface/perf/budgets.json",
+        "interface/tests/e2e/perf/load-budgets.ts",
+        "interface/tests/e2e/perf/startup-perf.spec.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 59,
+        "deletions": 0
+      },
+      "committedAtMs": 1777264506000,
+      "cleanSubject": "add authenticated startup guardrails",
+      "keywords": [
+        "authenticated",
+        "startup",
+        "guardrails"
+      ],
+      "fileGroups": [
+        "docs/performance-wave-0-baseline.md",
+        "interface/perf/budgets.json",
+        "interface/tests/e2e"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Docs",
+        "Other"
+      ]
+    },
+    {
+      "sha": "9f76ae2d630d44fcdfe91864edb6915cb9ac7119",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T21:38:17-07:00",
+      "subject": "feat(perf): reveal auth-neutral splash during desktop boot",
+      "body": "Split desktop readiness into early splash and app-ready signals so cold opens can show branded pixels while preserving the authenticated route preload gate.\n\nMade-with: Cursor",
+      "parents": [
+        "63a3e98a34d1b0defc2a3b70c6bf078a7e0cbc0b"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/ui/main_window.rs",
+        "interface/index.html",
+        "interface/src/lib/desktop-ready.ts",
+        "interface/src/main.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 129,
+        "deletions": 28
+      },
+      "committedAtMs": 1777264697000,
+      "cleanSubject": "reveal auth-neutral splash during desktop boot",
+      "keywords": [
+        "reveal",
+        "auth",
+        "neutral",
+        "splash",
+        "during",
+        "desktop",
+        "boot"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/src",
+        "interface/index.html",
+        "interface/src/lib",
+        "interface/src/main.tsx"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Desktop",
+        "Other"
+      ]
+    },
+    {
+      "sha": "a776d7417a3a36a41b7a30fae0b0dab4824e2bdc",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T21:41:28-07:00",
+      "subject": "perf(server): quiet logs and bound static/log responses",
+      "body": "Reduce default tracing noise, compress and cache fingerprinted interface assets, and cap cross-project log aggregation work.\n\nMade-with: Cursor",
+      "parents": [
+        "9f76ae2d630d44fcdfe91864edb6915cb9ac7119"
+      ],
+      "files": [
+        "Cargo.lock",
+        "apps/aura-os-desktop/src/init/logging.rs",
+        "apps/aura-os-server/Cargo.toml",
+        "apps/aura-os-server/src/handlers/log.rs",
+        "apps/aura-os-server/src/main.rs",
+        "apps/aura-os-server/src/router/mod.rs"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 124,
+        "deletions": 15
+      },
+      "committedAtMs": 1777264888000,
+      "cleanSubject": "perf(server): quiet logs and bound static/log responses",
+      "keywords": [
+        "perf",
+        "server",
+        "quiet",
+        "logs",
+        "bound",
+        "static",
+        "responses"
+      ],
+      "fileGroups": [
+        "Cargo.lock",
+        "apps/aura-os-desktop/src",
+        "apps/aura-os-server/Cargo.toml",
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Desktop"
+      ]
+    },
+    {
+      "sha": "162698d5c96713d4945ff8ce6bda0a21de95ae67",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T21:43:32-07:00",
+      "subject": "perf(events): share domain events during hub fanout",
+      "body": "Publish ref-counted domain events to subscribers so loop activity broadcasts avoid cloning payloads per listener.\n\nMade-with: Cursor",
+      "parents": [
+        "a776d7417a3a36a41b7a30fae0b0dab4824e2bdc"
+      ],
+      "files": [
+        "apps/aura-os-server/src/loop_events_bridge.rs",
+        "crates/aura-os-events/src/hub.rs",
+        "crates/aura-os-loops/src/registry/tests.rs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 37,
+        "deletions": 18
+      },
+      "committedAtMs": 1777265012000,
+      "cleanSubject": "perf(events): share domain events during hub fanout",
+      "keywords": [
+        "perf",
+        "events",
+        "share",
+        "domain",
+        "during",
+        "fanout"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-events/src",
+        "crates/aura-os-loops/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Other"
+      ]
+    },
+    {
+      "sha": "4993abfe54d034dd1082dfdf49c498dd2f1622f7",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T21:46:12-07:00",
+      "subject": "perf(interface): defer heavyweight startup assets",
+      "body": "Move highlight theme loading off the critical path, lazy-load sidekick output panes, and replace blank route/project loading frames with lightweight fallbacks.\n\nMade-with: Cursor",
+      "parents": [
+        "162698d5c96713d4945ff8ce6bda0a21de95ae67"
+      ],
+      "files": [
+        "interface/src/App.tsx",
+        "interface/src/components/SidekickContent/SidekickContent.tsx",
+        "interface/src/main.tsx",
+        "interface/src/views/HomeView/HomeView.tsx",
+        "interface/vite.config.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 51,
+        "deletions": 14
+      },
+      "committedAtMs": 1777265172000,
+      "cleanSubject": "perf(interface): defer heavyweight startup assets",
+      "keywords": [
+        "perf",
+        "interface",
+        "defer",
+        "heavyweight",
+        "startup",
+        "assets"
+      ],
+      "fileGroups": [
+        "interface/src/App.tsx",
+        "interface/src/components",
+        "interface/src/main.tsx",
+        "interface/src/views",
+        "interface/vite.config.ts"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "4b7565ef491652360da42c6f5932514269c72bab",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T21:48:31-07:00",
+      "subject": "perf(chat): batch websocket event handling per frame",
+      "body": "Queue non-terminal engine events on requestAnimationFrame and add a paint containment hint for long chat transcripts.\n\nMade-with: Cursor",
+      "parents": [
+        "4993abfe54d034dd1082dfdf49c498dd2f1622f7"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/stores/event-store/event-store.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 67,
+        "deletions": 2
+      },
+      "committedAtMs": 1777265311000,
+      "cleanSubject": "perf(chat): batch websocket event handling per frame",
+      "keywords": [
+        "perf",
+        "chat",
+        "batch",
+        "websocket",
+        "event",
+        "handling",
+        "frame"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "3ee409c924cbe8d64160cc6c3b7c05c49c698916",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T21:52:29-07:00",
+      "subject": "perf(projects): reduce sidebar render churn",
+      "body": "Use the existing left-menu virtualizer immediately, debounce desktop sidebar search commits, and preload Projects/Tasks app chunks on navigation hover.\n\nMade-with: Cursor",
+      "parents": [
+        "4b7565ef491652360da42c6f5932514269c72bab"
+      ],
+      "files": [
+        "interface/src/apps/registry.ts",
+        "interface/src/components/DesktopShell/SidebarSearchInput.tsx",
+        "interface/src/features/left-menu/LeftMenuTree/LeftMenuTree.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 18,
+        "deletions": 3
+      },
+      "committedAtMs": 1777265549000,
+      "cleanSubject": "perf(projects): reduce sidebar render churn",
+      "keywords": [
+        "perf",
+        "projects",
+        "reduce",
+        "sidebar",
+        "render",
+        "churn"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "1eca7c566df95ba4cf7b915461916a8f1430462b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T21:53:55-07:00",
+      "subject": "perf(memory): cap retained chat history",
+      "body": "Bound in-memory chat history and normalized message maps so long sessions do not retain unbounded transcript data.\n\nMade-with: Cursor",
+      "parents": [
+        "3ee409c924cbe8d64160cc6c3b7c05c49c698916"
+      ],
+      "files": [
+        "infra/evals/external/swebench/bin/run.sh",
+        "interface/src/stores/chat-history-store.ts",
+        "interface/src/stores/message-store.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 259,
+        "deletions": 40
+      },
+      "committedAtMs": 1777265635000,
+      "cleanSubject": "perf(memory): cap retained chat history",
+      "keywords": [
+        "perf",
+        "memory",
+        "retained",
+        "chat",
+        "history"
+      ],
+      "fileGroups": [
+        "infra/evals/external",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "ecae9742fd631fd79dc505320a6362018d2ba558",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T21:54:11-07:00",
+      "subject": "chore: keep external eval script untracked",
+      "body": "Remove the pre-staged SWE-bench script from the committed performance wave while preserving the local file for its owner.\n\nMade-with: Cursor",
+      "parents": [
+        "1eca7c566df95ba4cf7b915461916a8f1430462b"
+      ],
+      "files": [
+        "infra/evals/external/swebench/bin/run.sh"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 0,
+        "deletions": 156
+      },
+      "committedAtMs": 1777265651000,
+      "cleanSubject": "keep external eval script untracked",
+      "keywords": [
+        "keep",
+        "external",
+        "eval",
+        "script",
+        "untracked"
+      ],
+      "fileGroups": [
+        "infra/evals/external"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "f88e1aa85beeadf5098f13b7f1365f63213d675b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T21:54:55-07:00",
+      "subject": "test(memory): guard chat retention caps",
+      "body": "Cover bounded history entries and normalized message pruning so long chat sessions keep memory use capped.\n\nMade-with: Cursor",
+      "parents": [
+        "ecae9742fd631fd79dc505320a6362018d2ba558"
+      ],
+      "files": [
+        "interface/src/stores/chat-history-store.test.ts",
+        "interface/src/stores/message-store.test.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 57,
+        "deletions": 0
+      },
+      "committedAtMs": 1777265695000,
+      "cleanSubject": "guard chat retention caps",
+      "keywords": [
+        "guard",
+        "chat",
+        "retention",
+        "caps"
+      ],
+      "fileGroups": [
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "acd1773f68cf9fb56aadbca3f2753cb5b80ca52b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T22:20:53-07:00",
+      "subject": "feat(evals): add external benchmark lane for SWE-bench + Terminal-Bench",
+      "body": "Score the full AURA pipeline (org -> import -> spec -> tasks -> autonomous\nloop) against the public SWE-bench Verified and Terminal-Bench 2 benchmarks\nso we can publish defensible numbers and track them over time.\n\n- Refactor run-live-benchmark-api.mjs into a reusable library at\n  scripts/lib/benchmark-api-runner.mjs (createBenchmarkClient,\n  walkFixtureDir, runScenario, summarizeSessionUsage). The CLI is now a\n  60-line wrapper preserving the existing env contract.\n- Add SWE-bench Verified driver under infra/evals/external/swebench/:\n  per-instance shallow clone at base_commit, requirements.md with\n  benchmark-aware directives, in-memory scenario, runScenario call,\n  workspace git diff, test-edit hunk stripping, predictions.jsonl,\n  driver-summary.json. Wrap with bin/run.sh (preflight + dataset fetch\n  + driver + swebench harness + aggregate-score) and bin/aggregate-score.mjs\n  for the canonical score.json shape.\n- Add Terminal-Bench 2 integration under infra/evals/external/tbench/:\n  Python BaseAgent shim that delegates to a Node bridge, which builds an\n  in-memory scenario and calls runScenario from the same library. Wrap\n  with bin/run-tbench.sh and bin/aggregate-score.mjs.\n- Add .github/workflows/external-benchmarks.yml (workflow_dispatch only,\n  self-hosted, 6-10h timeouts, cost guard via AURA_BENCH_MAX_USD, uploads\n  artifacts and writes a markdown delta to GITHUB_STEP_SUMMARY).\n- Add infra/evals/external/bin/post-pr-comment.mjs to render score deltas\n  against committed baselines, with a smoke confidence_note blockquote\n  and per-instance status counts table.\n- Add placeholder baselines + SECRETS.md + top-level README explaining\n  the lane, prerequisites, output shape, and reporting hygiene.\n\nAll new code uses Node built-ins and Python stdlib only; no new npm or\npip dependencies. 38/38 node tests, 9/9 python tests, sh -n, and\nyaml-lint all clean.\n\nMade-with: Cursor",
+      "parents": [
+        "f88e1aa85beeadf5098f13b7f1365f63213d675b"
+      ],
+      "files": [
+        ".github/workflows/external-benchmarks.yml",
+        "infra/evals/external/README.md",
+        "infra/evals/external/SECRETS.md",
+        "infra/evals/external/bin/post-pr-comment.mjs",
+        "infra/evals/external/bin/post-pr-comment.test.mjs",
+        "infra/evals/external/swebench/bin/aggregate-score.mjs",
+        "infra/evals/external/swebench/bin/fetch-dataset.mjs",
+        "infra/evals/external/swebench/bin/run.sh",
+        "infra/evals/external/swebench/datasets/.gitignore",
+        "infra/evals/external/swebench/datasets/.gitkeep",
+        "infra/evals/external/swebench/datasets/README.md",
+        "infra/evals/external/swebench/run-swebench.mjs",
+        "infra/evals/external/swebench/run-swebench.test.mjs",
+        "infra/evals/external/tbench/README.md",
+        "infra/evals/external/tbench/aura_agent/.gitignore",
+        "infra/evals/external/tbench/aura_agent/__init__.py",
+        "infra/evals/external/tbench/aura_agent/aura_agent.py",
+        "infra/evals/external/tbench/aura_agent/test_aura_agent.py",
+        "infra/evals/external/tbench/bin/aggregate-score.mjs",
+        "infra/evals/external/tbench/bin/run-aura-pipeline.mjs",
+        "infra/evals/external/tbench/bin/run-tbench.sh",
+        "infra/evals/reports/external/.gitignore",
+        "infra/evals/reports/external/.gitkeep",
+        "infra/evals/reports/external/swebench_verified/.gitkeep",
+        "infra/evals/reports/external/swebench_verified/baseline.json",
+        "infra/evals/reports/external/tbench_2_core/.gitkeep",
+        "infra/evals/reports/external/tbench_2_core/baseline.json",
+        "interface/package.json",
+        "interface/scripts/lib/benchmark-api-runner.mjs",
+        "interface/scripts/lib/benchmark-api-runner.test.mjs",
+        "interface/scripts/run-live-benchmark-api.mjs"
+      ],
+      "stats": {
+        "fileCount": 31,
+        "insertions": 6485,
+        "deletions": 675
+      },
+      "committedAtMs": 1777267253000,
+      "cleanSubject": "add external benchmark lane for SWE-bench + Terminal-Bench",
+      "keywords": [
+        "external",
+        "benchmark",
+        "lane",
+        "bench",
+        "terminal"
+      ],
+      "fileGroups": [
+        ".github/workflows/external-benchmarks.yml",
+        "infra/evals/external",
+        "infra/evals/reports",
+        "interface/package.json",
+        "interface/scripts/lib",
+        "interface/scripts/run-live-benchmark-api.mjs"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "85290bc7d46ecf1f0a53c1b60edf7a413aa7e9e8",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-26T22:21:40-07:00",
+      "subject": "chore(evals): mark external benchmark runners executable",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "acd1773f68cf9fb56aadbca3f2753cb5b80ca52b"
+      ],
+      "files": [
+        "infra/evals/external/swebench/bin/run.sh",
+        "infra/evals/external/tbench/bin/run-tbench.sh"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 0,
+        "deletions": 0
+      },
+      "committedAtMs": 1777267300000,
+      "cleanSubject": "mark external benchmark runners executable",
+      "keywords": [
+        "mark",
+        "external",
+        "benchmark",
+        "runners",
+        "executable"
+      ],
+      "fileGroups": [
+        "infra/evals/external"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "b63828936bb7d24f33b01212eec49a95527bdff7",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T05:51:10-07:00",
+      "subject": "chore(ui): reduce sidebar fade height",
+      "body": "Halve bottom fade bands in the left navigation and Sidekick panel so content remains less obscured.\n\nMade-with: Cursor",
+      "parents": [
+        "85290bc7d46ecf1f0a53c1b60edf7a413aa7e9e8"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentList/AgentList.module.css",
+        "interface/src/components/DesktopShell/DesktopShell.module.css",
+        "interface/src/components/ProjectsNav/ProjectsNav.module.css",
+        "interface/src/features/left-menu/LeftMenuTree/LeftMenuTree.module.css"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 4,
+        "deletions": 4
+      },
+      "committedAtMs": 1777294270000,
+      "cleanSubject": "reduce sidebar fade height",
+      "keywords": [
+        "reduce",
+        "sidebar",
+        "fade",
+        "height"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "27caa020eaead2cb5f185f5068428550ca83c19c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T06:03:52-07:00",
+      "subject": "fix(evals): harden SWE-bench local runs",
+      "body": "Load benchmark env files consistently so refreshed local-stack auth tokens are used, and fail early when the official SWE-bench scorer is invoked with native Windows Python.\n\nMade-with: Cursor",
+      "parents": [
+        "b63828936bb7d24f33b01212eec49a95527bdff7"
+      ],
+      "files": [
+        "infra/evals/external/README.md",
+        "infra/evals/external/SECRETS.md",
+        "infra/evals/external/bin/load-env.mjs",
+        "infra/evals/external/bin/load-env.sh",
+        "infra/evals/external/swebench/bin/run.sh",
+        "infra/evals/external/swebench/run-swebench.mjs"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 285,
+        "deletions": 15
+      },
+      "committedAtMs": 1777295032000,
+      "cleanSubject": "harden SWE-bench local runs",
+      "keywords": [
+        "harden",
+        "bench",
+        "local",
+        "runs"
+      ],
+      "fileGroups": [
+        "infra/evals/external"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "5bb4cb3fbf24159ed5883e2d501b158905f9fc93",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T06:08:03-07:00",
+      "subject": "fix(evals): adopt imported SWE-bench auth token",
+      "body": "Let the SWE-bench driver use the token returned by auth import instead of forcing preservation of a potentially stale configured token.\n\nMade-with: Cursor",
+      "parents": [
+        "27caa020eaead2cb5f185f5068428550ca83c19c"
+      ],
+      "files": [
+        "infra/evals/external/swebench/bin/run.sh"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 0,
+        "deletions": 1
+      },
+      "committedAtMs": 1777295283000,
+      "cleanSubject": "adopt imported SWE-bench auth token",
+      "keywords": [
+        "adopt",
+        "imported",
+        "bench",
+        "auth",
+        "token"
+      ],
+      "fileGroups": [
+        "infra/evals/external"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "b32d0aa8b1d54c0f76e80cbe72e36f790201ac6f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T06:08:59-07:00",
+      "subject": "fix(evals): let SWE-bench driver run on Windows",
+      "body": "Skip only the official SWE-bench harness when native Windows Python is detected so local driver artifacts can still be produced.\n\nMade-with: Cursor",
+      "parents": [
+        "5bb4cb3fbf24159ed5883e2d501b158905f9fc93"
+      ],
+      "files": [
+        "infra/evals/external/swebench/bin/run.sh"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 17,
+        "deletions": 9
+      },
+      "committedAtMs": 1777295339000,
+      "cleanSubject": "let SWE-bench driver run on Windows",
+      "keywords": [
+        "bench",
+        "driver",
+        "windows"
+      ],
+      "fileGroups": [
+        "infra/evals/external"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "bea6a03580d74c4a5026907e9f985f4658417a14",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T06:09:42-07:00",
+      "subject": "fix(evals): bootstrap auth from Git Bash on Windows",
+      "body": "Seed the Git-for-Windows Unix helper paths before resolving the local-stack auth script directory so PowerShell launches can find dirname and related tools.\n\nMade-with: Cursor",
+      "parents": [
+        "b32d0aa8b1d54c0f76e80cbe72e36f790201ac6f"
+      ],
+      "files": [
+        "infra/evals/local-stack/bin/bootstrap-auth.sh"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 5,
+        "deletions": 0
+      },
+      "committedAtMs": 1777295382000,
+      "cleanSubject": "bootstrap auth from Git Bash on Windows",
+      "keywords": [
+        "bootstrap",
+        "auth",
+        "from",
+        "bash",
+        "windows"
+      ],
+      "fileGroups": [
+        "infra/evals/local-stack"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "ba018d51f04f6602afbc50f992ca44b5ff6f9e14",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T06:16:34-07:00",
+      "subject": "fix(evals): align benchmark auth token sourcing",
+      "body": "Restore print-auth-token against the core app settings store and let local-stack auth bootstrap use the same persisted session path and token aliases as the app tooling.\n\nMade-with: Cursor",
+      "parents": [
+        "bea6a03580d74c4a5026907e9f985f4658417a14"
+      ],
+      "files": [
+        "apps/aura-os-server/src/bin/print-auth-token.rs",
+        "infra/evals/external/SECRETS.md",
+        "infra/evals/local-stack/README.md",
+        "infra/evals/local-stack/bin/bootstrap-auth.sh"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 143,
+        "deletions": 9
+      },
+      "committedAtMs": 1777295794000,
+      "cleanSubject": "align benchmark auth token sourcing",
+      "keywords": [
+        "align",
+        "benchmark",
+        "auth",
+        "token",
+        "sourcing"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "infra/evals/external",
+        "infra/evals/local-stack"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "1e50bd6f3a37f9b342a28603d48b805dd1bb5e7a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T06:22:57-07:00",
+      "subject": "fix(evals): enable local storage token trust",
+      "body": "Render explicit dev JWT trust flags for local aura-network and aura-storage so local evals can reuse imported Aura sessions without production cookie secrets.\n\nMade-with: Cursor",
+      "parents": [
+        "ba018d51f04f6602afbc50f992ca44b5ff6f9e14"
+      ],
+      "files": [
+        "infra/evals/local-stack/README.md",
+        "infra/evals/local-stack/bin/render-envs.sh"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 8,
+        "deletions": 1
+      },
+      "committedAtMs": 1777296177000,
+      "cleanSubject": "enable local storage token trust",
+      "keywords": [
+        "enable",
+        "local",
+        "storage",
+        "token",
+        "trust"
+      ],
+      "fileGroups": [
+        "infra/evals/local-stack"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "7b003e388ebc24b88e6660844bd52ae871a1a102",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T06:25:16-07:00",
+      "subject": "fix(chat): support local harness agent messages",
+      "body": "Avoid sending the Aura proxy provider override to local harness sessions and keep failed chat stream errors visible after history refresh catches up.\n\nMade-with: Cursor",
+      "parents": [
+        "1e50bd6f3a37f9b342a28603d48b805dd1bb5e7a"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/agent_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/errors.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/streaming.rs",
+        "apps/aura-os-server/src/handlers/agents/runtime.rs",
+        "interface/src/hooks/use-chat-history-sync.test.ts",
+        "interface/src/hooks/use-chat-history-sync.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 182,
+        "deletions": 33
+      },
+      "committedAtMs": 1777296316000,
+      "cleanSubject": "support local harness agent messages",
+      "keywords": [
+        "support",
+        "local",
+        "harness",
+        "agent",
+        "messages"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "8cca9e82fd2ab67f4cff633532ba7f2e72b200a5",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T06:29:55-07:00",
+      "subject": "fix(evals): pass user id to project tool sessions",
+      "body": "Thread the authenticated user id into spec generation and task extraction harness sessions so local harness workspace validation has the required owner context.\n\nMade-with: Cursor",
+      "parents": [
+        "7b003e388ebc24b88e6660844bd52ae871a1a102"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/projects_helpers/session.rs",
+        "apps/aura-os-server/src/handlers/specs/gen.rs",
+        "apps/aura-os-server/src/handlers/tasks/extraction.rs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 30,
+        "deletions": 6
+      },
+      "committedAtMs": 1777296595000,
+      "cleanSubject": "pass user id to project tool sessions",
+      "keywords": [
+        "pass",
+        "user",
+        "project",
+        "tool",
+        "sessions"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "5e19d275dff5cd23888e8a3338b860702adfa5d3",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T06:30:44-07:00",
+      "subject": "fix(generation): route image and 3d through harness",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "8cca9e82fd2ab67f4cff633532ba7f2e72b200a5"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/generation/harness_stream.rs",
+        "apps/aura-os-server/src/handlers/generation/image.rs",
+        "apps/aura-os-server/src/handlers/generation/mod.rs",
+        "apps/aura-os-server/src/handlers/generation/model3d.rs",
+        "apps/aura-os-server/src/handlers/generation/router_proxy.rs",
+        "apps/aura-os-server/src/handlers/org_tools/mod.rs",
+        "crates/aura-protocol/src/client.rs",
+        "infra/shared/org-integration-tools.json",
+        "interface/src/apps/chat/components/ChatPanel/useChatPanelState.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts"
+      ],
+      "stats": {
+        "fileCount": 11,
+        "insertions": 441,
+        "deletions": 312
+      },
+      "committedAtMs": 1777296644000,
+      "cleanSubject": "route image and 3d through harness",
+      "keywords": [
+        "route",
+        "image",
+        "through",
+        "harness"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-protocol/src",
+        "infra/shared/org-integration-tools.json",
+        "interface/src/apps",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "d89b1b76f8929f0f11fd1bce77016eeade8ff9c3",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T06:33:16-07:00",
+      "subject": "fix(evals): pass LLM routing env to local harness",
+      "body": "Forward local-stack router, Anthropic, and model settings into the host harness process so proxy/direct routing behaves as configured.\n\nMade-with: Cursor",
+      "parents": [
+        "5e19d275dff5cd23888e8a3338b860702adfa5d3"
+      ],
+      "files": [
+        "infra/evals/local-stack/bin/run-service.sh"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 10,
+        "deletions": 0
+      },
+      "committedAtMs": 1777296796000,
+      "cleanSubject": "pass LLM routing env to local harness",
+      "keywords": [
+        "pass",
+        "routing",
+        "local",
+        "harness"
+      ],
+      "fileGroups": [
+        "infra/evals/local-stack"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "089e38bcf6d3940553ef174b500d9f7c1b2217fb",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T06:35:05-07:00",
+      "subject": "fix(evals): force proxy routing for local harness",
+      "body": "Always run the local-stack host harness in proxy mode and fall back to the bootstrapped eval token for router authentication.\n\nMade-with: Cursor",
+      "parents": [
+        "d89b1b76f8929f0f11fd1bce77016eeade8ff9c3"
+      ],
+      "files": [
+        "infra/evals/local-stack/bin/run-service.sh",
+        "infra/evals/local-stack/stack.env.example"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 12,
+        "deletions": 10
+      },
+      "committedAtMs": 1777296905000,
+      "cleanSubject": "force proxy routing for local harness",
+      "keywords": [
+        "force",
+        "proxy",
+        "routing",
+        "local",
+        "harness"
+      ],
+      "fileGroups": [
+        "infra/evals/local-stack"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "7bbe3e11f01738522695f579a7b591f55a6f645a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T06:39:09-07:00",
+      "subject": "fix(evals): use managed router model id",
+      "body": "Default the local-stack harness to the core app's managed Aura Claude model id so proxy-routed evals use the router model namespace.\n\nMade-with: Cursor",
+      "parents": [
+        "089e38bcf6d3940553ef174b500d9f7c1b2217fb"
+      ],
+      "files": [
+        "infra/evals/local-stack/bin/common.sh",
+        "infra/evals/local-stack/stack.env.example"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 2,
+        "deletions": 2
+      },
+      "committedAtMs": 1777297149000,
+      "cleanSubject": "use managed router model id",
+      "keywords": [
+        "managed",
+        "router",
+        "model"
+      ],
+      "fileGroups": [
+        "infra/evals/local-stack"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "6a8062eff02a8a55cbfa5fa099549aa2b85b6d33",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T06:47:34-07:00",
+      "subject": "fix(evals): pin benchmark agent model",
+      "body": "Ensure local benchmark agents inherit the stack model explicitly so SWE-bench does not fall back to stale harness defaults.\n\nMade-with: Cursor",
+      "parents": [
+        "7bbe3e11f01738522695f579a7b591f55a6f645a"
+      ],
+      "files": [
+        "infra/evals/external/swebench/bin/run.sh",
+        "infra/evals/local-stack/bin/render-envs.sh",
+        "infra/evals/local-stack/docker-compose.yml"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 3,
+        "deletions": 1
+      },
+      "committedAtMs": 1777297654000,
+      "cleanSubject": "pin benchmark agent model",
+      "keywords": [
+        "benchmark",
+        "agent",
+        "model"
+      ],
+      "fileGroups": [
+        "infra/evals/external",
+        "infra/evals/local-stack"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "6ca179b81fbc5a06c3c82232b728c067a993a009",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T06:48:34-07:00",
+      "subject": "fix(evals): show benchmark progress logs",
+      "body": "Surface spec and task progress in SWE-bench output, tail harness logs during driver runs, and keep local evals on the managed Claude 4.7 router model.\n\nMade-with: Cursor",
+      "parents": [
+        "6a8062eff02a8a55cbfa5fa099549aa2b85b6d33"
+      ],
+      "files": [
+        "infra/evals/external/bin/follow-harness-log.mjs",
+        "infra/evals/external/swebench/bin/run.sh",
+        "infra/evals/external/swebench/run-swebench.mjs",
+        "infra/evals/local-stack/bin/common.sh",
+        "infra/evals/local-stack/stack.env.example",
+        "interface/scripts/lib/benchmark-api-runner.mjs"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 569,
+        "deletions": 21
+      },
+      "committedAtMs": 1777297714000,
+      "cleanSubject": "show benchmark progress logs",
+      "keywords": [
+        "show",
+        "benchmark",
+        "progress",
+        "logs"
+      ],
+      "fileGroups": [
+        "infra/evals/external",
+        "infra/evals/local-stack",
+        "interface/scripts/lib"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "576c900a21fb4ee5460844b6371da7e1b3873c97",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T07:07:47-07:00",
+      "subject": "fix(evals): use app auth for local stack",
+      "body": "Prefer the real app session when bootstrapping eval auth and carry local agent metadata into project-tool harness sessions.\n\nMade-with: Cursor",
+      "parents": [
+        "6ca179b81fbc5a06c3c82232b728c067a993a009"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/projects_helpers/session.rs",
+        "infra/evals/local-stack/README.md",
+        "infra/evals/local-stack/bin/bootstrap-auth.sh"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 101,
+        "deletions": 51
+      },
+      "committedAtMs": 1777298867000,
+      "cleanSubject": "use app auth for local stack",
+      "keywords": [
+        "auth",
+        "local",
+        "stack"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "infra/evals/local-stack"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "f00ffc8d6ce994ca4b2cba43d45ceb48d6dad6aa",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T07:13:13-07:00",
+      "subject": "fix(evals): reject local router tokens",
+      "body": "Match the main app harness path by relying on per-session auth and failing fast when local-stack bootstrap resolves a dev-only token.\n\nMade-with: Cursor",
+      "parents": [
+        "576c900a21fb4ee5460844b6371da7e1b3873c97"
+      ],
+      "files": [
+        "infra/evals/local-stack/README.md",
+        "infra/evals/local-stack/bin/bootstrap-auth.sh",
+        "infra/evals/local-stack/bin/run-service.sh",
+        "infra/evals/local-stack/stack.env.example"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 43,
+        "deletions": 30
+      },
+      "committedAtMs": 1777299193000,
+      "cleanSubject": "reject local router tokens",
+      "keywords": [
+        "reject",
+        "local",
+        "router",
+        "tokens"
+      ],
+      "fileGroups": [
+        "infra/evals/local-stack"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "6ac686005f6bc8b121f6852bdc7dbc96440b5c3d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T07:33:35-07:00",
+      "subject": "Made-with: Cursor",
+      "body": "",
+      "parents": [
+        "f00ffc8d6ce994ca4b2cba43d45ceb48d6dad6aa"
+      ],
+      "files": [
+        "infra/evals/external/bin/load-env.sh",
+        "infra/evals/external/swebench/bin/run.sh"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 250,
+        "deletions": 36
+      },
+      "committedAtMs": 1777300415000,
+      "cleanSubject": "Made-with: Cursor",
+      "keywords": [
+        "made",
+        "with",
+        "cursor"
+      ],
+      "fileGroups": [
+        "infra/evals/external"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "95d4dfc32d140496b0f34eb0f47fcb588e626376",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T08:26:39-07:00",
+      "subject": "fix(evals): cut harness log noise to one line per tool call",
+      "body": "The per-token tool_call_snapshot stream was leaking through the\nfollower because tracing's `module::path:` prefix made the snapshot\nprefix-match fail and routed every line to the raw passthrough,\nproducing dozens of wrap-prone INFO lines per tool call. Strip the\nmodule path before matching, replace the time/byte snapshot dedupe\nwith a per-tool 'drafting started' flag that resets on queued/ok/\nfailed, and silence unmatched INFO by default (verbose mode via\nAURA_BENCH_HARNESS_LOG_VERBOSE=1) so a SWE-bench run reads as one\nsalient line per event.\n\nMade-with: Cursor",
+      "parents": [
+        "6ac686005f6bc8b121f6852bdc7dbc96440b5c3d"
+      ],
+      "files": [
+        "infra/evals/external/bin/follow-harness-log.mjs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 80,
+        "deletions": 39
+      },
+      "committedAtMs": 1777303599000,
+      "cleanSubject": "cut harness log noise to one line per tool call",
+      "keywords": [
+        "harness",
+        "noise",
+        "line",
+        "tool",
+        "call"
+      ],
+      "fileGroups": [
+        "infra/evals/external"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "37f218042d8b38f8530dd4d556480c9c3f30316c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T08:33:03-07:00",
+      "subject": "feat(evals): cache zOS login creds for swebench/run.sh",
+      "body": "Persist email/password to a gitignored runtime file after a successful\nzOS login, then try those cached credentials silently on the next run\nbefore re-prompting. Saves time across multiple manual swebench runs\nwithout leaving the prompt-driven UX in place.\n\nThe cache file is sourced directly (not via load-env.sh) so values with\nsingle quotes round-trip correctly under POSIX single-quote escaping.\n\nMade-with: Cursor",
+      "parents": [
+        "95d4dfc32d140496b0f34eb0f47fcb588e626376"
+      ],
+      "files": [
+        "infra/evals/external/swebench/bin/run.sh"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 78,
+        "deletions": 4
+      },
+      "committedAtMs": 1777303983000,
+      "cleanSubject": "cache zOS login creds for swebench/run.sh",
+      "keywords": [
+        "cache",
+        "login",
+        "creds",
+        "swebench"
+      ],
+      "fileGroups": [
+        "infra/evals/external"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "85aa438f29d76e832e766ea58229fc412ae7c70a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T09:08:48-07:00",
+      "subject": "eval: drive spec-gen through chat events stream to mirror desktop session",
+      "body": "Why\n---\nThe SWE-bench eval pipeline was hitting recurring Cloudflare 403s on the\npost-tool-result LLM call during spec generation. Root cause: the\nproject-tool path (/specs/generate, /specs/generate/stream,\n/tasks/extract) opened a SessionConfig that was structurally different\nfrom the working desktop chat session (/agents/:id/events/stream). Two\nfields were missing — system_prompt and provider_config — which changed\nthe request signature the upstream aura-router proxy received and made\nthe post-tool-result hop 403 under load. The chat path never had this\nproblem because it always populated both fields.\n\nServer: project_tool_session_config now mirrors the chat session\n----------------------------------------------------------------\nproject_tool_session_config now populates:\n\n* system_prompt via build_project_system_prompt (the same helper the\n  chat path uses), composing a <project_context> block with the\n  project_id and the standard IMPORTANT reminders, then appending the\n  agent instance's template prompt verbatim. When no instance is\n  attached we still emit the project_context block so the existing\n  legacy callsites keep their context contract.\n* provider_config via build_harness_provider_config (Local stays None\n  per the existing helper contract; Swarm now correctly carries\n  aura_proxy routing parity with chat).\n\nTo make the chat helper reachable from the project_tool helper module,\nbuild_project_system_prompt is widened from pub(super) to pub(crate)\nand re-exported from chat::mod. The two render helpers it delegates to\n(render_project_context, render_project_context_fallback) are also\nwidened so unit tests can pin the formatting without wiring an\nAppState. build_harness_provider_config is re-exported from\nagents::mod for the same reason.\n\nproject_tool_session_config now returns ApiResult<SessionConfig> so the\nprovider_config builder error can propagate. The three callsites in\nspecs::gen and tasks::extraction were updated with `?`. The synthetic\nLocal partition agent_id (`{tool_agent_name}-{project_id}`) is\npreserved — the isolation guarantee for spec/task extraction still\nholds.\n\nTests\n-----\nTwo new unit tests pin the <project_context> block formatting\n(project_id present, three IMPORTANT reminders present, project name\nand workspace lines emitted) and the fallback path used when the\nproject lookup fails. Skipped the end-to-end SessionConfig assembly\ntest — it would need a heavyweight AppState mock and the rendering\ncoverage matches the failure mode we care about (request shape parity).\n\nEval driver: switch spec-gen to the chat events stream\n------------------------------------------------------\nbenchmark-api-runner.mjs and tests/e2e/evals/helpers.ts now drive spec\ngeneration through /projects/:id/agents/:instance/events/stream with\n`{ content: \"Generate specs for this project\", action: \"generate_specs\" }`,\ndrain until assistant_message_end (or error), and then\nGET /projects/:id/specs for the persisted list. Same downstream shape\n(spec_id, title, order_index).\n\nThe dedicated /specs/generate/stream endpoint still exists and is\nstill used by the desktop UI (generateSpecsStream in\ninterface/src/api/streams.ts); only the eval driver and Playwright\nhelper switched. apiStreamSse was extended with an optional `body`\nparameter so the helper can carry the JSON payload the events stream\nexpects; existing call shape (no body) is unchanged.\n\nNot in scope\n------------\nThe dev loop (/loop/start) goes through AutomatonClient.start /\nAutomatonStartParams, which is structurally different and was not\nhitting the same 403 pattern. Untouched.\n\nMade-with: Cursor",
+      "parents": [
+        "37f218042d8b38f8530dd4d556480c9c3f30316c"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/mod.rs",
+        "apps/aura-os-server/src/handlers/projects_helpers/session.rs",
+        "apps/aura-os-server/src/handlers/specs/gen.rs",
+        "apps/aura-os-server/src/handlers/tasks/extraction.rs",
+        "interface/scripts/lib/benchmark-api-runner.mjs",
+        "interface/tests/e2e/evals/helpers.ts"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 291,
+        "deletions": 19
+      },
+      "committedAtMs": 1777306128000,
+      "cleanSubject": "eval: drive spec-gen through chat events stream to mirror desktop session",
+      "keywords": [
+        "eval",
+        "drive",
+        "spec",
+        "through",
+        "chat",
+        "events",
+        "stream",
+        "mirror",
+        "desktop",
+        "session"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/scripts/lib",
+        "interface/tests/e2e"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "d968e0ac363416ab7b77d05d6168e764d08be41f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T09:26:11-07:00",
+      "subject": "eval: add live pipeline preflight before SWE/TBench runs",
+      "body": "Adds a fail-fast end-to-end preflight that exercises every vital backend\npath used by the long benchmark runs (auth import, agent/project CRUD,\nSSE spec generation, task extraction, dev loop, stats, cleanup) on a\ntiny fixture right after authentication, so a broken router proxy,\nmissing model, or harness adapter regression aborts in 1-2 minutes\ninstead of after a multi-hour run.\n\n- New shared lib runLivePipelinePreflight() and CLI wrapper at\n  interface/scripts/preflight-live-pipeline.mjs.\n- New checked-in minimal fixture used by the preflight by default.\n- Wired into infra/evals/external/swebench/bin/run.sh and\n  infra/evals/external/tbench/bin/run-tbench.sh after the existing\n  tool/disk preflights. Honors AURA_BENCH_SKIP_LIVE_PREFLIGHT=1.\n- Behavior knobs: AURA_BENCH_PREFLIGHT_LOOP_TIMEOUT_MS,\n  AURA_BENCH_PREFLIGHT_SPEC_TIMEOUT_MS, AURA_BENCH_PREFLIGHT_FIXTURE.\n- Cleanup is best-effort and runs in a finally block; partial failures\n  (e.g. agent DELETE 409 when historical sessions exist) are logged but\n  do not fail the preflight.\n\nMade-with: Cursor",
+      "parents": [
+        "85aa438f29d76e832e766ea58229fc412ae7c70a"
+      ],
+      "files": [
+        "infra/evals/external/swebench/bin/run.sh",
+        "infra/evals/external/tbench/README.md",
+        "infra/evals/external/tbench/bin/run-tbench.sh",
+        "interface/scripts/lib/live-pipeline-preflight.mjs",
+        "interface/scripts/preflight-live-pipeline.mjs",
+        "interface/tests/e2e/evals/fixtures/preflight-minimal/package.json",
+        "interface/tests/e2e/evals/fixtures/preflight-minimal/requirements.md"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 838,
+        "deletions": 4
+      },
+      "committedAtMs": 1777307171000,
+      "cleanSubject": "eval: add live pipeline preflight before SWE/TBench runs",
+      "keywords": [
+        "eval",
+        "live",
+        "pipeline",
+        "preflight",
+        "before",
+        "tbench",
+        "runs"
+      ],
+      "fileGroups": [
+        "infra/evals/external",
+        "interface/scripts/lib",
+        "interface/scripts/preflight-live-pipeline.mjs",
+        "interface/tests/e2e"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "89b23f75937184bd019403962f4062728fec7e77",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T09:36:32-07:00",
+      "subject": "feat(evals): add --resume to swebench run.sh and driver",
+      "body": "If a multi-instance SWE-bench Verified run dies mid-way, every prior\ninvocation lost its work because run.sh always minted a fresh OUT_DIR\nand the driver never read existing predictions.jsonl/runs to skip\ncompleted instances. Resume now reuses the most recent (or named) run\ndirectory, deduplicates predictions.jsonl by instance_id, and is\nidempotent at the workspace level so retries are safe regardless of\nwhen the prior attempt died.\n\n- run.sh accepts --resume[=ID|PATH]; bare --resume auto-picks the most\n  recently modified aura-* run dir under\n  infra/evals/reports/external/swebench_verified/. The harness reuses\n  the prior RUN_ID so its scoring report stays aligned.\n- run-swebench.mjs filters out instance ids whose runs/<id>.json status\n  is agent_complete, clone_error, or skipped_cost_cap. agent_error is\n  re-run by default; --resume-include-errors keeps those too.\n- shallowCloneInstance reuses workspace/ when HEAD already matches the\n  target base_commit and otherwise wipes + re-clones, so partial state\n  from a killed attempt is never a blocker.\n- predictions.jsonl is deduplicated by instance_id at startup so a\n  retried row never produces a double-append (which would confuse the\n  harness scorer that takes the first match).\n- aggregate-score.mjs synthesizes driver-summary.json from runs/*.json\n  when it is missing, so score.json is always produced even if the\n  driver was SIGKILL'd before its end-only summary write.\n\nVerified with the documented sanity-checks command set:\n  node --test interface/scripts/lib/benchmark-api-runner.test.mjs \\\n    infra/evals/external/swebench/run-swebench.test.mjs \\\n    infra/evals/external/swebench/bin/aggregate-score.test.mjs \\\n    infra/evals/external/bin/post-pr-comment.test.mjs\n  -> 61 pass / 0 fail\n\nMade-with: Cursor",
+      "parents": [
+        "d968e0ac363416ab7b77d05d6168e764d08be41f"
+      ],
+      "files": [
+        "infra/evals/external/README.md",
+        "infra/evals/external/swebench/bin/aggregate-score.mjs",
+        "infra/evals/external/swebench/bin/aggregate-score.test.mjs",
+        "infra/evals/external/swebench/bin/run.sh",
+        "infra/evals/external/swebench/run-swebench.mjs",
+        "infra/evals/external/swebench/run-swebench.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 942,
+        "deletions": 29
+      },
+      "committedAtMs": 1777307792000,
+      "cleanSubject": "add --resume to swebench run.sh and driver",
+      "keywords": [
+        "resume",
+        "swebench",
+        "driver"
+      ],
+      "fileGroups": [
+        "infra/evals/external"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "4d137da72aeb5ee3d1b7ba65600f50a69ca5a803",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T09:39:14-07:00",
+      "subject": "fix(evals): cap project-tool sessions to prevent fetch-failed timeouts",
+      "body": "The SWE-bench `astropy__astropy-12907` run on 2026-04-27 surfaced as the\nopaque `TypeError: fetch failed` in the JS driver. The actual root cause\nwas the LLM looping `list_specs`/`create_spec` inside the `extract_tasks`\nhandler for ~5 minutes, after which Node's undici default `headersTimeout`\n(300s) tripped on the still-pending HTTP response and the JS client\nthrew before the server ever wrote response headers.\n\nThree layers of defense, ordered so the server is the one that fails first:\n\n1. `SessionConfig.max_turns = 40` for spec-gen, spec-summary, and\n   task-extract sessions. Healthy spec generation in this codebase runs\n   in ~14 tool calls; 40 leaves headroom while still cutting a runaway\n   in well under 4 minutes at the observed ~3 s/call cadence.\n2. `tokio::time::timeout(project_tool_deadline())` wrapping the harness\n   event loops in `extract_tasks`, `generate_specs`, and\n   `generate_specs_summary` (default 240s, configurable via\n   `AURA_PROJECT_TOOL_DEADLINE_SECS`). On timeout the handlers return\n   any newly persisted specs/tasks instead of letting the connection\n   hang.\n3. `AbortController`-driven `fetchWithTimeout` for the JS benchmark\n   client (default 360s, configurable via `AURA_BENCH_FETCH_TIMEOUT_MS`),\n   so the very last layer of defense produces a typed\n   `AURA_BENCH_FETCH_TIMEOUT` error instead of `fetch failed`.\n\nTests: new unit coverage for the env-helper parsers, plus a\n`fetchWithTimeout` test that aborts a hung TCP listener within 75ms.\n\nMade-with: Cursor",
+      "parents": [
+        "89b23f75937184bd019403962f4062728fec7e77"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/projects_helpers/mod.rs",
+        "apps/aura-os-server/src/handlers/projects_helpers/session.rs",
+        "apps/aura-os-server/src/handlers/specs/gen.rs",
+        "apps/aura-os-server/src/handlers/tasks/extraction.rs",
+        "interface/scripts/lib/benchmark-api-runner.mjs",
+        "interface/scripts/lib/benchmark-api-runner.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 466,
+        "deletions": 61
+      },
+      "committedAtMs": 1777307954000,
+      "cleanSubject": "cap project-tool sessions to prevent fetch-failed timeouts",
+      "keywords": [
+        "project",
+        "tool",
+        "sessions",
+        "prevent",
+        "fetch",
+        "failed",
+        "timeouts"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/scripts/lib"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "4b80362d2b792ae6e5c1f0b1f33ef261836d0451",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T09:47:11-07:00",
+      "subject": "fix(evals): cap chat-route tool actions to break spec-gen LLM loop",
+      "body": "The previous commit capped `max_turns` on the dedicated\n`/api/projects/:id/specs/generate` and `/api/projects/:id/tasks/extract`\nendpoints, but the SWE-bench driver and live-pipeline preflight both\nissue spec generation through the chat instance route\n(`/api/projects/:id/agents/:aid/events/stream` with\n`action: \"generate_specs\"`). That session was still uncapped, so on the\n2026-04-27 `astropy__astropy-12907` repro the LLM looped\n`list_specs` -> `create_spec` -> `list_specs` for ~5 minutes until\nNode's default `headersTimeout` tripped and surfaced as the opaque\n`TypeError: fetch failed`, which is exactly what the user observed\nagain at the preflight `spec_stream` step.\n\nAdd `is_project_tool_action` and apply `project_tool_max_turns` in both\n`instance_route::send_event_stream` and `agent_route::send_event_stream`\nwhen the request action is a non-interactive tool flow\n(`generate_specs` / `regenerate_specs_summary` / `extract_tasks`).\nReal interactive chat (`None | \"chat\" | \"plan\"`) stays uncapped so\nhuman-in-the-loop conversations are unaffected.\n\nAlso fold in a stale `cargo fmt` drift in `specs/gen.rs` that was\nflagged by `--check` while verifying the touched files.\n\nMade-with: Cursor",
+      "parents": [
+        "4d137da72aeb5ee3d1b7ba65600f50a69ca5a803"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/agent_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route.rs",
+        "apps/aura-os-server/src/handlers/projects_helpers/mod.rs",
+        "apps/aura-os-server/src/handlers/projects_helpers/session.rs",
+        "apps/aura-os-server/src/handlers/specs/gen.rs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 90,
+        "deletions": 24
+      },
+      "committedAtMs": 1777308431000,
+      "cleanSubject": "cap chat-route tool actions to break spec-gen LLM loop",
+      "keywords": [
+        "chat",
+        "route",
+        "tool",
+        "actions",
+        "break",
+        "spec",
+        "loop"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "32a9a192bea04e51a25aec79b341ca001522976c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T10:02:43-07:00",
+      "subject": "fix(evals): override harness service URLs in autospawn so spec writes hit local stack",
+      "body": "The autospawned harness loads its own `.env` which ships with production\ndefaults: `AURA_OS_SERVER_URL=http://127.0.0.1:3100`,\n`AURA_STORAGE_URL=https://aura-storage.onrender.com`, etc. Local-stack\noperators pin `AURA_SERVER_PORT=3190`, so every `domain_tools::create_spec`\nPOST that the harness's `HttpDomainApi` issues lands on a dead :3100 port\nand returns a 105-byte `{\"ok\":false,\"error\":\"POST http://.../specs\"}`\nenvelope. Crucially, that envelope is wrapped in `domain_ok` rather than\n`domain_err` (the harness only errors on `reqwest` Result::Err), so the\nLLM sees a \"soft failure\", retries, and the session loops until\n`max_turns` cuts it off. The preflight then reports\n`spec_stream` ok / `list_specs` returns 0 specs.\n\nFix: after `parse_env_file` populates the spawned child env from the\nharness's `.env`, override the URLs the harness uses to call back into\nour control plane with values derived from this server's own\nconfiguration:\n- `AURA_OS_SERVER_URL` is always stamped from\n  `aura_os_integrations::control_plane_api_base_url()` (the canonical\n  source that already honours `AURA_SERVER_BASE_URL` / `VITE_API_URL`\n  / `AURA_SERVER_HOST` / `AURA_SERVER_PORT`).\n- `AURA_STORAGE_URL`, `AURA_NETWORK_URL`, and `ORBIT_URL` (translated\n  from the parent's `ORBIT_BASE_URL`) are forwarded only when the\n  parent has them set, leaving desktop defaults untouched when nothing\n  is configured.\n\nAlso extracts `parse_env_file` into a free helper so the env-loading\nbehaviour is unit-testable and the override precedence is locked in by\nthree new tests.\n\nMade-with: Cursor",
+      "parents": [
+        "4b80362d2b792ae6e5c1f0b1f33ef261836d0451"
+      ],
+      "files": [
+        "apps/aura-os-server/src/app_builder/harness_autospawn.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 246,
+        "deletions": 12
+      },
+      "committedAtMs": 1777309363000,
+      "cleanSubject": "override harness service URLs in autospawn so spec writes hit local stack",
+      "keywords": [
+        "override",
+        "harness",
+        "service",
+        "urls",
+        "autospawn",
+        "spec",
+        "writes",
+        "local",
+        "stack"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "9f8c598c1f856d9fa59de96495c0fd5ef00d4a89",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T10:14:16-07:00",
+      "subject": "fix(evals): override AURA_OS_SERVER_URL for local-stack harness",
+      "body": "`run-service.sh harness` already overrides AURA_NETWORK_URL,\nAURA_STORAGE_URL, and ORBIT_URL so the harness talks to the local\nstack instead of the production defaults baked into its `.env`. It\nforgot AURA_OS_SERVER_URL, so every `HttpDomainApi` spec/task write\nlanded on the harness `.env` default of `:3100` (a dead port whenever\nAURA_SERVER_PORT is the standard `:3190`). The failed POST was wrapped\nin a `domain_ok({\"ok\":false,...})` envelope with `is_error=false`,\nwhich the executor reported as a soft tool failure. The LLM read that\nas \"the spec did not exist, try again\" and looped\n`list_specs` to `create_spec` until `max_turns` cut it off — exactly\nthe regression that surfaced as `[preflight] FAIL list_specs ... 0\nspecs` after a 117-second `spec_stream`.\n\nThe previous commit (32a9a192b) added the same override to the Rust\nautospawn path; this commit covers the local-stack bash flow which is\nwhat `up-all.sh` actually runs (the autospawn path only kicks in for\nthe desktop app or when nothing is already on `:3404`).\n\nMade-with: Cursor",
+      "parents": [
+        "32a9a192bea04e51a25aec79b341ca001522976c"
+      ],
+      "files": [
+        "infra/evals/local-stack/bin/run-service.sh"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 10,
+        "deletions": 0
+      },
+      "committedAtMs": 1777310056000,
+      "cleanSubject": "override AURA_OS_SERVER_URL for local-stack harness",
+      "keywords": [
+        "override",
+        "aura",
+        "server",
+        "local",
+        "stack",
+        "harness"
+      ],
+      "fileGroups": [
+        "infra/evals/local-stack"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "ba31352c95b67d419cc23055e4090a9ddf4cf6c6",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T10:27:06-07:00",
+      "subject": "fix(api): accept camelCase task bodies so harness create_task succeeds",
+      "body": "`CreateSpecBody` already deserializes camelCase + snake_case (rename_all +\naliases), but `CreateTaskBody` / `UpdateTaskBody` were snake_case-only. The\nharness's `HttpDomainApi::create_task` POSTs `{\"specId\",\"orderIndex\",\n\"dependencyTaskIds\",...}`, so every harness task write 422'd with \"missing\nfield `spec_id`\". The harness wrapped the failure in a soft\n`domain_ok({\"ok\":false,\"error\":\"HTTP 422: ...\"})` envelope (is_error=false),\nthe LLM read it as \"task didn't save, try again\", and looped create_task\nuntil the project-tool deadline -- surfacing as\n`[preflight] FAIL extract_tasks ... 0 tasks` after a 95s spin.\n\nAdd `rename_all = \"camelCase\"` plus snake_case aliases on both bodies, plus\na `dependencyTaskIds` alias so the harness's legacy field name keeps\nworking without a coordinated harness release. Frontend (snake_case) and\nexisting api_tests (snake_case) continue to round-trip via the aliases.\n\nMade-with: Cursor",
+      "parents": [
+        "9f8c598c1f856d9fa59de96495c0fd5ef00d4a89"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/tasks/crud.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 128,
+        "deletions": 1
+      },
+      "committedAtMs": 1777310826000,
+      "cleanSubject": "accept camelCase task bodies so harness create_task succeeds",
+      "keywords": [
+        "accept",
+        "camelcase",
+        "task",
+        "bodies",
+        "harness",
+        "create",
+        "succeeds"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "5a03bfac857150949c863051f94101a951e7c6fe",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T10:33:08-07:00",
+      "subject": "fix(evals): git-init preflight fixture so loop_start passes workspace check",
+      "body": "`POST /api/projects/:id/loop/start` runs `validate_workspace_is_initialised`\nserver-side, which rejects any workspace without a `.git` entry. The\npersistent fixture at\n`interface/tests/e2e/evals/fixtures/preflight-minimal` lives inside the\naura-os repo (so it can't ship its own `.git`), and the ephemeral\ntmp-dir branch of `ensureFixtureDir` only lays down `requirements.md`\nand `package.json` -- neither path leaves a `.git`. Result:\n`[preflight] FAIL loop_start ... workspace at ... is not a git\nrepository (no .git entry)`.\n\nAdd a new `init_fixture_repo` step that idempotently `git init`s the\nworkspace and creates an initial commit. Identity / signing config is\nscoped per-invocation via `-c` so we don't depend on the operator's\nglobal git config and don't pollute it. Also add a `.gitignore` inside\nthe fixture for `.git/`, `hello.txt`, and `spec/` so the runtime state\nthe dev loop produces stops appearing as untracked entries in the\nparent repo.\n\nMade-with: Cursor",
+      "parents": [
+        "ba31352c95b67d419cc23055e4090a9ddf4cf6c6"
+      ],
+      "files": [
+        "interface/scripts/lib/live-pipeline-preflight.mjs",
+        "interface/tests/e2e/evals/fixtures/preflight-minimal/.gitignore"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 85,
+        "deletions": 0
+      },
+      "committedAtMs": 1777311188000,
+      "cleanSubject": "git-init preflight fixture so loop_start passes workspace check",
+      "keywords": [
+        "init",
+        "preflight",
+        "fixture",
+        "loop",
+        "start",
+        "passes",
+        "workspace",
+        "check"
+      ],
+      "fileGroups": [
+        "interface/scripts/lib",
+        "interface/tests/e2e"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "c6a03cc2cb9bddcd7937bb9a5c951ec4daffff14",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T10:40:26-07:00",
+      "subject": "fix(api): accept `status` alias on TransitionTaskRequest so harness syncs land",
+      "body": "Frontend client and aura-os-server integration tests POST\n`{ \"new_status\": \"...\" }`, so that stays the canonical name. The\nharness's `HttpDomainApi::transition_task` POSTs `{ \"status\": \"...\" }`\ninstead (matching aura-storage's internal `TransitionTaskRequest`\nshape), and aura-os-server's DTO had no alias for it. Every dev-loop\ntransition therefore 422'd:\n\n  HTTP 422 Unprocessable Entity: Failed to deserialize the JSON body\n  into the target type: missing field `new_status`\n\nLocally the loop still ran to completion (`Dev loop finished\noutcome=all_tasks_blocked completed=3 failed=1`), but server-side the\ntask records never left their initial state because every status sync\n-- `pending -> in_progress`, `in_progress -> done`, retry, failed\nsyncs -- bounced. The preflight's poll loop watches server state for a\nterminal status, so it timed out at 180s with `loop_progress: no task\nreached a terminal state within 180000ms`.\n\nAdd `#[serde(alias = \"status\")]` on `new_status`. Both wire shapes\ndeserialize cleanly. Two new dto unit tests pin both directions.\n\nMade-with: Cursor",
+      "parents": [
+        "5a03bfac857150949c863051f94101a951e7c6fe"
+      ],
+      "files": [
+        "apps/aura-os-server/src/dto.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 39,
+        "deletions": 0
+      },
+      "committedAtMs": 1777311626000,
+      "cleanSubject": "accept `status` alias on TransitionTaskRequest so harness syncs land",
+      "keywords": [
+        "accept",
+        "status",
+        "alias",
+        "transitiontaskrequest",
+        "harness",
+        "syncs",
+        "land"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "42503fcd3a6329c8a849a129d84555ca5a5ebbc2",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T11:17:34-07:00",
+      "subject": "fix(evals): align local-stack harness spawn with aura-os autospawn flow",
+      "body": "The benchmark's autonomous loop was hitting `403 Forbidden cloudflare_html=true`\non `complete_streaming` while the IDE flow against the same router worked. The\ndelta was three configuration drifts between `run-service.sh` and the main\napp's `harness_autospawn.rs` spawn:\n\n1. `AURA_ROUTER_JWT` was always exported, even when `AURA_STACK_AURA_ROUTER_JWT`\n   was empty. An empty export short-circuits\n   `aura_agent::session_bootstrap::load_auth_token`'s CredentialStore fallback\n   (`Some(\"\")` instead of `None`), which puts an empty `Bearer ` on the wire\n   and trips upstream Cloudflare. Now gated on a non-empty value, matching the\n   IDE flow which leaves it unset.\n2. `aura-harness/.env` was never merged into the spawned environment by the\n   stack script. The main app parses that file (line-by-line, skipping\n   comments/blank lines, non-overriding) before spawning. Add a matching\n   `_load_harness_dotenv` helper and call it from the harness branch so\n   `INTERNAL_SERVICE_TOKEN`, `TAVILY_API_KEY`, `ENABLE_CMD_TOOLS`, etc. are\n   available without requiring the operator to copy them into the stack env.\n3. `cargo run` ran the harness in debug mode while the main app spawns it\n   with `--release`. Switch to `--release` for parity, with\n   `AURA_STACK_HARNESS_BUILD_PROFILE=debug` as an opt-out for stack\n   development iteration.\n\nMade-with: Cursor",
+      "parents": [
+        "c6a03cc2cb9bddcd7937bb9a5c951ec4daffff14"
+      ],
+      "files": [
+        "infra/evals/local-stack/bin/run-service.sh"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 62,
+        "deletions": 2
+      },
+      "committedAtMs": 1777313854000,
+      "cleanSubject": "align local-stack harness spawn with aura-os autospawn flow",
+      "keywords": [
+        "align",
+        "local",
+        "stack",
+        "harness",
+        "spawn",
+        "with",
+        "aura",
+        "autospawn",
+        "flow"
+      ],
+      "fileGroups": [
+        "infra/evals/local-stack"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "5f412eaa0b15452d9b8086ba686f056cabe6a760",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T11:40:46-07:00",
+      "subject": "fix(evals): make preflight fixture hermetic and align with real npm scripts",
+      "body": "Three converging issues were keeping the dev-loop preflight red on\nWindows even though agent permissions were maxed correctly via\n`fullAccessPermissions()`:\n\n- The persistent `preflight-minimal/` fixture is used as the project\n  workspace directly, so artifacts from prior runs (a stale `hello.txt`,\n  an inherited nested `.git/`, mirrored `spec/` slugs from\n  `mirror_spec_best_effort`) poisoned every subsequent run. The agent\n  re-wrote `hello.txt` and tripped the same-turn write-blocked detector;\n  duplicate `01-*` specs caused two tasks to be generated for one\n  logical step.\n- `create_project` overrode `build_command`/`test_command` to\n  `\"echo ok\"`, but the spec markdown told the agent to verify\n  `npm run build` / `npm run test`. The agent shelled out to npm and\n  hit the `forbidden: npm.cmd` allowlist bug (fixed in aura-harness).\n- The completion gate rejected `task_done` for verification-only\n  steps because no file edits were recorded and the agent never\n  declared `no_changes_needed: true`.\n\nChanges:\n\n- Materialise the persistent fixture into a fresh tmp dir per run via\n  `copyFixtureSnapshot`, skipping `.git`, `node_modules`, build\n  outputs, `hello.txt`, and the gitignored `spec/` mirror. The\n  original fixture is left untouched; the snapshot is removed by the\n  outer `finally` block.\n- Switch `build_command`/`test_command` on the created project to\n  `npm run build` / `npm run test` so they match the spec text and\n  the fixture's package.json. After the harness `.cmd`/`.bat` strip,\n  these resolve cleanly and the test-runner escape hatch fires for\n  verification-only tasks.\n- Update the agent system prompt and `requirements.md` so verification\n  tasks that produce no file edits explicitly call `task_done` with\n  `no_changes_needed: true`, satisfying the completion gate even when\n  the test escape hatch is unavailable.\n- Update the no-fixture fallback's package.json to use the same\n  `node -e ...` scripts as the persistent fixture so both code paths\n  agree.\n\nMade-with: Cursor",
+      "parents": [
+        "42503fcd3a6329c8a849a129d84555ca5a5ebbc2"
+      ],
+      "files": [
+        "interface/scripts/lib/live-pipeline-preflight.mjs",
+        "interface/tests/e2e/evals/fixtures/preflight-minimal/requirements.md"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 100,
+        "deletions": 6
+      },
+      "committedAtMs": 1777315246000,
+      "cleanSubject": "make preflight fixture hermetic and align with real npm scripts",
+      "keywords": [
+        "make",
+        "preflight",
+        "fixture",
+        "hermetic",
+        "align",
+        "with",
+        "real",
+        "scripts"
+      ],
+      "fileGroups": [
+        "interface/scripts/lib",
+        "interface/tests/e2e"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "984af20c209ec161133fc31c53f0f2cae74ace27",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T11:42:33-07:00",
+      "subject": "fix(evals): inherit harness LLM env from .env to stop CF retry storms",
+      "body": "The local-stack eval harness was unconditionally exporting\nAURA_LLM_ROUTING=proxy and AURA_ROUTER_URL=https://aura-router.onrender.com\non every launch, clobbering whatever aura-harness/.env configured. That\ndiverged from `apps/aura-os-server/src/app_builder/harness_autospawn.rs`,\nwhich loads the harness's .env first and only overrides control-plane\nURLs. The result: eval runs always hit aura-router on Render, whose\nCloudflare WAF then rule-blocks the eval host's IP. The harness's\nAURA_LLM_MAX_RETRIES=8 retry loop with 250ms->30s exponential backoff\nturns each blocked tool call into a multi-minute hang and reinforces\nthe WAF block.\n\nMirror autospawn precedence in `run-service.sh`: export stack-owned\ncontrol-plane vars first, then `_load_harness_dotenv` to fill in\nLLM routing / auth from the harness's own .env, then apply optional\nstack-level overrides only when set. New optional knobs in stack.env:\n\n  AURA_STACK_HARNESS_LLM_ROUTING       # override .env routing (proxy|direct)\n  AURA_STACK_ROUTER_URL                # override .env router URL\n  AURA_STACK_ANTHROPIC_API_KEY         # required when ROUTING=direct\n  AURA_STACK_HARNESS_LLM_MAX_RETRIES   # cap CloudflareBlock retries\n\nUpdate `common.sh` to default these to empty (the autospawn-mirror\nbehaviour) and document the CF escape valve in `stack.env.example`.\n\nBehaviour change for users with AURA_STACK_HARNESS_LLM_ROUTING=proxy\nalready in stack.env: none. Behaviour change for users without it set:\nthe eval harness now reads aura-harness/.env directly, just like the\ndesktop app does.\n\nMade-with: Cursor",
+      "parents": [
+        "5f412eaa0b15452d9b8086ba686f056cabe6a760"
+      ],
+      "files": [
+        "infra/evals/local-stack/bin/common.sh",
+        "infra/evals/local-stack/bin/run-service.sh",
+        "infra/evals/local-stack/stack.env.example"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 91,
+        "deletions": 28
+      },
+      "committedAtMs": 1777315353000,
+      "cleanSubject": "inherit harness LLM env from .env to stop CF retry storms",
+      "keywords": [
+        "inherit",
+        "harness",
+        "from",
+        "stop",
+        "retry",
+        "storms"
+      ],
+      "fileGroups": [
+        "infra/evals/local-stack"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "1ddf91e8c5b65eeb6b2fe8a85f48b9e56e0e5ed0",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T14:13:28-07:00",
+      "subject": "feat(evals): add LLM-path preflight probe to bootstrap-auth",
+      "body": "Surface broken LLM routing in <5s with an actionable diagnosis instead\nof letting the harness burn its 8-attempt retry budget on every tool\ncall before bailing with `complete_streaming ... cloudflare_html=true`.\n\nNew `infra/evals/local-stack/bin/preflight-llm.sh`:\n\n  - Mirrors the harness request shape the eval will send (POST\n    /v1/messages, anthropic-version: 2023-06-01, JSON body, Bearer JWT\n    in proxy mode or x-api-key in direct mode).\n  - Distinguishes failure classes from one probe:\n      * Cloudflare HTML body  -> IP-level WAF deny at onrender.com edge\n                                 (prints Ray ID + IP, suggests direct\n                                 mode / retry cap / rule clearance)\n      * 401 with non-CF body  -> JWT or API key rejected\n      * 403 with non-CF body  -> upstream auth/billing rejection\n      * 5xx                   -> router cold-start or upstream outage\n      * connect/timeout       -> DNS / network egress issue\n      * 2xx                   -> path is healthy, proceed\n  - Tiny payload (max_tokens=1) keeps probe cost negligible.\n  - Auto-skips when AURA_STACK_HARNESS_MODE != local.\n\nWired into `bootstrap-auth.sh` so the probe runs once after JWT\nresolution and the imported session validation, with the same token\nthe harness will use. Soft- or hard-failure controlled by the new\n`AURA_STACK_LLM_PREFLIGHT` knob (fail|warn|skip, default fail).\n\nVerified: probe correctly returns 200 against aura-router with the\nbootstrapped JWT today (after the WAF rule that fired during a recent\neval run had aged out), proving the 92 cloudflare_html=true blocks\nseen earlier were burst/retry-pattern WAF triggers rather than an\nIP-level CF deny or a config/JWT/auth issue.\n\nAlso includes a previously-uncommitted zOS-login fallback in\n`bootstrap-auth.sh`: when no persisted session is found (or the\nresolved token is a local HS256 dev token that aura-router would\nreject), fall through to `AURA_EVAL_USER_EMAIL` / `AURA_EVAL_USER_PASSWORD`\nvia `/api/auth/login`. This is what makes the preflight probe usable\nin CI / fresh-machine setups where there is no aura-app session yet.\n\nMade-with: Cursor",
+      "parents": [
+        "984af20c209ec161133fc31c53f0f2cae74ace27"
+      ],
+      "files": [
+        "infra/evals/local-stack/bin/bootstrap-auth.sh",
+        "infra/evals/local-stack/bin/common.sh",
+        "infra/evals/local-stack/bin/preflight-llm.sh",
+        "infra/evals/local-stack/stack.env.example"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 296,
+        "deletions": 13
+      },
+      "committedAtMs": 1777324408000,
+      "cleanSubject": "add LLM-path preflight probe to bootstrap-auth",
+      "keywords": [
+        "path",
+        "preflight",
+        "probe",
+        "bootstrap",
+        "auth"
+      ],
+      "fileGroups": [
+        "infra/evals/local-stack"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "8d00651af7d19d963ef6aea535f8a95cb4b08015",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T14:20:31-07:00",
+      "subject": "fix(evals): correct stale stack.env gitignore path after infra/ move",
+      "body": "The rule was anchored to `evals/local-stack/stack.env` from before the\ndirectory was relocated under `infra/`. As written it matched no path,\nso personal stack.env files (which carry AURA_STACK_AUTH_COOKIE_SECRET\nand the internal service token) were showing up as untracked instead\nof ignored, inviting accidental commits. Fix the path so the rule\nactually resolves.\n\nMade-with: Cursor",
+      "parents": [
+        "1ddf91e8c5b65eeb6b2fe8a85f48b9e56e0e5ed0"
+      ],
+      "files": [
+        ".gitignore"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1777324831000,
+      "cleanSubject": "correct stale stack.env gitignore path after infra/ move",
+      "keywords": [
+        "correct",
+        "stale",
+        "stack",
+        "gitignore",
+        "path",
+        "after",
+        "infra",
+        "move"
+      ],
+      "fileGroups": [
+        ".gitignore"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "ad54c9234c21c0522c79df28a71cd50bedf48863",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T14:35:20-07:00",
+      "subject": "fix(evals): align host-managed harness env exactly with desktop autospawn",
+      "body": "The local-stack harness branch of `run-service.sh` was setting several\nenv vars the desktop's `harness_autospawn::maybe_spawn_local_harness`\nnever touches (`RUST_LOG`, `AURA_ANTHROPIC_MODEL`,\n`AURA_DEBUG_CLOUDFLARE_DUMP_DIR`, plus an `AURA_STACK_HARNESS_LLM_*`\noverride block). Those produced symptoms — verbose tool_call_snapshot\nspam in `harness.log`, cf-block-*.html dumps filling\n`.runtime/cloudflare-dumps/`, model pinning, debug auth-fingerprint\nWARNs, retry-storm reinforcement — that the desktop never sees because\nit never sets any of them. Per the user's \"match the desktop\" guidance,\nthis aligns the eval pipeline's spawn flow exactly with the desktop's.\n\nChanges:\n\n- `run-service.sh` harness branch:\n  - Drop `AURA_LISTEN_ADDR`; switch to `BIND_ADDR` + `BIND_PORT` to\n    mirror autospawn lines 76-77.\n  - Forward `AURA_HARNESS_WS_SLOTS` from `AURA_STACK_HARNESS_WS_SLOTS`\n    when set, mirroring autospawn lines 93-97.\n  - Drop `RUST_LOG`, `AURA_ANTHROPIC_MODEL`,\n    `AURA_DEBUG_CLOUDFLARE_DUMP_DIR`, and the entire\n    `AURA_STACK_HARNESS_LLM_*` / `AURA_STACK_AURA_ROUTER_JWT` /\n    `AURA_STACK_ANTHROPIC_API_KEY` / `AURA_STACK_HARNESS_LLM_MAX_RETRIES`\n    override block. The harness now inherits all of these from\n    `aura-harness/.env`, exactly as the desktop spawn does.\n  - Re-stamp `AURA_OS_SERVER_URL` unconditionally (the .env's `:3100`\n    default would route domain writes to a dead port) but only forward\n    storage / network / orbit URLs when the stack actually has values\n    for them, mirroring `derive_harness_url_overrides`'s \"only emit\n    when confident\" semantics (autospawn lines 240-267).\n- `_load_harness_dotenv`: change to overriding semantics so\n  `aura-harness/.env` entries override the spawn-stage env, exactly\n  the way `cmd.env(key, val)` overwrites prior `cmd.env` calls in the\n  desktop spawn. Stack URL re-overrides below the call site re-stamp\n  the keys that must win over the .env.\n- `stack.env.example`: document that the LLM-routing knobs and\n  `AURA_STACK_HARNESS_LOG_LEVEL` are honored only by the docker-compose\n  harness path (`AURA_STACK_HARNESS_RUNTIME=docker`) and the\n  `bin/preflight-llm.sh` probe; the default host-managed harness\n  inherits everything from `aura-harness/.env` like the desktop does.\n- Clear the existing `.runtime/cloudflare-dumps/*.html` accumulated\n  while the eval was leaking the debug dump dir into the harness child.\n\nMade-with: Cursor",
+      "parents": [
+        "8d00651af7d19d963ef6aea535f8a95cb4b08015"
+      ],
+      "files": [
+        "infra/evals/local-stack/bin/run-service.sh",
+        "infra/evals/local-stack/stack.env.example"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 87,
+        "deletions": 96
+      },
+      "committedAtMs": 1777325720000,
+      "cleanSubject": "align host-managed harness env exactly with desktop autospawn",
+      "keywords": [
+        "align",
+        "host",
+        "managed",
+        "harness",
+        "exactly",
+        "with",
+        "desktop",
+        "autospawn"
+      ],
+      "fileGroups": [
+        "infra/evals/local-stack"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "fc2ca01faaae66ef702502524e049936b83b35c7",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T14:49:51-07:00",
+      "subject": "fix(evals): mirror desktop sidecar (AURA_LISTEN_ADDR), not dev autospawn",
+      "body": "The previous commit (`ad54c9234`) aligned the eval harness env to the\nWRONG desktop spawn path: `harness_autospawn.rs` is a dev-only\nfallback inside `aura-os-server` (used when the bundled binary is\nmissing), not what the production desktop actually runs. The\nproduction desktop spawns the harness via\n`apps/aura-os-desktop/src/harness/sidecar.rs:63-66`, which exports\n`AURA_LISTEN_ADDR` (NOT `BIND_ADDR`/`BIND_PORT`) and skips the .env\nload entirely — the harness binary itself calls `dotenvy::dotenv()`\non startup (`aura-harness/src/main.rs:49`) and `dotenvy` is\nnon-overriding, so anything we pre-export wins.\n\nSymptoms of the previous mistake (preflight `spec_stream` returning\nHTTP 503 \"local harness websocket connect failed\"):\n\n1. `NodeConfig::from_env`\n   (`aura-harness/crates/aura-runtime/src/config/mod.rs:212`) reads\n   `AURA_LISTEN_ADDR` FIRST and falls back to `BIND_ADDR` only when\n   the former is unset. The harness's own `.env` bakes\n   `AURA_LISTEN_ADDR=127.0.0.1:8080`, so the previous commit's\n   `BIND_ADDR=127.0.0.1:3404` always lost — the harness bound to\n   8080 while aura-os-server probed 3404.\n2. The newly-overriding `_load_harness_dotenv` then exported the\n   .env's `AURA_LISTEN_ADDR=127.0.0.1:8080\\r` verbatim (the file is\n   CRLF on Windows; the Rust-side `parse_env_file` calls `.trim()`\n   which strips `\\r`, but the bash port did not), and the harness\n   crashed with \"Error: parsing bind address / invalid socket\n   address syntax\" before binding at all.\n\nFix:\n\n- Drop `BIND_ADDR` / `BIND_PORT` exports; restore `AURA_LISTEN_ADDR`,\n  matching `sidecar.rs:65`.\n- Drop the `_load_harness_dotenv` function and call entirely. The\n  harness binary loads its own .env via `dotenvy::dotenv()` on\n  startup; pre-exports always win because dotenvy is non-overriding.\n  Removes the CRLF parsing footgun and ~30 lines of duplicated\n  parsing.\n- Keep all the Phase-1 cleanups from `ad54c9234`: no\n  `AURA_DEBUG_CLOUDFLARE_DUMP_DIR`, no `AURA_ANTHROPIC_MODEL` pin,\n  no forced `RUST_LOG`, no `AURA_STACK_HARNESS_LLM_*` override block.\n- Keep the Phase-3 stack URL overrides (`AURA_OS_SERVER_URL`\n  unconditional, others only when this stack has confident values),\n  unchanged from `ad54c9234`.\n\nMade-with: Cursor",
+      "parents": [
+        "ad54c9234c21c0522c79df28a71cd50bedf48863"
+      ],
+      "files": [
+        "infra/evals/local-stack/bin/run-service.sh"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 37,
+        "deletions": 73
+      },
+      "committedAtMs": 1777326591000,
+      "cleanSubject": "mirror desktop sidecar (AURA_LISTEN_ADDR), not dev autospawn",
+      "keywords": [
+        "mirror",
+        "desktop",
+        "sidecar",
+        "aura",
+        "listen",
+        "addr",
+        "autospawn"
+      ],
+      "fileGroups": [
+        "infra/evals/local-stack"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "4df41219291481d7f52de6f798f47a4427d20b8c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T15:13:22-07:00",
+      "subject": "fix(chat): stop end-of-turn message blink",
+      "body": "Drop the `content-visibility: auto` / `contain-intrinsic-size: 120px`\npaint hint on per-message wrappers in ChatMessageList. When the\nStreamingBubble unmounts and a fresh MessageBubble for the saved event\ntakes its place, the new node was laying out at the 120px placeholder\nfor one frame before Chromium decided it was \"relevant to user\" and\npainted real content -- visible as the just-finished assistant message\nbriefly disappearing and reappearing at end of every turn.\n\nThe companion rAF batching of engine events from the same perf commit\nstays; only the paint-containment hint is removed. Chat history is\nalready capped to MAX_MESSAGES_PER_THREAD so the perf benefit on long\ntranscripts was modest, and the per-turn UX regression is not worth it.\n\nMade-with: Cursor",
+      "parents": [
+        "fc2ca01faaae66ef702502524e049936b83b35c7"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatMessageList/ChatMessageList.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 6
+      },
+      "committedAtMs": 1777328002000,
+      "cleanSubject": "stop end-of-turn message blink",
+      "keywords": [
+        "stop",
+        "turn",
+        "message",
+        "blink"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "3153bd05ccf785bd45a9a49a564be5eff3859295",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T15:34:53-07:00",
+      "subject": "feat(dev-loop): thread aura_org_id + aura_session_id to harness",
+      "body": "The interactive chat path on `aura-os-server` populates\n`SessionConfig::aura_org_id` (from `agent_instance.org_id`) and\n`SessionConfig::aura_session_id` (from the chat persistence\ncontext), and `aura-harness` forwards both as\n`X-Aura-Org-Id` / `X-Aura-Session-Id` on every outbound\n`/v1/messages` call. The dev-loop / single-task path went without:\n`AutomatonStartParams` only carried `auth_token` + `model`, so the\nharness could not stamp those headers on automation runs. That\nforced `aura-router` to bucket automation traffic by client IP\ninstead of org id, which is what made burst-y eval workloads from\na single host trip Cloudflare on `aura-router.onrender.com` even\nwhen interactive chat from the same account worked fine.\n\nAdd the two fields to `AutomatonStartParams` (both\n`#[serde(skip_serializing_if = \"Option::is_none\")]`, so pre-update\nharnesses keep accepting the payload), and populate them in\n`build_start_params`:\n\n- `aura_org_id` comes from `ctx.project.org_id`. The chat path uses\n  `instance.org_id`, but instances are scoped to a single project so\n  the project's `org_id` matches and saves a redundant lookup.\n- `aura_session_id` is a fresh UUID per automaton start — same\n  shape as `SessionConfig::aura_session_id` (a per-chat-session\n  UUID), giving concurrent automation runs of the same agent\n  distinct router/billing partitions.\n\nPairs with the matching `aura-harness` change that wires these\nfields into `AutomatonStartRequest` -> `AgentRunnerConfig` ->\n`AgentLoopConfig` -> `ModelRequest`. End-to-end verified against\nthe local-stack eval: harness logs now show\n`aura_debug_org_id=Some(...)` / `aura_debug_session_id=Some(...)`\non every dev-loop turn, matching the chat path's headers exactly,\nand the Cloudflare 403s on automation traffic stop reproducing.\n\nMade-with: Cursor",
+      "parents": [
+        "4df41219291481d7f52de6f798f47a4427d20b8c"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop/start.rs",
+        "crates/aura-os-harness/src/automaton_client.rs",
+        "crates/aura-os-harness/src/automaton_client/tests.rs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 55,
+        "deletions": 9
+      },
+      "committedAtMs": 1777329293000,
+      "cleanSubject": "thread aura_org_id + aura_session_id to harness",
+      "keywords": [
+        "thread",
+        "aura",
+        "session",
+        "harness"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-harness/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Other"
+      ]
+    },
+    {
+      "sha": "4ab682821d98b7cdd3d7df2bac67f100fcbfc39f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T17:07:37-07:00",
+      "subject": "fix(evals): stable dev-loop session id + dump CF blocks for diagnosis",
+      "body": "The aura-router (fronted by Cloudflare on aura-router.onrender.com)\ntreats every fresh `X-Aura-Session-Id` arriving with a 60+ KB POST as\nnew, \"is this a bot?\" traffic. The dev-loop minted a brand-new\n`Uuid::new_v4()` per `AutomatonStartParams`, so each tick / restart in\nthe swebench eval re-rolled the dice and tripped the managed challenge\nthat the desktop app's stable chat session never reaches.\n\nTwo changes:\n\n- Replace the per-start v4 with `Uuid::new_v5` over a fixed namespace\n  + the `(project_id, agent_instance_id, task_id)` tuple. Restarts of\n  the same logical run reuse the same id; concurrent runs of different\n  instances or tasks still partition for billing / telemetry. Mirrors\n  the chat path which reuses the persisted chat-session id across\n  reconnects. New `stable_session_id_tests` covers determinism +\n  partitioning.\n\n- Plumb `AURA_DEBUG_CLOUDFLARE_DUMP_DIR` through the local-stack\n  render-envs / common.sh path. The harness's Anthropic provider\n  already writes the full HTML body (Ray ID, managed-rule label) when\n  this is set; we just weren't exporting it from the eval shell.\n  Failed runs will now leave `cf-block-<ts>.html` in\n  `.runtime/cloudflare-dumps/` so the next CF storm is diagnosable\n  without code changes.\n\nMade-with: Cursor",
+      "parents": [
+        "3153bd05ccf785bd45a9a49a564be5eff3859295"
+      ],
+      "files": [
+        "Cargo.lock",
+        "Cargo.toml",
+        "apps/aura-os-server/src/handlers/dev_loop/start.rs",
+        "infra/evals/local-stack/bin/common.sh",
+        "infra/evals/local-stack/bin/render-envs.sh"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 152,
+        "deletions": 7
+      },
+      "committedAtMs": 1777334857000,
+      "cleanSubject": "stable dev-loop session id + dump CF blocks for diagnosis",
+      "keywords": [
+        "stable",
+        "loop",
+        "session",
+        "dump",
+        "blocks",
+        "diagnosis"
+      ],
+      "fileGroups": [
+        "Cargo.lock",
+        "Cargo.toml",
+        "apps/aura-os-server/src",
+        "infra/evals/local-stack"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "40cd88288ae2018f798cb85ffb887a85a5c0e5a9",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T17:43:06-07:00",
+      "subject": "fix(evals): keep swe-bench llm calls on proxy context",
+      "body": "Forward the stable template agent identity through automaton starts so SWE-bench/dev-loop LLM calls match chat billing context, and reject direct Anthropic eval routing while preserving proxy retry controls.",
+      "parents": [
+        "4ab682821d98b7cdd3d7df2bac67f100fcbfc39f"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop/start.rs",
+        "crates/aura-os-harness/src/automaton_client.rs",
+        "crates/aura-os-harness/src/automaton_client/tests.rs",
+        "infra/evals/local-stack/bin/common.sh",
+        "infra/evals/local-stack/bin/preflight-llm.sh",
+        "infra/evals/local-stack/bin/render-envs.sh",
+        "infra/evals/local-stack/bin/run-service.sh",
+        "infra/evals/local-stack/docker-compose.yml",
+        "infra/evals/local-stack/stack.env.example"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 128,
+        "deletions": 40
+      },
+      "committedAtMs": 1777336986000,
+      "cleanSubject": "keep swe-bench llm calls on proxy context",
+      "keywords": [
+        "keep",
+        "bench",
+        "calls",
+        "proxy",
+        "context"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-harness/src",
+        "infra/evals/local-stack"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "a1aa55a76196fb5cf3d7fc6873cbf5f44bd232f0",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-27T18:03:53-07:00",
+      "subject": "fix(evals): throttle swe-bench blocked runs",
+      "body": "Fail fast on Cloudflare-blocked SWE-bench runs and keep benchmark scheduling conservative so blocked provider traffic is not amplified by parallel instances or unbounded spec streams.\n\nMade-with: Cursor",
+      "parents": [
+        "40cd88288ae2018f798cb85ffb887a85a5c0e5a9"
+      ],
+      "files": [
+        "infra/evals/external/swebench/bin/run.sh",
+        "infra/evals/external/swebench/run-swebench.mjs",
+        "interface/scripts/lib/benchmark-api-runner.mjs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 158,
+        "deletions": 34
+      },
+      "committedAtMs": 1777338233000,
+      "cleanSubject": "throttle swe-bench blocked runs",
+      "keywords": [
+        "throttle",
+        "bench",
+        "blocked",
+        "runs"
+      ],
+      "fileGroups": [
+        "infra/evals/external",
+        "interface/scripts/lib"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "982a6777dc27fae113fd651fdc814d2471df5f22",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-28T07:04:50-07:00",
+      "subject": "refactor: collapse harness LLM path to AURA proxy only",
+      "body": "All LLM traffic now flows through aura-router with a per-request JWT;\nthere is no direct-provider path. Trim the wire to model overrides only:\n\n- Rename `SessionProviderConfig` -> `SessionModelOverrides`, drop\n  `provider`, `routing_mode`, `upstream_provider_family`, `api_key`,\n  `base_url`. Field on `SessionInit` becomes `provider_overrides`.\n- Replace `build_harness_provider_config` (which conditionally returned\n  None for HarnessMode::Local) with `session_model_overrides(model)` -\n  always returns `Some(SessionModelOverrides { default_model, ... })`\n  when a model is set.\n- Drop `map_startup_error_explains_unsupported_provider_config` and the\n  matching error-mapping branch - provider rejection is no longer\n  reachable now that the wire carries no provider field.\n- Strip `AURA_STACK_HARNESS_LLM_ROUTING` plumbing from\n  `infra/evals/local-stack` (common.sh, render-envs.sh, run-service.sh,\n  preflight-llm.sh, run-harness-context-cache-ab.sh, docker-compose.yml,\n  stack.env.example). Rename `AURA_STACK_ANTHROPIC_MODEL` ->\n  `AURA_STACK_DEFAULT_MODEL` (legacy name still read).\n\nMade-with: Cursor",
+      "parents": [
+        "a1aa55a76196fb5cf3d7fc6873cbf5f44bd232f0"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/agent_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/errors.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route.rs",
+        "apps/aura-os-server/src/handlers/agents/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/runtime.rs",
+        "apps/aura-os-server/src/handlers/generation/harness_stream.rs",
+        "apps/aura-os-server/src/handlers/projects_helpers/session.rs",
+        "crates/aura-os-harness/src/harness.rs",
+        "crates/aura-os-harness/src/lib.rs",
+        "crates/aura-protocol/src/client.rs",
+        "crates/aura-protocol/src/lib.rs",
+        "infra/evals/local-stack/bin/common.sh",
+        "infra/evals/local-stack/bin/preflight-llm.sh",
+        "infra/evals/local-stack/bin/render-envs.sh",
+        "infra/evals/local-stack/bin/run-harness-context-cache-ab.sh",
+        "infra/evals/local-stack/bin/run-service.sh",
+        "infra/evals/local-stack/docker-compose.yml",
+        "infra/evals/local-stack/stack.env.example"
+      ],
+      "stats": {
+        "fileCount": 18,
+        "insertions": 86,
+        "deletions": 197
+      },
+      "committedAtMs": 1777385090000,
+      "cleanSubject": "collapse harness LLM path to AURA proxy only",
+      "keywords": [
+        "collapse",
+        "harness",
+        "path",
+        "aura",
+        "proxy",
+        "only"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-harness/src",
+        "crates/aura-protocol/src",
+        "infra/evals/local-stack"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "fc6438bce4cc00699bdcd026055ae39750ace180",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-28T07:32:42-07:00",
+      "subject": "fix(evals): stabilize SWE-bench dev-loop runs",
+      "body": "Use quote-safe project gate commands by default and preserve blocked-run classification so Cloudflare failures stop scheduling instead of producing misleading patches.\n\nMade-with: Cursor",
+      "parents": [
+        "982a6777dc27fae113fd651fdc814d2471df5f22"
+      ],
+      "files": [
+        "infra/evals/external/swebench/run-swebench.mjs",
+        "infra/evals/external/swebench/run-swebench.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 184,
+        "deletions": 6
+      },
+      "committedAtMs": 1777386762000,
+      "cleanSubject": "stabilize SWE-bench dev-loop runs",
+      "keywords": [
+        "stabilize",
+        "bench",
+        "loop",
+        "runs"
+      ],
+      "fileGroups": [
+        "infra/evals/external"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "879112d06e844a6881b711881a64f5926b46f572",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-28T08:09:06-07:00",
+      "subject": "fix(chat): avoid duplicate live assistant render",
+      "body": "Ensure the active streaming bubble owns in-flight assistant text so project chats do not briefly show the same turn twice.\n\nMade-with: Cursor",
+      "parents": [
+        "fc6438bce4cc00699bdcd026055ae39750ace180"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatMessageList/ChatMessageList.test.tsx",
+        "interface/src/apps/chat/components/ChatMessageList/ChatMessageList.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 54,
+        "deletions": 24
+      },
+      "committedAtMs": 1777388946000,
+      "cleanSubject": "avoid duplicate live assistant render",
+      "keywords": [
+        "avoid",
+        "duplicate",
+        "live",
+        "assistant",
+        "render"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "5698a2fa8bcdfc6823252a2747b40ab49394370e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-28T08:42:10-07:00",
+      "subject": "fix(evals): clarify SWE-bench scoring mode",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "879112d06e844a6881b711881a64f5926b46f572"
+      ],
+      "files": [
+        "infra/evals/external/swebench/bin/aggregate-score.mjs",
+        "infra/evals/external/swebench/bin/aggregate-score.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 83,
+        "deletions": 5
+      },
+      "committedAtMs": 1777390930000,
+      "cleanSubject": "clarify SWE-bench scoring mode",
+      "keywords": [
+        "clarify",
+        "bench",
+        "scoring",
+        "mode"
+      ],
+      "fileGroups": [
+        "infra/evals/external"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "e42f98a6f2043773cb57ff8c1304f05ba535f560",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-28T12:20:24-07:00",
+      "subject": "fix(evals): guide no-change SWE tasks",
+      "body": "Clarify the SWE-bench and task extraction prompts so verification-only work uses the no-change completion contract instead of cycling through rejected task_done calls.\n\nMade-with: Cursor",
+      "parents": [
+        "5698a2fa8bcdfc6823252a2747b40ab49394370e"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/tasks/extraction.rs",
+        "infra/evals/external/swebench/run-swebench.mjs",
+        "infra/evals/external/swebench/run-swebench.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 40,
+        "deletions": 5
+      },
+      "committedAtMs": 1777404024000,
+      "cleanSubject": "guide no-change SWE tasks",
+      "keywords": [
+        "guide",
+        "change",
+        "tasks"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "infra/evals/external"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "3762db77201a58fc3e36da1ec899518fe8aa6c1c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-28T12:53:31-07:00",
+      "subject": "fix(dev-loop): preserve push retry state",
+      "body": "Record git push timeout evidence after a local commit so completed tasks stay recoverable without appearing fully synced.\n\nMade-with: Cursor",
+      "parents": [
+        "e42f98a6f2043773cb57ff8c1304f05ba535f560"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop/streaming/side_effects.rs",
+        "apps/aura-os-server/src/handlers/tasks/output.rs",
+        "apps/aura-os-server/src/handlers/tasks/output_tests.rs",
+        "apps/aura-os-server/src/sync_state.rs",
+        "crates/aura-os-harness/src/signals.rs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 286,
+        "deletions": 6
+      },
+      "committedAtMs": 1777406011000,
+      "cleanSubject": "preserve push retry state",
+      "keywords": [
+        "preserve",
+        "push",
+        "retry",
+        "state"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-harness/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "2b86cd0738d0307bd0c65aec107b3ce1a2c6e1d4",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-28T12:59:23-07:00",
+      "subject": "fix(evals): document submit-plan workflow",
+      "body": "Guide generated SWE-bench tasks through the harness write-unlock contract and keep preflight polling/docs aligned with the portable project gates.\n\nMade-with: Cursor",
+      "parents": [
+        "3762db77201a58fc3e36da1ec899518fe8aa6c1c"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/tasks/extraction.rs",
+        "infra/evals/external/swebench/run-swebench.mjs",
+        "infra/evals/external/swebench/run-swebench.test.mjs",
+        "interface/scripts/lib/live-pipeline-preflight.mjs"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 55,
+        "deletions": 26
+      },
+      "committedAtMs": 1777406363000,
+      "cleanSubject": "document submit-plan workflow",
+      "keywords": [
+        "document",
+        "submit",
+        "plan",
+        "workflow"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "infra/evals/external",
+        "interface/scripts/lib"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "0ed86284bbdb66a78be8c474f58a5fd98090eb6a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-28T19:08:45-07:00",
+      "subject": "fix(evals): keep SWE tasks implementation focused",
+      "body": "Steer SWE-bench tasking away from standalone inspect/verify chains so each instance centers on one patch-producing implementation task.\n\nMade-with: Cursor",
+      "parents": [
+        "2b86cd0738d0307bd0c65aec107b3ce1a2c6e1d4"
+      ],
+      "files": [
+        "infra/evals/external/swebench/run-swebench.mjs",
+        "infra/evals/external/swebench/run-swebench.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 5,
+        "deletions": 2
+      },
+      "committedAtMs": 1777428525000,
+      "cleanSubject": "keep SWE tasks implementation focused",
+      "keywords": [
+        "keep",
+        "tasks",
+        "implementation",
+        "focused"
+      ],
+      "fileGroups": [
+        "infra/evals/external"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "139dbda9b8f940a60bfc64a4ca9f8e5ced0a1a2d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-28T19:09:26-07:00",
+      "subject": "fix(evals): require semantic SWE validation",
+      "body": "Ask SWE-bench agents to run the strongest safe local validation before task completion so patches are checked against behavior, not just workflow gates.\n\nMade-with: Cursor",
+      "parents": [
+        "0ed86284bbdb66a78be8c474f58a5fd98090eb6a"
+      ],
+      "files": [
+        "infra/evals/external/swebench/run-swebench.mjs",
+        "infra/evals/external/swebench/run-swebench.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 4,
+        "deletions": 1
+      },
+      "committedAtMs": 1777428566000,
+      "cleanSubject": "require semantic SWE validation",
+      "keywords": [
+        "require",
+        "semantic",
+        "validation"
+      ],
+      "fileGroups": [
+        "infra/evals/external"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "d03116035b166c3b121f28bdb2da1bcd31e4370d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-28T19:09:58-07:00",
+      "subject": "fix(evals): require SWE patch self-review",
+      "body": "Make SWE-bench agents re-read changed files and validate patch scope before completing a task.\n\nMade-with: Cursor",
+      "parents": [
+        "139dbda9b8f940a60bfc64a4ca9f8e5ced0a1a2d"
+      ],
+      "files": [
+        "infra/evals/external/swebench/run-swebench.mjs",
+        "infra/evals/external/swebench/run-swebench.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 4,
+        "deletions": 1
+      },
+      "committedAtMs": 1777428598000,
+      "cleanSubject": "require SWE patch self-review",
+      "keywords": [
+        "require",
+        "patch",
+        "self",
+        "review"
+      ],
+      "fileGroups": [
+        "infra/evals/external"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "07e4753884a3ccd3234e115a0ea7b7d3d3c6d79d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-28T19:11:33-07:00",
+      "subject": "feat(evals): retry unresolved SWE instances",
+      "body": "Allow SWE-bench reruns to select unresolved instances from a prior score and include official failure context in requirements for repair attempts.\n\nMade-with: Cursor",
+      "parents": [
+        "d03116035b166c3b121f28bdb2da1bcd31e4370d"
+      ],
+      "files": [
+        "infra/evals/external/swebench/run-swebench.mjs",
+        "infra/evals/external/swebench/run-swebench.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 132,
+        "deletions": 2
+      },
+      "committedAtMs": 1777428693000,
+      "cleanSubject": "retry unresolved SWE instances",
+      "keywords": [
+        "retry",
+        "unresolved",
+        "instances"
+      ],
+      "fileGroups": [
+        "infra/evals/external"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "64ca62aaee2aaa19f1347a712fafb706ebd197c7",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-28T19:12:29-07:00",
+      "subject": "feat(evals): write SWE postmortems",
+      "body": "Emit machine-readable and markdown postmortems from SWE-bench aggregation so unresolved instances are bucketed by likely failure mode.\n\nMade-with: Cursor",
+      "parents": [
+        "07e4753884a3ccd3234e115a0ea7b7d3d3c6d79d"
+      ],
+      "files": [
+        "infra/evals/external/swebench/bin/aggregate-score.mjs",
+        "infra/evals/external/swebench/bin/aggregate-score.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 142,
+        "deletions": 1
+      },
+      "committedAtMs": 1777428749000,
+      "cleanSubject": "write SWE postmortems",
+      "keywords": [
+        "write",
+        "postmortems"
+      ],
+      "fileGroups": [
+        "infra/evals/external"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "9e5bf10028175649b7498692d7299dbeddc5cec0",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-28T19:30:17-07:00",
+      "subject": "fix(evals): gate SWE completion on tests",
+      "body": "Make SWE-bench runs use the configured Python test command and require recorded test verification before benchmark completion.\n\nMade-with: Cursor",
+      "parents": [
+        "64ca62aaee2aaa19f1347a712fafb706ebd197c7"
+      ],
+      "files": [
+        "infra/evals/external/swebench/run-swebench.mjs",
+        "infra/evals/external/swebench/run-swebench.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 17,
+        "deletions": 12
+      },
+      "committedAtMs": 1777429817000,
+      "cleanSubject": "gate SWE completion on tests",
+      "keywords": [
+        "gate",
+        "completion",
+        "tests"
+      ],
+      "fileGroups": [
+        "infra/evals/external"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "310f3c74c1daeb7b136ab8d776ac02f27ec7c73f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-28T19:32:33-07:00",
+      "subject": "fix(evals): stop scoring provider-blocked SWE runs",
+      "body": "Skip predictions for Cloudflare-blocked instances and make the wrapper stop before harness scoring unless partial scoring is explicitly requested.\n\nMade-with: Cursor",
+      "parents": [
+        "9e5bf10028175649b7498692d7299dbeddc5cec0"
+      ],
+      "files": [
+        "infra/evals/external/swebench/bin/run.sh",
+        "infra/evals/external/swebench/run-swebench.mjs",
+        "infra/evals/external/swebench/run-swebench.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 32,
+        "deletions": 5
+      },
+      "committedAtMs": 1777429953000,
+      "cleanSubject": "stop scoring provider-blocked SWE runs",
+      "keywords": [
+        "stop",
+        "scoring",
+        "provider",
+        "blocked",
+        "runs"
+      ],
+      "fileGroups": [
+        "infra/evals/external"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "3901736b4bf5a512bd11556d7c177c1f14ccc378",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-29T09:59:00-07:00",
+      "subject": "fix(harness): align dev-loop automaton start payload",
+      "body": "Carry the same prompt, provider override, user, org/session, and classifier context into automaton starts that chat/spec sessions send via SessionInit, so the harness can form the first dev-loop LLM request with the expected router shape.\n\nMade-with: Cursor",
+      "parents": [
+        "310f3c74c1daeb7b136ab8d776ac02f27ec7c73f"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop/adapter.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/start.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/types.rs",
+        "crates/aura-os-harness/src/automaton_client.rs",
+        "crates/aura-os-harness/src/automaton_client/tests.rs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 87,
+        "deletions": 7
+      },
+      "committedAtMs": 1777481940000,
+      "cleanSubject": "align dev-loop automaton start payload",
+      "keywords": [
+        "align",
+        "loop",
+        "automaton",
+        "start",
+        "payload"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-harness/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "4cffca5f1cdf998fbcceebc8434c9749563eadf4",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-29T19:52:16-07:00",
+      "subject": "feat(evals): harden SWE request diagnostics",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "3901736b4bf5a512bd11556d7c177c1f14ccc378"
+      ],
+      "files": [
+        "apps/aura-os-server/src/auth_guard/tests.rs",
+        "apps/aura-os-server/src/error/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/busy.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/turn_slot.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/signals.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/start.rs",
+        "apps/aura-os-server/src/handlers/projects.rs",
+        "apps/aura-os-server/src/handlers/projects_helpers/session.rs",
+        "apps/aura-os-server/src/handlers/tasks/extraction.rs",
+        "apps/aura-os-server/src/handlers/tasks/output.rs",
+        "apps/aura-os-server/src/handlers/tasks/output_tests.rs",
+        "apps/aura-os-server/src/lib/phase7_test_support.rs",
+        "apps/aura-os-server/src/state/mod.rs",
+        "apps/aura-os-server/tests/concurrent_agents_stress_test.rs",
+        "apps/aura-os-server/tests/dev_loop_dod_regression/completion.rs",
+        "crates/aura-os-harness/src/error.rs",
+        "crates/aura-os-harness/src/local_harness.rs",
+        "crates/aura-os-harness/src/swarm_harness.rs",
+        "crates/aura-os-harness/src/test_support.rs",
+        "crates/aura-os-store/src/store.rs",
+        "infra/evals/external/bin/follow-harness-log.mjs",
+        "infra/evals/external/swebench/bin/aggregate-score.mjs",
+        "infra/evals/external/swebench/bin/aggregate-score.test.mjs",
+        "infra/evals/external/swebench/bin/analyze-request-profiles.mjs",
+        "infra/evals/external/swebench/bin/analyze-request-profiles.test.mjs",
+        "infra/evals/external/swebench/bin/run.sh",
+        "infra/evals/external/swebench/lib/request-contract-reporting.mjs",
+        "infra/evals/external/swebench/run-swebench.mjs",
+        "infra/evals/external/swebench/run-swebench.test.mjs",
+        "infra/evals/external/tbench/aura_agent/aura_agent.py",
+        "infra/evals/external/tbench/aura_agent/test_aura_agent.py",
+        "infra/evals/external/tbench/bin/run-aura-pipeline.mjs",
+        "infra/evals/local-stack/bin/common.sh",
+        "infra/evals/local-stack/bin/render-envs.sh",
+        "infra/evals/local-stack/bin/run-service.sh",
+        "infra/evals/local-stack/bin/up-all.sh",
+        "infra/evals/local-stack/docker-compose.yml",
+        "infra/evals/local-stack/stack.env.example",
+        "interface/scripts/lib/benchmark-api-runner.mjs",
+        "interface/scripts/lib/benchmark-api-runner.test.mjs",
+        "interface/scripts/lib/live-pipeline-preflight.mjs",
+        "interface/scripts/preflight-live-pipeline.mjs",
+        "interface/scripts/run-live-benchmark-api.mjs",
+        "interface/tests/e2e/evals/fixtures/preflight-minimal/requirements.md"
+      ],
+      "stats": {
+        "fileCount": 45,
+        "insertions": 2378,
+        "deletions": 267
+      },
+      "committedAtMs": 1777517536000,
+      "cleanSubject": "harden SWE request diagnostics",
+      "keywords": [
+        "harden",
+        "request",
+        "diagnostics"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-harness/src",
+        "crates/aura-os-store/src",
+        "infra/evals/external",
+        "infra/evals/local-stack",
+        "interface/scripts/lib",
+        "interface/scripts/preflight-live-pipeline.mjs",
+        "interface/scripts/run-live-benchmark-api.mjs",
+        "interface/tests/e2e"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "74726eea7910ff7e485ea18951d94a7bf25cd9fb",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-30T09:57:40-07:00",
+      "subject": "fix(evals): use venv for native SWE verification",
+      "body": "Bootstrap a compatible per-instance Python venv before native Windows SWE runs so the DoD gate does not fall back to global Python and push agents into environment workaround patches.\n\nMade-with: Cursor",
+      "parents": [
+        "4cffca5f1cdf998fbcceebc8434c9749563eadf4"
+      ],
+      "files": [
+        "infra/evals/external/swebench/run-swebench.mjs",
+        "infra/evals/external/swebench/run-swebench.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 336,
+        "deletions": 13
+      },
+      "committedAtMs": 1777568260000,
+      "cleanSubject": "use venv for native SWE verification",
+      "keywords": [
+        "venv",
+        "native",
+        "verification"
+      ],
+      "fileGroups": [
+        "infra/evals/external"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "e22a0b3741f34b8ea9ca76034a174391206e9314",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-30T19:07:02-07:00",
+      "subject": "fix(evals): harden SWE verification flow",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "74726eea7910ff7e485ea18951d94a7bf25cd9fb"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/specs/gen.rs",
+        "apps/aura-os-server/src/handlers/tasks/extraction.rs",
+        "infra/evals/external/swebench/bin/run.sh",
+        "infra/evals/external/swebench/run-swebench.mjs",
+        "infra/evals/external/swebench/run-swebench.test.mjs",
+        "infra/evals/local-stack/bin/common.sh",
+        "infra/evals/local-stack/docker-compose.yml",
+        "infra/evals/local-stack/stack.env.example",
+        "interface/scripts/lib/benchmark-api-runner.mjs",
+        "interface/scripts/lib/benchmark-api-runner.test.mjs",
+        "interface/scripts/lib/live-pipeline-preflight.mjs",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.test.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 13,
+        "insertions": 469,
+        "deletions": 86
+      },
+      "committedAtMs": 1777601222000,
+      "cleanSubject": "harden SWE verification flow",
+      "keywords": [
+        "harden",
+        "verification",
+        "flow"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "infra/evals/external",
+        "infra/evals/local-stack",
+        "interface/scripts/lib",
+        "interface/src/apps"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "4b95a86a21b142a00ba6135ce0abe4c45abedb1f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-30T19:12:24-07:00",
+      "subject": "chore(evals): ignore local SWE run artifacts",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "e22a0b3741f34b8ea9ca76034a174391206e9314"
+      ],
+      "files": [
+        ".gitignore"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 3,
+        "deletions": 0
+      },
+      "committedAtMs": 1777601544000,
+      "cleanSubject": "ignore local SWE run artifacts",
+      "keywords": [
+        "ignore",
+        "local",
+        "artifacts"
+      ],
+      "fileGroups": [
+        ".gitignore"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "56e3e8506e68ef0421f26a3939f3f37fa1e92e9e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-30T19:12:46-07:00",
+      "subject": "feat(protocol): check in TypeScript bindings",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "4b95a86a21b142a00ba6135ce0abe4c45abedb1f"
+      ],
+      "files": [
+        "crates/aura-protocol/bindings/AgentPermissionsWire.ts",
+        "crates/aura-protocol/bindings/AgentScopeWire.ts",
+        "crates/aura-protocol/bindings/AgentToolPermissionsWire.ts",
+        "crates/aura-protocol/bindings/ApprovalResponse.ts",
+        "crates/aura-protocol/bindings/AssistantMessageEnd.ts",
+        "crates/aura-protocol/bindings/AssistantMessageStart.ts",
+        "crates/aura-protocol/bindings/CapabilityWire.ts",
+        "crates/aura-protocol/bindings/ConversationMessage.ts",
+        "crates/aura-protocol/bindings/ErrorMsg.ts",
+        "crates/aura-protocol/bindings/FileOp.ts",
+        "crates/aura-protocol/bindings/FilesChanged.ts",
+        "crates/aura-protocol/bindings/GenerationCompleted.ts",
+        "crates/aura-protocol/bindings/GenerationErrorMsg.ts",
+        "crates/aura-protocol/bindings/GenerationPartialImage.ts",
+        "crates/aura-protocol/bindings/GenerationProgressMsg.ts",
+        "crates/aura-protocol/bindings/GenerationRequest.ts",
+        "crates/aura-protocol/bindings/GenerationStart.ts",
+        "crates/aura-protocol/bindings/InboundMessage.ts",
+        "crates/aura-protocol/bindings/InstalledIntegration.ts",
+        "crates/aura-protocol/bindings/InstalledTool.ts",
+        "crates/aura-protocol/bindings/InstalledToolIntegrationRequirement.ts",
+        "crates/aura-protocol/bindings/InstalledToolRuntimeAuth.ts",
+        "crates/aura-protocol/bindings/InstalledToolRuntimeExecution.ts",
+        "crates/aura-protocol/bindings/InstalledToolRuntimeIntegration.ts",
+        "crates/aura-protocol/bindings/InstalledToolRuntimeProviderExecution.ts",
+        "crates/aura-protocol/bindings/IntentClassifierRule.ts",
+        "crates/aura-protocol/bindings/IntentClassifierSpec.ts",
+        "crates/aura-protocol/bindings/MessageAttachment.ts",
+        "crates/aura-protocol/bindings/OutboundMessage.ts",
+        "crates/aura-protocol/bindings/SessionInit.ts",
+        "crates/aura-protocol/bindings/SessionModelOverrides.ts",
+        "crates/aura-protocol/bindings/SessionReady.ts",
+        "crates/aura-protocol/bindings/SessionUsage.ts",
+        "crates/aura-protocol/bindings/SkillInfo.ts",
+        "crates/aura-protocol/bindings/TextDelta.ts",
+        "crates/aura-protocol/bindings/ThinkingDelta.ts",
+        "crates/aura-protocol/bindings/ToolApprovalDecision.ts",
+        "crates/aura-protocol/bindings/ToolApprovalPrompt.ts",
+        "crates/aura-protocol/bindings/ToolApprovalRemember.ts",
+        "crates/aura-protocol/bindings/ToolApprovalResponse.ts",
+        "crates/aura-protocol/bindings/ToolAuth.ts",
+        "crates/aura-protocol/bindings/ToolCallSnapshot.ts",
+        "crates/aura-protocol/bindings/ToolInfo.ts",
+        "crates/aura-protocol/bindings/ToolResultMsg.ts",
+        "crates/aura-protocol/bindings/ToolStateWire.ts",
+        "crates/aura-protocol/bindings/ToolUseStart.ts",
+        "crates/aura-protocol/bindings/UserMessage.ts",
+        "crates/aura-protocol/bindings/serde_json/JsonValue.ts"
+      ],
+      "stats": {
+        "fileCount": 48,
+        "insertions": 554,
+        "deletions": 0
+      },
+      "committedAtMs": 1777601566000,
+      "cleanSubject": "check in TypeScript bindings",
+      "keywords": [
+        "check",
+        "typescript",
+        "bindings"
+      ],
+      "fileGroups": [
+        "crates/aura-protocol/bindings"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "e46714fd6bad53b81c4e8ed6385b2a8ee20fa32c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-30T19:40:30-07:00",
+      "subject": "Merge origin/main into main",
+      "body": "Integrate the remote billing/auth updates with local eval and harness work while preserving both histories.\n\nMade-with: Cursor",
+      "parents": [
+        "56e3e8506e68ef0421f26a3939f3f37fa1e92e9e",
+        "d777b4bc71a6f1fd8d3b8467a615a1d56f6518ff"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 3150,
+        "deletions": 250
+      },
+      "committedAtMs": 1777603230000,
+      "cleanSubject": "Merge origin/main into main",
+      "keywords": [
+        "merge",
+        "origin",
+        "main",
+        "into"
+      ],
+      "fileGroups": [],
+      "primaryArea": "Other",
+      "areas": []
     }
   ],
-  "batchCount": 1,
+  "batchCount": 6,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -185,36 +3417,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11554540
+          "sizeBytes": 11564048
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.420.1",
+      "version": "0.1.0-nightly.421.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.420.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.421.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 34435746
+          "sizeBytes": 35116376
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.420.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.421.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.420.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.421.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 101747192
+          "sizeBytes": 102377976
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.420.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.421.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -224,29 +3456,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.420.1",
+      "version": "0.1.0-nightly.421.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.420.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.421.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 30975251
+          "sizeBytes": 31677303
         },
         {
-          "name": "Aura_0.1.0-nightly.420.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.421.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.420.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.421.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 30775032
+          "sizeBytes": 31482094
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.420.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.421.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -256,29 +3488,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.420.1",
+      "version": "0.1.0-nightly.421.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.420.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.421.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 32460211
+          "sizeBytes": 33217650
         },
         {
-          "name": "Aura_0.1.0-nightly.420.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.421.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.420.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.421.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 32300828
+          "sizeBytes": 33069114
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.420.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.421.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -288,17 +3520,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.420.1",
+      "version": "0.1.0-nightly.421.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.420.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.421.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 23445341
+          "sizeBytes": 23935872
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.420.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.421.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -307,37 +3539,272 @@
     }
   ],
   "rendered": {
-    "title": "Pro tier returns to $20 with legacy pricing preserved",
-    "intro": "Today's nightly closes out the Pro tier pricing migration. The headline price moves back to $20/month, while early Zero Pro subscribers keep their original $10/month rate, now clearly surfaced in the subscription UI.",
+    "title": "Cold-start polish, external benchmark lane, and a long SWE-bench reliability push",
+    "intro": "A heavy day across the stack: Aura's desktop boot got noticeably faster and steadier, a brand-new external benchmark lane for SWE-bench Verified and Terminal-Bench 2 landed, and the eval infrastructure went through a multi-hour reliability marathon to keep automation traffic from tripping Cloudflare. Smaller polish hit the chat surface, the pricing modal, and protocol bindings.",
     "entries": [
       {
         "batch_id": "entry-1",
-        "time_label": "9:16 AM",
-        "started_at": "2026-04-30T16:16:12.000Z",
-        "ended_at": "2026-04-30T17:52:59.000Z",
-        "title": "Pro tier pricing migration wraps up with legacy rate grandfathered",
-        "summary": "The Pro tier returns to its $20/mo headline price now that the migration is complete, and the subscription modal explicitly grandfathers Zero Pro OG subscribers at $10/mo.",
+        "time_label": "9:35 PM",
+        "started_at": "2026-04-27T04:35:06.000Z",
+        "ended_at": "2026-04-30T02:52:16.000Z",
+        "title": "Desktop cold-start performance wave",
+        "summary": "A coordinated push tightened the authenticated cold-open path, deferred heavy work off the critical path, and bounded long-running memory growth in chat.",
         "items": [
           {
-            "text": "Restored the Pro tier headline price to $20/mo in the subscription modal as the pricing migration finishes.",
+            "text": "Desktop cold opens now reveal an auth-neutral splash while preserving the no-login-flash authenticated route, with startup readiness budgets captured as guardrails so this stays measurable.",
             "commit_shas": [
-              "cbf003bec0f4907753480903cb975f07cff6c14c"
+              "63a3e98a34d1b0defc2a3b70c6bf078a7e0cbc0b",
+              "9f76ae2d630d44fcdfe91864edb6915cb9ac7119"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a legacy pricing note so Zero Pro OG subscribers see that their original $10/mo rate is preserved — both as a footer note in the tier modal and as an inline note on the Pro card itself.",
+            "text": "Trimmed the critical path: highlight themes load lazily, Sidekick output panes defer, route/project loaders use lightweight fallbacks, and Projects/Tasks chunks preload on hover. Sidebar churn dropped via the existing virtualizer plus debounced search.",
+            "commit_shas": [
+              "4993abfe54d034dd1082dfdf49c498dd2f1622f7",
+              "3ee409c924cbe8d64160cc6c3b7c05c49c698916"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Chat transcripts batch non-terminal websocket events per animation frame and cap retained history so long sessions no longer grow unbounded; a duplicate-render and end-of-turn message blink were both fixed afterward.",
+            "commit_shas": [
+              "4b7565ef491652360da42c6f5932514269c72bab",
+              "1eca7c566df95ba4cf7b915461916a8f1430462b",
+              "f88e1aa85beeadf5098f13b7f1365f63213d675b",
+              "4df41219291481d7f52de6f798f47a4427d20b8c",
+              "879112d06e844a6881b711881a64f5926b46f572"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Server logs are quieter by default, fingerprinted interface assets are compressed and cached, and cross-project log aggregation is bounded; domain events are also fanned out via shared, ref-counted payloads instead of per-listener clones.",
+            "commit_shas": [
+              "a776d7417a3a36a41b7a30fae0b0dab4824e2bdc",
+              "162698d5c96713d4945ff8ce6bda0a21de95ae67"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Sidebar fade bands in the left navigation and Sidekick panel were halved so list content is less obscured.",
+            "commit_shas": [
+              "b63828936bb7d24f33b01212eec49a95527bdff7"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "New external benchmark lane scores the full Aura pipeline against SWE-bench Verified and Terminal-Bench 2, with a manual GitHub workflow, cost guard, baselines, PR-comment renderer, and a fail-fast live preflight that exercises auth, spec generation, task extraction, and the dev loop on a tiny fixture before any long run.",
+            "commit_shas": [
+              "acd1773f68cf9fb56aadbca3f2753cb5b80ca52b",
+              "85290bc7d46ecf1f0a53c1b60edf7a413aa7e9e8",
+              "d968e0ac363416ab7b77d05d6168e764d08be41f",
+              "5a03bfac857150949c863051f94101a951e7c6fe",
+              "5f412eaa0b15452d9b8086ba686f056cabe6a760"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "SWE-bench runs gained --resume support: completed instances are skipped, predictions.jsonl is deduplicated, workspaces are reused when HEAD already matches base_commit, and score.json is synthesized from incremental runs even if the driver was killed.",
+            "commit_shas": [
+              "89b23f75937184bd019403962f4062728fec7e77",
+              "37f218042d8b38f8530dd4d556480c9c3f30316c"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Dev-loop and project-tool sessions now match the chat path's router shape end-to-end: stable v5 session ids per (project, instance, task), threaded org/session ids and template agent identity, full SessionInit-equivalent payload (system prompt, provider overrides, classifier context), and consistent harness URL and env handling. This was the underlying fix for repeated Cloudflare 403s on automation traffic against aura-router.",
+            "commit_shas": [
+              "3153bd05ccf785bd45a9a49a564be5eff3859295",
+              "4ab682821d98b7cdd3d7df2bac67f100fcbfc39f",
+              "40cd88288ae2018f798cb85ffb887a85a5c0e5a9",
+              "3901736b4bf5a512bd11556d7c177c1f14ccc378",
+              "85aa438f29d76e832e766ea58229fc412ae7c70a",
+              "ad54c9234c21c0522c79df28a71cd50bedf48863",
+              "fc2ca01faaae66ef702502524e049936b83b35c7"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Project-tool sessions are now bounded against runaway LLM loops with a max_turns cap, a server-side tokio deadline, and an AbortController-based fetch timeout, applied to both the dedicated endpoints and the chat-route generate_specs/extract_tasks actions. CreateTask/UpdateTask and TransitionTask DTOs accept camelCase and a status alias so harness writes stop 422'ing and looping.",
+            "commit_shas": [
+              "4d137da72aeb5ee3d1b7ba65600f50a69ca5a803",
+              "4b80362d2b792ae6e5c1f0b1f33ef261836d0451",
+              "ba31352c95b67d419cc23055e4090a9ddf4cf6c6",
+              "c6a03cc2cb9bddcd7937bb9a5c951ec4daffff14"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Local eval stack got a long stabilization arc: shared auth/token sourcing with the app, dev JWT trust for local services, harness URL overrides so domain writes hit the right port, proxy-only routing, an LLM-path preflight probe with Cloudflare classification, and per-instance harness env that finally mirrors the desktop sidecar.",
+            "commit_shas": [
+              "b32d0aa8b1d54c0f76e80cbe72e36f790201ac6f",
+              "bea6a03580d74c4a5026907e9f985f4658417a14",
+              "ba018d51f04f6602afbc50f992ca44b5ff6f9e14",
+              "1e50bd6f3a37f9b342a28603d48b805dd1bb5e7a",
+              "576c900a21fb4ee5460844b6371da7e1b3873c97",
+              "f00ffc8d6ce994ca4b2cba43d45ceb48d6dad6aa",
+              "32a9a192bea04e51a25aec79b341ca001522976c",
+              "9f8c598c1f856d9fa59de96495c0fd5ef00d4a89",
+              "42503fcd3a6329c8a849a129d84555ca5a5ebbc2",
+              "984af20c209ec161133fc31c53f0f2cae74ace27",
+              "1ddf91e8c5b65eeb6b2fe8a85f48b9e56e0e5ed0",
+              "8d00651af7d19d963ef6aea535f8a95cb4b08015",
+              "5bb4cb3fbf24159ed5883e2d501b158905f9fc93"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "SWE-bench task generation was reshaped: prompts now steer toward one patch-producing task per instance, require self-review and the strongest safe local validation before completion, gate completion on the configured Python test command, and document the no-change completion contract for verification-only work. Aggregation now emits machine-readable and markdown postmortems bucketed by failure mode, with retry support for unresolved instances.",
+            "commit_shas": [
+              "e42f98a6f2043773cb57ff8c1304f05ba535f560",
+              "0ed86284bbdb66a78be8c474f58a5fd98090eb6a",
+              "139dbda9b8f940a60bfc64a4ca9f8e5ced0a1a2d",
+              "d03116035b166c3b121f28bdb2da1bcd31e4370d",
+              "9e5bf10028175649b7498692d7299dbeddc5cec0",
+              "07e4753884a3ccd3234e115a0ea7b7d3d3c6d79d",
+              "64ca62aaee2aaa19f1347a712fafb706ebd197c7",
+              "2b86cd0738d0307bd0c65aec107b3ce1a2c6e1d4",
+              "5698a2fa8bcdfc6823252a2747b40ab49394370e",
+              "fc6438bce4cc00699bdcd026055ae39750ace180"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Cloudflare-blocked SWE-bench runs are now classified, throttled, and excluded from scoring instead of being amplified by parallel scheduling or producing misleading patches; harness log noise was also collapsed to one salient line per tool call.",
+            "commit_shas": [
+              "a1aa55a76196fb5cf3d7fc6873cbf5f44bd232f0",
+              "310f3c74c1daeb7b136ab8d776ac02f27ec7c73f",
+              "95d4dfc32d140496b0f34eb0f47fcb588e626376",
+              "6ca179b81fbc5a06c3c82232b728c067a993a009"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Image and 3D generation requests now flow through the harness session machinery instead of a separate router proxy, unifying the streaming path used by chat with media generation.",
+            "commit_shas": [
+              "5e19d275dff5cd23888e8a3338b860702adfa5d3"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Harness LLM transport collapsed to AURA proxy only: the wire now carries model overrides instead of a full provider config, and the direct-provider path was removed from both server and local-stack tooling.",
+            "commit_shas": [
+              "982a6777dc27fae113fd651fdc814d2471df5f22"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Local harness chat sessions skip the Aura proxy override and keep failed stream errors visible after history refresh, so the local harness UX stops swallowing errors mid-turn.",
+            "commit_shas": [
+              "7b003e388ebc24b88e6660844bd52ae871a1a102"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Dev-loop completed tasks now record git push timeout evidence after a local commit so they remain recoverable instead of appearing fully synced when the push hangs.",
+            "commit_shas": [
+              "3762db77201a58fc3e36da1ec899518fe8aa6c1c"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "End-to-end SWE diagnostics: instance routes log session shape on each chat-events stream open, request-profile analyzer and contract reporting libraries landed, and per-run request profiles can be aggregated for postmortem.",
+            "commit_shas": [
+              "4cffca5f1cdf998fbcceebc8434c9749563eadf4"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "9:16 AM",
+        "started_at": "2026-04-30T16:16:12.000Z",
+        "ended_at": "2026-04-30T16:16:12.000Z",
+        "title": "Pro tier price restored to $20",
+        "summary": "The TierSubscriptionModal was rolled back to the $20 Pro price now that the migration is complete.",
+        "items": [
+          {
+            "text": "Pro tier in the subscription modal is back to $20 after the pricing migration finished.",
+            "commit_shas": [
+              "cbf003bec0f4907753480903cb975f07cff6c14c"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "9:57 AM",
+        "started_at": "2026-04-30T16:57:40.000Z",
+        "ended_at": "2026-04-30T16:57:40.000Z",
+        "title": "Per-instance Python venv for native SWE verification",
+        "summary": "Native Windows SWE-bench runs now bootstrap a compatible per-instance venv before the DoD gate runs, instead of falling back to a global Python that pushes agents toward environment workaround patches.",
+        "items": [
+          {
+            "text": "SWE-bench's DoD verification on native Windows now provisions a per-instance virtualenv up front so verification runs in a clean, version-matched interpreter rather than the operator's global Python.",
+            "commit_shas": [
+              "74726eea7910ff7e485ea18951d94a7bf25cd9fb"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-4",
+        "time_label": "10:29 AM",
+        "started_at": "2026-04-30T17:29:54.000Z",
+        "ended_at": "2026-04-30T17:52:59.000Z",
+        "title": "Legacy pricing note for Zero Pro OG users",
+        "summary": "Long-time Zero Pro subscribers now see context for their grandfathered pricing in the tier modal and credit history surfaces.",
+        "items": [
+          {
+            "text": "Added a legacy pricing note for Zero Pro OG users in the tier subscription modal, surfaced it on the Pro card, and renamed the Monthly Allowance row to Monthly Plan Top-Up in credit history. A follow-up moves the legacy note to its own line below the price for cleaner layout.",
             "commit_shas": [
               "d9776a3f3fdb41162e347b97966bb59d9103ef6f",
               "dadfd29970ae5e46e103002239a3f7d978ee3d94",
               "d777b4bc71a6f1fd8d3b8467a615a1d56f6518ff"
             ],
             "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-5",
+        "time_label": "7:07 PM",
+        "started_at": "2026-05-01T02:07:02.000Z",
+        "ended_at": "2026-05-01T02:12:24.000Z",
+        "title": "SWE verification flow hardening",
+        "summary": "Spec generation and task extraction now ship scoped tool hints, task extraction fails loudly when no tasks are produced, and local SWE artifacts stay out of git.",
+        "items": [
+          {
+            "text": "Spec generation and task extraction now pass explicit, scoped tool_hints to the harness so the model stops reaching for unrelated tools, and extract_tasks now returns a clear error when the harness completes without persisting any tasks instead of silently returning empty.",
+            "commit_shas": [
+              "e22a0b3741f34b8ea9ca76034a174391206e9314"
+            ],
+            "confidence": "high"
           },
           {
-            "text": "Renamed the credit history entry 'Monthly Allowance' to 'Monthly Plan Top-Up' in org settings for clearer billing language.",
+            "text": "Local SWE-bench run artifacts are now ignored by git so per-run output stops cluttering working trees.",
             "commit_shas": [
-              "dadfd29970ae5e46e103002239a3f7d978ee3d94"
+              "4b95a86a21b142a00ba6135ce0abe4c45abedb1f"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-6",
+        "time_label": "7:12 PM",
+        "started_at": "2026-05-01T02:12:46.000Z",
+        "ended_at": "2026-05-01T02:12:46.000Z",
+        "title": "Checked-in TypeScript protocol bindings",
+        "summary": "aura-protocol's ts-rs-generated TypeScript types are now committed, giving the interface a stable, versioned source of truth for wire shapes.",
+        "items": [
+          {
+            "text": "Checked in 48 generated TypeScript binding files for aura-protocol (SessionInit, SessionModelOverrides, AssistantMessageEnd, GenerationRequest, tool/permission wires, and more), so the interface no longer needs to regenerate them locally to stay in sync with the Rust protocol.",
+            "commit_shas": [
+              "56e3e8506e68ef0421f26a3939f3f37fa1e92e9e"
             ],
             "confidence": "high"
           }
@@ -345,10 +3812,13 @@
       }
     ],
     "highlights": [
-      "Pro tier price restored to $20/mo",
-      "Legacy $10/mo rate preserved for Zero Pro OG subscribers",
-      "Credit history label clarified to 'Monthly Plan Top-Up'"
+      "Desktop cold-open shows an auth-neutral splash and defers heavyweight assets",
+      "New external benchmark lane: SWE-bench Verified + Terminal-Bench 2",
+      "Resume-able SWE-bench runs with live preflight that fails in minutes, not hours",
+      "Dev-loop traffic now matches chat's router shape to stop Cloudflare blocks",
+      "Pro tier price returned to $20 with a legacy note for OG users",
+      "TypeScript protocol bindings are now checked in"
     ],
-    "raw_commit_count": 4
+    "raw_commit_count": 78
   }
 }
