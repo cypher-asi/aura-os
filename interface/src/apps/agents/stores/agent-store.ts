@@ -347,6 +347,9 @@ export const useAgentStore = create<AgentState>()(
       },
 
       setSelectedAgent: (agentId): void => {
+        if (agentId) {
+          void import("../../../lib/analytics").then(({ track }) => track("agent_selected"));
+        }
         set({ selectedAgentId: agentId });
       },
 

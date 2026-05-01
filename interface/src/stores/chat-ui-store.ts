@@ -73,6 +73,9 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
 
   setSelectedModel: (streamKey, model, adapterType, agentId) => {
     persistModel(model, adapterType, agentId);
+    void import("../lib/analytics").then(({ track }) =>
+      track("model_selected", { model_name: model }),
+    );
     set((s) => ({
       streams: {
         ...s.streams,

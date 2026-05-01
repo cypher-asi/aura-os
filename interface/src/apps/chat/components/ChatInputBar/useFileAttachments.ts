@@ -74,7 +74,12 @@ export function useFileAttachments(
     const toAdd = Array.from(files).slice(0, MAX_ATTACHMENTS - attachments.length);
     const results = await Promise.all(toAdd.map(processFile));
     const valid = results.filter((r): r is AttachmentItem => r !== null);
-    if (valid.length) onAttachmentsChange([...attachments, ...valid]);
+    if (valid.length) {
+      void import("../../../../lib/analytics").then(({ track }) =>
+        track("file_attached", { file_count: valid.length }),
+      );
+      onAttachmentsChange([...attachments, ...valid]);
+    }
     textareaRef?.current?.focus();
   }, [attachments, canAddMore, onAttachmentsChange, textareaRef]);
 

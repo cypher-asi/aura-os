@@ -100,6 +100,7 @@ export function useAgentChatWindow(agentId: string | undefined): ChatPanelProps 
 
   const handleNewSession = useCallback(() => {
     if (!agentId) return;
+    void import("../lib/analytics").then(({ track }) => track("chat_session_reset"));
     api.agents.resetSession(agentId).catch(() => {});
     markNextSendAsNewSession();
     const store = useContextUsageStore.getState();

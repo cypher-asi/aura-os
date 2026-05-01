@@ -167,6 +167,7 @@ function StandaloneAgentChatPanel({
   }, [resetEvents]);
 
   const handleNewSession = useCallback(() => {
+    void import("../../../../lib/analytics").then(({ track }) => track("chat_session_reset"));
     api.agents.resetSession(agentId).catch(() => {});
     markNextSendAsNewSession();
     const store = useContextUsageStore.getState();
@@ -279,6 +280,7 @@ function ProjectAgentChatPanel({
   }, [resetEvents]);
 
   const handleNewSession = useCallback(() => {
+    void import("../../../../lib/analytics").then(({ track }) => track("chat_session_reset"));
     api.resetInstanceSession(projectId, agentInstanceId).catch(() => {});
     markNextSendAsNewSession();
     const store = useContextUsageStore.getState();
