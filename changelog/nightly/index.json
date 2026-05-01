@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-05-01",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.426.1",
+    "title": "Anonymous product analytics with a privacy opt-out",
+    "intro": "Today's nightly wires Aura into Mixpanel for anonymous, privacy-respecting product analytics. Tracking spans authentication, chat, AURA 3D, projects, agents, tasks, processes, integrations, notes, and billing — and ships alongside a new Privacy section in Settings where anyone can opt out.",
+    "entryCount": 1,
+    "highlights": [
+      "Mixpanel analytics, anonymous by default",
+      "Honors DNT/GPC and a Settings opt-out",
+      "Coverage across chat, 3D, projects, billing"
+    ],
+    "rawCommitCount": 6,
+    "generatedAt": "2026-05-01T10:42:00.577Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.426.1",
+    "path": "history/2026-05-01.json"
+  },
+  {
     "date": "2026-04-30",
     "channel": "nightly",
     "version": "0.1.0-nightly.423.1",
