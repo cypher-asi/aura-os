@@ -28,6 +28,7 @@ import {
 import { purgeLegacyChatHistoryFallback } from "./shared/lib/browser-db";
 import { bootstrapTaskStreamSubscriptions } from "./stores/task-stream-bootstrap";
 import { bootstrapProcessStreamSubscriptions } from "./stores/process-stream-bootstrap";
+import { initAnalytics, track } from "./lib/analytics";
 
 // Must run before any module that reads the host origin (e.g. host-store,
 // API clients) so a `?host=` bootstrap param wins over stale localStorage.
@@ -41,6 +42,11 @@ markBootPhase("frontend module loaded");
 installNativeTitlebarDrag();
 
 markAppEntry();
+
+// Initialize product analytics (Mixpanel).
+// Anonymous by default, no PII. Disabled when VITE_MIXPANEL_TOKEN is unset.
+initAnalytics();
+track("app_opened");
 
 // Register the app-scoped task stream subscribers BEFORE the first
 // component render. Waiting until a component's useEffect runs lets the

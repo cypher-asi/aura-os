@@ -17,6 +17,7 @@ import {
   FolderOpen,
   RotateCcw,
 } from "lucide-react";
+import { track } from "../../../../lib/analytics";
 import { ContextUsageIndicator } from "./ContextUsageIndicator";
 import type { ContextUsageEntry } from "../../../../stores/context-usage-store";
 import { useIsStreaming } from "../../../../hooks/stream/hooks";
@@ -456,6 +457,7 @@ export const DesktopChatInputBar = memo(
       }
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
+        track("chat_message_sent", { model: selectedModel });
         onSend(
           input,
           undefined,
@@ -686,14 +688,15 @@ export const DesktopChatInputBar = memo(
               <button
                 type="button"
                 className={styles.sendButton}
-                onClick={() =>
+                onClick={() => {
+                  track("chat_message_sent", { model: selectedModel });
                   onSend(
                     input,
                     undefined,
                     undefined,
                     generationMode !== "chat" ? generationMode : undefined,
-                  )
-                }
+                  );
+                }}
                 disabled={
                   !input.trim() &&
                   attachments.length === 0 &&

@@ -208,23 +208,33 @@ export const useAuthStore = create<AuthState>()((set) => ({
   login: async (email: string, password: string) => {
     const session = await authApi.login(email, password);
     await setStoredAuth(session);
+    const user = sessionToUser(session);
     set({
-      user: sessionToUser(session),
+      user,
       hasResolvedInitialSession: true,
       zeroProRefreshError: getZeroProRefreshError(session),
     });
     await startRealtimeForSession(session);
+    import("../lib/analytics").then(({ track, identifyUser }) => {
+      if (user?.user_id) identifyUser(user.user_id);
+      track("user_logged_in");
+    });
   },
 
   register: async (email: string, password: string, name: string, inviteCode: string) => {
     const session = await authApi.register(email, password, name, inviteCode);
     await setStoredAuth(session);
+    const user = sessionToUser(session);
     set({
-      user: sessionToUser(session),
+      user,
       hasResolvedInitialSession: true,
       zeroProRefreshError: getZeroProRefreshError(session),
     });
     await startRealtimeForSession(session);
+    import("../lib/analytics").then(({ track, identifyUser }) => {
+      if (user?.user_id) identifyUser(user.user_id);
+      track("user_signed_up", { has_invite_code: !!inviteCode });
+    });
   },
 
   logout: async () => {
