@@ -373,7 +373,7 @@ export function ChatPanel({
           projects={projects}
           selectedProjectId={selectedProjectId}
           onProjectChange={onProjectChange}
-          isVisible={historyResolved}
+          isVisible
           isCentered={isThreadEmpty}
           compact={compact}
           contextUsage={contextUsage}

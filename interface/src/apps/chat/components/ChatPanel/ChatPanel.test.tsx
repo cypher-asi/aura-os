@@ -177,7 +177,7 @@ describe("ChatPanel", () => {
 
     const { container } = renderPanel({ isLoading: true, historyResolved: false });
 
-    expect(screen.getByTestId("chat-input-bar")).toBeInTheDocument();
+    expect(getInputBar()).toHaveAttribute("data-visible", "true");
     expect(container.querySelector(".initialRevealOverlay")).not.toBeNull();
     expect(screen.queryByText("Loading conversation...")).not.toBeInTheDocument();
   });
@@ -191,7 +191,7 @@ describe("ChatPanel", () => {
       historyResolved: false,
     });
 
-    expect(screen.getByTestId("chat-input-bar")).toBeInTheDocument();
+    expect(getInputBar()).toHaveAttribute("data-visible", "true");
     expect(container.querySelector(".initialRevealOverlay")).not.toBeNull();
     expect(screen.queryByText("Loading conversation...")).not.toBeInTheDocument();
   });

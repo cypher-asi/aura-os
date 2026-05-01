@@ -46,6 +46,7 @@ function safeJsonParse(value) {
   }
 }
 
+const MAX_BETWEEN_STEP_WAIT_MS = 1_000;
 const DEFAULT_API_FETCH_TIMEOUT_MS = 360_000;
 
 /**
@@ -71,13 +72,15 @@ export function resolveApiFetchTimeoutMs(envValue) {
 
 export function resolveModelCooldownMs(envValue) {
   if (typeof envValue === "number") {
-    return Number.isFinite(envValue) && envValue > 0 ? Math.floor(envValue) : 0;
+    return Number.isFinite(envValue) && envValue > 0
+      ? Math.min(Math.floor(envValue), MAX_BETWEEN_STEP_WAIT_MS)
+      : 0;
   }
   const raw = typeof envValue === "string" ? envValue.trim() : "";
   if (!raw) return 0;
   const parsed = Number(raw);
   if (!Number.isFinite(parsed) || parsed <= 0) return 0;
-  return Math.floor(parsed);
+  return Math.min(Math.floor(parsed), MAX_BETWEEN_STEP_WAIT_MS);
 }
 
 async function sleep(ms) {
@@ -286,7 +289,7 @@ export function createBenchmarkClient(options = {}) {
       return {
         resource,
         id,
-        ok: response.ok || response.status === 404,
+        ok: response.ok || response.status === 404 || response.status === 409,
         status: response.status,
       };
     },
@@ -1094,6 +1097,11 @@ export async function runScenario(scenario, options) {
       "POST",
       `/api/projects/${project.project_id}/tasks/extract?agent_instance_id=${agentInstance.agent_instance_id}`,
     );
+    if (!Array.isArray(tasks) || tasks.length === 0) {
+      throw new Error(
+        "tasks/extract returned 0 tasks after spec generation; check harness/provider errors for the task-extraction turn",
+      );
+    }
     client.logStep("tasks extracted", { count: tasks.length });
     recordStep("create_tasks", `Extracted ${tasks.length} tasks`, { count: tasks.length });
     sortedTasks(tasks, specs).forEach((task, index, orderedTasks) => {

@@ -38,8 +38,9 @@ import {
 
 const execFileAsync = promisify(execFile);
 
+const MAX_BETWEEN_STEP_WAIT_MS = 1_000;
 const DEFAULT_LOOP_TIMEOUT_MS = 180_000;
-const DEFAULT_POLL_INTERVAL_MS = 4_000;
+const DEFAULT_POLL_INTERVAL_MS = MAX_BETWEEN_STEP_WAIT_MS;
 const DEFAULT_SPEC_STREAM_TIMEOUT_MS = 120_000;
 const DEFAULT_PREFLIGHT_ORG_NAME = "Aura Preflight";
 const FIXTURE_PROFILE_MINIMAL = "minimal";
@@ -69,6 +70,12 @@ function fullAccessPermissions() {
 function fixtureProfileLabel(profile) {
   const value = String(profile ?? "").trim();
   return value || FIXTURE_PROFILE_MINIMAL;
+}
+
+function betweenStepWaitMs(value, fallback = MAX_BETWEEN_STEP_WAIT_MS) {
+  const parsed = Number(value ?? fallback);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.min(Math.floor(parsed), MAX_BETWEEN_STEP_WAIT_MS);
 }
 
 function requirementsForFixtureProfile(profile) {
@@ -484,7 +491,7 @@ async function deleteIgnoringMissing(client, endpoint) {
       method: "DELETE",
       headers: authHeaders(client.accessToken),
     });
-    return { ok: response.ok || response.status === 404, status: response.status };
+    return { ok: response.ok || response.status === 404 || response.status === 409, status: response.status };
   } catch (error) {
     return {
       ok: false,
@@ -576,7 +583,7 @@ export async function runLivePipelinePreflight(options = {}) {
       ?? process.env.AURA_BENCH_PREFLIGHT_LOOP_TIMEOUT_MS
       ?? DEFAULT_LOOP_TIMEOUT_MS,
   );
-  const pollIntervalMs = Number(options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS);
+  const pollIntervalMs = betweenStepWaitMs(options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS);
   const specStreamTimeoutMs = Number(
     options.specStreamTimeoutMs
       ?? process.env.AURA_BENCH_PREFLIGHT_SPEC_TIMEOUT_MS
@@ -869,7 +876,7 @@ export async function runLivePipelinePreflight(options = {}) {
       if (safe.length === 0) {
         throw new StepFailure(
           "extract_tasks",
-          "tasks/extract returned 0 tasks; the LLM router/model is likely unhealthy",
+          "tasks/extract returned 0 tasks after spec generation; check harness/provider errors for the task-extraction turn",
         );
       }
       return { value: safe, detailsForLog: { taskCount: safe.length } };
@@ -943,17 +950,29 @@ export async function runLivePipelinePreflight(options = {}) {
       ]);
       const sessionList = Array.isArray(sessions) ? sessions : [];
       requestContractSummary = requestContractSummaryFromPreflightSurfaces(stats, sessionList);
+      const requestContractDetails = requestContractSummary.available
+        ? {
+          requestContractAcceptance: requestContractSummary.acceptance,
+          requestContractVerdicts: requestContractSummary.verdict_counts,
+        }
+        : {};
       return {
         detailsForLog: {
           totalTokens: Number(stats?.total_tokens ?? 0),
           sessionCount: sessionList.length,
-          requestContractAcceptance: requestContractSummary.acceptance,
-          requestContractVerdicts: requestContractSummary.verdict_counts,
+          ...requestContractDetails,
         },
       };
     });
 
     const totalElapsedMs = Date.now() - startedAt;
+    const requestContractDetails = requestContractSummary.available
+      ? {
+        requestContractAcceptance: requestContractSummary.acceptance,
+        requestContract: requestContractSummary,
+        requestContractSummary: describeRequestContractSummary(requestContractSummary),
+      }
+      : {};
     emit(onStep, {
       step: "preflight_complete",
       status: "ok",
@@ -961,12 +980,14 @@ export async function runLivePipelinePreflight(options = {}) {
       details: {
         fixtureDir,
         ephemeral,
-        requestContractAcceptance: requestContractSummary.acceptance,
-        requestContract: requestContractSummary,
-        requestContractSummary: describeRequestContractSummary(requestContractSummary),
+        ...requestContractDetails,
       },
     });
-    return { ok: true, totalElapsedMs, requestContract: requestContractSummary };
+    return {
+      ok: true,
+      totalElapsedMs,
+      ...(requestContractSummary.available ? { requestContract: requestContractSummary } : {}),
+    };
   } finally {
     await cleanupCreatedEntities(client, ids, onStep);
     if (ephemeral) {

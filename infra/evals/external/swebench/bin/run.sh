@@ -645,6 +645,12 @@ preflight_disk_space "$repo_root"
 free_gb=$(free_disk_gb "$repo_root")
 info "preflight ok: node=$node_version free=${free_gb}GB"
 
+# Keep the benchmark from idling between task extraction and the autonomous
+# loop, without shrinking timeouts for real work like spec generation, model
+# calls, or command execution.
+: "${AURA_BENCH_MODEL_COOLDOWN_MS:=1000}"
+export AURA_BENCH_MODEL_COOLDOWN_MS
+
 # Preflight: end-to-end live pipeline (auth -> spec -> tasks -> loop). This
 # is what catches broken router/proxy/harness wiring before we burn an hour
 # on the actual benchmark. Runs after tool/disk checks so we don't bother

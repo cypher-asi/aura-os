@@ -16,6 +16,23 @@ use crate::state::{AppState, AuthJwt, AuthSession};
 const TASK_RESULT_POLL_INTERVAL: Duration = Duration::from_millis(250);
 const TASK_RESULT_POLL_TIMEOUT: Duration = Duration::from_secs(5);
 
+fn task_extraction_tool_hints() -> Vec<String> {
+    [
+        "read_file",
+        "list_files",
+        "find_files",
+        "search_code",
+        "list_specs",
+        "get_spec",
+        "list_tasks",
+        "create_task",
+        "update_task",
+    ]
+    .into_iter()
+    .map(str::to_string)
+    .collect()
+}
+
 #[derive(Debug, Deserialize, Default)]
 pub(crate) struct TaskQueryParams {
     pub agent_instance_id: Option<AgentInstanceId>,
@@ -183,7 +200,7 @@ pub(crate) async fn extract_tasks(
         .commands_tx
         .try_send(HarnessInbound::UserMessage(UserMessage {
             content: task_extraction_prompt(&project_id),
-            tool_hints: None,
+            tool_hints: Some(task_extraction_tool_hints()),
             attachments: None,
         }))
         .map_err(|e| ApiError::internal(format!("sending task extract command: {e}")))?;
@@ -203,7 +220,14 @@ pub(crate) async fn extract_tasks(
 
     match tokio::time::timeout(deadline, extraction_loop).await {
         Ok(ExtractionOutcome::Completed) => {
-            Ok(Json(load_extracted_tasks(&state, &project_id, &jwt).await?))
+            let tasks = load_extracted_tasks(&state, &project_id, &jwt).await?;
+            if tasks_changed_since(&baseline_tasks, &tasks) || !tasks.is_empty() {
+                Ok(Json(tasks))
+            } else {
+                Err(ApiError::internal(
+                    "task extraction completed without creating tasks; check harness logs for the model/tool error",
+                ))
+            }
         }
         Ok(ExtractionOutcome::HarnessError(message)) => {
             // Even on a harness error the LLM may have already populated
@@ -250,7 +274,7 @@ enum ExtractionOutcome {
 
 #[cfg(test)]
 mod tests {
-    use super::task_extraction_prompt;
+    use super::{task_extraction_prompt, task_extraction_tool_hints};
 
     #[test]
     fn task_extraction_prompt_guides_no_change_verification_tasks() {
@@ -264,5 +288,15 @@ mod tests {
         assert!(prompt.contains("task_done"));
         assert!(prompt.contains("no_changes_needed: true"));
         assert!(prompt.contains("Never call the `extract_tasks` tool"));
+    }
+
+    #[test]
+    fn task_extraction_tool_hints_scope_project_planning_surface() {
+        let hints = task_extraction_tool_hints();
+
+        assert!(hints.contains(&"read_file".to_string()));
+        assert!(hints.contains(&"create_task".to_string()));
+        assert!(!hints.contains(&"run_command".to_string()));
+        assert!(!hints.contains(&"generate_image".to_string()));
     }
 }

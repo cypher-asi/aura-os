@@ -26,6 +26,22 @@ use crate::state::{AppState, AuthJwt, AuthSession};
 const SSE_NO_BUFFERING_HEADERS: [(&str, HeaderValue); 1] =
     [("X-Accel-Buffering", HeaderValue::from_static("no"))];
 
+fn spec_generation_tool_hints() -> Vec<String> {
+    [
+        "read_file",
+        "list_files",
+        "find_files",
+        "search_code",
+        "list_specs",
+        "get_spec",
+        "create_spec",
+        "update_spec",
+    ]
+    .into_iter()
+    .map(str::to_string)
+    .collect()
+}
+
 pub(crate) async fn generate_specs_summary(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
@@ -57,7 +73,7 @@ pub(crate) async fn generate_specs_summary(
         .commands_tx
         .try_send(HarnessInbound::UserMessage(UserMessage {
             content: format!("Generate specs summary for project {project_id}"),
-            tool_hints: None,
+            tool_hints: Some(spec_generation_tool_hints()),
             attachments: None,
         }))
         .map_err(|e| ApiError::internal(format!("sending spec summary command: {e}")))?;
@@ -138,7 +154,7 @@ async fn open_spec_gen_session(
                  If you implement a type that is defined by an external spec or RFC, cite the authoritative source (URL or section number) in the spec itself — do not guess sizes, field layouts, or constants. \
                  Do not stop until the specs have been created."
             ),
-            tool_hints: None,
+            tool_hints: Some(spec_generation_tool_hints()),
             attachments: None,
         }))
         .map_err(|e| ApiError::internal(format!("sending spec gen command: {e}")))?;
@@ -267,6 +283,21 @@ pub(crate) async fn generate_specs_stream(
         SSE_NO_BUFFERING_HEADERS,
         Sse::new(stream).keep_alive(KeepAlive::default()),
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::spec_generation_tool_hints;
+
+    #[test]
+    fn spec_generation_tool_hints_scope_project_spec_surface() {
+        let hints = spec_generation_tool_hints();
+
+        assert!(hints.contains(&"read_file".to_string()));
+        assert!(hints.contains(&"create_spec".to_string()));
+        assert!(!hints.contains(&"create_task".to_string()));
+        assert!(!hints.contains(&"run_command".to_string()));
+    }
 }
 
 /// SSE stream that owns the [`HarnessSession`] for its full lifetime.

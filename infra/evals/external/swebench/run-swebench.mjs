@@ -33,9 +33,12 @@ const driverDir = path.dirname(currentFile);
 const repoRoot = path.resolve(driverDir, "..", "..", "..", "..");
 
 export const SWEBENCH_VENV_DIR = ".venv-swebench";
+export const SWEBENCH_TEST_WRAPPER_BASENAME = "aura-swebench-test";
 
 const PYTHON_FIXTURE_IGNORE = Object.freeze([
   `**/${SWEBENCH_VENV_DIR}/**`,
+  `${SWEBENCH_TEST_WRAPPER_BASENAME}.cmd`,
+  `${SWEBENCH_TEST_WRAPPER_BASENAME}.sh`,
   "**/__pycache__/**",
   "**/*.pyc",
   "**/.pytest_cache/**",
@@ -51,7 +54,7 @@ export const BENCHMARK_DIRECTIVES = `## Benchmark constraints
 - Create one patch-producing implementation task for this instance. Do not split the work into standalone inspect, locate, or verify tasks; fold that work into the implementation task.
 - Fold inspection/verification into the implementation task. Do not create a standalone verification-only task unless it genuinely needs no source edits.
 - Before \`task_done\`, run the full configured test command. If the full suite is too slow after it starts, also run the strongest targeted semantic validation available and record both outcomes.
-- Use the configured benchmark Python command for verification; do not switch to global Python or patch build/version/logger/compiler files to work around local environment setup.
+- Use only the configured project test command for verification; do not invoke \`.venv-swebench\` paths directly, switch to global Python, or patch build/version/logger/compiler files to work around local environment setup.
 - Before \`task_done\`, self-review the final patch: re-read every changed source file, compare the diff to the problem statement, confirm no existing tests or dependencies were changed, and remove any placeholder/debug code.
 - Completion contract: if a task genuinely requires no file changes, call \`task_done\` with \`no_changes_needed: true\` and explain why in the notes. Otherwise the dev-loop completion gate rejects \`task_done\` because there are no file operations to verify.
 `;
@@ -62,6 +65,17 @@ export const STATUS_VERIFICATION_ENVIRONMENT_BLOCKED = "verification_environment
 export const STATUS_AGENT_PATCH_POLLUTED = "agent_patch_polluted";
 export const SWEBENCH_DEFAULT_BUILD_COMMAND = "node --version";
 export const SWEBENCH_DEFAULT_TEST_COMMAND = "python -m pytest";
+export const SWEBENCH_PROJECT_TEST_EXTRA = ".[test]";
+export const SWEBENCH_LEGACY_BUILD_REQUIREMENTS = Object.freeze([
+  "setuptools<60",
+  "setuptools_scm<7",
+  "wheel",
+  "extension-helpers<1",
+  "cython<3",
+  "oldest-supported-numpy",
+  "pytest>=7,<8",
+  "pytest-openfiles",
+]);
 const MAX_BETWEEN_STEP_WAIT_MS = 1_000;
 
 export function resolveSwebenchProjectCommand(envName, env = process.env) {
@@ -72,6 +86,29 @@ export function resolveSwebenchProjectCommand(envName, env = process.env) {
   return envName === "AURA_BENCH_TEST_COMMAND"
     ? SWEBENCH_DEFAULT_TEST_COMMAND
     : SWEBENCH_DEFAULT_BUILD_COMMAND;
+}
+
+function sanitizePathSegment(value, fallback = "run") {
+  const sanitized = String(value ?? "")
+    .replace(/[^A-Za-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return sanitized || fallback;
+}
+
+export function resolveSwebenchWorkRoot(outDir, {
+  env = process.env,
+  platform = process.platform,
+} = {}) {
+  const configured = env?.AURA_BENCH_WORK_ROOT;
+  if (typeof configured === "string" && configured.trim().length > 0) {
+    return path.resolve(configured.trim());
+  }
+  if (platform === "win32") {
+    const driveRoot = path.parse(path.resolve(outDir)).root || "C:\\";
+    const runSlug = sanitizePathSegment(path.basename(path.resolve(outDir)), "swebench");
+    return path.join(driveRoot, "aura-swe", runSlug);
+  }
+  return path.join(outDir, "work");
 }
 
 function splitCommandLine(value) {
@@ -89,19 +126,12 @@ function splitCommandLine(value) {
   });
 }
 
-function commandForShell(parts) {
-  return parts.map((part) => {
-    const value = String(part);
-    if (/^[A-Za-z0-9_./:=+-]+$/.test(value)) return value;
-    return `"${value.replaceAll('"', '\\"')}"`;
-  }).join(" ");
-}
-
 function runProcess(command, args, options = {}) {
   const result = spawnSync(command, args, {
     stdio: ["ignore", "pipe", "pipe"],
     cwd: options.cwd,
     encoding: "utf8",
+    env: options.env,
     maxBuffer: options.maxBuffer ?? 32 * 1024 * 1024,
     timeout: options.timeoutMs,
   });
@@ -174,6 +204,81 @@ export function swebenchVenvPythonPath(workspaceDir, platform = process.platform
     : path.join(workspaceDir, SWEBENCH_VENV_DIR, "bin", "python");
 }
 
+export function swebenchVenvPythonCommand(platform = process.platform) {
+  return platform === "win32"
+    ? `${SWEBENCH_VENV_DIR}/Scripts/python.exe`
+    : `${SWEBENCH_VENV_DIR}/bin/python`;
+}
+
+export function swebenchTestWrapperName(platform = process.platform) {
+  return platform === "win32"
+    ? `${SWEBENCH_TEST_WRAPPER_BASENAME}.cmd`
+    : `${SWEBENCH_TEST_WRAPPER_BASENAME}.sh`;
+}
+
+export function swebenchTestCommand(platform = process.platform) {
+  const wrapperName = swebenchTestWrapperName(platform);
+  return platform === "win32"
+    ? `cmd /C ${wrapperName}`
+    : `sh ${wrapperName}`;
+}
+
+export function swebenchTestWrapperContents(platform = process.platform) {
+  if (platform === "win32") {
+    return [
+      "@echo off",
+      "setlocal",
+      "\"%~dp0.venv-swebench\\Scripts\\python.exe\" -m pytest %*",
+      "exit /b %ERRORLEVEL%",
+      "",
+    ].join("\r\n");
+  }
+  return [
+    "#!/usr/bin/env sh",
+    "set -eu",
+    "\"$(dirname \"$0\")/.venv-swebench/bin/python\" -m pytest \"$@\"",
+    "",
+  ].join("\n");
+}
+
+export async function writeSwebenchTestWrapper(workspaceDir, platform = process.platform) {
+  const wrapperPath = path.join(workspaceDir, swebenchTestWrapperName(platform));
+  await fs.writeFile(wrapperPath, swebenchTestWrapperContents(platform), "utf8");
+  if (platform !== "win32") {
+    await fs.chmod(wrapperPath, 0o755);
+  }
+  return wrapperPath;
+}
+
+export function swebenchBootstrapInstallSteps() {
+  return [
+    {
+      stage: "install_build_tools",
+      label: "python env: installed legacy-compatible build tooling",
+      args: [
+        "-m",
+        "pip",
+        "install",
+        "--disable-pip-version-check",
+        ...SWEBENCH_LEGACY_BUILD_REQUIREMENTS,
+      ],
+    },
+    {
+      stage: "install_project",
+      label: "python env: installed editable project with declared test extras",
+      args: [
+        "-m",
+        "pip",
+        "install",
+        "--disable-pip-version-check",
+        "--no-build-isolation",
+        "-e",
+        SWEBENCH_PROJECT_TEST_EXTRA,
+      ],
+    },
+  ];
+}
+
 export async function bootstrapSwebenchPythonEnv(workspaceDir, {
   env = process.env,
   platform = process.platform,
@@ -218,36 +323,35 @@ export async function bootstrapSwebenchPythonEnv(workspaceDir, {
   log(`python env: created ${SWEBENCH_VENV_DIR} with ${resolved.source} (${resolved.version})`);
 
   if (env?.AURA_BENCH_BOOTSTRAP_PYTHON_DEPS !== "0") {
-    const install = runProcess(venvPython, [
-      "-m",
-      "pip",
-      "install",
-      "--disable-pip-version-check",
-      "pytest",
-      "-e",
-      ".",
-    ], {
-      cwd: workspaceDir,
-      timeoutMs: 600_000,
-      maxBuffer: 128 * 1024 * 1024,
-    });
-    if (install.code !== 0) {
-      return {
-        ok: false,
-        stage: "install_deps",
-        reason: install.stderr || install.stdout || `pip install exited ${install.code}`,
-        python: resolved,
-      };
+    for (const step of swebenchBootstrapInstallSteps()) {
+      const install = runProcess(venvPython, step.args, {
+        cwd: workspaceDir,
+        timeoutMs: 600_000,
+        maxBuffer: 128 * 1024 * 1024,
+        env,
+      });
+      if (install.code !== 0) {
+        return {
+          ok: false,
+          stage: step.stage,
+          reason: install.stderr || install.stdout || `pip install exited ${install.code}`,
+          python: resolved,
+        };
+      }
+      log(step.label);
     }
-    log("python env: installed pytest and editable project");
   }
+
+  const wrapperPath = await writeSwebenchTestWrapper(workspaceDir, platform);
+  log(`python env: wrote test wrapper ${path.basename(wrapperPath)}`);
 
   return {
     ok: true,
     python: resolved,
     venvDir,
     venvPython,
-    testCommand: `${commandForShell([venvPython])} -m pytest`,
+    testWrapper: path.basename(wrapperPath),
+    testCommand: swebenchTestCommand(platform),
   };
 }
 
@@ -521,7 +625,9 @@ function isBenchmarkArtifactPath(rawPath) {
   return cleaned === "requirements.md"
     || cleaned.startsWith("spec/")
     || cleaned === SWEBENCH_VENV_DIR
-    || cleaned.startsWith(`${SWEBENCH_VENV_DIR}/`);
+    || cleaned.startsWith(`${SWEBENCH_VENV_DIR}/`)
+    || cleaned === `${SWEBENCH_TEST_WRAPPER_BASENAME}.cmd`
+    || cleaned === `${SWEBENCH_TEST_WRAPPER_BASENAME}.sh`;
 }
 
 function parseDiffHeaderPaths(headerLine) {
@@ -899,7 +1005,8 @@ export function detectVerificationEnvironmentBlock({ auraPayload, platform = pro
     || /\bcannot run due to\b/.test(text)
     || /\bbroken extension build\b/.test(text)
     || /\bvisual c\+\+\b|\bmsvc\b|\bnmake\b/.test(text)
-    || /\bloggingerror\b/.test(text);
+    || /\bloggingerror\b/.test(text)
+    || /task_done test gate failed to execute|failed to execute build command|os error 123/.test(text);
 
   if (!nativeWindows || !unsupportedEnvironment) {
     return { blocked: false, reason: null, platform, evidence: [] };
@@ -908,6 +1015,9 @@ export function detectVerificationEnvironmentBlock({ auraPayload, platform = pro
   const evidence = [];
   if (/\bvisual c\+\+\b|\bmsvc\b|\bnmake\b/.test(text)) evidence.push("native_windows_compiler_failure");
   if (/\bloggingerror\b/.test(text)) evidence.push("astropy_logging_import_failure");
+  if (/task_done test gate failed to execute|failed to execute build command|os error 123/.test(text)) {
+    evidence.push("task_done_test_gate_execution_failure");
+  }
   if (/\benvironment has issues unrelated\b|\btest infrastructure cannot run\b|\bcannot run due to\b/.test(text)) {
     evidence.push("agent_reported_environment_blocker");
   }
@@ -955,8 +1065,15 @@ export function guardSwebenchPredictionPatch({ patch, instance, auraPayload = nu
   };
 }
 
-function classifyAuraOutcome(payload) {
+export function classifyAuraOutcome(payload) {
   if (!payload || typeof payload !== "object") return null;
+  const text = taskOutputText(payload);
+  if (/task_done (?:test gate failed to execute|blocked by Definition-of-Done test gate)/i.test(text)) {
+    return {
+      status: "agent_error",
+      message: "AURA dev loop reached done after task_done test gate failure",
+    };
+  }
   const doneTasks = Number(payload.counts?.doneTasks ?? 0);
   const failedTasks = Number(payload.counts?.failedTasks ?? 0);
   const taskCount = Number(payload.counts?.tasks ?? 0);
@@ -1139,10 +1256,14 @@ async function shallowCloneInstance(repo, baseCommit, destDir, log) {
 
 async function excludeBenchmarkArtifactsFromWorkspace(workspaceDir) {
   const excludePath = path.join(workspaceDir, ".git", "info", "exclude");
-  const entry = `\n# AURA SWE-bench local verification artifacts\n/${SWEBENCH_VENV_DIR}/\n`;
+  const entry = `\n# AURA SWE-bench local verification artifacts\n/${SWEBENCH_VENV_DIR}/\n/${SWEBENCH_TEST_WRAPPER_BASENAME}.cmd\n/${SWEBENCH_TEST_WRAPPER_BASENAME}.sh\n`;
   try {
     const current = await fs.readFile(excludePath, "utf8");
-    if (current.includes(`/${SWEBENCH_VENV_DIR}/`)) return;
+    if (
+      current.includes(`/${SWEBENCH_VENV_DIR}/`)
+      && current.includes(`/${SWEBENCH_TEST_WRAPPER_BASENAME}.cmd`)
+      && current.includes(`/${SWEBENCH_TEST_WRAPPER_BASENAME}.sh`)
+    ) return;
     await fs.appendFile(excludePath, entry, "utf8");
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
@@ -1205,7 +1326,7 @@ export function buildScenario(instance, workspaceDir, options = {}) {
   const testCommand = options.testCommand
     ?? resolveSwebenchProjectCommand("AURA_BENCH_TEST_COMMAND");
   const venvInstruction = options.pythonEnv?.testCommand
-    ? ` Use the prepared benchmark Python environment for verification: \`${options.pythonEnv.testCommand}\`. Do not use global Python for this instance.`
+    ? ` Use the prepared benchmark Python environment only through the configured project test command: \`${options.pythonEnv.testCommand}\`. Do not invoke .venv-swebench paths directly and do not use global Python for this instance.`
     : "";
   return {
     id: `swebench-${id}`,
@@ -1594,6 +1715,7 @@ async function runOneInstance({
       skipped: pythonEnv.skipped ?? false,
       source: pythonEnv.python?.source ?? null,
       version: pythonEnv.python?.version ?? null,
+      test_wrapper: pythonEnv.testWrapper ?? null,
       test_command: pythonEnv.testCommand,
     }
     : pythonEnv;
@@ -1922,8 +2044,11 @@ async function main(rawArgv) {
   }
 
   await fs.mkdir(outDir, { recursive: true });
-  const workRoot = path.join(outDir, "work");
+  const workRoot = resolveSwebenchWorkRoot(outDir);
   await fs.mkdir(workRoot, { recursive: true });
+  if (path.resolve(workRoot) !== path.resolve(path.join(outDir, "work"))) {
+    process.stderr.write(`[swebench] using short work root ${workRoot}\n`);
+  }
 
   // Load and filter the manifest.
   let manifestRecords;
@@ -2179,6 +2304,7 @@ async function main(rawArgv) {
     request_contract: requestContractTotals,
     aborted_due_to_cost_cap: costState.aborted,
     out_dir: outDir,
+    work_root: workRoot,
     resumed: resumed || undefined,
   };
 

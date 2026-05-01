@@ -11,6 +11,7 @@ import {
   bootstrapSwebenchPythonEnv,
   buildScenario,
   buildRequirementsMd,
+  classifyAuraOutcome,
   detectVerificationEnvironmentBlock,
   findLatestRunDir,
   guardSwebenchPredictionPatch,
@@ -23,13 +24,22 @@ import {
   requestContractSummaryFromPayload,
   resolveSwebenchProjectCommand,
   resolveResumeOutDir,
+  resolveSwebenchWorkRoot,
   runWithPool,
   shouldWritePredictionForStatus,
   SWEBENCH_DEFAULT_BUILD_COMMAND,
   SWEBENCH_DEFAULT_TEST_COMMAND,
+  SWEBENCH_LEGACY_BUILD_REQUIREMENTS,
+  SWEBENCH_PROJECT_TEST_EXTRA,
+  SWEBENCH_TEST_WRAPPER_BASENAME,
   SWEBENCH_VENV_DIR,
   stripBenchmarkArtifactsFromDiff,
   stripTestEditsFromDiff,
+  swebenchBootstrapInstallSteps,
+  swebenchTestCommand,
+  swebenchTestWrapperContents,
+  swebenchTestWrapperName,
+  swebenchVenvPythonCommand,
   swebenchVenvPythonPath,
 } from "./run-swebench.mjs";
 import { extractTypedFailureReport } from "./lib/request-contract-reporting.mjs";
@@ -53,6 +63,7 @@ test("BENCHMARK_DIRECTIVES is a single shared constant", () => {
   assert.match(BENCHMARK_DIRECTIVES, /Fold inspection\/verification into the implementation task/);
   assert.match(BENCHMARK_DIRECTIVES, /self-review the final patch/);
   assert.match(BENCHMARK_DIRECTIVES, /re-read every changed source file/);
+  assert.match(BENCHMARK_DIRECTIVES, /do not invoke `\.venv-swebench` paths directly/);
   assert.match(BENCHMARK_DIRECTIVES, /no_changes_needed: true/);
 });
 
@@ -71,20 +82,50 @@ test("SWE-bench project command honours explicit operator overrides", () => {
   }), "python -m pytest -q");
 });
 
+test("resolveSwebenchWorkRoot keeps native Windows builds out of deep report dirs", () => {
+  const outDir = "C:/code/aura-os/infra/evals/reports/external/swebench_verified/aura-abc-20260430";
+  const workRoot = resolveSwebenchWorkRoot(outDir, {
+    env: {},
+    platform: "win32",
+  }).replaceAll("\\", "/");
+
+  assert.equal(workRoot, "C:/aura-swe/aura-abc-20260430");
+});
+
+test("resolveSwebenchWorkRoot honours explicit operator override", () => {
+  const workRoot = resolveSwebenchWorkRoot("C:/reports/aura-run", {
+    env: { AURA_BENCH_WORK_ROOT: "C:/tmp/custom-swe-work" },
+    platform: "win32",
+  }).replaceAll("\\", "/");
+
+  assert.equal(workRoot, "C:/tmp/custom-swe-work");
+});
+
+test("resolveSwebenchWorkRoot keeps non-Windows work under the report directory", () => {
+  assert.equal(
+    resolveSwebenchWorkRoot("/tmp/reports/aura-run", {
+      env: {},
+      platform: "linux",
+    }).replaceAll("\\", "/"),
+    "/tmp/reports/aura-run/work",
+  );
+});
+
 test("buildScenario can route the test gate through a prepared venv", () => {
   const scenario = buildScenario(SAMPLE_INSTANCE, "/tmp/workspace", {
-    testCommand: "\"/tmp/workspace/.venv-swebench/bin/python\" -m pytest",
+    testCommand: `sh ${SWEBENCH_TEST_WRAPPER_BASENAME}.sh`,
     pythonEnv: {
-      testCommand: "\"/tmp/workspace/.venv-swebench/bin/python\" -m pytest",
+      testCommand: `sh ${SWEBENCH_TEST_WRAPPER_BASENAME}.sh`,
     },
   });
 
   assert.equal(
     scenario.project.testCommand,
-    "\"/tmp/workspace/.venv-swebench/bin/python\" -m pytest",
+    `sh ${SWEBENCH_TEST_WRAPPER_BASENAME}.sh`,
   );
   assert.match(scenario.agentTemplate.systemPrompt, /prepared benchmark Python environment/);
-  assert.match(scenario.agentTemplate.systemPrompt, /Do not use global Python/);
+  assert.match(scenario.agentTemplate.systemPrompt, /do not use global Python/);
+  assert.match(scenario.agentTemplate.systemPrompt, /Do not invoke \.venv-swebench paths directly/);
 });
 
 test("swebenchVenvPythonPath returns platform-specific venv python paths", () => {
@@ -98,6 +139,34 @@ test("swebenchVenvPythonPath returns platform-specific venv python paths", () =>
   );
 });
 
+test("swebenchVenvPythonCommand uses parser-safe relative paths", () => {
+  assert.equal(
+    swebenchVenvPythonCommand("win32"),
+    `${SWEBENCH_VENV_DIR}/Scripts/python.exe`,
+  );
+  assert.equal(
+    swebenchVenvPythonCommand("linux"),
+    `${SWEBENCH_VENV_DIR}/bin/python`,
+  );
+});
+
+test("swebenchTestCommand routes verification through a project wrapper", () => {
+  assert.equal(
+    swebenchTestWrapperName("win32"),
+    `${SWEBENCH_TEST_WRAPPER_BASENAME}.cmd`,
+  );
+  assert.equal(swebenchTestCommand("win32"), `cmd /C ${SWEBENCH_TEST_WRAPPER_BASENAME}.cmd`);
+  assert.match(
+    swebenchTestWrapperContents("win32"),
+    /"%~dp0\.venv-swebench\\Scripts\\python\.exe" -m pytest %\*/,
+  );
+  assert.equal(swebenchTestCommand("linux"), `sh ${SWEBENCH_TEST_WRAPPER_BASENAME}.sh`);
+  assert.match(
+    swebenchTestWrapperContents("linux"),
+    /\.venv-swebench\/bin\/python" -m pytest "\$@"/,
+  );
+});
+
 test("bootstrapSwebenchPythonEnv only auto-enables venv on native Windows", async () => {
   const result = await bootstrapSwebenchPythonEnv("/tmp/workspace", {
     env: {},
@@ -107,6 +176,27 @@ test("bootstrapSwebenchPythonEnv only auto-enables venv on native Windows", asyn
   assert.equal(result.ok, true);
   assert.equal(result.skipped, true);
   assert.equal(result.testCommand, "python -m pytest");
+});
+
+test("swebenchBootstrapInstallSteps pins legacy build tooling before editable install", () => {
+  const steps = swebenchBootstrapInstallSteps();
+
+  assert.equal(steps.length, 2);
+  assert.equal(steps[0].stage, "install_build_tools");
+  assert.deepEqual(
+    steps[0].args.slice(0, 4),
+    ["-m", "pip", "install", "--disable-pip-version-check"],
+  );
+  assert.ok(SWEBENCH_LEGACY_BUILD_REQUIREMENTS.includes("setuptools<60"));
+  assert.ok(SWEBENCH_LEGACY_BUILD_REQUIREMENTS.includes("extension-helpers<1"));
+  assert.ok(SWEBENCH_LEGACY_BUILD_REQUIREMENTS.includes("pytest>=7,<8"));
+  assert.ok(SWEBENCH_LEGACY_BUILD_REQUIREMENTS.includes("pytest-openfiles"));
+  assert.ok(steps[0].args.includes("setuptools<60"));
+  assert.equal(steps[1].stage, "install_project");
+  assert.ok(steps[1].args.includes("--no-build-isolation"));
+  assert.ok(steps[1].args.includes("-e"));
+  assert.ok(steps[1].args.includes(SWEBENCH_PROJECT_TEST_EXTRA));
+  assert.ok(!steps[1].args.includes("."));
 });
 
 test("Cloudflare-blocked statuses do not write predictions", () => {
@@ -417,6 +507,31 @@ test("stripBenchmarkArtifactsFromDiff removes local SWE-bench venv artifacts", (
   assert.doesNotMatch(result.patch, /pyvenv\.cfg/);
 });
 
+test("stripBenchmarkArtifactsFromDiff removes local SWE-bench test wrapper artifacts", () => {
+  const diff = [
+    `diff --git a/${SWEBENCH_TEST_WRAPPER_BASENAME}.cmd b/${SWEBENCH_TEST_WRAPPER_BASENAME}.cmd`,
+    "new file mode 100644",
+    "--- /dev/null",
+    `+++ b/${SWEBENCH_TEST_WRAPPER_BASENAME}.cmd`,
+    "@@ -0,0 +1 @@",
+    "+cmd /C pytest",
+    "diff --git a/src/module.py b/src/module.py",
+    "index 1111111..2222222 100644",
+    "--- a/src/module.py",
+    "+++ b/src/module.py",
+    "@@ -1 +1 @@",
+    "-old",
+    "+new",
+    "",
+  ].join("\n");
+
+  const result = stripBenchmarkArtifactsFromDiff(diff);
+
+  assert.equal(result.strippedHunks, 1);
+  assert.match(result.patch, /src\/module.py/);
+  assert.doesNotMatch(result.patch, /aura-swebench-test\.cmd/);
+});
+
 test("stripBenchmarkArtifactsFromDiff handles empty input", () => {
   assert.deepEqual(stripBenchmarkArtifactsFromDiff(""), { patch: "", strippedHunks: 0 });
   assert.deepEqual(stripBenchmarkArtifactsFromDiff(null), { patch: "", strippedHunks: 0 });
@@ -502,6 +617,36 @@ test("detectVerificationEnvironmentBlock marks native Windows setup failures as 
   assert.equal(result.blocked, true);
   assert.equal(result.platform, "win32");
   assert.ok(result.evidence.includes("agent_reported_environment_blocker"));
+});
+
+test("detectVerificationEnvironmentBlock marks native Windows task_done execution failures", () => {
+  const result = detectVerificationEnvironmentBlock({
+    auraPayload: {
+      taskOutputs: {
+        task: {
+          output: "ERROR: task_done test gate failed to execute `.venv-swebench/Scripts/python.exe -m pytest`: failed to execute build command: os error 123",
+        },
+      },
+    },
+    platform: "win32",
+  });
+
+  assert.equal(result.blocked, true);
+  assert.ok(result.evidence.includes("task_done_test_gate_execution_failure"));
+});
+
+test("classifyAuraOutcome rejects done tasks after task_done gate execution failure", () => {
+  const result = classifyAuraOutcome({
+    counts: { tasks: 1, doneTasks: 1, failedTasks: 0 },
+    taskOutputs: {
+      task: {
+        output: "ERROR: task_done test gate failed to execute `.venv-swebench/Scripts/python.exe -m pytest`: os error 123",
+      },
+    },
+  });
+
+  assert.equal(result.status, "agent_error");
+  assert.match(result.message, /task_done test gate failure/);
 });
 
 test("parseArgs supports the documented CLI flags", () => {

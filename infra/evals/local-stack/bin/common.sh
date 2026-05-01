@@ -83,21 +83,13 @@ stack_load_env() {
   # canonical 429/400. Keep SWE/local-stack LLM egress paced by default;
   # set to 0 for private/local router endpoints.
   export AURA_STACK_HARNESS_LLM_MIN_REQUEST_INTERVAL_MS="${AURA_STACK_HARNESS_LLM_MIN_REQUEST_INTERVAL_MS:-2500}"
-  # Cloudflare WAF in front of aura-router has been observed to 403 on
-  # chat-path bodies above ~37-38KB (49 tools + accumulated tool results
-  # in spec/task generation). The harness ships an emergency body cap that
-  # truncates the largest text block in the last user message before the
-  # request leaves the host. We default to 32KB here — well under the
-  # observed cliff and above the typical dev-loop ceiling (~22KB) — so
-  # only oversized chat-path requests get trimmed. Set to `0` to disable.
+  # Emergency body truncation is disabled by default. The previous default cap
+  # was useful while diagnosing router 403s, but current failures are better
+  # caught by request-shape contracts; late truncation often cannot help because
+  # most oversized SWE requests are system/tool/history overhead, not a large
+  # truncatable user payload. Set this only for targeted diagnostics.
   # See `aura-harness/crates/aura-reasoner/src/anthropic/provider.rs::maybe_apply_emergency_body_cap`.
-  # Default cap lowered from 32768 to 24576 after the WAF was observed
-  # rejecting bodies as small as ~32KB when content patterns are dense
-  # (Python code blocks, file paths, escaped `&` operators). 24KB gives
-  # ~8KB of headroom below the empirical cliff and still preserves the
-  # last user message's largest payload after truncation. Operators can
-  # raise/lower via AURA_STACK_HARNESS_LLM_EMERGENCY_BODY_CAP_BYTES.
-  export AURA_STACK_HARNESS_LLM_EMERGENCY_BODY_CAP_BYTES="${AURA_STACK_HARNESS_LLM_EMERGENCY_BODY_CAP_BYTES:-24576}"
+  export AURA_STACK_HARNESS_LLM_EMERGENCY_BODY_CAP_BYTES="${AURA_STACK_HARNESS_LLM_EMERGENCY_BODY_CAP_BYTES:-0}"
   export AURA_STACK_HARNESS_LLM_DEBUG_REQUEST_DUMP_DIR="${AURA_STACK_HARNESS_LLM_DEBUG_REQUEST_DUMP_DIR:-$AURA_STACK_RUNTIME_DIR/llm-request-dumps}"
   # Operator overrides for the harness's `task_done` test gate. Use
   # `AURA_STACK_HARNESS_DOD_DISABLE_TEST_GATE=1` for quick scripted

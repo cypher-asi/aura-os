@@ -159,6 +159,27 @@ test("createBenchmarkClient returns a method-bound client when given valid optio
   assert.equal(typeof client.logStep, "function");
 });
 
+test("cleanupEntity treats conflict as an expected cleanup outcome", async () => {
+  const previousFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async () => ({ ok: false, status: 409 });
+    const client = createBenchmarkClient({
+      apiBaseUrl: "http://127.0.0.1:3190",
+      accessToken: "abc",
+      verbose: false,
+    });
+    const result = await client.cleanupEntity("agent", "agent-1", "/api/agents/agent-1");
+    assert.deepEqual(result, {
+      resource: "agent",
+      id: "agent-1",
+      ok: true,
+      status: 409,
+    });
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
+
 test("storageJson resolves to an empty array when no storageUrl is set", async () => {
   const client = createBenchmarkClient({
     apiBaseUrl: "http://127.0.0.1:3190",
@@ -189,8 +210,8 @@ test("resolveModelCooldownMs defaults off and honors positive values", () => {
   assert.equal(resolveModelCooldownMs("0"), 0);
   assert.equal(resolveModelCooldownMs("-1"), 0);
   assert.equal(resolveModelCooldownMs("not-a-number"), 0);
-  assert.equal(resolveModelCooldownMs(" 1500.9 "), 1500);
-  assert.equal(resolveModelCooldownMs(2500.8), 2500);
+  assert.equal(resolveModelCooldownMs(" 1500.9 "), 1_000);
+  assert.equal(resolveModelCooldownMs(2500.8), 1_000);
 });
 
 test("sumBuildAndTestSteps counts harness output markers", () => {
