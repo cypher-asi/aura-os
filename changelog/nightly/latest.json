@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-01T02:54:35.862Z",
+  "generatedAt": "2026-05-01T04:40:01.584Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.421.1",
+  "version": "0.1.0-nightly.422.1",
   "date": "2026-04-30",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.421.1",
-  "lastIncludedSha": "e46714fd6bad53b81c4e8ed6385b2a8ee20fa32c",
-  "previousProcessedSha": "d777b4bc71a6f1fd8d3b8467a615a1d56f6518ff",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.422.1",
+  "lastIncludedSha": "07a20d5cf4cf6335576aae5c00c0066e6235329f",
+  "previousProcessedSha": "e46714fd6bad53b81c4e8ed6385b2a8ee20fa32c",
   "commitShas": [
     "cbf003bec0f4907753480903cb975f07cff6c14c",
     "d9776a3f3fdb41162e347b97966bb59d9103ef6f",
@@ -89,10 +89,11 @@
     "74726eea7910ff7e485ea18951d94a7bf25cd9fb",
     "e22a0b3741f34b8ea9ca76034a174391206e9314",
     "4b95a86a21b142a00ba6135ce0abe4c45abedb1f",
-    "56e3e8506e68ef0421f26a3939f3f37fa1e92e9e"
+    "56e3e8506e68ef0421f26a3939f3f37fa1e92e9e",
+    "07a20d5cf4cf6335576aae5c00c0066e6235329f"
   ],
-  "rawCommitCount": 79,
-  "filteredCommitCount": 78,
+  "rawCommitCount": 80,
+  "filteredCommitCount": 79,
   "rawCommits": [
     {
       "sha": "cbf003bec0f4907753480903cb975f07cff6c14c",
@@ -3406,6 +3407,70 @@
       "fileGroups": [],
       "primaryArea": "Other",
       "areas": []
+    },
+    {
+      "sha": "07a20d5cf4cf6335576aae5c00c0066e6235329f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-30T21:26:47-07:00",
+      "subject": "fix: surface packaged desktop boot failures",
+      "body": "Add production boot diagnostics and release asset validation so broken packaged frontend bundles fail CI and users no longer see an endless splash screen.\n\nMade-with: Cursor",
+      "parents": [
+        "e46714fd6bad53b81c4e8ed6385b2a8ee20fa32c"
+      ],
+      "files": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "apps/aura-os-desktop/src/init/init_script.rs",
+        "infra/scripts/release/desktop-ci-smoke.mjs",
+        "infra/scripts/release/desktop-frontend-assets-validate.mjs",
+        "infra/scripts/release/desktop-frontend-assets-validate.test.mjs",
+        "interface/index.html",
+        "interface/src/App.tsx",
+        "interface/src/lib/boot-diagnostics.ts",
+        "interface/src/lib/boot-shell.test.ts",
+        "interface/src/lib/boot-shell.ts",
+        "interface/src/main.tsx",
+        "interface/src/vite-env.d.ts",
+        "scripts/ci/verify-desktop.mjs"
+      ],
+      "stats": {
+        "fileCount": 15,
+        "insertions": 404,
+        "deletions": 13
+      },
+      "committedAtMs": 1777609607000,
+      "cleanSubject": "surface packaged desktop boot failures",
+      "keywords": [
+        "surface",
+        "packaged",
+        "desktop",
+        "boot",
+        "failures"
+      ],
+      "fileGroups": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "apps/aura-os-desktop/src",
+        "infra/scripts/release",
+        "interface/index.html",
+        "interface/src/App.tsx",
+        "interface/src/lib",
+        "interface/src/main.tsx",
+        "interface/src/vite-env.d.ts",
+        "scripts/ci/verify-desktop.mjs"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Release Infrastructure",
+        "Other",
+        "Desktop"
+      ]
     }
   ],
   "batchCount": 6,
@@ -3417,36 +3482,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11564048
+          "sizeBytes": 11565492
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.421.1",
+      "version": "0.1.0-nightly.422.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.421.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.422.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 35116376
+          "sizeBytes": 35117942
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.421.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.422.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.421.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.422.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 102377976
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.421.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.422.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -3456,29 +3521,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.421.1",
+      "version": "0.1.0-nightly.422.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.421.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.422.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 31677303
+          "sizeBytes": 31675328
         },
         {
-          "name": "Aura_0.1.0-nightly.421.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.422.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.421.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.422.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 31482094
+          "sizeBytes": 31482078
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.421.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.422.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -3488,29 +3553,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.421.1",
+      "version": "0.1.0-nightly.422.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.421.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.422.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33217650
+          "sizeBytes": 33226389
         },
         {
-          "name": "Aura_0.1.0-nightly.421.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.422.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.421.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.422.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33069114
+          "sizeBytes": 33069531
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.421.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.422.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -3520,17 +3585,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.421.1",
+      "version": "0.1.0-nightly.422.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.421.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.422.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 23935872
+          "sizeBytes": 23938965
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.421.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.422.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -3539,193 +3604,128 @@
     }
   ],
   "rendered": {
-    "title": "Cold-start polish, external benchmark lane, and a long SWE-bench reliability push",
-    "intro": "A heavy day across the stack: Aura's desktop boot got noticeably faster and steadier, a brand-new external benchmark lane for SWE-bench Verified and Terminal-Bench 2 landed, and the eval infrastructure went through a multi-hour reliability marathon to keep automation traffic from tripping Cloudflare. Smaller polish hit the chat surface, the pricing modal, and protocol bindings.",
+    "title": "External benchmark lane lands; desktop boot and SWE-bench reliability hardened",
+    "intro": "Today's nightly is dominated by a sweeping push to make Aura measurable against public coding benchmarks and to close the long tail of issues that surfaced once the eval pipeline started running for real. Alongside that, the desktop got a faster authenticated cold open, chat trimmed memory and visual jitter, and the packaged desktop now refuses to ship with a broken frontend bundle.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "9:35 PM",
         "started_at": "2026-04-27T04:35:06.000Z",
-        "ended_at": "2026-04-30T02:52:16.000Z",
-        "title": "Desktop cold-start performance wave",
-        "summary": "A coordinated push tightened the authenticated cold-open path, deferred heavy work off the critical path, and bounded long-running memory growth in chat.",
+        "ended_at": "2026-04-30T16:16:12.000Z",
+        "title": "SWE-bench and Terminal-Bench scoring lane goes live",
+        "summary": "A new external-benchmarks pipeline scores the full Aura org→spec→tasks→loop flow against SWE-bench Verified and Terminal-Bench 2, with the long tail of router, auth, harness, and prompt fixes needed to actually finish runs.",
         "items": [
           {
-            "text": "Desktop cold opens now reveal an auth-neutral splash while preserving the no-login-flash authenticated route, with startup readiness budgets captured as guardrails so this stays measurable.",
-            "commit_shas": [
-              "63a3e98a34d1b0defc2a3b70c6bf078a7e0cbc0b",
-              "9f76ae2d630d44fcdfe91864edb6915cb9ac7119"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Trimmed the critical path: highlight themes load lazily, Sidekick output panes defer, route/project loaders use lightweight fallbacks, and Projects/Tasks chunks preload on hover. Sidebar churn dropped via the existing virtualizer plus debounced search.",
-            "commit_shas": [
-              "4993abfe54d034dd1082dfdf49c498dd2f1622f7",
-              "3ee409c924cbe8d64160cc6c3b7c05c49c698916"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Chat transcripts batch non-terminal websocket events per animation frame and cap retained history so long sessions no longer grow unbounded; a duplicate-render and end-of-turn message blink were both fixed afterward.",
-            "commit_shas": [
-              "4b7565ef491652360da42c6f5932514269c72bab",
-              "1eca7c566df95ba4cf7b915461916a8f1430462b",
-              "f88e1aa85beeadf5098f13b7f1365f63213d675b",
-              "4df41219291481d7f52de6f798f47a4427d20b8c",
-              "879112d06e844a6881b711881a64f5926b46f572"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Server logs are quieter by default, fingerprinted interface assets are compressed and cached, and cross-project log aggregation is bounded; domain events are also fanned out via shared, ref-counted payloads instead of per-listener clones.",
-            "commit_shas": [
-              "a776d7417a3a36a41b7a30fae0b0dab4824e2bdc",
-              "162698d5c96713d4945ff8ce6bda0a21de95ae67"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Sidebar fade bands in the left navigation and Sidekick panel were halved so list content is less obscured.",
-            "commit_shas": [
-              "b63828936bb7d24f33b01212eec49a95527bdff7"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "New external benchmark lane scores the full Aura pipeline against SWE-bench Verified and Terminal-Bench 2, with a manual GitHub workflow, cost guard, baselines, PR-comment renderer, and a fail-fast live preflight that exercises auth, spec generation, task extraction, and the dev loop on a tiny fixture before any long run.",
+            "text": "Stood up the external benchmark lane: a SWE-bench Verified driver and Terminal-Bench 2 integration sharing a reusable benchmark-api-runner library, a manual-only GitHub workflow with cost guards and artifact uploads, and a PR-comment renderer for score deltas against committed baselines.",
             "commit_shas": [
               "acd1773f68cf9fb56aadbca3f2753cb5b80ca52b",
-              "85290bc7d46ecf1f0a53c1b60edf7a413aa7e9e8",
+              "85290bc7d46ecf1f0a53c1b60edf7a413aa7e9e8"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added a fail-fast live-pipeline preflight that exercises auth, spec generation, task extraction, and the dev loop on a tiny fixture before each long benchmark run, plus a `--resume` mode for SWE-bench that skips already-completed instances and reuses prior run directories after a crash.",
+            "commit_shas": [
               "d968e0ac363416ab7b77d05d6168e764d08be41f",
+              "89b23f75937184bd019403962f4062728fec7e77",
               "5a03bfac857150949c863051f94101a951e7c6fe",
               "5f412eaa0b15452d9b8086ba686f056cabe6a760"
             ],
             "confidence": "high"
           },
           {
-            "text": "SWE-bench runs gained --resume support: completed instances are skipped, predictions.jsonl is deduplicated, workspaces are reused when HEAD already matches base_commit, and score.json is synthesized from incremental runs even if the driver was killed.",
+            "text": "Aligned project-tool sessions (spec generation, summary, task extraction) with the chat path so harness requests carry the same system prompt, provider config, and per-session billing context, eliminating the Cloudflare 403s that had been killing post-tool-result LLM calls during eval runs.",
             "commit_shas": [
-              "89b23f75937184bd019403962f4062728fec7e77",
-              "37f218042d8b38f8530dd4d556480c9c3f30316c"
+              "95d4dfc32d140496b0f34eb0f47fcb588e626376",
+              "37f218042d8b38f8530dd4d556480c9c3f30316c",
+              "3153bd05ccf785bd45a9a49a564be5eff3859295",
+              "4ab682821d98b7cdd3d7df2bac67f100fcbfc39f",
+              "40cd88288ae2018f798cb85ffb887a85a5c0e5a9",
+              "3901736b4bf5a512bd11556d7c177c1f14ccc378"
             ],
             "confidence": "high"
           },
           {
-            "text": "Dev-loop and project-tool sessions now match the chat path's router shape end-to-end: stable v5 session ids per (project, instance, task), threaded org/session ids and template agent identity, full SessionInit-equivalent payload (system prompt, provider overrides, classifier context), and consistent harness URL and env handling. This was the underlying fix for repeated Cloudflare 403s on automation traffic against aura-router.",
+            "text": "Capped runaway tool loops and tightened error surfaces: project-tool sessions now bound max_turns and have server-side deadlines, the JS benchmark client uses an AbortController-backed fetch timeout, and the chat-route generate_specs/extract_tasks actions are also gated so the model can't loop list_specs→create_spec for minutes.",
             "commit_shas": [
-              "3153bd05ccf785bd45a9a49a564be5eff3859295",
-              "4ab682821d98b7cdd3d7df2bac67f100fcbfc39f",
-              "40cd88288ae2018f798cb85ffb887a85a5c0e5a9",
-              "3901736b4bf5a512bd11556d7c177c1f14ccc378",
-              "85aa438f29d76e832e766ea58229fc412ae7c70a",
+              "4d137da72aeb5ee3d1b7ba65600f50a69ca5a803",
+              "4b80362d2b792ae6e5c1f0b1f33ef261836d0451",
+              "4cffca5f1cdf998fbcceebc8434c9749563eadf4"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Fixed the local-stack harness wiring to mirror desktop sidecar behavior: AURA_LISTEN_ADDR matches the real desktop spawn, control-plane URLs (server, storage, network, orbit) are stamped from the running stack, and the harness now inherits LLM routing from its own .env so eval traffic stops getting amplified into Cloudflare retry storms.",
+            "commit_shas": [
+              "32a9a192bea04e51a25aec79b341ca001522976c",
+              "9f8c598c1f856d9fa59de96495c0fd5ef00d4a89",
+              "42503fcd3a6329c8a849a129d84555ca5a5ebbc2",
+              "984af20c209ec161133fc31c53f0f2cae74ace27",
               "ad54c9234c21c0522c79df28a71cd50bedf48863",
               "fc2ca01faaae66ef702502524e049936b83b35c7"
             ],
             "confidence": "high"
           },
           {
-            "text": "Project-tool sessions are now bounded against runaway LLM loops with a max_turns cap, a server-side tokio deadline, and an AbortController-based fetch timeout, applied to both the dedicated endpoints and the chat-route generate_specs/extract_tasks actions. CreateTask/UpdateTask and TransitionTask DTOs accept camelCase and a status alias so harness writes stop 422'ing and looping.",
+            "text": "Closed wire-format gaps that were silently failing eval writes: CreateTaskBody/UpdateTaskBody now accept camelCase, TransitionTaskRequest accepts a `status` alias, and the harness's create_task/transition_task calls land cleanly instead of looping on 422s.",
             "commit_shas": [
-              "4d137da72aeb5ee3d1b7ba65600f50a69ca5a803",
-              "4b80362d2b792ae6e5c1f0b1f33ef261836d0451",
               "ba31352c95b67d419cc23055e4090a9ddf4cf6c6",
               "c6a03cc2cb9bddcd7937bb9a5c951ec4daffff14"
             ],
             "confidence": "high"
           },
           {
-            "text": "Local eval stack got a long stabilization arc: shared auth/token sourcing with the app, dev JWT trust for local services, harness URL overrides so domain writes hit the right port, proxy-only routing, an LLM-path preflight probe with Cloudflare classification, and per-instance harness env that finally mirrors the desktop sidecar.",
+            "text": "Collapsed the harness LLM path to AURA proxy only — direct-provider routing, routing_mode, and api_key fields are gone from SessionConfig, replaced by a slim SessionModelOverrides — and reshaped image and 3D generation to flow through the same harness session as chat.",
             "commit_shas": [
-              "b32d0aa8b1d54c0f76e80cbe72e36f790201ac6f",
-              "bea6a03580d74c4a5026907e9f985f4658417a14",
-              "ba018d51f04f6602afbc50f992ca44b5ff6f9e14",
-              "1e50bd6f3a37f9b342a28603d48b805dd1bb5e7a",
-              "576c900a21fb4ee5460844b6371da7e1b3873c97",
-              "f00ffc8d6ce994ca4b2cba43d45ceb48d6dad6aa",
-              "32a9a192bea04e51a25aec79b341ca001522976c",
-              "9f8c598c1f856d9fa59de96495c0fd5ef00d4a89",
-              "42503fcd3a6329c8a849a129d84555ca5a5ebbc2",
-              "984af20c209ec161133fc31c53f0f2cae74ace27",
-              "1ddf91e8c5b65eeb6b2fe8a85f48b9e56e0e5ed0",
-              "8d00651af7d19d963ef6aea535f8a95cb4b08015",
-              "5bb4cb3fbf24159ed5883e2d501b158905f9fc93"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "SWE-bench task generation was reshaped: prompts now steer toward one patch-producing task per instance, require self-review and the strongest safe local validation before completion, gate completion on the configured Python test command, and document the no-change completion contract for verification-only work. Aggregation now emits machine-readable and markdown postmortems bucketed by failure mode, with retry support for unresolved instances.",
-            "commit_shas": [
-              "e42f98a6f2043773cb57ff8c1304f05ba535f560",
-              "0ed86284bbdb66a78be8c474f58a5fd98090eb6a",
-              "139dbda9b8f940a60bfc64a4ca9f8e5ced0a1a2d",
-              "d03116035b166c3b121f28bdb2da1bcd31e4370d",
-              "9e5bf10028175649b7498692d7299dbeddc5cec0",
-              "07e4753884a3ccd3234e115a0ea7b7d3d3c6d79d",
-              "64ca62aaee2aaa19f1347a712fafb706ebd197c7",
-              "2b86cd0738d0307bd0c65aec107b3ce1a2c6e1d4",
-              "5698a2fa8bcdfc6823252a2747b40ab49394370e",
-              "fc6438bce4cc00699bdcd026055ae39750ace180"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Cloudflare-blocked SWE-bench runs are now classified, throttled, and excluded from scoring instead of being amplified by parallel scheduling or producing misleading patches; harness log noise was also collapsed to one salient line per tool call.",
-            "commit_shas": [
-              "a1aa55a76196fb5cf3d7fc6873cbf5f44bd232f0",
-              "310f3c74c1daeb7b136ab8d776ac02f27ec7c73f",
-              "95d4dfc32d140496b0f34eb0f47fcb588e626376",
-              "6ca179b81fbc5a06c3c82232b728c067a993a009"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Image and 3D generation requests now flow through the harness session machinery instead of a separate router proxy, unifying the streaming path used by chat with media generation.",
-            "commit_shas": [
+              "982a6777dc27fae113fd651fdc814d2471df5f22",
               "5e19d275dff5cd23888e8a3338b860702adfa5d3"
             ],
             "confidence": "high"
           },
           {
-            "text": "Harness LLM transport collapsed to AURA proxy only: the wire now carries model overrides instead of a full provider config, and the direct-provider path was removed from both server and local-stack tooling.",
+            "text": "Sharpened SWE-bench output quality: prompts now require semantic local validation, patch self-review, and a no-change completion contract for verification-only tasks; runs can retry unresolved instances with official failure context; and aggregation emits machine-readable plus markdown postmortems bucketed by failure mode.",
             "commit_shas": [
-              "982a6777dc27fae113fd651fdc814d2471df5f22"
+              "e42f98a6f2043773cb57ff8c1304f05ba535f560",
+              "0ed86284bbdb66a78be8c474f58a5fd98090eb6a",
+              "139dbda9b8f940a60bfc64a4ca9f8e5ced0a1a2d",
+              "d03116035b166c3b121f28bdb2da1bcd31e4370d",
+              "07e4753884a3ccd3234e115a0ea7b7d3d3c6d79d",
+              "64ca62aaee2aaa19f1347a712fafb706ebd197c7",
+              "9e5bf10028175649b7498692d7299dbeddc5cec0",
+              "310f3c74c1daeb7b136ab8d776ac02f27ec7c73f",
+              "fc6438bce4cc00699bdcd026055ae39750ace180",
+              "a1aa55a76196fb5cf3d7fc6873cbf5f44bd232f0",
+              "2b86cd0738d0307bd0c65aec107b3ce1a2c6e1d4"
             ],
             "confidence": "high"
           },
           {
-            "text": "Local harness chat sessions skip the Aura proxy override and keep failed stream errors visible after history refresh, so the local harness UX stops swallowing errors mid-turn.",
+            "text": "Improved authenticated cold-open and runtime perf on desktop: a branded splash now renders before app-ready while still gating on the authenticated route, startup defers highlight themes and sidekick panes, the server quiets default tracing and caches fingerprinted assets, and event hub fanout shares ref-counted payloads instead of cloning per listener.",
             "commit_shas": [
+              "9f76ae2d630d44fcdfe91864edb6915cb9ac7119",
+              "4993abfe54d034dd1082dfdf49c498dd2f1622f7",
+              "3ee409c924cbe8d64160cc6c3b7c05c49c698916",
+              "a776d7417a3a36a41b7a30fae0b0dab4824e2bdc",
+              "162698d5c96713d4945ff8ce6bda0a21de95ae67",
+              "63a3e98a34d1b0defc2a3b70c6bf078a7e0cbc0b",
+              "b63828936bb7d24f33b01212eec49a95527bdff7"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Tightened chat reliability and memory: per-frame batching of websocket events for long transcripts, bounded retained history and normalized message maps, removal of the paint-containment hint that caused end-of-turn message blink, and a fix for duplicate live assistant rendering in project chats.",
+            "commit_shas": [
+              "4b7565ef491652360da42c6f5932514269c72bab",
+              "1eca7c566df95ba4cf7b915461916a8f1430462b",
+              "f88e1aa85beeadf5098f13b7f1365f63213d675b",
+              "4df41219291481d7f52de6f798f47a4427d20b8c",
+              "879112d06e844a6881b711881a64f5926b46f572",
               "7b003e388ebc24b88e6660844bd52ae871a1a102"
             ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Dev-loop completed tasks now record git push timeout evidence after a local commit so they remain recoverable instead of appearing fully synced when the push hangs.",
-            "commit_shas": [
-              "3762db77201a58fc3e36da1ec899518fe8aa6c1c"
-            ],
             "confidence": "high"
           },
           {
-            "text": "End-to-end SWE diagnostics: instance routes log session shape on each chat-events stream open, request-profile analyzer and contract reporting libraries landed, and per-run request profiles can be aggregated for postmortem.",
-            "commit_shas": [
-              "4cffca5f1cdf998fbcceebc8434c9749563eadf4"
-            ],
-            "confidence": "high"
-          }
-        ]
-      },
-      {
-        "batch_id": "entry-2",
-        "time_label": "9:16 AM",
-        "started_at": "2026-04-30T16:16:12.000Z",
-        "ended_at": "2026-04-30T16:16:12.000Z",
-        "title": "Pro tier price restored to $20",
-        "summary": "The TierSubscriptionModal was rolled back to the $20 Pro price now that the migration is complete.",
-        "items": [
-          {
-            "text": "Pro tier in the subscription modal is back to $20 after the pricing migration finished.",
+            "text": "Pro tier pricing reverted to $20 after the migration, with the surrounding subscription modal preparing for the legacy-pricing note shown to OG users.",
             "commit_shas": [
               "cbf003bec0f4907753480903cb975f07cff6c14c"
             ],
@@ -3734,15 +3734,15 @@
         ]
       },
       {
-        "batch_id": "entry-3",
+        "batch_id": "entry-2",
         "time_label": "9:57 AM",
         "started_at": "2026-04-30T16:57:40.000Z",
         "ended_at": "2026-04-30T16:57:40.000Z",
-        "title": "Per-instance Python venv for native SWE verification",
-        "summary": "Native Windows SWE-bench runs now bootstrap a compatible per-instance venv before the DoD gate runs, instead of falling back to a global Python that pushes agents toward environment workaround patches.",
+        "title": "Native Windows SWE-bench verification gets a per-instance Python venv",
+        "summary": "SWE-bench DoD verification on native Windows now bootstraps a compatible per-instance virtualenv before running tests, so agents stop producing patches that work around a missing global Python.",
         "items": [
           {
-            "text": "SWE-bench's DoD verification on native Windows now provisions a per-instance virtualenv up front so verification runs in a clean, version-matched interpreter rather than the operator's global Python.",
+            "text": "Bootstrap a per-instance Python venv before native Windows SWE-bench verification so the DoD gate uses a compatible interpreter instead of falling back to the global Python and pushing agents into environment-workaround patches.",
             "commit_shas": [
               "74726eea7910ff7e485ea18951d94a7bf25cd9fb"
             ],
@@ -3751,41 +3751,48 @@
         ]
       },
       {
-        "batch_id": "entry-4",
+        "batch_id": "entry-3",
         "time_label": "10:29 AM",
         "started_at": "2026-04-30T17:29:54.000Z",
         "ended_at": "2026-04-30T17:52:59.000Z",
-        "title": "Legacy pricing note for Zero Pro OG users",
-        "summary": "Long-time Zero Pro subscribers now see context for their grandfathered pricing in the tier modal and credit history surfaces.",
+        "title": "Legacy-price note for Zero Pro OG users in the tier modal",
+        "summary": "Subscription UI now calls out the original Pro pricing for OG users and renames the credit history label to better describe what it represents.",
         "items": [
           {
-            "text": "Added a legacy pricing note for Zero Pro OG users in the tier subscription modal, surfaced it on the Pro card, and renamed the Monthly Allowance row to Monthly Plan Top-Up in credit history. A follow-up moves the legacy note to its own line below the price for cleaner layout.",
+            "text": "Added a legacy-price note on the Pro card in the tier subscription modal for Zero Pro OG users, with a follow-up tweak to render it on its own line beneath the price.",
             "commit_shas": [
               "d9776a3f3fdb41162e347b97966bb59d9103ef6f",
               "dadfd29970ae5e46e103002239a3f7d978ee3d94",
               "d777b4bc71a6f1fd8d3b8467a615a1d56f6518ff"
             ],
             "confidence": "high"
+          },
+          {
+            "text": "Renamed \"Monthly Allowance\" to \"Monthly Plan Top-Up\" in the org credit history view to better describe what users are seeing.",
+            "commit_shas": [
+              "dadfd29970ae5e46e103002239a3f7d978ee3d94"
+            ],
+            "confidence": "high"
           }
         ]
       },
       {
-        "batch_id": "entry-5",
+        "batch_id": "entry-4",
         "time_label": "7:07 PM",
         "started_at": "2026-05-01T02:07:02.000Z",
         "ended_at": "2026-05-01T02:12:24.000Z",
-        "title": "SWE verification flow hardening",
-        "summary": "Spec generation and task extraction now ship scoped tool hints, task extraction fails loudly when no tasks are produced, and local SWE artifacts stay out of git.",
+        "title": "SWE-bench verification flow hardened end-to-end",
+        "summary": "A second pass on the SWE-bench verification flow tightens spec/task tool hints, the live preflight, and the chat panel, and stops local SWE run artifacts from polluting the working tree.",
         "items": [
           {
-            "text": "Spec generation and task extraction now pass explicit, scoped tool_hints to the harness so the model stops reaching for unrelated tools, and extract_tasks now returns a clear error when the harness completes without persisting any tasks instead of silently returning empty.",
+            "text": "Scoped tool hints for spec generation and task extraction to the project-and-spec surface (no run_command, no create_task during spec gen), required task extraction to actually produce tasks before reporting success, and tightened the live-pipeline preflight and chat panel along the same path.",
             "commit_shas": [
               "e22a0b3741f34b8ea9ca76034a174391206e9314"
             ],
             "confidence": "high"
           },
           {
-            "text": "Local SWE-bench run artifacts are now ignored by git so per-run output stops cluttering working trees.",
+            "text": "Added local SWE run output directories to .gitignore so eval artifacts no longer show up as untracked files in the repo.",
             "commit_shas": [
               "4b95a86a21b142a00ba6135ce0abe4c45abedb1f"
             ],
@@ -3794,17 +3801,34 @@
         ]
       },
       {
-        "batch_id": "entry-6",
+        "batch_id": "entry-5",
         "time_label": "7:12 PM",
         "started_at": "2026-05-01T02:12:46.000Z",
         "ended_at": "2026-05-01T02:12:46.000Z",
-        "title": "Checked-in TypeScript protocol bindings",
-        "summary": "aura-protocol's ts-rs-generated TypeScript types are now committed, giving the interface a stable, versioned source of truth for wire shapes.",
+        "title": "TypeScript bindings for aura-protocol checked in",
+        "summary": "Generated TypeScript types for the harness wire protocol are now committed alongside the Rust crate, giving the interface a stable, reviewable source of truth for session, tool, and generation messages.",
         "items": [
           {
-            "text": "Checked in 48 generated TypeScript binding files for aura-protocol (SessionInit, SessionModelOverrides, AssistantMessageEnd, GenerationRequest, tool/permission wires, and more), so the interface no longer needs to regenerate them locally to stay in sync with the Rust protocol.",
+            "text": "Checked in 48 ts-rs–generated TypeScript bindings under crates/aura-protocol/bindings/ covering SessionInit, SessionModelOverrides, agent permissions, tool approvals, generation messages, and the inbound/outbound message envelopes — making protocol drift visible in code review instead of only at runtime.",
             "commit_shas": [
               "56e3e8506e68ef0421f26a3939f3f37fa1e92e9e"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-6",
+        "time_label": "9:26 PM",
+        "started_at": "2026-05-01T04:26:47.000Z",
+        "ended_at": "2026-05-01T04:26:47.000Z",
+        "title": "Packaged desktop boot failures now fail CI instead of users",
+        "summary": "A new boot-diagnostics layer plus release-asset validation in the nightly and stable workflows means a broken packaged frontend bundle is caught in CI rather than leaving users staring at an endless splash.",
+        "items": [
+          {
+            "text": "Added production boot diagnostics and a boot-shell module on the interface side, wired init-script changes on the desktop app, and introduced release-asset validation scripts plus a desktop-validate workflow so nightly and stable releases reject builds whose packaged frontend bundle won't actually start.",
+            "commit_shas": [
+              "07a20d5cf4cf6335576aae5c00c0066e6235329f"
             ],
             "confidence": "high"
           }
@@ -3812,13 +3836,12 @@
       }
     ],
     "highlights": [
-      "Desktop cold-open shows an auth-neutral splash and defers heavyweight assets",
-      "New external benchmark lane: SWE-bench Verified + Terminal-Bench 2",
-      "Resume-able SWE-bench runs with live preflight that fails in minutes, not hours",
-      "Dev-loop traffic now matches chat's router shape to stop Cloudflare blocks",
-      "Pro tier price returned to $20 with a legacy note for OG users",
-      "TypeScript protocol bindings are now checked in"
+      "SWE-bench Verified and Terminal-Bench 2 scoring lanes now wired end-to-end",
+      "Desktop cold open shows a branded splash without flashing a logged-out state",
+      "Packaged desktop boot failures now fail CI instead of stranding users on a splash",
+      "Pro tier pricing reverted to $20 with legacy note for OG users",
+      "Chat trims retained history and stops end-of-turn message blink"
     ],
-    "raw_commit_count": 78
+    "raw_commit_count": 79
   }
 }

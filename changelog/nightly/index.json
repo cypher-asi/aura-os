@@ -2,21 +2,20 @@
   {
     "date": "2026-04-30",
     "channel": "nightly",
-    "version": "0.1.0-nightly.421.1",
-    "title": "Cold-start polish, external benchmark lane, and a long SWE-bench reliability push",
-    "intro": "A heavy day across the stack: Aura's desktop boot got noticeably faster and steadier, a brand-new external benchmark lane for SWE-bench Verified and Terminal-Bench 2 landed, and the eval infrastructure went through a multi-hour reliability marathon to keep automation traffic from tripping Cloudflare. Smaller polish hit the chat surface, the pricing modal, and protocol bindings.",
+    "version": "0.1.0-nightly.422.1",
+    "title": "External benchmark lane lands; desktop boot and SWE-bench reliability hardened",
+    "intro": "Today's nightly is dominated by a sweeping push to make Aura measurable against public coding benchmarks and to close the long tail of issues that surfaced once the eval pipeline started running for real. Alongside that, the desktop got a faster authenticated cold open, chat trimmed memory and visual jitter, and the packaged desktop now refuses to ship with a broken frontend bundle.",
     "entryCount": 6,
     "highlights": [
-      "Desktop cold-open shows an auth-neutral splash and defers heavyweight assets",
-      "New external benchmark lane: SWE-bench Verified + Terminal-Bench 2",
-      "Resume-able SWE-bench runs with live preflight that fails in minutes, not hours",
-      "Dev-loop traffic now matches chat's router shape to stop Cloudflare blocks",
-      "Pro tier price returned to $20 with a legacy note for OG users",
-      "TypeScript protocol bindings are now checked in"
+      "SWE-bench Verified and Terminal-Bench 2 scoring lanes now wired end-to-end",
+      "Desktop cold open shows a branded splash without flashing a logged-out state",
+      "Packaged desktop boot failures now fail CI instead of stranding users on a splash",
+      "Pro tier pricing reverted to $20 with legacy note for OG users",
+      "Chat trims retained history and stops end-of-turn message blink"
     ],
-    "rawCommitCount": 79,
-    "generatedAt": "2026-05-01T02:54:35.862Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.421.1",
+    "rawCommitCount": 80,
+    "generatedAt": "2026-05-01T04:40:01.584Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.422.1",
     "path": "history/2026-04-30.json"
   },
   {
