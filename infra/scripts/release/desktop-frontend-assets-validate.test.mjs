@@ -3,7 +3,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { extractAssetRefs } from "./desktop-frontend-assets-validate.mjs";
+import {
+  extractAssetRefs,
+  findBrokenCssModuleExports,
+} from "./desktop-frontend-assets-validate.mjs";
 
 test("extractAssetRefs returns built asset src and href references", () => {
   const html = `
@@ -18,4 +21,13 @@ test("extractAssetRefs returns built asset src and href references", () => {
     "assets/index-def.js",
     "assets/legacy.js",
   ]);
+});
+
+test("findBrokenCssModuleExports detects rolldown CSS export stubs", () => {
+  const js = `
+    import "./rolldown-runtime.js";
+    export { github_dark_min_exports as g, ok as o };
+  `;
+
+  assert.deepEqual(findBrokenCssModuleExports(js), ["github_dark_min_exports"]);
 });

@@ -39,6 +39,7 @@ use crate::init::env::apply_desktop_runtime_defaults;
 use crate::init::init_script::{build_initialization_script, load_bootstrapped_auth_literals};
 use crate::init::logging::init_logging;
 use crate::init::paths::init_data_dirs;
+use crate::init::single_instance::acquire_single_instance_or_exit;
 use crate::net::loopback::{url_is_loopback_with_port_other_than, url_loopback_port_matches};
 use crate::net::server::{bind_listener, spawn_server};
 use crate::route_state::RouteState;
@@ -73,6 +74,7 @@ fn main() {
     apply_desktop_runtime_defaults();
     aura_os_server::ensure_user_bins_on_path();
     init_logging();
+    let _single_instance = acquire_single_instance_or_exit();
 
     let cli = parse_cli_args();
     let pre_bind = prepare_pre_bind(cli);

@@ -7,3 +7,4 @@ pub(crate) mod env;
 pub(crate) mod init_script;
 pub(crate) mod logging;
 pub(crate) mod paths;
+pub(crate) mod single_instance;

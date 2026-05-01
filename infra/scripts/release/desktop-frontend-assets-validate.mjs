@@ -39,6 +39,61 @@ export function extractAssetRefs(html) {
   return [...refs].sort();
 }
 
+function walkFiles(rootDir, files) {
+  for (const entry of fs.readdirSync(rootDir, { withFileTypes: true })) {
+    const targetPath = path.join(rootDir, entry.name);
+    if (entry.isDirectory()) {
+      walkFiles(targetPath, files);
+      continue;
+    }
+    if (entry.isFile()) {
+      files.push(targetPath);
+    }
+  }
+}
+
+export function findBrokenCssModuleExports(js) {
+  const matches = new Set();
+  const exportPattern = /export\s*\{([^}]+)\}/g;
+  let match = exportPattern.exec(js);
+  while (match) {
+    const exports = match[1].split(",");
+    for (const item of exports) {
+      const candidate = item.trim().split(/\s+as\s+/)[0]?.trim();
+      if (candidate?.endsWith("_exports")) {
+        matches.add(candidate);
+      }
+    }
+    match = exportPattern.exec(js);
+  }
+  return [...matches].sort();
+}
+
+function validateNoBrokenCssModuleExports(distDir) {
+  const files = [];
+  walkFiles(distDir, files);
+  const failures = [];
+
+  for (const file of files) {
+    if (!file.endsWith(".js")) continue;
+    const brokenExports = findBrokenCssModuleExports(fs.readFileSync(file, "utf8"));
+    if (brokenExports.length > 0) {
+      failures.push({
+        file: path.relative(distDir, file),
+        exports: brokenExports,
+      });
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new Error(
+      `built JS contains broken CSS module export stubs:\n${failures
+        .map((failure) => `- ${failure.file}: ${failure.exports.join(", ")}`)
+        .join("\n")}`,
+    );
+  }
+}
+
 function validateDistAssets(distDir) {
   const resolvedDist = path.resolve(distDir);
   const indexPath = path.join(resolvedDist, "index.html");
@@ -60,6 +115,8 @@ function validateDistAssets(distDir) {
         .join("\n")}`,
     );
   }
+
+  validateNoBrokenCssModuleExports(resolvedDist);
 
   return {
     dist: resolvedDist,

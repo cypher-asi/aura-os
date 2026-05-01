@@ -107,7 +107,7 @@ export default defineConfig(({ mode, command }) => {
             if (id.includes("/@xyflow/")) {
               return "diagram-vendor";
             }
-            if (id.includes("/highlight.js/")) {
+            if (id.includes("/highlight.js/") && !id.endsWith(".css") && !id.includes("/styles/")) {
               return "highlight-vendor";
             }
             if (
