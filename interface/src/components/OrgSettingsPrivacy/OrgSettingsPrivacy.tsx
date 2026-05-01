@@ -26,8 +26,7 @@ export function OrgSettingsPrivacy() {
           <div className={styles.rowInfo}>
             <span className={styles.rowLabel}>Share anonymous usage data</span>
             <span className={styles.rowDescription}>
-              Help improve AURA by sharing anonymous usage data. No personal
-              information, file paths, or conversation content is ever collected.
+              Help improve AURA by sharing anonymous usage data.
             </span>
           </div>
           <div className={styles.rowControl}>
@@ -41,6 +40,11 @@ export function OrgSettingsPrivacy() {
           </div>
         </div>
       </div>
+      <p className={styles.sectionIntro} style={{ marginTop: 0 }}>
+        No personal information, file paths, or conversation content is ever
+        collected. Only anonymous usage patterns are tracked to help us improve
+        the product.
+      </p>
     </>
   );
 }
