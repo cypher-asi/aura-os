@@ -143,6 +143,7 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
       }
       void createNote(projectId, parentPath).then((result) => {
         if (result) {
+          void import("../../../lib/analytics").then(({ track }) => track("note_created"));
           navigate(`/notes/${projectId}/${encodeURIComponent(result.relPath)}`);
         }
       });

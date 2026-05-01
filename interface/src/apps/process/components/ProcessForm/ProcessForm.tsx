@@ -43,6 +43,8 @@ export function ProcessForm({ onClose, projectId: initialProjectId, onCreated }:
         project_id: selectedProjectId,
       });
       addProcess(process);
+      const { track } = await import("../../../../lib/analytics");
+      track("process_created");
       onCreated?.(process.process_id);
       navigate(`/process/${process.process_id}`);
       onClose();

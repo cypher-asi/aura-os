@@ -283,6 +283,7 @@ function useProjectSelectionHandler(
   const navigate = useNavigate();
 
   return useCallback((nodeId: string) => {
+    void import("../../lib/analytics").then(({ track }) => track("project_opened"));
     const mobileDestination = getMobileProjectDestination(data.location.pathname);
     const isNested = isProjectNestedPath(
       data.location.pathname,

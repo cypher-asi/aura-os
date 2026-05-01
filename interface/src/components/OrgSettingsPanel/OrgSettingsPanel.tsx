@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Modal, Navigator, Text } from "@cypher-asi/zui";
 import type { NavigatorItemProps } from "@cypher-asi/zui";
@@ -12,6 +12,7 @@ import { OrgSettingsCreditHistory } from "../OrgSettingsCreditHistory/OrgSetting
 import { OrgSettingsPrivacy } from "../OrgSettingsPrivacy/OrgSettingsPrivacy";
 import { TierSubscriptionModal } from "../TierSubscriptionModal";
 import { useAuth } from "../../stores/auth-store";
+import { track } from "../../lib/analytics";
 import { useOrgSettingsData } from "./useOrgSettingsData";
 import styles from "./OrgSettingsPanel.module.css";
 
@@ -74,6 +75,8 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [tierModalOpen, setTierModalOpen] = useState(false);
+
+  useEffect(() => { if (isOpen) track("settings_opened"); }, [isOpen]);
 
   const handleNavChange = (id: string) => {
     // Integrations were promoted to a top-level app. Keep the tab in the

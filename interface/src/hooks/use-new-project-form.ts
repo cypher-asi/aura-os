@@ -192,6 +192,8 @@ export function useNewProjectForm(
         ...(trimmedLocalPath ? { local_workspace_path: trimmedLocalPath } : {}),
       });
 
+      const { track } = await import("../lib/analytics");
+      track("project_created", { environment: orbitFields.orbit_repo_name ? "remote" : "local" });
       reset(); onCreated(project);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create project");

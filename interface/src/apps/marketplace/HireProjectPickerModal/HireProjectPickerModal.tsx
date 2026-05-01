@@ -53,6 +53,8 @@ export function HireProjectPickerModal({
     try {
       const instance = await api.createAgentInstance(project.project_id, agent.agent_id);
       await refreshProjectAgents(project.project_id);
+      const { track } = await import("../../../lib/analytics");
+      track("marketplace_agent_hired");
       onHired(instance, project);
       onClose();
     } catch (err) {

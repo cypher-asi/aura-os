@@ -84,6 +84,7 @@ export function TierSubscriptionModal({ isOpen, onClose }: Props) {
 
   useEffect(() => {
     if (!isOpen) return;
+    track("tier_modal_opened");
     setPlanLoading(true);
     orgsApi
       .getSubscriptionStatus()

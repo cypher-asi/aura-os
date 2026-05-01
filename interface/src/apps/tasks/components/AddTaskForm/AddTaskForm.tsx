@@ -111,6 +111,8 @@ export function AddTaskForm({
       replaceTask(projectId, optimisticTaskId, task);
       removeSidekickTask(optimisticTaskId);
       pushSidekickTask(task);
+      const { track } = await import("../../../../lib/analytics");
+      track("task_created");
       if (createMore) {
         resetForm();
         inputRef.current?.focus();

@@ -148,6 +148,8 @@ export function IntegrationEditor({
     try {
       if (isNew) {
         await onCreate(payload);
+        const { track } = await import("../../lib/analytics");
+        track("integration_connected", { provider });
       } else {
         await onUpdate(integration.integration_id, payload);
       }

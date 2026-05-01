@@ -44,6 +44,8 @@ export function ProcessMainPanel({ children }: { children?: ReactNode }) {
     if (!process) return;
     try {
       const run = await processApi.triggerProcess(process.process_id);
+      const { track } = await import("../../../../lib/analytics");
+      track("process_triggered");
       fetchRuns(process.process_id);
       viewRun(run);
       setLastViewedRunId(process.process_id, run.run_id);

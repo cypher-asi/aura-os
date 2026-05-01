@@ -29,6 +29,8 @@ export function RunTaskButton({ task }: { task: import("../../shared/types").Tas
     if (!projectId || running) return;
     setRunning(true);
     try {
+      const { track } = await import("../../lib/analytics");
+      track("task_run_started", { model: selectedModel });
       await api.runTask(projectId, task.task_id, agentInstanceId, selectedModel);
     } catch (err) {
       if (isInsufficientCreditsError(err)) dispatchInsufficientCredits();

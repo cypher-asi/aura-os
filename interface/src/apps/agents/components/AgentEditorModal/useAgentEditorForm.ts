@@ -429,6 +429,8 @@ export function useAgentEditorForm(
           permissions: cloneAgentPermissions(fullAccessAgentPermissions()),
         };
         saved = await api.agents.create(createPayload);
+        const { track } = await import("../../../../lib/analytics");
+        track("agent_created");
       }
       await onSaved(saved);
       if (closeOnSave) {

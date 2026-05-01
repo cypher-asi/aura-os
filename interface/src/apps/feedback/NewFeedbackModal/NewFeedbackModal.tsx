@@ -75,7 +75,11 @@ export function NewFeedbackModal({ isOpen, onClose }: NewFeedbackModalProps) {
       status,
       product,
     });
-    if (created) onClose();
+    if (created) {
+      const { track } = await import("../../../lib/analytics");
+      track("feedback_created", { category, product });
+      onClose();
+    }
   };
 
   // ZUI's Modal re-runs its focus effect whenever `onClose`'s identity

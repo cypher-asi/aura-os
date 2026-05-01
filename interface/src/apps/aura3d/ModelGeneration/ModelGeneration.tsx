@@ -87,6 +87,9 @@ export function ModelGeneration() {
                   taskId: "",
                   createdAt: new Date().toISOString(),
                 });
+                void import("../../../lib/analytics").then(({ track }) =>
+                  track("aura3d_model_generated"),
+                );
               }
               break;
             case EventType.GenerationError:

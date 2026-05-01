@@ -70,6 +70,9 @@ export function ImageGeneration() {
                   createdAt: new Date().toISOString(),
                   meta: event.content.meta,
                 });
+                void import("../../../lib/analytics").then(({ track }) =>
+                  track("aura3d_image_generated", { model: imagineModel }),
+                );
               }
               break;
             case EventType.GenerationError:

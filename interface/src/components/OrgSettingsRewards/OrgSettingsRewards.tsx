@@ -31,6 +31,7 @@ export function OrgSettingsRewards() {
   const handleCopy = () => {
     if (!inviteCode) return;
     navigator.clipboard.writeText(inviteCode);
+    void import("../../lib/analytics").then(({ track }) => track("invite_code_copied"));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
