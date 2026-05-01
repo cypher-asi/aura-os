@@ -16,15 +16,19 @@ mod activity;
 mod credits;
 mod side_effects;
 
+use std::str::FromStr;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
 };
 
-use aura_os_core::{AgentInstanceId, ProjectId, SessionId, SessionStatus};
+use aura_os_core::{AgentInstanceId, ProjectId, SessionId, SessionStatus, TaskId};
 use aura_os_events::{DomainEvent, LegacyJsonEvent};
 use aura_os_harness::collect_automaton_events;
+use tracing::warn;
 
+use crate::handlers::live_heuristics::{emit_live_heuristic, LiveAnalyzer};
+use crate::loop_log::RunStatus;
 use crate::state::AppState;
 
 use super::session::end_session;
@@ -115,17 +119,57 @@ pub(crate) fn spawn_event_forwarder(ctx: ForwarderContext) -> tokio::task::Abort
         let jwt = jwt.map(Arc::new);
         let rx = events_tx.subscribe();
         let fallback_task_id = task_id.clone();
+        let (event_task_tx, mut event_task_rx) =
+            tokio::sync::mpsc::unbounded_channel::<(serde_json::Value, String)>();
+        let event_worker_state = state.clone();
+        let event_worker_loop_handle = loop_handle.clone();
+        let event_worker_jwt = jwt.clone();
+        let event_worker_fallback_task_id = fallback_task_id.clone();
+        let event_worker = tokio::spawn(async move {
+            let mut live_analyzer = LiveAnalyzer::new();
+            while let Some((event, event_type)) = event_task_rx.recv().await {
+                event_worker_state
+                    .loop_log
+                    .on_json_event(project_id, agent_instance_id, &event)
+                    .await;
+                record_loop_log_task_lifecycle(
+                    &event_worker_state,
+                    project_id,
+                    agent_instance_id,
+                    &event_type,
+                    &event,
+                )
+                .await;
+                maybe_emit_live_heuristics(
+                    &event_worker_state,
+                    project_id,
+                    agent_instance_id,
+                    &mut live_analyzer,
+                    &event_type,
+                )
+                .await;
+                activity::apply_loop_activity(&event_worker_loop_handle, &event_type, &event).await;
+                side_effects::record_event_side_effects(
+                    &event_worker_state,
+                    project_id,
+                    agent_instance_id,
+                    event_worker_fallback_task_id.clone(),
+                    event,
+                    &event_type,
+                    event_worker_jwt.as_ref().map(|j| j.as_str()),
+                    session_id,
+                )
+                .await;
+            }
+        });
         let credit_stop_requested = Arc::new(AtomicBool::new(false));
         let stop_automaton_id = automaton_id.clone();
         let completion = collect_automaton_events(rx, timeout, |event, event_type| {
             let state = state.clone();
             let event = event.clone();
             let event_type = event_type.to_string();
-            let fallback_task_id = fallback_task_id.clone();
             let credit_stop_requested = credit_stop_requested.clone();
             let stop_automaton_id = stop_automaton_id.clone();
-            let loop_handle = loop_handle.clone();
-            let jwt = jwt.clone();
             if credits::insufficient_credits_event_message(&event_type, &event).is_some()
                 && credit_stop_requested
                     .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
@@ -142,22 +186,13 @@ pub(crate) fn spawn_event_forwarder(ctx: ForwarderContext) -> tokio::task::Abort
                     .await;
                 });
             }
-            tokio::spawn(async move {
-                activity::apply_loop_activity(&loop_handle, &event_type, &event).await;
-                side_effects::record_event_side_effects(
-                    &state,
-                    project_id,
-                    agent_instance_id,
-                    fallback_task_id,
-                    event,
-                    &event_type,
-                    jwt.as_ref().map(|j| j.as_str()),
-                    session_id,
-                )
-                .await;
-            });
+            let _ = event_task_tx.send((event, event_type));
         })
         .await;
+        drop(event_task_tx);
+        if let Err(error) = event_worker.await {
+            warn!(%error, "dev-loop forwarder event worker failed");
+        }
         alive.store(false, Ordering::SeqCst);
         credits::remove_matching_registry_entry(
             &state,
@@ -181,6 +216,18 @@ pub(crate) fn spawn_event_forwarder(ctx: ForwarderContext) -> tokio::task::Abort
                 .mark_failed(completion.failure_message().map(str::to_string))
                 .await;
         }
+        state
+            .loop_log
+            .on_loop_ended(
+                project_id,
+                agent_instance_id,
+                if succeeded {
+                    RunStatus::Completed
+                } else {
+                    RunStatus::Failed
+                },
+            )
+            .await;
         // Mirror the harness loop outcome onto the storage `Session`
         // we minted in `start_loop` / `run_single_task` so the
         // Sidekick "Sessions" stat reflects automation activity.
@@ -201,16 +248,21 @@ pub(crate) fn spawn_event_forwarder(ctx: ForwarderContext) -> tokio::task::Abort
         }
         emit_domain_event_with_session(
             &state,
-            if succeeded {
-                "loop_finished"
-            } else {
-                "task_failed"
-            },
+            "loop_finished",
             project_id,
             agent_instance_id,
             session_id,
             insufficient_credits_reason.map_or_else(
-                || serde_json::json!({}),
+                || {
+                    if succeeded {
+                        serde_json::json!({"outcome": "completed"})
+                    } else {
+                        serde_json::json!({
+                            "outcome": "failed",
+                            "reason": completion.failure_message(),
+                        })
+                    }
+                },
                 |reason| {
                     serde_json::json!({
                         "outcome": "insufficient_credits",
@@ -221,6 +273,82 @@ pub(crate) fn spawn_event_forwarder(ctx: ForwarderContext) -> tokio::task::Abort
         );
     });
     handle.abort_handle()
+}
+
+async fn maybe_emit_live_heuristics(
+    state: &AppState,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+    live_analyzer: &mut LiveAnalyzer,
+    event_type: &str,
+) {
+    let Some((run_id, run_dir)) = state
+        .loop_log
+        .active_bundle(project_id, agent_instance_id)
+        .await
+    else {
+        return;
+    };
+
+    live_analyzer.note_event(event_type);
+    if !live_analyzer.should_run() {
+        return;
+    }
+    let findings = live_analyzer.maybe_analyze(&run_dir);
+
+    if let Some(findings) = findings {
+        for finding in findings {
+            emit_live_heuristic(state, &finding, project_id, agent_instance_id, &run_id);
+        }
+    }
+}
+
+async fn record_loop_log_task_lifecycle(
+    state: &AppState,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+    event_type: &str,
+    event: &serde_json::Value,
+) {
+    let Some(task_id) = event_task_id(event) else {
+        return;
+    };
+    let Ok(task_id) = TaskId::from_str(task_id) else {
+        return;
+    };
+
+    match event_type {
+        "task_started" => {
+            state
+                .loop_log
+                .on_task_started(project_id, agent_instance_id, task_id, None)
+                .await;
+        }
+        "task_completed" | "task_failed" => {
+            let output = task_output_snapshot(state, project_id, task_id)
+                .await
+                .unwrap_or_default();
+            state.loop_log.on_task_end(task_id, &output).await;
+        }
+        _ => {}
+    }
+}
+
+fn event_task_id(event: &serde_json::Value) -> Option<&str> {
+    event.get("task_id").and_then(|value| value.as_str())
+}
+
+async fn task_output_snapshot(
+    state: &AppState,
+    project_id: ProjectId,
+    task_id: TaskId,
+) -> Option<String> {
+    state
+        .task_output_cache
+        .lock()
+        .await
+        .get(&(project_id, task_id))
+        .map(|entry| entry.live_output.clone())
 }
 
 #[cfg(test)]

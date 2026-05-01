@@ -162,6 +162,10 @@ pub(crate) async fn start_loop(
         ctx.agent_id,
         LoopKind::Automation,
     ));
+    state
+        .loop_log
+        .on_loop_started(project_id, agent_instance_id)
+        .await;
     let forwarder = spawn_event_forwarder(ForwarderContext {
         state: state.clone(),
         project_id,
@@ -190,10 +194,6 @@ pub(crate) async fn start_loop(
             session_id,
         },
     );
-    state
-        .loop_log
-        .on_loop_started(project_id, agent_instance_id)
-        .await;
     emit_domain_event(
         &state,
         "loop_started",
@@ -344,6 +344,14 @@ pub(crate) async fn run_single_task(
     )
     .await;
 
+    state
+        .loop_log
+        .on_loop_started(project_id, ephemeral_instance_id)
+        .await;
+    state
+        .loop_log
+        .on_task_started(project_id, ephemeral_instance_id, task_id, None)
+        .await;
     seed_task_output(&state, project_id, ephemeral_instance_id, &task_id_str).await;
     emit_domain_event(
         &state,

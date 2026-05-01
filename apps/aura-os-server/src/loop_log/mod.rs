@@ -78,6 +78,19 @@ impl LoopLogWriter {
     pub fn bundle_dir(&self, project_id: ProjectId, run_id: &str) -> PathBuf {
         self.base_dir.join(project_id.to_string()).join(run_id)
     }
+
+    /// Return the currently-open bundle for a live loop, if this
+    /// process still owns its in-memory writer state.
+    pub(crate) async fn active_bundle(
+        &self,
+        project_id: ProjectId,
+        agent_instance_id: AgentInstanceId,
+    ) -> Option<(String, PathBuf)> {
+        let state = self.run_state.lock().await;
+        state
+            .get(&(project_id, agent_instance_id))
+            .map(|run| (run.run_id.clone(), run.run_dir.clone()))
+    }
 }
 
 #[cfg(test)]
@@ -227,5 +240,71 @@ mod tests {
             .unwrap();
         assert!(blockers.contains("duplicate"));
         assert_eq!(runs[0].counters.blockers, 1);
+    }
+
+    #[tokio::test]
+    async fn active_bundle_is_available_until_loop_ends() {
+        let tmp = TempDir::new().unwrap();
+        let writer = LoopLogWriter::new(tmp.path().to_path_buf());
+        let pid = ProjectId::new();
+        let aiid = AgentInstanceId::new();
+
+        assert!(writer.active_bundle(pid, aiid).await.is_none());
+        writer.on_loop_started(pid, aiid).await;
+
+        let (run_id, run_dir) = writer
+            .active_bundle(pid, aiid)
+            .await
+            .expect("started loop should expose active bundle");
+        assert!(run_dir.ends_with(&run_id));
+
+        writer.on_loop_ended(pid, aiid, RunStatus::Completed).await;
+        assert!(writer.active_bundle(pid, aiid).await.is_none());
+    }
+
+    #[tokio::test]
+    async fn task_lifecycle_writes_output_and_failed_summary() {
+        let tmp = TempDir::new().unwrap();
+        let writer = LoopLogWriter::new(tmp.path().to_path_buf());
+        let pid = ProjectId::new();
+        let aiid = AgentInstanceId::new();
+        let tid = TaskId::new();
+
+        writer.on_loop_started(pid, aiid).await;
+        writer.on_task_started(pid, aiid, tid, None).await;
+        writer
+            .on_json_event(
+                pid,
+                aiid,
+                &serde_json::json!({"type": "task_started", "task_id": tid}),
+            )
+            .await;
+        writer
+            .on_json_event(
+                pid,
+                aiid,
+                &serde_json::json!({"type": "task_failed", "task_id": tid, "reason": "pytest regression"}),
+            )
+            .await;
+        writer
+            .on_task_end(tid, "collected task output\npytest failed")
+            .await;
+        writer.on_loop_ended(pid, aiid, RunStatus::Failed).await;
+
+        let runs = writer.list_runs(pid).await;
+        assert_eq!(runs.len(), 1);
+        assert_eq!(runs[0].status, RunStatus::Failed);
+        assert_eq!(runs[0].tasks.len(), 1);
+        assert_eq!(runs[0].tasks[0].task_id, tid.to_string());
+        assert_eq!(runs[0].tasks[0].status.as_deref(), Some("task_failed"));
+
+        let output_path = writer
+            .bundle_dir(pid, &runs[0].run_id)
+            .join(format!("task_{tid}.output.txt"));
+        let output = tokio::fs::read_to_string(output_path).await.unwrap();
+        assert!(output.contains("pytest failed"));
+
+        let summary = writer.read_summary(pid, &runs[0].run_id).await.unwrap();
+        assert!(summary.contains("Failed"));
     }
 }
