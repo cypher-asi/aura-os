@@ -8,20 +8,24 @@ use tracing::{error, info};
 use crate::dto::GenerateImageRequest;
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::billing;
-use crate::state::{AppState, AuthJwt};
+use crate::state::{AppState, AuthJwt, AuthSession};
 
-use super::harness_stream::open_generation_stream;
+use super::harness_stream::{open_generation_stream, resolve_generation_identity};
 use super::router_proxy::router_url;
 use super::sse::SseResponse;
 
 pub(crate) async fn generate_image_stream(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
+    AuthSession(auth_session): AuthSession,
     Json(body): Json<GenerateImageRequest>,
 ) -> ApiResult<SseResponse> {
     billing::require_credits(&state, &jwt).await?;
     info!(model = ?body.model, "Image generation stream requested");
 
+    let identity =
+        resolve_generation_identity(&state, &auth_session, &jwt, body.project_id.as_deref())
+            .await?;
     open_generation_stream(
         state,
         jwt,
@@ -36,6 +40,7 @@ pub(crate) async fn generate_image_stream(
             parent_id: None,
             is_iteration: body.is_iteration,
         },
+        identity,
     )
     .await
 }

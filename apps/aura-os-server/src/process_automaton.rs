@@ -112,6 +112,21 @@ async fn start_scheduled_process_automaton(
     let project_id = process.project_id.as_deref().ok_or_else(|| {
         ApiError::bad_request("process must be attached to a project before it can run")
     })?;
+    // Phase 5: thread `aura_org_id` / `aura_session_id` through to
+    // the harness so the outbound proxy `/v1/messages` call carries
+    // the same `X-Aura-*` identity headers chat / dev-loop
+    // automata already send. Without this, scheduled-process runs
+    // bucket as anonymous IP-only traffic on aura-router and trip
+    // the WAF rule that interactive chat from the same account
+    // never reproduces. The org is the project's owning org; the
+    // session id derives deterministically from `run_id` so retries
+    // for the same logical run share the same router bucket.
+    let aura_org_id = process
+        .org_id
+        .as_deref()
+        .map(str::to_string)
+        .or_else(|| resolve_project_org_id(state, project_id));
+    let aura_session_id = Some(stable_process_run_session_id(&process.id, run_id));
     let auth_token = Some(jwt.to_string());
     let client = HarnessClient::new(state.automaton_client.base_url());
 
@@ -127,12 +142,38 @@ async fn start_scheduled_process_automaton(
                     "run_id": run_id,
                     "trigger": trigger,
                 })),
+                aura_org_id,
+                aura_session_id,
             },
             Some(jwt),
         )
         .await
         .map(|_| ())
-        .map_err(map_automaton_start_error)
+        .map_err(|err| map_automaton_start_error(state.harness_ws_slots, err))
+}
+
+/// Best-effort lookup of the project's owning org id from the local
+/// project cache. Falls back to `None` (so the resulting
+/// `aura_org_id` is left unset) when the project isn't shadowed
+/// locally — the harness will still accept the request, it just
+/// won't carry the per-org bucket on the proxy call.
+fn resolve_project_org_id(state: &AppState, project_id: &str) -> Option<String> {
+    project_id
+        .parse::<aura_os_core::ProjectId>()
+        .ok()
+        .and_then(|pid| state.project_service.get_project(&pid).ok())
+        .map(|project| project.org_id.to_string())
+}
+
+/// Deterministic per-(process, run) UUID used as `aura_session_id`
+/// for the outbound proxy header. Mirrors the rationale on
+/// `dev_loop::start::stable_dev_loop_session_id`: derive from the
+/// logical-run identity so retries / restarts of the same run
+/// share a router bucket, while concurrent runs of different
+/// processes get distinct bucketing.
+fn stable_process_run_session_id(process_id: &str, run_id: &str) -> String {
+    let payload = format!("aura-os/process-run:{process_id}:{run_id}");
+    uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_DNS, payload.as_bytes()).to_string()
 }
 
 async fn mark_run_failed(
@@ -161,10 +202,23 @@ async fn mark_run_failed(
         .await;
 }
 
-fn map_automaton_start_error(error: HarnessClientError) -> (StatusCode, Json<ApiError>) {
+fn map_automaton_start_error(
+    ws_slots_cap: usize,
+    error: HarnessClientError,
+) -> (StatusCode, Json<ApiError>) {
     match error {
         HarnessClientError::Status { status: 409, .. } => {
             ApiError::conflict("a scheduled process automaton is already running")
+        }
+        // Phase 5: map upstream WS-slot exhaustion to the structured
+        // `harness_capacity_exhausted` envelope so the scheduled-
+        // process surface returns the same 503 shape chat /
+        // dev-loop already do. The harness emits 503 with either
+        // `code: "capacity_exhausted"` or an opaque body
+        // (mirroring `swarm_harness::is_capacity_exhausted_response`
+        // for the SwarmHarness path).
+        HarnessClientError::Status { status: 503, body } if is_capacity_body(&body) => {
+            ApiError::harness_capacity_exhausted(ws_slots_cap)
         }
         HarnessClientError::Status { status, body } => {
             let status = StatusCode::from_u16(status).unwrap_or(StatusCode::BAD_GATEWAY);
@@ -179,6 +233,34 @@ fn map_automaton_start_error(error: HarnessClientError) -> (StatusCode, Json<Api
             )
         }
         other => ApiError::bad_gateway(other.to_string()),
+    }
+}
+
+/// Heuristic for "this 503 body looks like the harness's WS-slot
+/// capacity rejection". Mirrors
+/// `swarm_harness::is_capacity_exhausted_response`'s permissive
+/// interpretation: an empty / opaque 503 body counts as capacity
+/// (the harness never surfaces a different structured 503 today)
+/// while a structured body must carry the canonical
+/// `capacity_exhausted` code.
+fn is_capacity_body(body: &str) -> bool {
+    let trimmed = body.trim();
+    if trimmed.is_empty() {
+        return true;
+    }
+    let Ok(parsed) = serde_json::from_str::<serde_json::Value>(trimmed) else {
+        return true;
+    };
+    let code = parsed.get("code").and_then(|v| v.as_str()).or_else(|| {
+        parsed
+            .get("error")
+            .and_then(|err| err.get("code"))
+            .and_then(|v| v.as_str())
+    });
+    match code {
+        Some(c) if c.eq_ignore_ascii_case("capacity_exhausted") => true,
+        Some(_) => false,
+        None => true,
     }
 }
 

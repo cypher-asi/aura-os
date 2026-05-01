@@ -73,6 +73,21 @@ pub struct HarnessAutomatonStartParams {
     pub process_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub input: Option<serde_json::Value>,
+    /// Org UUID forwarded to the harness so the outbound proxy
+    /// request carries `X-Aura-Org-Id`. Mirrors the same field on
+    /// [`crate::AutomatonStartParams::aura_org_id`] for dev-loop /
+    /// single-task automata. Skipped on the wire when `None` so
+    /// pre-existing harnesses (which `#[serde(default)]` the field)
+    /// keep accepting the payload.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aura_org_id: Option<String>,
+    /// Storage session UUID forwarded to the harness so the outbound
+    /// proxy request carries `X-Aura-Session-Id`. Generated per
+    /// process-run start so router / billing telemetry can
+    /// distinguish concurrent scheduled-process runs of the same
+    /// process.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aura_session_id: Option<String>,
 }
 
 /// Response payload from `POST /automaton/start`.

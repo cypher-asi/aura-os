@@ -102,16 +102,19 @@ impl SessionIdentityRequirements {
 
     /// Image / 3D generation sessions opened by
     /// `handlers::generation::harness_stream::open_generation_stream`.
-    /// Until Phase 5 threads identity through these sessions, only
-    /// the JWT is hard-required so the existing call site keeps
-    /// working without breaking the eval pipeline.
-    #[allow(dead_code)] // wired up in Phase 5
+    /// Phase 5 threads org / session / user identity through, so we
+    /// can now require them — same as chat — except for
+    /// `template_agent_id`: generation sessions use a synthetic
+    /// `generation-{uuid}` agent_id since they aren't tied to an
+    /// agent template. The `require_any_agent_identity` flag
+    /// catches the case where even the synthetic id is somehow
+    /// missing.
     pub(crate) const GENERATION: Self = Self {
-        require_org_id: false,
-        require_session_id: false,
+        require_org_id: true,
+        require_session_id: true,
         require_template_agent_id: false,
-        require_any_agent_identity: false,
-        require_user_id: false,
+        require_any_agent_identity: true,
+        require_user_id: true,
         require_auth_token: true,
     };
 
@@ -449,22 +452,52 @@ mod tests {
     }
 
     #[test]
-    fn generation_requirements_only_enforce_auth_token() {
+    fn generation_requirements_accept_synthetic_agent_id_with_full_identity() {
+        // Phase 5: GENERATION now requires org / session / user so the
+        // outbound proxy carries the same `X-Aura-*` headers chat
+        // does. The synthetic `generation-{uuid}` agent_id satisfies
+        // `require_any_agent_identity` in lieu of a `template_agent_id`.
         let cfg = SessionConfig {
             agent_id: Some("generation-1".to_string()),
+            user_id: Some("user-1".to_string()),
             token: Some("jwt".to_string()),
+            aura_org_id: Some("org-1".to_string()),
+            aura_session_id: Some("session-1".to_string()),
             agent_permissions: AgentPermissionsWire::default(),
             ..Default::default()
         };
-        // Generation sessions intentionally omit org / session / user
-        // until Phase 5 threads them through; ensure the preflight
-        // accepts that.
         assert!(validate_session_identity(
             &cfg,
             SessionIdentityRequirements::GENERATION,
             "generation_session"
         )
         .is_ok());
+    }
+
+    #[test]
+    fn generation_requirements_reject_missing_org_id() {
+        let cfg = SessionConfig {
+            agent_id: Some("generation-1".to_string()),
+            user_id: Some("user-1".to_string()),
+            token: Some("jwt".to_string()),
+            // aura_org_id missing — Tier 1 must catch this before the
+            // harness Tier 2 does, so the structured 422 carries the
+            // friendlier `generation_session` context.
+            aura_session_id: Some("session-1".to_string()),
+            agent_permissions: AgentPermissionsWire::default(),
+            ..Default::default()
+        };
+        let (_, axum::Json(api_err)) = validate_session_identity(
+            &cfg,
+            SessionIdentityRequirements::GENERATION,
+            "generation_session",
+        )
+        .expect_err("missing aura_org_id should fail GENERATION preflight");
+        assert_eq!(api_err.code, "missing_aura_org_id");
+        assert_eq!(
+            api_err.data.expect("structured data populated")["context"],
+            "generation_session"
+        );
     }
 
     #[test]
