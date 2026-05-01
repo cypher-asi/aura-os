@@ -12,6 +12,7 @@ use aura_os_harness::connect_with_retries;
 
 use crate::dto::LoopStatusResponse;
 use crate::error::{ApiError, ApiResult};
+use crate::handlers::agents::chat::errors::map_harness_error_to_api;
 use crate::state::{ActiveAutomaton, AppState, AuthJwt, AuthSession};
 
 use super::control::control_loop;
@@ -152,7 +153,17 @@ pub(crate) async fn start_loop(
         2,
     )
     .await
-    .map_err(|e| ApiError::bad_gateway(format!("connecting automaton stream: {e}")))?;
+    .map_err(|e| {
+        // The /automaton/start HTTP call may have succeeded only for
+        // the upstream WS upgrade to be rejected with the 503 / 1013
+        // capacity signal (see `aura_os_harness::HarnessError`). Route
+        // through the shared mapper so it surfaces as the structured
+        // 503 `harness_capacity_exhausted` envelope instead of a
+        // generic `bad_gateway`.
+        map_harness_error_to_api(&e, state.harness_ws_slots, |err| {
+            ApiError::bad_gateway(format!("connecting automaton stream: {err}"))
+        })
+    })?;
 
     let alive = Arc::new(AtomicBool::new(true));
     let loop_handle = state.loop_registry.open(LoopId::new(
@@ -339,7 +350,15 @@ pub(crate) async fn run_single_task(
         2,
     )
     .await
-    .map_err(|e| ApiError::bad_gateway(format!("connecting task automaton stream: {e}")))?;
+    .map_err(|e| {
+        // Same capacity-vs-bad-gateway mapping rationale as in
+        // `start_loop` above; mirror it here so single-task runs
+        // surface the same 503 envelope when the WS upgrade is the
+        // step that trips the harness's WS-slot semaphore.
+        map_harness_error_to_api(&e, state.harness_ws_slots, |err| {
+            ApiError::bad_gateway(format!("connecting task automaton stream: {err}"))
+        })
+    })?;
 
     // Single-task runs always mint a fresh ephemeral agent instance,
     // so they always need a fresh storage session — there's nothing

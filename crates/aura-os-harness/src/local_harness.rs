@@ -15,7 +15,7 @@ use aura_protocol::{InboundMessage, OutboundMessage};
 /// WebSocket close code 1013 ("Try Again Later") signals upstream
 /// capacity exhaustion before the upgrade completes. Detect it by
 /// matching the tungstenite close-frame code numerically.
-const WS_CLOSE_CODE_TRY_AGAIN_LATER: u16 = 1013;
+pub(crate) const WS_CLOSE_CODE_TRY_AGAIN_LATER: u16 = 1013;
 
 #[derive(Debug, Clone)]
 pub struct LocalHarness {
@@ -128,7 +128,7 @@ impl HarnessLink for LocalHarness {
 /// Other transport errors (DNS, TLS, generic IO) intentionally fall
 /// through so the existing `bad_gateway` mapping in the server keeps
 /// firing for them.
-fn is_capacity_exhausted_ws_error(err: &tungstenite::Error) -> bool {
+pub(crate) fn is_capacity_exhausted_ws_error(err: &tungstenite::Error) -> bool {
     if let tungstenite::Error::Http(resp) = err {
         if resp.status().as_u16() == 503 {
             return true;

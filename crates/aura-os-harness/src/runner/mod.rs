@@ -73,9 +73,9 @@ pub async fn start_and_connect(
         stream_retries,
     )
     .await
-    .map_err(|message| RunStartError::Connect {
+    .map_err(|err| RunStartError::Connect {
         attempts: stream_retries + 1,
-        message,
+        message: err.to_string(),
     })?;
     Ok((result, tx, ws_handle))
 }
@@ -91,14 +91,24 @@ pub async fn start_and_connect(
 /// Returns a [`WsReaderHandle`] alongside the broadcast sender; the
 /// caller must keep the handle alive for as long as events should flow
 /// and drop / cancel it to release the harness's WS slot.
+/// Repeatedly call [`AutomatonClient::connect_event_stream`] with
+/// exponential backoff. Returns an `anyhow::Error` so typed causes
+/// (notably [`crate::HarnessError::CapacityExhausted`]) survive into
+/// the caller and can be matched by
+/// `aura_os_server::handlers::agents::chat::errors::map_harness_error_to_api`.
+///
+/// Capacity-exhausted errors are returned immediately on the first
+/// attempt rather than retried — the upstream WS-slot semaphore
+/// won't free up in 500ms and retrying just delays the structured
+/// 503 the caller wants to surface.
 pub async fn connect_with_retries(
     client: &AutomatonClient,
     automaton_id: &str,
     event_stream_url: Option<&str>,
     retries: u32,
-) -> Result<(broadcast::Sender<serde_json::Value>, WsReaderHandle), String> {
+) -> anyhow::Result<(broadcast::Sender<serde_json::Value>, WsReaderHandle)> {
     let total_attempts = retries + 1;
-    let mut last_err = String::new();
+    let mut last_err: Option<anyhow::Error> = None;
     for attempt in 0..total_attempts {
         if attempt > 0 {
             let delay = Duration::from_millis(500 * (1u64 << attempt.min(2)));
@@ -118,11 +128,19 @@ pub async fn connect_with_retries(
                     %automaton_id, attempt,
                     error = %e, "Event stream connection attempt failed"
                 );
-                last_err = e.to_string();
+                if crate::HarnessError::is_capacity_exhausted(&e) {
+                    // Don't burn additional attempts on a known
+                    // capacity rejection; the 1013 / 503 won't
+                    // resolve in the next 500-2000ms.
+                    return Err(e);
+                }
+                last_err = Some(e);
             }
         }
     }
-    Err(last_err)
+    Err(last_err.unwrap_or_else(|| {
+        anyhow::anyhow!("event stream connection failed without recording an error")
+    }))
 }
 
 #[cfg(test)]

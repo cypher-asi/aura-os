@@ -492,12 +492,30 @@ impl AutomatonClient {
                     .map_err(|e| anyhow::anyhow!("bad auth header value: {e}"))?,
             );
         }
-        let (ws_stream, _) = tokio::time::timeout(
+        let connect_result = tokio::time::timeout(
             Duration::from_secs(8),
             tokio_tungstenite::connect_async(request),
         )
         .await
-        .map_err(|_| anyhow::anyhow!("timed out connecting to automaton event stream: {url}"))??;
+        .map_err(|_| anyhow::anyhow!("timed out connecting to automaton event stream: {url}"))?;
+        let (ws_stream, _) = match connect_result {
+            Ok(ok) => ok,
+            Err(err) => {
+                // Phase 4: surface upstream WS-slot exhaustion as the
+                // typed `HarnessError::CapacityExhausted` so the
+                // server's `map_harness_error_to_api` can funnel it
+                // into the structured 503 envelope instead of letting
+                // it inherit the generic `bad_gateway` mapping the
+                // dev-loop adapter previously applied. Mirrors the
+                // same detection used in `LocalHarness::open_session`.
+                if crate::local_harness::is_capacity_exhausted_ws_error(&err) {
+                    return Err(anyhow::Error::new(crate::error::HarnessError::CapacityExhausted)
+                        .context(format!("automaton event stream connect rejected: {err}")));
+                }
+                return Err(anyhow::Error::new(err)
+                    .context("automaton event stream connect failed"));
+            }
+        };
         info!(automaton_id, "Connected to automaton event stream");
 
         let (_write, mut read) = ws_stream.split();
