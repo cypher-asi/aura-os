@@ -300,27 +300,38 @@ pub(crate) async fn run_single_task(
     // Clone the JWT for the forwarder before `build_start_params` moves
     // it; see `start_loop` for the motivation.
     let forwarder_jwt = jwt.clone();
-    let result = ctx
-        .client
-        .start(
-            build_start_params(
-                &state,
-                &ctx,
-                ephemeral_instance_id,
-                Some(jwt),
-                Some(session.0.user_id.clone()),
-                Some(task_id_str.clone()),
-            )
-            .await,
+    let params = build_start_params(
+        &state,
+        &ctx,
+        ephemeral_instance_id,
+        Some(jwt),
+        Some(session.0.user_id.clone()),
+        Some(task_id_str.clone()),
+    )
+    .await;
+    // Tier 1 fail-fast: refuse to POST /automaton/start with a payload
+    // missing one of the required X-Aura-* identity fields. Mirrors
+    // the guard inside `start_or_adopt` for the dev-loop path.
+    if let Err(err) =
+        crate::handlers::agents::session_identity::validate_automaton_identity(
+            &params,
+            crate::handlers::agents::session_identity::SessionIdentityRequirements::DEV_LOOP,
+            "single_task_automaton",
         )
-        .await
-        .map_err(|e| {
-            let svc = state.agent_instance_service.clone();
-            tokio::spawn(async move {
-                let _ = svc.delete_instance(&ephemeral_instance_id).await;
-            });
-            map_start_error(ctx.client.base_url(), e, state.harness_ws_slots)
-        })?;
+    {
+        let svc = state.agent_instance_service.clone();
+        tokio::spawn(async move {
+            let _ = svc.delete_instance(&ephemeral_instance_id).await;
+        });
+        return Err(err);
+    }
+    let result = ctx.client.start(params).await.map_err(|e| {
+        let svc = state.agent_instance_service.clone();
+        tokio::spawn(async move {
+            let _ = svc.delete_instance(&ephemeral_instance_id).await;
+        });
+        map_start_error(ctx.client.base_url(), e, state.harness_ws_slots)
+    })?;
     let (events_tx, ws_reader_handle) = connect_with_retries(
         &ctx.client,
         &result.automaton_id,

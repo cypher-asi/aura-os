@@ -8,6 +8,9 @@ use aura_os_harness::SessionConfig;
 use crate::error::ApiResult;
 use crate::handlers::agents::chat::build_project_system_prompt;
 use crate::handlers::agents::conversions_pub::resolve_workspace_path;
+use crate::handlers::agents::session_identity::{
+    validate_session_identity, SessionIdentityRequirements,
+};
 use crate::handlers::agents::session_model_overrides;
 use crate::handlers::agents::tool_dedupe::dedupe_and_log_installed_tools;
 use crate::handlers::agents::workspace_tools::{
@@ -184,11 +187,16 @@ pub(crate) async fn resolve_project_tool_workspace_path(
 ///
 /// Mirrors the structural shape of the desktop chat session built in
 /// [`crate::handlers::agents::chat::instance_route::send_event_stream`]:
-/// the project-aware `system_prompt` and the harness `provider_config`
+/// the project-aware `system_prompt` and the harness `provider_overrides`
 /// must be present so the LLM request signature matches the working
 /// chat path. Without them, the SWE-bench eval pipeline was hitting
 /// recurring Cloudflare 403s on the post-tool-result LLM call when
 /// running spec-gen / task-extract under Swarm.
+///
+/// Tier 1 fail-fast: the returned config is preflighted against
+/// [`SessionIdentityRequirements::PROJECT_TOOL`] before being handed
+/// back, so call sites cannot accidentally hand the harness a config
+/// missing one of the required `X-Aura-*` identity headers.
 pub(crate) async fn project_tool_session_config(
     state: &AppState,
     project_id: &ProjectId,
@@ -330,54 +338,14 @@ pub(crate) async fn project_tool_session_config(
         ..Default::default()
     };
 
-    // #region agent log
-    debug_log_project_tool_shape(tool_agent_name, &cfg);
-    // #endregion
+    validate_session_identity(
+        &cfg,
+        SessionIdentityRequirements::PROJECT_TOOL,
+        "project_tool_session",
+    )?;
 
     Ok(cfg)
 }
-
-// #region agent log
-fn debug_log_project_tool_shape(tool_agent_name: &str, config: &SessionConfig) {
-    use std::io::Write;
-    let data = serde_json::json!({
-        "path": "project_tool_session",
-        "tool_agent_name": tool_agent_name,
-        "model": config.model.as_deref().unwrap_or("<none>"),
-        "has_aura_org_id": config.aura_org_id.is_some(),
-        "aura_org_id_len": config.aura_org_id.as_deref().map(str::len).unwrap_or(0),
-        "has_aura_session_id": config.aura_session_id.is_some(),
-        "aura_session_id_len": config.aura_session_id.as_deref().map(str::len).unwrap_or(0),
-        "has_agent_id": config.agent_id.is_some(),
-        "has_template_agent_id": config.template_agent_id.is_some(),
-        "has_token": config.token.is_some(),
-        "token_len": config.token.as_deref().map(str::len).unwrap_or(0),
-        "system_prompt_len": config.system_prompt.as_deref().map(str::len).unwrap_or(0),
-        "has_provider_overrides": config.provider_overrides.is_some(),
-        "has_intent_classifier": config.intent_classifier.is_some(),
-        "has_tool_permissions": config.tool_permissions.is_some(),
-        "has_conversation_messages": config.conversation_messages.is_some(),
-        "max_turns": config.max_turns,
-        "installed_tools_count": config.installed_tools.as_ref().map(Vec::len).unwrap_or(0),
-        "installed_integrations_count": config.installed_integrations.as_ref().map(Vec::len).unwrap_or(0),
-        "has_project_id": config.project_id.is_some(),
-        "has_project_path": config.project_path.is_some(),
-    });
-    let line = serde_json::json!({
-        "sessionId": "95fd5c",
-        "hypothesisId": "H1-H5-projecttool",
-        "location": "apps/aura-os-server/src/handlers/projects_helpers/session.rs::project_tool_session_config",
-        "message": "session-shape snapshot",
-        "timestamp": chrono::Utc::now().timestamp_millis(),
-        "data": data,
-    });
-    let _ = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(r"C:\code\aura-os\debug-95fd5c.log")
-        .and_then(|mut f| writeln!(f, "{line}"));
-}
-// #endregion
 
 fn effective_project_tool_model(instance: Option<&AgentInstance>) -> Option<String> {
     instance.and_then(|instance| {

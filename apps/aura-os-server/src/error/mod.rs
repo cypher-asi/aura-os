@@ -175,6 +175,46 @@ impl ApiError {
         )
     }
 
+    /// One of the required session-identity fields the server must
+    /// populate before opening a harness session is missing. Returned
+    /// as 422 so the UI / evals pipeline / integration tests fail
+    /// loudly instead of inheriting a downstream Cloudflare 403 /
+    /// generic 5xx caused by the missing `X-Aura-*` header.
+    ///
+    /// `field` is one of the canonical wire field names
+    /// (`aura_org_id`, `aura_session_id`, `template_agent_id`,
+    /// `user_id`, `auth_token`, `project_id`); the resulting
+    /// machine-readable `code` is `missing_<field>` so callers can
+    /// match a stable code without parsing free text.
+    ///
+    /// `context` describes the call site (e.g. `chat_session`,
+    /// `dev_loop_automaton`, `project_tool_session`). Surfaced in
+    /// `data.context` for debuggability without polluting `error` /
+    /// `details` for end users.
+    pub(crate) fn session_identity_missing(
+        field: &'static str,
+        context: &'static str,
+    ) -> (StatusCode, Json<Self>) {
+        let message = format!(
+            "Required session identity field `{field}` is missing for {context}. \
+             This is a server bug — the harness session would have been opened \
+             without the matching `X-Aura-*` header."
+        );
+        (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(Self {
+                error: message.clone(),
+                code: format!("missing_{field}"),
+                details: Some(message),
+                data: Some(serde_json::json!({
+                    "code": "session_identity_missing",
+                    "field": field,
+                    "context": context,
+                })),
+            }),
+        )
+    }
+
     pub(crate) fn service_unavailable(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
         (
             StatusCode::SERVICE_UNAVAILABLE,

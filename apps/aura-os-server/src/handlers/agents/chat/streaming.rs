@@ -31,6 +31,9 @@ use super::persist::{persist_user_message, ChatPersistCtx};
 use super::persist_task::spawn_chat_persist_task;
 use super::turn_slot::{acquire_turn_slot, spawn_turn_slot_release, TurnSlotGuard};
 use super::types::{SseResponse, SseStream};
+use crate::handlers::agents::session_identity::{
+    validate_session_identity, SessionIdentityRequirements,
+};
 
 pub fn harness_broadcast_to_sse(
     rx: tokio::sync::broadcast::Receiver<HarnessOutbound>,
@@ -166,6 +169,19 @@ pub(super) async fn open_harness_chat_stream(
         attachments,
         commands,
     } = args;
+
+    // Tier 1 fail-fast: refuse to open a chat session that would be
+    // missing one of the required X-Aura-* identity headers on the
+    // outbound /v1/messages call. Without this, the harness would
+    // silently drop the header and the request would surface later
+    // as a Cloudflare 403 / generic 5xx with no actionable signal.
+    // See `crate::handlers::agents::session_identity` for the
+    // contract.
+    validate_session_identity(
+        &session_config,
+        SessionIdentityRequirements::CHAT,
+        "chat_session",
+    )?;
 
     // Guiding invariant: no silent success. If the inbound user message
     // cannot be persisted for ANY reason, we must return a non-2xx to the

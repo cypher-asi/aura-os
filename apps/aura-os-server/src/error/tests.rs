@@ -128,6 +128,42 @@ fn harness_capacity_exhausted_returns_503_with_structured_data() {
 }
 
 #[test]
+fn session_identity_missing_returns_422_with_stable_field_code() {
+    let (status, Json(api_err)) =
+        ApiError::session_identity_missing("aura_org_id", "chat_session");
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(api_err.code, "missing_aura_org_id");
+    let data = api_err.data.expect("data must be populated");
+    assert_eq!(data["code"], "session_identity_missing");
+    assert_eq!(data["field"], "aura_org_id");
+    assert_eq!(data["context"], "chat_session");
+    assert!(
+        api_err.error.contains("aura_org_id"),
+        "user-visible message must mention the missing field, got: {}",
+        api_err.error
+    );
+    assert!(
+        api_err.error.contains("chat_session"),
+        "user-visible message must mention the call-site context, got: {}",
+        api_err.error
+    );
+}
+
+#[test]
+fn session_identity_missing_codes_are_field_specific() {
+    for field in [
+        "aura_session_id",
+        "template_agent_id",
+        "user_id",
+        "auth_token",
+    ] {
+        let (_, Json(api_err)) = ApiError::session_identity_missing(field, "dev_loop_automaton");
+        assert_eq!(api_err.code, format!("missing_{field}"));
+        assert_eq!(api_err.data.unwrap()["field"], field);
+    }
+}
+
+#[test]
 fn chat_persist_error_body_skips_data_when_none_in_legacy_paths() {
     // Legacy ApiError constructors (not_found, etc.) must still emit
     // bodies without a `data` key so existing clients that assert on

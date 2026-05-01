@@ -8,6 +8,9 @@ use aura_os_harness::{AutomatonClient, AutomatonStartError, AutomatonStartParams
 
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::chat::build_project_system_prompt;
+use crate::handlers::agents::session_identity::{
+    validate_automaton_identity, SessionIdentityRequirements,
+};
 use crate::handlers::agents::session_model_overrides;
 use crate::handlers::agents::tool_dedupe::dedupe_and_log_installed_tools;
 use crate::handlers::agents::workspace_tools::{
@@ -260,56 +263,8 @@ pub(super) async fn build_start_params(
         aura_session_id,
     };
 
-    // #region agent log
-    debug_log_session_shape(
-        "build_start_params",
-        "H1-H5-devloop",
-        &serde_json::json!({
-            "path": "dev_loop",
-            "model": params.model.as_deref().unwrap_or("<none>"),
-            "has_aura_org_id": params.aura_org_id.is_some(),
-            "aura_org_id_len": params.aura_org_id.as_deref().map(str::len).unwrap_or(0),
-            "has_aura_session_id": params.aura_session_id.is_some(),
-            "aura_session_id_len": params.aura_session_id.as_deref().map(str::len).unwrap_or(0),
-            "has_aura_agent_id": params.aura_agent_id.is_some(),
-            "has_template_agent_id": params.template_agent_id.is_some(),
-            "has_partition_agent_id": params.agent_id.is_some(),
-            "has_auth_token": params.auth_token.is_some(),
-            "auth_token_len": params.auth_token.as_deref().map(str::len).unwrap_or(0),
-            "system_prompt_len": params.system_prompt.as_deref().map(str::len).unwrap_or(0),
-            "has_provider_overrides": params.provider_overrides.is_some(),
-            "has_intent_classifier": params.intent_classifier.is_some(),
-            "max_turns": params.max_turns,
-            "installed_tools_count": params.installed_tools.as_ref().map(Vec::len).unwrap_or(0),
-            "installed_integrations_count": params.installed_integrations.as_ref().map(Vec::len).unwrap_or(0),
-            "has_workspace_root": params.workspace_root.is_some(),
-            "task_id_present": params.task_id.is_some(),
-            "project_id_len": params.project_id.len(),
-        }),
-    );
-    // #endregion
-
     params
 }
-
-// #region agent log
-fn debug_log_session_shape(location: &str, hypothesis_id: &str, data: &serde_json::Value) {
-    use std::io::Write;
-    let line = serde_json::json!({
-        "sessionId": "95fd5c",
-        "hypothesisId": hypothesis_id,
-        "location": format!("apps/aura-os-server/src/handlers/dev_loop/start.rs::{location}"),
-        "message": "session-shape snapshot",
-        "timestamp": chrono::Utc::now().timestamp_millis(),
-        "data": data,
-    });
-    let _ = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(r"C:\code\aura-os\debug-95fd5c.log")
-        .and_then(|mut f| writeln!(f, "{line}"));
-}
-// #endregion
 
 /// Derive a stable session UUID for the (project, agent-instance, task)
 /// tuple that owns this dev-loop run.
@@ -363,6 +318,17 @@ pub(super) async fn start_or_adopt(
     params: AutomatonStartParams,
     ws_slots_cap: usize,
 ) -> ApiResult<StartedAutomaton> {
+    // Tier 1 fail-fast: refuse to POST /automaton/start with a payload
+    // missing one of the required X-Aura-* identity fields (org id,
+    // session id, template agent id, user id, JWT). Without this, the
+    // harness silently drops the missing header and the first LLM
+    // call eventually surfaces as a Cloudflare 403 / generic 5xx with
+    // no actionable signal. See `crate::handlers::agents::session_identity`.
+    validate_automaton_identity(
+        &params,
+        SessionIdentityRequirements::DEV_LOOP,
+        "dev_loop_automaton",
+    )?;
     match client.start(params.clone()).await {
         Ok(result) => Ok(StartedAutomaton {
             automaton_id: result.automaton_id,

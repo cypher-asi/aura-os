@@ -7,6 +7,7 @@ mod installed_tools;
 mod instances;
 mod marketplace_fields;
 mod runtime;
+pub(crate) mod session_identity;
 mod sessions;
 pub(crate) mod tool_dedupe;
 pub(crate) mod workspace_tools;
