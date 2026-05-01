@@ -27,6 +27,9 @@ desktop-smoke-logs
 evals/reports/promptfoo-results.json
 infra/evals/local-stack/.runtime
 infra/evals/local-stack/stack.env
+.venv-swebench/
+AURA.*.json
+logs/run_evaluation/
 
 # Secrets
 .env
