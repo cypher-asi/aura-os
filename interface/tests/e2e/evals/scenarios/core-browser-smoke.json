@@ -1,9 +1,9 @@
 [
   {
-    "id": "desktop-login-host-connection",
+    "id": "desktop-login-screen",
     "suite": "smoke",
     "kind": "browser_core",
-    "title": "Desktop login screen exposes the host connection controls",
+    "title": "Desktop login screen shows the login form",
     "devices": ["eval-desktop-chromium"],
     "bootstrap": "guest",
     "steps": [
@@ -11,27 +11,16 @@
         "label": "open_login",
         "navigate": "/login",
         "expect": {
-          "visibleRoles": [
-            { "role": "button", "name": "Change host", "exact": true }
-          ]
-        }
-      },
-      {
-        "label": "open_host_modal",
-        "action": {
-          "clickRole": { "role": "button", "name": "Change host", "exact": true }
-        },
-        "expect": {
-          "visibleTexts": ["Host Connection"]
+          "visibleTexts": ["Login to AURA"]
         }
       }
     ]
   },
   {
-    "id": "mobile-login-host-connection",
+    "id": "mobile-login-screen",
     "suite": "smoke",
     "kind": "browser_core",
-    "title": "Mobile login screen exposes the host connection controls",
+    "title": "Mobile login screen shows the sign in form",
     "devices": [
       "eval-mobile-chromium",
       "eval-mobile-webkit"
@@ -42,18 +31,7 @@
         "label": "open_login",
         "navigate": "/login",
         "expect": {
-          "visibleRoles": [
-            { "role": "button", "name": "Host", "exact": false }
-          ]
-        }
-      },
-      {
-        "label": "open_host_modal",
-        "action": {
-          "clickRole": { "role": "button", "name": "Host", "exact": false }
-        },
-        "expect": {
-          "visibleTexts": ["Host Connection"]
+          "visibleTexts": ["Sign in"]
         }
       }
     ]

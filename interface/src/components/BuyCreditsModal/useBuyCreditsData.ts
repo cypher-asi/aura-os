@@ -95,7 +95,7 @@ export function useBuyCreditsData(isOpen: boolean): BuyCreditsData {
   const balanceDisplay = balanceLoading && balance === null
     ? "..."
     : balanceError && balance === null ? "---"
-    : balance !== null ? balance.balance_formatted
+    : balance !== null ? `${balance.balance_cents.toLocaleString()} Z credits`
     : "---";
 
   return {

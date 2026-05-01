@@ -1,0 +1,119 @@
+.root {
+  padding: var(--space-2) var(--space-3);
+  overflow-x: hidden;
+}
+
+.error {
+  color: var(--color-danger, #f87171);
+  font-size: 13px;
+  margin-bottom: var(--space-3);
+}
+
+.tierGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+}
+
+.tierCard {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+}
+
+.tierCardCurrent {
+  border-color: var(--color-accent, #4aeaa8);
+}
+
+.tierHeader {
+  margin-bottom: var(--space-2);
+}
+
+.tierName {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 2px;
+}
+
+.tierPrice {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.tierCredits {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: var(--space-2);
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+}
+
+.creditRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.creditLabel {
+  color: var(--color-text-muted);
+}
+
+.creditValue {
+  color: var(--color-accent, #4aeaa8);
+  font-weight: 500;
+}
+
+.creditNote {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--space-1);
+  flex: 1;
+}
+
+.features li {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  padding: 1px 0;
+}
+
+.features li::before {
+  content: "✓ ";
+  color: var(--color-text-muted);
+}
+
+.tierAction {
+  margin-top: auto;
+  text-align: center;
+}
+
+.currentBadge {
+  font-size: 12px;
+  color: var(--color-accent, #4aeaa8);
+  font-weight: 500;
+}
+
+.loadingState {
+  text-align: center;
+  color: var(--color-text-muted, #888);
+  padding: var(--space-6, 24px) 0;
+  font-size: var(--text-sm, 14px);
+}
+
+.footerNote {
+  font-size: var(--text-2xs, 11px);
+  color: var(--color-text-muted, #888);
+  text-align: center;
+  margin-top: var(--space-3);
+  line-height: 1.5;
+}

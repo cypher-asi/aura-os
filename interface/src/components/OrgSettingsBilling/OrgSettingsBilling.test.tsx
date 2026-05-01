@@ -51,15 +51,15 @@ beforeEach(() => {
 describe("OrgSettingsBilling", () => {
   it("renders the current balance formatted", () => {
     renderBilling();
-    expect(screen.getByText("$5.00")).toBeInTheDocument();
+    expect(screen.getByText("500 credits")).toBeInTheDocument();
   });
 
   it("renders preset buttons", () => {
     renderBilling();
-    expect(screen.getByText("$5")).toBeInTheDocument();
-    expect(screen.getByText("$10")).toBeInTheDocument();
     expect(screen.getByText("$25")).toBeInTheDocument();
     expect(screen.getByText("$50")).toBeInTheDocument();
+    expect(screen.getByText("$100")).toBeInTheDocument();
+    expect(screen.getByText("$250")).toBeInTheDocument();
   });
 
   it("calls onPurchase with preset amount", async () => {

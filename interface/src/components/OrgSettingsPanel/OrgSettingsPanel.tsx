@@ -1,16 +1,20 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Modal, Navigator, Text } from "@cypher-asi/zui";
 import type { NavigatorItemProps } from "@cypher-asi/zui";
-import { Settings, Users, Mail, CreditCard, LogOut, Plug } from "lucide-react";
+import { Settings, Users, Mail, CreditCard, LogOut, Plug, Gift, History } from "lucide-react";
 import { OrgSettingsGeneral } from "../OrgSettingsGeneral";
 import { OrgSettingsMembers } from "../OrgSettingsMembers";
 import { OrgSettingsInvites } from "../OrgSettingsInvites";
 import { OrgSettingsBilling } from "../OrgSettingsBilling";
+import { OrgSettingsRewards } from "../OrgSettingsRewards";
+import { OrgSettingsCreditHistory } from "../OrgSettingsCreditHistory/OrgSettingsCreditHistory";
+import { TierSubscriptionModal } from "../TierSubscriptionModal";
 import { useAuth } from "../../stores/auth-store";
 import { useOrgSettingsData } from "./useOrgSettingsData";
 import styles from "./OrgSettingsPanel.module.css";
 
-type Section = "general" | "members" | "invites" | "billing";
+type Section = "general" | "members" | "invites" | "billing" | "rewards" | "credit-history";
 
 interface Props {
   isOpen: boolean;
@@ -22,11 +26,13 @@ const NAV_ITEMS: NavigatorItemProps[] = [
   { id: "general", label: "General", icon: <Settings size={14} /> },
   { id: "members", label: "Members", icon: <Users size={14} /> },
   { id: "invites", label: "Invites", icon: <Mail size={14} /> },
+  { id: "rewards", label: "Rewards", icon: <Gift size={14} /> },
   { id: "billing", label: "Billing", icon: <CreditCard size={14} /> },
+  { id: "credit-history", label: "Z Credit History", icon: <History size={14} /> },
   { id: "integrations", label: "Integrations", icon: <Plug size={14} /> },
 ];
 
-function OrgSettingsContent({ data }: { data: ReturnType<typeof useOrgSettingsData> }) {
+function OrgSettingsContent({ data, onUpgrade }: { data: ReturnType<typeof useOrgSettingsData>; onUpgrade: () => void }) {
   return (
     <>
       {data.section === "general" && (
@@ -45,8 +51,14 @@ function OrgSettingsContent({ data }: { data: ReturnType<typeof useOrgSettingsDa
       {data.section === "invites" && (
         <OrgSettingsInvites invites={data.invites} isAdminOrOwner={data.isAdminOrOwner} onCreateInvite={data.handleCreateInvite} onRevokeInvite={data.handleRevokeInvite} />
       )}
+      {data.section === "rewards" && (
+        <OrgSettingsRewards />
+      )}
       {data.section === "billing" && (
-        <OrgSettingsBilling billing={data.billing} billingEmail={data.billingEmail} isAdminOrOwner={data.isAdminOrOwner} balance={data.balance} balanceLoading={data.balanceLoading} balanceError={data.balanceError} checkoutError={data.checkoutError} pollingStatus={data.pollingStatus} onPurchase={data.handlePurchase} onRetryBalance={data.loadCreditBalance} />
+        <OrgSettingsBilling billing={data.billing} isAdminOrOwner={data.isAdminOrOwner} balance={data.balance} balanceLoading={data.balanceLoading} balanceError={data.balanceError} checkoutError={data.checkoutError} pollingStatus={data.pollingStatus} onPurchase={data.handlePurchase} onRetryBalance={data.loadCreditBalance} onUpgrade={onUpgrade} />
+      )}
+      {data.section === "credit-history" && (
+        <OrgSettingsCreditHistory />
       )}
     </>
   );
@@ -56,6 +68,7 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
   const data = useOrgSettingsData(isOpen, initialSection);
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const [tierModalOpen, setTierModalOpen] = useState(false);
 
   const handleNavChange = (id: string) => {
     // Integrations were promoted to a top-level app. Keep the tab in the
@@ -109,9 +122,10 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
           </div>
         </div>
         <div className={styles.settingsContent}>
-          <OrgSettingsContent data={data} />
+          <OrgSettingsContent data={data} onUpgrade={() => setTierModalOpen(true)} />
         </div>
       </div>
+      <TierSubscriptionModal isOpen={tierModalOpen} onClose={() => setTierModalOpen(false)} />
     </Modal>
   );
 }

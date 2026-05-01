@@ -79,6 +79,9 @@ struct ZosProfileResponse {
 pub struct AuthSessionResult {
     pub session: ZeroAuthSession,
     pub zero_pro_refresh_error: Option<String>,
+    /// The user ID of the inviter, if the user registered via an invite code.
+    /// Populated from the zos-api finalize response.
+    pub inviter_user_id: Option<String>,
 }
 
 fn zero_pro_refresh_error_message() -> String {
@@ -177,14 +180,26 @@ impl AuthService {
             .await
             .map_err(AuthError::Http)?;
 
-        if !finalize_res.status().is_success() {
+        // Capture inviter from finalize response (if invite code was used)
+        let mut inviter_user_id = None;
+        if finalize_res.status().is_success() {
+            if let Ok(body) = finalize_res.json::<serde_json::Value>().await {
+                inviter_user_id = body
+                    .get("inviter")
+                    .and_then(|v| v.get("id"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+            }
+        } else {
             let status = finalize_res.status().as_u16();
             let body = finalize_res.text().await.unwrap_or_default();
             warn!(status, body = %body, "Failed to finalize account, continuing with session");
         }
 
         // Step 4: Build session from the token (re-fetches user with completed profile)
-        self.build_session_from_token(token).await
+        let mut result = self.build_session_from_token(token).await?;
+        result.inviter_user_id = inviter_user_id;
+        Ok(result)
     }
 
     pub async fn import_access_token(
@@ -323,6 +338,7 @@ impl AuthService {
         Ok(AuthSessionResult {
             session,
             zero_pro_refresh_error,
+            inviter_user_id: None,
         })
     }
 }

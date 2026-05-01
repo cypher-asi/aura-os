@@ -287,6 +287,17 @@ pub(crate) async fn project_tool_session_config(
         project_path.as_deref(),
     ));
     let provider_overrides = session_model_overrides(model.as_deref());
+    let aura_org_id = agent_instance
+        .as_ref()
+        .and_then(|instance| instance.org_id.as_ref())
+        .map(ToString::to_string)
+        .or_else(|| {
+            state
+                .project_service
+                .get_project(project_id)
+                .ok()
+                .map(|project| project.org_id.to_string())
+        });
     let cfg = SessionConfig {
         system_prompt,
         agent_id: agent_id_field,
@@ -306,10 +317,7 @@ pub(crate) async fn project_tool_session_config(
         provider_overrides,
         installed_tools,
         installed_integrations,
-        aura_org_id: agent_instance
-            .as_ref()
-            .and_then(|instance| instance.org_id.as_ref())
-            .map(ToString::to_string),
+        aura_org_id,
         aura_session_id: Some(stable_project_tool_session_id(
             project_id,
             agent_instance_id.as_ref(),

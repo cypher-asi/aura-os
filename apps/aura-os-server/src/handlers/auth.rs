@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use axum::extract::State;
+use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::Json;
 use base64::Engine;
@@ -76,6 +76,14 @@ pub(crate) async fn login(
         },
     );
 
+    // Fire-and-forget: grant signup credits on first AURA login.
+    // Idempotent — only grants once per user (signup_grant_at check).
+    let user_id = result.session.user_id.clone();
+    let is_zero_pro = result.session.is_zero_pro;
+    tokio::spawn(async move {
+        grant_signup_credits(&user_id, is_zero_pro, None).await;
+    });
+
     Ok(Json(AuthSessionResponse::from_auth_result(result)))
 }
 
@@ -101,7 +109,136 @@ pub(crate) async fn register(
         },
     );
 
+    // Fire-and-forget: grant signup credits on first AURA login.
+    // If user entered a real invite code, store the inviter so referral
+    // credits fire when this user subscribes to a paid plan (not on signup).
+    let user_id = result.session.user_id.clone();
+    let is_zero_pro = result.session.is_zero_pro;
+    let referred_by = if !is_default_invite_code(&req.invite_code) {
+        result.inviter_user_id.clone()
+    } else {
+        None
+    };
+    tokio::spawn(async move {
+        grant_signup_credits(&user_id, is_zero_pro, referred_by.as_deref()).await;
+    });
+
     Ok(Json(AuthSessionResponse::from_auth_result(result)))
+}
+
+/// Get the zOS API base URL from env var or use the default.
+fn zos_api_url() -> String {
+    std::env::var("ZOS_API_URL").unwrap_or_else(|_| "https://zosapi.zero.tech".to_string())
+}
+
+/// Check if the invite code is the system default (organic signup, no referral).
+fn is_default_invite_code(code: &str) -> bool {
+    let default =
+        std::env::var("DEFAULT_INVITE_CODE").unwrap_or_else(|_| "domw-jh4cz8".to_string());
+    code.eq_ignore_ascii_case(&default)
+}
+
+/// Grant one-time signup credits on first AURA login. Idempotent — z-billing
+/// checks `signup_grant_at` and only grants once per user.
+/// If `referred_by` is set, stores the inviter ID on the account for
+/// deferred referral credits (triggered when user subscribes).
+async fn grant_signup_credits(user_id: &str, is_zero_pro: bool, referred_by: Option<&str>) {
+    let (billing_url, api_key) = match billing_service_config() {
+        Some(config) => config,
+        None => return,
+    };
+
+    let client = reqwest::Client::new();
+    match client
+        .post(format!("{billing_url}/v1/credits/signup-grant"))
+        .header("x-api-key", &api_key)
+        .header("x-service-name", "aura-os-server")
+        .json(&serde_json::json!({ "user_id": user_id, "is_zero_pro": is_zero_pro, "referred_by": referred_by }))
+        .send()
+        .await
+    {
+        Ok(resp) if resp.status().is_success() => {
+            tracing::info!(user_id = %user_id, "Signup credit grant issued");
+        }
+        Ok(resp) => {
+            tracing::warn!(user_id = %user_id, status = %resp.status(), "Signup grant response");
+        }
+        Err(e) => {
+            tracing::warn!(user_id = %user_id, error = %e, "Failed to reach z-billing for signup grant");
+        }
+    }
+}
+
+/// Get z-billing service URL and API key. Returns None if not configured.
+fn billing_service_config() -> Option<(String, String)> {
+    let billing_url = std::env::var("Z_BILLING_URL")
+        .unwrap_or_else(|_| "https://z-billing.onrender.com".to_string());
+    match std::env::var("Z_BILLING_API_KEY") {
+        Ok(key) => Some((billing_url, key)),
+        Err(_) => {
+            tracing::warn!("Z_BILLING_API_KEY not set, skipping credit grant");
+            None
+        }
+    }
+}
+
+pub(crate) async fn validate_invite_code(
+    Path(code): Path<String>,
+) -> ApiResult<Json<serde_json::Value>> {
+    // Sanitize: invite codes are alphanumeric + hyphens only (e.g. "domw-jh4cz8")
+    if code.is_empty() || code.len() > 50 || !code.chars().all(|c| c.is_alphanumeric() || c == '-')
+    {
+        return Ok(Json(serde_json::json!({ "valid": false })));
+    }
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(format!("{}/invite/{code}/validate", zos_api_url()))
+        .send()
+        .await
+        .map_err(|e| ApiError::bad_gateway(format!("invite validation failed: {e}")))?;
+
+    if !resp.status().is_success() {
+        return Ok(Json(serde_json::json!({ "valid": false })));
+    }
+
+    let body: serde_json::Value = resp
+        .json()
+        .await
+        .map_err(|e| ApiError::bad_gateway(format!("invite response parse failed: {e}")))?;
+
+    // Normalize: zos-api currently returns a plain boolean.
+    // Wrap it so the frontend always receives { valid, inviterUserId? }.
+    if body.is_boolean() {
+        return Ok(Json(
+            serde_json::json!({ "valid": body.as_bool().unwrap_or(false) }),
+        ));
+    }
+
+    Ok(Json(body))
+}
+
+pub(crate) async fn get_my_invite_code(
+    AuthJwt(jwt): AuthJwt,
+) -> ApiResult<Json<serde_json::Value>> {
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(format!("{}/invite", zos_api_url()))
+        .bearer_auth(&jwt)
+        .send()
+        .await
+        .map_err(|e| ApiError::bad_gateway(format!("invite fetch failed: {e}")))?;
+
+    if !resp.status().is_success() {
+        return Err(ApiError::bad_gateway("Failed to fetch invite code"));
+    }
+
+    let body: serde_json::Value = resp
+        .json()
+        .await
+        .map_err(|e| ApiError::bad_gateway(format!("invite response parse failed: {e}")))?;
+
+    Ok(Json(body))
 }
 
 pub(crate) async fn import_access_token(

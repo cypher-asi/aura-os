@@ -59,18 +59,14 @@ export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
     onOpenBilling?.();
   };
 
-  const footerZCredits = balance !== null
+  const footerCredits = balance !== null
     ? formatCredits(balance.balance_cents)
     : balanceDisplay === "..." ? "..." : "---";
-
-  const footerCashCredits = balance !== null ? balance.balance_formatted : balanceDisplay;
 
   const footer = (
     <div className={styles.footer}>
       <div className={styles.footerCredits}>
-        <span>{footerZCredits}</span>
-        <span className={styles.footerSeparator}>•</span>
-        <span>{footerCashCredits}</span>
+        <span>{footerCredits}</span>
       </div>
       {onOpenBilling && !isNativeApp && (
         <button className={styles.billingLink} onClick={handleOpenBilling} type="button">
@@ -81,7 +77,7 @@ export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="BUY CREDITS" size="md" footer={footer}>
+    <Modal isOpen={isOpen} onClose={onClose} title="BUY Z CREDITS" size="md" footer={footer}>
       <div className={styles.content}>
         <div className={styles.balanceRow}>
           <div className={styles.balanceValue}>{balanceDisplay}</div>
@@ -112,7 +108,7 @@ export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
                   onClick={() => handlePresetClick(amount)}
                   disabled={isPolling}
                 >
-                  <div className={styles.presetPrice}>${amount}</div>
+                  <div className={styles.presetPrice}>${amount} <span style={{ fontSize: "0.75em", opacity: 0.6 }}>({(amount * 100).toLocaleString()})</span></div>
                 </button>
               ))}
             </div>
@@ -150,9 +146,9 @@ export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
         {!isNativeApp && pollingStatus !== "idle" && (
           <div className={styles.pollingStatus}>
             {pollingStatus === "polling" && "Waiting for payment confirmation..."}
-            {pollingStatus === "success" && "Payment confirmed! Credits updated."}
+            {pollingStatus === "success" && "Payment confirmed! Z credits updated."}
             {pollingStatus === "timeout" &&
-              "Payment not yet confirmed. Credits will appear once the payment is processed."}
+              "Payment not yet confirmed. Z credits will appear once the payment is processed."}
           </div>
         )}
       </div>

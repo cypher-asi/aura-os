@@ -12,6 +12,12 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify({ email, password, name, invite_code: inviteCode }),
     }),
+  validateInviteCode: (code: string) =>
+    apiFetch<{ valid: boolean }>(`/api/invite/${encodeURIComponent(code)}/validate`, {
+      method: "POST",
+    }),
+  getMyInviteCode: () =>
+    apiFetch<{ slug: string }>("/api/invite/me", { method: "POST" }),
   getSession: () => apiFetch<AuthSession>("/api/auth/session"),
   validate: () =>
     apiFetch<AuthSession>("/api/auth/validate", { method: "POST" }),

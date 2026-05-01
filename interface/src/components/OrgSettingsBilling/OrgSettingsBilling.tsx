@@ -1,15 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Input, Button } from "@cypher-asi/zui";
 import type { OrgBilling, CreditBalance } from "../../shared/types";
 import type { CheckoutPollingStatus } from "../../hooks/use-checkout-polling";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { NATIVE_BILLING_MESSAGE } from "../../lib/billing";
+import { orgsApi } from "../../shared/api/orgs";
 import styles from "../OrgSettingsPanel/OrgSettingsPanel.module.css";
 import billingStyles from "./OrgSettingsBilling.module.css";
 
 interface Props {
   billing: OrgBilling | null;
-  billingEmail: string;
   isAdminOrOwner: boolean;
   balance: CreditBalance | null;
   balanceLoading: boolean;
@@ -18,15 +18,15 @@ interface Props {
   pollingStatus: CheckoutPollingStatus;
   onPurchase: (amountUsd: number) => void;
   onRetryBalance: () => void;
+  onUpgrade?: () => void;
 }
 
-const PRESETS = [5, 10, 25, 50];
+const PRESETS = [25, 50, 100, 250];
 const MIN_USD = 1;
 const MAX_USD = 1000;
 
 export function OrgSettingsBilling({
   billing,
-  billingEmail,
   isAdminOrOwner,
   balance,
   balanceLoading,
@@ -35,9 +35,37 @@ export function OrgSettingsBilling({
   pollingStatus,
   onPurchase,
   onRetryBalance,
+  onUpgrade,
 }: Props) {
   const { isNativeApp } = useAuraCapabilities();
   const [customAmount, setCustomAmount] = useState("");
+  const [periodEnd, setPeriodEnd] = useState<string | null>(null);
+  const [periodLoading, setPeriodLoading] = useState(true);
+  const [isPaidPlan, setIsPaidPlan] = useState(false);
+  const [isActive, setIsActive] = useState(false);
+
+  const fetchSubscription = useCallback(() => {
+    setPeriodLoading(true);
+    orgsApi.getSubscriptionStatus()
+      .then((s) => {
+        if (s.current_period_end) setPeriodEnd(s.current_period_end);
+        setIsPaidPlan(s.plan !== "mortal");
+        setIsActive(s.is_subscribed);
+      })
+      .catch(() => {})
+      .finally(() => setPeriodLoading(false));
+  }, []);
+
+  useEffect(() => { fetchSubscription(); }, [fetchSubscription]);
+
+  // Auto-refresh when user returns to tab (e.g. after Stripe checkout/portal)
+  useEffect(() => {
+    const handler = () => {
+      if (document.visibilityState === "visible") fetchSubscription();
+    };
+    document.addEventListener("visibilitychange", handler);
+    return () => document.removeEventListener("visibilitychange", handler);
+  }, [fetchSubscription]);
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
 
   const customNum = parseFloat(customAmount);
@@ -65,45 +93,18 @@ export function OrgSettingsBilling({
   return (
     <>
       <h2 className={styles.sectionTitle}>Billing</h2>
+      <p className={billingStyles.billingIntro}>
+        Subscribe to a tier for monthly Z credit allowances and enhanced rewards, or purchase Z credits as you go.
+      </p>
 
-      <div className={styles.settingsGroupLabel}>Plan</div>
-      <div className={styles.settingsGroup}>
-        <div className={styles.settingsRow}>
-          <div className={styles.rowInfo}>
-            <span className={styles.rowLabel}>Current Plan</span>
-            <span className={styles.rowDescription}>
-              Your active subscription
-            </span>
-          </div>
-          <div className={styles.rowControl}>
-            <span className={styles.roleBadge}>{billing?.plan ?? "pro"}</span>
-          </div>
-        </div>
-        {isAdminOrOwner && (
-          <div className={billingStyles.billingEmailSection}>
-            <div className={styles.rowInfo}>
-              <span className={styles.rowLabel}>Billing Email</span>
-              <span className={styles.rowDescription}>
-                Tied to your ZERO account. Invoices and receipts are sent here.
-              </span>
-            </div>
-            <div className={billingStyles.billingEmailRow}>
-              <span className={billingStyles.billingEmailValue}>
-                {billingEmail || "—"}
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Credit Balance */}
-      <div className={styles.settingsGroupLabel}>Credits</div>
+      {/* Credit Balance — shown first */}
+      <div className={styles.settingsGroupLabel}>Z Credits</div>
       <div className={styles.settingsGroup}>
         <div className={styles.settingsRow}>
           <div className={styles.rowInfo}>
             <span className={styles.rowLabel}>Current Balance</span>
             <span className={styles.rowDescription}>
-              Credits available for AI usage
+              Z credits available for AI usage
             </span>
           </div>
           <div className={styles.rowControl}>
@@ -116,17 +117,52 @@ export function OrgSettingsBilling({
                       <button className={billingStyles.retryLink} onClick={onRetryBalance}>Retry</button>
                     </span>
                   : balance !== null
-                    ? balance.balance_formatted
+                    ? `${balance.balance_cents.toLocaleString()} Z credits`
                     : "---"}
             </span>
           </div>
         </div>
       </div>
 
+      <div className={styles.settingsGroupLabel}>Plan</div>
+      <div className={styles.settingsGroup}>
+        <div className={styles.settingsRow}>
+          <div className={styles.rowInfo}>
+            <span className={styles.rowLabel}>Current Plan</span>
+            <span className={styles.rowDescription}>
+              {isPaidPlan && !isActive ? "Cancels at end of period" : "Your active subscription"}
+            </span>
+          </div>
+          <div className={styles.rowControl} style={{ marginLeft: "auto" }}>
+            <span className={styles.roleBadge}>{periodLoading ? "..." : balance?.plan ?? billing?.plan ?? "mortal"}</span>
+            {onUpgrade && (
+              <Button variant="ghost" size="sm" onClick={onUpgrade} style={{ padding: 0, display: "flex", justifyContent: "flex-end" }}>
+                Change Plan
+              </Button>
+            )}
+          </div>
+        </div>
+        {isPaidPlan && (
+          <div className={styles.settingsRow}>
+            <div className={styles.rowInfo}>
+              <span className={styles.rowLabel}>{isActive ? "Next Billing Date" : "Plan Ends"}</span>
+              <span className={styles.rowDescription}>
+                {isActive ? "Next monthly Z credit top-up" : "Your plan will revert to Mortal"}
+              </span>
+            </div>
+            <div className={styles.rowControl}>
+              {periodLoading ? "Loading..." : periodEnd
+                ? new Date(periodEnd).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+                : "---"}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Purchase Credits */}
       {isAdminOrOwner && !isNativeApp && (
         <>
-          <div className={styles.settingsGroupLabel}>Buy Credits</div>
+          <div className={styles.settingsGroupLabel}>Buy Z Credits</div>
           <div className={styles.settingsGroup}>
             <div className={billingStyles.presetRow}>
               {PRESETS.map((amount) => (
@@ -137,7 +173,7 @@ export function OrgSettingsBilling({
                   onClick={() => handlePresetClick(amount)}
                   disabled={isPolling}
                 >
-                  ${amount}
+                  ${amount} <span style={{ fontSize: "0.75em", opacity: 0.6 }}>({(amount * 100).toLocaleString()})</span>
                 </button>
               ))}
             </div>
@@ -205,8 +241,8 @@ export function OrgSettingsBilling({
       {!isNativeApp && pollingStatus !== "idle" && (
         <div className={billingStyles.pollingStatus}>
           {pollingStatus === "polling" && "Waiting for payment confirmation..."}
-          {pollingStatus === "success" && "Payment confirmed! Credits updated."}
-          {pollingStatus === "timeout" && "Payment not yet confirmed. Credits will appear once the payment is processed."}
+          {pollingStatus === "success" && "Payment confirmed! Z credits updated."}
+          {pollingStatus === "timeout" && "Payment not yet confirmed. Z credits will appear once the payment is processed."}
         </div>
       )}
     </>

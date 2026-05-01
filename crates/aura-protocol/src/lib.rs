@@ -54,7 +54,7 @@ pub use permissions::{
     AgentPermissionsWire, AgentScopeWire, AgentToolPermissionsWire, CapabilityWire,
 };
 pub use server::{
-    AssistantMessageEnd, AssistantMessageStart, ErrorMsg, FileOp, FilesChanged,
+    AssistantMessageEnd, AssistantMessageStart, ErrorMsg, FileDiff, FileOp, FilesChanged,
     GenerationCompleted, GenerationErrorMsg, GenerationPartialImage, GenerationProgressMsg,
     GenerationStart, OutboundMessage, SessionReady, SessionUsage, SkillInfo, TextDelta,
     ThinkingDelta, ToolApprovalPrompt, ToolCallSnapshot, ToolInfo, ToolResultMsg, ToolUseStart,

@@ -166,6 +166,52 @@ pub(crate) async fn get_account(
     Ok(Json(result))
 }
 
+// ============================================================================
+// Subscriptions
+// ============================================================================
+
+pub(crate) async fn subscription_checkout(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Json(body): Json<serde_json::Value>,
+) -> ApiResult<Json<serde_json::Value>> {
+    let plan = body
+        .get("plan")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| ApiError::bad_request("plan is required"))?;
+
+    let resp = state
+        .billing_client
+        .create_subscription_checkout(&jwt, plan)
+        .await
+        .map_err(billing_err)?;
+    Ok(Json(resp))
+}
+
+pub(crate) async fn subscription_portal(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+) -> ApiResult<Json<serde_json::Value>> {
+    let resp = state
+        .billing_client
+        .create_portal_session(&jwt)
+        .await
+        .map_err(billing_err)?;
+    Ok(Json(resp))
+}
+
+pub(crate) async fn subscription_status(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+) -> ApiResult<Json<serde_json::Value>> {
+    let resp = state
+        .billing_client
+        .get_subscription_status(&jwt)
+        .await
+        .map_err(billing_err)?;
+    Ok(Json(resp))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

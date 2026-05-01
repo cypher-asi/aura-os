@@ -96,7 +96,7 @@ export function LoginForm({
             <Input
               value={inviteCode}
               onChange={(e) => setInviteCode(e.target.value)}
-              placeholder="Invite code"
+              placeholder="Invite code (optional)"
               type="text"
               autoComplete="off"
               disabled={loading}
