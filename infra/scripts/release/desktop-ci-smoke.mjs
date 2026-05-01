@@ -4,6 +4,7 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { extractAssetRefs } from "./desktop-frontend-assets-validate.mjs";
 
 const binaryPath = process.env.AURA_DESKTOP_BINARY;
 const port = process.env.AURA_SERVER_PORT || "19847";
@@ -74,16 +75,42 @@ child.on("exit", (code, signal) => {
   cleanupAndExit(1);
 });
 
+async function assertFrontendAssetsServed(html) {
+  const assetRefs = extractAssetRefs(html);
+  if (assetRefs.length === 0) {
+    throw new Error("desktop response did not reference any built frontend assets");
+  }
+
+  for (const ref of assetRefs) {
+    const assetUrl = new URL(ref, `${baseUrl}/`).toString();
+    const response = await fetch(assetUrl);
+    if (!response.ok) {
+      throw new Error(`${assetUrl} returned ${response.status}`);
+    }
+    const contentType = response.headers.get("content-type") ?? "";
+    if (ref.endsWith(".js") && !contentType.includes("javascript")) {
+      throw new Error(`${assetUrl} returned unexpected content-type ${contentType}`);
+    }
+    if (ref.endsWith(".css") && !contentType.includes("css")) {
+      throw new Error(`${assetUrl} returned unexpected content-type ${contentType}`);
+    }
+  }
+
+  return assetRefs;
+}
+
 async function waitForReady() {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
     try {
+      let assetRefs = [];
       const root = await fetch(baseUrl);
       if (root.ok) {
         const html = await root.text();
         if (!html.includes("<div id=\"root\">") && !html.includes("<div id='root'>")) {
           throw new Error("frontend root marker missing from desktop response");
         }
+        assetRefs = await assertFrontendAssetsServed(html);
       } else {
         throw new Error(`root returned ${root.status}`);
       }
@@ -132,6 +159,7 @@ async function waitForReady() {
         channel: payload.channel,
         updateBaseUrl: payload.update_base_url,
         endpointTemplate: payload.endpoint_template,
+        frontendAssetsChecked: assetRefs,
         runtimeConfig,
         logs: { stdout: stdoutPath, stderr: stderrPath },
       }, null, 2));

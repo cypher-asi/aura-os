@@ -128,15 +128,24 @@ describe("preloadInitialShellApp", () => {
     }
   });
 
-  it("swallows preload() rejections so the reveal gate can still open", async () => {
+  it("logs preload() rejections while keeping the reveal gate open", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const preload = vi.fn(() => Promise.reject(new Error("chunk load failed")));
 
-    const ready = preloadInitialShellApp({
-      appList: [makeApp("agents", "/agents", preload)],
-      timeoutMs: 0,
-    });
+    try {
+      const ready = preloadInitialShellApp({
+        appList: [makeApp("agents", "/agents", preload)],
+        timeoutMs: 0,
+      });
 
-    await expect(ready).resolves.toBeUndefined();
+      await expect(ready).resolves.toBeUndefined();
+      expect(errorSpy).toHaveBeenCalledWith(
+        "[aura-boot] preload agents failed",
+        expect.any(Error),
+      );
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 
   it("exposes the same Promise via awaitInitialShellAppReady()", () => {

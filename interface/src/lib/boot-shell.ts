@@ -2,6 +2,7 @@ import type { AuraApp } from "../apps/types";
 import { apps } from "../apps/registry";
 import { getLastApp } from "../utils/storage";
 import { getInitialShellPath } from "../utils/last-app-path";
+import { reportBootError } from "./boot-diagnostics";
 
 /**
  * Default maximum time we'll hold back the desktop window reveal waiting for the
@@ -65,7 +66,10 @@ export function preloadInitialShellApp(options: PreloadOptions = {}): Promise<vo
   const preloadResult = app.preload();
   const preloadDone = Promise.resolve(preloadResult)
     .then(() => undefined)
-    .catch(() => undefined);
+    .catch((error) => {
+      reportBootError(`preload ${app.id}`, error);
+      return undefined;
+    });
 
   if (timeoutMs <= 0) {
     initialAppReadyPromise = preloadDone;

@@ -12,6 +12,7 @@ import { getLastApp } from "./utils/storage";
 import { bootstrapNativeTestAuth } from "./lib/native-test-auth";
 import { hydrateStoredAuth, isLoggedInSync } from "./shared/lib/auth-token";
 import { preloadInitialShellApp } from "./lib/boot-shell";
+import { reportBootError } from "./lib/boot-diagnostics";
 
 const InviteAcceptView = lazy(() =>
   import("./views/InviteAcceptView").then((m) => ({ default: m.InviteAcceptView })),
@@ -146,7 +147,7 @@ export default function App() {
         await hydrateStoredAuth();
         await bootstrapNativeTestAuth();
       } catch (error) {
-        console.error("Native test auth bootstrap failed", error);
+        reportBootError("auth bootstrap", error);
       } finally {
         if (active && shouldRestoreSession) {
           await restoreSession();

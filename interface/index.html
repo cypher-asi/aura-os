@@ -59,6 +59,37 @@
         animation: aura-splash-scan 900ms ease-in-out infinite;
       }
 
+      #aura-splash .aura-boot-error {
+        display: none;
+        max-width: 420px;
+        text-align: center;
+        letter-spacing: 0;
+        text-indent: 0;
+        color: rgba(248, 250, 252, 0.86);
+      }
+
+      #aura-splash .aura-boot-error-title {
+        margin-top: 2px;
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      #aura-splash .aura-boot-error-detail,
+      #aura-splash .aura-boot-error-action {
+        margin-top: 8px;
+        font-size: 12px;
+        line-height: 1.5;
+        color: rgba(226, 232, 240, 0.72);
+      }
+
+      html.aura-boot-error #aura-splash .aura-splash-pulse {
+        display: none;
+      }
+
+      html.aura-boot-error #aura-splash .aura-boot-error {
+        display: block;
+      }
+
       html.aura-app-ready #aura-splash {
         opacity: 0;
       }
@@ -83,9 +114,78 @@
       <div class="aura-splash-mark">
         <div>AURA</div>
         <div class="aura-splash-pulse"></div>
+        <div class="aura-boot-error" role="status" aria-live="polite">
+          <div class="aura-boot-error-title" id="aura-boot-error-title">
+            AURA is taking longer than expected to start.
+          </div>
+          <div class="aura-boot-error-detail" id="aura-boot-error-detail">
+            Waiting for the app bundle to load.
+          </div>
+          <div class="aura-boot-error-action">
+            Restart AURA. If this keeps happening, install the latest build and report this message.
+          </div>
+        </div>
       </div>
     </div>
     <div id="root"></div>
+    <script>
+      (function () {
+        var timeoutId = 0;
+        var currentPhase = "loading app bundle";
+
+        function setText(id, text) {
+          var node = document.getElementById(id);
+          if (node) node.textContent = text;
+        }
+
+        function showBootError(message, detail) {
+          if (document.documentElement.classList.contains("aura-app-ready")) return;
+          setText("aura-boot-error-title", message || "AURA could not finish starting.");
+          setText("aura-boot-error-detail", detail || "Startup stopped before the app became ready.");
+          document.documentElement.classList.add("aura-boot-error");
+        }
+
+        window.__AURA_BOOT_STATUS__ = {
+          mark: function (phase) {
+            currentPhase = phase || currentPhase;
+            setText("aura-boot-error-detail", "Current step: " + currentPhase + ".");
+          },
+          fail: function (message, detail) {
+            showBootError(message, detail);
+          },
+          clear: function () {
+            if (timeoutId) window.clearTimeout(timeoutId);
+            document.documentElement.classList.remove("aura-boot-error");
+          },
+        };
+
+        window.addEventListener(
+          "error",
+          function (event) {
+            var target = event.target;
+            var source = target && (target.src || target.href);
+            showBootError(
+              "AURA hit a startup error.",
+              event.message || (source ? "Failed to load " + source : "A startup resource failed to load.")
+            );
+          },
+          true
+        );
+
+        window.addEventListener("unhandledrejection", function (event) {
+          var reason = event.reason;
+          var detail = reason && reason.message ? reason.message : "A startup promise failed.";
+          showBootError("AURA hit a startup error.", detail);
+        });
+
+        timeoutId = window.setTimeout(function () {
+          showBootError(
+            "AURA is taking longer than expected to start.",
+            "Current step: " + currentPhase + "."
+          );
+        }, 20000);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

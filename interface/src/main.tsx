@@ -18,6 +18,12 @@ import { installNativeTitlebarDrag } from "./lib/native-titlebar-drag";
 import { syncQueryHostOriginToStorage } from "./shared/lib/host-config";
 import { signalDesktopReady, signalDesktopSplashReady } from "./lib/desktop-ready";
 import { awaitInitialShellAppReady } from "./lib/boot-shell";
+import {
+  clearBootStatus,
+  installBootErrorHandlers,
+  markBootPhase,
+  reportBootError,
+} from "./lib/boot-diagnostics";
 import { purgeLegacyChatHistoryFallback } from "./shared/lib/browser-db";
 import { bootstrapTaskStreamSubscriptions } from "./stores/task-stream-bootstrap";
 import { bootstrapProcessStreamSubscriptions } from "./stores/process-stream-bootstrap";
@@ -26,6 +32,8 @@ import { bootstrapProcessStreamSubscriptions } from "./stores/process-stream-boo
 // API clients) so a `?host=` bootstrap param wins over stale localStorage.
 syncQueryHostOriginToStorage();
 installPreloadRecovery();
+installBootErrorHandlers();
+markBootPhase("frontend module loaded");
 // -webkit-app-region: drag works in WebView2 on Windows but is ignored by
 // WKWebView (macOS) and WebKitGTK (Linux). Install a JS fallback that
 // routes titlebar pointerdown into the existing native-drag IPC.
@@ -46,6 +54,7 @@ bootstrapProcessStreamSubscriptions();
 
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("Missing #root element");
+markBootPhase("rendering React root");
 createRoot(rootEl).render(
   <QueryClientProvider client={queryClient}>
     <ThemeProvider defaultTheme="dark" defaultAccent="purple">
@@ -103,13 +112,23 @@ scheduleIdle(() => {
 });
 
 schedulePostFirstPaint(() => {
+  markBootPhase("first paint committed");
   signalDesktopSplashReady();
 
   // Keep the app-ready signal tied to the existing authenticated-shell preload
   // gate. The native window can show the auth-neutral splash early, while the
   // actual app frame is revealed only after the initial route module is ready.
-  void awaitInitialShellAppReady().then(() => {
-    hideBootSplash();
-    signalDesktopReady();
-  });
+  void (async () => {
+    try {
+      markBootPhase("waiting for initial shell app");
+      await awaitInitialShellAppReady();
+      markBootPhase("initial shell app ready");
+    } catch (error) {
+      reportBootError("initial shell app readiness", error);
+    } finally {
+      hideBootSplash();
+      clearBootStatus();
+      signalDesktopReady();
+    }
+  })();
 });

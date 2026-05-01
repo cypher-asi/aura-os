@@ -109,7 +109,10 @@ pub(crate) fn build_initialization_script(
     if statements.is_empty() {
         String::new()
     } else {
-        format!("try {{ {} }} catch {{}};", statements.join(" "))
+        format!(
+            "try {{ {} }} catch (error) {{ console.error('[aura-init-script]', error); }};",
+            statements.join(" ")
+        )
     }
 }
 
@@ -123,6 +126,7 @@ mod tests {
         assert!(script.contains("aura-host-origin"));
         assert!(script.contains("http://127.0.0.1:19847"));
         assert!(!script.contains("window.ipc.postMessage('ready')"));
+        assert!(script.contains("console.error('[aura-init-script]', error)"));
     }
 
     #[test]

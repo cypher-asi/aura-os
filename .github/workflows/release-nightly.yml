@@ -260,6 +260,7 @@ jobs:
         run: |
           npm ci
           npm run build
+          node ../infra/scripts/release/desktop-frontend-assets-validate.mjs --dist dist
 
       - name: Build release binary
         env:
@@ -413,6 +414,7 @@ jobs:
           tar -xf downloaded-build-inputs/desktop-build-inputs.tar
           test -d apps/aura-os-desktop/resources/sidecar
           test -d interface/dist
+          node infra/scripts/release/desktop-frontend-assets-validate.mjs --dist interface/dist
           binary_name="aura-os-desktop"
           if [ "${{ matrix.target }}" = "windows" ]; then
             binary_name="${binary_name}.exe"

@@ -19,6 +19,9 @@ assertDesktopRuntime({ requireHarness: true });
 run("node", ["--check", "infra/scripts/release/desktop-local-auto-update-smoke.mjs"], {
   cwd: repoRoot,
 });
+run("node", ["--test", "infra/scripts/release/desktop-frontend-assets-validate.test.mjs"], {
+  cwd: repoRoot,
+});
 run("node", ["--test", "infra/scripts/release/prepare-desktop-sidecar.test.mjs"], {
   cwd: repoRoot,
 });
@@ -28,6 +31,9 @@ run("node", ["infra/scripts/release/prepare-desktop-sidecar.mjs", "--check"], {
 run("npm", ["ci"], { cwd: interfaceDir });
 run("node", ["infra/scripts/release/prepare-desktop-sidecar.mjs"], { cwd: repoRoot });
 run("npm", ["run", "build"], { cwd: interfaceDir });
+run("node", ["infra/scripts/release/desktop-frontend-assets-validate.mjs", "--dist", "interface/dist"], {
+  cwd: repoRoot,
+});
 const cargoArgs = ["build", "--release", "--package", "aura-os-desktop"];
 
 if (process.env.AURA_CARGO_TIMINGS === "1") {
