@@ -1,65 +1,67 @@
-# External benchmark lane lands; desktop boot and SWE-bench reliability hardened
+# External benchmark lane lands; packaged desktop hardening
 
 - Date: `2026-04-30`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.422.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.422.1
+- Version: `0.1.0-nightly.423.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.423.1
 
-Today's nightly is dominated by a sweeping push to make Aura measurable against public coding benchmarks and to close the long tail of issues that surfaced once the eval pipeline started running for real. Alongside that, the desktop got a faster authenticated cold open, chat trimmed memory and visual jitter, and the packaged desktop now refuses to ship with a broken frontend bundle.
+A heavy day dominated by standing up Aura's external benchmark pipeline (SWE-bench Verified and Terminal-Bench 2) and the long debugging tail that came with it: router/Cloudflare parity with the chat path, harness env alignment with the desktop sidecar, and a much stricter SWE verification flow. On the product side, startup performance got real attention, the packaged desktop got hardened against silent boot failures, and Pro pricing copy was reconciled for legacy subscribers.
 
-## 9:35 PM — SWE-bench and Terminal-Bench scoring lane goes live
+## 9:35 PM — External benchmark lane for SWE-bench and Terminal-Bench
 
-A new external-benchmarks pipeline scores the full Aura org→spec→tasks→loop flow against SWE-bench Verified and Terminal-Bench 2, with the long tail of router, auth, harness, and prompt fixes needed to actually finish runs.
+A new manual-only benchmark lane scores the full Aura pipeline against SWE-bench Verified and Terminal-Bench 2, with resumable runs, fail-fast preflights, and postmortem reporting.
 
-- Stood up the external benchmark lane: a SWE-bench Verified driver and Terminal-Bench 2 integration sharing a reusable benchmark-api-runner library, a manual-only GitHub workflow with cost guards and artifact uploads, and a PR-comment renderer for score deltas against committed baselines. (`acd1773`, `85290bc`)
-- Added a fail-fast live-pipeline preflight that exercises auth, spec generation, task extraction, and the dev loop on a tiny fixture before each long benchmark run, plus a `--resume` mode for SWE-bench that skips already-completed instances and reuses prior run directories after a crash. (`d968e0a`, `89b23f7`, `5a03bfa`, `5f412ea`)
-- Aligned project-tool sessions (spec generation, summary, task extraction) with the chat path so harness requests carry the same system prompt, provider config, and per-session billing context, eliminating the Cloudflare 403s that had been killing post-tool-result LLM calls during eval runs. (`95d4dfc`, `37f2180`, `3153bd0`, `4ab6828`, `40cd882`, `3901736`)
-- Capped runaway tool loops and tightened error surfaces: project-tool sessions now bound max_turns and have server-side deadlines, the JS benchmark client uses an AbortController-backed fetch timeout, and the chat-route generate_specs/extract_tasks actions are also gated so the model can't loop list_specs→create_spec for minutes. (`4d137da`, `4b80362`, `4cffca5`)
-- Fixed the local-stack harness wiring to mirror desktop sidecar behavior: AURA_LISTEN_ADDR matches the real desktop spawn, control-plane URLs (server, storage, network, orbit) are stamped from the running stack, and the harness now inherits LLM routing from its own .env so eval traffic stops getting amplified into Cloudflare retry storms. (`32a9a19`, `9f8c598`, `42503fc`, `984af20`, `ad54c92`, `fc2ca01`)
-- Closed wire-format gaps that were silently failing eval writes: CreateTaskBody/UpdateTaskBody now accept camelCase, TransitionTaskRequest accepts a `status` alias, and the harness's create_task/transition_task calls land cleanly instead of looping on 422s. (`ba31352`, `c6a03cc`)
-- Collapsed the harness LLM path to AURA proxy only — direct-provider routing, routing_mode, and api_key fields are gone from SessionConfig, replaced by a slim SessionModelOverrides — and reshaped image and 3D generation to flow through the same harness session as chat. (`982a677`, `5e19d27`)
-- Sharpened SWE-bench output quality: prompts now require semantic local validation, patch self-review, and a no-change completion contract for verification-only tasks; runs can retry unresolved instances with official failure context; and aggregation emits machine-readable plus markdown postmortems bucketed by failure mode. (`e42f98a`, `0ed8628`, `139dbda`, `d031160`, `07e4753`, `64ca62a`, `9e5bf10`, `310f3c7`, `fc6438b`, `a1aa55a`, `2b86cd0`)
-- Improved authenticated cold-open and runtime perf on desktop: a branded splash now renders before app-ready while still gating on the authenticated route, startup defers highlight themes and sidekick panes, the server quiets default tracing and caches fingerprinted assets, and event hub fanout shares ref-counted payloads instead of cloning per listener. (`9f76ae2`, `4993abf`, `3ee409c`, `a776d74`, `162698d`, `63a3e98`, `b638289`)
-- Tightened chat reliability and memory: per-frame batching of websocket events for long transcripts, bounded retained history and normalized message maps, removal of the paint-containment hint that caused end-of-turn message blink, and a fix for duplicate live assistant rendering in project chats. (`4b7565e`, `1eca7c5`, `f88e1aa`, `4df4121`, `879112d`, `7b003e3`)
-- Pro tier pricing reverted to $20 after the migration, with the surrounding subscription modal preparing for the legacy-pricing note shown to OG users. (`cbf003b`)
+- Stood up an end-to-end external benchmark lane: a SWE-bench Verified driver and Terminal-Bench 2 integration that share a reusable benchmark-api-runner library, a workflow_dispatch GitHub Actions workflow on self-hosted runners with per-run cost guards, and a PR-comment renderer that diffs scores against committed baselines. (`acd1773`, `85290bc`)
+- Added a fail-fast live-pipeline preflight that exercises auth import, agent/project CRUD, SSE spec generation, task extraction, and the dev loop on a tiny fixture before each long run, so broken router/proxy/harness wiring aborts in 1–2 minutes instead of after multiple hours. (`d968e0a`, `5a03bfa`, `5f412ea`)
+- SWE-bench runs are now resumable: --resume reuses the most recent run directory, skips already-completed instances, deduplicates predictions.jsonl, reuses workspace clones when HEAD matches base_commit, and synthesizes driver-summary.json from per-instance records when the driver was killed mid-run. (`89b23f7`)
+- Surfaced benchmark progress with a tailing harness-log follower that collapses per-token tool snapshots into one salient line per event, and added cached zOS login credentials so repeat manual SWE runs skip the prompt. (`6ca179b`, `95d4dfc`, `37f2180`)
+- Tightened SWE verification: no-change task contracts, semantic local validation before completion, mandatory patch self-review, retries of unresolved instances with official failure context, machine-readable + markdown postmortems bucketing failures by mode, and gating completion on the configured Python test command. (`e42f98a`, `139dbda`, `d031160`, `07e4753`, `64ca62a`, `9e5bf10`, `0ed8628`)
+- Cold-open performance pass: an auth-neutral splash now paints during desktop boot while the authenticated route preload gate is preserved, highlight themes and Sidekick panes lazy-load, route/project loading frames use lightweight fallbacks, and chat events are batched per animation frame with a paint-containment hint that was later reverted to fix end-of-turn message blink. (`9f76ae2`, `4993abf`, `4b7565e`, `3ee409c`, `63a3e98`, `4df4121`, `879112d`)
+- Bounded long chat sessions and tightened server overhead: in-memory chat history and normalized message maps are now capped, domain events are ref-counted across hub fanout, default tracing noise is reduced, fingerprinted interface assets are compressed and cached, and cross-project log aggregation work is bounded. (`1eca7c5`, `f88e1aa`, `162698d`, `a776d74`)
+- Resolved a multi-day Cloudflare-403 storm on automation traffic by aligning dev-loop and project-tool sessions with the chat path: spec generation now drives through the chat events stream, project-tool sessions populate system_prompt and provider_config, dev-loop automaton starts carry stable org/session/agent identity (UUIDv5 over project+instance+task), and the harness LLM path was collapsed to AURA proxy only. (`85aa438`, `3153bd0`, `4ab6828`, `40cd882`, `982a677`, `3901736`)
+- Hardened harness loop hangs and Cloudflare retry storms: project-tool sessions are capped at max_turns=40 with a server-side tokio deadline and an AbortController-driven fetch timeout on the JS client, chat-route tool actions inherit the same caps, and Cloudflare-blocked SWE runs now fail fast and stop scheduling instead of producing misleading patches. (`4d137da`, `4b80362`, `a1aa55a`, `fc6438b`, `310f3c7`)
+- Aligned the local-stack eval harness with the production desktop sidecar spawn: AURA_LISTEN_ADDR, AURA_OS_SERVER_URL, storage/network/orbit URL overrides, --release builds, and dotenvy precedence now match sidecar.rs exactly, and a new preflight-llm.sh probe classifies Cloudflare WAF, JWT, billing, and connectivity failures from a single tiny request. (`32a9a19`, `9f8c598`, `42503fc`, `984af20`, `ad54c92`, `fc2ca01`, `1ddf91e`)
+- Wire-format fixes that unblocked harness writes: CreateTaskBody/UpdateTaskBody now accept camelCase plus a dependencyTaskIds alias, TransitionTaskRequest accepts a status alias for new_status, image and 3D generation now route through the harness, and chat correctly preserves stream errors on local harness sessions. (`ba31352`, `c6a03cc`, `5e19d27`, `7b003e3`)
+- Bootstrapped local-stack auth: print-auth-token reads from the core app settings store, bootstrap-auth seeds Git-for-Windows helper paths and falls back to AURA_EVAL_USER_EMAIL/PASSWORD via /api/auth/login, dev JWT trust is rendered explicitly for local aura-network and aura-storage, and a stale .gitignore path for stack.env was corrected after the infra/ relocation. (`bea6a03`, `ba018d5`, `1e50bd6`, `576c900`, `f00ffc8`, `8d00651`)
+- Dev-loop and harness diagnostics expanded: deeper SWE request-shape logging across chat and dev-loop session config, dev-loop git-push timeout evidence is now persisted so completed tasks stay recoverable, and the dev-loop automaton-start payload now mirrors chat/spec SessionInit fields end-to-end. (`4cffca5`, `3762db7`, `3901736`)
+- Polished the desktop shell with halved sidebar/Sidekick fade bands and reverted the Pro tier price to $20 now that the migration is complete. (`b638289`, `cbf003b`)
 
-## 9:57 AM — Native Windows SWE-bench verification gets a per-instance Python venv
+## 9:57 AM — Per-instance Python venv for native SWE verification
 
-SWE-bench DoD verification on native Windows now bootstraps a compatible per-instance virtualenv before running tests, so agents stop producing patches that work around a missing global Python.
+Native Windows SWE-bench runs now bootstrap a compatible per-instance Python virtualenv before the DoD verification step.
 
-- Bootstrap a per-instance Python venv before native Windows SWE-bench verification so the DoD gate uses a compatible interpreter instead of falling back to the global Python and pushing agents into environment-workaround patches. (`74726ee`)
+- Bootstrap a compatible per-instance Python venv before native Windows SWE verification so the definition-of-done gate stops falling back to global Python and pushing agents toward environment-workaround patches. (`74726ee`)
 
-## 10:29 AM — Legacy-price note for Zero Pro OG users in the tier modal
+## 10:29 AM — Legacy pricing note for Zero Pro OG subscribers
 
-Subscription UI now calls out the original Pro pricing for OG users and renames the credit history label to better describe what it represents.
+The tier modal and credit history now flag legacy pricing for original Pro users alongside a clearer credit label.
 
-- Added a legacy-price note on the Pro card in the tier subscription modal for Zero Pro OG users, with a follow-up tweak to render it on its own line beneath the price. (`d9776a3`, `dadfd29`, `d777b4b`)
-- Renamed "Monthly Allowance" to "Monthly Plan Top-Up" in the org credit history view to better describe what users are seeing. (`dadfd29`)
+- Surface a legacy pricing note on the Pro card for Zero Pro OG users, place it on its own line beneath the price, and rename Monthly Allowance to Monthly Plan Top-Up in org credit history. (`d9776a3`, `dadfd29`, `d777b4b`)
 
-## 7:07 PM — SWE-bench verification flow hardened end-to-end
+## 7:07 PM — Stricter SWE verification flow and run-artifact hygiene
 
-A second pass on the SWE-bench verification flow tightens spec/task tool hints, the live preflight, and the chat panel, and stops local SWE run artifacts from polluting the working tree.
+Spec generation and task extraction get scoped tool hints, task extraction fails loudly when no tasks land, and local SWE run artifacts are no longer tracked.
 
-- Scoped tool hints for spec generation and task extraction to the project-and-spec surface (no run_command, no create_task during spec gen), required task extraction to actually produce tasks before reporting success, and tightened the live-pipeline preflight and chat panel along the same path. (`e22a0b3`)
-- Added local SWE run output directories to .gitignore so eval artifacts no longer show up as untracked files in the repo. (`4b95a86`)
+- Scoped spec-generation and task-extraction tool hints to the relevant project/spec/task surface, made extract_tasks return an explicit error when the harness completes without creating any tasks, and updated ChatPanel handling along with preflight and benchmark runner glue. (`e22a0b3`)
+- Added local SWE-bench run artifacts to .gitignore so reports and workspaces stop showing up as untracked files. (`4b95a86`)
 
-## 7:12 PM — TypeScript bindings for aura-protocol checked in
+## 7:12 PM — Checked-in TypeScript bindings for aura-protocol
 
-Generated TypeScript types for the harness wire protocol are now committed alongside the Rust crate, giving the interface a stable, reviewable source of truth for session, tool, and generation messages.
+Generated ts-rs bindings for the aura-protocol wire types are now committed alongside the Rust crate.
 
-- Checked in 48 ts-rs–generated TypeScript bindings under crates/aura-protocol/bindings/ covering SessionInit, SessionModelOverrides, agent permissions, tool approvals, generation messages, and the inbound/outbound message envelopes — making protocol drift visible in code review instead of only at runtime. (`56e3e85`)
+- Committed 48 generated TypeScript binding files for aura-protocol wire types — SessionInit, SessionModelOverrides, AgentPermissionsWire, ToolCallSnapshot, GenerationRequest, and friends — so the interface can consume the harness/protocol shapes without a separate codegen step at build time. (`56e3e85`)
 
-## 9:26 PM — Packaged desktop boot failures now fail CI instead of users
+## 9:26 PM — Packaged desktop boot diagnostics and single-instance guard
 
-A new boot-diagnostics layer plus release-asset validation in the nightly and stable workflows means a broken packaged frontend bundle is caught in CI rather than leaving users staring at an endless splash.
+Production desktop builds now fail loudly on broken frontend bundles and refuse to launch duplicate instances on Windows.
 
-- Added production boot diagnostics and a boot-shell module on the interface side, wired init-script changes on the desktop app, and introduced release-asset validation scripts plus a desktop-validate workflow so nightly and stable releases reject builds whose packaged frontend bundle won't actually start. (`07a20d5`)
+- Added production boot diagnostics and a release-asset validator wired into desktop-validate, release-nightly, and release-stable workflows so a broken packaged frontend bundle fails CI instead of leaving users on an endless splash screen. (`07a20d5`)
+- Hardened the packaged desktop launch by avoiding the Vite/Rolldown dynamic CSS chunk crash in production builds and adding a Windows single-instance guard so installer and update launches cannot leave duplicate Aura instances running. (`5ee87d5`)
 
 ## Highlights
 
-- SWE-bench Verified and Terminal-Bench 2 scoring lanes now wired end-to-end
-- Desktop cold open shows a branded splash without flashing a logged-out state
-- Packaged desktop boot failures now fail CI instead of stranding users on a splash
-- Pro tier pricing reverted to $20 with legacy note for OG users
-- Chat trims retained history and stops end-of-turn message blink
+- External SWE-bench + Terminal-Bench lane shipped end-to-end
+- Cold-open splash and chat streaming perf overhaul
+- Packaged desktop now fails loudly instead of stalling on a blank splash
+- Pro tier reverted to $20 with a legacy-pricing note for OG users
 
