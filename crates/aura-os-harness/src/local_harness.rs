@@ -5,7 +5,9 @@ use tokio_tungstenite::tungstenite;
 use tracing::info;
 
 use crate::error::HarnessError;
-use crate::harness::{build_session_init, HarnessLink, HarnessSession, SessionConfig};
+use crate::harness::{
+    build_session_init, validate_session_init_identity, HarnessLink, HarnessSession, SessionConfig,
+};
 use crate::harness_url::local_harness_base_url;
 use crate::ws_bridge::spawn_ws_bridge;
 use aura_protocol::{InboundMessage, OutboundMessage};
@@ -41,6 +43,15 @@ impl LocalHarness {
 #[async_trait]
 impl HarnessLink for LocalHarness {
     async fn open_session(&self, config: SessionConfig) -> anyhow::Result<HarnessSession> {
+        // Tier 2 fail-fast: validate the minimum identity contract
+        // before any network work. Surfaces as a structured
+        // `HarnessError::SessionIdentityMissing` inside the returned
+        // `anyhow::Error` so the server's `map_harness_error_to_api`
+        // can funnel it into the same 422 response Tier 1 emits.
+        if let Err(err) = validate_session_init_identity(&config) {
+            return Err(anyhow::Error::new(err)
+                .context("local harness rejected session_init: identity preflight"));
+        }
         let ws_url = self.ws_url();
         let connect_result = tokio::time::timeout(
             Duration::from_secs(8),

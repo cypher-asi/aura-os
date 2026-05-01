@@ -19,8 +19,8 @@ pub mod test_support;
 mod ws_bridge;
 
 pub use automaton_client::{
-    AutomatonClient, AutomatonStartError, AutomatonStartParams, AutomatonStartResult,
-    WsReaderHandle,
+    validate_automaton_start_identity, AutomatonClient, AutomatonStartError, AutomatonStartParams,
+    AutomatonStartResult, WsReaderHandle,
 };
 pub use client::{
     bearer_headers, GetHeadResponse, HarnessAutomatonStartParams, HarnessAutomatonStartResponse,
@@ -28,8 +28,8 @@ pub use client::{
 };
 pub use error::HarnessError;
 pub use harness::{
-    build_remote_handshake, build_session_init, HarnessCommandSender, HarnessLink, HarnessSession,
-    SessionConfig,
+    build_remote_handshake, build_session_init, validate_session_init_identity,
+    HarnessCommandSender, HarnessLink, HarnessSession, SessionConfig,
 };
 pub use harness_url::local_harness_base_url;
 pub use local_harness::LocalHarness;

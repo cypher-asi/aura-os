@@ -7,6 +7,8 @@ use aura_protocol::{
     SessionModelOverrides,
 };
 
+use crate::error::HarnessError;
+
 #[derive(Default)]
 pub struct SessionConfig {
     pub system_prompt: Option<String>,
@@ -123,6 +125,57 @@ pub fn build_session_init(cfg: &SessionConfig) -> SessionInit {
     }
 }
 
+/// Tier 2 fail-fast: harness-side preflight that mirrors the
+/// minimum required identity contract enforced by the server's
+/// `handlers::agents::session_identity::validate_session_identity`.
+///
+/// The harness has no notion of "call site" (chat vs dev-loop vs
+/// project-tool), so we validate the *intersection* of fields that
+/// every real session-open path must populate so the upstream proxy
+/// can stamp the corresponding `X-Aura-*` header. `user_id` is left
+/// off this list intentionally: server-side Tier 1 enforces it for
+/// the chat / dev-loop / project-tool surfaces, but the harness
+/// must keep accepting non-user sessions (e.g. ad-hoc CLI runs in
+/// `aura-os-harness/runner.rs`).
+///
+/// Drift signal: if a server build forgets to call its Tier 1
+/// preflight, this Tier 2 check still surfaces the missing field as
+/// a structured [`HarnessError::SessionIdentityMissing`] inside the
+/// returned `anyhow::Error`, which the server's
+/// `map_harness_error_to_api` then funnels into the same
+/// `session_identity_missing` 422 response shape.
+pub fn validate_session_init_identity(cfg: &SessionConfig) -> Result<(), HarnessError> {
+    if is_blank(cfg.aura_org_id.as_deref()) {
+        return Err(HarnessError::SessionIdentityMissing {
+            field: "aura_org_id",
+            context: "session_init",
+        });
+    }
+    if is_blank(cfg.aura_session_id.as_deref()) {
+        return Err(HarnessError::SessionIdentityMissing {
+            field: "aura_session_id",
+            context: "session_init",
+        });
+    }
+    if is_blank(cfg.template_agent_id.as_deref()) && is_blank(cfg.agent_id.as_deref()) {
+        return Err(HarnessError::SessionIdentityMissing {
+            field: "agent_id",
+            context: "session_init",
+        });
+    }
+    if is_blank(cfg.token.as_deref()) {
+        return Err(HarnessError::SessionIdentityMissing {
+            field: "auth_token",
+            context: "session_init",
+        });
+    }
+    Ok(())
+}
+
+fn is_blank(value: Option<&str>) -> bool {
+    value.map(|v| v.trim().is_empty()).unwrap_or(true)
+}
+
 /// Projection of [`SessionConfig`] used by
 /// [`crate::SwarmHarness::open_session`]'s HTTP bootstrap
 /// (`POST /v1/agents/:id/sessions`).
@@ -143,4 +196,101 @@ pub fn build_remote_handshake(cfg: &SessionConfig) -> serde_json::Value {
             "max_turns": cfg.max_turns,
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn full_cfg() -> SessionConfig {
+        SessionConfig {
+            aura_org_id: Some("org-1".into()),
+            aura_session_id: Some("session-1".into()),
+            template_agent_id: Some("template-1".into()),
+            agent_id: Some("template-1::instance-1".into()),
+            token: Some("jwt".into()),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn validate_accepts_fully_populated_config() {
+        assert!(validate_session_init_identity(&full_cfg()).is_ok());
+    }
+
+    #[test]
+    fn validate_rejects_missing_org_id() {
+        let mut cfg = full_cfg();
+        cfg.aura_org_id = None;
+        let err = validate_session_init_identity(&cfg).unwrap_err();
+        assert!(matches!(
+            err,
+            HarnessError::SessionIdentityMissing {
+                field: "aura_org_id",
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn validate_rejects_blank_session_id() {
+        let mut cfg = full_cfg();
+        cfg.aura_session_id = Some("   ".into());
+        let err = validate_session_init_identity(&cfg).unwrap_err();
+        assert!(matches!(
+            err,
+            HarnessError::SessionIdentityMissing {
+                field: "aura_session_id",
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn validate_accepts_agent_id_when_template_missing() {
+        let mut cfg = full_cfg();
+        cfg.template_agent_id = None;
+        // bare `agent_id` is enough — the harness's `build_session_init`
+        // falls back from template_agent_id to agent_id for
+        // X-Aura-Agent-Id.
+        assert!(validate_session_init_identity(&cfg).is_ok());
+    }
+
+    #[test]
+    fn validate_rejects_missing_both_agent_identities() {
+        let mut cfg = full_cfg();
+        cfg.template_agent_id = None;
+        cfg.agent_id = None;
+        let err = validate_session_init_identity(&cfg).unwrap_err();
+        assert!(matches!(
+            err,
+            HarnessError::SessionIdentityMissing {
+                field: "agent_id",
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn validate_rejects_missing_auth_token() {
+        let mut cfg = full_cfg();
+        cfg.token = None;
+        let err = validate_session_init_identity(&cfg).unwrap_err();
+        assert!(matches!(
+            err,
+            HarnessError::SessionIdentityMissing {
+                field: "auth_token",
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn validate_does_not_require_user_id() {
+        // The harness must keep accepting non-user (CLI / runner)
+        // sessions; user_id is enforced server-side per call site.
+        let mut cfg = full_cfg();
+        cfg.user_id = None;
+        assert!(validate_session_init_identity(&cfg).is_ok());
+    }
 }

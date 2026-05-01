@@ -1,6 +1,8 @@
 use super::{
-    normalize_automaton_event, AutomatonStartParams, AutomatonStartResult, WsReaderHandle,
+    normalize_automaton_event, validate_automaton_start_identity, AutomatonStartParams,
+    AutomatonStartResult, WsReaderHandle,
 };
+use crate::error::HarnessError;
 use aura_protocol::{AgentPermissionsWire, AgentScopeWire, CapabilityWire};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -194,6 +196,115 @@ fn automaton_start_params_serializes_proxy_identity_context() {
     assert_eq!(value["provider_overrides"]["prompt_caching_enabled"], true);
     assert_eq!(value["user_id"], "user-1");
     assert_eq!(value["max_turns"], 40);
+}
+
+fn full_valid_params() -> AutomatonStartParams {
+    AutomatonStartParams {
+        project_id: "project-1".into(),
+        agent_id: Some("template-1::instance-1".into()),
+        aura_agent_id: Some("template-1".into()),
+        template_agent_id: Some("template-1".into()),
+        auth_token: Some("jwt".into()),
+        model: None,
+        system_prompt: None,
+        provider_overrides: None,
+        user_id: Some("user-1".into()),
+        intent_classifier: None,
+        max_turns: None,
+        workspace_root: None,
+        task_id: None,
+        git_repo_url: None,
+        git_branch: None,
+        installed_tools: None,
+        installed_integrations: None,
+        agent_permissions: AgentPermissionsWire::default(),
+        prior_failure: None,
+        work_log: Vec::new(),
+        aura_org_id: Some("org-1".into()),
+        aura_session_id: Some("session-1".into()),
+    }
+}
+
+#[test]
+fn validate_automaton_start_identity_accepts_full_params() {
+    assert!(validate_automaton_start_identity(&full_valid_params()).is_ok());
+}
+
+#[test]
+fn validate_automaton_start_identity_rejects_missing_org_id() {
+    let mut params = full_valid_params();
+    params.aura_org_id = None;
+    let err = validate_automaton_start_identity(&params).unwrap_err();
+    assert!(matches!(
+        err,
+        HarnessError::SessionIdentityMissing {
+            field: "aura_org_id",
+            context: "automaton_start",
+        }
+    ));
+}
+
+#[test]
+fn validate_automaton_start_identity_rejects_blank_session_id() {
+    let mut params = full_valid_params();
+    params.aura_session_id = Some("   ".into());
+    let err = validate_automaton_start_identity(&params).unwrap_err();
+    assert!(matches!(
+        err,
+        HarnessError::SessionIdentityMissing {
+            field: "aura_session_id",
+            ..
+        }
+    ));
+}
+
+#[test]
+fn validate_automaton_start_identity_accepts_when_only_partition_agent_id_present() {
+    // The harness only needs *some* agent identity for X-Aura-Agent-Id;
+    // the partition `agent_id` alone is enough.
+    let mut params = full_valid_params();
+    params.template_agent_id = None;
+    params.aura_agent_id = None;
+    assert!(validate_automaton_start_identity(&params).is_ok());
+}
+
+#[test]
+fn validate_automaton_start_identity_rejects_when_no_agent_identity_at_all() {
+    let mut params = full_valid_params();
+    params.template_agent_id = None;
+    params.aura_agent_id = None;
+    params.agent_id = None;
+    let err = validate_automaton_start_identity(&params).unwrap_err();
+    assert!(matches!(
+        err,
+        HarnessError::SessionIdentityMissing {
+            field: "agent_id",
+            ..
+        }
+    ));
+}
+
+#[test]
+fn validate_automaton_start_identity_rejects_missing_auth_token() {
+    let mut params = full_valid_params();
+    params.auth_token = None;
+    let err = validate_automaton_start_identity(&params).unwrap_err();
+    assert!(matches!(
+        err,
+        HarnessError::SessionIdentityMissing {
+            field: "auth_token",
+            ..
+        }
+    ));
+}
+
+#[test]
+fn validate_automaton_start_identity_does_not_require_user_id() {
+    // Scheduled-process / runner flows may genuinely have no
+    // signed-in user; the harness must still accept those.
+    let mut params = full_valid_params();
+    params.user_id = None;
+    assert!(validate_automaton_start_identity(&params).is_ok());
 }
 
 #[test]

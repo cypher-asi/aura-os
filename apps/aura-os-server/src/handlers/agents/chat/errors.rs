@@ -141,6 +141,15 @@ pub(crate) fn map_harness_error_to_api(
 ) -> (StatusCode, Json<ApiError>) {
     if aura_os_harness::HarnessError::is_capacity_exhausted(err) {
         ApiError::harness_capacity_exhausted(ws_slots_cap)
+    } else if let Some((field, context)) =
+        aura_os_harness::HarnessError::session_identity_missing(err)
+    {
+        // Tier 2: the harness rejected our session_init payload
+        // because one of the required `X-Aura-*` identity fields is
+        // missing. Funnel into the same 422 shape Tier 1 emits so
+        // server / harness drift stays observable as one error code
+        // regardless of which side caught it.
+        ApiError::session_identity_missing(field, context)
     } else {
         fallback(err)
     }
@@ -271,6 +280,24 @@ mod tests {
             .expect("structured data must be populated");
         assert_eq!(data["configured_cap"], 96);
         assert_eq!(data["retry_after_seconds"], 5);
+    }
+
+    #[test]
+    fn map_harness_error_to_api_session_identity_remaps_to_422() {
+        let err = anyhow::Error::new(aura_os_harness::HarnessError::SessionIdentityMissing {
+            field: "aura_org_id",
+            context: "session_init",
+        })
+        .context("local harness rejected session_init: identity preflight");
+        let (status, Json(body)) = map_harness_error_to_api(&err, 96, |_| {
+            unreachable!("session_identity_missing must NOT hit the fallback");
+        });
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+        assert_eq!(body.code, "missing_aura_org_id");
+        let data = body.data.expect("structured data must be populated");
+        assert_eq!(data["code"], "session_identity_missing");
+        assert_eq!(data["field"], "aura_org_id");
+        assert_eq!(data["context"], "session_init");
     }
 
     #[test]

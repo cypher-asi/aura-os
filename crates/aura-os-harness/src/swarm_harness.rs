@@ -14,7 +14,8 @@ use aura_protocol::InboundMessage;
 
 use crate::error::HarnessError;
 use crate::harness::{
-    build_remote_handshake, build_session_init, HarnessLink, HarnessSession, SessionConfig,
+    build_remote_handshake, build_session_init, validate_session_init_identity, HarnessLink,
+    HarnessSession, SessionConfig,
 };
 use crate::ws_bridge::spawn_ws_bridge;
 
@@ -364,6 +365,12 @@ fn send_session_init(
 #[async_trait]
 impl HarnessLink for SwarmHarness {
     async fn open_session(&self, config: SessionConfig) -> anyhow::Result<HarnessSession> {
+        // Tier 2 fail-fast: identical contract to LocalHarness — see
+        // `validate_session_init_identity` for the rationale.
+        if let Err(err) = validate_session_init_identity(&config) {
+            return Err(anyhow::Error::new(err)
+                .context("swarm harness rejected session_init: identity preflight"));
+        }
         let base_url = self.configured_base_url()?.to_string();
         let token = config.token.as_deref().or(self.auth_token.as_deref());
         let headers = self.bearer_headers(token);

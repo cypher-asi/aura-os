@@ -15,6 +15,7 @@ use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tracing::{info, warn};
 
+use crate::error::HarnessError;
 use crate::runner::automaton_event_kinds::DONE;
 
 mod event_normalization;
@@ -222,6 +223,54 @@ pub struct AutomatonStartResult {
     pub event_stream_url: String,
 }
 
+/// Tier 2 fail-fast: harness-side preflight for
+/// [`AutomatonClient::start`] payloads, mirroring the contract on
+/// [`crate::validate_session_init_identity`] for the chat / direct
+/// session path.
+///
+/// Validates the *intersection* of fields every dev-loop /
+/// single-task / scheduled-process automaton needs so the upstream
+/// proxy can stamp `X-Aura-*`. `user_id` is intentionally not
+/// required at this layer because some scheduled-process flows
+/// genuinely have no signed-in user; server-side Tier 1 enforces it
+/// per call site for the dev-loop / single-task path.
+pub fn validate_automaton_start_identity(
+    params: &AutomatonStartParams,
+) -> Result<(), HarnessError> {
+    if blank(params.aura_org_id.as_deref()) {
+        return Err(HarnessError::SessionIdentityMissing {
+            field: "aura_org_id",
+            context: "automaton_start",
+        });
+    }
+    if blank(params.aura_session_id.as_deref()) {
+        return Err(HarnessError::SessionIdentityMissing {
+            field: "aura_session_id",
+            context: "automaton_start",
+        });
+    }
+    if blank(params.template_agent_id.as_deref())
+        && blank(params.aura_agent_id.as_deref())
+        && blank(params.agent_id.as_deref())
+    {
+        return Err(HarnessError::SessionIdentityMissing {
+            field: "agent_id",
+            context: "automaton_start",
+        });
+    }
+    if blank(params.auth_token.as_deref()) {
+        return Err(HarnessError::SessionIdentityMissing {
+            field: "auth_token",
+            context: "automaton_start",
+        });
+    }
+    Ok(())
+}
+
+fn blank(value: Option<&str>) -> bool {
+    value.map(|v| v.trim().is_empty()).unwrap_or(true)
+}
+
 /// Client for the harness automaton REST + WebSocket API.
 #[derive(Debug, Clone)]
 pub struct AutomatonClient {
@@ -265,6 +314,17 @@ impl AutomatonClient {
         &self,
         params: AutomatonStartParams,
     ) -> Result<AutomatonStartResult, AutomatonStartError> {
+        // Tier 2 fail-fast: refuse to POST /automaton/start with a
+        // payload missing one of the required identity fields. The
+        // server's `start_or_adopt` / `run_single_task` already
+        // preflight in Tier 1, but this guard catches direct
+        // callers / outdated server builds and preserves the
+        // structured error shape via `HarnessError::SessionIdentityMissing`.
+        if let Err(err) = validate_automaton_start_identity(&params) {
+            return Err(AutomatonStartError::Other(anyhow::Error::new(err).context(
+                "automaton client rejected /automaton/start: identity preflight",
+            )));
+        }
         let url = format!("{}/automaton/start", self.http_base);
         let req = self.apply_auth(self.http.post(&url).json(&params));
         let resp = req.send().await.map_err(|e| AutomatonStartError::Request {
