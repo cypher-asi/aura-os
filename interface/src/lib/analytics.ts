@@ -117,7 +117,7 @@ export function isAnalyticsOptedOut(): boolean {
 function detectPlatform(): "desktop" | "web" | "mobile" {
   if (typeof window === "undefined") return "web";
   // Electron desktop app
-  if ("ipc" in window && typeof (window as Record<string, unknown>).ipc === "object") {
+  if ("ipc" in window && typeof (window as unknown as Record<string, unknown>).ipc === "object") {
     return "desktop";
   }
   // Capacitor mobile app
