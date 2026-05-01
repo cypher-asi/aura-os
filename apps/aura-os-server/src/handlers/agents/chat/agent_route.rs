@@ -2,7 +2,7 @@
 //! agent, prepares the harness `SessionConfig`, kicks off persistence,
 //! and hands off to the SSE driver.
 
-use aura_os_core::{AgentId, AgentPermissions, ChatRole, OrgId, SessionEvent};
+use aura_os_core::{AgentId, AgentPermissions, ChatRole, OrgId, ProjectId, SessionEvent};
 use aura_os_harness::{ConversationMessage, SessionConfig};
 use axum::extract::{Path, State};
 use axum::Json;
@@ -10,7 +10,9 @@ use tracing::{error, info, warn};
 
 use crate::dto::SendChatRequest;
 use crate::error::{ApiError, ApiResult};
-use crate::handlers::projects_helpers::{is_project_tool_action, project_tool_max_turns};
+use crate::handlers::projects_helpers::{
+    is_project_tool_action, project_tool_max_turns, resolve_project_tool_workspace_path,
+};
 use crate::state::{AppState, AuthJwt};
 
 use super::busy::reject_if_partition_busy;
@@ -20,6 +22,7 @@ use super::compaction::{
 };
 use super::constants::{CONVERSATION_HISTORY_WARN_BYTES, DEFAULT_AGENT_HISTORY_WINDOW_LIMIT};
 use super::discovery::find_matching_project_agents;
+use super::instance_route::build_project_system_prompt;
 use super::loaders::load_current_session_events_for_agent_with_matched;
 use super::persist::ChatPersistCtx;
 use super::request::slice_recent_agent_events;
@@ -105,11 +108,26 @@ pub(crate) async fn send_agent_event_stream(
     // `headersTimeout`. Interactive chat stays uncapped.
     let max_turns = is_project_tool_action(body.action.as_deref()).then(project_tool_max_turns);
 
+    // Project-bound bare-agent chats need the same `<project_context>`
+    // block + workspace path as the instance route so workspace tools
+    // (`list_files`, `read_file`, `run_command`) resolve relative to
+    // the right repo and the LLM sees the canonical project_id /
+    // name / description in its system prompt. Without this, a
+    // bare-agent chat targeting a project (e.g. the CEO agent's
+    // `send_to_agent` flow) silently lost workspace context and the
+    // harness would refuse filesystem tool calls or run them against
+    // the wrong cwd.
+    let (system_prompt, project_path) = build_agent_system_prompt(
+        &state,
+        &agent,
+        effective_project_id.as_deref(),
+        agent.harness_mode(),
+        project_state_snapshot.as_deref(),
+    )
+    .await;
+
     let config = SessionConfig {
-        system_prompt: Some(append_project_state_to_system_prompt(
-            &agent.system_prompt,
-            project_state_snapshot.as_deref(),
-        )),
+        system_prompt: Some(system_prompt),
         agent_id: Some(partition_agent_id),
         template_agent_id: Some(agent_id.to_string()),
         user_id: Some(auth_session.user_id.clone()),
@@ -118,7 +136,8 @@ pub(crate) async fn send_agent_event_stream(
         max_turns,
         token: Some(jwt.clone()),
         conversation_messages,
-        project_id: body.project_id.clone(),
+        project_id: effective_project_id.clone(),
+        project_path,
         aura_org_id: agent.org_id.as_ref().map(|o| o.to_string()),
         aura_session_id: persist_ctx.as_ref().map(|c| c.session_id.clone()),
         provider_overrides: session_model_overrides(model.as_deref()),
@@ -358,6 +377,52 @@ fn normalize_agent_perms(
         Some(pid) => base_perms.with_project_self_caps(pid),
         None => base_perms,
     }
+}
+
+/// Compose the system prompt + workspace path for the bare-agent
+/// chat route, mirroring `instance_route::send_event_stream`'s
+/// behaviour:
+///
+/// * If the turn is project-bound (explicit `body.project_id` or
+///   inferred via the persistence context), wrap the agent
+///   template prompt with the project-aware `<project_context>`
+///   block via [`build_project_system_prompt`] and resolve the
+///   workspace path so workspace tools see a real cwd.
+/// * Otherwise fall back to the bare template prompt with no
+///   workspace path (legacy bare-agent semantics).
+///
+/// In either case the project-state snapshot (specs / tasks
+/// summary) is appended last, matching the instance route.
+async fn build_agent_system_prompt(
+    state: &AppState,
+    agent: &aura_os_core::Agent,
+    effective_project_id: Option<&str>,
+    harness_mode: aura_os_core::HarnessMode,
+    project_state_snapshot: Option<&str>,
+) -> (String, Option<String>) {
+    let (base_prompt, project_path) = match effective_project_id
+        .and_then(|pid| pid.parse::<ProjectId>().ok())
+    {
+        Some(project_id) => {
+            // Bare-agent chats have no AgentInstanceId; fall back to
+            // project-level workspace resolution (handles both
+            // explicit `project.local_workspace_path` and the
+            // canonical `data_dir`-rooted layout for Local /
+            // Swarm).
+            let project_path =
+                resolve_project_tool_workspace_path(state, &project_id, harness_mode, None).await;
+            let prompt = build_project_system_prompt(
+                state,
+                &project_id,
+                &agent.system_prompt,
+                project_path.as_deref(),
+            );
+            (prompt, project_path)
+        }
+        None => (agent.system_prompt.clone(), None),
+    };
+    let with_state = append_project_state_to_system_prompt(&base_prompt, project_state_snapshot);
+    (with_state, project_path)
 }
 
 fn installed_workspace_integrations(
