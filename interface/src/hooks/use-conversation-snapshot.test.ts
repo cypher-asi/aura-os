@@ -10,6 +10,7 @@ function setStreamMessages(streamKey: string, messages: DisplaySessionEvent[]) {
       ...state.entries,
       [streamKey]: {
         isStreaming: false,
+        isWriting: false,
         events: [],
         streamingText: "",
         thinkingText: "",
@@ -21,6 +22,28 @@ function setStreamMessages(streamKey: string, messages: DisplaySessionEvent[]) {
     },
   }));
   createSetters(streamKey).setEvents(messages);
+}
+
+function setLiveAssistantText(streamKey: string, streamingText: string) {
+  useStreamStore.setState((state) => ({
+    entries: {
+      ...state.entries,
+      [streamKey]: {
+        ...(state.entries[streamKey] ?? {
+          isStreaming: false,
+          isWriting: false,
+          events: [],
+          thinkingDurationMs: null,
+          activeToolCalls: [],
+          timeline: [],
+          progressText: "",
+        }),
+        streamingText,
+        thinkingText: "",
+        isWriting: false,
+      },
+    },
+  }));
 }
 
 describe("useConversationSnapshot", () => {
@@ -78,6 +101,53 @@ describe("useConversationSnapshot", () => {
       role: "user",
       content: "test",
     };
+    setStreamMessages(streamKey, [optimisticUser]);
+
+    const { result } = renderHook(() =>
+      useConversationSnapshot(streamKey, historyMessages),
+    );
+
+    expect(result.current.messages).toEqual([...historyMessages, optimisticUser]);
+  });
+
+  it("deduplicates a lone optimistic user when history already has the active assistant tail", () => {
+    const streamKey = "thread-live-tail";
+    const historyMessages: DisplaySessionEvent[] = [
+      { id: "evt-user-real", role: "user", content: "test" },
+      {
+        id: "evt-assistant-real",
+        role: "assistant",
+        content: "Hello! It looks like you're just testing things out.",
+      },
+    ];
+
+    setStreamMessages(streamKey, [
+      { id: "temp-repeat", role: "user", content: "test" },
+    ]);
+    setLiveAssistantText(
+      streamKey,
+      "Hello! It looks like you're just testing things out.",
+    );
+
+    const { result } = renderHook(() =>
+      useConversationSnapshot(streamKey, historyMessages),
+    );
+
+    expect(result.current.messages).toEqual(historyMessages);
+  });
+
+  it("keeps a repeated optimistic prompt when the matching history tail is not live", () => {
+    const streamKey = "thread-repeat-no-live-tail";
+    const historyMessages: DisplaySessionEvent[] = [
+      { id: "evt-user-old", role: "user", content: "test" },
+      { id: "evt-assistant-old", role: "assistant", content: "prior reply" },
+    ];
+    const optimisticUser: DisplaySessionEvent = {
+      id: "temp-repeat",
+      role: "user",
+      content: "test",
+    };
+
     setStreamMessages(streamKey, [optimisticUser]);
 
     const { result } = renderHook(() =>

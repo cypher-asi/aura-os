@@ -1,5 +1,7 @@
 import { useEffect, useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useStreamEvents } from "./stream/hooks";
+import { useStreamStore } from "./stream/store";
 import { useMessageStore } from "../stores/message-store";
 import type { DisplaySessionEvent } from "../shared/types/stream";
 
@@ -51,6 +53,29 @@ function messageContentMatches(
   return contentBlocksMatch(storedMessage.contentBlocks, streamMessage.contentBlocks);
 }
 
+interface LiveAssistantActivity {
+  streamingText: string;
+  thinkingText: string;
+  hasToolActivity: boolean;
+}
+
+function assistantContentMatchesLiveActivity(
+  assistantMessage: DisplaySessionEvent | undefined,
+  liveActivity: LiveAssistantActivity,
+): boolean {
+  if (!assistantMessage || assistantMessage.role !== "assistant") {
+    return false;
+  }
+
+  const liveText = liveActivity.streamingText.trim();
+  const assistantText = assistantMessage.content.trim();
+  if (!liveText || !assistantText) {
+    return false;
+  }
+
+  return assistantText.startsWith(liveText) || liveText.startsWith(assistantText);
+}
+
 /**
  * Merge stored (persisted) messages with ephemeral stream messages.
  *
@@ -73,6 +98,7 @@ function messageContentMatches(
 function combineStoredAndStreamMessages(
   storedMessages: DisplaySessionEvent[],
   streamMessages: DisplaySessionEvent[],
+  liveActivity: LiveAssistantActivity,
 ): DisplaySessionEvent[] {
   if (storedMessages.length === 0) {
     return streamMessages;
@@ -151,11 +177,18 @@ function combineStoredAndStreamMessages(
         index === 0 &&
         matchedStoredIndexes.size === 0 &&
         streamAfterIdDedup.length >= 2;
+      const isCurrentLiveAssistantTail =
+        streamAfterIdDedup.length === 1 &&
+        streamIdx === 0 &&
+        message.role === "user" &&
+        index === storedMessages.length - 2 &&
+        assistantContentMatchesLiveActivity(storedMessages[index + 1], liveActivity);
       const isAnchored =
         matchedStoredIndexes.has(index - 1) ||
         matchedStoredIndexes.has(index + 1) ||
         index === storedMessages.length - 1 ||
-        isFirstUnmatchedHead;
+        isFirstUnmatchedHead ||
+        isCurrentLiveAssistantTail;
       if (isAnchored) {
         matched = index;
         break;
@@ -188,14 +221,27 @@ export function useConversationSnapshot(
   }, [streamKey, historyMessages]);
 
   const streamMessages = useStreamEvents(streamKey);
+  const liveActivity = useStreamStore(
+    useShallow((state) => {
+      const entry = state.entries[streamKey];
+      return {
+        streamingText: entry?.streamingText ?? "",
+        thinkingText: entry?.thinkingText ?? "",
+        hasToolActivity:
+          (entry?.activeToolCalls.length ?? 0) > 0 ||
+          (entry?.timeline.length ?? 0) > 0 ||
+          !!entry?.progressText,
+      };
+    }),
+  );
 
   const messages = useMemo(() => {
     const stored = useMessageStore.getState().getThreadMessages(streamKey);
     if (stored.length > 0) {
-      return combineStoredAndStreamMessages(stored, streamMessages);
+      return combineStoredAndStreamMessages(stored, streamMessages, liveActivity);
     }
-    return combineStoredAndStreamMessages(historyMessages ?? [], streamMessages);
-  }, [streamKey, streamMessages, historyMessages]);
+    return combineStoredAndStreamMessages(historyMessages ?? [], streamMessages, liveActivity);
+  }, [streamKey, streamMessages, historyMessages, liveActivity]);
 
   return { messages };
 }
