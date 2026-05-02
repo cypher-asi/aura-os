@@ -54,6 +54,11 @@ async function readJsonIfExists(filePath) {
   }
 }
 
+async function readJsonWithSourceIfExists(filePath) {
+  const content = await readJsonIfExists(filePath);
+  return content == null ? null : { content, source: filePath };
+}
+
 async function listJsonFiles(dirPath) {
   let entries;
   try {
@@ -105,15 +110,18 @@ function normalizeStatus(harnessEntry, driverRecord) {
   return "not_resolved";
 }
 
-async function loadHarnessReport(runDir) {
+async function loadHarnessReport(runDir, { runId = null } = {}) {
   // Look for a top-level report.json in harness-report/, or fall back to a
   // walk over per-instance JSON files.
   const harnessDir = path.join(runDir, "harness-report");
   let foundHarnessOutput = false;
-  const topLevel = await readJsonIfExists(path.join(harnessDir, "report.json"));
+  const sources = [];
+  const topLevelResult = await readJsonWithSourceIfExists(path.join(harnessDir, "report.json"));
+  const topLevel = topLevelResult?.content ?? null;
   if (topLevel) foundHarnessOutput = true;
+  if (topLevelResult) sources.push(topLevelResult.source);
   if (looksLikeTopLevelReport(topLevel)) {
-    return { report: topLevel, perInstance: {}, foundHarnessOutput };
+    return { report: topLevel, perInstance: {}, foundHarnessOutput, sources };
   }
 
   const perInstance = {};
@@ -124,6 +132,7 @@ async function loadHarnessReport(runDir) {
     const content = await readJsonIfExists(file);
     if (!content || typeof content !== "object") continue;
     foundHarnessOutput = true;
+    sources.push(file);
     if (looksLikeTopLevelReport(content) && !looksLikeTopLevelReport(aggregate)) {
       aggregate = content;
       continue;
@@ -142,18 +151,43 @@ async function loadHarnessReport(runDir) {
     }
     for (const entry of nestedEntries) {
       if (!entry.isDirectory()) continue;
-      const candidate = await readJsonIfExists(
-        path.join(harnessDir, entry.name, "report.json"),
-      );
-      if (candidate) foundHarnessOutput = true;
-      if (looksLikeTopLevelReport(candidate)) {
-        aggregate = candidate;
+      const candidatePath = path.join(harnessDir, entry.name, "report.json");
+      const candidate = await readJsonWithSourceIfExists(candidatePath);
+      if (candidate) {
+        foundHarnessOutput = true;
+        sources.push(candidate.source);
+      }
+      if (looksLikeTopLevelReport(candidate?.content)) {
+        aggregate = candidate.content;
         break;
       }
     }
   }
 
-  return { report: aggregate ?? {}, perInstance, foundHarnessOutput };
+  if (!looksLikeTopLevelReport(aggregate) && runId) {
+    const fallbackName = `AURA.${runId}.json`;
+    const fallbackPaths = [
+      path.join(runDir, fallbackName),
+      path.join(path.dirname(runDir), fallbackName),
+      path.join(process.cwd(), fallbackName),
+    ];
+    const seen = new Set();
+    for (const fallbackPath of fallbackPaths) {
+      const resolved = path.resolve(fallbackPath);
+      if (seen.has(resolved)) continue;
+      seen.add(resolved);
+      const candidate = await readJsonWithSourceIfExists(resolved);
+      if (!candidate) continue;
+      foundHarnessOutput = true;
+      sources.push(candidate.source);
+      if (looksLikeTopLevelReport(candidate.content)) {
+        aggregate = candidate.content;
+        break;
+      }
+    }
+  }
+
+  return { report: aggregate ?? {}, perInstance, foundHarnessOutput, sources };
 }
 
 function buildHarnessIndex(report, perInstance) {
@@ -175,6 +209,7 @@ function buildHarnessIndex(report, perInstance) {
         ?? report.unresolved
         ?? [],
       error: report.error_ids ?? report.error ?? [],
+      emptyPatch: report.empty_patch_ids ?? report.empty_patch_instances ?? [],
       submitted: report.submitted_ids ?? report.submitted_instances ?? [],
     };
 
@@ -188,8 +223,16 @@ function buildHarnessIndex(report, perInstance) {
       const entry = typeof id === "string" ? { instance_id: id } : id;
       upsert(entry?.instance_id, { error: true });
     }
+    for (const id of asArray(buckets.emptyPatch)) {
+      upsert(typeof id === "string" ? id : id?.instance_id, { resolved: false });
+    }
     for (const id of asArray(buckets.submitted)) {
-      upsert(typeof id === "string" ? id : id?.instance_id, { submitted: true });
+      const instanceId = typeof id === "string" ? id : id?.instance_id;
+      upsert(instanceId, { submitted: true });
+      const existing = index.get(instanceId);
+      if (instanceId && existing && existing.resolved !== true && !existing.error) {
+        upsert(instanceId, { resolved: false });
+      }
     }
   }
 
@@ -253,8 +296,8 @@ export function synthesizeSummaryFromRecords(runDir, recordsMap) {
   for (const record of records) {
     const status = record.status ?? "";
     statusCounts[status] = (statusCounts[status] ?? 0) + 1;
-    totalCost += Number(record.cost_usd ?? 0);
-    totalTokens += Number(record.total_tokens ?? 0);
+    totalCost += recordCostUsd(record);
+    totalTokens += recordTotalTokens(record);
     totalStripped += Number(record.patch?.tests_directory_hits_stripped ?? 0);
     if (record.started_at) {
       const t = Date.parse(record.started_at);
@@ -290,6 +333,31 @@ export function synthesizeSummaryFromRecords(runDir, recordsMap) {
     out_dir: runDir,
     synthesized: true,
   };
+}
+
+function recordCostUsd(record) {
+  const direct = Number(record?.cost_usd ?? 0);
+  if (direct > 0) return direct;
+  const metrics = Number(record?.aura_payload?.metrics?.estimatedCostUsd ?? 0);
+  if (metrics > 0) return metrics;
+  return Number(record?.aura_payload?.projectStats?.estimated_cost_usd ?? 0);
+}
+
+function recordTotalTokens(record) {
+  const direct = Number(
+    record?.total_tokens
+      ?? record?.aura_payload?.metrics?.totalTokens
+      ?? record?.aura_payload?.projectStats?.total_tokens
+      ?? 0,
+  );
+  if (direct > 0) return direct;
+
+  const usage = record?.aura_payload?.richUsageSummary;
+  if (!usage || typeof usage !== "object") return 0;
+  return Number(usage.totalInputTokens ?? 0)
+    + Number(usage.totalOutputTokens ?? 0)
+    + Number(usage.totalCacheCreationInputTokens ?? 0)
+    + Number(usage.totalCacheReadInputTokens ?? 0);
 }
 
 function buildConfidenceNote(subset, instanceCount) {
@@ -427,7 +495,9 @@ async function main(rawArgv) {
       `[aggregate-score] driver-summary.json was missing; synthesized from ${driverRecords.size} runs/*.json file(s)\n`,
     );
   }
-  const { report, perInstance, foundHarnessOutput } = await loadHarnessReport(runDir);
+  const { report, perInstance, foundHarnessOutput, sources } = await loadHarnessReport(runDir, {
+    runId: summary.run_id,
+  });
   const harnessIndex = buildHarnessIndex(report, perInstance);
   const officialHarnessRan = foundHarnessOutput;
   const nativeWindowsDriverOnly = !officialHarnessRan && process.platform === "win32";
@@ -448,8 +518,8 @@ async function main(rawArgv) {
     if (status === "resolved") resolvedCount += 1;
 
     const auraMetrics = driver?.aura_payload?.metrics ?? {};
-    const cost = Number(driver?.cost_usd ?? auraMetrics.estimatedCostUsd ?? 0);
-    const tokens = Number(driver?.total_tokens ?? auraMetrics.totalTokens ?? 0);
+    const cost = recordCostUsd(driver);
+    const tokens = recordTotalTokens(driver);
     totalCost += cost;
     totalTokens += tokens;
 
@@ -494,6 +564,11 @@ async function main(rawArgv) {
         : "driver_predictions_only",
     official_harness_ran: officialHarnessRan,
     official_results_available: officialHarnessRan,
+    scoring_source: {
+      harness_report_found: foundHarnessOutput,
+      harness_report_paths: sources.map((source) => path.relative(runDir, source)),
+      aggregated_at: new Date().toISOString(),
+    },
     scoring_note: officialHarnessRan
       ? ""
       : nativeWindowsDriverOnly
@@ -502,8 +577,12 @@ async function main(rawArgv) {
     instance_count: instanceCount,
     aura_version: summary.aura_version ?? null,
     claude_model: summary.claude_model ?? null,
-    cost_usd: Number((summary.cost_usd ?? totalCost).toFixed(6)),
-    total_tokens: Number(summary.total_tokens ?? totalTokens),
+    cost_usd: Number(
+      Number(Number(summary.cost_usd ?? 0) > 0 ? summary.cost_usd : totalCost).toFixed(6),
+    ),
+    total_tokens: Number(summary.total_tokens ?? 0) > 0
+      ? Number(summary.total_tokens)
+      : totalTokens,
     wallclock_seconds: Number(summary.wallclock_seconds ?? 0),
     score: Number(resolvedPct.toFixed(2)),
     resolved: resolvedCount,

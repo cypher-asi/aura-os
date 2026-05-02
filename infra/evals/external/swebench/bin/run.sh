@@ -21,6 +21,8 @@
 #   AURA_BENCH_SKIP_LLM_PREFLIGHT   optional, set 1 to skip the direct LLM probe
 #   AURA_BENCH_SKIP_LIVE_PREFLIGHT  optional, set 1 to skip the live pipeline
 #                                   preflight (auth/spec/tasks/dev-loop)
+#   AURA_BENCH_DRIVER_ONLY          optional, set 1 to intentionally skip the
+#                                   official SWE-bench harness
 #   AURA_BENCH_SKIP_PHASE0_MOCK_PREFLIGHT optional, set 1 to skip the
 #                                   SWE-shaped mock automation preflight
 #   AURA_BENCH_SKIP_PHASE1_PROFILE_ANALYSIS optional, set 1 to skip the
@@ -558,14 +560,15 @@ if [ "$#" -gt 0 ]; then
     esac
 fi
 
-# Pre-scan extra args for --resume so the wrapper knows whether to mint a fresh
-# OUT_DIR or reuse an existing one. We do not strip the flag from "$@" -- the
-# Node driver re-parses and applies the same resume semantics. Forms accepted:
+# Pre-scan extra args for wrapper-owned flags. We do not strip --resume because
+# the Node driver re-parses and applies the same resume semantics. We do strip
+# --driver-only so it is not forwarded to the Node driver.
 #   --resume                 (auto-pick most recent run dir)
 #   --resume <RUN_ID|path>   (space-separated value)
 #   --resume=<RUN_ID|path>   (inline value)
 RESUME_FLAG=""
 RESUME_VALUE=""
+FORWARD_ARGS=""
 __prev=""
 for __a in "$@"; do
     if [ "$__prev" = "--resume" ]; then
@@ -574,11 +577,18 @@ for __a in "$@"; do
             --*) ;;
             *)
                 RESUME_VALUE="$__a"
+                FORWARD_ARGS="${FORWARD_ARGS} $(shell_single_quote "$__a")"
                 continue
                 ;;
         esac
     fi
     case "$__a" in
+        --driver-only)
+            AURA_BENCH_DRIVER_ONLY=1
+            export AURA_BENCH_DRIVER_ONLY
+            __prev=""
+            continue
+            ;;
         --resume)
             RESUME_FLAG=1
             __prev="--resume"
@@ -592,8 +602,10 @@ for __a in "$@"; do
             __prev=""
             ;;
     esac
+    FORWARD_ARGS="${FORWARD_ARGS} $(shell_single_quote "$__a")"
 done
 unset __a __prev
+eval "set -- $FORWARD_ARGS"
 
 # Preflight: node >= 22.
 if ! command -v node >/dev/null 2>&1; then
@@ -621,8 +633,12 @@ PY
 fi
 case "$python_platform" in
     win32|cygwin|msys*)
-        SKIP_SWEBENCH_HARNESS=1
-        info "native Windows Python detected; AURA driver will run, but the official SWE-bench harness will be skipped because it requires Linux/macOS Python"
+        if [ "${AURA_BENCH_DRIVER_ONLY:-0}" = "1" ]; then
+            SKIP_SWEBENCH_HARNESS=1
+            info "native Windows Python detected; running explicit driver-only plumbing validation"
+        else
+            err "native Windows Python cannot run official SWE-bench scoring. Run this lane from WSL2/Linux/macOS, or set AURA_BENCH_DRIVER_ONLY=1 / pass --driver-only for plumbing validation only."
+        fi
         ;;
 esac
 if [ "$SKIP_SWEBENCH_HARNESS" -eq 0 ] && ! python3 -m pip show swebench >/dev/null 2>&1 && ! pip3 show swebench >/dev/null 2>&1; then

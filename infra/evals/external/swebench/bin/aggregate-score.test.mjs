@@ -5,8 +5,10 @@ import path from "node:path";
 import test from "node:test";
 
 import {
+  buildHarnessIndex,
   buildPostmortem,
   failureBucket,
+  loadHarnessReport,
   normalizeStatus,
   synthesizeSummaryFromRecords,
   main,
@@ -113,6 +115,18 @@ test("normalizeStatus preserves typed driver guardrail outcomes without official
     normalizeStatus({ resolved: true }, { status: "agent_patch_polluted" }),
     "resolved",
   );
+});
+
+test("buildHarnessIndex treats submitted-only official ids as unresolved", () => {
+  const index = buildHarnessIndex({
+    resolved_ids: ["a__a-1"],
+    submitted_ids: ["a__a-1", "a__a-2"],
+    empty_patch_ids: ["a__a-3"],
+  }, {});
+
+  assert.equal(index.get("a__a-1").resolved, true);
+  assert.equal(index.get("a__a-2").resolved, false);
+  assert.equal(index.get("a__a-3").resolved, false);
 });
 
 test("aggregate-score main() synthesizes driver-summary.json from runs/ when missing", async () => {
@@ -254,6 +268,86 @@ test("aggregate-score marks official scoring when harness report is present", as
     );
     assert.equal(postmortem.buckets.resolved, 1);
   } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("aggregate-score discovers misplaced AURA.<run_id>.json harness report", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "swebench-agg-fallback-"));
+  const previousCwd = process.cwd();
+  try {
+    await fs.mkdir(path.join(dir, "runs"), { recursive: true });
+    await fs.writeFile(
+      path.join(dir, "driver-summary.json"),
+      JSON.stringify({
+        run_id: "aura-fallback",
+        subset: "smoke",
+        instance_count: 2,
+        cost_usd: 0,
+        total_tokens: 0,
+        wallclock_seconds: 1,
+      }),
+      "utf8",
+    );
+    for (const instanceId of ["a__a-1", "a__a-2"]) {
+      await fs.writeFile(
+        path.join(dir, "runs", `${instanceId}.json`),
+        JSON.stringify({
+          instance_id: instanceId,
+          repo: "a/a",
+          base_commit: "deadbeef",
+          status: "agent_complete",
+          aura_payload: {
+            richUsageSummary: {
+              totalInputTokens: 10,
+              totalOutputTokens: 5,
+              totalCacheCreationInputTokens: 2,
+              totalCacheReadInputTokens: 3,
+            },
+          },
+          patch: {
+            lines: 4,
+            files_changed: 1,
+            files_changed_list: ["src/a.py"],
+            tests_directory_hits_stripped: 0,
+            empty: false,
+          },
+        }),
+        "utf8",
+      );
+    }
+    await fs.writeFile(
+      path.join(dir, "AURA.aura-fallback.json"),
+      JSON.stringify({
+        total_instances: 500,
+        submitted_instances: ["a__a-1", "a__a-2"],
+        resolved_ids: ["a__a-1"],
+        unresolved_ids: ["a__a-2"],
+      }),
+      "utf8",
+    );
+
+    process.chdir(os.tmpdir());
+    const harness = await loadHarnessReport(dir, { runId: "aura-fallback" });
+    assert.equal(harness.foundHarnessOutput, true);
+    assert.equal(harness.sources.length, 1);
+
+    await main(["--out", dir]);
+
+    const score = JSON.parse(
+      await fs.readFile(path.join(dir, "score.json"), "utf8"),
+    );
+    assert.equal(score.scoring_mode, "official_harness");
+    assert.equal(score.resolved, 1);
+    assert.equal(score.not_resolved, 1);
+    assert.equal(score.total_tokens, 40);
+    assert.deepEqual(
+      score.instances.map((entry) => [entry.instance_id, entry.status]),
+      [["a__a-1", "resolved"], ["a__a-2", "not_resolved"]],
+    );
+    assert.match(score.scoring_source.harness_report_paths[0], /AURA\.aura-fallback\.json$/);
+  } finally {
+    process.chdir(previousCwd);
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
