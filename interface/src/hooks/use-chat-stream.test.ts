@@ -1,6 +1,7 @@
 import { renderHook, act } from "@testing-library/react";
 import { useChatStream } from "./use-chat-stream";
 import { useStreamStore, streamMetaMap } from "./stream/store";
+import { EventType } from "../shared/types/aura-events";
 
 const mockSetStreamingAgentInstanceId = vi.fn();
 const mockSetAgentStreaming = vi.fn();
@@ -153,6 +154,52 @@ describe("useChatStream", () => {
       expect.any(AbortSignal),
       "p-1",
     );
+  });
+
+  it("persists completed image generation as a generated image tool card", async () => {
+    vi.mocked(generateImageStream).mockImplementation(
+      async (_prompt, _model, _attachments, handler) => {
+        handler?.onEvent({
+          type: EventType.GenerationCompleted,
+          content: {
+            mode: "image",
+            imageUrl: "https://cdn.example.com/cat.png",
+            originalUrl: "https://cdn.example.com/cat-original.png",
+            artifactId: "artifact-cat",
+          },
+        } as any);
+      },
+    );
+
+    const { result } = renderHook(() =>
+      useChatStream({ projectId: "p-1", agentInstanceId: "ai-1" }),
+    );
+
+    await act(async () => {
+      await result.current.sendMessage(
+        "draw a cat",
+        null,
+        "gpt-image-2",
+        undefined,
+        ["generate_image"],
+        undefined,
+        "image",
+      );
+    });
+
+    const entry = useStreamStore.getState().entries[result.current.streamKey];
+    const assistantEvent = entry.events.find((event) => event.role === "assistant");
+    const imageTool = assistantEvent?.toolCalls?.find((tool) => tool.name === "generate_image");
+
+    expect(imageTool).toMatchObject({
+      pending: false,
+      isError: false,
+    });
+    expect(JSON.parse(imageTool?.result ?? "{}")).toMatchObject({
+      imageUrl: "https://cdn.example.com/cat.png",
+      artifactId: "artifact-cat",
+    });
+    expect(entry.activeToolCalls).toHaveLength(0);
   });
 
   it("does nothing for empty content without action", async () => {

@@ -292,8 +292,7 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
         const toolId = `gen-${Date.now()}`;
         coreHandleToolCall(refs, setters, { id: toolId, name: toolName, input: {} });
         coreHandleToolResult(refs, setters, { id: toolId, name: toolName, result: JSON.stringify(gc), is_error: false });
-        resetStreamBuffers(refs, setters);
-        setters.setIsStreaming(false);
+        finalizeStream(refs, setters, abortRef, false, { reason: "completed" });
         if (agentInstanceId) {
           sidekickRef.current.setAgentStreaming(agentInstanceId, false);
         }

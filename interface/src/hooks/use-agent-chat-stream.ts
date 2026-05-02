@@ -165,8 +165,7 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
               const toolId = `gen-${Date.now()}`;
               handleToolCall(refs, setters, { id: toolId, name: toolName, input: {} });
               handleToolResult(refs, setters, { id: toolId, name: toolName, result: JSON.stringify(gc), is_error: false });
-              resetStreamBuffers(refs, setters);
-              core.setIsStreaming(false);
+              finalizeStream(refs, setters, abortRef, false, { reason: "completed" });
               break;
             }
             case EventType.GenerationError:
