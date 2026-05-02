@@ -176,11 +176,37 @@ function readAppVersion(appPath) {
     ).trim();
   }
 
-  // Read ProductVersion from Windows VS_VERSION_INFO via PowerShell. Falls
-  // back to FileVersion if ProductVersion is empty (older installers).
-  const script =
-    "$p = (Get-Item -LiteralPath $env:AURA_SMOKE_EXE).VersionInfo;" +
-    " if ([string]::IsNullOrWhiteSpace($p.ProductVersion)) { $p.FileVersion.Trim() } else { $p.ProductVersion.Trim() }";
+  // Read ProductVersion from Windows VS_VERSION_INFO via PowerShell. Older
+  // NSIS artifacts can leave both ProductVersion and FileVersion empty, so
+  // fall back to the installer registry DisplayVersion for this install dir.
+  const script = `
+$exe = Get-Item -LiteralPath $env:AURA_SMOKE_EXE -ErrorAction Stop
+$versions = @($exe.VersionInfo.ProductVersion, $exe.VersionInfo.FileVersion) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+if ($versions.Count -gt 0) {
+  $versions[0].Trim()
+  exit 0
+}
+
+$installDir = (Split-Path -Parent $exe.FullName).TrimEnd('\\')
+$roots = @(
+  'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
+  'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
+  'HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall'
+)
+
+foreach ($root in $roots) {
+  if (-not (Test-Path $root)) { continue }
+  foreach ($entry in Get-ChildItem $root) {
+    $item = Get-ItemProperty $entry.PSPath
+    $location = ([string]$item.InstallLocation).Trim('"').TrimEnd('\\')
+    $uninstall = ([string]$item.UninstallString).Trim('"')
+    if (($location -eq $installDir -or $uninstall.StartsWith($installDir)) -and -not [string]::IsNullOrWhiteSpace($item.DisplayVersion)) {
+      $item.DisplayVersion.Trim()
+      exit 0
+    }
+  }
+}
+`;
   const output = execFileSync(
     "powershell.exe",
     ["-NoProfile", "-NonInteractive", "-Command", script],

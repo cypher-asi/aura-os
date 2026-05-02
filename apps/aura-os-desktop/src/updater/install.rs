@@ -473,17 +473,14 @@ pub(crate) fn start_install(state: UpdateState) -> Result<(), String> {
         }
     }
 
-    tokio::spawn(async move {
-        match tokio::task::spawn_blocking(move || install_and_restart(state)).await {
-            Ok(Ok(())) => {}
-            Ok(Err(error)) => {
+    std::thread::Builder::new()
+        .name("aura-update-install".into())
+        .spawn(move || {
+            if let Err(error) = install_and_restart(state) {
                 warn!(error = %error, "background install failed");
             }
-            Err(error) => {
-                warn!(error = %error, "background install task failed");
-            }
-        }
-    });
+        })
+        .map_err(|error| format!("failed to spawn updater install thread: {error}"))?;
     Ok(())
 }
 
