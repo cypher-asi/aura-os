@@ -35,12 +35,34 @@ interface FinalizeStreamOptions {
 function getStreamErrorMessage(error: unknown): string {
   if (typeof error === "string") return error;
   if (error instanceof Error) return error.message;
+  if (
+    typeof error === "object"
+    && error !== null
+    && "message" in error
+    && typeof (error as { message?: unknown }).message === "string"
+  ) {
+    return (error as { message: string }).message;
+  }
   return String(error);
+}
+
+function getStreamErrorCode(error: unknown): string | undefined {
+  if (
+    typeof error === "object"
+    && error !== null
+    && "code" in error
+    && typeof (error as { code?: unknown }).code === "string"
+  ) {
+    return (error as { code: string }).code;
+  }
+  return undefined;
 }
 
 function isStreamDroppedError(error: unknown, message: string): boolean {
   if (error instanceof SSEIdleTimeoutError) return true;
   if (error instanceof Error && error.name === "SSEIdleTimeoutError") return true;
+  const code = getStreamErrorCode(error);
+  if (code === "STREAM_LAGGED" || code === "stream_lagged") return true;
   if (
     typeof error === "object"
     && error !== null
@@ -250,16 +272,18 @@ export function handleStreamError(
   error: unknown,
 ): void {
   const rawMessage = getStreamErrorMessage(error);
+  const rawCode = getStreamErrorCode(error);
   const { message, displayVariant } = normalizeStreamError(error);
+  const displayMessage = rawCode && !displayVariant ? `${message} (${rawCode})` : message;
 
-  console.error("Chat stream error:", rawMessage);
+  console.error("Chat stream error:", rawCode ? `${rawCode}: ${rawMessage}` : rawMessage);
   if (displayVariant === "insufficientCreditsError") {
     dispatchInsufficientCredits();
   }
   flushStreamingText(refs, setters);
   resolvePendingToolCalls(refs, setters, {
     isError: true,
-    result: `Stream error: ${message}`,
+    result: `Stream error: ${displayMessage}`,
   });
   setters.setActiveToolCalls([...refs.toolCalls.current]);
 
@@ -275,8 +299,8 @@ export function handleStreamError(
       id: `error-${Date.now()}`,
       role: "assistant",
       content: displayVariant
-        ? prefix + message
-        : prefix + `*Error: ${message}*`,
+        ? prefix + displayMessage
+        : prefix + `*Error: ${displayMessage}*`,
       displayVariant,
       toolCalls: savedToolCalls,
       thinkingText: savedThinking,
@@ -285,6 +309,9 @@ export function handleStreamError(
     },
   ]);
   resetStreamBuffers(refs, setters);
+  setters.setProgressText("");
+  setters.setIsStreaming(false);
+  setters.setIsWriting(false);
 }
 
 export function finalizeStream(

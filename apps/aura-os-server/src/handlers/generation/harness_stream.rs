@@ -1,4 +1,5 @@
 use std::convert::Infallible;
+use std::time::Duration;
 
 use aura_os_core::HarnessMode;
 use aura_os_harness::{
@@ -10,7 +11,8 @@ use futures_util::stream;
 use serde_json::json;
 use serde_json::Map;
 use tokio::sync::broadcast;
-use tracing::{error, warn};
+use tokio::time::Instant;
+use tracing::{error, info, warn};
 
 use aura_os_core::ZeroAuthSession;
 
@@ -22,6 +24,9 @@ use crate::handlers::agents::session_identity::{
 use crate::state::AppState;
 
 use super::sse::{SseResponse, SseStream, SSE_NO_BUFFERING_HEADERS};
+
+const DEFAULT_GENERATION_EVENT_IDLE_TIMEOUT_SECS: u64 = 120;
+const DEFAULT_GENERATION_MAX_RUNTIME_SECS: u64 = 600;
 
 /// Identity context callers must resolve before opening a
 /// generation session.
@@ -98,12 +103,28 @@ pub(super) async fn open_generation_stream(
     request: GenerationRequest,
     identity: GenerationIdentity,
 ) -> ApiResult<SseResponse> {
+    let generation_id = uuid::Uuid::new_v4().to_string();
     let harness_mode = HarnessMode::Local;
+    let mode = request.mode.clone();
+    let model = request.model.clone();
+    let prompt_len = request.prompt.as_ref().map_or(0, |prompt| prompt.len());
+    let image_count = request.images.as_ref().map_or(0, Vec::len);
+    let has_project_id = request.project_id.is_some();
     let GenerationIdentity {
         aura_org_id,
         aura_session_id,
         user_id,
     } = identity;
+    info!(
+        generation_id = %generation_id,
+        mode = %mode,
+        model = ?model,
+        prompt_len,
+        image_count,
+        has_project_id,
+        harness_mode = ?harness_mode,
+        "generation stream opening harness session"
+    );
     let session_config = SessionConfig {
         agent_id: Some(format!("generation-{}", uuid::Uuid::new_v4().as_simple())),
         agent_name: Some("Generation".to_string()),
@@ -133,7 +154,12 @@ pub(super) async fn open_generation_stream(
 
     let harness = state.harness_for(harness_mode);
     let session = harness.open_session(session_config).await.map_err(|err| {
-        error!(error = %err, "generation harness session failed to open");
+        error!(
+            generation_id = %generation_id,
+            mode = %mode,
+            error = %err,
+            "generation harness session failed to open"
+        );
         // Route through the shared mapper so upstream WS-slot
         // exhaustion + harness-side identity preflight failures
         // surface as the same structured envelopes the rest of the
@@ -142,20 +168,42 @@ pub(super) async fn open_generation_stream(
             ApiError::bad_gateway(format!("opening harness generation session failed: {e}"))
         })
     })?;
+    info!(
+        generation_id = %generation_id,
+        session_id = %session.session_id,
+        mode = %mode,
+        "generation harness session opened"
+    );
 
     let rx = session.events_tx.subscribe();
     session
         .commands_tx
         .try_send(HarnessInbound::GenerationRequest(request))
         .map_err(|err| {
-            error!(error = %err, "generation request failed to send to harness");
+            error!(
+                generation_id = %generation_id,
+                session_id = %session.session_id,
+                mode = %mode,
+                error = %err,
+                "generation request failed to send to harness"
+            );
             ApiError::bad_gateway(format!("sending harness generation request failed: {err}"))
         })?;
+    info!(
+        generation_id = %generation_id,
+        session_id = %session.session_id,
+        mode = %mode,
+        "generation request sent to harness"
+    );
 
     let stream = harness_generation_to_sse(
         state,
         harness_mode,
         session.session_id,
+        generation_id,
+        mode,
+        generation_event_idle_timeout(),
+        generation_max_runtime(),
         rx,
         session.commands_tx.clone(),
     );
@@ -170,20 +218,127 @@ fn harness_generation_to_sse(
     state: AppState,
     harness_mode: HarnessMode,
     session_id: String,
+    generation_id: String,
+    mode: String,
+    event_idle_timeout: Duration,
+    max_runtime: Duration,
     rx: broadcast::Receiver<HarnessOutbound>,
     commands_tx: HarnessCommandSender,
 ) -> impl futures_core::Stream<Item = Result<Event, Infallible>> + Send {
+    let now = Instant::now();
     stream::unfold(
-        (state, rx, false, session_id, commands_tx),
-        move |(state, mut rx, done, session_id, commands_tx)| async move {
-            if done {
+        GenerationStreamState {
+            state,
+            rx,
+            done: false,
+            session_id,
+            generation_id,
+            mode,
+            event_idle_timeout,
+            max_runtime,
+            started_at: now,
+            last_generation_event_at: now,
+            saw_generation_event: false,
+            _commands_tx: commands_tx,
+        },
+        move |mut stream_state| async move {
+            let GenerationStreamState {
+                state,
+                rx,
+                done,
+                session_id,
+                generation_id,
+                mode,
+                event_idle_timeout,
+                max_runtime,
+                started_at,
+                last_generation_event_at,
+                saw_generation_event,
+                _commands_tx,
+            } = &mut stream_state;
+            if *done {
                 return None;
             }
 
             loop {
-                match rx.recv().await {
-                    Ok(evt) => {
-                        if let Some((event, terminal)) = generation_event_to_sse(evt) {
+                let elapsed = started_at.elapsed();
+                if elapsed >= *max_runtime {
+                    let event = generation_timeout_event(
+                        "GENERATION_TIMEOUT",
+                        "Image generation timed out before completing. Try again in a moment.",
+                    );
+                    error!(
+                        generation_id = %generation_id,
+                        session_id = %session_id,
+                        mode = %mode,
+                        elapsed_ms = elapsed.as_millis(),
+                        "generation stream reached max runtime"
+                    );
+                    close_generation_session(state.clone(), harness_mode, session_id.clone());
+                    stream_state.done = true;
+                    return Some((Ok(event), stream_state));
+                }
+
+                let idle_elapsed = last_generation_event_at.elapsed();
+                if idle_elapsed >= *event_idle_timeout {
+                    let event = generation_timeout_event(
+                        "GENERATION_NO_EVENTS",
+                        if *saw_generation_event {
+                            "Image generation stopped sending progress before completing. Try again in a moment."
+                        } else {
+                            "Image generation did not start. Try again in a moment."
+                        },
+                    );
+                    error!(
+                        generation_id = %generation_id,
+                        session_id = %session_id,
+                        mode = %mode,
+                        idle_ms = idle_elapsed.as_millis(),
+                        elapsed_ms = elapsed.as_millis(),
+                        saw_generation_event = *saw_generation_event,
+                        "generation stream watchdog fired"
+                    );
+                    close_generation_session(state.clone(), harness_mode, session_id.clone());
+                    stream_state.done = true;
+                    return Some((Ok(event), stream_state));
+                }
+
+                let max_remaining = *max_runtime - elapsed;
+                let idle_remaining = *event_idle_timeout - idle_elapsed;
+                let wait_for = max_remaining.min(idle_remaining);
+
+                match tokio::time::timeout(wait_for, rx.recv()).await {
+                    Err(_) => {
+                        continue;
+                    }
+                    Ok(Ok(evt)) => {
+                        if let Some(event_name) = generation_event_name(&evt) {
+                            let terminal = generation_event_is_terminal(&evt);
+                            if terminal {
+                                info!(
+                                    generation_id = %generation_id,
+                                    session_id = %session_id,
+                                    mode = %mode,
+                                    event = event_name,
+                                    elapsed_ms = started_at.elapsed().as_millis(),
+                                    "generation stream terminal event received"
+                                );
+                            } else if !*saw_generation_event {
+                                info!(
+                                    generation_id = %generation_id,
+                                    session_id = %session_id,
+                                    mode = %mode,
+                                    event = event_name,
+                                    elapsed_ms = started_at.elapsed().as_millis(),
+                                    "generation stream first event received"
+                                );
+                            }
+                            *last_generation_event_at = Instant::now();
+                            *saw_generation_event = true;
+                        }
+                        if let Some((event, terminal)) =
+                            generation_event_to_sse(evt, generation_id, session_id, mode)
+                        {
                             if terminal {
                                 close_generation_session(
                                     state.clone(),
@@ -191,14 +346,18 @@ fn harness_generation_to_sse(
                                     session_id.clone(),
                                 );
                             }
-                            return Some((
-                                Ok(event),
-                                (state, rx, terminal, session_id, commands_tx),
-                            ));
+                            stream_state.done = terminal;
+                            return Some((Ok(event), stream_state));
                         }
                     }
-                    Err(broadcast::error::RecvError::Lagged(n)) => {
-                        warn!(dropped = n, "generation harness stream lagged");
+                    Ok(Err(broadcast::error::RecvError::Lagged(n))) => {
+                        warn!(
+                            generation_id = %generation_id,
+                            session_id = %session_id,
+                            mode = %mode,
+                            dropped = n,
+                            "generation harness stream lagged"
+                        );
                         let event = Event::default()
                             .event("generation_error")
                             .json_data(json!({
@@ -207,20 +366,44 @@ fn harness_generation_to_sse(
                             }))
                             .unwrap_or_else(|_| Event::default().data("{}"));
                         close_generation_session(state.clone(), harness_mode, session_id.clone());
-                        return Some((Ok(event), (state, rx, true, session_id, commands_tx)));
+                        stream_state.done = true;
+                        return Some((Ok(event), stream_state));
                     }
-                    Err(broadcast::error::RecvError::Closed) => {
+                    Ok(Err(broadcast::error::RecvError::Closed)) => {
+                        warn!(
+                            generation_id = %generation_id,
+                            session_id = %session_id,
+                            mode = %mode,
+                            elapsed_ms = started_at.elapsed().as_millis(),
+                            "generation harness stream closed before terminal generation event"
+                        );
                         let event = Event::default()
                             .event("done")
                             .json_data(json!({}))
                             .unwrap_or_else(|_| Event::default().data("{}"));
                         close_generation_session(state.clone(), harness_mode, session_id.clone());
-                        return Some((Ok(event), (state, rx, true, session_id, commands_tx)));
+                        stream_state.done = true;
+                        return Some((Ok(event), stream_state));
                     }
                 }
             }
         },
     )
+}
+
+struct GenerationStreamState {
+    state: AppState,
+    rx: broadcast::Receiver<HarnessOutbound>,
+    done: bool,
+    session_id: String,
+    generation_id: String,
+    mode: String,
+    event_idle_timeout: Duration,
+    max_runtime: Duration,
+    started_at: Instant,
+    last_generation_event_at: Instant,
+    saw_generation_event: bool,
+    _commands_tx: HarnessCommandSender,
 }
 
 fn close_generation_session(state: AppState, harness_mode: HarnessMode, session_id: String) {
@@ -232,7 +415,12 @@ fn close_generation_session(state: AppState, harness_mode: HarnessMode, session_
     });
 }
 
-fn generation_event_to_sse(evt: HarnessOutbound) -> Option<(Event, bool)> {
+fn generation_event_to_sse(
+    evt: HarnessOutbound,
+    generation_id: &str,
+    session_id: &str,
+    mode: &str,
+) -> Option<(Event, bool)> {
     match evt {
         HarnessOutbound::GenerationStart(start) => Some((
             Event::default()
@@ -265,26 +453,101 @@ fn generation_event_to_sse(evt: HarnessOutbound) -> Option<(Event, bool)> {
                 true,
             ))
         }
-        HarnessOutbound::GenerationError(err) => Some((
-            Event::default()
-                .event("generation_error")
-                .json_data(&err)
-                .unwrap_or_else(|_| Event::default().data("{}")),
-            true,
-        )),
-        HarnessOutbound::Error(err) => Some((
-            Event::default()
-                .event("error")
-                .json_data(json!({
-                    "code": err.code,
-                    "message": format!("Aura proxy upstream provider error: {}", err.message),
-                    "recoverable": err.recoverable,
-                }))
-                .unwrap_or_else(|_| Event::default().data("{}")),
-            true,
-        )),
+        HarnessOutbound::GenerationError(err) => {
+            error!(
+                generation_id,
+                session_id,
+                mode,
+                code = %err.code,
+                message = %err.message,
+                "generation harness emitted terminal generation error"
+            );
+            Some((
+                Event::default()
+                    .event("generation_error")
+                    .json_data(&err)
+                    .unwrap_or_else(|_| Event::default().data("{}")),
+                true,
+            ))
+        }
+        HarnessOutbound::Error(err) => {
+            error!(
+                generation_id,
+                session_id,
+                mode,
+                code = %err.code,
+                message = %err.message,
+                recoverable = err.recoverable,
+                "generation harness emitted terminal upstream error"
+            );
+            Some((
+                Event::default()
+                    .event("error")
+                    .json_data(json!({
+                        "code": err.code,
+                        "message": format!("Aura proxy upstream provider error: {}", err.message),
+                        "recoverable": err.recoverable,
+                    }))
+                    .unwrap_or_else(|_| Event::default().data("{}")),
+                true,
+            ))
+        }
         _ => None,
     }
+}
+
+fn generation_event_name(evt: &HarnessOutbound) -> Option<&'static str> {
+    match evt {
+        HarnessOutbound::GenerationStart(_) => Some("generation_start"),
+        HarnessOutbound::GenerationProgress(_) => Some("generation_progress"),
+        HarnessOutbound::GenerationPartialImage(_) => Some("generation_partial_image"),
+        HarnessOutbound::GenerationCompleted(_) => Some("generation_completed"),
+        HarnessOutbound::GenerationError(_) => Some("generation_error"),
+        HarnessOutbound::Error(_) => Some("error"),
+        _ => None,
+    }
+}
+
+fn generation_event_is_terminal(evt: &HarnessOutbound) -> bool {
+    matches!(
+        evt,
+        HarnessOutbound::GenerationCompleted(_)
+            | HarnessOutbound::GenerationError(_)
+            | HarnessOutbound::Error(_)
+    )
+}
+
+fn generation_timeout_event(code: &'static str, message: &'static str) -> Event {
+    Event::default()
+        .event("generation_error")
+        .json_data(json!({
+            "code": code,
+            "message": message,
+        }))
+        .unwrap_or_else(|_| Event::default().data("{}"))
+}
+
+fn generation_event_idle_timeout() -> Duration {
+    env_duration_secs(
+        "AURA_GENERATION_EVENT_IDLE_TIMEOUT_SECS",
+        DEFAULT_GENERATION_EVENT_IDLE_TIMEOUT_SECS,
+    )
+}
+
+fn generation_max_runtime() -> Duration {
+    env_duration_secs(
+        "AURA_GENERATION_MAX_RUNTIME_SECS",
+        DEFAULT_GENERATION_MAX_RUNTIME_SECS,
+    )
+}
+
+fn env_duration_secs(key: &str, default_secs: u64) -> Duration {
+    let secs = std::env::var(key)
+        .ok()
+        .and_then(|raw| raw.trim().parse::<u64>().ok())
+        .filter(|secs| *secs > 0)
+        .unwrap_or(default_secs);
+    Duration::from_secs(secs)
 }
 
 fn normalize_generation_completed_payload(
@@ -360,6 +623,9 @@ fn string_field(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aura_protocol::{
+        ErrorMsg, GenerationCompleted, GenerationErrorMsg, GenerationProgressMsg, GenerationStart,
+    };
 
     #[test]
     fn normalize_generation_payload_aliases_artifact_fields() {
@@ -396,5 +662,52 @@ mod tests {
         assert_eq!(payload["mode"], "image");
         assert_eq!(payload["imageUrl"], "https://cdn.example.com/nested.png");
         assert_eq!(payload["artifactId"], "artifact-2");
+    }
+
+    #[test]
+    fn generation_event_classification_marks_terminal_events() {
+        let start = HarnessOutbound::GenerationStart(GenerationStart {
+            mode: "image".to_string(),
+        });
+        assert_eq!(generation_event_name(&start), Some("generation_start"));
+        assert!(!generation_event_is_terminal(&start));
+
+        let progress = HarnessOutbound::GenerationProgress(GenerationProgressMsg {
+            percent: 25.0,
+            message: "rendering".to_string(),
+        });
+        assert_eq!(
+            generation_event_name(&progress),
+            Some("generation_progress")
+        );
+        assert!(!generation_event_is_terminal(&progress));
+
+        let completed = HarnessOutbound::GenerationCompleted(GenerationCompleted {
+            mode: "image".to_string(),
+            payload: json!({ "imageUrl": "https://cdn.example.com/image.png" }),
+        });
+        assert_eq!(
+            generation_event_name(&completed),
+            Some("generation_completed")
+        );
+        assert!(generation_event_is_terminal(&completed));
+
+        let generation_error = HarnessOutbound::GenerationError(GenerationErrorMsg {
+            code: "GENERATION_FAILED".to_string(),
+            message: "model unavailable".to_string(),
+        });
+        assert_eq!(
+            generation_event_name(&generation_error),
+            Some("generation_error")
+        );
+        assert!(generation_event_is_terminal(&generation_error));
+
+        let upstream_error = HarnessOutbound::Error(ErrorMsg {
+            code: "provider_error".to_string(),
+            message: "upstream failed".to_string(),
+            recoverable: false,
+        });
+        assert_eq!(generation_event_name(&upstream_error), Some("error"));
+        assert!(generation_event_is_terminal(&upstream_error));
     }
 }

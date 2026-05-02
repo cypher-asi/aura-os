@@ -299,10 +299,10 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
         break;
       }
       case EventType.GenerationError:
-        handleStreamError(refs, setters, event.content.message);
+        handleStreamError(refs, setters, event.content);
         break;
       case EventType.Error:
-        handleStreamError(refs, setters, event.content.message);
+        handleStreamError(refs, setters, event.content);
         break;
       case EventType.Done:
         finalizeStream(refs, setters, abortRef, false);
