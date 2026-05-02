@@ -56,6 +56,34 @@ describe("useScrollAnchorV2", () => {
     expect(container.scrollTop).toBe(1000);
   });
 
+  it("can reset follow state without forcing a bottom scroll", () => {
+    const container = makeContainer({ scrollTop: 100, scrollHeight: 1000, clientHeight: 400 });
+    const ref = { current: container };
+
+    const { result, rerender } = renderHook(
+      ({ resetKey }) =>
+        useScrollAnchorV2(ref, {
+          resetKey,
+          scrollToBottomOnReset: false,
+        }),
+      { initialProps: { resetKey: "thread-1" } },
+    );
+
+    expect(result.current.isAutoFollowing).toBe(true);
+    expect(container.scrollTop).toBe(100);
+
+    act(() => {
+      (container as unknown as { scrollTop: number }).scrollTop = 0;
+      result.current.handleScroll();
+    });
+    expect(result.current.isAutoFollowing).toBe(false);
+
+    rerender({ resetKey: "thread-2" });
+
+    expect(result.current.isAutoFollowing).toBe(true);
+    expect(container.scrollTop).toBe(0);
+  });
+
   it("flips out of auto-follow when the user scrolls far enough from the bottom", () => {
     const container = makeContainer({ scrollTop: 1000, scrollHeight: 1000, clientHeight: 400 });
     const ref = { current: container };

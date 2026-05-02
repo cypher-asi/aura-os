@@ -29,6 +29,7 @@ export interface UseChatPanelStateOptions {
   adapterType?: string;
   defaultModel?: string | null;
   scrollResetKey?: unknown;
+  scrollToBottomOnReset?: boolean;
   historyMessages?: DisplaySessionEvent[];
   selectedProjectId?: string;
   agentId?: string;
@@ -40,6 +41,7 @@ export function useChatPanelState({
   adapterType,
   defaultModel,
   scrollResetKey,
+  scrollToBottomOnReset,
   historyMessages,
   selectedProjectId,
   agentId,
@@ -79,7 +81,7 @@ export function useChatPanelState({
 
   const { handleScroll, scrollToBottom, isAutoFollowing } = useScrollAnchorV2(
     messageAreaRef,
-    { resetKey: scrollResetKey },
+    { resetKey: scrollResetKey, scrollToBottomOnReset },
   );
 
   const { loadOlder, isLoadingOlder, hasOlderMessages } = useLoadOlderMessages({

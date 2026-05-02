@@ -214,6 +214,8 @@ function StandaloneAgentChatPanel({
     initialHandoff: initialCreateHandoff ? "create-agent" : undefined,
     onInitialHandoffReady,
     scrollResetKey: agentId,
+    scrollToBottomOnReset: false,
+    focusInputOnThreadReady: false,
     historyMessages,
     projects: agentProjects,
     selectedProjectId: effectiveProjectId,

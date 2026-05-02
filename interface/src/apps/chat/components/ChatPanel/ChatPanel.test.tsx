@@ -316,6 +316,18 @@ describe("ChatPanel", () => {
     expect(getInputBar()).toHaveFocus();
   });
 
+  it("can skip desktop input autofocus when the thread becomes ready", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+
+    renderPanel({
+      historyResolved: true,
+      isLoading: false,
+      focusInputOnThreadReady: false,
+    });
+
+    expect(getInputBar()).not.toHaveFocus();
+  });
+
   it("does not auto-focus the input on mobile", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
 

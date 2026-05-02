@@ -57,6 +57,8 @@ export interface ChatPanelProps {
   errorMessage?: string | null;
   emptyMessage?: string;
   scrollResetKey?: unknown;
+  scrollToBottomOnReset?: boolean;
+  focusInputOnThreadReady?: boolean;
   historyMessages?: DisplaySessionEvent[];
   projects?: Project[];
   selectedProjectId?: string;
@@ -91,6 +93,8 @@ export function ChatPanel({
   errorMessage,
   emptyMessage,
   scrollResetKey,
+  scrollToBottomOnReset,
+  focusInputOnThreadReady = true,
   historyMessages,
   projects,
   selectedProjectId,
@@ -134,6 +138,7 @@ export function ChatPanel({
     adapterType,
     defaultModel,
     scrollResetKey,
+    scrollToBottomOnReset,
     historyMessages,
     selectedProjectId,
     agentId,
@@ -255,12 +260,19 @@ export function ChatPanel({
   }, [historyResolved, messages.length]);
 
   useEffect(() => {
-    if (isMobileLayout || !threadReady || inputFocusReadyRef.current) {
+    if (!focusInputOnThreadReady || isMobileLayout || !threadReady || inputFocusReadyRef.current) {
       return;
     }
     inputFocusReadyRef.current = true;
     requestAnimationFrame(() => inputBarRef.current?.focus());
-  }, [inputBarRef, initialHandoff, isMobileLayout, scrollResetKey, threadReady]);
+  }, [
+    focusInputOnThreadReady,
+    inputBarRef,
+    initialHandoff,
+    isMobileLayout,
+    scrollResetKey,
+    threadReady,
+  ]);
 
   useEffect(() => {
     if (!initialHandoff || !threadReady || initialHandoffReadyRef.current) {

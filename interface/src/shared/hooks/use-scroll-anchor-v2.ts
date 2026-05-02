@@ -20,9 +20,9 @@ export interface UseScrollAnchorV2Return {
  */
 export function useScrollAnchorV2(
   ref: React.RefObject<HTMLElement | null>,
-  options: { resetKey?: unknown },
+  options: { resetKey?: unknown; scrollToBottomOnReset?: boolean },
 ): UseScrollAnchorV2Return {
-  const { resetKey } = options;
+  const { resetKey, scrollToBottomOnReset = true } = options;
 
   const pinnedRef = useRef(true);
   const guardRef = useRef(false);
@@ -48,8 +48,10 @@ export function useScrollAnchorV2(
   useLayoutEffect(() => {
     pinnedRef.current = true;
     syncFollowState();
-    guardedScrollToBottom();
-  }, [resetKey, guardedScrollToBottom, syncFollowState]);
+    if (scrollToBottomOnReset) {
+      guardedScrollToBottom();
+    }
+  }, [resetKey, guardedScrollToBottom, scrollToBottomOnReset, syncFollowState]);
 
   const handleScroll = useCallback(() => {
     if (guardRef.current) return;

@@ -2,8 +2,20 @@ import { renderHook, act } from "@testing-library/react";
 import { vi } from "vitest";
 import { useChatPanelState } from "./useChatPanelState";
 
-const mockHandleScroll = vi.fn();
-const mockScrollToBottom = vi.fn();
+const scrollAnchorMocks = vi.hoisted(() => {
+  const handleScroll = vi.fn();
+  const scrollToBottom = vi.fn();
+  const useScrollAnchorV2 = vi.fn(() => ({
+    handleScroll,
+    scrollToBottom,
+    isAutoFollowing: true,
+  }));
+
+  return { handleScroll, scrollToBottom, useScrollAnchorV2 };
+});
+const mockHandleScroll = scrollAnchorMocks.handleScroll;
+const mockScrollToBottom = scrollAnchorMocks.scrollToBottom;
+const mockUseScrollAnchorV2 = scrollAnchorMocks.useScrollAnchorV2;
 const mockEnqueue = vi.fn();
 const mockDequeue = vi.fn();
 const mockChatUI = {
@@ -17,11 +29,7 @@ let mockStreamMessages: Array<{ id: string }> = [];
 let requestAnimationFrameSpy: ReturnType<typeof vi.spyOn> | null = null;
 
 vi.mock("../../../../shared/hooks/use-scroll-anchor-v2", () => ({
-  useScrollAnchorV2: () => ({
-    handleScroll: mockHandleScroll,
-    scrollToBottom: mockScrollToBottom,
-    isAutoFollowing: true,
-  }),
+  useScrollAnchorV2: scrollAnchorMocks.useScrollAnchorV2,
 }));
 
 vi.mock("../../../../hooks/use-load-older-messages", () => ({
@@ -88,6 +96,7 @@ describe("useChatPanelState", () => {
     mockChatUI.selectedModel = "gpt-5.4";
     mockHandleScroll.mockReset();
     mockScrollToBottom.mockReset();
+    mockUseScrollAnchorV2.mockClear();
     mockEnqueue.mockReset();
     mockDequeue.mockReset();
     mockChatUI.init.mockReset();
@@ -264,5 +273,26 @@ describe("useChatPanelState", () => {
 
     expect(mockDequeue).toHaveBeenCalledWith("stream-1");
     expect(mockScrollToBottom).not.toHaveBeenCalled();
+  });
+
+  it("passes reset scroll behavior through to the scroll anchor", () => {
+    const onSend = vi.fn();
+
+    renderHook(() =>
+      useChatPanelState({
+        streamKey: "stream-1",
+        onSend,
+        scrollResetKey: "agent-1",
+        scrollToBottomOnReset: false,
+      }),
+    );
+
+    expect(mockUseScrollAnchorV2).toHaveBeenCalledWith(
+      expect.anything(),
+      {
+        resetKey: "agent-1",
+        scrollToBottomOnReset: false,
+      },
+    );
   });
 });
