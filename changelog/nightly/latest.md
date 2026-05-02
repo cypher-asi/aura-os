@@ -1,57 +1,59 @@
-# Remote chat resilience and a more observable Windows updater
+# Steadier remote chat and a more honest Windows updater
 
 - Date: `2026-05-02`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.429.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.429.1
+- Version: `0.1.0-nightly.431.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.431.1
 
-Today's nightly hardens the remote chat path end-to-end and tightens up the Windows auto-update handoff. On the server, sessions now carry the right org identity and stalled remote streams surface real errors instead of hanging on "connecting." On the desktop side, the Windows updater is more observable and runs off the runtime thread, while the interface gets steadier chat tails, sidebar previews, and composer focus.
+Today's nightly tightens the seams across remote chat and the desktop updater: stalled harness sessions now fail loudly instead of hanging on "connecting", Windows updates leave a paper trail and reliably relaunch, and a cluster of interface fixes keeps streamed agent replies, sidebar previews, and the chat composer from flickering or losing focus.
 
-## 2:37 PM — Org identity preserved for remote harness chats
+## 2:37 PM — Remote chat sessions keep their org identity
 
-Remote chat sessions now derive the X-Aura-Org-Id header from the project when the agent record is missing it, keeping org-scoped integrations working.
+Server-side fix so harness-backed chat sessions always carry the org context the remote runtime needs.
 
-- Chat routes fall back to the project's org id when agent metadata is incomplete, so remote harness sessions consistently send X-Aura-Org-Id and resolve installed integrations against the correct org. (`9bbe1ae`)
+- Chat sessions now backfill the X-Aura-Org-Id header from the project when agent metadata is missing it, so remote harness sessions no longer drop org context mid-handshake. (`9bbe1ae`)
 
-## 2:40 PM — Windows updater handoff: logs, relaunch, and single-instance retry
+## 2:40 PM — Observable Windows updater handoff
 
-The NSIS-based Windows updater now captures handoff logs, waits for the prior instance to exit, and relaunches Aura after install instead of disappearing silently.
+The NSIS updater path on Windows now leaves diagnostics behind and brings Aura back up after install.
 
-- Windows updates write a per-version handoff log and PowerShell script next to the staged installer, so failed or silent updates leave behind diagnostics instead of vanishing. (`b7d6168`)
-- When relaunched after an install, Aura retries the single-instance mutex for up to 15 seconds via a new AURA_UPDATE_RELAUNCH signal, avoiding races where the old process hasn't fully exited yet. (`b7d6168`)
+- Windows updates capture a per-version handoff log under the updater stage directory and run a relaunch script that brings Aura back after the NSIS installer exits, ending the silent-quit failure mode. (`b7d6168`)
+- The single-instance guard now waits up to 15s when AURA_UPDATE_RELAUNCH is set, so the relaunched process doesn't race the old one for the mutex. (`b7d6168`)
 
-## 2:55 PM — Stalled remote chat streams now fail loudly instead of spinning
+## 2:55 PM — Stalled remote streams fail fast
 
-A new turn watchdog and stricter Swarm session startup turn silent remote runtimes into explicit errors, so the UI stops getting stuck on the connecting state.
+Swarm-backed chat now surfaces explicit errors instead of leaving the UI stuck on the connecting state.
 
-- Swarm session startup now waits for an explicit session_ready signal, and a turn watchdog broadcasts synthetic terminal errors if the remote agent emits no events within 30 seconds or stalls past the 5-minute turn ceiling. (`33ad453`)
-- The WebSocket bridge now rejects unsupported frames with a clear error path instead of silently dropping them, surfacing protocol mismatches to the chat UI. (`33ad453`)
+- Swarm session startup now waits for an explicit session_ready signal and a new turn watchdog broadcasts a terminal error if the remote runtime emits no events within 30s (or stays open past the 5-minute turn cap). (`33ad453`)
+- Unsupported websocket frames from the harness are now translated into stream errors over the SSE channel, so chat unblocks instead of hanging behind keep-alives. (`33ad453`)
 
-## 2:56 PM — Updater installs run on a dedicated OS thread
+## 2:56 PM — Updater install moves off the Tokio runtime
 
-The user-approved install no longer piggybacks on the Tokio runtime, and the Windows smoke test can recover a version when PE metadata is empty.
+Desktop install kickoff and the Windows smoke check both got more robust against environment quirks.
 
-- start_install now spawns a named aura-update-install OS thread instead of a Tokio task, removing the need for a reactor on the tao event loop and simplifying lifecycle when the app is shutting down for the install. (`9e66500`)
-- The Windows auto-update smoke script falls back to the NSIS uninstall registry's DisplayVersion when ProductVersion and FileVersion are both blank, so older installer artifacts don't break release verification. (`9e66500`)
+- User-approved updater installs now run on a dedicated aura-update-install OS thread, removing the requirement that the tao event loop carry a Tokio reactor at install time. (`9e66500`)
+- The Windows auto-update smoke script falls back to the NSIS DisplayVersion in the uninstall registry when PE ProductVersion/FileVersion are blank, so version checks stop failing on stripped installer metadata. (`9e66500`)
 
-## 2:59 PM — Steadier chat tail and sidebar previews
+## 2:59 PM — End-of-turn flicker and sidebar preview churn
 
-Two interface fixes stop end-of-turn flicker in the chat transcript and keep agent sidebar previews stable as history caches roll over.
+Two interface fixes stop the chat tail and agent sidebar from visibly resetting on routine updates.
 
-- The final assistant bubble now uses a content-derived render key, so when persisted history replaces the streaming placeholder the tail row keeps the same DOM node and stops flashing at end of turn. (`0dbf968`)
-- The agent list reads previews from a dedicated previewLastMessages cache (capped at 100 entries) instead of the bounded 8-entry history store, so sidebar previews stay populated even after older history entries are evicted. (`a33f494`)
+- The trailing assistant bubble in chat no longer remounts when persisted history replaces the streaming placeholder, eliminating the end-of-turn flash. (`0dbf968`)
+- Agent sidebar previews now read from a dedicated bounded preview cache (up to 100 entries) instead of the evictable history store, so last-message snippets stay put even after history entries are pruned. (`a33f494`)
 
-## 3:10 PM — Standalone agent focus, swarm wakeups, and quieter builds
+## 3:10 PM — Agent chat polish and CEO identity correctness
 
-Switching standalone agents now refocuses the composer, hibernating swarm agents get woken on demand, and the npm build no longer drowns in chunk-size and dynamic-import warnings.
+An afternoon cluster of agent-chat fixes covering focus, layering, post-stream stability, hibernating swarm wake-ups, and a correctness fix for CEO deduplication.
 
-- Switching between standalone agents restores the shared desktop autofocus path, so the chat composer is ready to type into as soon as the target thread loads. (`983b01e`)
-- The swarm harness now wakes hibernating agents when a new turn arrives, removing a class of stuck-session cases on remote runtimes. (`9274780`)
-- Replaced ineffective dynamic store imports with static ones, raised Vite's chunk warning limit to match the current vendor split, and cleaned up Rust formatting, quieting the npm build output. (`b6613b2`)
+- Switching standalone agents now restores the desktop autofocus path so the composer is ready as soon as the new thread loads, and the agent environment status card is portaled out of the chat-input stacking context so it can hover above the thinking indicator. (`983b01e`, `45cb631`)
+- Agent chats now preserve the streamed assistant tail until persisted history semantically catches up, so finished replies stop blinking or briefly reverting to stale content. (`db539c0`)
+- The swarm harness now wakes hibernating agents on demand instead of leaving them idle when a turn arrives. (`9274780`)
+- CEO bootstrap dedupe is now keyed on the persisted bootstrap agent id rather than the full-access permission preset, so ordinary privileged agents are no longer mistaken for the CEO and silently merged. (`5283d2f`)
 
 ## Highlights
 
-- Remote chat no longer hangs when the harness goes silent
-- Windows updater handoff is now logged and relaunches reliably
-- Sidebar previews and the streaming chat tail stop flickering
+- Remote chat fails fast when the harness goes silent
+- Windows updater handoff is now logged and relaunches Aura
+- Streamed assistant replies no longer flash at end of turn
+- CEO agent identity is anchored to a real id, not permission shape
 

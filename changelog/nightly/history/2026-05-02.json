@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-02T22:31:59.345Z",
+  "generatedAt": "2026-05-02T23:36:10.003Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.429.1",
+  "version": "0.1.0-nightly.431.1",
   "date": "2026-05-02",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.429.1",
-  "lastIncludedSha": "b6613b20504f7dba9feb3b9e12a19059154cfce4",
-  "previousProcessedSha": "ba457ef6e3a83c4a1d665b079442522b75ff40ee",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.431.1",
+  "lastIncludedSha": "5283d2f148d9c4895738ef8919c78f4d639afe07",
+  "previousProcessedSha": "b6613b20504f7dba9feb3b9e12a19059154cfce4",
   "commitShas": [
     "9bbe1ae4500f19f6a7e2f9fc278293b40c372761",
     "b7d61680e560cbca7b1df6f3ec16c783705f7fff",
@@ -20,10 +20,13 @@
     "a33f494041f19908a4d4ab1c52bb3e01e8a5f1cc",
     "9274780f9bb436c780d94937a6f750cc5d74d786",
     "983b01e5e82eef003aa19ab93d2973ebf8dcff0e",
-    "b6613b20504f7dba9feb3b9e12a19059154cfce4"
+    "b6613b20504f7dba9feb3b9e12a19059154cfce4",
+    "45cb631ccf61f2c29817f09794a54877ebd7bf47",
+    "db539c0242b7d3e009c42ca3ad4619d6fab3c5f4",
+    "5283d2f148d9c4895738ef8919c78f4d639afe07"
   ],
-  "rawCommitCount": 9,
-  "filteredCommitCount": 9,
+  "rawCommitCount": 12,
+  "filteredCommitCount": 12,
   "rawCommits": [
     {
       "sha": "9bbe1ae4500f19f6a7e2f9fc278293b40c372761",
@@ -386,6 +389,138 @@
         "Core Rust",
         "Interface"
       ]
+    },
+    {
+      "sha": "45cb631ccf61f2c29817f09794a54877ebd7bf47",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T16:13:06-07:00",
+      "subject": "fix(chat): layer remote status hover above thinking indicator",
+      "body": "Portal the agent environment status card out of the chat input stacking context so it can render above streaming indicators while keeping existing interactions intact.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "b6613b20504f7dba9feb3b9e12a19059154cfce4"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentEnvironment/AgentEnvironment.module.css",
+        "interface/src/apps/agents/components/AgentEnvironment/AgentEnvironment.test.tsx",
+        "interface/src/apps/agents/components/AgentEnvironment/AgentEnvironment.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 117,
+        "deletions": 32
+      },
+      "committedAtMs": 1777763586000,
+      "cleanSubject": "layer remote status hover above thinking indicator",
+      "keywords": [
+        "layer",
+        "remote",
+        "status",
+        "hover",
+        "above",
+        "thinking",
+        "indicator"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "db539c0242b7d3e009c42ca3ad4619d6fab3c5f4",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T16:22:53-07:00",
+      "subject": "fix(chat): keep agent responses stable after streaming",
+      "body": "Preserve the streamed assistant tail until persisted history semantically catches up so agent chats do not blink or reload stale final content.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "45cb631ccf61f2c29817f09794a54877ebd7bf47"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.test.tsx",
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.tsx",
+        "interface/src/apps/chat/components/ChatMessageList/ChatMessageList.test.tsx",
+        "interface/src/apps/chat/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/hooks/stream/handlers.test.ts",
+        "interface/src/hooks/stream/handlers/lifecycle.ts",
+        "interface/src/hooks/use-chat-history-sync.test.ts",
+        "interface/src/hooks/use-chat-history-sync.ts"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 298,
+        "deletions": 66
+      },
+      "committedAtMs": 1777764173000,
+      "cleanSubject": "keep agent responses stable after streaming",
+      "keywords": [
+        "keep",
+        "agent",
+        "responses",
+        "stable",
+        "after",
+        "streaming"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "5283d2f148d9c4895738ef8919c78f4d639afe07",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T16:23:32-07:00",
+      "subject": "fix(agents): identify CEO agents explicitly",
+      "body": "Avoid treating full-access permissions as CEO identity so regular privileged agents keep their own role while the bootstrap CEO remains deduped by explicit identity.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "db539c0242b7d3e009c42ca3ad4619d6fab3c5f4"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agent_bootstrap.rs",
+        "crates/aura-os-core/src/entities/agent.rs",
+        "interface/src/apps/agents/AgentConversationRow/AgentConversationRow.test.tsx",
+        "interface/src/shared/types/entities.ts",
+        "interface/src/shared/types/permissions.test.ts",
+        "interface/src/shared/types/permissions.ts"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 187,
+        "deletions": 42
+      },
+      "committedAtMs": 1777764212000,
+      "cleanSubject": "identify CEO agents explicitly",
+      "keywords": [
+        "identify",
+        "agents",
+        "explicitly"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-core/src",
+        "interface/src/apps",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Core Rust",
+        "Other"
+      ]
     }
   ],
   "batchCount": 6,
@@ -397,36 +532,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11690363
+          "sizeBytes": 11691501
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.429.1",
+      "version": "0.1.0-nightly.431.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.429.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.431.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 35458136
+          "sizeBytes": 35445666
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.429.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.431.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.429.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.431.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 102697464
+          "sizeBytes": 102689272
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.429.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.431.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -436,29 +571,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.429.1",
+      "version": "0.1.0-nightly.431.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.429.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.431.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 32022391
+          "sizeBytes": 32005160
         },
         {
-          "name": "Aura_0.1.0-nightly.429.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.431.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.429.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.431.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 31792982
+          "sizeBytes": 31817336
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.429.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.431.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -468,29 +603,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.429.1",
+      "version": "0.1.0-nightly.431.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.429.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.431.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33558205
+          "sizeBytes": 33569160
         },
         {
-          "name": "Aura_0.1.0-nightly.429.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.431.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.429.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.431.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33418848
+          "sizeBytes": 33422272
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.429.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.431.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -500,17 +635,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.429.1",
+      "version": "0.1.0-nightly.431.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.429.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.431.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24171402
+          "sizeBytes": 24164542
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.429.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.431.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -519,19 +654,19 @@
     }
   ],
   "rendered": {
-    "title": "Remote chat resilience and a more observable Windows updater",
-    "intro": "Today's nightly hardens the remote chat path end-to-end and tightens up the Windows auto-update handoff. On the server, sessions now carry the right org identity and stalled remote streams surface real errors instead of hanging on \"connecting.\" On the desktop side, the Windows updater is more observable and runs off the runtime thread, while the interface gets steadier chat tails, sidebar previews, and composer focus.",
+    "title": "Steadier remote chat and a more honest Windows updater",
+    "intro": "Today's nightly tightens the seams across remote chat and the desktop updater: stalled harness sessions now fail loudly instead of hanging on \"connecting\", Windows updates leave a paper trail and reliably relaunch, and a cluster of interface fixes keeps streamed agent replies, sidebar previews, and the chat composer from flickering or losing focus.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:37 PM",
         "started_at": "2026-05-02T21:37:08.000Z",
         "ended_at": "2026-05-02T21:37:08.000Z",
-        "title": "Org identity preserved for remote harness chats",
-        "summary": "Remote chat sessions now derive the X-Aura-Org-Id header from the project when the agent record is missing it, keeping org-scoped integrations working.",
+        "title": "Remote chat sessions keep their org identity",
+        "summary": "Server-side fix so harness-backed chat sessions always carry the org context the remote runtime needs.",
         "items": [
           {
-            "text": "Chat routes fall back to the project's org id when agent metadata is incomplete, so remote harness sessions consistently send X-Aura-Org-Id and resolve installed integrations against the correct org.",
+            "text": "Chat sessions now backfill the X-Aura-Org-Id header from the project when agent metadata is missing it, so remote harness sessions no longer drop org context mid-handshake.",
             "commit_shas": [
               "9bbe1ae4500f19f6a7e2f9fc278293b40c372761"
             ],
@@ -544,18 +679,18 @@
         "time_label": "2:40 PM",
         "started_at": "2026-05-02T21:40:29.000Z",
         "ended_at": "2026-05-02T21:40:29.000Z",
-        "title": "Windows updater handoff: logs, relaunch, and single-instance retry",
-        "summary": "The NSIS-based Windows updater now captures handoff logs, waits for the prior instance to exit, and relaunches Aura after install instead of disappearing silently.",
+        "title": "Observable Windows updater handoff",
+        "summary": "The NSIS updater path on Windows now leaves diagnostics behind and brings Aura back up after install.",
         "items": [
           {
-            "text": "Windows updates write a per-version handoff log and PowerShell script next to the staged installer, so failed or silent updates leave behind diagnostics instead of vanishing.",
+            "text": "Windows updates capture a per-version handoff log under the updater stage directory and run a relaunch script that brings Aura back after the NSIS installer exits, ending the silent-quit failure mode.",
             "commit_shas": [
               "b7d61680e560cbca7b1df6f3ec16c783705f7fff"
             ],
             "confidence": "high"
           },
           {
-            "text": "When relaunched after an install, Aura retries the single-instance mutex for up to 15 seconds via a new AURA_UPDATE_RELAUNCH signal, avoiding races where the old process hasn't fully exited yet.",
+            "text": "The single-instance guard now waits up to 15s when AURA_UPDATE_RELAUNCH is set, so the relaunched process doesn't race the old one for the mutex.",
             "commit_shas": [
               "b7d61680e560cbca7b1df6f3ec16c783705f7fff"
             ],
@@ -568,22 +703,22 @@
         "time_label": "2:55 PM",
         "started_at": "2026-05-02T21:55:05.000Z",
         "ended_at": "2026-05-02T21:55:05.000Z",
-        "title": "Stalled remote chat streams now fail loudly instead of spinning",
-        "summary": "A new turn watchdog and stricter Swarm session startup turn silent remote runtimes into explicit errors, so the UI stops getting stuck on the connecting state.",
+        "title": "Stalled remote streams fail fast",
+        "summary": "Swarm-backed chat now surfaces explicit errors instead of leaving the UI stuck on the connecting state.",
         "items": [
           {
-            "text": "Swarm session startup now waits for an explicit session_ready signal, and a turn watchdog broadcasts synthetic terminal errors if the remote agent emits no events within 30 seconds or stalls past the 5-minute turn ceiling.",
+            "text": "Swarm session startup now waits for an explicit session_ready signal and a new turn watchdog broadcasts a terminal error if the remote runtime emits no events within 30s (or stays open past the 5-minute turn cap).",
             "commit_shas": [
               "33ad453f9e8aa1af16d78e0837800f09d16bec15"
             ],
             "confidence": "high"
           },
           {
-            "text": "The WebSocket bridge now rejects unsupported frames with a clear error path instead of silently dropping them, surfacing protocol mismatches to the chat UI.",
+            "text": "Unsupported websocket frames from the harness are now translated into stream errors over the SSE channel, so chat unblocks instead of hanging behind keep-alives.",
             "commit_shas": [
               "33ad453f9e8aa1af16d78e0837800f09d16bec15"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           }
         ]
       },
@@ -592,18 +727,18 @@
         "time_label": "2:56 PM",
         "started_at": "2026-05-02T21:56:36.000Z",
         "ended_at": "2026-05-02T21:56:36.000Z",
-        "title": "Updater installs run on a dedicated OS thread",
-        "summary": "The user-approved install no longer piggybacks on the Tokio runtime, and the Windows smoke test can recover a version when PE metadata is empty.",
+        "title": "Updater install moves off the Tokio runtime",
+        "summary": "Desktop install kickoff and the Windows smoke check both got more robust against environment quirks.",
         "items": [
           {
-            "text": "start_install now spawns a named aura-update-install OS thread instead of a Tokio task, removing the need for a reactor on the tao event loop and simplifying lifecycle when the app is shutting down for the install.",
+            "text": "User-approved updater installs now run on a dedicated aura-update-install OS thread, removing the requirement that the tao event loop carry a Tokio reactor at install time.",
             "commit_shas": [
               "9e665002e20c855d8954d65ed69b7823b7b8af45"
             ],
             "confidence": "high"
           },
           {
-            "text": "The Windows auto-update smoke script falls back to the NSIS uninstall registry's DisplayVersion when ProductVersion and FileVersion are both blank, so older installer artifacts don't break release verification.",
+            "text": "The Windows auto-update smoke script falls back to the NSIS DisplayVersion in the uninstall registry when PE ProductVersion/FileVersion are blank, so version checks stop failing on stripped installer metadata.",
             "commit_shas": [
               "9e665002e20c855d8954d65ed69b7823b7b8af45"
             ],
@@ -616,18 +751,18 @@
         "time_label": "2:59 PM",
         "started_at": "2026-05-02T21:59:52.000Z",
         "ended_at": "2026-05-02T22:06:36.000Z",
-        "title": "Steadier chat tail and sidebar previews",
-        "summary": "Two interface fixes stop end-of-turn flicker in the chat transcript and keep agent sidebar previews stable as history caches roll over.",
+        "title": "End-of-turn flicker and sidebar preview churn",
+        "summary": "Two interface fixes stop the chat tail and agent sidebar from visibly resetting on routine updates.",
         "items": [
           {
-            "text": "The final assistant bubble now uses a content-derived render key, so when persisted history replaces the streaming placeholder the tail row keeps the same DOM node and stops flashing at end of turn.",
+            "text": "The trailing assistant bubble in chat no longer remounts when persisted history replaces the streaming placeholder, eliminating the end-of-turn flash.",
             "commit_shas": [
               "0dbf9681172ba6b7c18b996948965eb14fd1d15b"
             ],
             "confidence": "high"
           },
           {
-            "text": "The agent list reads previews from a dedicated previewLastMessages cache (capped at 100 entries) instead of the bounded 8-entry history store, so sidebar previews stay populated even after older history entries are evicted.",
+            "text": "Agent sidebar previews now read from a dedicated bounded preview cache (up to 100 entries) instead of the evictable history store, so last-message snippets stay put even after history entries are pruned.",
             "commit_shas": [
               "a33f494041f19908a4d4ab1c52bb3e01e8a5f1cc"
             ],
@@ -661,28 +796,36 @@
         "batch_id": "entry-6",
         "time_label": "3:10 PM",
         "started_at": "2026-05-02T22:10:57.000Z",
-        "ended_at": "2026-05-02T22:19:51.000Z",
-        "title": "Standalone agent focus, swarm wakeups, and quieter builds",
-        "summary": "Switching standalone agents now refocuses the composer, hibernating swarm agents get woken on demand, and the npm build no longer drowns in chunk-size and dynamic-import warnings.",
+        "ended_at": "2026-05-02T23:23:32.000Z",
+        "title": "Agent chat polish and CEO identity correctness",
+        "summary": "An afternoon cluster of agent-chat fixes covering focus, layering, post-stream stability, hibernating swarm wake-ups, and a correctness fix for CEO deduplication.",
         "items": [
           {
-            "text": "Switching between standalone agents restores the shared desktop autofocus path, so the chat composer is ready to type into as soon as the target thread loads.",
+            "text": "Switching standalone agents now restores the desktop autofocus path so the composer is ready as soon as the new thread loads, and the agent environment status card is portaled out of the chat-input stacking context so it can hover above the thinking indicator.",
             "commit_shas": [
-              "983b01e5e82eef003aa19ab93d2973ebf8dcff0e"
+              "983b01e5e82eef003aa19ab93d2973ebf8dcff0e",
+              "45cb631ccf61f2c29817f09794a54877ebd7bf47"
             ],
             "confidence": "high"
           },
           {
-            "text": "The swarm harness now wakes hibernating agents when a new turn arrives, removing a class of stuck-session cases on remote runtimes.",
+            "text": "Agent chats now preserve the streamed assistant tail until persisted history semantically catches up, so finished replies stop blinking or briefly reverting to stale content.",
+            "commit_shas": [
+              "db539c0242b7d3e009c42ca3ad4619d6fab3c5f4"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The swarm harness now wakes hibernating agents on demand instead of leaving them idle when a turn arrives.",
             "commit_shas": [
               "9274780f9bb436c780d94937a6f750cc5d74d786"
             ],
             "confidence": "medium"
           },
           {
-            "text": "Replaced ineffective dynamic store imports with static ones, raised Vite's chunk warning limit to match the current vendor split, and cleaned up Rust formatting, quieting the npm build output.",
+            "text": "CEO bootstrap dedupe is now keyed on the persisted bootstrap agent id rather than the full-access permission preset, so ordinary privileged agents are no longer mistaken for the CEO and silently merged.",
             "commit_shas": [
-              "b6613b20504f7dba9feb3b9e12a19059154cfce4"
+              "5283d2f148d9c4895738ef8919c78f4d639afe07"
             ],
             "confidence": "high"
           }
@@ -690,10 +833,11 @@
       }
     ],
     "highlights": [
-      "Remote chat no longer hangs when the harness goes silent",
-      "Windows updater handoff is now logged and relaunches reliably",
-      "Sidebar previews and the streaming chat tail stop flickering"
+      "Remote chat fails fast when the harness goes silent",
+      "Windows updater handoff is now logged and relaunches Aura",
+      "Streamed assistant replies no longer flash at end of turn",
+      "CEO agent identity is anchored to a real id, not permission shape"
     ],
-    "raw_commit_count": 9
+    "raw_commit_count": 12
   }
 }
