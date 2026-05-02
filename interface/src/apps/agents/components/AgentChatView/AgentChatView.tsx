@@ -215,7 +215,6 @@ function StandaloneAgentChatPanel({
     onInitialHandoffReady,
     scrollResetKey: agentId,
     scrollToBottomOnReset: false,
-    focusInputOnThreadReady: false,
     historyMessages,
     projects: agentProjects,
     selectedProjectId: effectiveProjectId,
