@@ -83,6 +83,14 @@ test("buildPostmortem buckets unresolved instances by likely failure mode", () =
         files_changed: 1,
         failed_to_pass_results: { failure: ["test_bug"] },
       },
+      {
+        instance_id: "a__a-5",
+        status: "agent_patch_polluted",
+        files_changed: 1,
+        patch_pollution_guard: {
+          pollution: [{ path: "setup.cfg", reasons: ["build_system_workaround"] }],
+        },
+      },
     ],
   });
 
@@ -96,10 +104,12 @@ test("buildPostmortem buckets unresolved instances by likely failure mode", () =
   assert.equal(postmortem.buckets.dev_loop_failure, 1);
   assert.equal(postmortem.buckets.empty_or_filtered_patch, 1);
   assert.equal(postmortem.buckets.hidden_test_failure, 1);
+  assert.equal(postmortem.buckets.agent_patch_polluted, 1);
   assert.deepEqual(
     postmortem.unresolved.map((entry) => entry.instance_id),
-    ["a__a-2", "a__a-3", "a__a-4"],
+    ["a__a-2", "a__a-3", "a__a-4", "a__a-5"],
   );
+  assert.equal(postmortem.unresolved.at(-1).detail, "setup.cfg (build_system_workaround)");
 });
 
 test("normalizeStatus preserves typed driver guardrail outcomes without official harness results", () => {

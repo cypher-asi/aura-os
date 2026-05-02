@@ -1,10 +1,12 @@
 # SWE-bench Verified dataset manifests
 
 This directory holds JSONL manifests of SWE-bench Verified instances. Each
-file contains one JSON record per line. Two canonical subsets are used:
+file contains one JSON record per line. Three canonical subsets are used:
 
 - `smoke.jsonl` — first 20 instances (pipeline sanity check; ~5% leaderboard
   granularity, not a defensible number on its own)
+- `smoke_stratified.jsonl` — 20 instances selected round-robin by repository
+  from the full Verified split; better for quick cross-project smoke checks
 - `verified.jsonl` — full 500 instances
 
 Both files are produced by
@@ -15,6 +17,7 @@ HuggingFace `datasets-server` JSONL pages mirroring
 
 ```sh
 node infra/evals/external/swebench/bin/fetch-dataset.mjs --subset smoke
+node infra/evals/external/swebench/bin/fetch-dataset.mjs --subset smoke_stratified
 node infra/evals/external/swebench/bin/fetch-dataset.mjs --subset verified
 ```
 

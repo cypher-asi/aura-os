@@ -386,6 +386,47 @@ export function failureBucket(instance) {
   return "unresolved_patch_quality";
 }
 
+function compactText(value, maxLength = 160) {
+  const text = String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - 1)}...`;
+}
+
+function failureDetail(instance) {
+  const pollution = instance.patch_pollution_guard?.pollution ?? [];
+  if (pollution.length > 0) {
+    return pollution
+      .map((entry) => {
+        const reasons = Array.isArray(entry.reasons) && entry.reasons.length > 0
+          ? ` (${entry.reasons.join(", ")})`
+          : "";
+        return `${entry.path}${reasons}`;
+      })
+      .join("; ");
+  }
+
+  const environment = instance.verification_environment;
+  if (environment?.blocked) {
+    const evidence = Array.isArray(environment.evidence) && environment.evidence.length > 0
+      ? ` [${environment.evidence.join(", ")}]`
+      : "";
+    return compactText(`${environment.reason ?? "verification environment blocked"}${evidence}`);
+  }
+
+  if (instance.tests_directory_hits_stripped > 0) {
+    return `${instance.tests_directory_hits_stripped} test edit hunk(s) stripped`;
+  }
+  if (instance.failed_to_pass_results) {
+    return compactText(JSON.stringify(instance.failed_to_pass_results));
+  }
+  if (instance.files_changed === 0) {
+    return "empty or fully filtered patch";
+  }
+  return "";
+}
+
 export function buildPostmortem(score) {
   const buckets = {};
   const unresolved = [];
@@ -404,6 +445,7 @@ export function buildPostmortem(score) {
         failed_tasks: instance.failed_tasks,
         tests_directory_hits_stripped: instance.tests_directory_hits_stripped,
         failed_to_pass_results: instance.failed_to_pass_results,
+        detail: failureDetail(instance),
       });
     }
   }
@@ -418,6 +460,12 @@ export function buildPostmortem(score) {
     buckets,
     unresolved,
   };
+}
+
+function markdownCell(value) {
+  return String(value ?? "")
+    .replace(/\r?\n/g, " ")
+    .replace(/\|/g, "\\|");
 }
 
 function renderPostmortemMarkdown(postmortem) {
@@ -439,12 +487,12 @@ function renderPostmortemMarkdown(postmortem) {
     "",
     "## Unresolved Instances",
     "",
-    "| Instance | Bucket | Status | Files | Lines | Tasks | Failed Tasks |",
-    "| --- | --- | --- | ---: | ---: | ---: | ---: |",
+    "| Instance | Bucket | Status | Files | Lines | Tasks | Failed Tasks | Detail |",
+    "| --- | --- | --- | ---: | ---: | ---: | ---: | --- |",
   );
   for (const entry of postmortem.unresolved) {
     lines.push(
-      `| ${entry.instance_id} | ${entry.bucket} | ${entry.status} | ${entry.files_changed ?? 0} | ${entry.model_patch_lines ?? 0} | ${entry.task_count ?? 0} | ${entry.failed_tasks ?? 0} |`,
+      `| ${entry.instance_id} | ${entry.bucket} | ${entry.status} | ${entry.files_changed ?? 0} | ${entry.model_patch_lines ?? 0} | ${entry.task_count ?? 0} | ${entry.failed_tasks ?? 0} | ${markdownCell(entry.detail)} |`,
     );
   }
   lines.push("");

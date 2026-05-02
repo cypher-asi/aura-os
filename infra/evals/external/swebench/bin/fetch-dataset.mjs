@@ -22,7 +22,13 @@ const binDir = path.dirname(currentFile);
 const driverDir = path.resolve(binDir, "..");
 
 const SUBSETS = {
-  smoke: { count: 20, label: "smoke (first 20 rows)" },
+  smoke: { count: 20, label: "smoke (first 20 rows)", strategy: "first" },
+  smoke_stratified: {
+    count: 20,
+    fetchCount: 500,
+    label: "smoke_stratified (20 rows, round-robin by repo)",
+    strategy: "stratified_by_repo",
+  },
   verified: { count: 500, label: "verified (full 500 rows)" },
 };
 
@@ -74,7 +80,7 @@ function printHelp() {
   process.stdout.write(
     `Usage: node infra/evals/external/swebench/bin/fetch-dataset.mjs --subset NAME [--out PATH]\n` +
       `\n` +
-      `  --subset NAME   smoke (20 rows) or verified (500 rows)\n` +
+      `  --subset NAME   smoke (20 rows), smoke_stratified (20 rows), or verified (500 rows)\n` +
       `  --out PATH      override the output JSONL path\n` +
       `                  (default: infra/evals/external/swebench/datasets/<subset>.jsonl)\n`,
   );
@@ -147,6 +153,30 @@ async function fetchRows(maxCount) {
   return collected;
 }
 
+export function selectStratifiedRows(rows, count) {
+  const buckets = new Map();
+  for (const row of rows) {
+    const repo = row?.repo;
+    if (!repo) continue;
+    const bucket = buckets.get(repo) ?? [];
+    bucket.push(row);
+    buckets.set(repo, bucket);
+  }
+
+  const selected = [];
+  while (selected.length < count) {
+    let added = false;
+    for (const bucket of buckets.values()) {
+      if (bucket.length === 0) continue;
+      selected.push(bucket.shift());
+      added = true;
+      if (selected.length >= count) break;
+    }
+    if (!added) break;
+  }
+  return selected;
+}
+
 async function main(rawArgv) {
   let args;
   try {
@@ -166,7 +196,7 @@ async function main(rawArgv) {
   const subsetSpec = SUBSETS[args.subset];
   if (!subsetSpec) {
     process.stderr.write(
-      `Error: unknown subset "${args.subset}" (expected smoke or verified).\n`,
+      `Error: unknown subset "${args.subset}" (expected smoke, smoke_stratified, or verified).\n`,
     );
     process.exit(2);
     return;
@@ -182,7 +212,7 @@ async function main(rawArgv) {
 
   let rows;
   try {
-    rows = await fetchRows(subsetSpec.count);
+    rows = await fetchRows(subsetSpec.fetchCount ?? subsetSpec.count);
   } catch (error) {
     process.stderr.write(`Error: ${error.message}\n`);
     process.stderr.write(
@@ -196,6 +226,10 @@ async function main(rawArgv) {
     process.stderr.write(`Error: HuggingFace returned 0 rows.\n`);
     process.exit(1);
     return;
+  }
+
+  if (subsetSpec.strategy === "stratified_by_repo") {
+    rows = selectStratifiedRows(rows, subsetSpec.count);
   }
 
   const lines = rows.map((row) => JSON.stringify(row)).join("\n");
