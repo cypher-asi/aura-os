@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-02T05:18:07.367Z",
+  "generatedAt": "2026-05-02T06:05:31.052Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.427.1",
+  "version": "0.1.0-nightly.428.1",
   "date": "2026-05-01",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.427.1",
-  "lastIncludedSha": "7f0ede707a413d7336c2245ae5f5cea6a33608a9",
-  "previousProcessedSha": "977a0f7ac1d2091c606acf4dcd937a18a947712c",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.428.1",
+  "lastIncludedSha": "ba457ef6e3a83c4a1d665b079442522b75ff40ee",
+  "previousProcessedSha": "7f0ede707a413d7336c2245ae5f5cea6a33608a9",
   "commitShas": [
     "f134511b28bf5db4103a22dcbc53cf83016d622b",
     "468f979761beba71da1bbc0b85859f8c49a7561b",
@@ -34,10 +34,11 @@
     "b03bad1d364f518d907f13d21aaff66b59535a46",
     "c79bc79f35a0d525c3460a4e3466f411f66b8b48",
     "68c823c35252dc43beeb2744b0fbff65385e73bd",
-    "7f0ede707a413d7336c2245ae5f5cea6a33608a9"
+    "7f0ede707a413d7336c2245ae5f5cea6a33608a9",
+    "ba457ef6e3a83c4a1d665b079442522b75ff40ee"
   ],
-  "rawCommitCount": 23,
-  "filteredCommitCount": 23,
+  "rawCommitCount": 24,
+  "filteredCommitCount": 24,
   "rawCommits": [
     {
       "sha": "f134511b28bf5db4103a22dcbc53cf83016d622b",
@@ -1013,6 +1014,46 @@
       "areas": [
         "Other"
       ]
+    },
+    {
+      "sha": "ba457ef6e3a83c4a1d665b079442522b75ff40ee",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-01T22:51:13-07:00",
+      "subject": "fix(generation): surface image stream stalls",
+      "body": "Add generation stream watchdogs and structured logging so production image hangs become terminal, debuggable failures instead of indefinite spinners.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "7f0ede707a413d7336c2245ae5f5cea6a33608a9"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/generation/harness_stream.rs",
+        "interface/src/hooks/stream/handlers/lifecycle.ts",
+        "interface/src/hooks/use-chat-stream/build-stream-handler.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 383,
+        "deletions": 43
+      },
+      "committedAtMs": 1777701073000,
+      "cleanSubject": "surface image stream stalls",
+      "keywords": [
+        "surface",
+        "image",
+        "stream",
+        "stalls"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
     }
   ],
   "batchCount": 6,
@@ -1024,36 +1065,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11691542
+          "sizeBytes": 11691598
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.427.1",
+      "version": "0.1.0-nightly.428.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.427.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.428.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 35430806
+          "sizeBytes": 35447242
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.427.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.428.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.427.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.428.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 102689272
+          "sizeBytes": 102709752
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.427.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.428.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -1063,29 +1104,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.427.1",
+      "version": "0.1.0-nightly.428.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.427.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.428.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 31969428
+          "sizeBytes": 31989445
         },
         {
-          "name": "Aura_0.1.0-nightly.427.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.428.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.427.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.428.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 31761575
+          "sizeBytes": 31765425
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.427.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.428.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1095,29 +1136,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.427.1",
+      "version": "0.1.0-nightly.428.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.427.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.428.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33525364
+          "sizeBytes": 33541334
         },
         {
-          "name": "Aura_0.1.0-nightly.427.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.428.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.427.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.428.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33373925
+          "sizeBytes": 33390261
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.427.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.428.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1127,17 +1168,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.427.1",
+      "version": "0.1.0-nightly.428.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.427.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.428.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24096259
+          "sizeBytes": 24119397
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.427.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.428.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -1146,35 +1187,34 @@
     }
   ],
   "rendered": {
-    "title": "Product analytics, identity-safe sessions, and a polished slash-image flow",
-    "intro": "Today's nightly lands a privacy-aware product analytics layer in the interface, hardens every harness session with a two-tier identity preflight on both server and harness sides, and finishes the slash-image generation experience end-to-end. Reliability work also reached the Windows updater handoff and the SWE-bench scoring pipeline.",
+    "title": "Slash-image generation, harness identity hardening, and product analytics",
+    "intro": "A dense nightly that ships end-to-end image generation in chat, locks down harness session identity across every call site, and lights up first-class product analytics. Reliability work also tightens the Windows updater handoff, dev-loop run capture, and SWE-bench scoring.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:31 AM",
         "started_at": "2026-05-01T09:31:59.000Z",
         "ended_at": "2026-05-01T10:28:04.000Z",
-        "title": "Mixpanel product analytics with built-in privacy controls",
-        "summary": "A new anonymous-by-default analytics layer landed across the interface, instrumenting key product events and giving users explicit privacy controls.",
+        "title": "Mixpanel product analytics with privacy controls",
+        "summary": "Aura gains opt-out-aware product analytics covering signup, chat, generation, projects, agents, and billing.",
         "items": [
           {
-            "text": "Introduced a Mixpanel-based analytics core that is anonymous by default, ships no PII, respects DNT/GPC browser signals, and stays disabled unless VITE_MIXPANEL_TOKEN is configured.",
+            "text": "Introduced a privacy-first Mixpanel pipeline that is anonymous by default, respects DNT/GPC, stays disabled without VITE_MIXPANEL_TOKEN, and supports localStorage opt-out — wired into app boot, auth, and chat send.",
             "commit_shas": [
               "f134511b28bf5db4103a22dcbc53cf83016d622b"
             ],
             "confidence": "high"
           },
           {
-            "text": "Instrumented the full product surface — projects, agents, tasks, processes, AURA 3D image and model generation, marketplace hires, integrations, notes, feedback, subscription starts and credit purchases, plus model selection, agent selection, file attachments and chat session resets.",
+            "text": "Instrumented the full product surface with ~20 events spanning project/agent/task/process creation, AURA 3D image and model generation, marketplace hires, integrations, notes, feedback, model and agent selection, file attachments, and chat session resets.",
             "commit_shas": [
-              "468f979761beba71da1bbc0b85859f8c49a7561b",
               "a8c653d676234f8bc463789f4cb697624b5558c2",
               "edeb438dc9346d33ec2d2b9cc10bcb20b2d2bd00"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a Privacy section in Org Settings with an opt-in/opt-out toggle for anonymous usage data, and tightened the panel layout so the row stays compact while context lives in a section intro.",
+            "text": "Added subscription_started and credits_purchased tracking alongside a new Privacy section in Org Settings with an explicit opt-in/opt-out toggle and a tightened layout.",
             "commit_shas": [
               "468f979761beba71da1bbc0b85859f8c49a7561b",
               "977a0f7ac1d2091c606acf4dcd937a18a947712c"
@@ -1182,7 +1222,7 @@
             "confidence": "high"
           },
           {
-            "text": "Cleaned up TypeScript build breakage in the analytics platform detection and orbit project form so the new tracking compiles cleanly.",
+            "text": "Resolved TypeScript build errors uncovered by the analytics rollout in the project form and platform detection paths.",
             "commit_shas": [
               "bdee6c5916ad5779460f28712247ff21bc9a9897"
             ],
@@ -1195,47 +1235,41 @@
         "time_label": "2:09 PM",
         "started_at": "2026-05-01T21:09:50.000Z",
         "ended_at": "2026-05-01T23:14:00.000Z",
-        "title": "Two-tier session identity preflight for every harness call site",
-        "summary": "Server- and harness-side preflights now fail loudly with a structured 422 the moment a session would open without its required X-Aura-* identity headers, replacing opaque downstream 403/5xx errors.",
+        "title": "Two-tier harness session identity preflight",
+        "summary": "Server and harness now fail fast with a structured 422 when X-Aura-* identity headers are missing, ending silent Cloudflare 403s on the first LLM call.",
         "items": [
           {
-            "text": "Added a Tier 1 server preflight that emits a stable session_identity_missing 422 with a per-field code whenever chat, dev-loop, project-tool, generation, or scheduled-process sessions are missing org id, session id, agent id, user id, or JWT — and removed the noisy Windows-only debug log shim that was writing synchronously to a hardcoded file on every session start.",
+            "text": "Added a Tier 1 server preflight that validates org, session, agent, user, and JWT identity at every harness session entry point (chat, dev-loop, project tools) and emits a stable missing_<field> 422 with structured context instead of a downstream 5xx.",
             "commit_shas": [
               "31e24487ce63e9dc25c24a70946b895017717599"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a matching Tier 2 harness preflight on LocalHarness, SwarmHarness, and AutomatonClient::start so drift between server and harness stays observable from either side, with the server's error mapper funneling harness-side rejections into the same 422 response shape.",
+            "text": "Mirrored the contract on the harness side as a Tier 2 preflight in LocalHarness, SwarmHarness, and AutomatonClient, with a server-side mapper that funnels HarnessError::SessionIdentityMissing into the same 422 envelope regardless of which layer caught it.",
             "commit_shas": [
               "7932e2c404e211caf6a8132e7040f96cf093369b"
             ],
             "confidence": "high"
           },
           {
-            "text": "Threaded canonical org / session / user identity through image and 3D generation streams and scheduled-process automatons, with a deterministic UUIDv5 session id per (process_id, run_id) so retries share a router bucket while concurrent runs stay isolated.",
+            "text": "Threaded org / session / user identity through image and 3D generation streams and scheduled-process automatons, with deterministic UUIDv5 session ids for process retries and proper remapping of WS-slot 503s to harness_capacity_exhausted.",
             "commit_shas": [
               "e5ee3af49900f117343909d3e97313137fc9a0ce"
             ],
             "confidence": "high"
           },
           {
-            "text": "Mapped dev-loop WebSocket connect failures (HTTP 503 / WS 1013) to the structured harness_capacity_exhausted 503 envelope and short-circuited retries, so the eval pipeline's capacity-aware backoff actually fires instead of seeing a generic bad_gateway.",
-            "commit_shas": [
-              "8555c3165085b23065c8590e3026df39d1926cde"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Brought bare-agent chat to parity with the project-bound instance route by resolving the workspace path and wrapping the prompt with the canonical project_context block whenever an effective project is bound or inferred.",
+            "text": "Brought the bare-agent chat route to parity with the project-bound instance route, resolving project_path and wrapping the system prompt with project context so workspace tools no longer execute against an empty cwd.",
             "commit_shas": [
               "c847b858bbb7cedf919b7b0fe4d24b8e924433fd"
             ],
             "confidence": "high"
           },
           {
-            "text": "Wired harness stream events into loop-log bundles and live heuristics so dev-loop and SWE-bench failures retain actionable run evidence after the fact.",
+            "text": "Surfaced WS-slot exhaustion during dev-loop event-stream connect as the structured 503 harness_capacity_exhausted envelope and captured dev-loop run bundles into loop-log heuristics so SWE failures retain actionable evidence.",
             "commit_shas": [
+              "8555c3165085b23065c8590e3026df39d1926cde",
               "8f3cbe1e8bc81e2bcfc43a43e124e62691ea6139"
             ],
             "confidence": "high"
@@ -1246,36 +1280,26 @@
         "batch_id": "entry-3",
         "time_label": "8:15 PM",
         "started_at": "2026-05-02T03:15:40.000Z",
-        "ended_at": "2026-05-02T03:16:38.000Z",
-        "title": "Mixed clipboard pastes and a sturdier Windows updater handoff",
-        "summary": "Two targeted fixes improved chat input behavior and the Windows update experience.",
+        "ended_at": "2026-05-02T03:18:56.000Z",
+        "title": "Windows updater handoff, clipboard pastes, and SWE-bench scoring",
+        "summary": "A small but meaningful trio of fixes across desktop updates, chat input, and eval scoring.",
         "items": [
           {
-            "text": "Chat input now correctly accepts clipboard pastes that mix images with other content instead of dropping the image payload.",
+            "text": "Made the Windows updater handoff resilient by launching the NSIS installer through PowerShell Start-Process so the installer survives Aura exiting mid-handoff.",
+            "commit_shas": [
+              "b0c153a7712d4a0f7d78f8385642f99084ce1091"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Chat input now accepts mixed-content clipboard pastes that include images alongside other data, instead of dropping the paste.",
             "commit_shas": [
               "603e71538f04e048266459e74b3812555344802c"
             ],
             "confidence": "high"
           },
           {
-            "text": "On Windows, the NSIS updater is now launched through PowerShell Start-Process so the installer survives Aura exiting mid-handoff, removing a class of stalled-update failures.",
-            "commit_shas": [
-              "b0c153a7712d4a0f7d78f8385642f99084ce1091"
-            ],
-            "confidence": "high"
-          }
-        ]
-      },
-      {
-        "batch_id": "entry-4",
-        "time_label": "8:18 PM",
-        "started_at": "2026-05-02T03:18:56.000Z",
-        "ended_at": "2026-05-02T03:18:56.000Z",
-        "title": "SWE-bench scoring made explicit and recoverable",
-        "summary": "The SWE-bench aggregation pipeline now fails fast in unsupported configurations and reconciles misplaced harness reports.",
-        "items": [
-          {
-            "text": "Aggregation now errors out on native Windows unless driver-only mode is explicitly requested, and recovers misplaced AURA.<runId>.json harness reports so score.json reflects official results when they exist.",
+            "text": "Hardened SWE-bench official scoring: fail fast on native Windows unless driver-only mode is requested, and recover misplaced harness reports so score.json reflects official results.",
             "commit_shas": [
               "270ec0a121f10451a1fb65df04cd1cec63665bf6"
             ],
@@ -1284,15 +1308,15 @@
         ]
       },
       {
-        "batch_id": "entry-5",
+        "batch_id": "entry-4",
         "time_label": "8:20 PM",
         "started_at": "2026-05-02T03:20:10.000Z",
         "ended_at": "2026-05-02T04:54:37.000Z",
-        "title": "Slash /image generation now works end-to-end in chat",
-        "summary": "A coordinated set of fixes routes the slash /image command through the generation stream, keeps it stable while queued, persists results, and renders them as proper media cards.",
+        "title": "End-to-end /image generation in chat",
+        "summary": "The slash-image command now streams through the generation pipeline, persists results, and renders them as standalone media with several adjacent chat-stream fixes.",
         "items": [
           {
-            "text": "Slash /image now routes through the dedicated generation stream and preserves both image model and generation mode for queued sends, so the right backend and model are used even while another response is still streaming.",
+            "text": "Routed the /image command through the dedicated generation stream and preserved the image model plus generation mode for queued sends so the request reaches the right backend even while another stream is active.",
             "commit_shas": [
               "9a9091277c96e5fa534c6bd70cd55e67ed1b5d67",
               "d54c7b7c10c396ad130359e2af4514dbfaef5fe6"
@@ -1300,22 +1324,16 @@
             "confidence": "high"
           },
           {
-            "text": "Completed the slash-image flow on both interface and server, normalizing the generation_completed payload shape and threading harness command channels through the SSE bridge.",
+            "text": "Completed the slash-image flow end-to-end with a normalized GenerationCompleted payload on the server, finalized tool turns through the stream lifecycle so generated images become durable chat cards, and a renderer update that shows results as larger standalone media instead of nested inside the generic tool block.",
             "commit_shas": [
-              "b03bad1d364f518d907f13d21aaff66b59535a46"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Generated images are now finalized through the stream lifecycle into durable chat cards instead of being cleared with transient buffers, and render as standalone larger media rather than nested inside the generic tool block.",
-            "commit_shas": [
+              "b03bad1d364f518d907f13d21aaff66b59535a46",
               "c79bc79f35a0d525c3460a4e3466f411f66b8b48",
               "68c823c35252dc43beeb2744b0fbff65385e73bd"
             ],
             "confidence": "high"
           },
           {
-            "text": "Stopped the live chat tail from rendering an optimistic prompt next to its persisted copy mid-stream, and stopped agent selection from forcing scroll and focus resets that yanked the chat pane around.",
+            "text": "Stopped the optimistic user prompt from rendering alongside its persisted copy mid-stream and removed forced scroll/focus resets when switching standalone agents, keeping the chat pane stable.",
             "commit_shas": [
               "93c30011b23a9c6b280dd6d2e87e4673da4cd43e",
               "611098480768c6b5a39c6f86b03877d3f0d573d9"
@@ -1325,17 +1343,34 @@
         ]
       },
       {
-        "batch_id": "entry-6",
+        "batch_id": "entry-5",
         "time_label": "10:04 PM",
         "started_at": "2026-05-02T05:04:32.000Z",
         "ended_at": "2026-05-02T05:04:32.000Z",
-        "title": "Stratified SWE-bench smoke subset with richer postmortems",
-        "summary": "SWE-bench smoke runs now exercise a stratified subset and emit compact failure details to make environment, pollution, and hidden-test causes obvious from the postmortem alone.",
+        "title": "SWE-bench smoke diagnostics",
+        "summary": "Benchmark runs surface root causes more directly via stratified subsets and richer postmortems.",
         "items": [
           {
-            "text": "Added a stratified SWE-bench smoke subset and embedded compact failure details in postmortems so benchmark runs surface environment, pollution, and hidden-test causes directly.",
+            "text": "Added a stratified SWE-bench smoke subset and embedded compact failure details in postmortems so environment, pollution, and hidden-test causes are visible without digging through raw logs.",
             "commit_shas": [
               "7f0ede707a413d7336c2245ae5f5cea6a33608a9"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-6",
+        "time_label": "10:51 PM",
+        "started_at": "2026-05-02T05:51:13.000Z",
+        "ended_at": "2026-05-02T05:51:13.000Z",
+        "title": "Generation stream watchdogs end indefinite image hangs",
+        "summary": "Image generation streams now have idle and max-runtime watchdogs plus structured logging, so production stalls fail terminally instead of spinning forever.",
+        "items": [
+          {
+            "text": "Added per-stream generation_id, mode, and session logging across open, send, and lifecycle plus 120s event-idle and 600s max-runtime watchdogs in harness_stream and the chat-stream lifecycle handler, turning previously indefinite spinners into debuggable terminal failures.",
+            "commit_shas": [
+              "ba457ef6e3a83c4a1d665b079442522b75ff40ee"
             ],
             "confidence": "high"
           }
@@ -1343,11 +1378,11 @@
       }
     ],
     "highlights": [
-      "Mixpanel analytics shipped with DNT/GPC and an in-app opt-out",
+      "Mixpanel analytics across the full product surface, opt-out aware",
       "Two-tier session identity preflight prevents silent harness 403s",
-      "Slash /image generation now streams, persists, and renders as media",
-      "Windows updater handoff hardened via PowerShell Start-Process"
+      "Slash /image flow now streams, persists, and renders as media",
+      "Generation streams gain watchdogs that turn hangs into terminal failures"
     ],
-    "raw_commit_count": 23
+    "raw_commit_count": 24
   }
 }

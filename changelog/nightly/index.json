@@ -2,19 +2,19 @@
   {
     "date": "2026-05-01",
     "channel": "nightly",
-    "version": "0.1.0-nightly.427.1",
-    "title": "Product analytics, identity-safe sessions, and a polished slash-image flow",
-    "intro": "Today's nightly lands a privacy-aware product analytics layer in the interface, hardens every harness session with a two-tier identity preflight on both server and harness sides, and finishes the slash-image generation experience end-to-end. Reliability work also reached the Windows updater handoff and the SWE-bench scoring pipeline.",
+    "version": "0.1.0-nightly.428.1",
+    "title": "Slash-image generation, harness identity hardening, and product analytics",
+    "intro": "A dense nightly that ships end-to-end image generation in chat, locks down harness session identity across every call site, and lights up first-class product analytics. Reliability work also tightens the Windows updater handoff, dev-loop run capture, and SWE-bench scoring.",
     "entryCount": 6,
     "highlights": [
-      "Mixpanel analytics shipped with DNT/GPC and an in-app opt-out",
+      "Mixpanel analytics across the full product surface, opt-out aware",
       "Two-tier session identity preflight prevents silent harness 403s",
-      "Slash /image generation now streams, persists, and renders as media",
-      "Windows updater handoff hardened via PowerShell Start-Process"
+      "Slash /image flow now streams, persists, and renders as media",
+      "Generation streams gain watchdogs that turn hangs into terminal failures"
     ],
-    "rawCommitCount": 23,
-    "generatedAt": "2026-05-02T05:18:07.367Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.427.1",
+    "rawCommitCount": 24,
+    "generatedAt": "2026-05-02T06:05:31.052Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.428.1",
     "path": "history/2026-05-01.json"
   },
   {

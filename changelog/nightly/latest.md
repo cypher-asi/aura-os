@@ -1,64 +1,63 @@
-# Product analytics, identity-safe sessions, and a polished slash-image flow
+# Slash-image generation, harness identity hardening, and product analytics
 
 - Date: `2026-05-01`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.427.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.427.1
+- Version: `0.1.0-nightly.428.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.428.1
 
-Today's nightly lands a privacy-aware product analytics layer in the interface, hardens every harness session with a two-tier identity preflight on both server and harness sides, and finishes the slash-image generation experience end-to-end. Reliability work also reached the Windows updater handoff and the SWE-bench scoring pipeline.
+A dense nightly that ships end-to-end image generation in chat, locks down harness session identity across every call site, and lights up first-class product analytics. Reliability work also tightens the Windows updater handoff, dev-loop run capture, and SWE-bench scoring.
 
-## 2:31 AM — Mixpanel product analytics with built-in privacy controls
+## 2:31 AM — Mixpanel product analytics with privacy controls
 
-A new anonymous-by-default analytics layer landed across the interface, instrumenting key product events and giving users explicit privacy controls.
+Aura gains opt-out-aware product analytics covering signup, chat, generation, projects, agents, and billing.
 
-- Introduced a Mixpanel-based analytics core that is anonymous by default, ships no PII, respects DNT/GPC browser signals, and stays disabled unless VITE_MIXPANEL_TOKEN is configured. (`f134511`)
-- Instrumented the full product surface — projects, agents, tasks, processes, AURA 3D image and model generation, marketplace hires, integrations, notes, feedback, subscription starts and credit purchases, plus model selection, agent selection, file attachments and chat session resets. (`468f979`, `a8c653d`, `edeb438`)
-- Added a Privacy section in Org Settings with an opt-in/opt-out toggle for anonymous usage data, and tightened the panel layout so the row stays compact while context lives in a section intro. (`468f979`, `977a0f7`)
-- Cleaned up TypeScript build breakage in the analytics platform detection and orbit project form so the new tracking compiles cleanly. (`bdee6c5`)
+- Introduced a privacy-first Mixpanel pipeline that is anonymous by default, respects DNT/GPC, stays disabled without VITE_MIXPANEL_TOKEN, and supports localStorage opt-out — wired into app boot, auth, and chat send. (`f134511`)
+- Instrumented the full product surface with ~20 events spanning project/agent/task/process creation, AURA 3D image and model generation, marketplace hires, integrations, notes, feedback, model and agent selection, file attachments, and chat session resets. (`a8c653d`, `edeb438`)
+- Added subscription_started and credits_purchased tracking alongside a new Privacy section in Org Settings with an explicit opt-in/opt-out toggle and a tightened layout. (`468f979`, `977a0f7`)
+- Resolved TypeScript build errors uncovered by the analytics rollout in the project form and platform detection paths. (`bdee6c5`)
 
-## 2:09 PM — Two-tier session identity preflight for every harness call site
+## 2:09 PM — Two-tier harness session identity preflight
 
-Server- and harness-side preflights now fail loudly with a structured 422 the moment a session would open without its required X-Aura-* identity headers, replacing opaque downstream 403/5xx errors.
+Server and harness now fail fast with a structured 422 when X-Aura-* identity headers are missing, ending silent Cloudflare 403s on the first LLM call.
 
-- Added a Tier 1 server preflight that emits a stable session_identity_missing 422 with a per-field code whenever chat, dev-loop, project-tool, generation, or scheduled-process sessions are missing org id, session id, agent id, user id, or JWT — and removed the noisy Windows-only debug log shim that was writing synchronously to a hardcoded file on every session start. (`31e2448`)
-- Added a matching Tier 2 harness preflight on LocalHarness, SwarmHarness, and AutomatonClient::start so drift between server and harness stays observable from either side, with the server's error mapper funneling harness-side rejections into the same 422 response shape. (`7932e2c`)
-- Threaded canonical org / session / user identity through image and 3D generation streams and scheduled-process automatons, with a deterministic UUIDv5 session id per (process_id, run_id) so retries share a router bucket while concurrent runs stay isolated. (`e5ee3af`)
-- Mapped dev-loop WebSocket connect failures (HTTP 503 / WS 1013) to the structured harness_capacity_exhausted 503 envelope and short-circuited retries, so the eval pipeline's capacity-aware backoff actually fires instead of seeing a generic bad_gateway. (`8555c31`)
-- Brought bare-agent chat to parity with the project-bound instance route by resolving the workspace path and wrapping the prompt with the canonical project_context block whenever an effective project is bound or inferred. (`c847b85`)
-- Wired harness stream events into loop-log bundles and live heuristics so dev-loop and SWE-bench failures retain actionable run evidence after the fact. (`8f3cbe1`)
+- Added a Tier 1 server preflight that validates org, session, agent, user, and JWT identity at every harness session entry point (chat, dev-loop, project tools) and emits a stable missing_<field> 422 with structured context instead of a downstream 5xx. (`31e2448`)
+- Mirrored the contract on the harness side as a Tier 2 preflight in LocalHarness, SwarmHarness, and AutomatonClient, with a server-side mapper that funnels HarnessError::SessionIdentityMissing into the same 422 envelope regardless of which layer caught it. (`7932e2c`)
+- Threaded org / session / user identity through image and 3D generation streams and scheduled-process automatons, with deterministic UUIDv5 session ids for process retries and proper remapping of WS-slot 503s to harness_capacity_exhausted. (`e5ee3af`)
+- Brought the bare-agent chat route to parity with the project-bound instance route, resolving project_path and wrapping the system prompt with project context so workspace tools no longer execute against an empty cwd. (`c847b85`)
+- Surfaced WS-slot exhaustion during dev-loop event-stream connect as the structured 503 harness_capacity_exhausted envelope and captured dev-loop run bundles into loop-log heuristics so SWE failures retain actionable evidence. (`8555c31`, `8f3cbe1`)
 
-## 8:15 PM — Mixed clipboard pastes and a sturdier Windows updater handoff
+## 8:15 PM — Windows updater handoff, clipboard pastes, and SWE-bench scoring
 
-Two targeted fixes improved chat input behavior and the Windows update experience.
+A small but meaningful trio of fixes across desktop updates, chat input, and eval scoring.
 
-- Chat input now correctly accepts clipboard pastes that mix images with other content instead of dropping the image payload. (`603e715`)
-- On Windows, the NSIS updater is now launched through PowerShell Start-Process so the installer survives Aura exiting mid-handoff, removing a class of stalled-update failures. (`b0c153a`)
+- Made the Windows updater handoff resilient by launching the NSIS installer through PowerShell Start-Process so the installer survives Aura exiting mid-handoff. (`b0c153a`)
+- Chat input now accepts mixed-content clipboard pastes that include images alongside other data, instead of dropping the paste. (`603e715`)
+- Hardened SWE-bench official scoring: fail fast on native Windows unless driver-only mode is requested, and recover misplaced harness reports so score.json reflects official results. (`270ec0a`)
 
-## 8:18 PM — SWE-bench scoring made explicit and recoverable
+## 8:20 PM — End-to-end /image generation in chat
 
-The SWE-bench aggregation pipeline now fails fast in unsupported configurations and reconciles misplaced harness reports.
+The slash-image command now streams through the generation pipeline, persists results, and renders them as standalone media with several adjacent chat-stream fixes.
 
-- Aggregation now errors out on native Windows unless driver-only mode is explicitly requested, and recovers misplaced AURA.<runId>.json harness reports so score.json reflects official results when they exist. (`270ec0a`)
+- Routed the /image command through the dedicated generation stream and preserved the image model plus generation mode for queued sends so the request reaches the right backend even while another stream is active. (`9a90912`, `d54c7b7`)
+- Completed the slash-image flow end-to-end with a normalized GenerationCompleted payload on the server, finalized tool turns through the stream lifecycle so generated images become durable chat cards, and a renderer update that shows results as larger standalone media instead of nested inside the generic tool block. (`b03bad1`, `c79bc79`, `68c823c`)
+- Stopped the optimistic user prompt from rendering alongside its persisted copy mid-stream and removed forced scroll/focus resets when switching standalone agents, keeping the chat pane stable. (`93c3001`, `6110984`)
 
-## 8:20 PM — Slash /image generation now works end-to-end in chat
+## 10:04 PM — SWE-bench smoke diagnostics
 
-A coordinated set of fixes routes the slash /image command through the generation stream, keeps it stable while queued, persists results, and renders them as proper media cards.
+Benchmark runs surface root causes more directly via stratified subsets and richer postmortems.
 
-- Slash /image now routes through the dedicated generation stream and preserves both image model and generation mode for queued sends, so the right backend and model are used even while another response is still streaming. (`9a90912`, `d54c7b7`)
-- Completed the slash-image flow on both interface and server, normalizing the generation_completed payload shape and threading harness command channels through the SSE bridge. (`b03bad1`)
-- Generated images are now finalized through the stream lifecycle into durable chat cards instead of being cleared with transient buffers, and render as standalone larger media rather than nested inside the generic tool block. (`c79bc79`, `68c823c`)
-- Stopped the live chat tail from rendering an optimistic prompt next to its persisted copy mid-stream, and stopped agent selection from forcing scroll and focus resets that yanked the chat pane around. (`93c3001`, `6110984`)
+- Added a stratified SWE-bench smoke subset and embedded compact failure details in postmortems so environment, pollution, and hidden-test causes are visible without digging through raw logs. (`7f0ede7`)
 
-## 10:04 PM — Stratified SWE-bench smoke subset with richer postmortems
+## 10:51 PM — Generation stream watchdogs end indefinite image hangs
 
-SWE-bench smoke runs now exercise a stratified subset and emit compact failure details to make environment, pollution, and hidden-test causes obvious from the postmortem alone.
+Image generation streams now have idle and max-runtime watchdogs plus structured logging, so production stalls fail terminally instead of spinning forever.
 
-- Added a stratified SWE-bench smoke subset and embedded compact failure details in postmortems so benchmark runs surface environment, pollution, and hidden-test causes directly. (`7f0ede7`)
+- Added per-stream generation_id, mode, and session logging across open, send, and lifecycle plus 120s event-idle and 600s max-runtime watchdogs in harness_stream and the chat-stream lifecycle handler, turning previously indefinite spinners into debuggable terminal failures. (`ba457ef`)
 
 ## Highlights
 
-- Mixpanel analytics shipped with DNT/GPC and an in-app opt-out
+- Mixpanel analytics across the full product surface, opt-out aware
 - Two-tier session identity preflight prevents silent harness 403s
-- Slash /image generation now streams, persists, and renders as media
-- Windows updater handoff hardened via PowerShell Start-Process
+- Slash /image flow now streams, persists, and renders as media
+- Generation streams gain watchdogs that turn hangs into terminal failures
 
