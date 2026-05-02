@@ -316,4 +316,38 @@ describe("ChatMessageList", () => {
       }),
     );
   });
+
+  it("does not remount the tail assistant bubble when persisted history replaces the stream placeholder", () => {
+    const scrollRef = makeScrollRef();
+
+    const { rerender } = render(
+      <ChatMessageList
+        messages={[
+          makeMessage("temp-user", "testing", "user"),
+          makeMessage("stream-assistant", "Final answer"),
+        ]}
+        streamKey="stream-1"
+        scrollRef={scrollRef}
+      />,
+    );
+
+    const placeholderWrapper =
+      screen.getByTestId("bubble-stream-assistant").parentElement;
+    expect(placeholderWrapper).not.toBeNull();
+
+    rerender(
+      <ChatMessageList
+        messages={[
+          makeMessage("message-user", "testing", "user"),
+          makeMessage("message-assistant", "Final answer"),
+        ]}
+        streamKey="stream-1"
+        scrollRef={scrollRef}
+      />,
+    );
+
+    const persistedWrapper =
+      screen.getByTestId("bubble-message-assistant").parentElement;
+    expect(persistedWrapper).toBe(placeholderWrapper);
+  });
 });

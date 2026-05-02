@@ -31,6 +31,25 @@ const EMPTY_TIMELINE: NonNullable<
   ReturnType<typeof useStreamStore.getState>["entries"][string]
 >["timeline"] = [];
 
+function hashString(value: string): string {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) | 0;
+  }
+  return hash.toString(36);
+}
+
+function messageRenderKey(
+  msg: DisplaySessionEvent,
+  index: number,
+  visibleCount: number,
+): string {
+  if (msg.role === "assistant" && index === visibleCount - 1) {
+    return `assistant-tail:${msg.content.length}:${hashString(msg.content)}`;
+  }
+  return msg.id;
+}
+
 /**
  * Renders the full chat transcript in natural flex flow. Pin-to-bottom and
  * reading-position preservation when content above the viewport changes
@@ -183,9 +202,9 @@ export function ChatMessageList({
           }}
         >
           {/* eslint-disable-next-line react-hooks/refs -- reading justFinalizedIdRef.current here is part of the intentional render-phase pattern documented above the transition detection */}
-          {visibleMessages.map((msg) => (
+          {visibleMessages.map((msg, index) => (
             <div
-              key={msg.id}
+              key={messageRenderKey(msg, index, visibleMessages.length)}
               data-message-id={msg.id}
               style={{ display: "flex", width: "100%" }}
             >
