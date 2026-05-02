@@ -8,11 +8,20 @@
 use tracing::{error, info, warn};
 
 #[cfg(target_os = "windows")]
+use std::time::{Duration, Instant};
+#[cfg(target_os = "windows")]
 use windows::core::PCWSTR;
 #[cfg(target_os = "windows")]
-use windows::Win32::Foundation::{CloseHandle, GetLastError, HANDLE, ERROR_ALREADY_EXISTS};
+use windows::Win32::Foundation::{CloseHandle, GetLastError, ERROR_ALREADY_EXISTS, HANDLE};
 #[cfg(target_os = "windows")]
 use windows::Win32::System::Threading::CreateMutexW;
+
+#[cfg(target_os = "windows")]
+const UPDATE_RELAUNCH_ENV: &str = "AURA_UPDATE_RELAUNCH";
+#[cfg(target_os = "windows")]
+const UPDATE_RELAUNCH_RETRY_TIMEOUT: Duration = Duration::from_secs(15);
+#[cfg(target_os = "windows")]
+const UPDATE_RELAUNCH_RETRY_INTERVAL: Duration = Duration::from_millis(250);
 
 pub(crate) struct SingleInstanceGuard {
     #[cfg(target_os = "windows")]
@@ -33,7 +42,10 @@ impl Drop for SingleInstanceGuard {
 #[cfg(target_os = "windows")]
 fn acquire_single_instance() -> Result<Option<SingleInstanceGuard>, String> {
     const MUTEX_NAME: &str = "Local\\com.aura.desktop.single-instance";
-    let wide_name: Vec<u16> = MUTEX_NAME.encode_utf16().chain(std::iter::once(0)).collect();
+    let wide_name: Vec<u16> = MUTEX_NAME
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
     let handle = unsafe { CreateMutexW(None, true, PCWSTR(wide_name.as_ptr())) }
         .map_err(|error| format!("failed to create Aura single-instance mutex: {error}"))?;
 
@@ -49,13 +61,46 @@ fn acquire_single_instance() -> Result<Option<SingleInstanceGuard>, String> {
     }))
 }
 
+#[cfg(target_os = "windows")]
+fn update_relaunch_requested() -> bool {
+    std::env::var_os(UPDATE_RELAUNCH_ENV).is_some()
+}
+
+#[cfg(target_os = "windows")]
+fn acquire_single_instance_with_update_retry() -> Result<Option<SingleInstanceGuard>, String> {
+    let should_retry = update_relaunch_requested();
+    let deadline = Instant::now() + UPDATE_RELAUNCH_RETRY_TIMEOUT;
+    let mut logged_retry = false;
+
+    loop {
+        match acquire_single_instance()? {
+            Some(guard) => return Ok(Some(guard)),
+            None if should_retry && Instant::now() < deadline => {
+                if !logged_retry {
+                    info!(
+                        "update relaunch found an existing Aura instance; waiting for shutdown before continuing"
+                    );
+                    logged_retry = true;
+                }
+                std::thread::sleep(UPDATE_RELAUNCH_RETRY_INTERVAL);
+            }
+            None => return Ok(None),
+        }
+    }
+}
+
 #[cfg(not(target_os = "windows"))]
 fn acquire_single_instance() -> Result<Option<SingleInstanceGuard>, String> {
     Ok(Some(SingleInstanceGuard {}))
 }
 
+#[cfg(not(target_os = "windows"))]
+fn acquire_single_instance_with_update_retry() -> Result<Option<SingleInstanceGuard>, String> {
+    acquire_single_instance()
+}
+
 pub(crate) fn acquire_single_instance_or_exit() -> SingleInstanceGuard {
-    match acquire_single_instance() {
+    match acquire_single_instance_with_update_retry() {
         Ok(Some(guard)) => {
             info!("single-instance guard acquired");
             guard
