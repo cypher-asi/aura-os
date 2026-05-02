@@ -6,11 +6,11 @@ use anyhow::Context;
 use async_trait::async_trait;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use reqwest::StatusCode;
-use tokio::sync::Mutex;
+use tokio::sync::{broadcast, Mutex};
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tracing::{info, warn};
 
-use aura_protocol::InboundMessage;
+use aura_protocol::{InboundMessage, OutboundMessage};
 
 use crate::error::HarnessError;
 use crate::harness::{
@@ -21,6 +21,7 @@ use crate::ws_bridge::spawn_ws_bridge;
 
 const AGENT_READY_POLL_INTERVAL: Duration = Duration::from_secs(2);
 const AGENT_READY_TIMEOUT: Duration = Duration::from_secs(90);
+const SESSION_READY_TIMEOUT: Duration = Duration::from_secs(20);
 
 #[derive(Debug, Clone)]
 pub struct SwarmHarness {
@@ -110,19 +111,27 @@ impl SwarmHarness {
             let resp = self.client.get(&url).headers(headers.clone()).send().await;
 
             match resp {
-                Ok(r) if r.status().is_success() => {
-                    if let Ok(state) = r.json::<AgentStateResponse>().await {
-                        match state.state.as_str() {
-                            "running" | "idle" => return Ok(()),
-                            "error" => {
-                                anyhow::bail!("agent {agent_id} entered error state");
-                            }
-                            other => {
-                                info!(agent_id = %agent_id, state = %other, "Waiting for agent...");
-                            }
+                Ok(r) if r.status().is_success() => match parse_agent_state(r).await {
+                    Ok(state) => match state.state.as_str() {
+                        "running" | "idle" => return Ok(()),
+                        "provisioning" | "stopping" => {
+                            info!(agent_id = %agent_id, state = %state.state, "Waiting for agent...");
                         }
-                    }
-                }
+                        "error" => {
+                            anyhow::bail!(
+                                "agent {agent_id} entered error state{}",
+                                format_error_suffix(state.error_message.as_deref())
+                            );
+                        }
+                        other => {
+                            anyhow::bail!(
+                                "agent {agent_id} is in non-runnable state `{other}`{}",
+                                format_error_suffix(state.error_message.as_deref())
+                            );
+                        }
+                    },
+                    Err(e) => anyhow::bail!("agent state response was invalid: {e}"),
+                },
                 Ok(r) => {
                     warn!(agent_id = %agent_id, status = %r.status(), "Agent state check failed");
                 }
@@ -155,12 +164,17 @@ impl SwarmHarness {
         let response = self
             .client
             .post(format!("{base_url}/v1/agents"))
-            .headers(headers)
+            .headers(headers.clone())
             .json(&agent_body)
             .send()
             .await
             .context("swarm create agent request failed")?;
         let agent_resp = parse_create_agent_response(response).await?;
+        if matches!(agent_resp.status.as_str(), "stopped" | "error") {
+            self.start_agent(base_url, &agent_resp.agent_id, headers.clone())
+                .await
+                .context("swarm start agent request failed")?;
+        }
         if !matches!(agent_resp.status.as_str(), "running" | "idle") {
             self.wait_for_agent_ready(&agent_resp.agent_id, token)
                 .await
@@ -171,19 +185,28 @@ impl SwarmHarness {
     }
 
     fn create_agent_body(&self, config: &SessionConfig) -> serde_json::Value {
-        let agent_display_name = config
-            .agent_name
-            .as_deref()
-            .or(config.agent_id.as_deref())
-            .unwrap_or("default");
+        let agent_display_name = swarm_agent_display_name(config);
         let mut agent_body = serde_json::json!({ "name": agent_display_name });
-        if let Some(ref aid) = config.agent_id {
-            agent_body["agent_id"] = serde_json::Value::String(aid.clone());
-        }
-        if let Some(ref tid) = config.template_agent_id {
-            agent_body["template_agent_id"] = serde_json::Value::String(tid.clone());
+        if let Some(aid) = swarm_control_agent_id(config) {
+            agent_body["agent_id"] = serde_json::Value::String(aid);
         }
         agent_body
+    }
+
+    async fn start_agent(
+        &self,
+        base_url: &str,
+        agent_id: &str,
+        headers: HeaderMap,
+    ) -> anyhow::Result<()> {
+        let response = self
+            .client
+            .post(format!("{base_url}/v1/agents/{agent_id}/start"))
+            .headers(headers)
+            .send()
+            .await
+            .context("swarm start agent request failed")?;
+        parse_lifecycle_response(response, "start").await
     }
 
     async fn create_session(
@@ -240,7 +263,9 @@ impl SwarmHarness {
             .await
             .context("swarm websocket connect failed")?;
         let (events_tx, raw_events_tx, commands_tx) = spawn_ws_bridge(ws_stream);
+        let mut ready_rx = events_tx.subscribe();
         send_session_init(&commands_tx, config)?;
+        wait_for_session_ready(&mut ready_rx, &session_resp.session_id).await?;
         Ok(HarnessSession {
             session_id: session_resp.session_id,
             events_tx,
@@ -261,6 +286,8 @@ pub struct CreateAgentResponse {
 #[derive(serde::Deserialize)]
 struct AgentStateResponse {
     state: String,
+    #[serde(default)]
+    error_message: Option<String>,
 }
 
 #[derive(serde::Deserialize)]
@@ -286,6 +313,21 @@ async fn parse_create_agent_response(
         );
     }
     Ok(agent_resp)
+}
+
+async fn parse_agent_state(response: reqwest::Response) -> anyhow::Result<AgentStateResponse> {
+    let body = response.text().await?;
+    serde_json::from_str(&body)
+        .with_context(|| format!("invalid swarm state response body: {body}"))
+}
+
+async fn parse_lifecycle_response(response: reqwest::Response, action: &str) -> anyhow::Result<()> {
+    let status = response.status();
+    let body = response.text().await?;
+    if !status.is_success() {
+        anyhow::bail!("swarm {action} agent failed with {status}: {body}");
+    }
+    Ok(())
 }
 
 async fn parse_create_session_response(
@@ -362,6 +404,100 @@ fn send_session_init(
         .context("swarm session_init send failed")
 }
 
+async fn wait_for_session_ready(
+    rx: &mut broadcast::Receiver<OutboundMessage>,
+    swarm_session_id: &str,
+) -> anyhow::Result<()> {
+    let ready = tokio::time::timeout(SESSION_READY_TIMEOUT, async {
+        loop {
+            match rx.recv().await {
+                Ok(OutboundMessage::SessionReady(ready)) => break Ok(ready.session_id),
+                Ok(OutboundMessage::Error(err)) => {
+                    anyhow::bail!(
+                        "harness error during swarm init ({}): {}",
+                        err.code,
+                        err.message
+                    )
+                }
+                Ok(_) => continue,
+                Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                Err(broadcast::error::RecvError::Closed) => {
+                    anyhow::bail!("swarm websocket closed before session_ready")
+                }
+            }
+        }
+    })
+    .await
+    .with_context(|| {
+        format!(
+            "swarm session did not emit session_ready within {}s",
+            SESSION_READY_TIMEOUT.as_secs()
+        )
+    })??;
+
+    if ready != swarm_session_id {
+        info!(
+            swarm_session_id,
+            runtime_session_id = %ready,
+            "Swarm runtime session_ready id differs from control-plane session id"
+        );
+    }
+    Ok(())
+}
+
+fn swarm_control_agent_id(config: &SessionConfig) -> Option<String> {
+    config
+        .template_agent_id
+        .as_deref()
+        .filter(|id| !id.trim().is_empty())
+        .map(ToOwned::to_owned)
+        .or_else(|| {
+            config
+                .agent_id
+                .as_deref()
+                .and_then(|id| {
+                    id.split_once("::")
+                        .map(|(template, _)| template)
+                        .or(Some(id))
+                })
+                .filter(|id| !id.trim().is_empty())
+                .map(ToOwned::to_owned)
+        })
+}
+
+fn swarm_agent_display_name(config: &SessionConfig) -> String {
+    let source = config
+        .agent_name
+        .as_deref()
+        .or(config.template_agent_id.as_deref())
+        .or(config.agent_id.as_deref())
+        .unwrap_or("default");
+    let mut sanitized = String::with_capacity(source.len().min(64));
+    for ch in source.chars() {
+        if sanitized.len() >= 64 {
+            break;
+        }
+        if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' {
+            sanitized.push(ch);
+        } else if ch.is_whitespace() || ch == ':' {
+            sanitized.push('-');
+        }
+    }
+    let sanitized = sanitized.trim_matches('-').to_string();
+    if sanitized.is_empty() {
+        "agent".to_string()
+    } else {
+        sanitized
+    }
+}
+
+fn format_error_suffix(message: Option<&str>) -> String {
+    message
+        .filter(|message| !message.trim().is_empty())
+        .map(|message| format!(": {message}"))
+        .unwrap_or_default()
+}
+
 #[async_trait]
 impl HarnessLink for SwarmHarness {
     async fn open_session(&self, config: SessionConfig) -> anyhow::Result<HarnessSession> {
@@ -407,5 +543,57 @@ impl HarnessLink for SwarmHarness {
             .await?
             .error_for_status()?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn create_agent_body_uses_template_id_for_swarm_agent_id() {
+        let harness = SwarmHarness::new("http://swarm.test".to_string(), None);
+        let config = SessionConfig {
+            agent_id: Some("71cb2243-1cc3-441a-8a24-4ecac56b7651::default".to_string()),
+            template_agent_id: Some("71cb2243-1cc3-441a-8a24-4ecac56b7651".to_string()),
+            agent_name: Some("Remote Agent!".to_string()),
+            ..Default::default()
+        };
+
+        let body = harness.create_agent_body(&config);
+
+        assert_eq!(
+            body["agent_id"],
+            serde_json::Value::String("71cb2243-1cc3-441a-8a24-4ecac56b7651".to_string())
+        );
+        assert_eq!(
+            body["name"],
+            serde_json::Value::String("Remote-Agent".to_string())
+        );
+        assert!(body.get("template_agent_id").is_none());
+    }
+
+    #[test]
+    fn swarm_control_agent_id_falls_back_to_partition_template_prefix() {
+        let config = SessionConfig {
+            agent_id: Some("template-1::instance-1".to_string()),
+            template_agent_id: None,
+            ..Default::default()
+        };
+
+        assert_eq!(
+            swarm_control_agent_id(&config).as_deref(),
+            Some("template-1")
+        );
+    }
+
+    #[test]
+    fn swarm_agent_display_name_falls_back_when_empty_after_sanitize() {
+        let config = SessionConfig {
+            agent_name: Some("!!!".to_string()),
+            ..Default::default()
+        };
+
+        assert_eq!(swarm_agent_display_name(&config), "agent");
     }
 }

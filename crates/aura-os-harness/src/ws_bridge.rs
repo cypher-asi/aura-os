@@ -99,19 +99,30 @@ fn forward_ws_text(
             debug!("Parsed harness event");
             let _ = reader_tx.send(event);
         }
-        Err(_) => forward_raw_ws_text(text, reader_raw_tx),
+        Err(err) => forward_untyped_ws_text(text, err, reader_tx, reader_raw_tx),
     }
 }
 
-fn forward_raw_ws_text(text: &str, reader_raw_tx: &broadcast::Sender<serde_json::Value>) {
+fn forward_untyped_ws_text(
+    text: &str,
+    err: serde_json::Error,
+    reader_tx: &broadcast::Sender<OutboundMessage>,
+    reader_raw_tx: &broadcast::Sender<serde_json::Value>,
+) {
     if let Ok(value) = serde_json::from_str::<serde_json::Value>(text) {
-        debug!(
+        warn!(
             direction = "received",
             payload_len = text.len(),
             payload = %debug_payload(text),
+            error = %err,
             "Forwarding untyped harness event"
         );
         let _ = reader_raw_tx.send(value);
+        let _ = reader_tx.send(bridge_error(
+            "harness_protocol_mismatch",
+            format!("harness websocket emitted an unsupported event shape: {err}"),
+            true,
+        ));
     } else {
         warn!(
             direction = "received",
@@ -119,6 +130,11 @@ fn forward_raw_ws_text(text: &str, reader_raw_tx: &broadcast::Sender<serde_json:
             payload = %debug_payload(text),
             "Non-JSON harness message, dropping"
         );
+        let _ = reader_tx.send(bridge_error(
+            "harness_protocol_mismatch",
+            "harness websocket emitted a non-JSON message",
+            true,
+        ));
     }
 }
 
@@ -205,5 +221,36 @@ mod tests {
     #[test]
     fn debug_payload_preserves_short_frames() {
         assert_eq!(debug_payload("{\"type\":\"ping\"}"), "{\"type\":\"ping\"}");
+    }
+
+    #[test]
+    fn untyped_json_emits_visible_protocol_error() {
+        let (typed_tx, mut typed_rx) = broadcast::channel(8);
+        let (raw_tx, mut raw_rx) = broadcast::channel(8);
+
+        forward_ws_text("{\"type\":\"unknown_event\"}", &typed_tx, &raw_tx);
+
+        let typed = typed_rx.try_recv().expect("typed protocol error");
+        assert!(matches!(
+            typed,
+            OutboundMessage::Error(ErrorMsg { ref code, .. }) if code == "harness_protocol_mismatch"
+        ));
+        let raw = raw_rx.try_recv().expect("raw diagnostic event");
+        assert_eq!(raw["type"], "unknown_event");
+    }
+
+    #[test]
+    fn non_json_message_emits_visible_protocol_error() {
+        let (typed_tx, mut typed_rx) = broadcast::channel(8);
+        let (raw_tx, mut raw_rx) = broadcast::channel(8);
+
+        forward_ws_text("not json", &typed_tx, &raw_tx);
+
+        let typed = typed_rx.try_recv().expect("typed protocol error");
+        assert!(matches!(
+            typed,
+            OutboundMessage::Error(ErrorMsg { ref code, .. }) if code == "harness_protocol_mismatch"
+        ));
+        assert!(raw_rx.try_recv().is_err());
     }
 }

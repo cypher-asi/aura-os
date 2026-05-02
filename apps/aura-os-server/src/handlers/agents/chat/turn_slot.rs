@@ -28,9 +28,13 @@
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 
-use aura_os_harness::HarnessOutbound;
+use aura_os_harness::{ErrorMsg, HarnessOutbound};
 use tokio::sync::{broadcast, Mutex, OwnedMutexGuard};
+
+const FIRST_EVENT_TIMEOUT: Duration = Duration::from_secs(30);
+const MAX_TURN_TIMEOUT: Duration = Duration::from_secs(300);
 
 /// Maximum simultaneous "in-flight + queued" turns on one partition.
 /// One actively holding the lock plus at most one waiter; a third
@@ -131,6 +135,71 @@ pub(crate) fn spawn_turn_slot_release(
     });
 }
 
+pub(crate) fn spawn_turn_watchdog(
+    events_tx: broadcast::Sender<HarnessOutbound>,
+    events_rx: broadcast::Receiver<HarnessOutbound>,
+) {
+    spawn_turn_watchdog_with_timeouts(events_tx, events_rx, FIRST_EVENT_TIMEOUT, MAX_TURN_TIMEOUT);
+}
+
+fn spawn_turn_watchdog_with_timeouts(
+    events_tx: broadcast::Sender<HarnessOutbound>,
+    mut events_rx: broadcast::Receiver<HarnessOutbound>,
+    first_event_timeout: Duration,
+    max_turn_timeout: Duration,
+) {
+    tokio::spawn(async move {
+        match tokio::time::timeout(first_event_timeout, events_rx.recv()).await {
+            Ok(Ok(HarnessOutbound::AssistantMessageEnd(_)) | Ok(HarnessOutbound::Error(_))) => {
+                return;
+            }
+            Ok(Ok(_)) | Ok(Err(broadcast::error::RecvError::Lagged(_))) => {}
+            Ok(Err(broadcast::error::RecvError::Closed)) => return,
+            Err(_) => {
+                let _ = events_tx.send(timeout_error(
+                    "stream_stalled",
+                    format!(
+                        "Remote agent did not emit any stream events within {}s.",
+                        first_event_timeout.as_secs()
+                    ),
+                ));
+                return;
+            }
+        }
+
+        let terminal = async {
+            loop {
+                match events_rx.recv().await {
+                    Ok(HarnessOutbound::AssistantMessageEnd(_))
+                    | Ok(HarnessOutbound::Error(_))
+                    | Err(broadcast::error::RecvError::Closed) => break,
+                    Ok(_) | Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                }
+            }
+        };
+        if tokio::time::timeout(max_turn_timeout, terminal)
+            .await
+            .is_err()
+        {
+            let _ = events_tx.send(timeout_error(
+                "turn_timeout",
+                format!(
+                    "Remote agent turn did not finish within {}s.",
+                    max_turn_timeout.as_secs()
+                ),
+            ));
+        }
+    });
+}
+
+fn timeout_error(code: &str, message: String) -> HarnessOutbound {
+    HarnessOutbound::Error(ErrorMsg {
+        code: code.to_string(),
+        message,
+        recoverable: true,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use std::sync::atomic::AtomicUsize;
@@ -142,7 +211,10 @@ mod tests {
     };
     use tokio::sync::{broadcast, Mutex};
 
-    use super::{acquire_turn_slot, spawn_turn_slot_release, MAX_PENDING_TURNS};
+    use super::{
+        acquire_turn_slot, spawn_turn_slot_release, spawn_turn_watchdog_with_timeouts,
+        MAX_PENDING_TURNS,
+    };
 
     fn assistant_end() -> HarnessOutbound {
         HarnessOutbound::AssistantMessageEnd(AssistantMessageEnd {
@@ -335,5 +407,60 @@ mod tests {
         .await
         .expect("slot should be released after broadcast close");
         drop(next);
+    }
+
+    #[tokio::test]
+    async fn turn_watchdog_emits_stream_stalled_when_no_first_event_arrives() {
+        let (tx, rx) = broadcast::channel::<HarnessOutbound>(8);
+        let mut observed = tx.subscribe();
+
+        spawn_turn_watchdog_with_timeouts(
+            tx,
+            rx,
+            Duration::from_millis(10),
+            Duration::from_secs(1),
+        );
+
+        let event = tokio::time::timeout(Duration::from_millis(200), observed.recv())
+            .await
+            .expect("watchdog event timed out")
+            .expect("watchdog broadcast");
+        assert!(matches!(
+            event,
+            HarnessOutbound::Error(ErrorMsg { ref code, .. }) if code == "stream_stalled"
+        ));
+    }
+
+    #[tokio::test]
+    async fn turn_watchdog_emits_turn_timeout_after_nonterminal_event() {
+        let (tx, rx) = broadcast::channel::<HarnessOutbound>(8);
+        let mut observed = tx.subscribe();
+
+        spawn_turn_watchdog_with_timeouts(
+            tx.clone(),
+            rx,
+            Duration::from_secs(1),
+            Duration::from_millis(10),
+        );
+        tx.send(HarnessOutbound::TextDelta(aura_os_harness::TextDelta {
+            text: "working".to_string(),
+        }))
+        .expect("seed nonterminal event");
+
+        let mut saw_timeout = false;
+        for _ in 0..2 {
+            let event = tokio::time::timeout(Duration::from_millis(200), observed.recv())
+                .await
+                .expect("watchdog event timed out")
+                .expect("watchdog broadcast");
+            if matches!(
+                event,
+                HarnessOutbound::Error(ErrorMsg { ref code, .. }) if code == "turn_timeout"
+            ) {
+                saw_timeout = true;
+                break;
+            }
+        }
+        assert!(saw_timeout, "watchdog must emit turn_timeout");
     }
 }

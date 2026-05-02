@@ -29,7 +29,9 @@ use super::errors::{
 use super::event_bus::publish_user_message_event;
 use super::persist::{persist_user_message, ChatPersistCtx};
 use super::persist_task::spawn_chat_persist_task;
-use super::turn_slot::{acquire_turn_slot, spawn_turn_slot_release, TurnSlotGuard};
+use super::turn_slot::{
+    acquire_turn_slot, spawn_turn_slot_release, spawn_turn_watchdog, TurnSlotGuard,
+};
 use super::types::{SseResponse, SseStream};
 use crate::handlers::agents::session_identity::{
     validate_session_identity, SessionIdentityRequirements,
@@ -220,6 +222,7 @@ pub(super) async fn open_harness_chat_stream(
         is_new,
         was_queued,
         rx,
+        events_tx,
         slot_guard,
     } = get_or_create_delegated_chat_session(
         state,
@@ -233,6 +236,7 @@ pub(super) async fn open_harness_chat_stream(
 
     let persist_rx = rx.resubscribe();
     let release_rx = rx.resubscribe();
+    let watchdog_rx = rx.resubscribe();
 
     // Fan out the now-persisted user turn onto the local WebSocket event
     // bus so the UI can live-refresh the target agent's chat panel when
@@ -252,6 +256,7 @@ pub(super) async fn open_harness_chat_stream(
     // would drop as soon as `open_harness_chat_stream` returns and a
     // back-to-back send would race the WS writer just like before
     // Phase 3.
+    spawn_turn_watchdog(events_tx, watchdog_rx);
     spawn_turn_slot_release(slot_guard, release_rx);
 
     let stream = build_sse_stream(rx, is_new, was_queued);
@@ -307,6 +312,10 @@ pub(super) struct SessionForTurn {
     /// here; the orchestrator resubscribes to feed the persist task
     /// and the turn-slot release sentinel.
     pub(super) rx: broadcast::Receiver<HarnessOutbound>,
+    /// Sender paired with `rx`, used to broadcast synthetic terminal
+    /// errors when the remote runtime goes silent while SSE keep-alives
+    /// keep the HTTP connection open.
+    pub(super) events_tx: broadcast::Sender<HarnessOutbound>,
     /// Held for the entire lifetime of this user turn; handed to a
     /// sentinel task that watches the broadcast for the terminal
     /// event and drops the guard there.
@@ -408,6 +417,7 @@ async fn reuse_with_turn_slot(
         is_new: false,
         was_queued: acquired.queued,
         rx: reused.rx,
+        events_tx: reused.events_tx,
         slot_guard: acquired.guard,
     })
 }
@@ -417,6 +427,7 @@ async fn reuse_with_turn_slot(
 /// `await` does not block other partitions.
 struct ReusedSessionHandles {
     rx: broadcast::Receiver<HarnessOutbound>,
+    events_tx: broadcast::Sender<HarnessOutbound>,
     commands_tx: HarnessCommandSender,
     turn_slot: Arc<Mutex<()>>,
     turn_pending_count: Arc<AtomicUsize>,
@@ -442,6 +453,7 @@ async fn try_reuse_session(
     }
     Some(ReusedSessionHandles {
         rx: session.events_tx.subscribe(),
+        events_tx: session.events_tx.clone(),
         commands_tx: session.commands_tx.clone(),
         turn_slot: Arc::clone(&session.turn_slot),
         turn_pending_count: Arc::clone(&session.turn_pending_count),
@@ -480,6 +492,7 @@ async fn insert_delegated_chat_session(
         })?;
 
     let rx = started.events_rx;
+    let events_tx = started.session.events_tx.clone();
     let mut reg = state.chat_sessions.lock().await;
     reg.insert(
         key.to_string(),
@@ -498,6 +511,7 @@ async fn insert_delegated_chat_session(
         is_new: true,
         was_queued: false,
         rx,
+        events_tx,
         slot_guard: acquired.guard,
     })
 }
