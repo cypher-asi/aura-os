@@ -30,7 +30,9 @@ pub fn merge_agent_instance(
             .map(|a| a.agent_id)
             .or_else(|| spa.agent_id.as_deref().and_then(|s: &str| s.parse().ok()))
             .unwrap_or_default(),
-        org_id: agent.and_then(|a| a.org_id),
+        org_id: agent
+            .and_then(|a| a.org_id)
+            .or_else(|| spa.org_id.as_deref().and_then(|value| value.parse().ok())),
         name: agent
             .map(|a| a.name.clone())
             .unwrap_or_else(|| spa.name.clone().unwrap_or_default()),
@@ -156,5 +158,16 @@ mod tests {
         let spa = make_storage_project_agent(Some("supervisor"));
         let merged = merge_agent_instance(&spa, None, None);
         assert_eq!(merged.instance_role, AgentInstanceRole::Chat);
+    }
+
+    #[test]
+    fn merge_agent_instance_falls_back_to_storage_org_id() {
+        let org_id = aura_os_core::OrgId::new();
+        let mut spa = make_storage_project_agent(None);
+        spa.org_id = Some(org_id.to_string());
+
+        let merged = merge_agent_instance(&spa, None, None);
+
+        assert_eq!(merged.org_id, Some(org_id));
     }
 }

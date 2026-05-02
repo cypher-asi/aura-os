@@ -86,13 +86,14 @@ pub(crate) async fn send_event_stream(
         append_project_state_to_system_prompt(&system_prompt, project_state_snapshot.as_deref());
 
     let model = pick_instance_model(&body, &instance);
-    let org_integrations = fetch_org_integrations(&state, instance.org_id.as_ref(), &jwt).await;
+    let effective_org_id = resolve_effective_org_id(&state, instance.org_id.as_ref(), &project_id);
+    let org_integrations = fetch_org_integrations(&state, effective_org_id.as_ref(), &jwt).await;
     let normalized_instance_perms = normalize_instance_perms(&state, &instance, &pid_str).await;
 
     let installed_tools = build_session_installed_tools(
         &InstalledToolsCtx {
             state: &state,
-            org_id: instance.org_id.as_ref(),
+            org_id: effective_org_id.as_ref(),
             jwt: &jwt,
             context: "instance_chat",
             agent_id: &agent_instance_id.to_string(),
@@ -102,7 +103,7 @@ pub(crate) async fn send_event_stream(
     )
     .await?;
     let installed_integrations =
-        installed_workspace_integrations(instance.org_id.as_ref(), org_integrations.as_deref());
+        installed_workspace_integrations(effective_org_id.as_ref(), org_integrations.as_deref());
 
     // Cap agentic steps for non-interactive tool flows like
     // `generate_specs` so a degenerate `list_specs` ↔ `create_spec`
@@ -127,7 +128,7 @@ pub(crate) async fn send_event_stream(
         conversation_messages,
         project_id: Some(pid_str),
         project_path,
-        aura_org_id: instance.org_id.as_ref().map(|o| o.to_string()),
+        aura_org_id: effective_org_id.as_ref().map(ToString::to_string),
         aura_session_id: persist_ctx.as_ref().map(|c| c.session_id.clone()),
         provider_overrides: session_model_overrides(model.as_deref()),
         installed_tools,
@@ -199,6 +200,20 @@ fn pick_instance_model(
                 .clone()
                 .filter(|value| !value.trim().is_empty())
         })
+}
+
+fn resolve_effective_org_id(
+    state: &AppState,
+    preferred_org_id: Option<&OrgId>,
+    project_id: &ProjectId,
+) -> Option<OrgId> {
+    preferred_org_id.cloned().or_else(|| {
+        state
+            .project_service
+            .get_project(project_id)
+            .ok()
+            .map(|p| p.org_id)
+    })
 }
 
 async fn fetch_org_integrations(

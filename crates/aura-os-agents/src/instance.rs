@@ -230,7 +230,7 @@ impl AgentInstanceService {
         let req = aura_os_storage::CreateProjectAgentRequest {
             agent_id: agent.agent_id.to_string(),
             name: agent.name.clone(),
-            org_id: None,
+            org_id: agent.org_id.as_ref().map(ToString::to_string),
             role: Some(agent.role.clone()),
             personality: Some(agent.personality.clone()),
             system_prompt: Some(agent.system_prompt.clone()),

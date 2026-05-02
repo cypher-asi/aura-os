@@ -81,16 +81,20 @@ pub(crate) async fn send_agent_event_stream(
         load_project_state_for_agent(&state, &body, &persist_ctx, &jwt, force_new, live_session)
             .await;
 
-    let model = effective_model(&agent, body.model.clone());
-    let org_integrations = fetch_org_integrations(&state, agent.org_id.as_ref(), &jwt).await;
-
     let effective_project_id = resolve_effective_project_id(&body, &persist_ctx);
+    let effective_org_id = resolve_effective_org_id(
+        &state,
+        agent.org_id.as_ref(),
+        effective_project_id.as_deref(),
+    );
+    let model = effective_model(&agent, body.model.clone());
+    let org_integrations = fetch_org_integrations(&state, effective_org_id.as_ref(), &jwt).await;
     let normalized_perms = normalize_agent_perms(&agent, effective_project_id.as_deref());
 
     let installed_tools = build_session_installed_tools(
         &InstalledToolsCtx {
             state: &state,
-            org_id: agent.org_id.as_ref(),
+            org_id: effective_org_id.as_ref(),
             jwt: &jwt,
             context: "agent_chat",
             agent_id: &agent_id.to_string(),
@@ -100,7 +104,7 @@ pub(crate) async fn send_agent_event_stream(
     )
     .await?;
     let installed_integrations =
-        installed_workspace_integrations(agent.org_id.as_ref(), org_integrations.as_deref());
+        installed_workspace_integrations(effective_org_id.as_ref(), org_integrations.as_deref());
 
     // Mirror the cap applied in `instance_route.rs::send_event_stream`:
     // tool-driven actions like `generate_specs` get bounded so a
@@ -138,7 +142,7 @@ pub(crate) async fn send_agent_event_stream(
         conversation_messages,
         project_id: effective_project_id.clone(),
         project_path,
-        aura_org_id: agent.org_id.as_ref().map(|o| o.to_string()),
+        aura_org_id: effective_org_id.as_ref().map(ToString::to_string),
         aura_session_id: persist_ctx.as_ref().map(|c| c.session_id.clone()),
         provider_overrides: session_model_overrides(model.as_deref()),
         installed_tools,
@@ -357,6 +361,19 @@ fn resolve_effective_project_id(
                 .map(|ctx| ctx.project_id.clone())
                 .filter(|pid| !pid.is_empty())
         })
+}
+
+fn resolve_effective_org_id(
+    state: &AppState,
+    preferred_org_id: Option<&OrgId>,
+    effective_project_id: Option<&str>,
+) -> Option<OrgId> {
+    preferred_org_id.cloned().or_else(|| {
+        effective_project_id
+            .and_then(|pid| pid.parse::<ProjectId>().ok())
+            .and_then(|pid| state.project_service.get_project(&pid).ok())
+            .map(|project| project.org_id)
+    })
 }
 
 /// When the turn is project-bound (either explicitly via the body or
