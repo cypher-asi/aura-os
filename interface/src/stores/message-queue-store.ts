@@ -1,13 +1,16 @@
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import type { ChatAttachment } from "../api/streams";
+import type { GenerationMode } from "../constants/models";
 
 export interface QueuedMessage {
   id: string;
   content: string;
   action: string | null;
+  model?: string | null;
   attachments?: ChatAttachment[];
   commands?: string[];
+  generationMode?: GenerationMode;
 }
 
 interface MessageQueueState {

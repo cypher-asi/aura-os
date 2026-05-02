@@ -1,5 +1,6 @@
 import { useRef, useCallback, useEffect } from "react";
 import { api } from "../api/client";
+import { generateImageStream } from "../api/streams";
 import type { ChatAttachment, StreamEventHandler } from "../api/streams";
 import type { GenerationMode } from "../constants/models";
 import { buildContentBlocks, buildAttachmentLabel } from "./attachment-helpers";
@@ -184,9 +185,21 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
       };
 
       try {
-        const modelForTurn = _generationMode ? null : selectedModel;
         const shouldStartNewSession = nextSendStartsNewSessionRef.current;
         nextSendStartsNewSessionRef.current = false;
+        if (_generationMode === "image") {
+          await generateImageStream(
+            userMsg.content,
+            selectedModel,
+            attachments,
+            handler,
+            controller.signal,
+            projectId,
+          );
+          return;
+        }
+
+        const modelForTurn = _generationMode ? null : selectedModel;
         await api.agents.sendEventStream(
           agentId,
           userMsg.content,

@@ -159,7 +159,12 @@ export function useChatPanelState({
           : commands.some((c) => c.id === "generate_3d")
             ? ("3d" as GenerationMode)
             : undefined);
-      const runtimeModel = effectiveGenMode ? null : selectedModel;
+      const runtimeModel =
+        effectiveGenMode === "image"
+          ? selectedModel
+          : effectiveGenMode
+            ? null
+            : selectedModel;
       setAttachments([]);
       setCommands([]);
 
@@ -167,8 +172,10 @@ export function useChatPanelState({
         useMessageQueueStore.getState().enqueue(streamKey, {
           content,
           action: action ?? null,
+          model: runtimeModel,
           attachments: apiAttachments,
           commands: commandIds,
+          generationMode: effectiveGenMode,
         });
         scrollToBottom();
       } else {
@@ -219,10 +226,11 @@ export function useChatPanelState({
         onSendRef.current(
           next.content,
           next.action,
-          selectedModelRef.current,
+          next.model ?? selectedModelRef.current,
           next.attachments,
           next.commands,
           selectedProjectIdRef.current,
+          next.generationMode,
         );
         scrollToBottom();
       }

@@ -85,6 +85,7 @@ describe("useChatPanelState", () => {
   beforeEach(() => {
     mockIsStreaming = false;
     mockStreamMessages = [];
+    mockChatUI.selectedModel = "gpt-5.4";
     mockHandleScroll.mockReset();
     mockScrollToBottom.mockReset();
     mockEnqueue.mockReset();
@@ -157,6 +158,55 @@ describe("useChatPanelState", () => {
       }),
     );
     expect(mockScrollToBottom).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves image model and generation mode for queued sends", () => {
+    mockIsStreaming = true;
+    mockChatUI.selectedModel = "gpt-image-2";
+    const onSend = vi.fn();
+    const { result, rerender } = renderHook(() =>
+      useChatPanelState({
+        streamKey: "stream-1",
+        onSend,
+        selectedProjectId: "project-1",
+      }),
+    );
+
+    act(() => result.current.handleSend("Draw a fox", undefined, undefined, "image"));
+
+    expect(mockEnqueue).toHaveBeenCalledWith(
+      "stream-1",
+      expect.objectContaining({
+        content: "Draw a fox",
+        action: null,
+        model: "gpt-image-2",
+        generationMode: "image",
+      }),
+    );
+
+    mockDequeue.mockReturnValueOnce({
+      id: "q-1",
+      content: "Draw a fox",
+      action: null,
+      model: "gpt-image-2",
+      commands: ["generate_image"],
+      generationMode: "image",
+    });
+    mockIsStreaming = false;
+
+    act(() => {
+      rerender();
+    });
+
+    expect(onSend).toHaveBeenCalledWith(
+      "Draw a fox",
+      null,
+      "gpt-image-2",
+      undefined,
+      ["generate_image"],
+      "project-1",
+      "image",
+    );
   });
 
   it("does not trigger an extra bottom scroll when streaming finishes without a queued send", () => {

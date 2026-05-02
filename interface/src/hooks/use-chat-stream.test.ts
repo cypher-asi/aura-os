@@ -50,7 +50,12 @@ vi.mock("../api/client", () => ({
   dispatchInsufficientCredits: vi.fn(),
 }));
 
+vi.mock("../api/streams", () => ({
+  generateImageStream: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { api } from "../api/client";
+import { generateImageStream } from "../api/streams";
 
 describe("useChatStream", () => {
   beforeEach(() => {
@@ -58,6 +63,7 @@ describe("useChatStream", () => {
     useStreamStore.setState({ entries: {} });
     vi.clearAllMocks();
     vi.mocked(api.sendEventStream).mockReset().mockResolvedValue(undefined);
+    vi.mocked(generateImageStream).mockReset().mockResolvedValue(undefined);
   });
 
   it("returns streamKey, sendMessage, stopStreaming, resetEvents", () => {
@@ -108,6 +114,42 @@ describe("useChatStream", () => {
     const entry = useStreamStore.getState().entries[result.current.streamKey];
     expect(entry.events[0].role).toBe("user");
     expect(entry.events[0].content).toBe("hello");
+  });
+
+  it("routes image generation through the dedicated image stream", async () => {
+    const attachments = [
+      {
+        type: "image" as const,
+        media_type: "image/png",
+        data: "abc123",
+        name: "reference.png",
+      },
+    ];
+    const { result } = renderHook(() =>
+      useChatStream({ projectId: "p-1", agentInstanceId: "ai-1" }),
+    );
+
+    await act(async () => {
+      await result.current.sendMessage(
+        "draw a fox",
+        null,
+        "gpt-image-2",
+        attachments,
+        ["generate_image"],
+        undefined,
+        "image",
+      );
+    });
+
+    expect(api.sendEventStream).not.toHaveBeenCalled();
+    expect(generateImageStream).toHaveBeenCalledWith(
+      "draw a fox",
+      "gpt-image-2",
+      attachments,
+      expect.any(Object),
+      expect.any(AbortSignal),
+      "p-1",
+    );
   });
 
   it("does nothing for empty content without action", async () => {

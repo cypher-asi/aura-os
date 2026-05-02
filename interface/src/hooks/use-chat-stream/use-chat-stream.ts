@@ -1,5 +1,6 @@
 import { useRef, useCallback, useEffect } from "react";
 import { api } from "../../api/client";
+import { generateImageStream } from "../../api/streams";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { useProjectActions } from "../../stores/project-action-store";
 import type { ChatAttachment } from "../../api/streams";
@@ -73,9 +74,21 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
       });
 
       try {
-        const modelForTurn = _generationMode ? null : selectedModel;
         const shouldStartNewSession = nextSendStartsNewSessionRef.current;
         nextSendStartsNewSessionRef.current = false;
+        if (_generationMode === "image") {
+          await generateImageStream(
+            userMsg.content,
+            selectedModel,
+            attachments,
+            handler,
+            controller.signal,
+            projectId,
+          );
+          return;
+        }
+
+        const modelForTurn = _generationMode ? null : selectedModel;
         await api.sendEventStream(
           projectId,
           agentInstanceId,
