@@ -184,14 +184,15 @@ function StandaloneAgentChatPanel({
 
   const { historyMessages, historyResolved, isLoading, historyError, wrapSend } =
     useChatHistorySync({
-    historyKey,
-    streamKey,
-    fetchFn,
-    resetEvents,
-    invalidateBeforeFetch: false,
-    onSwitch: onAgentSwitch,
-    onClear,
+      historyKey,
+      streamKey,
+      fetchFn,
+      resetEvents,
+      invalidateBeforeFetch: false,
+      onSwitch: onAgentSwitch,
+      onClear,
       hydrateToStream: false,
+      watchAgentId: agentId,
     });
 
   const wrappedSend = useMemo(() => wrapSend(sendMessage), [wrapSend, sendMessage]);

@@ -140,6 +140,36 @@ function isAssistantBoundaryPlaceholder(message: DisplaySessionEvent): boolean {
   return message.role === "assistant" && message.id.startsWith("stream-");
 }
 
+function chooseFinalAssistantContent(
+  savedMessage: DisplaySessionEvent,
+  placeholder: DisplaySessionEvent,
+): string {
+  const savedContent = savedMessage.content;
+  const placeholderContent = placeholder.content;
+  if (
+    placeholderContent.length > savedContent.length &&
+    (savedContent.trim().length === 0 || placeholderContent.startsWith(savedContent))
+  ) {
+    return placeholderContent;
+  }
+  return savedContent;
+}
+
+function mergeSavedAssistantMessage(
+  savedMessage: DisplaySessionEvent,
+  placeholder: DisplaySessionEvent,
+): DisplaySessionEvent {
+  return {
+    ...savedMessage,
+    content: chooseFinalAssistantContent(savedMessage, placeholder),
+    toolCalls: savedMessage.toolCalls ?? placeholder.toolCalls,
+    thinkingText: savedMessage.thinkingText ?? placeholder.thinkingText,
+    thinkingDurationMs:
+      savedMessage.thinkingDurationMs ?? placeholder.thinkingDurationMs,
+    timeline: savedMessage.timeline ?? placeholder.timeline,
+  };
+}
+
 export function handleEventSaved(
   refs: StreamRefs,
   setters: StreamSetters,
@@ -179,10 +209,9 @@ export function handleEventSaved(
     const lastMessage = prev[prev.length - 1];
     if (
       lastMessage &&
-      isAssistantBoundaryPlaceholder(lastMessage) &&
-      lastMessage.content === savedMessage.content
+      isAssistantBoundaryPlaceholder(lastMessage)
     ) {
-      return [...prev.slice(0, -1), savedMessage];
+      return [...prev.slice(0, -1), mergeSavedAssistantMessage(savedMessage, lastMessage)];
     }
 
     return [...prev, savedMessage];

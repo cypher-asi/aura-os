@@ -53,6 +53,58 @@ function hasTransientStreamError(events: DisplaySessionEvent[]): boolean {
   );
 }
 
+function assistantHasVisibleActivity(event: DisplaySessionEvent | undefined): boolean {
+  return !!(
+    event &&
+    event.role === "assistant" &&
+    (
+      event.content.trim().length > 0 ||
+      (event.toolCalls?.length ?? 0) > 0 ||
+      (event.timeline?.length ?? 0) > 0 ||
+      (event.thinkingText?.trim().length ?? 0) > 0
+    )
+  );
+}
+
+function findTrailingAssistant(events: DisplaySessionEvent[]): DisplaySessionEvent | undefined {
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    if (events[index].role === "assistant") {
+      return events[index];
+    }
+  }
+  return undefined;
+}
+
+function historyHasCaughtUpToStream(
+  historyMessages: DisplaySessionEvent[],
+  streamEvents: DisplaySessionEvent[],
+): boolean {
+  if (historyMessages.length < streamEvents.length) {
+    return false;
+  }
+
+  const streamAssistant = findTrailingAssistant(streamEvents);
+  if (!assistantHasVisibleActivity(streamAssistant)) {
+    return true;
+  }
+
+  const historyAssistant = findTrailingAssistant(historyMessages);
+  if (!assistantHasVisibleActivity(historyAssistant)) {
+    return false;
+  }
+
+  const streamContent = streamAssistant?.content.trim() ?? "";
+  if (!streamContent) {
+    return true;
+  }
+
+  const historyContent = historyAssistant?.content.trim() ?? "";
+  return (
+    historyContent.length >= streamContent.length &&
+    historyContent.startsWith(streamContent)
+  );
+}
+
 interface ChatHistorySyncOptions {
   historyKey: string | undefined;
   streamKey: string;
@@ -367,10 +419,10 @@ export function useChatHistorySync({
       return;
     }
 
-    // Only clear stream events when history has caught up with at least as
-    // many messages. This prevents a flash where stream events are wiped
-    // before the server has finished persisting the assistant reply.
-    if (historyMessages.length < streamCount) {
+    // Only clear stream events when history has semantically caught up.
+    // Length alone is not enough: a stale same-length snapshot with an empty
+    // assistant row would replace the fuller streamed answer.
+    if (!historyHasCaughtUpToStream(historyMessages, streamEntry?.events ?? [])) {
       return;
     }
     if (hasTransientStreamError(streamEntry?.events ?? [])) {
@@ -381,6 +433,7 @@ export function useChatHistorySync({
   }, [
     historyKey,
     historyLastMessageAt,
+    historyMessages,
     historyMessages.length,
     historyStatus,
     hydrateToStream,

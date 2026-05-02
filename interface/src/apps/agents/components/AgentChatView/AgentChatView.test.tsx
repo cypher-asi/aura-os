@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   params: { agentId: "agent-1", projectId: undefined, agentInstanceId: undefined },
   isMobileLayout: false,
   latestChatPanelProps: undefined as Record<string, unknown> | undefined,
+  latestHistorySyncOptions: undefined as Record<string, unknown> | undefined,
   setSelectedAgent: vi.fn(),
   sendMessage: vi.fn(),
   stopStreaming: vi.fn(),
@@ -57,13 +58,16 @@ vi.mock("../../../../hooks/use-chat-stream", () => ({
 }));
 
 vi.mock("../../../../hooks/use-chat-history-sync", () => ({
-  useChatHistorySync: () => ({
-    historyMessages: [],
-    historyResolved: true,
-    isLoading: false,
-    historyError: null,
-    wrapSend: (fn: (...args: unknown[]) => unknown) => fn,
-  }),
+  useChatHistorySync: (options: Record<string, unknown>) => {
+    mocks.latestHistorySyncOptions = options;
+    return {
+      historyMessages: [],
+      historyResolved: true,
+      isLoading: false,
+      historyError: null,
+      wrapSend: (fn: (...args: unknown[]) => unknown) => fn,
+    };
+  },
 }));
 
 vi.mock("../../../../shared/hooks/use-delayed-loading", () => ({
@@ -176,6 +180,7 @@ describe("AgentChatView", () => {
     mocks.params = { agentId: "agent-1", projectId: undefined, agentInstanceId: undefined };
     mocks.isMobileLayout = false;
     mocks.latestChatPanelProps = undefined;
+    mocks.latestHistorySyncOptions = undefined;
   });
 
   it("uses ChatPanel's desktop input autofocus for standalone agents", () => {
@@ -189,5 +194,18 @@ describe("AgentChatView", () => {
       }),
     );
     expect(mocks.latestChatPanelProps).not.toHaveProperty("focusInputOnThreadReady");
+  });
+
+  it("watches standalone agent ids for cross-agent chat updates", () => {
+    render(<AgentChatView />);
+
+    expect(mocks.latestHistorySyncOptions).toEqual(
+      expect.objectContaining({
+        historyKey: "agent:agent-1",
+        streamKey: "agent-stream",
+        hydrateToStream: false,
+        watchAgentId: "agent-1",
+      }),
+    );
   });
 });

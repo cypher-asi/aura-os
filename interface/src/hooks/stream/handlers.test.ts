@@ -26,6 +26,7 @@ import {
   handleStreamError,
   finalizeStream,
   handleAssistantTurnBoundary,
+  handleEventSaved,
 } from "./handlers";
 import {
   dispatchInsufficientCredits,
@@ -1299,6 +1300,35 @@ describe("stream/handlers", () => {
       handleAssistantTurnBoundary(refs, setters);
 
       expect(setters.calls.setEvents).toBeUndefined();
+    });
+  });
+
+  describe("handleEventSaved", () => {
+    it("preserves fuller streamed content when the saved event is stale", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      handleEventSaved(refs, setters, {
+        event_id: "evt-assistant",
+        content: "",
+        content_blocks: [],
+      } as never);
+
+      const setEvents = setters.calls.setEvents?.[0] as
+        | ((prev: unknown[]) => Array<{ id: string; content: string }>)
+        | undefined;
+      expect(setEvents).toBeDefined();
+
+      const result = setEvents?.([
+        { id: "stream-assistant", role: "assistant", content: "full streamed reply" },
+      ]);
+
+      expect(result).toHaveLength(1);
+      expect(result?.[0]).toMatchObject({
+        id: "evt-assistant",
+        role: "assistant",
+        content: "full streamed reply",
+      });
     });
   });
 });

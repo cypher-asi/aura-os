@@ -6,7 +6,6 @@ import {
 } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { MessageBubble } from "../MessageBubble";
-import { StreamingBubble } from "../StreamingBubble";
 import type { DisplaySessionEvent } from "../../../../shared/types/stream";
 
 import { useStreamStore } from "../../../../hooks/stream/store";
@@ -31,21 +30,13 @@ const EMPTY_TIMELINE: NonNullable<
   ReturnType<typeof useStreamStore.getState>["entries"][string]
 >["timeline"] = [];
 
-function hashString(value: string): string {
-  let hash = 0;
-  for (let i = 0; i < value.length; i += 1) {
-    hash = (hash * 31 + value.charCodeAt(i)) | 0;
-  }
-  return hash.toString(36);
-}
-
 function messageRenderKey(
   msg: DisplaySessionEvent,
   index: number,
   visibleCount: number,
 ): string {
   if (msg.role === "assistant" && index === visibleCount - 1) {
-    return `assistant-tail:${msg.content.length}:${hashString(msg.content)}`;
+    return "assistant-tail";
   }
   return msg.id;
 }
@@ -74,7 +65,6 @@ export function ChatMessageList({
 }: ChatMessageListProps) {
   const {
     isStreaming,
-    isWriting,
     streamingText,
     thinkingText,
     thinkingDurationMs,
@@ -84,7 +74,6 @@ export function ChatMessageList({
   } = useStreamStore(
     useShallow((state) => ({
       isStreaming: state.entries[streamKey]?.isStreaming ?? false,
-      isWriting: state.entries[streamKey]?.isWriting ?? false,
       streamingText: state.entries[streamKey]?.streamingText ?? "",
       thinkingText: state.entries[streamKey]?.thinkingText ?? "",
       thinkingDurationMs: state.entries[streamKey]?.thinkingDurationMs ?? null,
@@ -94,20 +83,54 @@ export function ChatMessageList({
     })),
   );
 
-  const nowStreaming = isStreaming || !!streamingText || !!thinkingText || activeToolCalls.length > 0;
-  const liveAssistantBubbleHasText = !!streamingText || !!thinkingText;
-  const visibleMessages =
-    liveAssistantBubbleHasText &&
-    messages.length > 0 &&
-    messages[messages.length - 1].role === "assistant"
-      ? messages.slice(0, -1)
-      : messages;
+  const nowStreaming =
+    isStreaming || !!streamingText || !!thinkingText || activeToolCalls.length > 0;
+  const lastMessage = messages[messages.length - 1];
+  const hasLiveAssistantActivity =
+    !!streamingText || !!thinkingText || activeToolCalls.length > 0 || timeline.length > 0;
+  const liveAssistantMessage: DisplaySessionEvent | null = hasLiveAssistantActivity
+    ? {
+        ...(lastMessage?.role === "assistant"
+          ? lastMessage
+          : {
+              id: `stream-live:${streamKey}`,
+              role: "assistant" as const,
+              content: "",
+            }),
+        content:
+          streamingText ||
+          (lastMessage?.role === "assistant" ? lastMessage.content : ""),
+        toolCalls:
+          activeToolCalls.length > 0
+            ? activeToolCalls
+            : lastMessage?.role === "assistant"
+              ? lastMessage.toolCalls
+              : undefined,
+        thinkingText:
+          thinkingText ||
+          (lastMessage?.role === "assistant" ? lastMessage.thinkingText : undefined),
+        thinkingDurationMs:
+          thinkingDurationMs ??
+          (lastMessage?.role === "assistant" ? lastMessage.thinkingDurationMs : null),
+        timeline:
+          timeline.length > 0
+            ? timeline
+            : lastMessage?.role === "assistant"
+              ? lastMessage.timeline
+              : undefined,
+      }
+    : null;
+  const visibleMessages = liveAssistantMessage
+    ? lastMessage?.role === "assistant"
+      ? [...messages.slice(0, -1), liveAssistantMessage]
+      : [...messages, liveAssistantMessage]
+    : messages;
   const prevStreamingRef = useRef(nowStreaming);
   const justFinalizedIdRef = useRef<string | null>(null);
 
   // Detect streaming -> not-streaming transition during render so the
   // MessageBubble for the just-finalized message mounts with its thinking /
-  // activity rows expanded, matching the StreamingBubble it replaces. This
+  // activity rows expanded, matching the live assistant row it replaces. This
   // has to happen during render (not useEffect) because `initialThinkingExpanded`
   // is read once at MessageBubble mount — deferring to useEffect means the
   // bubble mounts collapsed for one frame and then can't be re-expanded.
@@ -126,7 +149,12 @@ export function ChatMessageList({
   /* eslint-enable react-hooks/refs */
 
   const hasMessages =
-    messages.length > 0 || isStreaming || streamingText || thinkingText || activeToolCalls.length > 0;
+    messages.length > 0 ||
+    isStreaming ||
+    streamingText ||
+    thinkingText ||
+    activeToolCalls.length > 0 ||
+    timeline.length > 0;
 
   const initialLayoutReadyKeyRef = useRef<string | null>(null);
   useLayoutEffect(() => {
@@ -210,27 +238,17 @@ export function ChatMessageList({
             >
               <MessageBubble
                 message={msg}
-                isStreaming={isStreaming && msg.id.startsWith("stream-")}
+                isStreaming={
+                  isStreaming &&
+                  msg.role === "assistant" &&
+                  index === visibleMessages.length - 1 &&
+                  (msg.id.startsWith("stream-") || msg.id.startsWith("stream-live:"))
+                }
                 initialThinkingExpanded={msg.id === justFinalizedIdRef.current}
                 initialActivitiesExpanded={msg.id === justFinalizedIdRef.current}
               />
             </div>
           ))}
-        </div>
-      )}
-      {nowStreaming && (
-        <div>
-          <StreamingBubble
-            isStreaming={isStreaming}
-            text={streamingText}
-            toolCalls={activeToolCalls}
-            thinkingText={thinkingText}
-            thinkingDurationMs={thinkingDurationMs}
-            timeline={timeline}
-            progressText={progressText}
-            isWriting={isWriting}
-            showPhaseIndicator={false}
-          />
         </div>
       )}
     </>
