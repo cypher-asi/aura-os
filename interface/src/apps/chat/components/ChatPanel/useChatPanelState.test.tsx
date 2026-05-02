@@ -78,7 +78,7 @@ vi.mock("../../../../stores/message-queue-store", () => ({
 }));
 
 vi.mock("../../../../constants/commands", () => ({
-  isGenerationCommand: () => false,
+  isGenerationCommand: (id: string) => id === "generate_image" || id === "generate_3d",
 }));
 
 describe("useChatPanelState", () => {
@@ -158,6 +158,43 @@ describe("useChatPanelState", () => {
       }),
     );
     expect(mockScrollToBottom).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps image mode active after an idle send", () => {
+    mockChatUI.selectedModel = "gpt-image-2";
+    const onSend = vi.fn();
+    const { result } = renderHook(() =>
+      useChatPanelState({
+        streamKey: "stream-1",
+        onSend,
+      }),
+    );
+
+    act(() => {
+      result.current.setCommands([
+        {
+          id: "generate_image",
+          label: "Image",
+          description: "Generate an image from a text prompt",
+          category: "Generation",
+        },
+      ]);
+    });
+
+    act(() => result.current.handleSend("Draw a fox", undefined, undefined, "image"));
+
+    expect(onSend).toHaveBeenCalledWith(
+      "Draw a fox",
+      null,
+      "gpt-image-2",
+      undefined,
+      ["generate_image"],
+      undefined,
+      "image",
+    );
+    expect(result.current.commands.map((command) => command.id)).toEqual([
+      "generate_image",
+    ]);
   });
 
   it("preserves image model and generation mode for queued sends", () => {

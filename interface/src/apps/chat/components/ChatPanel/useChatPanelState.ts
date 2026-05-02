@@ -7,7 +7,7 @@ import { useMessageQueueStore, useMessageQueue } from "../../../../stores/messag
 import type { QueuedMessage } from "../../../../stores/message-queue-store";
 import type { ChatAttachment } from "../../../../api/streams";
 import type { DisplaySessionEvent } from "../../../../shared/types/stream";
-import type { SlashCommand } from "../../../../constants/commands";
+import { isGenerationCommand, type SlashCommand } from "../../../../constants/commands";
 import type { GenerationMode } from "../../../../constants/models";
 import { availableModelsForAdapter } from "../../../../constants/models";
 import { useChatUI } from "../../../../stores/chat-ui-store";
@@ -166,7 +166,7 @@ export function useChatPanelState({
             ? null
             : selectedModel;
       setAttachments([]);
-      setCommands([]);
+      setCommands((prev) => prev.filter((c) => isGenerationCommand(c.id)));
 
       if (isStreaming) {
         useMessageQueueStore.getState().enqueue(streamKey, {

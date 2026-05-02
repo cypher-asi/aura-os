@@ -76,15 +76,19 @@ export async function streamSSE<T extends string>(
   signal?: AbortSignal,
 ): Promise<void> {
   let response: Response;
+  const resolvedUrl = resolveApiUrl(url);
   try {
-    response = await fetch(resolveApiUrl(url), {
+    response = await fetch(resolvedUrl, {
       ...init,
       headers: { ...authHeaders(), ...(init.headers as Record<string, string>) },
       signal,
     });
   } catch (err) {
     if (signal?.aborted) return;
-    callbacks.onError?.(err instanceof Error ? err : new Error(String(err)));
+    const message = err instanceof Error ? err.message : String(err);
+    callbacks.onError?.(
+      new Error(`Failed to fetch SSE ${init.method ?? "GET"} ${resolvedUrl}: ${message}`),
+    );
     return;
   }
 

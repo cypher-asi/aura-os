@@ -292,8 +292,11 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
     const handleCommandRemove = useCallback(
       (id: string) => {
         onCommandsChange?.(selectedCommands.filter((command) => command.id !== id));
+        if (isGenerationCommand(id)) {
+          onModelChange(getDefaultModelForMode("chat").id);
+        }
       },
-      [onCommandsChange, selectedCommands],
+      [onCommandsChange, onModelChange, selectedCommands],
     );
 
     const handleInputChange = useCallback(

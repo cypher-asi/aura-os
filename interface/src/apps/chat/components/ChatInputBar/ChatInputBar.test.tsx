@@ -329,6 +329,37 @@ describe("ChatInputBar", () => {
     );
   });
 
+  it("restores a chat model when the image command is removed", async () => {
+    const user = userEvent.setup();
+    const onCommandsChange = vi.fn();
+    mockSelectedModel = "gpt-image-2";
+    render(
+      <ChatInputBar
+        {...makeProps({
+          selectedCommands: [
+            {
+              id: "generate_image",
+              label: "Image",
+              description: "Generate an image from a text prompt",
+              category: "Generation",
+            },
+          ],
+          onCommandsChange,
+        })}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Remove Image" }));
+
+    expect(onCommandsChange).toHaveBeenCalledWith([]);
+    expect(mockSetSelectedModel).toHaveBeenCalledWith(
+      "test-stream",
+      "aura-claude-sonnet-4-6",
+      undefined,
+      undefined,
+    );
+  });
+
   it("opens the mobile model sheet and calls setSelectedModel", async () => {
     const user = userEvent.setup();
     mockSelectedModel = "aura-claude-opus-4-6";

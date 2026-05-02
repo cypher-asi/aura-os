@@ -414,8 +414,11 @@ export const DesktopChatInputBar = memo(
     const handleCommandRemove = useCallback(
       (id: string) => {
         onCommandsChange?.(selectedCommands.filter((c) => c.id !== id));
+        if (isGenerationCommand(id)) {
+          onModelChange(getDefaultModelForMode("chat").id);
+        }
       },
-      [selectedCommands, onCommandsChange],
+      [selectedCommands, onCommandsChange, onModelChange],
     );
 
     const handleModelButtonClick = useCallback(() => {

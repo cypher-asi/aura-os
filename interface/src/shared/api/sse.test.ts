@@ -221,7 +221,9 @@ describe("streamSSE", () => {
 
     await streamSSE("/api/stream", {}, callbacks);
     expect(callbacks.onError).toHaveBeenCalledOnce();
-    expect((callbacks.onError as ReturnType<typeof vi.fn>).mock.calls[0][0].message).toBe("Network down");
+    expect((callbacks.onError as ReturnType<typeof vi.fn>).mock.calls[0][0].message).toBe(
+      "Failed to fetch SSE GET /api/stream: Network down",
+    );
   });
 
   it("does not call onError when fetch throws and signal is aborted", async () => {
