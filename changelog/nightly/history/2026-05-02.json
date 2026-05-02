@@ -633,7 +633,29 @@
             ],
             "confidence": "high"
           }
-        ]
+        ],
+        "media": {
+          "schemaVersion": 1,
+          "status": "published",
+          "type": "image",
+          "assetPath": "assets/changelog/nightly/2026-05-02/entry-5-64ccd1c3388a.png",
+          "alt": "Steadier chat tail and sidebar previews",
+          "caption": "Agent sidebar previews stay populated even after older chat history rolls over.",
+          "width": 2560,
+          "height": 1440,
+          "bytes": 2368210,
+          "sourceCommitShas": [
+            "0dbf9681172ba6b7c18b996948965eb14fd1d15b",
+            "a33f494041f19908a4d4ab1c52bb3e01e8a5f1cc"
+          ],
+          "gates": {
+            "rawQuality": "accepted",
+            "rawVision": "accepted",
+            "brandedQuality": "accepted",
+            "brandedVision": "accepted"
+          },
+          "updatedAt": "2026-05-02T22:39:35.482Z"
+        }
       },
       {
         "batch_id": "entry-6",
