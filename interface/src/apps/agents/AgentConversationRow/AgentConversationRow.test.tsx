@@ -1,6 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import type { Agent } from "../../../shared/types";
-import { emptyAgentPermissions } from "../../../shared/types/permissions-wire";
+import {
+  emptyAgentPermissions,
+  fullAccessAgentPermissions,
+} from "../../../shared/types/permissions-wire";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";
 
 vi.mock("../../../hooks/use-avatar-state", () => ({
@@ -51,6 +54,22 @@ describe("AgentConversationRow", () => {
     expect(screen.getAllByText("Architect")).toHaveLength(1);
     expect(screen.getByText("Latest chat reply")).toBeInTheDocument();
     expect(screen.queryByText("Plans features end to end.")).not.toBeInTheDocument();
+  });
+
+  it("shows the agent role badge for full-access non-CEO agents", () => {
+    render(
+      <AgentConversationRow
+        agent={{ ...baseAgent, permissions: fullAccessAgentPermissions() }}
+        lastMessage={lastMessage}
+        isSelected={false}
+        onClick={() => {}}
+        onContextMenu={() => {}}
+        onMouseEnter={() => {}}
+      />,
+    );
+
+    expect(screen.getByText("Architect")).toBeInTheDocument();
+    expect(screen.queryByText("CEO")).not.toBeInTheDocument();
   });
 
   it("prefixes the preview with 'You: ' for user messages", () => {

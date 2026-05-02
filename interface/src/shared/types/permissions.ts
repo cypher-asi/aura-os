@@ -20,22 +20,15 @@ import {
 } from "./permissions-wire";
 
 /**
- * True iff an agent looks like a CEO / super-agent. The canonical signal
- * is a universe-scope permissions bundle that carries every core CEO
- * capability (see `AgentPermissions::ceo_preset`), but we fall back to the
- * `role === "CEO" && name === "CEO"` shape emitted by
- * `ceo_agent_template` so we don't re-trigger bootstrap just because
- * aura-network didn't round-trip the `permissions` column. Callers that
- * need to reason about *capabilities* specifically (e.g. a UI that gates
- * the spawn-agent button) should use `hasSpawnCapability` etc. directly.
+ * True iff an agent has the explicit CEO bootstrap identity. Do not infer
+ * identity from the permissions bundle: ordinary agents can now carry the
+ * same full-access capability set as the historical CEO preset.
+ *
+ * Callers that need to reason about *capabilities* specifically (e.g. a UI
+ * that gates the spawn-agent button) should use `hasSpawnCapability` etc.
+ * directly.
  */
 export function isSuperAgent(agent: Agent): boolean {
-  if (
-    hasUniverseScope(agent.permissions) &&
-    hasAllCoreCapabilities(agent.permissions)
-  ) {
-    return true;
-  }
   return (
     agent.role?.toLowerCase() === "ceo" &&
     agent.name?.toLowerCase() === "ceo"

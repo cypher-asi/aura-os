@@ -147,8 +147,9 @@ pub struct Agent {
     pub local_workspace_path: Option<String>,
     /// Required capability + scope bundle. The harness enforces these
     /// unconditionally on every session — there is no role-based
-    /// fallback. Regular agents carry [`AgentPermissions::empty`]; CEO
-    /// bootstraps carry [`AgentPermissions::ceo_preset`].
+    /// fallback. Ordinary agents may carry [`AgentPermissions::full_access`];
+    /// the CEO bootstrap identity is tracked separately by name/role and the
+    /// persisted bootstrap agent id.
     pub permissions: AgentPermissions,
     /// Optional per-turn intent classifier. When present the harness
     /// narrows the per-turn tool surface based on each user message.

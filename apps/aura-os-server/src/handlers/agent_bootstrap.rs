@@ -32,16 +32,14 @@ pub(crate) struct CleanupCeoResponse {
     pub failed: Vec<String>,
 }
 
-/// True if a network agent record looks like a CEO bootstrap agent.
+/// True if a network agent record has the explicit CEO bootstrap identity.
 ///
-/// The canonical signal is [`AgentPermissions::is_ceo_preset`], but older
-/// aura-network deployments don't persist the full `permissions` column
-/// yet, in which case the permissions bundle comes back empty via
-/// `#[serde(default)]`. We therefore treat `name == "CEO" && role == "CEO"`
-/// as a fallback signal so the bootstrap never creates a duplicate CEO
-/// just because the network forgot its permissions.
-fn looks_like_ceo(net: &NetworkAgent) -> bool {
-    if net.permissions.is_ceo_preset() {
+/// Do not infer CEO identity from [`AgentPermissions::is_ceo_preset`]: that
+/// method recognizes the full-access capability bundle, and ordinary agents
+/// can legitimately carry that same bundle. The persisted bootstrap agent id
+/// keeps renamed CEOs recognizable without falling back to capability shape.
+fn looks_like_ceo(net: &NetworkAgent, bootstrapped_ceo_agent_id: Option<&str>) -> bool {
+    if bootstrapped_ceo_agent_id.is_some_and(|id| id == net.id) {
         return true;
     }
     let role = net.role.as_deref().unwrap_or("");
@@ -134,9 +132,12 @@ async fn dedupe_ceo_agents<'a>(
     network: &aura_os_network::NetworkClient,
     jwt: &str,
     net_agents: &'a [NetworkAgent],
+    bootstrapped_ceo_agent_id: Option<&str>,
 ) -> DedupeOutcome<'a> {
-    let mut candidates: Vec<&NetworkAgent> =
-        net_agents.iter().filter(|a| looks_like_ceo(a)).collect();
+    let mut candidates: Vec<&NetworkAgent> = net_agents
+        .iter()
+        .filter(|a| looks_like_ceo(a, bootstrapped_ceo_agent_id))
+        .collect();
     sort_ceo_candidates_oldest_first(&mut candidates);
 
     let Some((canonical, extras)) = candidates.split_first() else {
@@ -226,14 +227,12 @@ async fn ensure_canonical_ceo_permissions_persisted(
 
 /// Idempotent CEO-agent bootstrap.
 ///
-/// Looks up the caller's first org, scans its agents for anyone already
-/// holding the full [`AgentPermissions::ceo_preset`] bundle (with a
-/// name/role fallback — see [`looks_like_ceo`]), and either returns that
-/// record or creates a new one seeded with the preset via the standard
-/// `create_agent` network pipeline. If the scan finds multiple CEO
-/// records (e.g. from prior bootstrap races or permission round-trip
-/// bugs), the oldest is kept and the rest are deleted so the agents
-/// list stays clean.
+/// Looks up the caller's first org, scans its agents for the explicit CEO
+/// bootstrap identity, and either returns that record or creates a new one
+/// seeded with the full-access preset via the standard `create_agent` network
+/// pipeline. If the scan finds multiple CEO records (e.g. from prior bootstrap
+/// races), the oldest is kept and the rest are deleted so the agents list stays
+/// clean.
 pub(crate) async fn setup_ceo_agent(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
@@ -258,7 +257,17 @@ pub(crate) async fn setup_ceo_agent(
         Err(_) => ("My Organization".into(), "default".into()),
     };
 
-    let outcome = dedupe_ceo_agents(network, &jwt, &net_agents).await;
+    let bootstrapped_ceo_agent_id = state
+        .agent_service
+        .bootstrapped_ceo_agent_id()
+        .map(|id| id.to_string());
+    let outcome = dedupe_ceo_agents(
+        network,
+        &jwt,
+        &net_agents,
+        bootstrapped_ceo_agent_id.as_deref(),
+    )
+    .await;
     if let Some(canonical) = outcome.canonical {
         // Older aura-network deployments didn't persist the
         // `permissions` column for agents, leaving the canonical CEO
@@ -415,10 +424,87 @@ pub(crate) async fn cleanup_ceo_agents(
 
     let network = state.require_network_client()?;
     let net_agents = network.list_agents(&jwt).await.map_err(map_network_error)?;
-    let outcome = dedupe_ceo_agents(network, &jwt, &net_agents).await;
+    let bootstrapped_ceo_agent_id = state
+        .agent_service
+        .bootstrapped_ceo_agent_id()
+        .map(|id| id.to_string());
+    let outcome = dedupe_ceo_agents(
+        network,
+        &jwt,
+        &net_agents,
+        bootstrapped_ceo_agent_id.as_deref(),
+    )
+    .await;
     Ok(Json(CleanupCeoResponse {
         kept: outcome.canonical.map(|a| a.id.clone()),
         deleted: outcome.deleted,
         failed: outcome.failed,
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use aura_os_core::AgentPermissions;
+    use aura_os_network::NetworkAgent;
+
+    use super::looks_like_ceo;
+
+    fn network_agent(
+        name: &str,
+        role: Option<&str>,
+        permissions: AgentPermissions,
+    ) -> NetworkAgent {
+        NetworkAgent {
+            id: "agent-1".to_string(),
+            name: name.to_string(),
+            role: role.map(str::to_string),
+            personality: None,
+            system_prompt: None,
+            skills: None,
+            icon: None,
+            harness: None,
+            machine_type: None,
+            vm_id: None,
+            user_id: "user-1".to_string(),
+            org_id: None,
+            profile_id: None,
+            tags: None,
+            listing_status: None,
+            expertise: None,
+            jobs: None,
+            revenue_usd: None,
+            reputation: None,
+            permissions,
+            intent_classifier: None,
+            created_at: None,
+            updated_at: None,
+        }
+    }
+
+    #[test]
+    fn full_access_regular_agent_is_not_ceo_identity() {
+        let agent = network_agent("Builder", Some("Engineer"), AgentPermissions::full_access());
+        assert!(!looks_like_ceo(&agent, None));
+    }
+
+    #[test]
+    fn ceo_identity_matches_case_insensitively() {
+        let agent = network_agent("ceo", Some("CEO"), AgentPermissions::empty());
+        assert!(looks_like_ceo(&agent, None));
+    }
+
+    #[test]
+    fn bootstrapped_ceo_id_recognizes_renamed_ceo() {
+        let agent = network_agent("Orion", Some("Leader"), AgentPermissions::full_access());
+        assert!(looks_like_ceo(&agent, Some("agent-1")));
+    }
+
+    #[test]
+    fn ceo_identity_requires_name_and_role() {
+        let only_name = network_agent("CEO", Some("Engineer"), AgentPermissions::full_access());
+        let only_role = network_agent("Builder", Some("CEO"), AgentPermissions::full_access());
+
+        assert!(!looks_like_ceo(&only_name, None));
+        assert!(!looks_like_ceo(&only_role, None));
+    }
 }

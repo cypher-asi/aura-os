@@ -144,10 +144,9 @@ export interface Agent {
   /**
    * Required capability + scope bundle. The harness enforces these
    * unconditionally on every session — there is no role-based fallback.
-   * Regular agents carry an empty bundle; CEO/super-agents carry the
-   * universe-scope CEO preset. Use `isSuperAgent(agent)` from
-   * `@/types/permissions` to detect CEO agents — never branch on `role`
-   * or tags.
+   * Ordinary agents may carry full-access permissions; use
+   * `isSuperAgent(agent)` from `@/types/permissions` to detect the explicit
+   * CEO bootstrap identity, and use capability helpers for capability checks.
    */
   permissions: AgentPermissions;
   /**
