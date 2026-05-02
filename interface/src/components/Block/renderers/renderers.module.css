@@ -267,6 +267,27 @@
   text-decoration: underline;
 }
 
+.generatedImageResult {
+  display: flex;
+  align-items: flex-start;
+  margin-top: 6px;
+}
+
+.generatedImageLink {
+  display: inline-flex;
+  max-width: min(100%, 520px);
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.generatedImage {
+  display: block;
+  width: auto;
+  max-width: min(100%, 520px);
+  max-height: 520px;
+  object-fit: contain;
+}
+
 /* ── Generic (JSON) body ── */
 
 .genericSection + .genericSection {

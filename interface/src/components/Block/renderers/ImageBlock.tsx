@@ -49,6 +49,25 @@ export function ImageBlock({ entry, defaultExpanded }: ImageBlockProps) {
 
   const status = entry.pending ? "pending" : entry.isError ? "error" : "done";
 
+  if (imageUrl && status === "done") {
+    return (
+      <div className={styles.generatedImageResult} data-agent-proof="generated-image-visible">
+        <a
+          href={originalUrl || imageUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.generatedImageLink}
+        >
+          <img
+            src={imageUrl}
+            alt={prompt ?? "Generated image"}
+            className={styles.generatedImage}
+          />
+        </a>
+      </div>
+    );
+  }
+
   return (
     <Block
       icon={<ImageIcon size={12} />}

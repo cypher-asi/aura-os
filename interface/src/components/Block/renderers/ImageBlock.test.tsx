@@ -31,10 +31,11 @@ describe("ImageBlock", () => {
       />,
     );
 
-    expect(screen.getByRole("img", { name: "Generated" })).toHaveAttribute(
+    expect(screen.getByRole("img", { name: "Generated image" })).toHaveAttribute(
       "src",
       "https://cdn.example.com/cat.png",
     );
+    expect(screen.queryByRole("button", { name: /generated image/i })).not.toBeInTheDocument();
   });
 
   it("renders nested payload asset_url results", () => {
@@ -48,7 +49,7 @@ describe("ImageBlock", () => {
       />,
     );
 
-    expect(screen.getByRole("img", { name: "Generated" })).toHaveAttribute(
+    expect(screen.getByRole("img", { name: "Generated image" })).toHaveAttribute(
       "src",
       "https://cdn.example.com/nested-cat.png",
     );
