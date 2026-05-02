@@ -142,6 +142,9 @@ describe("useChatStream", () => {
     });
 
     expect(api.sendEventStream).not.toHaveBeenCalled();
+    expect(
+      useStreamStore.getState().entries[result.current.streamKey]?.progressText,
+    ).toBe("Generating image...");
     expect(generateImageStream).toHaveBeenCalledWith(
       "draw a fox",
       "gpt-image-2",

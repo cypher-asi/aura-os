@@ -179,27 +179,34 @@ The release system answers a different question:
 
 ## Local Update Smoke
 
-There is now a dedicated local script for exercising the packaged macOS updater
-path with a real signed `.app.tar.gz` bundle and the same per-channel manifest
-shape that `gh-pages` publishes:
+Use `infra/scripts/release/desktop-local-auto-update-smoke.mjs` to exercise a
+packaged desktop update with a real signed updater artifact and the same
+per-channel manifest shape that `gh-pages` publishes. This validates the "can
+the packaged desktop app discover, download, and install the published update
+bundle?" path that the lighter CI smoke does not fully answer.
 
-- `aura-os-desktop-release-flow/infra/scripts/release/desktop-local-auto-update-smoke.mjs` in the sibling release-flow repo
+Supported inputs:
 
-It is intended for validating the "can the packaged desktop app discover,
-download, and install the published update bundle?" question that the lighter CI
-smoke does not fully answer.
+- macOS: an installed older `.app` bundle, a signed newer `.app.tar.gz`, its
+  matching `.sig`, and the expected target version
+- Windows: an installed older `Aura.exe`, a signed newer NSIS `*-setup.exe`, its
+  matching `.sig`, and the expected target version
 
-Expected inputs:
+Example Windows run:
 
-- an installed `.app` bundle for the older desktop version
-- a signed newer `.app.tar.gz` updater bundle
-- the matching `.sig` file for that updater bundle
-- the expected target version
+```powershell
+node infra/scripts/release/desktop-local-auto-update-smoke.mjs `
+  --app "C:\Users\you\AppData\Local\Aura\Aura.exe" `
+  --update-bundle ".\packaged\windows-x64\aura-os-desktop_0.1.1_x64-setup.exe" `
+  --signature ".\packaged\windows-x64\aura-os-desktop_0.1.1_x64-setup.exe.sig" `
+  --target-version 0.1.1 `
+  --channel stable
+```
 
 The script spins up a local manifest server, launches the packaged app with a
 local updater base URL override, triggers an immediate re-check through the
-desktop API, and waits for the bundle version on disk to change to the target
-version.
+desktop API, posts `/api/update-install`, and waits for the installed app
+version on disk to change to the target version.
 
 ## Mobile Release Reporting
 

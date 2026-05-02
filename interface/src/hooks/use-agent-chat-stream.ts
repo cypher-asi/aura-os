@@ -188,6 +188,7 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
         const shouldStartNewSession = nextSendStartsNewSessionRef.current;
         nextSendStartsNewSessionRef.current = false;
         if (_generationMode === "image") {
+          core.setProgressText("Generating image...");
           await generateImageStream(
             userMsg.content,
             selectedModel,

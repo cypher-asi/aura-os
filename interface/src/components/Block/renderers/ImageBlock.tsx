@@ -20,8 +20,27 @@ interface ImageBlockProps {
 
 export function ImageBlock({ entry, defaultExpanded }: ImageBlockProps) {
   const data = parseResult(entry.result);
-  const imageUrl = (data?.imageUrl ?? data?.url ?? data?.image_url) as string | undefined;
-  const originalUrl = (data?.originalUrl ?? data?.original_url) as string | undefined;
+  const payload = data?.payload && typeof data.payload === "object"
+    ? data.payload as Record<string, unknown>
+    : null;
+  const imageUrl = (
+    data?.imageUrl ??
+    data?.url ??
+    data?.image_url ??
+    data?.assetUrl ??
+    data?.asset_url ??
+    payload?.imageUrl ??
+    payload?.url ??
+    payload?.image_url ??
+    payload?.assetUrl ??
+    payload?.asset_url
+  ) as string | undefined;
+  const originalUrl = (
+    data?.originalUrl ??
+    data?.original_url ??
+    payload?.originalUrl ??
+    payload?.original_url
+  ) as string | undefined;
   const model = (data as { meta?: { model?: string } } | null)?.meta?.model;
   const prompt =
     (data?.prompt as string | undefined) ??

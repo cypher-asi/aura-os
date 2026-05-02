@@ -77,6 +77,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
         const shouldStartNewSession = nextSendStartsNewSessionRef.current;
         nextSendStartsNewSessionRef.current = false;
         if (_generationMode === "image") {
+          core.setProgressText("Generating image...");
           await generateImageStream(
             userMsg.content,
             selectedModel,

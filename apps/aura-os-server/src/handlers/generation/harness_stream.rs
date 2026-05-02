@@ -1,11 +1,14 @@
 use std::convert::Infallible;
 
 use aura_os_core::HarnessMode;
-use aura_os_harness::{HarnessInbound, HarnessOutbound, SessionConfig, SessionModelOverrides};
+use aura_os_harness::{
+    HarnessCommandSender, HarnessInbound, HarnessOutbound, SessionConfig, SessionModelOverrides,
+};
 use aura_protocol::GenerationRequest;
 use axum::response::sse::{Event, KeepAlive, Sse};
 use futures_util::stream;
 use serde_json::json;
+use serde_json::Map;
 use tokio::sync::broadcast;
 use tracing::{error, warn};
 
@@ -78,9 +81,10 @@ fn project_id_to_org_id(state: &AppState, project_id: Option<&str>) -> Option<St
 }
 
 async fn fallback_user_primary_org_id(state: &AppState, jwt: &str) -> ApiResult<String> {
-    let client = state.network_client.as_ref().ok_or_else(|| {
-        ApiError::session_identity_missing("aura_org_id", "generation_session")
-    })?;
+    let client = state
+        .network_client
+        .as_ref()
+        .ok_or_else(|| ApiError::session_identity_missing("aura_org_id", "generation_session"))?;
     let orgs = client.list_orgs(jwt).await.map_err(map_network_error)?;
     orgs.into_iter()
         .next()
@@ -148,7 +152,13 @@ pub(super) async fn open_generation_stream(
             ApiError::bad_gateway(format!("sending harness generation request failed: {err}"))
         })?;
 
-    let stream = harness_generation_to_sse(state, harness_mode, session.session_id, rx);
+    let stream = harness_generation_to_sse(
+        state,
+        harness_mode,
+        session.session_id,
+        rx,
+        session.commands_tx.clone(),
+    );
     let boxed: SseStream = Box::pin(stream);
     Ok((
         SSE_NO_BUFFERING_HEADERS,
@@ -161,10 +171,11 @@ fn harness_generation_to_sse(
     harness_mode: HarnessMode,
     session_id: String,
     rx: broadcast::Receiver<HarnessOutbound>,
+    commands_tx: HarnessCommandSender,
 ) -> impl futures_core::Stream<Item = Result<Event, Infallible>> + Send {
     stream::unfold(
-        (state, rx, false, session_id),
-        move |(state, mut rx, done, session_id)| async move {
+        (state, rx, false, session_id, commands_tx),
+        move |(state, mut rx, done, session_id, commands_tx)| async move {
             if done {
                 return None;
             }
@@ -180,7 +191,10 @@ fn harness_generation_to_sse(
                                     session_id.clone(),
                                 );
                             }
-                            return Some((Ok(event), (state, rx, terminal, session_id)));
+                            return Some((
+                                Ok(event),
+                                (state, rx, terminal, session_id, commands_tx),
+                            ));
                         }
                     }
                     Err(broadcast::error::RecvError::Lagged(n)) => {
@@ -193,7 +207,7 @@ fn harness_generation_to_sse(
                             }))
                             .unwrap_or_else(|_| Event::default().data("{}"));
                         close_generation_session(state.clone(), harness_mode, session_id.clone());
-                        return Some((Ok(event), (state, rx, true, session_id)));
+                        return Some((Ok(event), (state, rx, true, session_id, commands_tx)));
                     }
                     Err(broadcast::error::RecvError::Closed) => {
                         let event = Event::default()
@@ -201,7 +215,7 @@ fn harness_generation_to_sse(
                             .json_data(json!({}))
                             .unwrap_or_else(|_| Event::default().data("{}"));
                         close_generation_session(state.clone(), harness_mode, session_id.clone());
-                        return Some((Ok(event), (state, rx, true, session_id)));
+                        return Some((Ok(event), (state, rx, true, session_id, commands_tx)));
                     }
                 }
             }
@@ -242,15 +256,7 @@ fn generation_event_to_sse(evt: HarnessOutbound) -> Option<(Event, bool)> {
             false,
         )),
         HarnessOutbound::GenerationCompleted(completed) => {
-            let mut payload = completed.payload;
-            if let Some(obj) = payload.as_object_mut() {
-                obj.insert("mode".to_string(), json!(completed.mode));
-            } else {
-                payload = json!({
-                    "mode": completed.mode,
-                    "payload": payload,
-                });
-            }
+            let payload = normalize_generation_completed_payload(completed.mode, completed.payload);
             Some((
                 Event::default()
                     .event("generation_completed")
@@ -278,5 +284,117 @@ fn generation_event_to_sse(evt: HarnessOutbound) -> Option<(Event, bool)> {
             true,
         )),
         _ => None,
+    }
+}
+
+fn normalize_generation_completed_payload(
+    mode: String,
+    payload: serde_json::Value,
+) -> serde_json::Value {
+    let mut payload = match payload {
+        serde_json::Value::Object(obj) => serde_json::Value::Object(obj),
+        other => {
+            return json!({
+                "mode": mode,
+                "payload": other,
+            });
+        }
+    };
+
+    if let Some(obj) = payload.as_object_mut() {
+        obj.insert("mode".to_string(), json!(mode));
+
+        let nested_payload = obj
+            .get("payload")
+            .and_then(|value| value.as_object())
+            .cloned();
+
+        if !obj.contains_key("imageUrl") {
+            if let Some(value) = string_field(
+                obj,
+                nested_payload.as_ref(),
+                &["imageUrl", "image_url", "assetUrl", "asset_url", "url"],
+            ) {
+                obj.insert("imageUrl".to_string(), json!(value));
+            }
+        }
+        if !obj.contains_key("originalUrl") {
+            if let Some(value) = string_field(
+                obj,
+                nested_payload.as_ref(),
+                &["originalUrl", "original_url"],
+            ) {
+                obj.insert("originalUrl".to_string(), json!(value));
+            }
+        }
+        if !obj.contains_key("artifactId") {
+            if let Some(value) = string_field(
+                obj,
+                nested_payload.as_ref(),
+                &["artifactId", "artifact_id", "id"],
+            ) {
+                obj.insert("artifactId".to_string(), json!(value));
+            }
+        }
+    }
+
+    payload
+}
+
+fn string_field(
+    obj: &Map<String, serde_json::Value>,
+    nested_obj: Option<&Map<String, serde_json::Value>>,
+    keys: &[&str],
+) -> Option<String> {
+    keys.iter()
+        .find_map(|key| obj.get(*key).and_then(|value| value.as_str()))
+        .or_else(|| {
+            nested_obj.and_then(|nested| {
+                keys.iter()
+                    .find_map(|key| nested.get(*key).and_then(|value| value.as_str()))
+            })
+        })
+        .map(str::to_string)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalize_generation_payload_aliases_artifact_fields() {
+        let payload = normalize_generation_completed_payload(
+            "image".to_string(),
+            json!({
+                "assetUrl": "https://cdn.example.com/image.png",
+                "original_url": "https://cdn.example.com/original.png",
+                "artifact_id": "artifact-1",
+            }),
+        );
+
+        assert_eq!(payload["mode"], "image");
+        assert_eq!(payload["imageUrl"], "https://cdn.example.com/image.png");
+        assert_eq!(
+            payload["originalUrl"],
+            "https://cdn.example.com/original.png"
+        );
+        assert_eq!(payload["artifactId"], "artifact-1");
+    }
+
+    #[test]
+    fn normalize_generation_payload_aliases_nested_payload_fields() {
+        let payload = normalize_generation_completed_payload(
+            "image".to_string(),
+            json!({
+                "payload": {
+                    "asset_url": "https://cdn.example.com/nested.png",
+                    "artifact_id": "artifact-2"
+                }
+            }),
+        );
+
+        assert_eq!(payload["mode"], "image");
+        assert_eq!(payload["imageUrl"], "https://cdn.example.com/nested.png");
+        assert_eq!(payload["artifactId"], "artifact-2");
     }
 }
