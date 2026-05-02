@@ -4,9 +4,9 @@ use std::time::Duration;
 
 use anyhow::Context;
 use async_trait::async_trait;
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use reqwest::StatusCode;
-use tokio::sync::{broadcast, Mutex};
+use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue};
+use tokio::sync::{Mutex, broadcast};
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tracing::{info, warn};
 
@@ -14,8 +14,8 @@ use aura_protocol::{InboundMessage, OutboundMessage};
 
 use crate::error::HarnessError;
 use crate::harness::{
-    build_remote_handshake, build_session_init, validate_session_init_identity, HarnessLink,
-    HarnessSession, SessionConfig,
+    HarnessLink, HarnessSession, SessionConfig, build_remote_handshake, build_session_init,
+    validate_session_init_identity,
 };
 use crate::ws_bridge::spawn_ws_bridge;
 
@@ -114,7 +114,7 @@ impl SwarmHarness {
                 Ok(r) if r.status().is_success() => match parse_agent_state(r).await {
                     Ok(state) => match state.state.as_str() {
                         "running" | "idle" => return Ok(()),
-                        "provisioning" | "stopping" => {
+                        "provisioning" | "starting" | "stopping" | "hibernating" | "waking" => {
                             info!(agent_id = %agent_id, state = %state.state, "Waiting for agent...");
                         }
                         "error" => {
@@ -170,10 +170,10 @@ impl SwarmHarness {
             .await
             .context("swarm create agent request failed")?;
         let agent_resp = parse_create_agent_response(response).await?;
-        if matches!(agent_resp.status.as_str(), "stopped" | "error") {
-            self.start_agent(base_url, &agent_resp.agent_id, headers.clone())
+        if let Some(action) = lifecycle_action_for_initial_status(&agent_resp.status) {
+            self.transition_agent(base_url, &agent_resp.agent_id, action, headers.clone())
                 .await
-                .context("swarm start agent request failed")?;
+                .with_context(|| format!("swarm {action} agent request failed"))?;
         }
         if !matches!(agent_resp.status.as_str(), "running" | "idle") {
             self.wait_for_agent_ready(&agent_resp.agent_id, token)
@@ -193,20 +193,21 @@ impl SwarmHarness {
         agent_body
     }
 
-    async fn start_agent(
+    async fn transition_agent(
         &self,
         base_url: &str,
         agent_id: &str,
+        action: &str,
         headers: HeaderMap,
     ) -> anyhow::Result<()> {
         let response = self
             .client
-            .post(format!("{base_url}/v1/agents/{agent_id}/start"))
+            .post(format!("{base_url}/v1/agents/{agent_id}/{action}"))
             .headers(headers)
             .send()
             .await
-            .context("swarm start agent request failed")?;
-        parse_lifecycle_response(response, "start").await
+            .with_context(|| format!("swarm {action} agent request failed"))?;
+        parse_lifecycle_response(response, action).await
     }
 
     async fn create_session(
@@ -313,6 +314,14 @@ async fn parse_create_agent_response(
         );
     }
     Ok(agent_resp)
+}
+
+fn lifecycle_action_for_initial_status(status: &str) -> Option<&'static str> {
+    match status {
+        "stopped" | "error" => Some("start"),
+        "hibernating" => Some("wake"),
+        _ => None,
+    }
 }
 
 async fn parse_agent_state(response: reqwest::Response) -> anyhow::Result<AgentStateResponse> {
@@ -595,5 +604,28 @@ mod tests {
         };
 
         assert_eq!(swarm_agent_display_name(&config), "agent");
+    }
+
+    #[test]
+    fn lifecycle_action_for_initial_status_wakes_hibernating_agents() {
+        assert_eq!(
+            lifecycle_action_for_initial_status("hibernating"),
+            Some("wake")
+        );
+    }
+
+    #[test]
+    fn lifecycle_action_for_initial_status_preserves_start_transitions() {
+        assert_eq!(
+            lifecycle_action_for_initial_status("stopped"),
+            Some("start")
+        );
+        assert_eq!(lifecycle_action_for_initial_status("error"), Some("start"));
+    }
+
+    #[test]
+    fn lifecycle_action_for_initial_status_leaves_ready_agents_alone() {
+        assert_eq!(lifecycle_action_for_initial_status("running"), None);
+        assert_eq!(lifecycle_action_for_initial_status("idle"), None);
     }
 }
