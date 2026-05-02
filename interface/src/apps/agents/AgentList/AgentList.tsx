@@ -111,8 +111,7 @@ function AgentConversationRowWithHistory({
 }) {
   const lastMessage = useChatHistoryStore((state) => {
     if (isMobileLibrary) return undefined;
-    const messages = state.entries[agentHistoryKey(agent.agent_id)]?.events;
-    return messages?.length ? messages[messages.length - 1] : undefined;
+    return state.previewLastMessages[agentHistoryKey(agent.agent_id)];
   });
 
   return (

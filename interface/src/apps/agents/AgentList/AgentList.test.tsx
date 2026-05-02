@@ -21,8 +21,16 @@ const mocks = vi.hoisted(() => ({
     mocks.pendingCreateAgentHandoff = { target, label };
   }),
   entries: {} as Record<string, unknown>,
+  previewLastMessages: {} as Record<string, unknown>,
   useChatHistoryStore: Object.assign(
-    (selector: (state: { entries: Record<string, unknown> }) => unknown) => selector({ entries: {} }),
+    (selector: (state: {
+      entries: Record<string, unknown>;
+      previewLastMessages: Record<string, unknown>;
+    }) => unknown) =>
+      selector({
+        entries: mocks.entries,
+        previewLastMessages: mocks.previewLastMessages,
+      }),
     {
       getState: () => ({
         prefetchHistory: vi.fn(),
@@ -122,11 +130,13 @@ vi.mock("../components/AgentEditorModal", () => ({
 vi.mock("../AgentConversationRow", () => ({
   AgentConversationRow: ({
     agent,
+    lastMessage,
     onClick,
     onContextMenu,
     onMouseEnter,
   }: {
     agent: { agent_id: string; name: string };
+    lastMessage?: { content?: string };
     onClick: () => void;
     onContextMenu?: (e: React.MouseEvent) => void;
     onMouseEnter?: () => void;
@@ -137,6 +147,7 @@ vi.mock("../AgentConversationRow", () => ({
       onClick={onClick}
       onContextMenu={onContextMenu}
       onMouseEnter={onMouseEnter}
+      data-last-message-content={lastMessage?.content ?? ""}
     >
       {agent.name}
     </button>
@@ -245,6 +256,8 @@ describe("AgentList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.pendingCreateAgentHandoff = null;
+    mocks.entries = {};
+    mocks.previewLastMessages = {};
     mocks.storeFetchAgents = vi.fn();
     mocks.storeRemoveAgent = vi.fn();
     mocks.storePatchAgent = vi.fn();
@@ -365,6 +378,21 @@ describe("AgentList", () => {
         expect.any(Function),
       );
     });
+  });
+
+  it("uses the preview message cache for row previews", () => {
+    mocks.useParams.mockReturnValue({ agentId: "agent-1" });
+    mocks.previewLastMessages = {
+      "agent:agent-1": { id: "evt-1", role: "assistant", content: "Stable preview" },
+    };
+
+    const view = render(<AgentList />);
+    const row = screen.getByRole("button", { name: "Builder Bot" });
+    expect(row).toHaveAttribute("data-last-message-content", "Stable preview");
+
+    mocks.previewLastMessages = {};
+    view.rerender(<AgentList />);
+    expect(row).toHaveAttribute("data-last-message-content", "");
   });
 
   it("does not prefetch history on mount in mobile-library mode", async () => {

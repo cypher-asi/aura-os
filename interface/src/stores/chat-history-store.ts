@@ -31,6 +31,7 @@ type HistoryEntry = {
 
 type ChatHistoryState = {
   entries: Record<string, HistoryEntry>;
+  previewLastMessages: Record<string, DisplaySessionEvent>;
   fetchHistory: (
     key: string,
     fetchFn: () => Promise<SessionEvent[]>,
@@ -52,6 +53,7 @@ type ChatHistoryState = {
 const HISTORY_TTL_MS = 30_000;
 const ERROR_TTL_MS = 10_000;
 const MAX_HISTORY_ENTRIES = 8;
+const MAX_HISTORY_PREVIEW_ENTRIES = 100;
 const MAX_HISTORY_EVENTS_PER_ENTRY = 500;
 
 /**
@@ -103,8 +105,30 @@ function withBoundedHistoryEntry(
   return next;
 }
 
+function withBoundedHistoryPreview(
+  previewLastMessages: Record<string, DisplaySessionEvent>,
+  key: string,
+  lastMessage: DisplaySessionEvent | undefined,
+): Record<string, DisplaySessionEvent> {
+  const next = { ...previewLastMessages };
+  delete next[key];
+  if (lastMessage) {
+    next[key] = lastMessage;
+  }
+
+  const keys = Object.keys(next);
+  if (keys.length <= MAX_HISTORY_PREVIEW_ENTRIES) return next;
+  for (const staleKey of keys) {
+    if (staleKey === key) continue;
+    delete next[staleKey];
+    if (Object.keys(next).length <= MAX_HISTORY_PREVIEW_ENTRIES) break;
+  }
+  return next;
+}
+
 export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
   entries: {},
+  previewLastMessages: {},
 
   fetchHistory: async (key, fetchFn, opts): Promise<void> => {
     const entry = get().entries[key];
@@ -150,6 +174,7 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
       })
       .then((data) => {
         const events = boundHistoryEvents(data.events);
+        const lastMessage = events.length ? events[events.length - 1] : undefined;
         set((s) => ({
           entries: withBoundedHistoryEntry(
             s.entries,
@@ -161,6 +186,11 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
               error: null,
               lastMessageAt: data.lastMessageAt,
             },
+          ),
+          previewLastMessages: withBoundedHistoryPreview(
+            s.previewLastMessages,
+            key,
+            lastMessage,
           ),
         }));
         useMessageStore.getState().setThread(key, events);
@@ -228,6 +258,11 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
           lastMessageAt: null,
         },
       ),
+      previewLastMessages: withBoundedHistoryPreview(
+        s.previewLastMessages,
+        key,
+        undefined,
+      ),
     }));
     void browserDbDelete(BROWSER_DB_STORES.chatHistory, key).catch(() => {});
   },
@@ -252,6 +287,7 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
     if (get().entries[key]?.status === "ready") return;
 
     const events = boundHistoryEvents(persisted.events);
+    const lastMessage = events.length ? events[events.length - 1] : undefined;
     set((s) => ({
       entries: withBoundedHistoryEntry(
         s.entries,
@@ -270,6 +306,11 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
           error: null,
           lastMessageAt: persisted.lastMessageAt ?? null,
         },
+      ),
+      previewLastMessages: withBoundedHistoryPreview(
+        s.previewLastMessages,
+        key,
+        lastMessage,
       ),
     }));
     useMessageStore.getState().setThread(key, events);

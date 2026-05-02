@@ -31,7 +31,7 @@ function makeMsg(id: string): SessionEvent {
 
 beforeEach(() => {
   queryClient.clear();
-  useChatHistoryStore.setState({ entries: {} });
+  useChatHistoryStore.setState({ entries: {}, previewLastMessages: {} });
 });
 
 describe("chat-history-store", () => {
@@ -50,6 +50,16 @@ describe("chat-history-store", () => {
       expect(entry.status).toBe("ready");
       expect(entry.events).toHaveLength(1);
       expect(entry.error).toBeNull();
+      expect(useChatHistoryStore.getState().previewLastMessages.k1?.id).toBe("m1");
+    });
+
+    it("keeps preview messages when bounded history entries are evicted", async () => {
+      for (let i = 0; i < 9; i += 1) {
+        await useChatHistoryStore.getState().fetchHistory(`k${i}`, makeFetchFn([makeMsg(`m${i}`)]));
+      }
+
+      expect(useChatHistoryStore.getState().entries.k0).toBeUndefined();
+      expect(useChatHistoryStore.getState().previewLastMessages.k0?.id).toBe("m0");
     });
 
     it("sets error status on failure", async () => {
@@ -140,6 +150,7 @@ describe("chat-history-store", () => {
         error: null,
         lastMessageAt: null,
       });
+      expect(useChatHistoryStore.getState().previewLastMessages.k7).toBeUndefined();
     });
   });
 
