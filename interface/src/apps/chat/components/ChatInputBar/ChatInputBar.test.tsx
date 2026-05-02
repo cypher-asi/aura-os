@@ -57,6 +57,43 @@ function makeProps(overrides: Partial<Parameters<typeof ChatInputBar>[0]> = {}) 
   };
 }
 
+function makeFileList(file: File): FileList {
+  return {
+    length: 1,
+    0: file,
+    item: (index: number) => (index === 0 ? file : null),
+    [Symbol.iterator]: function* iterator() {
+      yield file;
+    },
+  } as unknown as FileList;
+}
+
+function withMockDataTransfer(fileList: FileList, run: () => void) {
+  const originalDataTransfer = globalThis.DataTransfer;
+
+  class MockDataTransfer {
+    files = fileList;
+    items = {
+      add: vi.fn(),
+    };
+  }
+
+  // JSDOM does not provide a writable DataTransfer implementation for clipboard tests.
+  Object.defineProperty(globalThis, "DataTransfer", {
+    configurable: true,
+    value: MockDataTransfer,
+  });
+
+  try {
+    run();
+  } finally {
+    Object.defineProperty(globalThis, "DataTransfer", {
+      configurable: true,
+      value: originalDataTransfer,
+    });
+  }
+}
+
 beforeEach(() => {
   mockIsStreaming = false;
   mockIsMobileLayout = false;
@@ -360,16 +397,43 @@ describe("ChatInputBar", () => {
     expect(screen.getByRole("button", { name: "Send" })).toBeEnabled();
   });
 
-  it("preserves mixed text and image pastes for the browser to handle", () => {
+  it("intercepts image pastes even when the clipboard includes text formats", () => {
+    const file = new File(["img"], "pasted.png", { type: "image/png" });
+    const fileList = makeFileList(file);
+
+    withMockDataTransfer(fileList, () => {
+      const textarea = render(<ChatInputBar {...makeProps()} />).getByPlaceholderText("What do you want to create?");
+      const event = createEvent.paste(textarea, {
+        clipboardData: {
+          items: [
+            {
+              kind: "file",
+              type: "image/png",
+              getAsFile: () => file,
+            },
+            {
+              kind: "string",
+              type: "text/plain",
+              getAsFile: () => null,
+            },
+          ],
+        },
+      });
+
+      event.preventDefault = vi.fn();
+      fireEvent(textarea, event);
+
+      expect(event.preventDefault).toHaveBeenCalledOnce();
+      expect(mockAddFiles).toHaveBeenCalledTimes(1);
+      expect(mockAddFiles).toHaveBeenCalledWith(fileList);
+    });
+  });
+
+  it("preserves text-only pastes for the browser to handle", () => {
     const textarea = render(<ChatInputBar {...makeProps()} />).getByPlaceholderText("What do you want to create?");
     const event = createEvent.paste(textarea, {
       clipboardData: {
         items: [
-          {
-            kind: "file",
-            type: "image/png",
-            getAsFile: () => new File(["img"], "pasted.png", { type: "image/png" }),
-          },
           {
             kind: "string",
             type: "text/plain",
@@ -387,30 +451,10 @@ describe("ChatInputBar", () => {
   });
 
   it("intercepts pure image pastes and forwards them to attachments", () => {
-    const originalDataTransfer = globalThis.DataTransfer;
-    const fileList = {
-      length: 1,
-      0: new File(["img"], "pasted.png", { type: "image/png" }),
-      item: (index: number) => (index === 0 ? fileList[0] : null),
-      [Symbol.iterator]: function* iterator() {
-        yield fileList[0];
-      },
-    } as unknown as FileList;
+    const file = new File(["img"], "pasted.png", { type: "image/png" });
+    const fileList = makeFileList(file);
 
-    class MockDataTransfer {
-      files = fileList;
-      items = {
-        add: vi.fn(),
-      };
-    }
-
-    // JSDOM does not provide a writable DataTransfer implementation for clipboard tests.
-    Object.defineProperty(globalThis, "DataTransfer", {
-      configurable: true,
-      value: MockDataTransfer,
-    });
-
-    try {
+    withMockDataTransfer(fileList, () => {
       const textarea = render(<ChatInputBar {...makeProps()} />).getByPlaceholderText("What do you want to create?");
       const event = createEvent.paste(textarea, {
         clipboardData: {
@@ -418,7 +462,7 @@ describe("ChatInputBar", () => {
             {
               kind: "file",
               type: "image/png",
-              getAsFile: () => fileList[0],
+              getAsFile: () => file,
             },
           ],
         },
@@ -430,11 +474,6 @@ describe("ChatInputBar", () => {
       expect(event.preventDefault).toHaveBeenCalledOnce();
       expect(mockAddFiles).toHaveBeenCalledTimes(1);
       expect(mockAddFiles).toHaveBeenCalledWith(fileList);
-    } finally {
-      Object.defineProperty(globalThis, "DataTransfer", {
-        configurable: true,
-        value: originalDataTransfer,
-      });
-    }
+    });
   });
 });
