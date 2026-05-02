@@ -3,24 +3,41 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-01T10:42:00.577Z",
+  "generatedAt": "2026-05-02T05:18:07.367Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.426.1",
+  "version": "0.1.0-nightly.427.1",
   "date": "2026-05-01",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.426.1",
-  "lastIncludedSha": "977a0f7ac1d2091c606acf4dcd937a18a947712c",
-  "previousProcessedSha": "5ee87d54a3882bb18de0788cb5df5d4331ce4cfd",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.427.1",
+  "lastIncludedSha": "7f0ede707a413d7336c2245ae5f5cea6a33608a9",
+  "previousProcessedSha": "977a0f7ac1d2091c606acf4dcd937a18a947712c",
   "commitShas": [
     "f134511b28bf5db4103a22dcbc53cf83016d622b",
     "468f979761beba71da1bbc0b85859f8c49a7561b",
     "a8c653d676234f8bc463789f4cb697624b5558c2",
     "edeb438dc9346d33ec2d2b9cc10bcb20b2d2bd00",
     "bdee6c5916ad5779460f28712247ff21bc9a9897",
-    "977a0f7ac1d2091c606acf4dcd937a18a947712c"
+    "977a0f7ac1d2091c606acf4dcd937a18a947712c",
+    "8f3cbe1e8bc81e2bcfc43a43e124e62691ea6139",
+    "31e24487ce63e9dc25c24a70946b895017717599",
+    "7932e2c404e211caf6a8132e7040f96cf093369b",
+    "c847b858bbb7cedf919b7b0fe4d24b8e924433fd",
+    "8555c3165085b23065c8590e3026df39d1926cde",
+    "e5ee3af49900f117343909d3e97313137fc9a0ce",
+    "603e71538f04e048266459e74b3812555344802c",
+    "b0c153a7712d4a0f7d78f8385642f99084ce1091",
+    "270ec0a121f10451a1fb65df04cd1cec63665bf6",
+    "9a9091277c96e5fa534c6bd70cd55e67ed1b5d67",
+    "93c30011b23a9c6b280dd6d2e87e4673da4cd43e",
+    "d54c7b7c10c396ad130359e2af4514dbfaef5fe6",
+    "611098480768c6b5a39c6f86b03877d3f0d573d9",
+    "b03bad1d364f518d907f13d21aaff66b59535a46",
+    "c79bc79f35a0d525c3460a4e3466f411f66b8b48",
+    "68c823c35252dc43beeb2744b0fbff65385e73bd",
+    "7f0ede707a413d7336c2245ae5f5cea6a33608a9"
   ],
-  "rawCommitCount": 6,
-  "filteredCommitCount": 6,
+  "rawCommitCount": 23,
+  "filteredCommitCount": 23,
   "rawCommits": [
     {
       "sha": "f134511b28bf5db4103a22dcbc53cf83016d622b",
@@ -286,9 +303,719 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "8f3cbe1e8bc81e2bcfc43a43e124e62691ea6139",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-01T14:09:50-07:00",
+      "subject": "fix(server): capture dev-loop run bundles",
+      "body": "Wire harness stream events into loop log bundles and live heuristics so SWE failures retain actionable run evidence.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "977a0f7ac1d2091c606acf4dcd937a18a947712c"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop/adapter.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/streaming/mod.rs",
+        "apps/aura-os-server/src/loop_log/mod.rs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 243,
+        "deletions": 28
+      },
+      "committedAtMs": 1777669790000,
+      "cleanSubject": "capture dev-loop run bundles",
+      "keywords": [
+        "capture",
+        "loop",
+        "bundles"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "31e24487ce63e9dc25c24a70946b895017717599",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-01T15:55:19-07:00",
+      "subject": "feat(server): tier 1 fail-fast preflight for harness session identity",
+      "body": "Add a server-side preflight that fails loudly with HTTP 422\n`session_identity_missing` when a chat / dev-loop / project-tool\nsession would be opened against the harness with one of the required\n`X-Aura-*` identity fields missing (org id, session id, template /\nagent id, user id, JWT). Without this, the harness silently dropped\nthe missing header and the first LLM call surfaced later as a\nCloudflare 403 / generic 5xx with no actionable signal.\n\n* `ApiError::session_identity_missing(field, context)` constructor\n  emits a stable `missing_<field>` code plus structured\n  `data.context` so the UI / evals pipeline / integration tests can\n  match without parsing free text.\n* `handlers::agents::session_identity` ships per-call-site\n  `SessionIdentityRequirements` (CHAT, DEV_LOOP, PROJECT_TOOL,\n  GENERATION, SCHEDULED_PROCESS) plus `validate_session_identity` /\n  `validate_automaton_identity` helpers. PROJECT_TOOL relaxes\n  `template_agent_id` to \"any agent identity\" so the synthetic\n  `{tool_agent_name}-{project_id}` agent_id used for project-tool\n  sessions without a bound agent instance still passes.\n* Wire the validators into `chat::open_harness_chat_stream`,\n  `dev_loop::start_or_adopt`, `dev_loop::run_single_task`, and\n  `project_tool_session_config` so every session-open call site is\n  guarded uniformly.\n\nSide-effect cleanup: drop the three Windows-only\n`debug_log_session_shape*` shims that landed in 4cffca5f1 and wrote\nsynchronously to a hardcoded `C:\\code\\aura-os\\debug-95fd5c.log`\non every chat / dev-loop / project-tool start (silently dropped on\nLinux/macOS, unbounded growth, leaked data-length metrics). Replaced\nwith a single structured `tracing::debug!` event on the\n`aura_os_server::session_shape` target gated by normal `RUST_LOG`\ncontrols.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "8f3cbe1e8bc81e2bcfc43a43e124e62691ea6139"
+      ],
+      "files": [
+        "apps/aura-os-server/src/error/mod.rs",
+        "apps/aura-os-server/src/error/tests.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/streaming.rs",
+        "apps/aura-os-server/src/handlers/agents/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/session_identity.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/adapter.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/start.rs",
+        "apps/aura-os-server/src/handlers/projects_helpers/session.rs"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 682,
+        "deletions": 171
+      },
+      "committedAtMs": 1777676119000,
+      "cleanSubject": "tier 1 fail-fast preflight for harness session identity",
+      "keywords": [
+        "tier",
+        "fail",
+        "fast",
+        "preflight",
+        "harness",
+        "session",
+        "identity"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "7932e2c404e211caf6a8132e7040f96cf093369b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-01T16:00:39-07:00",
+      "subject": "feat(harness): tier 2 fail-fast preflight for session identity",
+      "body": "Add a harness-side identity preflight that mirrors the server's\nTier 1 contract so drift between the two layers stays observable\nfrom either side. If a server build forgets to call Tier 1 (or a\ndirect caller bypasses it entirely), the harness now refuses to\nemit a `SessionInit` / `POST /automaton/start` payload missing one\nof the required `X-Aura-*` header sources instead of letting the\nupstream proxy 403 without context.\n\n* `HarnessError::SessionIdentityMissing { field, context }` carries\n  the canonical wire field name (`aura_org_id`, `aura_session_id`,\n  `agent_id`, `auth_token`) and a static call-site label\n  (`session_init` / `automaton_start`).\n* New `HarnessError::session_identity_missing(&anyhow::Error)`\n  walks the cause chain to extract the structured variant — same\n  pattern the existing `is_capacity_exhausted` helper uses.\n* `validate_session_init_identity(&SessionConfig)` and\n  `validate_automaton_start_identity(&AutomatonStartParams)`\n  enforce the *intersection* of fields every real call site needs;\n  `user_id` is intentionally not required at this layer because\n  ad-hoc CLI / scheduled-process flows in `runner.rs` /\n  `process_automaton.rs` legitimately omit it.\n* Wire the validators into `LocalHarness::open_session`,\n  `SwarmHarness::open_session`, and `AutomatonClient::start` at the\n  very top of each function so no network work happens before the\n  preflight.\n* Server's `map_harness_error_to_api` gains a new branch that\n  funnels `HarnessError::SessionIdentityMissing` into\n  `ApiError::session_identity_missing(field, context)` so callers\n  see the same 422 response shape regardless of which side caught\n  the missing field.\n\nAdds 18 new unit tests across the harness validators, error helper,\nand the server's mapping branch.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "31e24487ce63e9dc25c24a70946b895017717599"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/errors.rs",
+        "crates/aura-os-harness/src/automaton_client.rs",
+        "crates/aura-os-harness/src/automaton_client/tests.rs",
+        "crates/aura-os-harness/src/error.rs",
+        "crates/aura-os-harness/src/harness.rs",
+        "crates/aura-os-harness/src/lib.rs",
+        "crates/aura-os-harness/src/local_harness.rs",
+        "crates/aura-os-harness/src/swarm_harness.rs"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 450,
+        "deletions": 7
+      },
+      "committedAtMs": 1777676439000,
+      "cleanSubject": "tier 2 fail-fast preflight for session identity",
+      "keywords": [
+        "tier",
+        "fail",
+        "fast",
+        "preflight",
+        "session",
+        "identity"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-harness/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Other"
+      ]
+    },
+    {
+      "sha": "c847b858bbb7cedf919b7b0fe4d24b8e924433fd",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-01T16:03:11-07:00",
+      "subject": "feat(server): give bare-agent chat parity with instance route",
+      "body": "Bring the `POST /v1/agents/:agent_id/chat/stream` route in line with\nthe project-bound instance route when an effective `project_id` is\npresent (either via the explicit `body.project_id` or inferred from\nthe agent's `find_matching_project_agents` binding). The bare-agent\nroute used to ship the raw template `system_prompt` and an empty\n`SessionConfig::project_path`, which silently dropped workspace\ncontext: the LLM never saw the canonical `<project_context>` block,\nand the harness's filesystem / command tools resolved against an\nempty cwd instead of the real repo. This was visible on the CEO\nagent's `send_to_agent` flow and on any direct bare-agent chat\nthat targeted a project.\n\nThe new `build_agent_system_prompt` helper:\n\n* Resolves `project_path` via `resolve_project_tool_workspace_path`\n  with `agent_instance_id = None` so the bare-agent path falls\n  through to the project-level workspace resolution (handles both\n  explicit `local_workspace_path` and the canonical `data_dir`\n  layout for Local / Swarm).\n* Wraps the agent template prompt with `build_project_system_prompt`\n  so the LLM gets the same `<project_context>` + IMPORTANT\n  reminders the instance route emits.\n* Falls back to the bare template prompt with no workspace path\n  when there is no effective project, preserving the legacy\n  unbound-bare-agent semantics.\n* Appends the project-state snapshot last, matching the instance\n  route's order.\n\nAlso threads the *effective* project id (rather than just\n`body.project_id`) into `SessionConfig.project_id` so a bare-agent\nchat that inferred its project from the persistence binding now\nhands the harness a consistent `(project_id, project_path,\nsystem_prompt)` triple — preventing the Tier 1 preflight from\nwarning on a project_id-without-project_path mismatch.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "7932e2c404e211caf6a8132e7040f96cf093369b"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/agent_route.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 72,
+        "deletions": 7
+      },
+      "committedAtMs": 1777676591000,
+      "cleanSubject": "give bare-agent chat parity with instance route",
+      "keywords": [
+        "give",
+        "bare",
+        "agent",
+        "chat",
+        "parity",
+        "with",
+        "instance",
+        "route"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "8555c3165085b23065c8590e3026df39d1926cde",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-01T16:06:55-07:00",
+      "subject": "feat(server,harness): map dev-loop WS connect capacity to 503",
+      "body": "Surface upstream WS-slot exhaustion that occurs during the\n*event-stream* connect (not just the initial `/automaton/start`\nHTTP call) as the structured `harness_capacity_exhausted` 503\nenvelope instead of a generic `bad_gateway` 502.\n\nPreviously, when a dev-loop / single-task automaton successfully\nposted to `/automaton/start` but the subsequent WS upgrade for\n`/automaton/{id}/stream` was rejected with HTTP 503 / WS 1013\n\"Try Again Later\", the dev-loop adapter mapped the error to\n`ApiError::bad_gateway(...)` with a flattened message. The frontend\nhad no way to recognise the capacity case from the wire shape and\nthe eval pipeline's retry/backoff logic that keys on the structured\n`harness_capacity_exhausted` code never fired.\n\nThree coordinated changes:\n\n* `AutomatonClient::connect_event_stream` now wraps WS-1013 / 503\n  errors with `HarnessError::CapacityExhausted` using the same\n  detection as `LocalHarness::open_session`\n  (`is_capacity_exhausted_ws_error`), which is now `pub(crate)`.\n* `runner::connect_with_retries` returns `anyhow::Result<...>`\n  instead of `Result<_, String>` so the typed cause survives into\n  the dev-loop adapter, AND short-circuits on a detected capacity\n  rejection (no point burning two more retry attempts at 500ms /\n  1000ms intervals when the upstream WS-slot semaphore won't free\n  up that quickly).\n* `dev_loop::adapter::start_loop` and `run_single_task` route the\n  `connect_with_retries` error through the shared\n  `map_harness_error_to_api` so the 503 envelope wins over the\n  generic fallback. The fallback closure is preserved for any\n  non-capacity transport failure.\n\n`runner::start_and_connect` keeps its existing `RunStartError::Connect\n{ message: String }` variant for backwards compatibility with the\nad-hoc CLI runner; it now stringifies the typed error at the\nboundary instead of receiving a pre-stringified one.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "c847b858bbb7cedf919b7b0fe4d24b8e924433fd"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop/adapter.rs",
+        "crates/aura-os-harness/src/automaton_client.rs",
+        "crates/aura-os-harness/src/local_harness.rs",
+        "crates/aura-os-harness/src/runner/mod.rs"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 67,
+        "deletions": 12
+      },
+      "committedAtMs": 1777676815000,
+      "cleanSubject": "map dev-loop WS connect capacity to 503",
+      "keywords": [
+        "loop",
+        "connect",
+        "capacity"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-harness/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Other"
+      ]
+    },
+    {
+      "sha": "e5ee3af49900f117343909d3e97313137fc9a0ce",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-01T16:14:00-07:00",
+      "subject": "feat(server,harness): thread session identity through generation + scheduled processes",
+      "body": "Bring the two adjacent harness call sites — image / 3D generation\nstreams and scheduled-process automatons — onto the same identity\ncontract chat / dev-loop already meet, so every outbound proxy\n`/v1/messages` call carries the canonical `X-Aura-Org-Id` /\n`X-Aura-Session-Id` / `X-Aura-User-Id` headers. Without this, eval\nbursts that exercised these surfaces bucketed as anonymous\nIP-only traffic on aura-router and tripped the WAF rule chat\nfrom the same account never reproduces.\n\nGeneration (`open_generation_stream`):\n\n* New `GenerationIdentity { aura_org_id, aura_session_id, user_id }`\n  bundle resolved by `resolve_generation_identity` from the auth\n  session + (optional) project_id. When `project_id` is set the\n  org is read from `project.org_id`; otherwise the user's first\n  available org from `network_client.list_orgs(jwt)` is used as\n  the fallback. Both surface a structured 422\n  `session_identity_missing { field: \"aura_org_id\" }` if neither\n  is available, instead of opening a session that would later\n  trip the harness Tier 2 preflight.\n* `aura_session_id` is a fresh UUID per stream — generation runs\n  are stateless, unlike chat / dev-loop where the persisted\n  session id is reused across reconnects.\n* GENERATION `SessionIdentityRequirements` upgraded from \"auth\n  token only\" to \"org + session + user + auth token + any agent\n  identity\"; the synthetic `generation-{uuid}` agent_id now\n  satisfies `require_any_agent_identity` in lieu of a\n  `template_agent_id`.\n* `harness.open_session` failures now route through\n  `map_harness_error_to_api` so capacity exhaustion + harness-side\n  identity preflight failures surface as the structured envelopes\n  instead of a generic `bad_gateway`.\n\nScheduled processes (`process_automaton::start_scheduled_process_automaton`):\n\n* `HarnessAutomatonStartParams` gains optional `aura_org_id` and\n  `aura_session_id` fields, mirroring the same pattern already\n  carried on `AutomatonStartParams` for dev-loop / single-task\n  automata. Both serialize with `skip_serializing_if = \"Option::is_none\"`\n  so pre-existing harnesses (which `#[serde(default)]` the field)\n  keep accepting the payload.\n* `aura_org_id` is sourced from `process.org_id` when the storage\n  record carries it, falling back to the locally-shadowed\n  project's `org_id`.\n* `aura_session_id` is a deterministic UUIDv5 derived from\n  `(process_id, run_id)` so retries / restarts of the same\n  logical run share a router bucket while concurrent runs of\n  different processes get distinct bucketing — same rationale as\n  `dev_loop::start::stable_dev_loop_session_id`.\n* `map_automaton_start_error` now recognises the harness's WS-slot\n  capacity 503 (empty body, opaque body, or canonical\n  `code: \"capacity_exhausted\"`) and remaps to the structured\n  `harness_capacity_exhausted` envelope instead of forwarding the\n  raw 503 body as a generic `harness_error`.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "8555c3165085b23065c8590e3026df39d1926cde"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/session_identity.rs",
+        "apps/aura-os-server/src/handlers/generation/harness_stream.rs",
+        "apps/aura-os-server/src/handlers/generation/image.rs",
+        "apps/aura-os-server/src/handlers/generation/model3d.rs",
+        "apps/aura-os-server/src/process_automaton.rs",
+        "crates/aura-os-harness/src/client.rs"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 260,
+        "deletions": 20
+      },
+      "committedAtMs": 1777677240000,
+      "cleanSubject": "thread session identity through generation + scheduled processes",
+      "keywords": [
+        "thread",
+        "session",
+        "identity",
+        "through",
+        "generation",
+        "scheduled",
+        "processes"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-harness/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "603e71538f04e048266459e74b3812555344802c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-01T20:15:40-07:00",
+      "subject": "fix(interface): accept mixed image clipboard pastes",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "e5ee3af49900f117343909d3e97313137fc9a0ce"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 76,
+        "deletions": 40
+      },
+      "committedAtMs": 1777691740000,
+      "cleanSubject": "accept mixed image clipboard pastes",
+      "keywords": [
+        "accept",
+        "mixed",
+        "image",
+        "clipboard",
+        "pastes"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "b0c153a7712d4a0f7d78f8385642f99084ce1091",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-01T20:16:38-07:00",
+      "subject": "fix(desktop): make Windows updater handoff resilient",
+      "body": "Launch the NSIS installer through PowerShell Start-Process so the installer can survive Aura exiting during update handoff.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "603e71538f04e048266459e74b3812555344802c"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/updater/install.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 101,
+        "deletions": 10
+      },
+      "committedAtMs": 1777691798000,
+      "cleanSubject": "make Windows updater handoff resilient",
+      "keywords": [
+        "make",
+        "windows",
+        "updater",
+        "handoff",
+        "resilient"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/src"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop"
+      ]
+    },
+    {
+      "sha": "270ec0a121f10451a1fb65df04cd1cec63665bf6",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-01T20:18:56-07:00",
+      "subject": "fix(evals): harden swebench scoring aggregation",
+      "body": "Make SWE-bench official scoring explicit by failing fast on native Windows unless driver-only mode is requested, and recover misplaced harness reports so score.json reflects official results when available.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "b0c153a7712d4a0f7d78f8385642f99084ce1091"
+      ],
+      "files": [
+        "infra/evals/external/swebench/bin/aggregate-score.mjs",
+        "infra/evals/external/swebench/bin/aggregate-score.test.mjs",
+        "infra/evals/external/swebench/bin/run.sh"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 212,
+        "deletions": 23
+      },
+      "committedAtMs": 1777691936000,
+      "cleanSubject": "harden swebench scoring aggregation",
+      "keywords": [
+        "harden",
+        "swebench",
+        "scoring",
+        "aggregation"
+      ],
+      "fileGroups": [
+        "infra/evals/external"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "9a9091277c96e5fa534c6bd70cd55e67ed1b5d67",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-01T20:20:10-07:00",
+      "subject": "fix(interface): route slash image through generation stream",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "270ec0a121f10451a1fb65df04cd1cec63665bf6"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatPanel/useChatPanelState.test.tsx",
+        "interface/src/apps/chat/components/ChatPanel/useChatPanelState.ts",
+        "interface/src/hooks/use-agent-chat-stream.test.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream.test.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts",
+        "interface/src/stores/message-queue-store.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 175,
+        "deletions": 4
+      },
+      "committedAtMs": 1777692010000,
+      "cleanSubject": "route slash image through generation stream",
+      "keywords": [
+        "route",
+        "slash",
+        "image",
+        "through",
+        "generation",
+        "stream"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/hooks",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "93c30011b23a9c6b280dd6d2e87e4673da4cd43e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-01T20:31:30-07:00",
+      "subject": "fix(interface): dedupe live chat turn tail",
+      "body": "Avoid rendering an optimistic user prompt alongside the persisted copy while the active assistant response is still streaming.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "9a9091277c96e5fa534c6bd70cd55e67ed1b5d67"
+      ],
+      "files": [
+        "interface/src/hooks/use-conversation-snapshot.test.ts",
+        "interface/src/hooks/use-conversation-snapshot.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 120,
+        "deletions": 4
+      },
+      "committedAtMs": 1777692690000,
+      "cleanSubject": "dedupe live chat turn tail",
+      "keywords": [
+        "dedupe",
+        "live",
+        "chat",
+        "turn",
+        "tail"
+      ],
+      "fileGroups": [
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "d54c7b7c10c396ad130359e2af4514dbfaef5fe6",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-01T20:31:51-07:00",
+      "subject": "fix(interface): keep slash image mode active",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "93c30011b23a9c6b280dd6d2e87e4673da4cd43e"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/apps/chat/components/ChatPanel/useChatPanelState.test.tsx",
+        "interface/src/apps/chat/components/ChatPanel/useChatPanelState.ts",
+        "interface/src/mobile/chat/MobileChatInputBar.tsx",
+        "interface/src/shared/api/sse.test.ts",
+        "interface/src/shared/api/sse.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 88,
+        "deletions": 8
+      },
+      "committedAtMs": 1777692711000,
+      "cleanSubject": "keep slash image mode active",
+      "keywords": [
+        "keep",
+        "slash",
+        "image",
+        "mode",
+        "active"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/mobile",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "611098480768c6b5a39c6f86b03877d3f0d573d9",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-01T20:35:00-07:00",
+      "subject": "fix(interface): stop agent selection chat jumps",
+      "body": "Avoid forcing chat scroll and focus resets when selecting standalone agents so the main pane stays stable.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "d54c7b7c10c396ad130359e2af4514dbfaef5fe6"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.test.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/apps/chat/components/ChatPanel/useChatPanelState.test.tsx",
+        "interface/src/apps/chat/components/ChatPanel/useChatPanelState.ts",
+        "interface/src/shared/hooks/use-scroll-anchor-v2.test.ts",
+        "interface/src/shared/hooks/use-scroll-anchor-v2.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 102,
+        "deletions": 14
+      },
+      "committedAtMs": 1777692900000,
+      "cleanSubject": "stop agent selection chat jumps",
+      "keywords": [
+        "stop",
+        "agent",
+        "selection",
+        "chat",
+        "jumps"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "b03bad1d364f518d907f13d21aaff66b59535a46",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-01T21:32:02-07:00",
+      "subject": "fix(interface,server): complete slash image generation flow",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "611098480768c6b5a39c6f86b03877d3f0d573d9"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/generation/harness_stream.rs",
+        "docs/release-workflows.md",
+        "interface/src/components/Block/renderers/ImageBlock.test.tsx",
+        "interface/src/components/Block/renderers/ImageBlock.tsx",
+        "interface/src/hooks/use-agent-chat-stream.test.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream.test.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 247,
+        "deletions": 39
+      },
+      "committedAtMs": 1777696322000,
+      "cleanSubject": "complete slash image generation flow",
+      "keywords": [
+        "complete",
+        "slash",
+        "image",
+        "generation",
+        "flow"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "docs/release-workflows.md",
+        "interface/src/components",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Docs",
+        "Other"
+      ]
+    },
+    {
+      "sha": "c79bc79f35a0d525c3460a4e3466f411f66b8b48",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-01T21:36:03-07:00",
+      "subject": "fix(interface): persist slash image results in chat",
+      "body": "Finalize generated image tool turns through the stream lifecycle so completed results become durable chat cards instead of being cleared with transient buffers.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "b03bad1d364f518d907f13d21aaff66b59535a46"
+      ],
+      "files": [
+        "interface/src/hooks/use-agent-chat-stream.test.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream.test.ts",
+        "interface/src/hooks/use-chat-stream/build-stream-handler.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 95,
+        "deletions": 4
+      },
+      "committedAtMs": 1777696563000,
+      "cleanSubject": "persist slash image results in chat",
+      "keywords": [
+        "persist",
+        "slash",
+        "image",
+        "results",
+        "chat"
+      ],
+      "fileGroups": [
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "68c823c35252dc43beeb2744b0fbff65385e73bd",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-01T21:54:37-07:00",
+      "subject": "fix(interface): render generated images as media",
+      "body": "Show completed image generation results as standalone larger media instead of nesting the image inside the generic tool block shell.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "c79bc79f35a0d525c3460a4e3466f411f66b8b48"
+      ],
+      "files": [
+        "interface/src/components/Block/renderers/ImageBlock.test.tsx",
+        "interface/src/components/Block/renderers/ImageBlock.tsx",
+        "interface/src/components/Block/renderers/renderers.module.css"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 43,
+        "deletions": 2
+      },
+      "committedAtMs": 1777697677000,
+      "cleanSubject": "render generated images as media",
+      "keywords": [
+        "render",
+        "generated",
+        "images",
+        "media"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "7f0ede707a413d7336c2245ae5f5cea6a33608a9",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-01T22:04:32-07:00",
+      "subject": "feat(evals): improve swebench smoke diagnostics",
+      "body": "Add a stratified SWE-bench smoke subset and include compact failure details in postmortems so benchmark runs surface environment, pollution, and hidden-test causes directly.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "68c823c35252dc43beeb2744b0fbff65385e73bd"
+      ],
+      "files": [
+        "infra/evals/external/swebench/bin/aggregate-score.mjs",
+        "infra/evals/external/swebench/bin/aggregate-score.test.mjs",
+        "infra/evals/external/swebench/bin/fetch-dataset.mjs",
+        "infra/evals/external/swebench/bin/fetch-dataset.test.mjs",
+        "infra/evals/external/swebench/datasets/README.md"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 139,
+        "deletions": 9
+      },
+      "committedAtMs": 1777698272000,
+      "cleanSubject": "improve swebench smoke diagnostics",
+      "keywords": [
+        "improve",
+        "swebench",
+        "smoke",
+        "diagnostics"
+      ],
+      "fileGroups": [
+        "infra/evals/external"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 6,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -297,36 +1024,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11690862
+          "sizeBytes": 11691542
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.426.1",
+      "version": "0.1.0-nightly.427.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.426.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.427.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 35243534
+          "sizeBytes": 35430806
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.426.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.427.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.426.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.427.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 102496760
+          "sizeBytes": 102689272
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.426.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.427.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -336,29 +1063,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.426.1",
+      "version": "0.1.0-nightly.427.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.426.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.427.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 31808937
+          "sizeBytes": 31969428
         },
         {
-          "name": "Aura_0.1.0-nightly.426.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.427.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.426.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.427.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 31612678
+          "sizeBytes": 31761575
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.426.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.427.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -368,29 +1095,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.426.1",
+      "version": "0.1.0-nightly.427.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.426.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.427.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33356949
+          "sizeBytes": 33525364
         },
         {
-          "name": "Aura_0.1.0-nightly.426.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.427.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.426.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.427.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33192993
+          "sizeBytes": 33373925
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.426.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.427.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -400,17 +1127,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.426.1",
+      "version": "0.1.0-nightly.427.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.426.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.427.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24019723
+          "sizeBytes": 24096259
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.426.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.427.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -419,44 +1146,196 @@
     }
   ],
   "rendered": {
-    "title": "Anonymous product analytics with a privacy opt-out",
-    "intro": "Today's nightly wires Aura into Mixpanel for anonymous, privacy-respecting product analytics. Tracking spans authentication, chat, AURA 3D, projects, agents, tasks, processes, integrations, notes, and billing — and ships alongside a new Privacy section in Settings where anyone can opt out.",
+    "title": "Product analytics, identity-safe sessions, and a polished slash-image flow",
+    "intro": "Today's nightly lands a privacy-aware product analytics layer in the interface, hardens every harness session with a two-tier identity preflight on both server and harness sides, and finishes the slash-image generation experience end-to-end. Reliability work also reached the Windows updater handoff and the SWE-bench scoring pipeline.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:31 AM",
         "started_at": "2026-05-01T09:31:59.000Z",
         "ended_at": "2026-05-01T10:28:04.000Z",
-        "title": "Mixpanel analytics rollout with Privacy settings opt-out",
-        "summary": "Aura's interface gains an end-to-end product analytics layer built on Mixpanel, paired with a user-facing Privacy panel and TypeScript fixes to keep the build green.",
+        "title": "Mixpanel product analytics with built-in privacy controls",
+        "summary": "A new anonymous-by-default analytics layer landed across the interface, instrumenting key product events and giving users explicit privacy controls.",
         "items": [
           {
-            "text": "Introduced an anonymous-by-default Mixpanel pipeline that tracks app open, sign-up, login, and chat sends with model metadata, honors DNT/GPC browser signals, supports localStorage opt-out, and stays fully disabled when VITE_MIXPANEL_TOKEN is unset.",
+            "text": "Introduced a Mixpanel-based analytics core that is anonymous by default, ships no PII, respects DNT/GPC browser signals, and stays disabled unless VITE_MIXPANEL_TOKEN is configured.",
             "commit_shas": [
               "f134511b28bf5db4103a22dcbc53cf83016d622b"
             ],
             "confidence": "high"
           },
           {
-            "text": "Expanded event coverage across the product surface — projects, agents, tasks, processes, AURA 3D image and model generation, marketplace hires, integrations, notes, feedback, settings/tier modal opens, and invite-code copies — plus chat-side events for model selection, agent selection, file attachments (with count), and session resets across all three reset paths.",
+            "text": "Instrumented the full product surface — projects, agents, tasks, processes, AURA 3D image and model generation, marketplace hires, integrations, notes, feedback, subscription starts and credit purchases, plus model selection, agent selection, file attachments and chat session resets.",
             "commit_shas": [
+              "468f979761beba71da1bbc0b85859f8c49a7561b",
               "a8c653d676234f8bc463789f4cb697624b5558c2",
               "edeb438dc9346d33ec2d2b9cc10bcb20b2d2bd00"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added subscription and credit-purchase tracking (plan and amount) and shipped a new Privacy section in Org Settings with a one-click opt-in/opt-out toggle for anonymous usage data.",
+            "text": "Added a Privacy section in Org Settings with an opt-in/opt-out toggle for anonymous usage data, and tightened the panel layout so the row stays compact while context lives in a section intro.",
             "commit_shas": [
-              "468f979761beba71da1bbc0b85859f8c49a7561b"
+              "468f979761beba71da1bbc0b85859f8c49a7561b",
+              "977a0f7ac1d2091c606acf4dcd937a18a947712c"
             ],
             "confidence": "high"
           },
           {
-            "text": "Polished the Privacy panel layout — moving the longer disclosure copy into a section intro paragraph beneath the toggle — and resolved TypeScript build errors in the analytics platform-detection cast and the project-creation event's orbit_repo field.",
+            "text": "Cleaned up TypeScript build breakage in the analytics platform detection and orbit project form so the new tracking compiles cleanly.",
             "commit_shas": [
-              "977a0f7ac1d2091c606acf4dcd937a18a947712c",
               "bdee6c5916ad5779460f28712247ff21bc9a9897"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "2:09 PM",
+        "started_at": "2026-05-01T21:09:50.000Z",
+        "ended_at": "2026-05-01T23:14:00.000Z",
+        "title": "Two-tier session identity preflight for every harness call site",
+        "summary": "Server- and harness-side preflights now fail loudly with a structured 422 the moment a session would open without its required X-Aura-* identity headers, replacing opaque downstream 403/5xx errors.",
+        "items": [
+          {
+            "text": "Added a Tier 1 server preflight that emits a stable session_identity_missing 422 with a per-field code whenever chat, dev-loop, project-tool, generation, or scheduled-process sessions are missing org id, session id, agent id, user id, or JWT — and removed the noisy Windows-only debug log shim that was writing synchronously to a hardcoded file on every session start.",
+            "commit_shas": [
+              "31e24487ce63e9dc25c24a70946b895017717599"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added a matching Tier 2 harness preflight on LocalHarness, SwarmHarness, and AutomatonClient::start so drift between server and harness stays observable from either side, with the server's error mapper funneling harness-side rejections into the same 422 response shape.",
+            "commit_shas": [
+              "7932e2c404e211caf6a8132e7040f96cf093369b"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Threaded canonical org / session / user identity through image and 3D generation streams and scheduled-process automatons, with a deterministic UUIDv5 session id per (process_id, run_id) so retries share a router bucket while concurrent runs stay isolated.",
+            "commit_shas": [
+              "e5ee3af49900f117343909d3e97313137fc9a0ce"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Mapped dev-loop WebSocket connect failures (HTTP 503 / WS 1013) to the structured harness_capacity_exhausted 503 envelope and short-circuited retries, so the eval pipeline's capacity-aware backoff actually fires instead of seeing a generic bad_gateway.",
+            "commit_shas": [
+              "8555c3165085b23065c8590e3026df39d1926cde"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Brought bare-agent chat to parity with the project-bound instance route by resolving the workspace path and wrapping the prompt with the canonical project_context block whenever an effective project is bound or inferred.",
+            "commit_shas": [
+              "c847b858bbb7cedf919b7b0fe4d24b8e924433fd"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Wired harness stream events into loop-log bundles and live heuristics so dev-loop and SWE-bench failures retain actionable run evidence after the fact.",
+            "commit_shas": [
+              "8f3cbe1e8bc81e2bcfc43a43e124e62691ea6139"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "8:15 PM",
+        "started_at": "2026-05-02T03:15:40.000Z",
+        "ended_at": "2026-05-02T03:16:38.000Z",
+        "title": "Mixed clipboard pastes and a sturdier Windows updater handoff",
+        "summary": "Two targeted fixes improved chat input behavior and the Windows update experience.",
+        "items": [
+          {
+            "text": "Chat input now correctly accepts clipboard pastes that mix images with other content instead of dropping the image payload.",
+            "commit_shas": [
+              "603e71538f04e048266459e74b3812555344802c"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "On Windows, the NSIS updater is now launched through PowerShell Start-Process so the installer survives Aura exiting mid-handoff, removing a class of stalled-update failures.",
+            "commit_shas": [
+              "b0c153a7712d4a0f7d78f8385642f99084ce1091"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-4",
+        "time_label": "8:18 PM",
+        "started_at": "2026-05-02T03:18:56.000Z",
+        "ended_at": "2026-05-02T03:18:56.000Z",
+        "title": "SWE-bench scoring made explicit and recoverable",
+        "summary": "The SWE-bench aggregation pipeline now fails fast in unsupported configurations and reconciles misplaced harness reports.",
+        "items": [
+          {
+            "text": "Aggregation now errors out on native Windows unless driver-only mode is explicitly requested, and recovers misplaced AURA.<runId>.json harness reports so score.json reflects official results when they exist.",
+            "commit_shas": [
+              "270ec0a121f10451a1fb65df04cd1cec63665bf6"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-5",
+        "time_label": "8:20 PM",
+        "started_at": "2026-05-02T03:20:10.000Z",
+        "ended_at": "2026-05-02T04:54:37.000Z",
+        "title": "Slash /image generation now works end-to-end in chat",
+        "summary": "A coordinated set of fixes routes the slash /image command through the generation stream, keeps it stable while queued, persists results, and renders them as proper media cards.",
+        "items": [
+          {
+            "text": "Slash /image now routes through the dedicated generation stream and preserves both image model and generation mode for queued sends, so the right backend and model are used even while another response is still streaming.",
+            "commit_shas": [
+              "9a9091277c96e5fa534c6bd70cd55e67ed1b5d67",
+              "d54c7b7c10c396ad130359e2af4514dbfaef5fe6"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Completed the slash-image flow on both interface and server, normalizing the generation_completed payload shape and threading harness command channels through the SSE bridge.",
+            "commit_shas": [
+              "b03bad1d364f518d907f13d21aaff66b59535a46"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Generated images are now finalized through the stream lifecycle into durable chat cards instead of being cleared with transient buffers, and render as standalone larger media rather than nested inside the generic tool block.",
+            "commit_shas": [
+              "c79bc79f35a0d525c3460a4e3466f411f66b8b48",
+              "68c823c35252dc43beeb2744b0fbff65385e73bd"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Stopped the live chat tail from rendering an optimistic prompt next to its persisted copy mid-stream, and stopped agent selection from forcing scroll and focus resets that yanked the chat pane around.",
+            "commit_shas": [
+              "93c30011b23a9c6b280dd6d2e87e4673da4cd43e",
+              "611098480768c6b5a39c6f86b03877d3f0d573d9"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-6",
+        "time_label": "10:04 PM",
+        "started_at": "2026-05-02T05:04:32.000Z",
+        "ended_at": "2026-05-02T05:04:32.000Z",
+        "title": "Stratified SWE-bench smoke subset with richer postmortems",
+        "summary": "SWE-bench smoke runs now exercise a stratified subset and emit compact failure details to make environment, pollution, and hidden-test causes obvious from the postmortem alone.",
+        "items": [
+          {
+            "text": "Added a stratified SWE-bench smoke subset and embedded compact failure details in postmortems so benchmark runs surface environment, pollution, and hidden-test causes directly.",
+            "commit_shas": [
+              "7f0ede707a413d7336c2245ae5f5cea6a33608a9"
             ],
             "confidence": "high"
           }
@@ -464,10 +1343,11 @@
       }
     ],
     "highlights": [
-      "Mixpanel analytics, anonymous by default",
-      "Honors DNT/GPC and a Settings opt-out",
-      "Coverage across chat, 3D, projects, billing"
+      "Mixpanel analytics shipped with DNT/GPC and an in-app opt-out",
+      "Two-tier session identity preflight prevents silent harness 403s",
+      "Slash /image generation now streams, persists, and renders as media",
+      "Windows updater handoff hardened via PowerShell Start-Process"
     ],
-    "raw_commit_count": 6
+    "raw_commit_count": 23
   }
 }

@@ -2,18 +2,19 @@
   {
     "date": "2026-05-01",
     "channel": "nightly",
-    "version": "0.1.0-nightly.426.1",
-    "title": "Anonymous product analytics with a privacy opt-out",
-    "intro": "Today's nightly wires Aura into Mixpanel for anonymous, privacy-respecting product analytics. Tracking spans authentication, chat, AURA 3D, projects, agents, tasks, processes, integrations, notes, and billing — and ships alongside a new Privacy section in Settings where anyone can opt out.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.427.1",
+    "title": "Product analytics, identity-safe sessions, and a polished slash-image flow",
+    "intro": "Today's nightly lands a privacy-aware product analytics layer in the interface, hardens every harness session with a two-tier identity preflight on both server and harness sides, and finishes the slash-image generation experience end-to-end. Reliability work also reached the Windows updater handoff and the SWE-bench scoring pipeline.",
+    "entryCount": 6,
     "highlights": [
-      "Mixpanel analytics, anonymous by default",
-      "Honors DNT/GPC and a Settings opt-out",
-      "Coverage across chat, 3D, projects, billing"
+      "Mixpanel analytics shipped with DNT/GPC and an in-app opt-out",
+      "Two-tier session identity preflight prevents silent harness 403s",
+      "Slash /image generation now streams, persists, and renders as media",
+      "Windows updater handoff hardened via PowerShell Start-Process"
     ],
-    "rawCommitCount": 6,
-    "generatedAt": "2026-05-01T10:42:00.577Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.426.1",
+    "rawCommitCount": 23,
+    "generatedAt": "2026-05-02T05:18:07.367Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.427.1",
     "path": "history/2026-05-01.json"
   },
   {
