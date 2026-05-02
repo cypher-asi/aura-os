@@ -1,4 +1,12 @@
-import { useState, useRef, useEffect, useCallback } from "react"
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
+} from "react"
+import { createPortal } from "react-dom"
 import { useEnvironmentInfo } from "../../../../hooks/use-environment-info"
 import { useAvatarState } from "../../../../hooks/use-avatar-state"
 import { useEventStore } from "../../../../stores/event-store/index"
@@ -79,12 +87,21 @@ function getActionsForState(state: string): ActionDef[] {
   }
 }
 
+function isNodeTarget(target: EventTarget | null): target is Node {
+  return typeof Node !== "undefined" && target instanceof Node
+}
+
 const POLL_INTERVAL = 15_000
+const STATUS_CARD_GAP = 6
+const STATUS_CARD_MIN_WIDTH = 220
+const STATUS_CARD_VIEWPORT_MARGIN = 8
 
 export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps) {
   const [open, setOpen] = useState(false)
   const [pinned, setPinned] = useState(false)
+  const [statusCardStyle, setStatusCardStyle] = useState<CSSProperties | null>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
+  const statusCardRef = useRef<HTMLDivElement>(null)
   const { data } = useEnvironmentInfo()
   const isLocal = machineType === "local"
   const isRemote = machineType === "remote" && !!agentId
@@ -225,12 +242,52 @@ export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps
     [agentId, actionLoading, pendingRecovery, refreshState],
   )
 
+  const updateStatusCardPosition = useCallback(() => {
+    const wrapper = wrapperRef.current
+    if (!wrapper || typeof window === "undefined") return
+
+    const rect = wrapper.getBoundingClientRect()
+    const maxLeft = Math.max(
+      STATUS_CARD_VIEWPORT_MARGIN,
+      window.innerWidth - STATUS_CARD_MIN_WIDTH - STATUS_CARD_VIEWPORT_MARGIN,
+    )
+    setStatusCardStyle({
+      left: Math.min(Math.max(rect.left, STATUS_CARD_VIEWPORT_MARGIN), maxLeft),
+      top: Math.max(rect.top - STATUS_CARD_GAP, STATUS_CARD_VIEWPORT_MARGIN),
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!open) {
+      setStatusCardStyle(null)
+      return
+    }
+
+    updateStatusCardPosition()
+    window.addEventListener("resize", updateStatusCardPosition)
+    window.addEventListener("scroll", updateStatusCardPosition, true)
+    return () => {
+      window.removeEventListener("resize", updateStatusCardPosition)
+      window.removeEventListener("scroll", updateStatusCardPosition, true)
+    }
+  }, [open, updateStatusCardPosition])
+
   const handleMouseEnter = useCallback(() => {
     if (!pinned) setOpen(true)
   }, [pinned])
-  const handleMouseLeave = useCallback(() => {
+
+  const handleMouseLeave = useCallback((event: ReactMouseEvent) => {
+    const nextTarget = event.relatedTarget
+    if (isNodeTarget(nextTarget) && statusCardRef.current?.contains(nextTarget)) return
     if (!pinned) setOpen(false)
   }, [pinned])
+
+  const handleStatusCardMouseLeave = useCallback((event: ReactMouseEvent) => {
+    const nextTarget = event.relatedTarget
+    if (isNodeTarget(nextTarget) && wrapperRef.current?.contains(nextTarget)) return
+    if (!pinned) setOpen(false)
+  }, [pinned])
+
   const handleClick = useCallback(() => {
     if (pinned) {
       setPinned(false)
@@ -245,7 +302,10 @@ export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps
   useEffect(() => {
     if (!open) return
     const onClickOutside = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      const insideWrapper = wrapperRef.current?.contains(target)
+      const insideStatusCard = statusCardRef.current?.contains(target)
+      if (!insideWrapper && !insideStatusCard) {
         setOpen(false)
         setPinned(false)
       }
@@ -256,28 +316,15 @@ export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps
 
   const remoteStatus = vmState?.state ?? (remoteStateError ? "error" : "running")
   const remoteErrorMessage = remoteStateError ?? vmState?.error_message
-
-  return (
-    <div
-      ref={wrapperRef}
-      className={styles.wrapper}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      <span className={styles.indicator} onClick={handleClick} role="button" tabIndex={0}>
-        <span
-          className={styles.dot}
-          data-status={
-            isRemote
-              ? remoteStatus
-              : (avatarState.isLocal ? "local" : (avatarState.status ?? "idle"))
-          }
-        />
-        {isLocal ? "Local" : "Remote"}
-      </span>
-
-      {open && (
-        <div className={styles.statusCard}>
+  const statusCard = open && typeof document !== "undefined"
+    ? createPortal(
+        <div
+          ref={statusCardRef}
+          className={styles.statusCard}
+          style={statusCardStyle ?? undefined}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleStatusCardMouseLeave}
+        >
           {isRemote ? (
             <>
               <div className={styles.statusRow}>
@@ -432,8 +479,32 @@ export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps
               </div>
             </>
           )}
-        </div>
-      )}
-    </div>
+        </div>,
+        document.body,
+      )
+    : null
+
+  return (
+    <>
+      <div
+        ref={wrapperRef}
+        className={styles.wrapper}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        <span className={styles.indicator} onClick={handleClick} role="button" tabIndex={0}>
+          <span
+            className={styles.dot}
+            data-status={
+              isRemote
+                ? remoteStatus
+                : (avatarState.isLocal ? "local" : (avatarState.status ?? "idle"))
+            }
+          />
+          {isLocal ? "Local" : "Remote"}
+        </span>
+      </div>
+      {statusCard}
+    </>
   )
 }

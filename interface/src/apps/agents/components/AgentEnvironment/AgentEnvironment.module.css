@@ -69,10 +69,9 @@
 }
 
 .statusCard {
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 0;
-  z-index: 100;
+  position: fixed;
+  z-index: 2000;
+  transform: translateY(-100%);
   background: var(--color-bg-secondary, #1a1a1a);
   border: 1px solid var(--color-border);
   border-radius: 6px;

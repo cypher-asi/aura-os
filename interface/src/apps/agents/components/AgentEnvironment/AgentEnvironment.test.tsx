@@ -59,6 +59,21 @@ describe("AgentEnvironment", () => {
     vi.useRealTimers()
   })
 
+  it("renders the status card outside the trigger stacking context", async () => {
+    const user = userEvent.setup()
+    const { container } = render(<AgentEnvironment machineType="remote" agentId="a1" />)
+
+    await waitFor(() => {
+      expect(swarmApiMocks.getRemoteAgentState).toHaveBeenCalledWith("a1")
+    })
+
+    await user.click(screen.getByRole("button", { name: "Remote" }))
+
+    const statusLabel = await screen.findByText("Status")
+    expect(document.body).toContainElement(statusLabel)
+    expect(container).not.toContainElement(statusLabel)
+  })
+
   it("shows Recovery for errored remote machines and calls recover endpoint", async () => {
     const user = userEvent.setup()
 
