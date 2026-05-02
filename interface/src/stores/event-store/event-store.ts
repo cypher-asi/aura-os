@@ -6,6 +6,7 @@ import { createReconnectingWebSocket } from "../../shared/hooks/ws-reconnect";
 import { resolveWsUrl } from "../../shared/lib/host-config";
 import { persistTaskOutputText } from "./task-output-cache";
 import { handleEngineEvent } from "./engine-event-handlers";
+import { startLoopActivityWatchdog, useLoopActivityStore } from "../loop-activity-store";
 
 export interface BuildStep {
   kind: "started" | "passed" | "failed" | "fix_attempt" | "skipped";
@@ -384,14 +385,8 @@ export function connectEventSocket() {
       // the unified circular progress indicator is accurate even if we
       // missed a `loop_activity_changed` event during the disconnect.
       if (connected) {
-        // Lazy import so the event-store module has no hard dependency
-        // on the loop activity store during initial bundle parsing.
-        void import("../loop-activity-store").then(
-          ({ useLoopActivityStore, startLoopActivityWatchdog }) => {
-            void useLoopActivityStore.getState().hydrate();
-            startLoopActivityWatchdog();
-          },
-        );
+        void useLoopActivityStore.getState().hydrate();
+        startLoopActivityWatchdog();
       }
     },
   );

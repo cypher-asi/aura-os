@@ -23,6 +23,8 @@ import { fullAccessAgentPermissions } from "../shared/types/permissions-wire";
 import { sanitizeRestorePath } from "../utils/last-app-path";
 import type { ProjectStatsData } from "../shared/api/projects";
 import { writeCaptureDemoProjectStats } from "./capture-demo-stats";
+import { useFeedStore } from "../stores/feed-store";
+import { useLoopActivityStore } from "../stores/loop-activity-store";
 
 const DESKTOP_WINDOWS_STORAGE_KEY = "aura:desktopWindows";
 const DEMO_PROJECT_ID = "22222222-2222-4222-8222-222222222222";
@@ -971,7 +973,6 @@ async function seedProcessWorkflow(): Promise<void> {
 }
 
 async function seedFeedTimeline(): Promise<void> {
-  const { useFeedStore } = await import("../stores/feed-store");
   const now = new Date();
   useFeedStore.setState({
     liveEvents: [
@@ -1240,7 +1241,6 @@ async function seedProfileWorkspace(
 }
 
 async function seedAgentActivity(agentId: string): Promise<void> {
-  const { useLoopActivityStore } = await import("../stores/loop-activity-store");
   const now = new Date().toISOString();
   useLoopActivityStore.getState().upsert(
     {

@@ -323,13 +323,11 @@ pub(crate) async fn run_single_task(
     // Tier 1 fail-fast: refuse to POST /automaton/start with a payload
     // missing one of the required X-Aura-* identity fields. Mirrors
     // the guard inside `start_or_adopt` for the dev-loop path.
-    if let Err(err) =
-        crate::handlers::agents::session_identity::validate_automaton_identity(
-            &params,
-            crate::handlers::agents::session_identity::SessionIdentityRequirements::DEV_LOOP,
-            "single_task_automaton",
-        )
-    {
+    if let Err(err) = crate::handlers::agents::session_identity::validate_automaton_identity(
+        &params,
+        crate::handlers::agents::session_identity::SessionIdentityRequirements::DEV_LOOP,
+        "single_task_automaton",
+    ) {
         let svc = state.agent_instance_service.clone();
         tokio::spawn(async move {
             let _ = svc.delete_instance(&ephemeral_instance_id).await;

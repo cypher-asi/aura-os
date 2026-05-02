@@ -129,8 +129,7 @@ fn harness_capacity_exhausted_returns_503_with_structured_data() {
 
 #[test]
 fn session_identity_missing_returns_422_with_stable_field_code() {
-    let (status, Json(api_err)) =
-        ApiError::session_identity_missing("aura_org_id", "chat_session");
+    let (status, Json(api_err)) = ApiError::session_identity_missing("aura_org_id", "chat_session");
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
     assert_eq!(api_err.code, "missing_aura_org_id");
     let data = api_err.data.expect("data must be populated");

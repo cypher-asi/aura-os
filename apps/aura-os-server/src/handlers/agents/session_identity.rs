@@ -225,9 +225,7 @@ pub(crate) fn validate_automaton_identity(
 }
 
 fn is_missing(value: Option<&str>) -> bool {
-    value
-        .map(|v| v.trim().is_empty())
-        .unwrap_or(true)
+    value.map(|v| v.trim().is_empty()).unwrap_or(true)
 }
 
 /// Replace the previous Windows-only file-logging shims

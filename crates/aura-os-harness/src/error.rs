@@ -115,8 +115,8 @@ mod tests {
 
     #[test]
     fn capacity_exhausted_matches_through_anyhow_chain() {
-        let err = anyhow::Error::new(HarnessError::CapacityExhausted)
-            .context("upstream WS slots full");
+        let err =
+            anyhow::Error::new(HarnessError::CapacityExhausted).context("upstream WS slots full");
         assert!(HarnessError::is_capacity_exhausted(&err));
     }
 

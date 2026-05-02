@@ -509,11 +509,14 @@ impl AutomatonClient {
                 // dev-loop adapter previously applied. Mirrors the
                 // same detection used in `LocalHarness::open_session`.
                 if crate::local_harness::is_capacity_exhausted_ws_error(&err) {
-                    return Err(anyhow::Error::new(crate::error::HarnessError::CapacityExhausted)
-                        .context(format!("automaton event stream connect rejected: {err}")));
+                    return Err(
+                        anyhow::Error::new(crate::error::HarnessError::CapacityExhausted)
+                            .context(format!("automaton event stream connect rejected: {err}")),
+                    );
                 }
-                return Err(anyhow::Error::new(err)
-                    .context("automaton event stream connect failed"));
+                return Err(
+                    anyhow::Error::new(err).context("automaton event stream connect failed")
+                );
             }
         };
         info!(automaton_id, "Connected to automaton event stream");
