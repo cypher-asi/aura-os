@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-05-02",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.429.1",
+    "title": "Remote chat resilience and a more observable Windows updater",
+    "intro": "Today's nightly hardens the remote chat path end-to-end and tightens up the Windows auto-update handoff. On the server, sessions now carry the right org identity and stalled remote streams surface real errors instead of hanging on \"connecting.\" On the desktop side, the Windows updater is more observable and runs off the runtime thread, while the interface gets steadier chat tails, sidebar previews, and composer focus.",
+    "entryCount": 6,
+    "highlights": [
+      "Remote chat no longer hangs when the harness goes silent",
+      "Windows updater handoff is now logged and relaunches reliably",
+      "Sidebar previews and the streaming chat tail stop flickering"
+    ],
+    "rawCommitCount": 9,
+    "generatedAt": "2026-05-02T22:31:59.345Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.429.1",
+    "path": "history/2026-05-02.json"
+  },
+  {
     "date": "2026-05-01",
     "channel": "nightly",
     "version": "0.1.0-nightly.428.1",
