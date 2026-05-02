@@ -73,6 +73,8 @@ fn restart_after_install(update: &Update) -> Result<(), String> {
 
 #[cfg(target_os = "windows")]
 const INSTALLER_STAGE_SUBDIR: &str = "runtime/updater";
+#[cfg(target_os = "windows")]
+const WINDOWS_NSIS_INSTALLER_ARGS: [&str; 2] = ["/P", "/R"];
 
 #[cfg(target_os = "windows")]
 fn sanitize_version_for_filename(version: &str) -> String {
@@ -129,6 +131,28 @@ fn stage_installer_bytes(data_dir: &Path, version: &str, bytes: &[u8]) -> Result
 }
 
 #[cfg(target_os = "windows")]
+fn windows_powershell_path() -> String {
+    std::env::var("SYSTEMROOT").map_or_else(
+        |_| "powershell.exe".to_string(),
+        |root| format!("{root}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"),
+    )
+}
+
+#[cfg(target_os = "windows")]
+fn windows_nsis_installer_argument_list() -> String {
+    WINDOWS_NSIS_INSTALLER_ARGS.join(", ")
+}
+
+#[cfg(target_os = "windows")]
+fn quoted_powershell_path_arg(path: &Path) -> std::ffi::OsString {
+    let mut arg = std::ffi::OsString::new();
+    arg.push("\"");
+    arg.push(path);
+    arg.push("\"");
+    arg
+}
+
+#[cfg(target_os = "windows")]
 fn spawn_windows_installer_with_flags(
     installer_path: &Path,
     creation_flags: u32,
@@ -136,12 +160,16 @@ fn spawn_windows_installer_with_flags(
     use std::os::windows::process::CommandExt;
     use std::process::Stdio;
 
-    let mut command = std::process::Command::new(installer_path);
+    let mut command = std::process::Command::new(windows_powershell_path());
     command
+        .args(["-NoProfile", "-WindowStyle", "Hidden"])
+        .args(["Start-Process"])
+        .arg(quoted_powershell_path_arg(installer_path))
         // `/P` enables passive mode in cargo-packager's NSIS template
         // (small progress window, no user interaction). `/R` asks the
         // installer to restart Aura once install completes.
-        .args(["/P", "/R"])
+        .arg("-ArgumentList")
+        .arg(windows_nsis_installer_argument_list())
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -156,16 +184,16 @@ fn spawn_windows_installer_with_flags(
 
 #[cfg(target_os = "windows")]
 fn spawn_windows_installer(installer_path: &Path) -> Result<u32, String> {
-    // Creation flags for the detached install child. Breaking away from any
-    // enclosing Job Object (wry/WebView2 can place the host process inside
-    // one) is what actually keeps the installer alive once Aura exits. Some
-    // Windows hosts disallow breakaway; retry without that flag so non-job
-    // launches still work.
+    // Launch through PowerShell's Start-Process instead of making the staged
+    // NSIS installer a direct child. This mirrors cargo-packager-updater and
+    // gives Windows a short-lived launcher that can hand off the installer
+    // before Aura exits and releases locked files.
     const DETACHED_PROCESS: u32 = 0x0000_0008;
     const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x0100_0000;
     const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
-    let base_flags = DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP;
+    let base_flags = DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW;
     let child = match spawn_windows_installer_with_flags(
         installer_path,
         base_flags | CREATE_BREAKAWAY_FROM_JOB,
@@ -175,12 +203,12 @@ fn spawn_windows_installer(installer_path: &Path) -> Result<u32, String> {
             warn!(
                 error = %primary_error,
                 installer = %installer_path.display(),
-                "failed to spawn Windows installer with job breakaway; retrying without breakaway"
+                "failed to spawn Windows installer launcher with job breakaway; retrying without breakaway"
             );
             spawn_windows_installer_with_flags(installer_path, base_flags).map_err(
                 |fallback_error| {
                     format!(
-                        "failed to spawn installer {} with breakaway ({primary_error}) or fallback ({fallback_error})",
+                        "failed to spawn installer launcher for {} with breakaway ({primary_error}) or fallback ({fallback_error})",
                         installer_path.display(),
                     )
                 },
@@ -305,4 +333,67 @@ pub(crate) fn start_install(state: UpdateState) -> Result<(), String> {
         }
     });
     Ok(())
+}
+
+#[cfg(all(test, target_os = "windows"))]
+mod tests {
+    use super::{
+        quoted_powershell_path_arg, sanitize_version_for_filename, stage_installer_bytes,
+        windows_nsis_installer_argument_list, INSTALLER_STAGE_SUBDIR,
+    };
+    use std::fs;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn unique_temp_dir(name: &str) -> PathBuf {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be after epoch")
+            .as_nanos();
+        std::env::temp_dir().join(format!("aura-updater-{name}-{unique}"))
+    }
+
+    #[test]
+    fn sanitizes_update_version_for_installer_filename() {
+        assert_eq!(
+            sanitize_version_for_filename("0.1.0-nightly+build/42"),
+            "0.1.0-nightly_build_42"
+        );
+    }
+
+    #[test]
+    fn formats_nsis_arguments_for_powershell_start_process() {
+        assert_eq!(windows_nsis_installer_argument_list(), "/P, /R");
+    }
+
+    #[test]
+    fn quotes_installer_path_for_powershell() {
+        let path = PathBuf::from(r"C:\Users\Test User\AppData\Local\Aura\aura setup.exe");
+        assert_eq!(
+            quoted_powershell_path_arg(&path).to_string_lossy(),
+            r#""C:\Users\Test User\AppData\Local\Aura\aura setup.exe""#
+        );
+    }
+
+    #[test]
+    fn stages_installer_bytes_under_updater_runtime_dir() {
+        let temp_dir = unique_temp_dir("stage");
+        fs::create_dir_all(&temp_dir).expect("create temp dir");
+
+        let staged = stage_installer_bytes(&temp_dir, "1.2.3+win/test", b"installer bytes")
+            .expect("stage installer");
+
+        assert_eq!(
+            staged,
+            temp_dir
+                .join(INSTALLER_STAGE_SUBDIR)
+                .join("aura-setup-1.2.3_win_test.exe")
+        );
+        assert_eq!(
+            fs::read(&staged).expect("read staged installer"),
+            b"installer bytes"
+        );
+
+        fs::remove_dir_all(&temp_dir).expect("remove temp dir");
+    }
 }
