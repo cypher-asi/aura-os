@@ -5,25 +5,8 @@
 }
 
 :root {
-  color-scheme: dark;
-  --color-accent: #ffffff !important;
-  --color-focus-ring: transparent !important;
-  --color-overlay-focus: transparent !important;
+  color-scheme: light dark;
   --font-sans: 'Inter Variable', sans-serif;
-  --color-spinner: #fff;
-  --color-text-muted: #555;
-  --status-pending: #5c6078;
-  --status-ready: #45aaf2;
-  --status-in-progress: #9CDCFE;
-  --status-done: #6b7280;
-  --status-failed: #ff6b6b;
-  --status-blocked: #ff8a50;
-  /* Unify the border token across every surface so tables, blocks, tools,
-     sidekick panes, overlays, and modals all render the same subtle outline
-     as the main LLM chat bubbles. Previously this value only lived on the
-     ChatPanel container, leaving everything outside chat on the brighter
-     vendor default (#4e4e4e). */
-  --color-border: #17171a;
 }
 
 html, body, #root {
@@ -31,7 +14,7 @@ html, body, #root {
   width: 100%;
   min-width: 0;
   margin: 0;
-  background: #000;
+  background: var(--color-bg);
   overflow: hidden;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -40,14 +23,6 @@ html, body, #root {
 html:has([role="dialog"][aria-modal="true"]),
 body:has([role="dialog"][aria-modal="true"]) {
   overflow: hidden;
-}
-
-[role="dialog"][aria-modal="true"] {
-  --color-bg: #000000;
-  --color-surface: #000000;
-  --color-elevated: #000000;
-  --color-backdrop: #000000;
-  background-color: #000000 !important;
 }
 
 @media (pointer: coarse), (max-width: 900px) {

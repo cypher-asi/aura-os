@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="en" style="background:#000">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="light dark" />
     <link rel="icon" type="image/png" href="/aura-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -10,9 +10,33 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
     />
-    <meta name="theme-color" content="#05070d" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#05070d" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <script>
+      // Stamp <html data-theme="..."> before any CSS or React boots so the
+      // first paint matches the user's persisted ZUI ThemeProvider choice
+      // (avoids a dark <-> light flash). Mirrors the storage shape
+      // ThemeProvider writes to localStorage["zui-theme"].
+      (function () {
+        try {
+          var raw = localStorage.getItem('zui-theme');
+          var theme = 'dark';
+          if (raw) {
+            var parsed = JSON.parse(raw);
+            if (parsed && typeof parsed.theme === 'string') theme = parsed.theme;
+          }
+          if (theme === 'system') {
+            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+          if (theme !== 'dark' && theme !== 'light') theme = 'dark';
+          document.documentElement.setAttribute('data-theme', theme);
+        } catch (_) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      })();
+    </script>
     <style>
       #aura-splash {
         position: fixed;
@@ -98,6 +122,26 @@
         display: none;
       }
 
+      [data-theme='light'] #aura-splash {
+        background:
+          radial-gradient(circle at 50% 42%, rgba(124, 58, 237, 0.12), transparent 32rem),
+          #ffffff;
+        color: #0f172a;
+      }
+
+      [data-theme='light'] #aura-splash .aura-splash-pulse {
+        background: rgba(15, 23, 42, 0.12);
+      }
+
+      [data-theme='light'] #aura-splash .aura-boot-error {
+        color: rgba(15, 23, 42, 0.86);
+      }
+
+      [data-theme='light'] #aura-splash .aura-boot-error-detail,
+      [data-theme='light'] #aura-splash .aura-boot-error-action {
+        color: rgba(30, 41, 59, 0.72);
+      }
+
       @keyframes aura-splash-scan {
         from {
           transform: translateX(-100%);
@@ -109,7 +153,7 @@
     </style>
     <title>AURA</title>
   </head>
-  <body style="background:#000">
+  <body>
     <div id="aura-splash" aria-hidden="true">
       <div class="aura-splash-mark">
         <div>AURA</div>

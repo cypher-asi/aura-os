@@ -3,9 +3,13 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@cypher-asi/zui";
 import "@fontsource-variable/inter";
 import "@cypher-asi/zui/styles";
-import "highlight.js/styles/github-dark.min.css";
+// App-specific tokens layer on top of ZUI's themes; must come before
+// index.css so app-level layout rules can still override token values.
+import "./styles/tokens.css";
 import "./index.css";
 import App from "./App";
+import { applyHighlightTheme } from "./lib/highlight-theme";
+import { HighlightThemeBridge } from "./components/HighlightThemeBridge";
 import { queryClient } from "./shared/lib/query-client";
 import { registerServiceWorker } from "./lib/registerServiceWorker";
 import {
@@ -62,9 +66,15 @@ bootstrapProcessStreamSubscriptions();
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("Missing #root element");
 markBootPhase("rendering React root");
+// Sync the highlight.js stylesheet to the data-theme that was stamped
+// inline in index.html (pre-React) so the first paint of any code block
+// is already in the right palette. The HighlightThemeBridge inside the
+// ThemeProvider keeps it in sync on subsequent theme changes.
+applyHighlightTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark");
 createRoot(rootEl).render(
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="dark" defaultAccent="purple">
+    <ThemeProvider defaultTheme="dark" defaultAccent="purple" disableTransitionOnChange>
+      <HighlightThemeBridge />
       <App />
     </ThemeProvider>
   </QueryClientProvider>,

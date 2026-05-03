@@ -1,0 +1,47 @@
+/* App-specific design tokens, layered on top of @cypher-asi/zui's themes.
+   ZUI provides the base palette (--color-bg, --color-surface, --color-text-*,
+   --color-success, etc.) keyed off [data-theme='dark'|'light']. The tokens
+   below are AURA-specific extensions and per-mode overrides; they live here
+   (not in vendor/zui) so app product tokens stay decoupled from the ZUI
+   package surface. Future phases will expand this file with editable chrome
+   tokens (--color-canvas-*, --color-node-*, --color-terminal-*, etc.). */
+
+:root,
+[data-theme='dark'] {
+  /* Status colors (task / agent / run state badges). */
+  --status-pending: #5c6078;
+  --status-ready: #45aaf2;
+  --status-in-progress: #9CDCFE;
+  --status-done: #6b7280;
+  --status-failed: #ff6b6b;
+  --status-blocked: #ff8a50;
+
+  /* Inline spinner stroke color — needs to read on the bg. */
+  --color-spinner: #fff;
+
+  /* Override of ZUI's --color-text-muted to match AURA's quieter
+     "secondary text" baseline in dark mode. */
+  --color-text-muted: #555;
+
+  /* Unify the border token across every surface so tables, blocks, tools,
+     sidekick panes, overlays, and modals all render the same subtle outline
+     as the main LLM chat bubbles. Previously this value only lived on the
+     ChatPanel container, leaving everything outside chat on the brighter
+     vendor default (#4e4e4e). */
+  --color-border: #17171a;
+}
+
+[data-theme='light'] {
+  --status-pending: #6b7280;
+  --status-ready: #2563eb;
+  --status-in-progress: #1d4ed8;
+  --status-done: #9ca3af;
+  --status-failed: #dc2626;
+  --status-blocked: #ea580c;
+
+  --color-spinner: #111;
+
+  --color-text-muted: #6b7280;
+
+  --color-border: #e5e7eb;
+}
