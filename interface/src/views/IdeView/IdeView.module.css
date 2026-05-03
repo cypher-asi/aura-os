@@ -2,8 +2,8 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: var(--color-bg, #0d1117);
-  color: var(--color-text-primary, #e6edf3);
+  background: var(--color-bg);
+  color: var(--color-text-primary);
   overflow: hidden;
 }
 
@@ -17,8 +17,8 @@
 }
 
 .sidebar {
-  background: var(--color-bg, #0d1117);
-  border-right: 1px solid var(--color-border, #30363d);
+  background: var(--color-bg);
+  border-right: 1px solid var(--color-border);
 }
 
 .editorPane {
@@ -36,8 +36,8 @@
   align-items: stretch;
   height: 34px;
   flex-shrink: 0;
-  background: var(--color-bg, #0d1117);
-  border-bottom: 1px solid var(--color-border, #30363d);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
   gap: 0;
 }
 
@@ -60,35 +60,35 @@
   gap: 6px;
   padding: 0 10px 0 14px;
   font-size: 12px;
-  color: var(--color-text-secondary, #8b949e);
+  color: var(--color-text-secondary);
   background: transparent;
   border: none;
-  border-right: 1px solid var(--color-border, #30363d);
+  border-right: 1px solid var(--color-border);
   cursor: pointer;
   white-space: nowrap;
   user-select: none;
 }
 
 .tab:hover {
-  background: var(--color-surface, #161b22);
+  background: var(--color-surface);
 }
 
 .tab.active {
-  color: var(--color-text-primary, #e6edf3);
-  background: var(--color-bg, #0d1117);
-  border-bottom: 2px solid var(--color-accent, #ffffff);
+  color: var(--color-text-primary);
+  background: var(--color-bg);
+  border-bottom: 2px solid var(--color-accent);
 }
 
 .tabDot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--color-text-secondary, #8b949e);
+  background: var(--color-text-secondary);
   flex-shrink: 0;
 }
 
 .tab.dirty .tabDot {
-  background: var(--color-accent, #ffffff);
+  background: var(--color-accent);
 }
 
 .tabClose {
@@ -108,15 +108,15 @@
 }
 
 .tabClose:hover {
-  background: var(--color-border, #30363d);
+  background: var(--color-border);
 }
 
 .tabCloseIcon {
-  color: var(--color-text-muted, #484f58);
+  color: var(--color-text-muted);
 }
 
 .tabClose:hover .tabCloseIcon {
-  color: var(--color-text-primary, #e6edf3);
+  color: var(--color-text-primary);
 }
 
 /* ---- Save button in tab bar ---- */
@@ -128,18 +128,18 @@
   padding: 0 12px;
   font-size: 11px;
   font-weight: 500;
-  color: var(--color-text-secondary, #8b949e);
+  color: var(--color-text-secondary);
   background: transparent;
   border: none;
-  border-left: 1px solid var(--color-border, #30363d);
+  border-left: 1px solid var(--color-border);
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .saveButton:hover:not(:disabled) {
-  color: var(--color-text-primary, #e6edf3);
-  background: var(--color-surface, #161b22);
+  color: var(--color-text-primary);
+  background: var(--color-surface);
 }
 
 .saveButton:disabled {
@@ -164,9 +164,9 @@
   padding: 12px 0;
   text-align: right;
   user-select: none;
-  color: var(--color-text-muted, #484f58);
-  background: var(--color-bg, #0d1117);
-  border-right: 1px solid var(--color-border, #30363d);
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  border-right: 1px solid var(--color-border);
   min-width: 48px;
   overflow: hidden;
 }
@@ -217,7 +217,7 @@
   tab-size: 2;
   background: transparent;
   color: transparent;
-  caret-color: var(--color-text-primary, #e6edf3);
+  caret-color: var(--color-text-primary);
   border: none;
   outline: none;
   resize: none;
@@ -226,7 +226,7 @@
 }
 
 .codeArea::selection {
-  background: rgba(56, 139, 253, 0.3);
+  background: var(--color-editor-selection);
 }
 
 /* ---- Status bar ---- */
@@ -239,9 +239,9 @@
   padding: 0 12px;
   gap: 16px;
   font-size: 11px;
-  color: var(--color-text-muted, #484f58);
-  background: var(--color-bg, #0d1117);
-  border-top: 1px solid var(--color-border, #30363d);
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  border-top: 1px solid var(--color-border);
 }
 
 .statusItem {
@@ -262,7 +262,7 @@
 }
 
 .error {
-  color: var(--color-danger, #f85149);
+  color: var(--color-danger);
 }
 
 .dangerText {
