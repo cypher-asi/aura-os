@@ -47,7 +47,7 @@ vi.mock("@cypher-asi/zui", () => ({
   ),
 }));
 
-vi.mock("../../../api/client", () => ({
+vi.mock("../../../../api/client", () => ({
   api: {
     agents: {
       update: (...args: unknown[]) => mockUpdate(...args),
@@ -57,12 +57,12 @@ vi.mock("../../../api/client", () => ({
   },
 }));
 
-vi.mock("../../../shared/utils/api-errors", () => ({
+vi.mock("../../../../shared/utils/api-errors", () => ({
   getApiErrorMessage: (err: unknown) =>
     err instanceof Error ? err.message : String(err),
 }));
 
-vi.mock("../stores", () => ({
+vi.mock("../../stores", () => ({
   useAgentStore: Object.assign(
     (selector: (state: { agents: unknown[] }) => unknown) =>
       typeof selector === "function" ? selector({ agents: [] }) : { agents: [] },
@@ -72,7 +72,7 @@ vi.mock("../stores", () => ({
   ),
 }));
 
-vi.mock("./AgentInfoPanel.module.css", () => ({
+vi.mock("../AgentInfoPanel.module.css", () => ({
   default: new Proxy({}, { get: (_target, prop) => String(prop) }),
 }));
 
@@ -80,7 +80,7 @@ vi.mock("./AgentInfoPanel.module.css", () => ({
 const projectsListState = {
   projects: [] as { project_id: string; name: string }[],
 };
-vi.mock("../../../stores/projects-list-store", () => ({
+vi.mock("../../../../stores/projects-list-store", () => ({
   useProjectsListStore: (
     selector: (s: typeof projectsListState) => unknown,
   ) =>
@@ -90,14 +90,14 @@ vi.mock("../../../stores/projects-list-store", () => ({
 const orgState = {
   orgs: [] as { org_id: string; name: string }[],
 };
-vi.mock("../../../stores/org-store", () => ({
+vi.mock("../../../../stores/org-store", () => ({
   useOrgStore: (selector: (s: typeof orgState) => unknown) =>
     typeof selector === "function" ? selector(orgState) : orgState,
 }));
 
 import { PermissionsTab } from "./PermissionsTab";
-import type { Agent } from "../../../shared/types";
-import type { AgentPermissions } from "../../../shared/types/permissions-wire";
+import type { Agent } from "../../../../shared/types";
+import type { AgentPermissions } from "../../../../shared/types/permissions-wire";
 
 function makeAgent(overrides: Partial<Agent> = {}): Agent {
   return {
