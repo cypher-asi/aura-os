@@ -1,5 +1,5 @@
 import { renderHook, waitFor } from "@testing-library/react";
-import type { DisplaySessionEvent } from "../shared/types/stream";
+import type { DisplaySessionEvent } from "../../shared/types/stream";
 
 type EventCallback = (event: { content?: Record<string, unknown> }) => void;
 
@@ -75,21 +75,21 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock("../stores/chat-history-store", () => ({
+vi.mock("../../stores/chat-history-store", () => ({
   useChatHistory: mocks.useChatHistory,
   useChatHistoryStore: mocks.useChatHistoryStore,
 }));
 
-vi.mock("./stream/hooks", () => ({
+vi.mock("../stream/hooks", () => ({
   useIsStreaming: mocks.useIsStreaming,
 }));
 
-vi.mock("./stream/store", () => ({
+vi.mock("../stream/store", () => ({
   getStreamEntry: mocks.getStreamEntry,
   streamMetaMap: mocks.streamMetaMap,
 }));
 
-vi.mock("../stores/event-store/index", () => ({
+vi.mock("../../stores/event-store/index", () => ({
   useEventStore: mocks.useEventStore,
 }));
 
@@ -136,7 +136,7 @@ const sidekickMocks = vi.hoisted(() => {
   };
 });
 
-vi.mock("../stores/sidekick-store", () => ({
+vi.mock("../../stores/sidekick-store", () => ({
   useSidekickStore: sidekickMocks.useSidekickStore,
 }));
 
@@ -144,7 +144,7 @@ const screenshotBridgeMocks = vi.hoisted(() => ({
   isAuraCaptureSessionActive: vi.fn(() => false),
 }));
 
-vi.mock("../lib/screenshot-bridge", () => ({
+vi.mock("../../lib/screenshot-bridge", () => ({
   isAuraCaptureSessionActive: screenshotBridgeMocks.isAuraCaptureSessionActive,
 }));
 
