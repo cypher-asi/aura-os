@@ -3,7 +3,7 @@
   align-items: center;
   gap: 2px;
   padding: 4px 6px;
-  background: var(--color-bg-subtle, #141414);
+  background: var(--color-surface);
 }
 
 .navButton {
@@ -15,13 +15,13 @@
   border-radius: var(--radius-sm, 4px);
   border: none;
   background: transparent;
-  color: var(--color-text-muted, #9a9a9a);
+  color: var(--color-text-muted);
   cursor: pointer;
 }
 
 .navButton:hover {
-  color: var(--color-text, #ededed);
-  background: var(--color-bg-hover, #1e1e1e);
+  color: var(--color-text-primary);
+  background: var(--color-overlay-light);
 }
 
 .navButton[aria-disabled="true"],
@@ -32,7 +32,7 @@
 
 .navButton:disabled:hover {
   background: transparent;
-  color: var(--color-text-muted, #9a9a9a);
+  color: var(--color-text-muted);
 }
 
 .inputWrap {
@@ -45,13 +45,13 @@
   padding: 0;
   border-radius: 999px;
   border: 1px solid transparent;
-  background: var(--color-bg, #1a1a1a);
+  background: var(--color-elevated);
   transition: border-color 120ms ease, background-color 120ms ease;
 }
 
 .inputWrap:focus-within {
-  border-color: var(--color-accent, #4c8bf5);
-  background: var(--color-bg, #0f0f0f);
+  border-color: var(--color-accent);
+  background: var(--color-bg);
 }
 
 .inputIcon {
@@ -62,7 +62,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-muted, #9a9a9a);
+  color: var(--color-text-muted);
   pointer-events: none;
 }
 
@@ -73,7 +73,7 @@
   border-radius: 999px;
   border: none;
   background: transparent;
-  color: var(--color-text, #ededed);
+  color: var(--color-text-primary);
   font-size: 12px;
   font-family: var(--font-sans, system-ui);
 }
@@ -101,17 +101,17 @@
   border-radius: 999px;
   border: none;
   background: transparent;
-  color: var(--color-text-muted, #9a9a9a);
+  color: var(--color-text-muted);
   cursor: pointer;
 }
 
 .actionButton:hover {
-  color: var(--color-text, #ededed);
-  background: var(--color-bg-hover, rgba(255, 255, 255, 0.08));
+  color: var(--color-text-primary);
+  background: var(--color-overlay-medium);
 }
 
 .actionButton[aria-pressed="true"] {
-  color: var(--color-accent, #4c8bf5);
+  color: var(--color-accent);
 }
 
 .detectedMenu {
@@ -123,9 +123,9 @@
   max-width: 320px;
   padding: 4px;
   border-radius: var(--radius-md, 6px);
-  background: var(--color-bg-elevated, #1a1a1a);
-  border: 1px solid var(--color-border, #2a2a2a);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  background: var(--color-elevated);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 8px 20px var(--color-backdrop-light);
   z-index: 4;
   display: flex;
   flex-direction: column;
@@ -141,17 +141,17 @@
   border-radius: var(--radius-sm, 4px);
   border: none;
   background: transparent;
-  color: var(--color-text, #ededed);
+  color: var(--color-text-primary);
   cursor: pointer;
   text-align: left;
 }
 
 .detectedItem:hover {
-  background: var(--color-bg-hover, #1e1e1e);
+  background: var(--color-overlay-light);
 }
 
 .detectedEmpty {
   padding: 8px;
   font-size: 12px;
-  color: var(--color-text-muted, #9a9a9a);
+  color: var(--color-text-muted);
 }
