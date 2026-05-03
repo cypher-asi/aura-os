@@ -1,59 +1,59 @@
-# Steadier remote chat and a more honest Windows updater
+# Steadier chat streams and a survivable Windows updater
 
 - Date: `2026-05-02`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.431.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.431.1
+- Version: `0.1.0-nightly.432.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.432.1
 
-Today's nightly tightens the seams across remote chat and the desktop updater: stalled harness sessions now fail loudly instead of hanging on "connecting", Windows updates leave a paper trail and reliably relaunch, and a cluster of interface fixes keeps streamed agent replies, sidebar previews, and the chat composer from flickering or losing focus.
+Today's nightly tightens the seams where chat meets persistence and where Windows desktop hands off to its own installer. Streaming replies stop blinking when history catches up, stalled remote sessions surface real errors instead of a frozen "connecting" state, and the Windows updater now leaves a paper trail and reliably relaunches Aura after install.
 
-## 2:37 PM — Remote chat sessions keep their org identity
+## 2:37 PM — Org identity for remote chat and a debuggable Windows updater handoff
 
-Server-side fix so harness-backed chat sessions always carry the org context the remote runtime needs.
+Two reliability fixes landed back to back: remote harness sessions now carry the right org header, and the Windows updater stops disappearing silently after install.
 
-- Chat sessions now backfill the X-Aura-Org-Id header from the project when agent metadata is missing it, so remote harness sessions no longer drop org context mid-handshake. (`9bbe1ae`)
+- Remote harness chat sessions now populate the X-Aura-Org-Id context from the project when agent metadata is incomplete, so server-side requests no longer drop their org identity. (`9bbe1ae`)
+- On Windows, the NSIS installer handoff now writes a per-version log and the desktop app retries its single-instance acquisition during an update relaunch, so updates that previously quit without diagnostics now leave evidence and come back up cleanly. (`b7d6168`)
 
-## 2:40 PM — Observable Windows updater handoff
+## 2:55 PM — Remote chat surfaces stalls instead of hanging on "connecting"
 
-The NSIS updater path on Windows now leaves diagnostics behind and brings Aura back up after install.
+Swarm session startup and the WebSocket bridge now treat silence and bad frames as real errors, so the UI can stop showing an indefinite connecting state.
 
-- Windows updates capture a per-version handoff log under the updater stage directory and run a relaunch script that brings Aura back after the NSIS installer exits, ending the silent-quit failure mode. (`b7d6168`)
-- The single-instance guard now waits up to 15s when AURA_UPDATE_RELAUNCH is set, so the relaunched process doesn't race the old one for the mutex. (`b7d6168`)
+- Swarm session startup waits for an explicit session_ready signal and a new turn watchdog broadcasts a synthetic terminal error if the remote runtime emits no events within 30s or runs past the 5-minute turn cap. (`33ad453`)
+- The WebSocket bridge now rejects unsupported frame types as terminal errors instead of letting the SSE keep-alive mask a dead stream, so chat fails fast with a real message. (`33ad453`)
 
-## 2:55 PM — Stalled remote streams fail fast
+## 2:56 PM — Updater installs move off the Tokio runtime thread
 
-Swarm-backed chat now surfaces explicit errors instead of leaving the UI stuck on the connecting state.
+The Windows install path is reworked so it doesn't deadlock the desktop event loop, and the local smoke script can verify NSIS builds.
 
-- Swarm session startup now waits for an explicit session_ready signal and a new turn watchdog broadcasts a terminal error if the remote runtime emits no events within 30s (or stays open past the 5-minute turn cap). (`33ad453`)
-- Unsupported websocket frames from the harness are now translated into stream errors over the SSE channel, so chat unblocks instead of hanging behind keep-alives. (`33ad453`)
+- User-approved installs now run on a named OS thread, so the tao event loop no longer needs a Tokio reactor to drive the updater handoff. (`9e66500`)
+- The desktop auto-update smoke script falls back to NSIS DisplayVersion when PE metadata is empty, keeping local Windows release verification working end to end. (`9e66500`)
 
-## 2:56 PM — Updater install moves off the Tokio runtime
+## 2:59 PM — Chat tail stability, sidebar previews, and an explicit CEO identity
 
-Desktop install kickoff and the Windows smoke check both got more robust against environment quirks.
+A long thread of interface fixes removes the flicker at the end of streamed replies, keeps the agent sidebar quiet, and stops treating any full-access agent as the bootstrap CEO.
 
-- User-approved updater installs now run on a dedicated aura-update-install OS thread, removing the requirement that the tao event loop carry a Tokio reactor at install time. (`9e66500`)
-- The Windows auto-update smoke script falls back to the NSIS DisplayVersion in the uninstall registry when PE ProductVersion/FileVersion are blank, so version checks stop failing on stripped installer metadata. (`9e66500`)
+- The streaming assistant tail is now preserved until persisted history semantically catches up, so end-of-turn replies stop remounting or briefly reverting to stale content in both the chat and standalone agent views. (`0dbf968`, `db539c0`)
+- Switching standalone agents now refocuses the chat composer via the shared desktop autofocus path, and the agent sidebar reads previews from a dedicated cache so rows don't churn as history entries get evicted. (`a33f494`, `983b01e`)
+- The agent environment status card is now portaled out of the chat input's stacking context, so hovering remote status no longer renders behind the thinking indicator. (`45cb631`)
+- CEO bootstrap now matches on the persisted bootstrap agent id instead of the full-access permission preset, so privileged non-CEO agents keep their own role and the swarm harness wakes hibernating agents reliably. (`5283d2f`, `9274780`)
 
-## 2:59 PM — End-of-turn flicker and sidebar preview churn
+## 5:07 PM — Windows updater relaunch flag wired through cargo-packager-updater
 
-Two interface fixes stop the chat tail and agent sidebar from visibly resetting on routine updates.
+A small follow-up aligns the custom NSIS handoff with the updater library so the staged installer can actually relaunch Aura after shutdown.
 
-- The trailing assistant bubble in chat no longer remounts when persisted history replaces the streaming placeholder, eliminating the end-of-turn flash. (`0dbf968`)
-- Agent sidebar previews now read from a dedicated bounded preview cache (up to 100 entries) instead of the evictable history store, so last-message snippets stay put even after history entries are pruned. (`a33f494`)
+- The Windows updater now passes the relaunch argument that cargo-packager-updater expects, completing the install-then-relaunch path on Windows. (`0df9e8e`)
 
-## 3:10 PM — Agent chat polish and CEO identity correctness
+## 5:16 PM — Cross-agent reloads recover empty terminal assistant rows
 
-An afternoon cluster of agent-chat fixes covering focus, layering, post-stream stability, hibernating swarm wake-ups, and a correctness fix for CEO deduplication.
+A late-day fix closes the last blink regression by reconstructing assistant content from persisted deltas when the terminal event lands without displayable text.
 
-- Switching standalone agents now restores the desktop autofocus path so the composer is ready as soon as the new thread loads, and the agent environment status card is portaled out of the chat-input stacking context so it can hover above the thinking indicator. (`983b01e`, `45cb631`)
-- Agent chats now preserve the streamed assistant tail until persisted history semantically catches up, so finished replies stop blinking or briefly reverting to stale content. (`db539c0`)
-- The swarm harness now wakes hibernating agents on demand instead of leaving them idle when a turn arrives. (`9274780`)
-- CEO bootstrap dedupe is now keyed on the persisted bootstrap agent id rather than the full-access permission preset, so ordinary privileged agents are no longer mistaken for the CEO and silently merged. (`5283d2f`)
+- Server-side history reconstruction now rebuilds completed assistant messages from text and thinking deltas when assistant_message_end was persisted without content, so cross-agent replies survive reloads. (`9cb703f`)
+- The chat message list restores its dedicated streaming bubble path and skips no-op history rewrites, eliminating the residual flash when persisted history replaces the live tail. (`9cb703f`)
 
 ## Highlights
 
-- Remote chat fails fast when the harness goes silent
-- Windows updater handoff is now logged and relaunches Aura
-- Streamed assistant replies no longer flash at end of turn
-- CEO agent identity is anchored to a real id, not permission shape
+- Chat tail no longer flashes when history syncs
+- Stalled remote agents now fail loudly instead of hanging
+- Windows updater logs its handoff and relaunches cleanly
+- Sidebar previews and CEO identity made stable
 
