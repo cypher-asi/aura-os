@@ -13,10 +13,10 @@ describe('Panel', () => {
     expect(container.querySelector('.custom-class')).toBeInTheDocument();
   });
 
-  it('applies glass variant by default', () => {
+  it('applies solid variant by default', () => {
     const { container } = render(<Panel>Content</Panel>);
     const panel = container.firstChild as HTMLElement;
-    expect(panel.style.backgroundColor).toBeDefined();
+    expect(panel.style.backgroundColor).toContain('var(--color-bg');
   });
 
   it('applies solid variant styles', () => {

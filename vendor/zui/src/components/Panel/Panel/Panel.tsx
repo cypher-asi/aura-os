@@ -91,7 +91,7 @@ const lightHoverBgOpen = 'rgba(255, 255, 255, 0.9)';
 
 export const Panel = forwardRef(function Panel(
   {
-    variant = 'glass',
+    variant = 'solid',
     background,
     border = 'future',
     borderRadius = 'none',
