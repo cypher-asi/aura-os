@@ -126,6 +126,33 @@ vi.mock("../OrgSettingsInvites", () => ({
 vi.mock("../OrgSettingsBilling", () => ({
   OrgSettingsBilling: () => <div data-testid="section-billing">Billing</div>,
 }));
+vi.mock("../OrgSettingsRewards", () => ({
+  OrgSettingsRewards: () => <div data-testid="section-rewards">Rewards</div>,
+}));
+vi.mock("../OrgSettingsCreditHistory/OrgSettingsCreditHistory", () => ({
+  OrgSettingsCreditHistory: () => <div data-testid="section-credit-history">Credit History</div>,
+}));
+vi.mock("../OrgSettingsPrivacy/OrgSettingsPrivacy", () => ({
+  OrgSettingsPrivacy: () => <div data-testid="section-privacy">Privacy</div>,
+}));
+vi.mock("../TierSubscriptionModal", () => ({
+  TierSubscriptionModal: () => null,
+}));
+vi.mock("../../views/SettingsView/AppearanceSection", () => ({
+  AppearanceSection: () => <div data-testid="section-appearance">Appearance</div>,
+}));
+vi.mock("../../views/SettingsView/AboutSection", () => ({
+  AboutSection: () => <div data-testid="section-about">About</div>,
+}));
+vi.mock("../../views/SettingsView/NotificationsSection", () => ({
+  NotificationsSection: () => <div data-testid="section-notifications">Notifications</div>,
+}));
+vi.mock("../../views/SettingsView/KeyboardSection", () => ({
+  KeyboardSection: () => <div data-testid="section-keyboard">Keyboard</div>,
+}));
+vi.mock("../../views/SettingsView/AdvancedSection", () => ({
+  AdvancedSection: () => <div data-testid="section-advanced">Advanced</div>,
+}));
 
 const mockNavigate = vi.fn();
 vi.mock("react-router-dom", () => ({
@@ -201,13 +228,35 @@ describe("OrgSettingsPanel", () => {
     expect(screen.queryByTestId("section-general")).not.toBeInTheDocument();
   });
 
-  it("renders all navigation items", () => {
+  it("renders all team navigation items", () => {
     renderPanel();
     expect(screen.getByText("General")).toBeInTheDocument();
     expect(screen.getByText("Members")).toBeInTheDocument();
     expect(screen.getByText("Invites")).toBeInTheDocument();
     expect(screen.getByText("Billing")).toBeInTheDocument();
     expect(screen.getByText("Integrations")).toBeInTheDocument();
+  });
+
+  it("renders all app navigation items alongside team items", () => {
+    renderPanel();
+    expect(screen.getByText("Appearance")).toBeInTheDocument();
+    expect(screen.getByText("Notifications")).toBeInTheDocument();
+    expect(screen.getByText("Keyboard")).toBeInTheDocument();
+    expect(screen.getByText("About")).toBeInTheDocument();
+    expect(screen.getByText("Advanced")).toBeInTheDocument();
+  });
+
+  it("switches to Appearance section (app-scoped)", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    await user.click(screen.getByText("Appearance"));
+    expect(screen.getByTestId("section-appearance")).toBeInTheDocument();
+  });
+
+  it("uses 'Settings' as the modal title", () => {
+    renderPanel();
+    expect(screen.getByRole("heading", { name: "Settings" })).toBeInTheDocument();
   });
 
   it("closes the modal and navigates to /integrations when Integrations is clicked", async () => {
@@ -278,6 +327,16 @@ describe("OrgSettingsPanel", () => {
 
       await user.click(screen.getByText("Close"));
       expect(onClose).toHaveBeenCalledOnce();
+    });
+
+    it("still renders app sections (Appearance) when no org is loaded", async () => {
+      mockOrgStore.activeOrg = null;
+      const user = userEvent.setup();
+      renderPanel();
+
+      await user.click(screen.getByText("Appearance"));
+      expect(screen.getByTestId("section-appearance")).toBeInTheDocument();
+      expect(screen.queryByText("Team settings are currently unavailable.")).not.toBeInTheDocument();
     });
   });
 });

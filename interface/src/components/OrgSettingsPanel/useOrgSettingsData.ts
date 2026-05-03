@@ -10,7 +10,25 @@ import { useCheckoutPolling } from "../../hooks/use-checkout-polling";
 import { CREDITS_UPDATED_EVENT } from "../CreditsBadge";
 import { NATIVE_BILLING_MESSAGE } from "../../lib/billing";
 
-type Section = "general" | "members" | "invites" | "billing" | "rewards" | "credit-history" | "privacy";
+// Team-scoped sections (rendered against the active org).
+type OrgSection = "general" | "members" | "invites" | "billing" | "rewards" | "credit-history" | "privacy";
+// App-scoped sections (rendered independent of the active org).
+type AppSection = "appearance" | "about" | "notifications" | "keyboard" | "advanced";
+export type Section = OrgSection | AppSection;
+
+const ORG_SECTIONS: ReadonlySet<OrgSection> = new Set([
+  "general",
+  "members",
+  "invites",
+  "billing",
+  "rewards",
+  "credit-history",
+  "privacy",
+]);
+
+export function isOrgSection(section: Section): section is OrgSection {
+  return ORG_SECTIONS.has(section as OrgSection);
+}
 
 export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
   const { isNativeApp } = useAuraCapabilities();

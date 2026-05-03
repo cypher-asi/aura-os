@@ -36,6 +36,22 @@
   color: var(--color-text-muted);
 }
 
+/* Small uppercase label that separates the App and Team groups in the
+   Settings sidebar. Matches the visual weight of the navHeader subtitle so
+   the sidebar reads as a structured outline. */
+.navGroupLabel {
+  padding: var(--space-3) var(--space-3) var(--space-1);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.navGroupLabel:first-of-type {
+  padding-top: 0;
+}
+
 .navFooter {
   margin-top: auto;
   padding-top: var(--space-3);

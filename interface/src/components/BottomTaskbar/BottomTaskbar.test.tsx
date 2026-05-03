@@ -265,12 +265,12 @@ describe("BottomTaskbar", () => {
     expect(screen.queryByText("1,200 Z")).not.toBeInTheDocument();
   });
 
-  it("opens team settings from the taskbar shortcut", async () => {
+  it("opens settings from the taskbar shortcut", async () => {
     const user = userEvent.setup();
 
     render(<BottomTaskbar />);
 
-    await user.click(screen.getByRole("button", { name: "Team settings" }));
+    await user.click(screen.getByRole("button", { name: "Settings" }));
 
     expect(openOrgSettings).toHaveBeenCalledTimes(1);
   });

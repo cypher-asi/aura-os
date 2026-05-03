@@ -126,8 +126,8 @@ export function BottomTaskbar() {
           />
           <TaskbarIconButton
             icon={<Settings size={TASKBAR_ICON_SIZE} />}
-            title="Team settings"
-            aria-label="Team settings"
+            title="Settings"
+            aria-label="Settings"
             onClick={openOrgSettings}
           />
           <AppNavRail
