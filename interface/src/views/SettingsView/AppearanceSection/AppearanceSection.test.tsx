@@ -69,6 +69,17 @@ describe("AppearanceSection", () => {
     expect(document.documentElement.dataset.theme).toBe("light");
   });
 
+  it("clicking Light persists the theme choice to localStorage", async () => {
+    const user = userEvent.setup();
+    renderWithTheme(<AppearanceSection />);
+
+    await user.click(screen.getByRole("button", { name: "Light" }));
+
+    const stored = localStorage.getItem(TEST_STORAGE_KEY);
+    expect(stored).not.toBeNull();
+    expect(JSON.parse(stored ?? "{}")).toMatchObject({ theme: "light" });
+  });
+
   it("clicking System resolves to the current system preference (dark)", async () => {
     mockMatchMedia(true);
     const user = userEvent.setup();

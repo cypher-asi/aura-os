@@ -197,4 +197,13 @@ describe("SettingsView", () => {
     );
     expect(screen.getByTestId("settings-update-retry")).toBeTruthy();
   });
+
+  it("renders the appearance section alongside the about panel", () => {
+    render(<SettingsView />);
+
+    expect(screen.getByTestId("settings-about-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("settings-appearance-panel")).toBeInTheDocument();
+    expect(screen.getByText("About")).toBeInTheDocument();
+    expect(screen.getByText("Appearance")).toBeInTheDocument();
+  });
 });

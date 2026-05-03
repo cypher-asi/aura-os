@@ -59,7 +59,6 @@ export function usePermissionsAutosave({
     // / "Save failed" badge from the previous selection doesn't bleed
     // into the new one. Mirrors the original combined agent-id effect
     // before the form/autosave split.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStatus({ kind: "idle" });
   }, [agentId]);
 
@@ -122,13 +121,17 @@ export function usePermissionsAutosave({
 
   // If the user navigates away (unmount) or switches agents while a
   // debounce is still pending, flush the latest draft immediately
-  // rather than silently dropping it.
+  // rather than silently dropping it. We intentionally read
+  // `draftRef.current` / `lastSavedRef.current` at cleanup time so
+  // we always send the most recent value the user typed, not a
+  // captured snapshot from when the effect was registered.
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current !== null) {
         clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;
         if (!permissionsEqual(draftRef.current, lastSavedRef.current)) {
+          // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional latest-value read at unmount
           void performSave(draftRef.current);
         }
       }
