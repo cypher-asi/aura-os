@@ -1,9 +1,14 @@
-import { Topbar, Button, useTheme, type Theme } from "@cypher-asi/zui";
+import { Topbar, Button, useTheme } from "@cypher-asi/zui";
 import { Server, Sun, Moon, MonitorSmartphone } from "lucide-react";
 import { OrgSelector } from "../OrgSelector";
 import { WindowControls } from "../WindowControls";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { windowCommand } from "../../lib/windowCommand";
+import {
+  cycleTheme,
+  getThemeToggleAriaLabel,
+  getThemeToggleIconKind,
+} from "../../lib/theme-toggle";
 import styles from "./DesktopShell.module.css";
 
 interface DesktopTitlebarProps {
@@ -12,21 +17,15 @@ interface DesktopTitlebarProps {
   onOpenHostSettings: () => void;
 }
 
-const THEME_CYCLE: Record<Theme, Theme> = {
-  dark: "light",
-  light: "system",
-  system: "dark",
-};
+const ICON_BY_KIND = {
+  sun: Sun,
+  moon: Moon,
+  system: MonitorSmartphone,
+} as const;
 
 function ThemeToggleButton() {
   const { theme, resolvedTheme, setTheme } = useTheme();
-
-  const Icon = theme === "system"
-    ? MonitorSmartphone
-    : resolvedTheme === "light"
-      ? Sun
-      : Moon;
-  const stateLabel = theme === "system" ? "system" : resolvedTheme;
+  const Icon = ICON_BY_KIND[getThemeToggleIconKind(theme, resolvedTheme)];
 
   return (
     <span className="titlebar-no-drag">
@@ -35,8 +34,8 @@ function ThemeToggleButton() {
         size="sm"
         iconOnly
         icon={<Icon size={16} />}
-        aria-label={`Switch theme (currently ${stateLabel})`}
-        onClick={() => setTheme(THEME_CYCLE[theme])}
+        aria-label={getThemeToggleAriaLabel(theme, resolvedTheme)}
+        onClick={() => setTheme(cycleTheme(theme))}
       />
     </span>
   );

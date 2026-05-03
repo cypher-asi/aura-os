@@ -3,6 +3,7 @@ import { Topbar, Button } from "@cypher-asi/zui";
 import { ArrowLeft, CircleUserRound, Menu, Plus, Settings } from "lucide-react";
 import { useMobileDrawerStore } from "../../stores/mobile-drawer-store";
 import { projectAgentsRoute, projectRootPath } from "../../utils/mobileNavigation";
+import { MobileThemeToggleButton } from "../../components/MobileThemeToggleButton";
 import type { MobileShellState } from "./useMobileShellState";
 import {
   buildMobileReturnState,
@@ -131,6 +132,7 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
                 onClick={() => navigate("/agents?create=1")}
               />
             ) : null}
+            <MobileThemeToggleButton />
             <Button
               variant="ghost"
               size="sm"

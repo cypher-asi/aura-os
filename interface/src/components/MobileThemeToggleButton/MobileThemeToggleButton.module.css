@@ -1,0 +1,28 @@
+.mobileThemeToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  border-radius: 8px;
+  color: var(--color-text);
+  cursor: pointer;
+  flex: 0 0 auto;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.mobileThemeToggle:hover {
+  background: var(--color-surface-tint);
+}
+
+.mobileThemeToggle:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.mobileThemeToggle:active {
+  background: var(--color-elevated-tint);
+}

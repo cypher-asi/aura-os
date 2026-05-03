@@ -254,6 +254,9 @@ vi.mock("../../components/PanelSearch", () => ({
 vi.mock("../../components/HostSettingsModal", () => ({
   HostSettingsModal: () => null,
 }));
+vi.mock("../../components/MobileThemeToggleButton", () => ({
+  MobileThemeToggleButton: () => <button aria-label="Switch theme (currently dark)" data-testid="mobile-theme-toggle" />,
+}));
 vi.mock("../../shared/lib/host-config", () => ({
   getHostDisplayLabel: () => "https://bad-host.example",
 }));
