@@ -1,0 +1,64 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.select {
+  flex: 1;
+  min-width: 180px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.inlineForm {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.nameInput {
+  flex: 1;
+  min-width: 160px;
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+}
+
+.nameInput:focus {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.error {
+  color: var(--color-error, var(--status-failed));
+}
+
+.successInline {
+  color: var(--color-text-muted);
+}

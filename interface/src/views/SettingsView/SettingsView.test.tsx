@@ -65,6 +65,25 @@ vi.mock("@cypher-asi/zui", () => ({
     </button>
   ),
   Spinner: () => <span data-testid="spinner" />,
+  Select: ({
+    children,
+    ...rest
+  }: {
+    children?: React.ReactNode;
+  } & Record<string, unknown>) => (
+    <select
+      data-testid={rest["data-testid"] as string | undefined}
+      aria-label={rest["aria-label"] as string | undefined}
+      value={rest.value as string | number | readonly string[] | undefined}
+      onChange={
+        rest.onChange as
+          | ((e: React.ChangeEvent<HTMLSelectElement>) => void)
+          | undefined
+      }
+    >
+      {children}
+    </select>
+  ),
   THEMES: ["dark", "light", "system"],
   ACCENT_COLORS: ["cyan", "blue", "purple", "green", "orange", "rose"],
   useTheme: () => ({

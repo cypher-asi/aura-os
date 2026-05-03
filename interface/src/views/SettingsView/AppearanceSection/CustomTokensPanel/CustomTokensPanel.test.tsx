@@ -138,6 +138,50 @@ describe("CustomTokensPanel", () => {
     ).toBe("#222222");
   });
 
+  it("shows 'Editing preset' note when an editable user preset is active", () => {
+    localStorage.setItem(
+      "aura-theme-presets",
+      JSON.stringify({
+        presets: [
+          {
+            id: "user-1",
+            name: "Twilight",
+            base: "dark",
+            overrides: { "--color-border": "#abcdef" },
+            version: 1,
+          },
+        ],
+        active: { dark: "user-1", light: null },
+        version: 1,
+      }),
+    );
+    renderWithTheme(<CustomTokensPanel />);
+    expect(
+      screen.getByTestId("custom-tokens-preset-note"),
+    ).toHaveTextContent("Editing preset: Twilight");
+    expect(screen.queryByTestId("custom-tokens-readonly-note")).toBeNull();
+  });
+
+  it("disables inputs and shows the read-only note when a built-in is active", () => {
+    localStorage.setItem(
+      "aura-theme-presets",
+      JSON.stringify({
+        presets: [],
+        active: { dark: "aura-dark", light: null },
+        version: 1,
+      }),
+    );
+    renderWithTheme(<CustomTokensPanel />);
+    const note = screen.getByTestId("custom-tokens-readonly-note");
+    expect(note).toHaveTextContent("Aura Dark is read-only");
+    expect(
+      screen.getByRole("textbox", { name: "Border CSS value" }),
+    ).toBeDisabled();
+    expect(screen.getByLabelText("Border color picker")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Reset all" })).toBeDisabled();
+    expect(screen.queryByTestId("custom-tokens-preset-note")).toBeNull();
+  });
+
   it("Reset all clears every override for the current theme", async () => {
     const user = userEvent.setup();
     localStorage.setItem(

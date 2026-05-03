@@ -92,9 +92,16 @@ type TokenRowProps = {
   label: string;
   currentValue: string | undefined;
   onChange: (value: string | null) => void;
+  disabled?: boolean;
 };
 
-function TokenRow({ token, label, currentValue, onChange }: TokenRowProps) {
+function TokenRow({
+  token,
+  label,
+  currentValue,
+  onChange,
+  disabled = false,
+}: TokenRowProps) {
   const { draft, isInvalid, handleTextChange, handleColorChange, handleReset } =
     useTokenRowState(currentValue, onChange);
   const hasOverride = typeof currentValue === "string";
@@ -122,6 +129,7 @@ function TokenRow({ token, label, currentValue, onChange }: TokenRowProps) {
           value={toColorInputValue(currentValue)}
           onChange={handleColorChange}
           className={styles.colorInput}
+          disabled={disabled}
         />
         <input
           id={`token-text-${token}`}
@@ -134,12 +142,14 @@ function TokenRow({ token, label, currentValue, onChange }: TokenRowProps) {
           value={draft}
           onChange={handleTextChange}
           className={textInputClass}
+          disabled={disabled}
         />
         <Button
           size="sm"
           variant="ghost"
           onClick={handleReset}
           aria-label={`Reset ${label}`}
+          disabled={disabled}
         >
           Reset
         </Button>
@@ -149,10 +159,20 @@ function TokenRow({ token, label, currentValue, onChange }: TokenRowProps) {
 }
 
 export function CustomTokensPanel() {
-  const { overrides, setToken, resetAll } = useThemeOverrides();
+  const { overrides, setToken, resetAll, presets, activePresetId } =
+    useThemeOverrides();
+  const activePreset = activePresetId
+    ? (presets.find((p) => p.id === activePresetId) ?? null)
+    : null;
+  const readOnly = activePreset?.readOnly === true;
+  const editingPreset = activePreset !== null && !readOnly;
+
+  const rootClass = readOnly
+    ? `${styles.root} ${styles.rootDisabled}`
+    : styles.root;
 
   return (
-    <div className={styles.root} data-testid="custom-tokens-panel">
+    <div className={rootClass} data-testid="custom-tokens-panel">
       <Text weight="semibold" size="sm">
         Custom colors
       </Text>
@@ -160,6 +180,22 @@ export function CustomTokensPanel() {
         Customize chrome colors for the current theme. Changes are local to your
         browser.
       </Text>
+
+      {editingPreset && activePreset && (
+        <Text size="xs" data-testid="custom-tokens-preset-note">
+          Editing preset: {activePreset.name}
+        </Text>
+      )}
+      {readOnly && activePreset && (
+        <Text
+          size="xs"
+          variant="muted"
+          data-testid="custom-tokens-readonly-note"
+        >
+          {activePreset.name} is read-only. Click &ldquo;Save as preset&rdquo;
+          above to start customizing.
+        </Text>
+      )}
 
       <div className={styles.rows}>
         {EDITABLE_TOKENS.map((token) => (
@@ -169,12 +205,18 @@ export function CustomTokensPanel() {
             label={TOKEN_LABELS[token]}
             currentValue={overrides[token]}
             onChange={(value) => setToken(token, value)}
+            disabled={readOnly}
           />
         ))}
       </div>
 
       <div className={styles.footer}>
-        <Button size="sm" variant="ghost" onClick={resetAll}>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={resetAll}
+          disabled={readOnly}
+        >
           Reset all
         </Button>
       </div>

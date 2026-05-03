@@ -10,6 +10,7 @@ import {
 } from "@cypher-asi/zui";
 import { Sun, Moon, MonitorSmartphone } from "lucide-react";
 import { CustomTokensPanel } from "./CustomTokensPanel";
+import { PresetsPanel } from "./PresetsPanel";
 import styles from "./AppearanceSection.module.css";
 
 const THEME_LABELS: Record<Theme, string> = {
@@ -101,6 +102,8 @@ export function AppearanceSection() {
           })}
         </div>
       </div>
+
+      <PresetsPanel />
 
       <CustomTokensPanel />
 
