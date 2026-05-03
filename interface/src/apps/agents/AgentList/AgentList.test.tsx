@@ -80,6 +80,7 @@ vi.mock("@cypher-asi/zui", () => ({
     title?: string;
   }) => (isOpen ? <div><div>{title}</div>{children}{footer}</div> : null),
   Button: ({ children, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
+  Text: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
 }));
 
 vi.mock("../../../components/ProjectsPlusButton", () => ({
@@ -172,6 +173,8 @@ vi.mock("../../../api/client", () => ({
     agents: {
       listEvents: vi.fn(async () => []),
       delete: vi.fn(async () => {}),
+      listProjectBindings: vi.fn(async () => []),
+      removeProjectBinding: vi.fn(async () => {}),
     },
   },
   ApiClientError: class ApiClientError extends Error {
@@ -206,6 +209,7 @@ vi.mock("../../../stores/projects-list-store", () => ({
     {
       getState: () => ({
         patchAgentTemplateFields: vi.fn(),
+        refreshProjectAgents: vi.fn(async () => []),
       }),
     },
   ),

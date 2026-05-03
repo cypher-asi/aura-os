@@ -345,6 +345,12 @@
   white-space: nowrap;
 }
 
+.bindingHint {
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin-left: 4px;
+}
+
 .removeBinding {
   display: flex;
   align-items: center;

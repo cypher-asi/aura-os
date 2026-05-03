@@ -1,7 +1,7 @@
 import { useMemo, useCallback, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { Menu, Modal, Button } from "@cypher-asi/zui";
+import { Menu } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
 import { Pencil, Pin, PinOff, Star, StarOff, Trash2 } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
@@ -27,7 +27,8 @@ import { useSidebarSearch } from "../../../hooks/use-sidebar-search";
 import { useOverlayScrollbar } from "../../../shared/hooks/use-overlay-scrollbar";
 import { createAgentChatHandoffState } from "../../../utils/chat-handoff";
 import { standaloneAgentHandoffTarget } from "../../../utils/chat-handoff";
-import { getApiErrorDetails, getApiErrorMessage } from "../../../shared/utils/api-errors";
+import { useCascadeDeleteAgent } from "../hooks/use-cascade-delete-agent";
+import { DeleteAgentConfirmModal } from "../hooks/DeleteAgentConfirmModal";
 
 import type { Agent } from "../../../shared/types";
 import { isSuperAgent as isSuperAgentByPerms } from "../../../shared/types/permissions";
@@ -67,12 +68,6 @@ function buildAgentMenuItems(
   }
 
   return items;
-}
-
-function getDeleteAgentErrorMessage(err: unknown): string {
-  const details = getApiErrorDetails(err);
-  const message = getApiErrorMessage(err);
-  return details ? `${message} ${details}` : message;
 }
 
 function pickReplacementAgentId(agents: Agent[], deletedAgentId: string): string | null {
@@ -171,9 +166,8 @@ export function AgentList({ mode = "default" }: AgentListProps) {
   const [editTarget, setEditTarget] = useState<Agent | null>(null);
   const { user } = useAuth();
   const [deleteTarget, setDeleteTarget] = useState<Agent | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [optimisticDeletedAgentId, setOptimisticDeletedAgentId] = useState<string | null>(null);
+  const cascade = useCascadeDeleteAgent(deleteTarget);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { thumbStyle, visible, onThumbPointerDown } = useOverlayScrollbar(scrollRef);
 
@@ -347,12 +341,12 @@ export function AgentList({ mode = "default" }: AgentListProps) {
           break;
         case "delete":
           setDeleteTarget(ctxMenu.agent);
-          setDeleteError(null);
+          cascade.reset();
           break;
       }
       setCtxMenu(null);
     },
-    [ctxMenu, togglePin, toggleFavorite],
+    [cascade, ctxMenu, togglePin, toggleFavorite],
   );
 
   const sortedAgents = useSortedAgents();
@@ -389,9 +383,6 @@ export function AgentList({ mode = "default" }: AgentListProps) {
         ?? pickReplacementAgentId(sortedAgents, target.agent_id)
       : null;
 
-    setDeleteLoading(true);
-    setDeleteError(null);
-    setDeleteTarget(null);
     setOptimisticDeletedAgentId(target.agent_id);
 
     if (deletingSelectedAgent) {
@@ -400,22 +391,19 @@ export function AgentList({ mode = "default" }: AgentListProps) {
     }
 
     try {
-      await api.agents.delete(target.agent_id);
-      useAgentStore.getState().removeAgent(target.agent_id);
+      await cascade.deleteWithCascade();
       setOptimisticDeletedAgentId(null);
-      useAgentStore.getState().fetchAgents({ force: true });
-    } catch (err) {
+      setDeleteTarget(null);
+    } catch {
+      // Restore the row in the sidebar so the user can retry.
       setOptimisticDeletedAgentId(null);
       if (deletingSelectedAgent) {
         setSelectedAgent(target.agent_id);
         navigate(`/agents/${target.agent_id}`);
       }
-      setDeleteTarget(target);
-      setDeleteError(getDeleteAgentErrorMessage(err));
-    } finally {
-      setDeleteLoading(false);
+      // Keep `deleteTarget` set so the modal stays open with `cascade.error` rendered.
     }
-  }, [agentId, deleteTarget, filteredAgents, navigate, setSelectedAgent, sortedAgents]);
+  }, [agentId, cascade, deleteTarget, filteredAgents, navigate, setSelectedAgent, sortedAgents]);
 
   if (visibleSortedAgents.length === 0) {
     return (
@@ -503,44 +491,19 @@ export function AgentList({ mode = "default" }: AgentListProps) {
           document.body,
         )}
 
-      <Modal
+      <DeleteAgentConfirmModal
         isOpen={!!deleteTarget}
         onClose={() => {
           setDeleteTarget(null);
-          setDeleteError(null);
+          cascade.reset();
         }}
-        title="Delete Agent"
-        size="sm"
-        footer={
-          <div className={styles.confirmFooter}>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setDeleteTarget(null);
-                setDeleteError(null);
-              }}
-              disabled={deleteLoading}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleDelete}
-              disabled={deleteLoading}
-              className={styles.dangerButton}
-            >
-              {deleteLoading ? "Deleting..." : "Delete"}
-            </Button>
-          </div>
-        }
-      >
-        <div className={styles.confirmMessage}>
-          Are you sure you want to delete &ldquo;{deleteTarget?.name}&rdquo;? This action cannot be undone.
-        </div>
-        {deleteError && <div className={styles.errorText}>{deleteError}</div>}
-      </Modal>
+        onDelete={handleDelete}
+        deleting={cascade.deleting}
+        deleteError={cascade.error}
+        bindings={cascade.bindings}
+        bindingsLoading={cascade.bindingsLoading}
+        agentName={deleteTarget?.name ?? ""}
+      />
 
       <AgentEditorModal
         isOpen={showEditor}

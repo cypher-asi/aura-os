@@ -27,6 +27,25 @@ use aura_os_core::Agent;
 use crate::handlers::projects;
 use crate::state::AppState;
 
+/// Confirm the agent template still exists upstream before we (re-)create
+/// a Home binding for it. Returns `true` when the template is missing
+/// (404), in which case callers MUST skip the binding step — otherwise
+/// the chat-side self-heal in [`super::chat::setup::setup_agent_chat_persistence`]
+/// resurrects the binding immediately after the user just removed it as
+/// part of `delete_agent`'s cascade. Network/auth failures fail open
+/// (return `false`) so transient blips don't block the auto-bind for
+/// new agents on first chat.
+async fn agent_template_is_deleted(state: &AppState, jwt: &str, agent_id: &str) -> bool {
+    let Some(client) = state.network_client.as_ref() else {
+        return false;
+    };
+    match client.get_agent(agent_id, jwt).await {
+        Ok(_) => false,
+        Err(aura_os_network::NetworkError::Server { status: 404, .. }) => true,
+        Err(_) => false,
+    }
+}
+
 /// Project name used for the auto-created Home project. A project
 /// with this name is only treated as an auto-home if its description
 /// also starts with [`AGENT_HOME_PROJECT_MARKER`] or the legacy
@@ -95,6 +114,20 @@ pub(crate) async fn ensure_agent_home_project_and_binding(
         return;
     };
     let agent_id_str = agent.agent_id.to_string();
+
+    // Don't resurrect a binding for an agent template that was just
+    // deleted. The chat-side self-heal calls into here every turn for
+    // any agent that is missing a binding, so without this guard the
+    // cascade-delete in `delete_agent` (which removes the binding right
+    // before deleting the template) would race against the heal and
+    // sometimes leave a Home binding pointing at a dead template.
+    if agent_template_is_deleted(state, jwt, &agent_id_str).await {
+        info!(
+            %agent_id_str,
+            "agent home: template no longer exists upstream; skipping binding"
+        );
+        return;
+    }
 
     let all_projects = match projects::list_all_projects_from_network(state, jwt).await {
         Ok(p) => p,

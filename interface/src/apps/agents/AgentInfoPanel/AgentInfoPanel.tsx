@@ -1,18 +1,24 @@
-import { useState, useCallback, useEffect } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Text, Button, Modal } from "@cypher-asi/zui";
-import { Loader2, FolderOpen, X } from "lucide-react";
+import { Text, Button } from "@cypher-asi/zui";
+import { FolderOpen, X } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import { AgentOrchestrationDashboard } from "../components/AgentOrchestrationDashboard";
 import { AgentEditorModal } from "../components/AgentEditorModal";
 import { PreviewOverlay } from "../../../components/PreviewOverlay";
 import { api } from "../../../api/client";
-import { getApiErrorDetails, getApiErrorMessage } from "../../../shared/utils/api-errors";
+import { getApiErrorMessage } from "../../../shared/utils/api-errors";
 import { useSelectedAgent, useAgentStore } from "../stores";
 import { useAgentSidekickStore } from "../stores/agent-sidekick-store";
 import { useShallow } from "zustand/react/shallow";
 import { useAuth } from "../../../stores/auth-store";
+import { useOrgStore } from "../../../stores/org-store";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
+import {
+  useCascadeDeleteAgent,
+  type AgentProjectBinding,
+} from "../hooks/use-cascade-delete-agent";
+import { DeleteAgentConfirmModal } from "../hooks/DeleteAgentConfirmModal";
 import { SkillsTab } from "./SkillsTab";
 import { MemoryTab } from "./MemoryTab";
 import { SkillPreview } from "./SkillPreview";
@@ -35,104 +41,40 @@ interface AgentInfoPanelProps {
   agent?: Agent | null;
 }
 
-type ProjectBinding = {
-  project_agent_id: string;
-  project_id: string;
-  project_name: string;
-};
+type BindingHint = "another-org" | "archived" | null;
 
-function getDeleteAgentErrorMessage(err: unknown): string {
-  const details = getApiErrorDetails(err);
-  const message = getApiErrorMessage(err);
-  return details ? `${message} ${details}` : message;
-}
+function useBindingHints(bindings: AgentProjectBinding[]): Record<string, BindingHint> {
+  const activeOrgId = useOrgStore((s) => s.activeOrg?.org_id ?? null);
+  const projects = useProjectsListStore((s) => s.projects);
+  const agentsByProject = useProjectsListStore((s) => s.agentsByProject);
 
-function useDeleteAgent(
-  selectedAgent: Agent | null,
-  setSelectedAgent: (id: string | null) => void,
-  navigate: ReturnType<typeof useNavigate>,
-  requestDelete: () => void,
-  closeDeleteConfirm: () => void,
-  refreshProjectBindings: () => Promise<void>,
-) {
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-
-  const openDeleteConfirm = useCallback(() => {
-    setDeleteError(null);
-    requestDelete();
-  }, [requestDelete]);
-
-  const handleCloseDeleteConfirm = useCallback(() => {
-    closeDeleteConfirm();
-    setDeleteError(null);
-  }, [closeDeleteConfirm]);
-
-  const handleDelete = useCallback(async () => {
-    if (!selectedAgent) return;
-    setDeleting(true);
-    setDeleteError(null);
-    try {
-      await api.agents.delete(selectedAgent.agent_id);
-      handleCloseDeleteConfirm();
-      setSelectedAgent(null);
-      useAgentStore.getState().fetchAgents({ force: true });
-      navigate("/agents");
-    } catch (err) {
-      setDeleteError(getDeleteAgentErrorMessage(err));
-      await refreshProjectBindings();
-    } finally {
-      setDeleting(false);
-    }
-  }, [
-    selectedAgent,
-    setSelectedAgent,
-    navigate,
-    handleCloseDeleteConfirm,
-    refreshProjectBindings,
-  ]);
-
-  return { deleting, deleteError, openDeleteConfirm, handleDelete, handleCloseDeleteConfirm };
-}
-
-function DeleteConfirmModal({
-  isOpen,
-  onClose,
-  onDelete,
-  deleting,
-  deleteError,
-  agentName,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onDelete: () => void;
-  deleting: boolean;
-  deleteError: string | null;
-  agentName: string;
-}) {
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Delete Agent"
-      size="sm"
-      footer={
-        <div className={styles.deleteFooter}>
-          <Button variant="ghost" onClick={onClose} disabled={deleting}>Cancel</Button>
-          <Button variant="danger" onClick={onDelete} disabled={deleting}>
-            {deleting ? <><Loader2 size={14} className={styles.spin} /> Deleting...</> : "Delete"}
-          </Button>
-        </div>
+  return useMemo(() => {
+    const projectsById = new Map(projects.map((p) => [p.project_id, p]));
+    const out: Record<string, BindingHint> = {};
+    for (const binding of bindings) {
+      const project = projectsById.get(binding.project_id);
+      if (project && activeOrgId && project.org_id !== activeOrgId) {
+        out[binding.project_agent_id] = "another-org";
+        continue;
       }
-    >
-      <Text size="sm">
-        Are you sure you want to delete <strong>{agentName}</strong>? This cannot be undone.
-      </Text>
-      {deleteError && (
-        <Text size="xs" className={styles.deleteError}>{deleteError}</Text>
-      )}
-    </Modal>
-  );
+      if (!project && activeOrgId) {
+        // Binding refers to a project that isn't in the active-org list.
+        // Almost always means it lives in a different org.
+        out[binding.project_agent_id] = "another-org";
+        continue;
+      }
+      const projectAgents = agentsByProject[binding.project_id];
+      const instance = projectAgents?.find(
+        (inst) => inst.agent_instance_id === binding.project_agent_id,
+      );
+      if (instance?.status === "archived") {
+        out[binding.project_agent_id] = "archived";
+        continue;
+      }
+      out[binding.project_agent_id] = null;
+    }
+    return out;
+  }, [activeOrgId, agentsByProject, bindings, projects]);
 }
 
 function ProjectsTab({
@@ -143,13 +85,15 @@ function ProjectsTab({
   onRetry,
   isOwnAgent,
 }: {
-  projectBindings: ProjectBinding[];
+  projectBindings: AgentProjectBinding[];
   projectBindingsLoading: boolean;
   projectBindingsError: string | null;
-  onRemoveBinding: (binding: ProjectBinding) => Promise<void>;
+  onRemoveBinding: (binding: AgentProjectBinding) => Promise<void>;
   onRetry: () => void;
   isOwnAgent: boolean;
 }) {
+  const bindingHints = useBindingHints(projectBindings);
+
   if (projectBindingsLoading) {
     return <div className={styles.tabEmptyState}>Loading projects...</div>;
   }
@@ -174,28 +118,39 @@ function ProjectsTab({
         <Text size="xs" className={styles.deleteError}>{projectBindingsError}</Text>
       )}
       <div className={styles.bindingsList}>
-        {projectBindings.map((b) => (
-          <div key={b.project_agent_id} className={styles.bindingRow}>
-            <FolderOpen size={12} className={styles.metaIcon} />
-            <Text size="xs" className={styles.bindingName}>{b.project_name}</Text>
-            {isOwnAgent && (
-              <button
-                type="button"
-                className={styles.removeBinding}
-                title="Remove from project"
-                onClick={async () => {
-                  try {
-                    await onRemoveBinding(b);
-                  } catch {
-                    // Error state is handled by the parent so the panel can stay consistent.
-                  }
-                }}
-              >
-                <X size={12} />
-              </button>
-            )}
-          </div>
-        ))}
+        {projectBindings.map((b) => {
+          const hint = bindingHints[b.project_agent_id];
+          return (
+            <div key={b.project_agent_id} className={styles.bindingRow}>
+              <FolderOpen size={12} className={styles.metaIcon} />
+              <Text size="xs" className={styles.bindingName}>
+                {b.project_name}
+                {hint === "another-org" && (
+                  <span className={styles.bindingHint}> (in another org)</span>
+                )}
+                {hint === "archived" && (
+                  <span className={styles.bindingHint}> (archived)</span>
+                )}
+              </Text>
+              {isOwnAgent && (
+                <button
+                  type="button"
+                  className={styles.removeBinding}
+                  title="Remove from project"
+                  onClick={async () => {
+                    try {
+                      await onRemoveBinding(b);
+                    } catch {
+                      // Error state is handled by the parent so the panel can stay consistent.
+                    }
+                  }}
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -226,56 +181,50 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
       viewSkill: s.viewSkill,
     })),
   );
-  const [projectBindings, setProjectBindings] = useState<ProjectBinding[]>([]);
-  const [projectBindingsLoading, setProjectBindingsLoading] = useState(false);
-  const [projectBindingsError, setProjectBindingsError] = useState<string | null>(null);
 
-  const refreshProjectBindings = useCallback(async () => {
-    if (!selectedAgent) {
-      setProjectBindings([]);
-      setProjectBindingsError(null);
-      setProjectBindingsLoading(false);
-      return;
-    }
+  const cascade = useCascadeDeleteAgent(selectedAgent);
+  const [bindingRemovalError, setBindingRemovalError] = useState<string | null>(null);
 
-    setProjectBindingsLoading(true);
-    setProjectBindingsError(null);
-    try {
-      const bindings = await api.agents.listProjectBindings(selectedAgent.agent_id);
-      setProjectBindings(bindings);
-    } catch (err) {
-      setProjectBindings([]);
-      setProjectBindingsError(getApiErrorMessage(err));
-    } finally {
-      setProjectBindingsLoading(false);
-    }
-  }, [selectedAgent]);
-
-  const handleRemoveBinding = useCallback(async (binding: ProjectBinding) => {
-    if (!selectedAgent) return;
-    setProjectBindingsError(null);
-    try {
-      await api.agents.removeProjectBinding(selectedAgent.agent_id, binding.project_agent_id);
-      await useProjectsListStore.getState().refreshProjectAgents(binding.project_id);
-      await refreshProjectBindings();
-    } catch (err) {
-      setProjectBindingsError(getApiErrorMessage(err));
-      throw err;
-    }
-  }, [selectedAgent, refreshProjectBindings]);
-
-  const del = useDeleteAgent(
-    selectedAgent,
-    setSelectedAgent,
-    navigate,
-    requestDelete,
-    closeDeleteConfirm,
-    refreshProjectBindings,
+  const handleRemoveBinding = useCallback(
+    async (binding: AgentProjectBinding) => {
+      if (!selectedAgent) return;
+      setBindingRemovalError(null);
+      try {
+        await api.agents.removeProjectBinding(
+          selectedAgent.agent_id,
+          binding.project_agent_id,
+        );
+        await useProjectsListStore.getState().refreshProjectAgents(binding.project_id);
+        await cascade.refresh();
+      } catch (err) {
+        setBindingRemovalError(getApiErrorMessage(err));
+        throw err;
+      }
+    },
+    [cascade, selectedAgent],
   );
 
-  useEffect(() => {
-    void refreshProjectBindings();
-  }, [refreshProjectBindings]);
+  const openDeleteConfirm = useCallback(() => {
+    cascade.reset();
+    requestDelete();
+  }, [cascade, requestDelete]);
+
+  const handleCloseDeleteConfirm = useCallback(() => {
+    closeDeleteConfirm();
+    cascade.reset();
+  }, [cascade, closeDeleteConfirm]);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!selectedAgent) return;
+    try {
+      await cascade.deleteWithCascade();
+      handleCloseDeleteConfirm();
+      setSelectedAgent(null);
+      navigate("/agents");
+    } catch {
+      // Error state lives on `cascade.error` and is rendered in the modal.
+    }
+  }, [cascade, handleCloseDeleteConfirm, navigate, selectedAgent, setSelectedAgent]);
 
   if (!selectedAgent) {
     return <EmptyState>Select an agent to see details</EmptyState>;
@@ -304,19 +253,19 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
           />
         )}
 
-        {effectiveTab === "chats" && <ChatsTab agent={a} projectBindings={projectBindings} />}
+        {effectiveTab === "chats" && <ChatsTab agent={a} projectBindings={cascade.bindings} />}
         {effectiveTab === "skills" && <SkillsTab agent={a} />}
         {effectiveTab === "permissions" && (
           <PermissionsTab agent={a} isOwnAgent={isOwnAgent} />
         )}
         {effectiveTab === "projects" && (
           <ProjectsTab
-            projectBindings={projectBindings}
-            projectBindingsLoading={projectBindingsLoading}
-            projectBindingsError={projectBindingsError}
+            projectBindings={cascade.bindings}
+            projectBindingsLoading={cascade.bindingsLoading}
+            projectBindingsError={bindingRemovalError ?? cascade.bindingsError}
             onRemoveBinding={handleRemoveBinding}
             onRetry={() => {
-              void refreshProjectBindings();
+              void cascade.refresh();
             }}
             isOwnAgent={isOwnAgent}
           />
@@ -355,7 +304,7 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
       {isMobileStandalone && isOwnAgent && (
         <div className={styles.mobileActions}>
           <Button variant="ghost" size="sm" onClick={requestEdit}>Edit</Button>
-          <Button variant="ghost" size="sm" onClick={del.openDeleteConfirm}>Delete</Button>
+          <Button variant="ghost" size="sm" onClick={openDeleteConfirm}>Delete</Button>
         </div>
       )}
 
@@ -371,12 +320,14 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
         }}
       />
 
-      <DeleteConfirmModal
+      <DeleteAgentConfirmModal
         isOpen={showDeleteConfirm}
-        onClose={del.handleCloseDeleteConfirm}
-        onDelete={del.handleDelete}
-        deleting={del.deleting}
-        deleteError={del.deleteError}
+        onClose={handleCloseDeleteConfirm}
+        onDelete={handleConfirmDelete}
+        deleting={cascade.deleting}
+        deleteError={cascade.error}
+        bindings={cascade.bindings}
+        bindingsLoading={cascade.bindingsLoading}
         agentName={a.name}
       />
     </div>
