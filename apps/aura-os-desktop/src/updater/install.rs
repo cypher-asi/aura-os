@@ -76,7 +76,7 @@ fn restart_after_install(update: &Update) -> Result<(), String> {
 #[cfg(target_os = "windows")]
 const INSTALLER_STAGE_SUBDIR: &str = "runtime/updater";
 #[cfg(target_os = "windows")]
-const WINDOWS_NSIS_INSTALLER_ARGS: [&str; 1] = ["/P"];
+const WINDOWS_NSIS_INSTALLER_ARGS: [&str; 2] = ["/P", "/R"];
 #[cfg(target_os = "windows")]
 const WINDOWS_UPDATE_RELAUNCH_ENV: &str = "AURA_UPDATE_RELAUNCH";
 
@@ -254,10 +254,11 @@ fn write_windows_handoff_script(
     append_handoff_log(
         log_path,
         &format!(
-            "handoff_prepared installer={} aura_exe={} script={}",
+            "handoff_prepared installer={} aura_exe={} script={} args={}",
             installer_path.display(),
             aura_exe_path.display(),
-            script_path.display()
+            script_path.display(),
+            windows_nsis_installer_argument_list()
         ),
     );
     Ok(script_path)
@@ -513,7 +514,7 @@ mod tests {
 
     #[test]
     fn formats_nsis_arguments_for_powershell_start_process() {
-        assert_eq!(windows_nsis_installer_argument_list(), "/P");
+        assert_eq!(windows_nsis_installer_argument_list(), "/P, /R");
     }
 
     #[test]
@@ -567,6 +568,7 @@ mod tests {
         );
 
         assert!(script.contains("Start-Process -FilePath $installerPath"));
+        assert!(script.contains("$installerArgs = @('/P', '/R')"));
         assert!(script.contains("-PassThru -Wait"));
         assert!(script.contains("installer_exited"));
         assert!(script.contains(&format!("$env:{WINDOWS_UPDATE_RELAUNCH_ENV} = '1'")));
