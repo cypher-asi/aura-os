@@ -1,4 +1,4 @@
-# Theme + Cleanup Smoke Checklist (Phases 1-5)
+# Theme + Cleanup Smoke Checklist (Phases 1-14)
 
 Run `npm run dev` from `interface/` and step through:
 
@@ -32,3 +32,21 @@ Run `npm run dev` from `interface/` and step through:
 - [ ] Browser panel still loads (default-export → named refactor).
 - [ ] Agent permissions tab loads and saves edits (PermissionsTab folder split).
 - [ ] Notes app: tree loads, content edits autosave (notes-store split).
+
+## Keyboard / a11y (new in Phase 14)
+
+The Phase 14 a11y pass replaced the old global
+`*, *:focus, *:focus-visible { outline: none !important; }` rule in
+`interface/src/index.css` with a single `:focus-visible` base rule. Mouse
+clicks no longer trigger focus rings (per modern `:focus-visible`
+semantics); keyboard-driven focus does.
+
+- [ ] Tab through the app — every interactive element shows a visible focus ring (white in dark mode, near-black in light mode).
+- [ ] Click anywhere with the mouse — no focus ring appears (focus-visible only triggers on keyboard).
+- [ ] Open a modal (Org Settings / Buy Credits / Skill Shop / New Project), Tab through its controls — focus ring visible on each, including the close button.
+- [ ] Open Settings → Appearance, Tab through theme buttons / accent swatches / custom-token rows / preset controls — focus ring visible everywhere.
+- [ ] DesktopTitlebar + MobileTopbar buttons — focus visible.
+- [ ] AgentWindow titlebar buttons (focus / close / minimize) — focus visible.
+- [ ] ChatInputBar send + attachment buttons — focus visible. The textarea itself intentionally suppresses the outline; the surrounding `inputContainer` brightens its border via `:focus-within` instead.
+- [ ] Mobile: tap a row, then use a Bluetooth keyboard if available — focus ring visible.
+- [ ] Confirm `interface/src/index.css` no longer contains `outline: none !important` (the line that was suppressing every focus ring globally pre-Phase-14).

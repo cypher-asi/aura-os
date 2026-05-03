@@ -1,7 +1,25 @@
-*,
-*:focus,
-*:focus-visible {
-  outline: none !important;
+/* Phase 14 a11y: keyboard-only focus ring.
+   Uses :focus-visible (not :focus) so mouse clicks never paint a ring,
+   which is the standard a11y pattern in modern browsers. The ring colour
+   resolves to --color-focus-ring from vendor/zui themes (white on dark,
+   near-black on light), and is also app-overridable via tokens.css.
+   The earlier `*, *:focus, *:focus-visible { outline: none !important; }`
+   rule (a Phase 1 leftover) suppressed every focus indicator globally
+   and is intentionally gone. Per-element overrides below scope `outline:
+   none` to surfaces where the design carries focus a different way (or
+   where the element is not really keyboard-interactive). */
+:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* The titlebar drag region and the React root are not keyboard-interactive
+   by themselves; if focus ever lands on them (e.g. programmatic focus on
+   #root after a route change) we don't want a ring around the whole window. */
+#root:focus-visible,
+.titlebar-drag:focus-visible {
+  outline: none;
 }
 
 :root {
