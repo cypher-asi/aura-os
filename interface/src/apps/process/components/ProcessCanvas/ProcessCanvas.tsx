@@ -156,7 +156,7 @@ function ProcessCanvasInner({
         snapToGrid
         snapGrid={[GRID, GRID]}
         defaultEdgeOptions={{ animated: true, type: "step" }}
-        connectionLineStyle={{ stroke: "rgba(255, 255, 255, 0.55)", strokeWidth: 1 }}
+        connectionLineStyle={{ stroke: "var(--color-canvas-edge)", strokeWidth: 1 }}
         proOptions={{ hideAttribution: true }}
         selectionOnDrag
         selectionMode={SelectionMode.Partial}
@@ -164,13 +164,13 @@ function ProcessCanvasInner({
         panActivationKeyCode="Shift"
         selectionKeyCode={null}
         multiSelectionKeyCode="Control"
-        style={{ background: "var(--color-bg, #0d0d1a)" }}
+        style={{ background: "var(--color-canvas-bg)" }}
       >
         <Background
           variant={BackgroundVariant.Dots}
           gap={GRID}
           size={1}
-          color="#444"
+          color="var(--color-canvas-grid)"
           className={styles.dotBackground}
         />
         <Controls
@@ -184,9 +184,9 @@ function ProcessCanvasInner({
           className={styles.flowControls}
         />
         <MiniMap
-          style={{ background: "#111", borderRadius: 0, width: 150, height: 112 }}
-          nodeColor="#666"
-          maskColor="rgba(0,0,0,0.8)"
+          style={{ background: "var(--color-canvas-bg)", borderRadius: 0, width: 150, height: 112 }}
+          nodeColor="var(--color-canvas-edge)"
+          maskColor="var(--color-canvas-overlay)"
           pannable
         />
       </ReactFlow>

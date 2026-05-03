@@ -7,8 +7,6 @@ import type { ProcessNodeType } from "../../../../shared/types/enums";
 import { useAgentStore } from "../../../agents/stores";
 import { Avatar } from "../../../../components/Avatar";
 
-const SUCCESS_COLOR = "var(--color-success, #4aeaa8)";
-
 function tint(color: string, amount: number) {
   return `color-mix(in srgb, ${color} ${amount}%, transparent)`;
 }
@@ -27,16 +25,23 @@ const NODE_ICONS: Record<ProcessNodeType, React.ReactNode> = {
 };
 
 const NODE_COLORS: Record<ProcessNodeType, string> = {
-  ignition: SUCCESS_COLOR,
-  action: "#3b82f6",
-  condition: "#8b5cf6",
-  artifact: SUCCESS_COLOR,
-  delay: "#6b7280",
-  merge: "#ec4899",
-  prompt: "#0ea5e9",
-  sub_process: "#f59e0b",
-  for_each: "#14b8a6",
-  group: "#38bdf8",
+  ignition: "var(--color-node-ignition)",
+  action: "var(--color-node-action)",
+  condition: "var(--color-node-condition)",
+  artifact: "var(--color-node-artifact)",
+  delay: "var(--color-node-delay)",
+  merge: "var(--color-node-merge)",
+  prompt: "var(--color-node-prompt)",
+  sub_process: "var(--color-node-sub-process)",
+  for_each: "var(--color-node-for-each)",
+  group: "var(--color-node-group)",
+};
+
+const STATUS_COLORS: Record<NonNullable<ProcessNodeData["runStatus"]>, string> = {
+  running: "var(--color-node-running)",
+  completed: "var(--color-node-success)",
+  failed: "var(--color-node-error)",
+  skipped: "var(--color-node-default)",
 };
 
 interface ProcessNodeData {
@@ -88,7 +93,7 @@ function RenameInput({ value, onSubmit }: { value: string; onSubmit: (v: string)
 
 function ProcessNodeCardInner({ data, selected }: NodeProps & { data: ProcessNodeData }) {
   const nodeType = data.nodeType;
-  const color = NODE_COLORS[nodeType] ?? "#6b7280";
+  const color = NODE_COLORS[nodeType] ?? "var(--color-node-default)";
   const isIgnition = nodeType === "ignition";
   const isCondition = nodeType === "condition";
   const isMerge = nodeType === "merge";
@@ -96,21 +101,17 @@ function ProcessNodeCardInner({ data, selected }: NodeProps & { data: ProcessNod
     data.agentId ? s.agents.find((a) => a.agent_id === data.agentId) : undefined,
   );
 
-  const statusColor = data.runStatus === "running" ? "#3b82f6"
-    : data.runStatus === "completed" ? SUCCESS_COLOR
-    : data.runStatus === "failed" ? "#ef4444"
-    : data.runStatus === "skipped" ? "#6b7280"
-    : undefined;
+  const statusColor = data.runStatus ? STATUS_COLORS[data.runStatus] : undefined;
 
   const borderColor = statusColor ?? (selected ? color : "var(--color-border)");
   const shadow = statusColor
     ? `0 0 0 1px ${tint(statusColor, 25)}, 0 0 8px ${tint(statusColor, 18)}`
-    : selected ? `0 0 0 1px ${tint(color, 25)}` : "0 2px 8px rgba(0,0,0,0.2)";
+    : selected ? `0 0 0 1px ${tint(color, 25)}` : "var(--shadow-md)";
 
   return (
     <div
       style={{
-        background: "var(--color-bg, #0d0d1a)",
+        background: "var(--color-bg)",
         border: `1px solid ${borderColor}`,
         borderRadius: 0,
         paddingTop: 0,
@@ -132,7 +133,7 @@ function ProcessNodeCardInner({ data, selected }: NodeProps & { data: ProcessNod
         <Handle
           type="target"
           position={Position.Left}
-          style={{ background: color, width: 10, height: 10, border: "2px solid var(--color-bg-surface, #1a1a2e)" }}
+          style={{ background: color, width: 10, height: 10, border: "2px solid var(--color-surface)" }}
         />
       )}
       {isMerge && (
@@ -142,7 +143,7 @@ function ProcessNodeCardInner({ data, selected }: NodeProps & { data: ProcessNod
           id="merge-2"
           style={{
             background: color, width: 10, height: 10,
-            border: "2px solid var(--color-bg-surface, #1a1a2e)",
+            border: "2px solid var(--color-surface)",
             top: "75%",
           }}
         />
@@ -166,7 +167,7 @@ function ProcessNodeCardInner({ data, selected }: NodeProps & { data: ProcessNod
           ) : (
             <div
               style={{
-                fontSize: 13, fontWeight: 600, color: "var(--color-text, #eee)", lineHeight: 1,
+                fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)", lineHeight: 1,
                 overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
               }}
             >
@@ -175,7 +176,7 @@ function ProcessNodeCardInner({ data, selected }: NodeProps & { data: ProcessNod
           )}
         </div>
         {data.isPinned && (
-          <Pin size={12} style={{ color: "#fff", flexShrink: 0 }} />
+          <Pin size={12} style={{ color: "var(--color-text-primary)", flexShrink: 0 }} />
         )}
         {agent && (
           <Avatar avatarUrl={agent.icon ?? undefined} name={agent.name} type="agent" size={20} />
@@ -185,7 +186,7 @@ function ProcessNodeCardInner({ data, selected }: NodeProps & { data: ProcessNod
       <Handle
         type="source"
         position={Position.Right}
-        style={{ background: color, width: 10, height: 10, border: "2px solid var(--color-bg-surface, #1a1a2e)" }}
+        style={{ background: color, width: 10, height: 10, border: "2px solid var(--color-surface)" }}
       />
       {isCondition && (
         <Handle
@@ -193,8 +194,8 @@ function ProcessNodeCardInner({ data, selected }: NodeProps & { data: ProcessNod
           position={Position.Right}
           id="false"
           style={{
-            background: "#ef4444", width: 10, height: 10,
-            border: "2px solid var(--color-bg-surface, #1a1a2e)",
+            background: "var(--color-node-error)", width: 10, height: 10,
+            border: "2px solid var(--color-surface)",
             top: "75%",
           }}
         />

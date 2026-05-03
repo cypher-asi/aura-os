@@ -104,7 +104,7 @@ function ProcessNodeLiveOutput({
 
   if (!hasContent) {
     return (
-      <div style={{ fontSize: 11, color: "#3b82f6", fontStyle: "italic", padding: "4px 0" }}>
+      <div style={{ fontSize: 11, color: "var(--color-node-running)", fontStyle: "italic", padding: "4px 0" }}>
         Waiting for output...
       </div>
     );
@@ -139,7 +139,7 @@ function ProcessNodeLiveOutput({
 
 function ActiveDurationCell({ startedAt }: { startedAt: string }) {
   const elapsed = useElapsedTime(startedAt, true);
-  return <span style={{ fontFamily: "var(--font-mono)", color: "#3b82f6" }}>{elapsed}</span>;
+  return <span style={{ fontFamily: "var(--font-mono)", color: "var(--color-node-running)" }}>{elapsed}</span>;
 }
 
 // ---------------------------------------------------------------------------
@@ -188,7 +188,7 @@ function RunDetailGrid({
         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {isActive && (
             <span style={{
-              width: 6, height: 6, borderRadius: "50%", background: "#3b82f6",
+              width: 6, height: 6, borderRadius: "50%", background: "var(--color-node-running)",
               animation: "aura-pulse 1.5s ease-in-out infinite",
             }} />
           )}
@@ -244,7 +244,7 @@ function RunTokensSection({
               {models.map((m) => (
                 <span key={m} style={{
                   display: "inline-block", fontSize: 10, padding: "1px 6px",
-                  borderRadius: 3, background: "rgba(107,114,128,0.1)",
+                  borderRadius: 3, background: "color-mix(in srgb, var(--color-text-muted) 10%, transparent)",
                   color: "var(--color-text-muted)", marginRight: 4,
                 }}>
                   {m}

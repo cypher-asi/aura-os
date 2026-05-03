@@ -5,8 +5,10 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { CanvasAddon } from "@xterm/addon-canvas";
 import "@xterm/xterm/css/xterm.css";
+import { useTheme } from "@cypher-asi/zui";
 import type { UseTerminalReturn } from "../../hooks/use-terminal";
 import { OverlayScrollbar } from "../OverlayScrollbar";
+import { getXtermTheme } from "./getXtermTheme";
 import styles from "./XTerminal.module.css";
 
 interface XTerminalProps {
@@ -21,58 +23,20 @@ interface XTerminalProps {
 // ~200 cols) is rarely realized in practice.
 const SCROLLBACK_LINES = 100_000;
 
-function getThemeBg(): string {
-  return getComputedStyle(document.documentElement).getPropertyValue("--color-bg").trim() || "#111";
-}
-
-function getThemeColor(variable: string, fallback: string): string {
-  return getComputedStyle(document.documentElement).getPropertyValue(variable).trim() || fallback;
-}
-
-function getTheme() {
-  const background = getThemeBg();
-  const appGreen = getThemeColor("--color-success", "#4aeaa8");
-  const appBlue = getThemeColor("--status-ready", "#45aaf2");
-
-  return {
-    background,
-    foreground: "#d4d4d4",
-    cursor: appGreen,
-    cursorAccent: background,
-    selectionBackground: "rgba(74, 234, 168, 0.32)",
-    selectionInactiveBackground: "rgba(74, 234, 168, 0.22)",
-    black: "#1e1e1e",
-    red: "#f44747",
-    green: appGreen,
-    yellow: "#d7ba7d",
-    blue: appBlue,
-    magenta: "#ffffff",
-    cyan: appBlue,
-    white: "#d4d4d4",
-    brightBlack: "#808080",
-    brightRed: "#f44747",
-    brightGreen: appGreen,
-    brightYellow: "#d7ba7d",
-    brightBlue: appBlue,
-    brightMagenta: "#ffffff",
-    brightCyan: appBlue,
-    brightWhite: "#ffffff",
-  };
-}
-
 export function XTerminal({ terminal: hook, visible, focused }: XTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
   const [viewportReady, setViewportReady] = useState(false);
+  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     const xterm = new Terminal({
-      theme: getTheme(),
+      theme: getXtermTheme(resolvedTheme),
       fontFamily: "'Cascadia Code', 'Fira Code', 'JetBrains Mono', Menlo, monospace",
       fontSize: 11,
       lineHeight: 1.3,
@@ -155,6 +119,15 @@ export function XTerminal({ terminal: hook, visible, focused }: XTerminalProps) 
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Live theme swap: xterm.js v6 supports re-assigning `terminal.options.theme`
+  // and re-renders without remounting, so existing scrollback survives a
+  // dark↔light flip.
+  useEffect(() => {
+    const xterm = xtermRef.current;
+    if (!xterm) return;
+    xterm.options.theme = getXtermTheme(resolvedTheme);
+  }, [resolvedTheme]);
 
   useEffect(() => {
     if (visible && fitRef.current) {

@@ -30,7 +30,7 @@ export function RunList({ runs, onSelect }: RunListProps) {
               width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
               background: run.status === "completed" ? "var(--color-success)"
                 : run.status === "failed" ? "var(--color-error)"
-                : isActive ? "#3b82f6"
+                : isActive ? "var(--color-node-running)"
                 : "var(--color-text-muted)",
               ...(isActive ? { animation: "aura-pulse 1.5s ease-in-out infinite" } : {}),
             }} />
@@ -51,7 +51,7 @@ export function RunList({ runs, onSelect }: RunListProps) {
 function RunElapsedBadge({ startedAt }: { startedAt: string }) {
   const elapsed = useElapsedTime(startedAt, true);
   return (
-    <span style={{ fontSize: 11, color: "#3b82f6", fontWeight: 600, fontFamily: "var(--font-mono)" }}>
+    <span style={{ fontSize: 11, color: "var(--color-node-running)", fontWeight: 600, fontFamily: "var(--font-mono)" }}>
       {elapsed}
     </span>
   );

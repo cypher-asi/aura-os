@@ -25,7 +25,7 @@ export function PinnedOutputField({ text }: { text: string }) {
         className={styles.fieldLabel}
         style={{ display: "flex", alignItems: "center", gap: 4 }}
       >
-        <Pin size={11} style={{ color: "#f59e0b" }} />
+        <Pin size={11} style={{ color: "var(--color-warning)" }} />
         Pinned Output
         <span
           style={{
@@ -41,7 +41,7 @@ export function PinnedOutputField({ text }: { text: string }) {
         style={{
           maxHeight: expanded ? "none" : 200,
           overflow: "auto",
-          borderLeft: "2px solid #f59e0b40",
+          borderLeft: "2px solid color-mix(in srgb, var(--color-warning) 25%, transparent)",
           padding: "4px 8px",
         }}
         className={mdStyles.markdown}
@@ -59,9 +59,9 @@ export function PinnedOutputField({ text }: { text: string }) {
             border: "none",
             padding: 0,
             marginTop: 4,
-            fontSize: 11,
-            color: "var(--color-text-link, #3b82f6)",
-            cursor: "pointer",
+          fontSize: 11,
+          color: "var(--color-node-running)",
+          cursor: "pointer",
           }}
         >
           {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -117,11 +117,11 @@ export function PinOutputButton({
         fontSize: 11,
         fontWeight: 600,
         border: isPinned
-          ? "1px solid #f59e0b40"
+          ? "1px solid color-mix(in srgb, var(--color-warning) 25%, transparent)"
           : "1px solid var(--color-border)",
         borderRadius: 0,
-        background: isPinned ? "rgba(245,158,11,0.1)" : "transparent",
-        color: isPinned ? "#f59e0b" : "var(--color-text-muted)",
+        background: isPinned ? "color-mix(in srgb, var(--color-warning) 10%, transparent)" : "transparent",
+        color: isPinned ? "var(--color-warning)" : "var(--color-text-muted)",
         cursor: busy ? "wait" : "pointer",
         transition: "all 0.15s",
       }}

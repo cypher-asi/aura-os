@@ -13,15 +13,15 @@
 
 .flowControls button {
   background: transparent !important;
-  color: var(--color-text-muted, #666) !important;
+  color: var(--color-text-muted) !important;
   border-color: transparent !important;
-  fill: var(--color-text-muted, #666) !important;
+  fill: var(--color-text-muted) !important;
 }
 
 .flowControls button:hover {
   background: transparent !important;
-  color: #fff !important;
-  fill: #fff !important;
+  color: var(--color-text-primary) !important;
+  fill: var(--color-text-primary) !important;
 }
 
 .flowControls button svg {
@@ -41,8 +41,8 @@
 }
 
 :global(.react-flow__selection) {
-  border: 1px solid var(--color-success, #4c9) !important;
-  background: color-mix(in srgb, var(--color-success, #4c9) 12%, transparent) !important;
+  border: 1px solid var(--color-success) !important;
+  background: color-mix(in srgb, var(--color-success) 12%, transparent) !important;
 }
 
 :global(.react-flow__handle) {
@@ -60,18 +60,18 @@
 }
 
 :global(.react-flow__edge-path) {
-  stroke: rgba(255, 255, 255, 0.55) !important;
+  stroke: var(--color-canvas-edge) !important;
   stroke-width: 1px !important;
   stroke-opacity: 1 !important;
   fill: none !important;
-  filter: drop-shadow(0 0 1.5px rgba(255, 255, 255, 0.15));
+  filter: drop-shadow(0 0 1.5px color-mix(in srgb, var(--color-canvas-edge) 25%, transparent));
 }
 
 :global(.react-flow__connection-path) {
-  stroke: rgba(255, 255, 255, 0.55) !important;
+  stroke: var(--color-canvas-edge) !important;
   stroke-opacity: 1 !important;
   fill: none !important;
-  filter: drop-shadow(0 0 1.5px rgba(255, 255, 255, 0.15));
+  filter: drop-shadow(0 0 1.5px color-mix(in srgb, var(--color-canvas-edge) 25%, transparent));
 }
 
 :global(.react-flow__node) {
@@ -100,7 +100,7 @@
   cursor: grab !important;
   border: none !important;
   border-radius: 0 !important;
-  box-shadow: 0 0 0 1px var(--color-border, #333) !important;
+  box-shadow: 0 0 0 1px var(--color-border) !important;
 }
 
 :global(.react-flow__minimap:active) {
@@ -121,8 +121,8 @@
   padding: 0 4px;
   box-sizing: border-box;
   border-radius: 0;
-  background: #000;
-  border: 1px solid var(--color-border, #333);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
 }
 
 :global(.process-node-rename-input) {
@@ -130,10 +130,10 @@
   font-size: 13px;
   font-weight: 600;
   font-family: inherit;
-  color: var(--color-text, #eee);
+  color: var(--color-text-primary);
   background: transparent;
   border: none;
-  border-bottom: 1px solid var(--color-text-muted, #666);
+  border-bottom: 1px solid var(--color-text-muted);
   outline: none;
   padding: 0;
   margin: 0;

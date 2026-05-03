@@ -3,12 +3,13 @@
    --color-success, etc.) keyed off [data-theme='dark'|'light']. The tokens
    below are AURA-specific extensions and per-mode overrides; they live here
    (not in vendor/zui) so app product tokens stay decoupled from the ZUI
-   package surface. Future phases will expand this file with editable chrome
-   tokens (--color-canvas-*, --color-node-*, --color-terminal-*, etc.). */
+   package surface. */
 
 :root,
 [data-theme='dark'] {
-  /* Status colors (task / agent / run state badges). */
+  /* ----------------------------------------------------------------------
+     Status colors (task / agent / run state badges).
+     ---------------------------------------------------------------------- */
   --status-pending: #5c6078;
   --status-ready: #45aaf2;
   --status-in-progress: #9CDCFE;
@@ -29,6 +30,68 @@
      ChatPanel container, leaving everything outside chat on the brighter
      vendor default (#4e4e4e). */
   --color-border: #17171a;
+
+  /* ----------------------------------------------------------------------
+     Process canvas surface — used by ProcessCanvas (ReactFlow background,
+     dot-grid pattern, mini-map mask + edge color).
+     ---------------------------------------------------------------------- */
+  --color-canvas-bg: #111;
+  --color-canvas-grid: #444;
+  --color-canvas-overlay: rgba(0, 0, 0, 0.8);
+  --color-canvas-edge: #666;
+
+  /* ----------------------------------------------------------------------
+     Process node palette — drives ProcessNodeCard borders, handles, icon
+     tints. Status tokens reflect run state; type tokens are keyed off
+     ProcessNodeType so each node kind keeps its identifying accent.
+     ---------------------------------------------------------------------- */
+  --color-node-default: #6b7280;
+  --color-node-running: #3b82f6;
+  --color-node-success: var(--color-success);
+  --color-node-error: #ef4444;
+  --color-node-warning: var(--color-warning);
+  --color-node-pending: var(--color-pending);
+
+  --color-node-ignition: var(--color-success);
+  --color-node-action: #3b82f6;
+  --color-node-condition: #8b5cf6;
+  --color-node-artifact: var(--color-success);
+  --color-node-delay: #6b7280;
+  --color-node-merge: #ec4899;
+  --color-node-prompt: #0ea5e9;
+  --color-node-sub-process: #f59e0b;
+  --color-node-for-each: #14b8a6;
+  --color-node-group: #38bdf8;
+
+  /* ----------------------------------------------------------------------
+     Terminal (xterm.js) palette — consumed by getXtermTheme() at runtime.
+     Dark values mirror the VS Code default dark+ palette so the embedded
+     terminal feels native; light values use the VS Code default light
+     palette for a readable inverted experience.
+     ---------------------------------------------------------------------- */
+  --color-terminal-bg: #1e1e1e;
+  --color-terminal-fg: #cccccc;
+  --color-terminal-cursor: #aeafad;
+  --color-terminal-cursor-accent: #1e1e1e;
+  --color-terminal-selection-bg: #264f78;
+  --color-terminal-selection-inactive-bg: rgba(38, 79, 120, 0.7);
+
+  --color-terminal-ansi-black: #000000;
+  --color-terminal-ansi-red: #cd3131;
+  --color-terminal-ansi-green: #0dbc79;
+  --color-terminal-ansi-yellow: #e5e510;
+  --color-terminal-ansi-blue: #2472c8;
+  --color-terminal-ansi-magenta: #bc3fbc;
+  --color-terminal-ansi-cyan: #11a8cd;
+  --color-terminal-ansi-white: #e5e5e5;
+  --color-terminal-ansi-bright-black: #666666;
+  --color-terminal-ansi-bright-red: #f14c4c;
+  --color-terminal-ansi-bright-green: #23d18b;
+  --color-terminal-ansi-bright-yellow: #f5f543;
+  --color-terminal-ansi-bright-blue: #3b8eea;
+  --color-terminal-ansi-bright-magenta: #d670d6;
+  --color-terminal-ansi-bright-cyan: #29b8db;
+  --color-terminal-ansi-bright-white: #e5e5e5;
 }
 
 [data-theme='light'] {
@@ -44,4 +107,55 @@
   --color-text-muted: #6b7280;
 
   --color-border: #e5e7eb;
+
+  /* Process canvas — light overrides. */
+  --color-canvas-bg: #f9fafb;
+  --color-canvas-grid: #e5e7eb;
+  --color-canvas-overlay: rgba(255, 255, 255, 0.8);
+  --color-canvas-edge: #9ca3af;
+
+  /* Process node palette — light overrides. Type accents shift to slightly
+     darker hues so they read against the lighter canvas. */
+  --color-node-default: #d1d5db;
+  --color-node-running: #2563eb;
+  --color-node-success: var(--color-success);
+  --color-node-error: #dc2626;
+  --color-node-warning: var(--color-warning);
+  --color-node-pending: var(--color-pending);
+
+  --color-node-ignition: var(--color-success);
+  --color-node-action: #2563eb;
+  --color-node-condition: #7c3aed;
+  --color-node-artifact: var(--color-success);
+  --color-node-delay: #9ca3af;
+  --color-node-merge: #db2777;
+  --color-node-prompt: #0284c7;
+  --color-node-sub-process: #d97706;
+  --color-node-for-each: #0d9488;
+  --color-node-group: #0284c7;
+
+  /* Terminal (xterm.js) — VS Code default light theme palette. */
+  --color-terminal-bg: #ffffff;
+  --color-terminal-fg: #1f2937;
+  --color-terminal-cursor: #374151;
+  --color-terminal-cursor-accent: #ffffff;
+  --color-terminal-selection-bg: #bfdbfe;
+  --color-terminal-selection-inactive-bg: rgba(191, 219, 254, 0.7);
+
+  --color-terminal-ansi-black: #000000;
+  --color-terminal-ansi-red: #cd3131;
+  --color-terminal-ansi-green: #00bc00;
+  --color-terminal-ansi-yellow: #949800;
+  --color-terminal-ansi-blue: #0451a5;
+  --color-terminal-ansi-magenta: #bc05bc;
+  --color-terminal-ansi-cyan: #0598bc;
+  --color-terminal-ansi-white: #555555;
+  --color-terminal-ansi-bright-black: #666666;
+  --color-terminal-ansi-bright-red: #cd3131;
+  --color-terminal-ansi-bright-green: #14ce14;
+  --color-terminal-ansi-bright-yellow: #b5ba00;
+  --color-terminal-ansi-bright-blue: #0451a5;
+  --color-terminal-ansi-bright-magenta: #bc05bc;
+  --color-terminal-ansi-bright-cyan: #0598bc;
+  --color-terminal-ansi-bright-white: #a5a5a5;
 }

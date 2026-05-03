@@ -41,14 +41,14 @@ export function LiveRunBanner({ run, events, totalNodes }: LiveRunBannerProps) {
     <div style={{
       padding: "10px 12px",
       borderBottom: "1px solid var(--color-border)",
-      background: "rgba(59,130,246,0.04)",
+      background: "color-mix(in srgb, var(--color-node-running) 4%, transparent)",
     }}>
       <BannerHeader elapsed={elapsed} />
       <BannerProgress completedCount={completedCount} totalNodes={totalNodes} />
       {currentNode && (
         <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 4 }}>
           {currentAgent ? (
-            <><span style={{ fontWeight: 600, color: "var(--color-text)" }}>{currentAgent.name}</span> working on </>
+            <><span style={{ fontWeight: 600, color: "var(--color-text-primary)" }}>{currentAgent.name}</span> working on </>
           ) : null}
           <span style={{ fontWeight: 500 }}>{currentNode.label}</span>
         </div>
@@ -67,13 +67,13 @@ function BannerHeader({ elapsed }: { elapsed: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
       <span style={{
-        width: 8, height: 8, borderRadius: "50%", background: "#3b82f6",
+        width: 8, height: 8, borderRadius: "50%", background: "var(--color-node-running)",
         animation: "aura-pulse 1.5s ease-in-out infinite", flexShrink: 0,
       }} />
-      <span style={{ fontSize: 13, fontWeight: 600, color: "#3b82f6" }}>Running</span>
+      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-node-running)" }}>Running</span>
       <span style={{
         fontSize: 13, fontWeight: 600, fontFamily: "var(--font-mono)",
-        color: "var(--color-text)", marginLeft: "auto",
+        color: "var(--color-text-primary)", marginLeft: "auto",
       }}>
         {elapsed}
       </span>
@@ -86,11 +86,11 @@ function BannerProgress({ completedCount, totalNodes }: { completedCount: number
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
       <div style={{
         flex: 1, height: 4, borderRadius: 2,
-        background: "rgba(59,130,246,0.15)", overflow: "hidden",
+        background: "color-mix(in srgb, var(--color-node-running) 15%, transparent)", overflow: "hidden",
       }}>
         <div style={{
           width: totalNodes > 0 ? `${(completedCount / totalNodes) * 100}%` : "0%",
-          height: "100%", borderRadius: 2, background: "#3b82f6",
+          height: "100%", borderRadius: 2, background: "var(--color-node-running)",
           transition: "width 0.5s ease-out",
         }} />
       </div>
