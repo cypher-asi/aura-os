@@ -1,31 +1,36 @@
-.settingsPanel {
-  max-width: 560px;
-  padding: var(--space-4);
+.layout {
+  display: flex;
+  gap: var(--space-6);
+  align-items: flex-start;
+  min-height: 0;
+}
+
+.nav {
+  width: 220px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
-.settingsPanel + .settingsPanel {
-  margin-top: var(--space-3);
-}
+@media (max-width: 720px) {
+  .layout {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
 
-.infoGrid {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  column-gap: var(--space-4);
-  row-gap: var(--space-2);
-  margin: 0;
-}
-
-.infoGrid dt {
-  margin: 0;
-}
-
-.infoGrid dd {
-  margin: 0;
-}
-
-.monoText {
-  font-family: var(--font-mono);
+  .nav {
+    width: 100%;
+    position: static;
+  }
 }

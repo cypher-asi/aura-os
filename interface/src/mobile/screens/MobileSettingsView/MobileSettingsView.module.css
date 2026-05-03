@@ -13,8 +13,7 @@
   margin: 0 0 16px;
 }
 
-.settingsHeader h1,
-.settingsPanel h2 {
+.settingsHeader h1 {
   margin: 0;
   color: var(--color-text);
   font-size: 17px;
@@ -31,89 +30,108 @@
   line-height: 18px;
 }
 
-.settingsPanel,
-.settingsNote {
+.rowList {
   width: 100%;
   max-width: 560px;
+  display: flex;
+  flex-direction: column;
   border: 1px solid color-mix(in srgb, var(--color-border) 32%, transparent);
   border-radius: 18px;
   background: color-mix(in srgb, var(--color-bg-surface) 72%, transparent);
-}
-
-.settingsPanel {
-  display: flex;
-  flex-direction: column;
   overflow: hidden;
 }
 
-.settingsPanel h2 {
-  padding: 14px 16px 7px;
-}
-
-.settingsNote {
-  margin-top: 12px;
-  padding: 14px 16px;
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 18px;
-}
-
-/* The AppearanceSection ships its own ZUI Panel (border + background), so
-   the outer section wrapper here just provides top spacing — strip the
-   chrome that .settingsPanel normally paints to avoid a double-bordered look. */
-.appearancePanelMobile {
-  margin-top: 12px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  border-radius: 0;
-  overflow: visible;
-}
-
-.infoGrid {
-  display: grid;
-  grid-template-columns: minmax(78px, max-content) minmax(0, 1fr);
-  column-gap: 16px;
-  margin: 0;
-  padding: 0 16px 12px;
-}
-
-.infoGrid dt,
-.infoGrid dd {
+.row {
   display: flex;
   align-items: center;
-  min-height: 42px;
-  margin: 0;
-  border-top: 1px solid color-mix(in srgb, var(--color-border) 28%, transparent);
-  font-size: 13px;
-  line-height: 18px;
-}
-
-.infoGrid dt:first-of-type,
-.infoGrid dt:first-of-type + dd {
-  border-top: 0;
-}
-
-.infoGrid dt {
-  color: var(--color-text-secondary);
-  font-weight: 500;
-}
-
-.infoGrid dd {
-  min-width: 0;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  background: transparent;
+  border: 0;
   color: var(--color-text);
-  font-weight: 520;
-  justify-content: flex-end;
-  text-align: right;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
 }
 
-.mutedText {
+.row + .row {
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 28%, transparent);
+}
+
+.row:hover,
+.row:focus-visible {
+  background: color-mix(in srgb, var(--color-brand-primary) 6%, transparent);
+  outline: none;
+}
+
+.rowIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+}
+
+.rowLabel {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 540;
+  line-height: 20px;
+}
+
+.rowChevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--color-text-muted);
 }
 
-.monoText {
-  font-family: var(--font-mono);
+.detailHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.detailTitle {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 22px;
+}
+
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 6px 10px 6px 6px;
+  margin-left: -6px;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 540;
+  line-height: 18px;
+  cursor: pointer;
+  appearance: none;
+}
+
+.backButton:hover,
+.backButton:focus-visible {
+  background: color-mix(in srgb, var(--color-brand-primary) 6%, transparent);
+  color: var(--color-text);
+  outline: none;
+}
+
+.detailBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 @media (min-width: 720px) {

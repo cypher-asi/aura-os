@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import type { DesktopUpdateStatusResponse } from "../../shared/api/desktop";
 
 const mockGetUpdateStatus = vi.fn();
@@ -84,6 +85,29 @@ vi.mock("@cypher-asi/zui", () => ({
       {children}
     </select>
   ),
+  Navigator: ({
+    items,
+    value,
+    onChange,
+  }: {
+    items: { id: string; label: string }[];
+    value?: string;
+    onChange?: (id: string) => void;
+  }) => (
+    <nav data-testid="settings-navigator">
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          data-testid={`nav-item-${item.id}`}
+          aria-current={value === item.id ? "page" : undefined}
+          onClick={() => onChange?.(item.id)}
+        >
+          {item.label}
+        </button>
+      ))}
+    </nav>
+  ),
   THEMES: ["dark", "light", "system"],
   ACCENT_COLORS: ["cyan", "blue", "purple", "green", "orange", "rose"],
   useTheme: () => ({
@@ -104,14 +128,42 @@ vi.mock("./AppearanceSection/AppearanceSection.module.css", () => ({
   default: new Proxy({}, { get: (_target, prop) => String(prop) }),
 }));
 
-vi.mock("lucide-react", () => ({
-  Check: () => <span data-testid="icon-check" />,
-  Download: () => <span data-testid="icon-download" />,
-  RefreshCw: () => <span data-testid="icon-refresh" />,
-  Sun: () => <span data-testid="icon-sun" />,
-  Moon: () => <span data-testid="icon-moon" />,
-  MonitorSmartphone: () => <span data-testid="icon-monitor-smartphone" />,
+vi.mock("./AboutSection/AboutSection.module.css", () => ({
+  default: new Proxy({}, { get: (_target, prop) => String(prop) }),
 }));
+
+vi.mock("./NotificationsSection/NotificationsSection.module.css", () => ({
+  default: new Proxy({}, { get: (_target, prop) => String(prop) }),
+}));
+
+vi.mock("./KeyboardSection/KeyboardSection.module.css", () => ({
+  default: new Proxy({}, { get: (_target, prop) => String(prop) }),
+}));
+
+vi.mock("./AdvancedSection/AdvancedSection.module.css", () => ({
+  default: new Proxy({}, { get: (_target, prop) => String(prop) }),
+}));
+
+vi.mock("lucide-react", () => {
+  const Stub = ({ "data-testid": testId }: { "data-testid"?: string }) => (
+    <span data-testid={testId} />
+  );
+  return {
+    Check: Stub,
+    Download: Stub,
+    RefreshCw: Stub,
+    Sun: Stub,
+    Moon: Stub,
+    MonitorSmartphone: Stub,
+    Info: Stub,
+    Paintbrush: Stub,
+    Bell: Stub,
+    Keyboard: Stub,
+    Settings: Stub,
+    ChevronRight: Stub,
+    ArrowLeft: Stub,
+  };
+});
 
 import { SettingsView } from "./SettingsView";
 
@@ -145,6 +197,17 @@ function setCapabilities(nativeUpdater: boolean) {
   });
 }
 
+function renderAt(initialPath: string) {
+  return render(
+    <MemoryRouter initialEntries={[initialPath]}>
+      <Routes>
+        <Route path="/projects/settings" element={<SettingsView />} />
+        <Route path="/projects/settings/:section" element={<SettingsView />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
 describe("SettingsView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -154,8 +217,66 @@ describe("SettingsView", () => {
     setCapabilities(true);
   });
 
-  it("renders build metadata from the compile-time constants", () => {
-    render(<SettingsView />);
+  it("redirects /projects/settings (no section) to the default about section", async () => {
+    renderAt("/projects/settings");
+
+    expect(await screen.findByTestId("settings-about-panel")).toBeInTheDocument();
+  });
+
+  it("redirects an unknown section to the default about section", async () => {
+    renderAt("/projects/settings/not-a-real-section");
+
+    expect(await screen.findByTestId("settings-about-panel")).toBeInTheDocument();
+  });
+
+  it("renders the navigator with every section label", () => {
+    renderAt("/projects/settings/about");
+
+    expect(screen.getByTestId("settings-navigator")).toBeInTheDocument();
+    expect(screen.getByTestId("nav-item-about")).toHaveTextContent("About");
+    expect(screen.getByTestId("nav-item-appearance")).toHaveTextContent("Appearance");
+    expect(screen.getByTestId("nav-item-notifications")).toHaveTextContent("Notifications");
+    expect(screen.getByTestId("nav-item-keyboard")).toHaveTextContent("Keyboard");
+    expect(screen.getByTestId("nav-item-advanced")).toHaveTextContent("Advanced");
+  });
+
+  it("renders only the about pane when on /projects/settings/about", () => {
+    renderAt("/projects/settings/about");
+
+    expect(screen.getByTestId("settings-about-panel")).toBeInTheDocument();
+    expect(screen.queryByTestId("settings-appearance-panel")).toBeNull();
+    expect(screen.queryByTestId("settings-advanced-panel")).toBeNull();
+  });
+
+  it("renders only the appearance pane when on /projects/settings/appearance", () => {
+    renderAt("/projects/settings/appearance");
+
+    expect(screen.getByTestId("settings-appearance-panel")).toBeInTheDocument();
+    expect(screen.queryByTestId("settings-about-panel")).toBeNull();
+  });
+
+  it("renders the advanced placeholder with the env-vars copy", () => {
+    renderAt("/projects/settings/advanced");
+
+    expect(screen.getByTestId("settings-advanced-panel")).toBeInTheDocument();
+    expect(screen.getByText(/\.env\.example/)).toBeInTheDocument();
+  });
+
+  it("clicking a navigator item switches the visible pane", async () => {
+    renderAt("/projects/settings/about");
+
+    expect(screen.getByTestId("settings-about-panel")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId("nav-item-appearance"));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("settings-about-panel")).toBeNull();
+    });
+    expect(screen.getByTestId("settings-appearance-panel")).toBeInTheDocument();
+  });
+
+  it("renders build metadata in the about pane", () => {
+    renderAt("/projects/settings/about");
 
     expect(screen.getByTestId("settings-version")).toHaveTextContent("0.0.0-test");
     expect(screen.getByTestId("settings-channel")).toHaveTextContent(/Test/);
@@ -165,7 +286,7 @@ describe("SettingsView", () => {
 
   it("shows the server-managed message when native updater is unavailable", async () => {
     setCapabilities(false);
-    render(<SettingsView />);
+    renderAt("/projects/settings/about");
 
     expect(await screen.findByTestId("settings-update-unsupported")).toHaveTextContent(
       /delivered automatically by the server/i,
@@ -176,7 +297,7 @@ describe("SettingsView", () => {
   });
 
   it("shows 'latest version' and triggers a check on click", async () => {
-    render(<SettingsView />);
+    renderAt("/projects/settings/about");
 
     const latest = await screen.findByTestId("settings-update-latest");
     expect(latest).toHaveTextContent(/latest version/i);
@@ -194,7 +315,7 @@ describe("SettingsView", () => {
       update: { status: "available", version: "1.2.3" },
     });
 
-    render(<SettingsView />);
+    renderAt("/projects/settings/about");
 
     const installBtn = await screen.findByTestId("settings-update-install");
     expect(screen.getByTestId("settings-update-available")).toHaveTextContent(/1\.2\.3/);
@@ -209,20 +330,11 @@ describe("SettingsView", () => {
       update: { status: "failed", error: "network down" },
     });
 
-    render(<SettingsView />);
+    renderAt("/projects/settings/about");
 
     expect(await screen.findByTestId("settings-update-failed")).toHaveTextContent(
       /network down/,
     );
     expect(screen.getByTestId("settings-update-retry")).toBeTruthy();
-  });
-
-  it("renders the appearance section alongside the about panel", () => {
-    render(<SettingsView />);
-
-    expect(screen.getByTestId("settings-about-panel")).toBeInTheDocument();
-    expect(screen.getByTestId("settings-appearance-panel")).toBeInTheDocument();
-    expect(screen.getByText("About")).toBeInTheDocument();
-    expect(screen.getByText("Appearance")).toBeInTheDocument();
   });
 });

@@ -65,6 +65,7 @@ export const projectsRoutes: RouteObject[] = [
   { path: "projects", element: <HomeView /> },
   { path: "projects/organization", element: <MobileOrganizationRoute /> },
   { path: "projects/settings", element: <SettingsRoute /> },
+  { path: "projects/settings/:section", element: <SettingsRoute /> },
   {
     path: "projects/:projectId",
     element: <ProjectLayout />,
