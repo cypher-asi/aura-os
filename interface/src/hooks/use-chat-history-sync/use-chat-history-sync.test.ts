@@ -30,6 +30,8 @@ const mocks = vi.hoisted(() => {
     fetchHistory: vi.fn(async () => {}),
     invalidateHistory: vi.fn(),
     hydrateFromCache: vi.fn(async () => {}),
+    pinKey: vi.fn(),
+    unpinKey: vi.fn(),
   };
 
   const eventListeners = new Map<string, Set<(event: unknown) => void>>();
@@ -195,6 +197,42 @@ describe("useChatHistorySync", () => {
         allowWhileStreaming: true,
       });
     });
+  });
+
+  // Regression test for the "CEO chat blink" eviction race: the active
+  // chat panel must pin its `historyKey` in the chat-history-store
+  // LRU for the panel's lifetime, and release it on unmount.
+  it("pins the active historyKey on mount and unpins it on unmount", () => {
+    const { unmount } = renderHook(() =>
+      useChatHistorySync({
+        historyKey: "agent:agent-1",
+        streamKey: "agent-1",
+        fetchFn: vi.fn(async () => []),
+        resetEvents: vi.fn(),
+      }),
+    );
+
+    expect(mocks.state.pinKey).toHaveBeenCalledWith("agent:agent-1");
+    expect(mocks.state.unpinKey).not.toHaveBeenCalled();
+
+    unmount();
+
+    expect(mocks.state.unpinKey).toHaveBeenCalledWith("agent:agent-1");
+  });
+
+  it("does not pin when historyKey is undefined", () => {
+    const { unmount } = renderHook(() =>
+      useChatHistorySync({
+        historyKey: undefined,
+        streamKey: "agent-1",
+        fetchFn: undefined,
+        resetEvents: vi.fn(),
+      }),
+    );
+
+    expect(mocks.state.pinKey).not.toHaveBeenCalled();
+    unmount();
+    expect(mocks.state.unpinKey).not.toHaveBeenCalled();
   });
 
   it("skips initial stream hydration when hydrateToStream is false", async () => {

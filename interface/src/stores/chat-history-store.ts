@@ -32,6 +32,15 @@ type HistoryEntry = {
 type ChatHistoryState = {
   entries: Record<string, HistoryEntry>;
   previewLastMessages: Record<string, DisplaySessionEvent>;
+  /**
+   * Keys that the LRU eviction in `withBoundedHistoryEntry` must NOT
+   * drop, even when the entry table is over `MAX_HISTORY_ENTRIES`.
+   * `useChatHistorySync` pins the active chat panel's `historyKey` for
+   * the panel's lifetime so a background sidebar prefetch can never
+   * evict the currently-displayed transcript out from under the
+   * renderer (the original "CEO chat blink" failure mode).
+   */
+  pinnedKeys: Set<string>;
   fetchHistory: (
     key: string,
     fetchFn: () => Promise<SessionEvent[]>,
@@ -40,6 +49,8 @@ type ChatHistoryState = {
   prefetchHistory: (key: string, fetchFn: () => Promise<SessionEvent[]>) => void;
   invalidateHistory: (key: string) => void;
   clearHistory: (key: string) => void;
+  pinKey: (key: string) => void;
+  unpinKey: (key: string) => void;
   /**
    * Synchronously-ish populate the entry from IndexedDB if available.
    * Used by `useChatHistorySync` on mount so the chat view can paint
@@ -91,16 +102,34 @@ function boundHistoryEvents(events: DisplaySessionEvent[]): DisplaySessionEvent[
 
 function withBoundedHistoryEntry(
   entries: Record<string, HistoryEntry>,
+  pinnedKeys: Set<string>,
   key: string,
   entry: HistoryEntry,
 ): Record<string, HistoryEntry> {
   const next = { ...entries, [key]: { ...entry, events: boundHistoryEvents(entry.events) } };
-  const keys = Object.keys(next);
-  if (keys.length <= MAX_HISTORY_ENTRIES) return next;
-  for (const staleKey of keys) {
+  if (Object.keys(next).length <= MAX_HISTORY_ENTRIES) return next;
+  // First pass: only evict non-pinned, non-active keys. This is the
+  // hot path; pinned keys (the currently-displayed chat panel(s))
+  // are protected from background sidebar prefetches that would
+  // otherwise drop the active transcript and cause the renderer to
+  // momentarily snap to the empty state ("CEO chat blink").
+  for (const staleKey of Object.keys(next)) {
     if (staleKey === key) continue;
+    if (pinnedKeys.has(staleKey)) continue;
     delete next[staleKey];
     if (Object.keys(next).length <= MAX_HISTORY_ENTRIES) break;
+  }
+  // Defensive fallback: if every other key was pinned and we are
+  // still over the cap, fall back to evicting the oldest non-active
+  // pinned key. This keeps the cache strictly bounded but is not
+  // expected to trigger in practice — pin counts are bounded by the
+  // number of mounted chat panels, well below `MAX_HISTORY_ENTRIES`.
+  if (Object.keys(next).length > MAX_HISTORY_ENTRIES) {
+    for (const staleKey of Object.keys(next)) {
+      if (staleKey === key) continue;
+      delete next[staleKey];
+      if (Object.keys(next).length <= MAX_HISTORY_ENTRIES) break;
+    }
   }
   return next;
 }
@@ -144,6 +173,25 @@ function displayEventsEqual(
 export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
   entries: {},
   previewLastMessages: {},
+  pinnedKeys: new Set<string>(),
+
+  pinKey: (key): void => {
+    set((s) => {
+      if (s.pinnedKeys.has(key)) return s;
+      const next = new Set(s.pinnedKeys);
+      next.add(key);
+      return { pinnedKeys: next };
+    });
+  },
+
+  unpinKey: (key): void => {
+    set((s) => {
+      if (!s.pinnedKeys.has(key)) return s;
+      const next = new Set(s.pinnedKeys);
+      next.delete(key);
+      return { pinnedKeys: next };
+    });
+  },
 
   fetchHistory: async (key, fetchFn, opts): Promise<void> => {
     const entry = get().entries[key];
@@ -170,6 +218,7 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
       set((s) => ({
         entries: withBoundedHistoryEntry(
           s.entries,
+          s.pinnedKeys,
           key,
           {
             events: entry?.events ?? EMPTY_EVENTS,
@@ -203,6 +252,7 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
         set((s) => ({
           entries: withBoundedHistoryEntry(
             s.entries,
+            s.pinnedKeys,
             key,
             {
               events,
@@ -226,6 +276,7 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
         set((s) => ({
           entries: withBoundedHistoryEntry(
             s.entries,
+            s.pinnedKeys,
             key,
             {
               events: entry?.events ?? EMPTY_EVENTS,
@@ -274,6 +325,7 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
     set((s) => ({
       entries: withBoundedHistoryEntry(
         s.entries,
+        s.pinnedKeys,
         key,
         {
           events: EMPTY_EVENTS,
@@ -316,6 +368,7 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
     set((s) => ({
       entries: withBoundedHistoryEntry(
         s.entries,
+        s.pinnedKeys,
         key,
         {
           events,

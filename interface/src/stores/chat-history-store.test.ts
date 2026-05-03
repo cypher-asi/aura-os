@@ -31,7 +31,11 @@ function makeMsg(id: string): SessionEvent {
 
 beforeEach(() => {
   queryClient.clear();
-  useChatHistoryStore.setState({ entries: {}, previewLastMessages: {} });
+  useChatHistoryStore.setState({
+    entries: {},
+    previewLastMessages: {},
+    pinnedKeys: new Set<string>(),
+  });
 });
 
 describe("chat-history-store", () => {
@@ -127,6 +131,65 @@ describe("chat-history-store", () => {
       expect(keys).toHaveLength(8);
       expect(keys).not.toContain("k0");
       expect(keys).toContain("k8");
+    });
+
+    // Regression test for the "CEO chat blink": an open SuperAgent chat
+    // sits in the LRU at index 0 and was the eviction victim of the 9th
+    // sidebar prefetch, blanking the panel until the next refetch.
+    // Pinning the active `historyKey` in `useChatHistorySync` makes the
+    // currently-displayed entry un-evictable.
+    it("never evicts a pinned key", async () => {
+      await useChatHistoryStore.getState().fetchHistory(
+        "agent:ceo",
+        makeFetchFn([makeMsg("ceo-1")]),
+      );
+      useChatHistoryStore.getState().pinKey("agent:ceo");
+
+      for (let i = 0; i < 10; i += 1) {
+        await useChatHistoryStore.getState().fetchHistory(
+          `agent:other-${i}`,
+          makeFetchFn([makeMsg(`o${i}`)]),
+        );
+      }
+
+      const entries = useChatHistoryStore.getState().entries;
+      expect(entries["agent:ceo"]).toBeDefined();
+      expect(entries["agent:ceo"].events).toHaveLength(1);
+      expect(entries["agent:ceo"].events[0].id).toBe("ceo-1");
+      expect(Object.keys(entries)).toHaveLength(8);
+    });
+
+    it("unpinKey re-allows eviction", async () => {
+      await useChatHistoryStore.getState().fetchHistory(
+        "agent:ceo",
+        makeFetchFn([makeMsg("ceo-1")]),
+      );
+      useChatHistoryStore.getState().pinKey("agent:ceo");
+      useChatHistoryStore.getState().unpinKey("agent:ceo");
+
+      for (let i = 0; i < 10; i += 1) {
+        await useChatHistoryStore.getState().fetchHistory(
+          `agent:other-${i}`,
+          makeFetchFn([makeMsg(`o${i}`)]),
+        );
+      }
+
+      expect(useChatHistoryStore.getState().entries["agent:ceo"]).toBeUndefined();
+    });
+  });
+
+  describe("pinKey / unpinKey", () => {
+    it("pinKey is idempotent", () => {
+      useChatHistoryStore.getState().pinKey("k-pin");
+      const firstSet = useChatHistoryStore.getState().pinnedKeys;
+      useChatHistoryStore.getState().pinKey("k-pin");
+      expect(useChatHistoryStore.getState().pinnedKeys).toBe(firstSet);
+    });
+
+    it("unpinKey is a no-op for unknown keys", () => {
+      const firstSet = useChatHistoryStore.getState().pinnedKeys;
+      useChatHistoryStore.getState().unpinKey("never-pinned");
+      expect(useChatHistoryStore.getState().pinnedKeys).toBe(firstSet);
     });
   });
 

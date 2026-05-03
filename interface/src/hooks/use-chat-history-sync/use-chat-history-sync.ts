@@ -246,6 +246,23 @@ export function useChatHistorySync({
     onSwitch?.();
   }, [historyKey, fetchFn, invalidateBeforeFetch, onSwitch, onClear]);
 
+  // Pin the active history key in the chat-history-store LRU for the
+  // panel's lifetime. The store caps in-memory entries at
+  // `MAX_HISTORY_ENTRIES = 8`; without a pin, sidebar prefetching the
+  // 9th agent could evict the currently-displayed transcript and the
+  // renderer would momentarily snap to the empty state — the original
+  // "CEO chat blink" failure mode (an open SuperAgent chat is the
+  // most common eviction victim because it is usually opened first).
+  // Pinning makes the active key un-evictable; unmount cleanup
+  // releases it so navigating away does not leak pins.
+  useEffect(() => {
+    if (!historyKey) return;
+    useChatHistoryStore.getState().pinKey(historyKey);
+    return () => {
+      useChatHistoryStore.getState().unpinKey(historyKey);
+    };
+  }, [historyKey]);
+
   // Sync fetched history into the stream store for rendering.
   // Guards:
   // 1. When history was invalidated (fetchedAt === 0) and the stream store
