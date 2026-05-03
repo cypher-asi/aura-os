@@ -1,0 +1,79 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 160px) 1fr;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  user-select: none;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.swatch {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.colorInput {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.textInput {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family-mono, monospace);
+}
+
+.textInput:focus {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.textInputInvalid {
+  border-color: var(--color-error, var(--status-failed));
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-1);
+}

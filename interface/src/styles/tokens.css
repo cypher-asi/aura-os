@@ -32,6 +32,18 @@
   --color-border: #17171a;
 
   /* ----------------------------------------------------------------------
+     Editable chrome tokens (phase 7). Defaults live here; the theme
+     overrides layer (`interface/src/lib/theme-overrides.ts`) can rewrite
+     them via `document.documentElement.style.setProperty(...)` for per-
+     resolved-theme user customisation.
+     ---------------------------------------------------------------------- */
+  --color-surface-tint: rgba(255, 255, 255, 0.04);
+  --color-elevated-tint: rgba(255, 255, 255, 0.06);
+  --color-sidebar-bg: var(--color-surface);
+  --color-sidekick-bg: var(--color-elevated);
+  --color-titlebar-bg: var(--color-bg);
+
+  /* ----------------------------------------------------------------------
      Process canvas surface — used by ProcessCanvas (ReactFlow background,
      dot-grid pattern, mini-map mask + edge color).
      ---------------------------------------------------------------------- */
@@ -107,6 +119,13 @@
   --color-text-muted: #6b7280;
 
   --color-border: #e5e7eb;
+
+  /* Editable chrome tokens — light overrides. */
+  --color-surface-tint: rgba(0, 0, 0, 0.04);
+  --color-elevated-tint: rgba(0, 0, 0, 0.06);
+  --color-sidebar-bg: var(--color-surface);
+  --color-sidekick-bg: var(--color-elevated);
+  --color-titlebar-bg: var(--color-bg);
 
   /* Process canvas — light overrides. */
   --color-canvas-bg: #f9fafb;

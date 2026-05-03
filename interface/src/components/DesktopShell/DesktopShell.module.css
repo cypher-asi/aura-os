@@ -3,7 +3,7 @@
   --shell-chrome-inset: 5px;
   --shell-chrome-outer-height: calc(var(--shell-chrome-height) + 10px);
   --shell-chrome-radius: 20px;
-  --shell-chrome-background: color-mix(in srgb, var(--color-bg) 90%, transparent);
+  --shell-chrome-background: color-mix(in srgb, var(--color-titlebar-bg) 90%, transparent);
   --shell-chrome-backdrop-filter: blur(40px) saturate(1.4);
   position: relative;
   isolation: isolate;
@@ -85,7 +85,7 @@
   display: flex;
   flex-direction: column;
   margin-right: 2px;
-  background: var(--color-bg);
+  background: var(--color-sidebar-bg);
 }
 
 :global([data-desktop-mode]) .desktopSidebar {
@@ -113,7 +113,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: var(--color-bg);
+  background: var(--color-sidekick-bg);
 }
 
 .sidekickHeaderSlot {
@@ -152,7 +152,7 @@
 
 .sidekickLane {
   margin-left: 2px;
-  background: var(--color-bg);
+  background: var(--color-sidekick-bg);
 }
 
 .titleLink {

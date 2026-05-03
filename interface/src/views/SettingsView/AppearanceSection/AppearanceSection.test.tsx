@@ -38,6 +38,7 @@ function mockMatchMedia(prefersDark: boolean) {
 describe("AppearanceSection", () => {
   beforeEach(() => {
     localStorage.clear();
+    document.documentElement.removeAttribute("style");
     delete document.documentElement.dataset.theme;
     delete document.documentElement.dataset.accent;
     mockMatchMedia(true);
@@ -45,6 +46,7 @@ describe("AppearanceSection", () => {
 
   afterEach(() => {
     localStorage.clear();
+    document.documentElement.removeAttribute("style");
     vi.unstubAllGlobals();
   });
 

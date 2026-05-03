@@ -10,6 +10,7 @@ import "./index.css";
 import { App } from "./App";
 import { applyHighlightTheme } from "./lib/highlight-theme";
 import { HighlightThemeBridge } from "./components/HighlightThemeBridge";
+import { ThemeOverridesBridge } from "./components/ThemeOverridesBridge";
 import { queryClient } from "./shared/lib/query-client";
 import { registerServiceWorker } from "./lib/registerServiceWorker";
 import {
@@ -75,6 +76,7 @@ createRoot(rootEl).render(
   <QueryClientProvider client={queryClient}>
     <ThemeProvider defaultTheme="dark" defaultAccent="purple" disableTransitionOnChange>
       <HighlightThemeBridge />
+      <ThemeOverridesBridge />
       <App />
     </ThemeProvider>
   </QueryClientProvider>,

@@ -9,6 +9,7 @@ import {
   type AccentColor,
 } from "@cypher-asi/zui";
 import { Sun, Moon, MonitorSmartphone } from "lucide-react";
+import { CustomTokensPanel } from "./CustomTokensPanel";
 import styles from "./AppearanceSection.module.css";
 
 const THEME_LABELS: Record<Theme, string> = {
@@ -101,8 +102,10 @@ export function AppearanceSection() {
         </div>
       </div>
 
+      <CustomTokensPanel />
+
       <Text variant="muted" size="xs">
-        Custom panel and border colors are coming soon.
+        Custom colors persist per dark/light mode in this browser.
       </Text>
     </Panel>
   );
