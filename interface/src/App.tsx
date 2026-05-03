@@ -116,7 +116,7 @@ function renderRoutes(routes: typeof shellAppRoutes): React.ReactNode {
   });
 }
 
-export default function App() {
+export function App() {
   // `initiallyLoggedIn` is the synchronous boot-time decision — a frozen
   // snapshot from module load. It exists ONLY to keep returning users on the
   // shell during the very first render (no login flash). Once the auth store

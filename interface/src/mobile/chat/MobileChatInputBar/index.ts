@@ -1,0 +1,1 @@
+export { MobileChatInputBar } from "./MobileChatInputBar";

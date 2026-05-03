@@ -151,5 +151,3 @@ export function BrowserErrorOverlay({
     </div>
   );
 }
-
-export default BrowserErrorOverlay;

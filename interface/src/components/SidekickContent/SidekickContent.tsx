@@ -21,7 +21,9 @@ import { useTerminalTarget } from "../../hooks/use-terminal-target";
 import { InfoPanel } from "./InfoPanel";
 import styles from "../Sidekick/Sidekick.module.css";
 
-const BrowserPanel = lazy(() => import("../../apps/browser/components/BrowserPanel"));
+const BrowserPanel = lazy(() =>
+  import("../../apps/browser/components/BrowserPanel").then((m) => ({ default: m.BrowserPanel })),
+);
 const RunSidekickPane = lazy(() =>
   import("../TaskOutputPanel").then((m) => ({ default: m.RunSidekickPane })),
 );

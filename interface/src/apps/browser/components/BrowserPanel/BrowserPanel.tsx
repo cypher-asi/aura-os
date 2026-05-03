@@ -90,5 +90,3 @@ export function BrowserPanel({ projectId }: BrowserPanelProps) {
     </div>
   );
 }
-
-export default BrowserPanel;

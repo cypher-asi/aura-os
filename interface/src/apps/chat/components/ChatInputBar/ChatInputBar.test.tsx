@@ -11,7 +11,7 @@ vi.mock("./ChatInputBar.module.css", () => ({
   default: new Proxy({}, { get: (_t, prop) => String(prop) }),
 }));
 
-vi.mock("../../../../mobile/chat/MobileChatInputBar.module.css", () => ({
+vi.mock("../../../../mobile/chat/MobileChatInputBar/MobileChatInputBar.module.css", () => ({
   default: new Proxy({}, { get: (_t, prop) => String(prop) }),
 }));
 

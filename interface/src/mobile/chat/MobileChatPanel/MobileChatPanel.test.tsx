@@ -3,7 +3,7 @@ import { MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
 import { MobileChatPanel } from "./MobileChatPanel";
 
-vi.mock("../../apps/chat/components/ChatPanel", () => ({
+vi.mock("../../../apps/chat/components/ChatPanel", () => ({
   ChatPanel: ({
     header,
     InputBarComponent,
@@ -17,7 +17,7 @@ vi.mock("../../apps/chat/components/ChatPanel", () => ({
   ),
 }));
 
-vi.mock("./MobileChatHeader.module.css", () => ({
+vi.mock("../MobileChatHeader/MobileChatHeader.module.css", () => ({
   default: new Proxy({}, { get: (_target, prop) => String(prop) }),
 }));
 

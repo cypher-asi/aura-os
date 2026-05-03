@@ -8,17 +8,17 @@ import {
   useState,
 } from "react";
 import { ArrowUp, ChevronDown, FileText, Plus, X } from "lucide-react";
-import { AgentEnvironment } from "../../apps/agents/components/AgentEnvironment";
-import { CommandChips } from "../../apps/chat/components/ChatInputBar/CommandChips";
-import { ContextUsageIndicator } from "../../apps/chat/components/ChatInputBar/ContextUsageIndicator";
-import { SlashCommandMenu } from "../../apps/chat/components/ChatInputBar/SlashCommandMenu";
-import { useFileAttachments } from "../../apps/chat/components/ChatInputBar/useFileAttachments";
+import { AgentEnvironment } from "../../../apps/agents/components/AgentEnvironment";
+import { CommandChips } from "../../../apps/chat/components/ChatInputBar/CommandChips";
+import { ContextUsageIndicator } from "../../../apps/chat/components/ChatInputBar/ContextUsageIndicator";
+import { SlashCommandMenu } from "../../../apps/chat/components/ChatInputBar/SlashCommandMenu";
+import { useFileAttachments } from "../../../apps/chat/components/ChatInputBar/useFileAttachments";
 import type {
   AttachmentItem,
   ChatInputBarHandle,
   ChatInputBarProps,
-} from "../../apps/chat/components/ChatInputBar/ChatInputBar";
-import { isGenerationCommand, type SlashCommand } from "../../constants/commands";
+} from "../../../apps/chat/components/ChatInputBar/ChatInputBar";
+import { isGenerationCommand, type SlashCommand } from "../../../constants/commands";
 import {
   availableModelsForAdapter,
   getDefaultModelForMode,
@@ -27,9 +27,9 @@ import {
   modelProviderGroup,
   sortModelsForMenu,
   type GenerationMode,
-} from "../../constants/models";
-import { useIsStreaming } from "../../hooks/stream/hooks";
-import { useChatUI } from "../../stores/chat-ui-store";
+} from "../../../constants/models";
+import { useIsStreaming } from "../../../hooks/stream/hooks";
+import { useChatUI } from "../../../stores/chat-ui-store";
 import styles from "./MobileChatInputBar.module.css";
 
 function AttachmentPreviews({

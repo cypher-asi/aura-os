@@ -1,5 +1,5 @@
 import { Drawer } from "@cypher-asi/zui";
-import type { AgentInstance } from "../../shared/types";
+import type { AgentInstance } from "../../../shared/types";
 import styles from "./MobileProjectAgentSwitcherSheet.module.css";
 
 export function MobileProjectAgentSwitcherSheet({

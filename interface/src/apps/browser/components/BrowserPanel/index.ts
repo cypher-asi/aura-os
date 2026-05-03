@@ -1,2 +1,2 @@
-export * from "./BrowserPanel";
-export { default } from "./BrowserPanel";
+export { BrowserPanel } from "./BrowserPanel";
+export type { BrowserPanelProps } from "./BrowserPanel";

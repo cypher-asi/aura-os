@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { ChatPanel, type ChatPanelProps } from "../../apps/chat/components/ChatPanel";
-import { MobileChatHeader } from "./MobileChatHeader";
-import { MobileChatInputBar } from "./MobileChatInputBar";
+import { ChatPanel, type ChatPanelProps } from "../../../apps/chat/components/ChatPanel";
+import { MobileChatHeader } from "../MobileChatHeader";
+import { MobileChatInputBar } from "../MobileChatInputBar";
 
 type MobileHeaderSummaryKind = "details" | "switch";
 

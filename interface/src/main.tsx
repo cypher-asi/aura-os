@@ -7,7 +7,7 @@ import "@cypher-asi/zui/styles";
 // index.css so app-level layout rules can still override token values.
 import "./styles/tokens.css";
 import "./index.css";
-import App from "./App";
+import { App } from "./App";
 import { applyHighlightTheme } from "./lib/highlight-theme";
 import { HighlightThemeBridge } from "./components/HighlightThemeBridge";
 import { queryClient } from "./shared/lib/query-client";
