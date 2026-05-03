@@ -150,6 +150,87 @@
           transform: translateX(240%);
         }
       }
+
+      /*
+       * Fallback titlebar shown over the splash / boot-error overlay so the
+       * frameless desktop window stays draggable and closable even when the
+       * React bundle never mounts (e.g. dev server unreachable, Vite import
+       * error). React's DesktopTitlebar / WindowControls take over once
+       * `html.aura-app-ready` is set in main.tsx#hideBootSplash.
+       */
+      #aura-fallback-titlebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 32px;
+        z-index: 2147483647;
+        display: flex;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: rgba(248, 250, 252, 0.86);
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      #aura-fallback-titlebar .aura-ftb-drag {
+        flex: 1;
+        -webkit-app-region: drag;
+      }
+
+      #aura-fallback-titlebar .aura-ftb-controls {
+        display: flex;
+        -webkit-app-region: no-drag;
+      }
+
+      #aura-fallback-titlebar .aura-ftb-btn {
+        appearance: none;
+        background: transparent;
+        border: 0;
+        margin: 0;
+        padding: 0;
+        width: 46px;
+        height: 32px;
+        color: inherit;
+        font-size: 12px;
+        line-height: 1;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-app-region: no-drag;
+      }
+
+      #aura-fallback-titlebar .aura-ftb-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      #aura-fallback-titlebar .aura-ftb-btn:focus-visible {
+        outline: 1px solid rgba(168, 85, 247, 0.7);
+        outline-offset: -2px;
+      }
+
+      #aura-fallback-titlebar .aura-ftb-close:hover {
+        background: #c42b1c;
+        color: #fff;
+      }
+
+      html.aura-app-ready #aura-fallback-titlebar {
+        display: none;
+      }
+
+      [data-theme='light'] #aura-fallback-titlebar {
+        color: rgba(15, 23, 42, 0.86);
+      }
+
+      [data-theme='light'] #aura-fallback-titlebar .aura-ftb-btn:hover {
+        background: rgba(15, 23, 42, 0.08);
+      }
+
+      [data-theme='light'] #aura-fallback-titlebar .aura-ftb-close:hover {
+        background: #c42b1c;
+        color: #fff;
+      }
     </style>
     <title>AURA</title>
   </head>
@@ -169,6 +250,32 @@
             Restart AURA. If this keeps happening, install the latest build and report this message.
           </div>
         </div>
+      </div>
+    </div>
+    <div id="aura-fallback-titlebar" aria-hidden="true">
+      <div class="aura-ftb-drag"></div>
+      <div class="aura-ftb-controls">
+        <button
+          type="button"
+          class="aura-ftb-btn"
+          data-cmd="minimize"
+          aria-label="Minimize window"
+          title="Minimize"
+        >&#x2013;</button>
+        <button
+          type="button"
+          class="aura-ftb-btn"
+          data-cmd="maximize"
+          aria-label="Maximize window"
+          title="Maximize"
+        >&#x25A1;</button>
+        <button
+          type="button"
+          class="aura-ftb-btn aura-ftb-close"
+          data-cmd="close"
+          aria-label="Close window"
+          title="Close"
+        >&#x2715;</button>
       </div>
     </div>
     <div id="root"></div>
@@ -228,6 +335,47 @@
             "Current step: " + currentPhase + "."
           );
         }, 20000);
+
+        // Wire the fallback titlebar to the same IPC bridge wry exposes for
+        // the React WindowControls component. window.ipc is installed before
+        // any frontend script runs, so these controls work even when the
+        // bundle never loads. No-op in the browser dev/test contexts where
+        // window.ipc is undefined.
+        function postWindowCommand(cmd) {
+          var ipc = window.ipc;
+          if (ipc && typeof ipc.postMessage === "function") {
+            ipc.postMessage(cmd);
+          }
+        }
+
+        var fallbackBar = document.getElementById("aura-fallback-titlebar");
+        if (fallbackBar) {
+          fallbackBar.addEventListener("click", function (event) {
+            var target = event.target;
+            if (!target || typeof target.closest !== "function") return;
+            var btn = target.closest(".aura-ftb-btn");
+            if (!btn) return;
+            var cmd = btn.getAttribute("data-cmd");
+            if (cmd) postWindowCommand(cmd);
+          });
+
+          // Mirrors interface/src/lib/native-titlebar-drag.ts: WebView2 on
+          // Windows already starts a native drag via -webkit-app-region, so
+          // adding a JS-initiated drag there would race with it. On macOS
+          // WKWebView and Linux WebKitGTK the CSS rule is ignored and we
+          // need this pointerdown -> IPC fallback for the drag region to work.
+          var ua = (typeof navigator !== "undefined" && navigator.userAgent) || "";
+          var isWindows = /Windows NT/i.test(ua);
+          if (!isWindows) {
+            var dragRegion = fallbackBar.querySelector(".aura-ftb-drag");
+            if (dragRegion) {
+              dragRegion.addEventListener("pointerdown", function (event) {
+                if (event.button !== 0) return;
+                postWindowCommand("drag");
+              });
+            }
+          }
+        }
       })();
     </script>
     <script type="module" src="/src/main.tsx"></script>
