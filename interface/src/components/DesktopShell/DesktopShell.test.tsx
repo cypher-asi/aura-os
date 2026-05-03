@@ -72,6 +72,14 @@ vi.mock("@cypher-asi/zui", () => ({
   Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
   Modal: ({ children, isOpen }: { children?: React.ReactNode; isOpen: boolean }) =>
     isOpen ? <div data-testid="modal">{children}</div> : null,
+  useTheme: () => ({
+    theme: "dark",
+    accent: "purple",
+    resolvedTheme: "dark",
+    systemTheme: "dark",
+    setTheme: vi.fn(),
+    setAccent: vi.fn(),
+  }),
 }));
 
 vi.mock("../../hooks/use-active-app", () => ({

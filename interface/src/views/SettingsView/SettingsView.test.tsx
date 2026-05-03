@@ -65,9 +65,23 @@ vi.mock("@cypher-asi/zui", () => ({
     </button>
   ),
   Spinner: () => <span data-testid="spinner" />,
+  THEMES: ["dark", "light", "system"],
+  ACCENT_COLORS: ["cyan", "blue", "purple", "green", "orange", "rose"],
+  useTheme: () => ({
+    theme: "dark",
+    accent: "purple",
+    resolvedTheme: "dark",
+    systemTheme: "dark",
+    setTheme: vi.fn(),
+    setAccent: vi.fn(),
+  }),
 }));
 
 vi.mock("./SettingsView.module.css", () => ({
+  default: new Proxy({}, { get: (_target, prop) => String(prop) }),
+}));
+
+vi.mock("./AppearanceSection/AppearanceSection.module.css", () => ({
   default: new Proxy({}, { get: (_target, prop) => String(prop) }),
 }));
 
@@ -75,6 +89,9 @@ vi.mock("lucide-react", () => ({
   Check: () => <span data-testid="icon-check" />,
   Download: () => <span data-testid="icon-download" />,
   RefreshCw: () => <span data-testid="icon-refresh" />,
+  Sun: () => <span data-testid="icon-sun" />,
+  Moon: () => <span data-testid="icon-moon" />,
+  MonitorSmartphone: () => <span data-testid="icon-monitor-smartphone" />,
 }));
 
 import { SettingsView } from "./SettingsView";

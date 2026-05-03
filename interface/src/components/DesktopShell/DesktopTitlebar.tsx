@@ -1,5 +1,5 @@
-import { Topbar, Button } from "@cypher-asi/zui";
-import { Server } from "lucide-react";
+import { Topbar, Button, useTheme, type Theme } from "@cypher-asi/zui";
+import { Server, Sun, Moon, MonitorSmartphone } from "lucide-react";
 import { OrgSelector } from "../OrgSelector";
 import { WindowControls } from "../WindowControls";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
@@ -10,6 +10,36 @@ interface DesktopTitlebarProps {
   sidekickCollapsed: boolean;
   onToggleSidekick: () => void;
   onOpenHostSettings: () => void;
+}
+
+const THEME_CYCLE: Record<Theme, Theme> = {
+  dark: "light",
+  light: "system",
+  system: "dark",
+};
+
+function ThemeToggleButton() {
+  const { theme, resolvedTheme, setTheme } = useTheme();
+
+  const Icon = theme === "system"
+    ? MonitorSmartphone
+    : resolvedTheme === "light"
+      ? Sun
+      : Moon;
+  const stateLabel = theme === "system" ? "system" : resolvedTheme;
+
+  return (
+    <span className="titlebar-no-drag">
+      <Button
+        variant="ghost"
+        size="sm"
+        iconOnly
+        icon={<Icon size={16} />}
+        aria-label={`Switch theme (currently ${stateLabel})`}
+        onClick={() => setTheme(THEME_CYCLE[theme])}
+      />
+    </span>
+  );
 }
 
 export function DesktopTitlebar({
@@ -39,6 +69,7 @@ export function DesktopTitlebar({
           className={styles.titleActions}
           onDoubleClick={(e) => e.stopPropagation()}
         >
+          <ThemeToggleButton />
           {features.hostRetargeting && (
             <Button
               variant="ghost"

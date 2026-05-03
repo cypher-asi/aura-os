@@ -1,0 +1,82 @@
+.appearancePanel {
+  max-width: 560px;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.themeButtons {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.accentSwatches {
+  display: flex;
+  gap: var(--space-1-5);
+  flex-wrap: wrap;
+}
+
+.swatch {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.swatch:hover {
+  transform: scale(1.1);
+}
+
+.swatch:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.swatch::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid transparent;
+  pointer-events: none;
+}
+
+.swatchSelected {
+  box-shadow: 0 0 0 2px var(--color-focus-ring);
+}
+
+/* Accent palette — these ARE the brand colors, by definition. Mirrors the
+   dark-mode swatches in vendor/zui/src/components/ThemePanel/ThemePanel.module.css. */
+.swatchCyan {
+  background: #01f4cb;
+}
+
+.swatchBlue {
+  background: #3b82f6;
+}
+
+.swatchPurple {
+  background: #a855f7;
+}
+
+.swatchGreen {
+  background: #00e676;
+}
+
+.swatchOrange {
+  background: #f97316;
+}
+
+.swatchRose {
+  background: #f43f5e;
+}

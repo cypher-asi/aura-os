@@ -1,6 +1,7 @@
 import { Page, Panel, Text } from "@cypher-asi/zui";
 import { formatBuildTime, getBuildInfo } from "../../lib/build-info";
 import { UpdateControl } from "../../components/UpdateControl";
+import { AppearanceSection } from "./AppearanceSection";
 import styles from "./SettingsView.module.css";
 
 export function SettingsView() {
@@ -56,6 +57,7 @@ export function SettingsView() {
           </dd>
         </dl>
       </Panel>
+      <AppearanceSection />
       <Panel variant="solid" border="solid" borderRadius="md" className={styles.settingsPanel}>
         <Text variant="muted" size="sm">
           Settings are managed through environment variables. See <code>.env.example</code> for available options.

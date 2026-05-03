@@ -59,6 +59,18 @@
   line-height: 18px;
 }
 
+/* The AppearanceSection ships its own ZUI Panel (border + background), so
+   the outer section wrapper here just provides top spacing — strip the
+   chrome that .settingsPanel normally paints to avoid a double-bordered look. */
+.appearancePanelMobile {
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+  overflow: visible;
+}
+
 .infoGrid {
   display: grid;
   grid-template-columns: minmax(78px, max-content) minmax(0, 1fr);

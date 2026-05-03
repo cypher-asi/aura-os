@@ -3,6 +3,11 @@ import path from "path";
 
 export default defineConfig({
   resolve: {
+    // Mirror vite.config.ts: the vendored @cypher-asi/zui has its own
+    // nested copy of React (different major than the app's), so we must
+    // dedupe + alias here so anything pulled in from the ZUI source
+    // shares the single React instance used by tests.
+    dedupe: ["react", "react-dom"],
     preserveSymlinks: true,
     alias: [
       {
@@ -13,6 +18,8 @@ export default defineConfig({
         find: "@cypher-asi/zui",
         replacement: path.resolve(__dirname, "node_modules/@cypher-asi/zui/src/index.ts"),
       },
+      { find: "react-dom", replacement: path.resolve(__dirname, "node_modules/react-dom") },
+      { find: "react", replacement: path.resolve(__dirname, "node_modules/react") },
     ],
   },
   define: {

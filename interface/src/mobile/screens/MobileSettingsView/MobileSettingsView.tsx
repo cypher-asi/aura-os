@@ -1,4 +1,5 @@
 import { formatBuildTime, getBuildInfo } from "../../../lib/build-info";
+import { AppearanceSection } from "../../../views/SettingsView/AppearanceSection";
 import styles from "./MobileSettingsView.module.css";
 
 function isPlaceholderVersion(version: string) {
@@ -68,6 +69,10 @@ export function MobileSettingsView() {
             </span>
           </dd>
         </dl>
+      </section>
+
+      <section className={`${styles.settingsPanel} ${styles.appearancePanelMobile}`}>
+        <AppearanceSection />
       </section>
 
       <section className={styles.settingsNote}>
