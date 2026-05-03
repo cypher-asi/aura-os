@@ -157,6 +157,18 @@ export function ChatPanel({
   const initialHandoffReadyRef = useRef(false);
   const inputFocusReadyRef = useRef(false);
   const initialColdLoadRef = useRef(!historyResolved);
+  // Latches `true` once we've completed the initial reveal for the current
+  // chat (warm mount, cold-load anchor-ready, or empty-thread short circuit).
+  // Subsequent transient `historyResolved=false` flips MUST NOT re-arm the
+  // cold-load machinery, otherwise the next flip back to `true` re-applies
+  // `.messageContentHidden` and the entire transcript flashes
+  // `visibility: hidden` for ~2 frames mid-turn. `historyResolved` flaps
+  // during normal chat whenever the chat-history-store evicts our entry
+  // (`MAX_HISTORY_ENTRIES = 8`) and a follow-up WS event re-creates it via
+  // `fetchHistory`, which transitions status `"loading"` → `"ready"`.
+  // Reset only on real chat switches via the `[initialHandoff, scrollResetKey]`
+  // effect below.
+  const hasInitiallyRevealedRef = useRef(historyResolved);
   const revealAnimationFrameRef = useRef<number | null>(null);
   const loadingOverlayTimeoutRef = useRef<number | null>(null);
   const [isInitialThreadRevealReady, setIsInitialThreadRevealReady] = useState(() => historyResolved);
@@ -174,6 +186,7 @@ export function ChatPanel({
     initialHandoffReadyRef.current = false;
     inputFocusReadyRef.current = false;
     initialColdLoadRef.current = !historyResolved;
+    hasInitiallyRevealedRef.current = historyResolved;
     setIsInitialThreadRevealReady(historyResolved);
     if (revealAnimationFrameRef.current != null) {
       cancelAnimationFrame(revealAnimationFrameRef.current);
@@ -188,6 +201,10 @@ export function ChatPanel({
   }, [initialHandoff, scrollResetKey]);
 
   useEffect(() => {
+    if (hasInitiallyRevealedRef.current) {
+      return;
+    }
+
     if (!historyResolved) {
       initialColdLoadRef.current = true;
       setIsInitialThreadRevealReady(false);
@@ -196,6 +213,7 @@ export function ChatPanel({
 
     if (messages.length === 0) {
       initialColdLoadRef.current = false;
+      hasInitiallyRevealedRef.current = true;
       setIsInitialThreadRevealReady(true);
     }
   }, [historyResolved, messages.length]);
@@ -254,6 +272,7 @@ export function ChatPanel({
       revealAnimationFrameRef.current = requestAnimationFrame(() => {
         revealAnimationFrameRef.current = null;
         initialColdLoadRef.current = false;
+        hasInitiallyRevealedRef.current = true;
         setIsInitialThreadRevealReady(true);
       });
     });

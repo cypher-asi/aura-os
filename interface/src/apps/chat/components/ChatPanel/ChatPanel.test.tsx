@@ -264,6 +264,121 @@ describe("ChatPanel", () => {
     expect(container.querySelector(".initialRevealOverlay")).toBeNull();
   });
 
+  it("does not re-hide the transcript when historyResolved flaps mid-chat after the initial reveal", () => {
+    // Regression: chat-history-store evicts non-current entries when
+    // `MAX_HISTORY_ENTRIES = 8` is exceeded. After eviction, `useChatHistory`
+    // returns `IDLE_HISTORY` (status `"idle"`), so `historyResolved` flips
+    // false. The next WS-driven force-fetch transitions status `"loading"`
+    // → `"ready"` and `historyResolved` flips back to true. Without the
+    // `hasInitiallyRevealedRef` latch, that round-trip re-armed the
+    // cold-load reveal: `initialColdLoadRef.current` went back to true and
+    // `isInitialThreadRevealReady` to false, so `.messageContentHidden`
+    // (`visibility: hidden`) was reapplied to the entire transcript --
+    // which is exactly what the user perceived as "all messages flash"
+    // a few times during a turn in the standalone agent chat.
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+    autoSignalInitialAnchorReady = true;
+
+    const { container, rerender } = render(
+      <ChatPanel
+        streamKey="stream-1"
+        onSend={vi.fn()}
+        onStop={vi.fn()}
+        agentName="Coca"
+        machineType="remote"
+        isLoading={false}
+        historyResolved
+        historyMessages={[...sampleHistoryMessages]}
+      />,
+    );
+
+    expect(container.querySelector(".messageContentHidden")).toBeNull();
+
+    // Simulate the eviction → IDLE_HISTORY round-trip: history briefly
+    // becomes unresolved, then resolves again with the same messages.
+    rerender(
+      <ChatPanel
+        streamKey="stream-1"
+        onSend={vi.fn()}
+        onStop={vi.fn()}
+        agentName="Coca"
+        machineType="remote"
+        isLoading={false}
+        historyResolved={false}
+        historyMessages={[...sampleHistoryMessages]}
+      />,
+    );
+
+    rerender(
+      <ChatPanel
+        streamKey="stream-1"
+        onSend={vi.fn()}
+        onStop={vi.fn()}
+        agentName="Coca"
+        machineType="remote"
+        isLoading={false}
+        historyResolved
+        historyMessages={[...sampleHistoryMessages]}
+      />,
+    );
+
+    expect(container.querySelector(".messageContentHidden")).toBeNull();
+    expect(container.querySelector(".initialRevealOverlay")).toBeNull();
+  });
+
+  it("re-arms cold-load when the user actually switches chats", () => {
+    // The latch must not block legitimate cold-load reveals on a real
+    // chat switch. Switching is signalled by `scrollResetKey` (and/or
+    // `initialHandoff`); the mount/reset effect resets the latch so the
+    // new chat gets its own cold-load → reveal cycle.
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+
+    const { container, rerender } = render(
+      <ChatPanel
+        streamKey="stream-1"
+        onSend={vi.fn()}
+        onStop={vi.fn()}
+        agentName="Coca"
+        machineType="remote"
+        isLoading={false}
+        historyResolved
+        historyMessages={[...sampleHistoryMessages]}
+        scrollResetKey="agent-a"
+      />,
+    );
+
+    expect(container.querySelector(".messageContentHidden")).toBeNull();
+
+    rerender(
+      <ChatPanel
+        streamKey="stream-1"
+        onSend={vi.fn()}
+        onStop={vi.fn()}
+        agentName="Coca"
+        machineType="remote"
+        isLoading
+        historyResolved={false}
+        scrollResetKey="agent-b"
+      />,
+    );
+
+    rerender(
+      <ChatPanel
+        streamKey="stream-1"
+        onSend={vi.fn()}
+        onStop={vi.fn()}
+        agentName="Coca"
+        machineType="remote"
+        isLoading={false}
+        historyResolved
+        historyMessages={[...sampleHistoryMessages]}
+        scrollResetKey="agent-b"
+      />,
+    );
+
+    expect(container.querySelector(".messageContentHidden")).not.toBeNull();
+  });
+
   it("does not hide an empty conversation while history is already resolved", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
 
