@@ -104,6 +104,52 @@
   --color-terminal-ansi-bright-magenta: #d670d6;
   --color-terminal-ansi-bright-cyan: #29b8db;
   --color-terminal-ansi-bright-white: #e5e5e5;
+
+  /* ----------------------------------------------------------------------
+     Sidekick log per-type accent tints (phase 9). Each value drives both
+     the active filter chip and the inline log badge for a given event
+     domain. Backgrounds are computed at the call site via color-mix at
+     ~15% alpha so the fg/bg pair stays visually consistent.
+     ---------------------------------------------------------------------- */
+  --color-log-loop: #4ade80;
+  --color-log-task: #34d399;
+  --color-log-output: #86efac;
+  --color-log-files: #a3e635;
+  --color-log-session: #2dd4bf;
+  --color-log-log: #16a34a;
+  --color-log-spec: #5eead4;
+  --color-log-connected: #22c55e;
+
+  /* ----------------------------------------------------------------------
+     Status notice tints (AgentEnvironment recovery notices). Distinct from
+     the semantic --color-{success,warning,error} so the tinted hue stays
+     stable when the accent palette changes. The `-fg` variant is the
+     lighter label/text shade that reads on the tinted background.
+     ---------------------------------------------------------------------- */
+  --color-status-info: #06b6d4;
+  --color-status-info-fg: #67e8f9;
+  --color-status-purple: #a855f7;
+  --color-warning-fg: #fbbf24;
+  --color-error-fg: #f87171;
+
+  /* ----------------------------------------------------------------------
+     Image scrim — solid dark wash that stays dark on any background
+     (e.g. ChatInputBar attachment thumbnail close button). Kept dark in
+     light mode too so it remains legible over arbitrary attached images.
+     ---------------------------------------------------------------------- */
+  --color-image-scrim: rgba(0, 0, 0, 0.6);
+  --color-image-scrim-strong: rgba(0, 0, 0, 0.8);
+
+  /* Editor text-selection background (IdeView code areas). */
+  --color-editor-selection: rgba(56, 139, 253, 0.3);
+
+  /* ----------------------------------------------------------------------
+     Mobile chat input chrome — intentionally darker even in light mode
+     for visual lift; the input bar reads as an inverted "input pill" on
+     top of the chat surface.
+     ---------------------------------------------------------------------- */
+  --color-chat-mobile-input-bg: #111213;
+  --color-chat-mobile-send-bg: #28282b;
 }
 
 [data-theme='light'] {
@@ -177,4 +223,31 @@
   --color-terminal-ansi-bright-magenta: #bc05bc;
   --color-terminal-ansi-bright-cyan: #0598bc;
   --color-terminal-ansi-bright-white: #a5a5a5;
+
+  /* Sidekick log per-type accent tints — light overrides. */
+  --color-log-loop: #16a34a;
+  --color-log-task: #047857;
+  --color-log-output: #16a34a;
+  --color-log-files: #65a30d;
+  --color-log-session: #0d9488;
+  --color-log-log: #166534;
+  --color-log-spec: #0f766e;
+  --color-log-connected: #16a34a;
+
+  /* Status notice tints — light overrides. */
+  --color-status-info: #0891b2;
+  --color-status-info-fg: #0e7490;
+  --color-status-purple: #7c3aed;
+  --color-warning-fg: #b45309;
+  --color-error-fg: #b91c1c;
+
+  /* Image scrim — slightly lighter in light mode. */
+  --color-image-scrim: rgba(0, 0, 0, 0.5);
+  --color-image-scrim-strong: rgba(0, 0, 0, 0.7);
+
+  --color-editor-selection: rgba(56, 139, 253, 0.25);
+
+  /* Mobile chat input chrome — kept dark even in light mode. */
+  --color-chat-mobile-input-bg: #1f2937;
+  --color-chat-mobile-send-bg: #111827;
 }
