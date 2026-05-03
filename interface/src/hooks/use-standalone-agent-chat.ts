@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { api, STANDALONE_AGENT_HISTORY_LIMIT } from "../api/client";
 import { useAgentChatStream } from "./use-agent-chat-stream";
@@ -41,12 +41,19 @@ function persistAgentProject(agentId: string, projectId: string) {
 }
 
 /**
- * Standalone agent chat wiring extracted from AgentChatView so it can be
- * reused by both the route-based view and desktop floating windows.
+ * Single source of truth for standalone-agent chat wiring.
  *
- * Returns all the props that ChatPanel needs.
+ * Both the route view (`/agents/:agentId` -> `StandaloneAgentChatPanel`) and the
+ * floating desktop window (`AgentWindow`) consume this hook so the two surfaces
+ * stay behaviourally identical. Route-only concerns (`scrollToBottomOnReset`,
+ * `initialHandoff`, `LAST_AGENT_ID_KEY` persistence) are layered on top by the
+ * caller after the fact.
+ *
+ * Returns `ChatPanelProps`. `agentId` may be undefined to support the
+ * floating-window mount race where the window is rendered before the agent
+ * list has resolved.
  */
-export function useAgentChatWindow(agentId: string | undefined): ChatPanelProps {
+export function useStandaloneAgentChat(agentId: string | undefined): ChatPanelProps {
   const agentProjects = useProjectsListStore(useShallow(selectProjectsForAgent(agentId)));
 
   const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(() => {
@@ -54,26 +61,33 @@ export function useAgentChatWindow(agentId: string | undefined): ChatPanelProps 
     return loadPersistedProject(agentId);
   });
 
+  useEffect(() => {
+    if (!agentId) return;
+    setSelectedProjectId(loadPersistedProject(agentId));
+  }, [agentId]);
+
   const effectiveProjectId = useMemo(() => {
-    if (selectedProjectId && agentProjects.some((p) => p.project_id === selectedProjectId)) {
+    if (selectedProjectId && agentProjects.some((project) => project.project_id === selectedProjectId)) {
       return selectedProjectId;
     }
     return agentProjects[0]?.project_id;
   }, [selectedProjectId, agentProjects]);
 
   const handleProjectChange = useCallback(
-    (pid: string) => {
-      setSelectedProjectId(pid);
-      if (agentId) persistAgentProject(agentId, pid);
+    (projectId: string) => {
+      setSelectedProjectId(projectId);
+      if (agentId) persistAgentProject(agentId, projectId);
     },
     [agentId],
   );
 
-  const { streamKey, sendMessage, stopStreaming, resetEvents, markNextSendAsNewSession } = useAgentChatStream({ agentId });
-  const contextUsage = useContextUsage(streamKey);
+  const { streamKey, sendMessage, stopStreaming, resetEvents, markNextSendAsNewSession } =
+    useAgentChatStream({ agentId });
 
   const { agentName, machineType, templateAgentId, adapterType, defaultModel } =
     useStandaloneAgentMeta(agentId);
+
+  const contextUsage = useContextUsage(streamKey);
 
   const historyKey = useMemo(() => {
     if (!agentId) return undefined;
@@ -89,7 +103,7 @@ export function useAgentChatWindow(agentId: string | undefined): ChatPanelProps 
   }, [agentId]);
 
   const setSelectedAgent = useAgentStore((s) => s.setSelectedAgent);
-  const onAgentSwitch = useCallback(() => {
+  const onSwitch = useCallback(() => {
     if (!agentId) return;
     setSelectedAgent(agentId);
   }, [agentId, setSelectedAgent]);
@@ -120,13 +134,13 @@ export function useAgentChatWindow(agentId: string | undefined): ChatPanelProps 
 
   const { historyMessages, historyResolved, isLoading, historyError, wrapSend } =
     useChatHistorySync({
-    historyKey,
-    streamKey,
-    fetchFn,
-    resetEvents,
-    invalidateBeforeFetch: false,
-    onSwitch: onAgentSwitch,
-    onClear,
+      historyKey,
+      streamKey,
+      fetchFn,
+      resetEvents,
+      invalidateBeforeFetch: false,
+      onSwitch,
+      onClear,
       hydrateToStream: false,
       // Standalone agent chats are keyed by the org-level `agent_id`
       // (see `agentHistoryKey`), so we subscribe to that axis — not

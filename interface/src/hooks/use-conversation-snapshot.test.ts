@@ -231,4 +231,85 @@ describe("useConversationSnapshot", () => {
 
     expect(result.current.messages).toEqual(historyMessages);
   });
+
+  it("falls back to the last non-empty snapshot when every input briefly empties on the same stream", () => {
+    // Regression for the CEO chat blink: a sidebar prefetch evicts the
+    // active history entry (`MAX_HISTORY_ENTRIES = 8`), the post-stream
+    // "history caught up" effect resets stream events to `[]`, and the
+    // `setThread(streamKey, history)` effect hasn't re-run yet because
+    // `historyMessages` is also `[]` from the eviction. Without the
+    // fallback, the merged result is `[]` and `ChatMessageList` flashes
+    // its empty state, dropping the entire transcript for one or two
+    // frames mid-turn. The fallback keeps the prior transcript visible
+    // until any input repopulates.
+    const streamKey = "thread-blink";
+    const historyMessages: DisplaySessionEvent[] = [
+      { id: "evt-user", role: "user", content: "hello" },
+      { id: "evt-assistant", role: "assistant", content: "hi there" },
+    ];
+
+    const { result, rerender } = renderHook(
+      ({ history }: { history: DisplaySessionEvent[] | undefined }) =>
+        useConversationSnapshot(streamKey, history),
+      { initialProps: { history: historyMessages } },
+    );
+
+    expect(result.current.messages).toEqual(historyMessages);
+
+    // Simulate the eviction + stream reset round-trip: history briefly
+    // empties, message-store thread for `streamKey` is intentionally
+    // cleared too so the inline `getThreadMessages` read inside
+    // `useMemo` cannot rescue the snapshot from the message store.
+    useMessageStore.getState().clearThread(streamKey);
+    setStreamMessages(streamKey, []);
+    rerender({ history: [] });
+
+    expect(result.current.messages).toEqual(historyMessages);
+
+    // Recovery: history refetch lands. The fallback should release back
+    // to the live merged result for the new input — verified by passing a
+    // distinct payload so we know we're not just returning the cache.
+    const recoveredHistory: DisplaySessionEvent[] = [
+      ...historyMessages,
+      { id: "evt-user-2", role: "user", content: "still here" },
+    ];
+    rerender({ history: recoveredHistory });
+
+    expect(result.current.messages).toEqual(recoveredHistory);
+  });
+
+  it("returns a legitimately-empty thread for a brand-new chat with no prior snapshot", () => {
+    // The fallback must NOT invent messages for a chat that has never
+    // had any. Initial mount with empty inputs must render as truly empty
+    // so the cold-load empty state can show.
+    const streamKey = "thread-fresh";
+
+    const { result } = renderHook(() =>
+      useConversationSnapshot(streamKey, []),
+    );
+
+    expect(result.current.messages).toEqual([]);
+  });
+
+  it("clears the fallback cache when the chat switches to a new streamKey", () => {
+    // Switching agents must reset the cache so the new chat's empty
+    // initial frame is not papered over by the previous chat's tail.
+    const firstHistory: DisplaySessionEvent[] = [
+      { id: "evt-user-a", role: "user", content: "first" },
+      { id: "evt-assistant-a", role: "assistant", content: "reply A" },
+    ];
+
+    const { result, rerender } = renderHook(
+      ({ key, history }: { key: string; history: DisplaySessionEvent[] }) =>
+        useConversationSnapshot(key, history),
+      { initialProps: { key: "thread-a", history: firstHistory } },
+    );
+
+    expect(result.current.messages).toEqual(firstHistory);
+
+    rerender({ key: "thread-b", history: [] });
+
+    // The new chat starts empty even though the previous one had content.
+    expect(result.current.messages).toEqual([]);
+  });
 });

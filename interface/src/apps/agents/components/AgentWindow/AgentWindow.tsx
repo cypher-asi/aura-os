@@ -3,7 +3,7 @@ import { Minus, Square, X } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { useDesktopWindowStore, MIN_WIDTH, MIN_HEIGHT } from "../../../../stores/desktop-window-store";
 import type { WindowState } from "../../../../stores/desktop-window-store";
-import { useAgentChatWindow } from "../../../../hooks/use-agent-chat-window";
+import { useStandaloneAgentChat } from "../../../../hooks/use-standalone-agent-chat";
 import { useAvatarState } from "../../../../hooks/use-avatar-state";
 import { useAgentStore } from "../../stores";
 import { Avatar } from "../../../../components/Avatar";
@@ -18,33 +18,8 @@ interface AgentWindowProps {
 type ResizeDir = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
 const AgentChatWindowPanel = memo(function AgentChatWindowPanel({ agentId }: { agentId: string }) {
-  const chatProps = useAgentChatWindow(agentId);
-
-  return (
-    <ChatPanel
-      streamKey={chatProps.streamKey}
-      onSend={chatProps.onSend}
-      onStop={chatProps.onStop}
-      agentName={chatProps.agentName}
-      machineType={chatProps.machineType}
-      adapterType={chatProps.adapterType}
-      defaultModel={chatProps.defaultModel}
-      templateAgentId={chatProps.templateAgentId}
-      agentId={chatProps.agentId}
-      isLoading={chatProps.isLoading}
-      historyResolved={chatProps.historyResolved}
-      errorMessage={chatProps.errorMessage}
-      emptyMessage={chatProps.emptyMessage}
-      scrollResetKey={chatProps.scrollResetKey}
-      historyMessages={chatProps.historyMessages}
-      projects={chatProps.projects}
-      selectedProjectId={chatProps.selectedProjectId}
-      onProjectChange={chatProps.onProjectChange}
-      contextUsage={chatProps.contextUsage}
-      onNewSession={chatProps.onNewSession}
-      compact
-    />
-  );
+  const chatProps = useStandaloneAgentChat(agentId);
+  return <ChatPanel {...chatProps} compact />;
 });
 
 export const AgentWindow = memo(function AgentWindow({ win, isFocused }: AgentWindowProps) {

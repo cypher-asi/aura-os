@@ -42,8 +42,10 @@ vi.mock("../api/client", () => ({
     agents: {
       listEvents: vi.fn().mockResolvedValue([]),
       getContextUsage: vi.fn().mockResolvedValue({ context_utilization: 0 }),
+      resetSession: vi.fn().mockResolvedValue(undefined),
     },
   },
+  STANDALONE_AGENT_HISTORY_LIMIT: 50,
 }));
 
 vi.mock("../stores/chat-history-store", () => ({
@@ -64,9 +66,23 @@ vi.mock("../stores/projects-list-store", () => ({
     selector({ projects: mockProjects, agentsByProject: mockAgentsByProject }),
 }));
 
-import { useAgentChatWindow } from "./use-agent-chat-window";
+vi.mock("../stores/context-usage-store", () => ({
+  useContextUsage: vi.fn(() => undefined),
+  useContextUsageStore: {
+    getState: () => ({
+      clearContextUtilization: vi.fn(),
+      markResetPending: vi.fn(),
+    }),
+  },
+}));
 
-describe("useAgentChatWindow", () => {
+vi.mock("./use-hydrate-context-utilization", () => ({
+  useHydrateContextUtilization: vi.fn(),
+}));
+
+import { useStandaloneAgentChat } from "./use-standalone-agent-chat";
+
+describe("useStandaloneAgentChat", () => {
   beforeEach(() => {
     mockProjects = [];
     mockAgentsByProject = {};
@@ -97,21 +113,21 @@ describe("useAgentChatWindow", () => {
   });
 
   it("returns a stable shell payload when agentId is undefined", () => {
-    const { result } = renderHook(() => useAgentChatWindow(undefined));
+    const { result } = renderHook(() => useStandaloneAgentChat(undefined));
 
     expect(result.current.agentId).toBeUndefined();
     expect(result.current.streamKey).toBe("test-stream-key");
   });
 
   it("returns chat props when agentId is provided", () => {
-    const { result } = renderHook(() => useAgentChatWindow("agent-1"));
+    const { result } = renderHook(() => useStandaloneAgentChat("agent-1"));
 
     expect(result.current.agentId).toBe("agent-1");
     expect(result.current.streamKey).toBe("test-stream-key");
   });
 
   it("provides chat panel props", () => {
-    const { result } = renderHook(() => useAgentChatWindow("agent-1"));
+    const { result } = renderHook(() => useStandaloneAgentChat("agent-1"));
 
     expect(result.current.agentName).toBe("Test Agent");
     expect(result.current.machineType).toBe("local");
@@ -126,7 +142,7 @@ describe("useAgentChatWindow", () => {
   });
 
   it("exposes onSend and onStop", () => {
-    const { result } = renderHook(() => useAgentChatWindow("agent-1"));
+    const { result } = renderHook(() => useStandaloneAgentChat("agent-1"));
 
     expect(typeof result.current.onSend).toBe("function");
     expect(typeof result.current.onStop).toBe("function");
@@ -144,7 +160,7 @@ describe("useAgentChatWindow", () => {
       "proj-3": [{ agent_id: "agent-1" }],
     };
 
-    const { result } = renderHook(() => useAgentChatWindow("agent-1"));
+    const { result } = renderHook(() => useStandaloneAgentChat("agent-1"));
 
     expect(result.current.projects).toHaveLength(2);
     expect(result.current.projects!.map((p) => p.project_id)).toEqual(["proj-1", "proj-3"]);
@@ -154,7 +170,7 @@ describe("useAgentChatWindow", () => {
     mockProjects = [{ project_id: "proj-1" }];
     mockAgentsByProject = { "proj-1": [{ agent_id: "agent-1" }] };
 
-    const { result } = renderHook(() => useAgentChatWindow("agent-1"));
+    const { result } = renderHook(() => useStandaloneAgentChat("agent-1"));
 
     expect(result.current.selectedProjectId).toBe("proj-1");
   });
@@ -169,7 +185,7 @@ describe("useAgentChatWindow", () => {
       "proj-2": [{ agent_id: "agent-1" }],
     };
 
-    const { result } = renderHook(() => useAgentChatWindow("agent-1"));
+    const { result } = renderHook(() => useStandaloneAgentChat("agent-1"));
 
     act(() => {
       result.current.onProjectChange!("proj-2");
@@ -191,7 +207,7 @@ describe("useAgentChatWindow", () => {
       "proj-2": [{ agent_id: "agent-1" }],
     };
 
-    const { result } = renderHook(() => useAgentChatWindow("agent-1"));
+    const { result } = renderHook(() => useStandaloneAgentChat("agent-1"));
 
     expect(result.current.selectedProjectId).toBe("proj-2");
   });
@@ -202,13 +218,13 @@ describe("useAgentChatWindow", () => {
     mockProjects = [{ project_id: "proj-1" }];
     mockAgentsByProject = { "proj-1": [{ agent_id: "agent-1" }] };
 
-    const { result } = renderHook(() => useAgentChatWindow("agent-1"));
+    const { result } = renderHook(() => useStandaloneAgentChat("agent-1"));
 
     expect(result.current.selectedProjectId).toBe("proj-1");
   });
 
   it("scrollResetKey matches agentId", () => {
-    const { result } = renderHook(() => useAgentChatWindow("agent-42"));
+    const { result } = renderHook(() => useStandaloneAgentChat("agent-42"));
 
     expect(result.current.scrollResetKey).toBe("agent-42");
   });

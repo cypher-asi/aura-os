@@ -3,21 +3,18 @@ import { useLocation, useNavigate, useParams, useSearchParams } from "react-rout
 import { useShallow } from "zustand/react/shallow";
 import { X } from "lucide-react";
 import { Modal } from "@cypher-asi/zui";
-import { api, STANDALONE_AGENT_HISTORY_LIMIT } from "../../../../api/client";
-import { useAgentChatStream } from "../../../../hooks/use-agent-chat-stream";
+import { api } from "../../../../api/client";
 import { useChatStream } from "../../../../hooks/use-chat-stream";
 import { useChatHistorySync } from "../../../../hooks/use-chat-history-sync";
 import { useDelayedLoading } from "../../../../shared/hooks/use-delayed-loading";
 import { useAgentChatMeta } from "../../../../hooks/use-agent-chat-meta";
+import { useStandaloneAgentChat } from "../../../../hooks/use-standalone-agent-chat";
 import { setLastAgent, setLastProject } from "../../../../utils/storage";
 import { ChatPanel, type ChatPanelProps } from "../../../chat/components/ChatPanel";
 import { MobileChatPanel } from "../../../../mobile/chat/MobileChatPanel";
 import { MobileProjectAgentSwitcherSheet } from "../../../../mobile/chat/MobileProjectAgentSwitcherSheet";
-import {
-  projectChatHistoryKey,
-  agentHistoryKey,
-} from "../../../../stores/chat-history-store";
-import { useSelectedAgent, LAST_AGENT_ID_KEY } from "../../stores";
+import { projectChatHistoryKey } from "../../../../stores/chat-history-store";
+import { LAST_AGENT_ID_KEY } from "../../stores";
 import { useProjectsListStore } from "../../../../stores/projects-list-store";
 import { queryClient } from "../../../../shared/lib/query-client";
 import { deriveProjectAgentTitle } from "../../../../lib/derive-project-agent-title";
@@ -35,34 +32,10 @@ import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
 import { useAgentBusy } from "../../../../hooks/use-agent-busy";
 import styles from "./AgentChatView.module.css";
 
-const AGENT_PROJECT_KEY_PREFIX = "aura-agent-project:";
 const EMPTY_PROJECTS: Project[] = [];
 const EMPTY_AGENT_INSTANCES: AgentInstance[] = [];
 
-function loadPersistedProject(agentId: string): string | undefined {
-  try {
-    return localStorage.getItem(`${AGENT_PROJECT_KEY_PREFIX}${agentId}`) ?? undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function persistAgentProject(agentId: string, projectId: string) {
-  try {
-    localStorage.setItem(`${AGENT_PROJECT_KEY_PREFIX}${agentId}`, projectId);
-  } catch { /* ignore */ }
-}
-
 const noopSend = () => {};
-
-function selectProjectsForAgent(agentId: string) {
-  return (state: { projects: Project[]; agentsByProject: Record<string, AgentInstance[]> }) => {
-    return state.projects.filter((project) => {
-      const instances = state.agentsByProject[project.project_id];
-      return instances?.some((instance) => instance.agent_id === agentId);
-    });
-  };
-}
 
 function selectCurrentProject(projectId: string) {
   return (state: { projects: Project[] }) => {
@@ -118,110 +91,24 @@ function StandaloneAgentChatPanel({
   initialCreateHandoff: boolean;
   onInitialHandoffReady?: () => void;
 }) {
-  const agentProjects = useProjectsListStore(useShallow(selectProjectsForAgent(agentId)));
-  const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(() =>
-    loadPersistedProject(agentId),
-  );
-  useEffect(() => {
-    setSelectedProjectId(loadPersistedProject(agentId));
-  }, [agentId]);
-  const { streamKey, sendMessage, stopStreaming, resetEvents, markNextSendAsNewSession } = useAgentChatStream({ agentId });
-  const { agentName, machineType, templateAgentId, adapterType, defaultModel } = useAgentChatMeta(
-    "agent",
-    { agentId },
-  );
-  const { setSelectedAgent } = useSelectedAgent();
-  const contextUsage = useContextUsage(streamKey);
-
-  const effectiveProjectId = useMemo(() => {
-    if (selectedProjectId && agentProjects.some((project) => project.project_id === selectedProjectId)) {
-      return selectedProjectId;
-    }
-    return agentProjects[0]?.project_id;
-  }, [agentProjects, selectedProjectId]);
-
-  const handleProjectChange = useCallback(
-    (projectId: string) => {
-      setSelectedProjectId(projectId);
-      persistAgentProject(agentId, projectId);
-    },
-    [agentId],
-  );
-
-  const historyKey = useMemo(() => agentHistoryKey(agentId), [agentId]);
-  const fetchFn = useMemo(
-    () => () =>
-      api.agents.listEvents(agentId, {
-        limit: STANDALONE_AGENT_HISTORY_LIMIT,
-      }),
-    [agentId],
-  );
-
-  const onAgentSwitch = useCallback(() => {
-    setSelectedAgent(agentId);
-    localStorage.setItem(LAST_AGENT_ID_KEY, agentId);
-  }, [agentId, setSelectedAgent]);
-
-  const onClear = useCallback(() => {
-    resetEvents([], { allowWhileStreaming: true });
-  }, [resetEvents]);
-
-  const handleNewSession = useCallback(() => {
-    void import("../../../../lib/analytics").then(({ track }) => track("chat_session_reset"));
-    api.agents.resetSession(agentId).catch(() => {});
-    markNextSendAsNewSession();
-    const store = useContextUsageStore.getState();
-    store.clearContextUtilization(streamKey);
-    store.markResetPending(streamKey);
-  }, [agentId, markNextSendAsNewSession, streamKey]);
-
-  const contextUsageFetcher = useMemo(
-    () =>
-      (signal: AbortSignal) => api.agents.getContextUsage(agentId, { signal }),
-    [agentId],
-  );
-  useHydrateContextUtilization(streamKey, contextUsageFetcher, agentId);
-
-  const { historyMessages, historyResolved, isLoading, historyError, wrapSend } =
-    useChatHistorySync({
-      historyKey,
-      streamKey,
-      fetchFn,
-      resetEvents,
-      invalidateBeforeFetch: false,
-      onSwitch: onAgentSwitch,
-      onClear,
-      hydrateToStream: false,
-      watchAgentId: agentId,
-    });
-
-  const wrappedSend = useMemo(() => wrapSend(sendMessage), [wrapSend, sendMessage]);
-  const deferredLoading = useDelayedLoading(isLoading);
+  const sharedChatProps = useStandaloneAgentChat(agentId);
   const { isMobileLayout } = useAuraCapabilities();
 
+  // Route-only side effect: keep the legacy "last agent" cookie used by
+  // <MobileAgentDetailsView> and the agent rail in sync. The shared hook
+  // already pushes the agentId into the agent store via `setSelectedAgent`,
+  // so we only need to mirror it into localStorage here.
+  useEffect(() => {
+    try {
+      localStorage.setItem(LAST_AGENT_ID_KEY, agentId);
+    } catch { /* ignore */ }
+  }, [agentId]);
+
   const panelProps: ChatPanelProps = {
-    streamKey,
-    onSend: wrappedSend,
-    onStop: stopStreaming,
-    agentName,
-    machineType,
-    templateAgentId,
-    adapterType,
-    defaultModel,
-    agentId,
-    isLoading: deferredLoading,
-    historyResolved,
-    errorMessage: historyError ? historyError : null,
+    ...sharedChatProps,
     initialHandoff: initialCreateHandoff ? "create-agent" : undefined,
     onInitialHandoffReady,
-    scrollResetKey: agentId,
     scrollToBottomOnReset: false,
-    historyMessages,
-    projects: agentProjects,
-    selectedProjectId: effectiveProjectId,
-    onProjectChange: handleProjectChange,
-    contextUsage,
-    onNewSession: handleNewSession,
   };
 
   return isMobileLayout ? <MobileChatPanel {...panelProps} /> : <ChatPanel {...panelProps} />;

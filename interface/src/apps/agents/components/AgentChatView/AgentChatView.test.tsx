@@ -82,6 +82,13 @@ vi.mock("../../../../hooks/use-agent-chat-meta", () => ({
     adapterType: "aura_harness",
     defaultModel: "aura-gpt-5-4",
   }),
+  useStandaloneAgentMeta: () => ({
+    agentName: "Test Agent",
+    machineType: "remote",
+    templateAgentId: "template-1",
+    adapterType: "aura_harness",
+    defaultModel: "aura-gpt-5-4",
+  }),
 }));
 
 vi.mock("../../../../hooks/use-aura-capabilities", () => ({
@@ -118,6 +125,8 @@ vi.mock("../../../../stores/projects-list-store", () => ({
 vi.mock("../../stores", () => ({
   LAST_AGENT_ID_KEY: "last-agent-id",
   useSelectedAgent: () => ({ setSelectedAgent: mocks.setSelectedAgent }),
+  useAgentStore: (selector: (s: { setSelectedAgent: typeof mocks.setSelectedAgent }) => unknown) =>
+    selector({ setSelectedAgent: mocks.setSelectedAgent }),
 }));
 
 vi.mock("../../../../stores/chat-handoff-store", () => ({
