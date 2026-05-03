@@ -11,3 +11,14 @@
 .sidekickToggle {
   flex-shrink: 0;
 }
+
+/* Override ZUI Button's `.selected` accent color for this specific control
+   so the open-drawer state reads as window chrome (neutral primary text)
+   rather than an in-app accent emphasis. Targets aria-pressed="true",
+   which mirrors the `selected` prop on this button, and uses
+   class+attribute specificity (0,2,0) to outweigh ZUI's `.selected`
+   (0,1,0) without resorting to !important. */
+.sidekickToggle[aria-pressed="true"] {
+  color: var(--color-text-primary);
+  text-shadow: none;
+}
