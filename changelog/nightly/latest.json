@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-03T01:38:59.164Z",
+  "generatedAt": "2026-05-03T03:02:46.777Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.432.1",
+  "version": "0.1.0-nightly.433.1",
   "date": "2026-05-02",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.432.1",
-  "lastIncludedSha": "9cb703f259b6dec73086d77ae9e96321722ecba8",
-  "previousProcessedSha": "5283d2f148d9c4895738ef8919c78f4d639afe07",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.433.1",
+  "lastIncludedSha": "7e639620be7006ca0041a762b793b8b647fc2c9f",
+  "previousProcessedSha": "9cb703f259b6dec73086d77ae9e96321722ecba8",
   "commitShas": [
     "9bbe1ae4500f19f6a7e2f9fc278293b40c372761",
     "b7d61680e560cbca7b1df6f3ec16c783705f7fff",
@@ -25,10 +25,12 @@
     "db539c0242b7d3e009c42ca3ad4619d6fab3c5f4",
     "5283d2f148d9c4895738ef8919c78f4d639afe07",
     "0df9e8eb7de9799b15dcfa64db3756edd88c464c",
-    "9cb703f259b6dec73086d77ae9e96321722ecba8"
+    "9cb703f259b6dec73086d77ae9e96321722ecba8",
+    "48d2a33e554e950e8163356bbf21c83b09d42fef",
+    "7e639620be7006ca0041a762b793b8b647fc2c9f"
   ],
-  "rawCommitCount": 14,
-  "filteredCommitCount": 14,
+  "rawCommitCount": 16,
+  "filteredCommitCount": 16,
   "rawCommits": [
     {
       "sha": "9bbe1ae4500f19f6a7e2f9fc278293b40c372761",
@@ -609,6 +611,94 @@
         "Interface",
         "Other"
       ]
+    },
+    {
+      "sha": "48d2a33e554e950e8163356bbf21c83b09d42fef",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T18:49:13-07:00",
+      "subject": "fix(chat): stop transcript flash on history flap mid-turn",
+      "body": "Latch the cold-load reveal in ChatPanel so a transient\n`historyResolved=false` flip during a turn cannot re-arm\n`initialColdLoadRef` and re-apply `.messageContentHidden` to the entire\ntranscript.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "9cb703f259b6dec73086d77ae9e96321722ecba8"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.test.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 134,
+        "deletions": 0
+      },
+      "committedAtMs": 1777772953000,
+      "cleanSubject": "stop transcript flash on history flap mid-turn",
+      "keywords": [
+        "stop",
+        "transcript",
+        "flash",
+        "history",
+        "flap",
+        "turn"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "7e639620be7006ca0041a762b793b8b647fc2c9f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T19:34:03-07:00",
+      "subject": "fix(chat): unify standalone agent chat wiring + stop CEO transcript blink",
+      "body": "Two coupled changes that together close the \"CEO chat keeps blinking the\nwhole transcript mid-turn\" bug:\n\n1. Consolidate StandaloneAgentChatPanel (route view) and useAgentChatWindow\n   (floating desktop window) onto a single shared hook\n   `useStandaloneAgentChat(agentId)`. Both surfaces now route through the\n   exact same wiring (useAgentChatStream + useChatHistorySync + project\n   selection + context-usage hydration), so any future fix applies to\n   both at once. The route panel layers only its route-specific\n   side-effects (LAST_AGENT_ID_KEY persistence, `initialHandoff`,\n   `scrollToBottomOnReset`) on top.\n\n2. Add a per-streamKey \"last non-empty\" fallback inside\n   `useConversationSnapshot`. Mid-turn, three things can collapse the\n   merged `messages` to `[]` in the same render:\n   - chat-history-store eviction (`MAX_HISTORY_ENTRIES = 8`) flips\n     `historyMessages` to `[]` while a sidebar prefetch displaces the\n     active CEO key,\n   - the post-stream \"history caught up\" effect in `useChatHistorySync`\n     resets the stream-store events to `[]`,\n   - `setThread(streamKey, history)` in `useConversationSnapshot` runs\n     in a later effect tick so the message-store thread momentarily\n     has nothing to fall back on.\n   When all three line up, ChatMessageList renders its empty state and\n   the entire transcript visibly disappears for one or two frames. The\n   fallback caches the last non-empty merged snapshot keyed by\n   `streamKey` and returns it across these transient empty frames.\n   Resets cleanly on real chat switches; brand-new chats with no\n   history still render as legitimately empty.\n\nTests:\n- `use-conversation-snapshot.test.ts`: 3 new regression specs covering\n  the empty-frame fallback, the brand-new-chat empty case, and the\n  cache reset on streamKey change. Verified the empty-frame test fails\n  without the fix.\n- `use-standalone-agent-chat.test.ts`: full move of the prior\n  `use-agent-chat-window.test.ts` suite onto the consolidated hook.\n- `AgentChatView.test.tsx`: extends the existing standalone-agent\n  assertions to cover the new `useStandaloneAgentMeta` /\n  `useAgentStore` wiring on the route surface.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "48d2a33e554e950e8163356bbf21c83b09d42fef"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.test.tsx",
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.tsx",
+        "interface/src/apps/agents/components/AgentWindow/AgentWindow.tsx",
+        "interface/src/hooks/use-agent-chat-window.test.ts",
+        "interface/src/hooks/use-agent-chat-window.ts",
+        "interface/src/hooks/use-conversation-snapshot.test.ts",
+        "interface/src/hooks/use-conversation-snapshot.ts",
+        "interface/src/hooks/use-standalone-agent-chat.test.ts",
+        "interface/src/hooks/use-standalone-agent-chat.ts"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 221,
+        "deletions": 191
+      },
+      "committedAtMs": 1777775643000,
+      "cleanSubject": "unify standalone agent chat wiring + stop CEO transcript blink",
+      "keywords": [
+        "unify",
+        "standalone",
+        "agent",
+        "chat",
+        "wiring",
+        "stop",
+        "transcript",
+        "blink"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 6,
@@ -620,36 +710,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11691051
+          "sizeBytes": 11689811
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.432.1",
+      "version": "0.1.0-nightly.433.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.432.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.433.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 35448134
+          "sizeBytes": 35444524
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.432.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.433.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.432.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.433.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 102664696
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.432.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.433.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -659,29 +749,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.432.1",
+      "version": "0.1.0-nightly.433.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.432.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.433.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 32004420
+          "sizeBytes": 32001119
         },
         {
-          "name": "Aura_0.1.0-nightly.432.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.433.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.432.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.433.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 31814218
+          "sizeBytes": 31816651
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.432.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.433.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -691,29 +781,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.432.1",
+      "version": "0.1.0-nightly.433.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.432.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.433.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33575060
+          "sizeBytes": 33572048
         },
         {
-          "name": "Aura_0.1.0-nightly.432.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.433.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.432.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.433.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33416793
+          "sizeBytes": 33420730
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.432.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.433.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -723,17 +813,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.432.1",
+      "version": "0.1.0-nightly.433.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.432.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.433.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24160106
+          "sizeBytes": 24167992
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.432.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.433.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -742,26 +832,26 @@
     }
   ],
   "rendered": {
-    "title": "Steadier chat streams and a survivable Windows updater",
-    "intro": "Today's nightly tightens the seams where chat meets persistence and where Windows desktop hands off to its own installer. Streaming replies stop blinking when history catches up, stalled remote sessions surface real errors instead of a frozen \"connecting\" state, and the Windows updater now leaves a paper trail and reliably relaunches Aura after install.",
+    "title": "Steadier chat transcripts and a recoverable Windows updater",
+    "intro": "Today's nightly is a deep stabilization pass on the chat surface — taking aim at the mid-turn blink, transcript flashes, and CEO-chat regressions — paired with meaningful reliability work on the Windows auto-updater and remote agent streaming.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:37 PM",
         "started_at": "2026-05-02T21:37:08.000Z",
         "ended_at": "2026-05-02T21:40:29.000Z",
-        "title": "Org identity for remote chat and a debuggable Windows updater handoff",
-        "summary": "Two reliability fixes landed back to back: remote harness sessions now carry the right org header, and the Windows updater stops disappearing silently after install.",
+        "title": "Remote org identity and Windows updater diagnostics",
+        "summary": "Two reliability fixes: remote chat sessions now carry the right org context, and Windows updates surface logs and relaunch instead of silently quitting.",
         "items": [
           {
-            "text": "Remote harness chat sessions now populate the X-Aura-Org-Id context from the project when agent metadata is incomplete, so server-side requests no longer drop their org identity.",
+            "text": "Remote harness chat sessions now derive their X-Aura-Org-Id from the project when agent metadata is incomplete, so server-side org context is preserved across remote turns.",
             "commit_shas": [
               "9bbe1ae4500f19f6a7e2f9fc278293b40c372761"
             ],
             "confidence": "high"
           },
           {
-            "text": "On Windows, the NSIS installer handoff now writes a per-version log and the desktop app retries its single-instance acquisition during an update relaunch, so updates that previously quit without diagnostics now leave evidence and come back up cleanly.",
+            "text": "Windows auto-update is no longer a black box: the NSIS installer handoff now writes a per-version log to the updater stage directory, and a single-instance retry loop keyed off AURA_UPDATE_RELAUNCH waits out the old process so Aura comes back up cleanly post-install.",
             "commit_shas": [
               "b7d61680e560cbca7b1df6f3ec16c783705f7fff"
             ],
@@ -774,18 +864,18 @@
         "time_label": "2:55 PM",
         "started_at": "2026-05-02T21:55:05.000Z",
         "ended_at": "2026-05-02T21:55:05.000Z",
-        "title": "Remote chat surfaces stalls instead of hanging on \"connecting\"",
-        "summary": "Swarm session startup and the WebSocket bridge now treat silence and bad frames as real errors, so the UI can stop showing an indefinite connecting state.",
+        "title": "Stall detection for remote chat streams",
+        "summary": "Server-side watchdogs and explicit error broadcasts ensure remote chats fail visibly when the harness goes silent instead of sitting on a connecting spinner.",
         "items": [
           {
-            "text": "Swarm session startup waits for an explicit session_ready signal and a new turn watchdog broadcasts a synthetic terminal error if the remote runtime emits no events within 30s or runs past the 5-minute turn cap.",
+            "text": "Swarm session startup now waits for an explicit session_ready signal before considering the remote agent live, eliminating a class of races where chats appeared connected but had no upstream.",
             "commit_shas": [
               "33ad453f9e8aa1af16d78e0837800f09d16bec15"
             ],
             "confidence": "high"
           },
           {
-            "text": "The WebSocket bridge now rejects unsupported frame types as terminal errors instead of letting the SSE keep-alive mask a dead stream, so chat fails fast with a real message.",
+            "text": "A new turn watchdog broadcasts a synthetic terminal error if the remote runtime emits no events within 30s, or if the turn exceeds the 5-minute ceiling — so SSE keep-alives can no longer mask a stalled stream. Unsupported websocket frames now also surface as explicit errors.",
             "commit_shas": [
               "33ad453f9e8aa1af16d78e0837800f09d16bec15"
             ],
@@ -798,18 +888,18 @@
         "time_label": "2:56 PM",
         "started_at": "2026-05-02T21:56:36.000Z",
         "ended_at": "2026-05-02T21:56:36.000Z",
-        "title": "Updater installs move off the Tokio runtime thread",
-        "summary": "The Windows install path is reworked so it doesn't deadlock the desktop event loop, and the local smoke script can verify NSIS builds.",
+        "title": "Updater install moved off the Tokio runtime thread",
+        "summary": "Desktop installs now run on a dedicated OS thread, and the local update smoke script is more tolerant of empty PE metadata.",
         "items": [
           {
-            "text": "User-approved installs now run on a named OS thread, so the tao event loop no longer needs a Tokio reactor to drive the updater handoff.",
+            "text": "User-approved updater installs now run on a named OS thread, so the tao event loop no longer needs a live Tokio reactor at install time — removing a deadlock vector in the Windows update path.",
             "commit_shas": [
               "9e665002e20c855d8954d65ed69b7823b7b8af45"
             ],
             "confidence": "high"
           },
           {
-            "text": "The desktop auto-update smoke script falls back to NSIS DisplayVersion when PE metadata is empty, keeping local Windows release verification working end to end.",
+            "text": "The desktop auto-update smoke script falls back to the NSIS DisplayVersion registry value when PE metadata is empty, making local update verification work against more installer builds.",
             "commit_shas": [
               "9e665002e20c855d8954d65ed69b7823b7b8af45"
             ],
@@ -822,11 +912,11 @@
         "time_label": "2:59 PM",
         "started_at": "2026-05-02T21:59:52.000Z",
         "ended_at": "2026-05-02T23:23:32.000Z",
-        "title": "Chat tail stability, sidebar previews, and an explicit CEO identity",
-        "summary": "A long thread of interface fixes removes the flicker at the end of streamed replies, keeps the agent sidebar quiet, and stops treating any full-access agent as the bootstrap CEO.",
+        "title": "Stable assistant tails, sidebar previews, and CEO role handling",
+        "summary": "A broad polish pass on chat and agent UI: streaming bubbles stop remounting, sidebar previews stop thrashing, and CEO identity is no longer inferred from permissions.",
         "items": [
           {
-            "text": "The streaming assistant tail is now preserved until persisted history semantically catches up, so end-of-turn replies stop remounting or briefly reverting to stale content in both the chat and standalone agent views.",
+            "text": "The trailing assistant bubble now stays mounted as streaming text grows and as persisted history catches up, eliminating the end-of-turn flash in both project chats and standalone agent chats.",
             "commit_shas": [
               "0dbf9681172ba6b7c18b996948965eb14fd1d15b",
               "db539c0242b7d3e009c42ca3ad4619d6fab3c5f4"
@@ -834,7 +924,7 @@
             "confidence": "high"
           },
           {
-            "text": "Switching standalone agents now refocuses the chat composer via the shared desktop autofocus path, and the agent sidebar reads previews from a dedicated cache so rows don't churn as history entries get evicted.",
+            "text": "Agent sidebar previews stay stable across history-store updates, and switching between standalone agents once again hands focus back to the chat composer when the target thread is ready.",
             "commit_shas": [
               "a33f494041f19908a4d4ab1c52bb3e01e8a5f1cc",
               "983b01e5e82eef003aa19ab93d2973ebf8dcff0e"
@@ -842,14 +932,14 @@
             "confidence": "high"
           },
           {
-            "text": "The agent environment status card is now portaled out of the chat input's stacking context, so hovering remote status no longer renders behind the thinking indicator.",
+            "text": "The remote agent environment status card is now portaled out of the chat input's stacking context and pinned via fixed positioning, so it can hover above the streaming/thinking indicator without losing hover interactions.",
             "commit_shas": [
               "45cb631ccf61f2c29817f09794a54877ebd7bf47"
             ],
             "confidence": "high"
           },
           {
-            "text": "CEO bootstrap now matches on the persisted bootstrap agent id instead of the full-access permission preset, so privileged non-CEO agents keep their own role and the swarm harness wakes hibernating agents reliably.",
+            "text": "CEO identity is now resolved by the explicit bootstrap agent id rather than by matching the full-access permissions preset, so privileged non-CEO agents keep their own role and the bootstrap CEO is still deduped correctly. Hibernating swarm agents are also woken up reliably for new turns.",
             "commit_shas": [
               "5283d2f148d9c4895738ef8919c78f4d639afe07",
               "9274780f9bb436c780d94937a6f750cc5d74d786"
@@ -863,11 +953,11 @@
         "time_label": "5:07 PM",
         "started_at": "2026-05-03T00:07:58.000Z",
         "ended_at": "2026-05-03T00:07:58.000Z",
-        "title": "Windows updater relaunch flag wired through cargo-packager-updater",
-        "summary": "A small follow-up aligns the custom NSIS handoff with the updater library so the staged installer can actually relaunch Aura after shutdown.",
+        "title": "Windows updater relaunch argument aligned with cargo-packager",
+        "summary": "A small but load-bearing fix that lets the staged NSIS installer actually relaunch Aura after shutdown.",
         "items": [
           {
-            "text": "The Windows updater now passes the relaunch argument that cargo-packager-updater expects, completing the install-then-relaunch path on Windows.",
+            "text": "The custom NSIS handoff now passes the relaunch argument expected by cargo-packager-updater, so the staged installer runs to completion and reopens Aura instead of leaving the user on a closed window.",
             "commit_shas": [
               "0df9e8eb7de9799b15dcfa64db3756edd88c464c"
             ],
@@ -879,21 +969,28 @@
         "batch_id": "entry-6",
         "time_label": "5:16 PM",
         "started_at": "2026-05-03T00:16:27.000Z",
-        "ended_at": "2026-05-03T00:16:27.000Z",
-        "title": "Cross-agent reloads recover empty terminal assistant rows",
-        "summary": "A late-day fix closes the last blink regression by reconstructing assistant content from persisted deltas when the terminal event lands without displayable text.",
+        "ended_at": "2026-05-03T02:34:03.000Z",
+        "title": "End of the CEO transcript blink",
+        "summary": "A coordinated front-end and server fix closes out the long-standing mid-turn transcript disappearance in CEO and standalone agent chats.",
         "items": [
           {
-            "text": "Server-side history reconstruction now rebuilds completed assistant messages from text and thinking deltas when assistant_message_end was persisted without content, so cross-agent replies survive reloads.",
+            "text": "Empty terminal assistant rows are now reconstructed from persisted text and thinking deltas on reload, so cross-agent replies survive a refresh even when the persistence pipeline lagged on the original turn.",
             "commit_shas": [
               "9cb703f259b6dec73086d77ae9e96321722ecba8"
             ],
             "confidence": "high"
           },
           {
-            "text": "The chat message list restores its dedicated streaming bubble path and skips no-op history rewrites, eliminating the residual flash when persisted history replaces the live tail.",
+            "text": "ChatPanel now latches its cold-load reveal so a transient historyResolved=false flip mid-turn can no longer re-hide the entire transcript, ending the full-transcript flash users were seeing during long replies.",
             "commit_shas": [
-              "9cb703f259b6dec73086d77ae9e96321722ecba8"
+              "48d2a33e554e950e8163356bbf21c83b09d42fef"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The standalone agent route view and the floating desktop agent window now share a single useStandaloneAgentChat hook, and useConversationSnapshot caches the last non-empty merged snapshot per streamKey — together eliminating the one-to-two-frame empty render that caused the CEO transcript to blink mid-turn.",
+            "commit_shas": [
+              "7e639620be7006ca0041a762b793b8b647fc2c9f"
             ],
             "confidence": "high"
           }
@@ -901,11 +998,11 @@
       }
     ],
     "highlights": [
-      "Chat tail no longer flashes when history syncs",
-      "Stalled remote agents now fail loudly instead of hanging",
-      "Windows updater logs its handoff and relaunches cleanly",
-      "Sidebar previews and CEO identity made stable"
+      "CEO transcript blink fixed end-to-end",
+      "Stalled remote chats now fail loudly instead of hanging on 'connecting'",
+      "Windows updater handoff is observable and reliably relaunches Aura",
+      "Standalone agent route and floating window now share one chat wiring"
     ],
-    "raw_commit_count": 14
+    "raw_commit_count": 16
   }
 }

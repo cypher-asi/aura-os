@@ -2,19 +2,19 @@
   {
     "date": "2026-05-02",
     "channel": "nightly",
-    "version": "0.1.0-nightly.432.1",
-    "title": "Steadier chat streams and a survivable Windows updater",
-    "intro": "Today's nightly tightens the seams where chat meets persistence and where Windows desktop hands off to its own installer. Streaming replies stop blinking when history catches up, stalled remote sessions surface real errors instead of a frozen \"connecting\" state, and the Windows updater now leaves a paper trail and reliably relaunches Aura after install.",
+    "version": "0.1.0-nightly.433.1",
+    "title": "Steadier chat transcripts and a recoverable Windows updater",
+    "intro": "Today's nightly is a deep stabilization pass on the chat surface — taking aim at the mid-turn blink, transcript flashes, and CEO-chat regressions — paired with meaningful reliability work on the Windows auto-updater and remote agent streaming.",
     "entryCount": 6,
     "highlights": [
-      "Chat tail no longer flashes when history syncs",
-      "Stalled remote agents now fail loudly instead of hanging",
-      "Windows updater logs its handoff and relaunches cleanly",
-      "Sidebar previews and CEO identity made stable"
+      "CEO transcript blink fixed end-to-end",
+      "Stalled remote chats now fail loudly instead of hanging on 'connecting'",
+      "Windows updater handoff is observable and reliably relaunches Aura",
+      "Standalone agent route and floating window now share one chat wiring"
     ],
-    "rawCommitCount": 14,
-    "generatedAt": "2026-05-03T01:38:59.164Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.432.1",
+    "rawCommitCount": 16,
+    "generatedAt": "2026-05-03T03:02:46.777Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.433.1",
     "path": "history/2026-05-02.json"
   },
   {
