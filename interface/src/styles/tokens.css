@@ -39,8 +39,15 @@
      ---------------------------------------------------------------------- */
   --color-surface-tint: rgba(255, 255, 255, 0.04);
   --color-elevated-tint: rgba(255, 255, 255, 0.06);
-  --color-sidebar-bg: var(--color-surface);
-  --color-sidekick-bg: var(--color-elevated);
+  /* Default the side panels to the same shade as the titlebar / taskbar
+     in dark mode so all desktop chrome reads as one unified surface; the
+     taskbar pill paints color-mix(--color-titlebar-bg, 90%, transparent)
+     over the same backdrop, so matching --color-bg here flattens the
+     subtle stripe difference users were seeing between chrome and panes.
+     Custom-token overrides via CustomTokensPanel still win — see
+     theme-overrides.ts. Light mode keeps the surface/elevated split below. */
+  --color-sidebar-bg: var(--color-bg);
+  --color-sidekick-bg: var(--color-bg);
   --color-titlebar-bg: var(--color-bg);
 
   /* ----------------------------------------------------------------------
