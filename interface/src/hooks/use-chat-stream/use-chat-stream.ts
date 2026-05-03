@@ -12,7 +12,7 @@ import {
   handleStreamError,
   getIsStreaming,
 } from "../use-stream-core";
-import { buildContentBlocks, buildAttachmentLabel } from "../attachment-helpers";
+import { buildUserChatMessage } from "../attachment-helpers";
 import { buildStreamHandler } from "./build-stream-handler";
 
 interface UseChatStreamOptions {
@@ -46,12 +46,11 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
       const trimmed = content.trim();
       if (!trimmed && !action && !(attachments && attachments.length > 0)) return;
 
-      const userMsg = {
-        id: `temp-${Date.now()}`,
-        role: "user" as const,
-        content: trimmed || (action === "generate_specs" ? "Generate specs for this project" : trimmed) || buildAttachmentLabel(attachments),
-        contentBlocks: buildContentBlocks(trimmed, attachments),
-      };
+      const userMsg = buildUserChatMessage(
+        trimmed,
+        attachments,
+        action === "generate_specs" ? "Generate specs for this project" : undefined,
+      );
       core.setEvents((prev) => [...prev, userMsg]);
       core.setIsStreaming(true);
       sidekickRef.current.setAgentStreaming(agentInstanceId, true);

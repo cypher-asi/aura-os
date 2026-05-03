@@ -1,4 +1,8 @@
-import { buildContentBlocks, buildAttachmentLabel } from "./attachment-helpers";
+import {
+  buildContentBlocks,
+  buildAttachmentLabel,
+  buildUserChatMessage,
+} from "./attachment-helpers";
 
 describe("buildContentBlocks", () => {
   it("returns undefined when attachments are undefined", () => {
@@ -114,5 +118,45 @@ describe("buildAttachmentLabel", () => {
       { type: "text", media_type: "text/plain", data: "" },
     ]);
     expect(result).toBe("[2 file(s)]");
+  });
+});
+
+describe("buildUserChatMessage", () => {
+  it("uses trimmed content when present", () => {
+    const msg = buildUserChatMessage("hello", undefined);
+    expect(msg.role).toBe("user");
+    expect(msg.id).toMatch(/^temp-\d+$/);
+    expect(msg.content).toBe("hello");
+    expect(msg.contentBlocks).toBeUndefined();
+  });
+
+  it("falls back to fallbackContent when trimmed is empty", () => {
+    const msg = buildUserChatMessage("", undefined, "Generate specs for this project");
+    expect(msg.content).toBe("Generate specs for this project");
+  });
+
+  it("falls back to attachment label when trimmed and fallback are empty", () => {
+    const msg = buildUserChatMessage("", [
+      { type: "image", media_type: "image/png", data: "abc" },
+    ]);
+    expect(msg.content).toBe("[1 image(s)]");
+  });
+
+  it("includes contentBlocks when attachments are provided", () => {
+    const msg = buildUserChatMessage("look", [
+      { type: "image", media_type: "image/png", data: "imgdata" },
+    ]);
+    expect(msg.contentBlocks).toHaveLength(2);
+    expect(msg.contentBlocks?.[0]).toEqual({ type: "text", text: "look" });
+    expect(msg.contentBlocks?.[1]).toEqual({
+      type: "image",
+      media_type: "image/png",
+      data: "imgdata",
+    });
+  });
+
+  it("prefers trimmed content over fallbackContent when both are present", () => {
+    const msg = buildUserChatMessage("real text", undefined, "fallback");
+    expect(msg.content).toBe("real text");
   });
 });

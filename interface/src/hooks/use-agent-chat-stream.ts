@@ -3,7 +3,7 @@ import { api } from "../api/client";
 import { generateImageStream } from "../api/streams";
 import type { ChatAttachment, StreamEventHandler } from "../api/streams";
 import type { GenerationMode } from "../constants/models";
-import { buildContentBlocks, buildAttachmentLabel } from "./attachment-helpers";
+import { buildUserChatMessage } from "./attachment-helpers";
 import type { Spec, Task } from "../shared/types";
 import type { AuraEvent } from "../shared/types/aura-events";
 import { EventType } from "../shared/types/aura-events";
@@ -74,12 +74,7 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
       const hasAttachments = attachments && attachments.length > 0;
       if (!trimmed && !action && !hasAttachments) return;
 
-      const userMsg: DisplaySessionEvent = {
-        id: `temp-${Date.now()}`,
-        role: "user",
-        content: trimmed || buildAttachmentLabel(attachments),
-        contentBlocks: buildContentBlocks(trimmed, attachments),
-      };
+      const userMsg = buildUserChatMessage(trimmed, attachments);
 
       core.setEvents((prev) => [...prev, userMsg]);
       core.setIsStreaming(true);

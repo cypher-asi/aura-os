@@ -1,5 +1,8 @@
 import type { ChatAttachment } from "../api/streams";
-import type { DisplayContentBlockUnion } from "../shared/types/stream";
+import type {
+  DisplayContentBlockUnion,
+  DisplaySessionEvent,
+} from "../shared/types/stream";
 
 function decodeBase64Text(base64: string): string {
   try {
@@ -35,4 +38,30 @@ export function buildAttachmentLabel(attachments: ChatAttachment[] | undefined):
   return attachments.some((a) => a.type === "text")
     ? `[${attachments.length} file(s)]`
     : `[${attachments.length} image(s)]`;
+}
+
+/**
+ * Build the optimistic user-facing `DisplaySessionEvent` that both
+ * chat-stream orchestrators (`useChatStream`, `useAgentChatStream`)
+ * append to the stream store at the start of a send. Centralises the
+ * `temp-{Date.now()}` id convention and the `trimmed || fallback ||
+ * attachment-label` content fallback chain so both call sites stay
+ * structurally identical without the inline literal duplication.
+ *
+ * `fallbackContent` is used when the trimmed text is empty and the
+ * caller wants a non-attachment fallback (e.g. the "Generate specs for
+ * this project" string used by `useChatStream` when the user clicks
+ * the Generate Specs action with no message of their own).
+ */
+export function buildUserChatMessage(
+  trimmed: string,
+  attachments: ChatAttachment[] | undefined,
+  fallbackContent?: string,
+): DisplaySessionEvent {
+  return {
+    id: `temp-${Date.now()}`,
+    role: "user",
+    content: trimmed || fallbackContent || buildAttachmentLabel(attachments),
+    contentBlocks: buildContentBlocks(trimmed, attachments),
+  };
 }
