@@ -113,21 +113,21 @@
 
 .errorState {
   font-size: var(--text-sm);
-  color: var(--color-error, #ef4444);
+  color: var(--color-error);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-error, #ef4444) 6%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-error, #ef4444) 20%, transparent);
+  background: color-mix(in srgb, var(--color-error) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-error) 20%, transparent);
 }
 
 .retryButton {
   background: none;
-  border: 1px solid var(--color-error, #ef4444);
-  color: var(--color-error, #ef4444);
+  border: 1px solid var(--color-error);
+  color: var(--color-error);
   font-size: var(--text-xs);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
@@ -136,7 +136,7 @@
 }
 
 .retryButton:hover {
-  background: color-mix(in srgb, var(--color-error, #ef4444) 10%, transparent);
+  background: color-mix(in srgb, var(--color-error) 10%, transparent);
 }
 
 .loadingState {

@@ -1,6 +1,6 @@
 .billingIntro {
   font-size: var(--text-sm, 14px);
-  color: var(--color-text-muted, #888);
+  color: var(--color-text-muted);
   margin: 0 0 var(--space-3);
   line-height: 1.5;
 }
@@ -83,18 +83,18 @@
 
 .statusBadge[data-status="fulfilled"],
 .statusBadge[data-status="paid"] {
-  color: var(--color-success, #22c55e);
-  border-color: var(--color-success, #22c55e);
+  color: var(--color-success);
+  border-color: var(--color-success);
 }
 
 .statusBadge[data-status="pending"] {
-  color: var(--color-warning, #eab308);
-  border-color: var(--color-warning, #eab308);
+  color: var(--color-warning);
+  border-color: var(--color-warning);
 }
 
 .statusBadge[data-status="failed"] {
-  color: var(--color-error, #ef4444);
-  border-color: var(--color-error, #ef4444);
+  color: var(--color-error);
+  border-color: var(--color-error);
 }
 
 /* Loading state */
@@ -111,15 +111,15 @@
 
 .errorState {
   font-size: var(--text-sm);
-  color: var(--color-error, #ef4444);
+  color: var(--color-error);
   display: flex;
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   margin-bottom: var(--space-4);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-error, #ef4444) 6%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-error, #ef4444) 20%, transparent);
+  background: color-mix(in srgb, var(--color-error) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-error) 20%, transparent);
 }
 
 .infoState {
@@ -134,8 +134,8 @@
 
 .retryButton {
   background: none;
-  border: 1px solid var(--color-error, #ef4444);
-  color: var(--color-error, #ef4444);
+  border: 1px solid var(--color-error);
+  color: var(--color-error);
   font-size: var(--text-xs);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
@@ -144,13 +144,13 @@
 }
 
 .retryButton:hover {
-  background: color-mix(in srgb, var(--color-error, #ef4444) 10%, transparent);
+  background: color-mix(in srgb, var(--color-error) 10%, transparent);
 }
 
 .retryLink {
   background: none;
   border: none;
-  color: var(--color-error, #ef4444);
+  color: var(--color-error);
   font-size: inherit;
   text-decoration: underline;
   cursor: pointer;
