@@ -272,6 +272,7 @@ export function useChatHistorySync({
     let progressTimer: ReturnType<typeof setTimeout> | undefined;
     const onProgress = (event: { content?: Record<string, unknown> }) => {
       if (!matches(event.content)) return;
+      if (getStreamEntry(streamKey)?.isStreaming) return;
       if (progressTimer !== undefined) return;
       progressTimer = setTimeout(() => {
         progressTimer = undefined;
@@ -299,6 +300,7 @@ export function useChatHistorySync({
   }, [
     historyKey,
     fetchFn,
+    streamKey,
     subscribe,
     watchAgentInstanceId,
     watchAgentId,

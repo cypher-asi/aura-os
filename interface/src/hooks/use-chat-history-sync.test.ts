@@ -526,6 +526,40 @@ describe("useChatHistorySync", () => {
     }
   });
 
+  it("does not refetch progress snapshots while the local stream is active", async () => {
+    vi.useFakeTimers();
+    try {
+      const resetEvents = vi.fn();
+      const fetchFn = vi.fn(async () => []);
+      mocks.getStreamEntry.mockReturnValue({
+        isStreaming: true,
+        events: [
+          { id: "temp-user", role: "user", content: "hello" },
+        ] as DisplaySessionEvent[],
+      });
+
+      renderHook(() =>
+        useChatHistorySync({
+          historyKey: "agent:agent-1",
+          streamKey: "agent-1",
+          fetchFn,
+          resetEvents,
+          watchAgentInstanceId: "pa-42",
+        }),
+      );
+      mocks.state.fetchHistory.mockClear();
+
+      emit("assistant_turn_progress", {
+        content: { project_agent_id: "pa-42", session_id: "s-1" },
+      });
+      await vi.advanceTimersByTimeAsync(300);
+
+      expect(mocks.state.fetchHistory).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("re-arms streamingAgentInstanceId when history reports an in-flight assistant turn", async () => {
     sidekickMocks.state.streamingAgentInstanceId = null;
     sidekickMocks.state.streamingAgentInstanceIds = [];

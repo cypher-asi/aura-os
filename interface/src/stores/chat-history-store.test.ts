@@ -85,6 +85,17 @@ describe("chat-history-store", () => {
       expect(fetchFn).toHaveBeenCalledTimes(2);
     });
 
+    it("does not rewrite ready history when a forced refetch returns the same snapshot", async () => {
+      const fetchFn = makeFetchFn([makeMsg("m1")]);
+      await useChatHistoryStore.getState().fetchHistory("k-same", fetchFn);
+      const before = useChatHistoryStore.getState().entries["k-same"];
+
+      await useChatHistoryStore.getState().fetchHistory("k-same", fetchFn, { force: true });
+
+      expect(fetchFn).toHaveBeenCalledTimes(2);
+      expect(useChatHistoryStore.getState().entries["k-same"]).toBe(before);
+    });
+
     it("deduplicates concurrent requests for the same key", async () => {
       let resolveP: (v: SessionEvent[]) => void;
       const fetchFn = vi.fn<() => Promise<SessionEvent[]>>(

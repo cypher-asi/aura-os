@@ -25,6 +25,10 @@ vi.mock("../MessageBubble", () => ({
   },
 }));
 
+vi.mock("../StreamingBubble", () => ({
+  StreamingBubble: () => <div data-testid="streaming-bubble" />,
+}));
+
 vi.mock("../../../../hooks/stream/store", () => ({
   useStreamStore: (selector: (state: unknown) => unknown) =>
     selector({
@@ -238,7 +242,7 @@ describe("ChatMessageList", () => {
     expect(scrollRef.current.scrollTop).toBe(1000);
   });
 
-  it("renders the live assistant tail as a single message bubble while streaming", () => {
+  it("does not render the trailing assistant message twice while live text is streaming", () => {
     mockStreamEntry.isStreaming = true;
     mockStreamEntry.streamingText = "partial output";
     const scrollRef = makeScrollRef();
@@ -255,20 +259,11 @@ describe("ChatMessageList", () => {
     );
 
     expect(screen.getByTestId("bubble-temp-user")).toBeInTheDocument();
-    expect(screen.getByTestId("bubble-stream-assistant")).toBeInTheDocument();
-    const lastCall = mockMessageBubble.mock.calls[mockMessageBubble.mock.calls.length - 1];
-    expect(lastCall?.[0]).toEqual(
-      expect.objectContaining({
-        message: expect.objectContaining({
-          id: "stream-assistant",
-          content: "partial output",
-        }),
-        isStreaming: true,
-      }),
-    );
+    expect(screen.queryByTestId("bubble-stream-assistant")).not.toBeInTheDocument();
+    expect(screen.getByTestId("streaming-bubble")).toBeInTheDocument();
   });
 
-  it("does not remount the live assistant tail as streaming text grows", () => {
+  it("keeps the streaming bubble mounted as streaming text grows", () => {
     mockStreamEntry.isStreaming = true;
     mockStreamEntry.streamingText = "partial output";
     const scrollRef = makeScrollRef();
@@ -284,8 +279,7 @@ describe("ChatMessageList", () => {
       />,
     );
 
-    const initialWrapper =
-      screen.getByTestId("bubble-stream-assistant").parentElement;
+    const initialStreamingBubble = screen.getByTestId("streaming-bubble");
 
     mockStreamEntry.streamingText = "partial output plus more tokens";
     rerender(
@@ -299,9 +293,8 @@ describe("ChatMessageList", () => {
       />,
     );
 
-    expect(screen.getByTestId("bubble-stream-assistant").parentElement).toBe(
-      initialWrapper,
-    );
+    expect(screen.getByTestId("streaming-bubble")).toBe(initialStreamingBubble);
+    expect(screen.queryByTestId("bubble-stream-assistant")).not.toBeInTheDocument();
   });
 
   it("expands thinking / activities on the just-finalized message when a stream ends", () => {

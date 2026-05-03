@@ -58,12 +58,21 @@ fn collect_terminal_events(
     project_id: ProjectId,
 ) -> Vec<SessionEvent> {
     let mut messages = Vec::new();
-    for event in sorted {
+    for (index, event) in sorted.iter().enumerate() {
         let event_type = event.event_type.as_deref().unwrap_or("");
         let next = match event_type {
             "user_message" => parse_user_message_event(event, agent_instance_id, project_id),
             "assistant_message_end" => {
-                parse_assistant_message_end_event(event, agent_instance_id, project_id)
+                parse_assistant_message_end_event(event, agent_instance_id, project_id).or_else(
+                    || {
+                        reconstruct_completed_assistant_from_deltas(
+                            &sorted[..index],
+                            event,
+                            agent_instance_id,
+                            project_id,
+                        )
+                    },
+                )
             }
             "task_output" => parse_task_output_event(event, agent_instance_id, project_id),
             _ => None,
@@ -154,6 +163,72 @@ fn parse_assistant_message_end_event(
         thinking,
         thinking_duration_ms: None,
         created_at: parse_dt(&event.created_at),
+        in_flight: None,
+    })
+}
+
+fn message_id_of(event: &StorageSessionEvent) -> Option<&str> {
+    event
+        .content
+        .as_ref()
+        .and_then(|content| content.get("message_id"))
+        .and_then(|value| value.as_str())
+}
+
+fn reconstruct_completed_assistant_from_deltas(
+    prior_events: &[StorageSessionEvent],
+    terminal_event: &StorageSessionEvent,
+    agent_instance_id: AgentInstanceId,
+    project_id: ProjectId,
+) -> Option<SessionEvent> {
+    let message_id = message_id_of(terminal_event)?;
+    let mut text = String::new();
+    let mut thinking = String::new();
+
+    for event in prior_events {
+        if message_id_of(event) != Some(message_id) {
+            continue;
+        }
+        let content = event.content.as_ref();
+        match event.event_type.as_deref().unwrap_or("") {
+            "text_delta" => {
+                if let Some(delta) = content
+                    .and_then(|c| c.get("text"))
+                    .and_then(|value| value.as_str())
+                {
+                    text.push_str(delta);
+                }
+            }
+            "thinking_delta" => {
+                if let Some(delta) = content
+                    .and_then(|c| c.get("thinking"))
+                    .and_then(|value| value.as_str())
+                {
+                    thinking.push_str(delta);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    if text.is_empty() && thinking.is_empty() {
+        return None;
+    }
+
+    Some(SessionEvent {
+        event_id: SessionEventId::new(),
+        agent_instance_id,
+        project_id,
+        role: ChatRole::Assistant,
+        content: text,
+        content_blocks: None,
+        thinking: if thinking.is_empty() {
+            None
+        } else {
+            Some(thinking)
+        },
+        thinking_duration_ms: None,
+        created_at: parse_dt(&terminal_event.created_at),
         in_flight: None,
     })
 }

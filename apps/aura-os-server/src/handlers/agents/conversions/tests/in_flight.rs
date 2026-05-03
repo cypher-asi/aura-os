@@ -189,6 +189,51 @@ fn events_to_session_history_skips_reconstruction_when_end_present() {
 }
 
 #[test]
+fn events_to_session_history_recovers_empty_terminal_from_persisted_deltas() {
+    // If the terminal assistant row was persisted without displayable content
+    // (for example after a persistence receiver lag), reload should still use
+    // the already-stored deltas instead of dropping the agent's final reply.
+    let events = vec![
+        raw_event(
+            "evt-start",
+            "2026-01-01T00:00:01Z",
+            "assistant_message_start",
+            serde_json::json!({ "message_id": "m1", "seq": 1 }),
+        ),
+        raw_event(
+            "evt-d1",
+            "2026-01-01T00:00:02Z",
+            "text_delta",
+            serde_json::json!({ "message_id": "m1", "text": "Saved " }),
+        ),
+        raw_event(
+            "evt-d2",
+            "2026-01-01T00:00:03Z",
+            "text_delta",
+            serde_json::json!({ "message_id": "m1", "text": "reply" }),
+        ),
+        raw_event(
+            "evt-end",
+            "2026-01-01T00:00:04Z",
+            "assistant_message_end",
+            serde_json::json!({
+                "message_id": "m1",
+                "text": "",
+                "thinking": null,
+                "content_blocks": [],
+            }),
+        ),
+    ];
+
+    let history = events_to_session_history(&events, "agent-1", "project-1");
+
+    assert_eq!(history.len(), 1);
+    assert_eq!(history[0].role, ChatRole::Assistant);
+    assert_eq!(history[0].content, "Saved reply");
+    assert_eq!(history[0].in_flight, None, "recovered terminal is final");
+}
+
+#[test]
 fn events_to_session_history_reconstruction_captures_thinking() {
     let events = vec![
         raw_event(

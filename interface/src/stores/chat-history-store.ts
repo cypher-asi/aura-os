@@ -126,6 +126,21 @@ function withBoundedHistoryPreview(
   return next;
 }
 
+function displayEventsEqual(
+  first: DisplaySessionEvent[],
+  second: DisplaySessionEvent[],
+): boolean {
+  if (first.length !== second.length) {
+    return false;
+  }
+  for (let index = 0; index < first.length; index += 1) {
+    if (JSON.stringify(first[index]) !== JSON.stringify(second[index])) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
   entries: {},
   previewLastMessages: {},
@@ -175,6 +190,16 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
       .then((data) => {
         const events = boundHistoryEvents(data.events);
         const lastMessage = events.length ? events[events.length - 1] : undefined;
+        const current = get().entries[key];
+        if (
+          current?.status === "ready" &&
+          current.error == null &&
+          current.lastMessageAt === data.lastMessageAt &&
+          displayEventsEqual(current.events, events)
+        ) {
+          useMessageStore.getState().setThread(key, events);
+          return;
+        }
         set((s) => ({
           entries: withBoundedHistoryEntry(
             s.entries,

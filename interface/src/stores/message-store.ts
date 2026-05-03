@@ -48,6 +48,27 @@ function dropUnreferencedMessages(
   return changed ? next : messages;
 }
 
+function displayMessagesEqual(
+  currentMessages: Record<string, DisplaySessionEvent>,
+  currentIds: string[] | undefined,
+  nextMessages: DisplaySessionEvent[],
+): boolean {
+  if (!currentIds || currentIds.length !== nextMessages.length) {
+    return false;
+  }
+  for (let index = 0; index < nextMessages.length; index += 1) {
+    const nextMessage = nextMessages[index];
+    if (currentIds[index] !== nextMessage.id) {
+      return false;
+    }
+    const currentMessage = currentMessages[nextMessage.id];
+    if (!currentMessage || JSON.stringify(currentMessage) !== JSON.stringify(nextMessage)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export const useMessageStore = create<MessageStoreState>()((set, get) => ({
   messages: {},
   orderedIds: {},
@@ -127,6 +148,10 @@ export const useMessageStore = create<MessageStoreState>()((set, get) => ({
 
   setThread: (threadKey, msgs) => {
     set((s) => {
+      if (displayMessagesEqual(s.messages, s.orderedIds[threadKey], msgs)) {
+        return s;
+      }
+
       const newMessages = { ...s.messages };
       const ids: string[] = [];
 

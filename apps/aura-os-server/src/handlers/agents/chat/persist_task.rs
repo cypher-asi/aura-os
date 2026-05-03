@@ -174,6 +174,7 @@ async fn finalize_if_needed(
     });
     if persist_event(ctx, "assistant_message_end", end_payload).await {
         state.persisted_events += 1;
+        state.end_persisted = true;
         publish_assistant_message_end_event(event_bus, ctx, message_id_str(state));
         log_stream_summary(state, ctx, model, "aborted", true, "broadcast_closed");
     }

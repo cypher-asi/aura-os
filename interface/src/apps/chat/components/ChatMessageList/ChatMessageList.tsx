@@ -6,6 +6,7 @@ import {
 } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { MessageBubble } from "../MessageBubble";
+import { StreamingBubble } from "../StreamingBubble";
 import type { DisplaySessionEvent } from "../../../../shared/types/stream";
 
 import { useStreamStore } from "../../../../hooks/stream/store";
@@ -65,6 +66,7 @@ export function ChatMessageList({
 }: ChatMessageListProps) {
   const {
     isStreaming,
+    isWriting,
     streamingText,
     thinkingText,
     thinkingDurationMs,
@@ -74,6 +76,7 @@ export function ChatMessageList({
   } = useStreamStore(
     useShallow((state) => ({
       isStreaming: state.entries[streamKey]?.isStreaming ?? false,
+      isWriting: state.entries[streamKey]?.isWriting ?? false,
       streamingText: state.entries[streamKey]?.streamingText ?? "",
       thinkingText: state.entries[streamKey]?.thinkingText ?? "",
       thinkingDurationMs: state.entries[streamKey]?.thinkingDurationMs ?? null,
@@ -85,46 +88,13 @@ export function ChatMessageList({
 
   const nowStreaming =
     isStreaming || !!streamingText || !!thinkingText || activeToolCalls.length > 0;
-  const lastMessage = messages[messages.length - 1];
-  const hasLiveAssistantActivity =
-    !!streamingText || !!thinkingText || activeToolCalls.length > 0 || timeline.length > 0;
-  const liveAssistantMessage: DisplaySessionEvent | null = hasLiveAssistantActivity
-    ? {
-        ...(lastMessage?.role === "assistant"
-          ? lastMessage
-          : {
-              id: `stream-live:${streamKey}`,
-              role: "assistant" as const,
-              content: "",
-            }),
-        content:
-          streamingText ||
-          (lastMessage?.role === "assistant" ? lastMessage.content : ""),
-        toolCalls:
-          activeToolCalls.length > 0
-            ? activeToolCalls
-            : lastMessage?.role === "assistant"
-              ? lastMessage.toolCalls
-              : undefined,
-        thinkingText:
-          thinkingText ||
-          (lastMessage?.role === "assistant" ? lastMessage.thinkingText : undefined),
-        thinkingDurationMs:
-          thinkingDurationMs ??
-          (lastMessage?.role === "assistant" ? lastMessage.thinkingDurationMs : null),
-        timeline:
-          timeline.length > 0
-            ? timeline
-            : lastMessage?.role === "assistant"
-              ? lastMessage.timeline
-              : undefined,
-      }
-    : null;
-  const visibleMessages = liveAssistantMessage
-    ? lastMessage?.role === "assistant"
-      ? [...messages.slice(0, -1), liveAssistantMessage]
-      : [...messages, liveAssistantMessage]
-    : messages;
+  const liveAssistantBubbleHasText = !!streamingText || !!thinkingText;
+  const visibleMessages =
+    liveAssistantBubbleHasText &&
+    messages.length > 0 &&
+    messages[messages.length - 1].role === "assistant"
+      ? messages.slice(0, -1)
+      : messages;
   const prevStreamingRef = useRef(nowStreaming);
   const justFinalizedIdRef = useRef<string | null>(null);
 
@@ -238,17 +208,27 @@ export function ChatMessageList({
             >
               <MessageBubble
                 message={msg}
-                isStreaming={
-                  isStreaming &&
-                  msg.role === "assistant" &&
-                  index === visibleMessages.length - 1 &&
-                  (msg.id.startsWith("stream-") || msg.id.startsWith("stream-live:"))
-                }
+                isStreaming={isStreaming && msg.id.startsWith("stream-")}
                 initialThinkingExpanded={msg.id === justFinalizedIdRef.current}
                 initialActivitiesExpanded={msg.id === justFinalizedIdRef.current}
               />
             </div>
           ))}
+        </div>
+      )}
+      {nowStreaming && (
+        <div>
+          <StreamingBubble
+            isStreaming={isStreaming}
+            text={streamingText}
+            toolCalls={activeToolCalls}
+            thinkingText={thinkingText}
+            thinkingDurationMs={thinkingDurationMs}
+            timeline={timeline}
+            progressText={progressText}
+            isWriting={isWriting}
+            showPhaseIndicator={false}
+          />
         </div>
       )}
     </>
