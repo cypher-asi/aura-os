@@ -46,7 +46,7 @@
   font-weight: 600;
   border: none;
   background: transparent;
-  color: var(--color-text);
+  color: var(--color-text-primary);
   outline: none;
   padding: 0;
   overflow: hidden;
@@ -100,13 +100,13 @@
 }
 
 .fieldLabel {
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
   font-weight: 400 !important;
   font-size: 13px;
 }
 
 .specSummaryParagraph {
-  color: var(--color-text-secondary, #9ca3af);
+  color: var(--color-text-secondary);
   line-height: 1.6;
   margin-top: 0;
   margin-bottom: 0;
@@ -121,11 +121,11 @@
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
-  color: var(--color-text);
+  color: var(--color-text-primary);
   padding: var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: var(--color-bg-tertiary, rgba(0,0,0,0.08));
+  background: var(--color-overlay-subtle);
 }
 
 .taskStreamWrapper {
@@ -164,7 +164,7 @@
 }
 
 .failReason {
-  color: var(--status-failed, #ff6b6b);
+  color: var(--status-failed);
   word-break: break-word;
   line-height: 1.4;
 }
@@ -205,7 +205,7 @@
   display: block;
   margin-top: 2px;
   line-height: 1.4;
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -224,23 +224,23 @@
 .section [class*="label"],
 .section [class*="header"] span {
   font-weight: 400 !important;
-  color: var(--color-text-muted, #6b7280) !important;
+  color: var(--color-text-muted) !important;
 }
 
 .fileOpItem:hover {
-  background: var(--color-bg-hover, rgba(255,255,255,0.06));
+  background: var(--color-overlay-light);
 }
 
 .opCreate {
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 .opModify {
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 .opDelete {
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 .taskDescription {
@@ -271,7 +271,7 @@
   padding: 0 var(--space-3, 12px);
 }
 .markdown a {
-  color: var(--color-accent, #60a5fa);
+  color: var(--color-accent);
   text-decoration: underline;
   text-underline-offset: 2px;
   transition: opacity 0.15s;
@@ -279,19 +279,19 @@
 .markdown a:hover {
   opacity: 0.8;
 }
-.markdown strong { color: var(--color-text, #fff); }
-.markdown h1 { font-size: 18px; margin: 16px 0 8px; font-weight: 600; color: var(--color-text, #fff); }
-.markdown h2 { font-size: 15px; margin: 14px 0 6px; font-weight: 600; color: var(--color-text, #fff); }
-.markdown h3 { font-size: 13.5px; margin: 10px 0 4px; font-weight: 600; color: var(--color-text, #fff); }
+.markdown strong { color: var(--color-text-primary); }
+.markdown h1 { font-size: 18px; margin: 16px 0 8px; font-weight: 600; color: var(--color-text-primary); }
+.markdown h2 { font-size: 15px; margin: 14px 0 6px; font-weight: 600; color: var(--color-text-primary); }
+.markdown h3 { font-size: 13.5px; margin: 10px 0 4px; font-weight: 600; color: var(--color-text-primary); }
 .markdown p { margin-bottom: 8px; }
 .markdown p:last-child { margin-bottom: 0; }
 .markdown code {
   font-family: var(--font-mono);
-  background: var(--color-bg-tertiary, rgba(0,0,0,0.15));
+  background: var(--color-overlay-subtle);
   padding: 1px 4px;
   border-radius: 3px;
   font-size: 12px;
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
 }
 .markdown pre {
   border: 1px solid var(--color-border);
@@ -328,7 +328,7 @@
   text-align: left;
 }
 .markdown th {
-  background: var(--color-bg-secondary);
+  background: var(--color-surface);
   font-weight: 600;
 }
 .markdown ul, .markdown ol {
@@ -360,15 +360,15 @@
   border: none;
   border-radius: var(--radius-sm, 4px);
   background: transparent;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
   cursor: pointer;
   transition: color 0.15s, background 0.15s;
   flex-shrink: 0;
 }
 
 .copyOutputButton:hover {
-  color: var(--color-text-default);
-  background: var(--color-bg-hover, rgba(255, 255, 255, 0.06));
+  color: var(--color-text-primary);
+  background: var(--color-overlay-light);
 }
 
 /* ── Live Output activity feed ── */
@@ -417,7 +417,7 @@
 }
 
 .rawOutputToggle:hover {
-  color: var(--color-text);
+  color: var(--color-text-primary);
 }
 
 .rawOutputActions {
@@ -439,7 +439,7 @@
 }
 
 .copyRawBtn:hover {
-  color: var(--color-text);
+  color: var(--color-text-primary);
 }
 
 
@@ -458,7 +458,7 @@
   padding: 3px 0;
   font-size: 12px;
   line-height: 1.5;
-  color: var(--color-text);
+  color: var(--color-text-primary);
 }
 
 .activityItem[data-status="done"] {
@@ -471,11 +471,11 @@
 }
 
 .activityIcon[data-status="done"] {
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 .activityIcon[data-status="active"] {
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 .activityBody {
@@ -489,7 +489,7 @@
 .activityMessage code {
   font-family: var(--font-mono);
   font-size: 11px;
-  background: var(--color-bg-tertiary, rgba(0,0,0,0.08));
+  background: var(--color-overlay-subtle);
   padding: 1px 4px;
   border-radius: 3px;
 }
@@ -512,11 +512,11 @@
 /* ── Build Verification ── */
 
 .buildPassed .activityIcon {
-  color: var(--status-done, #34d399);
+  color: var(--status-done);
 }
 
 .buildFailed .activityIcon {
-  color: var(--status-failed, #ff6b6b);
+  color: var(--status-failed);
 }
 
 .buildToggle {
@@ -533,7 +533,7 @@
 }
 
 .buildToggle:hover {
-  color: var(--color-text);
+  color: var(--color-text-primary);
 }
 
 .buildOutput {
@@ -543,18 +543,18 @@
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
-  color: var(--color-text);
+  color: var(--color-text-primary);
   padding: var(--space-2);
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: var(--color-bg-tertiary, rgba(0,0,0,0.08));
+  background: var(--color-overlay-subtle);
 }
 
 .buildSkipped {
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 .buildSkipped .activityIcon {
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 .emptyVerification {
@@ -565,15 +565,15 @@
 /* ── Test Verification ── */
 
 .testPassed {
-  color: var(--status-done, #34d399);
+  color: var(--status-done);
 }
 
 .testFailed {
-  color: var(--status-failed, #ff6b6b);
+  color: var(--status-failed);
 }
 
 .testSkipped {
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-text-muted);
 }
 
 .testResultsList {
@@ -606,7 +606,7 @@
 
 .testErrorMsg {
   padding-left: calc(12px + var(--space-1));
-  color: var(--status-failed, #ff6b6b);
+  color: var(--status-failed);
   font-size: 11px;
   font-family: var(--font-mono);
   word-break: break-word;
@@ -654,7 +654,7 @@
   border: none;
   padding: 0;
   cursor: pointer;
-  color: var(--color-text, #fff);
+  color: var(--color-text-primary);
   font-size: 13px;
   text-align: left;
   text-decoration: underline;
