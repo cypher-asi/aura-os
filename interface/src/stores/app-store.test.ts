@@ -6,7 +6,13 @@ const { mockApps, mockSetTaskbarAppOrder, mockSetTaskbarHiddenAppIds } = vi.hois
     { id: "projects", basePath: "/projects", label: "Projects", preload: vi.fn() },
     { id: "tasks", basePath: "/tasks", label: "Tasks", preload: vi.fn() },
     { id: "feed", basePath: "/feed", label: "Feed", preload: vi.fn() },
-    { id: "feedback", basePath: "/feedback", label: "Feedback", preload: vi.fn() },
+    {
+      id: "feedback",
+      basePath: "/feedback",
+      label: "Feedback",
+      defaultHidden: true,
+      preload: vi.fn(),
+    },
     { id: "desktop", basePath: "/desktop", label: "Desktop", preload: vi.fn() },
   ],
   mockSetTaskbarAppOrder: vi.fn(),
@@ -19,7 +25,9 @@ vi.mock("../apps/registry", () => ({ apps: mockApps }));
 vi.mock("../utils/storage", () => ({
   getTaskbarAppOrder: () => [],
   setTaskbarAppOrder: mockSetTaskbarAppOrder,
-  getTaskbarHiddenAppIds: () => [],
+  // Returning `null` mirrors a fresh user with no saved hidden-apps entry, so
+  // the store should fall back to registry-derived `defaultHidden` defaults.
+  getTaskbarHiddenAppIds: () => null,
   setTaskbarHiddenAppIds: mockSetTaskbarHiddenAppIds,
 }));
 
@@ -29,6 +37,10 @@ import {
   resolveActiveApp,
   useAppStore,
 } from "./app-store";
+
+// Capture the store's hydrated initial state BEFORE `beforeEach` resets it,
+// so we can assert the registry-derived hidden-apps default seeding.
+const initialStoreState = useAppStore.getState();
 
 beforeEach(() => {
   mockSetTaskbarAppOrder.mockReset();
@@ -99,6 +111,12 @@ describe("app-store", () => {
   });
 
   describe("taskbar hidden apps", () => {
+    it("seeds hidden ids from registry defaultHidden flags when storage has no entry", () => {
+      // `feedback` is the only mock app marked `defaultHidden: true`, and the
+      // storage mock returns `null` — so initial hydration should hide it.
+      expect(initialStoreState.taskbarHiddenAppIds).toEqual(["feedback"]);
+    });
+
     it("normalizes hidden ids, dropping unknown + pinned apps", () => {
       useAppStore
         .getState()
@@ -106,6 +124,13 @@ describe("app-store", () => {
 
       expect(useAppStore.getState().taskbarHiddenAppIds).toEqual(["feed"]);
       expect(mockSetTaskbarHiddenAppIds).toHaveBeenCalledWith(["feed"]);
+    });
+
+    it("persists an explicit empty hidden list (so defaults don't reseed later)", () => {
+      useAppStore.getState().saveTaskbarHiddenAppIds([]);
+
+      expect(useAppStore.getState().taskbarHiddenAppIds).toEqual([]);
+      expect(mockSetTaskbarHiddenAppIds).toHaveBeenCalledWith([]);
     });
 
     it("persists order + hidden atomically via saveTaskbarAppsLayout", () => {

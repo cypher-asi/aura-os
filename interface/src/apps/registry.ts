@@ -63,7 +63,7 @@ function wrapLazyAppComponent<Props extends object>(
 }
 
 function createAppDefinition(
-  metadata: Pick<AuraApp, "id" | "label" | "agentDescription" | "agentKeywords" | "icon" | "basePath" | "searchPlaceholder"> & {
+  metadata: Pick<AuraApp, "id" | "label" | "agentDescription" | "agentKeywords" | "icon" | "basePath" | "searchPlaceholder" | "defaultHidden"> & {
     routes: RouteObject[];
     bareMainPanel?: boolean;
   },
@@ -366,6 +366,7 @@ export const apps: AuraApp[] = [
       basePath: "/debug",
       searchPlaceholder: "Search runs",
       routes: debugRoutes,
+      defaultHidden: true,
     },
     loadDebugApp,
     {

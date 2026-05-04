@@ -71,6 +71,18 @@ function normalizeTaskbarHiddenAppIds(apps: AuraApp[], savedIds: string[]): stri
   return hidden;
 }
 
+/**
+ * Hidden-app ids declared by the registry via `defaultHidden: true`. Used as
+ * the seed value when the user has no saved entry yet, so apps like Debug
+ * start out tucked away in the Apps modal's "Hidden" section instead of
+ * cluttering the visible taskbar strip.
+ */
+function getDefaultHiddenTaskbarAppIds(apps: AuraApp[]): string[] {
+  return apps
+    .filter((app) => app.defaultHidden && !isPinnedTaskbarApp(app))
+    .map((app) => app.id);
+}
+
 function moveItem(ids: string[], fromIndex: number, toIndex: number): string[] {
   if (fromIndex === toIndex) return ids;
   const nextIds = [...ids];
@@ -85,8 +97,12 @@ function getInitialTaskbarAppOrder(): string[] {
 }
 
 function getInitialTaskbarHiddenAppIds(): string[] {
-  const savedIds = typeof window === "undefined" ? [] : getTaskbarHiddenAppIds();
-  return normalizeTaskbarHiddenAppIds(registeredApps, savedIds);
+  const savedIds = typeof window === "undefined" ? null : getTaskbarHiddenAppIds();
+  // `null` means the user has never customized the hidden list — seed from
+  // the registry's `defaultHidden` flags. An explicit `[]` from storage means
+  // the user actively cleared the hidden list, and we honor that.
+  const seedIds = savedIds ?? getDefaultHiddenTaskbarAppIds(registeredApps);
+  return normalizeTaskbarHiddenAppIds(registeredApps, seedIds);
 }
 
 export const useAppStore = create<AppState>()((set, get) => ({

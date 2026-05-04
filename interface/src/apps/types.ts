@@ -41,6 +41,14 @@ export interface AuraApp {
   /** Placeholder text shown in the sidebar search input when this app is active. */
   searchPlaceholder?: string;
   /**
+   * When true, this app starts in the "Hidden" section of the Apps modal and
+   * is omitted from the visible taskbar strip until the user explicitly drags
+   * it into the visible section. Honored only on first load (when the user
+   * has no saved hidden-apps entry); once the user customizes their layout
+   * the saved value wins.
+   */
+  defaultHidden?: boolean;
+  /**
    * Routes owned by this app. `App.tsx` flattens these under the shell layout,
    * making the app module the single source of truth for which pathnames it
    * handles. Each route's `path` should be absolute (relative to the shell

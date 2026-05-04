@@ -360,10 +360,16 @@ export function setTaskbarAppOrder(ids: string[]): void {
   }
 }
 
-export function getTaskbarHiddenAppIds(): string[] {
+/**
+ * Returns the user's saved hidden-apps list, or `null` when no entry exists in
+ * storage. The `null` sentinel lets callers (the app store) fall back to
+ * registry-derived defaults on first load while still respecting an explicit
+ * empty array (i.e. the user un-hid everything).
+ */
+export function getTaskbarHiddenAppIds(): string[] | null {
   try {
     const raw = localStorage.getItem(TASKBAR_HIDDEN_APPS_KEY);
-    if (!raw) return [];
+    if (raw === null) return null;
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed)) {
       return parsed.filter((value): value is string => typeof value === "string");
@@ -376,10 +382,9 @@ export function getTaskbarHiddenAppIds(): string[] {
 
 export function setTaskbarHiddenAppIds(ids: string[]): void {
   try {
-    if (ids.length === 0) {
-      localStorage.removeItem(TASKBAR_HIDDEN_APPS_KEY);
-      return;
-    }
+    // Always persist, even when empty, so a user who explicitly clears all
+    // hidden apps isn't re-defaulted back to the registry's `defaultHidden`
+    // set on the next load.
     localStorage.setItem(TASKBAR_HIDDEN_APPS_KEY, JSON.stringify(ids));
   } catch {
     // ignore storage failures
