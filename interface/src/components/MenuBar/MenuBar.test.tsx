@@ -127,6 +127,18 @@ describe("MenuBar", () => {
     expect(screen.getByText("Ctrl+,")).toBeInTheDocument();
   });
 
+  it("marks the open trigger as selected via data-open + class for distinct background", async () => {
+    const user = userEvent.setup();
+    renderMenuBar();
+    const fileTrigger = screen.getByRole("menuitem", { name: "File" });
+    expect(fileTrigger).toHaveAttribute("aria-expanded", "false");
+    expect(fileTrigger).not.toHaveAttribute("data-open");
+    await user.click(fileTrigger);
+    expect(fileTrigger).toHaveAttribute("aria-expanded", "true");
+    expect(fileTrigger).toHaveAttribute("data-open", "true");
+    expect(fileTrigger.className).toMatch(/triggerOpen/);
+  });
+
   it("renders Mac glyphs for shortcuts on macOS", async () => {
     __setIsMacForTesting(true);
     const user = userEvent.setup();
