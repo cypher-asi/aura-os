@@ -2,20 +2,20 @@
   {
     "date": "2026-05-04",
     "channel": "nightly",
-    "version": "0.1.0-nightly.443.1",
-    "title": "Theming overhaul, onboarding, and chat reliability",
-    "intro": "A big day for Aura: the app gains a real light/dark theming system with a per-token editor and named presets, a new first-run onboarding flow with welcome modal and checklist, two long-standing chat regressions (\"CEO blink\" and the cold-load black panel) get root-caused, and Settings is consolidated into a single discoverable surface. The day closes out with nightly CI plumbing for Mixpanel and billing secrets.",
+    "version": "0.1.0-nightly.444.1",
+    "title": "Light mode lands, plus an onboarding checklist for new users",
+    "intro": "Today's nightly is dominated by one large thread: Aura grew a real theming system, with a working light mode, a Settings → Appearance editor, custom token overrides, and named presets you can import and export. On top of that, a first-run onboarding flow now greets new users with a welcome modal, a five-step checklist, and friendlier empty states. Smaller polish hits the chat panel reliability, modal chrome alignment, the Aura3D editor's memory of where you left off, and a few release-pipeline secrets needed for the desktop nightly.",
     "entryCount": 6,
     "highlights": [
-      "Full light/dark theming with custom tokens and presets",
-      "First-run onboarding with welcome modal and checklist",
-      "Two CEO chat regressions (blink + black panel) fixed at the root",
-      "Settings unified under the taskbar gear with deep links",
-      "Nightly CI gains Mixpanel and billing secret wiring"
+      "Full light/dark theming with a Settings → Appearance editor, custom tokens, and JSON presets",
+      "First-run onboarding: welcome modal, 5-task checklist, and friendlier empty states",
+      "Light mode is now actually readable across chat, sidekick, modals, and form inputs",
+      "Two CEO-chat blanking bugs (LRU eviction and cold-load reveal) fixed",
+      "Aura3D remembers your last project and auto-selects the latest image/model"
     ],
-    "rawCommitCount": 68,
-    "generatedAt": "2026-05-04T20:48:57.897Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.443.1",
+    "rawCommitCount": 69,
+    "generatedAt": "2026-05-04T21:31:29.935Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.444.1",
     "path": "history/2026-05-04.json"
   },
   {
