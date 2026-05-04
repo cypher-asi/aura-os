@@ -1,9 +1,27 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { useAura3DStore, STYLE_LOCK_SUFFIX } from "./aura3d-store";
 
+const LAST_PROJECT_KEY = "aura-last-project";
+
 describe("aura3d-store", () => {
+  let store: Record<string, string>;
+
   beforeEach(() => {
     useAura3DStore.setState(useAura3DStore.getInitialState());
+    store = {};
+    vi.stubGlobal("localStorage", {
+      getItem: vi.fn((key: string) => store[key] ?? null),
+      setItem: vi.fn((key: string, val: string) => {
+        store[key] = val;
+      }),
+      removeItem: vi.fn((key: string) => {
+        delete store[key];
+      }),
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("initialises with correct defaults", () => {
@@ -124,5 +142,116 @@ describe("aura3d-store", () => {
     expect(STYLE_LOCK_SUFFIX).toBeTruthy();
     expect(STYLE_LOCK_SUFFIX).toContain("standalone product only");
     expect(STYLE_LOCK_SUFFIX).toContain("jet black background");
+  });
+
+  describe("setActiveTab auto-select", () => {
+    const imageA = {
+      id: "img-newest",
+      prompt: "newest",
+      imageUrl: "a",
+      originalUrl: "",
+      model: "",
+      createdAt: "",
+    };
+    const imageB = {
+      id: "img-older",
+      prompt: "older",
+      imageUrl: "b",
+      originalUrl: "",
+      model: "",
+      createdAt: "",
+    };
+    const modelA = {
+      id: "model-newest",
+      sourceImageId: "img-newest",
+      sourceImageUrl: "a",
+      glbUrl: "g",
+      taskId: "",
+      createdAt: "",
+    };
+
+    it("selects the latest image when switching to image tab with nothing selected", () => {
+      useAura3DStore.setState({
+        activeTab: "3d",
+        images: [imageA, imageB],
+        models: [],
+      });
+      useAura3DStore.getState().setActiveTab("image");
+      const state = useAura3DStore.getState();
+      expect(state.activeTab).toBe("image");
+      expect(state.selectedImageId).toBe("img-newest");
+      expect(state.currentImage).toEqual(imageA);
+      expect(state.generateSourceImage).toEqual(imageA);
+    });
+
+    it("links the matching model when auto-selecting an image", () => {
+      useAura3DStore.setState({
+        activeTab: "3d",
+        images: [imageA, imageB],
+        models: [modelA],
+      });
+      useAura3DStore.getState().setActiveTab("image");
+      const state = useAura3DStore.getState();
+      expect(state.selectedImageId).toBe("img-newest");
+      expect(state.selectedModelId).toBe("model-newest");
+      expect(state.current3DModel).toEqual(modelA);
+    });
+
+    it("selects the latest model when switching to 3d tab with nothing selected", () => {
+      useAura3DStore.setState({
+        activeTab: "image",
+        images: [],
+        models: [modelA],
+      });
+      useAura3DStore.getState().setActiveTab("3d");
+      const state = useAura3DStore.getState();
+      expect(state.activeTab).toBe("3d");
+      expect(state.selectedModelId).toBe("model-newest");
+      expect(state.current3DModel).toEqual(modelA);
+    });
+
+    it("does not overwrite an existing image selection", () => {
+      useAura3DStore.setState({
+        activeTab: "3d",
+        images: [imageA, imageB],
+        models: [],
+        selectedImageId: "img-older",
+        currentImage: imageB,
+      });
+      useAura3DStore.getState().setActiveTab("image");
+      const state = useAura3DStore.getState();
+      expect(state.selectedImageId).toBe("img-older");
+      expect(state.currentImage).toEqual(imageB);
+    });
+
+    it("just sets the tab when there are no items", () => {
+      useAura3DStore.setState({
+        activeTab: "image",
+        images: [],
+        models: [],
+      });
+      useAura3DStore.getState().setActiveTab("3d");
+      const state = useAura3DStore.getState();
+      expect(state.activeTab).toBe("3d");
+      expect(state.selectedModelId).toBeNull();
+      expect(state.current3DModel).toBeNull();
+    });
+  });
+
+  describe("setSelectedProjectId persistence", () => {
+    it("writes the project id to localStorage so it survives app open/close", () => {
+      useAura3DStore.getState().setSelectedProjectId("proj-42");
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        LAST_PROJECT_KEY,
+        "proj-42",
+      );
+    });
+
+    it("does not persist when clearing the selection", () => {
+      useAura3DStore.getState().setSelectedProjectId("proj-1");
+      vi.mocked(localStorage.setItem).mockClear();
+      useAura3DStore.getState().setSelectedProjectId(null);
+      expect(localStorage.setItem).not.toHaveBeenCalled();
+    });
   });
 });

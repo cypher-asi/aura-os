@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { artifactsApi, type ProjectArtifact } from "../shared/api/artifacts";
 import { DEFAULT_IMAGE_MODEL_ID } from "../constants/models";
+import { setLastProject } from "../utils/storage";
 
 export type Aura3DTab = "image" | "3d";
 
@@ -134,7 +135,30 @@ interface Aura3DState {
 
 export const useAura3DStore = create<Aura3DState>()((set, get) => ({
   activeTab: "image",
-  setActiveTab: (tab) => set({ activeTab: tab }),
+  setActiveTab: (tab) =>
+    set((s) => {
+      if (tab === "image" && !s.selectedImageId && s.images.length > 0) {
+        const latest = s.images[0];
+        const linked = s.models.find((m) => m.sourceImageId === latest.id) ?? null;
+        return {
+          activeTab: tab,
+          selectedImageId: latest.id,
+          currentImage: latest,
+          generateSourceImage: latest,
+          selectedModelId: linked?.id ?? s.selectedModelId,
+          current3DModel: linked ?? s.current3DModel,
+        };
+      }
+      if (tab === "3d" && !s.selectedModelId && s.models.length > 0) {
+        const latest = s.models[0];
+        return {
+          activeTab: tab,
+          selectedModelId: latest.id,
+          current3DModel: latest,
+        };
+      }
+      return { activeTab: tab };
+    }),
 
   selectedProjectId: null,
   setSelectedProjectId: (id) => {
@@ -148,8 +172,11 @@ export const useAura3DStore = create<Aura3DState>()((set, get) => ({
       currentImage: null,
       current3DModel: null,
       generateSourceImage: null,
+      selectedImageId: null,
+      selectedModelId: null,
     });
     if (id) {
+      setLastProject(id);
       get().loadProjectArtifacts(id);
     }
   },
@@ -225,11 +252,25 @@ export const useAura3DStore = create<Aura3DState>()((set, get) => ({
       const imageArtifacts = artifacts.filter((a) => a.type === "image");
       const modelArtifacts = artifacts.filter((a) => a.type === "model");
 
+      const images = imageArtifacts.map(artifactToImage);
+      const models = modelArtifacts.map(artifactToModel);
+      const latestImage = images[0] ?? null;
+      const latestModel = models[0] ?? null;
+      const linkedModel = latestImage
+        ? models.find((m) => m.sourceImageId === latestImage.id) ?? null
+        : null;
+
       set((s) => ({
         isLoadingArtifacts: false,
-        images: imageArtifacts.map(artifactToImage),
-        models: modelArtifacts.map(artifactToModel),
+        images,
+        models,
         loadedProjectIds: new Set([...s.loadedProjectIds, projectId]),
+        selectedImageId: s.selectedImageId ?? latestImage?.id ?? null,
+        selectedModelId:
+          s.selectedModelId ?? linkedModel?.id ?? latestModel?.id ?? null,
+        currentImage: s.currentImage ?? latestImage,
+        generateSourceImage: s.generateSourceImage ?? latestImage,
+        current3DModel: s.current3DModel ?? linkedModel ?? latestModel,
       }));
     } catch {
       set({ isLoadingArtifacts: false });

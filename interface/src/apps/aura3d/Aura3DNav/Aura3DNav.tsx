@@ -1,9 +1,13 @@
-import { createElement, useMemo, useState } from "react";
+import { createElement, useEffect, useMemo, useState } from "react";
 import { PageEmptyState } from "@cypher-asi/zui";
 import { FolderGit2, ImageIcon, Box } from "lucide-react";
 import { useAura3DStore } from "../../../stores/aura3d-store";
-import { useProjectsListStore } from "../../../stores/projects-list-store";
+import {
+  getMostRecentProject,
+  useProjectsListStore,
+} from "../../../stores/projects-list-store";
 import { LeftMenuTree, buildLeftMenuEntries } from "../../../features/left-menu";
+import { getLastProject } from "../../../utils/storage";
 import styles from "./Aura3DNav.module.css";
 
 export function Aura3DNav() {
@@ -21,6 +25,24 @@ export function Aura3DNav() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(
     () => new Set(),
   );
+
+  useEffect(() => {
+    if (selectedProjectId) return;
+    if (projects.length === 0) return;
+    const lastId = getLastProject();
+    const target =
+      (lastId && projects.find((p) => p.project_id === lastId)) ??
+      getMostRecentProject(projects);
+    if (target) {
+      setSelectedProjectId(target.project_id);
+      setExpandedIds((prev) => {
+        if (prev.has(target.project_id)) return prev;
+        const next = new Set(prev);
+        next.add(target.project_id);
+        return next;
+      });
+    }
+  }, [projects, selectedProjectId, setSelectedProjectId]);
 
   const selectedNodeId = selectedImageId
     ? `img:${selectedImageId}`
