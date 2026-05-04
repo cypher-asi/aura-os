@@ -186,15 +186,12 @@ export function AgentEditorForm({
             className={styles.inlineAction}
             onClick={() => setShowAdvancedRuntime(true)}
           >
-            Advanced options
+            Advanced
           </button>
         </>
       ) : (
         <>
           <div className={styles.runtimeSectionHeader}>
-            <Text size="sm" weight="medium">
-              Advanced
-            </Text>
             <button
               type="button"
               className={styles.inlineAction}
