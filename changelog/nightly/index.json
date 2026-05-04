@@ -2,18 +2,20 @@
   {
     "date": "2026-05-04",
     "channel": "nightly",
-    "version": "0.1.0-nightly.440.1",
-    "title": "First-run onboarding lands across Aura",
-    "intro": "Today's nightly is built around a brand-new first-run experience: a welcome modal, a persistent five-step checklist, smarter empty states, and prompt suggestions to get new users from blank canvas to first message. A short server fix and CI plumbing for analytics tokens round out the day.",
-    "entryCount": 4,
+    "version": "0.1.0-nightly.443.1",
+    "title": "Theming overhaul, onboarding, and chat reliability",
+    "intro": "A big day for Aura: the app gains a real light/dark theming system with a per-token editor and named presets, a new first-run onboarding flow with welcome modal and checklist, two long-standing chat regressions (\"CEO blink\" and the cold-load black panel) get root-caused, and Settings is consolidated into a single discoverable surface. The day closes out with nightly CI plumbing for Mixpanel and billing secrets.",
+    "entryCount": 6,
     "highlights": [
-      "New welcome modal and 5-task onboarding checklist",
-      "Prompt suggestions and pulsing input on empty chat",
-      "Mixpanel analytics token now wired into desktop and mobile nightly builds"
+      "Full light/dark theming with custom tokens and presets",
+      "First-run onboarding with welcome modal and checklist",
+      "Two CEO chat regressions (blink + black panel) fixed at the root",
+      "Settings unified under the taskbar gear with deep links",
+      "Nightly CI gains Mixpanel and billing secret wiring"
     ],
-    "rawCommitCount": 15,
-    "generatedAt": "2026-05-04T20:00:22.467Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.440.1",
+    "rawCommitCount": 68,
+    "generatedAt": "2026-05-04T20:48:57.897Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.443.1",
     "path": "history/2026-05-04.json"
   },
   {

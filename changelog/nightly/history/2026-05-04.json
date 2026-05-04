@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-04T20:00:22.467Z",
+  "generatedAt": "2026-05-04T20:48:57.897Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.440.1",
+  "version": "0.1.0-nightly.443.1",
   "date": "2026-05-04",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.440.1",
-  "lastIncludedSha": "a60654c5637f906fad5f8f7e72e118fc3eb45708",
-  "previousProcessedSha": "d9871255dad6ca07cfb297bf2088fee12aa83760",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.443.1",
+  "lastIncludedSha": "d24847f3396e99deca4fce1c7026b970ad58d770",
+  "previousProcessedSha": "a60654c5637f906fad5f8f7e72e118fc3eb45708",
   "commitShas": [
     "bd804201205eb0d6fa131e14e53f6e7bf1cc6066",
     "988eee696ffa6cf9d70a1730c43aebcc09989807",
@@ -26,10 +26,61 @@
     "ae418f34acd254dc90ad8db71103ed9ae7cfc8a2",
     "d9871255dad6ca07cfb297bf2088fee12aa83760",
     "814d6630da888efdbf8bfc0c204f7f7c6ce04146",
-    "a60654c5637f906fad5f8f7e72e118fc3eb45708"
+    "a60654c5637f906fad5f8f7e72e118fc3eb45708",
+    "95f172f257cd25e486bcd78ba0787f28854a91c1",
+    "e4a35e7d2bea44d035ef8bc5c5f07d4396d418f6",
+    "43d01ee52f3f9c9aa2abdedef5edd434e5b35cd2",
+    "7f6bb743f744eee884ace2311e4960e15c0c6cdf",
+    "e57e0be5bc46d54733e7e358238adf1bf20ba245",
+    "78c08f29481cf34007294ae860db8111abf90434",
+    "827720857c150c5dc38dbe32e9edff7213bd9122",
+    "d2848bda4d8938636b37f18e15638e9e8e5dfd0d",
+    "aaee109b54f4b8e7019d54f2e41ef8caa839791b",
+    "0928dc60748d4be2cbeebd1641a3529fd31b133f",
+    "3424cb5a39f0018ab2708face5791ef0512927ed",
+    "47721ecb43c8abe4c486c39fa6136a9da6506ae7",
+    "aca46ece60619bcf98458f774d849ff9db3b2954",
+    "7d2fb89ab8aa138b38909f1580f920d6f0a28c28",
+    "c56ba5006331dd65e40a450679129613f4249e1d",
+    "4281fd02cd2c541f075b7a9b350f7a0b4e112c08",
+    "fe9bfeb86ef21e472b0a546c10b060b5a7f802eb",
+    "53bc7a416f9c720e36d4f62aa1be2ce17c1b7484",
+    "1ca212d7411d8367a591f67219bdadb00609e731",
+    "abb325f6c5e5e1809403cdb254458636de2f8c9c",
+    "f6cb1463314404db131b855ab7c66c37284daad6",
+    "3ee06ead3ba2dbc0ae82ff295d8606044d5726a1",
+    "60f0af6dbb72ef1fd9c6d6174c0eb96032f851ef",
+    "f2b997e862286d59830b1707bd12f3e4fd64aaa9",
+    "1d3e8e89f31bd486a4f39e244342bf8950b31591",
+    "b94ad56c501cb0a1cb6b4bcf584f9ef1a513deee",
+    "79f001d3c30d45451b9d999292a6a87e69b2d2ac",
+    "671d0b2b5c3ae339332024706bee8321cbb5de76",
+    "0b2c8a5f8eebe8b730c71645e4a9f6faf1a6f3ee",
+    "e69bc319fd3842f5c26ecdc11f9958073530ba7a",
+    "6fe2f649bcf69a312d2354faace87cee77955662",
+    "7ec29ea70835fe69725828e510eca910158bf555",
+    "35271989c803e4c0321d66cafb34c3b4390b8b29",
+    "ee633089a0815b8b19ca41ea893c9078ab7327eb",
+    "3199ec493eb5d6fb7295dee1d1076a67bcd73b26",
+    "4bc972e968c78ac488f6db527e9d8b8fa6bffa00",
+    "9f52c4ea0249f890dd8035c1b665fc62679f103a",
+    "401d9fbb507bd96a0d5c65629a6c9769350b0d4f",
+    "085ff9aabe631c4fdadb5f9525a5222f8d515dc1",
+    "401d59110cdec85ba3861756ca5e325620da3a4e",
+    "4b47c85048a7f8d2a2208e3d54fa5946be896881",
+    "8706839f94f73df6ea124fb5dae77f8ee042c721",
+    "ac89c2fd2d1031e7e84e414bb53d11fd35649f40",
+    "f111847f8192d3781e84b53b99a3b876be3db520",
+    "621104e3ac47a1adcec575921dd104cfe3e3a8ca",
+    "3702057369a9f71b8d313ef6716e73fb8ffe3887",
+    "62095010b96cf4ea59ffe88a5c0afa8fd38a7cd9",
+    "4f2675891bda2a6ecc51cb43300ab069717414c3",
+    "c2f8653ddf376fc450df4ba2df672db88dfb952d",
+    "c9514dbfd1e794559f8e5784c749702807710ae0",
+    "d24847f3396e99deca4fce1c7026b970ad58d770"
   ],
-  "rawCommitCount": 15,
-  "filteredCommitCount": 15,
+  "rawCommitCount": 68,
+  "filteredCommitCount": 66,
   "rawCommits": [
     {
       "sha": "bd804201205eb0d6fa131e14e53f6e7bf1cc6066",
@@ -620,9 +671,2376 @@
       "areas": [
         "Release Infrastructure"
       ]
+    },
+    {
+      "sha": "95f172f257cd25e486bcd78ba0787f28854a91c1",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T20:11:15-07:00",
+      "subject": "fix(agents): cascade-delete project bindings when deleting an agent",
+      "body": "The server's `delete_agent` returns a 409 (\"still added to: Home\")\nwhenever any `project_agent` row references the template, but the UI\nnever tore down those bindings on the user's behalf — leaving Delete\nas a dead-end with no obvious path forward, especially for the\nauto-created Home binding that the chat-side self-heal kept\nresurrecting.\n\nCentralize the workflow in `useCascadeDeleteAgent`, used by both the\nagent detail panel and the sidebar context menu, so confirming Delete\nremoves every binding first and then deletes the template in one\naction. The confirm modal now spells out which projects will be\ndetached. Server-side, `ensure_agent_home_project_and_binding` skips\nthe auto-bind when the template is already gone upstream so the\ncascade can't race the chat heal.\n\nAlso surface why a Home binding may not appear under Home in the\nProjects sidebar by hinting \"(in another org)\" / \"(archived)\" next to\neach row in the agent's Projects tab.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "7e639620be7006ca0041a762b793b8b647fc2c9f"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/home_project.rs",
+        "interface/src/apps/agents/AgentInfoPanel/AgentInfoPanel.module.css",
+        "interface/src/apps/agents/AgentInfoPanel/AgentInfoPanel.tsx",
+        "interface/src/apps/agents/AgentList/AgentList.test.tsx",
+        "interface/src/apps/agents/AgentList/AgentList.tsx",
+        "interface/src/apps/agents/hooks/DeleteAgentConfirmModal.module.css",
+        "interface/src/apps/agents/hooks/DeleteAgentConfirmModal.tsx",
+        "interface/src/apps/agents/hooks/use-cascade-delete-agent.test.ts",
+        "interface/src/apps/agents/hooks/use-cascade-delete-agent.ts"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 604,
+        "deletions": 236
+      },
+      "committedAtMs": 1777777875000,
+      "cleanSubject": "cascade-delete project bindings when deleting an agent",
+      "keywords": [
+        "cascade",
+        "delete",
+        "project",
+        "bindings",
+        "when",
+        "deleting",
+        "agent"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "e4a35e7d2bea44d035ef8bc5c5f07d4396d418f6",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T20:21:30-07:00",
+      "subject": "feat(theme): phase 1 — extract app tokens, de-darkify shell, dynamic highlight.js theme",
+      "body": "- New interface/src/styles/tokens.css with light/dark variants for status colors, --color-spinner, --color-text-muted, --color-border\n- Drop always-dark !important overrides in interface/src/index.css (--color-accent: #fff, --color-focus-ring: transparent, --color-overlay-focus: transparent) and the [role=\"dialog\"] { --color-bg: #000; ... } block; switch html/body/#root background to var(--color-bg)\n- index.html: color-scheme: light dark; pre-React data-theme stamper from localStorage[\"zui-theme\"]; per-scheme theme-color metas; light variant for splash\n- Dynamic highlight.js theme via interface/src/lib/highlight-theme.ts + interface/src/components/HighlightThemeBridge driven by useTheme().resolvedTheme\n- Pass disableTransitionOnChange to ZUI ThemeProvider to suppress flash on switch\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "95f172f257cd25e486bcd78ba0787f28854a91c1"
+      ],
+      "files": [
+        "interface/index.html",
+        "interface/src/components/HighlightThemeBridge/HighlightThemeBridge.test.tsx",
+        "interface/src/components/HighlightThemeBridge/HighlightThemeBridge.tsx",
+        "interface/src/components/HighlightThemeBridge/index.ts",
+        "interface/src/index.css",
+        "interface/src/lib/highlight-theme.ts",
+        "interface/src/main.tsx",
+        "interface/src/styles/tokens.css"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 208,
+        "deletions": 33
+      },
+      "committedAtMs": 1777778490000,
+      "cleanSubject": "phase 1 — extract app tokens, de-darkify shell, dynamic highlight.js theme",
+      "keywords": [
+        "phase",
+        "extract",
+        "tokens",
+        "darkify",
+        "shell",
+        "dynamic",
+        "highlight",
+        "theme"
+      ],
+      "fileGroups": [
+        "interface/index.html",
+        "interface/src/components",
+        "interface/src/index.css",
+        "interface/src/lib",
+        "interface/src/main.tsx",
+        "interface/src/styles"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "43d01ee52f3f9c9aa2abdedef5edd434e5b35cd2",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T20:41:36-07:00",
+      "subject": "feat(theme): phase 2 — Settings > Appearance section + titlebar quick toggle",
+      "body": "- New AppearanceSection component (folder + tsx + module.css + test + index) with theme-mode buttons and 6-color accent picker, both wired via ZUI useTheme()\n- Mounted AppearanceSection in SettingsView (desktop) and MobileSettingsView between the About panel and the env-vars note\n- DesktopTitlebar gains a Sun/Moon/MonitorSmartphone icon button that cycles dark -> light -> system; aria-labelled and inside titlebar-no-drag so it works through the WebView2 drag region\n- vitest.config.ts now mirrors vite.config.ts react/react-dom dedupe + aliases so the new test can render the real ZUI <ThemeProvider> (the vendored zui has its own nested React copy)\n- Updated DesktopShell.test.tsx and SettingsView.test.tsx ZUI/lucide mocks to expose the new useTheme / THEMES / ACCENT_COLORS / theme icons that AppearanceSection and the titlebar toggle pull in\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "e4a35e7d2bea44d035ef8bc5c5f07d4396d418f6"
+      ],
+      "files": [
+        "interface/src/components/DesktopShell/DesktopShell.test.tsx",
+        "interface/src/components/DesktopShell/DesktopTitlebar.tsx",
+        "interface/src/mobile/screens/MobileSettingsView/MobileSettingsView.module.css",
+        "interface/src/mobile/screens/MobileSettingsView/MobileSettingsView.tsx",
+        "interface/src/views/SettingsView/AppearanceSection/AppearanceSection.module.css",
+        "interface/src/views/SettingsView/AppearanceSection/AppearanceSection.test.tsx",
+        "interface/src/views/SettingsView/AppearanceSection/AppearanceSection.tsx",
+        "interface/src/views/SettingsView/AppearanceSection/index.ts",
+        "interface/src/views/SettingsView/SettingsView.test.tsx",
+        "interface/src/views/SettingsView/SettingsView.tsx",
+        "interface/vitest.config.ts"
+      ],
+      "stats": {
+        "fileCount": 11,
+        "insertions": 369,
+        "deletions": 2
+      },
+      "committedAtMs": 1777779696000,
+      "cleanSubject": "phase 2 — Settings > Appearance section + titlebar quick toggle",
+      "keywords": [
+        "phase",
+        "settings",
+        "appearance",
+        "section",
+        "titlebar",
+        "quick",
+        "toggle"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/mobile",
+        "interface/src/views",
+        "interface/vitest.config.ts"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "7f6bb743f744eee884ace2311e4960e15c0c6cdf",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T20:51:56-07:00",
+      "subject": "feat(theme): phase 3 — token-debt remediation in process canvas + xterm",
+      "body": "- Add --color-canvas-* / --color-node-* / --color-terminal-* tokens to interface/src/styles/tokens.css with dark and light variants\n- Migrate inline hex/rgba in ProcessCanvas, ProcessNodeCard (NODE_COLORS), RunList, LiveRunBanner, RunPreviewBody, PinnedOutput to the new CSS variables\n- Extract XTerminal theme into getXtermTheme(resolved) helper that reads CSS vars at runtime; XTerminal subscribes to useTheme().resolvedTheme and updates terminal.options.theme live on switch\n- New test: getXtermTheme.test.ts (palette mapping + fallbacks)\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "43d01ee52f3f9c9aa2abdedef5edd434e5b35cd2"
+      ],
+      "files": [
+        "interface/src/apps/process/components/PinnedOutput/PinnedOutput.tsx",
+        "interface/src/apps/process/components/ProcessCanvas/ProcessCanvas.module.css",
+        "interface/src/apps/process/components/ProcessCanvas/ProcessCanvas.tsx",
+        "interface/src/apps/process/components/ProcessNodeCard/ProcessNodeCard.tsx",
+        "interface/src/apps/process/components/ProcessSidekickContent/LiveRunBanner.tsx",
+        "interface/src/apps/process/components/ProcessSidekickContent/RunList.tsx",
+        "interface/src/apps/process/components/ProcessSidekickContent/RunPreviewBody.tsx",
+        "interface/src/components/XTerminal/XTerminal.tsx",
+        "interface/src/components/XTerminal/getXtermTheme.test.ts",
+        "interface/src/components/XTerminal/getXtermTheme.ts",
+        "interface/src/styles/tokens.css"
+      ],
+      "stats": {
+        "fileCount": 11,
+        "insertions": 486,
+        "deletions": 112
+      },
+      "committedAtMs": 1777780316000,
+      "cleanSubject": "phase 3 — token-debt remediation in process canvas + xterm",
+      "keywords": [
+        "phase",
+        "token",
+        "debt",
+        "remediation",
+        "process",
+        "canvas",
+        "xterm"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/styles"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "e57e0be5bc46d54733e7e358238adf1bf20ba245",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T20:59:06-07:00",
+      "subject": "refactor: phase 4 - code-rule cleanups (named exports, mobile chat folders, drop Context shim)",
+      "body": "- Convert default exports to named: App.tsx, BrowserPanel.tsx, BrowserErrorOverlay.tsx; update consumers (including React.lazy wrappers)\n- Restructure interface/src/mobile/chat/ flat files into per-component folders (MobileChatHeader, MobileChatInputBar, MobileChatPanel, MobileProjectAgentSwitcherSheet) with index.ts barrels; preserve git history via git mv\n- Delete deprecated interface/src/context/SidebarSearchContext.tsx shim; rewrite remaining imports to hooks/use-sidebar-search\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "7f6bb743f744eee884ace2311e4960e15c0c6cdf"
+      ],
+      "files": [
+        "interface/src/App.tsx",
+        "interface/src/apps/browser/components/BrowserErrorOverlay/BrowserErrorOverlay.tsx",
+        "interface/src/apps/browser/components/BrowserPanel/BrowserPanel.tsx",
+        "interface/src/apps/browser/components/BrowserPanel/index.ts",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/components/SidekickContent/SidekickContent.tsx",
+        "interface/src/context/SidebarSearchContext.tsx",
+        "interface/src/main.tsx",
+        "interface/src/mobile/chat/MobileChatHeader.module.css",
+        "interface/src/mobile/chat/MobileChatHeader.tsx",
+        "interface/src/mobile/chat/MobileChatHeader/MobileChatHeader.module.css",
+        "interface/src/mobile/chat/MobileChatHeader/MobileChatHeader.tsx",
+        "interface/src/mobile/chat/MobileChatHeader/index.ts",
+        "interface/src/mobile/chat/MobileChatInputBar.module.css",
+        "interface/src/mobile/chat/MobileChatInputBar.tsx",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.module.css",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.tsx",
+        "interface/src/mobile/chat/MobileChatInputBar/index.ts",
+        "interface/src/mobile/chat/MobileChatPanel.test.tsx",
+        "interface/src/mobile/chat/MobileChatPanel.tsx",
+        "interface/src/mobile/chat/MobileChatPanel/MobileChatPanel.test.tsx",
+        "interface/src/mobile/chat/MobileChatPanel/MobileChatPanel.tsx",
+        "interface/src/mobile/chat/MobileChatPanel/index.ts",
+        "interface/src/mobile/chat/MobileProjectAgentSwitcherSheet.module.css",
+        "interface/src/mobile/chat/MobileProjectAgentSwitcherSheet.tsx",
+        "interface/src/mobile/chat/MobileProjectAgentSwitcherSheet/MobileProjectAgentSwitcherSheet.module.css",
+        "interface/src/mobile/chat/MobileProjectAgentSwitcherSheet/MobileProjectAgentSwitcherSheet.tsx",
+        "interface/src/mobile/chat/MobileProjectAgentSwitcherSheet/index.ts"
+      ],
+      "stats": {
+        "fileCount": 28,
+        "insertions": 29,
+        "deletions": 28
+      },
+      "committedAtMs": 1777780746000,
+      "cleanSubject": "phase 4 - code-rule cleanups (named exports, mobile chat folders, drop Context shim)",
+      "keywords": [
+        "phase",
+        "code",
+        "rule",
+        "cleanups",
+        "named",
+        "exports",
+        "mobile",
+        "chat",
+        "folders",
+        "drop",
+        "context",
+        "shim"
+      ],
+      "fileGroups": [
+        "interface/src/App.tsx",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/context",
+        "interface/src/main.tsx",
+        "interface/src/mobile"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "78c08f29481cf34007294ae860db8111abf90434",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T21:34:43-07:00",
+      "subject": "refactor: phase 5 - split three largest files (>500 lines)",
+      "body": "- PermissionsTab.tsx (~1043 lines) -> PermissionsTab/ folder with\n  permissions-utils (pure helpers), permissions-rows (sub-components +\n  AutosaveStatus + ActiveHarnessToolsSection), usePermissionsForm\n  (draft state + setters + memoised derived), usePermissionsAutosave\n  (debounced PUT + status/badge timers + flush-on-unmount). Orchestrator\n  stays under 280 lines; existing test moved into the folder via git mv\n  with relative-import path updates only.\n- aura-events.ts (~842 lines) -> aura-events/ folder split into\n  payloads.ts (PhaseTimingEntry + LoopId/Activity + Sender +\n  ChatAttachment + isLoopActivityActive), event-types.ts (EventType\n  const + AuraEventBase + assembled AuraEvent union), events-domain.ts\n  (Message/Streaming/Agent/Spec/Task/Loop variants), events-system.ts\n  (Build/Test/Git/Harness/Billing/Process/Generation/Other variants),\n  parsers.ts (parseAuraEvent + isValidEventType + AuraEventOfType +\n  AuraEventContent), and an index barrel. Original .ts deleted; existing\n  imports continue to resolve via folder/index.\n- notes-store.ts (~632 lines) -> stores/notes/ folder with notes-utils\n  (shared helpers + types + autosave debounce), notes-tree-slice (CRUD),\n  notes-content-slice (autosave + flushNote rename rewiring),\n  notes-comments-slice, notes-sidekick-slice (active-note pointer +\n  reveal-in-folder), notes-store.ts (Zustand composer + selector hooks)\n  and an index barrel. Original interface/src/stores/notes-store.ts kept\n  as a one-line re-export so call sites are untouched.\n- No behavior changes; existing tests pass without modification (paths\n  preserved or re-exported; only test edits are import-path bumps in the\n  moved PermissionsTab.test.tsx).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "e57e0be5bc46d54733e7e358238adf1bf20ba245"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentInfoPanel/PermissionsTab.test.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/PermissionsTab.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/PermissionsTab/PermissionsTab.test.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/PermissionsTab/PermissionsTab.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/PermissionsTab/index.ts",
+        "interface/src/apps/agents/AgentInfoPanel/PermissionsTab/permissions-rows.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/PermissionsTab/permissions-utils.ts",
+        "interface/src/apps/agents/AgentInfoPanel/PermissionsTab/usePermissionsAutosave.ts",
+        "interface/src/apps/agents/AgentInfoPanel/PermissionsTab/usePermissionsForm.ts",
+        "interface/src/shared/types/aura-events.ts",
+        "interface/src/shared/types/aura-events/event-types.ts",
+        "interface/src/shared/types/aura-events/events-domain.ts",
+        "interface/src/shared/types/aura-events/events-system.ts",
+        "interface/src/shared/types/aura-events/index.ts",
+        "interface/src/shared/types/aura-events/parsers.ts",
+        "interface/src/shared/types/aura-events/payloads.ts",
+        "interface/src/stores/notes-store.ts",
+        "interface/src/stores/notes/index.ts",
+        "interface/src/stores/notes/notes-comments-slice.ts",
+        "interface/src/stores/notes/notes-content-slice.ts",
+        "interface/src/stores/notes/notes-sidekick-slice.ts",
+        "interface/src/stores/notes/notes-store.ts",
+        "interface/src/stores/notes/notes-tree-slice.ts",
+        "interface/src/stores/notes/notes-utils.ts"
+      ],
+      "stats": {
+        "fileCount": 24,
+        "insertions": 2832,
+        "deletions": 2522
+      },
+      "committedAtMs": 1777782883000,
+      "cleanSubject": "phase 5 - split three largest files (>500 lines)",
+      "keywords": [
+        "phase",
+        "split",
+        "three",
+        "largest",
+        "files",
+        "lines"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/shared",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "827720857c150c5dc38dbe32e9edff7213bd9122",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T21:57:12-07:00",
+      "subject": "test(theme): phase 6 - validation tests, smoke checklist, and checkpoint summary",
+      "body": "- Add SettingsView smoke test asserting AppearanceSection renders alongside the About panel.\n- Strengthen AppearanceSection.test.tsx with an explicit assertion that toggling theme persists to the ZUI localStorage entry (theme=light is JSON-serialized into the same blob as accent).\n- Restore the lint baseline after Phase 5 introduced +1 warning: usePermissionsAutosave.ts now has a targeted react-hooks/exhaustive-deps suppression on the unmount-flush ref read (intentional latest-value behavior), and a now-unused react-hooks/set-state-in-effect disable directive is removed.\n- New interface/docs/theme-smoke-checklist.md walks the user through manual verification of phases 1-5 (theme switching, accent, surface coverage, mobile, regression checks).\n- New interface/docs/theme-checkpoint-phase-6.md summarises the checkpoint state, commit history, automated-gate results (tsc clean, lint delta 0 vs baseline, scoped tests pass, build succeeds), pre-existing failures, and a Phase 7-14 next-steps pointer.\n\nVerified gates: npx tsc -b clean, npm run lint = 219 errors / 34 warnings (matches Phase 1 baseline), scoped vitest run for SettingsView/PermissionsTab/notes/AppearanceSection 14 files / 61 tests pass, npm run build successful in ~2.3s with both highlight.js light+dark CSS chunks emitted.",
+      "parents": [
+        "78c08f29481cf34007294ae860db8111abf90434"
+      ],
+      "files": [
+        "interface/docs/theme-checkpoint-phase-6.md",
+        "interface/docs/theme-smoke-checklist.md",
+        "interface/src/apps/agents/AgentInfoPanel/PermissionsTab/usePermissionsAutosave.ts",
+        "interface/src/views/SettingsView/AppearanceSection/AppearanceSection.test.tsx",
+        "interface/src/views/SettingsView/SettingsView.test.tsx"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 254,
+        "deletions": 2
+      },
+      "committedAtMs": 1777784232000,
+      "cleanSubject": "phase 6 - validation tests, smoke checklist, and checkpoint summary",
+      "keywords": [
+        "phase",
+        "validation",
+        "tests",
+        "smoke",
+        "checklist",
+        "checkpoint",
+        "summary"
+      ],
+      "fileGroups": [
+        "interface/docs/theme-checkpoint-phase-6.md",
+        "interface/docs/theme-smoke-checklist.md",
+        "interface/src/apps",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "d2848bda4d8938636b37f18e15638e9e8e5dfd0d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T22:09:59-07:00",
+      "subject": "fix(desktop): keep window controls accessible on boot/error overlay",
+      "body": "Adds a minimal native-HTML fallback titlebar in interface/index.html that\nsits above the splash and boot-error overlay, so the frameless tao window\nstays draggable and closable even when /src/main.tsx never mounts (e.g.\ndev server unreachable, Vite import error). The fallback uses the same\nwindow.ipc bridge wry exposes for the React WindowControls component\n(minimize/maximize/close/drag) and is hidden via html.aura-app-ready\nonce React's DesktopTitlebar takes over. Mirrors native-titlebar-drag.ts\nso the JS pointerdown drag fallback only fires on macOS/Linux where\n-webkit-app-region: drag is ignored by WKWebView/WebKitGTK.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "827720857c150c5dc38dbe32e9edff7213bd9122"
+      ],
+      "files": [
+        "interface/index.html"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 148,
+        "deletions": 0
+      },
+      "committedAtMs": 1777784999000,
+      "cleanSubject": "keep window controls accessible on boot/error overlay",
+      "keywords": [
+        "keep",
+        "window",
+        "controls",
+        "accessible",
+        "boot",
+        "error",
+        "overlay"
+      ],
+      "fileGroups": [
+        "interface/index.html"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "aaee109b54f4b8e7019d54f2e41ef8caa839791b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T22:19:33-07:00",
+      "subject": "feat(theme): phase 7 - richer theming editor (per-token overrides)",
+      "body": "- Add editable chrome tokens: --color-surface-tint, --color-elevated-tint,\n  --color-sidebar-bg, --color-sidekick-bg, --color-titlebar-bg (with light/\n  dark defaults, keyed off the existing surface/elevated/bg tokens)\n- DesktopShell sidebar / sidekick lane / titlebar consume the new tokens\n  (titlebar routes through --shell-chrome-background -> --color-titlebar-bg)\n- New interface/src/lib/theme-overrides.ts owns per-resolved-theme\n  persistence in localStorage[\"aura-theme-overrides\"] (validated on load)\n  and applies overrides as document.documentElement inline styles, which\n  win over :root/[data-theme] defaults by specificity\n- New interface/src/hooks/use-theme-overrides.ts subscribes to\n  useTheme().resolvedTheme and re-applies the active override set on switch\n- New interface/src/components/ThemeOverridesBridge mounted inside\n  ThemeProvider in main.tsx, sibling to HighlightThemeBridge\n- AppearanceSection gains a CustomTokensPanel subcomponent (folder + tsx +\n  module.css + test + index) with per-token native color picker + CSS text\n  input + per-row Reset, plus a Reset all affordance; invalid text values\n  flag the input and clear any prior override rather than leaving it stale\n- Phase 8 will add named presets + JSON import/export on top of this surface\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "d2848bda4d8938636b37f18e15638e9e8e5dfd0d"
+      ],
+      "files": [
+        "interface/src/components/DesktopShell/DesktopShell.module.css",
+        "interface/src/components/ThemeOverridesBridge/ThemeOverridesBridge.test.tsx",
+        "interface/src/components/ThemeOverridesBridge/ThemeOverridesBridge.tsx",
+        "interface/src/components/ThemeOverridesBridge/index.ts",
+        "interface/src/hooks/use-theme-overrides.test.ts",
+        "interface/src/hooks/use-theme-overrides.ts",
+        "interface/src/lib/theme-overrides.test.ts",
+        "interface/src/lib/theme-overrides.ts",
+        "interface/src/main.tsx",
+        "interface/src/styles/tokens.css",
+        "interface/src/views/SettingsView/AppearanceSection/AppearanceSection.test.tsx",
+        "interface/src/views/SettingsView/AppearanceSection/AppearanceSection.tsx",
+        "interface/src/views/SettingsView/AppearanceSection/CustomTokensPanel/CustomTokensPanel.module.css",
+        "interface/src/views/SettingsView/AppearanceSection/CustomTokensPanel/CustomTokensPanel.test.tsx",
+        "interface/src/views/SettingsView/AppearanceSection/CustomTokensPanel/CustomTokensPanel.tsx",
+        "interface/src/views/SettingsView/AppearanceSection/CustomTokensPanel/index.ts"
+      ],
+      "stats": {
+        "fileCount": 16,
+        "insertions": 1015,
+        "deletions": 5
+      },
+      "committedAtMs": 1777785573000,
+      "cleanSubject": "phase 7 - richer theming editor (per-token overrides)",
+      "keywords": [
+        "phase",
+        "richer",
+        "theming",
+        "editor",
+        "token",
+        "overrides"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/hooks",
+        "interface/src/lib",
+        "interface/src/main.tsx",
+        "interface/src/styles",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "0928dc60748d4be2cbeebd1641a3529fd31b133f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T22:50:21-07:00",
+      "subject": "feat(theme): phase 8 - named presets + JSON import/export",
+      "body": "- Extend theme-overrides persistence with ThemePreset / StoredPresets at localStorage[\"aura-theme-presets\"]; built-in Aura Dark and Aura Light auto-injected\n- Hook now exposes presets, activePresetId, selectPreset, createPresetFromCurrent, renamePreset, deletePreset, exportPreset, importPreset; single applicator preferring active preset over working set\n- New PresetsPanel subcomponent in AppearanceSection: select preset, save current as preset, rename, delete, export to JSON file, import from JSON file\n- CustomTokensPanel shows the active preset name and grays inputs when a built-in is selected\n- Built-ins are read-only; user presets get a fresh UUID on import to prevent collisions\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "aaee109b54f4b8e7019d54f2e41ef8caa839791b"
+      ],
+      "files": [
+        "interface/src/hooks/use-theme-overrides.test.ts",
+        "interface/src/hooks/use-theme-overrides.ts",
+        "interface/src/lib/theme-presets.test.ts",
+        "interface/src/lib/theme-presets.ts",
+        "interface/src/views/SettingsView/AppearanceSection/AppearanceSection.tsx",
+        "interface/src/views/SettingsView/AppearanceSection/CustomTokensPanel/CustomTokensPanel.module.css",
+        "interface/src/views/SettingsView/AppearanceSection/CustomTokensPanel/CustomTokensPanel.test.tsx",
+        "interface/src/views/SettingsView/AppearanceSection/CustomTokensPanel/CustomTokensPanel.tsx",
+        "interface/src/views/SettingsView/AppearanceSection/PresetsPanel/PresetsPanel.module.css",
+        "interface/src/views/SettingsView/AppearanceSection/PresetsPanel/PresetsPanel.test.tsx",
+        "interface/src/views/SettingsView/AppearanceSection/PresetsPanel/PresetsPanel.tsx",
+        "interface/src/views/SettingsView/AppearanceSection/PresetsPanel/index.ts",
+        "interface/src/views/SettingsView/SettingsView.test.tsx"
+      ],
+      "stats": {
+        "fileCount": 13,
+        "insertions": 1801,
+        "deletions": 25
+      },
+      "committedAtMs": 1777787421000,
+      "cleanSubject": "phase 8 - named presets + JSON import/export",
+      "keywords": [
+        "phase",
+        "named",
+        "presets",
+        "json",
+        "import",
+        "export"
+      ],
+      "fileGroups": [
+        "interface/src/hooks",
+        "interface/src/lib",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "3424cb5a39f0018ab2708face5791ef0512927ed",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T22:58:06-07:00",
+      "subject": "chore(theme): phase 9 - add tokens for log types, status notices, scrims, editor selection",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "0928dc60748d4be2cbeebd1641a3529fd31b133f"
+      ],
+      "files": [
+        "interface/src/styles/tokens.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 73,
+        "deletions": 0
+      },
+      "committedAtMs": 1777787886000,
+      "cleanSubject": "phase 9 - add tokens for log types, status notices, scrims, editor selection",
+      "keywords": [
+        "phase",
+        "tokens",
+        "types",
+        "status",
+        "notices",
+        "scrims",
+        "editor",
+        "selection"
+      ],
+      "fileGroups": [
+        "interface/src/styles"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "47721ecb43c8abe4c486c39fa6136a9da6506ae7",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T22:58:43-07:00",
+      "subject": "chore(theme): phase 9 - migrate SidekickLog.module.css to tokens",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "3424cb5a39f0018ab2708face5791ef0512927ed"
+      ],
+      "files": [
+        "interface/src/views/SidekickLog/SidekickLog.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 41,
+        "deletions": 41
+      },
+      "committedAtMs": 1777787923000,
+      "cleanSubject": "phase 9 - migrate SidekickLog.module.css to tokens",
+      "keywords": [
+        "phase",
+        "migrate",
+        "sidekicklog",
+        "module",
+        "tokens"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "aca46ece60619bcf98458f774d849ff9db3b2954",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T23:00:19-07:00",
+      "subject": "chore(theme): phase 9 - migrate ChatInputBar.module.css to tokens",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "47721ecb43c8abe4c486c39fa6136a9da6506ae7"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 56,
+        "deletions": 56
+      },
+      "committedAtMs": 1777788019000,
+      "cleanSubject": "phase 9 - migrate ChatInputBar.module.css to tokens",
+      "keywords": [
+        "phase",
+        "migrate",
+        "chatinputbar",
+        "module",
+        "tokens"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "7d2fb89ab8aa138b38909f1580f920d6f0a28c28",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T23:00:51-07:00",
+      "subject": "chore(theme): phase 9 - migrate IdeView.module.css to tokens",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "aca46ece60619bcf98458f774d849ff9db3b2954"
+      ],
+      "files": [
+        "interface/src/views/IdeView/IdeView.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 30,
+        "deletions": 30
+      },
+      "committedAtMs": 1777788051000,
+      "cleanSubject": "phase 9 - migrate IdeView.module.css to tokens",
+      "keywords": [
+        "phase",
+        "migrate",
+        "ideview",
+        "module",
+        "tokens"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "c56ba5006331dd65e40a450679129613f4249e1d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T23:02:02-07:00",
+      "subject": "chore(theme): phase 9 - migrate Preview.module.css to tokens",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "7d2fb89ab8aa138b38909f1580f920d6f0a28c28"
+      ],
+      "files": [
+        "interface/src/components/Preview/Preview.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 41,
+        "deletions": 41
+      },
+      "committedAtMs": 1777788122000,
+      "cleanSubject": "phase 9 - migrate Preview.module.css to tokens",
+      "keywords": [
+        "phase",
+        "migrate",
+        "preview",
+        "module",
+        "tokens"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "4281fd02cd2c541f075b7a9b350f7a0b4e112c08",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T23:02:56-07:00",
+      "subject": "chore(theme): phase 9 - migrate LeftMenuTree.module.css to tokens",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "c56ba5006331dd65e40a450679129613f4249e1d"
+      ],
+      "files": [
+        "interface/src/features/left-menu/LeftMenuTree/LeftMenuTree.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 22,
+        "deletions": 22
+      },
+      "committedAtMs": 1777788176000,
+      "cleanSubject": "phase 9 - migrate LeftMenuTree.module.css to tokens",
+      "keywords": [
+        "phase",
+        "migrate",
+        "leftmenutree",
+        "module",
+        "tokens"
+      ],
+      "fileGroups": [
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "fe9bfeb86ef21e472b0a546c10b060b5a7f802eb",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T23:03:18-07:00",
+      "subject": "chore(theme): phase 9 - migrate BrowserAddressBar.module.css to tokens",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "4281fd02cd2c541f075b7a9b350f7a0b4e112c08"
+      ],
+      "files": [
+        "interface/src/apps/browser/components/BrowserAddressBar/BrowserAddressBar.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 20,
+        "deletions": 20
+      },
+      "committedAtMs": 1777788198000,
+      "cleanSubject": "phase 9 - migrate BrowserAddressBar.module.css to tokens",
+      "keywords": [
+        "phase",
+        "migrate",
+        "browseraddressbar",
+        "module",
+        "tokens"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "53bc7a416f9c720e36d4f62aa1be2ce17c1b7484",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T23:03:54-07:00",
+      "subject": "chore(theme): phase 9 - migrate AgentEnvironment.module.css to tokens",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "fe9bfeb86ef21e472b0a546c10b060b5a7f802eb"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentEnvironment/AgentEnvironment.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 47,
+        "deletions": 47
+      },
+      "committedAtMs": 1777788234000,
+      "cleanSubject": "phase 9 - migrate AgentEnvironment.module.css to tokens",
+      "keywords": [
+        "phase",
+        "migrate",
+        "agentenvironment",
+        "module",
+        "tokens"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "1ca212d7411d8367a591f67219bdadb00609e731",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T23:04:52-07:00",
+      "subject": "chore(theme): phase 9 - migrate TaskOutputPanel.module.css to tokens",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "53bc7a416f9c720e36d4f62aa1be2ce17c1b7484"
+      ],
+      "files": [
+        "interface/src/components/TaskOutputPanel/TaskOutputPanel.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 35,
+        "deletions": 35
+      },
+      "committedAtMs": 1777788292000,
+      "cleanSubject": "phase 9 - migrate TaskOutputPanel.module.css to tokens",
+      "keywords": [
+        "phase",
+        "migrate",
+        "taskoutputpanel",
+        "module",
+        "tokens"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "abb325f6c5e5e1809403cdb254458636de2f8c9c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T23:05:39-07:00",
+      "subject": "chore(theme): phase 9 - migrate billing modal CSS to tokens",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "1ca212d7411d8367a591f67219bdadb00609e731"
+      ],
+      "files": [
+        "interface/src/components/BuyCreditsModal/BuyCreditsModal.module.css",
+        "interface/src/components/OrgSettingsBilling/OrgSettingsBilling.module.css"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 20,
+        "deletions": 20
+      },
+      "committedAtMs": 1777788339000,
+      "cleanSubject": "phase 9 - migrate billing modal CSS to tokens",
+      "keywords": [
+        "phase",
+        "migrate",
+        "billing",
+        "modal",
+        "tokens"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f6cb1463314404db131b855ab7c66c37284daad6",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T23:07:16-07:00",
+      "subject": "chore(theme): phase 9 - lint guard against raw color literals in module CSS",
+      "body": "- New interface/scripts/check-module-css-colors.mjs scans interface/src/**/*.module.css and fails on hex/rgb/rgba/hsl/hsla literals in files on the denylist\n- Denylist starts with the 10 module.css files migrated in phase 9; future commits can extend it as more files become clean\n- Wired into npm run lint via npm run lint:colors\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "abb325f6c5e5e1809403cdb254458636de2f8c9c"
+      ],
+      "files": [
+        "interface/package.json",
+        "interface/scripts/check-module-css-colors.mjs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 147,
+        "deletions": 1
+      },
+      "committedAtMs": 1777788436000,
+      "cleanSubject": "phase 9 - lint guard against raw color literals in module CSS",
+      "keywords": [
+        "phase",
+        "lint",
+        "guard",
+        "against",
+        "color",
+        "literals",
+        "module"
+      ],
+      "fileGroups": [
+        "interface/package.json",
+        "interface/scripts/check-module-css-colors.mjs"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "3ee06ead3ba2dbc0ae82ff295d8606044d5726a1",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T23:17:19-07:00",
+      "subject": "refactor(phase-10): split use-chat-history-sync (~530 lines) into folder of focused modules",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "f6cb1463314404db131b855ab7c66c37284daad6"
+      ],
+      "files": [
+        "interface/src/hooks/use-chat-history-sync.test.ts",
+        "interface/src/hooks/use-chat-history-sync.ts",
+        "interface/src/hooks/use-chat-history-sync/helpers.ts",
+        "interface/src/hooks/use-chat-history-sync/index.ts",
+        "interface/src/hooks/use-chat-history-sync/use-chat-history-sync.test.ts",
+        "interface/src/hooks/use-chat-history-sync/use-chat-history-sync.ts"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 116,
+        "deletions": 108
+      },
+      "committedAtMs": 1777789039000,
+      "cleanSubject": "split use-chat-history-sync (~530 lines) into folder of focused modules",
+      "keywords": [
+        "split",
+        "chat",
+        "history",
+        "sync",
+        "lines",
+        "into",
+        "folder",
+        "focused",
+        "modules"
+      ],
+      "fileGroups": [
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "60f0af6dbb72ef1fd9c6d6174c0eb96032f851ef",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T23:20:33-07:00",
+      "subject": "refactor(phase-10): split shared/types/entities.ts (~700 lines) into per-entity files",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "3ee06ead3ba2dbc0ae82ff295d8606044d5726a1"
+      ],
+      "files": [
+        "interface/src/shared/types/entities.ts",
+        "interface/src/shared/types/entities/agent.ts",
+        "interface/src/shared/types/entities/api.ts",
+        "interface/src/shared/types/entities/billing.ts",
+        "interface/src/shared/types/entities/environment.ts",
+        "interface/src/shared/types/entities/index.ts",
+        "interface/src/shared/types/entities/memory.ts",
+        "interface/src/shared/types/entities/org.ts",
+        "interface/src/shared/types/entities/process.ts",
+        "interface/src/shared/types/entities/project.ts",
+        "interface/src/shared/types/entities/session.ts",
+        "interface/src/shared/types/entities/skill.ts",
+        "interface/src/shared/types/entities/user.ts"
+      ],
+      "stats": {
+        "fileCount": 13,
+        "insertions": 726,
+        "deletions": 699
+      },
+      "committedAtMs": 1777789233000,
+      "cleanSubject": "split shared/types/entities.ts (~700 lines) into per-entity files",
+      "keywords": [
+        "split",
+        "shared",
+        "types",
+        "entities",
+        "lines",
+        "into",
+        "entity",
+        "files"
+      ],
+      "fileGroups": [
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f2b997e862286d59830b1707bd12f3e4fd64aaa9",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T23:23:09-07:00",
+      "subject": "refactor(phase-10): split AgentEnvironment.tsx (~510 lines) into orchestrator + subcomponents",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "60f0af6dbb72ef1fd9c6d6174c0eb96032f851ef"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentEnvironment/AgentEnvironment.tsx",
+        "interface/src/apps/agents/components/AgentEnvironment/StatusCard.tsx",
+        "interface/src/apps/agents/components/AgentEnvironment/helpers.ts",
+        "interface/src/apps/agents/components/AgentEnvironment/useRemoteAgentVm.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 611,
+        "deletions": 381
+      },
+      "committedAtMs": 1777789389000,
+      "cleanSubject": "split AgentEnvironment.tsx (~510 lines) into orchestrator + subcomponents",
+      "keywords": [
+        "split",
+        "agentenvironment",
+        "lines",
+        "into",
+        "orchestrator",
+        "subcomponents"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "1d3e8e89f31bd486a4f39e244342bf8950b31591",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T23:28:55-07:00",
+      "subject": "refactor(phase-10): split stream handlers.test.ts (~1334 lines) by handler concern",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "f2b997e862286d59830b1707bd12f3e4fd64aaa9"
+      ],
+      "files": [
+        "interface/src/hooks/stream/handlers.lifecycle.test.ts",
+        "interface/src/hooks/stream/handlers.shared.test.ts",
+        "interface/src/hooks/stream/handlers.test-helpers.ts",
+        "interface/src/hooks/stream/handlers.test.ts",
+        "interface/src/hooks/stream/handlers.thinking-text.test.ts",
+        "interface/src/hooks/stream/handlers.tool-retry.test.ts",
+        "interface/src/hooks/stream/handlers.tool.test.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 1489,
+        "deletions": 1334
+      },
+      "committedAtMs": 1777789735000,
+      "cleanSubject": "split stream handlers.test.ts (~1334 lines) by handler concern",
+      "keywords": [
+        "split",
+        "stream",
+        "handlers",
+        "test",
+        "1334",
+        "lines",
+        "handler",
+        "concern"
+      ],
+      "fileGroups": [
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "b94ad56c501cb0a1cb6b4bcf584f9ef1a513deee",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-02T23:47:14-07:00",
+      "subject": "feat(settings): phase 11 - sectioned Settings with /settings/:section deep links",
+      "body": "- SettingsView refactored into Navigator-driven layout with About / Appearance / Notifications / Keyboard / Advanced sections; About and Appearance keep existing content, others scaffolded as muted placeholders for future work\n- New per-section component folders (AboutSection, NotificationsSection, KeyboardSection, AdvancedSection) following the canonical structure\n- New sections.ts is the typed source of truth for section ids, labels, icons, and panes; isSettingsSectionId guards URL params\n- /settings now supports /settings/:section deep links (apps/projects/routes.tsx); invalid/missing section redirects to /settings/about\n- MobileSettingsView mirrors the pattern via a list-of-rows screen that drills into a section detail screen with back affordance; existing About content moves into the detail view, data-testids preserved\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "1d3e8e89f31bd486a4f39e244342bf8950b31591"
+      ],
+      "files": [
+        "interface/src/apps/projects/routes.tsx",
+        "interface/src/mobile/screens/MobileSettingsView/MobileSettingsView.module.css",
+        "interface/src/mobile/screens/MobileSettingsView/MobileSettingsView.test.tsx",
+        "interface/src/mobile/screens/MobileSettingsView/MobileSettingsView.tsx",
+        "interface/src/mobile/screens/MobileSettingsView/SettingsDetailScreen.tsx",
+        "interface/src/mobile/screens/MobileSettingsView/SettingsList.tsx",
+        "interface/src/views/SettingsView/AboutSection/AboutSection.module.css",
+        "interface/src/views/SettingsView/AboutSection/AboutSection.test.tsx",
+        "interface/src/views/SettingsView/AboutSection/AboutSection.tsx",
+        "interface/src/views/SettingsView/AboutSection/index.ts",
+        "interface/src/views/SettingsView/AdvancedSection/AdvancedSection.module.css",
+        "interface/src/views/SettingsView/AdvancedSection/AdvancedSection.test.tsx",
+        "interface/src/views/SettingsView/AdvancedSection/AdvancedSection.tsx",
+        "interface/src/views/SettingsView/AdvancedSection/index.ts",
+        "interface/src/views/SettingsView/KeyboardSection/KeyboardSection.module.css",
+        "interface/src/views/SettingsView/KeyboardSection/KeyboardSection.test.tsx",
+        "interface/src/views/SettingsView/KeyboardSection/KeyboardSection.tsx",
+        "interface/src/views/SettingsView/KeyboardSection/index.ts",
+        "interface/src/views/SettingsView/NotificationsSection/NotificationsSection.module.css",
+        "interface/src/views/SettingsView/NotificationsSection/NotificationsSection.test.tsx",
+        "interface/src/views/SettingsView/NotificationsSection/NotificationsSection.tsx",
+        "interface/src/views/SettingsView/NotificationsSection/index.ts",
+        "interface/src/views/SettingsView/SettingsView.module.css",
+        "interface/src/views/SettingsView/SettingsView.test.tsx",
+        "interface/src/views/SettingsView/SettingsView.tsx",
+        "interface/src/views/SettingsView/sections.test.ts",
+        "interface/src/views/SettingsView/sections.ts"
+      ],
+      "stats": {
+        "fileCount": 27,
+        "insertions": 1102,
+        "deletions": 236
+      },
+      "committedAtMs": 1777790834000,
+      "cleanSubject": "phase 11 - sectioned Settings with /settings/:section deep links",
+      "keywords": [
+        "phase",
+        "sectioned",
+        "settings",
+        "with",
+        "section",
+        "deep",
+        "links"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/mobile",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "79f001d3c30d45451b9d999292a6a87e69b2d2ac",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-03T00:08:39-07:00",
+      "subject": "feat(theme): phase 12 - mobile quick toggle for dark/light/system",
+      "body": "- New MobileThemeToggleButton (folder + tsx + module.css + test + index)\n  reuses ZUI useTheme(); 44x44 touch target via inline min-width/min-height;\n  aria-label reflects current theme state; icon cycles Sun/Moon/MonitorSmartphone\n- Mounted in the persistent MobileTopbar right-side actions (between the\n  optional create-agent button and the profile/settings buttons), so the\n  toggle is visible from every mobile screen (chat, files, agents, settings)\n- New interface/src/lib/theme-toggle.ts holds shared cycleTheme,\n  getThemeToggleAriaLabel, and getThemeToggleIconKind helpers covered by\n  table-driven tests; desktop ThemeToggleButton in DesktopTitlebar.tsx\n  refactored to consume the same helpers with no behavior change\n- MobileShell.test.tsx mocks the new MobileThemeToggleButton so its existing\n  zui mock (which intentionally omits useTheme) keeps working unchanged\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "b94ad56c501cb0a1cb6b4bcf584f9ef1a513deee"
+      ],
+      "files": [
+        "interface/src/components/DesktopShell/DesktopTitlebar.tsx",
+        "interface/src/components/MobileThemeToggleButton/MobileThemeToggleButton.module.css",
+        "interface/src/components/MobileThemeToggleButton/MobileThemeToggleButton.test.tsx",
+        "interface/src/components/MobileThemeToggleButton/MobileThemeToggleButton.tsx",
+        "interface/src/components/MobileThemeToggleButton/index.ts",
+        "interface/src/lib/theme-toggle.test.ts",
+        "interface/src/lib/theme-toggle.ts",
+        "interface/src/mobile/shell/MobileShell.test.tsx",
+        "interface/src/mobile/shell/MobileTopbar.tsx"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 321,
+        "deletions": 15
+      },
+      "committedAtMs": 1777792119000,
+      "cleanSubject": "phase 12 - mobile quick toggle for dark/light/system",
+      "keywords": [
+        "phase",
+        "mobile",
+        "quick",
+        "toggle",
+        "dark",
+        "light",
+        "system"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/lib",
+        "interface/src/mobile"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "671d0b2b5c3ae339332024706bee8321cbb5de76",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-03T00:18:14-07:00",
+      "subject": "docs(chat): phase 13 - architecture mini-doc for chat streaming hook consolidation",
+      "body": "- Inventory of use-chat-stream / use-agent-chat-stream / use-standalone-agent-chat / stream/* hooks\n- Responsibility map and overlap analysis\n- Proposed canonical hook surface with mode-discriminated variants\n- Phased migration plan (per-call-site, behavior-preserving)\n- Risks and rollback strategy\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "79f001d3c30d45451b9d999292a6a87e69b2d2ac"
+      ],
+      "files": [
+        "interface/docs/chat-streaming.md"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 375,
+        "deletions": 0
+      },
+      "committedAtMs": 1777792694000,
+      "cleanSubject": "phase 13 - architecture mini-doc for chat streaming hook consolidation",
+      "keywords": [
+        "phase",
+        "architecture",
+        "mini",
+        "chat",
+        "streaming",
+        "hook",
+        "consolidation"
+      ],
+      "fileGroups": [
+        "interface/docs/chat-streaming.md"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "0b2c8a5f8eebe8b730c71645e4a9f6faf1a6f3ee",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-03T00:21:13-07:00",
+      "subject": "refactor(chat): phase 13 - extract buildUserChatMessage shared helper",
+      "body": "Per the chat-streaming architecture mini-doc (interface/docs/chat-streaming.md),\nfull consolidation of the chat-streaming hook cluster was rejected because\nevery EventType branch carries project-specific side effects in the\nuseChatStream variant that the standalone-agent variant deliberately\nomits. A discriminated-union wrapper would be a thin facade with no real\nconsolidation value.\n\nThe one piece of genuine duplication is the optimistic user-message\nconstruction in sendMessage. Both useChatStream and useAgentChatStream\nbuild the same { id: temp-..., role: \"user\", content, contentBlocks }\nshape with the same trimmed || fallback || attachment-label fallback\nchain. Extract this into buildUserChatMessage in attachment-helpers.ts\nso the temp-id convention and fallback chain live in one place.\n\nNo behaviour change. Existing useChatStream and useAgentChatStream\ntest suites assert on entry.events[0].role and entry.events[0].content\nand continue to pass; new tests added for the helper itself.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "671d0b2b5c3ae339332024706bee8321cbb5de76"
+      ],
+      "files": [
+        "interface/src/hooks/attachment-helpers.test.ts",
+        "interface/src/hooks/attachment-helpers.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 83,
+        "deletions": 16
+      },
+      "committedAtMs": 1777792873000,
+      "cleanSubject": "phase 13 - extract buildUserChatMessage shared helper",
+      "keywords": [
+        "phase",
+        "extract",
+        "builduserchatmessage",
+        "shared",
+        "helper"
+      ],
+      "fileGroups": [
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "e69bc319fd3842f5c26ecdc11f9958073530ba7a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-03T00:33:11-07:00",
+      "subject": "fix(a11y): phase 14 - restore keyboard focus visibility across the app",
+      "body": "- Remove global *, *:focus, *:focus-visible { outline: none !important; } from interface/src/index.css that suppressed all focus indicators since Phase 1.\n- Add a single :focus-visible base rule (2px outline, --color-focus-ring, 2px offset, --radius-sm) so keyboard focus is visible everywhere; mouse clicks don't trigger focus-visible per modern browser semantics.\n- Per-element overrides only on #root and .titlebar-drag, which can receive programmatic focus but are not really keyboard-interactive surfaces; everything else falls through to the global :focus-visible rule. Existing per-component outline:none rules in CSS modules are intentional design choices (e.g. ChatInputBar textarea, sidekick tab bar, AppNavRail taskbar buttons) and are left alone; they all sit at higher specificity or with !important and continue to win.\n- Token values (--color-focus-ring: #ffffff dark / #111827 light) come from vendor/zui themes and are not changed in this phase.\n- Update interface/docs/theme-smoke-checklist.md (rename to \"Phases 1-14\") with a Keyboard / a11y section listing the manual tab-through checks.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "0b2c8a5f8eebe8b730c71645e4a9f6faf1a6f3ee"
+      ],
+      "files": [
+        "interface/docs/theme-smoke-checklist.md",
+        "interface/src/index.css"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 41,
+        "deletions": 5
+      },
+      "committedAtMs": 1777793591000,
+      "cleanSubject": "phase 14 - restore keyboard focus visibility across the app",
+      "keywords": [
+        "phase",
+        "restore",
+        "keyboard",
+        "focus",
+        "visibility",
+        "across"
+      ],
+      "fileGroups": [
+        "interface/docs/theme-smoke-checklist.md",
+        "interface/src/index.css"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "6fe2f649bcf69a312d2354faace87cee77955662",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-03T10:08:06-07:00",
+      "subject": "feat(theme): default Panel variant to solid so panels match the taskbar bg",
+      "body": "ZUI Panel previously defaulted to variant=\"glass\" (rgba(9,9,11,0.15)),\nwhich rendered as a barely-visible overlay against the page bg. The\ntaskbar pill chrome resolves to color-mix(var(--color-bg) 90%, transparent) -\nessentially var(--color-bg). Switching the default variant to \"solid\"\n(which uses var(--color-bg)) makes any unannotated <Panel /> instance\nread as the same surface tone as the taskbar pill in dark mode (and\nmirror-light in light mode).\n\nEvery existing in-tree Panel call site already specifies variant\nexplicitly (most use variant=\"solid\"), so this default change has no\nvisible regression risk for current consumers but anchors a more\nsensible default for future Panel usage.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "e69bc319fd3842f5c26ecdc11f9958073530ba7a"
+      ],
+      "files": [
+        "vendor/zui/src/components/Panel/Panel/Panel.test.tsx",
+        "vendor/zui/src/components/Panel/Panel/Panel.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 3,
+        "deletions": 3
+      },
+      "committedAtMs": 1777828086000,
+      "cleanSubject": "default Panel variant to solid so panels match the taskbar bg",
+      "keywords": [
+        "default",
+        "panel",
+        "variant",
+        "solid",
+        "panels",
+        "match",
+        "taskbar"
+      ],
+      "fileGroups": [
+        "vendor/zui/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "7ec29ea70835fe69725828e510eca910158bf555",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-03T10:17:12-07:00",
+      "subject": "feat(settings): merge app settings (Appearance + others) into OrgSettingsPanel",
+      "body": "The taskbar gear icon previously opened OrgSettingsPanel (\"Team Settings\"),\nwhich only contained team-scoped sections (General, Members, Invites,\nRewards, Billing, Z Credit History, Privacy, Integrations). The\nappearance/theme controls lived in a separate SettingsView at\n/projects/settings/appearance with no UI affordance from the desktop\nchrome to reach it. Result: users couldn't find theme controls without\ntyping the URL.\n\nThis consolidates both surfaces into the single modal opened by the\ntaskbar gear:\n\n- Renames the modal title from \"Team Settings\" to \"Settings\" and the\n  taskbar gear's title/aria-label from \"Team settings\" to \"Settings\".\n- Splits the sidebar Navigator into two grouped sections separated by\n  small uppercase labels (\"APP\" / \"TEAM\"), with App listed first so\n  Appearance is immediately visible.\n- App-scoped sections (Appearance, Notifications, Keyboard, About,\n  Advanced) reuse the existing components from views/SettingsView/* so\n  they stay in sync with the desktop deep-link route and the mobile\n  settings screen.\n- App sections render even when no active org is loaded; the\n  \"Team settings are currently unavailable\" message now only blocks\n  team-scoped sections, not the entire modal.\n- Section type lives in useOrgSettingsData and is exported so the panel\n  can type-narrow against an isOrgSection() guard.\n\nThe standalone SettingsView at /projects/settings/:section continues to\nexist (still used by the mobile shell and remains valid for deep links).\nThis change is purely additive on the desktop side.\n\nTests:\n- Adds OrgSettingsPanel cases for app nav items, switching to Appearance,\n  the renamed modal title, and Appearance still working when no org.\n- Updates the BottomTaskbar test to look for the renamed \"Settings\"\n  button. The pre-existing render-churn test failure (LayoutGrid not in\n  its lucide-react mock) is unchanged and out of scope.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "6fe2f649bcf69a312d2354faace87cee77955662"
+      ],
+      "files": [
+        "interface/src/components/BottomTaskbar/BottomTaskbar.test.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.tsx",
+        "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.module.css",
+        "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.test.tsx",
+        "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.tsx",
+        "interface/src/components/OrgSettingsPanel/useOrgSettingsData.ts"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 180,
+        "deletions": 36
+      },
+      "committedAtMs": 1777828632000,
+      "cleanSubject": "merge app settings (Appearance + others) into OrgSettingsPanel",
+      "keywords": [
+        "merge",
+        "settings",
+        "appearance",
+        "others",
+        "into",
+        "orgsettingspanel"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "35271989c803e4c0321d66cafb34c3b4390b8b29",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-03T10:23:05-07:00",
+      "subject": "fix(chat): pin active history key in LRU to stop CEO chat blink",
+      "body": "Background sidebar prefetches were evicting the currently-displayed\nchat panel's entry from chat-history-store's LRU (capped at\nMAX_HISTORY_ENTRIES = 8). The CEO/SuperAgent chat is the most common\nvictim because it sits at index 0 (typically opened first), so the\n9th sidebar prefetch dropped it. The renderer then snapped to the\nempty state until the next refetch repopulated the entry -- the\n\"CEO chat blink\" failure mode previously masked (but not eliminated)\nby the lastNonEmptyRef guard in use-conversation-snapshot.ts. A\nre-render burst from the new theme toggle made the race fire often\nenough to be reproducible from a single click.\n\nRoot-cause fix: add pinnedKeys: Set<string> to chat-history-store\nplus pinKey / unpinKey actions, and teach withBoundedHistoryEntry\nto skip pinned keys during eviction (with a defensive fallback for\nthe impossible all-keys-pinned case). useChatHistorySync pins the\nactive historyKey on mount and unpins on unmount, so the key\nbacking the currently-rendered chat panel can never be the eviction\nvictim of a background prefetch. Coverage:\n  - 4 new tests in chat-history-store.test.ts (pin survives 10\n    prefetches, unpin restores eviction, pinKey idempotent,\n    unpinKey no-op for unknown keys)\n  - 2 new tests in use-chat-history-sync.test.ts (pin on mount /\n    unpin on unmount lifecycle, undefined historyKey skips pin)\n\nThe lastNonEmptyRef guard is intentionally retained as defence in\ndepth for legitimately-transient mid-turn empty frames during\nstreaming, which are independent of LRU eviction.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "7ec29ea70835fe69725828e510eca910158bf555"
+      ],
+      "files": [
+        "interface/src/hooks/use-chat-history-sync/use-chat-history-sync.test.ts",
+        "interface/src/hooks/use-chat-history-sync/use-chat-history-sync.ts",
+        "interface/src/stores/chat-history-store.test.ts",
+        "interface/src/stores/chat-history-store.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 175,
+        "deletions": 4
+      },
+      "committedAtMs": 1777828985000,
+      "cleanSubject": "pin active history key in LRU to stop CEO chat blink",
+      "keywords": [
+        "active",
+        "history",
+        "stop",
+        "chat",
+        "blink"
+      ],
+      "fileGroups": [
+        "interface/src/hooks",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "ee633089a0815b8b19ca41ea893c9078ab7327eb",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-03T10:26:34-07:00",
+      "subject": "feat(theme): flatten dark side panels to taskbar background",
+      "body": "Defaults --color-sidebar-bg and --color-sidekick-bg to var(--color-bg)\nin dark mode so the left sidebar, right sidekick, and taskbar pills all\nread as the same shade. Previously sidebar resolved to --color-surface\n(#0e0e10) and sidekick to --color-elevated (#131316), producing a\nvisible vertical stripe against the titlebar/taskbar at --color-bg\n(#09090b). Light mode is unchanged. CustomTokensPanel overrides still\nwin via document.documentElement.style.setProperty, so anyone who\npreferred the previous separation can restore it.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "35271989c803e4c0321d66cafb34c3b4390b8b29"
+      ],
+      "files": [
+        "interface/src/styles/tokens.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 9,
+        "deletions": 2
+      },
+      "committedAtMs": 1777829194000,
+      "cleanSubject": "flatten dark side panels to taskbar background",
+      "keywords": [
+        "flatten",
+        "dark",
+        "side",
+        "panels",
+        "taskbar",
+        "background"
+      ],
+      "fileGroups": [
+        "interface/src/styles"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "3199ec493eb5d6fb7295dee1d1076a67bcd73b26",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-03T16:12:13-07:00",
+      "subject": "style(titlebar): render sidekick drawer toggle in primary text color when open",
+      "body": "The PanelRight icon in WindowControls used ZUI Button's selected state,\nwhich paints the icon in --color-accent with a glow. Visually this read\nas an in-app accent emphasis instead of a window-chrome control.\n\nOverride the selected color for just this button via a class+attribute\nselector on aria-pressed=\"true\" (specificity 0,2,0 beats ZUI's\n.selected at 0,1,0 without !important). Uses --color-text-primary so\nthe icon stays theme-aware (white in dark mode, dark text in light).\nEvery other selected ZUI Button across the app keeps its accent\ntreatment.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "ee633089a0815b8b19ca41ea893c9078ab7327eb"
+      ],
+      "files": [
+        "interface/src/components/WindowControls/WindowControls.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 11,
+        "deletions": 0
+      },
+      "committedAtMs": 1777849933000,
+      "cleanSubject": "style(titlebar): render sidekick drawer toggle in primary text color when open",
+      "keywords": [
+        "style",
+        "titlebar",
+        "render",
+        "sidekick",
+        "drawer",
+        "toggle",
+        "primary",
+        "text",
+        "color",
+        "when",
+        "open"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "4bc972e968c78ac488f6db527e9d8b8fa6bffa00",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-03T20:31:33-07:00",
+      "subject": "fix(chat): reveal cold-load transcript proactively to stop CEO black panel",
+      "body": "ChatPanel's cold-load reveal relied solely on ChatMessageList's one-shot\n`onInitialAnchorReady` callback, which is gated by an `initialLayoutReadyKeyRef`\nkeyed by streamKey and fires only ONCE per (streamKey, hasMessages=true)\npair. When re-entering CEO/MEOW after the chat-history-store evicted the\nevents entry (MAX_HISTORY_ENTRIES=8) while the message-store thread for the\nsame streamKey carried over from the prior visit, the child fired the gate\nimmediately on first commit (messages.length>0) but `handleInitialAnchorReady`\nbailed because historyResolved was still false. When history finally arrived,\nthe child's gate stayed latched and never re-fired -- leaving\n.messageContentHidden (visibility: hidden) permanently applied. The panel\nrendered fully black even though sidebar previews kept showing the last\nmessage correctly (previewLastMessages has its own 100-entry bound).\n\nFix: extend ChatPanel's existing [historyResolved, messages.length] reveal\neffect with a third branch that schedules the same double-rAF reveal\ndirectly when cold-load is active with both flags satisfied. The reveal\nbecomes robust to either ordering of the two signals; the existing\ncancelAnimationFrame guard prevents the child callback path and the new\neffect path from double-scheduling.\n\nTests:\n- New regression covering the carry-over + late historyResolved race.\n- Updated \"re-arms cold-load when the user actually switches chats\" and\n  renamed/flipped \"keeps cold-load history hidden until the initial anchor\n  is ready\"; both were locking in the buggy \"transcript stays hidden\"\n  surface, which the proactive reveal now correctly resolves.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "3199ec493eb5d6fb7295dee1d1076a67bcd73b26"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.test.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 101,
+        "deletions": 13
+      },
+      "committedAtMs": 1777865493000,
+      "cleanSubject": "reveal cold-load transcript proactively to stop CEO black panel",
+      "keywords": [
+        "reveal",
+        "cold",
+        "load",
+        "transcript",
+        "proactively",
+        "stop",
+        "black",
+        "panel"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "9f52c4ea0249f890dd8035c1b665fc62679f103a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-03T22:53:14-07:00",
+      "subject": "fix(theme): make light mode actually visible across chat, rails, sidekick, modals",
+      "body": "CSS modules across the app hardcoded `color: #fff` and `background: #000`,\nand many referenced an undefined `--color-bg-secondary` token whose\n`#1e1e1e` fallback fired in both themes. The result in light mode was\nwhite-on-white text, white-on-white icon hovers, and dark-slab panels\nembedded in an otherwise white app shell.\n\nThis pass routes the user-visible surfaces (chat bubbles, ChatPanel,\nLLMOutput, AppNavRail / Sidekick icon hovers, ProjectsNav, project list,\nActivityCard, modals, mobile screens) through the existing semantic\ntokens (--color-text-primary, --color-bg, --color-surface,\n--color-overlay-*, --color-border) so they flip with the theme.\n\nToken layer changes (interface/src/styles/tokens.css):\n- Define --color-bg-secondary, --color-text, --color-bg-hover as\n  theme-aware aliases so the dozens of consumers using these legacy\n  names stop falling back to a hardcoded dark hex.\n- Bump light-mode --color-text-secondary (#374151) and\n  --color-text-muted (#4b5563) to meet WCAG AA contrast on white.\n\nAlso invert the AURA wordmark PNG in light mode via a single\n[data-theme='light'] img[data-aura-wordmark] { filter: invert(1); }\nrule in index.css and tag the three render sites (DesktopTitlebar,\nMobileTopbar, LoginView) with data-aura-wordmark. The asset is white\ntext on transparent, so inversion gives perfect black text without a\nsecond PNG.\n\nExtend check-module-css-colors.mjs to lock in the newly clean modules\n(AppNavRail, Sidekick, ProjectsNav, ProjectsPlusButton, two mobile\nscreens) so future regressions are caught by lint:colors.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "4bc972e968c78ac488f6db527e9d8b8fa6bffa00"
+      ],
+      "files": [
+        "interface/scripts/check-module-css-colors.mjs",
+        "interface/src/apps/agents/components/AgentEditorModal/AgentEditorModal.module.css",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.module.css",
+        "interface/src/apps/chat/components/LLMOutput/LLMOutput.module.css",
+        "interface/src/apps/chat/components/MessageBubble/MessageBubble.module.css",
+        "interface/src/apps/profile/ProfileEditorModal/ProfileEditorModal.module.css",
+        "interface/src/components/ActivityCard/ActivityCard.module.css",
+        "interface/src/components/AppNavRail/AppNavRail.module.css",
+        "interface/src/components/DesktopShell/DesktopTitlebar.tsx",
+        "interface/src/components/ProjectList/ProjectList.module.css",
+        "interface/src/components/ProjectsNav/ProjectsNav.module.css",
+        "interface/src/components/ProjectsPlusButton/ProjectsPlusButton.module.css",
+        "interface/src/components/Sidekick/Sidekick.module.css",
+        "interface/src/components/SkillShopModal/SkillShopModal.module.css",
+        "interface/src/index.css",
+        "interface/src/mobile/screens/ProjectAgentsScreen/ProjectAgentsScreen.module.css",
+        "interface/src/mobile/screens/ProjectFilesScreen/ProjectFilesScreen.module.css",
+        "interface/src/mobile/screens/ProjectProcessScreen/ProjectProcessScreen.module.css",
+        "interface/src/mobile/screens/ProjectStatsScreen/ProjectStatsScreen.module.css",
+        "interface/src/mobile/shell/MobileTopbar.tsx",
+        "interface/src/styles/tokens.css",
+        "interface/src/views/LoginView/LoginView.tsx",
+        "interface/src/views/ProjectAgentsView/ProjectAgentsView.module.css",
+        "interface/src/views/aura.module.css"
+      ],
+      "stats": {
+        "fileCount": 24,
+        "insertions": 104,
+        "deletions": 71
+      },
+      "committedAtMs": 1777873994000,
+      "cleanSubject": "make light mode actually visible across chat, rails, sidekick, modals",
+      "keywords": [
+        "make",
+        "light",
+        "mode",
+        "actually",
+        "visible",
+        "across",
+        "chat",
+        "rails",
+        "sidekick",
+        "modals"
+      ],
+      "fileGroups": [
+        "interface/scripts/check-module-css-colors.mjs",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/index.css",
+        "interface/src/mobile",
+        "interface/src/styles",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "401d9fbb507bd96a0d5c65629a6c9769350b0d4f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-03T22:57:22-07:00",
+      "subject": "feat(theme): make titlebar/topbar theme toggle a binary light <-> dark switch",
+      "body": "The titlebar and mobile-topbar theme buttons used to cycle through three\nstates (dark -> light -> system -> dark), but per product direction the\ntoggle should be a simple two-state switch. The system option is dropped\nfrom the cycle and from the icon set.\n\ncycleTheme(theme, resolvedTheme) now flips between dark and light. If the\ncaller is currently on `system` (e.g. via a previously stored preference\nor programmatic setTheme), the next click resolves to the OPPOSITE of\nwhatever prefers-color-scheme is currently rendering, so the click always\nproduces a visible change instead of being a no-op for users sitting on\ntheir OS-matched theme.\n\nThe icon and aria-label now mirror the resolved theme — sun for light,\nmoon for dark — even when the stored preference is `system`, so the UI\nalways tells the user what they're actually looking at.\n\nTests updated for the two-state cycle on both the desktop helper and the\nMobileThemeToggleButton.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "9f52c4ea0249f890dd8035c1b665fc62679f103a"
+      ],
+      "files": [
+        "interface/src/components/DesktopShell/DesktopTitlebar.tsx",
+        "interface/src/components/MobileThemeToggleButton/MobileThemeToggleButton.test.tsx",
+        "interface/src/components/MobileThemeToggleButton/MobileThemeToggleButton.tsx",
+        "interface/src/lib/theme-toggle.test.ts",
+        "interface/src/lib/theme-toggle.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 58,
+        "deletions": 55
+      },
+      "committedAtMs": 1777874242000,
+      "cleanSubject": "make titlebar/topbar theme toggle a binary light <-> dark switch",
+      "keywords": [
+        "make",
+        "titlebar",
+        "topbar",
+        "theme",
+        "toggle",
+        "binary",
+        "light",
+        "dark",
+        "switch"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/lib"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "085ff9aabe631c4fdadb5f9525a5222f8d515dc1",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-03T22:58:45-07:00",
+      "subject": "fix(chat): keep user message bubble dark in light mode for sender contrast",
+      "body": "The previous light-mode contrast pass routed the user bubble background\nthrough --color-bg-secondary (now an alias for --color-elevated), which\nin light mode is white. The result was a near-invisible white bubble\nsitting on the white page background — losing the sender/assistant\nvisual differentiation that the bubble exists to communicate.\n\nPin .bubbleUser to a dark background + white text in BOTH themes.\nOther consumers of --color-bg-secondary keep their theme-aware behavior;\nonly this one rule needed to hold dark because its job is contrast\nagainst the page, not against the surrounding chrome.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "401d9fbb507bd96a0d5c65629a6c9769350b0d4f"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/MessageBubble/MessageBubble.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 8,
+        "deletions": 2
+      },
+      "committedAtMs": 1777874325000,
+      "cleanSubject": "keep user message bubble dark in light mode for sender contrast",
+      "keywords": [
+        "keep",
+        "user",
+        "message",
+        "bubble",
+        "dark",
+        "light",
+        "mode",
+        "sender",
+        "contrast"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "401d59110cdec85ba3861756ca5e325620da3a4e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-03T23:00:41-07:00",
+      "subject": "style(titlebar): unify theme/host icons with sidekick + window controls",
+      "body": "The titlebar action row mixed three button styles: the theme toggle used\nsize=16 icons without `rounded=\"md\"`, the host-settings button matched\nit, and the WindowControls inner row used size=14 strokeWidth=2 icons\nwith `rounded=\"md\"` and `gap: 0`. The result was a visible step in icon\nsize and spacing right next to the sidekick toggle.\n\nAlign the theme toggle and host-settings buttons with the sidekick /\nwindow-control button shape — same `size=\"sm\" rounded=\"md\" iconOnly`\nButton, same 14px lucide icons with strokeWidth=2 — and switch the\nhost `.titleActions` container from `gap: var(--space-2)` to `gap: 0`\nso every chrome icon sits on the same rhythm as the WindowControls\ninner row.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "085ff9aabe631c4fdadb5f9525a5222f8d515dc1"
+      ],
+      "files": [
+        "interface/src/components/DesktopShell/DesktopShell.module.css",
+        "interface/src/components/DesktopShell/DesktopTitlebar.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 12,
+        "deletions": 5
+      },
+      "committedAtMs": 1777874441000,
+      "cleanSubject": "style(titlebar): unify theme/host icons with sidekick + window controls",
+      "keywords": [
+        "style",
+        "titlebar",
+        "unify",
+        "theme",
+        "host",
+        "icons",
+        "with",
+        "sidekick",
+        "window",
+        "controls"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "1a03f95fd63b9b7b13b57974568cda169d703c00",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-04T11:35:25-07:00",
+      "subject": "Merge remote-tracking branch 'origin/main' into theming/phases-1-14",
+      "body": "",
+      "parents": [
+        "401d59110cdec85ba3861756ca5e325620da3a4e",
+        "ae418f34acd254dc90ad8db71103ed9ae7cfc8a2"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 1048,
+        "deletions": 6
+      },
+      "committedAtMs": 1777919725000,
+      "cleanSubject": "Merge remote-tracking branch 'origin/main' into theming/phases-1-14",
+      "keywords": [
+        "merge",
+        "remote",
+        "tracking",
+        "branch",
+        "origin",
+        "main",
+        "into",
+        "theming",
+        "phases"
+      ],
+      "fileGroups": [],
+      "primaryArea": "Other",
+      "areas": []
+    },
+    {
+      "sha": "4b47c85048a7f8d2a2208e3d54fa5946be896881",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-04T12:29:52-07:00",
+      "subject": "feat(apps): hide Debug from taskbar by default",
+      "body": "Add a `defaultHidden` flag to the AuraApp registry and mark Debug\nwith it, so the Apps modal seeds Debug into the \"Hidden\" section on\nfirst load instead of cluttering the visible taskbar strip. The\nstorage layer now distinguishes \"no saved hidden-apps entry\" (null,\nfalls back to the registry-derived defaults) from \"user explicitly\ncleared the list\" (empty array, honored as-is), so dragging Debug\ninto Visible persists across reloads.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "1a03f95fd63b9b7b13b57974568cda169d703c00"
+      ],
+      "files": [
+        "interface/src/apps/registry.ts",
+        "interface/src/apps/types.ts",
+        "interface/src/stores/app-store.test.ts",
+        "interface/src/stores/app-store.ts",
+        "interface/src/utils/storage.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 66,
+        "deletions": 11
+      },
+      "committedAtMs": 1777922992000,
+      "cleanSubject": "hide Debug from taskbar by default",
+      "keywords": [
+        "hide",
+        "debug",
+        "from",
+        "taskbar",
+        "default"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/stores",
+        "interface/src/utils"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "8706839f94f73df6ea124fb5dae77f8ee042c721",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-04T12:31:07-07:00",
+      "subject": "fix(theme): make form inputs visible in light mode",
+      "body": "ZUI's Input, Search, Textarea, Select, PanelLogin provider buttons,\nand the app-level FolderPickerField were rendering with white-on-\nwhite chrome on light theme: hard-coded `rgba(255, 255, 255, *)`\nbackgrounds/borders disappeared on `#ffffff` modal surfaces and the\ngeneric `--color-border` (`#e5e7eb`) was too soft to read as a\nborder on white.\n\nIntroduce dedicated `--color-input-{bg,bg-hover,bg-focus,border,\nborder-hover,border-focus,focus-shadow}` tokens in vendor/zui\n`themes.css` so form inputs can be tuned independently from generic\nsurface tokens. Dark values keep the original subtle white-on-dark\npill look. Light values use `#ffffff` fills with a `#d1d5db`\n(gray-300) border and `#9ca3af` / `#6b7280` hover/focus to give\nform fields a familiar visible outline. All six components now\nroute through the new tokens.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "4b47c85048a7f8d2a2208e3d54fa5946be896881"
+      ],
+      "files": [
+        "interface/src/components/FolderPickerField/FolderPickerField.module.css",
+        "vendor/zui/src/components/Input/Input.module.css",
+        "vendor/zui/src/components/Panel/PanelLogin/PanelLogin.module.css",
+        "vendor/zui/src/components/Search/Search.module.css",
+        "vendor/zui/src/components/Select/Select.module.css",
+        "vendor/zui/src/components/Text/Textarea/Textarea.module.css",
+        "vendor/zui/src/styles/themes.css"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 62,
+        "deletions": 28
+      },
+      "committedAtMs": 1777923067000,
+      "cleanSubject": "make form inputs visible in light mode",
+      "keywords": [
+        "make",
+        "form",
+        "inputs",
+        "visible",
+        "light",
+        "mode"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "vendor/zui/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "ac89c2fd2d1031e7e84e414bb53d11fd35649f40",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-04T12:33:20-07:00",
+      "subject": "feat(ui): align Settings, Aura3D, and Apps modal title bars with sidebar search",
+      "body": "Make the Settings page header, the Aura3D image/3D Model tab bar, and the\nApps modal header all 32px tall (control-height-sm) so they line up\nhorizontally with the sidebar search input.\n\n- SettingsView: replace zui Page wrapper with a custom 32px title bar;\n  move padding/scroll behavior into the local layout.\n- Aura3DMainPanel: drop the tabBar's top padding and pass a tabClassName\n  that pins each tab to control-height-sm (the inner Tabs already renders\n  the bottom border).\n- Apps modal: add an opt-in headerClassName prop to zui's Modal so we can\n  shrink only this modal's header to control-height-sm without affecting\n  every other modal app-wide.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "8706839f94f73df6ea124fb5dae77f8ee042c721"
+      ],
+      "files": [
+        "interface/src/apps/aura3d/Aura3DMainPanel/Aura3DMainPanel.module.css",
+        "interface/src/apps/aura3d/Aura3DMainPanel/Aura3DMainPanel.tsx",
+        "interface/src/components/AppsModal/AppsModal.module.css",
+        "interface/src/components/AppsModal/AppsModal.tsx",
+        "interface/src/views/SettingsView/SettingsView.module.css",
+        "interface/src/views/SettingsView/SettingsView.tsx",
+        "vendor/zui/src/components/Modal/Modal/Modal.tsx"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 57,
+        "deletions": 7
+      },
+      "committedAtMs": 1777923200000,
+      "cleanSubject": "align Settings, Aura3D, and Apps modal title bars with sidebar search",
+      "keywords": [
+        "align",
+        "settings",
+        "aura3d",
+        "apps",
+        "modal",
+        "title",
+        "bars",
+        "with",
+        "sidebar",
+        "search"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/views",
+        "vendor/zui/src"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "f111847f8192d3781e84b53b99a3b876be3db520",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-04T12:41:25-07:00",
+      "subject": "fix(theme): remove focus halo on Input",
+      "body": "Drop the `box-shadow: 0 0 0 3px var(--color-input-focus-shadow)`\nthat ZUI's `Input` painted on focus. Sibling input-shaped\ncomponents (`Search`, `Textarea`, `Select`) never had a focus\nshadow, so this brings `Input` in line: focus is now indicated\npurely by the darker `--color-input-border-focus` border, matching\nthe rest of the form chrome. The now-unused\n`--color-input-focus-shadow` token is removed from both dark and\nlight blocks in `vendor/zui/src/styles/themes.css`.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "ac89c2fd2d1031e7e84e414bb53d11fd35649f40"
+      ],
+      "files": [
+        "vendor/zui/src/components/Input/Input.module.css",
+        "vendor/zui/src/styles/themes.css"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 1,
+        "deletions": 3
+      },
+      "committedAtMs": 1777923685000,
+      "cleanSubject": "remove focus halo on Input",
+      "keywords": [
+        "remove",
+        "focus",
+        "halo",
+        "input"
+      ],
+      "fileGroups": [
+        "vendor/zui/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "621104e3ac47a1adcec575921dd104cfe3e3a8ca",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-04T12:42:32-07:00",
+      "subject": "feat(zui): add compactHeader prop to Modal",
+      "body": "Wire ZUI Modal up to the existing `.headerCompact` CSS class via a\nnew `compactHeader?: boolean` prop. The class (32px tall,\n`var(--control-height-sm)` with reduced padding) was already\ndefined in `Modal.module.css` but had no prop to opt into it —\ncallers had to inject it through `headerClassName`. This makes the\nslim-header variant a first-class API so AppsModal and the other\nsidebar-aligned modals can drop their bespoke `headerClassName`\noverrides.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "f111847f8192d3781e84b53b99a3b876be3db520"
+      ],
+      "files": [
+        "vendor/zui/src/components/Modal/Modal/Modal.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 4,
+        "deletions": 1
+      },
+      "committedAtMs": 1777923752000,
+      "cleanSubject": "add compactHeader prop to Modal",
+      "keywords": [
+        "compactheader",
+        "prop",
+        "modal"
+      ],
+      "fileGroups": [
+        "vendor/zui/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "3702057369a9f71b8d313ef6716e73fb8ffe3887",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-04T12:43:54-07:00",
+      "subject": "fix(ui): apply 32px compact header to Apps and Org Settings modals",
+      "body": "The previous attempt set the Apps modal's compact header through a local\nheaderClassName override on the Modal component, but the rule lived in\nAppsModal.module.css and competed with zui's Modal.header padding (same\nspecificity, source-order-dependent), so the override didn't always win\nin production builds. Move the compact-header style into zui's Modal\nstylesheet (right after .header, guaranteeing the cascade) and expose it\nthrough the new `compactHeader` boolean prop introduced earlier.\n\n- vendor/zui Modal.module.css: add `.headerCompact` (height 32px, padding\n  0 var(--space-3)) and a `.headerCompact .closeButton { padding: 0 }`\n  override so the X stays centered inside the slim header.\n- AppsModal: replace `headerClassName={styles.compactHeader}` with the\n  new `compactHeader` prop and drop the now-unused local CSS.\n- OrgSettingsPanel (\"Settings\" modal): opt into `compactHeader` so its\n  title bar also lines up horizontally with the sidebar search input.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "621104e3ac47a1adcec575921dd104cfe3e3a8ca"
+      ],
+      "files": [
+        "interface/src/components/AppsModal/AppsModal.module.css",
+        "interface/src/components/AppsModal/AppsModal.tsx",
+        "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.tsx",
+        "vendor/zui/src/components/Modal/Modal/Modal.module.css"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 11,
+        "deletions": 11
+      },
+      "committedAtMs": 1777923834000,
+      "cleanSubject": "apply 32px compact header to Apps and Org Settings modals",
+      "keywords": [
+        "apply",
+        "32px",
+        "compact",
+        "header",
+        "apps",
+        "settings",
+        "modals"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "vendor/zui/src"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "62095010b96cf4ea59ffe88a5c0afa8fd38a7cd9",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-04T12:45:06-07:00",
+      "subject": "refactor(zui): make slim modal header the default",
+      "body": "Bake the 32px (`control-height-sm`) header layout straight into\n`.header` in `Modal.module.css` so every ZUI Modal aligns with the\nsidebar search bar by default. The opt-in `compactHeader` prop and\nthe now-redundant `.headerCompact` CSS class are removed; the\n`.closeButton` padding is dropped to 0 to fit the slim row. Update\nthe two callers (`OrgSettingsPanel`, `AppsModal`) to drop the\nno-longer-needed `compactHeader` flag.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "3702057369a9f71b8d313ef6716e73fb8ffe3887"
+      ],
+      "files": [
+        "interface/src/components/AppsModal/AppsModal.tsx",
+        "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.tsx",
+        "vendor/zui/src/components/Modal/Modal/Modal.module.css",
+        "vendor/zui/src/components/Modal/Modal/Modal.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 5,
+        "deletions": 17
+      },
+      "committedAtMs": 1777923906000,
+      "cleanSubject": "make slim modal header the default",
+      "keywords": [
+        "make",
+        "slim",
+        "modal",
+        "header",
+        "default"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "vendor/zui/src"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "4f2675891bda2a6ecc51cb43300ab069717414c3",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-04T12:48:06-07:00",
+      "subject": "feat(aura3d): auto-select last project, latest image, and matching model",
+      "body": "Make the Aura3D nav and store remember context across app open/close\nso users don't land on an empty editor:\n\n- Aura3DNav: when nothing is selected, hydrate the selection from\n  `getLastProject()` if its id is still in the projects list,\n  otherwise fall back to the most recently created project. Expand\n  that node so its tree shows up unfolded on first paint.\n- aura3d-store: persist `selectedProjectId` to localStorage via\n  `setLastProject` whenever the user picks a project (cleared\n  selections are not persisted).\n- aura3d-store: `setActiveTab` now auto-selects the latest image\n  (and its linked 3D model, if any) when switching to the image\n  tab with nothing selected, and the latest model when switching\n  to the 3D tab. An existing selection is never overwritten.\n- aura3d-store: `loadProjectArtifacts` seeds default selections\n  (latest image, linked or latest model) after a project's\n  artifacts come back, so opening a project lands on its newest\n  asset instead of an empty pane. Switching projects clears the\n  per-project selection state so the new project's defaults can\n  take effect.\n- Tests: cover the new auto-select branches and the\n  localStorage persistence of `setSelectedProjectId`.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "62095010b96cf4ea59ffe88a5c0afa8fd38a7cd9"
+      ],
+      "files": [
+        "interface/src/apps/aura3d/Aura3DNav/Aura3DNav.tsx",
+        "interface/src/stores/aura3d-store.test.ts",
+        "interface/src/stores/aura3d-store.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 198,
+        "deletions": 6
+      },
+      "committedAtMs": 1777924086000,
+      "cleanSubject": "auto-select last project, latest image, and matching model",
+      "keywords": [
+        "auto",
+        "select",
+        "last",
+        "project",
+        "latest",
+        "image",
+        "matching",
+        "model"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "c2f8653ddf376fc450df4ba2df672db88dfb952d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-04T13:06:44-07:00",
+      "subject": "refactor(ui): extract shared InputBarShell from ChatInputBar and aura3d PromptInput",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "4f2675891bda2a6ecc51cb43300ab069717414c3"
+      ],
+      "files": [
+        "interface/src/apps/aura3d/PromptInput/PromptInput.module.css",
+        "interface/src/apps/aura3d/PromptInput/PromptInput.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/components/InputBarShell/InputBarShell.module.css",
+        "interface/src/components/InputBarShell/InputBarShell.tsx",
+        "interface/src/components/InputBarShell/ModelPicker.tsx",
+        "interface/src/components/InputBarShell/index.ts",
+        "interface/src/components/InputBarShell/styles.ts"
+      ],
+      "stats": {
+        "fileCount": 10,
+        "insertions": 1338,
+        "deletions": 1094
+      },
+      "committedAtMs": 1777925204000,
+      "cleanSubject": "extract shared InputBarShell from ChatInputBar and aura3d PromptInput",
+      "keywords": [
+        "extract",
+        "shared",
+        "inputbarshell",
+        "from",
+        "chatinputbar",
+        "aura3d",
+        "promptinput"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f0e42a5d865de18785380ad81d94da01adcc9252",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-04T13:07:03-07:00",
+      "subject": "Merge remote-tracking branch 'origin/main' into theming/phases-1-14",
+      "body": "",
+      "parents": [
+        "c2f8653ddf376fc450df4ba2df672db88dfb952d",
+        "a60654c5637f906fad5f8f7e72e118fc3eb45708"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 5,
+        "deletions": 2
+      },
+      "committedAtMs": 1777925223000,
+      "cleanSubject": "Merge remote-tracking branch 'origin/main' into theming/phases-1-14",
+      "keywords": [
+        "merge",
+        "remote",
+        "tracking",
+        "branch",
+        "origin",
+        "main",
+        "into",
+        "theming",
+        "phases"
+      ],
+      "fileGroups": [],
+      "primaryArea": "Other",
+      "areas": []
+    },
+    {
+      "sha": "c9514dbfd1e794559f8e5784c749702807710ae0",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-04T21:25:01+01:00",
+      "subject": "fix(onboarding): only complete create tasks when count exceeds initial defaults",
+      "body": "",
+      "parents": [
+        "f0e42a5d865de18785380ad81d94da01adcc9252"
+      ],
+      "files": [
+        "interface/src/features/onboarding/useOnboardingTaskWatcher.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 6,
+        "deletions": 16
+      },
+      "committedAtMs": 1777926301000,
+      "cleanSubject": "only complete create tasks when count exceeds initial defaults",
+      "keywords": [
+        "only",
+        "complete",
+        "create",
+        "tasks",
+        "when",
+        "count",
+        "exceeds",
+        "initial",
+        "defaults"
+      ],
+      "fileGroups": [
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "d24847f3396e99deca4fce1c7026b970ad58d770",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-04T21:35:30+01:00",
+      "subject": "ci: pass Z_BILLING_API_KEY secret to desktop nightly build",
+      "body": "",
+      "parents": [
+        "c9514dbfd1e794559f8e5784c749702807710ae0"
+      ],
+      "files": [
+        ".github/workflows/release-nightly.yml"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 0
+      },
+      "committedAtMs": 1777926930000,
+      "cleanSubject": "pass Z_BILLING_API_KEY secret to desktop nightly build",
+      "keywords": [
+        "pass",
+        "billing",
+        "secret",
+        "desktop",
+        "nightly",
+        "build"
+      ],
+      "fileGroups": [
+        ".github/workflows/release-nightly.yml"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
     }
   ],
-  "batchCount": 4,
+  "batchCount": 6,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -631,36 +3049,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11696108
+          "sizeBytes": 11712299
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.440.1",
+      "version": "0.1.0-nightly.443.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.440.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.443.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 35453188
+          "sizeBytes": 35461444
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.440.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.443.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.440.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.443.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 102701560
+          "sizeBytes": 102713848
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.440.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.443.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -670,29 +3088,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.440.1",
+      "version": "0.1.0-nightly.443.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.440.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.443.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 32014133
+          "sizeBytes": 32013917
         },
         {
-          "name": "Aura_0.1.0-nightly.440.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.443.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.440.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.443.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 31818110
+          "sizeBytes": 31820519
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.440.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.443.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -702,29 +3120,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.440.1",
+      "version": "0.1.0-nightly.443.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.440.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.443.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33573138
+          "sizeBytes": 33601812
         },
         {
-          "name": "Aura_0.1.0-nightly.440.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.443.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.440.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.443.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33421817
+          "sizeBytes": 33446787
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.440.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.443.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -734,17 +3152,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.440.1",
+      "version": "0.1.0-nightly.443.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.440.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.443.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24163684
+          "sizeBytes": 24172292
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.440.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.443.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -753,47 +3171,141 @@
     }
   ],
   "rendered": {
-    "title": "First-run onboarding lands across Aura",
-    "intro": "Today's nightly is built around a brand-new first-run experience: a welcome modal, a persistent five-step checklist, smarter empty states, and prompt suggestions to get new users from blank canvas to first message. A short server fix and CI plumbing for analytics tokens round out the day.",
+    "title": "Theming overhaul, onboarding, and chat reliability",
+    "intro": "A big day for Aura: the app gains a real light/dark theming system with a per-token editor and named presets, a new first-run onboarding flow with welcome modal and checklist, two long-standing chat regressions (\"CEO blink\" and the cold-load black panel) get root-caused, and Settings is consolidated into a single discoverable surface. The day closes out with nightly CI plumbing for Mixpanel and billing secrets.",
     "entries": [
       {
         "batch_id": "entry-1",
-        "time_label": "4:33 AM",
-        "started_at": "2026-05-04T11:33:23.000Z",
-        "ended_at": "2026-05-04T12:40:49.000Z",
-        "title": "Guided first-run experience with welcome modal and checklist",
-        "summary": "A full onboarding flow now greets new users on first login, with a persistent checklist that auto-completes as they explore Aura.",
+        "time_label": "8:11 PM",
+        "started_at": "2026-05-03T03:11:15.000Z",
+        "ended_at": "2026-05-04T19:41:25.000Z",
+        "title": "Light/dark theming, sectioned Settings, and onboarding flow",
+        "summary": "The bulk of the day: a multi-phase theme system lands end-to-end, Settings is restructured and merged with the taskbar gear, a new onboarding experience ships, and two stubborn chat regressions are fixed.",
         "items": [
           {
-            "text": "New users are now greeted by a two-step welcome modal showing the AURA logo, a welcome message, and a preview of the onboarding checklist, backed by a Zustand store with per-user localStorage persistence and analytics tracking.",
+            "text": "Introduced a full light/dark theme system: extracted semantic tokens (status colors, borders, spinners, text), de-darkified the shell, made highlight.js follow the resolved theme, and added a Settings > Appearance pane plus a titlebar Sun/Moon/Monitor quick toggle. Phase 9 then migrated SidekickLog, ChatInputBar, IdeView, Preview, LeftMenuTree, BrowserAddressBar, AgentEnvironment, TaskOutputPanel, and the billing modals onto tokens, with a new lint:colors guard preventing raw hex/rgb literals from creeping back in.",
+            "commit_shas": [
+              "e4a35e7d2bea44d035ef8bc5c5f07d4396d418f6",
+              "43d01ee52f3f9c9aa2abdedef5edd434e5b35cd2",
+              "7f6bb743f744eee884ace2311e4960e15c0c6cdf",
+              "3424cb5a39f0018ab2708face5791ef0512927ed",
+              "47721ecb43c8abe4c486c39fa6136a9da6506ae7",
+              "aca46ece60619bcf98458f774d849ff9db3b2954",
+              "7d2fb89ab8aa138b38909f1580f920d6f0a28c28",
+              "c56ba5006331dd65e40a450679129613f4249e1d",
+              "4281fd02cd2c541f075b7a9b350f7a0b4e112c08",
+              "fe9bfeb86ef21e472b0a546c10b060b5a7f802eb",
+              "53bc7a416f9c720e36d4f62aa1be2ce17c1b7484",
+              "1ca212d7411d8367a591f67219bdadb00609e731",
+              "abb325f6c5e5e1809403cdb254458636de2f8c9c",
+              "f6cb1463314404db131b855ab7c66c37284daad6",
+              "827720857c150c5dc38dbe32e9edff7213bd9122"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Built a richer theming editor on top of the token system: per-token overrides for sidebar, sidekick, titlebar, and surface tints persist to localStorage and apply via inline styles, and a new Presets panel lets users save, rename, delete, export, and import named themes as JSON, with built-in Aura Dark and Aura Light shipped read-only.",
+            "commit_shas": [
+              "aaee109b54f4b8e7019d54f2e41ef8caa839791b",
+              "0928dc60748d4be2cbeebd1641a3529fd31b133f"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Polished light mode end-to-end: chat bubbles, nav rails, sidekick, modals, and mobile screens were routed through semantic tokens to fix white-on-white text and dark slabs; the user message bubble stays dark in both themes for sender contrast; ZUI form inputs got dedicated tokens so they're visible on white; the AURA wordmark inverts in light mode; and the titlebar/topbar toggle was simplified to a binary light↔dark switch.",
+            "commit_shas": [
+              "9f52c4ea0249f890dd8035c1b665fc62679f103a",
+              "085ff9aabe631c4fdadb5f9525a5222f8d515dc1",
+              "8706839f94f73df6ea124fb5dae77f8ee042c721",
+              "f111847f8192d3781e84b53b99a3b876be3db520",
+              "401d9fbb507bd96a0d5c65629a6c9769350b0d4f",
+              "ee633089a0815b8b19ca41ea893c9078ab7327eb",
+              "6fe2f649bcf69a312d2354faace87cee77955662"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Restored keyboard focus visibility everywhere by removing the global outline:none override left over from the theme work and adding a single :focus-visible base rule using the theme's focus ring token, so tabbing through the app once again shows a visible indicator.",
+            "commit_shas": [
+              "e69bc319fd3842f5c26ecdc11f9958073530ba7a"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Sectioned Settings into About / Appearance / Notifications / Keyboard / Advanced with /settings/:section deep links and a mirrored mobile drill-in, added a mobile theme toggle in the persistent topbar, and merged app-scoped Settings into the taskbar gear's modal so Appearance is finally reachable from the desktop chrome.",
+            "commit_shas": [
+              "b94ad56c501cb0a1cb6b4bcf584f9ef1a513deee",
+              "79f001d3c30d45451b9d999292a6a87e69b2d2ac",
+              "7ec29ea70835fe69725828e510eca910158bf555",
+              "ac89c2fd2d1031e7e84e414bb53d11fd35649f40"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Shipped a first-run onboarding experience: a 2-step welcome modal, a portal-rendered floating checklist of 5 starter tasks (send message, create project, create agent, generate image, explore billing) with a help button in the taskbar, auto-detection via store subscriptions, and follow-up fixes so the create-agent and create-project tasks only complete on genuinely new entities. Empty states for chat, agents, and tasks were rewritten with prompt suggestions and clearer guidance.",
             "commit_shas": [
               "bd804201205eb0d6fa131e14e53f6e7bf1cc6066",
               "988eee696ffa6cf9d70a1730c43aebcc09989807",
-              "ec62961b1c1549b0c63641125906a06ae704355f"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "A floating, collapsible checklist anchored bottom-right walks users through five concrete first actions — send a message, create a project, create an agent, generate an image, and explore plans & credits — with a progress bar and one-click navigation into each feature.",
-            "commit_shas": [
               "708e75e6a2f331a85237b0a1add008371b631519",
-              "e5d310e08572b84be906c7426277872209e2b250"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "A new Help button in the bottom taskbar toggles the checklist on demand and a centralized task watcher subscribes to the message, project, agent, 3D, and billing stores to auto-detect completion without scattering tracking calls across the app.",
-            "commit_shas": [
               "6f91ff35d4277c128be32eb41b64fb374637c94c",
-              "e5d310e08572b84be906c7426277872209e2b250"
+              "e5d310e08572b84be906c7426277872209e2b250",
+              "ec62961b1c1549b0c63641125906a06ae704355f",
+              "11fc11649e7c4db2ef86897e6cb7194721a2c61d",
+              "779d73718c8032ab53b36f567e26980b00f90a54",
+              "0d96fae04302d0af22cd2ad908dfa840386d0838",
+              "2f9dbb19fb74b1c33c7b71167974fa407a39f8c9",
+              "8d0ab5a615456a346710620c5e4cfd10c64c8cc2"
             ],
             "confidence": "high"
           },
           {
-            "text": "Empty chats now surface four clickable prompt suggestion chips with a subtle pulsing glow on the input bar, and the Agents and Tasks empty states were rewritten with clearer guidance on what to do first.",
+            "text": "Root-caused two CEO chat regressions: the sidebar prefetch LRU was evicting the active chat (the \"CEO blink\"), now fixed by pinning the active history key against eviction; and the cold-load transcript could stay permanently hidden on re-entry to a chat with carried-over messages, now fixed by proactively revealing once history resolves.",
             "commit_shas": [
-              "11fc11649e7c4db2ef86897e6cb7194721a2c61d",
-              "779d73718c8032ab53b36f567e26980b00f90a54"
+              "35271989c803e4c0321d66cafb34c3b4390b8b29",
+              "4bc972e968c78ac488f6db527e9d8b8fa6bffa00"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Fixed agent deletion: the UI now cascade-deletes project bindings (including the auto-created Home binding) before deleting the template, with a confirm modal that lists which projects will be detached, ending the 409 \"still added to: Home\" dead-end.",
+            "commit_shas": [
+              "95f172f257cd25e486bcd78ba0787f28854a91c1"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Hardened the desktop shell: a native-HTML fallback titlebar in index.html keeps the frameless window draggable and closable even when the React app fails to mount (e.g. dev server unreachable or Vite errors), using the same wry IPC bridge as WindowControls.",
+            "commit_shas": [
+              "d2848bda4d8938636b37f18e15638e9e8e5dfd0d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Hid the Debug app from the taskbar by default via a new defaultHidden flag in the AuraApp registry, while preserving explicit user reorderings of visible vs hidden apps across reloads.",
+            "commit_shas": [
+              "4b47c85048a7f8d2a2208e3d54fa5946be896881"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Defaulted REQUIRE_ZERO_PRO to false in both the server's app builder and the desktop build so unset environments no longer gate behind the Zero Pro requirement.",
+            "commit_shas": [
+              "ae418f34acd254dc90ad8db71103ed9ae7cfc8a2",
+              "d9871255dad6ca07cfb297bf2088fee12aa83760"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Restructured the largest interface modules into focused folders — PermissionsTab, aura-events, notes-store, chat-history-sync, shared entity types, AgentEnvironment, and the stream handlers test suite — without behavior changes, plus extracted a shared buildUserChatMessage helper to deduplicate the optimistic user-message construction across chat streaming hooks.",
+            "commit_shas": [
+              "78c08f29481cf34007294ae860db8111abf90434",
+              "e57e0be5bc46d54733e7e358238adf1bf20ba245",
+              "3ee06ead3ba2dbc0ae82ff295d8606044d5726a1",
+              "60f0af6dbb72ef1fd9c6d6174c0eb96032f851ef",
+              "f2b997e862286d59830b1707bd12f3e4fd64aaa9",
+              "1d3e8e89f31bd486a4f39e244342bf8950b31591",
+              "0b2c8a5f8eebe8b730c71645e4a9f6faf1a6f3ee",
+              "671d0b2b5c3ae339332024706bee8321cbb5de76"
             ],
             "confidence": "high"
           }
@@ -801,24 +3313,16 @@
       },
       {
         "batch_id": "entry-2",
-        "time_label": "5:41 AM",
-        "started_at": "2026-05-04T12:41:12.000Z",
-        "ended_at": "2026-05-04T13:14:31.000Z",
-        "title": "Checklist correctly ignores pre-existing agents and projects",
-        "summary": "Follow-up fixes make the new onboarding checklist trigger only on genuinely new user actions and let it open the agent editor directly.",
+        "time_label": "12:41 PM",
+        "started_at": "2026-05-04T19:41:28.000Z",
+        "ended_at": "2026-05-04T19:41:28.000Z",
+        "title": "Mixpanel token wired into desktop nightly builds",
+        "summary": "Desktop nightly builds now have access to the Mixpanel analytics token at build time.",
         "items": [
           {
-            "text": "The checklist's \"Create an agent\" row now opens the agent editor modal directly via a new createAgentModalOpen flag on the agent store, instead of just routing to the agents page.",
+            "text": "Passed VITE_MIXPANEL_TOKEN through to the desktop nightly workflow so analytics are correctly initialized in nightly desktop artifacts.",
             "commit_shas": [
-              "0d96fae04302d0af22cd2ad908dfa840386d0838"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "The task watcher now snapshots a baseline count of existing agents and projects so onboarding only completes when the user actually creates something new, rather than auto-ticking for accounts that already had data.",
-            "commit_shas": [
-              "2f9dbb19fb74b1c33c7b71167974fa407a39f8c9",
-              "8d0ab5a615456a346710620c5e4cfd10c64c8cc2"
+              "814d6630da888efdbf8bfc0c204f7f7c6ce04146"
             ],
             "confidence": "high"
           }
@@ -826,16 +3330,18 @@
       },
       {
         "batch_id": "entry-3",
-        "time_label": "6:14 AM",
-        "started_at": "2026-05-04T13:14:52.000Z",
-        "ended_at": "2026-05-04T13:14:52.000Z",
-        "title": "Server defaults REQUIRE_ZERO_PRO to off when unset",
-        "summary": "A small but important server config fix prevents the Zero Pro requirement from accidentally engaging when its environment variable isn't set.",
+        "time_label": "12:42 PM",
+        "started_at": "2026-05-04T19:42:32.000Z",
+        "ended_at": "2026-05-04T19:45:06.000Z",
+        "title": "Slim 32px modal headers across all ZUI modals",
+        "summary": "Modal headers were aligned with the sidebar search rhythm by introducing, then promoting, a compact 32px header as the ZUI default.",
         "items": [
           {
-            "text": "aura-os-server now defaults require_zero_pro to false when the environment variable is unset, matching expected behavior for standard deployments.",
+            "text": "Added a compactHeader prop to ZUI Modal and applied it to the Apps and Org Settings modals so their title bars line up with the sidebar search input, then quickly promoted the slim 32px layout to the default for every ZUI Modal and removed the now-redundant prop.",
             "commit_shas": [
-              "ae418f34acd254dc90ad8db71103ed9ae7cfc8a2"
+              "621104e3ac47a1adcec575921dd104cfe3e3a8ca",
+              "3702057369a9f71b8d313ef6716e73fb8ffe3887",
+              "62095010b96cf4ea59ffe88a5c0afa8fd38a7cd9"
             ],
             "confidence": "high"
           }
@@ -843,24 +3349,64 @@
       },
       {
         "batch_id": "entry-4",
-        "time_label": "12:19 PM",
-        "started_at": "2026-05-04T19:19:02.000Z",
+        "time_label": "12:46 PM",
+        "started_at": "2026-05-04T19:46:00.000Z",
         "ended_at": "2026-05-04T19:46:00.000Z",
-        "title": "Mixpanel token wired into desktop and mobile nightly builds",
-        "summary": "Release pipeline updates ensure analytics and Zero Pro defaults are correct for the new onboarding instrumentation shipping in nightly builds.",
+        "title": "Mixpanel token wired into mobile nightly builds",
+        "summary": "The mobile nightly pipeline now receives the same analytics token treatment as desktop.",
         "items": [
           {
-            "text": "Desktop builds now default REQUIRE_ZERO_PRO to false at build time, aligning the desktop client with the server-side default.",
+            "text": "Forwarded VITE_MIXPANEL_TOKEN into the mobile nightly release workflow so iOS/Android nightly builds carry analytics configuration.",
             "commit_shas": [
-              "d9871255dad6ca07cfb297bf2088fee12aa83760"
+              "a60654c5637f906fad5f8f7e72e118fc3eb45708"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-5",
+        "time_label": "12:48 PM",
+        "started_at": "2026-05-04T19:48:06.000Z",
+        "ended_at": "2026-05-04T20:25:01.000Z",
+        "title": "Aura3D context memory and shared input bar shell",
+        "summary": "Aura3D remembers where users left off, and the chat and 3D prompt inputs now share a common shell.",
+        "items": [
+          {
+            "text": "Aura3D now restores the last-used project on open, auto-selects the latest image plus its linked 3D model when switching tabs, and seeds defaults after a project's artifacts load, so users land on real content instead of an empty editor.",
+            "commit_shas": [
+              "4f2675891bda2a6ecc51cb43300ab069717414c3"
             ],
             "confidence": "high"
           },
           {
-            "text": "The desktop and mobile nightly GitHub Actions workflows now forward VITE_MIXPANEL_TOKEN into the build environment so today's onboarding analytics events actually report from packaged nightly builds.",
+            "text": "Extracted a shared InputBarShell (with ModelPicker) used by both ChatInputBar and the Aura3D PromptInput, consolidating ~1.3k lines of duplicated input chrome into one component.",
             "commit_shas": [
-              "814d6630da888efdbf8bfc0c204f7f7c6ce04146",
-              "a60654c5637f906fad5f8f7e72e118fc3eb45708"
+              "c2f8653ddf376fc450df4ba2df672db88dfb952d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Tightened the onboarding task watcher further so create-agent and create-project tasks only complete when the count actually exceeds the initial baseline.",
+            "commit_shas": [
+              "c9514dbfd1e794559f8e5784c749702807710ae0"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-6",
+        "time_label": "1:35 PM",
+        "started_at": "2026-05-04T20:35:30.000Z",
+        "ended_at": "2026-05-04T20:35:30.000Z",
+        "title": "Z Billing API key plumbed into desktop nightly",
+        "summary": "Desktop nightly builds gain access to the Z Billing API key secret at build time.",
+        "items": [
+          {
+            "text": "Forwarded the Z_BILLING_API_KEY secret into the desktop nightly workflow so billing-related code paths can authenticate against the Z billing service in nightly builds.",
+            "commit_shas": [
+              "d24847f3396e99deca4fce1c7026b970ad58d770"
             ],
             "confidence": "high"
           }
@@ -868,10 +3414,12 @@
       }
     ],
     "highlights": [
-      "New welcome modal and 5-task onboarding checklist",
-      "Prompt suggestions and pulsing input on empty chat",
-      "Mixpanel analytics token now wired into desktop and mobile nightly builds"
+      "Full light/dark theming with custom tokens and presets",
+      "First-run onboarding with welcome modal and checklist",
+      "Two CEO chat regressions (blink + black panel) fixed at the root",
+      "Settings unified under the taskbar gear with deep links",
+      "Nightly CI gains Mixpanel and billing secret wiring"
     ],
-    "raw_commit_count": 15
+    "raw_commit_count": 66
   }
 }
