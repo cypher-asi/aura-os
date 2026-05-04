@@ -101,7 +101,7 @@ mod tests {
             env!("AURA_DESKTOP_DEFAULT_SWARM_BASE_URL"),
             "http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com"
         );
-        assert_eq!(env!("AURA_DESKTOP_DEFAULT_REQUIRE_ZERO_PRO"), "true");
+        assert_eq!(env!("AURA_DESKTOP_DEFAULT_REQUIRE_ZERO_PRO"), "false");
         assert_eq!(
             env!("AURA_DESKTOP_DEFAULT_DISABLE_LOCAL_HARNESS_AUTOSPAWN"),
             "true"
