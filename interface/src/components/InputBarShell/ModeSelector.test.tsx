@@ -1,79 +1,75 @@
-import { act, render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { ModeSelector } from "./ModeSelector";
 
-const rects: Record<string, { left: number; width: number }> = {
-  code: { left: 10, width: 40 },
-  plan: { left: 52, width: 44 },
-  image: { left: 100, width: 56 },
-  "3d": { left: 158, width: 32 },
-};
-
-class MockResizeObserver {
-  observe = vi.fn();
-  disconnect = vi.fn();
-}
-
-function flushAnimationFrames(frames: FrameRequestCallback[]) {
-  const pending = frames.splice(0);
-  act(() => {
-    pending.forEach((frame) => frame(performance.now()));
-  });
+function getSegments(container: HTMLElement): HTMLDivElement {
+  const segments = container.querySelector(
+    "[data-agent-surface='mode-selector'] > :last-child",
+  ) as HTMLDivElement | null;
+  if (!segments) throw new Error("segments wrapper not found");
+  return segments;
 }
 
 describe("ModeSelector", () => {
-  let frames: FrameRequestCallback[];
-  let originalResizeObserver: typeof ResizeObserver;
-
-  beforeEach(() => {
-    frames = [];
-    originalResizeObserver = globalThis.ResizeObserver;
-    globalThis.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
-    vi.spyOn(globalThis, "requestAnimationFrame").mockImplementation((callback) => {
-      frames.push(callback);
-      return frames.length;
-    });
-    vi.spyOn(globalThis, "cancelAnimationFrame").mockImplementation(() => {});
-    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
-      function getBoundingClientRect(this: HTMLElement) {
-        const mode = this.dataset.agentModeOption;
-        if (mode && rects[mode]) {
-          const { left, width } = rects[mode];
-          return { left, width } as DOMRect;
-        }
-        return { left: 8, width: 220 } as DOMRect;
-      },
-    );
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-    globalThis.ResizeObserver = originalResizeObserver;
-  });
-
-  it("moves the indicator from its previous position to the selected mode on the next frame", () => {
+  it("sets the indicator index from the active mode's position", () => {
     const { container, rerender } = render(
       <ModeSelector selectedMode="code" onChange={vi.fn()} />,
     );
-    const indicator = container.querySelector(
-      "span[aria-hidden='true']",
-    ) as HTMLSpanElement;
+    const segments = getSegments(container);
+    expect(segments.style.getPropertyValue("--mode-idx")).toBe("0");
 
-    expect(indicator.style.transform).toBe("translate3d(2px, 0, 0)");
-    expect(indicator.style.width).toBe("40px");
-
-    flushAnimationFrames(frames);
-    expect(indicator.dataset.ready).toBe("true");
-    expect(indicator.dataset.motion).toBe("on");
+    rerender(<ModeSelector selectedMode="plan" onChange={vi.fn()} />);
+    expect(segments.style.getPropertyValue("--mode-idx")).toBe("1");
 
     rerender(<ModeSelector selectedMode="image" onChange={vi.fn()} />);
+    expect(segments.style.getPropertyValue("--mode-idx")).toBe("2");
 
-    expect(indicator.dataset.motion).toBe("off");
-    expect(indicator.style.transform).toBe("translate3d(2px, 0, 0)");
-    expect(indicator.style.width).toBe("40px");
+    rerender(<ModeSelector selectedMode="3d" onChange={vi.fn()} />);
+    expect(segments.style.getPropertyValue("--mode-idx")).toBe("3");
+  });
 
-    flushAnimationFrames(frames);
-    expect(indicator.dataset.motion).toBe("on");
-    expect(indicator.style.transform).toBe("translate3d(92px, 0, 0)");
-    expect(indicator.style.width).toBe("56px");
+  it("exposes the mode count alongside the index so CSS can size the track", () => {
+    const { container } = render(
+      <ModeSelector selectedMode="code" onChange={vi.fn()} />,
+    );
+    const segments = getSegments(container);
+    expect(segments.style.getPropertyValue("--mode-count")).toBe("4");
+  });
+
+  it("marks exactly the active mode as aria-checked", () => {
+    const { rerender } = render(
+      <ModeSelector selectedMode="code" onChange={vi.fn()} />,
+    );
+    expect(screen.getByRole("radio", { name: "Code mode" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(screen.getByRole("radio", { name: "Plan mode" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+
+    rerender(<ModeSelector selectedMode="plan" onChange={vi.fn()} />);
+    expect(screen.getByRole("radio", { name: "Code mode" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+    expect(screen.getByRole("radio", { name: "Plan mode" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+  });
+
+  it("calls onChange with the clicked mode but ignores re-clicks on the active one", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<ModeSelector selectedMode="code" onChange={onChange} />);
+
+    await user.click(screen.getByRole("radio", { name: "Image mode" }));
+    expect(onChange).toHaveBeenCalledWith("image");
+
+    onChange.mockClear();
+    await user.click(screen.getByRole("radio", { name: "Code mode" }));
+    expect(onChange).not.toHaveBeenCalled();
   });
 });
