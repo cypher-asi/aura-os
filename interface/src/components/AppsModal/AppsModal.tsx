@@ -167,7 +167,7 @@ export function AppsModal({ isOpen, onClose }: Props) {
       onClose={onClose}
       title="Apps"
       size="sm"
-      headerClassName={styles.compactHeader}
+      compactHeader
     >
       <DndContext
         sensors={sensors}

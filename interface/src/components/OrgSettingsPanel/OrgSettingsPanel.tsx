@@ -142,7 +142,7 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
   const orgUnavailable = !data.activeOrg;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Settings" size="xl" noPadding fullHeight>
+    <Modal isOpen={isOpen} onClose={onClose} title="Settings" size="xl" noPadding fullHeight compactHeader>
       <div className={styles.settingsLayout}>
         <div className={styles.settingsNav}>
           <div className={styles.navHeader}>

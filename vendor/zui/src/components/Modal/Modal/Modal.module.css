@@ -58,6 +58,15 @@
   flex-shrink: 0;
 }
 
+.headerCompact {
+  height: var(--control-height-sm);
+  padding: 0 var(--space-3);
+}
+
+.headerCompact .closeButton {
+  padding: 0;
+}
+
 .headerTitleGroup {
   display: flex;
   align-items: center;
