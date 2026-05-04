@@ -2,19 +2,18 @@
   {
     "date": "2026-05-04",
     "channel": "nightly",
-    "version": "0.1.0-nightly.438.1",
-    "title": "First-run onboarding lands across the app",
-    "intro": "Today's nightly is dominated by a brand-new first-run experience: a welcome flow, a persistent checklist, smarter empty states, and a friendlier empty chat. A pair of small server and desktop fixes also relax the REQUIRE_ZERO_PRO gate so default builds boot cleanly.",
+    "version": "0.1.0-nightly.440.1",
+    "title": "First-run onboarding lands across Aura",
+    "intro": "Today's nightly is built around a brand-new first-run experience: a welcome modal, a persistent five-step checklist, smarter empty states, and prompt suggestions to get new users from blank canvas to first message. A short server fix and CI plumbing for analytics tokens round out the day.",
     "entryCount": 4,
     "highlights": [
-      "New welcome modal and 5-step onboarding checklist",
-      "Empty chat now shows prompt suggestions and a pulsing input",
-      "Friendlier empty states for agents and tasks",
-      "REQUIRE_ZERO_PRO now defaults to off on server and desktop"
+      "New welcome modal and 5-task onboarding checklist",
+      "Prompt suggestions and pulsing input on empty chat",
+      "Mixpanel analytics token now wired into desktop and mobile nightly builds"
     ],
-    "rawCommitCount": 13,
-    "generatedAt": "2026-05-04T19:32:40.655Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.438.1",
+    "rawCommitCount": 15,
+    "generatedAt": "2026-05-04T20:00:22.467Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.440.1",
     "path": "history/2026-05-04.json"
   },
   {
