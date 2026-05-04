@@ -8,8 +8,10 @@
 //!   installer hand-off and non-Windows relaunch).
 
 mod check;
+mod diagnostics;
 mod endpoint;
 mod install;
+mod reconcile;
 
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
@@ -78,8 +80,54 @@ pub(crate) enum UpdateStatus {
     UpToDate,
     Failed {
         error: String,
+        /// Stable identifier for the step that failed. Surfaced to the UI
+        /// (`UpdateControl`) so users see *where* an install died rather
+        /// than only an opaque error string. Optional because earlier
+        /// failures (before the step framework existed) and `Idle`
+        /// transitions through `Failed` may not have a meaningful step.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        last_step: Option<String>,
     },
     Idle,
+}
+
+impl UpdateStatus {
+    fn discriminant_str(&self) -> &'static str {
+        match self {
+            Self::Checking => "checking",
+            Self::Available { .. } => "available",
+            Self::Downloading { .. } => "downloading",
+            Self::Installing { .. } => "installing",
+            Self::UpToDate => "up_to_date",
+            Self::Failed { .. } => "failed",
+            Self::Idle => "idle",
+        }
+    }
+
+    fn version(&self) -> Option<&str> {
+        match self {
+            Self::Available { version, .. }
+            | Self::Downloading { version, .. }
+            | Self::Installing { version, .. } => Some(version.as_str()),
+            _ => None,
+        }
+    }
+
+    fn channel(&self) -> Option<UpdateChannel> {
+        match self {
+            Self::Available { channel, .. }
+            | Self::Downloading { channel, .. }
+            | Self::Installing { channel, .. } => Some(*channel),
+            _ => None,
+        }
+    }
+
+    fn error(&self) -> Option<&str> {
+        match self {
+            Self::Failed { error, .. } => Some(error.as_str()),
+            _ => None,
+        }
+    }
 }
 
 /// Callback invoked before the process exits as part of an update install.
@@ -94,7 +142,7 @@ pub(crate) struct UpdateState {
     pub status: Arc<RwLock<UpdateStatus>>,
     pub channel: Arc<RwLock<UpdateChannel>>,
     settings_path: Arc<PathBuf>,
-    pub(super) data_dir: Arc<PathBuf>,
+    pub(crate) data_dir: Arc<PathBuf>,
     shutdown_hook: Arc<RwLock<Option<ShutdownHook>>>,
 }
 
@@ -122,13 +170,15 @@ impl UpdateState {
             warn!(error = %error, path = %settings_path.display(), "failed to load persisted updater settings");
             default_channel
         });
-        Self {
+        let state = Self {
             status: Arc::new(RwLock::new(UpdateStatus::Idle)),
             channel: Arc::new(RwLock::new(channel)),
             settings_path: Arc::new(settings_path),
             data_dir: Arc::new(data_dir.to_path_buf()),
             shutdown_hook: Arc::new(RwLock::new(None)),
-        }
+        };
+        reconcile::reconcile_persisted_state(&state, env!("CARGO_PKG_VERSION"));
+        state
     }
 
     pub(crate) fn persist_channel(&self, channel: UpdateChannel) -> Result<(), String> {
@@ -207,8 +257,66 @@ pub(super) fn set_status(status: &Arc<RwLock<UpdateStatus>>, next: UpdateStatus)
     *status.write().expect("updater status lock poisoned") = next;
 }
 
+/// Set the in-memory status, append a step record to the updater log, and
+/// refresh the persisted JSON snapshot. Callers should prefer this over the
+/// raw `set_status` helper so every status transition is observable from
+/// disk. `detail` is free-form context (paths, byte counts, pids).
+pub(super) fn set_status_with_step(
+    state: &UpdateState,
+    next: UpdateStatus,
+    step: diagnostics::UpdateStep,
+    detail: Option<&str>,
+) {
+    let status_str = next.discriminant_str();
+    let version = next.version().map(str::to_string);
+    let channel = next.channel().map(|c| c.as_str().to_string());
+    let error = next.error().map(str::to_string);
+    set_status(&state.status, next);
+    diagnostics::record_update_step(
+        state.data_dir.as_ref(),
+        status_str,
+        step,
+        version.as_deref(),
+        channel.as_deref(),
+        error.as_deref(),
+        detail,
+    );
+}
+
+/// Append a non-status-changing step record. Use when the in-memory status
+/// is already correct (e.g. mid-`Installing`) but a new milestone — like
+/// `script_written` or `handoff_spawned` — should be visible from the
+/// updater log.
+pub(super) fn record_step_only(
+    state: &UpdateState,
+    step: diagnostics::UpdateStep,
+    detail: Option<&str>,
+) {
+    let status = state
+        .status
+        .read()
+        .expect("updater status lock poisoned");
+    let status_str = status.discriminant_str();
+    let version = status.version().map(str::to_string);
+    let channel = status.channel().map(|c| c.as_str().to_string());
+    let error = status.error().map(str::to_string);
+    drop(status);
+    diagnostics::record_update_step(
+        state.data_dir.as_ref(),
+        status_str,
+        step,
+        version.as_deref(),
+        channel.as_deref(),
+        error.as_deref(),
+        detail,
+    );
+}
+
 pub(crate) use check::{spawn_update_loop, trigger_recheck};
-pub(crate) use install::start_install;
+pub(crate) use diagnostics::{
+    load_state_snapshot, updater_log_path, updater_state_path, UpdateStep,
+};
+pub(crate) use install::{stage_only, start_install};
 
 #[cfg(test)]
 mod tests {

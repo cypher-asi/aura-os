@@ -25,6 +25,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+tracing-appender = "0.2"
 cargo-packager-updater = "0.2"
 
 [target.'cfg(target_os = "windows")'.dependencies]

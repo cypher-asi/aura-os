@@ -187,6 +187,31 @@ describe("desktopApi", () => {
     );
   });
 
+  it("revealUpdateLogs sends POST /api/update-reveal-logs", async () => {
+    const fetchMock = mockFetch(200, { ok: true, path: "C:/aura/logs" });
+    globalThis.fetch = fetchMock;
+    const result = await desktopApi.revealUpdateLogs();
+    expect(result.ok).toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/update-reveal-logs",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("stageUpdateOnly sends POST /api/update-stage-only", async () => {
+    const fetchMock = mockFetch(200, {
+      ok: true,
+      staged_path: "C:/aura/runtime/updater/aura-setup-1.exe",
+    });
+    globalThis.fetch = fetchMock;
+    const result = await desktopApi.stageUpdateOnly();
+    expect(result.ok).toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/update-stage-only",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
   it("throws ApiClientError on server error", async () => {
     globalThis.fetch = mockFetch(500, { error: "Fail", code: "internal", details: null });
     await expect(desktopApi.pickFolder()).rejects.toThrow(ApiClientError);

@@ -127,6 +127,15 @@ pub(crate) fn spawn_server(
                     "/api/update-channel",
                     axum_post(handlers::post_update_channel).with_state(update_state.clone()),
                 )
+                .route(
+                    "/api/update-reveal-logs",
+                    axum_post(handlers::post_update_reveal_logs)
+                        .with_state(update_state.clone()),
+                )
+                .route(
+                    "/api/update-stage-only",
+                    axum_post(handlers::post_update_stage_only).with_state(update_state.clone()),
+                )
                 .layer(aura_os_server::build_local_api_cors_layer());
 
             let app = aura_os_server::create_router_with_interface(app_state, interface_dir)

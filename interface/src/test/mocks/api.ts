@@ -112,6 +112,9 @@ export function mockDesktopApi(): Record<string, ReturnType<typeof vi.fn>> {
     getUpdateStatus: stub(),
     installUpdate: stub(),
     setUpdateChannel: stub(),
+    revealUpdateLogs: stub(),
+    stageUpdateOnly: stub(),
+    checkForUpdates: stub(),
   };
 }
 

@@ -36,11 +36,14 @@ export function UpdateControl({ layout = "inline" }: UpdateControlProps = {}) {
     status,
     availableVersion,
     error,
+    lastStep,
     lastCheckedAt,
     checkPending,
     installPending,
+    revealPending,
     checkForUpdates,
     installUpdate,
+    revealUpdaterLogs,
   } = useUpdateStatus();
 
   if (!supported) {
@@ -88,6 +91,7 @@ export function UpdateControl({ layout = "inline" }: UpdateControlProps = {}) {
       status,
       availableVersion,
       error,
+      lastStep,
       isChecking,
       isDownloading,
       isInstalling,
@@ -95,6 +99,8 @@ export function UpdateControl({ layout = "inline" }: UpdateControlProps = {}) {
       isAvailable,
       installUpdate,
       checkForUpdates,
+      revealUpdaterLogs,
+      revealPending,
     });
   }
 
@@ -102,6 +108,7 @@ export function UpdateControl({ layout = "inline" }: UpdateControlProps = {}) {
     status,
     availableVersion,
     error,
+    lastStep,
     lastCheckedAt,
     isChecking,
     isDownloading,
@@ -110,6 +117,8 @@ export function UpdateControl({ layout = "inline" }: UpdateControlProps = {}) {
     isAvailable,
     installUpdate,
     checkForUpdates,
+    revealUpdaterLogs,
+    revealPending,
   });
 }
 
@@ -117,6 +126,7 @@ interface RenderCommon {
   status: ReturnType<typeof useUpdateStatus>["status"];
   availableVersion: string | null;
   error: string | null;
+  lastStep: string | null;
   isChecking: boolean;
   isDownloading: boolean;
   isInstalling: boolean;
@@ -124,6 +134,17 @@ interface RenderCommon {
   isAvailable: boolean;
   installUpdate: () => Promise<unknown> | void;
   checkForUpdates: () => Promise<unknown> | void;
+  revealUpdaterLogs: () => Promise<unknown> | void;
+  revealPending: boolean;
+}
+
+function formatLastStepLabel(step: string | null): string | null {
+  if (!step) return null;
+  return step
+    .split("_")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 }
 
 function renderInline(
@@ -133,6 +154,7 @@ function renderInline(
     status,
     availableVersion,
     error,
+    lastStep,
     isChecking,
     isDownloading,
     isInstalling,
@@ -141,6 +163,8 @@ function renderInline(
     lastCheckedAt,
     checkForUpdates,
     installUpdate,
+    revealUpdaterLogs,
+    revealPending,
   } = props;
 
   const lastCheckedLabel = formatLastChecked(lastCheckedAt);
@@ -208,10 +232,32 @@ function renderInline(
     actions = null;
   } else if (isFailed) {
     testId = "settings-update-failed";
+    const stepLabel = formatLastStepLabel(lastStep);
     message = (
-      <Text as="span" size="sm" className={styles.updateError}>
-        Update failed: {error || "unknown error"}
-      </Text>
+      <div>
+        <Text as="div" size="sm" className={styles.updateError}>
+          Update failed: {error || "unknown error"}
+        </Text>
+        {stepLabel ? (
+          <Text
+            as="div"
+            size="sm"
+            className={styles.updateErrorStep}
+            data-testid="settings-update-failed-step"
+          >
+            Stopped at: {stepLabel}.{" "}
+            <button
+              type="button"
+              className={styles.updateDiagnosticsLink}
+              onClick={() => void revealUpdaterLogs()}
+              disabled={revealPending}
+              data-testid="settings-update-reveal-logs"
+            >
+              {revealPending ? "Opening logs\u2026" : "Show updater logs"}
+            </button>
+          </Text>
+        ) : null}
+      </div>
     );
     actions = (
       <Button
@@ -276,6 +322,7 @@ function renderPanel(props: RenderCommon): React.ReactElement {
   const {
     availableVersion,
     error,
+    lastStep,
     isChecking,
     isDownloading,
     isInstalling,
@@ -283,6 +330,8 @@ function renderPanel(props: RenderCommon): React.ReactElement {
     isAvailable,
     installUpdate,
     checkForUpdates,
+    revealUpdaterLogs,
+    revealPending,
   } = props;
 
   let variant: "available" | "progress" | "failed";
@@ -295,10 +344,32 @@ function renderPanel(props: RenderCommon): React.ReactElement {
   if (isFailed) {
     variant = "failed";
     title = "Update failed";
+    const stepLabel = formatLastStepLabel(lastStep);
     description = (
-      <Text as="span" size="sm" className={styles.updateError}>
-        {error || "An unknown error occurred while installing the update."}
-      </Text>
+      <>
+        <Text as="div" size="sm" className={styles.updateError}>
+          {error || "An unknown error occurred while installing the update."}
+        </Text>
+        {stepLabel ? (
+          <Text
+            as="div"
+            size="sm"
+            className={styles.updateErrorStep}
+            data-testid="settings-update-panel-failed-step"
+          >
+            Stopped at: {stepLabel}.{" "}
+            <button
+              type="button"
+              className={styles.updateDiagnosticsLink}
+              onClick={() => void revealUpdaterLogs()}
+              disabled={revealPending}
+              data-testid="settings-update-panel-reveal-logs"
+            >
+              {revealPending ? "Opening logs\u2026" : "Show updater logs"}
+            </button>
+          </Text>
+        ) : null}
+      </>
     );
     icon = <AlertTriangle size={18} aria-hidden />;
     actions = (

@@ -36,6 +36,28 @@
   color: var(--color-danger, #d9534f);
 }
 
+.updateErrorStep {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.updateDiagnosticsLink {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: var(--color-brand-primary, var(--color-accent));
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.updateDiagnosticsLink:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
 .updateUnsupported {
   text-align: right;
   max-width: 200px;

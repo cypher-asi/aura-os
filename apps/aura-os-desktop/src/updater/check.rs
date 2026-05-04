@@ -7,8 +7,8 @@ use tracing::{error, info, warn};
 
 use super::endpoint::{build_updater, endpoint_for_channel};
 use super::{
-    set_status, updater_supported, UpdateChannel, UpdateState, UpdateStatus, CHECK_INTERVAL,
-    INITIAL_CHECK_DELAY,
+    set_status, set_status_with_step, updater_supported, UpdateChannel, UpdateState, UpdateStatus,
+    UpdateStep, CHECK_INTERVAL, INITIAL_CHECK_DELAY,
 };
 
 pub(super) fn check_for_available_update(
@@ -47,6 +47,18 @@ pub(super) fn check_for_available_update(
     Ok(Some(version))
 }
 
+fn record_failure(state: &UpdateState, error: String, source: &str) {
+    set_status_with_step(
+        state,
+        UpdateStatus::Failed {
+            error: error.clone(),
+            last_step: Some(UpdateStep::CheckResult.as_str().to_string()),
+        },
+        UpdateStep::Failed,
+        Some(&format!("source={source}")),
+    );
+}
+
 fn record_check_outcome(
     state: &UpdateState,
     outcome: Result<Option<String>, String>,
@@ -61,9 +73,7 @@ fn record_check_outcome(
             } else {
                 warn!(error = %e, "recheck failed");
             }
-            *state.status.write().expect("updater status lock poisoned") = UpdateStatus::Failed {
-                error: e.to_string(),
-            };
+            record_failure(state, e, source);
         }
     }
 }
@@ -74,9 +84,7 @@ fn record_join_failure(state: &UpdateState, error: tokio::task::JoinError, sourc
     } else {
         warn!(error = %error, "recheck task failed");
     }
-    *state.status.write().expect("updater status lock poisoned") = UpdateStatus::Failed {
-        error: format!("update task failed: {error}"),
-    };
+    record_failure(state, format!("update task failed: {error}"), source);
 }
 
 /// Spawn the background update-check loop. Call once at startup.

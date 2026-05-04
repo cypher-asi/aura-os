@@ -14,6 +14,28 @@ export interface DesktopUpdateState {
   version?: string;
   channel?: DesktopUpdateChannel;
   error?: string;
+  /**
+   * Stable identifier for the last completed/failed step in the install
+   * pipeline (`download_started`, `handoff_spawned`, …). Surfaced when
+   * `status === "failed"` so users see *where* an install died rather
+   * than only an opaque error string.
+   */
+  last_step?: string;
+}
+
+export interface DesktopUpdateDiagnostics {
+  updater_log_path: string;
+  updater_state_path: string;
+}
+
+export interface DesktopUpdatePersistedState {
+  status: string;
+  step: string;
+  ts_unix_ms: number;
+  version?: string;
+  channel?: string;
+  error?: string;
+  detail?: string;
 }
 
 export interface DesktopUpdateStatusResponse {
@@ -23,6 +45,13 @@ export interface DesktopUpdateStatusResponse {
   supported?: boolean;
   update_base_url?: string;
   endpoint_template?: string;
+  /**
+   * Latest snapshot persisted to `<data_dir>/updater-state.json`. Useful for
+   * diagnostics even when the in-memory status has been reset to
+   * `Idle`/`UpToDate` by a successful reconcile on next boot.
+   */
+  last_persisted_state?: DesktopUpdatePersistedState | null;
+  diagnostics?: DesktopUpdateDiagnostics;
 }
 
 export interface PersistDesktopRouteResponse {
@@ -87,4 +116,14 @@ export const desktopApi = {
       method: "POST",
       body: JSON.stringify({ channel }),
     }),
+  revealUpdateLogs: () =>
+    apiFetch<{ ok: boolean; path?: string; updater_log?: string; error?: string }>(
+      "/api/update-reveal-logs",
+      { method: "POST" },
+    ),
+  stageUpdateOnly: () =>
+    apiFetch<{ ok: boolean; staged_path?: string; error?: string }>(
+      "/api/update-stage-only",
+      { method: "POST" },
+    ),
 };

@@ -6,7 +6,7 @@ use tao::event_loop::EventLoopProxy;
 use tracing::{debug, info, warn};
 
 use crate::route_state::RouteState;
-use crate::updater::{UpdateChannel, UpdateState};
+use crate::updater::{self, UpdateChannel, UpdateState};
 use crate::UserEvent;
 
 #[derive(Clone)]
@@ -122,6 +122,11 @@ pub(crate) async fn get_update_status(
     let status = state.status.read().expect("updater status lock poisoned");
     let channel = state.channel.read().expect("updater channel lock poisoned");
     let endpoint_template = crate::updater::endpoint_for_channel(*channel);
+    let last_persisted = updater::load_state_snapshot(state.data_dir.as_ref())
+        .ok()
+        .flatten();
+    let updater_log_path = updater::updater_log_path(state.data_dir.as_ref());
+    let updater_state_path = updater::updater_state_path(state.data_dir.as_ref());
     Json(serde_json::json!({
         "update": *status,
         "channel": *channel,
@@ -129,6 +134,11 @@ pub(crate) async fn get_update_status(
         "supported": crate::updater::updater_supported(),
         "update_base_url": crate::updater::update_base_url(),
         "endpoint_template": endpoint_template,
+        "last_persisted_state": last_persisted,
+        "diagnostics": {
+            "updater_log_path": updater_log_path.to_string_lossy(),
+            "updater_state_path": updater_state_path.to_string_lossy(),
+        },
     }))
 }
 
@@ -191,6 +201,79 @@ pub(crate) async fn post_update_check(
 #[derive(serde::Deserialize)]
 pub(crate) struct SetChannelRequest {
     channel: UpdateChannel,
+}
+
+pub(crate) async fn post_update_reveal_logs(
+    AxumState(state): AxumState<UpdateState>,
+) -> Json<serde_json::Value> {
+    let log_path = updater::updater_log_path(state.data_dir.as_ref());
+    let log_dir = log_path.parent().map(std::path::Path::to_path_buf);
+
+    // Prefer revealing the directory so the user sees the rolling
+    // `desktop.log` files alongside the per-event `updater.log`. Fall back
+    // to the file directly if the parent is missing for some reason.
+    let target = log_dir.clone().unwrap_or_else(|| log_path.clone());
+    let target_display = target.to_string_lossy().into_owned();
+
+    if !target.exists() {
+        // Create the directory so `open::that` has something to reveal even
+        // on a fresh install where no updater run has happened yet.
+        if let Err(error) = std::fs::create_dir_all(&target) {
+            warn!(error = %error, path = %target_display, "failed to ensure log directory exists for reveal");
+        }
+    }
+
+    match open::that(&target) {
+        Ok(_) => {
+            info!(path = %target_display, "revealed updater log directory");
+            Json(serde_json::json!({
+                "ok": true,
+                "path": target_display,
+                "updater_log": log_path.to_string_lossy(),
+            }))
+        }
+        Err(error) => {
+            warn!(error = %error, path = %target_display, "failed to reveal updater logs");
+            Json(serde_json::json!({
+                "ok": false,
+                "path": target_display,
+                "error": error.to_string(),
+            }))
+        }
+    }
+}
+
+pub(crate) async fn post_update_stage_only(
+    AxumState(state): AxumState<UpdateState>,
+) -> Json<serde_json::Value> {
+    if std::env::var("AURA_DESKTOP_DEBUG_UPDATER")
+        .map(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"))
+        .unwrap_or(false)
+    {
+        // Run the staging on the current async worker — staging hits the
+        // network and writes to disk but does not exit Aura.
+        let result =
+            tokio::task::spawn_blocking(move || updater::stage_only(&state)).await;
+        match result {
+            Ok(Ok(path)) => Json(serde_json::json!({
+                "ok": true,
+                "staged_path": path.to_string_lossy(),
+            })),
+            Ok(Err(error)) => {
+                warn!(%error, "stage_only failed");
+                Json(serde_json::json!({ "ok": false, "error": error }))
+            }
+            Err(error) => {
+                warn!(%error, "stage_only join failed");
+                Json(serde_json::json!({ "ok": false, "error": error.to_string() }))
+            }
+        }
+    } else {
+        Json(serde_json::json!({
+            "ok": false,
+            "error": "AURA_DESKTOP_DEBUG_UPDATER is not enabled",
+        }))
+    }
 }
 
 pub(crate) async fn post_update_channel(

@@ -29,11 +29,14 @@ export interface UpdateStatusState {
   currentVersion: string | null;
   availableVersion: string | null;
   error: string | null;
+  lastStep: string | null;
   lastCheckedAt: number | null;
   checkPending: boolean;
   installPending: boolean;
+  revealPending: boolean;
   checkForUpdates: () => Promise<void>;
   installUpdate: () => Promise<void>;
+  revealUpdaterLogs: () => Promise<void>;
 }
 
 export function useUpdateStatus(): UpdateStatusState {
@@ -43,6 +46,7 @@ export function useUpdateStatus(): UpdateStatusState {
   const [lastCheckedAt, setLastCheckedAt] = useState<number | null>(null);
   const [checkPending, setCheckPending] = useState(false);
   const [installPending, setInstallPending] = useState(false);
+  const [revealPending, setRevealPending] = useState(false);
   const mountedRef = useRef(true);
 
   const supported = !!features.nativeUpdater && data?.supported !== false;
@@ -116,10 +120,27 @@ export function useUpdateStatus(): UpdateStatusState {
     }
   }, [features.nativeUpdater, poll]);
 
+  const revealUpdaterLogs = useCallback(async () => {
+    if (!features.nativeUpdater) return;
+    setRevealPending(true);
+    try {
+      await api.revealUpdateLogs();
+    } catch {
+      // noop — the underlying handler also writes the failure to
+      // updater.log, so users can still inspect what went wrong.
+    } finally {
+      if (mountedRef.current) {
+        setRevealPending(false);
+      }
+    }
+  }, [features.nativeUpdater]);
+
   const status = (data?.update.status ?? "unknown") as UpdateStatusValue;
   const availableVersion = data?.update.version ?? null;
   const currentVersion = data?.current_version ?? null;
   const error = data?.update.error ?? null;
+  const lastStep =
+    data?.update.last_step ?? data?.last_persisted_state?.step ?? null;
 
   return {
     supported,
@@ -128,10 +149,13 @@ export function useUpdateStatus(): UpdateStatusState {
     currentVersion,
     availableVersion,
     error,
+    lastStep,
     lastCheckedAt,
     checkPending,
     installPending,
+    revealPending,
     checkForUpdates,
     installUpdate,
+    revealUpdaterLogs,
   };
 }
