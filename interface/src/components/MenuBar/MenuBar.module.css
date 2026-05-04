@@ -26,7 +26,7 @@
   padding: 0 var(--space-2);
   margin: 0 1px;
   font-size: var(--font-size-2xs, 11px);
-  font-weight: 500;
+  font-weight: 400;
   color: var(--color-text-primary);
   background: transparent;
   border: 1px solid transparent;
