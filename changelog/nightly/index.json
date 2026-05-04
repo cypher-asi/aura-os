@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-05-04",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.434.1",
+    "title": "First-run onboarding lands across the desktop app",
+    "intro": "Today's nightly is a focused product drop: a complete first-run onboarding experience now ships in Aura. New users see a welcome flow, a persistent checklist that tracks five guided tasks, and a Help button in the taskbar to bring it back at any time — all wired into the AppShell across Mac, Windows, and Linux desktop builds.",
+    "entryCount": 1,
+    "highlights": [
+      "New welcome modal and 5-task onboarding checklist",
+      "Auto-completing tasks watch real product activity",
+      "Help button in the taskbar reopens guidance anytime",
+      "Shipped to Mac, Windows, and Linux nightly builds"
+    ],
+    "rawCommitCount": 5,
+    "generatedAt": "2026-05-04T11:48:17.059Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.434.1",
+    "path": "history/2026-05-04.json"
+  },
+  {
     "date": "2026-05-02",
     "channel": "nightly",
     "version": "0.1.0-nightly.433.1",
