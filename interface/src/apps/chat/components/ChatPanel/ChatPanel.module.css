@@ -270,6 +270,10 @@
   max-width: 680px;
   display: flex;
   justify-content: flex-start;
+  /* Match `.bubble` horizontal padding so the shimmering phase label
+     left-aligns with the message text inside assistant bubbles, not
+     with the bubble's outer edge. */
+  padding-left: var(--space-3);
 }
 
 .pinnedStreamingIndicator > * {
