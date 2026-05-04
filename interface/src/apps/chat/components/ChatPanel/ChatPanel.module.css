@@ -255,7 +255,7 @@
    the input bar so that phase transitions never reflow the chat. */
 .pinnedStreamingIndicator {
   position: absolute;
-  bottom: 88px;
+  bottom: 120px;
   left: 0;
   right: 0;
   z-index: 11;
@@ -322,7 +322,7 @@
   }
 
   .pinnedStreamingIndicator {
-    bottom: calc(112px + var(--aura-mobile-keyboard-inset, 0px));
+    bottom: calc(160px + var(--aura-mobile-keyboard-inset, 0px));
   }
 
   .newMessagesPill {
