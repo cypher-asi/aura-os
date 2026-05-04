@@ -160,10 +160,13 @@
   text-decoration: none;
 }
 
+/* Match the inner WindowControls row (gap: 0) so every chrome icon —
+   theme toggle, host-settings, sidekick toggle, min/max/close — sits on
+   the same rhythm and renders as a single uniform button strip. */
 .titleActions {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 0;
 }
 
 .titleCenter {

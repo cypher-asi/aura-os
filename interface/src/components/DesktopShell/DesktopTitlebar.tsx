@@ -31,11 +31,13 @@ function ThemeToggleButton() {
       <Button
         variant="ghost"
         size="sm"
+        rounded="md"
         iconOnly
-        icon={<Icon size={16} />}
         aria-label={getThemeToggleAriaLabel(theme, resolvedTheme)}
         onClick={() => setTheme(cycleTheme(theme, resolvedTheme))}
-      />
+      >
+        <Icon size={14} strokeWidth={2} />
+      </Button>
     </span>
   );
 }
@@ -73,11 +75,13 @@ export function DesktopTitlebar({
             <Button
               variant="ghost"
               size="sm"
+              rounded="md"
               iconOnly
-              icon={<Server size={16} />}
               aria-label="Open host settings"
               onClick={onOpenHostSettings}
-            />
+            >
+              <Server size={14} strokeWidth={2} />
+            </Button>
           )}
           <WindowControls
             sidekickCollapsed={sidekickCollapsed}
