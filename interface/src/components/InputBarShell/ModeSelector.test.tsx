@@ -33,9 +33,6 @@ describe("ModeSelector", () => {
       return frames.length;
     });
     vi.spyOn(globalThis, "cancelAnimationFrame").mockImplementation(() => {});
-    vi.spyOn(window, "getComputedStyle").mockImplementation(
-      () => ({ paddingLeft: "2px" }) as CSSStyleDeclaration,
-    );
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
       function getBoundingClientRect(this: HTMLElement) {
         const mode = this.dataset.agentModeOption;
@@ -61,7 +58,7 @@ describe("ModeSelector", () => {
       "span[aria-hidden='true']",
     ) as HTMLSpanElement;
 
-    expect(indicator.style.transform).toBe("translate3d(0px, 0, 0)");
+    expect(indicator.style.transform).toBe("translate3d(2px, 0, 0)");
     expect(indicator.style.width).toBe("40px");
 
     flushAnimationFrames(frames);
@@ -71,12 +68,12 @@ describe("ModeSelector", () => {
     rerender(<ModeSelector selectedMode="image" onChange={vi.fn()} />);
 
     expect(indicator.dataset.motion).toBe("off");
-    expect(indicator.style.transform).toBe("translate3d(0px, 0, 0)");
+    expect(indicator.style.transform).toBe("translate3d(2px, 0, 0)");
     expect(indicator.style.width).toBe("40px");
 
     flushAnimationFrames(frames);
     expect(indicator.dataset.motion).toBe("on");
-    expect(indicator.style.transform).toBe("translate3d(90px, 0, 0)");
+    expect(indicator.style.transform).toBe("translate3d(92px, 0, 0)");
     expect(indicator.style.width).toBe("56px");
   });
 });

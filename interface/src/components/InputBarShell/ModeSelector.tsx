@@ -51,15 +51,10 @@ export const ModeSelector = memo(function ModeSelector({
     const btn = buttonRefs.current[mode];
     const wrap = segmentsRef.current;
     if (!btn || !wrap) return null;
-    // `position: absolute; left: 0` resolves to the padding edge of the
-    // positioned ancestor, while getBoundingClientRect uses the border
-    // edge — subtract the wrapper's padding-left so the indicator lines
-    // up with the button's actual rendered left.
-    const padLeft = parseFloat(getComputedStyle(wrap).paddingLeft) || 0;
     const b = btn.getBoundingClientRect();
     const w = wrap.getBoundingClientRect();
     return {
-      x: b.left - w.left - padLeft,
+      x: b.left - w.left,
       width: b.width,
     };
   }, []);

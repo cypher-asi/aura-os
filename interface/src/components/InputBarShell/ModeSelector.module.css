@@ -68,6 +68,9 @@
 .segment {
   position: relative;
   z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   appearance: none;
   border: none;
   background: transparent;
