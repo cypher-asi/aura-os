@@ -37,8 +37,17 @@ vi.mock("lucide-react", () => ({
   Settings: () => <svg />,
   ChevronRight: () => <svg />,
   ChevronLeft: () => <svg />,
+  LayoutGrid: () => <svg />,
   StarOff: () => <svg />,
   X: () => <svg />,
+  HelpCircle: () => <svg />,
+  MessageSquare: () => <svg />,
+  FolderPlus: () => <svg />,
+  Bot: () => <svg />,
+  Sparkles: () => <svg />,
+  Check: () => <svg />,
+  ChevronDown: () => <svg />,
+  ChevronUp: () => <svg />,
 }));
 
 vi.mock("@cypher-asi/zui", () => ({

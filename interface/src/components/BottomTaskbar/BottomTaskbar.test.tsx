@@ -48,6 +48,14 @@ vi.mock("lucide-react", () => ({
   LayoutGrid: () => <svg data-testid="layout-grid" />,
   StarOff: () => <svg />,
   X: () => <svg />,
+  HelpCircle: () => <svg />,
+  MessageSquare: () => <svg />,
+  FolderPlus: () => <svg />,
+  Bot: () => <svg />,
+  Sparkles: () => <svg />,
+  Check: () => <svg />,
+  ChevronDown: () => <svg />,
+  ChevronUp: () => <svg />,
 }));
 
 vi.mock("@cypher-asi/zui", () => ({
