@@ -239,8 +239,8 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         event_hub,
         loop_registry,
         require_zero_pro: std::env::var("REQUIRE_ZERO_PRO")
-            .map(|v| v != "false" && v != "0")
-            .unwrap_or(true),
+            .map(|v| v == "true" || v == "1")
+            .unwrap_or(false),
         automaton_client,
         harness_http,
         automaton_registry: Arc::new(Mutex::new(HashMap::new())),
