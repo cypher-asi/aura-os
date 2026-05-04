@@ -1,9 +1,8 @@
 import {
   memo,
   useCallback,
-  useLayoutEffect,
+  useEffect,
   useRef,
-  useState,
   type KeyboardEvent,
 } from "react";
 import {
@@ -41,14 +40,19 @@ export const ModeSelector = memo(function ModeSelector({
     "3d": null,
   });
   const segmentsRef = useRef<HTMLDivElement>(null);
-  const [indicator, setIndicator] = useState<{ x: number; w: number } | null>(
-    null,
-  );
+  const indicatorRef = useRef<HTMLSpanElement>(null);
 
-  useLayoutEffect(() => {
+  // Drive the indicator via direct DOM writes (not React state). React
+  // never touches the indicator's inline style, so its previous transform
+  // is still in the DOM when the parent re-renders for a new selectedMode;
+  // the just-committed paint shows the indicator at the OLD position, then
+  // this effect (running after paint) writes the new transform, which the
+  // CSS engine animates from "previous painted" → "new" on the next frame.
+  useEffect(() => {
     const btn = buttonRefs.current[selectedMode];
     const wrap = segmentsRef.current;
-    if (!btn || !wrap) return;
+    const ind = indicatorRef.current;
+    if (!btn || !wrap || !ind) return;
     const update = () => {
       // `position: absolute; left: 0` resolves to the padding edge of the
       // positioned ancestor, while getBoundingClientRect uses the border
@@ -57,8 +61,27 @@ export const ModeSelector = memo(function ModeSelector({
       const padLeft = parseFloat(getComputedStyle(wrap).paddingLeft) || 0;
       const b = btn.getBoundingClientRect();
       const w = wrap.getBoundingClientRect();
-      setIndicator({ x: b.left - w.left - padLeft, w: b.width });
+      ind.style.transform = `translate3d(${b.left - w.left - padLeft}px, 0, 0)`;
+      ind.style.width = `${b.width}px`;
     };
+    if (ind.dataset.ready !== "true") {
+      // First measurement: snap to position without transition (gated by
+      // the absence of `data-ready` in CSS), then enable transitions on
+      // the next frame so subsequent selection changes animate.
+      update();
+      const raf = requestAnimationFrame(() => {
+        if (indicatorRef.current) indicatorRef.current.dataset.ready = "true";
+      });
+      const ro = new ResizeObserver(update);
+      ro.observe(btn);
+      ro.observe(wrap);
+      window.addEventListener("resize", update);
+      return () => {
+        cancelAnimationFrame(raf);
+        ro.disconnect();
+        window.removeEventListener("resize", update);
+      };
+    }
     update();
     const ro = new ResizeObserver(update);
     ro.observe(btn);
@@ -104,16 +127,7 @@ export const ModeSelector = memo(function ModeSelector({
     >
       {hideLabel ? null : <span className={styles.label}>MODE</span>}
       <div className={styles.segments} ref={segmentsRef}>
-        {indicator && (
-          <span
-            aria-hidden
-            className={styles.indicator}
-            style={{
-              transform: `translateX(${indicator.x}px)`,
-              width: `${indicator.w}px`,
-            }}
-          />
-        )}
+        <span aria-hidden className={styles.indicator} ref={indicatorRef} />
         {AGENT_MODE_ORDER.map((mode) => {
           const descriptor = AGENT_MODE_DESCRIPTORS[mode];
           const isActive = mode === selectedMode;
