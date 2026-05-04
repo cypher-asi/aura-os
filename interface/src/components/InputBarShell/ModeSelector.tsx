@@ -1,4 +1,11 @@
-import { memo, useCallback, useRef, type KeyboardEvent } from "react";
+import {
+  memo,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import {
   AGENT_MODE_DESCRIPTORS,
   AGENT_MODE_ORDER,
@@ -33,6 +40,35 @@ export const ModeSelector = memo(function ModeSelector({
     image: null,
     "3d": null,
   });
+  const segmentsRef = useRef<HTMLDivElement>(null);
+  const [indicator, setIndicator] = useState<{ x: number; w: number } | null>(
+    null,
+  );
+
+  useLayoutEffect(() => {
+    const btn = buttonRefs.current[selectedMode];
+    const wrap = segmentsRef.current;
+    if (!btn || !wrap) return;
+    const update = () => {
+      // `position: absolute; left: 0` resolves to the padding edge of the
+      // positioned ancestor, while getBoundingClientRect uses the border
+      // edge — subtract the wrapper's padding-left so the indicator lines
+      // up with the button's actual rendered left.
+      const padLeft = parseFloat(getComputedStyle(wrap).paddingLeft) || 0;
+      const b = btn.getBoundingClientRect();
+      const w = wrap.getBoundingClientRect();
+      setIndicator({ x: b.left - w.left - padLeft, w: b.width });
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(btn);
+    ro.observe(wrap);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [selectedMode]);
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
@@ -67,7 +103,17 @@ export const ModeSelector = memo(function ModeSelector({
       onKeyDown={handleKeyDown}
     >
       {hideLabel ? null : <span className={styles.label}>MODE</span>}
-      <div className={styles.segments}>
+      <div className={styles.segments} ref={segmentsRef}>
+        {indicator && (
+          <span
+            aria-hidden
+            className={styles.indicator}
+            style={{
+              transform: `translateX(${indicator.x}px)`,
+              width: `${indicator.w}px`,
+            }}
+          />
+        )}
         {AGENT_MODE_ORDER.map((mode) => {
           const descriptor = AGENT_MODE_DESCRIPTORS[mode];
           const isActive = mode === selectedMode;

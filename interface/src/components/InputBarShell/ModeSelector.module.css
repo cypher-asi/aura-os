@@ -9,7 +9,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 12px 6px;
+  padding: 0 12px;
+  min-height: var(--control-height-sm, 32px);
   border-bottom: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
 }
 
@@ -23,6 +24,7 @@
 }
 
 .segments {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -31,7 +33,24 @@
   background: color-mix(in srgb, var(--color-overlay-light) 60%, transparent);
 }
 
+.indicator {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 0;
+  border-radius: 999px;
+  background: var(--color-elevated);
+  box-shadow: 0 1px 2px var(--color-backdrop-light);
+  transition:
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+  z-index: 0;
+}
+
 .segment {
+  position: relative;
+  z-index: 1;
   appearance: none;
   border: none;
   background: transparent;
@@ -40,18 +59,14 @@
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  padding: 4px 12px;
+  padding: 3px 10px;
   border-radius: 999px;
   cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease,
-    box-shadow 0.15s ease;
+  transition: color 0.15s ease;
 }
 
 .segment:hover:not(.segmentActive) {
   color: var(--color-text-primary);
-  background: color-mix(in srgb, var(--color-overlay-light) 80%, transparent);
 }
 
 .segment:focus-visible {
@@ -61,18 +76,22 @@
 
 .segmentActive {
   color: var(--color-text-primary);
-  background: var(--color-elevated);
-  box-shadow: 0 1px 2px var(--color-backdrop-light);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .indicator {
+    transition: none;
+  }
 }
 
 @media (max-width: 640px) {
   .root {
-    padding: 8px 10px 6px;
+    padding: 0 10px;
     gap: 8px;
   }
 
   .segment {
-    padding: 6px 12px;
+    padding: 4px 12px;
     font-size: 12px;
   }
 
