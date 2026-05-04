@@ -61,6 +61,10 @@
     opacity 120ms ease;
 }
 
+.indicator[data-ready="true"][data-motion="off"] {
+  transition: opacity 120ms ease;
+}
+
 .segment {
   position: relative;
   z-index: 1;

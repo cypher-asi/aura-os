@@ -2,6 +2,7 @@ import {
   memo,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   type KeyboardEvent,
 } from "react";
@@ -41,57 +42,135 @@ export const ModeSelector = memo(function ModeSelector({
   });
   const segmentsRef = useRef<HTMLDivElement>(null);
   const indicatorRef = useRef<HTMLSpanElement>(null);
+  const indicatorMetricsRef = useRef<{ x: number; width: number } | null>(null);
+  const readyFrameRef = useRef<number | null>(null);
+  const moveFrameRef = useRef<number | null>(null);
+  const syncFrameRef = useRef<number | null>(null);
 
-  // Drive the indicator via direct DOM writes (not React state). React
-  // never touches the indicator's inline style, so its previous transform
-  // is still in the DOM when the parent re-renders for a new selectedMode;
-  // the just-committed paint shows the indicator at the OLD position, then
-  // this effect (running after paint) writes the new transform, which the
-  // CSS engine animates from "previous painted" → "new" on the next frame.
+  const measureIndicator = useCallback((mode: AgentMode) => {
+    const btn = buttonRefs.current[mode];
+    const wrap = segmentsRef.current;
+    if (!btn || !wrap) return null;
+    // `position: absolute; left: 0` resolves to the padding edge of the
+    // positioned ancestor, while getBoundingClientRect uses the border
+    // edge — subtract the wrapper's padding-left so the indicator lines
+    // up with the button's actual rendered left.
+    const padLeft = parseFloat(getComputedStyle(wrap).paddingLeft) || 0;
+    const b = btn.getBoundingClientRect();
+    const w = wrap.getBoundingClientRect();
+    return {
+      x: b.left - w.left - padLeft,
+      width: b.width,
+    };
+  }, []);
+
+  const writeIndicator = useCallback((metrics: { x: number; width: number }) => {
+    const ind = indicatorRef.current;
+    if (!ind) return;
+    ind.style.transform = `translate3d(${metrics.x}px, 0, 0)`;
+    ind.style.width = `${metrics.width}px`;
+  }, []);
+
+  const cancelMoveFrame = useCallback(() => {
+    if (moveFrameRef.current == null) return;
+    cancelAnimationFrame(moveFrameRef.current);
+    moveFrameRef.current = null;
+  }, []);
+
+  const cancelSyncFrame = useCallback(() => {
+    if (syncFrameRef.current == null) return;
+    cancelAnimationFrame(syncFrameRef.current);
+    syncFrameRef.current = null;
+  }, []);
+
+  // Keep measurement writes in the layout phase. On selection changes we
+  // preserve the previous pill geometry for the just-committed layout, then
+  // move to the new geometry on the next frame so CSS has distinct from/to
+  // states to animate.
+  useLayoutEffect(() => {
+    const ind = indicatorRef.current;
+    const target = measureIndicator(selectedMode);
+    if (!ind || !target) return;
+
+    cancelMoveFrame();
+    cancelSyncFrame();
+
+    const previous = indicatorMetricsRef.current;
+    indicatorMetricsRef.current = target;
+
+    if (!previous) {
+      ind.dataset.motion = "off";
+      writeIndicator(target);
+      if (readyFrameRef.current != null) {
+        cancelAnimationFrame(readyFrameRef.current);
+      }
+      readyFrameRef.current = requestAnimationFrame(() => {
+        readyFrameRef.current = null;
+        const current = indicatorRef.current;
+        if (!current) return;
+        current.dataset.ready = "true";
+        current.dataset.motion = "on";
+      });
+      return;
+    }
+
+    ind.dataset.ready = "true";
+    ind.dataset.motion = "off";
+    writeIndicator(previous);
+    // Force the transition-disabled position to become the start point
+    // before enabling motion and writing the target position.
+    void ind.offsetWidth;
+    moveFrameRef.current = requestAnimationFrame(() => {
+      moveFrameRef.current = null;
+      const current = indicatorRef.current;
+      if (!current) return;
+      current.dataset.motion = "on";
+      writeIndicator(target);
+    });
+  }, [cancelMoveFrame, cancelSyncFrame, measureIndicator, selectedMode, writeIndicator]);
+
   useEffect(() => {
     const btn = buttonRefs.current[selectedMode];
     const wrap = segmentsRef.current;
     const ind = indicatorRef.current;
     if (!btn || !wrap || !ind) return;
     const update = () => {
-      // `position: absolute; left: 0` resolves to the padding edge of the
-      // positioned ancestor, while getBoundingClientRect uses the border
-      // edge — subtract the wrapper's padding-left so the indicator lines
-      // up with the button's actual rendered left.
-      const padLeft = parseFloat(getComputedStyle(wrap).paddingLeft) || 0;
-      const b = btn.getBoundingClientRect();
-      const w = wrap.getBoundingClientRect();
-      ind.style.transform = `translate3d(${b.left - w.left - padLeft}px, 0, 0)`;
-      ind.style.width = `${b.width}px`;
-    };
-    if (ind.dataset.ready !== "true") {
-      // First measurement: snap to position without transition (gated by
-      // the absence of `data-ready` in CSS), then enable transitions on
-      // the next frame so subsequent selection changes animate.
-      update();
-      const raf = requestAnimationFrame(() => {
-        if (indicatorRef.current) indicatorRef.current.dataset.ready = "true";
+      const metrics = measureIndicator(selectedMode);
+      if (!metrics) return;
+      const previous = indicatorMetricsRef.current;
+      if (previous && previous.x === metrics.x && previous.width === metrics.width) {
+        return;
+      }
+      if (moveFrameRef.current != null) return;
+      cancelSyncFrame();
+      ind.dataset.motion = "off";
+      writeIndicator(metrics);
+      indicatorMetricsRef.current = metrics;
+      syncFrameRef.current = requestAnimationFrame(() => {
+        syncFrameRef.current = null;
+        const current = indicatorRef.current;
+        if (current) current.dataset.motion = "on";
       });
-      const ro = new ResizeObserver(update);
-      ro.observe(btn);
-      ro.observe(wrap);
-      window.addEventListener("resize", update);
-      return () => {
-        cancelAnimationFrame(raf);
-        ro.disconnect();
-        window.removeEventListener("resize", update);
-      };
-    }
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(btn);
-    ro.observe(wrap);
+    };
+    const ro =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    ro?.observe(btn);
+    ro?.observe(wrap);
     window.addEventListener("resize", update);
     return () => {
-      ro.disconnect();
+      ro?.disconnect();
       window.removeEventListener("resize", update);
+      cancelSyncFrame();
     };
-  }, [selectedMode]);
+  }, [cancelSyncFrame, measureIndicator, selectedMode, writeIndicator]);
+
+  useEffect(() => {
+    return () => {
+      if (readyFrameRef.current != null) cancelAnimationFrame(readyFrameRef.current);
+      cancelMoveFrame();
+      cancelSyncFrame();
+    };
+  }, [cancelMoveFrame, cancelSyncFrame]);
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
