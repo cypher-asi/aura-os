@@ -49,16 +49,11 @@ export function useOnboardingTaskWatcher(): void {
       }),
     );
 
-    // ── create_project: only detect projects created beyond the initial load ──
-    let projectBaseline: number | null = null;
+    // ── create_project: detect when user creates a project (count exceeds 1, since org setup may create one) ──
     unsubs.push(
-      useProjectsListStore.subscribe((state) => {
+      useProjectsListStore.subscribe((state, prev) => {
         if (useOnboardingStore.getState().checklistTasks.create_project) return;
-        if (projectBaseline === null) {
-          projectBaseline = state.projects.length;
-          return;
-        }
-        if (state.projects.length > projectBaseline) {
+        if (state.projects.length > prev.projects.length && prev.projects.length >= 1) {
           useOnboardingStore.getState().completeTask("create_project");
           const completed = Object.values(useOnboardingStore.getState().checklistTasks).filter(Boolean).length;
           track("onboarding_task_completed", { task_id: "create_project", progress: progressLabel(completed) });
@@ -67,16 +62,11 @@ export function useOnboardingTaskWatcher(): void {
       }),
     );
 
-    // ── create_agent: only detect agents created beyond the initial load ──
-    let agentBaseline: number | null = null;
+    // ── create_agent: detect when user creates an agent (count exceeds 1, since a default CEO agent exists) ──
     unsubs.push(
-      useAgentStore.subscribe((state) => {
+      useAgentStore.subscribe((state, prev) => {
         if (useOnboardingStore.getState().checklistTasks.create_agent) return;
-        if (agentBaseline === null) {
-          agentBaseline = state.agents.length;
-          return;
-        }
-        if (state.agents.length > agentBaseline) {
+        if (state.agents.length > prev.agents.length && prev.agents.length >= 1) {
           useOnboardingStore.getState().completeTask("create_agent");
           const completed = Object.values(useOnboardingStore.getState().checklistTasks).filter(Boolean).length;
           track("onboarding_task_completed", { task_id: "create_agent", progress: progressLabel(completed) });
