@@ -1,104 +1,19 @@
-/* Input area — floats over messages with fade-to-dark gradient */
-.inputWrapper {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 8px;
-  padding: 0 var(--space-3) var(--space-3);
-  z-index: 10;
-  background: var(--color-bg);
-  transition:
-    bottom 260ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
-    background-color 220ms ease;
-}
-
-.inputWrapperHidden {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-.inputWrapper::before {
-  content: "";
-  position: absolute;
-  top: -80px;
-  left: 0;
-  right: 0;
-  height: 80px;
-  pointer-events: none;
-  background: linear-gradient(to bottom, transparent, var(--color-bg));
-  transition: opacity 220ms ease;
-}
-
-:global([data-desktop-mode]) .inputWrapper {
-  background: color-mix(in srgb, var(--color-bg) 92%, transparent);
-}
-
-:global([data-desktop-mode]) .inputWrapper::before {
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    color-mix(in srgb, var(--color-bg) 92%, transparent)
-  );
-}
-
-/* Empty-thread state: lift the input into the vertical center of the lane.
-   Uses the same `bottom` + `transform` properties as the default state so the
-   transition between centered and docked is smoothly animatable. */
-.inputWrapper.inputWrapperCentered {
-  bottom: 50%;
-  transform: translateY(50%);
-  background: transparent;
-}
-
-.inputWrapper.inputWrapperCentered::before {
-  opacity: 0;
-}
-
-:global([data-desktop-mode]) .inputWrapper.inputWrapperCentered {
-  background: transparent;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .inputWrapper,
-  .inputWrapper::before {
-    transition: none;
-  }
-}
-
-.inputContainer {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--color-border);
-  border-radius: 20px;
-  background: transparent;
-  padding: 0;
-  max-width: 680px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.inputContainerPulse {
-  animation: pulseGlow 2s ease-in-out infinite;
-}
-
-@keyframes pulseGlow {
-  0%, 100% {
-    border-color: var(--color-border);
-    box-shadow: none;
-  }
-  50% {
-    border-color: rgba(255, 255, 255, 0.3);
-    box-shadow: 0 0 12px rgba(255, 255, 255, 0.08);
-  }
-}
-
-.dropZoneActive {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 1px var(--color-accent);
-}
+/* ============================================================
+ * Chat-only input bar chrome.
+ *
+ * Visual primitives shared with other apps (wrapper, container,
+ * textarea, send/stop button, attach-button positioning, info
+ * bar, model picker chrome) live in `InputBarShell.module.css`.
+ * This stylesheet only owns chrome that's specific to the chat
+ * surface: attachments, queued hint, agent environment / orbit
+ * indicators, slash menu, command chips, project picker,
+ * context-usage indicator, and the new-session affordance.
+ *
+ * Mobile responsive overrides for shell-owned elements live in
+ * the shell stylesheet; chat-only items hide themselves on
+ * narrow viewports here so they don't depend on the shell's
+ * hashed class names.
+ * ============================================================ */
 
 .attachmentPreviews {
   display: flex;
@@ -203,14 +118,6 @@
   background: var(--color-image-scrim-strong);
 }
 
-.fileInputHidden {
-  position: absolute;
-  width: 0;
-  height: 0;
-  opacity: 0;
-  pointer-events: none;
-}
-
 .attachmentThumbImg {
   width: 48px;
   height: 48px;
@@ -229,64 +136,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.inputContainer:focus-within {
-  border-color: var(--color-overlay-focus);
-}
-
-.inputRow {
-  position: relative;
-  display: block;
-  min-height: var(--control-height-sm, 32px);
-  padding: 0;
-}
-
-.textarea {
-  display: block;
-  width: 100%;
-  resize: none;
-  border: none;
-  background: transparent;
-  color: var(--color-text-primary);
-  font-family: inherit;
-  font-size: 13px;
-  line-height: 1.5;
-  /* Leave room at the left/right so typed text never slides under the
-     floating attach/send buttons anchored in the bottom corners. */
-  padding: 6px 32px;
-  height: auto;
-  min-height: var(--control-height-sm, 32px);
-  max-height: min(70vh, 800px);
-  outline: none;
-  overflow-x: hidden;
-  overflow-y: auto;
-  border-radius: 0;
-}
-
-@media (pointer: coarse), (max-width: 900px) {
-  .textarea {
-    font-size: 16px;
-  }
-}
-
-.textarea::placeholder {
-  color: var(--color-text-muted);
-}
-
-.textarea:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.inputInfoBar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 4px 0;
-  max-width: 680px;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 .environmentWrap,
@@ -427,42 +276,8 @@
   color: var(--color-text-primary);
 }
 
-.attachButton {
-  position: absolute;
-  left: 2px;
-  bottom: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 0;
-  border: none;
-  background: transparent;
-  color: var(--color-text-primary);
-  cursor: pointer;
-  z-index: 1;
-}
-
-.attachButton:hover {
-  color: var(--color-text-primary);
-}
-
-.plusMenuWrap {
-  position: relative;
-}
-
-.plusMenu {
-  position: absolute;
-  bottom: 100%;
-  left: 0;
-  z-index: 100;
-  margin-bottom: var(--space-1);
-}
-
 .projectMenuWrap {
   position: relative;
-  margin-left: auto;
 }
 
 .projectButton {
@@ -532,152 +347,6 @@
 .projectMenuItemActive {
   color: var(--color-text-primary);
   font-weight: 500;
-}
-
-.modelMenuWrap {
-  position: relative;
-}
-
-.mobileModelBar {
-  display: none;
-}
-
-.modelButton {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  border: none;
-  background: transparent;
-  color: var(--color-text-secondary);
-  font-family: inherit;
-  font-size: 11px;
-  cursor: pointer;
-  transition: color 0.15s ease;
-  white-space: nowrap;
-}
-
-.modelButton:hover {
-  color: var(--color-text-primary);
-  opacity: 1;
-}
-
-.modelMenu {
-  position: absolute;
-  bottom: calc(100% + 4px);
-  right: 0;
-  z-index: 100;
-  background: var(--color-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 4px 0;
-  min-width: 140px;
-  box-shadow: 0 4px 12px var(--color-backdrop-light);
-  max-height: 280px;
-  overflow-y: auto;
-}
-
-.modelMenuItem {
-  display: block;
-  width: 100%;
-  padding: 6px 12px;
-  border: none;
-  background: transparent;
-  color: var(--color-text-secondary);
-  font-family: inherit;
-  font-size: 12px;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    background 0.1s ease,
-    color 0.1s ease;
-}
-
-.modelMenuItem:hover {
-  background: var(--color-overlay-light);
-  color: var(--color-text-primary);
-}
-
-.modelMenuItemActive {
-  color: var(--color-text-primary);
-  font-weight: 500;
-}
-
-.modelMenuGroup {
-  padding: 4px 0;
-}
-
-.modelMenuGroup + .modelMenuGroup {
-  border-top: 1px solid var(--color-border);
-}
-
-.modelMenuGroupLabel {
-  padding: 4px 12px 6px;
-  color: var(--color-text-muted);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.modelMenuShowMore {
-  display: block;
-  width: 100%;
-  padding: 8px 12px 6px;
-  border: none;
-  background: transparent;
-  color: var(--color-text-primary);
-  font-family: inherit;
-  font-size: 11px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.modelMenuShowMore:hover {
-  background: var(--color-overlay-light);
-}
-
-.sendButton {
-  position: absolute;
-  /* Sit just inside the textarea's right edge, leaving the native scrollbar
-     (when present) visible on the far right. */
-  right: 14px;
-  bottom: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 0;
-  border: none;
-  background: transparent;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  transition: color 0.15s ease;
-  z-index: 1;
-}
-
-.sendButton:hover:not(:disabled) {
-  color: var(--color-text-primary);
-}
-
-.sendButton:disabled {
-  opacity: 0.25;
-  cursor: not-allowed;
-}
-
-.stopButton {
-  color: var(--color-text-primary) !important;
-  opacity: 1 !important;
-}
-
-.stopIcon {
-  display: block;
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  background: var(--color-text-muted);
 }
 
 /* ── Slash command chips ─────────────────────────────────────── */
@@ -794,153 +463,19 @@
   white-space: nowrap;
 }
 
+/* Hide chat-only info-bar chrome on narrow viewports. The shell
+ * stylesheet handles responsive sizing for everything it owns
+ * (model picker, textarea, send/attach buttons); we only need
+ * to opt these chat-specific affordances out so the mobile bar
+ * shows just the model picker. */
 @media (max-width: 640px) {
-  .inputWrapper {
-    right: 0;
-    padding: 0 8px calc(8px + env(safe-area-inset-bottom));
-  }
-
-  .inputContainer {
-    border-color: color-mix(in srgb, var(--color-border) 54%, transparent);
-    border-radius: 20px;
-    background: var(--color-chat-mobile-input-bg);
-    padding: 5px 8px 8px 5px;
-  }
-
-  .mobileModelBar {
+  .environmentWrap,
+  .orbitWrap,
+  .commandsTrigger,
+  .projectMenuWrap,
+  .infoDivider,
+  .contextUsageWrap,
+  .newSessionButton {
     display: none;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 9px 10px 0;
-  }
-
-  .mobileModelLabel {
-    color: var(--color-text-muted);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .mobileModelMenuWrap {
-    position: relative;
-    min-width: 0;
-  }
-
-  .mobileModelButton {
-    max-width: min(58vw, 260px);
-    min-height: 30px;
-    padding: 0 10px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--color-bg) 66%, transparent);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-border) 52%, transparent);
-    color: var(--color-text-primary);
-    font-size: 12px;
-    font-weight: 700;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .mobileModelMenuWrap .modelMenu {
-    right: 0;
-    bottom: calc(100% + 8px);
-    min-width: min(280px, calc(100vw - 44px));
-    max-height: min(46vh, 340px);
-    border-radius: 16px;
-    padding: 6px;
-  }
-
-  .mobileModelMenuWrap .modelMenuItem,
-  .mobileModelMenuWrap .modelMenuShowMore {
-    border-radius: 12px;
-    padding: 10px 12px;
-    font-size: 13px;
-  }
-
-  .inputRow {
-    min-height: 44px;
-  }
-
-  .attachButton,
-  .sendButton {
-    width: 44px;
-    height: 44px;
-    border-radius: 999px;
-    bottom: 0;
-  }
-
-  .attachButton {
-    left: 0;
-    color: var(--color-text-secondary);
-  }
-
-  .sendButton {
-    right: 0;
-    background: var(--color-chat-mobile-send-bg);
-    color: var(--color-success);
-  }
-
-  .textarea {
-    min-height: 44px;
-    max-height: 250px;
-    padding: 10px 48px;
-    line-height: 1.38;
-  }
-
-  .inputInfoBar {
-    position: relative;
-    z-index: 3;
-    display: flex;
-    min-height: 32px;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 4px 0;
-    color: var(--color-text-secondary);
-    font-size: 12px;
-    pointer-events: auto;
-  }
-
-  .inputInfoBar .orbitWrap,
-  .inputInfoBar .commandsTrigger,
-  .inputInfoBar .projectMenuWrap,
-  .inputInfoBar .infoDivider,
-  .inputInfoBar .contextUsageWrap,
-  .inputInfoBar .newSessionButton {
-    display: none;
-  }
-
-  .inputInfoBar .modelMenuWrap {
-    margin-left: auto;
-  }
-
-  .inputInfoBar .modelButton {
-    min-height: 36px;
-    min-width: 104px;
-    max-width: min(58vw, 240px);
-    justify-content: flex-end;
-    padding: 0 0 0 12px;
-    color: var(--color-text-secondary);
-    font-size: 12px;
-    font-weight: 600;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    touch-action: manipulation;
-  }
-
-  .inputInfoBar .modelMenu {
-    right: 0;
-    bottom: calc(100% + 8px);
-    min-width: min(280px, calc(100vw - 32px));
-    max-height: min(46vh, 340px);
-    border-radius: 16px;
-    padding: 6px;
-  }
-
-  .inputInfoBar .modelMenuItem,
-  .inputInfoBar .modelMenuShowMore {
-    border-radius: 12px;
-    padding: 10px 12px;
-    font-size: 13px;
   }
 }

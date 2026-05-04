@@ -9,7 +9,6 @@ import {
   useMemo,
 } from "react";
 import {
-  ArrowUp,
   Plus,
   X,
   FileText,
@@ -34,6 +33,12 @@ import {
 import { isGenerationCommand } from "../../../../constants/commands";
 import { AgentEnvironment } from "../../../agents/components/AgentEnvironment";
 import { OrbitStatusIndicator } from "../../../../components/OrbitStatusIndicator";
+import {
+  InputBarShell,
+  inputBarShellStyles,
+  ModelPicker,
+  type InputBarShellHandle,
+} from "../../../../components/InputBarShell";
 import { SlashCommandMenu } from "./SlashCommandMenu";
 import { CommandChips } from "./CommandChips";
 import { useChatUI } from "../../../../stores/chat-ui-store";
@@ -200,24 +205,32 @@ export const DesktopChatInputBar = memo(
       [chatUI.setSelectedModel, streamKey, adapterType, agentId],
     );
     const [isDragOver, setIsDragOver] = useState(false);
-    const [modelMenuOpen, setModelMenuOpen] = useState(false);
     const [showAllModels, setShowAllModels] = useState(false);
     const [projectMenuOpen, setProjectMenuOpen] = useState(false);
     const [slashMenuOpen, setSlashMenuOpen] = useState(false);
     const [slashQuery, setSlashQuery] = useState("");
     const slashStartRef = useRef<number | null>(null);
     const projectMenuRef = useRef<HTMLDivElement>(null);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const shellRef = useRef<InputBarShellHandle>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     useImperativeHandle(ref, () => ({
-      focus: () => textareaRef.current?.focus(),
+      focus: () => shellRef.current?.focus(),
     }));
+
+    const textareaRefShim = useMemo(
+      () => ({
+        get current() {
+          return shellRef.current?.getTextarea() ?? null;
+        },
+      }),
+      [],
+    );
 
     const { canAddMore, addFiles, handleRemove } = useFileAttachments(
       attachments,
       onAttachmentsChange,
       onRemoveAttachment,
-      textareaRef,
+      textareaRefShim as React.RefObject<HTMLTextAreaElement | null>,
     );
 
     const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -261,46 +274,6 @@ export const DesktopChatInputBar = memo(
       },
       [addFiles],
     );
-
-    const autoResizeTextarea = useCallback(() => {
-      const el = textareaRef.current;
-      if (!el) return;
-      el.style.height = "auto";
-      // Cap the inline height to match the CSS max-height so the textarea's
-      // own scrollbar engages for long messages (and native caret-follow on
-      // Arrow keys keeps working).
-      const cap = Math.min(window.innerHeight * 0.7, 800);
-      el.style.height = Math.min(el.scrollHeight, cap) + "px";
-    }, []);
-
-    useEffect(() => {
-      autoResizeTextarea();
-    }, [input, autoResizeTextarea]);
-
-    useEffect(() => {
-      const onResize = () => autoResizeTextarea();
-      window.addEventListener("resize", onResize);
-      return () => window.removeEventListener("resize", onResize);
-    }, [autoResizeTextarea]);
-
-    useEffect(() => {
-      if (!modelMenuOpen) return;
-      const onClickOutside = (e: MouseEvent) => {
-        const target = e.target;
-        if (target instanceof Element && target.closest("[data-model-menu-root='true']")) {
-          return;
-        }
-        setModelMenuOpen(false);
-      };
-      document.addEventListener("mousedown", onClickOutside);
-      return () => document.removeEventListener("mousedown", onClickOutside);
-    }, [modelMenuOpen]);
-
-    useEffect(() => {
-      if (!modelMenuOpen) {
-        setShowAllModels(false);
-      }
-    }, [modelMenuOpen]);
 
     useEffect(() => {
       if (!projectMenuOpen) return;
@@ -406,7 +379,7 @@ export const DesktopChatInputBar = memo(
         setSlashMenuOpen(false);
         setSlashQuery("");
         slashStartRef.current = null;
-        textareaRef.current?.focus();
+        shellRef.current?.focus();
       },
       [selectedCommands, onCommandsChange, input, onInputChange, onModelChange],
     );
@@ -421,16 +394,10 @@ export const DesktopChatInputBar = memo(
       [selectedCommands, onCommandsChange, onModelChange],
     );
 
-    const handleModelButtonClick = useCallback(() => {
-      if (modelsForMode.length <= 1) return;
-      textareaRef.current?.blur();
-      setModelMenuOpen((isOpen) => !isOpen);
-    }, [modelsForMode.length]);
-
     const handleInputChange = useCallback(
       (value: string) => {
         onInputChange(value);
-        const el = textareaRef.current;
+        const el = shellRef.current?.getTextarea();
         if (!el) return;
         const cursor = el.selectionStart;
         const textBefore = value.slice(0, cursor);
@@ -448,24 +415,29 @@ export const DesktopChatInputBar = memo(
       [onInputChange, slashMenuOpen],
     );
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (
-        slashMenuOpen &&
-        ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(e.key)
-      ) {
-        return;
-      }
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        track("chat_message_sent", { model: selectedModel });
-        onSend(
-          input,
-          undefined,
-          undefined,
-          generationMode !== "chat" ? generationMode : undefined,
-        );
-      }
-    };
+    const handleTextareaKeyDown = useCallback(
+      (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (
+          slashMenuOpen &&
+          ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(e.key)
+        ) {
+          // The slash menu owns these keys while open; preventDefault tells
+          // the shell not to treat Enter as submit.
+          e.preventDefault();
+        }
+      },
+      [slashMenuOpen],
+    );
+
+    const handleSubmit = useCallback(() => {
+      track("chat_message_sent", { model: selectedModel });
+      onSend(
+        input,
+        undefined,
+        undefined,
+        generationMode !== "chat" ? generationMode : undefined,
+      );
+    }, [input, generationMode, onSend, selectedModel]);
 
     const providerLabel = (provider: string): string => {
       switch (provider) {
@@ -478,29 +450,25 @@ export const DesktopChatInputBar = memo(
       }
     };
 
-    const renderModelMenu = () => {
-      if (!modelMenuOpen || modelsForMode.length <= 1) {
-        return null;
-      }
-
-      return (
-        <div
-          className={styles.modelMenu}
-          data-agent-surface="model-picker"
-          data-agent-proof="chat-model-picker-visible"
-        >
-          {shouldUseCondensedAuraMenu && !showAllModels ? (
-            <>
+    const renderModelMenuItems = useCallback(
+      (close: () => void) => {
+        if (shouldUseCondensedAuraMenu && !showAllModels) {
+          return (
+            <div
+              className={inputBarShellStyles.modelMenu}
+              data-agent-surface="model-picker"
+              data-agent-proof="chat-model-picker-visible"
+            >
               {featuredModels.map((m) => (
                 <button
                   key={m.id}
                   type="button"
-                  className={`${styles.modelMenuItem} ${m.id === selectedModel ? styles.modelMenuItemActive : ""}`}
+                  className={`${inputBarShellStyles.modelMenuItem} ${m.id === selectedModel ? inputBarShellStyles.modelMenuItemActive : ""}`}
                   data-agent-model-id={m.id}
                   data-agent-model-label={m.label}
                   onClick={() => {
                     onModelChange(m.id);
-                    setModelMenuOpen(false);
+                    close();
                   }}
                 >
                   {m.label}
@@ -509,31 +477,38 @@ export const DesktopChatInputBar = memo(
               {hiddenModels.length > 0 ? (
                 <button
                   type="button"
-                  className={styles.modelMenuShowMore}
+                  className={inputBarShellStyles.modelMenuShowMore}
                   onClick={() => setShowAllModels(true)}
                 >
                   Show all models
                 </button>
               ) : null}
-            </>
-          ) : shouldUseCondensedAuraMenu ? (
-            <>
+            </div>
+          );
+        }
+        if (shouldUseCondensedAuraMenu) {
+          return (
+            <div
+              className={inputBarShellStyles.modelMenu}
+              data-agent-surface="model-picker"
+              data-agent-proof="chat-model-picker-visible"
+            >
               {Array.from(groupedExpandedModels.entries()).map(
                 ([provider, providerModels]) => (
-                  <div key={provider} className={styles.modelMenuGroup}>
-                    <div className={styles.modelMenuGroupLabel}>
+                  <div key={provider} className={inputBarShellStyles.modelMenuGroup}>
+                    <div className={inputBarShellStyles.modelMenuGroupLabel}>
                       {providerLabel(provider)}
                     </div>
                     {providerModels.map((m) => (
                       <button
                         key={m.id}
                         type="button"
-                        className={`${styles.modelMenuItem} ${m.id === selectedModel ? styles.modelMenuItemActive : ""}`}
+                        className={`${inputBarShellStyles.modelMenuItem} ${m.id === selectedModel ? inputBarShellStyles.modelMenuItemActive : ""}`}
                         data-agent-model-id={m.id}
                         data-agent-model-label={m.label}
                         onClick={() => {
                           onModelChange(m.id);
-                          setModelMenuOpen(false);
+                          close();
                         }}
                       >
                         {m.label}
@@ -542,304 +517,288 @@ export const DesktopChatInputBar = memo(
                   </div>
                 ),
               )}
-            </>
-          ) : (
-            sortedModelsForMode.map((m) => (
+            </div>
+          );
+        }
+        return (
+          <div
+            className={inputBarShellStyles.modelMenu}
+            data-agent-surface="model-picker"
+            data-agent-proof="chat-model-picker-visible"
+          >
+            {sortedModelsForMode.map((m) => (
               <button
                 key={m.id}
                 type="button"
-                className={`${styles.modelMenuItem} ${m.id === selectedModel ? styles.modelMenuItemActive : ""}`}
+                className={`${inputBarShellStyles.modelMenuItem} ${m.id === selectedModel ? inputBarShellStyles.modelMenuItemActive : ""}`}
                 data-agent-model-id={m.id}
                 data-agent-model-label={m.label}
                 onClick={() => {
                   onModelChange(m.id);
-                  setModelMenuOpen(false);
+                  close();
                 }}
               >
                 {m.label}
               </button>
-            ))
-          )}
-        </div>
-      );
-    };
+            ))}
+          </div>
+        );
+      },
+      [
+        shouldUseCondensedAuraMenu,
+        showAllModels,
+        featuredModels,
+        hiddenModels,
+        selectedModel,
+        onModelChange,
+        groupedExpandedModels,
+        sortedModelsForMode,
+      ],
+    );
 
-    return (
-      <div
-        className={`${styles.inputWrapper}${isVisible ? "" : ` ${styles.inputWrapperHidden}`}${isCentered ? ` ${styles.inputWrapperCentered}` : ""}`}
-        aria-hidden={isVisible ? undefined : true}
-        data-visible={isVisible ? "true" : "false"}
-        data-centered={isCentered ? "true" : "false"}
-        data-agent-surface="chat-input-bar"
-      >
-        <div
-          className={`${styles.inputContainer} ${isDragOver ? styles.dropZoneActive : ""}${isCentered ? ` ${styles.inputContainerPulse}` : ""}`}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-        >
-          {slashMenuOpen && (
-            <SlashCommandMenu
-              query={slashQuery}
-              excludeIds={excludeIds}
-              onSelect={handleCommandSelect}
-              onClose={() => {
-                setSlashMenuOpen(false);
-                setSlashQuery("");
-                slashStartRef.current = null;
-              }}
-            />
-          )}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="*/*"
-            multiple
-            className={styles.fileInputHidden}
-            onChange={(e) => {
-              addFiles(e.target.files);
-              e.target.value = "";
+    const isModelPickerInteractive = modelsForMode.length > 1;
+    const handleModelPickerOpen = useCallback(() => {
+      shellRef.current?.blur();
+      setShowAllModels(false);
+    }, []);
+
+    const containerTop = (
+      <>
+        {slashMenuOpen && (
+          <SlashCommandMenu
+            query={slashQuery}
+            excludeIds={excludeIds}
+            onSelect={handleCommandSelect}
+            onClose={() => {
+              setSlashMenuOpen(false);
+              setSlashQuery("");
+              slashStartRef.current = null;
             }}
           />
-          <AttachmentPreviews
-            attachments={attachments}
-            onRemove={handleRemove}
-          />
-          <CommandChips
-            commands={selectedCommands}
-            onRemove={handleCommandRemove}
-          />
-          {isQueued ? (
-            <div
-              className={styles.queuedHint}
-              role="status"
-              aria-live="polite"
-              data-agent-surface="chat-input-queued-hint"
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="*/*"
+          multiple
+          className={inputBarShellStyles.fileInputHidden}
+          onChange={(e) => {
+            addFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
+        <AttachmentPreviews
+          attachments={attachments}
+          onRemove={handleRemove}
+        />
+        <CommandChips
+          commands={selectedCommands}
+          onRemove={handleCommandRemove}
+        />
+        {isQueued ? (
+          <div
+            className={styles.queuedHint}
+            role="status"
+            aria-live="polite"
+            data-agent-surface="chat-input-queued-hint"
+          >
+            <span className={styles.queuedHintDot} aria-hidden="true" />
+            <span className={styles.queuedHintLabel}>
+              {queuedHint ?? "Queued behind current turn\u2026"}
+            </span>
+          </div>
+        ) : null}
+        {modelsForMode.length > 0 ? (
+          <div className={inputBarShellStyles.mobileModelBar}>
+            <span className={inputBarShellStyles.mobileModelLabel}>Model</span>
+            <ModelPicker
+              selectedLabel={modelLabel(selectedModel ?? "", adapterType, defaultModel)}
+              isInteractive={isModelPickerInteractive}
+              renderMenu={renderModelMenuItems}
+              className={inputBarShellStyles.mobileModelMenuWrap}
+              buttonClassName={inputBarShellStyles.mobileModelButton}
+              showChevron={isModelPickerInteractive}
+            />
+          </div>
+        ) : null}
+      </>
+    );
+
+    const inputRowStart = (
+      <button
+        type="button"
+        className={inputBarShellStyles.attachButton}
+        onClick={() => fileInputRef.current?.click()}
+        disabled={!canAddMore}
+        aria-label="Attach file"
+      >
+        <Plus size={16} strokeWidth={1} />
+      </button>
+    );
+
+    const infoBarStart = (
+      <>
+        {machineType ? (
+          <>
+            <span className={styles.environmentWrap}>
+              <AgentEnvironment
+                machineType={machineType}
+                agentId={templateAgentId ?? agentId}
+              />
+            </span>
+            <span className={styles.infoDivider} aria-hidden="true">
+              ·
+            </span>
+          </>
+        ) : null}
+        <span className={styles.orbitWrap}>
+          <OrbitStatusIndicator project={selectedProject} />
+        </span>
+        {compact && generationMode === "chat" ? null : (
+          <>
+            <span className={styles.infoDivider} aria-hidden="true">
+              ·
+            </span>
+            <button
+              type="button"
+              className={styles.commandsTrigger}
+              onClick={() => {
+                if (generationMode !== "chat") return;
+                onInputChange(
+                  input.endsWith(" ") || input.length === 0
+                    ? input + "/"
+                    : input + " /",
+                );
+                slashStartRef.current = (
+                  input.endsWith(" ") || input.length === 0
+                    ? input
+                    : input + " "
+                ).length;
+                setSlashQuery("");
+                setSlashMenuOpen(true);
+                shellRef.current?.focus();
+              }}
             >
-              <span className={styles.queuedHintDot} aria-hidden="true" />
-              <span className={styles.queuedHintLabel}>
-                {queuedHint ?? "Queued behind current turn\u2026"}
-              </span>
-            </div>
-          ) : null}
-          {modelsForMode.length > 0 ? (
-            <div className={styles.mobileModelBar}>
-              <span className={styles.mobileModelLabel}>Model</span>
-              <div className={styles.mobileModelMenuWrap} data-model-menu-root="true">
+              {generationMode === "image"
+                ? "/image mode"
+                : generationMode === "3d"
+                  ? "/3d mode"
+                  : "/ for commands"}
+            </button>
+          </>
+        )}
+      </>
+    );
+
+    const infoBarEnd = (
+      <>
+        <div className={styles.projectMenuWrap} ref={projectMenuRef}>
+          <button
+            type="button"
+            className={styles.projectButton}
+            onClick={
+              projects.length > 0 && onProjectChange
+                ? () => setProjectMenuOpen((v) => !v)
+                : undefined
+            }
+            style={
+              projects.length > 0 && onProjectChange
+                ? undefined
+                : { cursor: "default" }
+            }
+          >
+            <FolderOpen size={10} />
+            {selectedProjectName ?? "General"}
+            {projects.length > 0 && onProjectChange && (
+              <ChevronDown size={10} />
+            )}
+          </button>
+          {projectMenuOpen && projects.length > 0 && onProjectChange && (
+            <div className={styles.projectMenu}>
+              {projects.map((p) => (
                 <button
+                  key={p.project_id}
                   type="button"
-                  className={`${styles.modelButton} ${styles.mobileModelButton}`}
-                  onClick={
-                    modelsForMode.length > 1
-                      ? () => setModelMenuOpen((v) => !v)
-                      : undefined
-                  }
-                  style={
-                    modelsForMode.length > 1 ? undefined : { cursor: "default" }
-                  }
+                  className={`${styles.projectMenuItem} ${p.project_id === selectedProjectId ? styles.projectMenuItemActive : ""}`}
+                  onClick={() => {
+                    onProjectChange(p.project_id);
+                    setProjectMenuOpen(false);
+                  }}
                 >
-                  {modelLabel(selectedModel ?? "", adapterType, defaultModel)}
-                  {modelsForMode.length > 1 && <ChevronDown size={12} />}
+                  {p.name}
                 </button>
-                {renderModelMenu()}
-              </div>
-            </div>
-          ) : null}
-          <div className={styles.inputRow}>
-            <button
-              type="button"
-              className={styles.attachButton}
-              onClick={() => fileInputRef.current?.click()}
-              disabled={!canAddMore}
-              aria-label="Attach file"
-            >
-              <Plus size={16} strokeWidth={1} />
-            </button>
-            <textarea
-              ref={textareaRef}
-              className={styles.textarea}
-              value={input}
-              onChange={(e) => handleInputChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onPaste={handlePaste}
-              placeholder="What do you want to create?"
-              rows={1}
-              data-agent-field="chat-input"
-            />
-            {isStreaming ? (
-              <button
-                type="button"
-                className={`${styles.sendButton} ${styles.stopButton}`}
-                onClick={onStop}
-                aria-label={
-                  isExternallyBusy && !isChatStreaming
-                    ? "Stop automation"
-                    : "Stop"
-                }
-                title={
-                  isExternallyBusy && !isChatStreaming
-                    ? externalBusyMessage ?? "Stop the running automation"
-                    : undefined
-                }
-              >
-                <span className={styles.stopIcon} />
-              </button>
-            ) : (
-              <button
-                type="button"
-                className={styles.sendButton}
-                onClick={() => {
-                  track("chat_message_sent", { model: selectedModel });
-                  onSend(
-                    input,
-                    undefined,
-                    undefined,
-                    generationMode !== "chat" ? generationMode : undefined,
-                  );
-                }}
-                disabled={
-                  !input.trim() &&
-                  attachments.length === 0 &&
-                  selectedCommands.length === 0
-                }
-                aria-label="Send"
-              >
-                <ArrowUp size={16} />
-              </button>
-            )}
-          </div>
-        </div>
-        <div className={styles.inputInfoBar} data-agent-context-anchor="agent-chat-input-context">
-          {machineType ? (
-            <>
-              <span className={styles.environmentWrap}>
-                <AgentEnvironment
-                  machineType={machineType}
-                  agentId={templateAgentId ?? agentId}
-                />
-              </span>
-              <span className={styles.infoDivider} aria-hidden="true">
-                ·
-              </span>
-            </>
-          ) : null}
-          <span className={styles.orbitWrap}>
-            <OrbitStatusIndicator project={selectedProject} />
-          </span>
-          {compact && generationMode === "chat" ? null : (
-            <>
-              <span className={styles.infoDivider} aria-hidden="true">
-                ·
-              </span>
-              <button
-                type="button"
-                className={styles.commandsTrigger}
-                onClick={() => {
-                  if (generationMode !== "chat") return;
-                  onInputChange(
-                    input.endsWith(" ") || input.length === 0
-                      ? input + "/"
-                      : input + " /",
-                  );
-                  slashStartRef.current = (
-                    input.endsWith(" ") || input.length === 0
-                      ? input
-                      : input + " "
-                  ).length;
-                  setSlashQuery("");
-                  setSlashMenuOpen(true);
-                  textareaRef.current?.focus();
-                }}
-              >
-                {generationMode === "image"
-                  ? "/image mode"
-                  : generationMode === "3d"
-                    ? "/3d mode"
-                    : "/ for commands"}
-              </button>
-            </>
-          )}
-          <div className={styles.projectMenuWrap} ref={projectMenuRef}>
-            <button
-              type="button"
-              className={styles.projectButton}
-              onClick={
-                projects.length > 0 && onProjectChange
-                  ? () => setProjectMenuOpen((v) => !v)
-                  : undefined
-              }
-              style={
-                projects.length > 0 && onProjectChange
-                  ? undefined
-                  : { cursor: "default" }
-              }
-            >
-              <FolderOpen size={10} />
-              {selectedProjectName ?? "General"}
-              {projects.length > 0 && onProjectChange && (
-                <ChevronDown size={10} />
-              )}
-            </button>
-            {projectMenuOpen && projects.length > 0 && onProjectChange && (
-              <div className={styles.projectMenu}>
-                {projects.map((p) => (
-                  <button
-                    key={p.project_id}
-                    type="button"
-                    className={`${styles.projectMenuItem} ${p.project_id === selectedProjectId ? styles.projectMenuItemActive : ""}`}
-                    onClick={() => {
-                      onProjectChange(p.project_id);
-                      setProjectMenuOpen(false);
-                    }}
-                  >
-                    {p.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          {contextUsage != null && contextUsage.utilization > 0 ? (
-            <ContextUsageIndicator
-              utilization={contextUsage.utilization}
-              estimatedTokens={contextUsage.estimatedTokens}
-              onNewSession={onNewSession}
-            />
-          ) : onNewSession ? (
-            <button
-              type="button"
-              className={styles.newSessionButton}
-              onClick={onNewSession}
-              title="Start a new session and reset context."
-              aria-label="Start new session"
-            >
-              <RotateCcw size={10} />
-            </button>
-          ) : null}
-          {modelsForMode.length > 0 && (
-            <div className={styles.modelMenuWrap} data-model-menu-root="true">
-              <button
-                type="button"
-                className={styles.modelButton}
-                data-agent-action="open-model-picker"
-                aria-haspopup={modelsForMode.length > 1 ? "menu" : undefined}
-                aria-expanded={modelsForMode.length > 1 ? modelMenuOpen : undefined}
-                onClick={
-                  modelsForMode.length > 1
-                    ? handleModelButtonClick
-                    : undefined
-                }
-                style={
-                  modelsForMode.length > 1 ? undefined : { cursor: "default" }
-                }
-              >
-                {modelLabel(selectedModel ?? "", adapterType, defaultModel)}
-                {modelsForMode.length > 1 && <ChevronDown size={10} />}
-              </button>
-              {renderModelMenu()}
+              ))}
             </div>
           )}
         </div>
-      </div>
+        {contextUsage != null && contextUsage.utilization > 0 ? (
+          <ContextUsageIndicator
+            utilization={contextUsage.utilization}
+            estimatedTokens={contextUsage.estimatedTokens}
+            onNewSession={onNewSession}
+          />
+        ) : onNewSession ? (
+          <button
+            type="button"
+            className={styles.newSessionButton}
+            onClick={onNewSession}
+            title="Start a new session and reset context."
+            aria-label="Start new session"
+          >
+            <RotateCcw size={10} />
+          </button>
+        ) : null}
+        {modelsForMode.length > 0 && (
+          <ModelPicker
+            selectedLabel={modelLabel(selectedModel ?? "", adapterType, defaultModel)}
+            isInteractive={isModelPickerInteractive}
+            renderMenu={renderModelMenuItems}
+            onOpen={handleModelPickerOpen}
+            triggerProps={{ "data-agent-action": "open-model-picker" }}
+          />
+        )}
+      </>
+    );
+
+    return (
+      <InputBarShell
+        ref={shellRef}
+        value={input}
+        onValueChange={handleInputChange}
+        onSubmit={handleSubmit}
+        onStop={onStop}
+        isStreaming={isStreaming}
+        isSendEnabled={
+          input.trim().length > 0 ||
+          attachments.length > 0 ||
+          selectedCommands.length > 0
+        }
+        isVisible={isVisible}
+        isCentered={isCentered}
+        isPulsing={isCentered}
+        isDropZone={isDragOver}
+        placeholder="What do you want to create?"
+        textareaProps={{ "data-agent-field": "chat-input" }}
+        onTextareaKeyDown={handleTextareaKeyDown}
+        onTextareaPaste={handlePaste}
+        onContainerDragOver={handleDragOver}
+        onContainerDragLeave={handleDragLeave}
+        onContainerDrop={handleDrop}
+        containerTop={containerTop}
+        inputRowStart={inputRowStart}
+        infoBarStart={infoBarStart}
+        infoBarEnd={infoBarEnd}
+        sendAriaLabel="Send"
+        stopAriaLabel={
+          isExternallyBusy && !isChatStreaming ? "Stop automation" : "Stop"
+        }
+        stopTitle={
+          isExternallyBusy && !isChatStreaming
+            ? externalBusyMessage ?? "Stop the running automation"
+            : undefined
+        }
+        rootProps={{ "data-agent-surface": "chat-input-bar" }}
+      />
     );
   }),
 );
