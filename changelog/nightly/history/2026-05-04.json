@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-04T13:31:58.756Z",
+  "generatedAt": "2026-05-04T19:32:40.655Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.437.1",
+  "version": "0.1.0-nightly.438.1",
   "date": "2026-05-04",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.437.1",
-  "lastIncludedSha": "ae418f34acd254dc90ad8db71103ed9ae7cfc8a2",
-  "previousProcessedSha": "2f9dbb19fb74b1c33c7b71167974fa407a39f8c9",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.438.1",
+  "lastIncludedSha": "d9871255dad6ca07cfb297bf2088fee12aa83760",
+  "previousProcessedSha": "ae418f34acd254dc90ad8db71103ed9ae7cfc8a2",
   "commitShas": [
     "bd804201205eb0d6fa131e14e53f6e7bf1cc6066",
     "988eee696ffa6cf9d70a1730c43aebcc09989807",
@@ -23,10 +23,11 @@
     "0d96fae04302d0af22cd2ad908dfa840386d0838",
     "2f9dbb19fb74b1c33c7b71167974fa407a39f8c9",
     "8d0ab5a615456a346710620c5e4cfd10c64c8cc2",
-    "ae418f34acd254dc90ad8db71103ed9ae7cfc8a2"
+    "ae418f34acd254dc90ad8db71103ed9ae7cfc8a2",
+    "d9871255dad6ca07cfb297bf2088fee12aa83760"
   ],
-  "rawCommitCount": 12,
-  "filteredCommitCount": 12,
+  "rawCommitCount": 13,
+  "filteredCommitCount": 13,
   "rawCommits": [
     {
       "sha": "bd804201205eb0d6fa131e14e53f6e7bf1cc6066",
@@ -499,9 +500,49 @@
       "areas": [
         "Other"
       ]
+    },
+    {
+      "sha": "d9871255dad6ca07cfb297bf2088fee12aa83760",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-04T20:19:02+01:00",
+      "subject": "fix(desktop): default REQUIRE_ZERO_PRO to false in desktop build",
+      "body": "",
+      "parents": [
+        "ae418f34acd254dc90ad8db71103ed9ae7cfc8a2"
+      ],
+      "files": [
+        "apps/aura-os-desktop/build.rs",
+        "apps/aura-os-desktop/src/init/env.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 2,
+        "deletions": 2
+      },
+      "committedAtMs": 1777922342000,
+      "cleanSubject": "default REQUIRE_ZERO_PRO to false in desktop build",
+      "keywords": [
+        "default",
+        "require",
+        "zero",
+        "false",
+        "desktop",
+        "build"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/build.rs",
+        "apps/aura-os-desktop/src"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop"
+      ]
     }
   ],
-  "batchCount": 3,
+  "batchCount": 4,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -510,36 +551,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11696044
+          "sizeBytes": 11695980
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.437.1",
+      "version": "0.1.0-nightly.438.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.437.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.438.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 35456548
+          "sizeBytes": 35451092
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.437.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.438.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.437.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.438.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 102685176
+          "sizeBytes": 102697464
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.437.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.438.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -549,29 +590,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.437.1",
+      "version": "0.1.0-nightly.438.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.437.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.438.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 32014761
+          "sizeBytes": 32013777
         },
         {
-          "name": "Aura_0.1.0-nightly.437.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.438.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.437.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.438.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 31818927
+          "sizeBytes": 31816651
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.437.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.438.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -581,29 +622,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.437.1",
+      "version": "0.1.0-nightly.438.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.437.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.438.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33570812
+          "sizeBytes": 33574346
         },
         {
-          "name": "Aura_0.1.0-nightly.437.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.438.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.437.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.438.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33423185
+          "sizeBytes": 33423325
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.437.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.438.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -613,17 +654,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.437.1",
+      "version": "0.1.0-nightly.438.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.437.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.438.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24174672
+          "sizeBytes": 24167838
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.437.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.438.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -632,26 +673,26 @@
     }
   ],
   "rendered": {
-    "title": "First-run onboarding lands across the desktop app",
-    "intro": "Today's nightly is almost entirely a new-user onboarding push: a guided welcome flow, a persistent progress checklist, friendlier empty states, and a chat that actively invites the first message. A small server-side default for self-hosted deployments rounds out the day.",
+    "title": "First-run onboarding lands across the app",
+    "intro": "Today's nightly is dominated by a brand-new first-run experience: a welcome flow, a persistent checklist, smarter empty states, and a friendlier empty chat. A pair of small server and desktop fixes also relax the REQUIRE_ZERO_PRO gate so default builds boot cleanly.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "4:33 AM",
         "started_at": "2026-05-04T11:33:23.000Z",
         "ended_at": "2026-05-04T12:40:49.000Z",
-        "title": "Guided onboarding: welcome flow, checklist, and emptier-feeling screens get a fix",
-        "summary": "A full first-run experience lands, from the initial welcome modal through a persistent task checklist to friendlier empty states across chat, agents, and tasks.",
+        "title": "Guided first-run: welcome modal, checklist, and empty-state nudges",
+        "summary": "A full onboarding system shipped end-to-end, from a two-step welcome modal to a floating checklist, auto-detected task completion, a taskbar Help button, and softer empty states across chat, agents, and tasks.",
         "items": [
           {
-            "text": "Introduced a per-user onboarding store (Zustand + localStorage) that tracks the welcome flow and a 5-task checklist — send a message, create a project, create an agent, generate an image with AURA 3D, and explore plans & credits.",
+            "text": "Introduced a per-user onboarding store (Zustand + localStorage) with five guided tasks — send a message, create a project, create an agent, generate a 3D image, and explore billing — driving visibility logic for the welcome flow and checklist.",
             "commit_shas": [
               "bd804201205eb0d6fa131e14e53f6e7bf1cc6066"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a two-step welcome modal shown on first login, featuring the AURA logo, an intro message, and a preview of the onboarding checklist, with a skip option and analytics tracking.",
+            "text": "Added a two-step welcome modal on first login (AURA logo and intro, then a checklist preview) that is skippable, analytics-tracked, and locked from accidental overlay dismissal, with a small alignment fix for task-row icons.",
             "commit_shas": [
               "988eee696ffa6cf9d70a1730c43aebcc09989807",
               "ec62961b1c1549b0c63641125906a06ae704355f"
@@ -659,7 +700,7 @@
             "confidence": "high"
           },
           {
-            "text": "Shipped a floating, collapsible checklist widget pinned to the bottom-right with a progress bar; each row deep-links into the matching feature, and a new Help button in the bottom taskbar toggles or reopens it.",
+            "text": "Shipped a portal-rendered checklist widget anchored above the bottom taskbar with a progress bar, collapsible/dismissable header, and rows that route directly into the relevant feature; a Help button in the taskbar toggles or reopens it, and a watcher hook auto-completes tasks by subscribing to message, project, agent, 3D, and billing stores.",
             "commit_shas": [
               "708e75e6a2f331a85237b0a1add008371b631519",
               "6f91ff35d4277c128be32eb41b64fb374637c94c",
@@ -668,15 +709,9 @@
             "confidence": "high"
           },
           {
-            "text": "Empty chat threads now display four clickable prompt suggestion chips and a subtle pulsing glow on the input bar to invite a first message, both disappearing as soon as the user sends one.",
+            "text": "Reduced blank-canvas friction in chat with four clickable prompt suggestion chips and a subtle pulsing glow on the input bar when a thread is empty, plus more descriptive empty-state copy on the agents index, agent list, and task list.",
             "commit_shas": [
-              "11fc11649e7c4db2ef86897e6cb7194721a2c61d"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Rewrote the agent and task empty states with more descriptive guidance — e.g. \"Create your first AI agent to start chatting, automating tasks, and more\" instead of the old \"Add an agent to get started.\"",
-            "commit_shas": [
+              "11fc11649e7c4db2ef86897e6cb7194721a2c61d",
               "779d73718c8032ab53b36f567e26980b00f90a54"
             ],
             "confidence": "high"
@@ -688,18 +723,18 @@
         "time_label": "5:41 AM",
         "started_at": "2026-05-04T12:41:12.000Z",
         "ended_at": "2026-05-04T13:14:31.000Z",
-        "title": "Onboarding progress detection stops counting pre-existing agents and projects",
-        "summary": "Follow-up fixes to the new onboarding watcher so the checklist only credits genuinely new user actions, not the default agent or project that ships with a fresh account.",
+        "title": "Onboarding checklist stops firing on pre-existing agents and projects",
+        "summary": "Follow-up work wired the checklist's Create Agent action to the agent editor modal and corrected task auto-detection so default or pre-existing items no longer count as completion.",
         "items": [
           {
-            "text": "Wired the checklist's \"Create an agent\" row to open the agent editor modal directly via a new createAgentModalOpen flag on the agent store.",
+            "text": "The checklist's \"Create an agent\" row now opens the agent editor modal directly via a new createAgentModalOpen flag on the agent store, instead of just navigating to the list.",
             "commit_shas": [
               "0d96fae04302d0af22cd2ad908dfa840386d0838"
             ],
             "confidence": "high"
           },
           {
-            "text": "Reworked the task watcher to only complete create_agent and create_project when counts increase after mount, capturing a baseline so users with a default agent or project no longer see those steps auto-checked on first launch.",
+            "text": "Fixed false-positive completions where users with a default project or agent were marked done on load: detection now requires the count to grow beyond a baseline captured on first subscription, rather than simply being non-zero.",
             "commit_shas": [
               "2f9dbb19fb74b1c33c7b71167974fa407a39f8c9",
               "8d0ab5a615456a346710620c5e4cfd10c64c8cc2"
@@ -713,13 +748,30 @@
         "time_label": "6:14 AM",
         "started_at": "2026-05-04T13:14:52.000Z",
         "ended_at": "2026-05-04T13:14:52.000Z",
-        "title": "Self-hosted server defaults require_zero_pro to off",
-        "summary": "A small but meaningful server-side default change for operators running Aura without the corresponding env var configured.",
+        "title": "Server defaults REQUIRE_ZERO_PRO to off when unset",
+        "summary": "A small but meaningful server-side default change so the Zero Pro requirement no longer trips when the env var is absent.",
         "items": [
           {
-            "text": "The Aura OS server now defaults require_zero_pro to false when the environment variable is unset, avoiding accidental gating on self-hosted deployments.",
+            "text": "In the aura-os-server app builder, require_zero_pro now falls back to false when the environment variable is unset, avoiding accidental gating in default deployments.",
             "commit_shas": [
               "ae418f34acd254dc90ad8db71103ed9ae7cfc8a2"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-4",
+        "time_label": "12:19 PM",
+        "started_at": "2026-05-04T19:19:02.000Z",
+        "ended_at": "2026-05-04T19:19:02.000Z",
+        "title": "Desktop build mirrors the new REQUIRE_ZERO_PRO default",
+        "summary": "The desktop build was brought in line with the server change so Mac, Windows, and Linux nightlies behave consistently out of the box.",
+        "items": [
+          {
+            "text": "Desktop's build.rs and runtime env init now default REQUIRE_ZERO_PRO to false, matching the server-side fix so the flag is opt-in across all desktop targets in this nightly.",
+            "commit_shas": [
+              "d9871255dad6ca07cfb297bf2088fee12aa83760"
             ],
             "confidence": "high"
           }
@@ -729,10 +781,9 @@
     "highlights": [
       "New welcome modal and 5-step onboarding checklist",
       "Empty chat now shows prompt suggestions and a pulsing input",
-      "Auto-detection of onboarding progress, refined to ignore pre-existing data",
       "Friendlier empty states for agents and tasks",
-      "Self-hosted server defaults require_zero_pro to false"
+      "REQUIRE_ZERO_PRO now defaults to off on server and desktop"
     ],
-    "raw_commit_count": 12
+    "raw_commit_count": 13
   }
 }

@@ -2,20 +2,19 @@
   {
     "date": "2026-05-04",
     "channel": "nightly",
-    "version": "0.1.0-nightly.437.1",
-    "title": "First-run onboarding lands across the desktop app",
-    "intro": "Today's nightly is almost entirely a new-user onboarding push: a guided welcome flow, a persistent progress checklist, friendlier empty states, and a chat that actively invites the first message. A small server-side default for self-hosted deployments rounds out the day.",
-    "entryCount": 3,
+    "version": "0.1.0-nightly.438.1",
+    "title": "First-run onboarding lands across the app",
+    "intro": "Today's nightly is dominated by a brand-new first-run experience: a welcome flow, a persistent checklist, smarter empty states, and a friendlier empty chat. A pair of small server and desktop fixes also relax the REQUIRE_ZERO_PRO gate so default builds boot cleanly.",
+    "entryCount": 4,
     "highlights": [
       "New welcome modal and 5-step onboarding checklist",
       "Empty chat now shows prompt suggestions and a pulsing input",
-      "Auto-detection of onboarding progress, refined to ignore pre-existing data",
       "Friendlier empty states for agents and tasks",
-      "Self-hosted server defaults require_zero_pro to false"
+      "REQUIRE_ZERO_PRO now defaults to off on server and desktop"
     ],
-    "rawCommitCount": 12,
-    "generatedAt": "2026-05-04T13:31:58.756Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.437.1",
+    "rawCommitCount": 13,
+    "generatedAt": "2026-05-04T19:32:40.655Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.438.1",
     "path": "history/2026-05-04.json"
   },
   {
