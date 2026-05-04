@@ -2,38 +2,49 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ModeSelector } from "./ModeSelector";
 
-function getSegments(container: HTMLElement): HTMLDivElement {
-  const segments = container.querySelector(
-    "[data-agent-surface='mode-selector'] > :last-child",
-  ) as HTMLDivElement | null;
-  if (!segments) throw new Error("segments wrapper not found");
-  return segments;
+function getIndicator(container: HTMLElement): HTMLSpanElement {
+  const indicator = container.querySelector(
+    "[data-agent-element='mode-indicator']",
+  ) as HTMLSpanElement | null;
+  if (!indicator) throw new Error("mode-indicator span not found");
+  return indicator;
 }
 
 describe("ModeSelector", () => {
-  it("sets the indicator index from the active mode's position", () => {
+  it("writes the indicator transform inline so the CSS transition fires on every change", () => {
     const { container, rerender } = render(
       <ModeSelector selectedMode="code" onChange={vi.fn()} />,
     );
-    const segments = getSegments(container);
-    expect(segments.style.getPropertyValue("--mode-idx")).toBe("0");
+    const indicator = getIndicator(container);
+    expect(indicator.style.transform).toBe(
+      "translateX(calc(0 * (100% + 2px)))",
+    );
 
     rerender(<ModeSelector selectedMode="plan" onChange={vi.fn()} />);
-    expect(segments.style.getPropertyValue("--mode-idx")).toBe("1");
+    expect(indicator.style.transform).toBe(
+      "translateX(calc(1 * (100% + 2px)))",
+    );
 
     rerender(<ModeSelector selectedMode="image" onChange={vi.fn()} />);
-    expect(segments.style.getPropertyValue("--mode-idx")).toBe("2");
+    expect(indicator.style.transform).toBe(
+      "translateX(calc(2 * (100% + 2px)))",
+    );
 
     rerender(<ModeSelector selectedMode="3d" onChange={vi.fn()} />);
-    expect(segments.style.getPropertyValue("--mode-idx")).toBe("3");
+    expect(indicator.style.transform).toBe(
+      "translateX(calc(3 * (100% + 2px)))",
+    );
   });
 
-  it("exposes the mode count alongside the index so CSS can size the track", () => {
+  it("exposes mode-count on the segments wrapper so CSS can size the track", () => {
     const { container } = render(
       <ModeSelector selectedMode="code" onChange={vi.fn()} />,
     );
-    const segments = getSegments(container);
-    expect(segments.style.getPropertyValue("--mode-count")).toBe("4");
+    const segments = container.querySelector(
+      "[data-agent-surface='mode-selector'] > :last-child",
+    ) as HTMLDivElement | null;
+    expect(segments).not.toBeNull();
+    expect(segments!.style.getPropertyValue("--mode-count")).toBe("4");
   });
 
   it("marks exactly the active mode as aria-checked", () => {

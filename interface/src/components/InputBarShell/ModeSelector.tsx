@@ -27,13 +27,15 @@ export interface ModeSelectorProps {
  * keyboard-navigable (Left/Right arrows) and announced as a radio
  * group to assistive tech.
  *
- * The active pill is positioned by CSS only: segments are laid out
- * as equal-width grid columns and a single indicator child is
- * translated by `--mode-idx`, which the React layer just reads off
- * the active mode's index. There is no measurement, no ref-driven
- * animation, and no JS animation — a single CSS transition owns the
- * motion, so it cannot be raced by React/effect timing or a global
- * `transition: none` guard from a sibling component.
+ * The active pill is positioned by writing the indicator's
+ * `transform` directly as an inline style. The segments wrapper
+ * is an equal-width CSS grid so each mode owns one column, and
+ * the pill is absolutely positioned over those columns, sized to
+ * a single column, and translated by `index * (100% + gap)`. CSS
+ * just declares the transition; we never go through a CSS
+ * variable inside `transform` because that does not always
+ * trigger a transition on every browser when the variable is the
+ * only thing that changed.
  */
 export const ModeSelector = memo(function ModeSelector({
   selectedMode,
@@ -73,9 +75,11 @@ export const ModeSelector = memo(function ModeSelector({
 
   const rootClass = [styles.root, className].filter(Boolean).join(" ");
   const segmentsStyle = {
-    "--mode-idx": activeIndex,
     "--mode-count": AGENT_MODE_ORDER.length,
   } as CSSProperties;
+  const indicatorStyle: CSSProperties = {
+    transform: `translateX(calc(${activeIndex} * (100% + 2px)))`,
+  };
 
   return (
     <div
@@ -88,7 +92,12 @@ export const ModeSelector = memo(function ModeSelector({
     >
       {hideLabel ? null : <span className={styles.label}>MODE</span>}
       <div className={styles.segments} style={segmentsStyle}>
-        <span aria-hidden className={styles.indicator} />
+        <span
+          aria-hidden
+          className={styles.indicator}
+          data-agent-element="mode-indicator"
+          style={indicatorStyle}
+        />
         {AGENT_MODE_ORDER.map((mode) => {
           const descriptor = AGENT_MODE_DESCRIPTORS[mode];
           const isActive = mode === selectedMode;
