@@ -13,6 +13,7 @@ import { ONBOARDING_TASKS } from "../onboarding-constants";
 import { ChecklistTaskRow } from "./ChecklistTaskRow";
 import { useProjectsList } from "../../../apps/projects/useProjectsList";
 import { useUIModalStore } from "../../../stores/ui-modal-store";
+import { useAgentStore } from "../../../apps/agents/stores/agent-store";
 import { track } from "../../../lib/analytics";
 import styles from "./OnboardingChecklist.module.css";
 
@@ -28,19 +29,23 @@ export function OnboardingChecklist() {
   const navigate = useNavigate();
   const { openNewProjectModal } = useProjectsList();
   const openOrgBilling = useUIModalStore((s) => s.openOrgBilling);
+  const openCreateAgentModal = useAgentStore((s) => s.openCreateAgentModal);
 
   const handleTaskClick = useCallback(
     (taskId: string, route: string | null) => {
       track("onboarding_task_clicked", { task_id: taskId });
       if (taskId === "create_project") {
         openNewProjectModal();
+      } else if (taskId === "create_agent") {
+        navigate("/agents");
+        openCreateAgentModal();
       } else if (taskId === "view_billing") {
         openOrgBilling();
       } else if (route) {
         navigate(route);
       }
     },
-    [navigate, openNewProjectModal, openOrgBilling],
+    [navigate, openNewProjectModal, openCreateAgentModal, openOrgBilling],
   );
 
   const handleDismiss = useCallback(() => {
