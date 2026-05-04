@@ -208,7 +208,15 @@ describe("ChatPanel", () => {
     expect(getInputBar()).toHaveAttribute("data-visible", "true");
   });
 
-  it("keeps cold-load history hidden until the initial anchor is ready", () => {
+  it("reveals cold-load history once it resolves and fades the loading overlay", () => {
+    // The proactive [historyResolved, messages.length] reveal effect
+    // schedules a double-rAF reveal as soon as history resolves with
+    // messages, instead of waiting for `ChatMessageList`'s one-shot
+    // `onInitialAnchorReady` callback. Under the synchronous rAF mock
+    // installed in `beforeEach`, the reveal completes inside the
+    // first rerender flush -- so `.messageContentHidden` is already
+    // gone by the time we assert. The loading overlay then fades out
+    // on its own timer.
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
 
     const { container, rerender } = render(
@@ -236,24 +244,6 @@ describe("ChatPanel", () => {
       />,
     );
 
-    expect(container.querySelector(".messageContentHidden")).not.toBeNull();
-    expect(container.querySelector(".initialRevealOverlay")).not.toBeNull();
-
-    autoSignalInitialAnchorReady = true;
-
-    rerender(
-      <ChatPanel
-        streamKey="stream-1"
-        onSend={vi.fn()}
-        onStop={vi.fn()}
-        agentName="Coca"
-        machineType="remote"
-        isLoading={false}
-        historyResolved
-        historyMessages={[...sampleHistoryMessages]}
-      />,
-    );
-
     expect(container.querySelector(".messageContentHidden")).toBeNull();
     expect(container.querySelector(".initialRevealOverlayFading")).not.toBeNull();
 
@@ -262,6 +252,64 @@ describe("ChatPanel", () => {
     });
 
     expect(container.querySelector(".initialRevealOverlay")).toBeNull();
+  });
+
+  it("reveals the transcript when carry-over messages land before historyResolved (CEO/MEOW black-panel regression)", () => {
+    // Regression: when ChatPanel mounts with `messages.length > 0` (a
+    // persisted message-store thread carried over from a prior visit)
+    // BEFORE `historyResolved` flips true, ChatMessageList's one-shot
+    // `onInitialAnchorReady` gate fires immediately and latches. The
+    // pre-fix code waited solely on that callback, so when history
+    // resolved the gate never re-fired and `.messageContentHidden`
+    // remained applied -- rendering the panel fully black even though
+    // sidebar previews showed the last message correctly. The proactive
+    // [historyResolved, messages.length] reveal effect closes that gap.
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+    // Deliberately DO NOT auto-signal: simulate the latched-child case
+    // where the gate already fired and consumed its one-shot.
+    autoSignalInitialAnchorReady = false;
+
+    const { container, rerender } = render(
+      <ChatPanel
+        streamKey="stream-ceo"
+        onSend={vi.fn()}
+        onStop={vi.fn()}
+        agentName="Coca"
+        machineType="remote"
+        isLoading={false}
+        historyResolved={false}
+        historyMessages={[...sampleHistoryMessages]}
+        scrollResetKey="ceo"
+      />,
+    );
+
+    // Carry-over messages present, but history not yet resolved: the
+    // cold-load gate is up but `.messageContentHidden` is not applied
+    // yet because `historyResolved=false`.
+    expect(container.querySelector(".messageContentHidden")).toBeNull();
+
+    // History resolves. Without the fix, `.messageContentHidden` would
+    // be applied and stay applied because the child callback latched
+    // earlier. With the fix, the proactive reveal effect schedules the
+    // double rAF and `isInitialThreadRevealReady` flips to true.
+    rerender(
+      <ChatPanel
+        streamKey="stream-ceo"
+        onSend={vi.fn()}
+        onStop={vi.fn()}
+        agentName="Coca"
+        machineType="remote"
+        isLoading={false}
+        historyResolved
+        historyMessages={[...sampleHistoryMessages]}
+        scrollResetKey="ceo"
+      />,
+    );
+
+    // requestAnimationFrame is mocked to fire synchronously in this
+    // test file's beforeEach, so the double-rAF reveal completes
+    // immediately and the hidden class is gone.
+    expect(container.querySelector(".messageContentHidden")).toBeNull();
   });
 
   it("does not re-hide the transcript when historyResolved flaps mid-chat after the initial reveal", () => {
@@ -376,7 +424,16 @@ describe("ChatPanel", () => {
       />,
     );
 
-    expect(container.querySelector(".messageContentHidden")).not.toBeNull();
+    // Cold-load was correctly re-armed during the chat switch (verified
+    // by the loading overlay appearing on the intermediate render). With
+    // the proactive [historyResolved, messages.length] reveal effect, the
+    // transcript reveals as soon as both conditions are true again --
+    // previously this assertion checked `.messageContentHidden` was
+    // present, but that was the latched-child bug surface, not desired
+    // UX. The mocked synchronous rAF flushes the double-rAF reveal
+    // immediately, so by the time we assert `.messageContentHidden` is
+    // gone.
+    expect(container.querySelector(".messageContentHidden")).toBeNull();
   });
 
   it("does not hide an empty conversation while history is already resolved", () => {

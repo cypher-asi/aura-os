@@ -215,7 +215,38 @@ export function ChatPanel({
       initialColdLoadRef.current = false;
       hasInitiallyRevealedRef.current = true;
       setIsInitialThreadRevealReady(true);
+      return;
     }
+
+    // historyResolved && messages.length > 0 with cold-load active.
+    // Trigger the reveal directly via the same double-rAF that
+    // `handleInitialAnchorReady` would have done, instead of waiting on
+    // ChatMessageList's `onInitialAnchorReady` callback. The child's
+    // `useLayoutEffect` is keyed by `streamKey` and fires only ONCE per
+    // (streamKey, hasMessages=true) pair: if `messages.length > 0` was
+    // already true on first commit because the persisted `message-store`
+    // thread for this `streamKey` carried over from a prior visit while
+    // `historyResolved` was still false, the child's gate latches on a
+    // no-op call (handleInitialAnchorReady bails on `!historyResolved`)
+    // and never re-fires once history finally arrives -- leaving
+    // `.messageContentHidden` (`visibility: hidden`) permanently applied
+    // and rendering the chat panel as a black rectangle even though the
+    // data is present (sidebar previews still show correctly because
+    // `previewLastMessages` has its own 100-entry bound). This branch
+    // closes that gap so the reveal is robust to either ordering of
+    // `historyResolved` vs `messages.length > 0`.
+    if (!initialColdLoadRef.current) return;
+    if (revealAnimationFrameRef.current != null) {
+      cancelAnimationFrame(revealAnimationFrameRef.current);
+    }
+    revealAnimationFrameRef.current = requestAnimationFrame(() => {
+      revealAnimationFrameRef.current = requestAnimationFrame(() => {
+        revealAnimationFrameRef.current = null;
+        initialColdLoadRef.current = false;
+        hasInitiallyRevealedRef.current = true;
+        setIsInitialThreadRevealReady(true);
+      });
+    });
   }, [historyResolved, messages.length]);
 
   useEffect(() => () => {
