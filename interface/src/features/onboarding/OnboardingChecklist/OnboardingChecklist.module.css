@@ -1,0 +1,164 @@
+.container {
+  position: fixed;
+  bottom: 52px; /* above BottomTaskbar */
+  right: var(--space-4);
+  width: 320px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  z-index: 90; /* below modals (100+), above content */
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Header ── */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+}
+
+.headerInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.headerTitle {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.headerProgress {
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.iconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.iconButton:hover {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+/* ── Progress bar ── */
+
+.progressBar {
+  height: 2px;
+  background: var(--color-border);
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--color-brand-primary);
+  transition: width 0.3s ease;
+}
+
+/* ── Task list ── */
+
+.taskList {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2);
+}
+
+/* ── Task row ── */
+
+.taskRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background 0.15s;
+}
+
+.taskRow:hover:not(:disabled) {
+  background: var(--color-surface);
+}
+
+.taskRow:disabled {
+  cursor: default;
+}
+
+.taskRowCompleted {
+  opacity: 0.5;
+}
+
+.taskCheck {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--color-border);
+  border-radius: 50%;
+  color: transparent;
+}
+
+.taskCheckDone {
+  background: var(--color-brand-primary);
+  border-color: var(--color-brand-primary);
+  color: var(--color-text-on-primary, #fff);
+}
+
+.taskInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.taskLabel {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.taskDescription {
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+}
+
+.taskArrow {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
