@@ -191,9 +191,16 @@
 }
 
 .topbarAlignRail > :first-child > :first-child {
-  width: 44px;
-  justify-content: center;
+  min-width: 44px;
+  justify-content: flex-start;
   flex-shrink: 0;
+}
+
+.titleLeading {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  gap: var(--space-1);
 }
 
 .desktopSidebar,

@@ -353,6 +353,7 @@ fn build_loop_state(input: BuildLoopStateInput) -> LoopState {
         main_window: input.window,
         main_webview: input.main_webview,
         ide_windows: std::collections::HashMap::new(),
+        secondary_main_windows: std::collections::HashMap::new(),
         managed_frontend_dev_server: input.managed_frontend_dev_server,
         managed_local_harness: input.managed_local_harness,
         frontend_base_url: input.initial_frontend_base_url,

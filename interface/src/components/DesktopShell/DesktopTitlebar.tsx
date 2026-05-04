@@ -2,6 +2,7 @@ import { Topbar, Button, useTheme } from "@cypher-asi/zui";
 import { Server, Sun, Moon } from "lucide-react";
 import { OrgSelector } from "../OrgSelector";
 import { WindowControls } from "../WindowControls";
+import { MenuBar } from "../MenuBar";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { windowCommand } from "../../lib/windowCommand";
 import {
@@ -53,7 +54,12 @@ export function DesktopTitlebar({
     <Topbar
       className={`titlebar-drag ${styles.topbarAlignRail} ${styles.topbarBlur}`}
       onDoubleClick={() => windowCommand("maximize")}
-      icon={<OrgSelector variant="icon" />}
+      icon={
+        <span className={`${styles.titleLeading} titlebar-no-drag`}>
+          <MenuBar />
+          <OrgSelector variant="icon" />
+        </span>
+      }
       title={
         <span className={`titlebar-center ${styles.titleCenter}`}>
           <img

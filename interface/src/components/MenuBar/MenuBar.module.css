@@ -1,0 +1,121 @@
+/*
+ * Native-style menu bar (File / Edit / View / Help).
+ *
+ * Every color references a zui design token from
+ * `vendor/zui/src/styles/themes.css`, so the bar follows the active
+ * `[data-theme='light' | 'dark']` automatically — no JS theme reads.
+ * The dropdown panel is rendered through a portal to `document.body`
+ * but inherits the same CSS variables since `[data-theme]` lives on
+ * `:root`.
+ */
+
+.menuBar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: 100%;
+  padding: 0 var(--space-1);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  height: calc(100% - 4px);
+  padding: 0 var(--space-2);
+  margin: 0 1px;
+  font-size: var(--font-size-2xs, 11px);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast, 120ms ease), color var(--transition-fast, 120ms ease);
+}
+
+.trigger:hover {
+  background: var(--color-hover, var(--color-surface-hover));
+  color: var(--color-text-primary);
+}
+
+.trigger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-focus-ring);
+}
+
+.triggerOpen,
+.trigger[data-open="true"] {
+  background: var(--color-hover, var(--color-surface-hover));
+  color: var(--color-text-primary);
+}
+
+.panel {
+  position: fixed;
+  z-index: var(--z-dropdown, 200);
+  min-width: 220px;
+  padding: var(--space-1) 0;
+  background: var(--color-elevated);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.25));
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-2xs, 11px);
+  text-align: left;
+  transition: background var(--transition-fast, 120ms ease), color var(--transition-fast, 120ms ease);
+}
+
+.item:hover:not(:disabled) {
+  background: var(--color-hover, var(--color-bg-hover));
+  color: var(--color-text-primary);
+}
+
+.item:focus-visible {
+  outline: none;
+  background: var(--color-hover, var(--color-bg-hover));
+  box-shadow: inset 0 0 0 1px var(--color-focus-ring);
+}
+
+.item:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.itemLabel {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.itemShortcut {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-2xs, 11px);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.item:hover:not(:disabled) .itemShortcut {
+  color: var(--color-text-secondary);
+}
+
+.divider {
+  margin: var(--space-1) 0;
+  border: none;
+  border-top: 1px solid var(--color-border);
+}

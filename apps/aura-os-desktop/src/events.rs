@@ -13,6 +13,10 @@ pub(crate) enum WinCmd {
     Maximize,
     Close,
     Drag,
+    /// Toggle borderless fullscreen on the receiving window. Driven by the
+    /// View > Toggle Full Screen menu item (and the F11 shortcut) in the
+    /// frontend titlebar menu bar.
+    ToggleFullscreen,
 }
 
 #[derive(Debug)]
@@ -25,6 +29,10 @@ pub(crate) enum UserEvent {
         file_path: String,
         root_path: Option<String>,
     },
+    /// Spawn a brand-new main AURA window — a second tao window plus a
+    /// wry webview pointing at the live frontend URL. Driven by the
+    /// File > New Window menu item.
+    OpenMainWindow,
     ShowWindow {
         window_id: WindowId,
     },

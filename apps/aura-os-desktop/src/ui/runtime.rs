@@ -13,7 +13,7 @@ use std::process::Child;
 use std::time::Duration;
 use tao::event::{Event, WindowEvent};
 use tao::event_loop::{ControlFlow, EventLoop, EventLoopProxy, EventLoopWindowTarget};
-use tao::window::WindowId;
+use tao::window::{Fullscreen, WindowId};
 use tracing::{info, warn};
 
 use crate::events::{UserEvent, WinCmd};
@@ -24,7 +24,7 @@ use crate::init::env::ci_mode_enabled;
 use crate::init::init_script::{build_initialization_script, load_bootstrapped_auth_literals};
 use crate::route_state::RouteState;
 use crate::ui::icon::IconData;
-use crate::ui::main_window::ipc_handler;
+use crate::ui::main_window::{ipc_handler, open_secondary_main_window};
 use crate::updater;
 
 /// Emergency-only rescue timer. The primary trigger to show the window is the
@@ -57,6 +57,10 @@ pub(crate) struct LoopState {
     pub(crate) main_window: tao::window::Window,
     pub(crate) main_webview: wry::WebView,
     pub(crate) ide_windows: HashMap<WindowId, (tao::window::Window, wry::WebView)>,
+    /// Additional main AURA windows spawned via File > New Window. Tracked
+    /// separately from `ide_windows` so closing one of them only drops that
+    /// window — the primary `main_window` still drives app lifecycle.
+    pub(crate) secondary_main_windows: HashMap<WindowId, (tao::window::Window, wry::WebView)>,
     pub(crate) managed_frontend_dev_server: Option<Child>,
     pub(crate) managed_local_harness: Option<Child>,
     pub(crate) frontend_base_url: String,
@@ -81,6 +85,7 @@ impl LoopState {
             } => {
                 self.open_ide_window_with_fallback(elwt, &file_path, root_path.as_deref());
             }
+            UserEvent::OpenMainWindow => self.open_secondary_main_window(elwt),
             UserEvent::ShowWindow { window_id } => self.handle_show_window(window_id),
             UserEvent::InstallUpdate { state } => self.handle_install_update(state),
             UserEvent::ShutdownForUpdate => self.handle_shutdown_for_update(control_flow),
@@ -102,17 +107,15 @@ impl LoopState {
         }
         if matches!(cmd, WinCmd::Close) {
             self.ide_windows.remove(&window_id);
+            self.secondary_main_windows.remove(&window_id);
             return;
         }
-        if let Some((ide_win, _)) = self.ide_windows.get(&window_id) {
-            match cmd {
-                WinCmd::Minimize => ide_win.set_minimized(true),
-                WinCmd::Maximize => ide_win.set_maximized(!ide_win.is_maximized()),
-                WinCmd::Drag => {
-                    let _ = ide_win.drag_window();
-                }
-                WinCmd::Close => unreachable!(),
-            }
+        if let Some((win, _)) = self.ide_windows.get(&window_id) {
+            apply_secondary_window_command(win, cmd);
+            return;
+        }
+        if let Some((win, _)) = self.secondary_main_windows.get(&window_id) {
+            apply_secondary_window_command(win, cmd);
         }
     }
 
@@ -129,6 +132,39 @@ impl LoopState {
             }
             WinCmd::Drag => {
                 let _ = self.main_window.drag_window();
+            }
+            WinCmd::ToggleFullscreen => toggle_fullscreen(&self.main_window),
+        }
+    }
+
+    fn open_secondary_main_window(&mut self, elwt: &EventLoopWindowTarget<UserEvent>) {
+        // Mirror the bootstrap the primary window receives so the new
+        // webview shares the user's auth/session state without needing a
+        // shared `WebContext`. Loaded fresh from disk so a user who logs
+        // in after desktop startup still gets an authenticated extra
+        // window.
+        let bootstrapped = load_bootstrapped_auth_literals(&self.ctx.store_path);
+        let init_script =
+            build_initialization_script(self.ctx.host_origin.as_deref(), bootstrapped.as_ref());
+        let initial_url = apply_restore_route(
+            &self.frontend_base_url,
+            self.ctx.route_state.current_route().as_deref(),
+        );
+        let proxy_clone = self.ctx.proxy.clone();
+        match open_secondary_main_window(
+            elwt,
+            &initial_url,
+            &init_script,
+            Some(self.ctx.icon_data.to_icon()),
+            move |wid| Box::new(ipc_handler(proxy_clone.clone(), wid)),
+        ) {
+            Ok((win, wv)) => {
+                let wid = win.id();
+                self.secondary_main_windows.insert(wid, (win, wv));
+                spawn_fallback_show_timer(self.ctx.proxy.clone(), wid);
+            }
+            Err(error) => {
+                warn!(%error, "failed to spawn secondary main window");
             }
         }
     }
@@ -179,6 +215,8 @@ impl LoopState {
             self.main_window.set_visible(true);
         } else if let Some((ide_win, _)) = self.ide_windows.get(&window_id) {
             ide_win.set_visible(true);
+        } else if let Some((win, _)) = self.secondary_main_windows.get(&window_id) {
+            win.set_visible(true);
         }
     }
 
@@ -235,7 +273,28 @@ impl LoopState {
             *control_flow = ControlFlow::Exit;
         } else {
             self.ide_windows.remove(&window_id);
+            self.secondary_main_windows.remove(&window_id);
         }
+    }
+}
+
+fn apply_secondary_window_command(win: &tao::window::Window, cmd: WinCmd) {
+    match cmd {
+        WinCmd::Minimize => win.set_minimized(true),
+        WinCmd::Maximize => win.set_maximized(!win.is_maximized()),
+        WinCmd::Drag => {
+            let _ = win.drag_window();
+        }
+        WinCmd::ToggleFullscreen => toggle_fullscreen(win),
+        WinCmd::Close => {}
+    }
+}
+
+fn toggle_fullscreen(win: &tao::window::Window) {
+    if win.fullscreen().is_some() {
+        win.set_fullscreen(None);
+    } else {
+        win.set_fullscreen(Some(Fullscreen::Borderless(None)));
     }
 }
 

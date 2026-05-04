@@ -2,10 +2,10 @@
 //! `wry` webview that hosts the frontend, and the IPC handler that
 //! translates webview messages into `UserEvent`s.
 
-use tao::event_loop::EventLoopProxy;
-use tao::window::{WindowBuilder, WindowId};
+use tao::event_loop::{EventLoopProxy, EventLoopWindowTarget};
+use tao::window::{Icon, Window, WindowBuilder, WindowId};
 use tracing::{debug, info, warn};
-use wry::{WebContext, WebViewBuilder};
+use wry::{WebContext, WebView, WebViewBuilder};
 
 use crate::events::{UserEvent, WinCmd};
 use crate::ui::chrome::{disable_window_background_erase, set_square_corners};
@@ -28,11 +28,17 @@ pub(crate) fn ipc_handler(
             debug!("IPC app-ready signal");
             return;
         }
+        if msg == "new_window" {
+            debug!("IPC new_window signal");
+            let _ = proxy.send_event(UserEvent::OpenMainWindow);
+            return;
+        }
         let cmd = match msg {
             "minimize" => Some(WinCmd::Minimize),
             "maximize" => Some(WinCmd::Maximize),
             "close" => Some(WinCmd::Close),
             "drag" => Some(WinCmd::Drag),
+            "toggle_fullscreen" => Some(WinCmd::ToggleFullscreen),
             other => {
                 warn!(message = other, "unknown IPC message");
                 None
@@ -108,4 +114,58 @@ pub(crate) fn create_main_webview(
         .expect("failed to load initial main webview url");
 
     webview
+}
+
+/// Spawn an additional standalone main AURA window — a fresh `tao` window
+/// plus its own `wry::WebView` pointing at the live frontend URL. Used by
+/// the File > New Window menu item; the caller (the event-loop driver in
+/// `runtime.rs`) is responsible for keeping the returned tuple alive.
+///
+/// Each secondary window uses an isolated default `WebContext`. We rely on
+/// the bootstrapped `initialization_script` (the same one driving the
+/// primary webview) to mirror the user's auth + session into the new
+/// window's `localStorage` so the user stays logged in.
+pub(crate) fn open_secondary_main_window<E: 'static>(
+    event_loop: &EventLoopWindowTarget<E>,
+    url: &str,
+    initialization_script: &str,
+    icon: Option<Icon>,
+    make_ipc: impl FnOnce(WindowId) -> Box<dyn Fn(wry::http::Request<String>) + 'static>,
+) -> Result<(Window, WebView), Box<dyn std::error::Error>> {
+    let mut wb = WindowBuilder::new()
+        .with_title("AURA")
+        .with_decorations(false)
+        .with_visible(false)
+        .with_inner_size(tao::dpi::LogicalSize::new(1280.0, 800.0));
+    if let Some(ic) = icon {
+        wb = wb.with_window_icon(Some(ic));
+    }
+    let window = wb.build(event_loop)?;
+    set_square_corners(&window);
+    disable_window_background_erase(&window);
+
+    let ipc = make_ipc(window.id());
+    let builder = WebViewBuilder::new()
+        .with_background_color((0, 0, 0, 255))
+        .with_url(INITIAL_BLANK_PAGE_URL)
+        .with_initialization_script(initialization_script)
+        .with_ipc_handler(ipc)
+        .with_new_window_req_handler(|uri, _features| {
+            let _ = open::that(&uri);
+            wry::NewWindowResponse::Deny
+        });
+
+    #[cfg(not(target_os = "linux"))]
+    let webview = builder.build(&window)?;
+
+    #[cfg(target_os = "linux")]
+    let webview = {
+        use tao::platform::unix::WindowExtUnix;
+        use wry::WebViewBuilderExtUnix;
+        builder.build_gtk(window.gtk_window())?
+    };
+
+    webview.load_url(url)?;
+    info!(%url, "opened secondary main window");
+    Ok((window, webview))
 }
