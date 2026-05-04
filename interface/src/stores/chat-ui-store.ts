@@ -2,12 +2,21 @@ import { create } from "zustand";
 import {
   availableModelsForAdapter,
   defaultModelForAdapter,
+  getDefaultModelForMode,
   hasAgentScopedModel,
   loadPersistedModel,
   persistModel,
 } from "../constants/models";
+import {
+  AGENT_MODE_DESCRIPTORS,
+  DEFAULT_AGENT_MODE,
+  loadPersistedAgentMode,
+  persistAgentMode,
+  type AgentMode,
+} from "../constants/modes";
 
 interface StreamState {
+  selectedMode: AgentMode;
   selectedModel: string | null;
   projectId: string | null;
 }
@@ -37,12 +46,29 @@ interface ChatUIActions {
     defaultModel?: string | null,
     agentId?: string,
   ) => void;
+  /**
+   * Set the active agent mode (Code/Plan/Image/3D) for a stream. Also
+   * re-derives the model when switching into / out of a mode whose
+   * model list differs from the current selection (e.g. switching to
+   * Image mode swaps the chat model for an image model).
+   */
+  setSelectedMode: (
+    streamKey: string,
+    mode: AgentMode,
+    adapterType?: string,
+    agentId?: string,
+  ) => void;
+  getSelectedMode: (streamKey: string) => AgentMode;
 }
 
 type ChatUIStore = ChatUIState & ChatUIActions;
 
 const getStream = (state: ChatUIState, key: string): StreamState =>
-  state.streams[key] ?? { selectedModel: null, projectId: null };
+  state.streams[key] ?? {
+    selectedMode: DEFAULT_AGENT_MODE,
+    selectedModel: null,
+    projectId: null,
+  };
 
 export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
   streams: {},
@@ -50,6 +76,7 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
   init: (streamKey, adapterType, defaultModel, agentId) => {
     const existing = get().streams[streamKey];
     const model = loadPersistedModel(adapterType, defaultModel, agentId);
+    const mode = loadPersistedAgentMode(agentId);
     if (existing && existing.selectedModel !== null) {
       // Only refresh if this agent has its own persisted value and it
       // disagrees with what we installed on an earlier pass (e.g. the
@@ -60,13 +87,25 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
         !hasAgentScopedModel(agentId) ||
         existing.selectedModel === model
       ) {
+        if (existing.selectedMode !== mode) {
+          set((s) => ({
+            streams: {
+              ...s.streams,
+              [streamKey]: { ...getStream(s, streamKey), selectedMode: mode },
+            },
+          }));
+        }
         return;
       }
     }
     set((s) => ({
       streams: {
         ...s.streams,
-        [streamKey]: { ...getStream(s, streamKey), selectedModel: model },
+        [streamKey]: {
+          ...getStream(s, streamKey),
+          selectedModel: model,
+          selectedMode: mode,
+        },
       },
     }));
   },
@@ -94,6 +133,41 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
       },
     }));
   },
+
+  setSelectedMode: (streamKey, mode, adapterType, agentId) => {
+    persistAgentMode(mode, agentId);
+    void import("../lib/analytics").then(({ track }) =>
+      track("mode_selected", { mode }),
+    );
+    set((s) => {
+      const current = getStream(s, streamKey);
+      if (current.selectedMode === mode) {
+        return {
+          streams: { ...s.streams, [streamKey]: { ...current, selectedMode: mode } },
+        };
+      }
+      // Re-derive the model when switching modes. For Image we always
+      // jump to the default image model; for Code/Plan we restore the
+      // user's persisted chat model. 3D has no selectable model so we
+      // leave whatever was selected (it gets ignored at send time).
+      let nextModel = current.selectedModel;
+      const behavior = AGENT_MODE_DESCRIPTORS[mode].behavior;
+      if (behavior.kind === "generate_image") {
+        nextModel = getDefaultModelForMode("image").id;
+      } else if (behavior.kind === "chat" || behavior.kind === "chat_with_action") {
+        const restored = loadPersistedModel(adapterType, undefined, agentId);
+        nextModel = restored;
+      }
+      return {
+        streams: {
+          ...s.streams,
+          [streamKey]: { ...current, selectedMode: mode, selectedModel: nextModel },
+        },
+      };
+    });
+  },
+
+  getSelectedMode: (streamKey) => getStream(get(), streamKey).selectedMode,
 
   syncAvailableModels: (streamKey, adapterType, defaultModel, agentId) => {
     const models = availableModelsForAdapter(adapterType);
@@ -138,11 +212,24 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
 }));
 
 export function useChatUI(streamKey: string) {
+  const selectedMode = useChatUIStore(
+    (s) => s.streams[streamKey]?.selectedMode ?? DEFAULT_AGENT_MODE,
+  );
   const selectedModel = useChatUIStore((s) => s.streams[streamKey]?.selectedModel ?? null);
   const projectId = useChatUIStore((s) => s.streams[streamKey]?.projectId ?? null);
   const setSelectedModel = useChatUIStore((s) => s.setSelectedModel);
   const setProjectId = useChatUIStore((s) => s.setProjectId);
+  const setSelectedMode = useChatUIStore((s) => s.setSelectedMode);
   const init = useChatUIStore((s) => s.init);
   const syncAvailableModels = useChatUIStore((s) => s.syncAvailableModels);
-  return { selectedModel, projectId, setSelectedModel, setProjectId, init, syncAvailableModels };
+  return {
+    selectedMode,
+    selectedModel,
+    projectId,
+    setSelectedMode,
+    setSelectedModel,
+    setProjectId,
+    init,
+    syncAvailableModels,
+  };
 }

@@ -18,10 +18,18 @@ const mockScrollToBottom = scrollAnchorMocks.scrollToBottom;
 const mockUseScrollAnchorV2 = scrollAnchorMocks.useScrollAnchorV2;
 const mockEnqueue = vi.fn();
 const mockDequeue = vi.fn();
-const mockChatUI = {
+const mockChatUI: {
+  selectedMode: "code" | "plan" | "image" | "3d";
+  selectedModel: string | null;
+  init: ReturnType<typeof vi.fn>;
+  syncAvailableModels: ReturnType<typeof vi.fn>;
+  setSelectedMode: ReturnType<typeof vi.fn>;
+} = {
+  selectedMode: "code",
   selectedModel: "gpt-5.4",
   init: vi.fn(),
   syncAvailableModels: vi.fn(),
+  setSelectedMode: vi.fn(),
 };
 
 let mockIsStreaming = false;
@@ -94,6 +102,7 @@ describe("useChatPanelState", () => {
     mockIsStreaming = false;
     mockStreamMessages = [];
     mockChatUI.selectedModel = "gpt-5.4";
+    mockChatUI.selectedMode = "code";
     mockHandleScroll.mockReset();
     mockScrollToBottom.mockReset();
     mockUseScrollAnchorV2.mockClear();
@@ -101,6 +110,7 @@ describe("useChatPanelState", () => {
     mockDequeue.mockReset();
     mockChatUI.init.mockReset();
     mockChatUI.syncAvailableModels.mockReset();
+    mockChatUI.setSelectedMode.mockReset();
     requestAnimationFrameSpy = vi
       .spyOn(globalThis, "requestAnimationFrame")
       .mockImplementation((callback: FrameRequestCallback) => {

@@ -24,13 +24,17 @@ vi.mock("../../../../hooks/use-aura-capabilities", () => ({
 }));
 
 let mockSelectedModel: string | null = null;
+let mockSelectedMode: "code" | "plan" | "image" | "3d" = "code";
 const mockSetSelectedModel = vi.fn();
+const mockSetSelectedMode = vi.fn();
 const mockAddFiles = vi.fn();
 const mockHandleRemove = vi.fn();
 vi.mock("../../../../stores/chat-ui-store", () => ({
   useChatUI: () => ({
+    selectedMode: mockSelectedMode,
     selectedModel: mockSelectedModel,
     projectId: null,
+    setSelectedMode: mockSetSelectedMode,
     setSelectedModel: mockSetSelectedModel,
     setProjectId: vi.fn(),
     init: vi.fn(),
@@ -102,7 +106,9 @@ beforeEach(() => {
   mockIsStreaming = false;
   mockIsMobileLayout = false;
   mockSelectedModel = null;
+  mockSelectedMode = "code";
   mockSetSelectedModel.mockClear();
+  mockSetSelectedMode.mockClear();
   mockAddFiles.mockClear();
   mockHandleRemove.mockClear();
 });
@@ -135,7 +141,9 @@ describe("ChatInputBar", () => {
     const textarea = screen.getByPlaceholderText("What do you want to create?");
     await user.click(textarea);
     await user.keyboard("{Enter}");
-    expect(onSend).toHaveBeenCalledWith("Test message", undefined, undefined, undefined);
+    // Mode is now read from the per-stream store inside `useChatPanelState.handleSend`,
+    // so the input bar no longer threads `generationMode` through this callback.
+    expect(onSend).toHaveBeenCalledWith("Test message", undefined, undefined);
   });
 
   it("does not call onSend on Shift+Enter", async () => {
@@ -165,7 +173,7 @@ describe("ChatInputBar", () => {
     render(<ChatInputBar {...makeProps({ input: "click test", onSend })} />);
 
     await user.click(screen.getByRole("button", { name: "Send" }));
-    expect(onSend).toHaveBeenCalledWith("click test", undefined, undefined, undefined);
+    expect(onSend).toHaveBeenCalledWith("click test", undefined, undefined);
   });
 
   it("shows stop button when streaming", () => {
@@ -301,23 +309,11 @@ describe("ChatInputBar", () => {
     expect(screen.queryByText("GPT Image 2")).not.toBeInTheDocument();
   });
 
-  it("shows image models after the image command is selected", async () => {
+  it("shows image models when Image mode is active", async () => {
     const user = userEvent.setup();
+    mockSelectedMode = "image";
     mockSelectedModel = "gpt-image-2";
-    render(
-      <ChatInputBar
-        {...makeProps({
-          selectedCommands: [
-            {
-              id: "generate_image",
-              label: "Image",
-              description: "Generate an image from a text prompt",
-              category: "Generation",
-            },
-          ],
-        })}
-      />,
-    );
+    render(<ChatInputBar {...makeProps()} />);
 
     expect(screen.getByText("/image mode")).toBeInTheDocument();
     expect(screen.getAllByText("GPT Image 2")[0]).toBeInTheDocument();
@@ -333,35 +329,26 @@ describe("ChatInputBar", () => {
     );
   });
 
-  it("restores a chat model when the image command is removed", async () => {
+  it("switches mode via the mode selector segmented control", async () => {
     const user = userEvent.setup();
-    const onCommandsChange = vi.fn();
-    mockSelectedModel = "gpt-image-2";
-    render(
-      <ChatInputBar
-        {...makeProps({
-          selectedCommands: [
-            {
-              id: "generate_image",
-              label: "Image",
-              description: "Generate an image from a text prompt",
-              category: "Generation",
-            },
-          ],
-          onCommandsChange,
-        })}
-      />,
-    );
+    render(<ChatInputBar {...makeProps()} />);
 
-    await user.click(screen.getByRole("button", { name: "Remove Image" }));
-
-    expect(onCommandsChange).toHaveBeenCalledWith([]);
-    expect(mockSetSelectedModel).toHaveBeenCalledWith(
+    await user.click(screen.getByRole("radio", { name: "Image mode" }));
+    expect(mockSetSelectedMode).toHaveBeenCalledWith(
       "test-stream",
-      "aura-claude-sonnet-4-6",
+      "image",
       undefined,
       undefined,
     );
+  });
+
+  it("renders all four modes in the segmented selector", () => {
+    render(<ChatInputBar {...makeProps()} />);
+
+    expect(screen.getByRole("radio", { name: "Code mode" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Plan mode" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Image mode" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "3D mode" })).toBeInTheDocument();
   });
 
   it("opens the mobile model sheet and calls setSelectedModel", async () => {

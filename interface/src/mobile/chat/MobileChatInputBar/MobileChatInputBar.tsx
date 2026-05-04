@@ -21,13 +21,17 @@ import type {
 import { isGenerationCommand, type SlashCommand } from "../../../constants/commands";
 import {
   availableModelsForAdapter,
-  getDefaultModelForMode,
   getModelsForMode,
   modelLabel,
   modelProviderGroup,
   sortModelsForMenu,
   type GenerationMode,
 } from "../../../constants/models";
+import {
+  AGENT_MODE_DESCRIPTORS,
+  type AgentMode,
+} from "../../../constants/modes";
+import { ModeSelector } from "../../../components/InputBarShell";
 import { useIsStreaming } from "../../../hooks/stream/hooks";
 import { useChatUI } from "../../../stores/chat-ui-store";
 import styles from "./MobileChatInputBar.module.css";
@@ -108,6 +112,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
     const isStreaming = isChatStreaming || isExternallyBusy;
     const chatUI = useChatUI(streamKey);
     const selectedModel = chatUI.selectedModel;
+    const selectedMode = chatUI.selectedMode;
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const slashStartRef = useRef<number | null>(null);
@@ -129,11 +134,13 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       textareaRef,
     );
 
-    const generationMode: GenerationMode = selectedCommands.some((command) => command.id === "generate_image")
-      ? "image"
-      : selectedCommands.some((command) => command.id === "generate_3d")
-        ? "3d"
-        : "chat";
+    const modeBehavior = AGENT_MODE_DESCRIPTORS[selectedMode].behavior;
+    const generationMode: GenerationMode =
+      modeBehavior.kind === "generate_image"
+        ? "image"
+        : modeBehavior.kind === "generate_3d"
+          ? "3d"
+          : "chat";
     const isLocalAgent = machineType === "local";
     const canSend = !isLocalAgent && !isStreaming && (
       input.trim().length > 0 || attachments.length > 0 || selectedCommands.length > 0
@@ -183,6 +190,19 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
         chatUI.setSelectedModel(streamKey, model, adapterType, agentId);
       },
       [adapterType, agentId, chatUI, streamKey],
+    );
+
+    const onModeChange = useCallback(
+      (mode: AgentMode) => {
+        chatUI.setSelectedMode(streamKey, mode, adapterType, agentId);
+        if (
+          onCommandsChange &&
+          selectedCommands.some((c) => isGenerationCommand(c.id))
+        ) {
+          onCommandsChange(selectedCommands.filter((c) => !isGenerationCommand(c.id)));
+        }
+      },
+      [adapterType, agentId, chatUI, onCommandsChange, selectedCommands, streamKey],
     );
 
     const restoreViewportScroll = useCallback(() => {
@@ -260,20 +280,12 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
 
     const handleCommandSelect = useCallback(
       (command: SlashCommand) => {
-        let next: SlashCommand[];
         if (isGenerationCommand(command.id)) {
-          next = [
-            ...selectedCommands.filter((candidate) => !isGenerationCommand(candidate.id)),
-            command,
-          ];
-          const mode = command.id === "generate_image" ? "image" : "3d";
-          if (getModelsForMode(mode).length > 0) {
-            onModelChange(getDefaultModelForMode(mode).id);
-          }
+          const targetMode: AgentMode = command.id === "generate_image" ? "image" : "3d";
+          chatUI.setSelectedMode(streamKey, targetMode, adapterType, agentId);
         } else {
-          next = [...selectedCommands, command];
+          onCommandsChange?.([...selectedCommands, command]);
         }
-        onCommandsChange?.(next);
         if (slashStartRef.current !== null) {
           const before = input.slice(0, slashStartRef.current);
           const afterSlash = input.slice(slashStartRef.current);
@@ -286,17 +298,23 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
         slashStartRef.current = null;
         textareaRef.current?.focus();
       },
-      [input, onCommandsChange, onInputChange, onModelChange, selectedCommands],
+      [
+        adapterType,
+        agentId,
+        chatUI,
+        input,
+        onCommandsChange,
+        onInputChange,
+        selectedCommands,
+        streamKey,
+      ],
     );
 
     const handleCommandRemove = useCallback(
       (id: string) => {
         onCommandsChange?.(selectedCommands.filter((command) => command.id !== id));
-        if (isGenerationCommand(id)) {
-          onModelChange(getDefaultModelForMode("chat").id);
-        }
       },
-      [onCommandsChange, onModelChange, selectedCommands],
+      [onCommandsChange, selectedCommands],
     );
 
     const handleInputChange = useCallback(
@@ -323,8 +341,10 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
 
     const submitMessage = useCallback(() => {
       if (!canSend) return;
-      onSend(input, undefined, undefined, generationMode !== "chat" ? generationMode : undefined);
-    }, [canSend, generationMode, input, onSend]);
+      // Mode lives in the per-stream store; the panel state reads it
+      // when constructing the resolved send.
+      onSend(input, undefined, undefined);
+    }, [canSend, input, onSend]);
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (slashMenuOpen && ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(event.key)) {
@@ -494,6 +514,11 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
               addFiles(event.target.files);
               event.target.value = "";
             }}
+          />
+          <ModeSelector
+            selectedMode={selectedMode}
+            onChange={onModeChange}
+            className={styles.modeSelector}
           />
           <AttachmentPreviews attachments={attachments} onRemove={handleRemove} />
           <CommandChips commands={selectedCommands} onRemove={handleCommandRemove} />

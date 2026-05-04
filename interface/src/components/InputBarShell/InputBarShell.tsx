@@ -87,6 +87,13 @@ export interface InputBarShellProps {
   onContainerDragLeave?: (e: DragEvent<HTMLDivElement>) => void;
   onContainerDrop?: (e: DragEvent<HTMLDivElement>) => void;
 
+  /**
+   * Slot rendered as the topmost section of the inner container,
+   * above `containerTop`. Used by chat surfaces for the agent MODE
+   * selector (Code / Plan / Image / 3D) so it reads as a clearly
+   * distinct row above attachments, slash menus, and the textarea.
+   */
+  modeBar?: ReactNode;
   /** Slot rendered inside the container, above the input row. */
   containerTop?: ReactNode;
   /** Slot rendered inside the input row at the start (e.g. attach button). */
@@ -130,6 +137,7 @@ function InputBarShellInner(
     onContainerDragOver,
     onContainerDragLeave,
     onContainerDrop,
+    modeBar,
     containerTop,
     inputRowStart,
     infoBarStart,
@@ -213,6 +221,7 @@ function InputBarShellInner(
         onDragLeave={onContainerDragLeave}
         onDrop={onContainerDrop}
       >
+        {modeBar}
         {containerTop}
         <div className={styles.inputRow}>
           {inputRowStart}

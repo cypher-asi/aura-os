@@ -1,0 +1,82 @@
+/* ============================================================
+ * Mode selector — segmented control rendered as the topmost
+ * section of the agent chat input. Owns its own pill chrome and
+ * focus styling so it reads as a distinct row above the
+ * textarea / containerTop slot.
+ * ============================================================ */
+
+.root {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 6px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+}
+
+.label {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.segments {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-overlay-light) 60%, transparent);
+}
+
+.segment {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 4px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.segment:hover:not(.segmentActive) {
+  color: var(--color-text-primary);
+  background: color-mix(in srgb, var(--color-overlay-light) 80%, transparent);
+}
+
+.segment:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-overlay-focus);
+}
+
+.segmentActive {
+  color: var(--color-text-primary);
+  background: var(--color-elevated);
+  box-shadow: 0 1px 2px var(--color-backdrop-light);
+}
+
+@media (max-width: 640px) {
+  .root {
+    padding: 8px 10px 6px;
+    gap: 8px;
+  }
+
+  .segment {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .label {
+    font-size: 10px;
+  }
+}

@@ -14,6 +14,12 @@ import { useChatUI } from "../../../../stores/chat-ui-store";
 import { useConversationSnapshot } from "../../../../hooks/use-conversation-snapshot";
 import { useLoadOlderMessages } from "../../../../hooks/use-load-older-messages";
 import { useChatViewStore, useThreadView } from "../../../../stores/chat-view-store";
+import {
+  dispatch as dispatchResolvedSend,
+  resolveSend,
+  toQueuedRecord,
+  type LegacyOnSend,
+} from "./resolve-send";
 
 export interface UseChatPanelStateOptions {
   streamKey: string;
@@ -52,6 +58,7 @@ export function useChatPanelState({
   const availableModels = availableModelsForAdapter(adapterType);
   const chatUI = useChatUI(streamKey);
   const selectedModel = chatUI.selectedModel;
+  const selectedMode = chatUI.selectedMode;
   const messageAreaRef = useRef<HTMLDivElement>(null);
   const inputBarRef = useRef<ChatInputBarHandle>(null);
   const { isMobileLayout } = useAuraCapabilities();
@@ -146,51 +153,74 @@ export function useChatPanelState({
       content: string,
       action?: string,
       atts?: AttachmentItem[],
+      // genMode is accepted for backwards compatibility with callers
+      // that still thread it explicitly (e.g. the unit tests). When
+      // present, it overrides the store-derived mode for this single
+      // send only — the store remains the persistent source of truth.
       genMode?: GenerationMode,
     ) => {
       setInput("");
-      const apiAttachments = buildApiAttachments(atts);
-      const commandIds =
-        commands.length > 0
-          ? commands.map((c) => c.id)
-          : undefined;
-      const effectiveGenMode =
-        genMode ??
-        (commands.some((c) => c.id === "generate_image")
-          ? ("image" as GenerationMode)
-          : commands.some((c) => c.id === "generate_3d")
-            ? ("3d" as GenerationMode)
-            : undefined);
-      const runtimeModel =
-        effectiveGenMode === "image"
-          ? selectedModel
-          : effectiveGenMode
-            ? null
-            : selectedModel;
+      const apiAttachments = buildApiAttachments(atts) ?? [];
+      const userCommandIds = commands.map((c) => c.id);
+
+      // Translate the active mode (with optional per-call override)
+      // into a fully-typed `ResolvedSend` variant.
+      const overrideMode =
+        genMode === "image"
+          ? ("image" as const)
+          : genMode === "3d"
+            ? ("3d" as const)
+            : undefined;
+      const effectiveAgentMode = overrideMode ?? selectedMode;
+
+      const resolved = resolveSend({
+        mode: effectiveAgentMode,
+        content,
+        selectedModel,
+        attachments: apiAttachments,
+        userCommandIds,
+      });
+
       setAttachments([]);
+      // Drop non-generation chips (the panel's transient chip row);
+      // generation modes own that signal via the selector now.
       setCommands((prev) => prev.filter((c) => isGenerationCommand(c.id)));
 
+      // An explicit `action` from the caller (e.g. inline "Generate
+      // specs" buttons) wins over the mode-supplied one. The override
+      // is applied at the wire boundary, not by mutating a variant,
+      // so the discriminated union stays honest.
+      const overrideAction: string | null = action ?? null;
+
       if (isStreaming) {
+        const record = toQueuedRecord(resolved);
         useMessageQueueStore.getState().enqueue(streamKey, {
-          content,
-          action: action ?? null,
-          model: runtimeModel,
-          attachments: apiAttachments,
-          commands: commandIds,
-          generationMode: effectiveGenMode,
+          content: record.content,
+          action: overrideAction ?? record.action,
+          model: record.model,
+          attachments: record.attachments,
+          commands: record.commands,
+          generationMode: record.generationMode,
         });
         scrollToBottom();
       } else {
         scrollToBottom();
-        onSend(
-          content,
-          action ?? null,
-          runtimeModel,
-          apiAttachments,
-          commandIds,
-          selectedProjectId,
-          effectiveGenMode,
-        );
+        if (overrideAction !== null) {
+          // Caller supplied an explicit action; bypass the mode's
+          // action and pass everything else through unchanged.
+          const record = toQueuedRecord(resolved);
+          (onSend as LegacyOnSend)(
+            record.content,
+            overrideAction,
+            record.model,
+            record.attachments,
+            record.commands,
+            selectedProjectId,
+            record.generationMode,
+          );
+        } else {
+          dispatchResolvedSend(resolved, onSend as LegacyOnSend, selectedProjectId);
+        }
       }
     },
     [
@@ -199,6 +229,7 @@ export function useChatPanelState({
       isStreaming,
       onSend,
       scrollToBottom,
+      selectedMode,
       selectedModel,
       selectedProjectId,
       streamKey,

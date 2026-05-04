@@ -32,6 +32,13 @@
   background: linear-gradient(to top, #000 84%, rgba(0, 0, 0, 0));
 }
 
+.modeSelector {
+  /* Mobile composer hosts the mode selector inline at the top so it
+     sits above attachments / chips / textarea. Tighten padding to
+     match the surrounding mobile chrome. */
+  padding: 8px 12px 8px;
+}
+
 .composer {
   position: relative;
   display: flex;

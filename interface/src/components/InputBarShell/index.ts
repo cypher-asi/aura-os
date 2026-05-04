@@ -8,4 +8,5 @@ export {
   type ModelPickerProps,
   type ModelOptionLike,
 } from "./ModelPicker";
+export { ModeSelector, type ModeSelectorProps } from "./ModeSelector";
 export { inputBarShellStyles } from "./styles";

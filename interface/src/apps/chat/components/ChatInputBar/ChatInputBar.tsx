@@ -26,17 +26,21 @@ import {
   availableModelsForAdapter,
   modelLabel,
   getModelsForMode,
-  getDefaultModelForMode,
   modelProviderGroup,
   sortModelsForMenu,
 } from "../../../../constants/models";
 import { isGenerationCommand } from "../../../../constants/commands";
+import {
+  AGENT_MODE_DESCRIPTORS,
+  type AgentMode,
+} from "../../../../constants/modes";
 import { AgentEnvironment } from "../../../agents/components/AgentEnvironment";
 import { OrbitStatusIndicator } from "../../../../components/OrbitStatusIndicator";
 import {
   InputBarShell,
   inputBarShellStyles,
   ModelPicker,
+  ModeSelector,
   type InputBarShellHandle,
 } from "../../../../components/InputBarShell";
 import { SlashCommandMenu } from "./SlashCommandMenu";
@@ -198,11 +202,30 @@ export const DesktopChatInputBar = memo(
     const isStreaming = isChatStreaming || isExternallyBusy;
     const chatUI = useChatUI(streamKey);
     const selectedModel = chatUI.selectedModel;
+    const selectedMode = chatUI.selectedMode;
     const onModelChange = useCallback(
       (model: string) => {
         chatUI.setSelectedModel(streamKey, model, adapterType, agentId);
       },
       [chatUI.setSelectedModel, streamKey, adapterType, agentId],
+    );
+    const onModeChange = useCallback(
+      (mode: AgentMode) => {
+        chatUI.setSelectedMode(streamKey, mode, adapterType, agentId);
+        // Drop any conflicting generation chips so the chip row and
+        // the mode selector never show contradicting intent.
+        if (onCommandsChange && selectedCommands.some((c) => isGenerationCommand(c.id))) {
+          onCommandsChange(selectedCommands.filter((c) => !isGenerationCommand(c.id)));
+        }
+      },
+      [
+        adapterType,
+        agentId,
+        chatUI.setSelectedMode,
+        onCommandsChange,
+        selectedCommands,
+        streamKey,
+      ],
     );
     const [isDragOver, setIsDragOver] = useState(false);
     const [showAllModels, setShowAllModels] = useState(false);
@@ -294,13 +317,18 @@ export const DesktopChatInputBar = memo(
     );
     const selectedProjectName = selectedProject?.name;
 
-    const generationMode: GenerationMode = selectedCommands.some(
-      (c) => c.id === "generate_image",
-    )
-      ? "image"
-      : selectedCommands.some((c) => c.id === "generate_3d")
-        ? "3d"
-        : "chat";
+    // Drive the mode-derived UI state (model list filter, info-bar
+    // hint copy, send pipeline) from the per-stream mode store. Slash
+    // chips can no longer disagree with the selector because picking
+    // `/image` / `/3d` calls `setSelectedMode` and switching modes
+    // drops any conflicting chips.
+    const modeBehavior = AGENT_MODE_DESCRIPTORS[selectedMode].behavior;
+    const generationMode: GenerationMode =
+      modeBehavior.kind === "generate_image"
+        ? "image"
+        : modeBehavior.kind === "generate_3d"
+          ? "3d"
+          : "chat";
     // In chat mode, let the (only) `aura_harness` adapter drive the available
     // model list. In image/3d mode, use the mode-filtered model list (image/3d
     // generation is provider-agnostic today).
@@ -351,24 +379,15 @@ export const DesktopChatInputBar = memo(
 
     const handleCommandSelect = useCallback(
       (cmd: SlashCommand) => {
-        let next: SlashCommand[];
         if (isGenerationCommand(cmd.id)) {
-          next = [
-            ...selectedCommands.filter((c) => !isGenerationCommand(c.id)),
-            cmd,
-          ];
-          const mode = cmd.id === "generate_image" ? "image" : "3d";
-          // Only switch models when the target mode actually has selectable models.
-          // 3D generation has no user-selectable model, so we leave the current
-          // selection untouched to avoid clobbering the user's chat model.
-          if (getModelsForMode(mode).length > 0) {
-            const defaultForMode = getDefaultModelForMode(mode);
-            onModelChange(defaultForMode.id);
-          }
+          // Slash command becomes a fast keyboard path to the mode
+          // selector. The mode itself injects the matching command
+          // id at send time, so we don't add a redundant chip.
+          const targetMode: AgentMode = cmd.id === "generate_image" ? "image" : "3d";
+          chatUI.setSelectedMode(streamKey, targetMode, adapterType, agentId);
         } else {
-          next = [...selectedCommands, cmd];
+          onCommandsChange?.([...selectedCommands, cmd]);
         }
-        onCommandsChange?.(next);
         if (slashStartRef.current !== null) {
           const before = input.slice(0, slashStartRef.current);
           const afterSlash = input.slice(slashStartRef.current);
@@ -381,17 +400,23 @@ export const DesktopChatInputBar = memo(
         slashStartRef.current = null;
         shellRef.current?.focus();
       },
-      [selectedCommands, onCommandsChange, input, onInputChange, onModelChange],
+      [
+        adapterType,
+        agentId,
+        chatUI.setSelectedMode,
+        input,
+        onCommandsChange,
+        onInputChange,
+        selectedCommands,
+        streamKey,
+      ],
     );
 
     const handleCommandRemove = useCallback(
       (id: string) => {
         onCommandsChange?.(selectedCommands.filter((c) => c.id !== id));
-        if (isGenerationCommand(id)) {
-          onModelChange(getDefaultModelForMode("chat").id);
-        }
       },
-      [selectedCommands, onCommandsChange, onModelChange],
+      [selectedCommands, onCommandsChange],
     );
 
     const handleInputChange = useCallback(
@@ -430,14 +455,11 @@ export const DesktopChatInputBar = memo(
     );
 
     const handleSubmit = useCallback(() => {
-      track("chat_message_sent", { model: selectedModel });
-      onSend(
-        input,
-        undefined,
-        undefined,
-        generationMode !== "chat" ? generationMode : undefined,
-      );
-    }, [input, generationMode, onSend, selectedModel]);
+      track("chat_message_sent", { model: selectedModel, mode: selectedMode });
+      // Mode is read from the store inside `useChatPanelState.handleSend`;
+      // we no longer need to thread `generationMode` through here.
+      onSend(input, undefined, undefined);
+    }, [input, onSend, selectedModel, selectedMode]);
 
     const providerLabel = (provider: string): string => {
       switch (provider) {
@@ -760,6 +782,14 @@ export const DesktopChatInputBar = memo(
       </>
     );
 
+    const modeBar = (
+      <ModeSelector
+        selectedMode={selectedMode}
+        onChange={onModeChange}
+        hideLabel={compact}
+      />
+    );
+
     return (
       <InputBarShell
         ref={shellRef}
@@ -784,6 +814,7 @@ export const DesktopChatInputBar = memo(
         onContainerDragOver={handleDragOver}
         onContainerDragLeave={handleDragLeave}
         onContainerDrop={handleDrop}
+        modeBar={modeBar}
         containerTop={containerTop}
         inputRowStart={inputRowStart}
         infoBarStart={infoBarStart}
