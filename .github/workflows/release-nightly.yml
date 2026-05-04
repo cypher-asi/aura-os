@@ -166,6 +166,7 @@ jobs:
       SWARM_BASE_URL: ${{ vars.SWARM_BASE_URL }}
       REQUIRE_ZERO_PRO: ${{ vars.REQUIRE_ZERO_PRO }}
       AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN: ${{ vars.AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN }}
+      VITE_MIXPANEL_TOKEN: ${{ vars.VITE_MIXPANEL_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
