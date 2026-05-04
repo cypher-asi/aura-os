@@ -264,7 +264,7 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
 
   if (isEmpty) {
     if (!showEmpty) return null;
-    return <EmptyState>No tasks yet</EmptyState>;
+    return <EmptyState>No tasks yet. Create a task to get your AI agent working on something.</EmptyState>;
   }
 
   return (

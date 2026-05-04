@@ -52,5 +52,5 @@ export function AgentIndexRedirect() {
     return <Navigate to={`/agents/${target.agent_id}`} replace />;
   }
 
-  return <EmptyState icon={<Bot size={32} />}>Add an agent to get started.</EmptyState>;
+  return <EmptyState icon={<Bot size={32} />}>Create your first AI agent to start chatting, automating tasks, and more.</EmptyState>;
 }
