@@ -6,10 +6,11 @@
  *
  * Layout strategy: the segments wrapper is a CSS grid with one
  * equal-width column per mode plus a 2px gap. The indicator pill
- * lives in column 1 and is translated horizontally by
- * `--mode-idx`, which the React layer sets per render. CSS owns
- * the animation, so the pill cannot be raced by React/effect
- * timing or a sibling component briefly disabling transitions.
+ * is absolutely positioned over those columns (so it never takes
+ * a track) and translated horizontally by `--mode-idx`, which the
+ * React layer sets per render. CSS owns the animation, so the
+ * pill cannot be raced by React/effect timing or a sibling
+ * component briefly disabling transitions.
  * ============================================================ */
 
 .root {
@@ -46,9 +47,16 @@
 }
 
 .indicator {
-  grid-column: 1 / span 1;
-  grid-row: 1;
-  align-self: stretch;
+  position: absolute;
+  top: var(--mode-pad);
+  bottom: var(--mode-pad);
+  left: var(--mode-pad);
+  width: calc(
+    (
+        100% - 2 * var(--mode-pad) -
+          (var(--mode-count) - 1) * var(--mode-gap)
+      ) / var(--mode-count)
+  );
   border-radius: 999px;
   background: var(--color-elevated);
   box-shadow: 0 1px 2px var(--color-backdrop-light);
@@ -62,7 +70,6 @@
 .segment {
   position: relative;
   z-index: 1;
-  grid-row: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
