@@ -2,20 +2,20 @@
   {
     "date": "2026-05-04",
     "channel": "nightly",
-    "version": "0.1.0-nightly.444.1",
-    "title": "Light mode lands, plus an onboarding checklist for new users",
-    "intro": "Today's nightly is dominated by one large thread: Aura grew a real theming system, with a working light mode, a Settings → Appearance editor, custom token overrides, and named presets you can import and export. On top of that, a first-run onboarding flow now greets new users with a welcome modal, a five-step checklist, and friendlier empty states. Smaller polish hits the chat panel reliability, modal chrome alignment, the Aura3D editor's memory of where you left off, and a few release-pipeline secrets needed for the desktop nightly.",
+    "version": "0.1.0-nightly.445.1",
+    "title": "Themeable Aura: light mode, onboarding, and a self-diagnosing updater",
+    "intro": "Today's nightly is dominated by a sweeping theming overhaul that finally makes Aura usable in light mode, alongside a new onboarding flow, a redesigned chat input with mode selection, and a substantially more debuggable desktop auto-updater. Settings, modal chrome, and form inputs got pulled into a more coherent visual system, and the release pipeline picked up a few missing secrets along the way.",
     "entryCount": 6,
     "highlights": [
-      "Full light/dark theming with a Settings → Appearance editor, custom tokens, and JSON presets",
-      "First-run onboarding: welcome modal, 5-task checklist, and friendlier empty states",
-      "Light mode is now actually readable across chat, sidekick, modals, and form inputs",
-      "Two CEO-chat blanking bugs (LRU eviction and cold-load reveal) fixed",
-      "Aura3D remembers your last project and auto-selects the latest image/model"
+      "Full light/dark theming with custom token presets and JSON import/export",
+      "New onboarding: welcome modal, checklist, and prompt suggestions",
+      "Chat input gains Code/Plan/Image/3D mode selector",
+      "Self-diagnosing desktop auto-updater on Windows and macOS",
+      "Sectioned Settings with deep links and a unified Settings modal"
     ],
-    "rawCommitCount": 69,
-    "generatedAt": "2026-05-04T21:31:29.935Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.444.1",
+    "rawCommitCount": 71,
+    "generatedAt": "2026-05-04T22:00:15.223Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.445.1",
     "path": "history/2026-05-04.json"
   },
   {
