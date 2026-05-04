@@ -14,6 +14,7 @@ const DEFAULT_ORBIT_BASE_URL: &str = "https://orbit-sfvu.onrender.com";
 const DEFAULT_SWARM_BASE_URL: &str =
     "http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com";
 const DEFAULT_REQUIRE_ZERO_PRO: &str = "false";
+const DEFAULT_Z_BILLING_API_KEY: &str = "";
 const DEFAULT_DISABLE_LOCAL_HARNESS_AUTOSPAWN: &str = "true";
 
 fn npm() -> Command {
@@ -284,6 +285,11 @@ fn main() {
         "REQUIRE_ZERO_PRO",
         "AURA_DESKTOP_DEFAULT_REQUIRE_ZERO_PRO",
         DEFAULT_REQUIRE_ZERO_PRO,
+    );
+    emit_runtime_default(
+        "Z_BILLING_API_KEY",
+        "AURA_DESKTOP_DEFAULT_Z_BILLING_API_KEY",
+        DEFAULT_Z_BILLING_API_KEY,
     );
     emit_runtime_default(
         "AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN",

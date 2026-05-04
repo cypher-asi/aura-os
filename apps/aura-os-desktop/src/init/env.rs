@@ -64,6 +64,10 @@ pub(crate) fn apply_desktop_runtime_defaults() {
         env!("AURA_DESKTOP_DEFAULT_REQUIRE_ZERO_PRO"),
     );
     set_env_default(
+        "Z_BILLING_API_KEY",
+        env!("AURA_DESKTOP_DEFAULT_Z_BILLING_API_KEY"),
+    );
+    set_env_default(
         "AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN",
         env!("AURA_DESKTOP_DEFAULT_DISABLE_LOCAL_HARNESS_AUTOSPAWN"),
     );
