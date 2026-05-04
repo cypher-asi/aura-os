@@ -167,6 +167,7 @@ jobs:
       REQUIRE_ZERO_PRO: ${{ vars.REQUIRE_ZERO_PRO }}
       AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN: ${{ vars.AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN }}
       VITE_MIXPANEL_TOKEN: ${{ vars.VITE_MIXPANEL_TOKEN }}
+      Z_BILLING_API_KEY: ${{ secrets.Z_BILLING_API_KEY }}
     strategy:
       fail-fast: false
       matrix:
