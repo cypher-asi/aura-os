@@ -80,6 +80,21 @@
   margin-right: auto;
 }
 
+.inputContainerPulse {
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    border-color: var(--color-border);
+    box-shadow: none;
+  }
+  50% {
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.08);
+  }
+}
+
 .dropZoneActive {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 1px var(--color-accent);
