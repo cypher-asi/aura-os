@@ -24,6 +24,7 @@ export function Aura3DMainPanel({ children: _children }: { children?: ReactNode 
           value={activeTab}
           onChange={(id) => setActiveTab(id as Aura3DTab)}
           size="sm"
+          tabClassName={styles.tabItem}
         />
       </div>
       {error && (

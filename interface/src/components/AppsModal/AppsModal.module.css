@@ -1,3 +1,12 @@
+.compactHeader {
+  height: var(--control-height-sm);
+  padding: 0 var(--space-3);
+}
+
+.compactHeader :global(button) {
+  padding: 0;
+}
+
 .section {
   margin-top: var(--space-3);
   border-radius: var(--radius-md);

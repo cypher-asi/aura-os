@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { Navigator, Page } from "@cypher-asi/zui";
+import { Navigator } from "@cypher-asi/zui";
 import type { NavigatorItemProps } from "@cypher-asi/zui";
 import {
   DEFAULT_SETTINGS_SECTION,
@@ -30,7 +30,10 @@ export function SettingsView() {
   const { Pane } = getSettingsSection(section);
 
   return (
-    <Page title="Settings">
+    <div className={styles.root}>
+      <header className={styles.titleBar}>
+        <span className={styles.title}>Settings</span>
+      </header>
       <div className={styles.layout}>
         <aside className={styles.nav}>
           <Navigator
@@ -43,6 +46,6 @@ export function SettingsView() {
           <Pane />
         </section>
       </div>
-    </Page>
+    </div>
   );
 }

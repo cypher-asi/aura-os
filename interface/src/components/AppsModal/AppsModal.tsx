@@ -162,7 +162,13 @@ export function AppsModal({ isOpen, onClose }: Props) {
   const activeRow = activeId ? rowsById.get(activeId) ?? null : null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Apps" size="sm">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Apps"
+      size="sm"
+      headerClassName={styles.compactHeader}
+    >
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}

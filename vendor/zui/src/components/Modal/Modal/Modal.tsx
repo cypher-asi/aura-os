@@ -16,6 +16,7 @@ export interface ModalProps {
   headerActions?: ReactNode;
   className?: string;
   contentClassName?: string;
+  headerClassName?: string;
   titleClassName?: string;
   initialFocusRef?: RefObject<HTMLElement>;
   size?: ModalSize;
@@ -35,6 +36,7 @@ export function Modal({
   headerActions,
   className,
   contentClassName,
+  headerClassName,
   titleClassName,
   initialFocusRef,
   size = 'md',
@@ -76,7 +78,7 @@ export function Modal({
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className={styles.header}>
+        <div className={clsx(styles.header, headerClassName)}>
           <div className={styles.headerTitleGroup}>
             <h2 className={clsx(styles.title, titleClassName)}>{title}</h2>
             {subtitle && <span className={styles.subtitle}>{subtitle}</span>}
