@@ -71,7 +71,13 @@ pub(crate) async fn setup_agent_chat_persistence(
 /// first chat turn self-heals instead of surfacing the
 /// `chat_persist_unavailable` error to the UI. Best-effort: if it
 /// still fails we return whatever (still empty) match list we had.
-async fn lazy_repair_home_project_binding(
+///
+/// `pub(super)` so the deduped chat hot path in
+/// `agent_route::load_persistence_and_history` can run the same
+/// self-heal without re-fetching `find_matching_project_agents` twice.
+/// The original `setup_agent_chat_persistence` wrapper still calls
+/// this internally for `reset_agent_session`.
+pub(super) async fn lazy_repair_home_project_binding(
     state: &AppState,
     storage: &Arc<StorageClient>,
     agent_id: &AgentId,
@@ -221,4 +227,93 @@ pub(crate) async fn reset_instance_session(
         setup_project_chat_persistence(&state, &project_id, &agent_instance_id, &jwt, true).await;
     info!(%agent_instance_id, "Instance chat session reset");
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[cfg(test)]
+mod tests {
+    //! Pin down the precondition that motivates the lazy
+    //! Home-project repair on the chat hot path. The deduped
+    //! `agent_route::load_persistence_and_history` path skips the
+    //! `setup_agent_chat_persistence` wrapper and feeds a shared
+    //! `find_matching_project_agents` result directly into
+    //! [`setup_agent_chat_persistence_with_matched`]; without an
+    //! explicit lazy repair around an empty `matching` slice the
+    //! bare-agent first chat for a brand-new user surfaces a 422
+    //! `missing aura_session_id` because `aura_session_id` is sourced
+    //! from the returned `ChatPersistCtx`. These tests guard the
+    //! contract: empty matching → `None`, populated matching →
+    //! `Some(ctx)` with a real session id.
+    use std::sync::Arc;
+
+    use aura_os_core::AgentId;
+    use aura_os_storage::testutil::start_mock_storage;
+    use aura_os_storage::{StorageClient, StorageProjectAgent};
+
+    use super::setup_agent_chat_persistence_with_matched;
+
+    #[tokio::test]
+    async fn empty_matching_returns_none_so_chat_hot_path_must_self_heal() {
+        let (url, _db) = start_mock_storage().await;
+        let storage = Arc::new(StorageClient::with_base_url(&url));
+        let agent_id = AgentId::new();
+
+        let ctx =
+            setup_agent_chat_persistence_with_matched(&storage, &agent_id, "jwt", false, &[]).await;
+
+        assert!(
+            ctx.is_none(),
+            "without a project_agent binding the helper must return None — \
+             this is exactly the orphan state that the lazy_repair_home_project_binding \
+             call in agent_route::load_persistence_and_history is responsible for healing"
+        );
+    }
+
+    #[tokio::test]
+    async fn populated_matching_yields_persist_ctx_with_session_id() {
+        let (url, _db) = start_mock_storage().await;
+        let storage = Arc::new(StorageClient::with_base_url(&url));
+        let agent_id = AgentId::new();
+        let project_id = "project-1".to_string();
+        let project_agent = StorageProjectAgent {
+            id: "pa-1".to_string(),
+            project_id: Some(project_id.clone()),
+            org_id: Some("org-1".to_string()),
+            agent_id: Some(agent_id.to_string()),
+            name: Some("agent".to_string()),
+            role: None,
+            personality: None,
+            system_prompt: None,
+            skills: None,
+            icon: None,
+            harness: None,
+            status: Some("active".to_string()),
+            model: None,
+            total_input_tokens: None,
+            total_output_tokens: None,
+            instance_role: None,
+            permissions: None,
+            intent_classifier: None,
+            created_at: None,
+            updated_at: None,
+        };
+
+        let ctx = setup_agent_chat_persistence_with_matched(
+            &storage,
+            &agent_id,
+            "jwt",
+            false,
+            std::slice::from_ref(&project_agent),
+        )
+        .await
+        .expect("non-empty matching with a project_id must yield a ChatPersistCtx");
+
+        assert_eq!(ctx.project_id, project_id);
+        assert_eq!(ctx.project_agent_id, "pa-1");
+        assert_eq!(ctx.agent_id.as_deref(), Some(agent_id.to_string().as_str()));
+        assert!(
+            !ctx.session_id.is_empty(),
+            "session_id must be populated so SessionConfig.aura_session_id passes \
+             the Tier-1 chat preflight"
+        );
+    }
 }

@@ -27,7 +27,8 @@ use super::loaders::load_current_session_events_for_agent_with_matched;
 use super::persist::ChatPersistCtx;
 use super::request::slice_recent_agent_events;
 use super::setup::{
-    has_live_session, remove_live_session, setup_agent_chat_persistence_with_matched,
+    has_live_session, lazy_repair_home_project_binding, remove_live_session,
+    setup_agent_chat_persistence_with_matched,
 };
 use super::streaming::{open_harness_chat_stream, OpenChatStreamArgs};
 use super::tools::{build_session_installed_tools, InstalledToolsCtx};
@@ -220,7 +221,23 @@ async fn load_persistence_and_history(
     let Some(ref storage) = state.storage_client else {
         return (None, None);
     };
-    let matching = find_matching_project_agents(state, storage, jwt, &agent_id.to_string()).await;
+    let mut matching =
+        find_matching_project_agents(state, storage, jwt, &agent_id.to_string()).await;
+
+    // Self-heal: if the agent has no `project_agent` binding yet
+    // (typically because the best-effort auto-bind in
+    // `crud::create_agent` failed transiently or `agent.org_id` wasn't
+    // populated on the network record at create time), run the same
+    // lazy Home-project repair the legacy `setup_agent_chat_persistence`
+    // wrapper performs. Without this the deduped hot path lets a brand
+    // new user's first chat fail Tier-1 preflight with
+    // `missing aura_session_id` because `persist_ctx` would be `None`
+    // and `SessionConfig.aura_session_id` defaults to `None`. The
+    // repair busts the discovery cache and returns the refreshed match
+    // list, so persist + history below see the just-created binding.
+    if matching.is_empty() {
+        matching = lazy_repair_home_project_binding(state, storage, agent_id, jwt).await;
+    }
 
     let persist_fut =
         setup_agent_chat_persistence_with_matched(storage, agent_id, jwt, force_new, &matching);
