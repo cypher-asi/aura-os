@@ -3,23 +3,24 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-04T11:48:17.059Z",
+  "generatedAt": "2026-05-04T12:10:23.532Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.434.1",
+  "version": "0.1.0-nightly.435.1",
   "date": "2026-05-04",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.434.1",
-  "lastIncludedSha": "e5d310e08572b84be906c7426277872209e2b250",
-  "previousProcessedSha": "7e639620be7006ca0041a762b793b8b647fc2c9f",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.435.1",
+  "lastIncludedSha": "ec62961b1c1549b0c63641125906a06ae704355f",
+  "previousProcessedSha": "e5d310e08572b84be906c7426277872209e2b250",
   "commitShas": [
     "bd804201205eb0d6fa131e14e53f6e7bf1cc6066",
     "988eee696ffa6cf9d70a1730c43aebcc09989807",
     "708e75e6a2f331a85237b0a1add008371b631519",
     "6f91ff35d4277c128be32eb41b64fb374637c94c",
-    "e5d310e08572b84be906c7426277872209e2b250"
+    "e5d310e08572b84be906c7426277872209e2b250",
+    "ec62961b1c1549b0c63641125906a06ae704355f"
   ],
-  "rawCommitCount": 5,
-  "filteredCommitCount": 5,
+  "rawCommitCount": 6,
+  "filteredCommitCount": 6,
   "rawCommits": [
     {
       "sha": "bd804201205eb0d6fa131e14e53f6e7bf1cc6066",
@@ -215,6 +216,46 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "ec62961b1c1549b0c63641125906a06ae704355f",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-04T12:57:20+01:00",
+      "subject": "fix(onboarding): center-align task icons with text in welcome modal",
+      "body": "",
+      "parents": [
+        "e5d310e08572b84be906c7426277872209e2b250"
+      ],
+      "files": [
+        "interface/src/features/onboarding/WelcomeModal/WelcomeModal.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 2
+      },
+      "committedAtMs": 1777895840000,
+      "cleanSubject": "center-align task icons with text in welcome modal",
+      "keywords": [
+        "center",
+        "align",
+        "task",
+        "icons",
+        "with",
+        "text",
+        "welcome",
+        "modal"
+      ],
+      "fileGroups": [
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 1,
@@ -226,36 +267,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11695500
+          "sizeBytes": 11695504
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.434.1",
+      "version": "0.1.0-nightly.435.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.434.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.435.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 35452004
+          "sizeBytes": 35446612
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.434.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.435.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.434.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.435.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 102668792
+          "sizeBytes": 102664696
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.434.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.435.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -265,29 +306,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.434.1",
+      "version": "0.1.0-nightly.435.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.434.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.435.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 32008817
+          "sizeBytes": 32012033
         },
         {
-          "name": "Aura_0.1.0-nightly.434.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.435.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.434.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.435.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 31816262
+          "sizeBytes": 31820580
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.434.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.435.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -297,29 +338,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.434.1",
+      "version": "0.1.0-nightly.435.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.434.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.435.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33569443
+          "sizeBytes": 33575490
         },
         {
-          "name": "Aura_0.1.0-nightly.434.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.435.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.434.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.435.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33420400
+          "sizeBytes": 33421192
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.434.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.435.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -329,17 +370,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.434.1",
+      "version": "0.1.0-nightly.435.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.434.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.435.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24165633
+          "sizeBytes": 24170745
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.434.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.435.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -348,43 +389,45 @@
     }
   ],
   "rendered": {
-    "title": "First-run onboarding lands across the desktop app",
-    "intro": "Today's nightly is a focused product drop: a complete first-run onboarding experience now ships in Aura. New users see a welcome flow, a persistent checklist that tracks five guided tasks, and a Help button in the taskbar to bring it back at any time — all wired into the AppShell across Mac, Windows, and Linux desktop builds.",
+    "title": "First-run onboarding lands across the Aura desktop shell",
+    "intro": "Today's nightly is a focused onboarding release: new users now get a guided welcome flow, a persistent progress checklist, and an always-available help entry point in the taskbar — all wired into the desktop shell across Mac, Windows, and Linux builds.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "4:33 AM",
         "started_at": "2026-05-04T11:33:23.000Z",
-        "ended_at": "2026-05-04T11:33:23.000Z",
-        "title": "Guided first-run onboarding with welcome flow and checklist",
-        "summary": "Aura now greets new users with a two-step welcome modal and a persistent five-task checklist that tracks progress automatically and can be reopened from the taskbar.",
+        "ended_at": "2026-05-04T11:57:20.000Z",
+        "title": "Guided first-run onboarding for new Aura users",
+        "summary": "A complete onboarding experience now greets new users with a welcome modal, a progress checklist, and automatic task tracking wired into the desktop shell.",
         "items": [
           {
-            "text": "Added a per-user onboarding store with localStorage persistence that defines five starter tasks — send your first message, create a project, create an agent, generate an image with AURA 3D, and explore plans & credits — and tracks welcome and checklist visibility state.",
+            "text": "New users are now welcomed by a 2-step intro modal showing the AURA logo and a preview of getting-started tasks on first login, with a skip option and analytics tracking. Onboarding state persists per user via a Zustand store backed by localStorage, so progress survives reloads and is scoped to each account.",
             "commit_shas": [
-              "bd804201205eb0d6fa131e14e53f6e7bf1cc6066"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Introduced a two-step welcome modal shown on first login, featuring the AURA logo, an intro message, and a preview of the onboarding checklist, with a skip option and analytics tracking.",
-            "commit_shas": [
+              "bd804201205eb0d6fa131e14e53f6e7bf1cc6066",
               "988eee696ffa6cf9d70a1730c43aebcc09989807"
             ],
             "confidence": "high"
           },
           {
-            "text": "Shipped a floating, collapsible checklist in the bottom-right corner with a progress bar, per-task rows that deep-link into the relevant feature, and dismiss controls so users can hide it once they're rolling.",
+            "text": "A floating, collapsible checklist widget anchored to the bottom-right of the desktop guides users through five concrete first tasks — sending a message, creating a project, creating an agent, generating an image with AURA 3D, and exploring plans & credits — with a progress bar and click-through navigation to each feature.",
             "commit_shas": [
-              "708e75e6a2f331a85237b0a1add008371b631519"
+              "708e75e6a2f331a85237b0a1add008371b631519",
+              "bd804201205eb0d6fa131e14e53f6e7bf1cc6066"
             ],
             "confidence": "high"
           },
           {
-            "text": "Tasks now complete themselves: a watcher subscribes to the message, projects, agents, AURA 3D, and billing stores to detect real activity, and a new Help button between Settings and Profile in the bottom taskbar reopens or resets the checklist on demand.",
+            "text": "Checklist items now tick off automatically: a centralized task watcher subscribes to the message, projects, agents, 3D, and billing stores and emits per-task and completion analytics events, so users never have to manually mark progress.",
             "commit_shas": [
-              "6f91ff35d4277c128be32eb41b64fb374637c94c",
-              "e5d310e08572b84be906c7426277872209e2b250"
+              "6f91ff35d4277c128be32eb41b64fb374637c94c"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "A new Help button sits in the BottomTaskbar between Settings and Profile, letting users reopen the checklist after dismissing it or restart onboarding once it's complete. The welcome modal, checklist, and watcher are mounted in AppShell behind lazy boundaries, and a small CSS fix re-centers task icons with their labels in the welcome preview.",
+            "commit_shas": [
+              "e5d310e08572b84be906c7426277872209e2b250",
+              "ec62961b1c1549b0c63641125906a06ae704355f"
             ],
             "confidence": "high"
           }
@@ -392,11 +435,11 @@
       }
     ],
     "highlights": [
-      "New welcome modal and 5-task onboarding checklist",
-      "Auto-completing tasks watch real product activity",
-      "Help button in the taskbar reopens guidance anytime",
-      "Shipped to Mac, Windows, and Linux nightly builds"
+      "New 2-step welcome modal on first login",
+      "Floating 5-task onboarding checklist with auto-completion",
+      "Help button added to the bottom taskbar",
+      "Per-user onboarding progress persisted in localStorage"
     ],
-    "raw_commit_count": 5
+    "raw_commit_count": 6
   }
 }
