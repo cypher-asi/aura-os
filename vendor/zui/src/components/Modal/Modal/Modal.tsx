@@ -24,8 +24,6 @@ export interface ModalProps {
   fullHeight?: boolean;
   /** Remove default padding from content area */
   noPadding?: boolean;
-  /** Render a slim 32px header (control-height-sm) instead of the default. */
-  compactHeader?: boolean;
 }
 
 export function Modal({
@@ -44,7 +42,6 @@ export function Modal({
   size = 'md',
   fullHeight = false,
   noPadding = false,
-  compactHeader = false,
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -81,7 +78,7 @@ export function Modal({
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className={clsx(styles.header, compactHeader && styles.headerCompact, headerClassName)}>
+        <div className={clsx(styles.header, headerClassName)}>
           <div className={styles.headerTitleGroup}>
             <h2 className={clsx(styles.title, titleClassName)}>{title}</h2>
             {subtitle && <span className={styles.subtitle}>{subtitle}</span>}
