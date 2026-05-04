@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useOnboardingStore, selectIsFullyComplete } from "./onboarding-store";
+import { useOnboardingStore } from "./onboarding-store";
 import { useProjectsListStore } from "../../stores/projects-list-store";
 import { useAgentStore } from "../../apps/agents/stores/agent-store";
 import { useAura3DStore } from "../../stores/aura3d-store";
@@ -49,11 +49,11 @@ export function useOnboardingTaskWatcher(): void {
       }),
     );
 
-    // ── create_project: watch projects list ──
+    // ── create_project: watch for project count increasing (not just > 0, since a default project may exist) ──
     unsubs.push(
-      useProjectsListStore.subscribe((state) => {
+      useProjectsListStore.subscribe((state, prev) => {
         if (useOnboardingStore.getState().checklistTasks.create_project) return;
-        if (state.projects.length > 0) {
+        if (state.projects.length > prev.projects.length) {
           useOnboardingStore.getState().completeTask("create_project");
           const completed = Object.values(useOnboardingStore.getState().checklistTasks).filter(Boolean).length;
           track("onboarding_task_completed", { task_id: "create_project", progress: progressLabel(completed) });
@@ -62,11 +62,11 @@ export function useOnboardingTaskWatcher(): void {
       }),
     );
 
-    // ── create_agent: watch agents list ──
+    // ── create_agent: watch for agent count increasing (not just > 0, since a default agent exists) ──
     unsubs.push(
-      useAgentStore.subscribe((state) => {
+      useAgentStore.subscribe((state, prev) => {
         if (useOnboardingStore.getState().checklistTasks.create_agent) return;
-        if (state.agents.length > 0) {
+        if (state.agents.length > prev.agents.length) {
           useOnboardingStore.getState().completeTask("create_agent");
           const completed = Object.values(useOnboardingStore.getState().checklistTasks).filter(Boolean).length;
           track("onboarding_task_completed", { task_id: "create_agent", progress: progressLabel(completed) });
@@ -100,17 +100,6 @@ export function useOnboardingTaskWatcher(): void {
         }
       }),
     );
-
-    // ── Check initial state on mount (e.g., user already has projects) ──
-    const onboarding = useOnboardingStore.getState();
-    if (selectIsFullyComplete(onboarding)) return () => unsubs.forEach((u) => u());
-
-    if (!onboarding.checklistTasks.create_project && useProjectsListStore.getState().projects.length > 0) {
-      onboarding.completeTask("create_project");
-    }
-    if (!onboarding.checklistTasks.create_agent && useAgentStore.getState().agents.length > 0) {
-      onboarding.completeTask("create_agent");
-    }
 
     return () => unsubs.forEach((u) => u());
   }, []);
