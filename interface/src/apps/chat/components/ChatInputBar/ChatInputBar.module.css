@@ -358,10 +358,20 @@
   padding: 8px 14px 0;
 }
 
+.commandChipsInline {
+  max-width: 100%;
+  min-width: 0;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  overflow: hidden;
+  padding: 0;
+}
+
 .commandChip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  min-width: 0;
   padding: 2px 8px;
   border-radius: 4px;
   background: var(--color-overlay-medium);
@@ -373,7 +383,15 @@
 }
 
 .commandChipLabel {
+  min-width: 0;
+  overflow: hidden;
   opacity: 0.85;
+  text-overflow: ellipsis;
+}
+
+.commandChipsInline .commandChip {
+  max-width: 100%;
+  padding: 2px 7px;
 }
 
 .commandChipRemove {
