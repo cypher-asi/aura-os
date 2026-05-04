@@ -16,6 +16,7 @@ import { formatCredits } from "../../shared/utils/format";
 import { AppNavRail, TaskbarIconButton, TASKBAR_ICON_SIZE } from "../AppNavRail";
 import { useCreditBalance } from "../CreditsBadge/useCreditBalance";
 import { FavoriteAgentsStrip } from "./FavoriteAgentsStrip";
+import { HelpButton } from "../../features/onboarding/HelpButton/HelpButton";
 import styles from "./BottomTaskbar.module.css";
 
 const TASKBAR_CHEVRON_SIZE = TASKBAR_ICON_SIZE + 1;
@@ -130,6 +131,7 @@ export function BottomTaskbar() {
             aria-label="Settings"
             onClick={openOrgSettings}
           />
+          <HelpButton />
           <AppNavRail
             layout="taskbar"
             includeIds={["profile"]}

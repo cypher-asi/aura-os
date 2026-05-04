@@ -8,6 +8,9 @@ import { useProjectsListStore } from "../../stores/projects-list-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useDesktopWindowStore } from "../../stores/desktop-window-store";
 import { useAppUIStore } from "../../stores/app-ui-store";
+import { useAuth } from "../../stores/auth-store";
+import { useOnboardingStore } from "../../features/onboarding/onboarding-store";
+import { useOnboardingTaskWatcher } from "../../features/onboarding/useOnboardingTaskWatcher";
 import { useShallow } from "zustand/react/shallow";
 import { DesktopShell } from "../DesktopShell";
 import { MobileShell } from "../../mobile/shell";
@@ -34,6 +37,12 @@ const NewProjectModal = lazy(() =>
 );
 const AppsModal = lazy(() =>
   import("../AppsModal").then((module) => ({ default: module.AppsModal })),
+);
+const WelcomeModal = lazy(() =>
+  import("../../features/onboarding/WelcomeModal/WelcomeModal").then((module) => ({ default: module.WelcomeModal })),
+);
+const OnboardingChecklist = lazy(() =>
+  import("../../features/onboarding/OnboardingChecklist/OnboardingChecklist").then((module) => ({ default: module.OnboardingChecklist })),
 );
 
 function ProjectCreationModalHost() {
@@ -301,7 +310,18 @@ function CaptureBridgeHost() {
   return null;
 }
 
+function useOnboardingHydration() {
+  const user = useAuth().user;
+  const hydrateForUser = useOnboardingStore((s) => s.hydrateForUser);
+  useEffect(() => {
+    if (user?.user_id) hydrateForUser(user.user_id);
+  }, [user?.user_id, hydrateForUser]);
+}
+
 function AppContent() {
+  useOnboardingHydration();
+  useOnboardingTaskWatcher();
+
   const {
     orgSettingsOpen, orgInitialSection, closeOrgSettings,
     buyCreditsOpen, closeBuyCredits, openOrgBilling,
@@ -348,6 +368,12 @@ function AppContent() {
         </LazyModalBoundary>
       ) : null}
       <ProjectCreationModalHost />
+      <LazyModalBoundary>
+        <WelcomeModal />
+      </LazyModalBoundary>
+      <LazyModalBoundary>
+        <OnboardingChecklist />
+      </LazyModalBoundary>
     </>
   );
 }

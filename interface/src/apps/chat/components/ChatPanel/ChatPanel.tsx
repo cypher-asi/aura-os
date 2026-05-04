@@ -13,6 +13,7 @@ import { ChatMessageList } from "../ChatMessageList";
 import { DesktopChatInputBar, type ChatInputBarHandle, type ChatInputBarProps } from "../ChatInputBar";
 import { MessageQueue } from "../MessageQueue";
 import { OverlayScrollbar } from "../../../../components/OverlayScrollbar";
+import { PromptSuggestions } from "../PromptSuggestions/PromptSuggestions";
 import { ChatStreamingIndicator } from "./ChatStreamingIndicator";
 import { useChatPanelState } from "./useChatPanelState";
 import { useProgressText } from "../../../../hooks/stream/hooks";
@@ -410,6 +411,10 @@ export function ChatPanel({
         )}
 
         <ChatStreamingIndicator streamKey={streamKey} />
+
+        {isThreadEmpty && (
+          <PromptSuggestions onSelect={(prompt) => handleSend(prompt)} />
+        )}
 
         <InputBarComponent
           ref={inputBarRef}

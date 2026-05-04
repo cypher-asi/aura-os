@@ -54,6 +54,10 @@ type AgentState = {
   pinnedAgentIds: Set<string>;
   favoriteAgentIds: Set<string>;
 
+  createAgentModalOpen: boolean;
+  openCreateAgentModal: () => void;
+  closeCreateAgentModal: () => void;
+
   fetchAgents: (opts?: { force?: boolean }) => Promise<void>;
   removeAgent: (agentId: string) => void;
   patchAgent: (agent: Agent) => void;
@@ -137,6 +141,10 @@ export const useAgentStore = create<AgentState>()(
       selectedAgentId: null,
       pinnedAgentIds: readIdSet(PINNED_KEY),
       favoriteAgentIds: readIdSet(FAVORITE_KEY),
+
+      createAgentModalOpen: false,
+      openCreateAgentModal: () => set({ createAgentModalOpen: true }),
+      closeCreateAgentModal: () => set({ createAgentModalOpen: false }),
 
       fetchAgents: async (opts): Promise<void> => {
         const { agentsStatus } = get();

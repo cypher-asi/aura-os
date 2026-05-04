@@ -1,0 +1,110 @@
+.modal > div:first-child {
+  display: none;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-6);
+  flex: 1;
+}
+
+.stepContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-3);
+  flex: 1;
+  max-width: 460px;
+}
+
+.stepIcon {
+  color: var(--color-brand-primary);
+  margin-bottom: var(--space-2);
+}
+
+.logo {
+  margin-bottom: var(--space-2);
+}
+
+.stepTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.stepDescription {
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* ── Task preview ── */
+
+.taskPreview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  width: 100%;
+  text-align: left;
+}
+
+.taskPreviewRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.taskPreviewRow > svg {
+  flex-shrink: 0;
+}
+
+.taskPreviewLabel {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.taskPreviewHint {
+  display: block;
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+}
+
+/* ── Footer ── */
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.skipLink {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+}
+
+.skipLink:hover {
+  color: var(--color-text-primary);
+}
+

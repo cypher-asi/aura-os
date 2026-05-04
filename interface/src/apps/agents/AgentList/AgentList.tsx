@@ -134,6 +134,15 @@ export function AgentList({ mode = "default" }: AgentListProps) {
   const [showEditor, setShowEditor] = useState(false);
   const [pendingCreatedAgentId, setPendingCreatedAgentId] = useState<string | null>(null);
   const shouldOpenMobileCreate = isMobileLibrary && new URLSearchParams(location.search).get("create") === "1";
+  const createAgentModalOpen = useAgentStore((s) => s.createAgentModalOpen);
+  const closeCreateAgentModal = useAgentStore((s) => s.closeCreateAgentModal);
+
+  useEffect(() => {
+    if (createAgentModalOpen) {
+      setShowEditor(true);
+      closeCreateAgentModal();
+    }
+  }, [createAgentModalOpen, closeCreateAgentModal]);
   const pendingCreateAgentHandoff = useChatHandoffStore((state) => state.pendingCreateAgentHandoff);
   const beginCreateAgentHandoff = useChatHandoffStore((state) => state.beginCreateAgentHandoff);
 
@@ -408,7 +417,7 @@ export function AgentList({ mode = "default" }: AgentListProps) {
   if (visibleSortedAgents.length === 0) {
     return (
       <>
-        <EmptyState>Add an agent to get started.</EmptyState>
+        <EmptyState>Create your first AI agent to start chatting, automating tasks, and more.</EmptyState>
         <AgentEditorModal
           isOpen={showEditor}
           onClose={() => setShowEditor(false)}

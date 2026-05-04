@@ -573,7 +573,7 @@ export const DesktopChatInputBar = memo(
         data-agent-surface="chat-input-bar"
       >
         <div
-          className={`${styles.inputContainer} ${isDragOver ? styles.dropZoneActive : ""}`}
+          className={`${styles.inputContainer} ${isDragOver ? styles.dropZoneActive : ""}${isCentered ? ` ${styles.inputContainerPulse}` : ""}`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
