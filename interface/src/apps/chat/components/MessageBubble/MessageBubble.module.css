@@ -34,9 +34,15 @@
   word-wrap: break-word;
 }
 
+/* User message bubble is intentionally pinned dark + white text in BOTH
+   themes. Differentiating sender vs assistant is the whole point of the
+   bubble, and in light mode an off-white bubble against a white page bg
+   loses that contrast — the bubble disappears. Keep this hardcoded
+   rather than routing through --color-bg-secondary (which now flips
+   with the theme) so the visual identity is preserved across modes. */
 .bubbleUser {
-  background: var(--color-bg-secondary);
-  color: var(--color-text-primary);
+  background: #1e1e1e;
+  color: #ffffff;
   border-radius: 3px 3px 0 3px;
   min-height: var(--control-height-sm, 32px);
   display: flex;
