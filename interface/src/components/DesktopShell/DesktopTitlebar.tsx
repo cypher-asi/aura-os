@@ -56,8 +56,8 @@ export function DesktopTitlebar({
       onDoubleClick={() => windowCommand("maximize")}
       icon={
         <span className={`${styles.titleLeading} titlebar-no-drag`}>
-          <MenuBar />
           <OrgSelector variant="icon" />
+          <MenuBar />
         </span>
       }
       title={
