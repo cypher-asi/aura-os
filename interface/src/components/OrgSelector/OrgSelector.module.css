@@ -150,11 +150,6 @@
   color: var(--color-text-primary);
 }
 
-.iconTrigger [data-team="true"] {
-  background: #000;
-  box-shadow: 0 0 0 1px var(--color-border);
-}
-
 .orgNameLabel {
   font-size: var(--font-size-2xs, 11px);
   font-weight: 500;
