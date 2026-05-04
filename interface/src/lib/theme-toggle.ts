@@ -1,43 +1,45 @@
 import type { ResolvedTheme, Theme } from "@cypher-asi/zui";
 
 /**
- * Cycle order shared by the desktop titlebar toggle (Phase 2) and the mobile
- * topbar toggle (Phase 12): dark -> light -> system -> dark.
+ * Two-state toggle: light <-> dark. The titlebar / mobile topbar buttons
+ * flip between the two explicit themes — `system` is intentionally not
+ * part of the cycle (per product decision to keep the toggle a binary
+ * switch). If the user previously opted into `system` (e.g. via stored
+ * preference) the next click resolves to the OPPOSITE of whatever
+ * `prefers-color-scheme` is currently rendering, so the click always
+ * produces a visible change.
  */
-const THEME_CYCLE: Record<Theme, Theme> = {
-  dark: "light",
-  light: "system",
-  system: "dark",
-};
-
-export function cycleTheme(current: Theme): Theme {
-  return THEME_CYCLE[current];
+export function cycleTheme(current: Theme, resolvedTheme: ResolvedTheme): Theme {
+  if (current === "system") {
+    return resolvedTheme === "dark" ? "light" : "dark";
+  }
+  return current === "dark" ? "light" : "dark";
 }
 
-export type ThemeToggleIconKind = "sun" | "moon" | "system";
+export type ThemeToggleIconKind = "sun" | "moon";
 
 /**
- * Pick which icon to render. When the user has explicitly chosen "system"
- * we surface that with a dedicated icon; otherwise we mirror the active
- * resolved theme so users can see what's currently applied.
+ * Pick which icon to render. We mirror the currently-applied theme so
+ * users can see what's active at a glance — sun = light, moon = dark.
+ * `system` resolves to whichever of light/dark the OS is currently
+ * showing, so the icon stays meaningful even if the stored preference
+ * is `system`.
  */
 export function getThemeToggleIconKind(
-  theme: Theme,
+  _theme: Theme,
   resolvedTheme: ResolvedTheme,
 ): ThemeToggleIconKind {
-  if (theme === "system") return "system";
   return resolvedTheme === "light" ? "sun" : "moon";
 }
 
 /**
- * Human-readable aria-label for the toggle. Uses "system" (rather than the
- * resolved value) when the user has opted into system tracking, so screen
- * readers reflect the user's intent, not just the current state.
+ * Human-readable aria-label for the toggle. Reports the resolved theme
+ * (what's actually painted) so screen-reader users get the same signal
+ * as sighted users reading the icon.
  */
 export function getThemeToggleAriaLabel(
-  theme: Theme,
+  _theme: Theme,
   resolvedTheme: ResolvedTheme,
 ): string {
-  const stateLabel = theme === "system" ? "system" : resolvedTheme;
-  return `Switch theme (currently ${stateLabel})`;
+  return `Switch theme (currently ${resolvedTheme})`;
 }

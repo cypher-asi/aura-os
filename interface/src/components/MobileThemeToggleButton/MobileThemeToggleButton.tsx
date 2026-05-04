@@ -1,5 +1,5 @@
 import { useTheme } from "@cypher-asi/zui";
-import { MonitorSmartphone, Moon, Sun } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import {
   cycleTheme,
   getThemeToggleAriaLabel,
@@ -12,7 +12,6 @@ const TOUCH_TARGET_PX = 44;
 const ICON_BY_KIND = {
   sun: Sun,
   moon: Moon,
-  system: MonitorSmartphone,
 } as const;
 
 export function MobileThemeToggleButton() {
@@ -32,7 +31,7 @@ export function MobileThemeToggleButton() {
         minWidth: `${TOUCH_TARGET_PX}px`,
         minHeight: `${TOUCH_TARGET_PX}px`,
       }}
-      onClick={() => setTheme(cycleTheme(theme))}
+      onClick={() => setTheme(cycleTheme(theme, resolvedTheme))}
     >
       <Icon size={20} aria-hidden="true" />
     </button>

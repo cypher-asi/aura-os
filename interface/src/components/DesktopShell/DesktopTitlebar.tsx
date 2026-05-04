@@ -1,5 +1,5 @@
 import { Topbar, Button, useTheme } from "@cypher-asi/zui";
-import { Server, Sun, Moon, MonitorSmartphone } from "lucide-react";
+import { Server, Sun, Moon } from "lucide-react";
 import { OrgSelector } from "../OrgSelector";
 import { WindowControls } from "../WindowControls";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
@@ -20,7 +20,6 @@ interface DesktopTitlebarProps {
 const ICON_BY_KIND = {
   sun: Sun,
   moon: Moon,
-  system: MonitorSmartphone,
 } as const;
 
 function ThemeToggleButton() {
@@ -35,7 +34,7 @@ function ThemeToggleButton() {
         iconOnly
         icon={<Icon size={16} />}
         aria-label={getThemeToggleAriaLabel(theme, resolvedTheme)}
-        onClick={() => setTheme(cycleTheme(theme))}
+        onClick={() => setTheme(cycleTheme(theme, resolvedTheme))}
       />
     </span>
   );

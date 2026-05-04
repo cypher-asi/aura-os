@@ -44,7 +44,7 @@ describe("MobileThemeToggleButton", () => {
     window.localStorage.removeItem(TEST_STORAGE_KEY);
   });
 
-  it("renders the correct icon for dark / light / system themes", () => {
+  it("renders the correct icon for dark / light themes (system mirrors resolved)", () => {
     const { unmount: unmountDark } = renderWithTheme(<MobileThemeToggleButton />, {
       defaultTheme: "dark",
     });
@@ -63,14 +63,16 @@ describe("MobileThemeToggleButton", () => {
     );
     unmountLight();
 
+    // matchMedia is mocked to prefer dark, so a stored "system" preference
+    // resolves to the dark icon.
     renderWithTheme(<MobileThemeToggleButton />, { defaultTheme: "system" });
     expect(screen.getByTestId("mobile-theme-toggle")).toHaveAttribute(
       "data-icon",
-      "system",
+      "moon",
     );
   });
 
-  it("cycles dark -> light -> system -> dark on successive clicks", () => {
+  it("toggles between dark and light on successive clicks", () => {
     renderWithTheme(<MobileThemeToggleButton />, { defaultTheme: "dark" });
     const button = screen.getByTestId("mobile-theme-toggle");
 
@@ -80,10 +82,10 @@ describe("MobileThemeToggleButton", () => {
     expect(button).toHaveAttribute("data-icon", "sun");
 
     fireEvent.click(button);
-    expect(button).toHaveAttribute("data-icon", "system");
+    expect(button).toHaveAttribute("data-icon", "moon");
 
     fireEvent.click(button);
-    expect(button).toHaveAttribute("data-icon", "moon");
+    expect(button).toHaveAttribute("data-icon", "sun");
   });
 
   it("exposes an aria-label that reflects the current theme state", () => {
@@ -104,7 +106,7 @@ describe("MobileThemeToggleButton", () => {
     fireEvent.click(button);
     expect(button).toHaveAttribute(
       "aria-label",
-      "Switch theme (currently system)",
+      "Switch theme (currently dark)",
     );
   });
 
