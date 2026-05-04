@@ -60,6 +60,7 @@ export function DesktopTitlebar({
             alt="AURA"
             draggable={false}
             className={styles.titleLogo}
+            data-aura-wordmark
           />
         </span>
       }

@@ -7,7 +7,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 16px 14px calc(24px + env(safe-area-inset-bottom));
-  background: #000;
+  background: var(--color-bg);
   -webkit-overflow-scrolling: touch;
 }
 

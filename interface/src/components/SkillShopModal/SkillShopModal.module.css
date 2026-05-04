@@ -4,7 +4,7 @@
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: #000000;
+  background: var(--color-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -21,15 +21,12 @@
   height: 100%;
   max-width: none;
   max-height: none;
-  background: #000000;
+  background: var(--color-bg);
   border: none;
   border-radius: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  --color-bg: #000000;
-  --color-surface: #000000;
-  --color-elevated: #000000;
   animation: slideUp 0.2s ease-out;
 }
 
@@ -256,8 +253,8 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #000;
-  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-border);
   color: #22c55e;
   flex-shrink: 0;
 }

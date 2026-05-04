@@ -113,13 +113,13 @@
 .feedList button[aria-selected="true"],
 .taskExplorer button[aria-selected="true"] {
   background: var(--color-overlay-subtle);
-  color: #ffffff;
+  color: var(--color-text-primary);
 }
 
 .feedList button[aria-selected="true"]:hover,
 .taskExplorer button[aria-selected="true"]:hover {
   background: var(--color-overlay-subtle);
-  color: #ffffff;
+  color: var(--color-text-primary);
 }
 
 .taskExplorer div:has(> div > [aria-level="3"]) {

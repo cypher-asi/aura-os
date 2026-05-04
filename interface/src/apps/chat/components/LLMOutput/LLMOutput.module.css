@@ -21,7 +21,7 @@
 .root p:last-child { margin-bottom: 0; }
 .root code {
   font-family: var(--font-mono);
-  background: #000;
+  background: var(--color-surface);
   padding: 1px 4px;
   border-radius: 0;
   font-size: 12px;
@@ -60,7 +60,7 @@
   color: var(--color-text-secondary);
 }
 .root th {
-  background: #000;
+  background: var(--color-surface);
   font-weight: 600;
 }
 .root ul, .root ol {

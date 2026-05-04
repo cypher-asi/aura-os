@@ -37,6 +37,16 @@ const DENYLIST = [
   "src/components/TaskOutputPanel/TaskOutputPanel.module.css",
   "src/components/OrgSettingsBilling/OrgSettingsBilling.module.css",
   "src/components/BuyCreditsModal/BuyCreditsModal.module.css",
+  // Light-mode contrast pass: these CSS modules were migrated to semantic
+  // tokens so the surfaces they style flip cleanly between dark and light
+  // themes. Future regressions (e.g. someone re-introducing `color: #fff`)
+  // would otherwise surface only as white-on-white in light mode.
+  "src/components/AppNavRail/AppNavRail.module.css",
+  "src/components/Sidekick/Sidekick.module.css",
+  "src/components/ProjectsNav/ProjectsNav.module.css",
+  "src/components/ProjectsPlusButton/ProjectsPlusButton.module.css",
+  "src/mobile/screens/ProjectStatsScreen/ProjectStatsScreen.module.css",
+  "src/mobile/screens/ProjectProcessScreen/ProjectProcessScreen.module.css",
 ];
 
 const COLOR_PATTERNS = [

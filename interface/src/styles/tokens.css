@@ -31,6 +31,16 @@
      vendor default (#4e4e4e). */
   --color-border: #17171a;
 
+  /* Theme-aware aliases for legacy token names that ZUI never defined.
+     Many CSS modules write `var(--color-bg-secondary, #1e1e1e)` /
+     `var(--color-text)` / `var(--color-bg-hover)`; without these aliases
+     the dark-hex fallback fires in BOTH themes, leaving black slabs and
+     missing colors in light mode. Aliasing them here lets every consumer
+     flip with the theme automatically. */
+  --color-bg-secondary: var(--color-elevated);
+  --color-text: var(--color-text-primary);
+  --color-bg-hover: var(--color-overlay-light);
+
   /* ----------------------------------------------------------------------
      Editable chrome tokens (phase 7). Defaults live here; the theme
      overrides layer (`interface/src/lib/theme-overrides.ts`) can rewrite
@@ -169,7 +179,11 @@
 
   --color-spinner: #111;
 
-  --color-text-muted: #6b7280;
+  /* Bump light-mode grays for WCAG AA on white. ZUI's defaults
+     (text-secondary #4b5563, text-muted #9ca3af) are too pale for body
+     copy on the #ffffff page background. */
+  --color-text-secondary: #374151;
+  --color-text-muted: #4b5563;
 
   --color-border: #e5e7eb;
 

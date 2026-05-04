@@ -23,7 +23,7 @@
   flex-direction: column;
   overflow: hidden;
   border-radius: 28px 28px 0 0;
-  background: #0d0e0f;
+  background: var(--color-surface);
   box-shadow: 0 -28px 80px rgba(0, 0, 0, 0.6);
   animation: sheetIn 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -33,7 +33,7 @@
   height: 5px;
   margin: 9px auto 7px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--color-overlay-medium);
 }
 
 .header {
@@ -101,7 +101,7 @@
   overflow: hidden;
   border: 1px dashed color-mix(in srgb, var(--color-border) 70%, transparent);
   border-radius: 27px;
-  background: #111213;
+  background: var(--color-bg-secondary);
   color: var(--color-text-secondary);
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
@@ -156,7 +156,8 @@
 .fieldGroup :global(textarea) {
   min-height: 48px;
   border-radius: 14px;
-  background: #111213;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
   font-size: 16px;
   line-height: 22px;
 }

@@ -9,15 +9,15 @@
   justify-content: center;
   flex-shrink: 0;
   background: transparent;
-  color: rgba(255, 255, 255, 0.84);
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
 }
 
 .button:hover:not(:disabled),
 .button:focus-visible {
-  background: color-mix(in srgb, #ffffff 12%, transparent);
-  color: #ffffff;
+  background: var(--color-overlay-medium);
+  color: var(--color-text-primary);
   outline: none;
 }
 

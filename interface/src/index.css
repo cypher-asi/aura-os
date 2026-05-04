@@ -97,6 +97,14 @@ html[data-mobile-client="true"] select {
   -webkit-app-region: no-drag;
 }
 
+/* AURA wordmark — keep a single white-on-transparent PNG and invert it
+   in light mode so it reads as black-on-light. The data attribute lets
+   the rule apply to all three render sites (DesktopTitlebar, MobileTopbar,
+   LoginView) without coupling to a CSS module class. */
+[data-theme='light'] img[data-aura-wordmark] {
+  filter: invert(1);
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;

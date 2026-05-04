@@ -5,7 +5,7 @@
   height: 100%;
   flex-direction: column;
   overflow: hidden;
-  background: #000;
+  background: var(--color-bg);
 }
 
 .summary {
@@ -37,7 +37,7 @@
   overflow: auto;
   align-items: flex-start;
   padding: 18px 16px calc(24px + env(safe-area-inset-bottom));
-  background: #000;
+  background: var(--color-bg);
 }
 
 .remoteCard {
@@ -109,7 +109,7 @@
   flex: 1;
   min-height: 0;
   flex-direction: column;
-  background: #000;
+  background: var(--color-bg);
 }
 
 .previewHeader {

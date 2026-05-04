@@ -115,7 +115,7 @@
 
 .repo {
   font-weight: 500;
-  color: #fff;
+  color: var(--color-text-primary);
 }
 
 .time {

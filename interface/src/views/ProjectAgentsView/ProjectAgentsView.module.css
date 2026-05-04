@@ -13,7 +13,7 @@
   overflow: hidden;
   overscroll-behavior: contain;
   scroll-padding-bottom: calc(132px + env(safe-area-inset-bottom));
-  background: #000;
+  background: var(--color-bg);
 }
 
 .summaryBar {

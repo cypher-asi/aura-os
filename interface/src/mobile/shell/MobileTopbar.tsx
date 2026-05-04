@@ -115,7 +115,7 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
               </span>
             ) : (
               <span className={styles.mobileTopbarTitleButton} aria-label="Aura" style={{ userSelect: "none" }}>
-                <img src="/AURA_logo_text_mark.png" alt="AURA" draggable={false} style={{ height: 11, display: "block", userSelect: "none", pointerEvents: "none" }} />
+                <img src="/AURA_logo_text_mark.png" alt="AURA" draggable={false} data-aura-wordmark style={{ height: 11, display: "block", userSelect: "none", pointerEvents: "none" }} />
               </span>
             )}
           </span>
