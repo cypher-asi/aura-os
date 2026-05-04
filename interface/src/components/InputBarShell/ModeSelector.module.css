@@ -6,10 +6,9 @@
  *
  * Layout strategy: the segments wrapper is a CSS grid with one
  * equal-width column per mode plus a 2px gap. The indicator pill
- * is absolutely positioned over those columns (so it never takes
- * a track). React writes its `transform` directly as an inline
- * style; CSS just declares the transition so the browser sees a
- * concrete property change and animates between modes.
+ * is absolutely positioned and sized/positioned by React via
+ * measured pixel values (getBoundingClientRect). CSS transitions
+ * on transform + width produce the sliding animation.
  * ============================================================ */
 
 .root {
@@ -33,10 +32,9 @@
 .segments {
   --mode-gap: 2px;
   --mode-pad: 2px;
-  --mode-count: 4;
   position: relative;
   display: inline-grid;
-  grid-template-columns: repeat(var(--mode-count), minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: center;
   gap: var(--mode-gap);
   padding: var(--mode-pad);
@@ -48,27 +46,21 @@
   position: absolute;
   top: var(--mode-pad);
   bottom: var(--mode-pad);
-  left: var(--mode-pad);
-  width: calc(
-    (
-        100% - 2 * var(--mode-pad) -
-          (var(--mode-count) - 1) * var(--mode-gap)
-      ) / var(--mode-count)
-  );
+  left: 0;
+  width: 0;
   border-radius: 999px;
   background: var(--color-elevated);
   box-shadow: 0 1px 2px var(--color-backdrop-light);
   pointer-events: none;
   z-index: 0;
-  will-change: transform;
-  /* Initial transform so the indicator starts in column 1 even
-     before React applies the inline style on first paint. The
-     active position is then driven by an inline `transform`
-     written directly by React (no CSS variable in the transform),
-     so the browser reliably sees a property change and runs the
-     transition. */
+  will-change: transform, width;
   transform: translateX(0);
-  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.indicatorReady {
+  transition:
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .segment {
@@ -105,7 +97,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .indicator {
+  .indicatorReady {
     transition: none;
   }
 }

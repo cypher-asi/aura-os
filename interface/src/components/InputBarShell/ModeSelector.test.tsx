@@ -2,6 +2,11 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ModeSelector } from "./ModeSelector";
 
+const BTN_WIDTH = 48;
+const GAP = 2;
+const PAD = 2;
+const CONTAINER_LEFT = 10;
+
 function getIndicator(container: HTMLElement): HTMLSpanElement {
   const indicator = container.querySelector(
     "[data-agent-element='mode-indicator']",
@@ -11,40 +16,76 @@ function getIndicator(container: HTMLElement): HTMLSpanElement {
 }
 
 describe("ModeSelector", () => {
-  it("writes the indicator transform inline so the CSS transition fires on every change", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+
+    const modeOrder = ["code", "plan", "image", "3d"];
+    const originalGetBCR = Element.prototype.getBoundingClientRect;
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: Element) {
+        const modeAttr = this.getAttribute("data-agent-mode-option");
+        const isModeIndicator = this.getAttribute("data-agent-element") === "mode-indicator";
+        const isSegments = this.children.length > 0 && this.querySelector("[data-agent-mode-option]");
+
+        if (isSegments || this.classList.toString().includes("segments")) {
+          return {
+            left: CONTAINER_LEFT,
+            top: 5,
+            width: 200,
+            height: 28,
+            right: CONTAINER_LEFT + 200,
+            bottom: 33,
+            x: CONTAINER_LEFT,
+            y: 5,
+            toJSON: () => ({}),
+          } as DOMRect;
+        }
+
+        if (modeAttr) {
+          const idx = modeOrder.indexOf(modeAttr);
+          const left = CONTAINER_LEFT + PAD + idx * (BTN_WIDTH + GAP);
+          return {
+            left,
+            top: 7,
+            width: BTN_WIDTH,
+            height: 24,
+            right: left + BTN_WIDTH,
+            bottom: 31,
+            x: left,
+            y: 7,
+            toJSON: () => ({}),
+          } as DOMRect;
+        }
+
+        return originalGetBCR.call(this);
+      },
+    );
+  });
+
+  it("positions the indicator via measured pixel transform and width", () => {
     const { container, rerender } = render(
       <ModeSelector selectedMode="code" onChange={vi.fn()} />,
     );
     const indicator = getIndicator(container);
-    expect(indicator.style.transform).toBe(
-      "translateX(calc(0 * (100% + 2px)))",
-    );
+    expect(indicator.style.transform).toBe(`translateX(${PAD}px)`);
+    expect(indicator.style.width).toBe(`${BTN_WIDTH}px`);
 
     rerender(<ModeSelector selectedMode="plan" onChange={vi.fn()} />);
-    expect(indicator.style.transform).toBe(
-      "translateX(calc(1 * (100% + 2px)))",
-    );
+    expect(indicator.style.transform).toBe(`translateX(${PAD + BTN_WIDTH + GAP}px)`);
+    expect(indicator.style.width).toBe(`${BTN_WIDTH}px`);
 
     rerender(<ModeSelector selectedMode="image" onChange={vi.fn()} />);
-    expect(indicator.style.transform).toBe(
-      "translateX(calc(2 * (100% + 2px)))",
-    );
+    expect(indicator.style.transform).toBe(`translateX(${PAD + 2 * (BTN_WIDTH + GAP)}px)`);
 
     rerender(<ModeSelector selectedMode="3d" onChange={vi.fn()} />);
-    expect(indicator.style.transform).toBe(
-      "translateX(calc(3 * (100% + 2px)))",
-    );
-  });
-
-  it("exposes mode-count on the segments wrapper so CSS can size the track", () => {
-    const { container } = render(
-      <ModeSelector selectedMode="code" onChange={vi.fn()} />,
-    );
-    const segments = container.querySelector(
-      "[data-agent-surface='mode-selector'] > :last-child",
-    ) as HTMLDivElement | null;
-    expect(segments).not.toBeNull();
-    expect(segments!.style.getPropertyValue("--mode-count")).toBe("4");
+    expect(indicator.style.transform).toBe(`translateX(${PAD + 3 * (BTN_WIDTH + GAP)}px)`);
   });
 
   it("marks exactly the active mode as aria-checked", () => {
