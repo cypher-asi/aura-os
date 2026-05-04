@@ -1,25 +1,31 @@
-# First-run onboarding lands across the Aura desktop shell
+# First-run onboarding lands across the app
 
 - Date: `2026-05-04`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.435.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.435.1
+- Version: `0.1.0-nightly.436.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.436.1
 
-Today's nightly is a focused onboarding release: new users now get a guided welcome flow, a persistent progress checklist, and an always-available help entry point in the taskbar — all wired into the desktop shell across Mac, Windows, and Linux builds.
+Today's nightly is focused entirely on first-run experience: a new onboarding system guides fresh accounts from welcome modal to first message, project, agent, image, and billing visit, while empty states and the chat input get nudges to make the blank canvas feel less empty. A follow-up fix tightens detection so the checklist only credits genuinely new work.
 
-## 4:33 AM — Guided first-run onboarding for new Aura users
+## 4:33 AM — Guided onboarding: welcome modal, checklist, and empty-state nudges
 
-A complete onboarding experience now greets new users with a welcome modal, a progress checklist, and automatic task tracking wired into the desktop shell.
+A complete first-run experience now ships in the desktop interface, from a 2-step welcome modal to a persistent checklist, auto-detected progress, and friendlier empty states across chat, agents, and tasks.
 
-- New users are now welcomed by a 2-step intro modal showing the AURA logo and a preview of getting-started tasks on first login, with a skip option and analytics tracking. Onboarding state persists per user via a Zustand store backed by localStorage, so progress survives reloads and is scoped to each account. (`bd80420`, `988eee6`)
-- A floating, collapsible checklist widget anchored to the bottom-right of the desktop guides users through five concrete first tasks — sending a message, creating a project, creating an agent, generating an image with AURA 3D, and exploring plans & credits — with a progress bar and click-through navigation to each feature. (`708e75e`, `bd80420`)
-- Checklist items now tick off automatically: a centralized task watcher subscribes to the message, projects, agents, 3D, and billing stores and emits per-task and completion analytics events, so users never have to manually mark progress. (`6f91ff3`)
-- A new Help button sits in the BottomTaskbar between Settings and Profile, letting users reopen the checklist after dismissing it or restart onboarding once it's complete. The welcome modal, checklist, and watcher are mounted in AppShell behind lazy boundaries, and a small CSS fix re-centers task icons with their labels in the welcome preview. (`e5d310e`, `ec62961`)
+- Introduced a per-user onboarding store with localStorage persistence and a 5-task checklist (send a message, create a project, create an agent, generate an image, explore billing), paired with a 2-step welcome modal that shows the AURA logo, intro copy, and a checklist preview on first login. (`bd80420`, `988eee6`, `ec62961`)
+- Added a floating, collapsible checklist widget anchored above the bottom taskbar with a progress bar and per-task navigation, plus a Help button in the taskbar that toggles, reopens, or resets the checklist depending on its state. (`708e75e`, `6f91ff3`)
+- A central task watcher subscribes to the message, projects, agents, 3D, and billing stores to auto-complete checklist items and emit onboarding analytics, and the welcome modal, checklist, and watcher are now wired into AppShell with the Help button mounted in the BottomTaskbar. (`6f91ff3`, `e5d310e`)
+- Empty chats now show four clickable prompt suggestion chips with a subtle pulsing glow on the input bar, and the agents and tasks empty states were rewritten with descriptive guidance that explains each feature and encourages a first action. (`11fc116`, `779d737`)
+
+## 5:41 AM — Checklist credits only genuinely new agents and projects
+
+Quick follow-ups make the onboarding checklist trigger the agent editor directly and stop falsely completing tasks just because a default agent or project already exists.
+
+- The onboarding checklist can now open the create-agent editor directly via a new createAgentModalOpen flag on the agent store, so clicking 'Create an agent' jumps straight into the editor instead of a generic redirect. (`0d96fae`)
+- Fixed a first-run bug where the checklist marked 'create a project' and 'create an agent' as done on launch because of pre-seeded defaults; detection now requires the project or agent count to actually increase during the session. (`2f9dbb1`)
 
 ## Highlights
 
-- New 2-step welcome modal on first login
-- Floating 5-task onboarding checklist with auto-completion
-- Help button added to the bottom taskbar
-- Per-user onboarding progress persisted in localStorage
+- New welcome flow and 5-step onboarding checklist
+- Prompt suggestions and pulsing input on empty chat
+- Smarter task detection that ignores default agents and projects
 

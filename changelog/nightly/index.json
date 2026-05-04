@@ -2,19 +2,18 @@
   {
     "date": "2026-05-04",
     "channel": "nightly",
-    "version": "0.1.0-nightly.435.1",
-    "title": "First-run onboarding lands across the Aura desktop shell",
-    "intro": "Today's nightly is a focused onboarding release: new users now get a guided welcome flow, a persistent progress checklist, and an always-available help entry point in the taskbar — all wired into the desktop shell across Mac, Windows, and Linux builds.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.436.1",
+    "title": "First-run onboarding lands across the app",
+    "intro": "Today's nightly is focused entirely on first-run experience: a new onboarding system guides fresh accounts from welcome modal to first message, project, agent, image, and billing visit, while empty states and the chat input get nudges to make the blank canvas feel less empty. A follow-up fix tightens detection so the checklist only credits genuinely new work.",
+    "entryCount": 2,
     "highlights": [
-      "New 2-step welcome modal on first login",
-      "Floating 5-task onboarding checklist with auto-completion",
-      "Help button added to the bottom taskbar",
-      "Per-user onboarding progress persisted in localStorage"
+      "New welcome flow and 5-step onboarding checklist",
+      "Prompt suggestions and pulsing input on empty chat",
+      "Smarter task detection that ignores default agents and projects"
     ],
-    "rawCommitCount": 6,
-    "generatedAt": "2026-05-04T12:10:23.532Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.435.1",
+    "rawCommitCount": 10,
+    "generatedAt": "2026-05-04T13:01:05.499Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.436.1",
     "path": "history/2026-05-04.json"
   },
   {

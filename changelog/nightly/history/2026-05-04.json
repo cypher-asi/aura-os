@@ -3,24 +3,28 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-04T12:10:23.532Z",
+  "generatedAt": "2026-05-04T13:01:05.499Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.435.1",
+  "version": "0.1.0-nightly.436.1",
   "date": "2026-05-04",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.435.1",
-  "lastIncludedSha": "ec62961b1c1549b0c63641125906a06ae704355f",
-  "previousProcessedSha": "e5d310e08572b84be906c7426277872209e2b250",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.436.1",
+  "lastIncludedSha": "2f9dbb19fb74b1c33c7b71167974fa407a39f8c9",
+  "previousProcessedSha": "ec62961b1c1549b0c63641125906a06ae704355f",
   "commitShas": [
     "bd804201205eb0d6fa131e14e53f6e7bf1cc6066",
     "988eee696ffa6cf9d70a1730c43aebcc09989807",
     "708e75e6a2f331a85237b0a1add008371b631519",
     "6f91ff35d4277c128be32eb41b64fb374637c94c",
     "e5d310e08572b84be906c7426277872209e2b250",
-    "ec62961b1c1549b0c63641125906a06ae704355f"
+    "ec62961b1c1549b0c63641125906a06ae704355f",
+    "11fc11649e7c4db2ef86897e6cb7194721a2c61d",
+    "779d73718c8032ab53b36f567e26980b00f90a54",
+    "0d96fae04302d0af22cd2ad908dfa840386d0838",
+    "2f9dbb19fb74b1c33c7b71167974fa407a39f8c9"
   ],
-  "rawCommitCount": 6,
-  "filteredCommitCount": 6,
+  "rawCommitCount": 10,
+  "filteredCommitCount": 10,
   "rawCommits": [
     {
       "sha": "bd804201205eb0d6fa131e14e53f6e7bf1cc6066",
@@ -256,9 +260,170 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "11fc11649e7c4db2ef86897e6cb7194721a2c61d",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-04T13:40:04+01:00",
+      "subject": "feat(onboarding): add prompt suggestions and pulsing input on empty chat",
+      "body": "Show 4 clickable suggestion chips when chat is empty to reduce\nblank-canvas anxiety. Add subtle pulsing glow on the input bar\nto draw attention. Both disappear once a message is sent.",
+      "parents": [
+        "ec62961b1c1549b0c63641125906a06ae704355f"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/apps/chat/components/PromptSuggestions/PromptSuggestions.module.css",
+        "interface/src/apps/chat/components/PromptSuggestions/PromptSuggestions.tsx"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 83,
+        "deletions": 1
+      },
+      "committedAtMs": 1777898404000,
+      "cleanSubject": "add prompt suggestions and pulsing input on empty chat",
+      "keywords": [
+        "prompt",
+        "suggestions",
+        "pulsing",
+        "input",
+        "empty",
+        "chat"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "779d73718c8032ab53b36f567e26980b00f90a54",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-04T13:40:49+01:00",
+      "subject": "feat(onboarding): improve empty state messaging for agents and tasks",
+      "body": "Replace generic empty state text with more descriptive guidance\nthat explains what each feature does and encourages first action.",
+      "parents": [
+        "11fc11649e7c4db2ef86897e6cb7194721a2c61d"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentIndexRedirect/AgentIndexRedirect.tsx",
+        "interface/src/apps/agents/AgentList/AgentList.tsx",
+        "interface/src/views/TaskList/TaskList.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 12,
+        "deletions": 3
+      },
+      "committedAtMs": 1777898449000,
+      "cleanSubject": "improve empty state messaging for agents and tasks",
+      "keywords": [
+        "improve",
+        "empty",
+        "state",
+        "messaging",
+        "agents",
+        "tasks"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "0d96fae04302d0af22cd2ad908dfa840386d0838",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-04T13:41:12+01:00",
+      "subject": "feat(onboarding): open create agent modal from checklist",
+      "body": "Add createAgentModalOpen flag to agent store so the onboarding\nchecklist can trigger the agent editor modal directly.",
+      "parents": [
+        "779d73718c8032ab53b36f567e26980b00f90a54"
+      ],
+      "files": [
+        "interface/src/apps/agents/stores/agent-store.ts",
+        "interface/src/features/onboarding/OnboardingChecklist/OnboardingChecklist.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 14,
+        "deletions": 1
+      },
+      "committedAtMs": 1777898472000,
+      "cleanSubject": "open create agent modal from checklist",
+      "keywords": [
+        "open",
+        "create",
+        "agent",
+        "modal",
+        "from",
+        "checklist"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "2f9dbb19fb74b1c33c7b71167974fa407a39f8c9",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-04T13:44:22+01:00",
+      "subject": "fix(onboarding): detect new agent/project creation, not existing defaults",
+      "body": "",
+      "parents": [
+        "0d96fae04302d0af22cd2ad908dfa840386d0838"
+      ],
+      "files": [
+        "interface/src/features/onboarding/useOnboardingTaskWatcher.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 7,
+        "deletions": 18
+      },
+      "committedAtMs": 1777898662000,
+      "cleanSubject": "detect new agent/project creation, not existing defaults",
+      "keywords": [
+        "detect",
+        "agent",
+        "project",
+        "creation",
+        "existing",
+        "defaults"
+      ],
+      "fileGroups": [
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 2,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -267,36 +432,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11695504
+          "sizeBytes": 11695988
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.435.1",
+      "version": "0.1.0-nightly.436.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.435.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.436.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 35446612
+          "sizeBytes": 35456546
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.435.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.436.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.435.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.436.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 102664696
+          "sizeBytes": 102676984
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.435.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.436.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -306,29 +471,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.435.1",
+      "version": "0.1.0-nightly.436.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.435.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.436.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 32012033
+          "sizeBytes": 32011224
         },
         {
-          "name": "Aura_0.1.0-nightly.435.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.436.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.435.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.436.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 31820580
+          "sizeBytes": 31819100
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.435.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.436.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -338,29 +503,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.435.1",
+      "version": "0.1.0-nightly.436.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.435.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.436.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33575490
+          "sizeBytes": 33571790
         },
         {
-          "name": "Aura_0.1.0-nightly.435.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.436.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.435.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.436.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33421192
+          "sizeBytes": 33425098
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.435.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.436.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -370,17 +535,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.435.1",
+      "version": "0.1.0-nightly.436.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.435.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.436.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24170745
+          "sizeBytes": 24168566
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.435.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.436.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -389,45 +554,71 @@
     }
   ],
   "rendered": {
-    "title": "First-run onboarding lands across the Aura desktop shell",
-    "intro": "Today's nightly is a focused onboarding release: new users now get a guided welcome flow, a persistent progress checklist, and an always-available help entry point in the taskbar — all wired into the desktop shell across Mac, Windows, and Linux builds.",
+    "title": "First-run onboarding lands across the app",
+    "intro": "Today's nightly is focused entirely on first-run experience: a new onboarding system guides fresh accounts from welcome modal to first message, project, agent, image, and billing visit, while empty states and the chat input get nudges to make the blank canvas feel less empty. A follow-up fix tightens detection so the checklist only credits genuinely new work.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "4:33 AM",
         "started_at": "2026-05-04T11:33:23.000Z",
-        "ended_at": "2026-05-04T11:57:20.000Z",
-        "title": "Guided first-run onboarding for new Aura users",
-        "summary": "A complete onboarding experience now greets new users with a welcome modal, a progress checklist, and automatic task tracking wired into the desktop shell.",
+        "ended_at": "2026-05-04T12:40:49.000Z",
+        "title": "Guided onboarding: welcome modal, checklist, and empty-state nudges",
+        "summary": "A complete first-run experience now ships in the desktop interface, from a 2-step welcome modal to a persistent checklist, auto-detected progress, and friendlier empty states across chat, agents, and tasks.",
         "items": [
           {
-            "text": "New users are now welcomed by a 2-step intro modal showing the AURA logo and a preview of getting-started tasks on first login, with a skip option and analytics tracking. Onboarding state persists per user via a Zustand store backed by localStorage, so progress survives reloads and is scoped to each account.",
+            "text": "Introduced a per-user onboarding store with localStorage persistence and a 5-task checklist (send a message, create a project, create an agent, generate an image, explore billing), paired with a 2-step welcome modal that shows the AURA logo, intro copy, and a checklist preview on first login.",
             "commit_shas": [
               "bd804201205eb0d6fa131e14e53f6e7bf1cc6066",
-              "988eee696ffa6cf9d70a1730c43aebcc09989807"
+              "988eee696ffa6cf9d70a1730c43aebcc09989807",
+              "ec62961b1c1549b0c63641125906a06ae704355f"
             ],
             "confidence": "high"
           },
           {
-            "text": "A floating, collapsible checklist widget anchored to the bottom-right of the desktop guides users through five concrete first tasks — sending a message, creating a project, creating an agent, generating an image with AURA 3D, and exploring plans & credits — with a progress bar and click-through navigation to each feature.",
+            "text": "Added a floating, collapsible checklist widget anchored above the bottom taskbar with a progress bar and per-task navigation, plus a Help button in the taskbar that toggles, reopens, or resets the checklist depending on its state.",
             "commit_shas": [
               "708e75e6a2f331a85237b0a1add008371b631519",
-              "bd804201205eb0d6fa131e14e53f6e7bf1cc6066"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Checklist items now tick off automatically: a centralized task watcher subscribes to the message, projects, agents, 3D, and billing stores and emits per-task and completion analytics events, so users never have to manually mark progress.",
-            "commit_shas": [
               "6f91ff35d4277c128be32eb41b64fb374637c94c"
             ],
             "confidence": "high"
           },
           {
-            "text": "A new Help button sits in the BottomTaskbar between Settings and Profile, letting users reopen the checklist after dismissing it or restart onboarding once it's complete. The welcome modal, checklist, and watcher are mounted in AppShell behind lazy boundaries, and a small CSS fix re-centers task icons with their labels in the welcome preview.",
+            "text": "A central task watcher subscribes to the message, projects, agents, 3D, and billing stores to auto-complete checklist items and emit onboarding analytics, and the welcome modal, checklist, and watcher are now wired into AppShell with the Help button mounted in the BottomTaskbar.",
             "commit_shas": [
-              "e5d310e08572b84be906c7426277872209e2b250",
-              "ec62961b1c1549b0c63641125906a06ae704355f"
+              "6f91ff35d4277c128be32eb41b64fb374637c94c",
+              "e5d310e08572b84be906c7426277872209e2b250"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Empty chats now show four clickable prompt suggestion chips with a subtle pulsing glow on the input bar, and the agents and tasks empty states were rewritten with descriptive guidance that explains each feature and encourages a first action.",
+            "commit_shas": [
+              "11fc11649e7c4db2ef86897e6cb7194721a2c61d",
+              "779d73718c8032ab53b36f567e26980b00f90a54"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "5:41 AM",
+        "started_at": "2026-05-04T12:41:12.000Z",
+        "ended_at": "2026-05-04T12:44:22.000Z",
+        "title": "Checklist credits only genuinely new agents and projects",
+        "summary": "Quick follow-ups make the onboarding checklist trigger the agent editor directly and stop falsely completing tasks just because a default agent or project already exists.",
+        "items": [
+          {
+            "text": "The onboarding checklist can now open the create-agent editor directly via a new createAgentModalOpen flag on the agent store, so clicking 'Create an agent' jumps straight into the editor instead of a generic redirect.",
+            "commit_shas": [
+              "0d96fae04302d0af22cd2ad908dfa840386d0838"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Fixed a first-run bug where the checklist marked 'create a project' and 'create an agent' as done on launch because of pre-seeded defaults; detection now requires the project or agent count to actually increase during the session.",
+            "commit_shas": [
+              "2f9dbb19fb74b1c33c7b71167974fa407a39f8c9"
             ],
             "confidence": "high"
           }
@@ -435,11 +626,10 @@
       }
     ],
     "highlights": [
-      "New 2-step welcome modal on first login",
-      "Floating 5-task onboarding checklist with auto-completion",
-      "Help button added to the bottom taskbar",
-      "Per-user onboarding progress persisted in localStorage"
+      "New welcome flow and 5-step onboarding checklist",
+      "Prompt suggestions and pulsing input on empty chat",
+      "Smarter task detection that ignores default agents and projects"
     ],
-    "raw_commit_count": 6
+    "raw_commit_count": 10
   }
 }
