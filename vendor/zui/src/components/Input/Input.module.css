@@ -38,7 +38,7 @@
 .input:focus-visible {
   background-color: var(--color-input-bg-focus);
   border-color: var(--color-input-border-focus);
-  box-shadow: 0 0 0 3px var(--color-input-focus-shadow);
+  box-shadow: none;
   outline: none;
 }
 

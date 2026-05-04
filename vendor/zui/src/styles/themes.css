@@ -69,7 +69,6 @@
   --color-input-border: rgba(255, 255, 255, 0.08);
   --color-input-border-hover: rgba(255, 255, 255, 0.12);
   --color-input-border-focus: rgba(255, 255, 255, 0.25);
-  --color-input-focus-shadow: rgba(255, 255, 255, 0.04);
 }
 
 /* ============================================================================
@@ -141,7 +140,6 @@
   --color-input-border: #d1d5db;
   --color-input-border-hover: #9ca3af;
   --color-input-border-focus: #6b7280;
-  --color-input-focus-shadow: rgba(17, 24, 39, 0.08);
 }
 
 /* ============================================================================
