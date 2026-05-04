@@ -58,6 +58,18 @@
   --color-backdrop: rgba(0, 0, 0, 0.95);
   --color-backdrop-light: rgba(0, 0, 0, 0.3);
   --color-backdrop-medium: rgba(0, 0, 0, 0.4);
+
+  /* Input chrome — dedicated tokens so form inputs (Input, Search, login
+     provider buttons, FolderPickerField) can be tuned per theme without
+     dragging along generic surface tokens. Dark values keep the original
+     subtle white-on-dark pill look. */
+  --color-input-bg: rgba(255, 255, 255, 0.04);
+  --color-input-bg-hover: rgba(255, 255, 255, 0.06);
+  --color-input-bg-focus: rgba(255, 255, 255, 0.06);
+  --color-input-border: rgba(255, 255, 255, 0.08);
+  --color-input-border-hover: rgba(255, 255, 255, 0.12);
+  --color-input-border-focus: rgba(255, 255, 255, 0.25);
+  --color-input-focus-shadow: rgba(255, 255, 255, 0.04);
 }
 
 /* ============================================================================
@@ -116,6 +128,20 @@
   --color-backdrop: rgba(0, 0, 0, 0.75);
   --color-backdrop-light: rgba(0, 0, 0, 0.15);
   --color-backdrop-medium: rgba(0, 0, 0, 0.25);
+
+  /* Input chrome — light mode uses a clearly visible gray border with a
+     white fill. The previous overlay-based approach (rgba(0,0,0,0.03)
+     bg + #e5e7eb border) was technically correct but read as essentially
+     borderless on the white modal surfaces (#ffffff elevated / #f8f9fa
+     surface), so we explicitly bump the border to gray-300 here and keep
+     fills white for a familiar form-field look. */
+  --color-input-bg: #ffffff;
+  --color-input-bg-hover: #f9fafb;
+  --color-input-bg-focus: #ffffff;
+  --color-input-border: #d1d5db;
+  --color-input-border-hover: #9ca3af;
+  --color-input-border-focus: #6b7280;
+  --color-input-focus-shadow: rgba(17, 24, 39, 0.08);
 }
 
 /* ============================================================================

@@ -4,8 +4,8 @@
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background-color: var(--color-input-bg);
+  border: 1px solid var(--color-input-border);
   color: var(--color-text-primary);
   min-height: 80px;
   resize: vertical;
@@ -18,9 +18,13 @@
   color: var(--color-text-secondary);
 }
 
+.textarea:hover {
+  border-color: var(--color-input-border-hover);
+}
+
 .textarea:focus,
 .textarea:focus-visible {
-  border-color: var(--color-focus-ring);
+  border-color: var(--color-input-border-focus);
   outline: none;
 }
 

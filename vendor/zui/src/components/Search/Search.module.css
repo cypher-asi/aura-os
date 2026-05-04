@@ -34,8 +34,8 @@
   padding-left: calc(var(--space-3) + var(--icon-sm) + var(--space-2));
   border-radius: var(--radius-md);
   font-size: var(--text-base);
-  background-color: rgba(255, 255, 255, 0.01);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background-color: var(--color-input-bg);
+  border: 1px solid var(--color-input-border);
   color: var(--color-text-primary);
   min-height: var(--control-height-md);
   transition:
@@ -49,14 +49,14 @@
 }
 
 .input:hover {
-  background-color: rgba(255, 255, 255, 0.02);
-  border-color: rgba(255, 255, 255, 0.08);
+  background-color: var(--color-input-bg-hover);
+  border-color: var(--color-input-border-hover);
 }
 
 .input:focus,
 .input:focus-visible {
-  background-color: rgba(255, 255, 255, 0.02);
-  border-color: rgba(255, 255, 255, 0.12);
+  background-color: var(--color-input-bg-focus);
+  border-color: var(--color-input-border-focus);
   box-shadow: none;
   outline: none;
 }
@@ -127,11 +127,11 @@
 
 .clearButton:hover {
   color: var(--color-text-primary);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-overlay-medium);
 }
 
 .clearButton:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.25);
+  outline: 2px solid var(--color-overlay-focus);
   outline-offset: -1px;
 }
 
