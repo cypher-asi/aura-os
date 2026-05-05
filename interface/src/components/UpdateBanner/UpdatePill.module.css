@@ -2,10 +2,23 @@
   display: inline-flex;
   align-items: center;
   margin-right: var(--space-1);
+  /* Top/bottom breathing room so the pill doesn't touch the titlebar edges.
+     The titlebar is `--shell-chrome-height` (32px) tall; combined with the
+     `.pill` height override below this leaves ~4px above and below the pill. */
+  padding-block: 4px;
 }
 
+/*
+ * The titlebar host (`--shell-chrome-height`) and zui's `size="sm"` button
+ * are both 32px, so without an override the pill would fill the entire row.
+ * Shrink the pill to 24px and let the wrap's `align-items: center` + the
+ * wrap's `padding-block` create symmetrical vertical padding around it.
+ */
 .pill {
+  min-height: 24px;
+  height: 24px;
   padding-inline: var(--space-3);
+  padding-block: 0;
   font-size: var(--font-size-xs, 12px);
   font-weight: 500;
   letter-spacing: 0.01em;

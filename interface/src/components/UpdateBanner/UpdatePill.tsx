@@ -1,4 +1,5 @@
-import { Button, Spinner } from "@cypher-asi/zui";
+import { Spinner } from "@cypher-asi/zui";
+import { PillButton } from "../PillButton";
 import { useUpdateBanner } from "./useUpdateBanner";
 import styles from "./UpdatePill.module.css";
 
@@ -28,10 +29,8 @@ export function UpdatePill() {
 
   return (
     <span className={`titlebar-no-drag ${styles.pillWrap}`}>
-      <Button
-        variant="primary"
+      <PillButton
         size="sm"
-        rounded="full"
         className={styles.pill}
         disabled={installingNow}
         onClick={() => void handleInstallUpdate()}
@@ -40,7 +39,7 @@ export function UpdatePill() {
         icon={installingNow ? <Spinner size="sm" /> : undefined}
       >
         {installingNow ? "Installing\u2026" : "Update"}
-      </Button>
+      </PillButton>
     </span>
   );
 }

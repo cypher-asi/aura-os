@@ -1,0 +1,14 @@
+/*
+ * PillButton: accent background, always-dark text, fully-rounded shape.
+ *
+ * The zui `filled` variant already provides `background: var(--color-accent)`
+ * and `:hover { background: var(--color-accent-hover) }`. We only override
+ * the text color (so it doesn't flip to white for purple/blue/rose accents)
+ * and the corner radius (since the project's `--radius-full` token is `0`).
+ */
+.pillButton,
+.pillButton:hover:not(:disabled),
+.pillButton:disabled {
+  color: #0a0a0a;
+  border-radius: 9999px;
+}
