@@ -172,6 +172,24 @@ pub(super) async fn open_harness_chat_stream(
         commands,
     } = args;
 
+    // Guiding invariant: no silent success. If the inbound user message
+    // cannot be persisted for ANY reason, we must return a non-2xx to the
+    // caller, we must NOT forward the turn to the harness, and we must
+    // NOT open an SSE body. The CEO's `send_to_agent` tool relied on the
+    // previous soft-success behavior to report `persisted: true` for
+    // writes that silently vanished — see the structured
+    // `chat_persist_failed` / `chat_persist_unavailable` shapes in
+    // `error.rs` for what callers now see on failure.
+    //
+    // This MUST run before `validate_session_identity`: the missing
+    // `aura_session_id` in `SessionConfig` is sourced from `persist_ctx`,
+    // so a None `persist_ctx` would otherwise be flagged by the Tier-1
+    // preflight as a generic `missing_aura_session_id` (422) instead of
+    // the documented, more specific `chat_persist_unavailable` (424) that
+    // `send_to_agent` consumers parse and act on.
+    let ctx = require_persist_ctx(&session_key, persist_ctx)?;
+    let err_ctx = persist_error_ctx(&ctx);
+
     // Tier 1 fail-fast: refuse to open a chat session that would be
     // missing one of the required X-Aura-* identity headers on the
     // outbound /v1/messages call. Without this, the harness would
@@ -184,17 +202,6 @@ pub(super) async fn open_harness_chat_stream(
         SessionIdentityRequirements::CHAT,
         "chat_session",
     )?;
-
-    // Guiding invariant: no silent success. If the inbound user message
-    // cannot be persisted for ANY reason, we must return a non-2xx to the
-    // caller, we must NOT forward the turn to the harness, and we must
-    // NOT open an SSE body. The CEO's `send_to_agent` tool relied on the
-    // previous soft-success behavior to report `persisted: true` for
-    // writes that silently vanished — see the structured
-    // `chat_persist_failed` / `chat_persist_unavailable` shapes in
-    // `error.rs` for what callers now see on failure.
-    let ctx = require_persist_ctx(&session_key, persist_ctx)?;
-    let err_ctx = persist_error_ctx(&ctx);
 
     // Persist the user turn BEFORE starting the harness session. If
     // storage rejects the write we must not charge the caller credits
