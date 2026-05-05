@@ -68,6 +68,55 @@
   white-space: nowrap;
 }
 
+/* 3D-mode hint shown when no image is attached. Mirrors `.queuedHint`
+   shape and tokens so the two never compete visually; the optional
+   `.threeDHintFlash` modifier briefly amplifies the chip after a
+   blocked send so the user notices what's missing. */
+.threeDHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 14px 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  color: color-mix(in srgb, var(--color-text-primary) 85%, transparent);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  width: fit-content;
+  transition: background 220ms ease, transform 220ms ease;
+}
+
+.threeDHintFlash {
+  background: color-mix(in srgb, var(--color-accent) 28%, transparent);
+  animation: threeDHintShake 280ms ease;
+}
+
+@keyframes threeDHintShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-2px); }
+  40% { transform: translateX(2px); }
+  60% { transform: translateX(-1.5px); }
+  80% { transform: translateX(1.5px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .threeDHintFlash { animation: none; }
+}
+
+.threeDHintDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  opacity: 0.85;
+}
+
+.threeDHintLabel {
+  white-space: nowrap;
+}
+
 .attachmentThumb {
   position: relative;
   flex-shrink: 0;

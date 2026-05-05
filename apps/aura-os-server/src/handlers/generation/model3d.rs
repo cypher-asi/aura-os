@@ -28,12 +28,9 @@ pub(crate) async fn generate_3d_stream(
     // no real URL yet). Both reduce to a single string forwarded as
     // `image_url` on the protocol; the upstream router is responsible
     // for materialising data URLs into hosted assets before calling the
-    // 3D provider.
-    //
-    // Both inputs are optional: when neither is supplied we fall through
-    // to the text-to-3D path and rely on `prompt` alone. We still require
-    // *something* to ground the request, so reject the case where the
-    // caller supplied neither an image nor a prompt.
+    // 3D provider. The aura-router proxy currently only supports
+    // image-to-3D for Tripo, so we reject prompt-only requests here
+    // instead of letting them surface as a confusing upstream 422.
     let image_url = body
         .image_url
         .map(|s| s.trim().to_string())
@@ -42,18 +39,10 @@ pub(crate) async fn generate_3d_stream(
             body.image_data
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty())
-        });
-    let prompt = body
-        .prompt
-        .as_ref()
-        .map(|s| s.trim())
-        .filter(|s| !s.is_empty())
-        .map(str::to_string);
-    if image_url.is_none() && prompt.is_none() {
-        return Err(ApiError::bad_request(
-            "3D generation requires either an image (`image_url` / `image_data`) or a `prompt`",
-        ));
-    }
+        })
+        .ok_or_else(|| {
+            ApiError::bad_request("either `image_url` or `image_data` is required")
+        })?;
 
     let identity =
         resolve_generation_identity(&state, &auth_session, &jwt, body.project_id.as_deref())
@@ -63,16 +52,21 @@ pub(crate) async fn generate_3d_stream(
         jwt,
         aura_protocol::GenerationRequest {
             mode: "3d".to_string(),
-            prompt,
+            prompt: body.prompt,
             model: None,
             size: None,
-            image_url,
+            image_url: Some(image_url),
             images: None,
             project_id: body.project_id,
             parent_id: body.parent_id,
             is_iteration: None,
         },
         identity,
+        // 3D mode does not yet round-trip chat scope; persistence is
+        // tracked separately. Callers wanting durable history should
+        // use `useChatStream` (which already handles 3D via the LLM
+        // tool path) until parity is added.
+        None,
     )
     .await
 }

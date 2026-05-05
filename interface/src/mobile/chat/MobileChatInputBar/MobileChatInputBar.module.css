@@ -57,6 +57,54 @@
   border-color: color-mix(in srgb, #01f4cb 70%, var(--color-border));
 }
 
+/* 3D-mode persistent hint shown when no image is attached. The
+   `.threeDHintFlash` modifier briefly amplifies the chip after the
+   user attempts to send without an image. */
+.threeDHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 12px 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  color: color-mix(in srgb, var(--color-text-primary) 85%, transparent);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  width: fit-content;
+  transition: background 220ms ease, transform 220ms ease;
+}
+
+.threeDHintFlash {
+  background: color-mix(in srgb, var(--color-accent) 32%, transparent);
+  animation: threeDHintShakeMobile 280ms ease;
+}
+
+@keyframes threeDHintShakeMobile {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-2px); }
+  40% { transform: translateX(2px); }
+  60% { transform: translateX(-1.5px); }
+  80% { transform: translateX(1.5px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .threeDHintFlash { animation: none; }
+}
+
+.threeDHintDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  opacity: 0.85;
+}
+
+.threeDHintLabel {
+  white-space: nowrap;
+}
+
 .inputRow {
   position: relative;
   z-index: 1;

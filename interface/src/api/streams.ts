@@ -235,27 +235,20 @@ export function generateImageStream(
 }
 
 /**
- * Source image input for {@link generate3dStream}. The discriminator
- * makes the three valid states explicit instead of overloading
- * `null` / `undefined` for the no-image case:
+ * Source image input for {@link generate3dStream}. Exactly one of
+ * `imageUrl` or `imageData` must be supplied. `imageUrl` is used by
+ * the AURA 3D app (an existing project artifact already lives at a
+ * real URL); `imageData` (a `data:image/<type>;base64,...` string) is
+ * used by chat 3D mode where the user pastes / uploads an image and
+ * has no URL to point at — the backend decodes, persists, and forwards
+ * the resulting URL to the 3D provider.
  *
- * - `url`  — a fully-resolved URL. Used by the AURA 3D app, where the
- *            source image is already a project artifact at a real URL.
- * - `data` — a `data:image/<type>;base64,...` payload. Used by chat 3D
- *            mode when the user pastes / uploads an image and there is
- *            no URL yet; the backend decodes, persists, and forwards
- *            the resulting URL to the 3D provider.
- * - `none` — no source image. The text-to-3D path: the request relies
- *            entirely on `prompt`.
- *
- * At least one of `source.kind !== "none"` or a non-empty `prompt`
- * must hold; both layers above this (the chat-stream hooks and the
- * server handler) enforce that.
+ * Tripo itself supports text-to-3D, but our `aura-router` proxy
+ * currently only exposes image-to-3D, so a source image is required.
  */
 export type Generate3dSource =
   | { kind: "url"; imageUrl: string }
-  | { kind: "data"; imageData: string }
-  | { kind: "none" };
+  | { kind: "data"; imageData: string };
 
 export function generate3dStream(
   source: Generate3dSource | string,
@@ -269,17 +262,10 @@ export function generate3dStream(
   // callers (the AURA 3D app passes an image URL directly).
   const normalized: Generate3dSource =
     typeof source === "string" ? { kind: "url", imageUrl: source } : source;
-  const body: Record<string, unknown> = {};
-  switch (normalized.kind) {
-    case "url":
-      body.image_url = normalized.imageUrl;
-      break;
-    case "data":
-      body.image_data = normalized.imageData;
-      break;
-    case "none":
-      break;
-  }
+  const body: Record<string, unknown> =
+    normalized.kind === "url"
+      ? { image_url: normalized.imageUrl }
+      : { image_data: normalized.imageData };
   if (prompt) body.prompt = prompt;
   if (projectId) body.projectId = projectId;
   if (parentId) body.parentId = parentId;

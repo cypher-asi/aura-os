@@ -243,37 +243,11 @@ describe("useChatStream", () => {
     );
   });
 
-  it("routes prompt-only 3D generation through the text-to-3D path", async () => {
-    const { result } = renderHook(() =>
-      useChatStream({ projectId: "p-1", agentInstanceId: "ai-1" }),
-    );
-
-    await act(async () => {
-      await result.current.sendMessage(
-        "model of an eagle",
-        null,
-        "tripo-v2",
-        undefined,
-        ["generate_3d"],
-        undefined,
-        "3d",
-      );
-    });
-
-    expect(api.sendEventStream).not.toHaveBeenCalled();
-    expect(generate3dStream).toHaveBeenCalledWith(
-      { kind: "none" },
-      "model of an eagle",
-      expect.any(Object),
-      expect.any(AbortSignal),
-      "p-1",
-    );
-  });
-
-  it("surfaces an error when 3D mode has no prompt and only non-image attachments", async () => {
+  it("surfaces an upload-image hint when 3D mode is sent without an image attachment", async () => {
     // A non-image attachment bypasses `sendMessage`'s outer empty-content
     // guard (which only checks `attachments.length > 0`) and reaches the
-    // 3D branch's explicit prompt-or-image check.
+    // 3D branch's image-required check; the input-bar guard is the
+    // primary gate, but this defends paths that bypass it.
     const fileAttachment = [
       {
         type: "text" as const,
@@ -288,7 +262,7 @@ describe("useChatStream", () => {
 
     await act(async () => {
       await result.current.sendMessage(
-        "   ",
+        "model of an eagle",
         null,
         "tripo-v2",
         fileAttachment,
@@ -302,7 +276,7 @@ describe("useChatStream", () => {
     expect(generate3dStream).not.toHaveBeenCalled();
     const entry = useStreamStore.getState().entries[result.current.streamKey];
     const errorMsg = entry.events.find((m) =>
-      m.content.includes("3D mode needs either a prompt or an attached image"),
+      m.content.includes("Upload or paste an image of a 3D object"),
     );
     expect(errorMsg).toBeTruthy();
   });

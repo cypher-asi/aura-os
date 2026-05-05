@@ -454,12 +454,35 @@ export const DesktopChatInputBar = memo(
       [slashMenuOpen],
     );
 
+    const hasImageAttachment = attachments.some(
+      (a) => a.attachmentType === "image",
+    );
+    const needsImageForThreeD =
+      generationMode === "3d" && !hasImageAttachment;
+    const [needsImageHintFlash, setNeedsImageHintFlash] = useState(false);
+    // Drop the flash class once the user actually attaches an image so
+    // the persistent hint settles back into its calm baseline state.
+    useEffect(() => {
+      if (!needsImageForThreeD && needsImageHintFlash) {
+        setNeedsImageHintFlash(false);
+      }
+    }, [needsImageForThreeD, needsImageHintFlash]);
+
     const handleSubmit = useCallback(() => {
+      if (needsImageForThreeD) {
+        // Don't dispatch an empty 3D request — the upstream proxy
+        // requires a source image. Flash the persistent hint so the
+        // user sees what's missing, but keep `input` and `attachments`
+        // intact so they can attach an image and immediately retry.
+        setNeedsImageHintFlash(true);
+        shellRef.current?.focus();
+        return;
+      }
       track("chat_message_sent", { model: selectedModel, mode: selectedMode });
       // Mode is read from the store inside `useChatPanelState.handleSend`;
       // we no longer need to thread `generationMode` through here.
       onSend(input, undefined, undefined);
-    }, [input, onSend, selectedModel, selectedMode]);
+    }, [input, needsImageForThreeD, onSend, selectedModel, selectedMode]);
 
     const providerLabel = (provider: string): string => {
       switch (provider) {
@@ -625,6 +648,19 @@ export const DesktopChatInputBar = memo(
             <span className={styles.queuedHintDot} aria-hidden="true" />
             <span className={styles.queuedHintLabel}>
               {queuedHint ?? "Queued behind current turn\u2026"}
+            </span>
+          </div>
+        ) : null}
+        {needsImageForThreeD ? (
+          <div
+            className={`${styles.threeDHint}${needsImageHintFlash ? ` ${styles.threeDHintFlash}` : ""}`}
+            role="status"
+            aria-live="polite"
+            data-agent-surface="chat-input-3d-image-hint"
+          >
+            <span className={styles.threeDHintDot} aria-hidden="true" />
+            <span className={styles.threeDHintLabel}>
+              Upload or paste an image of a 3D object to generate.
             </span>
           </div>
         ) : null}

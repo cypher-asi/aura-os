@@ -1,11 +1,7 @@
 import { useRef, useCallback, useEffect } from "react";
 import { api } from "../api/client";
 import { generate3dStream, generateImageStream } from "../api/streams";
-import type {
-  ChatAttachment,
-  Generate3dSource,
-  StreamEventHandler,
-} from "../api/streams";
+import type { ChatAttachment, StreamEventHandler } from "../api/streams";
 import type { GenerationMode } from "../constants/models";
 import { buildUserChatMessage } from "./attachment-helpers";
 import type { Spec, Task } from "../shared/types";
@@ -200,34 +196,30 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
 
         if (_generationMode === "3d") {
           // Chat 3D mode bypasses the agent and calls the same
-          // generation endpoint the AURA 3D app uses. An attached /
-          // pasted image is forwarded as a base64 data URL
-          // (image-to-3D); when no image is present we fall back to
-          // text-to-3D and rely on the prompt.
+          // generation endpoint the AURA 3D app uses. The aura-router
+          // proxy only exposes image-to-3D for Tripo today, so we
+          // require an attached / pasted image. The input bar gates
+          // this in the normal flow (see `ChatInputBar.handleSubmit`);
+          // this check is defense-in-depth for any path (e.g. queue
+          // replay) that bypasses that guard.
           const imageAttachment = attachments?.find((a) => a.type === "image");
-          // `trimmed` is the user's actual input; `userMsg.content` may be a
-          // synthesized fallback like "[1 file(s)]" when there are
-          // attachments but no text, which we don't want to forward as the
-          // 3D prompt.
-          const trimmedPrompt = trimmed;
-          if (!imageAttachment && !trimmedPrompt) {
+          if (!imageAttachment) {
             handleStreamError(
               refs,
               setters,
-              "3D mode needs either a prompt or an attached image.",
+              "Upload or paste an image of a 3D object to generate, then send again.",
             );
             return;
           }
           core.setProgressText("Generating 3D model...");
-          const source: Generate3dSource = imageAttachment
-            ? {
-                kind: "data",
-                imageData: `data:${imageAttachment.media_type};base64,${imageAttachment.data}`,
-              }
-            : { kind: "none" };
+          const dataUrl = `data:${imageAttachment.media_type};base64,${imageAttachment.data}`;
+          // `trimmed` is the user's actual input; `userMsg.content` may
+          // be a synthesized fallback like "[1 image(s)]" when there
+          // are attachments but no text, which we don't want to forward
+          // as the 3D prompt.
           await generate3dStream(
-            source,
-            trimmedPrompt || null,
+            { kind: "data", imageData: dataUrl },
+            trimmed || null,
             handler,
             controller.signal,
             projectId,

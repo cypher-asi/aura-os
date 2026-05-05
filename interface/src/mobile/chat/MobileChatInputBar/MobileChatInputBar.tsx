@@ -339,12 +339,32 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       [onInputChange, slashMenuOpen],
     );
 
+    const hasImageAttachment = attachments.some(
+      (a) => a.attachmentType === "image",
+    );
+    const needsImageForThreeD =
+      generationMode === "3d" && !hasImageAttachment;
+    const [needsImageHintFlash, setNeedsImageHintFlash] = useState(false);
+    useEffect(() => {
+      if (!needsImageForThreeD && needsImageHintFlash) {
+        setNeedsImageHintFlash(false);
+      }
+    }, [needsImageForThreeD, needsImageHintFlash]);
+
     const submitMessage = useCallback(() => {
       if (!canSend) return;
+      if (needsImageForThreeD) {
+        // The aura-router proxy only exposes image-to-3D today, so
+        // bail out before clearing input and let the persistent hint
+        // (rendered above the input) ask the user to attach an image.
+        setNeedsImageHintFlash(true);
+        textareaRef.current?.focus();
+        return;
+      }
       // Mode lives in the per-stream store; the panel state reads it
       // when constructing the resolved send.
       onSend(input, undefined, undefined);
-    }, [canSend, input, onSend]);
+    }, [canSend, input, needsImageForThreeD, onSend]);
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (slashMenuOpen && ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(event.key)) {
@@ -522,6 +542,19 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
           />
           <AttachmentPreviews attachments={attachments} onRemove={handleRemove} />
           <CommandChips commands={selectedCommands} onRemove={handleCommandRemove} />
+          {needsImageForThreeD ? (
+            <div
+              className={`${styles.threeDHint}${needsImageHintFlash ? ` ${styles.threeDHintFlash}` : ""}`}
+              role="status"
+              aria-live="polite"
+              data-agent-surface="mobile-chat-input-3d-image-hint"
+            >
+              <span className={styles.threeDHintDot} aria-hidden="true" />
+              <span className={styles.threeDHintLabel}>
+                Upload or paste an image of a 3D object to generate.
+              </span>
+            </div>
+          ) : null}
           <div className={styles.inputRow}>
             <button
               type="button"
