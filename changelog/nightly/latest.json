@@ -3,22 +3,61 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-05T16:22:40.849Z",
+  "generatedAt": "2026-05-05T20:56:21.928Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.461.1",
+  "version": "0.1.0-nightly.462.1",
   "date": "2026-05-05",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.461.1",
-  "lastIncludedSha": "634521373040a7053b7dc80be4998b33e696da8f",
-  "previousProcessedSha": "32f8ad03e8ddbea27776cb4e37e8a43f158c4484",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.462.1",
+  "lastIncludedSha": "148a5cc6db79ede379fdcd0c419fcf5958b52d6a",
+  "previousProcessedSha": "634521373040a7053b7dc80be4998b33e696da8f",
   "commitShas": [
     "25abb62ffe6132b0e0b71165b4fc0cf947b3badc",
     "32f8ad03e8ddbea27776cb4e37e8a43f158c4484",
     "4fd0e5ee80d88002c8eb154b6320fe9a58e6aad6",
-    "634521373040a7053b7dc80be4998b33e696da8f"
+    "634521373040a7053b7dc80be4998b33e696da8f",
+    "8fa4a8a748f1efd2ce0945bae5f50f3ce28b1daf",
+    "f96d5c35f63a1fd6d49fb8dd1b3862c9841ed182",
+    "af9baf722d14ee275063e332e0dd45dabfe779dc",
+    "c10d3213ad3bac2cdf0ae73bea603bb6653855bd",
+    "b55579d3d8fd913c40f6183448b16d2bd1094d28",
+    "93e858df223334624b7546a1ff54cd468d994b44",
+    "31a743c27df0c87c4ed0a05a2760d2c935951142",
+    "f180965b2fc6ffc6128a2f0ebbb596a6104c2d3a",
+    "e86a27fe1ea9c56bd5c65a259a235974ed6361d9",
+    "a39cfb2cb529a8995cd9d201e8224ed732b0674b",
+    "9d2333803781726592628f5cf87c508237121668",
+    "0fe61f917bc54c0e5426983ed3717dc08d3e6933",
+    "a3e6206aaa7909706ebcd444b23e978773cad7e6",
+    "d2f348a1d520237898a4d004c02c2aabd19df549",
+    "eeaddb7127fc71829291c897521ae99ab8cbe011",
+    "7986e096f046c472723fe009a5be718cba20e63d",
+    "83f8acbb86fdcbdb5d64e2c934dbf5b470e95596",
+    "165bd660c9d4fc609f52e9a451757e1a4a75a9d4",
+    "aac2256deb46760a10cf619790f2b57f5924a5e6",
+    "5d8b7709adfde0abf0cdbf96d4a88b66f729b298",
+    "1e6a6ecf3c56281075fc7f1e10bb4bfe30d52af7",
+    "36903518d1ae069f3845da152d9cbcfde263faee",
+    "2505150143b7e8d7c87645fb34c00e4a6be8ed93",
+    "94b76d293faf6bd179444782224f28dd387fa4a5",
+    "8613b09691b3b2157107384f7758f4c1ca3a5114",
+    "3514966e3d874fb4afb5f533f9df183ef7d3ef44",
+    "cafe3915a1a38f5b62f597ecf0d8b62759592296",
+    "9a9d18e89d8f4ee36c91e24bb9ca4898501ba7d6",
+    "cdd9c4e49d02f4a2bb1844c8733e6d6b3cf8b3d9",
+    "2a201a15da34b56f925a3d739e53b1f129d304cc",
+    "12adeef6557f01709a9b1110dfa3ae7f66ee17df",
+    "695e1e8655f73de6e7b73ef431bbd44e253f16b5",
+    "35f25626965de64eca02e4b1be60da22746491b9",
+    "02c0b019fb6c891784b734a93882d70984d3e740",
+    "534c7c42b2087530bde61a060c52b13025b9cc8b",
+    "5df9dea82624e676e0a08be1f83f4d355732f47e",
+    "19fefbe368d6cb0517a0404443f942adf42258ee",
+    "cb67da1b946bc0ecd95f84c6ab1de808d18ac5a0",
+    "148a5cc6db79ede379fdcd0c419fcf5958b52d6a"
   ],
-  "rawCommitCount": 4,
-  "filteredCommitCount": 4,
+  "rawCommitCount": 43,
+  "filteredCommitCount": 43,
   "rawCommits": [
     {
       "sha": "25abb62ffe6132b0e0b71165b4fc0cf947b3badc",
@@ -215,9 +254,1683 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "8fa4a8a748f1efd2ce0945bae5f50f3ce28b1daf",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T09:10:07-07:00",
+      "subject": "style(mode-selector): always tint selection pill with the accent color",
+      "body": "The pill now reads as a single, consistent accent regardless of mode\ninstead of switching hues per mode (success/warning/info/purple).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "634521373040a7053b7dc80be4998b33e696da8f"
+      ],
+      "files": [
+        "interface/src/components/InputBarShell/ModeSelector.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 4,
+        "deletions": 25
+      },
+      "committedAtMs": 1777997407000,
+      "cleanSubject": "style(mode-selector): always tint selection pill with the accent color",
+      "keywords": [
+        "style",
+        "mode",
+        "selector",
+        "always",
+        "tint",
+        "selection",
+        "pill",
+        "with",
+        "accent",
+        "color"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f96d5c35f63a1fd6d49fb8dd1b3862c9841ed182",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T09:16:56-07:00",
+      "subject": "fix(process-canvas): darken light-mode dot grid so it's visible",
+      "body": "The light-mode --color-canvas-grid (#e5e7eb) sat right on top of the\nnear-white canvas background (#f9fafb), making the ReactFlow dot grid\neffectively invisible. Bump it to #cbd5e1 so the grid reads cleanly\nwithout competing with edges (--color-canvas-edge: #9ca3af).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "8fa4a8a748f1efd2ce0945bae5f50f3ce28b1daf"
+      ],
+      "files": [
+        "interface/src/styles/tokens.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 3,
+        "deletions": 1
+      },
+      "committedAtMs": 1777997816000,
+      "cleanSubject": "darken light-mode dot grid so it's visible",
+      "keywords": [
+        "darken",
+        "light",
+        "mode",
+        "grid",
+        "visible"
+      ],
+      "fileGroups": [
+        "interface/src/styles"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "af9baf722d14ee275063e332e0dd45dabfe779dc",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T09:41:11-07:00",
+      "subject": "refactor(mode-selector): drive sliding pill from a CSS index variable",
+      "body": "Rewrite ModeSelector from the ground up so the indicator's left/right slide is driven entirely by CSS rather than DOM measurement. The segments grid uses equal 1fr columns and a single `--mode-index` custom property; the pill's transform is computed via calc(), and a CSS transition on transform produces the smooth animation. This drops useLayoutEffect, useState, ResizeObserver, the per-mode ref object, and the indicatorReady transition-suppression hack. The component remains plain HTML/CSS with no ZUI primitives, and its public API, ARIA semantics, keyboard navigation, and data-* hooks are unchanged.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "f96d5c35f63a1fd6d49fb8dd1b3862c9841ed182"
+      ],
+      "files": [
+        "interface/src/components/InputBarShell/ModeSelector.module.css",
+        "interface/src/components/InputBarShell/ModeSelector.test.tsx",
+        "interface/src/components/InputBarShell/ModeSelector.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 87,
+        "deletions": 143
+      },
+      "committedAtMs": 1777999271000,
+      "cleanSubject": "drive sliding pill from a CSS index variable",
+      "keywords": [
+        "drive",
+        "sliding",
+        "pill",
+        "from",
+        "index",
+        "variable"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "c10d3213ad3bac2cdf0ae73bea603bb6653855bd",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T09:54:30-07:00",
+      "subject": "fix(mode-selector): make pill actually slide between columns",
+      "body": "The previous transform reused `--mode-col` (which is defined as `calc((100% - ...) / count)`) inside the indicator's translateX. That looked symmetrical with the width declaration, but the `100%` token resolves against a different reference depending on the property: for `width` it's the containing block (the segments container, what we want), but for `transform: translateX` it's the element's own box. So the calc evaluated to the wrong distance and the pill effectively snapped instead of sliding to the new column. Use `100%` directly inside the transform — which on translateX is one column width by construction — and add `--mode-gap` once per index step to land on the exact left edge of column N. Width still resolves correctly via `--mode-col`.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "af9baf722d14ee275063e332e0dd45dabfe779dc"
+      ],
+      "files": [
+        "interface/src/components/InputBarShell/ModeSelector.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 11,
+        "deletions": 4
+      },
+      "committedAtMs": 1778000070000,
+      "cleanSubject": "make pill actually slide between columns",
+      "keywords": [
+        "make",
+        "pill",
+        "actually",
+        "slide",
+        "between",
+        "columns"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "b55579d3d8fd913c40f6183448b16d2bd1094d28",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T09:58:07-07:00",
+      "subject": "feat(agents-chats): redesign Chats tab as ChatGPT-style date-bucketed list",
+      "body": "Reshape the agent info Chats tab so sessions render as a single, flat,\nreverse-chronological list bucketed by date (Today / Yesterday / Previous\n7 Days / Previous 30 Days / Month Year) instead of grouped by project.\nDrop the Explorer tree so child rows visually align with the bucket\nheader text. Replace the \"S{n}\" session prefix with the Haiku-generated\nsummary text alone (or \"New chat\" when none exists yet), and trigger the\nexisting /summarize endpoint as soon as a session has had its first\nuser+assistant turn so titles populate the way ChatGPT's do, instead of\nwaiting until the session is no longer active.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "c10d3213ad3bac2cdf0ae73bea603bb6653855bd"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentInfoPanel/AgentInfoPanel.module.css",
+        "interface/src/apps/agents/AgentInfoPanel/ChatsTab.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/agent-info-utils.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 169,
+        "deletions": 81
+      },
+      "committedAtMs": 1778000287000,
+      "cleanSubject": "redesign Chats tab as ChatGPT-style date-bucketed list",
+      "keywords": [
+        "redesign",
+        "chats",
+        "chatgpt",
+        "style",
+        "date",
+        "bucketed",
+        "list"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "93e858df223334624b7546a1ff54cd468d994b44",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T10:00:34-07:00",
+      "subject": "fix(mode-selector): emit literal transform per render so the slide actually animates",
+      "body": "When the indicator's transform was written as `translateX(calc(var(--mode-index) * (100% + var(--mode-gap))))` and React only updated the `--mode-index` custom property, Chromium kept the transform's computed value as the same calc/var expression and treated it as unchanged — so the CSS transition on transform never fired and the pill snapped instantly to the new column. Move the transform off CSS variables: React now emits a fully-resolved `translateX(calc(N * 100% + N*gap px))` string per active mode. Each render produces a different computed transform value, which lets the transition interpolate between the two positions for the smooth left/right slide. The gap is mirrored as a `MODE_GAP_PX` constant in TS to stay in sync with `--mode-gap` in the CSS module. Tests updated to assert the exact transform string per mode.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "b55579d3d8fd913c40f6183448b16d2bd1094d28"
+      ],
+      "files": [
+        "interface/src/components/InputBarShell/ModeSelector.module.css",
+        "interface/src/components/InputBarShell/ModeSelector.test.tsx",
+        "interface/src/components/InputBarShell/ModeSelector.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 48,
+        "deletions": 30
+      },
+      "committedAtMs": 1778000434000,
+      "cleanSubject": "emit literal transform per render so the slide actually animates",
+      "keywords": [
+        "emit",
+        "literal",
+        "transform",
+        "render",
+        "slide",
+        "actually",
+        "animates"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "31a743c27df0c87c4ed0a05a2760d2c935951142",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T10:01:19-07:00",
+      "subject": "fix(aura3d): resolve eight 3D viewer + chat 3D mode issues",
+      "body": "- WebGLViewer: coalesce ResizeObserver into one rAF and render\n  synchronously inside that frame so dragging the window edge no\n  longer flashes a blank/stretched canvas; pin canvas size to 100%\n  via CSS so setSize tracks the flex layout.\n- Theme-aware viewer chrome: scene background and grid colors now\n  switch with [data-theme] on <html>. Light mode uses a white\n  background and a dark gray grid (instead of the unreadable blue\n  on white). The container background uses --color-bg so any\n  pre-paint frame reads correctly in both themes.\n- Toggle buttons (Grid / Wireframe / Texture) drop the green accent\n  and use the standard neutral selected styling that matches the\n  segmented controls used elsewhere.\n- Image -> 3D flow: selectImage and setActiveTab no longer\n  auto-promote a previously-generated 3D model into\n  current3DModel. The 3D tab now always offers the source image\n  + Generate button, even when a model already exists; previously\n  generated models are still reachable by clicking the 3D thumb in\n  the sidekick or left-nav.\n- Right-click delete: new deleteImage / deleteModel store\n  actions wired to SidekickItemContextMenu for both the sidekick\n  thumbnail grids (Images and 3D Models) and the main-panel image\n  preview / 3D viewer surfaces. Deleting an image cascades to any\n  linked 3D model.\n- Larger main-panel images: dropped the 360px caps in\n  ImagePreview, ImageGeneration and ModelGeneration so the preview\n  fills the available area while a comfortable padding keeps it\n  away from the prompt input.\n- Chat 3D mode actually works: 3D mode in useAgentChatStream\n  now bypasses the agent and calls generate3dStream directly\n  with the pasted/uploaded image as a data: URL. The model\n  picker shows a new Tripo v2 entry filtered through\n  getModelsForMode(\"3d\"). The backend Generate3dRequest\n  accepts image_data (data URL) alongside the existing\n  image_url, so chat 3D no longer needs a pre-existing artifact.\n- STYLE_LOCK_SUFFIX is documented as AURA-3D-app only and is not\n  appended on the chat-mode generation paths, so chat-mode\n  prompts go to the provider unmodified.",
+      "parents": [
+        "93e858df223334624b7546a1ff54cd468d994b44"
+      ],
+      "files": [
+        "apps/aura-os-server/src/dto.rs",
+        "apps/aura-os-server/src/handlers/generation/model3d.rs",
+        "interface/src/api/streams.ts",
+        "interface/src/apps/aura3d/Aura3DSidekickPanel/Aura3DSidekickPanel.tsx",
+        "interface/src/apps/aura3d/ImageGeneration/ImageGeneration.module.css",
+        "interface/src/apps/aura3d/ImageGeneration/ImageGeneration.tsx",
+        "interface/src/apps/aura3d/ImagePreview/ImagePreview.module.css",
+        "interface/src/apps/aura3d/ImagePreview/ImagePreview.tsx",
+        "interface/src/apps/aura3d/ModelGeneration/ModelGeneration.module.css",
+        "interface/src/apps/aura3d/ModelGeneration/ModelGeneration.tsx",
+        "interface/src/apps/aura3d/WebGLViewer/WebGLViewer.module.css",
+        "interface/src/apps/aura3d/WebGLViewer/WebGLViewer.tsx",
+        "interface/src/apps/aura3d/WebGLViewer/scene-setup.ts",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/constants/models.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/stores/aura3d-store.test.ts",
+        "interface/src/stores/aura3d-store.ts",
+        "interface/src/stores/chat-ui-store.ts"
+      ],
+      "stats": {
+        "fileCount": 19,
+        "insertions": 928,
+        "deletions": 184
+      },
+      "committedAtMs": 1778000479000,
+      "cleanSubject": "resolve eight 3D viewer + chat 3D mode issues",
+      "keywords": [
+        "resolve",
+        "eight",
+        "viewer",
+        "chat",
+        "mode",
+        "issues"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/api",
+        "interface/src/apps",
+        "interface/src/constants",
+        "interface/src/hooks",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "f180965b2fc6ffc6128a2f0ebbb596a6104c2d3a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T10:05:05-07:00",
+      "subject": "feat(image-ux): shared Gallery + scroll-pin and accent fixes for image flows",
+      "body": "- Adds a single shared `Gallery` overlay (`components/Gallery/`) with\n  prev/next, ESC + backdrop dismiss, optional download, and a no-op\n  fallback when no provider is mounted. Mounted once at the root in\n  `main.tsx`.\n- Wires `useGallery().openGallery(...)` into MessageBubble user\n  attachments, generated `ImageBlock` results, and the 3D sidekick\n  thumbnails so every image surface in chat / project chat / 3D opens\n  the same in-app viewer instead of scattered ad-hoc lightboxes or\n  new-tab links.\n- New `useImageScrollPin` hook listens for descendant `<img>` `load`\n  events on the chat scroll container and re-pins to the bottom while\n  the user is auto-following or inside the cold-load reveal window,\n  fixing both \"newly generated image scrolls past the bottom\" and\n  \"opening a chat with images doesn't snap to the last message\".\n- Tightens the 3D sidekick `.thumbSelected` border to use only\n  `--color-accent` (with an accent-muted ring) so asset selection\n  follows the active accent instead of a hardcoded green fallback.\n\nTests: Gallery interaction suite, image-scroll-pin hook suite, and\nchat-ui-store image-mode init regression covering the persisted\nimage-mode model load + sync paths.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "31a743c27df0c87c4ed0a05a2760d2c935951142"
+      ],
+      "files": [
+        "interface/src/apps/aura3d/Aura3DSidekickPanel/Aura3DSidekickPanel.module.css",
+        "interface/src/apps/chat/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/apps/chat/components/MessageBubble/MessageBubble.module.css",
+        "interface/src/apps/chat/components/MessageBubble/MessageBubble.tsx",
+        "interface/src/components/Block/renderers/ImageBlock.test.tsx",
+        "interface/src/components/Block/renderers/ImageBlock.tsx",
+        "interface/src/components/Block/renderers/renderers.module.css",
+        "interface/src/components/Gallery/Gallery.module.css",
+        "interface/src/components/Gallery/Gallery.test.tsx",
+        "interface/src/components/Gallery/Gallery.tsx",
+        "interface/src/components/Gallery/GalleryProvider.tsx",
+        "interface/src/components/Gallery/gallery-context.ts",
+        "interface/src/components/Gallery/index.ts",
+        "interface/src/components/Gallery/use-gallery.ts",
+        "interface/src/main.tsx",
+        "interface/src/shared/hooks/use-image-scroll-pin.test.ts",
+        "interface/src/shared/hooks/use-image-scroll-pin.ts",
+        "interface/src/stores/chat-ui-store.test.ts"
+      ],
+      "stats": {
+        "fileCount": 19,
+        "insertions": 766,
+        "deletions": 13
+      },
+      "committedAtMs": 1778000705000,
+      "cleanSubject": "shared Gallery + scroll-pin and accent fixes for image flows",
+      "keywords": [
+        "shared",
+        "gallery",
+        "scroll",
+        "accent",
+        "fixes",
+        "image",
+        "flows"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/main.tsx",
+        "interface/src/shared",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "e86a27fe1ea9c56bd5c65a259a235974ed6361d9",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T10:11:16-07:00",
+      "subject": "refactor(sliding-pills): extract generic sliding-pill component, compose ModeSelector on top",
+      "body": "Pull the segmented-pill chrome and slide animation out of ModeSelector into a generic `SlidingPills` component under `interface/src/components/SlidingPills/` (TSX + module CSS + tests + index, per the project's React component layout rules). The component is controlled (`value` + `onChange`), strongly typed via a string-literal generic, exposes a `role=radiogroup` with `role=radio` segments, supports Left/Right (with wrap-around) and Home/End keyboard navigation, and handles disabled segments. The pill is sized and translated from the active button's measured `getBoundingClientRect`, so variable-width segments work; transitions on transform / width / height drive the smooth slide. ModeSelector is now a thin composition: it owns the row chrome (border, MODE label, padding, mobile breakpoints) and feeds the four agent modes to `SlidingPills` as `items`, keeping its public API (`selectedMode` / `onChange` / `className` / `hideLabel`) and `data-agent-surface` / `data-agent-mode` analytics hooks. Tests are split: positioning / keyboard / disabled-segment behavior live with `SlidingPills`, and `ModeSelector` tests focus on what the wrapper adds (radiogroup wiring, MODE label visibility, analytics surface).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "f180965b2fc6ffc6128a2f0ebbb596a6104c2d3a"
+      ],
+      "files": [
+        "interface/src/components/InputBarShell/ModeSelector.module.css",
+        "interface/src/components/InputBarShell/ModeSelector.test.tsx",
+        "interface/src/components/InputBarShell/ModeSelector.tsx",
+        "interface/src/components/SlidingPills/SlidingPills.module.css",
+        "interface/src/components/SlidingPills/SlidingPills.test.tsx",
+        "interface/src/components/SlidingPills/SlidingPills.tsx",
+        "interface/src/components/SlidingPills/index.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 610,
+        "deletions": 258
+      },
+      "committedAtMs": 1778001076000,
+      "cleanSubject": "extract generic sliding-pill component, compose ModeSelector on top",
+      "keywords": [
+        "extract",
+        "generic",
+        "sliding",
+        "pill",
+        "component",
+        "compose",
+        "modeselector"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "a39cfb2cb529a8995cd9d201e8224ed732b0674b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T10:36:33-07:00",
+      "subject": "fix(chat-3d): dispatch project-scoped 3D mode sends to Tripo instead of the LLM",
+      "body": "`useChatStream` (project agent chats) only branched on `image` generation\nmode, so 3D-mode sends fell through to `api.sendEventStream` and ended up\nas regular LLM turns. Mirrored the standalone-agent path: validate that\nan image attachment is present, then call `generate3dStream` with a data\nURL. Adds tests for the success path and the missing-image error path.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "e86a27fe1ea9c56bd5c65a259a235974ed6361d9"
+      ],
+      "files": [
+        "interface/src/hooks/use-chat-stream.test.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 96,
+        "deletions": 2
+      },
+      "committedAtMs": 1778002593000,
+      "cleanSubject": "dispatch project-scoped 3D mode sends to Tripo instead of the LLM",
+      "keywords": [
+        "dispatch",
+        "project",
+        "scoped",
+        "mode",
+        "sends",
+        "tripo",
+        "instead"
+      ],
+      "fileGroups": [
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "9d2333803781726592628f5cf87c508237121668",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T10:38:01-07:00",
+      "subject": "fix(image-ux): re-pin chat after image-mode generation completes",
+      "body": "The `useImageScrollPin` hook used a capturing `load` listener that\nrelied on browser-specific propagation behaviour and was bypassed\nonce the user lost auto-follow mid-generation. As a result, after\nsending an Image-mode prompt the viewport stayed at the top of the\nnew assistant bubble while the generated image grew the layout out\nthe bottom of the visible area.\n\n- Switch the hook to a `ResizeObserver` on the scroll container's\n  inner content wrapper. It catches every layout-shifting source\n  (image decode, font load, dynamic tool-row expansion, gallery\n  close, ...) without depending on `load` event propagation rules.\n  The capturing `load` listener stays as belt-and-suspenders so\n  immediate decode pins before the next layout flush.\n- Bump the `imagePinUntil` window in `ChatPanel` whenever\n  `isStreaming` toggles. The window now covers both the entire\n  generation interval and the post-stream decode tail, so even if\n  the user nudges auto-follow off during generation the final\n  bubble still lands at the bottom.\n- Extend the test suite to cover both the `ResizeObserver` path and\n  the existing `load` path.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "a39cfb2cb529a8995cd9d201e8224ed732b0674b"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/shared/hooks/use-image-scroll-pin.test.ts",
+        "interface/src/shared/hooks/use-image-scroll-pin.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 120,
+        "deletions": 22
+      },
+      "committedAtMs": 1778002681000,
+      "cleanSubject": "re-pin chat after image-mode generation completes",
+      "keywords": [
+        "chat",
+        "after",
+        "image",
+        "mode",
+        "generation",
+        "completes"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "0fe61f917bc54c0e5426983ed3717dc08d3e6933",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T10:43:29-07:00",
+      "subject": "fix(theme): sync browser tab/PWA chrome to in-app ZUI theme",
+      "body": "The <meta name=\"theme-color\"> tag in interface/index.html was keyed off\nprefers-color-scheme media queries, so the browser's tab thumbnail and\nURL bar tracked the OS preference instead of AURA's persisted ZUI theme\nin localStorage[\"zui-theme\"]. A user on OS=dark with AURA=light saw a\ndark Chrome tab while the app rendered light.\n\nReplace the dual media-keyed metas with a single <meta id=\"aura-theme-color\">\ntag, give the manifest <link> an id, and drive both from the resolved\ntheme. The pre-React inline boot script sets them on the first frame so\nthere's no flash, and a new BrowserChromeThemeBridge mounted under\n<ThemeProvider> keeps them in sync on subsequent toggles. A sibling\nmanifest-light.webmanifest carries the light palette for fresh PWA\ninstalls and installed-PWA contexts that re-read the manifest.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "9d2333803781726592628f5cf87c508237121668"
+      ],
+      "files": [
+        "interface/public/manifest-light.webmanifest",
+        "interface/src/components/BrowserChromeThemeBridge/BrowserChromeThemeBridge.test.tsx",
+        "interface/src/components/BrowserChromeThemeBridge/BrowserChromeThemeBridge.tsx",
+        "interface/src/components/BrowserChromeThemeBridge/index.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 182,
+        "deletions": 0
+      },
+      "committedAtMs": 1778003009000,
+      "cleanSubject": "sync browser tab/PWA chrome to in-app ZUI theme",
+      "keywords": [
+        "sync",
+        "browser",
+        "chrome",
+        "theme"
+      ],
+      "fileGroups": [
+        "interface/public/manifest-light.webmanifest",
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "a3e6206aaa7909706ebcd444b23e978773cad7e6",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T10:47:19-07:00",
+      "subject": "feat(aura3d): replace 3D Generate button with prompt input bar so the image stops resizing across tabs",
+      "body": "Image preview was visibly larger on the 3D Model tab because that tab\nended in a 76px button row while the Image tab ended in a tall\nInputBarShell + model picker. Switching tabs jumped the image.\n\nGeneralize aura3d's PromptInput to take an optional `models` list and a\n`requireText` flag, mirror the imagine prompt/model state with\n`model3DPrompt` / `model3DModel` (defaulting to MODEL_3D_MODELS[0],\ncleared on completion), and render the same input shell at the bottom\nof ModelGeneration. Submitting forwards the trimmed prompt to\ngenerate3dStream's existing optional `prompt` argument so the new text\nfield is functional, not cosmetic. Match `.viewerArea` padding to\n`.previewArea` and drop the obsolete `.footer`/`.actionBar` rules so\nboth tabs render the source image at identical bounds.\n\nAlso updates the Image tab placeholder to clarify the input describes\na static reference image for the downstream 3D model.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "0fe61f917bc54c0e5426983ed3717dc08d3e6933"
+      ],
+      "files": [
+        "interface/src/apps/aura3d/ImageGeneration/ImageGeneration.tsx",
+        "interface/src/apps/aura3d/ModelGeneration/ModelGeneration.module.css",
+        "interface/src/apps/aura3d/ModelGeneration/ModelGeneration.tsx",
+        "interface/src/apps/aura3d/PromptInput/PromptInput.tsx",
+        "interface/src/stores/aura3d-store.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 76,
+        "deletions": 48
+      },
+      "committedAtMs": 1778003239000,
+      "cleanSubject": "replace 3D Generate button with prompt input bar so the image stops resizing across tabs",
+      "keywords": [
+        "replace",
+        "generate",
+        "button",
+        "with",
+        "prompt",
+        "input",
+        "image",
+        "stops",
+        "resizing",
+        "across",
+        "tabs"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "d2f348a1d520237898a4d004c02c2aabd19df549",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T10:52:09-07:00",
+      "subject": "fix(aura3d): clicking a sidekick image only re-selects it instead of opening the gallery",
+      "body": "Sidekick thumbs were calling `selectImage` and `openGallery` on click,\nwhich meant a single tap to swap the main-panel preview unavoidably\nthrew the user into the full-screen gallery. Drop the gallery launch\n(and the now-unused `useGallery` / `galleryItems` plumbing) so left\nclick is just selection. Right-click still opens the delete menu, and\nthe gallery remains reachable from other entry points.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "a3e6206aaa7909706ebcd444b23e978773cad7e6"
+      ],
+      "files": [
+        "interface/src/apps/aura3d/Aura3DSidekickPanel/Aura3DSidekickPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 2,
+        "deletions": 19
+      },
+      "committedAtMs": 1778003529000,
+      "cleanSubject": "clicking a sidekick image only re-selects it instead of opening the gallery",
+      "keywords": [
+        "clicking",
+        "sidekick",
+        "image",
+        "only",
+        "selects",
+        "instead",
+        "opening",
+        "gallery"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "eeaddb7127fc71829291c897521ae99ab8cbe011",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T10:58:55-07:00",
+      "subject": "fix(sliding-pills): make the indicator actually slide between segments",
+      "body": "- Drop the @media (prefers-reduced-motion) override on .indicator. The\n  slide is the only visual feedback that selection moved, so disabling\n  it under reduced-motion produced an unconditional snap instead of\n  serving accessibility.\n- Write transform / width / height imperatively on the indicator ref\n  inside useLayoutEffect instead of going through useState. Holding\n  the rect in state caused two commits per click (old rect, then new\n  rect) before paint, which Chromium can collapse into a single\n  style-change cycle so the transform delta never triggers the CSS\n  transition. One imperative DOM write per click gives the browser a\n  clean previous -> next transform between paints, which is what fires\n  the slide.\n- Tighten the duration from 220ms to 140ms so the motion reads as a\n  snappy slide instead of a soft drift.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "d2f348a1d520237898a4d004c02c2aabd19df549"
+      ],
+      "files": [
+        "interface/src/components/SlidingPills/SlidingPills.module.css",
+        "interface/src/components/SlidingPills/SlidingPills.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 40,
+        "deletions": 47
+      },
+      "committedAtMs": 1778003935000,
+      "cleanSubject": "make the indicator actually slide between segments",
+      "keywords": [
+        "make",
+        "indicator",
+        "actually",
+        "slide",
+        "between",
+        "segments"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "7986e096f046c472723fe009a5be718cba20e63d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T11:02:04-07:00",
+      "subject": "feat(desktop-bg): per-theme backgrounds for light and dark mode",
+      "body": "The desktop background store now holds two BackgroundConfig slots\n({ light, dark }) and BackgroundLayer renders whichever matches the\ncurrent ZUI resolvedTheme, so the wallpaper switches automatically when\nthe user toggles the theme. The right-click \"Set Background...\" modal\nshows both Light Mode and Dark Mode sections stacked, each with its own\nswatches, custom color picker, and image upload.\n\nA legacy localStorage value (single { mode, color, imageDataUrl }) is\nmigrated by copying the existing config into both slots so users keep\nthe same wallpaper until they customize one explicitly.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "eeaddb7127fc71829291c897521ae99ab8cbe011"
+      ],
+      "files": [
+        "interface/src/apps/desktop/BackgroundModal/BackgroundModal.module.css",
+        "interface/src/apps/desktop/BackgroundModal/BackgroundModal.tsx",
+        "interface/src/components/DesktopShell/BackgroundLayer.tsx",
+        "interface/src/stores/desktop-background-store.test.ts",
+        "interface/src/stores/desktop-background-store.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 318,
+        "deletions": 135
+      },
+      "committedAtMs": 1778004124000,
+      "cleanSubject": "per-theme backgrounds for light and dark mode",
+      "keywords": [
+        "theme",
+        "backgrounds",
+        "light",
+        "dark",
+        "mode"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "83f8acbb86fdcbdb5d64e2c934dbf5b470e95596",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T11:03:22-07:00",
+      "subject": "feat(chat-3d): allow text-to-3D when no source image is attached",
+      "body": "Tripo's 3D pipeline supports text-to-3D, but both chat-stream hooks and\nthe `/api/generate/3d/stream` handler hard-required an image and erred\nout with \"3D mode requires an attached or pasted image...\" Relaxed both\nsides so 3D mode can be driven by a prompt alone:\n\n- `generate3dStream` accepts `null` / `undefined` source and omits\n  `image_url` / `image_data` from the body in that case.\n- `useChatStream` and `useAgentChatStream` only require a prompt OR an\n  image (not both), and pass the user's actual typed text as the prompt\n  rather than the synthesized \"[N file(s)]\" attachment label.\n- The server handler now requires only that *one* of image_url /\n  image_data / prompt is present, forwarding the empty image_url through\n  to the upstream router for the text-to-3D path.\n\nUpdates the use-chat-stream tests: replaces the now-obsolete\n\"image required\" case with positive coverage for text-only 3D and a\nguard test for the no-prompt-no-image case via a non-image attachment.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "7986e096f046c472723fe009a5be718cba20e63d"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/generation/model3d.rs",
+        "interface/src/api/streams.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream.test.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 116,
+        "deletions": 35
+      },
+      "committedAtMs": 1778004202000,
+      "cleanSubject": "allow text-to-3D when no source image is attached",
+      "keywords": [
+        "allow",
+        "text",
+        "when",
+        "source",
+        "image",
+        "attached"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/api",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "165bd660c9d4fc609f52e9a451757e1a4a75a9d4",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T11:06:09-07:00",
+      "subject": "refactor(chat-3d): model the no-image case as an explicit `none` variant",
+      "body": "Replace the nullish-source overload on `generate3dStream` with a third\ndiscriminator on `Generate3dSource`: `{ kind: \"none\" }`. Callers now say\nwhat they mean instead of leaning on `null` / `undefined` to imply the\ntext-to-3D path. The chat-stream hooks pass `{ kind: \"none\" }` when no\nimage is attached and the body still ships without `image_url` /\n`image_data`.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "83f8acbb86fdcbdb5d64e2c934dbf5b470e95596"
+      ],
+      "files": [
+        "interface/src/api/streams.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream.test.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 48,
+        "deletions": 36
+      },
+      "committedAtMs": 1778004369000,
+      "cleanSubject": "model the no-image case as an explicit `none` variant",
+      "keywords": [
+        "model",
+        "image",
+        "case",
+        "explicit",
+        "none",
+        "variant"
+      ],
+      "fileGroups": [
+        "interface/src/api",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "aac2256deb46760a10cf619790f2b57f5924a5e6",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T11:06:26-07:00",
+      "subject": "fix(desktop-bg): remove unused DEFAULTS constant",
+      "body": "Leftover from the per-theme background refactor; tsc --noUnusedLocals\nwas failing the build (TS6133).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "165bd660c9d4fc609f52e9a451757e1a4a75a9d4"
+      ],
+      "files": [
+        "interface/src/stores/desktop-background-store.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 0,
+        "deletions": 1
+      },
+      "committedAtMs": 1778004386000,
+      "cleanSubject": "remove unused DEFAULTS constant",
+      "keywords": [
+        "remove",
+        "unused",
+        "defaults",
+        "constant"
+      ],
+      "fileGroups": [
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "5d8b7709adfde0abf0cdbf96d4a88b66f729b298",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T11:10:35-07:00",
+      "subject": "fix(theme): wire BrowserChromeThemeBridge into index.html and main",
+      "body": "Follow-up to 0fe61f9 (\"fix(theme): sync browser tab/PWA chrome to in-app\nZUI theme\"), which committed the new bridge component and the\nmanifest-light file but missed the three call-site modifications that\nactually make the bridge run. Without these, the browser theme-color\nmeta and manifest link still ignored the in-app ZUI theme.\n\n- index.html: collapse the dual prefers-color-scheme theme-color metas\n  into one tag we own (id=aura-theme-color), give the manifest link\n  id=aura-manifest, and have the inline boot script point both at the\n  right palette from the persisted data-theme so the very first frame\n  is correct.\n- main.tsx: mount BrowserChromeThemeBridge under <ThemeProvider> so the\n  meta + manifest stay in sync when the user toggles theme at runtime.\n- pwa-mobile.spec.ts: assert exactly one theme-color meta now exists\n  and that it carries our id, locking in the new shape.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "aac2256deb46760a10cf619790f2b57f5924a5e6"
+      ],
+      "files": [
+        "interface/index.html",
+        "interface/src/main.tsx",
+        "interface/tests/e2e/pwa-mobile.spec.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 28,
+        "deletions": 4
+      },
+      "committedAtMs": 1778004635000,
+      "cleanSubject": "wire BrowserChromeThemeBridge into index.html and main",
+      "keywords": [
+        "wire",
+        "browserchromethemebridge",
+        "into",
+        "index",
+        "html",
+        "main"
+      ],
+      "fileGroups": [
+        "interface/index.html",
+        "interface/src/main.tsx",
+        "interface/tests/e2e"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "1e6a6ecf3c56281075fc7f1e10bb4bfe30d52af7",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T11:10:55-07:00",
+      "subject": "fix(theme): alias --color-bg-subtle/-bg-elevated/-border-strong so light mode is light",
+      "body": "The in-app Browser app's tab strip painted as a black slab in light\nmode (visible above the URL bar in the browser instance). Root cause:\nBrowserInstanceTabs.module.css and BrowserErrorOverlay.module.css\nreach for `var(--color-bg-subtle, #141414)` / `var(--color-bg-elevated,\n#1a1a1a)` / `var(--color-border-strong, rgba(255,255,255,0.24))`, but\nnone of those tokens are defined anywhere in ZUI or our tokens.css —\nso the dark-hex fallback fires in BOTH themes and the surface stays\ndark when [data-theme=light] flips everything else white. The same\nbroken tokens leak into debug, agents, files, and modal CSS too, so\nthe fix is best applied centrally.\n\nAdd three theme-aware aliases next to the existing legacy-name\naliases (`--color-bg-secondary`, `--color-text`, `--color-bg-hover`)\nthat dereference into ZUI's per-theme `--color-surface`,\n`--color-elevated`, and `--color-border` tokens. Every consumer now\nflips with the active theme without touching any module CSS.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "5d8b7709adfde0abf0cdbf96d4a88b66f729b298"
+      ],
+      "files": [
+        "interface/src/styles/tokens.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 13,
+        "deletions": 1
+      },
+      "committedAtMs": 1778004655000,
+      "cleanSubject": "alias --color-bg-subtle/-bg-elevated/-border-strong so light mode is light",
+      "keywords": [
+        "alias",
+        "color",
+        "subtle",
+        "elevated",
+        "border",
+        "strong",
+        "light",
+        "mode"
+      ],
+      "fileGroups": [
+        "interface/src/styles"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "36903518d1ae069f3845da152d9cbcfde263faee",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T11:16:03-07:00",
+      "subject": "feat(aura3d): float viewer controls bottom-right and make 3D viewer full-bleed",
+      "body": "Move the grid/wireframe/texture toggles (and poly count) out of the\nheader strip above the canvas into a translucent overlay anchored to\nthe bottom-right of the viewer, and drop the viewerArea padding +\ncontainer border-radius so the 3D viewer fills the full middle section\nflush with the panel edges below the tab bar.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "1e6a6ecf3c56281075fc7f1e10bb4bfe30d52af7"
+      ],
+      "files": [
+        "interface/src/apps/aura3d/ModelGeneration/ModelGeneration.module.css",
+        "interface/src/apps/aura3d/ModelGeneration/ModelGeneration.tsx",
+        "interface/src/apps/aura3d/WebGLViewer/WebGLViewer.module.css"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 50,
+        "deletions": 50
+      },
+      "committedAtMs": 1778004963000,
+      "cleanSubject": "float viewer controls bottom-right and make 3D viewer full-bleed",
+      "keywords": [
+        "float",
+        "viewer",
+        "controls",
+        "bottom",
+        "right",
+        "make",
+        "full",
+        "bleed"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "2505150143b7e8d7c87645fb34c00e4a6be8ed93",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T11:20:35-07:00",
+      "subject": "fix(aura3d): inset 3D source preview to match Image section framing",
+      "body": "Pad `.sourcePreview` so the source image shown in the 3D panel before\ngeneration sits in the same inset frame as the image in the Image\nsection, instead of bleeding to the panel edges. The WebGL viewer\n(`.viewerWrapper`) intentionally keeps no padding so the grid stays\nfull bleed once the 3D model is generated.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "36903518d1ae069f3845da152d9cbcfde263faee"
+      ],
+      "files": [
+        "interface/src/apps/aura3d/ModelGeneration/ModelGeneration.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 6,
+        "deletions": 0
+      },
+      "committedAtMs": 1778005235000,
+      "cleanSubject": "inset 3D source preview to match Image section framing",
+      "keywords": [
+        "inset",
+        "source",
+        "preview",
+        "match",
+        "image",
+        "section",
+        "framing"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "94b76d293faf6bd179444782224f28dd387fa4a5",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T11:21:33-07:00",
+      "subject": "feat(aura3d): show pending thumbnail and clean loading panel during image generation",
+      "body": "Starting a new image generation now deselects the previously selected\nimage so the main preview renders its clean loading/spinner state\ninstead of overlaying the prior image, and a fresh selected placeholder\nthumbnail is pinned at the front of the Images sidekick (promoting to\nthe streamed partial image once one arrives). `generateSourceImage` is\nintentionally preserved so the 3D tab's source preview / Generate\nbutton don't disappear mid-flight.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "2505150143b7e8d7c87645fb34c00e4a6be8ed93"
+      ],
+      "files": [
+        "interface/src/apps/aura3d/Aura3DSidekickPanel/Aura3DSidekickPanel.module.css",
+        "interface/src/apps/aura3d/Aura3DSidekickPanel/Aura3DSidekickPanel.tsx",
+        "interface/src/stores/aura3d-store.test.ts",
+        "interface/src/stores/aura3d-store.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 121,
+        "deletions": 2
+      },
+      "committedAtMs": 1778005293000,
+      "cleanSubject": "show pending thumbnail and clean loading panel during image generation",
+      "keywords": [
+        "show",
+        "pending",
+        "thumbnail",
+        "clean",
+        "loading",
+        "panel",
+        "during",
+        "image",
+        "generation"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "8613b09691b3b2157107384f7758f4c1ca3a5114",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T11:25:10-07:00",
+      "subject": "fix(chat-3d): require image attachment, surface inline upload hint",
+      "body": "Revert the optimistic text-to-3D path: aura-router only exposes\nimage-to-3D for Tripo today, so prompt-only requests bounced back as a\nconfusing 502 wrapping an upstream 422. Restore the image requirement on\nboth the server (`generate_3d_stream`) and the API surface\n(`Generate3dSource` is back to a `url`/`data` union), and the chat\nstream hooks now block 3D sends without an image.\n\nReplace the previous hard error with a calmer UX: when 3D mode is\nactive and no image is attached, the desktop and mobile composers show\na persistent inline hint (\"Upload or paste an image of a 3D object to\ngenerate.\") and the send button no longer dispatches the request — it\nflashes the hint and keeps the input + attachments intact so the user\ncan drop in an image and retry without retyping. The stream-level\nguard remains as defense-in-depth for paths that bypass the composer.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "94b76d293faf6bd179444782224f28dd387fa4a5"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/generation/model3d.rs",
+        "interface/src/api/streams.ts",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream.test.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.module.css",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.tsx"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 233,
+        "deletions": 124
+      },
+      "committedAtMs": 1778005510000,
+      "cleanSubject": "require image attachment, surface inline upload hint",
+      "keywords": [
+        "require",
+        "image",
+        "attachment",
+        "surface",
+        "inline",
+        "upload",
+        "hint"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/api",
+        "interface/src/apps",
+        "interface/src/hooks",
+        "interface/src/mobile"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "3514966e3d874fb4afb5f533f9df183ef7d3ef44",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T11:31:46-07:00",
+      "subject": "feat(aura3d): show pending thumbnail and clean loading panel during 3D generation",
+      "body": "Mirrors the image-side behavior on the 3D Model tab. Clicking Generate\nnow:\n\n- Drops `current3DModel` / `selectedModelId` so the main viewer\n  renders a clean spinner + rotating progress message instead of\n  continuing to show the source image as if nothing happened.\n- Pins a fresh selected pending placeholder at the top of the Models\n  sidekick, using the source image as its dim base with a centered\n  spinner overlay so the user has a concrete \"selected\" target the\n  moment they click Generate.\n\n`generateSourceImage` is intentionally preserved while in flight: it\npowers the pending thumb's base image and is still needed by the\nstreaming generation request itself.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "8613b09691b3b2157107384f7758f4c1ca3a5114"
+      ],
+      "files": [
+        "interface/src/apps/aura3d/Aura3DSidekickPanel/Aura3DSidekickPanel.module.css",
+        "interface/src/apps/aura3d/Aura3DSidekickPanel/Aura3DSidekickPanel.tsx",
+        "interface/src/apps/aura3d/ModelGeneration/ModelGeneration.module.css",
+        "interface/src/apps/aura3d/ModelGeneration/ModelGeneration.tsx",
+        "interface/src/stores/aura3d-store.test.ts",
+        "interface/src/stores/aura3d-store.ts"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 158,
+        "deletions": 3
+      },
+      "committedAtMs": 1778005906000,
+      "cleanSubject": "show pending thumbnail and clean loading panel during 3D generation",
+      "keywords": [
+        "show",
+        "pending",
+        "thumbnail",
+        "clean",
+        "loading",
+        "panel",
+        "during",
+        "generation"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "cafe3915a1a38f5b62f597ecf0d8b62759592296",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T11:39:09-07:00",
+      "subject": "feat(aura3d): capture and persist 3D model snapshots as sidekick thumbnails",
+      "body": "When the user opens a generated 3D model in the AURA 3D viewer, the\nfreshly-rendered scene is snapped to a PNG and POSTed to a new\n/api/artifacts/:id/thumbnail endpoint that writes it to\ndata_dir/workspaces/<project>/.thumbnails/<artifact_id>.png. The\nsidekick \"3D Models\" tile then renders the actual model preview\ninstead of the cube placeholder, with an onError fallback chain to\nthe source image and finally the cube icon when no PNG exists yet.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "3514966e3d874fb4afb5f533f9df183ef7d3ef44"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/project_artifacts.rs",
+        "apps/aura-os-server/src/router/projects_files.rs",
+        "interface/src/apps/aura3d/Aura3DSidekickPanel/Aura3DSidekickPanel.tsx",
+        "interface/src/apps/aura3d/ModelGeneration/ModelGeneration.tsx",
+        "interface/src/apps/aura3d/WebGLViewer/WebGLViewer.tsx",
+        "interface/src/apps/aura3d/WebGLViewer/scene-setup.ts",
+        "interface/src/shared/api/artifacts.ts",
+        "interface/src/stores/aura3d-store.test.ts",
+        "interface/src/stores/aura3d-store.ts"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 505,
+        "deletions": 12
+      },
+      "committedAtMs": 1778006349000,
+      "cleanSubject": "capture and persist 3D model snapshots as sidekick thumbnails",
+      "keywords": [
+        "capture",
+        "persist",
+        "model",
+        "snapshots",
+        "sidekick",
+        "thumbnails"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/apps",
+        "interface/src/shared",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "9a9d18e89d8f4ee36c91e24bb9ca4898501ba7d6",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T11:40:19-07:00",
+      "subject": "fix(image-mode): persist image-mode generations into chat history so they survive reload",
+      "body": "Image-mode (slash-command / mode picker) generations were lost on hard\nreload because `POST /api/generate/image/stream` only opened a synthetic\nharness session and streamed events back; the UI's `generate_image`\ntool turn was synthesized client-side from `GenerationCompleted` and\nlived only in the in-memory zustand stream store.\n\nNow the request carries the chat scope (`agentId` for standalone agent\nchat, `projectId` + `agentInstanceId` for project chat), the server\nresolves the same `ChatPersistCtx` the regular chat route uses, and a\nsibling task spawned alongside the SSE adapter writes a `user_message`\n+ synthetic `assistant_message_end` row pair. The assistant row's\n`content_blocks` mirror what the chat-agent persists when its LLM\ncalls `generate_image` itself, so cold reload renders the image\nthrough the existing `ImageBlock` path with no UI changes.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "cafe3915a1a38f5b62f597ecf0d8b62759592296"
+      ],
+      "files": [
+        "apps/aura-os-server/src/dto.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/event_bus.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/persist_task.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/setup.rs",
+        "apps/aura-os-server/src/handlers/generation/harness_stream.rs",
+        "apps/aura-os-server/src/handlers/generation/image.rs",
+        "apps/aura-os-server/src/handlers/generation/mod.rs",
+        "apps/aura-os-server/src/handlers/generation/persist.rs",
+        "interface/src/api/streams.ts",
+        "interface/src/apps/aura3d/ImageGeneration/ImageGeneration.tsx",
+        "interface/src/hooks/use-agent-chat-stream.test.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream.test.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts"
+      ],
+      "stats": {
+        "fileCount": 15,
+        "insertions": 575,
+        "deletions": 13
+      },
+      "committedAtMs": 1778006419000,
+      "cleanSubject": "persist image-mode generations into chat history so they survive reload",
+      "keywords": [
+        "persist",
+        "image",
+        "mode",
+        "generations",
+        "into",
+        "chat",
+        "history",
+        "they",
+        "survive",
+        "reload"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/api",
+        "interface/src/apps",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "cdd9c4e49d02f4a2bb1844c8733e6d6b3cf8b3d9",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T11:52:34-07:00",
+      "subject": "fix(chat-3d): inline 3D image hint inside input row, center and space inputRowEnd",
+      "body": "Move the \"Add an image to generate.\" chip from the stacked containerTop\nslot into the absolutely-positioned inputRowEnd slot so toggling 3D\nmode no longer changes the input bar's height. Shorten the label and\nadd a `.threeDHintInline` modifier that drops the stacked-layout outer\nmargin.\n\nAlso adjust the shared InputBarShell `.inputRowEnd` wrapper:\n- Vertically center via top: 50% + translateY(-50%) instead of\n  bottom: 5px so chips sit on the input's midline (was bottom-heavy).\n- Bump right offset (42 -> 52 desktop, 50 -> 58 mobile) so inline\n  chips have breathing room from the send button's hit area.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "9a9d18e89d8f4ee36c91e24bb9ca4898501ba7d6"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/components/InputBarShell/InputBarShell.module.css"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 44,
+        "deletions": 25
+      },
+      "committedAtMs": 1778007154000,
+      "cleanSubject": "inline 3D image hint inside input row, center and space inputRowEnd",
+      "keywords": [
+        "inline",
+        "image",
+        "hint",
+        "inside",
+        "input",
+        "center",
+        "space",
+        "inputrowend"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "2a201a15da34b56f925a3d739e53b1f129d304cc",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T11:55:48-07:00",
+      "subject": "fix(generation): raise SSE body cap to 25 MiB for image / 3D streams",
+      "body": "Chat 3D mode inlines pasted images as base64 data URLs in the request\nbody, which overruns axum's 2 MiB default and surfaces as\n`SSE request failed (413): Failed to buffer the request body: length\nlimit exceeded`. Apply a `DefaultBodyLimit` layer to both generation\nroutes so realistic screenshots / photos go through.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "cdd9c4e49d02f4a2bb1844c8733e6d6b3cf8b3d9"
+      ],
+      "files": [
+        "apps/aura-os-server/src/router/process_generation.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 21,
+        "deletions": 2
+      },
+      "committedAtMs": 1778007348000,
+      "cleanSubject": "raise SSE body cap to 25 MiB for image / 3D streams",
+      "keywords": [
+        "raise",
+        "body",
+        "image",
+        "streams"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "12adeef6557f01709a9b1110dfa3ae7f66ee17df",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T12:14:15-07:00",
+      "subject": "fix(aura3d): make 3D sidekick thumbnails actually render",
+      "body": "The captured-PNG thumbnail feature shipped in cafe3915a was broken in\nthree compounding ways: the upload never fired in practice and even\nif it had, <img> couldn't authenticate against the GET endpoint.\n\n- artifactToModel synthesised /api/artifacts/:id/thumbnail for every\n  loaded model, which made currentModelHasThumbnail truthy and\n  short-circuited the upload before any PNG was written. Drop the\n  guard; WebGLViewer's capturedUrlRef already dedupes per mount.\n- complete3DGeneration was called without artifactId, so the upload\n  bailed on `if (!model?.artifactId) return` for fresh generations\n  until a project reload. Forward event.content.artifactId from the\n  GenerationCompleted SSE event.\n- The thumbnail GET route lives under protected_api_router. A bare\n  <img src> request carries no Authorization header, so the server\n  returned 401 and tiles fell through to the cube placeholder. Wrap\n  the synthetic + post-upload URLs with ?token=<jwt> (the same\n  fallback the backend already accepts for SSE / WebSockets).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "2a201a15da34b56f925a3d739e53b1f129d304cc"
+      ],
+      "files": [
+        "interface/src/apps/aura3d/ModelGeneration/ModelGeneration.tsx",
+        "interface/src/stores/aura3d-store.test.ts",
+        "interface/src/stores/aura3d-store.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 140,
+        "deletions": 9
+      },
+      "committedAtMs": 1778008455000,
+      "cleanSubject": "make 3D sidekick thumbnails actually render",
+      "keywords": [
+        "make",
+        "sidekick",
+        "thumbnails",
+        "actually",
+        "render"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "695e1e8655f73de6e7b73ef431bbd44e253f16b5",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T12:24:47-07:00",
+      "subject": "feat(aura3d): confirm right-click delete for images and 3D models",
+      "body": "Route every Aura3D context-menu Delete (main image preview, 3D viewer,\nsource-image preview, and sidekick gallery thumbs for both Images and\nModels) through the standard `ModalConfirm` from `@cypher-asi/zui`,\nmatching how destructive actions are confirmed elsewhere in the app\n(e.g. `AutomationBar`).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "12adeef6557f01709a9b1110dfa3ae7f66ee17df"
+      ],
+      "files": [
+        "interface/src/apps/aura3d/Aura3DSidekickPanel/Aura3DSidekickPanel.tsx",
+        "interface/src/apps/aura3d/ImageGeneration/ImageGeneration.tsx",
+        "interface/src/apps/aura3d/ModelGeneration/ModelGeneration.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 105,
+        "deletions": 15
+      },
+      "committedAtMs": 1778009087000,
+      "cleanSubject": "confirm right-click delete for images and 3D models",
+      "keywords": [
+        "confirm",
+        "right",
+        "click",
+        "delete",
+        "images",
+        "models"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "35f25626965de64eca02e4b1be60da22746491b9",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T12:30:59-07:00",
+      "subject": "fix(generation): cap inlined 3D source images at 8 MiB with clear 413",
+      "body": "Even after the 25 MiB route-level body cap, oversized base64 `data:`\nURLs clear aura-os-server but stall in the harness / aura-router\npipeline downstream — surfacing as the SSE watchdog's generic\n\"Image generation did not start. Try again in a moment.\" 120 s later,\nwhich is opaque from the user's perspective.\n\nReject `data:` URLs above 8 MiB up front in `generate_3d_stream`\nwith a `413 payload_too_large` and a message that names the size\nand the cap. Hosted `https://` URLs are tiny strings and skip the\ncheck, so the AURA 3D app's flow is unaffected. Adds an\n`ApiError::payload_too_large` constructor in passing.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "695e1e8655f73de6e7b73ef431bbd44e253f16b5"
+      ],
+      "files": [
+        "apps/aura-os-server/src/error/mod.rs",
+        "apps/aura-os-server/src/handlers/generation/model3d.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 40,
+        "deletions": 0
+      },
+      "committedAtMs": 1778009459000,
+      "cleanSubject": "cap inlined 3D source images at 8 MiB with clear 413",
+      "keywords": [
+        "inlined",
+        "source",
+        "images",
+        "with",
+        "clear"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "02c0b019fb6c891784b734a93882d70984d3e740",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T12:36:34-07:00",
+      "subject": "Revert \"fix(generation): raise SSE body cap to 25 MiB for image / 3D streams\"",
+      "body": "This reverts commit 2a201a15da34b56f925a3d739e53b1f129d304cc.",
+      "parents": [
+        "35f25626965de64eca02e4b1be60da22746491b9"
+      ],
+      "files": [
+        "apps/aura-os-server/src/error/mod.rs",
+        "apps/aura-os-server/src/handlers/generation/model3d.rs",
+        "apps/aura-os-server/src/router/process_generation.rs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 2,
+        "deletions": 61
+      },
+      "committedAtMs": 1778009794000,
+      "cleanSubject": "Revert \"fix(generation): raise SSE body cap to 25 MiB for image / 3D streams\"",
+      "keywords": [
+        "revert",
+        "generation",
+        "raise",
+        "body",
+        "image",
+        "streams"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "534c7c42b2087530bde61a060c52b13025b9cc8b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T12:53:03-07:00",
+      "subject": "chore(modes): hide 3D mode from mode selector for now",
+      "body": "Comment out \"3d\" in AGENT_MODE_ORDER so the selector renders only\nCode / Plan / Image. The AgentMode type, descriptor, and downstream\n3D generation pipeline are left intact so re-enabling is a one-line\nrevert. Tests updated to assert 3D mode is absent.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "02c0b019fb6c891784b734a93882d70984d3e740"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/components/InputBarShell/ModeSelector.test.tsx",
+        "interface/src/constants/modes.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 9,
+        "deletions": 8
+      },
+      "committedAtMs": 1778010783000,
+      "cleanSubject": "hide 3D mode from mode selector for now",
+      "keywords": [
+        "hide",
+        "mode",
+        "from",
+        "selector"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/constants"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "5df9dea82624e676e0a08be1f83f4d355732f47e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T13:42:02-07:00",
+      "subject": "perf(interface): drop ineffective dynamic import of aura3d-store",
+      "body": "aura3d-store is statically imported by Aura3DMainPanel, Aura3DNav,\nAura3DSidekickPanel, Aura3DSidekickTaskbar, ImageGeneration,\nModelGeneration, PromptInput, and useOnboardingTaskWatcher, so the\ndynamic imports in AppShell.resetCaptureAppSpecificState and\ncapture-bridge.applyAuraCaptureSeedPlan never moved the module into\nits own chunk and only added async indirection. Vite was already\nwarning about this with [INEFFECTIVE_DYNAMIC_IMPORT]. Switch both\nsites to the static import that already exists transitively.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "534c7c42b2087530bde61a060c52b13025b9cc8b"
+      ],
+      "files": [
+        "interface/src/components/AppShell/AppShell.tsx",
+        "interface/src/lib/capture-bridge.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 4,
+        "deletions": 3
+      },
+      "committedAtMs": 1778013722000,
+      "cleanSubject": "perf(interface): drop ineffective dynamic import of aura3d-store",
+      "keywords": [
+        "perf",
+        "interface",
+        "drop",
+        "ineffective",
+        "dynamic",
+        "import",
+        "aura3d",
+        "store"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/lib"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "19fefbe368d6cb0517a0404443f942adf42258ee",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T13:42:13-07:00",
+      "subject": "chore(server): remove duplicate `use super::*` in agent-instances tests",
+      "body": "Two identical `use super::*` statements topped\n`handlers::agents::instances::tests`. The second was flagged as\n`unused_imports` by rustc and contributed no symbols beyond the\nfirst. Drop it.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "5df9dea82624e676e0a08be1f83f4d355732f47e"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/instances/tests.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 0,
+        "deletions": 1
+      },
+      "committedAtMs": 1778013733000,
+      "cleanSubject": "remove duplicate `use super::*` in agent-instances tests",
+      "keywords": [
+        "remove",
+        "duplicate",
+        "super",
+        "agent",
+        "instances",
+        "tests"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "cb67da1b946bc0ecd95f84c6ab1de808d18ac5a0",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T13:42:34-07:00",
+      "subject": "fix(server): keep chat_persist_unavailable (424) precedence over Tier-1 preflight",
+      "body": "The Tier-1 session-identity preflight added in 31e24487c runs inside\n`open_harness_chat_stream` before `require_persist_ctx`. Because\n`SessionConfig.aura_session_id` is sourced from `persist_ctx`, a None\n`persist_ctx` was being caught by the preflight as a generic\n`missing_aura_session_id` (HTTP 422) instead of the documented,\ncontract-stable `chat_persist_unavailable` (HTTP 424) that\n`send_to_agent` consumers parse and act on. The preflight only\nmatters if we are about to dispatch to the harness, which we never\ndo without a persist context, so the persistence precondition is\nthe more fundamental check and must run first.\n\nReorder the two checks and add a comment explaining the invariant\nso this regression doesn't recur.\n\nAlso update the `chat_events_test::streaming` regression test that\nguards this contract:\n\n* Inject a small inline billing mock so the test passes the now-\n  uniform `require_credits_for_auth_source` guard introduced in\n  8b9fbd910 (\"route all model traffic through the Aura proxy\"),\n  which removed the per-`auth_source` bypass the test previously\n  relied on.\n* Refresh the stale `local`-bypass comment to reflect the new\n  uniform credits policy.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "19fefbe368d6cb0517a0404443f942adf42258ee"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/streaming.rs",
+        "apps/aura-os-server/tests/chat_events_test/streaming.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 66,
+        "deletions": 14
+      },
+      "committedAtMs": 1778013754000,
+      "cleanSubject": "keep chat_persist_unavailable (424) precedence over Tier-1 preflight",
+      "keywords": [
+        "keep",
+        "chat",
+        "persist",
+        "unavailable",
+        "precedence",
+        "over",
+        "tier",
+        "preflight"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "148a5cc6db79ede379fdcd0c419fcf5958b52d6a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T13:42:46-07:00",
+      "subject": "feat(aura3d): bind deleteModel selector in ModelGeneration",
+      "body": "The right-click delete confirm flow now delegates to the store's\n`deleteModel` action when the pending delete targets a 3D model\n(it was already wired up for the image case via `deleteImage`).\nBind the selector so the existing `pendingDelete.id` branch can\ncall it and add it to the effect's deps array.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "cb67da1b946bc0ecd95f84c6ab1de808d18ac5a0"
+      ],
+      "files": [
+        "interface/src/apps/aura3d/ModelGeneration/ModelGeneration.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 0
+      },
+      "committedAtMs": 1778013766000,
+      "cleanSubject": "bind deleteModel selector in ModelGeneration",
+      "keywords": [
+        "bind",
+        "deletemodel",
+        "selector",
+        "modelgeneration"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
-  "batchCount": 2,
+  "batchCount": 6,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -226,36 +1939,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11802555
+          "sizeBytes": 11809282
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.461.1",
+      "version": "0.1.0-nightly.462.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.461.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.462.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 36562396
+          "sizeBytes": 36674166
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.461.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.462.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.461.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.462.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 103705080
+          "sizeBytes": 103787000
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.461.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.462.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -265,29 +1978,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.461.1",
+      "version": "0.1.0-nightly.462.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.461.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.462.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33673640
+          "sizeBytes": 33792510
         },
         {
-          "name": "AURA_0.1.0-nightly.461.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.462.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.461.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.462.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 32811996
+          "sizeBytes": 32919539
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.461.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.462.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -297,29 +2010,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.461.1",
+      "version": "0.1.0-nightly.462.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.461.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.462.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 35259096
+          "sizeBytes": 35397304
         },
         {
-          "name": "AURA_0.1.0-nightly.461.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.462.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.461.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.462.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 34452020
+          "sizeBytes": 34563340
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.461.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.462.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -329,17 +2042,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.461.1",
+      "version": "0.1.0-nightly.462.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.461.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.462.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24632343
+          "sizeBytes": 24726431
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.461.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.462.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -348,26 +2061,26 @@
     }
   ],
   "rendered": {
-    "title": "Shell chrome restored and analytics sharpened",
-    "intro": "Today's nightly rolls back a shell-trim experiment that had quietly regressed the desktop titlebar, mode selector, and right-click menu, then re-lands the per-mode color accents on the restored animated pill. Earlier in the day, analytics events were tightened so DAU and checkout funnels reflect what actually happened.",
+    "title": "AURA 3D comes online in chat, with a sharper image experience",
+    "intro": "Today's nightly is dominated by a deep push on the AURA 3D app and the new in-chat 3D mode: a usable image-to-3D pipeline, persistent thumbnails, calmer error states, and an end-to-end image experience that finally survives reload. Alongside it, the mode selector pill was rebuilt twice on the way to a clean shared component, and theme handling now reaches all the way out to the browser tab and PWA chrome.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "3:33 AM",
         "started_at": "2026-05-05T10:33:36.000Z",
         "ended_at": "2026-05-05T11:47:45.000Z",
-        "title": "Truthful analytics for sessions and checkout intent",
-        "summary": "Analytics instrumentation was reworked so DAU reflects real activity and purchase events no longer overstate completion.",
+        "title": "More accurate DAU and checkout-intent analytics",
+        "summary": "Tightened the analytics surface so daily active users and paywall funnels reflect what's actually happening.",
         "items": [
           {
-            "text": "Added a session_active event fired once per authenticated user load, with user identification, so DAU tracking reflects actual signed-in usage instead of incidental page hits.",
+            "text": "Added a session_active event in the AppShell so DAU tracking is grounded in real session activity rather than incidental page loads.",
             "commit_shas": [
               "25abb62ffe6132b0e0b71165b4fc0cf947b3badc"
             ],
             "confidence": "high"
           },
           {
-            "text": "Renamed credits_purchased and subscription_started to credits_checkout_started and subscription_checkout_started so funnel data reflects checkout intent rather than completed purchases.",
+            "text": "Renamed purchase and subscription events in the Buy Credits and Tier Subscription modals so they read as checkout intent rather than completed transactions.",
             "commit_shas": [
               "32f8ad03e8ddbea27776cb4e37e8a43f158c4484"
             ],
@@ -379,35 +2092,219 @@
         "batch_id": "entry-2",
         "time_label": "9:08 AM",
         "started_at": "2026-05-05T16:08:04.000Z",
-        "ended_at": "2026-05-05T16:08:04.000Z",
-        "title": "Desktop shell chrome and mode pill restored after trim regressions",
-        "summary": "A prior shell-trim refactor was reverted to bring back the bespoke titlebar, animated mode selector, and shared right-click menu, with per-mode accents re-ported onto the restored pill.",
+        "ended_at": "2026-05-05T17:00:34.000Z",
+        "title": "Mode selector pill restored and rebuilt to actually slide",
+        "summary": "Reverted a chrome-trimming sweep that had quietly regressed the shell, then iterated the mode pill until its slide animation was smooth and reliable.",
         "items": [
           {
-            "text": "Reverted the shell-trim experiment to restore the bespoke ShellTitlebar with MenuBar and the compact UpdatePill placed next to the theme toggle, replacing the plain Topbar and detached UpdateBanner that had shipped in its place.",
+            "text": "Rolled back an earlier interface trim to bring back the animated mode-selector indicator, the bespoke desktop titlebar with compact UpdatePill, the shared right-click menu on the taskbar, the inline CommandChips slot, and 125 lines of context-menu test coverage.",
             "commit_shas": [
               "4fd0e5ee80d88002c8eb154b6320fe9a58e6aad6"
             ],
             "confidence": "high"
           },
           {
-            "text": "Brought back the measured, animated mode selector indicator that slides between segments and matches the input control's height, and reinstated the inline CommandChips slot so slash-command tags render next to the textarea again.",
+            "text": "Worked through several iterations on the sliding pill — re-porting the per-mode tint, switching to a CSS-variable-driven slide, fixing translateX reference bugs, and finally emitting a literal transform per render — so the indicator reliably animates between Code, Plan, Image, and 3D instead of snapping.",
             "commit_shas": [
-              "4fd0e5ee80d88002c8eb154b6320fe9a58e6aad6"
+              "634521373040a7053b7dc80be4998b33e696da8f",
+              "af9baf722d14ee275063e332e0dd45dabfe779dc",
+              "c10d3213ad3bac2cdf0ae73bea603bb6653855bd",
+              "93e858df223334624b7546a1ff54cd468d994b44"
             ],
             "confidence": "high"
           },
           {
-            "text": "Rewired the BottomTaskbar and DesktopApp to the shared useDesktopContextMenu, restoring viewport-aware right-click positioning near the taskbar and the Settings entry that had gone missing with the inline portal.",
+            "text": "Settled on a single accent color for the active mode pill instead of per-mode hues, for a more consistent look across modes.",
             "commit_shas": [
-              "4fd0e5ee80d88002c8eb154b6320fe9a58e6aad6"
+              "8fa4a8a748f1efd2ce0945bae5f50f3ce28b1daf"
             ],
             "confidence": "high"
           },
           {
-            "text": "Re-ported per-mode accent colors (green for Code, amber for Plan, cyan for Image, purple for 3D) onto the restored animated indicator via a data-mode attribute, and tightened the UpdatePill's horizontal padding so it sits cleanly in the titlebar; a global no-op ResizeObserver in the test setup keeps mode-pill consumers from crashing under JSDOM.",
+            "text": "Redesigned the agent info Chats tab as a flat, ChatGPT-style date-bucketed list (Today / Yesterday / Previous 7 Days…) with auto-summarized titles that populate as soon as a session has its first exchange.",
             "commit_shas": [
-              "634521373040a7053b7dc80be4998b33e696da8f"
+              "b55579d3d8fd913c40f6183448b16d2bd1094d28"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Darkened the light-mode process canvas dot grid so it's actually visible against the near-white background.",
+            "commit_shas": [
+              "f96d5c35f63a1fd6d49fb8dd1b3862c9841ed182"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "10:01 AM",
+        "started_at": "2026-05-05T17:01:19.000Z",
+        "ended_at": "2026-05-05T17:52:09.000Z",
+        "title": "AURA 3D viewer overhaul and chat 3D mode wiring",
+        "summary": "A major pass on the 3D app fixed long-standing viewer glitches, brought 3D generation into chat, and unified image viewing across the product.",
+        "items": [
+          {
+            "text": "Fixed eight stacked AURA 3D issues at once: the WebGL viewer no longer flashes blank when resizing, scene background and grid are theme-aware, the Image→3D flow stops auto-promoting old models, right-click delete now works on both image and 3D thumbnails, and main-panel previews are no longer capped at 360px.",
+            "commit_shas": [
+              "31a743c27df0c87c4ed0a05a2760d2c935951142"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Wired chat's 3D mode straight to Tripo for both standalone and project-scoped agent chats, sending pasted/uploaded images as data URLs instead of falling through to the LLM.",
+            "commit_shas": [
+              "31a743c27df0c87c4ed0a05a2760d2c935951142",
+              "a39cfb2cb529a8995cd9d201e8224ed732b0674b"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Introduced a single shared Gallery overlay used by chat attachments, generated images, and the 3D sidekick, plus a useImageScrollPin hook that re-anchors the chat to the latest message as new images decode.",
+            "commit_shas": [
+              "f180965b2fc6ffc6128a2f0ebbb596a6104c2d3a",
+              "9d2333803781726592628f5cf87c508237121668"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Synced the browser tab thumbnail and PWA manifest to AURA's in-app ZUI theme via a new BrowserChromeThemeBridge and a sibling light-mode manifest, so OS-dark / app-light no longer leaves a dark Chrome tab.",
+            "commit_shas": [
+              "0fe61f917bc54c0e5426983ed3717dc08d3e6933"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Replaced the 3D tab's bare Generate button with the same prompt input shell used by the Image tab so previews stop resizing when switching tabs, and made a single click on a sidekick image just re-select it instead of opening the gallery.",
+            "commit_shas": [
+              "a3e6206aaa7909706ebcd444b23e978773cad7e6",
+              "d2f348a1d520237898a4d004c02c2aabd19df549"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-4",
+        "time_label": "10:58 AM",
+        "started_at": "2026-05-05T17:58:55.000Z",
+        "ended_at": "2026-05-05T18:16:03.000Z",
+        "title": "SlidingPills component, per-theme wallpapers, and theme leak fixes",
+        "summary": "Extracted the segmented-pill into a reusable component, added per-theme desktop backgrounds, and closed several theme-token leaks that left light mode dark.",
+        "items": [
+          {
+            "text": "Extracted the segmented control into a generic SlidingPills component (controlled, role=radiogroup, keyboard-navigable, variable-width segments) and rebuilt ModeSelector as a thin wrapper on top.",
+            "commit_shas": [
+              "eeaddb7127fc71829291c897521ae99ab8cbe011"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The desktop background store now holds independent Light Mode and Dark Mode slots, and the right-click Set Background modal exposes both side-by-side; legacy single-config users are migrated by copying their existing wallpaper into both slots.",
+            "commit_shas": [
+              "7986e096f046c472723fe009a5be718cba20e63d",
+              "aac2256deb46760a10cf619790f2b57f5924a5e6"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Briefly opened a text-to-3D path in chat, then refactored the source argument into an explicit discriminated union covering url / data / none variants.",
+            "commit_shas": [
+              "83f8acbb86fdcbdb5d64e2c934dbf5b470e95596",
+              "165bd660c9d4fc609f52e9a451757e1a4a75a9d4"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Finished wiring the BrowserChromeThemeBridge into index.html and main.tsx, and added theme-aware aliases for --color-bg-subtle / -bg-elevated / -border-strong so the in-app Browser tab strip and other surfaces stop painting black slabs in light mode.",
+            "commit_shas": [
+              "5d8b7709adfde0abf0cdbf96d4a88b66f729b298",
+              "1e6a6ecf3c56281075fc7f1e10bb4bfe30d52af7"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Floated the AURA 3D viewer's Grid / Wireframe / Texture toggles into a translucent bottom-right overlay and made the viewer full-bleed below the tab bar.",
+            "commit_shas": [
+              "36903518d1ae069f3845da152d9cbcfde263faee"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-5",
+        "time_label": "11:20 AM",
+        "started_at": "2026-05-05T18:20:35.000Z",
+        "ended_at": "2026-05-05T20:42:34.000Z",
+        "title": "Persistent image history, 3D thumbnails, and a calmer chat 3D experience",
+        "summary": "Image and 3D generation got production-grade polish: results survive reload, 3D models earn real preview thumbnails, and the chat 3D guardrails are friendlier when something is missing.",
+        "items": [
+          {
+            "text": "Image-mode generations now persist into chat history. The /api/generate/image/stream request carries chat scope (agentId or projectId+agentInstanceId), and a sibling task writes user_message + assistant_message_end rows so cold reload re-renders the image through the existing ImageBlock path.",
+            "commit_shas": [
+              "9a9d18e89d8f4ee36c91e24bb9ca4898501ba7d6"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "AURA 3D viewer now snapshots freshly-rendered scenes to a PNG and POSTs them to a new /api/artifacts/:id/thumbnail endpoint, so sidekick model tiles render the actual model preview with image and cube fallbacks; a follow-up wired the artifactId end-to-end and added a token query param so unauthenticated <img> tags can fetch the protected thumbnail.",
+            "commit_shas": [
+              "cafe3915a1a38f5b62f597ecf0d8b62759592296",
+              "12adeef6557f01709a9b1110dfa3ae7f66ee17df"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Generating an image or 3D model now clears the previous selection and pins a fresh placeholder thumbnail in the sidekick, so the main panel shows a clean loading state instead of stale content while the new asset streams in.",
+            "commit_shas": [
+              "94b76d293faf6bd179444782224f28dd387fa4a5",
+              "3514966e3d874fb4afb5f533f9df183ef7d3ef44",
+              "2505150143b7e8d7c87645fb34c00e4a6be8ed93"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Pulled chat 3D back to image-only after the upstream router rejected prompt-only requests as a confusing 502, replacing the hard error with a persistent inline 'Add an image to generate.' hint in both desktop and mobile composers, and routed delete actions through the standard ModalConfirm.",
+            "commit_shas": [
+              "8613b09691b3b2157107384f7758f4c1ca3a5114",
+              "cdd9c4e49d02f4a2bb1844c8733e6d6b3cf8b3d9",
+              "695e1e8655f73de6e7b73ef431bbd44e253f16b5"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Iterated on SSE body limits for inlined images: tried a 25 MiB route-level cap, reverted it in favor of an explicit 8 MiB pre-flight check on data URLs in the 3D handler that returns a clear 413 instead of a 120-second watchdog timeout.",
+            "commit_shas": [
+              "2a201a15da34b56f925a3d739e53b1f129d304cc",
+              "35f25626965de64eca02e4b1be60da22746491b9",
+              "02c0b019fb6c891784b734a93882d70984d3e740"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Hid 3D mode from the mode selector for now (Code / Plan / Image only) while keeping the underlying pipeline intact, fixed a server-side ordering bug that was masking chat_persist_unavailable (424) as a generic missing_aura_session_id (422), and dropped an ineffective dynamic import of aura3d-store flagged by Vite.",
+            "commit_shas": [
+              "534c7c42b2087530bde61a060c52b13025b9cc8b",
+              "cb67da1b946bc0ecd95f84c6ab1de808d18ac5a0",
+              "5df9dea82624e676e0a08be1f83f4d355732f47e"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-6",
+        "time_label": "1:42 PM",
+        "started_at": "2026-05-05T20:42:46.000Z",
+        "ended_at": "2026-05-05T20:42:46.000Z",
+        "title": "Right-click delete now works for 3D models too",
+        "summary": "Closed the loop on the AURA 3D delete-confirm flow.",
+        "items": [
+          {
+            "text": "Bound the deleteModel store action in ModelGeneration so the right-click delete confirm actually removes 3D models, matching the image side that was already wired through deleteImage.",
+            "commit_shas": [
+              "148a5cc6db79ede379fdcd0c419fcf5958b52d6a"
             ],
             "confidence": "high"
           }
@@ -415,10 +2312,12 @@
       }
     ],
     "highlights": [
-      "Desktop shell chrome and right-click menu restored",
-      "Per-mode tint re-ported onto animated mode pill",
-      "Analytics: session_active event and clearer checkout naming"
+      "Chat 3D mode lands (then narrows to image-to-3D with a calmer hint)",
+      "Image-mode generations now persist into chat history across reloads",
+      "Per-theme desktop wallpapers and theme-synced browser/PWA chrome",
+      "Sliding mode-selector pill rebuilt as a reusable SlidingPills component",
+      "3D viewer captures and persists snapshot thumbnails for the sidekick"
     ],
-    "raw_commit_count": 4
+    "raw_commit_count": 43
   }
 }

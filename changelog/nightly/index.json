@@ -2,18 +2,20 @@
   {
     "date": "2026-05-05",
     "channel": "nightly",
-    "version": "0.1.0-nightly.461.1",
-    "title": "Shell chrome restored and analytics sharpened",
-    "intro": "Today's nightly rolls back a shell-trim experiment that had quietly regressed the desktop titlebar, mode selector, and right-click menu, then re-lands the per-mode color accents on the restored animated pill. Earlier in the day, analytics events were tightened so DAU and checkout funnels reflect what actually happened.",
-    "entryCount": 2,
+    "version": "0.1.0-nightly.462.1",
+    "title": "AURA 3D comes online in chat, with a sharper image experience",
+    "intro": "Today's nightly is dominated by a deep push on the AURA 3D app and the new in-chat 3D mode: a usable image-to-3D pipeline, persistent thumbnails, calmer error states, and an end-to-end image experience that finally survives reload. Alongside it, the mode selector pill was rebuilt twice on the way to a clean shared component, and theme handling now reaches all the way out to the browser tab and PWA chrome.",
+    "entryCount": 6,
     "highlights": [
-      "Desktop shell chrome and right-click menu restored",
-      "Per-mode tint re-ported onto animated mode pill",
-      "Analytics: session_active event and clearer checkout naming"
+      "Chat 3D mode lands (then narrows to image-to-3D with a calmer hint)",
+      "Image-mode generations now persist into chat history across reloads",
+      "Per-theme desktop wallpapers and theme-synced browser/PWA chrome",
+      "Sliding mode-selector pill rebuilt as a reusable SlidingPills component",
+      "3D viewer captures and persists snapshot thumbnails for the sidekick"
     ],
-    "rawCommitCount": 4,
-    "generatedAt": "2026-05-05T16:22:40.849Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.461.1",
+    "rawCommitCount": 43,
+    "generatedAt": "2026-05-05T20:56:21.928Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.462.1",
     "path": "history/2026-05-05.json"
   },
   {
