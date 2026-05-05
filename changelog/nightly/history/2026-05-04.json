@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-05T01:48:42.393Z",
+  "generatedAt": "2026-05-05T03:10:46.111Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.450.1",
+  "version": "0.1.0-nightly.452.1",
   "date": "2026-05-04",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.450.1",
-  "lastIncludedSha": "fa8ce3291cc49f740948d408fc1bf2dd8f720603",
-  "previousProcessedSha": "bcb603e0959ec624e7db4dfddc02a317b520168f",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.452.1",
+  "lastIncludedSha": "70441f6da0f16a3777649849d650b424f2077dcf",
+  "previousProcessedSha": "fa8ce3291cc49f740948d408fc1bf2dd8f720603",
   "commitShas": [
     "bd804201205eb0d6fa131e14e53f6e7bf1cc6066",
     "988eee696ffa6cf9d70a1730c43aebcc09989807",
@@ -110,10 +110,19 @@
     "c4a25d4aa036276b9025f59a4aeff86b6effe263",
     "3286f2c5804a333a0d33c1a4778d5451914f43de",
     "bcb603e0959ec624e7db4dfddc02a317b520168f",
-    "fa8ce3291cc49f740948d408fc1bf2dd8f720603"
+    "fa8ce3291cc49f740948d408fc1bf2dd8f720603",
+    "345148810a0f5b208fc52eb5c5c8b98725090914",
+    "a5549be75d9a59bebf7b60851a2819781b97705c",
+    "6ac931eba99c4c0a333377a5d8dd32c7fe37777a",
+    "6bf1c299cc012ab93f9479e52162a677570bb968",
+    "8588aea5a6d156783653babebf7139119aa3b074",
+    "c65d9629bab049e93bce235709f37df717da2b92",
+    "819bcfabd8a0501639eefe54d987921d8b71213e",
+    "1257a4563bedfc3f0c894142766a53b181bd12af",
+    "70441f6da0f16a3777649849d650b424f2077dcf"
   ],
-  "rawCommitCount": 101,
-  "filteredCommitCount": 99,
+  "rawCommitCount": 110,
+  "filteredCommitCount": 108,
   "rawCommits": [
     {
       "sha": "bd804201205eb0d6fa131e14e53f6e7bf1cc6066",
@@ -4439,6 +4448,393 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "345148810a0f5b208fc52eb5c5c8b98725090914",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-04T18:36:32-07:00",
+      "subject": "feat(titlebar): unify login top bar with desktop chrome via ShellTitlebar",
+      "body": "Extract a shared `ShellTitlebar` wrapper around the zui `Topbar` primitive\nso the login screen and the authenticated DesktopShell render identical\nchrome: same drag region, inset rounded \"pill\" alignment, frosted blur\nbackground, and double-click-to-maximize. The login bar is now an inset\nfloating pill that overlays the looping AURA video, matching how\n`DesktopTitlebar` overlays the wallpaper-backed BackgroundLayer instead\nof an opaque full-width strip stacked above it.\n\nPromote the `--shell-chrome-*` design tokens from `.desktopShell` to\n`:root` so every consumer (the new ShellTitlebar pill and the existing\nBottomTaskbar pills) resolves the same height/inset/radius/background\nregardless of which shell hosts it — custom properties only inherit\ndownward, so a sibling could not read them when scoped to one element.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "fa8ce3291cc49f740948d408fc1bf2dd8f720603"
+      ],
+      "files": [
+        "interface/src/components/DesktopShell/DesktopShell.module.css",
+        "interface/src/components/DesktopShell/DesktopTitlebar.tsx",
+        "interface/src/components/ShellTitlebar/ShellTitlebar.module.css",
+        "interface/src/components/ShellTitlebar/ShellTitlebar.tsx",
+        "interface/src/components/ShellTitlebar/index.ts",
+        "interface/src/index.css",
+        "interface/src/views/LoginView/LoginView.module.css",
+        "interface/src/views/LoginView/LoginView.tsx"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 138,
+        "deletions": 60
+      },
+      "committedAtMs": 1777944992000,
+      "cleanSubject": "unify login top bar with desktop chrome via ShellTitlebar",
+      "keywords": [
+        "unify",
+        "login",
+        "with",
+        "desktop",
+        "chrome",
+        "shelltitlebar"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/index.css",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "a5549be75d9a59bebf7b60851a2819781b97705c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-04T19:06:25-07:00",
+      "subject": "style(chat): halve top and bottom fade gradient heights",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "345148810a0f5b208fc52eb5c5c8b98725090914"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.module.css",
+        "interface/src/components/InputBarShell/InputBarShell.module.css"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 3,
+        "deletions": 3
+      },
+      "committedAtMs": 1777946785000,
+      "cleanSubject": "style(chat): halve top and bottom fade gradient heights",
+      "keywords": [
+        "style",
+        "chat",
+        "halve",
+        "bottom",
+        "fade",
+        "gradient",
+        "heights"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "6ac931eba99c4c0a333377a5d8dd32c7fe37777a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-04T19:11:35-07:00",
+      "subject": "fix(menubar): reorder File menu, swap New Agent/New Window shortcuts, ignore double-click",
+      "body": "- Put New Window first in the File menu, then divider, then New Agent / New Project\n- New Window is now Ctrl+N; New Agent is Ctrl+Shift+N\n- Stop double-clicks on the menubar container and dropdown panel from bubbling to ShellTitlebar's maximize handler\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "a5549be75d9a59bebf7b60851a2819781b97705c"
+      ],
+      "files": [
+        "interface/src/components/MenuBar/MenuBar.tsx",
+        "interface/src/components/MenuBar/menu-config.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 10,
+        "deletions": 3
+      },
+      "committedAtMs": 1777947095000,
+      "cleanSubject": "reorder File menu, swap New Agent/New Window shortcuts, ignore double-click",
+      "keywords": [
+        "reorder",
+        "file",
+        "menu",
+        "swap",
+        "agent",
+        "window",
+        "shortcuts",
+        "ignore",
+        "double",
+        "click"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "6bf1c299cc012ab93f9479e52162a677570bb968",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-04T19:23:27-07:00",
+      "subject": "fix(desktop): share WebContext so File > New Window stays logged in",
+      "body": "Secondary main windows used `WebViewBuilder::new()`, giving each window\nits own isolated webview storage. The previous workaround baked auth\nliterals from disk into a per-window initialization script, which left a\nnew window on `LoginView` whenever the on-disk session was stale,\nmissing, or rejected by `/api/auth/session`, and prevented login/logout\nin one window from propagating to another.\n\nReuse the primary window's `wry::WebContext` for every secondary main\nwindow via `WebViewBuilder::new_with_web_context(...)`. The shared\ncontext backs localStorage, cookies, and IndexedDB across all main\nwindows, so a new window inherits the parent's live `aura-jwt` /\n`aura-session` directly and login/logout propagates through the same\nstorage. The secondary init script now only seeds `aura-host-origin` so\na stale disk snapshot cannot clobber the shared in-memory truth.\n\n`LoopState` gains a `web_context: WebContext` field threaded from\n`main()` through `BuildLoopStateInput`, so the context outlives the\nevent loop and is borrowed mutably each time a secondary window spawns.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "6ac931eba99c4c0a333377a5d8dd32c7fe37777a"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/main.rs",
+        "apps/aura-os-desktop/src/ui/main_window.rs",
+        "apps/aura-os-desktop/src/ui/runtime.rs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 39,
+        "deletions": 16
+      },
+      "committedAtMs": 1777947807000,
+      "cleanSubject": "share WebContext so File > New Window stays logged in",
+      "keywords": [
+        "share",
+        "webcontext",
+        "file",
+        "window",
+        "stays",
+        "logged"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/src"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop"
+      ]
+    },
+    {
+      "sha": "8588aea5a6d156783653babebf7139119aa3b074",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-04T19:29:54-07:00",
+      "subject": "refactor(update-pill): extract reusable PillButton and adopt it in UpdatePill",
+      "body": "Adds a shared PillButton primitive (filled accent button locked to a fully-rounded shape with always-dark text) and switches UpdatePill from the raw zui Button to PillButton. Also adds vertical breathing room and a 24px height override so the pill no longer fills the 32px titlebar row.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "6bf1c299cc012ab93f9479e52162a677570bb968"
+      ],
+      "files": [
+        "interface/src/components/PillButton/PillButton.module.css",
+        "interface/src/components/PillButton/PillButton.test.tsx",
+        "interface/src/components/PillButton/PillButton.tsx",
+        "interface/src/components/PillButton/index.ts",
+        "interface/src/components/UpdateBanner/UpdatePill.module.css",
+        "interface/src/components/UpdateBanner/UpdatePill.tsx"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 122,
+        "deletions": 5
+      },
+      "committedAtMs": 1777948194000,
+      "cleanSubject": "extract reusable PillButton and adopt it in UpdatePill",
+      "keywords": [
+        "extract",
+        "reusable",
+        "pillbutton",
+        "adopt",
+        "updatepill"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "c65d9629bab049e93bce235709f37df717da2b92",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-04T19:30:02-07:00",
+      "subject": "fix(sidekick): center EmptyState text within the full visible panel",
+      "body": "EmptyState's child Text from zui defaulted align='left', applying a class that beat the parent's text-align: center; pass align='center' so the message wraps centered. Also drop the InputBarShell fade padding-bottom on .tabContent when its only child is an EmptyState, so the empty message centers within the entire panel rather than the reduced flex area above the input bar.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "8588aea5a6d156783653babebf7139119aa3b074"
+      ],
+      "files": [
+        "interface/src/components/EmptyState/EmptyState.tsx",
+        "interface/src/components/Sidekick/Sidekick.module.css"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 8,
+        "deletions": 1
+      },
+      "committedAtMs": 1777948202000,
+      "cleanSubject": "center EmptyState text within the full visible panel",
+      "keywords": [
+        "center",
+        "emptystate",
+        "text",
+        "within",
+        "full",
+        "visible",
+        "panel"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "819bcfabd8a0501639eefe54d987921d8b71213e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-04T19:46:39-07:00",
+      "subject": "fix(evals): unblock smoke job and harden baseline refresh",
+      "body": "The Aura Functional Evals workflow has been failing on every push since\nApr 29 (commit 72eac5f4 renamed `desktop-login-host-connection` to\n`desktop-login-screen` etc. but never refreshed the baseline). The\nsmoke job's Playwright run was actually passing; `compare-evals.mjs`\nwas exiting 1 because three of the four baseline scenarios couldn't be\nmatched to the candidate summary by id, so each renamed entry was\ncounted as a missing-scenario regression.\n\nFour changes to break the cycle:\n\n- Refresh `infra/evals/reports/baselines/smoke-summary.json` so its\n  scenario ids match `core-browser-smoke.json` again.\n- Add `interface/scripts/refresh-evals-baseline.mjs` and an\n  `evals:refresh-baseline` npm alias so renaming a scenario id is one\n  command (`npm run test:evals:smoke && npm run evals:refresh-baseline\n  smoke`) instead of \"remember to copy a JSON over\".\n- Teach `compare-evals.mjs` to detect baseline drift: when at least\n  half of the baseline scenarios are missing from the candidate, emit\n  a single `[stale-baseline]` banner pointing at the refresh script\n  instead of N noisy \"missing scenario X\" lines that read like real\n  regressions. Real regressions (one rogue scenario disappearing) keep\n  their per-scenario message.\n- Drop the brittle `visibleTexts: [\"Login to AURA\" / \"Sign in\"]`\n  assertions in the login smoke scenarios in favor of a role-based\n  check on the shared \"Sign In\" submit button. Also skip the\n  token / cost / build-step / test-step blocking thresholds when the\n  baseline suite is `smoke` (those metrics are always 0 for browser-\n  only smoke runs and just add false-positive surface area), and skip\n  the duration warning when the baseline duration is 0 so an\n  uninitialized baseline doesn't warn on every run.\n\nDocuments the new flow in `docs/aura-evals.md`.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "c65d9629bab049e93bce235709f37df717da2b92"
+      ],
+      "files": [
+        "docs/aura-evals.md",
+        "infra/evals/reports/baselines/smoke-summary.json",
+        "interface/package.json",
+        "interface/scripts/compare-evals.mjs",
+        "interface/scripts/refresh-evals-baseline.mjs",
+        "interface/tests/e2e/evals/scenarios/core-browser-smoke.json"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 182,
+        "deletions": 29
+      },
+      "committedAtMs": 1777949199000,
+      "cleanSubject": "unblock smoke job and harden baseline refresh",
+      "keywords": [
+        "unblock",
+        "smoke",
+        "harden",
+        "baseline",
+        "refresh"
+      ],
+      "fileGroups": [
+        "docs/aura-evals.md",
+        "infra/evals/reports",
+        "interface/package.json",
+        "interface/scripts/compare-evals.mjs",
+        "interface/scripts/refresh-evals-baseline.mjs",
+        "interface/tests/e2e"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Docs",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "1257a4563bedfc3f0c894142766a53b181bd12af",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-04T19:54:20-07:00",
+      "subject": "fix(settings): keep Updates row readable at narrow widths",
+      "body": "The General > About > Updates row crushed its label/description column\nbecause .rowControl was flex-shrink:0 and the inline UpdateControl\npacked status text, action button, and \"Last checked\" on one line. The\ndescription (\"Check for and install new versions of Aura\") wrapped one\nword per line and was overlapped by the right column.\n\nAllow .settingsRow to wrap, give .rowInfo a 220px flex basis so it\nnever collapses, and let .rowControl shrink. Move the \"Last checked\"\nlabel into its own full-width line within the inline UpdateControl so\nthe status and button can wrap independently.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "819bcfabd8a0501639eefe54d987921d8b71213e"
+      ],
+      "files": [
+        "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.module.css",
+        "interface/src/components/UpdateControl/UpdateControl.module.css",
+        "interface/src/components/UpdateControl/UpdateControl.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 39,
+        "deletions": 7
+      },
+      "committedAtMs": 1777949660000,
+      "cleanSubject": "keep Updates row readable at narrow widths",
+      "keywords": [
+        "keep",
+        "updates",
+        "readable",
+        "narrow",
+        "widths"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "70441f6da0f16a3777649849d650b424f2077dcf",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-04T19:56:12-07:00",
+      "subject": "fix(release): keep DMG packaging from wedging on Spotlight-busy volumes",
+      "body": "macOS DMG packaging has been failing in CI with `hdiutil: couldn't eject\n... Resource busy` because Spotlight (mds / mdworker_shared) holds open\nfile handles on the freshly mounted /Volumes/Aura, blocking the final\ndetach inside `create-dmg`. Disable indexing on the runner before\npackaging and harden the stale-DMG cleanup with `diskutil unmount force`,\n`diskutil eject force`, and `lsof +D` diagnostics so the retry path can\nactually recover (and we can see what is pinning the volume next time).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "1257a4563bedfc3f0c894142766a53b181bd12af"
+      ],
+      "files": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "infra/scripts/release/cleanup-stale-macos-dmg.py",
+        "infra/scripts/release/cleanup_stale_macos_dmg_test.py"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 267,
+        "deletions": 8
+      },
+      "committedAtMs": 1777949772000,
+      "cleanSubject": "keep DMG packaging from wedging on Spotlight-busy volumes",
+      "keywords": [
+        "keep",
+        "packaging",
+        "from",
+        "wedging",
+        "spotlight",
+        "busy",
+        "volumes"
+      ],
+      "fileGroups": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "infra/scripts/release"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
     }
   ],
   "batchCount": 6,
@@ -4450,36 +4846,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11719095
+          "sizeBytes": 11719479
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.450.1",
+      "version": "0.1.0-nightly.452.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.450.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.452.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 35666536
+          "sizeBytes": 35665380
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.450.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.452.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.450.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.452.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 102865400
+          "sizeBytes": 102857208
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.450.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.452.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -4489,29 +4885,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.450.1",
+      "version": "0.1.0-nightly.452.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.450.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.452.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 32151400
+          "sizeBytes": 32150695
         },
         {
-          "name": "Aura_0.1.0-nightly.450.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.452.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.450.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.452.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 31968704
+          "sizeBytes": 31963436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.450.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.452.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -4521,29 +4917,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.450.1",
+      "version": "0.1.0-nightly.452.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.450.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.452.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33737305
+          "sizeBytes": 33739501
         },
         {
-          "name": "Aura_0.1.0-nightly.450.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.452.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.450.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.452.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33596249
+          "sizeBytes": 33596213
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.450.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.452.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -4553,17 +4949,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.450.1",
+      "version": "0.1.0-nightly.452.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.450.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.452.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24259196
+          "sizeBytes": 24253166
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.450.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.452.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -4572,24 +4968,40 @@
     }
   ],
   "rendered": {
-    "title": "Themeable shell, agent modes, and a self-diagnosing updater",
-    "intro": "A big day for Aura's surface area: light mode finally works end to end with editable themes and presets, the desktop chrome gains a proper menu bar and an in-titlebar Update pill, the chat input picks up a Code/Plan/Image/3D mode selector, and the Windows/macOS auto-updater is rebuilt to log every step instead of silently dying. New users get an onboarding checklist, and a couple of nasty chat reliability bugs (CEO blink, black panel, first-chat 422) are fixed at the root.",
+    "title": "Theming overhaul, desktop chrome, and a self-diagnosing updater",
+    "intro": "Today's nightly is a heavy day for Aura's desktop experience. A multi-phase theming program lands light mode end-to-end, with custom token overrides, named presets, and a clean two-state titlebar toggle. The desktop shell gains a real File/Edit/View/Help menu bar, an Update pill, multi-window support that stays signed in, and an auto-updater that finally explains itself when it fails. New users also get an onboarding flow with a welcome modal, a checklist, and an agent MODE selector for Code/Plan/Image/3D.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "8:11 PM",
         "started_at": "2026-05-03T03:11:15.000Z",
         "ended_at": "2026-05-04T19:41:28.000Z",
-        "title": "Themeable shell, sectioned settings, and onboarding land together",
-        "summary": "A long phased push tokenized the UI, shipped a real Appearance editor with presets, made light mode actually usable across the app, restructured Settings, and introduced a first-time onboarding flow.",
+        "title": "Light mode lands across the app with per-token presets",
+        "summary": "A multi-phase theming program ships a real light mode, an editable Appearance section, custom token overrides, named presets, and a two-state titlebar toggle, with extensive surface-level cleanup so chat, sidebars, modals, and form inputs read correctly in both themes.",
         "items": [
           {
-            "text": "Introduced a full theming system: design tokens with light/dark variants, a Settings → Appearance section, titlebar and mobile quick toggles, dynamic highlight.js/xterm theming, and migrated the process canvas, sidekick log, IDE, browser bar, billing modal, and other surfaces off raw hex values onto tokens — with a lint guard against new color literals.",
+            "text": "Introduced a tokenized theming foundation: a new tokens.css with light/dark variants, removal of the legacy always-dark overrides, a dynamic highlight.js theme bridge, and a pre-React theme stamper to avoid first-paint flash.",
             "commit_shas": [
               "e4a35e7d2bea44d035ef8bc5c5f07d4396d418f6",
-              "43d01ee52f3f9c9aa2abdedef5edd434e5b35cd2",
               "7f6bb743f744eee884ace2311e4960e15c0c6cdf",
-              "3424cb5a39f0018ab2708face5791ef0512927ed",
+              "3424cb5a39f0018ab2708face5791ef0512927ed"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added a Settings > Appearance section with theme mode buttons, a 6-color accent picker, a custom token editor, and named presets with JSON import/export, plus a titlebar quick toggle and a matching mobile toggle in MobileTopbar.",
+            "commit_shas": [
+              "43d01ee52f3f9c9aa2abdedef5edd434e5b35cd2",
+              "aaee109b54f4b8e7019d54f2e41ef8caa839791b",
+              "0928dc60748d4be2cbeebd1641a3529fd31b133f",
+              "79f001d3c30d45451b9d999292a6a87e69b2d2ac"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Migrated process canvas, xterm, sidekick log, chat input, IDE view, browser address bar, agent environment, billing modals and more onto the new tokens, and added a lint guard that fails the build on raw color literals in migrated module.css files.",
+            "commit_shas": [
+              "7f6bb743f744eee884ace2311e4960e15c0c6cdf",
               "47721ecb43c8abe4c486c39fa6136a9da6506ae7",
               "aca46ece60619bcf98458f774d849ff9db3b2954",
               "7d2fb89ab8aa138b38909f1580f920d6f0a28c28",
@@ -4599,52 +5011,48 @@
               "53bc7a416f9c720e36d4f62aa1be2ce17c1b7484",
               "1ca212d7411d8367a591f67219bdadb00609e731",
               "abb325f6c5e5e1809403cdb254458636de2f8c9c",
-              "f6cb1463314404db131b855ab7c66c37284daad6",
-              "79f001d3c30d45451b9d999292a6a87e69b2d2ac",
-              "827720857c150c5dc38dbe32e9edff7213bd9122"
+              "f6cb1463314404db131b855ab7c66c37284daad6"
             ],
             "confidence": "high"
           },
           {
-            "text": "Built an Appearance editor with per-token color overrides and named presets — including JSON import/export and built-in Aura Dark/Light — backed by a ThemeOverridesBridge that re-applies overrides on every theme switch.",
-            "commit_shas": [
-              "aaee109b54f4b8e7019d54f2e41ef8caa839791b",
-              "0928dc60748d4be2cbeebd1641a3529fd31b133f"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Made light mode genuinely visible: rerouted hardcoded #fff/#000 in chat bubbles, ChatPanel, LLM output, nav rails, sidekick, project lists, modals, and mobile screens through theme-aware tokens; bumped light-mode contrast to WCAG AA; inverted the AURA wordmark in light mode; and pinned the user message bubble dark in both themes for sender contrast. Form inputs now use dedicated input tokens so ZUI Input/Search/Textarea/Select stop disappearing on white.",
+            "text": "Fixed the worst light-mode contrast bugs: white-on-white chat bubbles, rails, sidekick, modals, the AURA wordmark, and ZUI form inputs (Input, Search, Textarea, Select) all now route through theme-aware tokens, and the user message bubble stays dark in light mode for sender contrast.",
             "commit_shas": [
               "9f52c4ea0249f890dd8035c1b665fc62679f103a",
               "085ff9aabe631c4fdadb5f9525a5222f8d515dc1",
               "8706839f94f73df6ea124fb5dae77f8ee042c721",
-              "ee633089a0815b8b19ca41ea893c9078ab7327eb",
-              "6fe2f649bcf69a312d2354faace87cee77955662"
+              "f111847f8192d3781e84b53b99a3b876be3db520"
             ],
             "confidence": "high"
           },
           {
-            "text": "Reworked Settings into deep-linkable /settings/:section routes (About, Appearance, Notifications, Keyboard, Advanced) on desktop and a list-then-detail pattern on mobile; folded the standalone Appearance surface into the taskbar gear modal so theme controls are discoverable, and aligned the Settings/Aura3D/Apps modal title bars with the sidebar search at 32px.",
+            "text": "Reworked Settings into a sectioned layout with /settings/:section deep links, merged the app Appearance/Notifications/Keyboard/About/Advanced sections into the taskbar gear modal so theme controls are reachable, and simplified the titlebar toggle to a binary light↔dark switch.",
             "commit_shas": [
               "b94ad56c501cb0a1cb6b4bcf584f9ef1a513deee",
               "7ec29ea70835fe69725828e510eca910158bf555",
-              "ac89c2fd2d1031e7e84e414bb53d11fd35649f40"
+              "401d9fbb507bd96a0d5c65629a6c9769350b0d4f"
             ],
             "confidence": "high"
           },
           {
-            "text": "Restored keyboard focus visibility everywhere by removing the global outline:none reset and adding a single :focus-visible base rule, and switched the titlebar/topbar theme button from a 3-state cycle to a binary light↔dark toggle that reflects the resolved theme.",
+            "text": "Restored keyboard focus visibility app-wide by removing the global outline:none and adding a single :focus-visible base rule, and kept the boot/error overlay window controls accessible via a native HTML fallback titlebar.",
             "commit_shas": [
               "e69bc319fd3842f5c26ecdc11f9958073530ba7a",
-              "401d9fbb507bd96a0d5c65629a6c9769350b0d4f",
-              "401d59110cdec85ba3861756ca5e325620da3a4e",
-              "3199ec493eb5d6fb7295dee1d1076a67bcd73b26"
+              "d2848bda4d8938636b37f18e15638e9e8e5dfd0d"
             ],
             "confidence": "high"
           },
           {
-            "text": "Shipped first-time onboarding: a 2-step welcome modal, a portal-rendered checklist of 5 starter tasks (send a message, create a project/agent, generate an image, explore billing) with auto-detection that ignores pre-existing defaults, prompt suggestion chips and a pulsing input on empty chat, friendlier empty states for agents and tasks, and a Help button in the taskbar.",
+            "text": "Fixed the CEO chat blink and orphaned-binding regressions: cascade-delete now tears down agent project bindings before delete, and active history keys are pinned in the chat-history LRU so background sidebar prefetches can no longer evict the visible chat.",
+            "commit_shas": [
+              "95f172f257cd25e486bcd78ba0787f28854a91c1",
+              "35271989c803e4c0321d66cafb34c3b4390b8b29",
+              "4bc972e968c78ac488f6db527e9d8b8fa6bffa00"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Shipped the first-run onboarding flow: a welcome modal, a portal-rendered checklist with progress, a help button in the taskbar, an auto-detection watcher with a baseline-count guard, and prompt suggestion chips on empty chats.",
             "commit_shas": [
               "bd804201205eb0d6fa131e14e53f6e7bf1cc6066",
               "988eee696ffa6cf9d70a1730c43aebcc09989807",
@@ -4652,41 +5060,24 @@
               "6f91ff35d4277c128be32eb41b64fb374637c94c",
               "e5d310e08572b84be906c7426277872209e2b250",
               "11fc11649e7c4db2ef86897e6cb7194721a2c61d",
-              "779d73718c8032ab53b36f567e26980b00f90a54",
               "0d96fae04302d0af22cd2ad908dfa840386d0838",
-              "2f9dbb19fb74b1c33c7b71167974fa407a39f8c9",
               "8d0ab5a615456a346710620c5e4cfd10c64c8cc2",
-              "ec62961b1c1549b0c63641125906a06ae704355f"
+              "779d73718c8032ab53b36f567e26980b00f90a54"
             ],
             "confidence": "high"
           },
           {
-            "text": "Fixed two long-standing chat reliability bugs: pinned the active history key in the LRU so background sidebar prefetches no longer evict and blink the CEO chat, and added a proactive cold-load reveal in ChatPanel so the transcript can't get stuck black when historyResolved arrives after the first commit.",
-            "commit_shas": [
-              "35271989c803e4c0321d66cafb34c3b4390b8b29",
-              "4bc972e968c78ac488f6db527e9d8b8fa6bffa00"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Cascade-deleting an agent now tears down every project binding (including the auto-created Home one) in a single confirm flow, with the modal listing exactly which projects will be detached and the server skipping its auto-bind once the template is gone.",
-            "commit_shas": [
-              "95f172f257cd25e486bcd78ba0787f28854a91c1"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Hid Debug from the taskbar by default (it now seeds into the Apps modal's Hidden section instead of cluttering the visible strip), kept window controls accessible on the boot/error overlay via a native fallback titlebar, and defaulted REQUIRE_ZERO_PRO to false in both desktop and server builds.",
+            "text": "Defaulted Debug to hidden in the Apps taskbar, aligned Settings/Aura3D/Apps modal headers to a 32px control height, and disabled REQUIRE_ZERO_PRO by default in both server and desktop builds.",
             "commit_shas": [
               "4b47c85048a7f8d2a2208e3d54fa5946be896881",
-              "d2848bda4d8938636b37f18e15638e9e8e5dfd0d",
+              "ac89c2fd2d1031e7e84e414bb53d11fd35649f40",
               "ae418f34acd254dc90ad8db71103ed9ae7cfc8a2",
               "d9871255dad6ca07cfb297bf2088fee12aa83760"
             ],
             "confidence": "high"
           },
           {
-            "text": "Started piping VITE_MIXPANEL_TOKEN into the desktop nightly build so analytics work in shipped binaries.",
+            "text": "Wired VITE_MIXPANEL_TOKEN into the desktop nightly build so analytics ship with the artifact.",
             "commit_shas": [
               "814d6630da888efdbf8bfc0c204f7f7c6ce04146"
             ],
@@ -4699,11 +5090,11 @@
         "time_label": "12:42 PM",
         "started_at": "2026-05-04T19:42:32.000Z",
         "ended_at": "2026-05-04T19:45:06.000Z",
-        "title": "ZUI modals adopt a 32px header by default",
-        "summary": "After two iterations on an opt-in flag, the slim 32px modal header was promoted to the ZUI default so every modal lines up with the sidebar search row.",
+        "title": "Slim 32px modal headers become the ZUI default",
+        "summary": "The opt-in compact modal header introduced for Apps and Settings is promoted into ZUI's Modal as the default look, so every modal title bar lines up with the sidebar search.",
         "items": [
           {
-            "text": "Added a compactHeader prop on ZUI Modal, applied it to the Apps and Org Settings modals, then promoted the slim 32px header to the default for all ZUI modals — so the new chrome is consistent without per-caller overrides.",
+            "text": "Added a compactHeader prop to ZUI Modal, applied it to the Apps and Org Settings modals to fix a cascade-order issue with local overrides, then made the 32px slim header the baked-in default and removed the now-redundant prop and CSS.",
             "commit_shas": [
               "621104e3ac47a1adcec575921dd104cfe3e3a8ca",
               "3702057369a9f71b8d313ef6716e73fb8ffe3887",
@@ -4718,11 +5109,11 @@
         "time_label": "12:46 PM",
         "started_at": "2026-05-04T19:46:00.000Z",
         "ended_at": "2026-05-04T19:46:00.000Z",
-        "title": "Mixpanel token wired into mobile nightly builds",
-        "summary": "Mobile nightly CI now receives the analytics token alongside desktop.",
+        "title": "Mobile nightly picks up Mixpanel analytics token",
+        "summary": "The mobile nightly workflow now passes VITE_MIXPANEL_TOKEN through to the build so analytics behave consistently with desktop nightlies.",
         "items": [
           {
-            "text": "Mobile nightly release workflow now passes VITE_MIXPANEL_TOKEN through to the build so analytics are populated on Android nightlies.",
+            "text": "Forwarded VITE_MIXPANEL_TOKEN into the mobile nightly GitHub Actions workflow.",
             "commit_shas": [
               "a60654c5637f906fad5f8f7e72e118fc3eb45708"
             ],
@@ -4736,10 +5127,10 @@
         "started_at": "2026-05-04T19:48:06.000Z",
         "ended_at": "2026-05-04T22:01:54.000Z",
         "title": "Agent MODE selector and a self-diagnosing desktop updater",
-        "summary": "The chat input gains a Code/Plan/Image/3D mode that steers the whole send pipeline, Aura3D remembers its last context, and the desktop auto-updater is rebuilt to actually report what went wrong.",
+        "summary": "Chat gains a Code/Plan/Image/3D mode selector with an animated capsule and a shared input bar shell, while the desktop auto-updater is rebuilt with persistent logs, reconcile-on-boot, and a sentinel-gated handoff so install failures stop being silent.",
         "items": [
           {
-            "text": "Added a Code/Plan/Image/3D mode row above the chat input on desktop and mobile. Selection is persisted per agent, drives model lists, injects /image, /3d, or generate_specs into the send pipeline, and is modeled as a discriminated union so each mode has the right field shape end to end.",
+            "text": "Added a per-agent MODE row (Code/Plan/Image/3D) above the chat input on desktop and mobile, modeled as a discriminated union so Image/3D modes inject the right slash command and steer the model list end-to-end; mode is persisted per agent like the model picker.",
             "commit_shas": [
               "4165166d3218e0164f4b38bfba7d16a8e2ccbfe8",
               "b35614b6f76066760c589b001ad330c37c101b1f",
@@ -4748,31 +5139,31 @@
             "confidence": "high"
           },
           {
-            "text": "Rebuilt the Windows + macOS auto-updater into a self-diagnosing pipeline: every install step now appends to a persistent updater.log and updater-state.json, a reconcile pass on boot reports the last failed step, the macOS path swapped process::exit for a graceful shutdown handshake, and the UpdateControl UI surfaces \"Stopped at: …\" plus a Show updater logs button. New /api/update-reveal-logs and a debug-only stage-only endpoint round it out.",
+            "text": "Extracted a shared InputBarShell from ChatInputBar and the Aura3D PromptInput so chat and 3D prompt surfaces share chrome, model picker, and the new mode selector.",
+            "commit_shas": [
+              "c2f8653ddf376fc450df4ba2df672db88dfb952d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Rebuilt the desktop auto-updater to be self-diagnosing: a daily desktop.log via tracing-appender, an updater.log + updater-state.json that survive process exit, boot-time reconcile of stalled installs, a sentinel-gated Windows handoff that no longer exits Aura blindly, a graceful macOS shutdown handshake, and a 'Show updater logs' affordance in UpdateControl.",
             "commit_shas": [
               "7f8e1d708d0b94da149805b6e1954816b4343a71"
             ],
             "confidence": "high"
           },
           {
-            "text": "Aura3D now hydrates a sensible starting context: it remembers the last project across sessions, expands its tree on first paint, and auto-selects the latest image (with linked 3D model) or latest model when you switch tabs into an empty pane.",
+            "text": "Made Aura3D remember context across sessions: nav hydrates the last selected project, the store auto-selects the latest image (and any linked 3D model) or latest model when switching tabs, and project artifacts seed default selections on load.",
             "commit_shas": [
               "4f2675891bda2a6ecc51cb43300ab069717414c3"
             ],
             "confidence": "high"
           },
           {
-            "text": "Extracted a shared InputBarShell so the chat input and Aura3D PromptInput share one chrome, simplifying future input work, and rearranged the Agent editor's Name/Role fields into a 2-column layout that collapses on narrow screens.",
-            "commit_shas": [
-              "c2f8653ddf376fc450df4ba2df672db88dfb952d",
-              "a86946a829ac96eafc1cb87dbfd8f0a9a4b13759"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Tightened onboarding completion so the create-project and create-agent tasks only fire when the count truly grows beyond the user's pre-existing defaults, and threaded the Z_BILLING_API_KEY secret into both the desktop nightly workflow and the desktop binary via build.rs.",
+            "text": "Tightened onboarding completion logic to ignore pre-existing defaults, placed Name and Role side-by-side in the agent editor, and threaded Z_BILLING_API_KEY into both the desktop nightly workflow and the desktop binary via build.rs.",
             "commit_shas": [
               "c9514dbfd1e794559f8e5784c749702807710ae0",
+              "a86946a829ac96eafc1cb87dbfd8f0a9a4b13759",
               "d24847f3396e99deca4fce1c7026b970ad58d770",
               "abc33929ee5189e9629408c7d8dd07f066f11873"
             ],
@@ -4785,11 +5176,11 @@
         "time_label": "3:07 PM",
         "started_at": "2026-05-04T22:07:43.000Z",
         "ended_at": "2026-05-04T22:07:43.000Z",
-        "title": "First chat with a new agent self-heals its Home binding",
-        "summary": "Closed a 422 on a brand-new user's first turn caused by a missing project_agent binding when the create-time auto-bind silently failed.",
+        "title": "First chat with a fresh agent self-heals its Home binding",
+        "summary": "A 422 'aura_session_id missing' regression on a new user's very first chat with a freshly created agent is fixed by restoring the lazy Home-project repair on the deduped chat hot path.",
         "items": [
           {
-            "text": "When the deduped chat hot path finds no matching project_agent rows for a freshly created agent, it now runs the same lazy_repair_home_project_binding the legacy wrapper used to call, busting the discovery cache so SessionConfig.aura_session_id is populated and the Tier-1 chat preflight stops returning 422 \"aura_session_id is missing\".",
+            "text": "Re-enabled lazy_repair_home_project_binding on the deduped agent chat persistence path so a missing or transient Home binding is repaired before the first turn instead of returning a structured 422; covered with new setup tests.",
             "commit_shas": [
               "8b5b7d76c05ffd3d80dacb574dd5bf5fd3bc9cdf"
             ],
@@ -4801,12 +5192,12 @@
         "batch_id": "entry-6",
         "time_label": "3:12 PM",
         "started_at": "2026-05-04T22:12:25.000Z",
-        "ended_at": "2026-05-05T01:35:42.000Z",
-        "title": "Desktop titlebar gains a real menu bar, Update pill, and shared right-click menu",
-        "summary": "An evening of desktop-chrome work: a File/Edit/View/Help menu bar with cross-platform shortcuts and a new-window IPC, an in-titlebar Update pill replacing the floating banner, a shared desktop/taskbar context menu, and a more reliable Windows updater handoff.",
+        "ended_at": "2026-05-05T02:56:12.000Z",
+        "title": "Native-style menu bar, multi-window login, and DMG packaging unblocked",
+        "summary": "The desktop titlebar gains a real File/Edit/View/Help menu with cross-platform shortcuts, secondary windows now share the auth-bearing WebContext, an Update pill replaces the floating banner, and macOS DMG packaging is hardened against Spotlight-induced ejection failures.",
         "items": [
           {
-            "text": "Added a native-style File/Edit/View/Help menu bar to the desktop titlebar with hover-to-switch dropdowns, right-aligned shortcuts that render Cmd glyphs on macOS and Ctrl+ on Win/Linux, View-menu zoom controls persisted to localStorage, and a new IPC path that lets New Window spawn a second main window without exiting on close.",
+            "text": "Added a File/Edit/View/Help menu bar to the desktop titlebar with hover-to-switch dropdowns, cross-platform shortcut formatting (Cmd glyphs on macOS, Ctrl+ on Win/Linux), zoom controls, context-aware Previous/Next Agent navigation, and Rust-side IPC for new windows and fullscreen toggle.",
             "commit_shas": [
               "0bb9d9290f6365c74448c8d68cfb83ede70b1e8f",
               "3694dd654af172b63d1f1ff36eb78bda51266c76",
@@ -4815,61 +5206,71 @@
               "917c64aa2df38e027f34cd8f850117a8d2b2fddd",
               "8d25e4afaf32e213568c09178e673ccf17b2ea24",
               "8bf02782655dca64d3561b3b6522cf0613542ff0",
-              "9a4640905fa45a92033d5419f23492e19234613a"
+              "6ac931eba99c4c0a333377a5d8dd32c7fe37777a"
             ],
             "confidence": "high"
           },
           {
-            "text": "Replaced the floating bottom-left UpdateBanner on desktop with a compact \"Update\" pill in the titlebar's right rail that mirrors the updater state machine (hidden / Update / Installing…), keeping mobile on the existing banner.",
+            "text": "Made File > New Window stay signed in by sharing the primary window's wry::WebContext across all main windows, so cookies, localStorage, and IndexedDB (and therefore the auth session) propagate between windows in real time.",
             "commit_shas": [
-              "c4a25d4aa036276b9025f59a4aeff86b6effe263"
+              "6bf1c299cc012ab93f9479e52162a677570bb968"
             ],
             "confidence": "high"
           },
           {
-            "text": "Right-clicking empty taskbar chrome now opens the same context menu as the desktop surface, and the menu pre-anchors near the click site so it never spawns off-screen near the taskbar; a Settings entry into org settings is included.",
-            "commit_shas": [
-              "de0dd0ff46c84bac5cfa115315ebf5328e1a0085"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Replaced the fragile PowerShell updater handoff with a cmd.exe .bat: startup is essentially instant (no AMSI/ExecutionPolicy gating), the sentinel deadline is now a soft 30s with a hard 60s ceiling, child stdout/stderr is captured and tailed back into updater.log on failure, and an early-exit child is detected via try_wait instead of timing out.",
+            "text": "Hardened the Windows auto-updater handoff by replacing the fragile PowerShell launcher with a cmd.exe .bat script, bumping the sentinel deadline from 5s to 30s with a 60s ceiling, capturing child stdout/stderr into the updater log, and detecting early child exit instead of timing out blindly.",
             "commit_shas": [
               "3286f2c5804a333a0d33c1a4778d5451914f43de"
             ],
             "confidence": "high"
           },
           {
-            "text": "After several iterations, the chat input MODE pill animation now reliably slides between Code/Plan/Image/3D using measured pixel positions and inline transforms, with slash-command tags kept inline and the cooking indicator re-aligned to the taller input bar.",
+            "text": "Replaced the floating bottom-left UpdateBanner on desktop with a compact Update pill in the titlebar's right rail, backed by a new shared PillButton primitive; mobile keeps the legacy banner.",
             "commit_shas": [
-              "7a6715abc3e2c45eaa2fcce86773ace436dc3950",
-              "45a46a85cc1336e6809837da386664bc0c6cfa20",
-              "91fac390859b5b64f13ef451c1d2704287000f5e",
-              "32e45e16c1a2972595d60c7cd658ed4b16930eb2",
-              "bbb8eae32e62b668c03aa10f9f4805897b964bde",
-              "bea99198d494f00703866b0e7113f7b9c0b8a501",
-              "708a892ac8a5c88e0624533a8fa5de924bc9093b",
-              "ee74d74d05780fd3b30a7d410880f49c5c0ee35c",
-              "840f24132626f2013eaae384208c9643c9bed521",
-              "fa8ce3291cc49f740948d408fc1bf2dd8f720603"
+              "c4a25d4aa036276b9025f59a4aeff86b6effe263",
+              "8588aea5a6d156783653babebf7139119aa3b074"
             ],
             "confidence": "high"
           },
           {
-            "text": "Light-mode polish on small surfaces: the org switcher avatar drops its jagged 1px ring and uses theme-aware tokens, team avatar fallbacks match user/agent fallbacks, and the image crop modal's zoom knob references --color-accent so its ring shows up in light mode.",
+            "text": "Unified the login screen and authenticated shell behind a shared ShellTitlebar, and shared the desktop right-click menu between the desktop surface and empty taskbar chrome (with edge-aware anchoring so menus near the taskbar don't spawn off-screen).",
+            "commit_shas": [
+              "345148810a0f5b208fc52eb5c5c8b98725090914",
+              "de0dd0ff46c84bac5cfa115315ebf5328e1a0085"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Polished the chat input mode selector after several attempts: switched from JS-measured WAAPI to a CSS-grid + measured-pixel approach driven by inline transform styles so the active capsule reliably slides between Code, Plan, Image, and 3D.",
+            "commit_shas": [
+              "7a6715abc3e2c45eaa2fcce86773ace436dc3950",
+              "45a46a85cc1336e6809837da386664bc0c6cfa20",
+              "32e45e16c1a2972595d60c7cd658ed4b16930eb2",
+              "bbb8eae32e62b668c03aa10f9f4805897b964bde",
+              "708a892ac8a5c88e0624533a8fa5de924bc9093b",
+              "840f24132626f2013eaae384208c9643c9bed521"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Cleaned up several light-mode chrome regressions in the org switcher avatar, image-crop zoom knob, slash command chips, cooking indicator alignment, and the narrow-width Settings > Updates row.",
             "commit_shas": [
               "5b35a3bc5269ea8cacaaa8828cb9d5e416807b95",
               "57aca98b227bce629826c4507b7cc013b792c4ec",
               "e4b94028fe5939d495971cd46789badf1b80b119",
-              "ca3cf0acbeb05d0cf0bb98b2eb52f1002af5f700"
+              "ca3cf0acbeb05d0cf0bb98b2eb52f1002af5f700",
+              "91fac390859b5b64f13ef451c1d2704287000f5e",
+              "bea99198d494f00703866b0e7113f7b9c0b8a501",
+              "ee74d74d05780fd3b30a7d410880f49c5c0ee35c",
+              "1257a4563bedfc3f0c894142766a53b181bd12af"
             ],
             "confidence": "high"
           },
           {
-            "text": "Restored the desktop build by switching the new DesktopContextMenu return type from bare JSX.Element to ReactNode so npm run build (and therefore cargo run via build.rs) succeeds.",
+            "text": "Unblocked the Aura Functional Evals smoke job by refreshing the renamed-scenario baseline, adding a stale-baseline detector and refresh script, and stopped macOS DMG packaging from wedging on Spotlight-busy volumes via forced unmount/eject and disabled indexing on the runner.",
             "commit_shas": [
-              "bcb603e0959ec624e7db4dfddc02a317b520168f"
+              "819bcfabd8a0501639eefe54d987921d8b71213e",
+              "70441f6da0f16a3777649849d650b424f2077dcf"
             ],
             "confidence": "high"
           }
@@ -4877,13 +5278,12 @@
       }
     ],
     "highlights": [
-      "Light mode rolled out across chat, rails, sidekick, and modals with a full theming editor and presets",
-      "File/Edit/View/Help menu bar plus a compact Update pill in the desktop titlebar",
-      "Chat input gains a Code/Plan/Image/3D mode selector that steers slash commands and models",
-      "Auto-updater on Windows/macOS now writes diagnostics, recovers from failed handoffs, and switched to cmd.exe",
-      "First-time user onboarding with welcome modal, checklist, and prompt suggestions",
-      "Fixes for CEO chat blink, black ChatPanel on cold load, and 422 on first chat with new agents"
+      "Light mode and per-token theme presets across the app",
+      "File/Edit/View/Help menu bar in the Desktop titlebar",
+      "Self-diagnosing auto-updater with logs on Windows and macOS",
+      "Code/Plan/Image/3D MODE selector in the chat input",
+      "First-run onboarding with welcome modal and checklist"
     ],
-    "raw_commit_count": 99
+    "raw_commit_count": 108
   }
 }

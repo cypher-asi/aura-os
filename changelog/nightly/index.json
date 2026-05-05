@@ -2,21 +2,20 @@
   {
     "date": "2026-05-04",
     "channel": "nightly",
-    "version": "0.1.0-nightly.450.1",
-    "title": "Themeable shell, agent modes, and a self-diagnosing updater",
-    "intro": "A big day for Aura's surface area: light mode finally works end to end with editable themes and presets, the desktop chrome gains a proper menu bar and an in-titlebar Update pill, the chat input picks up a Code/Plan/Image/3D mode selector, and the Windows/macOS auto-updater is rebuilt to log every step instead of silently dying. New users get an onboarding checklist, and a couple of nasty chat reliability bugs (CEO blink, black panel, first-chat 422) are fixed at the root.",
+    "version": "0.1.0-nightly.452.1",
+    "title": "Theming overhaul, desktop chrome, and a self-diagnosing updater",
+    "intro": "Today's nightly is a heavy day for Aura's desktop experience. A multi-phase theming program lands light mode end-to-end, with custom token overrides, named presets, and a clean two-state titlebar toggle. The desktop shell gains a real File/Edit/View/Help menu bar, an Update pill, multi-window support that stays signed in, and an auto-updater that finally explains itself when it fails. New users also get an onboarding flow with a welcome modal, a checklist, and an agent MODE selector for Code/Plan/Image/3D.",
     "entryCount": 6,
     "highlights": [
-      "Light mode rolled out across chat, rails, sidekick, and modals with a full theming editor and presets",
-      "File/Edit/View/Help menu bar plus a compact Update pill in the desktop titlebar",
-      "Chat input gains a Code/Plan/Image/3D mode selector that steers slash commands and models",
-      "Auto-updater on Windows/macOS now writes diagnostics, recovers from failed handoffs, and switched to cmd.exe",
-      "First-time user onboarding with welcome modal, checklist, and prompt suggestions",
-      "Fixes for CEO chat blink, black ChatPanel on cold load, and 422 on first chat with new agents"
+      "Light mode and per-token theme presets across the app",
+      "File/Edit/View/Help menu bar in the Desktop titlebar",
+      "Self-diagnosing auto-updater with logs on Windows and macOS",
+      "Code/Plan/Image/3D MODE selector in the chat input",
+      "First-run onboarding with welcome modal and checklist"
     ],
-    "rawCommitCount": 101,
-    "generatedAt": "2026-05-05T01:48:42.393Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.450.1",
+    "rawCommitCount": 110,
+    "generatedAt": "2026-05-05T03:10:46.111Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.452.1",
     "path": "history/2026-05-04.json"
   },
   {
