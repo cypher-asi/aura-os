@@ -489,4 +489,100 @@ describe("aura3d-store", () => {
       expect(localStorage.setItem).not.toHaveBeenCalled();
     });
   });
+
+  describe("uploadModelThumbnail", () => {
+    // The captured-PNG path is the entire feature: when the user opens
+    // a 3D model in the viewer, the freshly-rendered scene is snapped
+    // and POSTed so the sidekick tile can render an actual model
+    // preview instead of the cube placeholder. These tests cover the
+    // store-side wiring; the viewer-side capture is covered by manual
+    // QA since it depends on real WebGL.
+    const blob = new Blob([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], {
+      type: "image/png",
+    });
+
+    it("uploads, versions the URL, and stamps the model + current3DModel", async () => {
+      const model = {
+        id: "model-1",
+        artifactId: "art-model-1",
+        sourceImageId: "img-1",
+        sourceImageUrl: "u",
+        glbUrl: "g",
+        taskId: "",
+        createdAt: "",
+      };
+      const spy = vi
+        .spyOn(artifactsApi, "uploadThumbnail")
+        .mockResolvedValue({
+          thumbnailUrl: "/api/artifacts/art-model-1/thumbnail",
+        });
+      useAura3DStore.setState({
+        models: [model],
+        current3DModel: model,
+        selectedModelId: "model-1",
+      });
+
+      await useAura3DStore.getState().uploadModelThumbnail("model-1", blob);
+
+      const state = useAura3DStore.getState();
+      expect(spy).toHaveBeenCalledWith("art-model-1", blob);
+      expect(state.models[0].thumbnailUrl).toMatch(
+        /^\/api\/artifacts\/art-model-1\/thumbnail\?v=\d+$/,
+      );
+      expect(state.current3DModel?.thumbnailUrl).toEqual(
+        state.models[0].thumbnailUrl,
+      );
+      spy.mockRestore();
+    });
+
+    it("no-ops for a transient model without an artifactId", async () => {
+      // The router persists the artifact server-side after the SSE
+      // stream completes, so a freshly-generated model briefly has
+      // no `artifactId`. Uploading would 404 against the unknown
+      // route — better to skip silently and let the next open retry.
+      const transient = {
+        id: "model-1",
+        sourceImageId: "img-1",
+        sourceImageUrl: "u",
+        glbUrl: "g",
+        taskId: "",
+        createdAt: "",
+      };
+      const spy = vi
+        .spyOn(artifactsApi, "uploadThumbnail")
+        .mockResolvedValue({ thumbnailUrl: "" });
+      useAura3DStore.setState({ models: [transient] });
+
+      await useAura3DStore.getState().uploadModelThumbnail("model-1", blob);
+
+      expect(spy).not.toHaveBeenCalled();
+      expect(useAura3DStore.getState().models[0].thumbnailUrl).toBeUndefined();
+      spy.mockRestore();
+    });
+
+    it("swallows upload failures so a flaky network never crashes the viewer", async () => {
+      const model = {
+        id: "model-1",
+        artifactId: "art-model-1",
+        sourceImageId: "img-1",
+        sourceImageUrl: "u",
+        glbUrl: "g",
+        taskId: "",
+        createdAt: "",
+      };
+      const spy = vi
+        .spyOn(artifactsApi, "uploadThumbnail")
+        .mockRejectedValue(new Error("boom"));
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      useAura3DStore.setState({ models: [model] });
+
+      await expect(
+        useAura3DStore.getState().uploadModelThumbnail("model-1", blob),
+      ).resolves.toBeUndefined();
+
+      expect(useAura3DStore.getState().models[0].thumbnailUrl).toBeUndefined();
+      spy.mockRestore();
+      warn.mockRestore();
+    });
+  });
 });

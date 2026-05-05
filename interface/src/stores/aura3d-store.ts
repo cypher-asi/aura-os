@@ -23,7 +23,23 @@ export interface Generated3DModel {
   id: string;
   artifactId?: string;
   sourceImageId: string;
+  /**
+   * URL of the source image that was used to generate this 3D
+   * model. Kept around so the sidekick tile can fall back to it
+   * when no captured 3D snapshot exists yet.
+   */
   sourceImageUrl: string;
+  /**
+   * URL of a PNG snapshot of the rendered 3D scene, captured the
+   * first time the user opens this model in the WebGL viewer and
+   * persisted to the server's filesystem (see
+   * [project_artifacts.rs](apps/aura-os-server/src/handlers/project_artifacts.rs)).
+   * When set, the AURA 3D Sidekick "3D Models" grid prefers this
+   * over the source image so the tile actually previews the GLB.
+   * Empty / undefined until the user has viewed the model at
+   * least once on this server.
+   */
+  thumbnailUrl?: string;
   glbUrl: string;
   polyCount?: number;
   taskId: string;
@@ -71,6 +87,12 @@ function artifactToModel(a: ProjectArtifact): Generated3DModel {
     artifactId: a.id,
     sourceImageId: a.parentId ?? "",
     sourceImageUrl: a.thumbnailUrl ?? "",
+    // The thumbnail file is keyed deterministically by artifact id on
+    // the server, so we point every saved model at the GET endpoint
+    // and rely on `<img onError>` in the sidekick to fall back to the
+    // source image / cube placeholder when no PNG has been captured
+    // yet. This avoids needing a PATCH on the storage record.
+    thumbnailUrl: `/api/artifacts/${a.id}/thumbnail`,
     glbUrl: a.assetUrl ?? "",
     polyCount: (a.meta?.polyCount as number) ?? undefined,
     taskId: "",
@@ -143,6 +165,15 @@ interface Aura3DState {
   loadProjectArtifacts: (projectId: string) => Promise<void>;
   saveImageArtifact: (projectId: string, image: GeneratedImage) => Promise<void>;
   saveModelArtifact: (projectId: string, model: Generated3DModel, parentArtifactId?: string) => Promise<void>;
+  /**
+   * Persist a freshly-captured PNG snapshot of a 3D model as the
+   * sidekick tile thumbnail. Called by `ModelGeneration` when
+   * [WebGLViewer.tsx](../apps/aura3d/WebGLViewer/WebGLViewer.tsx)
+   * fires `onThumbnailReady` after the GLB is framed in the scene.
+   * No-ops when the model has no `artifactId` yet (transient
+   * generation that hasn't been saved).
+   */
+  uploadModelThumbnail: (modelId: string, blob: Blob) => Promise<void>;
 
   // Sidekick
   sidekickTab: Aura3DSidekickTab;
@@ -409,6 +440,36 @@ export const useAura3DStore = create<Aura3DState>()((set, get) => ({
       }));
     } catch (e) {
       console.warn("Failed to save model artifact:", e);
+    }
+  },
+  uploadModelThumbnail: async (modelId, blob) => {
+    const state = get();
+    const model = state.models.find((m) => m.id === modelId);
+    // Only upload for saved models — generation hasn't been persisted
+    // yet when `artifactId` is missing (router-side save races the
+    // initial open after a fresh generation). The capture will retry
+    // naturally on the next open, where the artifact id is available.
+    if (!model?.artifactId) return;
+    try {
+      const { thumbnailUrl } = await artifactsApi.uploadThumbnail(
+        model.artifactId,
+        blob,
+      );
+      // Cache-bust so an `<img>` already mounted with the previous
+      // (possibly 404) URL re-fetches and shows the new snapshot
+      // without waiting for a route navigation.
+      const versioned = `${thumbnailUrl}?v=${Date.now()}`;
+      set((s) => ({
+        models: s.models.map((m) =>
+          m.id === modelId ? { ...m, thumbnailUrl: versioned } : m,
+        ),
+        current3DModel:
+          s.current3DModel?.id === modelId
+            ? { ...s.current3DModel, thumbnailUrl: versioned }
+            : s.current3DModel,
+      }));
+    } catch (e) {
+      console.warn("Failed to upload model thumbnail:", e);
     }
   },
 

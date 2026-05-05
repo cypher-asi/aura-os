@@ -88,7 +88,16 @@ export function createScene(container: HTMLDivElement): SceneContext {
   camera.position.set(3, 3, 3);
   camera.lookAt(0, 0, 0);
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  // `preserveDrawingBuffer` is required so we can call
+  // `renderer.domElement.toBlob(...)` after the model loads to capture
+  // a thumbnail; without it the GL drawing buffer is cleared between
+  // frames and the canvas reads back blank pixels. The perf cost is
+  // negligible for this single-model viewer.
+  const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    alpha: false,
+    preserveDrawingBuffer: true,
+  });
   renderer.setSize(width, height);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;

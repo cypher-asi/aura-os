@@ -1,6 +1,10 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Spinner } from "@cypher-asi/zui";
-import { useAura3DStore } from "../../../stores/aura3d-store";
+import {
+  useAura3DStore,
+  type Generated3DModel,
+  type GeneratedImage,
+} from "../../../stores/aura3d-store";
 import { ImageIcon, Box } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import {
@@ -8,6 +12,80 @@ import {
   useSidekickItemContextMenu,
 } from "../../../components/SidekickItemContextMenu";
 import styles from "./Aura3DSidekickPanel.module.css";
+
+/**
+ * Renders the 3D model tile thumbnail, walking three fallbacks:
+ *   1. The captured GLB snapshot stored on the server filesystem
+ *      (`/api/artifacts/:id/thumbnail`). This is the primary case
+ *      after the user opens a model at least once.
+ *   2. The source image used to generate the model, when available
+ *      in the in-memory `images` store. Used for models the user
+ *      hasn't opened yet (no PNG on disk) but whose source image is
+ *      still loaded for this project.
+ *   3. The cube `Box` icon, which appears only when neither of the
+ *      above is reachable (e.g. server still warming up + user
+ *      switched projects mid-load).
+ *
+ * Each step is implemented with a separate `<img onError>` so the
+ * browser will *try* the captured thumbnail first; a 404 from the
+ * server transparently flips to the source image without any
+ * additional roundtrip. We track `step` in component state so a
+ * temporary network blip on the snapshot URL doesn't permanently
+ * downgrade the tile to the source-image view across re-renders.
+ */
+function ModelThumb({
+  model,
+  sourceImage,
+}: {
+  model: Generated3DModel;
+  sourceImage: GeneratedImage | undefined;
+}) {
+  type Step = "thumbnail" | "source" | "placeholder";
+
+  const initialStep: Step = model.thumbnailUrl
+    ? "thumbnail"
+    : sourceImage?.imageUrl
+      ? "source"
+      : "placeholder";
+  const [step, setStep] = useState<Step>(initialStep);
+
+  // Reset to the highest-priority source whenever the model's
+  // thumbnail URL changes (e.g. just-uploaded after the user opened
+  // it in the viewer). Without this, a previously-404'd tile would
+  // remain stuck on its source-image fallback even after the
+  // captured PNG appeared on disk.
+  useEffect(() => {
+    setStep(initialStep);
+  }, [model.thumbnailUrl, sourceImage?.imageUrl, initialStep]);
+
+  if (step === "thumbnail" && model.thumbnailUrl) {
+    return (
+      <img
+        src={model.thumbnailUrl}
+        alt="3D Model"
+        className={styles.thumbImage}
+        onError={() =>
+          setStep(sourceImage?.imageUrl ? "source" : "placeholder")
+        }
+      />
+    );
+  }
+  if (step === "source" && sourceImage?.imageUrl) {
+    return (
+      <img
+        src={sourceImage.imageUrl}
+        alt="3D Model"
+        className={styles.thumbImage}
+        onError={() => setStep("placeholder")}
+      />
+    );
+  }
+  return (
+    <div className={styles.modelThumbPlaceholder}>
+      <Box size={24} />
+    </div>
+  );
+}
 
 function ImagesPanel() {
   const images = useAura3DStore((s) => s.images);
@@ -205,13 +283,7 @@ function ModelsPanel() {
               onClick={() => selectModel(model.id)}
               title={model.polyCount != null ? `${model.polyCount.toLocaleString()} polys` : "3D Model"}
             >
-              {sourceImage ? (
-                <img src={sourceImage.imageUrl} alt="3D Model" className={styles.thumbImage} />
-              ) : (
-                <div className={styles.modelThumbPlaceholder}>
-                  <Box size={24} />
-                </div>
-              )}
+              <ModelThumb model={model} sourceImage={sourceImage} />
             </button>
           );
         })}

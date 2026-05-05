@@ -60,6 +60,21 @@ export function ModelGeneration() {
   const setError = useAura3DStore((s) => s.setError);
   const deleteImage = useAura3DStore((s) => s.deleteImage);
   const deleteModel = useAura3DStore((s) => s.deleteModel);
+  const uploadModelThumbnail = useAura3DStore((s) => s.uploadModelThumbnail);
+
+  const currentModelId = current3DModel?.id;
+  const currentModelHasThumbnail = Boolean(current3DModel?.thumbnailUrl);
+  const handleThumbnailReady = useCallback(
+    (blob: Blob) => {
+      if (!currentModelId) return;
+      // Skip when we already have a captured thumbnail to avoid a
+      // re-upload on every open of an existing model. The viewer's
+      // own `capturedUrlRef` also dedupes per `glbUrl` mount.
+      if (currentModelHasThumbnail) return;
+      void uploadModelThumbnail(currentModelId, blob);
+    },
+    [currentModelId, currentModelHasThumbnail, uploadModelThumbnail],
+  );
 
   const abortRef = useRef<AbortController | null>(null);
 
@@ -228,6 +243,7 @@ export function ModelGeneration() {
               showGrid={showGrid}
               showWireframe={showWireframe}
               showTexture={showTexture}
+              onThumbnailReady={handleThumbnailReady}
             />
             <div className={styles.viewerControls}>
               <button

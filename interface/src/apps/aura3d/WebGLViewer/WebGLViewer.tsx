@@ -15,6 +15,14 @@ interface WebGLViewerProps {
   showGrid?: boolean;
   showWireframe?: boolean;
   showTexture?: boolean;
+  /**
+   * Fires once after the model finishes loading and the camera has
+   * framed it, with a PNG snapshot of the rendered scene. Wired by
+   * the AURA 3D page to upload the snapshot as the artifact's
+   * sidekick thumbnail. The viewer dedupes per `glbUrl` so toggling
+   * wireframe/texture or re-rendering does not retrigger upload.
+   */
+  onThumbnailReady?: (blob: Blob) => void;
 }
 
 export function WebGLViewer({
@@ -22,11 +30,16 @@ export function WebGLViewer({
   showGrid = true,
   showWireframe = false,
   showTexture = true,
+  onThumbnailReady,
 }: WebGLViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneCtxRef = useRef<SceneContext | null>(null);
   const modelRef = useRef<LoadedModel | null>(null);
   const animationIdRef = useRef<number | null>(null);
+  // Track which `glbUrl` we have already snapped a thumbnail for so
+  // re-renders (theme swap, control toggles, prop changes) cannot
+  // retrigger the upload. Cleared whenever `glbUrl` changes.
+  const capturedUrlRef = useRef<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -120,6 +133,7 @@ export function WebGLViewer({
       modelRef.current = null;
     }
 
+    capturedUrlRef.current = null;
     setIsLoading(true);
     setError(null);
 
@@ -127,12 +141,35 @@ export function WebGLViewer({
       .then((loaded) => {
         modelRef.current = loaded;
         setIsLoading(false);
+        // Capture a sidekick thumbnail of the freshly-loaded model.
+        // We wait one frame so OrbitControls can settle the framing
+        // call from `loadModel` (camera position + target update),
+        // then render synchronously and pull a PNG off the canvas.
+        // The capture is gated on `glbUrl` so it only ever fires once
+        // per model per mount, even if React re-runs the effect.
+        if (!onThumbnailReady || capturedUrlRef.current === glbUrl) return;
+        const targetUrl = glbUrl;
+        requestAnimationFrame(() => {
+          const liveCtx = sceneCtxRef.current;
+          if (!liveCtx) return;
+          if (capturedUrlRef.current === targetUrl) return;
+          if (modelRef.current === null) return;
+          liveCtx.controls.update();
+          liveCtx.renderer.render(liveCtx.scene, liveCtx.camera);
+          liveCtx.renderer.domElement.toBlob((blob) => {
+            if (!blob) return;
+            // Mark captured before invoking the handler so a synchronous
+            // store update that re-renders this component can't loop.
+            capturedUrlRef.current = targetUrl;
+            onThumbnailReady(blob);
+          }, "image/png");
+        });
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : String(err));
         setIsLoading(false);
       });
-  }, [glbUrl]);
+  }, [glbUrl, onThumbnailReady]);
 
   // Toggle grid
   useEffect(() => {
