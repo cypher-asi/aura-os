@@ -1,0 +1,13 @@
+.pillWrap {
+  display: inline-flex;
+  align-items: center;
+  margin-right: var(--space-1);
+}
+
+.pill {
+  padding-inline: var(--space-3);
+  font-size: var(--font-size-xs, 12px);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}

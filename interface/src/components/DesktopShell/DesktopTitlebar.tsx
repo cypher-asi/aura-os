@@ -3,6 +3,7 @@ import { Server, Sun, Moon } from "lucide-react";
 import { OrgSelector } from "../OrgSelector";
 import { WindowControls } from "../WindowControls";
 import { MenuBar } from "../MenuBar";
+import { UpdatePill } from "../UpdateBanner";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { windowCommand } from "../../lib/windowCommand";
 import {
@@ -76,6 +77,7 @@ export function DesktopTitlebar({
           className={styles.titleActions}
           onDoubleClick={(e) => e.stopPropagation()}
         >
+          <UpdatePill />
           <ThemeToggleButton />
           {features.hostRetargeting && (
             <Button
