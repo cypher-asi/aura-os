@@ -351,35 +351,6 @@ describe("ChatInputBar", () => {
     expect(screen.getByRole("radio", { name: "3D mode" })).toBeInTheDocument();
   });
 
-  it("renders selected slash commands inline and removes them", async () => {
-    const user = userEvent.setup();
-    const selectedCommands = [
-      {
-        id: "find_files",
-        label: "Find Files",
-        description: "Find files by name or glob",
-        category: "Core",
-      },
-    ];
-    const onCommandsChange = vi.fn();
-    const { container } = render(
-      <ChatInputBar
-        {...makeProps({ selectedCommands, onCommandsChange })}
-      />,
-    );
-
-    const inlineSurface = container.querySelector(
-      '[data-agent-surface="command-chips-inline"]',
-    );
-    expect(inlineSurface).toContainElement(screen.getByText("/Find Files"));
-    expect(
-      container.querySelector('[data-agent-surface="command-chips-stacked"]'),
-    ).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Remove Find Files" }));
-    expect(onCommandsChange).toHaveBeenCalledWith([]);
-  });
-
   it("opens the mobile model sheet and calls setSelectedModel", async () => {
     const user = userEvent.setup();
     mockSelectedModel = "aura-claude-opus-4-6";

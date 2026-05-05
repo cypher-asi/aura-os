@@ -36,10 +36,10 @@
 .inputWrapper::before {
   content: "";
   position: absolute;
-  top: -40px;
+  top: -80px;
   left: 0;
   right: 0;
-  height: 40px;
+  height: 80px;
   pointer-events: none;
   background: linear-gradient(to bottom, transparent, var(--color-bg));
   transition: opacity 220ms ease;
@@ -100,7 +100,7 @@
   display: flex;
   flex-direction: column;
   border: 1px solid var(--color-border);
-  border-radius: 14px;
+  border-radius: 20px;
   background: transparent;
   padding: 0;
   max-width: 680px;
@@ -139,10 +139,6 @@
   padding: 0;
 }
 
-.inputRowHasEnd .textarea {
-  padding-right: min(220px, 42%);
-}
-
 .textarea {
   display: block;
   width: 100%;
@@ -165,15 +161,6 @@
   border-radius: 0;
 }
 
-/* The rounded container's `:focus-within` border-color change is the
-   intended focus indicator for this surface, so suppress the global
-   keyboard focus ring (`:focus-visible` in index.css) that would
-   otherwise paint a sharp outset rectangle around the textarea. */
-.textarea:focus,
-.textarea:focus-visible {
-  outline: none;
-}
-
 @media (pointer: coarse), (max-width: 900px) {
   .textarea {
     font-size: 16px;
@@ -187,17 +174,6 @@
 .textarea:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.inputRowEnd {
-  position: absolute;
-  right: 42px;
-  bottom: 5px;
-  z-index: 2;
-  display: flex;
-  max-width: min(170px, calc(100% - 84px));
-  min-width: 0;
-  align-items: center;
 }
 
 .attachButton {
@@ -413,7 +389,7 @@
 
   .inputContainer {
     border-color: color-mix(in srgb, var(--color-border) 54%, transparent);
-    border-radius: 16px;
+    border-radius: 20px;
     background: var(--color-chat-mobile-input-bg);
     padding: 5px 8px 8px 5px;
   }
@@ -497,16 +473,6 @@
     max-height: 250px;
     padding: 10px 48px;
     line-height: 1.38;
-  }
-
-  .inputRowHasEnd .textarea {
-    padding-right: min(220px, 48%);
-  }
-
-  .inputRowEnd {
-    right: 50px;
-    bottom: 11px;
-    max-width: min(170px, calc(100% - 106px));
   }
 
   .inputInfoBar {

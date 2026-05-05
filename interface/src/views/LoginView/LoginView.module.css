@@ -1,11 +1,8 @@
 .page {
-  position: relative;
-  isolation: isolate;
   display: flex;
   flex-direction: column;
   height: 100%;
   background: var(--color-bg);
-  overflow: hidden;
 }
 
 .pageMobile {
@@ -23,18 +20,13 @@
   flex: 1;
   min-height: 0;
   padding: var(--space-4);
+  overflow: hidden;
 }
 
-/*
- * Page-level video backdrop. Sits behind the entire login surface (including
- * the ShellTitlebar pill) so the chrome reads as a frosted overlay on top of
- * the looping AURA visual — mirroring how DesktopShell layers its
- * BackgroundLayer wallpaper behind the same titlebar pill.
- */
 .videoBackground {
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   pointer-events: none;
   background: #000;
 }

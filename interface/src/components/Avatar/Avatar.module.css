@@ -29,7 +29,7 @@
 }
 
 .avatar[data-team="true"] {
-  background: var(--color-bg-hover);
+  background: #000;
   color: var(--color-text);
 }
 

@@ -11,6 +11,7 @@ import { Lane, type LaneResizeControls } from "../Lane";
 import { ResponsiveMainLane } from "../ResponsiveMainLane";
 import { BottomTaskbar } from "../BottomTaskbar";
 import { ErrorBoundary } from "../ErrorBoundary";
+import { UpdateBanner } from "../UpdateBanner";
 import { useActiveApp } from "../../hooks/use-active-app";
 import { apps } from "../../apps/registry";
 
@@ -156,6 +157,7 @@ export function DesktopShell() {
           onToggleSidekick={toggleSidekick}
           onOpenHostSettings={openHostSettings}
         />
+        <UpdateBanner />
 
         <div className={styles.desktopContent}>
           <div ref={leftPanelRef} className={styles.desktopSidebar}>

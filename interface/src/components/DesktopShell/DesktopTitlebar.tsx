@@ -1,11 +1,9 @@
-import { Button, useTheme } from "@cypher-asi/zui";
+import { Topbar, Button, useTheme } from "@cypher-asi/zui";
 import { Server, Sun, Moon } from "lucide-react";
 import { OrgSelector } from "../OrgSelector";
 import { WindowControls } from "../WindowControls";
-import { MenuBar } from "../MenuBar";
-import { ShellTitlebar } from "../ShellTitlebar";
-import { UpdatePill } from "../UpdateBanner";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
+import { windowCommand } from "../../lib/windowCommand";
 import {
   cycleTheme,
   getThemeToggleAriaLabel,
@@ -52,13 +50,10 @@ export function DesktopTitlebar({
   const { features } = useAuraCapabilities();
 
   return (
-    <ShellTitlebar
-      icon={
-        <span className={`${styles.titleLeading} titlebar-no-drag`}>
-          <OrgSelector variant="icon" />
-          <MenuBar />
-        </span>
-      }
+    <Topbar
+      className={`titlebar-drag ${styles.topbarAlignRail} ${styles.topbarBlur}`}
+      onDoubleClick={() => windowCommand("maximize")}
+      icon={<OrgSelector variant="icon" />}
       title={
         <span className={`titlebar-center ${styles.titleCenter}`}>
           <img
@@ -75,7 +70,6 @@ export function DesktopTitlebar({
           className={styles.titleActions}
           onDoubleClick={(e) => e.stopPropagation()}
         >
-          <UpdatePill />
           <ThemeToggleButton />
           {features.hostRetargeting && (
             <Button

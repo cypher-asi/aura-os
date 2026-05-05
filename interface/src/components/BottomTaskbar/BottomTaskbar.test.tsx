@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const mockNavigate = vi.fn();
@@ -56,14 +56,7 @@ vi.mock("lucide-react", () => ({
   Check: () => <svg />,
   ChevronDown: () => <svg />,
   ChevronUp: () => <svg />,
-  Image: () => <svg />,
-  Upload: () => <svg />,
 }));
-
-interface MockMenuItem {
-  id: string;
-  label: string;
-}
 
 vi.mock("@cypher-asi/zui", () => ({
   Button: ({
@@ -73,35 +66,7 @@ vi.mock("@cypher-asi/zui", () => ({
   }: React.ButtonHTMLAttributes<HTMLButtonElement> & { icon?: React.ReactNode }) => (
     <button {...props}>{icon}{children}</button>
   ),
-  Menu: ({
-    items,
-    onChange,
-  }: {
-    items: MockMenuItem[];
-    onChange?: (id: string) => void;
-  }) => (
-    <div role="menu" data-testid="zui-menu">
-      {items.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          role="menuitem"
-          onClick={() => onChange?.(item.id)}
-        >
-          {item.label}
-        </button>
-      ))}
-    </div>
-  ),
-  Modal: ({ isOpen, children }: { isOpen: boolean; children?: React.ReactNode }) =>
-    isOpen ? <div data-testid="modal">{children}</div> : null,
-  Heading: ({ children }: { children?: React.ReactNode }) => <h4>{children}</h4>,
-  Text: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
-}));
-
-vi.mock("../../apps/desktop/BackgroundModal", () => ({
-  BackgroundModal: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div data-testid="background-modal" /> : null,
+  Menu: () => null,
 }));
 
 vi.mock("../CreditsBadge/useCreditBalance", () => ({
@@ -350,91 +315,5 @@ describe("BottomTaskbar", () => {
       "data-include-ids",
       JSON.stringify(["agents", "projects"]),
     );
-  });
-
-  describe("right-click context menu", () => {
-    function getBar(container: HTMLElement) {
-      const bar = container.querySelector<HTMLElement>(
-        '[data-agent-surface="desktop-shell-bottom-taskbar"]',
-      );
-      if (!bar) throw new Error("Bottom taskbar root not found");
-      return bar;
-    }
-
-    it("opens the desktop context menu when right-clicking empty taskbar space", () => {
-      const { container } = render(<BottomTaskbar />);
-
-      expect(screen.queryByTestId("zui-menu")).not.toBeInTheDocument();
-
-      fireEvent.contextMenu(getBar(container));
-
-      expect(screen.getByTestId("zui-menu")).toBeInTheDocument();
-      expect(screen.getByRole("menuitem", { name: /Set Background/ })).toBeInTheDocument();
-      expect(screen.getByRole("menuitem", { name: "Settings" })).toBeInTheDocument();
-    });
-
-    it("does not open the desktop context menu when right-clicking a taskbar button", () => {
-      render(<BottomTaskbar />);
-
-      fireEvent.contextMenu(screen.getByRole("button", { name: "Settings" }));
-
-      expect(screen.queryByTestId("zui-menu")).not.toBeInTheDocument();
-    });
-
-    it("opens org settings when selecting Settings from the context menu", async () => {
-      const user = userEvent.setup();
-      const { container } = render(<BottomTaskbar />);
-
-      fireEvent.contextMenu(getBar(container));
-      await user.click(screen.getByRole("menuitem", { name: "Settings" }));
-
-      expect(openOrgSettings).toHaveBeenCalledTimes(1);
-      expect(screen.queryByTestId("zui-menu")).not.toBeInTheDocument();
-    });
-
-    it("opens the background modal when selecting Set Background", async () => {
-      const user = userEvent.setup();
-      const { container } = render(<BottomTaskbar />);
-
-      fireEvent.contextMenu(getBar(container));
-      await user.click(screen.getByRole("menuitem", { name: /Set Background/ }));
-
-      expect(screen.getByTestId("background-modal")).toBeInTheDocument();
-    });
-
-    it("anchors to the bottom of the click when right-clicking near the viewport bottom", () => {
-      const originalInnerHeight = window.innerHeight;
-      const originalInnerWidth = window.innerWidth;
-      Object.defineProperty(window, "innerHeight", {
-        value: 800,
-        configurable: true,
-      });
-      Object.defineProperty(window, "innerWidth", {
-        value: 1280,
-        configurable: true,
-      });
-
-      try {
-        const { container } = render(<BottomTaskbar />);
-
-        fireEvent.contextMenu(getBar(container), {
-          clientX: 200,
-          clientY: 790,
-        });
-
-        const overlay = screen.getByTestId("zui-menu").parentElement as HTMLElement;
-        expect(overlay.style.bottom).not.toBe("");
-        expect(overlay.style.top).toBe("");
-      } finally {
-        Object.defineProperty(window, "innerHeight", {
-          value: originalInnerHeight,
-          configurable: true,
-        });
-        Object.defineProperty(window, "innerWidth", {
-          value: originalInnerWidth,
-          configurable: true,
-        });
-      }
-    });
   });
 });

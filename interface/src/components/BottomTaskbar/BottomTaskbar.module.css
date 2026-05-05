@@ -68,6 +68,11 @@
   background: var(--color-text-secondary);
 }
 
+.contextMenuOverlay {
+  position: fixed;
+  z-index: 9999;
+}
+
 .right {
   display: flex;
   align-items: center;

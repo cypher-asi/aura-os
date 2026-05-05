@@ -259,7 +259,6 @@ vi.mock("../HostSettingsModal", () => ({
 }));
 vi.mock("../UpdateBanner", () => ({
   UpdateBanner: () => <div data-testid="update-banner" />,
-  UpdatePill: () => <div data-testid="update-pill" />,
 }));
 vi.mock("../PanelSearch", () => ({
   PanelSearch: () => <div data-testid="panel-search" />,
@@ -376,12 +375,9 @@ describe("DesktopShell", () => {
     expect(screen.getByAltText("AURA")).toBeInTheDocument();
   });
 
-  it("mounts the update pill in the titlebar (not the legacy floating banner)", () => {
+  it("renders update banner", () => {
     renderShell();
-    // The desktop shell now surfaces auto-updates via a compact pill in the
-    // titlebar; the bottom-left floating banner only ships on mobile.
-    expect(screen.getByTestId("update-pill")).toBeInTheDocument();
-    expect(screen.queryByTestId("update-banner")).not.toBeInTheDocument();
+    expect(screen.getByTestId("update-banner")).toBeInTheDocument();
   });
 
   it("renders bottom taskbar", () => {

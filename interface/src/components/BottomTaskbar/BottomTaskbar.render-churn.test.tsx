@@ -48,8 +48,6 @@ vi.mock("lucide-react", () => ({
   Check: () => <svg />,
   ChevronDown: () => <svg />,
   ChevronUp: () => <svg />,
-  Image: () => <svg />,
-  Upload: () => <svg />,
 }));
 
 vi.mock("@cypher-asi/zui", () => ({
@@ -61,13 +59,6 @@ vi.mock("@cypher-asi/zui", () => ({
     <button {...props}>{icon}{children}</button>
   ),
   Menu: () => null,
-  Modal: () => null,
-  Heading: ({ children }: { children?: React.ReactNode }) => <h4>{children}</h4>,
-  Text: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
-}));
-
-vi.mock("../../apps/desktop/BackgroundModal", () => ({
-  BackgroundModal: () => null,
 }));
 
 vi.mock("../CreditsBadge/useCreditBalance", () => ({

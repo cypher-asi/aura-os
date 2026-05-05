@@ -1,4 +1,10 @@
 .desktopShell {
+  --shell-chrome-height: var(--control-height-sm);
+  --shell-chrome-inset: 5px;
+  --shell-chrome-outer-height: calc(var(--shell-chrome-height) + 10px);
+  --shell-chrome-radius: 20px;
+  --shell-chrome-background: color-mix(in srgb, var(--color-titlebar-bg) 90%, transparent);
+  --shell-chrome-backdrop-filter: blur(40px) saturate(1.4);
   position: relative;
   isolation: isolate;
   height: 100%;
@@ -13,6 +19,16 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
+}
+
+.topbarBlur {
+  height: var(--shell-chrome-height);
+  min-height: var(--shell-chrome-height);
+  box-sizing: border-box;
+  background: var(--shell-chrome-background) !important;
+  backdrop-filter: var(--shell-chrome-backdrop-filter);
+  -webkit-backdrop-filter: var(--shell-chrome-backdrop-filter);
+  border: 1px solid var(--color-border);
 }
 
 .desktopContent {
@@ -164,11 +180,20 @@
   pointer-events: none;
 }
 
-.titleLeading {
-  display: inline-flex;
-  align-items: center;
-  height: 100%;
-  gap: var(--space-1);
+.topbarAlignRail {
+  padding-left: 0;
+  padding-right: 0;
+  margin: var(--shell-chrome-inset);
+  border-radius: var(--shell-chrome-radius);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.topbarAlignRail > :first-child > :first-child {
+  width: 44px;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .desktopSidebar,
