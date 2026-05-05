@@ -1,4 +1,4 @@
-import { useRef, useCallback } from "react";
+import { useRef, useState, useCallback } from "react";
 import { Modal, Heading, Button, Text } from "@cypher-asi/zui";
 import { Upload } from "lucide-react";
 import {
@@ -9,10 +9,13 @@ import {
 import styles from "./BackgroundModal.module.css";
 
 const PRESET_COLORS = [
+  "#ffffff", "#000000",
   "#1a1a2e", "#16213e", "#0f3460", "#533483",
   "#2b2d42", "#3a0ca3", "#264653", "#2d6a4f",
   "#774936", "#6b2737", "#403d39", "#212529",
 ];
+
+type BackgroundView = "color" | "image";
 
 interface BackgroundConfigSectionProps {
   title: string;
@@ -30,7 +33,10 @@ function BackgroundConfigSection({
   const fileRef = useRef<HTMLInputElement>(null);
   const setColor = useDesktopBackgroundStore((s) => s.setColor);
   const setImage = useDesktopBackgroundStore((s) => s.setImage);
-  const clearBackground = useDesktopBackgroundStore((s) => s.clearBackground);
+
+  const [view, setView] = useState<BackgroundView>(
+    config.mode === "image" ? "image" : "color",
+  );
 
   const handleFile = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,59 +60,83 @@ function BackgroundConfigSection({
     <div className={styles.themeGroup}>
       <Heading level={4}>{title}</Heading>
 
-      <div className={styles.section}>
-        <Heading level={5}>Color</Heading>
-        <div className={styles.swatches}>
-          <button
-            className={`${styles.swatch} ${styles.swatchDefault} ${mode === "none" ? styles.swatchActive : ""}`}
-            onClick={() => clearBackground(theme)}
-            aria-label={`Reset ${title.toLowerCase()} to default background`}
-          />
-          {PRESET_COLORS.map((c) => (
-            <button
-              key={c}
-              className={`${styles.swatch} ${mode === "color" && color === c ? styles.swatchActive : ""}`}
-              style={{ backgroundColor: c }}
-              onClick={() => setColor(theme, c)}
-              aria-label={`Set ${title.toLowerCase()} to ${c}`}
-            />
-          ))}
-        </div>
-        <div className={styles.customColorRow}>
-          <input
-            type="color"
-            className={styles.colorInput}
-            value={mode === "color" && color ? color : defaultCustomColor}
-            onChange={(e) => setColor(theme, e.target.value)}
-            aria-label={`Custom ${title.toLowerCase()} color`}
-          />
-          <Text variant="muted" size="sm">Custom color</Text>
-        </div>
+      <div
+        className={styles.typeToggle}
+        role="tablist"
+        aria-label={`${title} background type`}
+      >
+        <Button
+          size="sm"
+          variant={view === "color" ? "secondary" : "ghost"}
+          selected={view === "color"}
+          onClick={() => setView("color")}
+          role="tab"
+          aria-selected={view === "color"}
+        >
+          Color
+        </Button>
+        <Button
+          size="sm"
+          variant={view === "image" ? "secondary" : "ghost"}
+          selected={view === "image"}
+          onClick={() => setView("image")}
+          role="tab"
+          aria-selected={view === "image"}
+        >
+          Image
+        </Button>
       </div>
 
-      <div className={styles.section}>
-        <Heading level={5}>Image</Heading>
-        {mode === "image" && imageDataUrl && (
-          <img src={imageDataUrl} alt={`${title} preview`} className={styles.imagePreview} />
-        )}
-        <div className={styles.imageActions}>
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={<Upload size={14} />}
-            onClick={() => fileRef.current?.click()}
-          >
-            Choose Image
-          </Button>
+      {view === "color" && (
+        <div className={styles.section}>
+          <div className={styles.swatches}>
+            {PRESET_COLORS.map((c) => (
+              <button
+                key={c}
+                className={`${styles.swatch} ${mode === "color" && color === c ? styles.swatchActive : ""}`}
+                style={{ backgroundColor: c }}
+                onClick={() => setColor(theme, c)}
+                aria-label={`Set ${title.toLowerCase()} to ${c}`}
+              />
+            ))}
+          </div>
+          <div className={styles.customColorRow}>
+            <input
+              type="color"
+              className={styles.colorInput}
+              value={mode === "color" && color ? color : defaultCustomColor}
+              onChange={(e) => setColor(theme, e.target.value)}
+              aria-label={`Custom ${title.toLowerCase()} color`}
+            />
+            <Text variant="muted" size="sm">Custom color</Text>
+          </div>
         </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          style={{ display: "none" }}
-          onChange={handleFile}
-        />
-      </div>
+      )}
+
+      {view === "image" && (
+        <div className={styles.section}>
+          {mode === "image" && imageDataUrl && (
+            <img src={imageDataUrl} alt={`${title} preview`} className={styles.imagePreview} />
+          )}
+          <div className={styles.imageActions}>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<Upload size={14} />}
+              onClick={() => fileRef.current?.click()}
+            >
+              Choose Image
+            </Button>
+          </div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={handleFile}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -128,14 +158,14 @@ export function BackgroundModal({
           title="Light Mode"
           theme="light"
           config={light}
-          defaultCustomColor="#f5f5f7"
+          defaultCustomColor="#ffffff"
         />
         <div className={styles.divider} />
         <BackgroundConfigSection
           title="Dark Mode"
           theme="dark"
           config={dark}
-          defaultCustomColor="#1a1a2e"
+          defaultCustomColor="#000000"
         />
       </div>
     </Modal>
