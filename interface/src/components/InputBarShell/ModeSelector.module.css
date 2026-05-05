@@ -8,9 +8,14 @@
  * 1fr columns. The indicator pill is absolutely positioned and
  * sized to one column width via calc(); its horizontal offset is
  * driven by a single `--mode-index` custom property set by React.
- * A CSS transition on `transform` produces the smooth left/right
- * slide when the selected mode changes — no DOM measurement or
- * ResizeObserver required.
+ * The transform uses `100%` (which on `transform: translateX` is
+ * relative to the indicator's own width — i.e. one column width),
+ * which is why we don't reuse `--mode-col` inside the calc: the
+ * `100%` token inside that variable would re-resolve against the
+ * indicator instead of the segments container. A CSS transition
+ * on `transform` produces the smooth left/right slide when the
+ * selected mode changes — no DOM measurement or ResizeObserver
+ * required.
  * ============================================================ */
 
 .root {
@@ -65,8 +70,10 @@
   pointer-events: none;
   z-index: 0;
   will-change: transform;
+  /* `100%` here is the indicator's own width (one column). Adding the
+     gap once per index step yields the exact left edge of column N. */
   transform: translateX(
-    calc(var(--mode-index) * (var(--mode-col) + var(--mode-gap)))
+    calc(var(--mode-index) * (100% + var(--mode-gap)))
   );
   transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
