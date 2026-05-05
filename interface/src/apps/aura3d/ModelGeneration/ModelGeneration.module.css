@@ -5,13 +5,6 @@
   min-height: 0;
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
-}
-
 .sectionTitle {
   font-size: 12px;
   font-weight: 500;
@@ -20,10 +13,23 @@
   color: var(--color-text-muted);
 }
 
+/* Floats over the bottom-right of the 3D viewer canvas. Translucent
+   surface + backdrop-blur so the controls read on any scene background
+   in either theme without obscuring the model behind them. */
 .viewerControls {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
   display: flex;
   align-items: center;
   gap: var(--space-1);
+  padding: 4px;
+  background: color-mix(in srgb, var(--color-elevated) 80%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  z-index: 2;
 }
 
 .controlButton {
@@ -51,14 +57,14 @@
    green status badge. */
 .controlButtonActive {
   color: var(--color-text-primary);
-  background: var(--color-elevated);
+  background: var(--color-surface);
   border-color: var(--color-border);
 }
 
 .polyCount {
   font-size: 11px;
   color: var(--color-text-muted);
-  margin-left: var(--space-2);
+  padding: 0 var(--space-2);
 }
 
 .viewerArea {
@@ -67,21 +73,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Mirrors `.previewArea` in ImageGeneration so switching tabs leaves
-     the source image / viewer at the same dimensions instead of
-     resizing every tab change. */
-  padding: var(--space-4);
   position: relative;
 }
 
 /* Wraps `<WebGLViewer>` so the right-click handler binds to the full
-   viewer surface and the canvas keeps a sized flex parent. */
+   viewer surface, the canvas keeps a sized flex parent, and the
+   floating control overlay anchors to the viewer rather than the
+   surrounding panel. */
 .viewerWrapper {
   flex: 1;
   width: 100%;
   height: 100%;
   min-height: 0;
   display: flex;
+  position: relative;
 }
 
 .sourcePreview {

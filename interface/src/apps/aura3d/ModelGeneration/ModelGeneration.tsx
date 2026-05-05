@@ -202,41 +202,6 @@ export function ModelGeneration() {
       className={styles.root}
       data-agent-surface="aura3d-model-generation"
     >
-      {current3DModel && (
-        <div className={styles.header}>
-          <div className={styles.viewerControls}>
-            <button
-              type="button"
-              className={`${styles.controlButton} ${showGrid ? styles.controlButtonActive : ""}`}
-              onClick={toggleGrid}
-              title="Toggle grid"
-            >
-              <Grid3x3 size={14} />
-            </button>
-            <button
-              type="button"
-              className={`${styles.controlButton} ${showWireframe ? styles.controlButtonActive : ""}`}
-              onClick={toggleWireframe}
-              title="Toggle wireframe"
-            >
-              <Triangle size={14} />
-            </button>
-            <button
-              type="button"
-              className={`${styles.controlButton} ${showTexture ? styles.controlButtonActive : ""}`}
-              onClick={toggleTexture}
-              title="Toggle textures"
-            >
-              <Paintbrush size={14} />
-            </button>
-            {current3DModel.polyCount != null && (
-              <span className={styles.polyCount}>
-                {current3DModel.polyCount.toLocaleString()} polys
-              </span>
-            )}
-          </div>
-        </div>
-      )}
       <div className={styles.viewerArea}>
         {current3DModel ? (
           <div
@@ -249,6 +214,37 @@ export function ModelGeneration() {
               showWireframe={showWireframe}
               showTexture={showTexture}
             />
+            <div className={styles.viewerControls}>
+              <button
+                type="button"
+                className={`${styles.controlButton} ${showGrid ? styles.controlButtonActive : ""}`}
+                onClick={toggleGrid}
+                title="Toggle grid"
+              >
+                <Grid3x3 size={14} />
+              </button>
+              <button
+                type="button"
+                className={`${styles.controlButton} ${showWireframe ? styles.controlButtonActive : ""}`}
+                onClick={toggleWireframe}
+                title="Toggle wireframe"
+              >
+                <Triangle size={14} />
+              </button>
+              <button
+                type="button"
+                className={`${styles.controlButton} ${showTexture ? styles.controlButtonActive : ""}`}
+                onClick={toggleTexture}
+                title="Toggle textures"
+              >
+                <Paintbrush size={14} />
+              </button>
+              {current3DModel.polyCount != null && (
+                <span className={styles.polyCount}>
+                  {current3DModel.polyCount.toLocaleString()} polys
+                </span>
+              )}
+            </div>
           </div>
         ) : generateSourceImage ? (
           <div

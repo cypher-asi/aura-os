@@ -7,7 +7,6 @@
      the next render reads correctly in both themes (was hard-coded
      `#0a0a0a` which flashed black in light mode). */
   background: var(--color-bg);
-  border-radius: 8px;
   overflow: hidden;
 }
 
