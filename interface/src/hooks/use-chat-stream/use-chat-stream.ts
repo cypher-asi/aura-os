@@ -91,23 +91,33 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
         if (_generationMode === "3d") {
           // Mirror the standalone-agent path in `use-agent-chat-stream.ts`:
           // chat 3D mode bypasses the agent and calls the same generation
-          // endpoint the AURA 3D app uses. The backend accepts either a URL
-          // or a data URL; chat almost always passes the latter (pasted /
-          // uploaded image).
+          // endpoint the AURA 3D app uses. An attached / pasted image is
+          // forwarded as a base64 data URL (image-to-3D); when no image is
+          // present we fall back to text-to-3D and rely on the prompt.
           const imageAttachment = attachments?.find((a) => a.type === "image");
-          if (!imageAttachment) {
+          // `trimmed` is the user's actual input; `userMsg.content` may be a
+          // synthesized fallback like "[1 file(s)]" when there are
+          // attachments but no text, which we don't want to forward as the
+          // 3D prompt.
+          const trimmedPrompt = trimmed;
+          if (!imageAttachment && !trimmedPrompt) {
             handleStreamError(
               refs,
               setters,
-              "3D mode requires an attached or pasted image to convert into a 3D model.",
+              "3D mode needs either a prompt or an attached image.",
             );
             return;
           }
           core.setProgressText("Generating 3D model...");
-          const dataUrl = `data:${imageAttachment.media_type};base64,${imageAttachment.data}`;
+          const source = imageAttachment
+            ? ({
+                kind: "data" as const,
+                imageData: `data:${imageAttachment.media_type};base64,${imageAttachment.data}`,
+              })
+            : null;
           await generate3dStream(
-            { kind: "data", imageData: dataUrl },
-            userMsg.content || null,
+            source,
+            trimmedPrompt || null,
             handler,
             controller.signal,
             projectId,

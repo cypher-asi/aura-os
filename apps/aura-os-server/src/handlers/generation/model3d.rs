@@ -29,6 +29,11 @@ pub(crate) async fn generate_3d_stream(
     // `image_url` on the protocol; the upstream router is responsible
     // for materialising data URLs into hosted assets before calling the
     // 3D provider.
+    //
+    // Both inputs are optional: when neither is supplied we fall through
+    // to the text-to-3D path and rely on `prompt` alone. We still require
+    // *something* to ground the request, so reject the case where the
+    // caller supplied neither an image nor a prompt.
     let image_url = body
         .image_url
         .map(|s| s.trim().to_string())
@@ -37,10 +42,18 @@ pub(crate) async fn generate_3d_stream(
             body.image_data
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty())
-        })
-        .ok_or_else(|| {
-            ApiError::bad_request("either `image_url` or `image_data` is required")
-        })?;
+        });
+    let prompt = body
+        .prompt
+        .as_ref()
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .map(str::to_string);
+    if image_url.is_none() && prompt.is_none() {
+        return Err(ApiError::bad_request(
+            "3D generation requires either an image (`image_url` / `image_data`) or a `prompt`",
+        ));
+    }
 
     let identity =
         resolve_generation_identity(&state, &auth_session, &jwt, body.project_id.as_deref())
@@ -50,10 +63,10 @@ pub(crate) async fn generate_3d_stream(
         jwt,
         aura_protocol::GenerationRequest {
             mode: "3d".to_string(),
-            prompt: body.prompt,
+            prompt,
             model: None,
             size: None,
-            image_url: Some(image_url),
+            image_url,
             images: None,
             project_id: body.project_id,
             parent_id: body.parent_id,

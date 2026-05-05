@@ -235,20 +235,24 @@ export function generateImageStream(
 }
 
 /**
- * Source image input for {@link generate3dStream}. Exactly one of
- * `imageUrl` or `imageData` must be supplied. `imageUrl` is used by
- * the AURA 3D app (an existing project artifact already lives at a
+ * Source image input for {@link generate3dStream}. `imageUrl` is used
+ * by the AURA 3D app (an existing project artifact already lives at a
  * real URL); `imageData` (a `data:image/<type>;base64,...` string) is
  * used by chat 3D mode where the user pastes / uploads an image and
  * has no URL to point at — the backend decodes, persists, and forwards
  * the resulting URL to the 3D provider.
+ *
+ * Both `source` and `prompt` are optional on the wire, but at least
+ * one of them must be supplied. The image-to-3D pipeline takes a
+ * source image (with an optional refining prompt); the text-to-3D
+ * pipeline takes a prompt with no source image.
  */
 export type Generate3dSource =
   | { kind: "url"; imageUrl: string }
   | { kind: "data"; imageData: string };
 
 export function generate3dStream(
-  source: Generate3dSource | string,
+  source: Generate3dSource | string | null | undefined,
   prompt?: string | null,
   handler: StreamEventHandler = { onEvent: () => {}, onError: () => {} },
   signal?: AbortSignal,
@@ -256,13 +260,18 @@ export function generate3dStream(
   parentId?: string,
 ) {
   // Keep the legacy positional `string` shape working for existing
-  // callers (the AURA 3D app passes an image URL directly).
-  const normalized: Generate3dSource =
-    typeof source === "string" ? { kind: "url", imageUrl: source } : source;
-  const body: Record<string, unknown> =
-    normalized.kind === "url"
-      ? { image_url: normalized.imageUrl }
-      : { image_data: normalized.imageData };
+  // callers (the AURA 3D app passes an image URL directly). `null` /
+  // `undefined` is the text-to-3D path: no source image is sent and
+  // the request relies purely on `prompt`.
+  const normalized: Generate3dSource | null =
+    source == null
+      ? null
+      : typeof source === "string"
+        ? { kind: "url", imageUrl: source }
+        : source;
+  const body: Record<string, unknown> = {};
+  if (normalized?.kind === "url") body.image_url = normalized.imageUrl;
+  else if (normalized?.kind === "data") body.image_data = normalized.imageData;
   if (prompt) body.prompt = prompt;
   if (projectId) body.projectId = projectId;
   if (parentId) body.parentId = parentId;
