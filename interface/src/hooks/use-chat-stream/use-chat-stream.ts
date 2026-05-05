@@ -33,6 +33,12 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
   const pendingSpecIdsRef = useRef<string[]>([]);
   const pendingTaskIdsRef = useRef<string[]>([]);
   const nextSendStartsNewSessionRef = useRef(false);
+  // See `use-agent-chat-stream.ts`: synchronous latch covering the gap
+  // between `sendMessage` invocation and the moment `setIsStreaming(true)`
+  // propagates through Zustand. Without it two clicks (or a click + queue
+  // dequeue replay) landing in the same microtask both pass the
+  // `getIsStreaming` read and proceed to issue parallel POSTs.
+  const inFlightRef = useRef(false);
 
   useEffect(() => () => {
     if (agentInstanceId && !getIsStreaming(core.key)) {
@@ -42,9 +48,11 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
 
   const sendMessage = useCallback(
     async (content: string, action: string | null = null, selectedModel?: string | null, attachments?: ChatAttachment[], commands?: string[], _projectIdOverride?: string, _generationMode?: GenerationMode) => {
-      if (!projectId || !agentInstanceId || getIsStreaming(core.key)) return;
+      if (!projectId || !agentInstanceId || inFlightRef.current || getIsStreaming(core.key)) return;
       const trimmed = content.trim();
       if (!trimmed && !action && !(attachments && attachments.length > 0)) return;
+
+      inFlightRef.current = true;
 
       const userMsg = buildUserChatMessage(
         trimmed,
@@ -160,6 +168,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
           sidekickRef.current.removeTask(id);
         }
         pendingTaskIdsRef.current = [];
+        inFlightRef.current = false;
       }
     },
     [projectId, agentInstanceId, core.key, refs, setters, abortRef, core.setEvents, core.setIsStreaming, core.setProgressText],

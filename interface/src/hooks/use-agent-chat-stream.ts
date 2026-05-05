@@ -52,6 +52,14 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
   const core = useStreamCore([agentId]);
   const { refs, setters, abortRef } = core;
   const nextSendStartsNewSessionRef = useRef(false);
+  // Synchronous latch covering the gap between a `sendMessage` invocation
+  // and the moment `setIsStreaming(true)` propagates through Zustand. The
+  // existing `getIsStreaming(core.key)` check reads through Zustand and is
+  // racy when two clicks (or a click + queue-dequeue replay) land in the
+  // same microtask: both reads see `false`, both writes proceed, and the
+  // CEO's first chat ends up issuing two POSTs. The ref flips synchronously
+  // before any await so the second caller short-circuits cleanly.
+  const inFlightRef = useRef(false);
 
   const onSpecSavedRef = useRef(onSpecSaved);
   useEffect(() => { onSpecSavedRef.current = onSpecSaved; }, [onSpecSaved]);
@@ -69,10 +77,12 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
       projectId?: string,
       _generationMode?: GenerationMode,
     ) => {
-      if (!agentId || getIsStreaming(core.key)) return;
+      if (!agentId || inFlightRef.current || getIsStreaming(core.key)) return;
       const trimmed = content.trim();
       const hasAttachments = attachments && attachments.length > 0;
       if (!trimmed && !action && !hasAttachments) return;
+
+      inFlightRef.current = true;
 
       const userMsg = buildUserChatMessage(trimmed, attachments);
 
@@ -254,6 +264,7 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
           controller.abort();
           abortRef.current = null;
         }
+        inFlightRef.current = false;
       }
     },
     [agentId, core.key, refs, setters, abortRef, core.setEvents, core.setIsStreaming, core.setProgressText],

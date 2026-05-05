@@ -247,6 +247,44 @@ describe("useAgentChatStream", () => {
     expect(errorMsgs).toHaveLength(0);
   });
 
+  it("blocks a second sendMessage that races inside the same microtask before the first awaits", async () => {
+    // Regression: on the CEO's first chat the server-side
+    // `lazy_repair_home_project_binding` makes `send_agent_event_stream`
+    // hang for several seconds before the first SSE byte arrives, so the
+    // chat panel sits silent. If a user double-clicks Send (or Enter twice)
+    // both calls used to read `getIsStreaming` as `false` before either
+    // had time to write `true` through Zustand, and two parallel POSTs
+    // would fire — manifesting in the UI as "the first chat with the CEO
+    // streams twice." The synchronous in-flight ref must short-circuit
+    // the second call regardless of whether the Zustand store has caught up.
+    let resolveFirstStream: (() => void) | null = null;
+    vi.mocked(api.agents.sendEventStream).mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveFirstStream = resolve;
+        }),
+    );
+
+    const { result } = renderHook(() =>
+      useAgentChatStream({ agentId: "agent-1" }),
+    );
+
+    await act(async () => {
+      const firstSend = result.current.sendMessage("hello");
+      // Kick off the second send in the same synchronous tick the first
+      // is mid-await. Without the latch both pass the streaming guard.
+      const secondSend = result.current.sendMessage("hello again");
+      resolveFirstStream?.();
+      await Promise.all([firstSend, secondSend]);
+    });
+
+    expect(api.agents.sendEventStream).toHaveBeenCalledTimes(1);
+    const entry = useStreamStore.getState().entries[result.current.streamKey];
+    const userMessages = entry.events.filter((evt) => evt.role === "user");
+    expect(userMessages).toHaveLength(1);
+    expect(userMessages[0].content).toBe("hello");
+  });
+
   it("marks only the next send as a new session", async () => {
     const { result } = renderHook(() =>
       useAgentChatStream({ agentId: "agent-1" }),
