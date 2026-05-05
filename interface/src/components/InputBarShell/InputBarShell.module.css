@@ -165,6 +165,15 @@
   border-radius: 0;
 }
 
+/* The rounded container's `:focus-within` border-color change is the
+   intended focus indicator for this surface, so suppress the global
+   keyboard focus ring (`:focus-visible` in index.css) that would
+   otherwise paint a sharp outset rectangle around the textarea. */
+.textarea:focus,
+.textarea:focus-visible {
+  outline: none;
+}
+
 @media (pointer: coarse), (max-width: 900px) {
   .textarea {
     font-size: 16px;
