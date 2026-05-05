@@ -238,6 +238,18 @@ impl ApiError {
             }),
         )
     }
+
+    pub(crate) fn payload_too_large(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
+        (
+            StatusCode::PAYLOAD_TOO_LARGE,
+            Json(Self {
+                error: msg.into(),
+                code: "payload_too_large".to_string(),
+                details: None,
+                data: None,
+            }),
+        )
+    }
 }
 
 mod chat_persist;

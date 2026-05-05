@@ -13,6 +13,20 @@ use super::harness_stream::{open_generation_stream, resolve_generation_identity}
 use super::router_proxy::router_url;
 use super::sse::SseResponse;
 
+/// Defensive cap on inlined `data:` URL source images for 3D generation.
+///
+/// The 3D source image flows through aura-os-server → local harness
+/// (WebSocket) → aura-router → 3D provider. Even after we raised the
+/// route-level body limit to 25 MiB, payloads above ~8 MiB regularly
+/// stall in the harness/router pipeline (no events come back, the SSE
+/// watchdog eventually fires with `GENERATION_NO_EVENTS`). Reject
+/// oversized data URLs up front with a clear `413` so the user sees
+/// "image is too large, please use a smaller one" instead of a 120 s
+/// silent timeout. 8 MiB of base64 ≈ 6 MiB of raw image, which covers
+/// every realistic paste / upload (typical screenshots are well under
+/// 1 MiB) while staying inside the harness pipeline's working envelope.
+const IMAGE_DATA_MAX_BYTES: usize = 8 * 1024 * 1024;
+
 pub(crate) async fn generate_3d_stream(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
@@ -43,6 +57,20 @@ pub(crate) async fn generate_3d_stream(
         .ok_or_else(|| {
             ApiError::bad_request("either `image_url` or `image_data` is required")
         })?;
+
+    // Defense in depth: a base64 `data:` URL above ~8 MiB clears the
+    // route-level body cap but consistently stalls in the harness /
+    // aura-router pipeline downstream, surfacing as the watchdog's
+    // generic "did not start" timeout 120 s later. Hosted `https://`
+    // URLs are tiny strings and skip this branch. See the
+    // `IMAGE_DATA_MAX_BYTES` doc comment for the trade-off.
+    if image_url.starts_with("data:") && image_url.len() > IMAGE_DATA_MAX_BYTES {
+        return Err(ApiError::payload_too_large(format!(
+            "Image is too large for 3D generation ({:.1} MiB). Please use an image under {} MiB.",
+            image_url.len() as f64 / (1024.0 * 1024.0),
+            IMAGE_DATA_MAX_BYTES / (1024 * 1024),
+        )));
+    }
 
     let identity =
         resolve_generation_identity(&state, &auth_session, &jwt, body.project_id.as_deref())
