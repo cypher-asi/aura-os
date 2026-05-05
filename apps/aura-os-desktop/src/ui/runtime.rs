@@ -15,6 +15,7 @@ use tao::event::{Event, WindowEvent};
 use tao::event_loop::{ControlFlow, EventLoop, EventLoopProxy, EventLoopWindowTarget};
 use tao::window::{Fullscreen, WindowId};
 use tracing::{info, warn};
+use wry::WebContext;
 
 use crate::events::{UserEvent, WinCmd};
 use crate::frontend::dev_server::stop_managed_frontend_dev_server;
@@ -26,6 +27,14 @@ use crate::route_state::RouteState;
 use crate::ui::icon::IconData;
 use crate::ui::main_window::{ipc_handler, open_secondary_main_window};
 use crate::updater;
+
+/// Web context shared by the primary window and any secondary main windows
+/// spawned via File > New Window. Sharing the context makes localStorage,
+/// cookies, and IndexedDB shared across all main windows so a new window
+/// inherits the parent's live auth/session state directly — no per-window
+/// disk read or init-script auth bake-in required, and login/logout in any
+/// window propagates to the others through the same web storage.
+pub(crate) type SharedWebContext = WebContext;
 
 /// Emergency-only rescue timer. The primary trigger to show the window is the
 /// IPC `ready` signal from the frontend (scheduled in `main.tsx` after React's
@@ -65,6 +74,12 @@ pub(crate) struct LoopState {
     pub(crate) managed_local_harness: Option<Child>,
     pub(crate) frontend_base_url: String,
     pub(crate) using_frontend_dev_server: bool,
+    /// Shared `wry::WebContext` (web storage / cookies / IndexedDB) used by
+    /// the primary window AND every secondary main window. Held here so it
+    /// outlives the event loop and so `open_secondary_main_window` can
+    /// borrow it mutably when spawning extra windows. See
+    /// [`SharedWebContext`].
+    pub(crate) web_context: SharedWebContext,
     pub(crate) ctx: LoopContext,
 }
 
@@ -138,14 +153,14 @@ impl LoopState {
     }
 
     fn open_secondary_main_window(&mut self, elwt: &EventLoopWindowTarget<UserEvent>) {
-        // Mirror the bootstrap the primary window receives so the new
-        // webview shares the user's auth/session state without needing a
-        // shared `WebContext`. Loaded fresh from disk so a user who logs
-        // in after desktop startup still gets an authenticated extra
-        // window.
-        let bootstrapped = load_bootstrapped_auth_literals(&self.ctx.store_path);
-        let init_script =
-            build_initialization_script(self.ctx.host_origin.as_deref(), bootstrapped.as_ref());
+        // Reuse the primary window's `WebContext` so the new webview shares
+        // localStorage / cookies / IndexedDB — the user's live session is
+        // already there, no per-window disk read or auth bake-in needed.
+        // The init script still seeds `aura-host-origin` (the API base URL
+        // the frontend reads on boot); auth literals are intentionally
+        // omitted here so a stale snapshot from disk can't clobber the
+        // shared, in-memory truth.
+        let init_script = build_initialization_script(self.ctx.host_origin.as_deref(), None);
         let initial_url = apply_restore_route(
             &self.frontend_base_url,
             self.ctx.route_state.current_route().as_deref(),
@@ -153,6 +168,7 @@ impl LoopState {
         let proxy_clone = self.ctx.proxy.clone();
         match open_secondary_main_window(
             elwt,
+            &mut self.web_context,
             &initial_url,
             &init_script,
             Some(self.ctx.icon_data.to_icon()),

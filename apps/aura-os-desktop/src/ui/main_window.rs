@@ -117,16 +117,20 @@ pub(crate) fn create_main_webview(
 }
 
 /// Spawn an additional standalone main AURA window — a fresh `tao` window
-/// plus its own `wry::WebView` pointing at the live frontend URL. Used by
-/// the File > New Window menu item; the caller (the event-loop driver in
-/// `runtime.rs`) is responsible for keeping the returned tuple alive.
+/// plus a `wry::WebView` (sharing the primary window's `WebContext`)
+/// pointing at the live frontend URL. Used by the File > New Window menu
+/// item; the caller (the event-loop driver in `runtime.rs`) is responsible
+/// for keeping the returned tuple alive.
 ///
-/// Each secondary window uses an isolated default `WebContext`. We rely on
-/// the bootstrapped `initialization_script` (the same one driving the
-/// primary webview) to mirror the user's auth + session into the new
-/// window's `localStorage` so the user stays logged in.
+/// The shared `WebContext` (web storage / cookies / IndexedDB) means the
+/// new window inherits the parent's live auth/session state directly:
+/// localStorage already has `aura-jwt` / `aura-session` written by the
+/// existing window, so the new webview starts logged-in without any disk
+/// round-trip or init-script auth bake-in. Login/logout in any window
+/// propagates to the others through the same shared web storage.
 pub(crate) fn open_secondary_main_window<E: 'static>(
     event_loop: &EventLoopWindowTarget<E>,
+    web_context: &mut WebContext,
     url: &str,
     initialization_script: &str,
     icon: Option<Icon>,
@@ -145,7 +149,7 @@ pub(crate) fn open_secondary_main_window<E: 'static>(
     disable_window_background_erase(&window);
 
     let ipc = make_ipc(window.id());
-    let builder = WebViewBuilder::new()
+    let builder = WebViewBuilder::new_with_web_context(web_context)
         .with_background_color((0, 0, 0, 255))
         .with_url(INITIAL_BLANK_PAGE_URL)
         .with_initialization_script(initialization_script)

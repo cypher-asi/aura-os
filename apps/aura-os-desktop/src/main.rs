@@ -139,6 +139,7 @@ fn main() {
     let state = build_loop_state(BuildLoopStateInput {
         window,
         main_webview,
+        web_context,
         managed_frontend_dev_server: server.managed_frontend_dev_server,
         managed_local_harness: pre_bind.managed_local_harness,
         initial_frontend_base_url,
@@ -336,6 +337,7 @@ fn log_resolved_control_plane_url(
 struct BuildLoopStateInput {
     window: tao::window::Window,
     main_webview: wry::WebView,
+    web_context: WebContext,
     managed_frontend_dev_server: Option<std::process::Child>,
     managed_local_harness: Option<std::process::Child>,
     initial_frontend_base_url: String,
@@ -358,6 +360,7 @@ fn build_loop_state(input: BuildLoopStateInput) -> LoopState {
         managed_local_harness: input.managed_local_harness,
         frontend_base_url: input.initial_frontend_base_url,
         using_frontend_dev_server: input.initial_using_frontend_dev_server,
+        web_context: input.web_context,
         ctx: LoopContext {
             icon_data: input.icon_data,
             main_window_id: input.main_window_id,
