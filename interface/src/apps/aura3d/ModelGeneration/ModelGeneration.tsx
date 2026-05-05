@@ -59,6 +59,7 @@ export function ModelGeneration() {
   const complete3DGeneration = useAura3DStore((s) => s.complete3DGeneration);
   const setError = useAura3DStore((s) => s.setError);
   const deleteImage = useAura3DStore((s) => s.deleteImage);
+  const deleteModel = useAura3DStore((s) => s.deleteModel);
   const uploadModelThumbnail = useAura3DStore((s) => s.uploadModelThumbnail);
 
   const currentModelId = current3DModel?.id;
