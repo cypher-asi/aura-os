@@ -2,12 +2,11 @@ import {
   Panel,
   Heading,
   Text,
-  Topbar,
 } from "@cypher-asi/zui";
 import { useLoginForm } from "./use-login-form";
 import { LoginForm } from "./LoginForm";
 import { ResetPasswordForm } from "./ResetPasswordForm";
-import { windowCommand } from "../../lib/windowCommand";
+import { ShellTitlebar } from "../../components/ShellTitlebar";
 import { WindowControls } from "../../components/WindowControls";
 import styles from "./LoginView.module.css";
 
@@ -21,27 +20,34 @@ export function LoginView() {
   return (
     <div className={`${styles.page} ${f.isMobileLayout ? styles.pageMobile : ""}`}>
       {!f.isMobileLayout && (
-        <Topbar
-          className="titlebar-drag"
-          onDoubleClick={() => windowCommand("maximize")}
+        <div className={styles.videoBackground} aria-hidden="true">
+          <video
+            className={styles.loginVideo}
+            src="/AURA_visual_loop.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
+          />
+        </div>
+      )}
+      {!f.isMobileLayout && (
+        <ShellTitlebar
           icon={<img src="/aura-icon.png" alt="" className="titlebar-icon" />}
-          title={<span className="titlebar-center"><img src="/AURA_logo_text_mark.png" alt="AURA" data-aura-wordmark style={{ height: 11, display: "block" }} /></span>}
+          title={
+            <span className="titlebar-center">
+              <img
+                src="/AURA_logo_text_mark.png"
+                alt="AURA"
+                data-aura-wordmark
+                style={{ height: 11, display: "block" }}
+              />
+            </span>
+          }
           actions={<WindowControls />}
         />
       )}
       <div className={`${styles.container} ${f.isMobileLayout ? styles.containerMobile : ""}`}>
-        {!f.isMobileLayout && (
-          <div className={styles.videoBackground} aria-hidden="true">
-            <video
-              className={styles.loginVideo}
-              src="/AURA_visual_loop.mp4"
-              autoPlay
-              loop
-              muted
-              playsInline
-            />
-          </div>
-        )}
         {f.isMobileLayout && (
           <div className={styles.mobileHero}>
             <Heading level={2}><span className={styles.brand}>AURA</span></Heading>

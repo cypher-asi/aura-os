@@ -134,30 +134,32 @@ export function AgentEditorForm({
         />
       </div>
 
-      <div className={styles.fieldGroup} data-agent-field="agent-name">
-        <label className={styles.label}>Name *</label>
-        <Input
-          aria-label="Name"
-          ref={nameRef}
-          value={name}
-          onChange={(e) => {
-            setName(e.target.value);
-            setNameError("");
-          }}
-          placeholder="e.g. Atlas"
-          validationMessage={nameError}
-        />
-      </div>
+      <div className={styles.nameRoleRow}>
+        <div className={styles.fieldGroup} data-agent-field="agent-name">
+          <label className={styles.label}>Name *</label>
+          <Input
+            aria-label="Name"
+            ref={nameRef}
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              setNameError("");
+            }}
+            placeholder="e.g. Atlas"
+            validationMessage={nameError}
+          />
+        </div>
 
-      <div className={styles.fieldGroup} data-agent-field="agent-role">
-        <label className={styles.label}>Role</label>
-        <Input
-          aria-label="Role"
-          value={isSuperAgent ? "SuperAgent" : role}
-          onChange={(e) => setRole(e.target.value)}
-          placeholder="e.g. Senior Developer"
-          disabled={isSuperAgent}
-        />
+        <div className={styles.fieldGroup} data-agent-field="agent-role">
+          <label className={styles.label}>Role</label>
+          <Input
+            aria-label="Role"
+            value={isSuperAgent ? "SuperAgent" : role}
+            onChange={(e) => setRole(e.target.value)}
+            placeholder="e.g. Senior Developer"
+            disabled={isSuperAgent}
+          />
+        </div>
       </div>
 
       {isSuperAgent ? <PermissionsSummary isSuperAgent /> : null}
@@ -184,15 +186,12 @@ export function AgentEditorForm({
             className={styles.inlineAction}
             onClick={() => setShowAdvancedRuntime(true)}
           >
-            Advanced options
+            Advanced
           </button>
         </>
       ) : (
         <>
           <div className={styles.runtimeSectionHeader}>
-            <Text size="sm" weight="medium">
-              Advanced
-            </Text>
             <button
               type="button"
               className={styles.inlineAction}

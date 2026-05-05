@@ -36,10 +36,10 @@
 .inputWrapper::before {
   content: "";
   position: absolute;
-  top: -80px;
+  top: -40px;
   left: 0;
   right: 0;
-  height: 80px;
+  height: 40px;
   pointer-events: none;
   background: linear-gradient(to bottom, transparent, var(--color-bg));
   transition: opacity 220ms ease;
@@ -100,7 +100,7 @@
   display: flex;
   flex-direction: column;
   border: 1px solid var(--color-border);
-  border-radius: 20px;
+  border-radius: 14px;
   background: transparent;
   padding: 0;
   max-width: 680px;
@@ -137,6 +137,10 @@
   display: block;
   min-height: var(--control-height-sm, 32px);
   padding: 0;
+}
+
+.inputRowHasEnd .textarea {
+  padding-right: min(220px, 42%);
 }
 
 .textarea {
@@ -185,6 +189,17 @@
 .textarea:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.inputRowEnd {
+  position: absolute;
+  right: 42px;
+  bottom: 5px;
+  z-index: 2;
+  display: flex;
+  max-width: min(170px, calc(100% - 84px));
+  min-width: 0;
+  align-items: center;
 }
 
 .attachButton {
@@ -400,7 +415,7 @@
 
   .inputContainer {
     border-color: color-mix(in srgb, var(--color-border) 54%, transparent);
-    border-radius: 20px;
+    border-radius: 16px;
     background: var(--color-chat-mobile-input-bg);
     padding: 5px 8px 8px 5px;
   }
@@ -484,6 +499,16 @@
     max-height: 250px;
     padding: 10px 48px;
     line-height: 1.38;
+  }
+
+  .inputRowHasEnd .textarea {
+    padding-right: min(220px, 48%);
+  }
+
+  .inputRowEnd {
+    right: 50px;
+    bottom: 11px;
+    max-width: min(170px, calc(100% - 106px));
   }
 
   .inputInfoBar {

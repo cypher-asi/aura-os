@@ -1,4 +1,12 @@
-import { memo, useCallback, useRef, type KeyboardEvent } from "react";
+import {
+  memo,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+} from "react";
 import {
   AGENT_MODE_DESCRIPTORS,
   AGENT_MODE_ORDER,
@@ -20,6 +28,13 @@ export interface ModeSelectorProps {
  * chat input. Exactly one mode is active at a time; selection is
  * keyboard-navigable (Left/Right arrows) and announced as a radio
  * group to assistive tech.
+ *
+ * The indicator pill is positioned by measuring the active
+ * button's pixel offset and width via the DOM, then applying
+ * concrete px-based `transform` and `width` inline styles. A CSS
+ * transition on both properties produces the sliding animation.
+ * A ResizeObserver re-measures on layout shifts so the pill stays
+ * aligned after responsive changes.
  */
 export const ModeSelector = memo(function ModeSelector({
   selectedMode,
@@ -33,6 +48,39 @@ export const ModeSelector = memo(function ModeSelector({
     image: null,
     "3d": null,
   });
+  const segmentsRef = useRef<HTMLDivElement>(null);
+
+  const [pill, setPill] = useState<{ left: number; width: number } | null>(null);
+  const readyRef = useRef(false);
+
+  useLayoutEffect(() => {
+    const btn = buttonRefs.current[selectedMode];
+    const container = segmentsRef.current;
+    if (!btn || !container) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const btnRect = btn.getBoundingClientRect();
+    const left = btnRect.left - containerRect.left;
+    const width = btnRect.width;
+    setPill({ left, width });
+
+    if (!readyRef.current) {
+      requestAnimationFrame(() => {
+        readyRef.current = true;
+      });
+    }
+
+    const ro = new ResizeObserver(() => {
+      const b = buttonRefs.current[selectedMode];
+      const c = segmentsRef.current;
+      if (!b || !c) return;
+      const cRect = c.getBoundingClientRect();
+      const bRect = b.getBoundingClientRect();
+      setPill({ left: bRect.left - cRect.left, width: bRect.width });
+    });
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [selectedMode]);
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
@@ -56,6 +104,10 @@ export const ModeSelector = memo(function ModeSelector({
   );
 
   const rootClass = [styles.root, className].filter(Boolean).join(" ");
+  const indicatorStyle: CSSProperties = pill
+    ? { transform: `translateX(${pill.left}px)`, width: `${pill.width}px` }
+    : { opacity: 0 };
+  const indicatorClass = `${styles.indicator}${readyRef.current ? ` ${styles.indicatorReady}` : ""}`;
 
   return (
     <div
@@ -67,7 +119,13 @@ export const ModeSelector = memo(function ModeSelector({
       onKeyDown={handleKeyDown}
     >
       {hideLabel ? null : <span className={styles.label}>MODE</span>}
-      <div className={styles.segments}>
+      <div className={styles.segments} ref={segmentsRef}>
+        <span
+          aria-hidden
+          className={indicatorClass}
+          data-agent-element="mode-indicator"
+          style={indicatorStyle}
+        />
         {AGENT_MODE_ORDER.map((mode) => {
           const descriptor = AGENT_MODE_DESCRIPTORS[mode];
           const isActive = mode === selectedMode;

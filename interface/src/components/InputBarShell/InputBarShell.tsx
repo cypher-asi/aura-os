@@ -98,6 +98,8 @@ export interface InputBarShellProps {
   containerTop?: ReactNode;
   /** Slot rendered inside the input row at the start (e.g. attach button). */
   inputRowStart?: ReactNode;
+  /** Slot rendered inside the input row at the end, before send/stop. */
+  inputRowEnd?: ReactNode;
   /** Slot rendered at the start of the info bar (e.g. agent env, orbit). */
   infoBarStart?: ReactNode;
   /** Slot rendered at the end of the info bar (e.g. project, model picker). */
@@ -140,6 +142,7 @@ function InputBarShellInner(
     modeBar,
     containerTop,
     inputRowStart,
+    inputRowEnd,
     infoBarStart,
     infoBarEnd,
     sendAriaLabel = "Send",
@@ -207,6 +210,13 @@ function InputBarShellInner(
     .filter(Boolean)
     .join(" ");
 
+  const inputRowClassName = [
+    styles.inputRow,
+    inputRowEnd ? styles.inputRowHasEnd : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <div
       {...rootProps}
@@ -223,7 +233,7 @@ function InputBarShellInner(
       >
         {modeBar}
         {containerTop}
-        <div className={styles.inputRow}>
+        <div className={inputRowClassName}>
           {inputRowStart}
           <textarea
             {...textareaProps}
@@ -237,6 +247,9 @@ function InputBarShellInner(
             disabled={disabled}
             rows={1}
           />
+          {inputRowEnd ? (
+            <div className={styles.inputRowEnd}>{inputRowEnd}</div>
+          ) : null}
           {isStreaming ? (
             <button
               type="button"

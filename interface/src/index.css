@@ -25,6 +25,21 @@
 :root {
   color-scheme: light dark;
   --font-sans: 'Inter Variable', sans-serif;
+
+  /*
+   * Shell chrome tokens shared by every surface that participates in the
+   * floating "pill" chrome (ShellTitlebar at the top, BottomTaskbar at the
+   * bottom). Defining them at :root means siblings of the chrome (e.g. the
+   * BottomTaskbar in DesktopShell) resolve the same values as the chrome
+   * itself — custom properties only inherit downward, so we cannot scope
+   * them to one element and still have a sibling read them.
+   */
+  --shell-chrome-height: var(--control-height-sm);
+  --shell-chrome-inset: 5px;
+  --shell-chrome-outer-height: calc(var(--shell-chrome-height) + 10px);
+  --shell-chrome-radius: 20px;
+  --shell-chrome-background: color-mix(in srgb, var(--color-titlebar-bg) 90%, transparent);
+  --shell-chrome-backdrop-filter: blur(40px) saturate(1.4);
 }
 
 html, body, #root {

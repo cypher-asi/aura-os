@@ -149,7 +149,7 @@
 
 .messageAreaShell {
   --chat-top-fade-background: var(--color-bg);
-  --chat-top-fade-height: 26px;
+  --chat-top-fade-height: 13px;
   position: relative;
   flex: 1;
   min-height: 0;
@@ -255,7 +255,7 @@
    the input bar so that phase transitions never reflow the chat. */
 .pinnedStreamingIndicator {
   position: absolute;
-  bottom: 88px;
+  bottom: 120px;
   left: 0;
   right: 0;
   z-index: 11;
@@ -270,6 +270,10 @@
   max-width: 680px;
   display: flex;
   justify-content: flex-start;
+  /* Match `.bubble` horizontal padding so the shimmering phase label
+     left-aligns with the message text inside assistant bubbles, not
+     with the bubble's outer edge. */
+  padding-left: var(--space-3);
 }
 
 .pinnedStreamingIndicator > * {
@@ -322,7 +326,7 @@
   }
 
   .pinnedStreamingIndicator {
-    bottom: calc(112px + var(--aura-mobile-keyboard-inset, 0px));
+    bottom: calc(160px + var(--aura-mobile-keyboard-inset, 0px));
   }
 
   .newMessagesPill {

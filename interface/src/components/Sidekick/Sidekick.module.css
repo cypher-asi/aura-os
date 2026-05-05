@@ -136,6 +136,13 @@
   padding-bottom: var(--sidekick-fade-height, 72px);
 }
 
+/* When the tab is empty, drop the input-bar fade padding so the empty
+   state is centered within the entire visible panel rather than the
+   reduced flex area above the InputBarShell. */
+.tabContent:has(> [data-agent-empty-state="true"]) {
+  padding-bottom: 0;
+}
+
 .tabContent::-webkit-scrollbar {
   display: none;
 }

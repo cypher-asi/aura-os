@@ -613,10 +613,6 @@ export const DesktopChatInputBar = memo(
           attachments={attachments}
           onRemove={handleRemove}
         />
-        <CommandChips
-          commands={selectedCommands}
-          onRemove={handleCommandRemove}
-        />
         {isQueued ? (
           <div
             className={styles.queuedHint}
@@ -657,6 +653,14 @@ export const DesktopChatInputBar = memo(
         <Plus size={16} strokeWidth={1} />
       </button>
     );
+
+    const inputRowEnd = selectedCommands.length > 0 ? (
+      <CommandChips
+        commands={selectedCommands}
+        onRemove={handleCommandRemove}
+        variant="inline"
+      />
+    ) : null;
 
     const infoBarStart = (
       <>
@@ -817,6 +821,7 @@ export const DesktopChatInputBar = memo(
         modeBar={modeBar}
         containerTop={containerTop}
         inputRowStart={inputRowStart}
+        inputRowEnd={inputRowEnd}
         infoBarStart={infoBarStart}
         infoBarEnd={infoBarEnd}
         sendAriaLabel="Send"

@@ -15,6 +15,7 @@ import { getTaskbarAppsCollapsed, setTaskbarAppsCollapsed } from "../../utils/st
 import { formatCredits } from "../../shared/utils/format";
 import { AppNavRail, TaskbarIconButton, TASKBAR_ICON_SIZE } from "../AppNavRail";
 import { useCreditBalance } from "../CreditsBadge/useCreditBalance";
+import { useDesktopContextMenu } from "../DesktopContextMenu";
 import { FavoriteAgentsStrip } from "./FavoriteAgentsStrip";
 import { HelpButton } from "../../features/onboarding/HelpButton/HelpButton";
 import styles from "./BottomTaskbar.module.css";
@@ -42,6 +43,7 @@ export function BottomTaskbar() {
   const [collapsed, setCollapsed] = useState(() => getTaskbarAppsCollapsed());
   const [creditsExpanded, setCreditsExpanded] = useState(false);
   const creditsLabel = credits !== null ? formatCredits(credits) : "---";
+  const { handleContextMenu, menuElement } = useDesktopContextMenu();
 
   const toggleAppsCollapsed = () => {
     setCollapsed((current) => {
@@ -51,12 +53,24 @@ export function BottomTaskbar() {
     });
   };
 
+  // Only open the desktop context menu when the right-click lands on empty
+  // taskbar chrome — clicks on icons/buttons keep their own behavior (or the
+  // browser default for items without a custom handler).
+  const onContextMenu = (event: React.MouseEvent) => {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('button, a, input, [role="menuitem"], [role="menu"]')) {
+      return;
+    }
+    handleContextMenu(event);
+  };
+
   return (
     <div
       className={styles.bar}
       data-agent-surface="desktop-shell-bottom-taskbar"
       data-agent-proof="desktop-shell-bottom-taskbar"
       data-agent-context-anchor="desktop-shell-bottom-taskbar"
+      onContextMenu={onContextMenu}
     >
       <div className={styles.left}>
         <TaskbarIconButton
@@ -140,6 +154,7 @@ export function BottomTaskbar() {
         </div>
         <span className={styles.clock}>{time}</span>
       </div>
+      {menuElement}
     </div>
   );
 }
