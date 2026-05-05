@@ -113,7 +113,7 @@ export function OrgSettingsRewards({ onUpgrade }: Props) {
           <div className={styles.rowInfo}>
             <span className={styles.rowLabel}>Upgrade your plan</span>
             <span className={styles.rowDescription}>
-              Upgrade to earn more daily and monthly Z credits.
+              Upgrade to earn more monthly Z credits and increase your daily bonus.
             </span>
           </div>
           <div className={styles.rowControl}>
