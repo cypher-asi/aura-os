@@ -1,6 +1,12 @@
 import { useRef, useEffect, useState } from "react";
 import { Spinner } from "@cypher-asi/zui";
-import { createScene, disposeScene, type SceneContext } from "./scene-setup";
+import {
+  applyViewerTheme,
+  createScene,
+  disposeScene,
+  readViewerTheme,
+  type SceneContext,
+} from "./scene-setup";
 import { loadModel, disposeModel, applyWireframe, applyTextures, type LoadedModel } from "./model-loader";
 import styles from "./WebGLViewer.module.css";
 
@@ -39,19 +45,57 @@ export function WebGLViewer({
     animate();
 
     const container = containerRef.current;
-    const observer = new ResizeObserver(() => {
-      if (!container) return;
-      const w = container.clientWidth;
-      const h = container.clientHeight;
+    // Coalesce resize ticks into a single RAF and render synchronously
+    // inside that frame. Without this the canvas shows one or more
+    // blank/stretched frames between `setSize()` and the animation
+    // loop's next paint, which reads as flicker while dragging the
+    // window edge.
+    let resizeRafId: number | null = null;
+    let pendingW = 0;
+    let pendingH = 0;
+    const flushResize = () => {
+      resizeRafId = null;
+      const w = pendingW;
+      const h = pendingH;
       if (w === 0 || h === 0) return;
       ctx.camera.aspect = w / h;
       ctx.camera.updateProjectionMatrix();
-      ctx.renderer.setSize(w, h);
+      // `updateStyle=false` keeps the canvas tracking the container's
+      // CSS box (we set `width:100%; height:100%` in the stylesheet)
+      // instead of forcing inline sizes that fight the flex layout.
+      ctx.renderer.setSize(w, h, false);
+      ctx.renderer.render(ctx.scene, ctx.camera);
+    };
+    const observer = new ResizeObserver(() => {
+      if (!container) return;
+      pendingW = container.clientWidth;
+      pendingH = container.clientHeight;
+      if (resizeRafId != null) return;
+      resizeRafId = requestAnimationFrame(flushResize);
     });
     observer.observe(container);
 
+    // Track <html data-theme> so the scene background and grid swap
+    // when the user toggles light/dark without a full remount.
+    const themeObserver = new MutationObserver(() => {
+      const next = readViewerTheme();
+      applyViewerTheme(ctx, next);
+      ctx.renderer.render(ctx.scene, ctx.camera);
+    });
+    if (typeof document !== "undefined") {
+      themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["data-theme"],
+      });
+    }
+
     return () => {
       observer.disconnect();
+      themeObserver.disconnect();
+      if (resizeRafId != null) {
+        cancelAnimationFrame(resizeRafId);
+        resizeRafId = null;
+      }
       if (animationIdRef.current) {
         cancelAnimationFrame(animationIdRef.current);
         animationIdRef.current = null;

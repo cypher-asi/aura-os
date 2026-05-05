@@ -234,15 +234,35 @@ export function generateImageStream(
   );
 }
 
+/**
+ * Source image input for {@link generate3dStream}. Exactly one of
+ * `imageUrl` or `imageData` must be supplied. `imageUrl` is used by
+ * the AURA 3D app (an existing project artifact already lives at a
+ * real URL); `imageData` (a `data:image/<type>;base64,...` string) is
+ * used by chat 3D mode where the user pastes / uploads an image and
+ * has no URL to point at — the backend decodes, persists, and forwards
+ * the resulting URL to the 3D provider.
+ */
+export type Generate3dSource =
+  | { kind: "url"; imageUrl: string }
+  | { kind: "data"; imageData: string };
+
 export function generate3dStream(
-  imageUrl: string,
+  source: Generate3dSource | string,
   prompt?: string | null,
   handler: StreamEventHandler = { onEvent: () => {}, onError: () => {} },
   signal?: AbortSignal,
   projectId?: string,
   parentId?: string,
 ) {
-  const body: Record<string, unknown> = { image_url: imageUrl };
+  // Keep the legacy positional `string` shape working for existing
+  // callers (the AURA 3D app passes an image URL directly).
+  const normalized: Generate3dSource =
+    typeof source === "string" ? { kind: "url", imageUrl: source } : source;
+  const body: Record<string, unknown> =
+    normalized.kind === "url"
+      ? { image_url: normalized.imageUrl }
+      : { image_data: normalized.imageData };
   if (prompt) body.prompt = prompt;
   if (projectId) body.projectId = projectId;
   if (parentId) body.parentId = parentId;

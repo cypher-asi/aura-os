@@ -22,6 +22,26 @@ pub(crate) async fn generate_3d_stream(
     billing::require_credits(&state, &jwt).await?;
     info!("3D generation stream requested");
 
+    // Accept either a fully-resolved URL (AURA 3D app, where the source
+    // image is already a project artifact) or a base64 data URL (chat
+    // 3D mode, where the user pasted / uploaded an image and there is
+    // no real URL yet). Both reduce to a single string forwarded as
+    // `image_url` on the protocol; the upstream router is responsible
+    // for materialising data URLs into hosted assets before calling the
+    // 3D provider.
+    let image_url = body
+        .image_url
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .or_else(|| {
+            body.image_data
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+        })
+        .ok_or_else(|| {
+            ApiError::bad_request("either `image_url` or `image_data` is required")
+        })?;
+
     let identity =
         resolve_generation_identity(&state, &auth_session, &jwt, body.project_id.as_deref())
             .await?;
@@ -33,7 +53,7 @@ pub(crate) async fn generate_3d_stream(
             prompt: body.prompt,
             model: None,
             size: None,
-            image_url: Some(body.image_url),
+            image_url: Some(image_url),
             images: None,
             project_id: body.project_id,
             parent_id: body.parent_id,

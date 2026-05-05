@@ -32,21 +32,27 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 4px;
   background: transparent;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   cursor: pointer;
-  transition: color 0.15s ease, background 0.15s ease;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
 }
 
-.controlButton:hover {
-  color: var(--color-text);
-  background: rgba(255, 255, 255, 0.06);
+.controlButton:hover:not(.controlButtonActive) {
+  color: var(--color-text-primary);
+  background: var(--color-overlay-light);
 }
 
+/* Selected state mirrors the standard button "selected" treatment used
+   elsewhere in the app (e.g. the chat ModeSelector pill). Avoid the
+   global accent so the toggles read as neutral selection rather than a
+   green status badge. */
 .controlButtonActive {
-  color: var(--color-accent, #4aeaa8);
+  color: var(--color-text-primary);
+  background: var(--color-elevated);
+  border-color: var(--color-border);
 }
 
 .polyCount {
@@ -61,18 +67,39 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  position: relative;
+}
+
+/* Wraps `<WebGLViewer>` so the right-click handler binds to the full
+   viewer surface and the canvas keeps a sized flex parent. */
+.viewerWrapper {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
 }
 
 .sourcePreview {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+/* Fill the available area while preserving aspect ratio. Removing the
+   360px cap is what actually makes the source image read as the
+   "main" panel content instead of a small thumbnail floating above
+   white space. */
 .sourceImage {
+  width: 100%;
+  height: 100%;
   max-width: 100%;
-  max-height: 360px;
+  max-height: 100%;
   object-fit: contain;
   border-radius: 8px;
 }

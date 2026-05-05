@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { useAura3DStore, STYLE_LOCK_SUFFIX } from "./aura3d-store";
+import { artifactsApi } from "../shared/api/artifacts";
 
 const LAST_PROJECT_KEY = "aura-last-project";
 
@@ -111,6 +112,39 @@ describe("aura3d-store", () => {
     expect(state.generateSourceImage).toEqual(image);
   });
 
+  it("selectImage clears any current 3D model so Generate stays reachable", () => {
+    // Regression for the "image -> 3D jumps to existing model" bug:
+    // selecting an image must wipe `current3DModel` even when a linked
+    // model exists in `models`. Users explicitly visit a previously-
+    // generated model by clicking its thumb (which calls `selectModel`).
+    const image = {
+      id: "img-1",
+      prompt: "test",
+      imageUrl: "u",
+      originalUrl: "",
+      model: "",
+      createdAt: "",
+    };
+    const model = {
+      id: "model-1",
+      sourceImageId: "img-1",
+      sourceImageUrl: "u",
+      glbUrl: "g",
+      taskId: "",
+      createdAt: "",
+    };
+    useAura3DStore.setState({
+      images: [image],
+      models: [model],
+      selectedModelId: "model-1",
+      current3DModel: model,
+    });
+    useAura3DStore.getState().selectImage("img-1");
+    const state = useAura3DStore.getState();
+    expect(state.selectedModelId).toBeNull();
+    expect(state.current3DModel).toBeNull();
+  });
+
   it("toggle functions flip booleans", () => {
     useAura3DStore.getState().toggleGrid();
     expect(useAura3DStore.getState().showGrid).toBe(false);
@@ -184,7 +218,13 @@ describe("aura3d-store", () => {
       expect(state.generateSourceImage).toEqual(imageA);
     });
 
-    it("links the matching model when auto-selecting an image", () => {
+    it("auto-selecting an image does NOT promote the linked 3D model", () => {
+      // Regression: previously setActiveTab("image") + selectImage would
+      // both auto-link the linked model into `current3DModel`, which
+      // hid the "Generate 3D" button on the 3D tab. The image -> 3D
+      // navigation must always offer Generate when the user lands on
+      // the 3D side; existing models are reachable explicitly via the
+      // sidekick or left-nav.
       useAura3DStore.setState({
         activeTab: "3d",
         images: [imageA, imageB],
@@ -193,11 +233,15 @@ describe("aura3d-store", () => {
       useAura3DStore.getState().setActiveTab("image");
       const state = useAura3DStore.getState();
       expect(state.selectedImageId).toBe("img-newest");
-      expect(state.selectedModelId).toBe("model-newest");
-      expect(state.current3DModel).toEqual(modelA);
+      expect(state.selectedModelId).toBeNull();
+      expect(state.current3DModel).toBeNull();
     });
 
-    it("selects the latest model when switching to 3d tab with nothing selected", () => {
+    it("switching to 3d tab does not auto-select a model", () => {
+      // Regression: `setActiveTab("3d")` used to jump to `models[0]`
+      // which made it impossible to reach the Generate button from the
+      // 3D tab. The user must explicitly pick a model thumb to view a
+      // previously-generated asset.
       useAura3DStore.setState({
         activeTab: "image",
         images: [],
@@ -206,8 +250,8 @@ describe("aura3d-store", () => {
       useAura3DStore.getState().setActiveTab("3d");
       const state = useAura3DStore.getState();
       expect(state.activeTab).toBe("3d");
-      expect(state.selectedModelId).toBe("model-newest");
-      expect(state.current3DModel).toEqual(modelA);
+      expect(state.selectedModelId).toBeNull();
+      expect(state.current3DModel).toBeNull();
     });
 
     it("does not overwrite an existing image selection", () => {
@@ -235,6 +279,81 @@ describe("aura3d-store", () => {
       expect(state.activeTab).toBe("3d");
       expect(state.selectedModelId).toBeNull();
       expect(state.current3DModel).toBeNull();
+    });
+  });
+
+  describe("deleteImage / deleteModel", () => {
+    const image = {
+      id: "img-1",
+      artifactId: "art-img-1",
+      prompt: "p",
+      imageUrl: "u",
+      originalUrl: "",
+      model: "",
+      createdAt: "",
+    };
+    const linkedModel = {
+      id: "model-1",
+      artifactId: "art-model-1",
+      sourceImageId: "img-1",
+      sourceImageUrl: "u",
+      glbUrl: "g",
+      taskId: "",
+      createdAt: "",
+    };
+
+    it("deleteImage removes the image, cascades to linked models, and clears selection", async () => {
+      const spy = vi
+        .spyOn(artifactsApi, "deleteArtifact")
+        .mockResolvedValue(undefined);
+      useAura3DStore.setState({
+        images: [image],
+        models: [linkedModel],
+        selectedImageId: "img-1",
+        currentImage: image,
+        generateSourceImage: image,
+        selectedModelId: "model-1",
+        current3DModel: linkedModel,
+      });
+
+      await useAura3DStore.getState().deleteImage("img-1");
+
+      const state = useAura3DStore.getState();
+      expect(state.images).toEqual([]);
+      expect(state.models).toEqual([]);
+      expect(state.selectedImageId).toBeNull();
+      expect(state.currentImage).toBeNull();
+      expect(state.generateSourceImage).toBeNull();
+      expect(state.selectedModelId).toBeNull();
+      expect(state.current3DModel).toBeNull();
+      expect(spy).toHaveBeenCalledWith("art-img-1");
+      spy.mockRestore();
+    });
+
+    it("deleteModel removes the model and clears its selection without touching the source image", async () => {
+      const spy = vi
+        .spyOn(artifactsApi, "deleteArtifact")
+        .mockResolvedValue(undefined);
+      useAura3DStore.setState({
+        images: [image],
+        models: [linkedModel],
+        selectedImageId: "img-1",
+        currentImage: image,
+        generateSourceImage: image,
+        selectedModelId: "model-1",
+        current3DModel: linkedModel,
+      });
+
+      await useAura3DStore.getState().deleteModel("model-1");
+
+      const state = useAura3DStore.getState();
+      expect(state.models).toEqual([]);
+      expect(state.images).toEqual([image]);
+      expect(state.currentImage).toEqual(image);
+      expect(state.selectedModelId).toBeNull();
+      expect(state.current3DModel).toBeNull();
+      expect(spy).toHaveBeenCalledWith("art-model-1");
+      spy.mockRestore();
     });
   });
 

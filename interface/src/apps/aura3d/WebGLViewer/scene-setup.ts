@@ -9,12 +9,80 @@ export interface SceneContext {
   gridHelper: THREE.GridHelper | null;
 }
 
+export type ViewerTheme = "dark" | "light";
+
+interface ViewerPalette {
+  background: number;
+  gridLine: number;
+  gridSecondary: number;
+  ambient: number;
+}
+
+const PALETTES: Record<ViewerTheme, ViewerPalette> = {
+  dark: {
+    background: 0x0a0a0a,
+    gridLine: 0x4466ff,
+    gridSecondary: 0x1a2244,
+    ambient: 0xf0f4ff,
+  },
+  light: {
+    // Match `--color-bg` in light mode so the viewer reads as the
+    // surrounding panel surface rather than a black slab.
+    background: 0xffffff,
+    // Darker line + lighter secondary so the grid is actually visible
+    // on a near-white background (the dark palette's blues blended
+    // into the white in light mode).
+    gridLine: 0x4b5563,
+    gridSecondary: 0x9ca3af,
+    ambient: 0xffffff,
+  },
+};
+
+export function readViewerTheme(): ViewerTheme {
+  if (typeof document === "undefined") return "dark";
+  const value = document.documentElement.dataset.theme;
+  return value === "light" ? "light" : "dark";
+}
+
+function buildGridHelper(theme: ViewerTheme): THREE.GridHelper {
+  const palette = PALETTES[theme];
+  const grid = new THREE.GridHelper(12, 24, palette.gridLine, palette.gridSecondary);
+  (grid.material as THREE.Material).opacity = theme === "light" ? 0.55 : 0.4;
+  (grid.material as THREE.Material).transparent = true;
+  return grid;
+}
+
+/**
+ * Swap the scene background and grid helper to match the current theme.
+ * Returns the freshly-built `GridHelper` so callers can update their
+ * stored reference; the previous grid is removed and disposed.
+ */
+export function applyViewerTheme(
+  ctx: SceneContext,
+  theme: ViewerTheme,
+): THREE.GridHelper | null {
+  const palette = PALETTES[theme];
+  ctx.scene.background = new THREE.Color(palette.background);
+  if (!ctx.gridHelper) return null;
+  const wasVisible = ctx.gridHelper.visible;
+  ctx.scene.remove(ctx.gridHelper);
+  (ctx.gridHelper.material as THREE.Material).dispose();
+  ctx.gridHelper.geometry.dispose();
+  const next = buildGridHelper(theme);
+  next.visible = wasVisible;
+  ctx.scene.add(next);
+  ctx.gridHelper = next;
+  return next;
+}
+
 export function createScene(container: HTMLDivElement): SceneContext {
   const width = container.clientWidth;
   const height = container.clientHeight || 300;
+  const theme = readViewerTheme();
+  const palette = PALETTES[theme];
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0a0a0a);
+  scene.background = new THREE.Color(palette.background);
 
   const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
   camera.position.set(3, 3, 3);
@@ -34,7 +102,7 @@ export function createScene(container: HTMLDivElement): SceneContext {
   controls.update();
 
   // Ambient light
-  const ambientLight = new THREE.AmbientLight(0xf0f4ff, 0.4);
+  const ambientLight = new THREE.AmbientLight(palette.ambient, 0.4);
   scene.add(ambientLight);
 
   // Key light — warm white from above right
@@ -61,9 +129,7 @@ export function createScene(container: HTMLDivElement): SceneContext {
   scene.add(bottomLight);
 
   // Grid (initially visible)
-  const gridHelper = new THREE.GridHelper(12, 24, 0x4466ff, 0x1a2244);
-  (gridHelper.material as THREE.Material).opacity = 0.4;
-  (gridHelper.material as THREE.Material).transparent = true;
+  const gridHelper = buildGridHelper(theme);
   scene.add(gridHelper);
 
   return { scene, camera, renderer, controls, gridHelper };

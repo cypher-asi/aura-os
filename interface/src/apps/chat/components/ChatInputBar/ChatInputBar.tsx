@@ -467,6 +467,8 @@ export const DesktopChatInputBar = memo(
           return "Aura";
         case "image":
           return "Image";
+        case "3d":
+          return "3D";
         default:
           return "Other";
       }

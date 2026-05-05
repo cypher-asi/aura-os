@@ -3,9 +3,13 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  min-height: 160px;
-  max-height: 360px;
-  background: #0a0a0a;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  /* Match the surrounding panel surface in both themes (was hard-coded
+     `#0a0a0a` which read as a black slab in light mode). */
+  background: var(--color-bg);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -14,9 +18,14 @@
   background: transparent;
 }
 
+/* No max-height: the image fills the available preview area while
+   `object-fit: contain` keeps its aspect ratio. The surrounding
+   `.previewArea` provides the empty-border padding. */
 .image {
+  width: 100%;
+  height: 100%;
   max-width: 100%;
-  max-height: 360px;
+  max-height: 100%;
   object-fit: contain;
   border-radius: 4px;
 }
@@ -64,43 +73,3 @@
   color: var(--color-text-muted);
 }
 
-.lightbox {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.85);
-  cursor: pointer;
-}
-
-.lightboxClose {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  cursor: pointer;
-  transition: background 120ms;
-  z-index: 1;
-}
-
-.lightboxClose:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.lightboxImage {
-  max-width: 90vw;
-  max-height: 90vh;
-  object-fit: contain;
-  border-radius: 8px;
-  cursor: default;
-}

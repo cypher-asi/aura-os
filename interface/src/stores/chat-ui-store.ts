@@ -2,8 +2,9 @@ import { create } from "zustand";
 import {
   availableModelsForAdapter,
   defaultModelForAdapter,
-  getDefaultModelForMode,
+  DEFAULT_3D_MODEL_ID,
   hasAgentScopedModel,
+  loadPersistedImageModel,
   loadPersistedModel,
   persistModel,
 } from "../constants/models";
@@ -14,6 +15,22 @@ import {
   persistAgentMode,
   type AgentMode,
 } from "../constants/modes";
+
+function modelForMode(
+  mode: AgentMode,
+  adapterType: string | undefined,
+  defaultModel: string | null | undefined,
+  agentId: string | undefined,
+): string {
+  const behavior = AGENT_MODE_DESCRIPTORS[mode].behavior;
+  if (behavior.kind === "generate_image") {
+    return loadPersistedImageModel(agentId);
+  }
+  if (behavior.kind === "generate_3d") {
+    return DEFAULT_3D_MODEL_ID;
+  }
+  return loadPersistedModel(adapterType, defaultModel ?? undefined, agentId);
+}
 
 interface StreamState {
   selectedMode: AgentMode;
@@ -75,8 +92,12 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
 
   init: (streamKey, adapterType, defaultModel, agentId) => {
     const existing = get().streams[streamKey];
-    const model = loadPersistedModel(adapterType, defaultModel, agentId);
     const mode = loadPersistedAgentMode(agentId);
+    // Derive the initial model from the persisted mode so an agent
+    // last left in Image mode reopens with its remembered image
+    // model (or the image default), not a stale chat model id that
+    // would later be sent to `/api/generate/image/stream` and rejected.
+    const model = modelForMode(mode, adapterType, defaultModel, agentId);
     if (existing && existing.selectedModel !== null) {
       // Only refresh if this agent has its own persisted value and it
       // disagrees with what we installed on an earlier pass (e.g. the
@@ -146,14 +167,17 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
           streams: { ...s.streams, [streamKey]: { ...current, selectedMode: mode } },
         };
       }
-      // Re-derive the model when switching modes. For Image we always
-      // jump to the default image model; for Code/Plan we restore the
-      // user's persisted chat model. 3D has no selectable model so we
-      // leave whatever was selected (it gets ignored at send time).
+      // Re-derive the model when switching modes. For Image we restore
+      // the user's last image-mode pick (or jump to the image default);
+      // for 3D we snap to the default 3D provider so the picker shows a
+      // valid selection; for Code/Plan we restore the persisted chat
+      // model.
       let nextModel = current.selectedModel;
       const behavior = AGENT_MODE_DESCRIPTORS[mode].behavior;
       if (behavior.kind === "generate_image") {
-        nextModel = getDefaultModelForMode("image").id;
+        nextModel = loadPersistedImageModel(agentId);
+      } else if (behavior.kind === "generate_3d") {
+        nextModel = DEFAULT_3D_MODEL_ID;
       } else if (behavior.kind === "chat" || behavior.kind === "chat_with_action") {
         const restored = loadPersistedModel(adapterType, undefined, agentId);
         nextModel = restored;
@@ -170,9 +194,34 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
   getSelectedMode: (streamKey) => getStream(get(), streamKey).selectedMode,
 
   syncAvailableModels: (streamKey, adapterType, defaultModel, agentId) => {
-    const models = availableModelsForAdapter(adapterType);
+    const chatModels = availableModelsForAdapter(adapterType);
     set((s) => {
       const current = getStream(s, streamKey);
+      const behavior = AGENT_MODE_DESCRIPTORS[current.selectedMode].behavior;
+      // In image mode the chat-adapter list is irrelevant; keep the
+      // current image model (or restore the persisted/default image
+      // model) so a chat-adapter sync doesn't reset us to Sonnet.
+      if (behavior.kind === "generate_image") {
+        const persistedImage = loadPersistedImageModel(agentId);
+        if (current.selectedModel === persistedImage) return s;
+        return {
+          streams: {
+            ...s.streams,
+            [streamKey]: { ...current, selectedModel: persistedImage },
+          },
+        };
+      }
+      // 3D mode pins to the default 3D provider; the chat-model sync
+      // must not yank it back into Sonnet.
+      if (behavior.kind === "generate_3d") {
+        if (current.selectedModel === DEFAULT_3D_MODEL_ID) return s;
+        return {
+          streams: {
+            ...s.streams,
+            [streamKey]: { ...current, selectedModel: DEFAULT_3D_MODEL_ID },
+          },
+        };
+      }
       const persisted = loadPersistedModel(adapterType, defaultModel, agentId);
       // Prefer a per-agent persisted value even when the current model is
       // still technically valid for this adapter. This rescues the cold-
@@ -183,7 +232,7 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
         agentId &&
         hasAgentScopedModel(agentId) &&
         current.selectedModel !== persisted &&
-        models.some((m) => m.id === persisted)
+        chatModels.some((m) => m.id === persisted)
       ) {
         return {
           streams: {
@@ -192,7 +241,7 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
           },
         };
       }
-      if (current.selectedModel && models.some((m) => m.id === current.selectedModel)) {
+      if (current.selectedModel && chatModels.some((m) => m.id === current.selectedModel)) {
         return s;
       }
       // The current selection isn't valid for this adapter; fall back to

@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { ImageIcon, X } from "lucide-react";
+import type { MouseEvent } from "react";
+import { ImageIcon } from "lucide-react";
 import { Spinner } from "@cypher-asi/zui";
+import { useGallery } from "../../../components/Gallery";
 import styles from "./ImagePreview.module.css";
 
 interface ImagePreviewProps {
@@ -9,6 +10,12 @@ interface ImagePreviewProps {
   isLoading?: boolean;
   progress?: number;
   progressMessage?: string;
+  /**
+   * Right-click handler forwarded to the rendered `<img>`. Opt-in so
+   * preview surfaces that don't own a delete action (e.g. lightbox-only
+   * stock previews) don't accidentally suppress the native menu.
+   */
+  onImageContextMenu?: (event: MouseEvent<HTMLImageElement>) => void;
 }
 
 export function ImagePreview({
@@ -17,9 +24,10 @@ export function ImagePreview({
   isLoading,
   progress,
   progressMessage,
+  onImageContextMenu,
 }: ImagePreviewProps) {
   const displayUrl = partialData || imageUrl;
-  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const { openGallery } = useGallery();
 
   if (isLoading && !displayUrl) {
     return (
@@ -45,40 +53,36 @@ export function ImagePreview({
     );
   }
 
+  const handleOpenGallery = (): void => {
+    if (isLoading) return;
+    openGallery({
+      items: [
+        {
+          id: "aura3d-preview",
+          src: displayUrl,
+          alt: "Generated asset",
+          downloadUrl: displayUrl,
+        },
+      ],
+      initialId: "aura3d-preview",
+    });
+  };
+
   return (
-    <>
-      <div className={styles.root} data-agent-surface="aura3d-image-preview" data-agent-proof="generated-image-preview">
-        <img
-          src={displayUrl}
-          alt="Generated asset"
-          className={`${styles.image} ${partialData && isLoading ? styles.imagePartial : ""}`}
-          onClick={() => !isLoading && setLightboxOpen(true)}
-          style={{ cursor: isLoading ? "default" : "pointer" }}
-        />
-        {isLoading && (
-          <div className={styles.overlay}>
-            <Spinner size="sm" />
-          </div>
-        )}
-      </div>
-      {lightboxOpen && displayUrl && (
-        <div className={styles.lightbox} onClick={() => setLightboxOpen(false)}>
-          <button
-            type="button"
-            className={styles.lightboxClose}
-            onClick={() => setLightboxOpen(false)}
-            aria-label="Close preview"
-          >
-            <X size={20} />
-          </button>
-          <img
-            src={displayUrl}
-            alt="Generated asset full view"
-            className={styles.lightboxImage}
-            onClick={(e) => e.stopPropagation()}
-          />
+    <div className={styles.root} data-agent-surface="aura3d-image-preview" data-agent-proof="generated-image-preview">
+      <img
+        src={displayUrl}
+        alt="Generated asset"
+        className={`${styles.image} ${partialData && isLoading ? styles.imagePartial : ""}`}
+        onClick={handleOpenGallery}
+        onContextMenu={onImageContextMenu}
+        style={{ cursor: isLoading ? "default" : "zoom-in" }}
+      />
+      {isLoading && (
+        <div className={styles.overlay}>
+          <Spinner size="sm" />
         </div>
       )}
-    </>
+    </div>
   );
 }

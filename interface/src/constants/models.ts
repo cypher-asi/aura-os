@@ -10,6 +10,7 @@ export interface ModelOption {
 export type ModelProviderGroup =
   | "aura"
   | "image"
+  | "3d"
   | "other";
 
 const LEGACY_HIDDEN_CHAT_MODELS: ModelOption[] = [
@@ -110,9 +111,23 @@ export const IMAGE_MODELS: ModelOption[] = [
 
 export const DEFAULT_IMAGE_MODEL_ID: string = IMAGE_MODELS[0]?.id ?? "gpt-image-2";
 
+/**
+ * 3D model providers usable in chat 3D mode. The 3D generation pipeline
+ * is image-input based: the chat caller must include a pasted /
+ * uploaded image, which the backend feeds to the selected provider.
+ * Kept distinct from {@link IMAGE_MODELS} so the model picker filters
+ * cleanly via {@link getModelsForMode}.
+ */
+export const MODEL_3D_MODELS: ModelOption[] = [
+  { id: "tripo-v2", label: "Tripo v2", tier: "3d", mode: "3d" },
+];
+
+export const DEFAULT_3D_MODEL_ID: string = MODEL_3D_MODELS[0]?.id ?? "tripo-v2";
+
 export const AVAILABLE_MODELS: ModelOption[] = [
   ...AURA_MANAGED_CHAT_MODELS,
   ...IMAGE_MODELS,
+  ...MODEL_3D_MODELS,
 ];
 
 const CHAT_MODELS: ModelOption[] = AVAILABLE_MODELS.filter((m) => m.mode === "chat");
@@ -186,6 +201,12 @@ function agentStorageKey(agentId: string): string {
 
 function storageKey(adapterType?: string): string {
   return `aura-selected-model:${adapterType ?? "default"}`;
+}
+
+function imageModelStorageKey(agentId?: string): string {
+  return agentId
+    ? `aura-selected-model:image:agent:${agentId}`
+    : `aura-selected-model:image:default`;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -264,6 +285,12 @@ export function persistModel(
   agentId?: string,
 ): void {
   try {
+    // Image models persist under a dedicated key so a chat-mode pick
+    // never shadows the user's last image-mode pick (and vice versa).
+    if (IMAGE_MODELS.some((m) => m.id === modelId)) {
+      localStorage.setItem(imageModelStorageKey(agentId), modelId);
+      return;
+    }
     if (agentId) localStorage.setItem(agentStorageKey(agentId), modelId);
     // Keep the adapter-scoped key in sync so agents that haven't saved a
     // per-agent preference still land on the user's most recent choice
@@ -272,6 +299,28 @@ export function persistModel(
   } catch {
     // localStorage may be unavailable
   }
+}
+
+/**
+ * Returns the persisted image-mode model id for this agent (or the
+ * shared image-mode default), or the first {@link IMAGE_MODELS} entry
+ * when nothing is stored yet. Kept separate from {@link loadPersistedModel}
+ * so chat-mode validation never rejects an image id.
+ */
+export function loadPersistedImageModel(agentId?: string): string {
+  try {
+    const fromAgent = agentId ? localStorage.getItem(imageModelStorageKey(agentId)) : null;
+    if (fromAgent && IMAGE_MODELS.some((m) => m.id === fromAgent)) {
+      return fromAgent;
+    }
+    const fromDefault = localStorage.getItem(imageModelStorageKey());
+    if (fromDefault && IMAGE_MODELS.some((m) => m.id === fromDefault)) {
+      return fromDefault;
+    }
+  } catch {
+    // localStorage may be unavailable
+  }
+  return DEFAULT_IMAGE_MODEL_ID;
 }
 
 /** Chat model options formatted for <Select> dropdowns across the app. */
@@ -302,6 +351,7 @@ export function modelLabel(
 
 export function modelProviderGroup(model: ModelOption): ModelProviderGroup {
   if (model.mode === "image") return "image";
+  if (model.mode === "3d") return "3d";
   if (model.id.startsWith("aura-")) return "aura";
   return "other";
 }
@@ -320,7 +370,8 @@ export function sortModelsForMenu(models: ModelOption[]): ModelOption[] {
   const providerOrder: Record<ModelProviderGroup, number> = {
     aura: 0,
     image: 1,
-    other: 2,
+    "3d": 2,
+    other: 3,
   };
 
   return [...models].sort((left, right) => {

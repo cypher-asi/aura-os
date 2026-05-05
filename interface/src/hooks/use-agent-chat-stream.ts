@@ -1,6 +1,6 @@
 import { useRef, useCallback, useEffect } from "react";
 import { api } from "../api/client";
-import { generateImageStream } from "../api/streams";
+import { generate3dStream, generateImageStream } from "../api/streams";
 import type { ChatAttachment, StreamEventHandler } from "../api/streams";
 import type { GenerationMode } from "../constants/models";
 import { buildUserChatMessage } from "./attachment-helpers";
@@ -187,6 +187,32 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
             userMsg.content,
             selectedModel,
             attachments,
+            handler,
+            controller.signal,
+            projectId,
+          );
+          return;
+        }
+
+        if (_generationMode === "3d") {
+          // Chat 3D mode bypasses the agent and calls the same
+          // generation endpoint the AURA 3D app uses. The backend
+          // accepts either a URL or a data URL; chat almost always
+          // passes the latter (pasted / uploaded image).
+          const imageAttachment = attachments?.find((a) => a.type === "image");
+          if (!imageAttachment) {
+            handleStreamError(
+              refs,
+              setters,
+              "3D mode requires an attached or pasted image to convert into a 3D model.",
+            );
+            return;
+          }
+          core.setProgressText("Generating 3D model...");
+          const dataUrl = `data:${imageAttachment.media_type};base64,${imageAttachment.data}`;
+          await generate3dStream(
+            { kind: "data", imageData: dataUrl },
+            userMsg.content || null,
             handler,
             controller.signal,
             projectId,

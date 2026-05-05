@@ -295,9 +295,18 @@ pub(crate) struct GenerateImageRequest {
     pub is_iteration: Option<bool>,
 }
 
+/// 3D generation request. Exactly one of `image_url` (a real URL,
+/// typically pointing at an existing project artifact) or `image_data`
+/// (a `data:image/<type>;base64,...` payload from a paste / upload in
+/// chat 3D mode) must be supplied. The handler normalises both to a
+/// single value before forwarding to the upstream router so the rest
+/// of the protocol stays unchanged.
 #[derive(Debug, Deserialize)]
 pub(crate) struct Generate3dRequest {
-    pub image_url: String,
+    #[serde(default, alias = "imageUrl")]
+    pub image_url: Option<String>,
+    #[serde(default, alias = "imageData")]
+    pub image_data: Option<String>,
     pub prompt: Option<String>,
     #[serde(rename = "projectId")]
     pub project_id: Option<String>,

@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 import { Box, Grid3x3, Triangle, Paintbrush } from "lucide-react";
 import { Button, Spinner } from "@cypher-asi/zui";
 import { useAura3DStore } from "../../../stores/aura3d-store";
 import { generate3dStream } from "../../../api/streams";
 import { EventType } from "../../../shared/types/aura-events";
 import { EmptyState } from "../../../components/EmptyState";
+import { SidekickItemContextMenu } from "../../../components/SidekickItemContextMenu";
 import { WebGLViewer } from "../WebGLViewer";
 import styles from "./ModelGeneration.module.css";
 
@@ -51,8 +52,79 @@ export function ModelGeneration() {
   const set3DProgress = useAura3DStore((s) => s.set3DProgress);
   const complete3DGeneration = useAura3DStore((s) => s.complete3DGeneration);
   const setError = useAura3DStore((s) => s.setError);
+  const deleteImage = useAura3DStore((s) => s.deleteImage);
+  const deleteModel = useAura3DStore((s) => s.deleteModel);
 
   const abortRef = useRef<AbortController | null>(null);
+
+  type MenuTarget =
+    | { kind: "image"; id: string }
+    | { kind: "model"; id: string };
+  const [menu, setMenu] = useState<{
+    x: number;
+    y: number;
+    target: MenuTarget;
+  } | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menu) return;
+    const handleClick = (e: globalThis.MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenu(null);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenu(null);
+    };
+    document.addEventListener("click", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("click", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [menu]);
+
+  const handleSourceContextMenu = useCallback(
+    (e: MouseEvent<HTMLDivElement>) => {
+      if (!generateSourceImage) return;
+      e.preventDefault();
+      setMenu({
+        x: e.clientX,
+        y: e.clientY,
+        target: { kind: "image", id: generateSourceImage.id },
+      });
+    },
+    [generateSourceImage],
+  );
+
+  const handleViewerContextMenu = useCallback(
+    (e: MouseEvent<HTMLDivElement>) => {
+      if (!current3DModel) return;
+      e.preventDefault();
+      setMenu({
+        x: e.clientX,
+        y: e.clientY,
+        target: { kind: "model", id: current3DModel.id },
+      });
+    },
+    [current3DModel],
+  );
+
+  const handleMenuAction = useCallback(
+    (action: string) => {
+      const target = menu?.target;
+      setMenu(null);
+      if (!target) return;
+      if (action !== "delete") return;
+      if (target.kind === "image") {
+        void deleteImage(target.id);
+      } else {
+        void deleteModel(target.id);
+      }
+    },
+    [menu, deleteImage, deleteModel],
+  );
 
   const handleGenerate3D = useCallback(() => {
     if (!generateSourceImage) return;
@@ -161,16 +233,22 @@ export function ModelGeneration() {
       )}
       <div className={styles.viewerArea}>
         {current3DModel ? (
-          <WebGLViewer
-            glbUrl={current3DModel.glbUrl}
-            showGrid={showGrid}
-            showWireframe={showWireframe}
-            showTexture={showTexture}
-          />
+          <div
+            className={styles.viewerWrapper}
+            onContextMenu={handleViewerContextMenu}
+          >
+            <WebGLViewer
+              glbUrl={current3DModel.glbUrl}
+              showGrid={showGrid}
+              showWireframe={showWireframe}
+              showTexture={showTexture}
+            />
+          </div>
         ) : generateSourceImage ? (
           <div
             className={styles.sourcePreview}
             data-agent-surface="aura3d-source-image-for-3d"
+            onContextMenu={handleSourceContextMenu}
           >
             <img
               src={generateSourceImage.imageUrl}
@@ -181,6 +259,15 @@ export function ModelGeneration() {
             />
           </div>
         ) : null}
+        {menu && (
+          <SidekickItemContextMenu
+            x={menu.x}
+            y={menu.y}
+            menuRef={menuRef}
+            onAction={handleMenuAction}
+            actions={["delete"]}
+          />
+        )}
       </div>
       <div className={styles.footer}>
         {!current3DModel && (

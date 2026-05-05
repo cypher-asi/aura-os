@@ -29,6 +29,18 @@ export interface Generated3DModel {
 
 export type Aura3DSidekickTab = "images" | "models";
 
+/**
+ * Stylized prompt suffix used **only** by the AURA 3D app's image
+ * generation flow ([ImageGeneration.tsx](../apps/aura3d/ImageGeneration/ImageGeneration.tsx)).
+ * The product framing here (jet black background, isolated 3/4 angle,
+ * etc.) is intentional: it produces inputs that read well as 3D
+ * sculpture sources for the downstream Tripo conversion.
+ *
+ * This suffix MUST NOT be appended to chat-mode image / 3D generation
+ * (see `interface/src/hooks/use-agent-chat-stream.ts`); chat mode sends
+ * the user's prompt verbatim so a free-form chat send never gets a
+ * product-photography lens forced onto it.
+ */
 export const STYLE_LOCK_SUFFIX =
   ", standalone product only, 3/4 angle view, single object centered, fully in frame with no cropping, no other objects or elements in frame, jet black background with subtle vignette, photorealistic, high-poly, textured 3D sculpture, subject pops from background, cinematic depth, isolated product presentation";
 
@@ -106,6 +118,17 @@ interface Aura3DState {
   selectedModelId: string | null;
   selectImage: (id: string) => void;
   selectModel: (id: string) => void;
+  /**
+   * Remove an image from the local cache and (if it has an artifact id)
+   * delete its server-side artifact. Cascades to any linked 3D model
+   * that used this image as its source.
+   */
+  deleteImage: (id: string) => Promise<void>;
+  /**
+   * Remove a 3D model from the local cache and delete its server-side
+   * artifact. Does not touch the source image.
+   */
+  deleteModel: (id: string) => Promise<void>;
 
   // Persistence
   isLoadingArtifacts: boolean;
@@ -137,26 +160,24 @@ export const useAura3DStore = create<Aura3DState>()((set, get) => ({
   activeTab: "image",
   setActiveTab: (tab) =>
     set((s) => {
+      // Auto-pick the latest image on the Image tab when nothing is
+      // selected yet — purely a quality-of-life onboarding step that
+      // never crosses into the 3D side of the store.
       if (tab === "image" && !s.selectedImageId && s.images.length > 0) {
         const latest = s.images[0];
-        const linked = s.models.find((m) => m.sourceImageId === latest.id) ?? null;
         return {
           activeTab: tab,
           selectedImageId: latest.id,
           currentImage: latest,
           generateSourceImage: latest,
-          selectedModelId: linked?.id ?? s.selectedModelId,
-          current3DModel: linked ?? s.current3DModel,
         };
       }
-      if (tab === "3d" && !s.selectedModelId && s.models.length > 0) {
-        const latest = s.models[0];
-        return {
-          activeTab: tab,
-          selectedModelId: latest.id,
-          current3DModel: latest,
-        };
-      }
+      // The 3D tab intentionally does NOT auto-select a model. If the
+      // user lands here with `generateSourceImage` set, ModelGeneration
+      // shows the source image + "Generate 3D" button so a fresh model
+      // can be made. Existing models are still reachable by clicking
+      // their thumbnail in the sidekick "3D Models" tab or in the
+      // left-nav project tree.
       return { activeTab: tab };
     }),
 
@@ -214,14 +235,18 @@ export const useAura3DStore = create<Aura3DState>()((set, get) => ({
     set((s) => {
       const image = s.images.find((i) => i.id === id);
       if (!image) return { selectedImageId: id };
-      // Find linked 3D model (where sourceImageId matches this image)
-      const linkedModel = s.models.find((m) => m.sourceImageId === id) ?? null;
+      // Selecting an image must NOT promote a previously-generated 3D
+      // model into `current3DModel`. If we did, opening the 3D tab
+      // would jump straight into the existing viewer and the user
+      // could never reach the "Generate 3D" button to create a new
+      // model from the same source image. Existing models remain
+      // reachable via `selectModel` (sidekick thumb / left nav).
       return {
         selectedImageId: id,
-        selectedModelId: linkedModel?.id ?? null,
+        selectedModelId: null,
         currentImage: image,
         generateSourceImage: image,
-        current3DModel: linkedModel,
+        current3DModel: null,
         activeTab: "image" as Aura3DTab,
       };
     });
@@ -236,6 +261,56 @@ export const useAura3DStore = create<Aura3DState>()((set, get) => ({
         activeTab: "3d" as Aura3DTab,
       };
     });
+  },
+  deleteImage: async (id) => {
+    const state = get();
+    const image = state.images.find((i) => i.id === id);
+    if (!image) return;
+    // Cascade: any 3D model whose source was this image is also gone.
+    const cascadedModelIds = new Set(
+      state.models.filter((m) => m.sourceImageId === id).map((m) => m.id),
+    );
+    set((s) => ({
+      images: s.images.filter((i) => i.id !== id),
+      models: s.models.filter((m) => !cascadedModelIds.has(m.id)),
+      selectedImageId: s.selectedImageId === id ? null : s.selectedImageId,
+      currentImage: s.currentImage?.id === id ? null : s.currentImage,
+      generateSourceImage:
+        s.generateSourceImage?.id === id ? null : s.generateSourceImage,
+      selectedModelId:
+        s.selectedModelId && cascadedModelIds.has(s.selectedModelId)
+          ? null
+          : s.selectedModelId,
+      current3DModel:
+        s.current3DModel && cascadedModelIds.has(s.current3DModel.id)
+          ? null
+          : s.current3DModel,
+    }));
+    if (image.artifactId) {
+      try {
+        await artifactsApi.deleteArtifact(image.artifactId);
+      } catch (e) {
+        console.warn("Failed to delete image artifact:", e);
+      }
+    }
+  },
+  deleteModel: async (id) => {
+    const state = get();
+    const model = state.models.find((m) => m.id === id);
+    if (!model) return;
+    set((s) => ({
+      models: s.models.filter((m) => m.id !== id),
+      selectedModelId: s.selectedModelId === id ? null : s.selectedModelId,
+      current3DModel:
+        s.current3DModel?.id === id ? null : s.current3DModel,
+    }));
+    if (model.artifactId) {
+      try {
+        await artifactsApi.deleteArtifact(model.artifactId);
+      } catch (e) {
+        console.warn("Failed to delete model artifact:", e);
+      }
+    }
   },
 
   // Persistence
@@ -255,22 +330,19 @@ export const useAura3DStore = create<Aura3DState>()((set, get) => ({
       const images = imageArtifacts.map(artifactToImage);
       const models = modelArtifacts.map(artifactToModel);
       const latestImage = images[0] ?? null;
-      const latestModel = models[0] ?? null;
-      const linkedModel = latestImage
-        ? models.find((m) => m.sourceImageId === latestImage.id) ?? null
-        : null;
 
+      // Only seed the *image* side of the store on first load. The 3D
+      // side is left untouched so opening a project doesn't immediately
+      // drop the user into an existing model and hide the Generate
+      // button on the 3D tab.
       set((s) => ({
         isLoadingArtifacts: false,
         images,
         models,
         loadedProjectIds: new Set([...s.loadedProjectIds, projectId]),
         selectedImageId: s.selectedImageId ?? latestImage?.id ?? null,
-        selectedModelId:
-          s.selectedModelId ?? linkedModel?.id ?? latestModel?.id ?? null,
         currentImage: s.currentImage ?? latestImage,
         generateSourceImage: s.generateSourceImage ?? latestImage,
-        current3DModel: s.current3DModel ?? linkedModel ?? latestModel,
       }));
     } catch {
       set({ isLoadingArtifacts: false });

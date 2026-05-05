@@ -27,5 +27,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-2) var(--space-4);
+  /* Generous padding so the preview reads as a framed surface inside
+     the panel rather than touching the chrome. The flex layout above
+     already prevents the image from spilling into the prompt input. */
+  padding: var(--space-4);
+  position: relative;
 }

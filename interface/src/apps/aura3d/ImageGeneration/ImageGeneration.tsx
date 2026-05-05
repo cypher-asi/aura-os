@@ -1,9 +1,10 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 import { useAura3DStore, STYLE_LOCK_SUFFIX } from "../../../stores/aura3d-store";
 import { generateImageStream } from "../../../api/streams";
 import { EventType } from "../../../shared/types/aura-events";
 import { ImagePreview } from "../ImagePreview";
 import { PromptInput } from "../PromptInput";
+import { SidekickItemContextMenu } from "../../../components/SidekickItemContextMenu";
 import styles from "./ImageGeneration.module.css";
 
 export function ImageGeneration() {
@@ -23,8 +24,54 @@ export function ImageGeneration() {
   const setPartialImageData = useAura3DStore((s) => s.setPartialImageData);
   const completeImageGeneration = useAura3DStore((s) => s.completeImageGeneration);
   const setError = useAura3DStore((s) => s.setError);
+  const deleteImage = useAura3DStore((s) => s.deleteImage);
 
   const abortRef = useRef<AbortController | null>(null);
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Outside-click + Escape teardown for the main-panel context menu.
+  // The shared sidekick hook can't be reused here because it resolves
+  // its target via DOM node ids; the main-panel preview is a single
+  // fixed target tracked by `currentImage`.
+  useEffect(() => {
+    if (!menuPos) return;
+    const handleClick = (e: globalThis.MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuPos(null);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuPos(null);
+    };
+    document.addEventListener("click", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("click", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [menuPos]);
+
+  const handleImageContextMenu = useCallback(
+    (e: MouseEvent<HTMLImageElement>) => {
+      if (!currentImage) return;
+      e.preventDefault();
+      setMenuPos({ x: e.clientX, y: e.clientY });
+    },
+    [currentImage],
+  );
+
+  const handleMenuAction = useCallback(
+    (action: string) => {
+      const target = currentImage;
+      setMenuPos(null);
+      if (!target) return;
+      if (action === "delete") {
+        void deleteImage(target.id);
+      }
+    },
+    [currentImage, deleteImage],
+  );
 
   const handleGenerate = useCallback(() => {
     const prompt = imaginePrompt.trim();
@@ -113,7 +160,17 @@ export function ImageGeneration() {
           isLoading={isGeneratingImage}
           progress={imageProgress}
           progressMessage={imageProgressMessage}
+          onImageContextMenu={handleImageContextMenu}
         />
+        {menuPos && currentImage && (
+          <SidekickItemContextMenu
+            x={menuPos.x}
+            y={menuPos.y}
+            menuRef={menuRef}
+            onAction={handleMenuAction}
+            actions={["delete"]}
+          />
+        )}
       </div>
       <PromptInput
         value={imaginePrompt}
