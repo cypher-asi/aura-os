@@ -1,14 +1,16 @@
 /* ============================================================
  * Mode selector — segmented control rendered as the topmost
  * section of the agent chat input. Owns its own pill chrome and
- * focus styling so it reads as a distinct row above the
- * textarea / containerTop slot.
+ * focus styling so it reads as a distinct row above the textarea
+ * / containerTop slot.
  *
- * Layout strategy: the segments wrapper is a CSS grid with one
- * equal-width column per mode plus a 2px gap. The indicator pill
- * is absolutely positioned and sized/positioned by React via
- * measured pixel values (getBoundingClientRect). CSS transitions
- * on transform + width produce the sliding animation.
+ * Layout strategy: the segments wrapper is a CSS grid of equal
+ * 1fr columns. The indicator pill is absolutely positioned and
+ * sized to one column width via calc(); its horizontal offset is
+ * driven by a single `--mode-index` custom property set by React.
+ * A CSS transition on `transform` produces the smooth left/right
+ * slide when the selected mode changes — no DOM measurement or
+ * ResizeObserver required.
  * ============================================================ */
 
 .root {
@@ -30,11 +32,16 @@
 }
 
 .segments {
+  --mode-count: 4;
   --mode-gap: 2px;
   --mode-pad: 2px;
+  --mode-col: calc(
+    (100% - var(--mode-pad) * 2 - var(--mode-gap) * (var(--mode-count) - 1))
+      / var(--mode-count)
+  );
   position: relative;
   display: inline-grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--mode-count), minmax(0, 1fr));
   align-items: center;
   gap: var(--mode-gap);
   padding: var(--mode-pad);
@@ -43,11 +50,12 @@
 }
 
 .indicator {
+  --mode-index: 0;
   position: absolute;
   top: var(--mode-pad);
   bottom: var(--mode-pad);
-  left: 0;
-  width: 0;
+  left: var(--mode-pad);
+  width: var(--mode-col);
   border-radius: 999px;
   background: var(--color-elevated);
   /* Selection pill always uses the global accent color so the active
@@ -56,14 +64,11 @@
   box-shadow: 0 1px 2px var(--color-backdrop-light);
   pointer-events: none;
   z-index: 0;
-  will-change: transform, width;
-  transform: translateX(0);
-}
-
-.indicatorReady {
-  transition:
-    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
-    width 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+  transform: translateX(
+    calc(var(--mode-index) * (var(--mode-col) + var(--mode-gap)))
+  );
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .segment {
@@ -100,7 +105,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .indicatorReady {
+  .indicator {
     transition: none;
   }
 }

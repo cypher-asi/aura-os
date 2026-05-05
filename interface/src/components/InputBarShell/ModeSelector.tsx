@@ -1,9 +1,7 @@
 import {
   memo,
   useCallback,
-  useLayoutEffect,
   useRef,
-  useState,
   type CSSProperties,
   type KeyboardEvent,
 } from "react";
@@ -26,15 +24,15 @@ export interface ModeSelectorProps {
 /**
  * Segmented control rendered as the topmost section of the agent
  * chat input. Exactly one mode is active at a time; selection is
- * keyboard-navigable (Left/Right arrows) and announced as a radio
+ * keyboard-navigable (Left/Right/Home/End) and announced as a radio
  * group to assistive tech.
  *
- * The indicator pill is positioned by measuring the active
- * button's pixel offset and width via the DOM, then applying
- * concrete px-based `transform` and `width` inline styles. A CSS
- * transition on both properties produces the sliding animation.
- * A ResizeObserver re-measures on layout shifts so the pill stays
- * aligned after responsive changes.
+ * The sliding pill is purely CSS-driven: the segments grid has equal
+ * 1fr columns, and the indicator's `transform` is computed from a
+ * single `--mode-index` custom property via `calc()`. Changing the
+ * active mode just rewrites that property; CSS transitions on
+ * `transform` produce the smooth left/right slide. No DOM
+ * measurement, layout effects, or ResizeObserver is needed.
  */
 export const ModeSelector = memo(function ModeSelector({
   selectedMode,
@@ -42,72 +40,43 @@ export const ModeSelector = memo(function ModeSelector({
   className,
   hideLabel = false,
 }: ModeSelectorProps) {
-  const buttonRefs = useRef<Record<AgentMode, HTMLButtonElement | null>>({
-    code: null,
-    plan: null,
-    image: null,
-    "3d": null,
-  });
-  const segmentsRef = useRef<HTMLDivElement>(null);
+  const buttonRefs = useRef(new Map<AgentMode, HTMLButtonElement | null>());
 
-  const [pill, setPill] = useState<{ left: number; width: number } | null>(null);
-  const readyRef = useRef(false);
-
-  useLayoutEffect(() => {
-    const btn = buttonRefs.current[selectedMode];
-    const container = segmentsRef.current;
-    if (!btn || !container) return;
-
-    const containerRect = container.getBoundingClientRect();
-    const btnRect = btn.getBoundingClientRect();
-    const left = btnRect.left - containerRect.left;
-    const width = btnRect.width;
-    setPill({ left, width });
-
-    if (!readyRef.current) {
-      requestAnimationFrame(() => {
-        readyRef.current = true;
-      });
-    }
-
-    const ro = new ResizeObserver(() => {
-      const b = buttonRefs.current[selectedMode];
-      const c = segmentsRef.current;
-      if (!b || !c) return;
-      const cRect = c.getBoundingClientRect();
-      const bRect = b.getBoundingClientRect();
-      setPill({ left: bRect.left - cRect.left, width: bRect.width });
-    });
-    ro.observe(container);
-    return () => ro.disconnect();
-  }, [selectedMode]);
+  const activeIndex = AGENT_MODE_ORDER.indexOf(selectedMode);
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
       const key = event.key;
-      if (key !== "ArrowLeft" && key !== "ArrowRight" && key !== "Home" && key !== "End") {
+      if (
+        key !== "ArrowLeft" &&
+        key !== "ArrowRight" &&
+        key !== "Home" &&
+        key !== "End"
+      ) {
         return;
       }
       event.preventDefault();
       const idx = AGENT_MODE_ORDER.indexOf(selectedMode);
       if (idx < 0) return;
+      const last = AGENT_MODE_ORDER.length - 1;
       let nextIdx = idx;
-      if (key === "ArrowLeft") nextIdx = (idx - 1 + AGENT_MODE_ORDER.length) % AGENT_MODE_ORDER.length;
-      else if (key === "ArrowRight") nextIdx = (idx + 1) % AGENT_MODE_ORDER.length;
+      if (key === "ArrowLeft") nextIdx = idx === 0 ? last : idx - 1;
+      else if (key === "ArrowRight") nextIdx = idx === last ? 0 : idx + 1;
       else if (key === "Home") nextIdx = 0;
-      else if (key === "End") nextIdx = AGENT_MODE_ORDER.length - 1;
+      else if (key === "End") nextIdx = last;
       const nextMode = AGENT_MODE_ORDER[nextIdx];
       onChange(nextMode);
-      requestAnimationFrame(() => buttonRefs.current[nextMode]?.focus());
+      requestAnimationFrame(() => {
+        buttonRefs.current.get(nextMode)?.focus();
+      });
     },
     [onChange, selectedMode],
   );
 
   const rootClass = [styles.root, className].filter(Boolean).join(" ");
-  const indicatorStyle: CSSProperties = pill
-    ? { transform: `translateX(${pill.left}px)`, width: `${pill.width}px` }
-    : { opacity: 0 };
-  const indicatorClass = `${styles.indicator}${readyRef.current ? ` ${styles.indicatorReady}` : ""}`;
+  const indicatorStyle = {
+    "--mode-index": activeIndex < 0 ? 0 : activeIndex,
+  } as CSSProperties;
 
   return (
     <div
@@ -119,12 +88,18 @@ export const ModeSelector = memo(function ModeSelector({
       onKeyDown={handleKeyDown}
     >
       {hideLabel ? null : <span className={styles.label}>MODE</span>}
-      <div className={styles.segments} ref={segmentsRef}>
+      <div
+        className={styles.segments}
+        style={
+          { "--mode-count": AGENT_MODE_ORDER.length } as CSSProperties
+        }
+      >
         <span
           aria-hidden
-          className={indicatorClass}
+          className={styles.indicator}
           data-agent-element="mode-indicator"
           data-mode={selectedMode}
+          data-mode-index={activeIndex}
           style={indicatorStyle}
         />
         {AGENT_MODE_ORDER.map((mode) => {
@@ -134,7 +109,7 @@ export const ModeSelector = memo(function ModeSelector({
             <button
               key={mode}
               ref={(node) => {
-                buttonRefs.current[mode] = node;
+                buttonRefs.current.set(mode, node);
               }}
               type="button"
               role="radio"
