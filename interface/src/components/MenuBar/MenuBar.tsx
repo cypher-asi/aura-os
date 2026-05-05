@@ -32,6 +32,7 @@ function MenuPanel({ menu, position, onSelect, onClose, panelRef, isItemDisabled
       aria-label={menu.label}
       style={style}
       onContextMenu={(event) => event.preventDefault()}
+      onDoubleClick={(event) => event.stopPropagation()}
     >
       {menu.entries.map((entry, index) => {
         if (entry.type === "divider") {
@@ -151,7 +152,13 @@ export function MenuBar() {
   const activeMenu = openMenuId ? menus.find((m) => m.id === openMenuId) ?? null : null;
 
   return (
-    <div ref={containerRef} className={`${styles.menuBar} titlebar-no-drag`} role="menubar" aria-label="Application menu">
+    <div
+      ref={containerRef}
+      className={`${styles.menuBar} titlebar-no-drag`}
+      role="menubar"
+      aria-label="Application menu"
+      onDoubleClick={(event) => event.stopPropagation()}
+    >
       {menus.map((menu) => {
         const isOpen = openMenuId === menu.id;
         return (

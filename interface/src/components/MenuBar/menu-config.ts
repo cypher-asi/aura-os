@@ -49,9 +49,9 @@ export const MENU_DEFINITIONS: MenuDefinition[] = [
     id: "file",
     label: "File",
     entries: [
-      { type: "item", id: "file.newAgent", label: "New Agent", shortcut: { key: "n", mod: true } },
+      { type: "item", id: "file.newWindow", label: "New Window", shortcut: { key: "n", mod: true } },
       DIVIDER,
-      { type: "item", id: "file.newWindow", label: "New Window", shortcut: { key: "n", mod: true, shift: true } },
+      { type: "item", id: "file.newAgent", label: "New Agent", shortcut: { key: "n", mod: true, shift: true } },
       { type: "item", id: "file.newProject", label: "New Project", shortcut: { key: "p", mod: true, shift: true } },
       DIVIDER,
       { type: "item", id: "file.settings", label: "Settings", shortcut: { key: ",", mod: true } },
