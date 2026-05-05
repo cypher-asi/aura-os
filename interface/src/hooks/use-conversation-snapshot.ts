@@ -5,6 +5,45 @@ import { useStreamStore } from "./stream/store";
 import { useMessageStore } from "../stores/message-store";
 import type { DisplaySessionEvent } from "../shared/types/stream";
 
+// Opt-in chat-merge tracer. Toggle with
+// `localStorage.setItem("aura.debug.chatMerge", "1")` and reload to
+// surface the exact stored / stream / merged transitions on every
+// recompute. Used to diagnose CEO-chat "user message flickers /
+// briefly overwritten" reports — pinpoints which race (stale post-
+// stream history clobber, WS-triggered refetch race, message-store
+// thread reset, or lastNonEmptyRef cache miss) is firing without
+// guessing. Cached at module load so the disabled path is a single
+// boolean read; no work happens on the hot render path otherwise.
+const CHAT_MERGE_DEBUG_KEY = "aura.debug.chatMerge";
+const chatMergeDebugEnabled = ((): boolean => {
+  try {
+    return (
+      typeof window !== "undefined" &&
+      window.localStorage?.getItem(CHAT_MERGE_DEBUG_KEY) === "1"
+    );
+  } catch {
+    return false;
+  }
+})();
+
+function fingerprint(message: DisplaySessionEvent | undefined): string {
+  if (!message) return "<none>";
+  const preview = message.content.slice(0, 40).replace(/\s+/g, " ");
+  return `${message.role}#${message.id}:"${preview}"`;
+}
+
+function chatMergeLog(
+  tag: string,
+  payload: Record<string, unknown>,
+): void {
+  if (!chatMergeDebugEnabled) return;
+  // eslint-disable-next-line no-console -- gated behind localStorage flag
+  console.debug(`[aura.chatMerge] ${tag}`, {
+    ts: Date.now(),
+    ...payload,
+  });
+}
+
 function contentBlocksMatch(
   first: DisplaySessionEvent["contentBlocks"],
   second: DisplaySessionEvent["contentBlocks"],
@@ -101,9 +140,17 @@ function combineStoredAndStreamMessages(
   liveActivity: LiveAssistantActivity,
 ): DisplaySessionEvent[] {
   if (storedMessages.length === 0) {
+    chatMergeLog("merge: stream-only (no stored)", {
+      streamCount: streamMessages.length,
+      streamLast: fingerprint(streamMessages[streamMessages.length - 1]),
+    });
     return streamMessages;
   }
   if (streamMessages.length === 0) {
+    chatMergeLog("merge: stored-only (no stream)", {
+      storedCount: storedMessages.length,
+      storedLast: fingerprint(storedMessages[storedMessages.length - 1]),
+    });
     return storedMessages;
   }
 
@@ -124,6 +171,11 @@ function combineStoredAndStreamMessages(
   }
 
   if (streamAfterIdDedup.length === 0) {
+    chatMergeLog("merge: stored wins (every stream id matched)", {
+      storedCount: storedMessages.length,
+      streamCount: streamMessages.length,
+      idMatches: matchedStoredIndexes.size,
+    });
     return storedMessages;
   }
 
@@ -137,6 +189,14 @@ function combineStoredAndStreamMessages(
       }
     }
     if (tailMatches) {
+      chatMergeLog("merge: stored wins (tail content-matches stream)", {
+        storedCount: storedMessages.length,
+        streamCount: streamMessages.length,
+        offset,
+        suppressedStreamLast: fingerprint(
+          streamAfterIdDedup[streamAfterIdDedup.length - 1],
+        ),
+      });
       return storedMessages;
     }
   }
@@ -203,8 +263,19 @@ function combineStoredAndStreamMessages(
   }
 
   if (liveOnlyMessages.length === 0) {
+    chatMergeLog("merge: stored wins (every optimistic anchored)", {
+      storedCount: storedMessages.length,
+      streamCount: streamMessages.length,
+      anchored: matchedStoredIndexes.size,
+    });
     return storedMessages;
   }
+  chatMergeLog("merge: appending live-only optimistic rows", {
+    storedCount: storedMessages.length,
+    streamCount: streamMessages.length,
+    liveOnlyCount: liveOnlyMessages.length,
+    liveOnlyLast: fingerprint(liveOnlyMessages[liveOnlyMessages.length - 1]),
+  });
   return [...storedMessages, ...liveOnlyMessages];
 }
 
@@ -258,11 +329,23 @@ export function useConversationSnapshot(
 
   const messages = useMemo(() => {
     const stored = useMessageStore.getState().getThreadMessages(streamKey);
-    const merged = stored.length > 0
-      ? combineStoredAndStreamMessages(stored, streamMessages, liveActivity)
-      : combineStoredAndStreamMessages(historyMessages ?? [], streamMessages, liveActivity);
+    const usedSource = stored.length > 0 ? "messageStore" : "historyProp";
+    const baseStored = stored.length > 0 ? stored : historyMessages ?? [];
+    const merged = combineStoredAndStreamMessages(
+      baseStored,
+      streamMessages,
+      liveActivity,
+    );
 
     if (merged.length > 0) {
+      chatMergeLog("snapshot: merged populated", {
+        streamKey,
+        usedSource,
+        baseStoredCount: baseStored.length,
+        streamCount: streamMessages.length,
+        mergedCount: merged.length,
+        mergedLast: fingerprint(merged[merged.length - 1]),
+      });
       return merged;
     }
 
@@ -271,9 +354,25 @@ export function useConversationSnapshot(
     // visible across a transient empty frame instead of flashing to the
     // empty state. On a brand-new chat (no prior snapshot), the cache is
     // also empty so we still return the legitimately-empty `merged`.
-    return lastNonEmptyRef.current.key === streamKey
-      ? lastNonEmptyRef.current.messages
-      : merged;
+    const cacheHit =
+      lastNonEmptyRef.current.key === streamKey &&
+      lastNonEmptyRef.current.messages.length > 0;
+    chatMergeLog("snapshot: merged EMPTY", {
+      streamKey,
+      usedSource,
+      baseStoredCount: baseStored.length,
+      streamCount: streamMessages.length,
+      historyPropCount: historyMessages?.length ?? 0,
+      cacheHit,
+      cacheLast: cacheHit
+        ? fingerprint(
+            lastNonEmptyRef.current.messages[
+              lastNonEmptyRef.current.messages.length - 1
+            ],
+          )
+        : "<none>",
+    });
+    return cacheHit ? lastNonEmptyRef.current.messages : merged;
   }, [streamKey, streamMessages, historyMessages, liveActivity]);
 
   // Keep the cache in sync after each commit. Doing this in an effect

@@ -20,6 +20,46 @@ import {
   historyHasCaughtUpToStream,
 } from "./helpers";
 
+// See `use-conversation-snapshot.ts` for the matching debug flag.
+// Toggle with `localStorage.setItem("aura.debug.chatMerge", "1")` and
+// reload to surface every history-side mutation that can race against
+// the optimistic stream rows: WS-triggered force refetches, post-stream
+// forced fetch, and the two `resetEvents(...)` paths that copy history
+// snapshots into the stream store. When investigating "user message
+// flickers / briefly overwritten" reports, line these logs up against
+// the `[aura.chatMerge]` snapshot logs to identify which mutation
+// landed inside the merge's empty-frame window.
+const CHAT_MERGE_DEBUG_KEY = "aura.debug.chatMerge";
+const chatHistorySyncDebugEnabled = ((): boolean => {
+  try {
+    return (
+      typeof window !== "undefined" &&
+      window.localStorage?.getItem(CHAT_MERGE_DEBUG_KEY) === "1"
+    );
+  } catch {
+    return false;
+  }
+})();
+
+function fingerprintLast(messages: DisplaySessionEvent[]): string {
+  const last = messages[messages.length - 1];
+  if (!last) return "<none>";
+  const preview = last.content.slice(0, 40).replace(/\s+/g, " ");
+  return `${last.role}#${last.id}:"${preview}"`;
+}
+
+function chatHistorySyncLog(
+  tag: string,
+  payload: Record<string, unknown>,
+): void {
+  if (!chatHistorySyncDebugEnabled) return;
+  // eslint-disable-next-line no-console -- gated behind localStorage flag
+  console.debug(`[aura.chatMerge] ${tag}`, {
+    ts: Date.now(),
+    ...payload,
+  });
+}
+
 interface ChatHistorySyncOptions {
   historyKey: string | undefined;
   streamKey: string;
@@ -126,11 +166,15 @@ export function useChatHistorySync({
     if (prevIsStreamingRef.current && !isStreaming) {
       streamFinishedAtRef.current = Date.now();
       if (historyKey && fetchFn) {
+        chatHistorySyncLog("history: post-stream forced refetch", {
+          historyKey,
+          streamKey,
+        });
         useChatHistoryStore.getState().fetchHistory(historyKey, fetchFn, { force: true });
       }
     }
     prevIsStreamingRef.current = isStreaming;
-  }, [isStreaming, historyKey, fetchFn]);
+  }, [isStreaming, historyKey, fetchFn, streamKey]);
 
   // Subscribe to live WebSocket chat events for this agent and force-refetch
   // history on a match. This keeps the target agent's chat panel in sync when
@@ -173,6 +217,11 @@ export function useChatHistorySync({
 
     const onChatEvent = (event: { content?: Record<string, unknown> }) => {
       if (!matches(event.content)) return;
+      chatHistorySyncLog("history: WS-triggered refetch (UserMessage/AssistantEnd)", {
+        historyKey,
+        streamKey,
+        eventContentKeys: event.content ? Object.keys(event.content) : [],
+      });
       useChatHistoryStore
         .getState()
         .fetchHistory(historyKey, fetchFn, { force: true });
@@ -191,6 +240,10 @@ export function useChatHistorySync({
       if (progressTimer !== undefined) return;
       progressTimer = setTimeout(() => {
         progressTimer = undefined;
+        chatHistorySyncLog("history: WS-triggered refetch (AssistantTurnProgress)", {
+          historyKey,
+          streamKey,
+        });
         useChatHistoryStore
           .getState()
           .fetchHistory(historyKey, fetchFn, { force: true });
@@ -319,6 +372,17 @@ export function useChatHistorySync({
       }
     }
 
+    chatHistorySyncLog("history: resetEvents(historyMessages) — hydrate path", {
+      historyKey,
+      streamKey,
+      historyCount: historyMessages.length,
+      historyLast: fingerprintLast(historyMessages),
+      replacingStreamCount: streamCount,
+      sinceFinishedMs:
+        streamFinishedAtRef.current > 0
+          ? Date.now() - streamFinishedAtRef.current
+          : null,
+    });
     resetEventsRef.current(historyMessages, { allowWhileStreaming: true });
   }, [
     historyMessages,
@@ -363,6 +427,14 @@ export function useChatHistorySync({
       return;
     }
 
+    chatHistorySyncLog("history: resetEvents([]) — caught-up clear path", {
+      historyKey,
+      streamKey,
+      historyCount: historyMessages.length,
+      historyLastMessageAt,
+      previousLastMessageAt,
+      replacingStreamCount: streamCount,
+    });
     resetEventsRef.current([], { allowWhileStreaming: true });
   }, [
     historyKey,
