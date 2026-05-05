@@ -2,20 +2,21 @@
   {
     "date": "2026-05-04",
     "channel": "nightly",
-    "version": "0.1.0-nightly.452.1",
-    "title": "Theming overhaul, desktop chrome, and a self-diagnosing updater",
-    "intro": "Today's nightly is a heavy day for Aura's desktop experience. A multi-phase theming program lands light mode end-to-end, with custom token overrides, named presets, and a clean two-state titlebar toggle. The desktop shell gains a real File/Edit/View/Help menu bar, an Update pill, multi-window support that stays signed in, and an auto-updater that finally explains itself when it fails. New users also get an onboarding flow with a welcome modal, a checklist, and an agent MODE selector for Code/Plan/Image/3D.",
-    "entryCount": 6,
+    "version": "0.1.0-nightly.457.1",
+    "title": "Theming overhaul, desktop chrome, and onboarding land together",
+    "intro": "A heavy day for Aura's desktop experience: a multi-phase theming system shipped end-to-end with light mode, custom tokens, and presets; a native-style menu bar and unified titlebar arrived; a first-run onboarding flow went live; and the auto-updater and macOS DMG packaging were rebuilt to be self-diagnosing and reliably shippable.",
+    "entryCount": 5,
     "highlights": [
-      "Light mode and per-token theme presets across the app",
-      "File/Edit/View/Help menu bar in the Desktop titlebar",
-      "Self-diagnosing auto-updater with logs on Windows and macOS",
-      "Code/Plan/Image/3D MODE selector in the chat input",
-      "First-run onboarding with welcome modal and checklist"
+      "Light mode and theme presets ship across desktop and mobile",
+      "Native-style File/Edit/View/Help menu bar in the desktop titlebar",
+      "First-run onboarding with welcome modal and checklist",
+      "Self-diagnosing Windows + macOS auto-updater",
+      "Patched macOS DMG packaging unblocks nightly releases",
+      "New agent MODE selector (Code/Plan/Image/3D) in the chat input"
     ],
-    "rawCommitCount": 110,
-    "generatedAt": "2026-05-05T03:10:46.111Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.452.1",
+    "rawCommitCount": 121,
+    "generatedAt": "2026-05-05T04:54:11.755Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.457.1",
     "path": "history/2026-05-04.json"
   },
   {

@@ -1,73 +1,69 @@
-# Theming overhaul, desktop chrome, and a self-diagnosing updater
+# Theming overhaul, desktop chrome, and onboarding land together
 
 - Date: `2026-05-04`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.452.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.452.1
+- Version: `0.1.0-nightly.457.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.457.1
 
-Today's nightly is a heavy day for Aura's desktop experience. A multi-phase theming program lands light mode end-to-end, with custom token overrides, named presets, and a clean two-state titlebar toggle. The desktop shell gains a real File/Edit/View/Help menu bar, an Update pill, multi-window support that stays signed in, and an auto-updater that finally explains itself when it fails. New users also get an onboarding flow with a welcome modal, a checklist, and an agent MODE selector for Code/Plan/Image/3D.
+A heavy day for Aura's desktop experience: a multi-phase theming system shipped end-to-end with light mode, custom tokens, and presets; a native-style menu bar and unified titlebar arrived; a first-run onboarding flow went live; and the auto-updater and macOS DMG packaging were rebuilt to be self-diagnosing and reliably shippable.
 
-## 8:11 PM — Light mode lands across the app with per-token presets
+## 8:11 PM — Light mode, theme presets, and a unified Settings surface
 
-A multi-phase theming program ships a real light mode, an editable Appearance section, custom token overrides, named presets, and a two-state titlebar toggle, with extensive surface-level cleanup so chat, sidebars, modals, and form inputs read correctly in both themes.
+A 14-phase theming program landed: design tokens, a custom-token editor with import/export presets, sectioned Settings with deep links, onboarding, and a long tail of light-mode contrast fixes.
 
-- Introduced a tokenized theming foundation: a new tokens.css with light/dark variants, removal of the legacy always-dark overrides, a dynamic highlight.js theme bridge, and a pre-React theme stamper to avoid first-paint flash. (`e4a35e7`, `7f6bb74`, `3424cb5`)
-- Added a Settings > Appearance section with theme mode buttons, a 6-color accent picker, a custom token editor, and named presets with JSON import/export, plus a titlebar quick toggle and a matching mobile toggle in MobileTopbar. (`43d01ee`, `aaee109`, `0928dc6`, `79f001d`)
-- Migrated process canvas, xterm, sidekick log, chat input, IDE view, browser address bar, agent environment, billing modals and more onto the new tokens, and added a lint guard that fails the build on raw color literals in migrated module.css files. (`7f6bb74`, `47721ec`, `aca46ec`, `7d2fb89`, `c56ba50`, `4281fd0`, `fe9bfeb`, `53bc7a4`, `1ca212d`, `abb325f`, `f6cb146`)
-- Fixed the worst light-mode contrast bugs: white-on-white chat bubbles, rails, sidekick, modals, the AURA wordmark, and ZUI form inputs (Input, Search, Textarea, Select) all now route through theme-aware tokens, and the user message bubble stays dark in light mode for sender contrast. (`9f52c4e`, `085ff9a`, `8706839`, `f111847`)
-- Reworked Settings into a sectioned layout with /settings/:section deep links, merged the app Appearance/Notifications/Keyboard/About/Advanced sections into the taskbar gear modal so theme controls are reachable, and simplified the titlebar toggle to a binary light↔dark switch. (`b94ad56`, `7ec29ea`, `401d9fb`)
-- Restored keyboard focus visibility app-wide by removing the global outline:none and adding a single :focus-visible base rule, and kept the boot/error overlay window controls accessible via a native HTML fallback titlebar. (`e69bc31`, `d2848bd`)
-- Fixed the CEO chat blink and orphaned-binding regressions: cascade-delete now tears down agent project bindings before delete, and active history keys are pinned in the chat-history LRU so background sidebar prefetches can no longer evict the visible chat. (`95f172f`, `3527198`, `4bc972e`)
-- Shipped the first-run onboarding flow: a welcome modal, a portal-rendered checklist with progress, a help button in the taskbar, an auto-detection watcher with a baseline-count guard, and prompt suggestion chips on empty chats. (`bd80420`, `988eee6`, `708e75e`, `6f91ff3`, `e5d310e`, `11fc116`, `0d96fae`, `8d0ab5a`, `779d737`)
-- Defaulted Debug to hidden in the Apps taskbar, aligned Settings/Aura3D/Apps modal headers to a 32px control height, and disabled REQUIRE_ZERO_PRO by default in both server and desktop builds. (`4b47c85`, `ac89c2f`, `ae418f3`, `d987125`)
-- Wired VITE_MIXPANEL_TOKEN into the desktop nightly build so analytics ship with the artifact. (`814d663`)
+- Introduced a token-driven theme system with light/dark variants, a Settings > Appearance section, and Sun/Moon quick toggles in the desktop titlebar and mobile topbar; the toggle was later simplified to a binary light↔dark switch with theme-aware icons. (`e4a35e7`, `43d01ee`, `7f6bb74`, `79f001d`, `401d9fb`)
+- Shipped a per-token theme editor with named presets, JSON import/export, built-in Aura Dark/Light, and live previews; chrome tokens for sidebar, sidekick, and titlebar are now user-customizable and persisted per resolved theme. (`aaee109`, `0928dc6`, `ee63308`)
+- Made light mode actually usable: routed chat bubbles, rails, sidekick, modals, and form inputs through semantic tokens; bumped contrast on muted text; pinned the user message bubble dark in both themes; and added a lint guard against raw color literals in module CSS. (`9f52c4e`, `8706839`, `085ff9a`, `f6cb146`, `f111847`)
+- Reorganized Settings into deep-linkable sections (/settings/:section) with About, Appearance, Notifications, Keyboard, and Advanced, and merged app + team settings into a single taskbar-gear modal so theme controls are finally discoverable. (`b94ad56`, `7ec29ea`, `ac89c2f`, `621104e`, `3702057`, `6209501`)
+- Added a first-run onboarding experience: a 2-step welcome modal, a portal-rendered checklist with 5 tasks, auto-detection via store subscriptions with baseline counts to ignore pre-existing defaults, and a Help button in the taskbar. (`bd80420`, `988eee6`, `708e75e`, `6f91ff3`, `e5d310e`, `11fc116`, `779d737`, `0d96fae`, `2f9dbb1`, `8d0ab5a`)
+- Fixed two longstanding chat blink bugs: pinned the active history key in the LRU so background prefetches can't evict the visible chat, and added a proactive cold-load reveal so transcripts no longer render as a black panel after re-entry. (`3527198`, `4bc972e`)
+- Restored keyboard focus visibility across the app, added a fallback HTML titlebar so window controls remain usable on boot/error overlays, and cascade-deletes for agents now tear down project bindings instead of dead-ending on a 409. (`e69bc31`, `d2848bd`, `95f172f`)
+- Wired Mixpanel tokens into desktop and mobile nightly builds and defaulted REQUIRE_ZERO_PRO to false on server and desktop so unset envs no longer block sign-in. (`814d663`, `a60654c`, `ae418f3`, `d987125`)
 
-## 12:42 PM — Slim 32px modal headers become the ZUI default
+## 12:48 PM — Agent MODE selector and self-diagnosing auto-updater
 
-The opt-in compact modal header introduced for Apps and Settings is promoted into ZUI's Modal as the default look, so every modal title bar lines up with the sidebar search.
+Chat input gains a Code/Plan/Image/3D mode switch with persisted per-agent state, and the desktop auto-updater grows a full diagnostic backbone for shipped Windows and macOS builds.
 
-- Added a compactHeader prop to ZUI Modal, applied it to the Apps and Org Settings modals to fix a cascade-order issue with local overrides, then made the 32px slim header the baked-in default and removed the now-redundant prop and CSS. (`621104e`, `3702057`, `6209501`)
+- Added a MODE row above every chat input (desktop and mobile) with mutually-exclusive Code, Plan, Image, and 3D modes that drive model lists, slash-command injection, and the send pipeline end-to-end; selection persists per agent. (`4165166`, `b35614b`, `375eb86`)
+- Made the desktop auto-updater observable on shipped builds: daily tracing log file, per-step diagnostics with persisted state, boot-time reconcile that surfaces the failed step, sentinel-gated Windows handoff so a stalled PowerShell can't kill Aura, and a graceful macOS shutdown handshake. (`7f8e1d7`)
+- Aura3D now remembers context across sessions: the nav restores the last project, switching tabs auto-selects the latest image or model, and project artifacts seed default selections instead of landing on an empty pane. (`4f26758`)
+- Extracted a shared InputBarShell from ChatInputBar and Aura3D PromptInput so chat and 3D prompts share one input chrome, and baked the Z_BILLING_API_KEY into desktop builds via build.rs and CI. (`c2f8653`, `abc3392`, `d24847f`)
 
-## 12:46 PM — Mobile nightly picks up Mixpanel analytics token
+## 3:07 PM — First-chat self-heal for new bare agents
 
-The mobile nightly workflow now passes VITE_MIXPANEL_TOKEN through to the build so analytics behave consistently with desktop nightlies.
+Restore Home-project binding repair on the deduped chat hot path so a freshly created agent's first message no longer 422s.
 
-- Forwarded VITE_MIXPANEL_TOKEN into the mobile nightly GitHub Actions workflow. (`a60654c`)
+- When a new agent's create-time Home-project bind fails silently, the chat hot path now lazily repairs the binding before persistence runs, eliminating the 'aura_session_id is missing for chat_session' error on first chat. (`8b5b7d7`)
 
-## 12:48 PM — Agent MODE selector and a self-diagnosing desktop updater
+## 3:12 PM — Native-style menu bar, desktop right-click, and shared chrome
 
-Chat gains a Code/Plan/Image/3D mode selector with an animated capsule and a shared input bar shell, while the desktop auto-updater is rebuilt with persistent logs, reconcile-on-boot, and a sentinel-gated handoff so install failures stop being silent.
+Aura's desktop chrome got a substantial polish pass: a real menu bar with global shortcuts, a shared right-click menu, login/desktop chrome unified, and the auto-updater's Windows handoff rebuilt on cmd.exe.
 
-- Added a per-agent MODE row (Code/Plan/Image/3D) above the chat input on desktop and mobile, modeled as a discriminated union so Image/3D modes inject the right slash command and steer the model list end-to-end; mode is persisted per agent like the model picker. (`4165166`, `b35614b`, `375eb86`)
-- Extracted a shared InputBarShell from ChatInputBar and the Aura3D PromptInput so chat and 3D prompt surfaces share chrome, model picker, and the new mode selector. (`c2f8653`)
-- Rebuilt the desktop auto-updater to be self-diagnosing: a daily desktop.log via tracing-appender, an updater.log + updater-state.json that survive process exit, boot-time reconcile of stalled installs, a sentinel-gated Windows handoff that no longer exits Aura blindly, a graceful macOS shutdown handshake, and a 'Show updater logs' affordance in UpdateControl. (`7f8e1d7`)
-- Made Aura3D remember context across sessions: nav hydrates the last selected project, the store auto-selects the latest image (and any linked 3D model) or latest model when switching tabs, and project artifacts seed default selections on load. (`4f26758`)
-- Tightened onboarding completion logic to ignore pre-existing defaults, placed Name and Role side-by-side in the agent editor, and threaded Z_BILLING_API_KEY into both the desktop nightly workflow and the desktop binary via build.rs. (`c9514db`, `a86946a`, `d24847f`, `abc3392`)
+- Added File/Edit/View/Help menus to the desktop titlebar with cross-platform shortcut formatting, hover-switching dropdowns, zoom controls, full-screen toggle, and Rust-side IPC for new windows; secondary windows now share the WebContext so login state propagates. (`0bb9d92`, `3694dd6`, `0b40364`, `5c94d6a`, `917c64a`, `8d25e4a`, `8bf0278`, `6ac931e`, `6bf1c29`)
+- Replaced the Windows updater's PowerShell handoff with a cmd.exe .bat script with captured stdout/stderr, a 30s soft / 60s hard sentinel deadline, and early-exit detection — so AMSI/Defender scans no longer abort otherwise-healthy installs with no breadcrumbs. (`3286f2c`)
+- Unified login and desktop titlebar chrome via a shared ShellTitlebar pill, then iterated to drop the bespoke wrapper and standardize on zui Topbar with a tokenized BottomTaskbar, and replaced the floating UpdateBanner with a compact Update pill in the titlebar. (`3451488`, `c4a25d4`, `8588aea`, `2a5a27e`)
+- Right-clicking empty taskbar chrome now opens the same context menu as the desktop, with edge-aware anchoring and a Settings entry; the menu pre-clamps when launched near viewport edges. (`de0dd0f`, `bcb603e`)
+- Rebranded installers and the in-app icon to AURA across NSIS, .dmg, .app, and PWA assets via a master-orb icon generator, and pinned iOS TestFlight uploads to Xcode 26 to clear Apple's iOS 26 SDK gate. (`ad5a8a6`, `def9935`)
+- Unblocked the long-failing Aura Functional Evals smoke job: refreshed the baseline, added a stale-baseline detector, role-based login assertions, and a one-command refresh script; also tightened the About > Updates row layout at narrow widths. (`819bcfa`, `1257a45`, `0ad4432`)
+- Hardened macOS DMG packaging by disabling Spotlight on the runner before packaging and force-unmounting busy volumes, recovering CI from the recurring 'hdiutil: Resource busy' wedge. (`70441f6`)
+- Polished the chat input mode pill through several iterations — CSS-grid positioning, measured pixel transforms, and inline-style transforms — landing on a reliable sliding capsule animation, plus a leaderboard switch from tokens to estimated cost. (`7a6715a`, `32e45e1`, `bbb8eae`, `708a892`, `840f241`, `509366a`)
 
-## 3:07 PM — First chat with a fresh agent self-heals its Home binding
+## 8:45 PM — Patched create-dmg and Node-24 CI compatibility
 
-A 422 'aura_session_id missing' regression on a new user's very first chat with a freshly created agent is fixed by restoring the lazy Home-project repair on the deduped chat hot path.
+Vendored a hardened create-dmg fork to break the macOS Intel packaging deadlock and bumped GitHub Actions runners ahead of the Node 20 deprecation.
 
-- Re-enabled lazy_repair_home_project_binding on the deduped agent chat persistence path so a missing or transient Home binding is repaired before the first turn instead of returning a structured 422; covered with new setup tests. (`8b5b7d7`)
-
-## 3:12 PM — Native-style menu bar, multi-window login, and DMG packaging unblocked
-
-The desktop titlebar gains a real File/Edit/View/Help menu with cross-platform shortcuts, secondary windows now share the auth-bearing WebContext, an Update pill replaces the floating banner, and macOS DMG packaging is hardened against Spotlight-induced ejection failures.
-
-- Added a File/Edit/View/Help menu bar to the desktop titlebar with hover-to-switch dropdowns, cross-platform shortcut formatting (Cmd glyphs on macOS, Ctrl+ on Win/Linux), zoom controls, context-aware Previous/Next Agent navigation, and Rust-side IPC for new windows and fullscreen toggle. (`0bb9d92`, `3694dd6`, `0b40364`, `5c94d6a`, `917c64a`, `8d25e4a`, `8bf0278`, `6ac931e`)
-- Made File > New Window stay signed in by sharing the primary window's wry::WebContext across all main windows, so cookies, localStorage, and IndexedDB (and therefore the auth session) propagate between windows in real time. (`6bf1c29`)
-- Hardened the Windows auto-updater handoff by replacing the fragile PowerShell launcher with a cmd.exe .bat script, bumping the sentinel deadline from 5s to 30s with a 60s ceiling, capturing child stdout/stderr into the updater log, and detecting early child exit instead of timing out blindly. (`3286f2c`)
-- Replaced the floating bottom-left UpdateBanner on desktop with a compact Update pill in the titlebar's right rail, backed by a new shared PillButton primitive; mobile keeps the legacy banner. (`c4a25d4`, `8588aea`)
-- Unified the login screen and authenticated shell behind a shared ShellTitlebar, and shared the desktop right-click menu between the desktop surface and empty taskbar chrome (with edge-aware anchoring so menus near the taskbar don't spawn off-screen). (`3451488`, `de0dd0f`)
-- Polished the chat input mode selector after several attempts: switched from JS-measured WAAPI to a CSS-grid + measured-pixel approach driven by inline transform styles so the active capsule reliably slides between Code, Plan, Image, and 3D. (`7a6715a`, `45a46a8`, `32e45e1`, `bbb8eae`, `708a892`, `840f241`)
-- Cleaned up several light-mode chrome regressions in the org switcher avatar, image-crop zoom knob, slash command chips, cooking indicator alignment, and the narrow-width Settings > Updates row. (`5b35a3b`, `57aca98`, `e4b9402`, `ca3cf0a`, `91fac39`, `bea9919`, `ee74d74`, `1257a45`)
-- Unblocked the Aura Functional Evals smoke job by refreshing the renamed-scenario baseline, adding a stale-baseline detector and refresh script, and stopped macOS DMG packaging from wedging on Spotlight-busy volumes via forced unmount/eject and disabled indexing on the runner. (`819bcfa`, `70441f6`)
+- Vendored a patched create-dmg with -nobrowse, mdutil-off, and forced-detach retries, and pre-seeded it into cargo-packager's cache so every nightly retry uses the fixed script instead of the broken upstream v1.1.1. (`5cb4b2a`)
+- Renamed the 1024px app icon to icon-1024@2x.png so cargo-packager's icns generator maps it to the retina ic10 slot, fixing the macOS .app build that broke after the AURA rebrand. (`a751975`)
+- Bumped every GitHub Action pinned to Node 20 (checkout, setup-node, setup-java, artifact, cache, setup-python) to its Node-24-compatible major ahead of the June 2026 deprecation, and unblocked Android CI by tightening a leaderboard map type. (`8054922`)
+- Pinned the iOS macos-26 runner to /Applications/Xcode_26.4.app since the runner image ships no plain Xcode_26.app symlink, recovering the validate-ios and ship-ios jobs from xcode-select failures. (`22d66ef`)
+- Added per-mode accent borders (green for Code, amber for Plan, cyan for Image, purple for 3D) to the segmented mode pill so the active mode reads at a glance. (`42ba4dc`)
 
 ## Highlights
 
-- Light mode and per-token theme presets across the app
-- File/Edit/View/Help menu bar in the Desktop titlebar
-- Self-diagnosing auto-updater with logs on Windows and macOS
-- Code/Plan/Image/3D MODE selector in the chat input
+- Light mode and theme presets ship across desktop and mobile
+- Native-style File/Edit/View/Help menu bar in the desktop titlebar
 - First-run onboarding with welcome modal and checklist
+- Self-diagnosing Windows + macOS auto-updater
+- Patched macOS DMG packaging unblocks nightly releases
+- New agent MODE selector (Code/Plan/Image/3D) in the chat input
 
