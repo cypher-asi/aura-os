@@ -1,23 +1,10 @@
 /* ============================================================
- * Mode selector — segmented control rendered as the topmost
- * section of the agent chat input. Owns its own pill chrome and
- * focus styling so it reads as a distinct row above the textarea
- * / containerTop slot.
- *
- * Layout strategy: the segments wrapper is a CSS grid of equal
- * 1fr columns. The indicator pill is absolutely positioned and
- * sized to one column width via calc(). React owns the `transform`
- * inline style and emits a fully-resolved `translateX(...)` string
- * per active mode — passing the index through a CSS variable does
- * not reliably trigger the transform transition in Chromium because
- * the dependent property's computed value is treated as unchanged
- * when only the variable's value differs. By writing the transform
- * literally on each render, the start/end computed values clearly
- * differ and the CSS transition interpolates between them.
- *
- * `100%` inside the transform's translateX is relative to the
- * indicator's own width (one column), so `index * (100% + gap)` is
- * the exact left edge of column N relative to column 0.
+ * Mode selector — topmost row of the agent chat input. Owns the
+ * row chrome (border, padding, MODE label) and the typography
+ * overrides that make the inner `SlidingPills` segments render
+ * compact enough to fit alongside the textarea / containerTop
+ * slot. The slide animation and selection chrome belong to
+ * `SlidingPills` itself.
  * ============================================================ */
 
 .root {
@@ -38,80 +25,17 @@
   text-transform: uppercase;
 }
 
-.segments {
-  --mode-count: 4;
-  --mode-gap: 2px;
-  --mode-pad: 2px;
-  --mode-col: calc(
-    (100% - var(--mode-pad) * 2 - var(--mode-gap) * (var(--mode-count) - 1))
-      / var(--mode-count)
-  );
-  position: relative;
-  display: inline-grid;
-  grid-template-columns: repeat(var(--mode-count), minmax(0, 1fr));
-  align-items: center;
-  gap: var(--mode-gap);
-  padding: var(--mode-pad);
-  border-radius: 999px;
+.pills {
   background: color-mix(in srgb, var(--color-overlay-light) 60%, transparent);
+  padding: 2px;
+  gap: 2px;
 }
 
-.indicator {
-  position: absolute;
-  top: var(--mode-pad);
-  bottom: var(--mode-pad);
-  left: var(--mode-pad);
-  width: var(--mode-col);
-  border-radius: 999px;
-  background: var(--color-elevated);
-  /* Selection pill always uses the global accent color so the active
-     mode reads consistently with the rest of the accent treatment. */
-  border: 1px solid var(--color-accent);
-  box-shadow: 0 1px 2px var(--color-backdrop-light);
-  pointer-events: none;
-  z-index: 0;
-  will-change: transform;
-  transform: translateX(0);
-  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.segment {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  appearance: none;
-  border: none;
-  background: transparent;
-  color: var(--color-text-secondary);
-  font-family: inherit;
+.modeSegment {
+  padding: 3px 10px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  padding: 3px 10px;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: color 0.15s ease;
-}
-
-.segment:hover:not(.segmentActive) {
-  color: var(--color-text-primary);
-}
-
-.segment:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--color-overlay-focus);
-}
-
-.segmentActive {
-  color: var(--color-text-primary);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .indicator {
-    transition: none;
-  }
 }
 
 @media (max-width: 640px) {
@@ -120,7 +44,7 @@
     gap: 8px;
   }
 
-  .segment {
+  .modeSegment {
     padding: 4px 12px;
     font-size: 12px;
   }
