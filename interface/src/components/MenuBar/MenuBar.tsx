@@ -30,6 +30,9 @@ function MenuPanel({ menu, position, onSelect, onClose, panelRef, isItemDisabled
       className={`${styles.panel} titlebar-no-drag`}
       role="menu"
       aria-label={menu.label}
+      data-agent-surface="desktop-menu-panel"
+      data-agent-proof="desktop-menu-panel-visible"
+      data-agent-context-anchor="desktop-menu-panel"
       style={style}
       onContextMenu={(event) => event.preventDefault()}
       onDoubleClick={(event) => event.stopPropagation()}
@@ -157,6 +160,9 @@ export function MenuBar() {
       className={`${styles.menuBar} titlebar-no-drag`}
       role="menubar"
       aria-label="Application menu"
+      data-agent-surface="desktop-menu-bar"
+      data-agent-proof="desktop-menu-bar-visible"
+      data-agent-context-anchor="desktop-menu-bar"
       onDoubleClick={(event) => event.stopPropagation()}
     >
       {menus.map((menu) => {
@@ -173,6 +179,7 @@ export function MenuBar() {
             aria-haspopup="menu"
             aria-expanded={isOpen}
             data-open={isOpen || undefined}
+            data-agent-action={`open-menu-${menu.id}`}
             className={`${styles.trigger} ${isOpen ? styles.triggerOpen : ""} titlebar-no-drag`}
             onClick={() => handleTriggerClick(menu.id)}
             onPointerEnter={() => handleTriggerEnter(menu.id)}

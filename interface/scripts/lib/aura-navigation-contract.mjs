@@ -22,14 +22,14 @@ const DESKTOP_CAPTURE_POLICY = Object.freeze({
 const SITEMAP_GENERATOR_VERSION = 1;
 const SEEDED_CAPTURE_SURFACES = Object.freeze({
   agents: {
-    capabilities: ["agent-chat-ready", "sidebar-list-populated", "sidekick-context-populated"],
-    preferredStableSurface: "Agent chat with a selected seeded agent, readable transcript, and sidekick context.",
-    seededData: ["selected agent", "chat transcript", "agent sidebar rows", "profile sidekick"],
+    capabilities: ["agent-chat-ready", "mode-selector-visible", "sidebar-list-populated", "sidekick-context-populated"],
+    preferredStableSurface: "Agent chat with a selected seeded agent, readable transcript, MODE selector, and sidekick context.",
+    seededData: ["selected agent", "chat transcript", "MODE selector", "agent sidebar rows", "profile sidekick"],
   },
   aura3d: {
-    capabilities: ["asset-gallery-populated", "image-gallery-populated", "generated-result-visible", "project-selected"],
-    preferredStableSurface: "Generated Image gallery with a selected demo project, selected image, and visible sidekick thumbnails.",
-    seededData: ["selected project", "generated image preview", "image gallery thumbnails"],
+    capabilities: ["asset-gallery-populated", "image-gallery-populated", "generated-result-visible", "project-selected", "desktop-menubar-visible", "theme-light-mode-visible"],
+    preferredStableSurface: "Generated Image gallery with a selected demo project, selected image, desktop chrome, and visible sidekick thumbnails.",
+    seededData: ["selected project", "generated image preview", "image gallery thumbnails", "desktop titlebar/menu chrome"],
   },
   projects: {
     capabilities: [
@@ -388,8 +388,8 @@ function buildCaptureSeedProfile(app) {
     "proof-data-populated",
     `app:${app.id}`,
     ...(seededSurface?.capabilities || []),
-    ...(app.id === "agents" ? ["agent-chat-ready", "sidebar-list-populated", "sidekick-context-populated"] : []),
-    ...(app.id === "aura3d" ? ["asset-gallery-populated", "image-gallery-populated", "project-selected"] : []),
+    ...(app.id === "agents" ? ["agent-chat-ready", "mode-selector-visible", "sidebar-list-populated", "sidekick-context-populated"] : []),
+    ...(app.id === "aura3d" ? ["asset-gallery-populated", "image-gallery-populated", "project-selected", "desktop-menubar-visible", "theme-light-mode-visible"] : []),
     ...(app.id === "projects" ? ["project-selected", "run-history-populated"] : []),
     ...(app.id === "tasks" ? ["run-history-populated", "project-selected"] : []),
     ...(sourceContext.surfaces?.some((handle) => /sidekick/i.test(handle)) ? ["sidekick-context-populated"] : []),

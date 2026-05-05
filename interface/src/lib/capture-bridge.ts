@@ -26,6 +26,7 @@ import { writeCaptureDemoProjectStats } from "./capture-demo-stats";
 import { useFeedStore } from "../stores/feed-store";
 import { useLoopActivityStore } from "../stores/loop-activity-store";
 import { useAura3DStore } from "../stores/aura3d-store";
+import { useOnboardingStore } from "../features/onboarding/onboarding-store";
 
 const DESKTOP_WINDOWS_STORAGE_KEY = "aura:desktopWindows";
 const DEMO_PROJECT_ID = "22222222-2222-4222-8222-222222222222";
@@ -74,6 +75,7 @@ export interface AuraCaptureBridgeState {
   placeholderVisible: boolean;
   feedbackComposerVisible: boolean;
   dialogVisible: boolean;
+  blockingDialogVisible: boolean;
   sidekickInfoVisible: boolean;
   sidekickPreviewVisible: boolean;
   orgSettingsOpen: boolean;
@@ -228,6 +230,17 @@ export function readAuraCaptureBridgeState(
     .some((node) => isVisible(node));
   const seedProofVisible = Array.from(document.querySelectorAll("[data-agent-proof]"))
     .some((node) => isVisible(node));
+  const orgSettingsOpen = hasVisibleDialogWithText(/\bteam settings\b/i);
+  const buyCreditsOpen = hasVisibleDialogWithText(/\bbuy credits\b/i);
+  const hostSettingsOpen = hasVisibleDialogWithText(/\bhost connection\b/i);
+  const appsModalOpen = hasVisibleDialogWithText(/\bvisible in taskbar\b/i);
+  const newProjectModalOpen = hasVisibleDialogWithText(/\bnew project\b/i);
+  const blockingDialogVisible = dialogVisible
+    && !orgSettingsOpen
+    && !buyCreditsOpen
+    && !hostSettingsOpen
+    && !appsModalOpen
+    && !newProjectModalOpen;
 
   return {
     timestamp: new Date().toISOString(),
@@ -245,13 +258,14 @@ export function readAuraCaptureBridgeState(
     placeholderVisible,
     feedbackComposerVisible,
     dialogVisible,
+    blockingDialogVisible,
     sidekickInfoVisible: Boolean(document.querySelector('[data-sidekick-info="true"]')),
     sidekickPreviewVisible: Boolean(document.querySelector('[data-sidekick-preview="true"]')),
-    orgSettingsOpen: hasVisibleDialogWithText(/\bteam settings\b/i),
-    buyCreditsOpen: hasVisibleDialogWithText(/\bbuy credits\b/i),
-    hostSettingsOpen: hasVisibleDialogWithText(/\bhost connection\b/i),
-    appsModalOpen: hasVisibleDialogWithText(/\bvisible in taskbar\b/i),
-    newProjectModalOpen: hasVisibleDialogWithText(/\bnew project\b/i),
+    orgSettingsOpen,
+    buyCreditsOpen,
+    hostSettingsOpen,
+    appsModalOpen,
+    newProjectModalOpen,
     desktopWindowCount: document.querySelectorAll('[data-window-layer-host="true"] [data-agent-id]').length,
     seedProofVisible,
   };
@@ -274,6 +288,46 @@ function seedCapabilities(seedPlan: AuraCaptureSeedPlan | null | undefined): str
   return Array.isArray(seedPlan?.capabilities)
     ? seedPlan.capabilities.map((entry) => entry.toLowerCase())
     : [];
+}
+
+function shouldApplyLightTheme(seedPlan: AuraCaptureSeedPlan | null | undefined, targetAppId: string | null): boolean {
+  return /\b(?:theme-light-mode-visible|light mode|light theme|appearance|theme preset|theme toggle|theme switch)\b/i.test(seedText(seedPlan, targetAppId));
+}
+
+function applyCaptureTheme(theme: "light" | "dark"): void {
+  try {
+    window.localStorage.setItem("zui-theme", JSON.stringify({ theme, accent: "purple" }));
+  } catch {
+    // Capture mode should still work when storage is unavailable.
+  }
+  document.documentElement.dataset.theme = theme;
+  document.documentElement.dataset.accent = document.documentElement.dataset.accent || "purple";
+}
+
+function suppressCaptureOnboarding(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  try {
+    const before = useOnboardingStore.getState();
+    before.completeWelcome();
+    before.dismissChecklist();
+    useOnboardingStore.setState({
+      welcomeCompleted: true,
+      welcomeSkipped: true,
+      welcomeStep: 0,
+      checklistDismissed: true,
+      checklistCollapsed: false,
+    });
+    const after = useOnboardingStore.getState();
+    return before.welcomeCompleted !== after.welcomeCompleted
+      || before.welcomeSkipped !== after.welcomeSkipped
+      || before.checklistDismissed !== after.checklistDismissed
+      || before.welcomeStep !== after.welcomeStep;
+  } catch {
+    return false;
+  }
 }
 
 export function shouldApplyAura3DSeed(seedPlan: AuraCaptureSeedPlan | null | undefined, targetAppId: string | null): boolean {
@@ -1365,6 +1419,15 @@ export async function applyAuraCaptureSeedPlan(
 ): Promise<Record<string, unknown>> {
   const applied: string[] = [];
   const capabilities = seedCapabilities(seedPlan);
+
+  if (await suppressCaptureOnboarding()) {
+    applied.push("onboarding-overlay-dismissed");
+  }
+
+  if (shouldApplyLightTheme(seedPlan, targetAppId)) {
+    applyCaptureTheme("light");
+    applied.push("theme-light-mode");
+  }
 
   if (capabilities.includes("project-selected") || shouldApplyAura3DSeed(seedPlan, targetAppId)) {
     await seedDemoProject();

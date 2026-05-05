@@ -57,6 +57,18 @@ test("assessMediaModelQuality blocks non-Opus models from producing publishable 
   assert.ok(gate.concerns.some((concern) => concern.includes("vision")));
 });
 
+test("assessMediaModelQuality blocks stale Opus models from media capture", () => {
+  const gate = assessMediaModelQuality({
+    anthropicModel: "claude-opus-4-7",
+    browserUseModel: "claude-opus-4.6",
+    visionJudgeModel: "gpt-5.5",
+  });
+
+  assert.equal(gate.ok, false);
+  assert.equal(gate.status, "blocked");
+  assert.ok(gate.concerns.some((concern) => concern.includes("Browser Use")));
+});
+
 test("buildPublishableMediaManifest omits failed media instead of creating placeholders", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-manifest-"));
   const pngPath = path.join(tempDir, "branded.png");
@@ -331,10 +343,10 @@ test("preflightCaptureAuth requires a live capture entry route", async () => {
 
   assert.equal(report.ok, false);
   assert.ok(report.concerns.some((concern) => concern.includes("Capture login route returned HTTP 404")));
-  assert.equal(report.sessionAvailable, true);
+  assert.equal(report.sessionAvailable, false);
 });
 
-test("requestCaptureSession locally mints media sessions when the API endpoint is unavailable", async () => {
+test("requestCaptureSession does not mint fake media sessions when the API contract fails", async () => {
   const report = await requestCaptureSession({
     baseUrl: "https://example.com",
     apiBaseUrl: "https://api.example.com",
@@ -342,11 +354,29 @@ test("requestCaptureSession locally mints media sessions when the API endpoint i
     fetchImpl: async () => fakeResponse({ status: 404, headers: { "content-type": "text/html" }, body: "<html></html>" }),
   });
 
-  assert.equal(report.ok, true);
-  assert.equal(report.source, "local-media-session");
-  assert.match(report.session?.access_token || "", /^aura-capture:/);
-  assert.equal(report.concerns.length, 0);
-  assert.ok(report.fallbackConcerns.some((concern) => concern.includes("expected 201")));
+  assert.equal(report.ok, false);
+  assert.equal(report.source, "api");
+  assert.equal(report.session, null);
+  assert.ok(report.concerns.some((concern) => concern.includes("expected 201")));
+  assert.ok(report.concerns.some((concern) => concern.includes("aura-capture access token")));
+});
+
+test("requestCaptureSession blocks invalid capture secrets instead of falling back to login screenshots", async () => {
+  const report = await requestCaptureSession({
+    baseUrl: "https://example.com",
+    apiBaseUrl: "https://api.example.com",
+    captureSecret: "wrong-capture-secret-with-enough-entropy",
+    fetchImpl: async () => fakeResponse({
+      status: 401,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ error: "invalid capture session secret", code: "unauthorized" }),
+    }),
+  });
+
+  assert.equal(report.ok, false);
+  assert.equal(report.sessionStatus, 401);
+  assert.equal(report.session, null);
+  assert.ok(report.concerns.some((concern) => concern.includes("HTTP 401")));
 });
 
 test("preflightCaptureAuth accepts the deployed capture contract shape", async () => {

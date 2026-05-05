@@ -652,6 +652,131 @@ test("deriveVisualMediaSurfaceClusters promotes repeated visual surfaces inside 
   assert.ok(shellCluster.subjects.some((subject) => subject.includes("bottom taskbar")));
 });
 
+test("deriveVisualMediaSurfaceClusters exposes recent desktop proof surfaces without mobile leakage", () => {
+  const opportunities = deriveVisualMediaOpportunities({
+    rawCommits: [
+      {
+        sha: "light11111111",
+        subject: "feat(theme): phase 10 - desktop light mode tokens",
+        files: [
+          "interface/src/styles/tokens.css",
+          "interface/src/components/DesktopShell/DesktopTitlebar.tsx",
+        ],
+      },
+      {
+        sha: "mobile1111111",
+        subject: "feat(theme): phase 12 - mobile quick toggle for dark/light/system",
+        files: ["interface/src/mobile/screens/MobileSettingsView/MobileSettingsView.tsx"],
+      },
+      {
+        sha: "tokens111111",
+        subject: "chore(theme): migrate ChatInputBar.module.css to design tokens",
+        files: ["interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css"],
+      },
+      {
+        sha: "mode111111111",
+        subject: "feat(chat): add agent MODE selector (Code/Plan/Image/3D) above the input",
+        files: [
+          "interface/src/components/InputBarShell/ModeSelector.tsx",
+          "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx",
+        ],
+      },
+      {
+        sha: "menu111111111",
+        subject: "fix(menubar): reorder File menu and swap New Agent/New Window shortcuts",
+        files: ["interface/src/components/MenuBar/MenuBar.tsx"],
+      },
+    ],
+    rendered: {
+      entries: [
+        {
+          batch_id: "entry-theme",
+          title: "Light mode lands across the app with per-token presets",
+          items: [
+            {
+              text: "Desktop light mode tokens and titlebar controls now render across Aura.",
+              commit_shas: ["light111", "tokens111"],
+              changed_files: [
+                "interface/src/styles/tokens.css",
+                "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css",
+              ],
+            },
+            {
+              text: "Mobile settings gained a quick theme toggle.",
+              commit_shas: ["mobile111"],
+              changed_files: ["interface/src/mobile/screens/MobileSettingsView/MobileSettingsView.tsx"],
+            },
+          ],
+        },
+        {
+          batch_id: "entry-mode",
+          title: "Agent MODE selector and self-diagnosing updater",
+          items: [
+            {
+              text: "Chat now exposes the Agent MODE selector with Code, Plan, Image, and 3D.",
+              commit_shas: ["mode111"],
+              changed_files: ["interface/src/components/InputBarShell/ModeSelector.tsx"],
+            },
+          ],
+        },
+        {
+          batch_id: "entry-menu",
+          title: "Native-style menu bar and multi-window login",
+          items: [
+            {
+              text: "The desktop menu bar now has reordered File menu shortcuts.",
+              commit_shas: ["menu111"],
+              changed_files: ["interface/src/components/MenuBar/MenuBar.tsx"],
+            },
+          ],
+        },
+      ],
+    },
+  }, {
+    sitemap: {
+      apps: [
+        {
+          id: "aura3d",
+          label: "AURA 3D",
+          path: "/3d",
+          keywords: ["aura 3d", "gallery", "desktop shell", "theme", "menu bar"],
+          captureSeedProfile: {
+            runtimeSeedSupport: "supported",
+            capabilities: ["image-gallery-populated", "theme-light-mode-visible", "desktop-menubar-visible"],
+          },
+        },
+        {
+          id: "agents",
+          label: "Agents",
+          path: "/agents",
+          keywords: ["agent", "chat", "mode selector"],
+          captureSeedProfile: {
+            runtimeSeedSupport: "supported",
+            capabilities: ["agent-chat-ready", "mode-selector-visible"],
+          },
+        },
+        {
+          id: "projects",
+          label: "Projects",
+          path: "/projects",
+          keywords: ["project", "stats", "metrics"],
+          captureSeedProfile: {
+            runtimeSeedSupport: "supported",
+            capabilities: ["project-stats-populated"],
+          },
+        },
+      ],
+    },
+  });
+  const clusters = deriveVisualMediaSurfaceClusters(opportunities);
+
+  assert.ok(clusters.some((cluster) => cluster.entryId === "entry-theme" && cluster.surfaceKey === "theme-light-mode"));
+  assert.ok(!clusters.some((cluster) => cluster.entryId === "entry-theme" && cluster.surfaceKey === "project-stats"));
+  assert.ok(clusters.some((cluster) => cluster.entryId === "entry-mode" && cluster.surfaceKey === "agent-mode-selector"));
+  assert.ok(clusters.some((cluster) => cluster.entryId === "entry-menu" && cluster.surfaceKey === "desktop-titlebar-menubar"));
+  assert.ok(!opportunities.some((opportunity) => opportunity.commitSha === "mobile1111111"));
+});
+
 test("deriveVisualMediaSurfaceClusters maps Team Settings proof to the Profile app route", () => {
   const opportunities = deriveVisualMediaOpportunities({
     rawCommits: [
@@ -948,6 +1073,41 @@ test("normalizeMediaPlan skips lower-priority duplicate shell fallback surfaces"
 
   assert.deepEqual(plan.candidates.map((candidate) => candidate.entryId), ["shell-a", "feedback"]);
   assert.ok(plan.skipped.some((entry) => entry.entryId === "shell-b" && entry.category === "duplicate-surface"));
+});
+
+test("normalizeMediaPlan keeps distinct shell proof classes on the same populated route", () => {
+  const plan = normalizeMediaPlan({
+    candidates: [
+      {
+        entryId: "light-theme",
+        title: "Light mode lands across the app",
+        shouldCapture: true,
+        reason: "Light theme desktop surface is visible around a populated gallery.",
+        targetAppId: "aura3d",
+        targetPath: "/3d",
+        proofGoal: "Show the desktop in light mode with theme-aware titlebar and panel surfaces.",
+        publicCaption: "Light mode paints the Aura desktop.",
+        confidence: 0.86,
+        changedFiles: ["interface/src/styles/tokens.css"],
+      },
+      {
+        entryId: "menu-bar",
+        title: "Native-style menu bar",
+        shouldCapture: true,
+        reason: "Menu bar and titlebar chrome are visible above the same populated gallery route.",
+        targetAppId: "aura3d",
+        targetPath: "/3d",
+        proofGoal: "Show the File/Edit/View/Help menu bar and titlebar controls above AURA 3D.",
+        publicCaption: "Aura now has a desktop menu bar.",
+        confidence: 0.82,
+        changedFiles: ["interface/src/components/MenuBar/MenuBar.tsx"],
+      },
+    ],
+    skipped: [],
+  }, { maxCandidates: 3 });
+
+  assert.deepEqual(plan.candidates.map((candidate) => candidate.entryId), ["light-theme", "menu-bar"]);
+  assert.ok(!plan.skipped.some((entry) => entry.category === "duplicate-surface"));
 });
 
 test("normalizeMediaPlan skips lower-priority duplicate model-picker surfaces", () => {

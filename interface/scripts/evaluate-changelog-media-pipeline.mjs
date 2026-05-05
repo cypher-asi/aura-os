@@ -2,7 +2,6 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 
 import {
@@ -111,8 +110,13 @@ async function looksLikeAuraApiOrigin(origin, fetchImpl = fetch) {
   return contentType.includes("application/json") && response.status !== 404;
 }
 
-function isOpusQualityModel(model) {
-  return /^claude[-_]opus(?:[-_.]|$)/i.test(String(model || "").trim());
+function isLatestOpusQualityModel(model) {
+  const normalized = String(model || "").trim().toLowerCase().replace(/[_-]+/g, ".");
+  const match = normalized.match(/^claude\.opus\.(\d+)(?:\.(\d+))?/);
+  if (!match) return false;
+  const major = Number(match[1]);
+  const minor = Number(match[2] ?? 0);
+  return major > 4 || (major === 4 && minor >= 7);
 }
 
 function isOpenAIQualityVisionModel(model) {
@@ -129,14 +133,14 @@ export function assessMediaModelQuality({
     {
       name: "planner-model",
       model: anthropicModel,
-      ok: isOpusQualityModel(anthropicModel),
-      reason: "Anthropic media planning must use an Opus-tier model.",
+      ok: isLatestOpusQualityModel(anthropicModel),
+      reason: "Anthropic media planning must use Claude Opus 4.7 or newer.",
     },
     {
       name: "browser-use-model",
       model: browserUseModel,
-      ok: isOpusQualityModel(browserUseModel),
-      reason: "Browser Use navigation/capture must use an Opus-tier model.",
+      ok: isLatestOpusQualityModel(browserUseModel),
+      reason: "Browser Use navigation/capture must use Claude Opus 4.7 or newer.",
     },
   ];
   if (visionJudge) {
@@ -554,25 +558,13 @@ function reuseRawVisionGateForPreservedBranding({ visionGate, branding }) {
   };
 }
 
-function buildLocalCaptureSession(captureSecret) {
-  const tokenHash = createHash("sha256")
-    .update(String(captureSecret || ""))
-    .digest("hex")
-    .slice(0, 32);
-  const generatedAt = new Date().toISOString();
-  return {
-    user_id: "capture-demo-user",
-    display_name: "Aura Capture",
-    profile_image: "",
-    primary_zid: "0://aura-capture",
-    zero_wallet: "0x0000000000000000000000000000000000000000",
-    wallets: [],
-    is_zero_pro: true,
-    is_access_granted: true,
-    access_token: `aura-capture:${tokenHash}`,
-    created_at: generatedAt,
-    validated_at: generatedAt,
-  };
+function parseCaptureSessionResponseBody(text, contentType) {
+  if (!String(contentType || "").includes("json") || !text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
 }
 
 export async function requestCaptureSession({ baseUrl, apiBaseUrl = "", captureSecret, fetchImpl = fetch } = {}) {
@@ -603,33 +595,25 @@ export async function requestCaptureSession({ baseUrl, apiBaseUrl = "", captureS
     body: JSON.stringify({ secret: captureSecret }),
   }).catch((error) => ({ error }));
   if (sessionResponse.error) {
-    concerns.push(`Capture session endpoint unavailable: ${sessionResponse.error.message || sessionResponse.error}`);
+    return {
+      ok: false,
+      sessionStatus: null,
+      concerns: [`Capture session endpoint unavailable: ${sessionResponse.error.message || sessionResponse.error}`],
+      session: null,
+      source: "api",
+    };
   } else {
     const contentType = sessionResponse.headers?.get?.("content-type") || "";
     const text = await sessionResponse.text();
-    let body = null;
-    if (contentType.includes("json") && text) {
-      try {
-        body = JSON.parse(text);
-      } catch {
-        concerns.push("Capture session route returned invalid JSON.");
-      }
+    const body = parseCaptureSessionResponseBody(text, contentType);
+    if (contentType.includes("json") && text && !body) {
+      concerns.push("Capture session route returned invalid JSON.");
     }
     if (sessionResponse.status !== 201) {
       concerns.push(`Capture session route returned HTTP ${sessionResponse.status}; expected 201.`);
     }
     if (!body?.access_token || !String(body.access_token).startsWith("aura-capture:")) {
       concerns.push("Capture session route did not return an aura-capture access token.");
-    }
-    if (concerns.length > 0) {
-      return {
-        ok: true,
-        sessionStatus: sessionResponse.status || null,
-        concerns: [],
-        fallbackConcerns: concerns,
-        session: buildLocalCaptureSession(captureSecret),
-        source: "local-media-session",
-      };
     }
     return {
       ok: concerns.length === 0,
@@ -639,15 +623,6 @@ export async function requestCaptureSession({ baseUrl, apiBaseUrl = "", captureS
       source: "api",
     };
   }
-
-  return {
-    ok: true,
-    sessionStatus: null,
-    concerns: [],
-    fallbackConcerns: concerns,
-    session: buildLocalCaptureSession(captureSecret),
-    source: "local-media-session",
-  };
 }
 
 export async function preflightCaptureAuth({ baseUrl, apiBaseUrl = "", captureSecret, fetchImpl = fetch } = {}) {

@@ -25,6 +25,51 @@ describe("ModeSelector", () => {
     expect(screen.queryByRole("radio", { name: "3D mode" })).not.toBeInTheDocument();
   });
 
+  it("exposes a stable capture handle for the mode selector surface", () => {
+    const { container } = render(
+      <ModeSelector selectedMode="code" onChange={vi.fn()} />,
+    );
+    const root = container.querySelector("[data-agent-surface='mode-selector']");
+
+    expect(root).toHaveAttribute("data-agent-proof", "agent-mode-selector-visible");
+    expect(root).toHaveAttribute("data-agent-context-anchor", "agent-mode-selector");
+    expect(root).toHaveAttribute("data-agent-mode", "code");
+    expect(screen.getByRole("radio", { name: "Code mode" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+  });
+
+  it("marks exactly the active mode as aria-checked", () => {
+    const { rerender } = render(
+      <ModeSelector selectedMode="code" onChange={vi.fn()} />,
+    );
+    expect(screen.getByRole("radio", { name: "Code mode" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(screen.getByRole("radio", { name: "Plan mode" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+
+    rerender(<ModeSelector selectedMode="plan" onChange={vi.fn()} />);
+    expect(screen.getByRole("radio", { name: "Code mode" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+    expect(screen.getByRole("radio", { name: "Plan mode" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(screen.getByRole("radio", { name: "Image mode" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+    // 3D mode is temporarily hidden from the selector.
+    expect(screen.queryByRole("radio", { name: "3D mode" })).not.toBeInTheDocument();
+  });
+
   it("calls onChange with the clicked mode but ignores re-clicks on the active one", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

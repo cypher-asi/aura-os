@@ -211,6 +211,38 @@ test("assessChangelogMediaQuality rejects generic empty-state proof copy", () =>
   assert.ok(report.concerns.some((concern) => concern.includes("placeholder UI")));
 });
 
+test("assessChangelogMediaQuality rejects onboarding overlays before branding can run", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-quality-"));
+  const screenshotPath = path.join(tempDir, "onboarding-overlay.png");
+  writePng(screenshotPath, 1920, 1080, (x, y) => ((x + y) % 48 < 24 ? [18, 24, 38] : [238, 242, 248]));
+
+  const report = assessChangelogMediaQuality({
+    desktopEvaluation: {
+      ok: true,
+      concerns: [],
+      parsedOutput: {
+        shouldCapture: true,
+        targetAppId: "agents",
+        targetPath: "/agents",
+        proofVisible: true,
+        visibleProof: ["Welcome to AURA onboarding modal is centered over the desktop product shell."],
+        screenshotDescription: "Aura desktop screen with first-run welcome overlay.",
+      },
+    },
+    screenshot: {
+      path: screenshotPath,
+      dimensions: { width: 1920, height: 1080 },
+    },
+    candidate: {
+      targetAppId: "agents",
+      targetPath: "/agents",
+    },
+  });
+
+  assert.equal(report.ok, false);
+  assert.ok(report.concerns.some((concern) => concern.includes("onboarding")));
+});
+
 test("buildVisionJudgePrompt defines an independent strict review", () => {
   const prompt = buildVisionJudgePrompt({
     candidate: {
@@ -223,7 +255,7 @@ test("buildVisionJudgePrompt defines an independent strict review", () => {
   });
 
   assert.match(prompt, /independent quality judge/);
-  assert.match(prompt, /not a login, loading, or error page/);
+  assert.match(prompt, /not a login, onboarding, welcome, loading, or error page/);
   assert.match(prompt, /For product feature proof, it is not a placeholder or empty state/);
   assert.match(prompt, /Judge the visible product proof, not internal routing metadata/);
   assert.match(prompt, /targetAppId\/targetPath are verified by deterministic gates outside the image/);

@@ -176,7 +176,7 @@ async function waitForCaptureShell(
   while (Date.now() - startedAt < timeoutMs) {
     lastState = readAuraCaptureBridgeState({ targetPath, targetAppId });
     const overlaysClosed =
-      !lastState.dialogVisible &&
+      !lastState.blockingDialogVisible &&
       !lastState.sidekickInfoVisible &&
       !lastState.sidekickPreviewVisible;
 
@@ -282,7 +282,13 @@ function CaptureBridgeHost() {
         finalState = await waitForCaptureShell(targetPath, targetAppId, Math.min(timeoutMs, 2_500));
 
         return {
-          ok: finalState.routeMatched && finalState.activeAppMatched && finalState.shellVisible,
+          ok: finalState.routeMatched
+            && finalState.activeAppMatched
+            && finalState.shellVisible
+            && finalState.desktopWindowCount === 0
+            && !finalState.blockingDialogVisible
+            && !finalState.sidekickInfoVisible
+            && !finalState.sidekickPreviewVisible,
           targetPath,
           targetAppId,
           sidekickCollapsed,

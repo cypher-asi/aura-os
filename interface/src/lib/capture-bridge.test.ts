@@ -12,6 +12,9 @@ import {
 function installLocalStorageStub() {
   const store = new Map<string, string>();
   const localStorageStub = {
+    get length() {
+      return store.size;
+    },
     getItem: vi.fn((key: string) => store.get(key) ?? null),
     setItem: vi.fn((key: string, value: string) => {
       store.set(key, value);
@@ -19,6 +22,10 @@ function installLocalStorageStub() {
     removeItem: vi.fn((key: string) => {
       store.delete(key);
     }),
+    clear: vi.fn(() => {
+      store.clear();
+    }),
+    key: vi.fn((index: number) => Array.from(store.keys())[index] ?? null),
   };
 
   Object.defineProperty(window, "localStorage", {
@@ -53,6 +60,8 @@ describe("capture-bridge helpers", () => {
   beforeEach(() => {
     installLocalStorageStub();
     document.body.innerHTML = "";
+    delete document.documentElement.dataset.theme;
+    delete document.documentElement.dataset.accent;
     window.history.replaceState({}, "", "/agents");
     vi.restoreAllMocks();
   });
@@ -152,6 +161,51 @@ describe("capture-bridge helpers", () => {
     expect(state.activeAppMatched).toBe(false);
   });
 
+  it("marks unknown first-run dialogs as blocking capture overlays", () => {
+    window.history.replaceState({}, "", "/agents");
+    document.body.innerHTML = `
+      <main
+        data-agent-surface="main-panel"
+        data-agent-active-app-id="agents"
+        data-agent-active-app-label="Agents"
+      ></main>
+      <section role="dialog" aria-modal="true">Welcome to AURA</section>
+    `;
+    makeVisible('[data-agent-surface="main-panel"]');
+    makeVisible('[role="dialog"]');
+
+    const state = readAuraCaptureBridgeState({
+      targetAppId: "agents",
+      targetPath: "/agents",
+    });
+
+    expect(state.dialogVisible).toBe(true);
+    expect(state.blockingDialogVisible).toBe(true);
+  });
+
+  it("allows explicitly requested product modals without classifying them as blockers", () => {
+    window.history.replaceState({}, "", "/profile");
+    document.body.innerHTML = `
+      <main
+        data-agent-surface="main-panel"
+        data-agent-active-app-id="profile"
+        data-agent-active-app-label="Profile"
+      ></main>
+      <section role="dialog" aria-modal="true">Team Settings</section>
+    `;
+    makeVisible('[data-agent-surface="main-panel"]');
+    makeVisible('[role="dialog"]');
+
+    const state = readAuraCaptureBridgeState({
+      targetAppId: "profile",
+      targetPath: "/profile",
+    });
+
+    expect(state.dialogVisible).toBe(true);
+    expect(state.orgSettingsOpen).toBe(true);
+    expect(state.blockingDialogVisible).toBe(false);
+  });
+
   it("uses proof and context boundaries when deciding whether to seed agent chat", () => {
     expect(
       shouldApplyAgentChatSeed({
@@ -185,6 +239,50 @@ describe("capture-bridge helpers", () => {
     }, "agents");
 
     expect(result.applied).toContain("agent-chat-demo-model-picker:aura-deepseek-v4-pro");
+  });
+
+  it("applies light theme state when the seed plan asks for light-mode proof", async () => {
+    const result = await applyAuraCaptureSeedPlan({
+      capabilities: ["app:aura3d", "theme-light-mode-visible", "image-gallery-populated"],
+      requiredState: ["The desktop product UI is rendered in light mode before capture."],
+    }, "aura3d");
+
+    expect(result.applied).toContain("theme-light-mode");
+    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(JSON.parse(window.localStorage.getItem("zui-theme") ?? "{}")).toMatchObject({
+      theme: "light",
+      accent: "purple",
+    });
+  });
+
+  it("dismisses onboarding overlays before capture seeding so first-run modals cannot cover proof", async () => {
+    const {
+      selectIsChecklistVisible,
+      selectIsWelcomeVisible,
+      useOnboardingStore,
+    } = await import("../features/onboarding/onboarding-store");
+
+    useOnboardingStore.setState({
+      userId: "capture-demo-user",
+      welcomeCompleted: false,
+      welcomeSkipped: false,
+      welcomeStep: 1,
+      checklistDismissed: false,
+      checklistCollapsed: false,
+    });
+
+    expect(selectIsWelcomeVisible(useOnboardingStore.getState())).toBe(true);
+
+    const result = await applyAuraCaptureSeedPlan({
+      capabilities: ["app:aura3d", "image-gallery-populated"],
+      requiredState: ["The product surface is visible without welcome or checklist overlays."],
+    }, "aura3d");
+
+    const state = useOnboardingStore.getState();
+    expect(result.applied).toContain("onboarding-overlay-dismissed");
+    expect(selectIsWelcomeVisible(state)).toBe(false);
+    expect(selectIsChecklistVisible(state)).toBe(false);
+    expect(state.checklistDismissed).toBe(true);
   });
 
   it("seeds AURA 3D shell proof with a populated image gallery by default", async () => {

@@ -66,6 +66,10 @@ function inferSeedCapabilities(candidate = {}) {
     || /\b(?:profile|account summary|team settings|org settings|team avatar|team name|members|invites|billing settings|preferences?)\b/.test(text);
   const wantsTeamSettingsModal = wantsProfileSurface
     && /\b(?:team settings|org settings|team avatar|team name|members|invites|billing settings|preferences?)\b/.test(text);
+  const wantsAgentModeSelector = appId === "agents"
+    && /\b(?:mode selector|mode picker|agent mode|code\/plan\/image\/3d|code plan image 3d|code mode|plan mode|image mode|3d mode)\b/.test(text);
+  const wantsDesktopMenuBar = /\b(?:desktop-menubar-visible|desktop menu|menu bar|menubar|native menu|file menu|edit menu|view menu|help menu|titlebar|title bar|window controls|new window|new agent|multi-window)\b/.test(text);
+  const wantsLightTheme = /\b(?:theme-light-mode-visible|light mode|light theme|appearance|theme toggle|theme switch|theme preset|per-token preset|color preset)\b/.test(text);
 
   if (appId) {
     capabilities.push(`app:${appId}`);
@@ -93,6 +97,10 @@ function inferSeedCapabilities(candidate = {}) {
     capabilities.push("model-source-image-populated");
   }
   if (appId === "agents" || /\b(?:chat|message|conversation|model picker|skills?|agent row|agent sidebar)\b/.test(text)) {
+    capabilities.push("agent-chat-ready");
+  }
+  if (wantsAgentModeSelector) {
+    capabilities.push("mode-selector-visible");
     capabilities.push("agent-chat-ready");
   }
   if (appId === "feedback" || /\b(?:feedback|ideas?|votes?|comments?|thread|board|status)\b/.test(text)) {
@@ -145,6 +153,16 @@ function inferSeedCapabilities(candidate = {}) {
     capabilities.push("sidekick-context-populated");
     capabilities.push("sidebar-list-populated");
   }
+  if (wantsDesktopMenuBar) {
+    capabilities.push("desktop-menubar-visible");
+    capabilities.push("shell-context-populated");
+    capabilities.push("sidekick-context-populated");
+    capabilities.push("sidebar-list-populated");
+  }
+  if (wantsLightTheme) {
+    capabilities.push("theme-light-mode-visible");
+    capabilities.push("shell-context-populated");
+  }
   if (/\b(?:loopprogress|loop progress|activity indicator|spinner|running|active loop)\b/.test(text)) {
     capabilities.push("active-loop-visible");
     capabilities.push("sidebar-list-populated");
@@ -168,6 +186,7 @@ export function normalizeCaptureSeedPlan(seedPlan = null, candidate = {}) {
     ...(capabilities.includes("generated-result-visible") ? ["At least one realistic generated result is visible before capture, with readable nearby product context."] : []),
     ...(capabilities.includes("model-source-image-populated") ? ["A source image is selected so the 3D model surface is not an empty placeholder."] : []),
     ...(capabilities.includes("agent-chat-ready") ? ["A seeded agent is selected with a populated chat transcript before capture."] : []),
+    ...(capabilities.includes("mode-selector-visible") ? ["The Agent MODE selector row is visible with Code, Plan, Image, and 3D options before capture."] : []),
     ...(capabilities.includes("feedback-board-populated") ? ["A feedback board is populated with realistic idea cards, votes, statuses, and a selected item before capture."] : []),
     ...(capabilities.includes("feedback-thread-populated") ? ["A feedback thread is selected with visible comments before capture."] : []),
     ...(capabilities.includes("notes-tree-populated") ? ["A notes project tree is populated with realistic documents before capture."] : []),
@@ -179,6 +198,8 @@ export function normalizeCaptureSeedPlan(seedPlan = null, candidate = {}) {
     ...(capabilities.includes("team-settings-open") ? ["The Team Settings modal is open to the relevant section before capture."] : []),
     ...(capabilities.includes("feed-timeline-populated") ? ["A feed timeline is populated with realistic release activity before capture."] : []),
     ...(capabilities.includes("shell-context-populated") ? ["The desktop shell surrounds a populated product app, not an empty launcher or blank route."] : []),
+    ...(capabilities.includes("desktop-menubar-visible") ? ["The desktop titlebar/menu bar is visible around populated product content."] : []),
+    ...(capabilities.includes("theme-light-mode-visible") ? ["The desktop product UI is rendered in light mode before capture."] : []),
     ...(capabilities.includes("sidekick-context-populated") ? ["The sidekick panel has meaningful selected-item detail instead of an empty prompt."] : []),
     ...(capabilities.includes("sidebar-list-populated") ? ["The app sidebar contains multiple realistic rows with readable labels and status context."] : []),
     ...(capabilities.includes("active-loop-visible") ? ["At least one durable activity/progress indicator is visible without relying on hover or transient UI."] : []),
@@ -207,6 +228,7 @@ export function normalizeCaptureSeedPlan(seedPlan = null, candidate = {}) {
     ...(capabilities.includes("generated-result-visible") ? ["generated result proof is visible and not an empty placeholder"] : []),
     ...(capabilities.includes("model-source-image-populated") ? ["source image for 3D conversion is visible"] : []),
     ...(capabilities.includes("agent-chat-ready") ? ["selected agent chat transcript is populated"] : []),
+    ...(capabilities.includes("mode-selector-visible") ? ["Agent MODE selector with Code, Plan, Image, and 3D options is visible"] : []),
     ...(capabilities.includes("project-summary-populated") ? ["selected project has visible summary, specs, tasks, or agent context"] : []),
     ...(capabilities.includes("project-stats-populated") ? ["project stats dashboard has non-zero metric cards and completion progress"] : []),
     ...(capabilities.includes("feedback-board-populated") ? ["feedback board has multiple visible cards"] : []),
@@ -219,6 +241,8 @@ export function normalizeCaptureSeedPlan(seedPlan = null, candidate = {}) {
     ...(capabilities.includes("team-settings-open") ? ["Team Settings modal is open and not in a loading-only state"] : []),
     ...(capabilities.includes("feed-timeline-populated") ? ["feed timeline contains seeded activity entries"] : []),
     ...(capabilities.includes("shell-context-populated") ? ["sidebar, main panel, sidekick, and bottom taskbar are all visible around product data"] : []),
+    ...(capabilities.includes("desktop-menubar-visible") ? ["titlebar/menu bar and window controls are visible in the desktop chrome"] : []),
+    ...(capabilities.includes("theme-light-mode-visible") ? ["document theme is light and readable before capture"] : []),
     ...(capabilities.includes("active-loop-visible") ? ["loop/progress indicator is visible on a stable row or panel"] : []),
   ]);
 

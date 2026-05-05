@@ -10,35 +10,15 @@ export const DEFAULT_HIGH_RES_CAPTURE_VIEWPORT = Object.freeze({
 });
 
 export const CHANGELOG_CAPTURE_PRESENTATION_CSS = `
-  body[data-aura-changelog-capture-presentation="true"] {
-    --color-text: #f7f8fb !important;
-    --color-text-primary: #f7f8fb !important;
-    --color-text-secondary: rgba(247, 248, 251, 0.8) !important;
-    --color-text-muted: rgba(247, 248, 251, 0.66) !important;
-    --color-border: rgba(255, 255, 255, 0.14) !important;
-    --color-border-subtle: rgba(255, 255, 255, 0.1) !important;
-    --color-bg-secondary: #1a1a1a !important;
-    --color-bg-tertiary: rgba(255, 255, 255, 0.075) !important;
-  }
   body[data-aura-changelog-capture-presentation="true"] [data-agent-surface],
   body[data-aura-changelog-capture-presentation="true"] [data-agent-context],
   body[data-aura-changelog-capture-presentation="true"] [data-agent-action],
   body[data-aura-changelog-capture-presentation="true"] [data-agent-field] {
     filter: none !important;
   }
-  body[data-aura-changelog-capture-presentation="true"] [data-agent-surface] {
-    color: var(--color-text-secondary) !important;
-  }
-  body[data-aura-changelog-capture-presentation="true"] [data-agent-proof],
-  body[data-aura-changelog-capture-presentation="true"] [data-agent-action],
-  body[data-aura-changelog-capture-presentation="true"] [data-agent-model-label] {
-    color: var(--color-text) !important;
-  }
-  body[data-aura-changelog-capture-presentation="true"] [data-agent-model-label],
-  body[data-aura-changelog-capture-presentation="true"] [data-agent-proof] button {
-    font-weight: 500 !important;
-  }
 `;
+
+export const CHANGELOG_CAPTURE_THEME_PRESERVED_CSS = CHANGELOG_CAPTURE_PRESENTATION_CSS;
 
 function commonChromeExecutablePath() {
   const candidates = [
@@ -79,7 +59,15 @@ function normalizeTargetPath(targetPath) {
 }
 
 function buildCaptureOutput({ targetAppId, targetPath, bridgeResult, pageText, proofText }) {
-  const ok = Boolean(bridgeResult?.ok);
+  const state = bridgeResult?.state || {};
+  const blockingDialogVisible = state.blockingDialogVisible === true
+    || (state.dialogVisible === true
+      && state.orgSettingsOpen !== true
+      && state.buyCreditsOpen !== true
+      && state.hostSettingsOpen !== true
+      && state.appsModalOpen !== true
+      && state.newProjectModalOpen !== true);
+  const ok = Boolean(bridgeResult?.ok && !blockingDialogVisible);
   const focusedProofText = String(proofText || pageText || "").replace(/\s+/g, " ").trim();
   return {
     shouldCapture: ok,
@@ -96,6 +84,7 @@ function buildCaptureOutput({ targetAppId, targetPath, bridgeResult, pageText, p
     desktopLayoutVisible: Boolean(bridgeResult?.state?.shellVisible),
     mobileLayoutVisible: false,
     concerns: ok ? [] : [
+      ...(blockingDialogVisible ? ["A blocking dialog or onboarding overlay is still visible over the product surface."] : []),
       "High-resolution capture bridge did not reach the requested desktop product screen.",
     ],
   };
@@ -120,6 +109,14 @@ function seedPlanCaptureText(seedPlan = null) {
     ...(Array.isArray(seedPlan.readinessSignals) ? seedPlan.readinessSignals : []),
     seedPlan.notes,
   ].filter(Boolean).join("\n");
+}
+
+function captureThemeForSeedPlan(seedPlan = null, story = "") {
+  const text = [seedPlanCaptureText(seedPlan), story].join("\n").toLowerCase();
+  if (/\b(?:theme-light-mode-visible|light mode|light theme|appearance|theme preset|theme toggle|theme switch)\b/.test(text)) {
+    return "light";
+  }
+  return null;
 }
 
 function shouldPreferStableShellProof(seedPlan = null, story = "") {
@@ -254,7 +251,7 @@ async function prepareProofState(page, story, seedPlan = null) {
   return selected;
 }
 
-async function applyCapturePresentationMode(page) {
+async function applyCapturePresentationMode(page, { preserveThemeColors = false } = {}) {
   await page.evaluate(({ css }) => {
     document.body.setAttribute("data-aura-changelog-capture-presentation", "true");
     document.getElementById("aura-changelog-capture-style")?.remove();
@@ -263,10 +260,10 @@ async function applyCapturePresentationMode(page) {
     style.textContent = css;
     document.head.appendChild(style);
   }, {
-    css: CHANGELOG_CAPTURE_PRESENTATION_CSS,
+    css: preserveThemeColors ? CHANGELOG_CAPTURE_THEME_PRESERVED_CSS : CHANGELOG_CAPTURE_PRESENTATION_CSS,
   });
   await page.waitForTimeout(250);
-  return { presentation: true };
+  return { presentation: true, preserveThemeColors };
 }
 
 async function selectProofClip(page) {
@@ -339,6 +336,18 @@ export async function captureHighResolutionAuraProof({
       },
       deviceScaleFactor: resolvedViewport.deviceScaleFactor,
     });
+    const requestedTheme = captureThemeForSeedPlan(seedPlan, story);
+    if (requestedTheme) {
+      await page.addInitScript(({ theme }) => {
+        try {
+          window.localStorage.setItem("zui-theme", JSON.stringify({ theme, accent: "purple" }));
+        } catch {
+          // Capture init script should not fail page load when storage is unavailable.
+        }
+        document.documentElement.setAttribute("data-theme", theme);
+        document.documentElement.setAttribute("data-accent", "purple");
+      }, { theme: requestedTheme });
+    }
     const loginUrl = buildCaptureLoginUrl(baseUrl, resolvedTargetPath, apiBaseUrl, captureSession);
     await page.goto(loginUrl, { waitUntil: "domcontentloaded", timeout: 60_000 });
     await page.waitForFunction(
@@ -357,7 +366,9 @@ export async function captureHighResolutionAuraProof({
       { appId: targetAppId, path: resolvedTargetPath, seed: seedPlan },
     );
     await page.waitForTimeout(waitAfterResetMs);
-    const appliedCapturePresentationMode = await applyCapturePresentationMode(page);
+    const appliedCapturePresentationMode = await applyCapturePresentationMode(page, {
+      preserveThemeColors: requestedTheme === "light",
+    });
     await page.waitForSelector("[data-agent-surface], [data-agent-action]", { state: "visible", timeout: 5000 }).catch(() => null);
     const proofAction = await prepareProofState(page, story, seedPlan);
     await page.waitForTimeout(450);
@@ -367,6 +378,7 @@ export async function captureHighResolutionAuraProof({
       width: window.innerWidth,
       height: window.innerHeight,
       devicePixelRatio: window.devicePixelRatio,
+      theme: document.documentElement.getAttribute("data-theme") || null,
       capturePresentation: document.body.getAttribute("data-aura-changelog-capture-presentation") === "true",
       text: document.body.innerText.slice(0, 2000),
       bridgeState: window.__AURA_CAPTURE_BRIDGE__?.getState?.() || null,
@@ -390,10 +402,11 @@ export async function captureHighResolutionAuraProof({
       pageText: pageState.text,
       proofText: clip?.sourceText,
     });
+    const captureOk = Boolean(output.shouldCapture && dimensions);
 
     return {
-      ok: Boolean(bridgeResult?.ok && dimensions),
-      status: bridgeResult?.ok && dimensions ? "captured" : "rejected",
+      ok: captureOk,
+      status: captureOk ? "captured" : "rejected",
       provider: "aura-high-res-browser-camera",
       viewport: resolvedViewport,
       capturePresentationMode: appliedCapturePresentationMode,
@@ -407,7 +420,7 @@ export async function captureHighResolutionAuraProof({
         bytes: buffer.length,
         dimensions,
       },
-      concerns: bridgeResult?.ok ? [] : output.concerns,
+      concerns: captureOk ? [] : output.concerns,
     };
   } catch (error) {
     return {

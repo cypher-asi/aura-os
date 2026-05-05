@@ -15,9 +15,7 @@ test("high-resolution capture stays generic and does not encode feature-specific
   assert.match(source, /height:\s*720/);
   assert.match(source, /deviceScaleFactor:\s*2/);
   assert.match(source, /data-aura-changelog-capture-presentation/);
-  assert.match(source, /--color-text-secondary/);
-  assert.match(source, /--color-text-muted/);
-  assert.match(source, /--color-border/);
+  assert.match(source, /CHANGELOG_CAPTURE_THEME_PRESERVED_CSS = CHANGELOG_CAPTURE_PRESENTATION_CSS/);
   assert.match(source, /viewport-full-desktop-proof/);
   assert.match(source, /type: "png"/);
   assert.match(source, /scale: "device"/);
@@ -25,6 +23,8 @@ test("high-resolution capture stays generic and does not encode feature-specific
   assert.match(source, /caret: "hide"/);
   assert.match(source, /shouldPreferStableShellProof\(seedPlan, story\)/);
   assert.match(source, /proofIsCompactTeaser/);
+  assert.match(source, /blockingDialogVisible/);
+  assert.match(source, /onboarding overlay/);
   assert.doesNotMatch(source, /DEFAULT_CHANGELOG_CAPTURE_ZOOM/);
   assert.doesNotMatch(source, /DEFAULT_CHANGELOG_CAPTURE_TEXT_SCALE/);
   assert.doesNotMatch(source, /captureZoom/);
@@ -38,6 +38,8 @@ test("high-resolution capture stays generic and does not encode feature-specific
   assert.doesNotMatch(source, /min-width: min\(72vw, 900px\)/);
   assert.doesNotMatch(source, /max-height: min\(68vh, 900px\)/);
   assert.doesNotMatch(source, /font-size: calc/);
+  assert.doesNotMatch(source, /--color-text/);
+  assert.doesNotMatch(source, /--color-border/);
   assert.doesNotMatch(source, /font-smoothing/);
   assert.doesNotMatch(source, /text-rendering/);
   assert.doesNotMatch(source, /width: calc\(.*--aura-changelog-capture-text-scale/);

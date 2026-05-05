@@ -48,6 +48,8 @@ export const ModeSelector = memo(function ModeSelector({
     <div
       className={rootClass}
       data-agent-surface="mode-selector"
+      data-agent-proof="agent-mode-selector-visible"
+      data-agent-context-anchor="agent-mode-selector"
       data-agent-mode={selectedMode}
     >
       {hideLabel ? null : <span className={styles.label}>MODE</span>}

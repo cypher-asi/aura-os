@@ -73,6 +73,8 @@ export function DesktopTitlebar({
       actions={
         <div
           className={styles.titleActions}
+          data-agent-surface="desktop-titlebar-actions"
+          data-agent-context-anchor="desktop-titlebar-actions"
           onDoubleClick={(e) => e.stopPropagation()}
         >
           <UpdatePill />
@@ -95,6 +97,9 @@ export function DesktopTitlebar({
           />
         </div>
       }
+      data-agent-surface="desktop-shell-titlebar"
+      data-agent-proof="desktop-shell-titlebar"
+      data-agent-context-anchor="desktop-shell-titlebar"
     />
   );
 }

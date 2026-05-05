@@ -5,6 +5,7 @@ import { PNG } from "pngjs";
 const BAD_PROOF_PATTERNS = [
   /\b(?:404|not found|error page)\b/i,
   /\b(?:login|log in|sign in|auth(?:entication)? required)\s+(?:screen|page|form|wall|required|needed)\b/i,
+  /\b(?:welcome to aura|onboarding|getting started|first[- ]run)\s+(?:screen|page|modal|dialog|checklist|overlay)?\b/i,
   /\b(?:loading|spinner)\s+(?:screen|page|state|indicator)\b/i,
   /\b(?:placeholder|empty)\s+(?:screen|page|state)\b/i,
   /\b(?:will appear here|pick a project|select a run|select an? .+ to see details|no (?:runs|items|results|projects|images|models) found)\b/i,
@@ -189,7 +190,7 @@ export function assessChangelogMediaQuality({
     concerns.push("Screenshot appears mostly blank or visually flat.");
   }
   if (BAD_PROOF_PATTERNS.some((pattern) => pattern.test(evidenceText))) {
-    concerns.push("Browser proof text mentions login, loading, error, mobile, or placeholder UI.");
+    concerns.push("Browser proof text mentions login, onboarding, loading, error, mobile, or placeholder UI.");
   }
 
   if (parsedOutput?.shouldCapture !== true) {
@@ -263,7 +264,7 @@ export function buildVisionJudgePrompt({ candidate, stage = "raw", hasReferenceI
     "",
     "Pass only if all are true:",
     "- It shows desktop Aura product UI, not mobile UI.",
-    "- It is not a login, loading, or error page.",
+    "- It is not a login, onboarding, welcome, loading, or error page.",
     isShellLayoutProof
       ? "- This is a desktop shell/layout proof. Do not reject solely because the supporting app content is sparse, placeholder-like, or lightly seeded if the visible shell/layout change itself is clear: topbar, rounded panels, sidebar/sidekick gaps, bottom taskbar capsules, or floating glass chrome."
       : "- For product feature proof, it is not a placeholder or empty state.",

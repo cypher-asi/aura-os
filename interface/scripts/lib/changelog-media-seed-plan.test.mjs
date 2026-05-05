@@ -128,6 +128,40 @@ test("normalizeCaptureSeedPlan keeps AURA 3D shell proof on populated image stat
   assert.ok(plan.readinessSignals.includes("generated image preview and image gallery are visible"));
 });
 
+test("normalizeCaptureSeedPlan derives durable mode selector, menu bar, and light theme requirements", () => {
+  const modePlan = normalizeCaptureSeedPlan(null, {
+    title: "Agent MODE selector exposes Code, Plan, Image, and 3D",
+    targetAppId: "agents",
+    targetPath: "/agents",
+    proofGoal: "Show the Agent MODE selector row with every mode visible.",
+    changedFiles: ["interface/src/components/InputBarShell/ModeSelector.tsx"],
+  });
+  const menuPlan = normalizeCaptureSeedPlan(null, {
+    title: "Native-style menu bar and desktop titlebar",
+    targetAppId: "aura3d",
+    targetPath: "/3d",
+    proofGoal: "Show the menu bar, titlebar, and window controls around populated product content.",
+    changedFiles: ["interface/src/components/MenuBar/MenuBar.tsx"],
+  });
+  const themePlan = normalizeCaptureSeedPlan(null, {
+    title: "Light mode lands across the desktop app",
+    targetAppId: "aura3d",
+    targetPath: "/3d",
+    proofGoal: "Show a populated product surface rendered in light mode.",
+    changedFiles: ["interface/src/styles/tokens.css"],
+  });
+
+  assert.ok(modePlan.capabilities.includes("mode-selector-visible"));
+  assert.ok(modePlan.capabilities.includes("agent-chat-ready"));
+  assert.ok(modePlan.readinessSignals.some((entry) => entry.includes("MODE selector")));
+  assert.ok(menuPlan.capabilities.includes("desktop-menubar-visible"));
+  assert.ok(menuPlan.capabilities.includes("shell-context-populated"));
+  assert.ok(menuPlan.requiredState.some((entry) => entry.includes("titlebar/menu bar")));
+  assert.ok(themePlan.capabilities.includes("theme-light-mode-visible"));
+  assert.ok(themePlan.capabilities.includes("shell-context-populated"));
+  assert.ok(themePlan.readinessSignals.some((entry) => entry.includes("light")));
+});
+
 test("normalizeCaptureSeedPlan does not infer tasks from generic board or ready wording", () => {
   const feedbackPlan = normalizeCaptureSeedPlan(null, {
     title: "Feedback board shows review ready statuses",

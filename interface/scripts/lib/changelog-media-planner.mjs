@@ -11,10 +11,10 @@ const SHELL_CAPTURE_FALLBACK_APP_ID = "aura3d";
 const SHELL_CAPTURE_FALLBACK_PATH = "/3d";
 const VISUAL_OPPORTUNITY_LIMIT = 72;
 const VISUAL_SURFACE_CLUSTER_LIMIT = 24;
-const VISUAL_ACTION_PATTERN = /\b(?:add|adds|added|launch|launched|ship|shipped|new|introduce|introduced|debut|debuted|scaffold|scaffolded|redesign|redesigned|rebuild|rebuilt|revamp|sort|sorted|filter|filtered|reorder|ordered|group|grouped|search|viewer|picker|selector|modal|composer|panel|sidebar|sidekick|taskbar|toolbar|dashboard|stats|metrics|chart|table|tabs|feed|feedback|notes|browser|debug app|aura 3d|3d|model picker|model selector|webgl|marketplace|integrations|profile|settings|gallery|lightbox|kanban|process canvas|desktop shell|chrome|window controls|copy button|inline rename|context menu|avatar|update control|browser tab|error page)\b/i;
+const VISUAL_ACTION_PATTERN = /\b(?:add|adds|added|launch|launched|ship|shipped|new|introduce|introduced|debut|debuted|scaffold|scaffolded|redesign|redesigned|rebuild|rebuilt|revamp|sort|sorted|filter|filtered|reorder|ordered|group|grouped|search|viewer|picker|selector|mode selector|modal|composer|panel|sidebar|sidekick|taskbar|toolbar|dashboard|stats|metrics|chart|table|tabs|feed|feedback|notes|browser|debug app|aura 3d|3d|model picker|model selector|webgl|marketplace|integrations|profile|settings|appearance|theme|light mode|gallery|lightbox|kanban|process canvas|desktop shell|chrome|menu bar|menubar|window controls|copy button|inline rename|context menu|avatar|update control|browser tab|error page)\b/i;
 const VISUAL_STYLE_PATTERN = /\b(?:style|polish|align|size|round|gap|border|radius|background|layout|height|width|hover|focus|icon|floating|capsule)\b/i;
 const MICRO_STYLE_ONLY_PATTERN = /\b(?:border(?:s)?|border token|color token|design token|token|radius|corner radii|gap(?:s)?|spacing|padding|margin|hover|focus|focus ring|outline|shadow|opacity|font smoothing|antialias(?:ed|ing)?|anti-aliased)\b/i;
-const SCREEN_LEVEL_STYLE_PATTERN = /\b(?:redesign|redesigned|rebuild|rebuilt|revamp|layout|taskbar|toolbar|titlebar|window controls|desktop shell|shell chrome|sidebar|panel|dashboard|gallery|picker|modal|screen|view|route|tab(?:s|bed)?|card|list|table|chart|editor|composer|thread|board|kanban|canvas|viewer)\b/i;
+const SCREEN_LEVEL_STYLE_PATTERN = /\b(?:redesign|redesigned|rebuild|rebuilt|revamp|layout|taskbar|toolbar|titlebar|menu bar|menubar|window controls|desktop shell|shell chrome|sidebar|panel|dashboard|gallery|picker|modal|screen|view|route|tab(?:s|bed)?|card|list|table|chart|editor|composer|thread|board|kanban|canvas|viewer|theme|light mode|appearance)\b/i;
 const TRANSIENT_INTERACTION_PATTERN = /\b(?:context menu|right[- ]click|hover-only|hover state|focus-only|focus ring|keyboard focus|drag(?:ging)?|resize handle|f2 rename|inline rename|temporary popover|flash(?:ing)?)\b/i;
 const DURABLE_INTERACTION_PATTERN = /\b(?:open by default|persistent|persisted|saved|selected|modal|panel|picker|settings|menu list|list row|card|thread|dashboard|table|gallery|editor|composer)\b/i;
 const VISIBLE_UI_BUG_FIX_PATTERN = /\b(?:(?:panel|dashboard|picker|menu|screen|view|composer|gallery|board|table|chart|list|card|metric|counter|number|stats?)s?.*(?:show|shows|showed|display|displays|displayed|render|renders|rendered|visible|stuck|zero|blank|empty|missing|wrong|incorrect)|(?:show|shows|showed|display|displays|displayed|render|renders|rendered|visible|stuck|zero|blank|empty|missing|wrong|incorrect).*(?:panel|dashboard|picker|menu|screen|view|composer|gallery|board|table|chart|list|card|metric|counter|number|stats?)s?)\b/i;
@@ -32,6 +32,37 @@ const PRICING_BENCHMARK_ONLY_PATTERN = /\b(?:benchmark(?:ing)?|pricing|price cov
 const MODEL_PICKER_PROOF_PATTERN = /\b(?:model picker|model selector|model menu|chat picker|picker option|menu option|selectable model|default model|available in (?:the )?(?:chat )?(?:model )?picker|chat input wiring|chat composer|composer model)\b/i;
 const DESKTOP_UI_FILE_PATTERN = /^interface\/src\/(?:apps|components|views|routes|layout|features)\//;
 const VISUAL_SURFACE_DEFINITIONS = [
+  {
+    key: "theme-light-mode",
+    label: "Light theme desktop surface",
+    appId: SHELL_CAPTURE_FALLBACK_APP_ID,
+    path: SHELL_CAPTURE_FALLBACK_PATH,
+    patterns: [
+      /\b(?:light mode|light theme|dark\/light|dark-light|theme toggle|theme switch|appearance|theme preset|per-token preset|color preset|theme tokens?|design tokens?)\b/i,
+      /\b(?:theme|appearance|light|dark|color|css).{0,48}\btokens?\b|\btokens?\b.{0,48}(?:theme|appearance|light|dark|color|css)\b/i,
+      /interface\/src\/(?:styles\/tokens\.css|lib\/theme-|hooks\/use-theme|components\/DesktopShell\/DesktopTitlebar|views\/SettingsView\/AppearanceSection)\b/i,
+    ],
+  },
+  {
+    key: "agent-mode-selector",
+    label: "Agent MODE selector",
+    appId: "agents",
+    path: "/agents",
+    patterns: [
+      /\b(?:agent mode selector|mode selector|mode picker|MODE selector|Code\/Plan\/Image\/3D|code plan image 3d|image mode|3d mode|plan mode|code mode)\b/i,
+      /interface\/src\/(?:components\/InputBarShell\/ModeSelector|constants\/modes|apps\/chat\/components\/ChatInputBar)\b/i,
+    ],
+  },
+  {
+    key: "desktop-titlebar-menubar",
+    label: "Desktop titlebar and menu bar",
+    appId: SHELL_CAPTURE_FALLBACK_APP_ID,
+    path: SHELL_CAPTURE_FALLBACK_PATH,
+    patterns: [
+      /\b(?:menu bar|menubar|native menu|File menu|Edit menu|View menu|Help menu|titlebar|title bar|window controls|new window|new agent|multi-window|desktop chrome)\b/i,
+      /interface\/src\/components\/(?:MenuBar|ShellTitlebar|DesktopShell\/DesktopTitlebar|WindowControls|DesktopContextMenu)\b/i,
+    ],
+  },
   {
     key: "desktop-shell-taskbar",
     label: "Desktop shell and taskbar",
@@ -68,7 +99,7 @@ const VISUAL_SURFACE_DEFINITIONS = [
     appId: "projects",
     path: "/projects",
     patterns: [
-      /\b(?:project stats|stats dashboard|metrics?|tokens?|cost|completion|contributors?|lines changed|sessions?)\b/i,
+      /\b(?:project stats|stats dashboard|project metrics?|completion|contributors?|lines changed|sessions?)\b/i,
       /interface\/src\/(?:views\/(?:ProjectStatsView|StatsDashboard)|components\/StatCard)\//i,
     ],
   },
@@ -153,6 +184,9 @@ const VISUAL_SURFACE_DEFINITIONS = [
     ],
   },
 ];
+const VISUAL_SURFACE_DEFINITIONS_BY_KEY = new Map(
+  VISUAL_SURFACE_DEFINITIONS.map((definition) => [definition.key, definition]),
+);
 const ENTRY_ALIGNMENT_STOP_WORDS = new Set([
   "the",
   "and",
@@ -347,6 +381,9 @@ function visualOpportunityScore(commit, itemTexts = []) {
   const text = [subject, ...itemTexts, body].filter(Boolean).join("\n");
   const filesAreMobileOnly = files.length > 0 && files.every(isMobileOnlyFile);
   if (MOBILE_SCOPE_PATTERN.test(subject) && !/\b(?:desktop|web|browser)\b/i.test(text)) return -20;
+  if (/\bmobile\b/i.test(subject) && !/\b(?:desktop|web|browser)\b/i.test([subject, body].join("\n")) && uiFiles.length === 0) {
+    return -20;
+  }
   if (MOBILE_ONLY_PATTERN.test(text) && !/\b(?:desktop|web|browser)\b/i.test(text)) return -20;
   if (filesAreMobileOnly && uiFiles.length === 0) return -20;
   if (isMobileOnlyVisualText(text) && uiFiles.length === 0) return -20;
@@ -444,6 +481,13 @@ function scoreSurfaceDefinition(definition, opportunity = {}) {
   if ((opportunity.likelyApps || []).some((app) => app.id === definition.appId)) score += directMatch ? 4 : 2;
   if (!directMatch && score < 8) return 0;
   return score;
+}
+
+function surfaceEntryTitleBonus(surfaceKey, entryTitle) {
+  const definition = VISUAL_SURFACE_DEFINITIONS_BY_KEY.get(surfaceKey);
+  const title = normalizeString(entryTitle);
+  if (!definition || !title) return 0;
+  return definition.patterns.some((pattern) => pattern.test(title)) ? 30 : 0;
 }
 
 function fallbackSurfaceForOpportunity(opportunity = {}) {
@@ -575,9 +619,11 @@ export function deriveVisualMediaSurfaceClusters(visualOpportunities = [], {
       });
       const explicitClusterBonus = opportunityCount >= 2 ? 16 : 0;
       const shellClusterBonus = group.surfaceKey === "desktop-shell-taskbar" ? 8 : 0;
+      const titleAlignmentBonus = surfaceEntryTitleBonus(group.surfaceKey, group.entryTitle);
       const clusterScore = opportunities.reduce((sum, opportunity) => sum + opportunity.score, 0)
         + explicitClusterBonus
         + shellClusterBonus
+        + titleAlignmentBonus
         + Math.min(20, opportunityCount * 4);
       return {
         clusterId: `${group.entryId}:${group.surfaceKey}`,
@@ -605,6 +651,7 @@ export function deriveVisualMediaSurfaceClusters(visualOpportunities = [], {
         changedFiles,
         guidance: [
           opportunityCount >= 2 ? "Multiple commits/bullets point at the same visual surface; treat this as stronger than parent-title wording alone." : "Single visible opportunity; require strong proof and seedability.",
+          titleAlignmentBonus > 0 ? "The changelog title explicitly names this surface; use the title as placement support while keeping the bullet/commit as proof." : "",
           group.surfaceKey === "desktop-shell-taskbar" ? "For shell/taskbar proof, capture a populated app route so the chrome is visible around real product content." : "",
           "Use the specific bullet/commit as the media anchor; the parent changelog title is placement context, not the primary proof.",
         ].filter(Boolean),
@@ -796,7 +843,7 @@ export function buildMediaPlannerPrompt({
     "- A media image appears at the changelog entry level, but it may be anchored to a specific changelog bullet/commit. If the parent title is broad, make the publicCaption and proofGoal explicitly name the bullet-level visual proof so the image does not feel random.",
     "- Do not create product screenshots for changelog-media, Browser Use, capture-mode, seeded-proof, OpenAI gate, reconciliation, or media workflow infrastructure entries unless the entry explicitly says the public changelog page itself changed visually. Demo seed data created only for screenshots is not a product feature.",
     "- Low-confidence candidates must be skipped. If a visual detail is incidental inside a broad refactor/release/backend entry, do not rescue it with a 0.60-style candidate just because a UI file appeared in the batch.",
-    "- Prefer stable visual clusters such as taskbar/shell redesign, feedback sorting, stats dashboards, model pickers, 3D galleries, notes editors, and debug screens over synthetic failure/error banners unless the seedPlan can deterministically materialize the banner state.",
+    "- Prefer stable visual clusters such as taskbar/shell redesign, titlebar/menu-bar chrome, light-theme desktop proof, agent mode selectors, feedback sorting, stats dashboards, model pickers, 3D galleries, notes editors, and debug screens over synthetic failure/error banners unless the seedPlan can deterministically materialize the banner state.",
     "- Return at most the requested number of candidates.",
     "- Candidate screenshots must be desktop web product UI only.",
     "- Skip login, auth, sign-in, onboarding, mobile-only, native app, Android, iOS, backend-only, infra-only, release pipeline, dependency, test-only, docs-only, refactor-only, and invisible bug-fix changes.",
@@ -811,10 +858,10 @@ export function buildMediaPlannerPrompt({
     "- Treat captureSeedProfile.runtimeSeedSupport='supported' as the safest path. If an app has unknown seed support but the changed files, route hints, and product wording clearly identify a desktop surface, you may still return it as a candidate with an explicit seedPlan that describes the missing data/readiness requirements; the downstream quality gates will decide whether it publishes.",
     "- Do not invent routes or product states that are not supported by the sitemap or commit context.",
     "- Candidates must include a targetAppId and targetPath from the sitemap. If no sitemap target exists, skip the entry.",
-    "- For desktop shell, chrome, layout, taskbar, sidebar, sidekick, or floating-panel changes, do not target /desktop because it can be an empty launcher shell. Target a populated, visually rich desktop app route from the sitemap instead. Prefer AURA 3D (/3d) on the generated Image gallery surface for shell/layout proof because seeded image content makes panel boundaries and chrome more legible; use Agents only when the change itself is agent/chat-specific.",
+    "- For desktop shell, chrome, menu bar, titlebar, layout, taskbar, sidebar, sidekick, theme, or floating-panel changes, do not target /desktop because it can be an empty launcher shell. Target a populated, visually rich desktop app route from the sitemap instead. Prefer AURA 3D (/3d) on the generated Image gallery surface for broad shell/theme/layout proof because seeded image content makes panel boundaries and chrome more legible; use Agents only when the change itself is agent/chat-specific.",
     "- Keep shell/chrome target and proof wording consistent: if targetAppId is aura3d, the proofGoal may describe taskbar/topbar/sidebar chrome around the AURA 3D image gallery, but it must not instruct Browser Use to anchor the shot on Agents, Tasks, Projects, or another app surface.",
     "- For AURA 3D, request image-gallery-populated for stable visual proof. Only request model-source-image-populated when the changelog explicitly needs the 3D model/source-image conversion surface; do not open the 3D Model tab just because the app is called AURA 3D.",
-    "- Candidates should include a seedPlan that describes generic capture-state capabilities, not a one-off script. Prefer capabilities like app:<id>, project-selected, proof-data-populated, image-gallery-populated, asset-gallery-populated, agent-chat-ready, feedback-board-populated, feedback-thread-populated, notes-tree-populated, note-editor-populated, task-board-populated, process-graph-populated, feed-timeline-populated, run-history-populated, model-picker-open, settings-panel-open, generated-result-visible, feature-toggle-enabled.",
+    "- Candidates should include a seedPlan that describes generic capture-state capabilities, not a one-off script. Prefer capabilities like app:<id>, project-selected, proof-data-populated, image-gallery-populated, asset-gallery-populated, agent-chat-ready, mode-selector-visible, desktop-menubar-visible, theme-light-mode-visible, feedback-board-populated, feedback-thread-populated, notes-tree-populated, note-editor-populated, task-board-populated, process-graph-populated, feed-timeline-populated, run-history-populated, model-picker-open, settings-panel-open, generated-result-visible, feature-toggle-enabled.",
     "- The seedPlan must describe the state/data needed before capture so the browser does not land on empty/default UI. If the feature needs data to be visible, request realistic demo data for the target surface.",
     "- In seedPlan.proofBoundary, describe the feature evidence itself: the visible control/result/list/detail/menu that proves the change.",
     "- In seedPlan.contextBoundary, describe visible product context only: nearby title, tab, sidebar, toolbar, navigation, selected project, open picker, active panel, chat transcript, composer, or selected row.",
@@ -943,8 +990,24 @@ function duplicateProneSurfaceKey(candidate) {
     ].join(":");
   }
   if (!isShellChromeCandidate(candidate)) return null;
+  const shellProofClass = (() => {
+    if (/\b(?:light mode|light theme|dark\/light|theme toggle|theme switch|appearance|theme preset|tokenized theme|theme-aware)\b/i.test(text)) {
+      return "theme";
+    }
+    if (/\b(?:menu bar|menubar|native menu|file\/edit\/view\/help|file menu|edit menu|view menu|help menu|titlebar|title bar|window controls|new window|multi-window)\b/i.test(text)) {
+      return "menu-titlebar";
+    }
+    if (/\b(?:update pill|update control|bottom taskbar|taskbar|floating[- ]glass|floating panel|shell spacing|desktop layout)\b/i.test(text)) {
+      return "taskbar-shell";
+    }
+    if (/\b(?:sidekick|sidebar|right rail|left rail)\b/i.test(text)) {
+      return "side-panel-shell";
+    }
+    return "generic-shell";
+  })();
   return [
     "shell-chrome",
+    shellProofClass,
     candidate?.targetAppId || "",
     candidate?.targetPath || "",
   ].join(":");
