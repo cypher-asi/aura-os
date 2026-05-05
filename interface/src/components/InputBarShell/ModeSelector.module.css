@@ -50,6 +50,10 @@
   width: 0;
   border-radius: 999px;
   background: var(--color-elevated);
+  /* Per-mode accent ring tints the active selection. Default to the
+     neutral border so the pill always reads as a discrete chip even
+     when no per-mode color applies. */
+  border: 1px solid var(--color-border);
   box-shadow: 0 1px 2px var(--color-backdrop-light);
   pointer-events: none;
   z-index: 0;
@@ -57,10 +61,30 @@
   transform: translateX(0);
 }
 
+/* Per-mode border accents on the active selection pill. The hue
+   matches the semantic intent of each mode (success for code,
+   warning for plan, info for image, purple for 3d). */
+.indicator[data-mode="code"] {
+  border-color: var(--color-success);
+}
+
+.indicator[data-mode="plan"] {
+  border-color: var(--color-warning);
+}
+
+.indicator[data-mode="image"] {
+  border-color: var(--color-status-info);
+}
+
+.indicator[data-mode="3d"] {
+  border-color: var(--color-status-purple);
+}
+
 .indicatorReady {
   transition:
     transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
-    width 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    width 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 220ms ease;
 }
 
 .segment {

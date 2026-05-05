@@ -124,6 +124,7 @@ export const ModeSelector = memo(function ModeSelector({
           aria-hidden
           className={indicatorClass}
           data-agent-element="mode-indicator"
+          data-mode={selectedMode}
           style={indicatorStyle}
         />
         {AGENT_MODE_ORDER.map((mode) => {
