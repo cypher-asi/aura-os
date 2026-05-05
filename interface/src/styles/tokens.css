@@ -36,10 +36,22 @@
      `var(--color-text)` / `var(--color-bg-hover)`; without these aliases
      the dark-hex fallback fires in BOTH themes, leaving black slabs and
      missing colors in light mode. Aliasing them here lets every consumer
-     flip with the theme automatically. */
+     flip with the theme automatically.
+
+     `--color-bg-subtle`, `--color-bg-elevated`, and `--color-border-strong`
+     are widely used by the in-app Browser app's tab strip + error overlay,
+     and by debug/agents/files modals; their original dark-hex fallbacks
+     (`#141414`, `#1a1a1a`, `rgba(255,255,255,0.24)`) bled through into
+     light mode so the in-app browser tab bar painted as a black slab even
+     when the rest of the UI was light. The aliases below dereference to
+     ZUI's theme-aware surface/elevated/border tokens so they flip with
+     the active theme. */
   --color-bg-secondary: var(--color-elevated);
   --color-text: var(--color-text-primary);
   --color-bg-hover: var(--color-overlay-light);
+  --color-bg-subtle: var(--color-surface);
+  --color-bg-elevated: var(--color-elevated);
+  --color-border-strong: var(--color-border);
 
   /* ----------------------------------------------------------------------
      Editable chrome tokens (phase 7). Defaults live here; the theme
