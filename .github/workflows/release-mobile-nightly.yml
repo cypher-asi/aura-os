@@ -144,7 +144,7 @@ jobs:
 
   build-ios:
     if: github.event_name == 'workflow_dispatch' && (inputs.platform == 'ios' || inputs.platform == 'both')
-    runs-on: macos-latest
+    runs-on: macos-26
     env:
       FASTLANE_SKIP_UPDATE_CHECK: "1"
       IOS_APP_STORE_CONNECT_KEY_ID: ${{ secrets.IOS_APP_STORE_CONNECT_KEY_ID }}
@@ -178,6 +178,17 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "4.0.2"
+
+      # Match the TestFlight lane: Apple requires the iOS 26 SDK (Xcode 26+)
+      # for App Store Connect uploads as of 2026-04-28, and we want our
+      # nightly IPAs to be archived against the same toolchain.
+      - name: Select Xcode 26
+        run: sudo xcode-select -s /Applications/Xcode_26.app
+
+      - name: Print Xcode and SDK versions
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
 
       - name: Check iOS runtime parity
         run: node scripts/ci/check-runtime.mjs ios --native --ruby

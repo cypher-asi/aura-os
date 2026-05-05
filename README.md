@@ -39,6 +39,7 @@ Persisted browser-owned state lives client-side in IndexedDB, while the local ba
 - Node.js `25.9.0` and npm
 - Java `26` for Android validation and release lanes
 - Ruby `4.0.2` for iOS and Android release lanes
+- Xcode `26` (iOS 26 SDK) for iOS validation and release lanes — required by App Store Connect since 2026-04-28
 - Vendored [ZUI](https://github.com/cypher-asi/zui) source already included under `vendor/zui`
 
 ### CI Runtime Parity
@@ -49,6 +50,7 @@ GitHub Actions now uses the same explicit runtime matrix across desktop, mobile,
 - Rust `1.94.1` via [`rust-toolchain.toml`](rust-toolchain.toml)
 - Java `26` for Android native lanes
 - Ruby `4.0.2` for mobile release lanes
+- Xcode `26` selected explicitly on the `macos-26` runner image for the iOS lanes
 
 Use the shared parity scripts from the repo root before pushing changes:
 

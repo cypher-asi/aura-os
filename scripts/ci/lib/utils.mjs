@@ -11,6 +11,7 @@ import {
   NODE_VERSION,
   RUBY_VERSION,
   RUST_VERSION,
+  XCODE_MAJOR,
 } from "./versions.mjs";
 
 const currentFile = fileURLToPath(import.meta.url);
@@ -148,6 +149,23 @@ export function assertRubyVersion(expectedVersion = RUBY_VERSION) {
   }
 }
 
+export function assertXcodeMajorAtLeast(minimumMajor = XCODE_MAJOR) {
+  const output = capture("xcodebuild", ["-version"]);
+  const match = output.match(/Xcode\s+(\d+)(?:\.(\d+))?/);
+  if (!match) {
+    fail(`Unable to parse Xcode version from: ${output}`);
+  }
+
+  const actualMajor = Number.parseInt(match[1], 10);
+  if (actualMajor < minimumMajor) {
+    fail(
+      `iOS release lanes require Xcode >= ${minimumMajor}.0, but found "${output.split("\n")[0]}". ` +
+        "Apple's App Store Connect upload validation requires the iOS 26 SDK (Xcode 26+) since 2026-04-28; " +
+        "select a newer toolchain via `sudo xcode-select -s /Applications/Xcode_26.app` or pin the runner image to macos-26.",
+    );
+  }
+}
+
 export function assertDesktopRuntime({ requireHarness = false } = {}) {
   assertNodeMajor(DESKTOP_NODE_MAJOR, "Desktop/evals");
   assertRustVersionAtLeast(RUST_VERSION);
@@ -175,7 +193,7 @@ export function assertIosRuntime({ requireNative = false, requireRuby = false } 
     assertRubyVersion(RUBY_VERSION);
   }
   if (requireNative) {
-    capture("xcodebuild", ["-version"]);
+    assertXcodeMajorAtLeast(XCODE_MAJOR);
   }
 }
 
