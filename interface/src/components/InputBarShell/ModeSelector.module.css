@@ -33,19 +33,22 @@
 
 .segment {
   appearance: none;
-  border: none;
+  /* Reserve the active-pill border on every segment so toggling between
+     modes never shifts the segment row by 1px. */
+  border: 1px solid transparent;
   background: transparent;
   color: var(--color-text-secondary);
   font-family: inherit;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  padding: 4px 12px;
+  padding: 3px 11px;
   border-radius: 999px;
   cursor: pointer;
   transition:
     background-color 0.15s ease,
     color 0.15s ease,
+    border-color 0.15s ease,
     box-shadow 0.15s ease;
 }
 
@@ -62,7 +65,27 @@
 .segmentActive {
   color: var(--color-text-primary);
   background: var(--color-elevated);
+  border-color: var(--color-border);
   box-shadow: 0 1px 2px var(--color-backdrop-light);
+}
+
+/* Per-mode border accents on the active "selection pill". The hue
+   matches the semantic intent of each mode (success for code,
+   warning for plan, info for image, purple for 3d). */
+.segmentActive[data-agent-mode-option="code"] {
+  border-color: var(--color-success);
+}
+
+.segmentActive[data-agent-mode-option="plan"] {
+  border-color: var(--color-warning);
+}
+
+.segmentActive[data-agent-mode-option="image"] {
+  border-color: var(--color-status-info);
+}
+
+.segmentActive[data-agent-mode-option="3d"] {
+  border-color: var(--color-status-purple);
 }
 
 @media (max-width: 640px) {
