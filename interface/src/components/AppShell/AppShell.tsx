@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect } from "react";
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppProviders } from "../AppProviders";
 import { useSidekickStore } from "../../stores/sidekick-store";
@@ -313,8 +313,17 @@ function CaptureBridgeHost() {
 function useOnboardingHydration() {
   const user = useAuth().user;
   const hydrateForUser = useOnboardingStore((s) => s.hydrateForUser);
+  const trackedUserIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (user?.user_id) hydrateForUser(user.user_id);
+    if (!user?.user_id) return;
+    hydrateForUser(user.user_id);
+    if (trackedUserIdRef.current !== user.user_id) {
+      trackedUserIdRef.current = user.user_id;
+      import("../../lib/analytics").then(({ track, identifyUser }) => {
+        identifyUser(user.user_id);
+        track("session_active");
+      });
+    }
   }, [user?.user_id, hydrateForUser]);
 }
 
