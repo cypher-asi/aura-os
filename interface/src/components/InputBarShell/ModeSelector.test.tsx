@@ -11,25 +11,31 @@ function getIndicator(container: HTMLElement): HTMLSpanElement {
 }
 
 describe("ModeSelector", () => {
-  it("reflects the active mode's index on the indicator via --mode-index", () => {
+  it("emits an index-driven transform per active mode", () => {
     const { container, rerender } = render(
       <ModeSelector selectedMode="code" onChange={vi.fn()} />,
     );
     const indicator = getIndicator(container);
     expect(indicator.dataset.modeIndex).toBe("0");
-    expect(indicator.style.getPropertyValue("--mode-index")).toBe("0");
+    expect(indicator.style.transform).toBe("translateX(0)");
 
     rerender(<ModeSelector selectedMode="plan" onChange={vi.fn()} />);
     expect(indicator.dataset.modeIndex).toBe("1");
-    expect(indicator.style.getPropertyValue("--mode-index")).toBe("1");
+    expect(indicator.style.transform).toBe(
+      "translateX(calc(1 * 100% + 2px))",
+    );
 
     rerender(<ModeSelector selectedMode="image" onChange={vi.fn()} />);
     expect(indicator.dataset.modeIndex).toBe("2");
-    expect(indicator.style.getPropertyValue("--mode-index")).toBe("2");
+    expect(indicator.style.transform).toBe(
+      "translateX(calc(2 * 100% + 4px))",
+    );
 
     rerender(<ModeSelector selectedMode="3d" onChange={vi.fn()} />);
     expect(indicator.dataset.modeIndex).toBe("3");
-    expect(indicator.style.getPropertyValue("--mode-index")).toBe("3");
+    expect(indicator.style.transform).toBe(
+      "translateX(calc(3 * 100% + 6px))",
+    );
   });
 
   it("marks exactly the active mode as aria-checked", () => {

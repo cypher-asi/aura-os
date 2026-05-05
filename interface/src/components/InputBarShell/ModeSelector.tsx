@@ -22,17 +22,28 @@ export interface ModeSelectorProps {
 }
 
 /**
+ * Width of the gap between segments in the CSS grid; must stay in
+ * sync with `--mode-gap` in the module CSS so the JS-emitted
+ * transform lines the pill up exactly with the active button.
+ */
+const MODE_GAP_PX = 2;
+
+/**
  * Segmented control rendered as the topmost section of the agent
  * chat input. Exactly one mode is active at a time; selection is
  * keyboard-navigable (Left/Right/Home/End) and announced as a radio
  * group to assistive tech.
  *
- * The sliding pill is purely CSS-driven: the segments grid has equal
- * 1fr columns, and the indicator's `transform` is computed from a
- * single `--mode-index` custom property via `calc()`. Changing the
- * active mode just rewrites that property; CSS transitions on
- * `transform` produce the smooth left/right slide. No DOM
- * measurement, layout effects, or ResizeObserver is needed.
+ * The sliding pill is positioned without any DOM measurement: the
+ * segments grid uses equal 1fr columns, the indicator's width is
+ * one column wide via CSS calc, and React emits a literal
+ * `transform: translateX(calc(N * 100% + N * gap))` per render —
+ * `100%` on `translateX` is relative to the indicator's own width
+ * (i.e. one column), so each index step is exactly one column plus
+ * one gap. Emitting the resolved transform string (rather than
+ * routing through a CSS variable) ensures the transform's computed
+ * value differs across renders, which is what the CSS transition
+ * needs to actually interpolate between the two positions.
  */
 export const ModeSelector = memo(function ModeSelector({
   selectedMode,
@@ -74,9 +85,13 @@ export const ModeSelector = memo(function ModeSelector({
   );
 
   const rootClass = [styles.root, className].filter(Boolean).join(" ");
-  const indicatorStyle = {
-    "--mode-index": activeIndex < 0 ? 0 : activeIndex,
-  } as CSSProperties;
+  const safeIndex = activeIndex < 0 ? 0 : activeIndex;
+  const indicatorStyle: CSSProperties = {
+    transform:
+      safeIndex === 0
+        ? "translateX(0)"
+        : `translateX(calc(${safeIndex} * 100% + ${safeIndex * MODE_GAP_PX}px))`,
+  };
 
   return (
     <div

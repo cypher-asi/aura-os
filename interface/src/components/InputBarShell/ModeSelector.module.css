@@ -6,16 +6,18 @@
  *
  * Layout strategy: the segments wrapper is a CSS grid of equal
  * 1fr columns. The indicator pill is absolutely positioned and
- * sized to one column width via calc(); its horizontal offset is
- * driven by a single `--mode-index` custom property set by React.
- * The transform uses `100%` (which on `transform: translateX` is
- * relative to the indicator's own width — i.e. one column width),
- * which is why we don't reuse `--mode-col` inside the calc: the
- * `100%` token inside that variable would re-resolve against the
- * indicator instead of the segments container. A CSS transition
- * on `transform` produces the smooth left/right slide when the
- * selected mode changes — no DOM measurement or ResizeObserver
- * required.
+ * sized to one column width via calc(). React owns the `transform`
+ * inline style and emits a fully-resolved `translateX(...)` string
+ * per active mode — passing the index through a CSS variable does
+ * not reliably trigger the transform transition in Chromium because
+ * the dependent property's computed value is treated as unchanged
+ * when only the variable's value differs. By writing the transform
+ * literally on each render, the start/end computed values clearly
+ * differ and the CSS transition interpolates between them.
+ *
+ * `100%` inside the transform's translateX is relative to the
+ * indicator's own width (one column), so `index * (100% + gap)` is
+ * the exact left edge of column N relative to column 0.
  * ============================================================ */
 
 .root {
@@ -55,7 +57,6 @@
 }
 
 .indicator {
-  --mode-index: 0;
   position: absolute;
   top: var(--mode-pad);
   bottom: var(--mode-pad);
@@ -70,11 +71,7 @@
   pointer-events: none;
   z-index: 0;
   will-change: transform;
-  /* `100%` here is the indicator's own width (one column). Adding the
-     gap once per index step yields the exact left edge of column N. */
-  transform: translateX(
-    calc(var(--mode-index) * (100% + var(--mode-gap)))
-  );
+  transform: translateX(0);
   transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
