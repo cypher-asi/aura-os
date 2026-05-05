@@ -178,7 +178,7 @@ export function ImageGeneration() {
         onSubmit={handleGenerate}
         isLoading={isGeneratingImage}
         disabled={!selectedProjectId}
-        placeholder={selectedProjectId ? "Describe your 3D asset..." : "Select a project first"}
+        placeholder={selectedProjectId ? "Describe a static image of what your desired 3D model." : "Select a project first"}
         selectedModel={imagineModel}
         onModelChange={setImagineModel}
       />

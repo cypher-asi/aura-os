@@ -1,6 +1,9 @@
 import { create } from "zustand";
 import { artifactsApi, type ProjectArtifact } from "../shared/api/artifacts";
-import { DEFAULT_IMAGE_MODEL_ID } from "../constants/models";
+import {
+  DEFAULT_3D_MODEL_ID,
+  DEFAULT_IMAGE_MODEL_ID,
+} from "../constants/models";
 import { setLastProject } from "../utils/storage";
 
 export type Aura3DTab = "image" | "3d";
@@ -96,6 +99,10 @@ interface Aura3DState {
   currentImage: GeneratedImage | null;
 
   // 3D generation
+  model3DPrompt: string;
+  setModel3DPrompt: (prompt: string) => void;
+  model3DModel: string;
+  setModel3DModel: (model: string) => void;
   generateSourceImage: GeneratedImage | null;
   setGenerateSourceImage: (image: GeneratedImage | null) => void;
   isGenerating3D: boolean;
@@ -212,6 +219,11 @@ export const useAura3DStore = create<Aura3DState>()((set, get) => ({
   imageProgressMessage: "",
   partialImageData: null,
   currentImage: null,
+
+  model3DPrompt: "",
+  setModel3DPrompt: (prompt) => set({ model3DPrompt: prompt }),
+  model3DModel: DEFAULT_3D_MODEL_ID,
+  setModel3DModel: (model) => set({ model3DModel: model }),
 
   generateSourceImage: null,
   setGenerateSourceImage: (image) => set({ generateSourceImage: image }),
@@ -444,6 +456,7 @@ export const useAura3DStore = create<Aura3DState>()((set, get) => ({
       current3DModel: model,
       models: [model, ...s.models],
       selectedModelId: model.id,
+      model3DPrompt: "",
     }));
     // Note: artifact is saved by the router when projectId is passed to the stream.
     // No frontend save needed — avoids duplicates.

@@ -63,11 +63,14 @@
 
 .viewerArea {
   flex: 1;
-  min-height: 200px;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-3) var(--space-4);
+  /* Mirrors `.previewArea` in ImageGeneration so switching tabs leaves
+     the source image / viewer at the same dimensions instead of
+     resizing every tab change. */
+  padding: var(--space-4);
   position: relative;
 }
 
@@ -104,16 +107,3 @@
   border-radius: 8px;
 }
 
-.footer {
-  flex-shrink: 0;
-  min-height: 76px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-3) var(--space-4);
-}
-
-.actionBar {
-  display: flex;
-  justify-content: center;
-}

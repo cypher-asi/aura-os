@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 import { Box, Grid3x3, Triangle, Paintbrush } from "lucide-react";
-import { Button, Spinner } from "@cypher-asi/zui";
 import { useAura3DStore } from "../../../stores/aura3d-store";
 import { generate3dStream } from "../../../api/streams";
 import { EventType } from "../../../shared/types/aura-events";
+import { MODEL_3D_MODELS } from "../../../constants/models";
 import { EmptyState } from "../../../components/EmptyState";
 import { SidekickItemContextMenu } from "../../../components/SidekickItemContextMenu";
+import { PromptInput } from "../PromptInput";
 import { WebGLViewer } from "../WebGLViewer";
 import styles from "./ModelGeneration.module.css";
 
@@ -39,6 +40,10 @@ export function ModelGeneration() {
   const generateSourceImage = useAura3DStore((s) => s.generateSourceImage);
   const isGenerating3D = useAura3DStore((s) => s.isGenerating3D);
   const current3DModel = useAura3DStore((s) => s.current3DModel);
+  const model3DPrompt = useAura3DStore((s) => s.model3DPrompt);
+  const setModel3DPrompt = useAura3DStore((s) => s.setModel3DPrompt);
+  const model3DModel = useAura3DStore((s) => s.model3DModel);
+  const setModel3DModel = useAura3DStore((s) => s.setModel3DModel);
   const progressMessage = useProgressMessage(isGenerating3D);
 
   const showGrid = useAura3DStore((s) => s.showGrid);
@@ -135,9 +140,10 @@ export function ModelGeneration() {
 
     setGenerating3D(true);
 
+    const trimmedPrompt = model3DPrompt.trim();
     generate3dStream(
       generateSourceImage.imageUrl,
-      undefined,
+      trimmedPrompt || undefined,
       {
         onEvent: (event) => {
           if (controller.signal.aborted) return;
@@ -179,7 +185,7 @@ export function ModelGeneration() {
       selectedProjectId ?? undefined,
       generateSourceImage.artifactId,
     );
-  }, [generateSourceImage, selectedProjectId, setGenerating3D, set3DProgress, complete3DGeneration, setError]);
+  }, [generateSourceImage, model3DPrompt, selectedProjectId, setGenerating3D, set3DProgress, complete3DGeneration, setError]);
 
   if (!generateSourceImage && !current3DModel) {
     return (
@@ -269,26 +275,28 @@ export function ModelGeneration() {
           />
         )}
       </div>
-      <div className={styles.footer}>
-        {!current3DModel && (
-          <div className={styles.actionBar}>
-            <Button
-              variant="primary"
-              onClick={handleGenerate3D}
-              disabled={!generateSourceImage || !selectedProjectId || isGenerating3D}
-            >
-              {isGenerating3D ? (
-                <>
-                  <Spinner size="sm" />
-                  <span>{progressMessage}</span>
-                </>
-              ) : (
-                "Generate 3D"
-              )}
-            </Button>
-          </div>
-        )}
-      </div>
+      {!current3DModel && (
+        <PromptInput
+          value={model3DPrompt}
+          onChange={setModel3DPrompt}
+          onSubmit={handleGenerate3D}
+          isLoading={isGenerating3D}
+          disabled={!generateSourceImage || !selectedProjectId}
+          placeholder={
+            isGenerating3D
+              ? progressMessage
+              : !generateSourceImage
+                ? "Generate an image first"
+                : !selectedProjectId
+                  ? "Select a project first"
+                  : "Refine your 3D model (optional)"
+          }
+          selectedModel={model3DModel}
+          onModelChange={setModel3DModel}
+          models={MODEL_3D_MODELS}
+          requireText={false}
+        />
+      )}
     </div>
   );
 }

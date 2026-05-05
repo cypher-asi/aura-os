@@ -1,5 +1,5 @@
 import { useCallback, useRef } from "react";
-import { IMAGE_MODELS } from "../../../constants/models";
+import { IMAGE_MODELS, type ModelOption } from "../../../constants/models";
 import {
   InputBarShell,
   inputBarShellStyles,
@@ -16,15 +16,28 @@ interface PromptInputProps {
   disabled?: boolean;
   selectedModel: string;
   onModelChange: (model: string) => void;
+  /**
+   * Model options shown in the picker. Defaults to `IMAGE_MODELS` so the
+   * Image tab keeps its existing behavior; the 3D tab passes
+   * `MODEL_3D_MODELS` to scope the menu to its providers.
+   */
+  models?: ModelOption[];
+  /**
+   * Whether the send button requires non-empty text. The Image tab
+   * needs a prompt to call the image API, but the 3D tab can submit
+   * with an empty prompt (the source image alone is sufficient input).
+   * Defaults to `true`.
+   */
+  requireText?: boolean;
 }
 
 /**
- * Prompt input for the aura3d Image tab. Composes the same
+ * Prompt input for the aura3d main panel. Composes the same
  * `InputBarShell` + `ModelPicker` primitives as the chat
  * `ChatInputBar` so both surfaces look and behave identically;
  * the aura3d variant simply omits chat-only chrome (slash
  * commands, attachments, projects, agent environment) and
- * scopes the model picker to `IMAGE_MODELS`.
+ * scopes the model picker to whatever generation mode is active.
  */
 export function PromptInput({
   value,
@@ -35,17 +48,19 @@ export function PromptInput({
   disabled = false,
   selectedModel,
   onModelChange,
+  models = IMAGE_MODELS,
+  requireText = true,
 }: PromptInputProps) {
   const shellRef = useRef<InputBarShellHandle>(null);
 
   const selectedLabel =
-    IMAGE_MODELS.find((m) => m.id === selectedModel)?.label ?? selectedModel;
-  const isModelPickerInteractive = IMAGE_MODELS.length > 1;
+    models.find((m) => m.id === selectedModel)?.label ?? selectedModel;
+  const isModelPickerInteractive = models.length > 1;
 
   const renderModelMenu = useCallback(
     (close: () => void) => (
       <div className={inputBarShellStyles.modelMenu}>
-        {IMAGE_MODELS.map((m) => (
+        {models.map((m) => (
           <button
             key={m.id}
             type="button"
@@ -60,8 +75,10 @@ export function PromptInput({
         ))}
       </div>
     ),
-    [selectedModel, onModelChange],
+    [models, selectedModel, onModelChange],
   );
+
+  const sendEnabled = !isLoading && (!requireText || value.trim().length > 0);
 
   return (
     <InputBarShell
@@ -70,7 +87,7 @@ export function PromptInput({
       onValueChange={onChange}
       onSubmit={onSubmit}
       isStreaming={false}
-      isSendEnabled={value.trim().length > 0 && !isLoading}
+      isSendEnabled={sendEnabled}
       isStatic
       placeholder={placeholder}
       disabled={isLoading || disabled}
