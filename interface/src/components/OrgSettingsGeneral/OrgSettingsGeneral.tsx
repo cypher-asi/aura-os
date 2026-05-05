@@ -200,7 +200,7 @@ export function OrgSettingsGeneral({
             <span className={styles.rowLabel}>Updates</span>
             <span className={styles.rowDescription}>Check for and install new versions of Aura</span>
           </div>
-          <div className={styles.rowControl}>
+          <div className={`${styles.rowControl} ${styles.rowControlWide}`}>
             <UpdateControl layout="inline" />
           </div>
         </div>

@@ -302,10 +302,8 @@ function renderInline(
       data-status={status}
       data-testid={testId}
     >
-      <div className={styles.updateStatusRow}>
-        <div className={styles.updateStatus}>{message}</div>
-        {actions ? <div className={styles.updateActions}>{actions}</div> : null}
-      </div>
+      <div className={styles.updateStatus}>{message}</div>
+      {actions ? <div className={styles.updateActions}>{actions}</div> : null}
       {lastCheckedLabel ? (
         <Text
           as="span"

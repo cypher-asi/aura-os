@@ -6,33 +6,18 @@
 }
 
 .updateControl[data-layout="inline"] {
-  align-items: stretch;
-  justify-content: flex-end;
-  gap: 4px;
-  margin-top: 0;
-  min-width: 0;
-}
-
-.updateStatusRow {
-  display: flex;
+  flex-direction: row;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: var(--space-2);
-  min-width: 0;
+  margin-top: 0;
 }
 
 .updateStatus {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-width: 0;
-  flex: 1 1 auto;
-  overflow-wrap: anywhere;
-}
-
-.updateStatus > :where(span, div) {
-  min-width: 0;
 }
 
 .updateActions {
@@ -40,13 +25,12 @@
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
-  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .updateLastChecked {
-  display: block;
-  text-align: right;
-  width: 100%;
+  flex-basis: 100%;
+  text-align: left;
   line-height: 1.4;
 }
 

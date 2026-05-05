@@ -117,10 +117,9 @@
 
 .settingsRow {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-2) var(--space-4);
+  gap: var(--space-4);
   padding: var(--space-3) var(--space-4);
   min-height: 52px;
 }
@@ -145,7 +144,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  flex: 1 1 220px;
+  flex: 1;
   min-width: 0;
 }
 
@@ -159,18 +158,18 @@
   font-size: var(--text-2xs);
   color: var(--color-text-muted);
   line-height: 1.4;
-  word-break: normal;
-  overflow-wrap: anywhere;
 }
 
 .rowControl {
-  flex: 0 1 auto;
-  min-width: 0;
+  flex-shrink: 0;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
   gap: var(--space-2);
+}
+
+.rowControlWide {
+  flex: 1;
+  align-items: stretch;
 }
 
 .avatarUpload {
