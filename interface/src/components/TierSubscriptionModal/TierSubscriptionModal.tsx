@@ -106,7 +106,7 @@ export function TierSubscriptionModal({ isOpen, onClose }: Props) {
     setError(null);
     try {
       const { url } = await orgsApi.createSubscriptionCheckout(planId);
-      track("subscription_started", { plan: planId });
+      track("subscription_checkout_started", { plan: planId });
       window.open(url, "_blank");
       setLoading(false);
     } catch (e) {

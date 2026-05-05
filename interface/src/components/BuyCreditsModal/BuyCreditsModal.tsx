@@ -53,7 +53,7 @@ export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
 
   const handlePurchaseClick = () => {
     if (effectiveAmount !== null) {
-      track("credits_purchased", { amount_usd: effectiveAmount });
+      track("credits_checkout_started", { amount_usd: effectiveAmount });
       handlePurchase(effectiveAmount);
     }
   };
