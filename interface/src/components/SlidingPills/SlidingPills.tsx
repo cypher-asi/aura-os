@@ -2,8 +2,6 @@ import {
   useCallback,
   useLayoutEffect,
   useRef,
-  useState,
-  type CSSProperties,
   type KeyboardEvent,
   type ReactNode,
 } from "react";
@@ -49,13 +47,6 @@ export interface SlidingPillsProps<T extends string> {
   readonly indicatorClassName?: string;
 }
 
-interface PillRect {
-  readonly left: number;
-  readonly top: number;
-  readonly width: number;
-  readonly height: number;
-}
-
 const NAVIGATION_KEYS: ReadonlySet<string> = new Set([
   "ArrowLeft",
   "ArrowRight",
@@ -64,17 +55,18 @@ const NAVIGATION_KEYS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Generic segmented control with a single sliding indicator pill. The
- * pill measures the active button's rect on every layout-affecting
- * change and animates `transform` / `width` / `height` between
- * positions via plain CSS transitions — no animation library required.
+ * Generic segmented control with a single sliding indicator pill.
  *
- * The component is controlled (`value` + `onChange`), exposes a
- * `role="radiogroup"` with one `role="radio"` per segment, and
- * supports Left/Right (with wrap-around) and Home/End keyboard
- * navigation. Variable-width segments are handled because the
- * indicator is sized from the measured rect rather than from a fixed
- * column width.
+ * Implementation note: the indicator's `transform`, `width` and
+ * `height` are written **imperatively** in a layout effect (via the
+ * indicator ref) rather than through React state. Holding the rect in
+ * `useState` caused two commits per click — once with the old rect,
+ * once with the new rect — both before the browser paints. Chromium
+ * can collapse those into a single style-change cycle so the
+ * `transform` delta never triggers the CSS transition and the pill
+ * snaps. Writing straight to the DOM here keeps a single style write
+ * per click and lets the browser see a clean previous → next
+ * transform between paints, which is what fires the slide.
  */
 export function SlidingPills<T extends string>({
   items,
@@ -86,27 +78,28 @@ export function SlidingPills<T extends string>({
   indicatorClassName,
 }: SlidingPillsProps<T>) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const indicatorRef = useRef<HTMLSpanElement>(null);
   const itemRefs = useRef(new Map<T, HTMLButtonElement | null>());
-  const [pillRect, setPillRect] = useState<PillRect | null>(null);
 
   useLayoutEffect(() => {
     const container = containerRef.current;
+    const indicator = indicatorRef.current;
     const selectedEl = itemRefs.current.get(value);
-    if (!container || !selectedEl) return;
+    if (!container || !indicator || !selectedEl) return;
 
-    const measure = () => {
+    const apply = () => {
       const containerRect = container.getBoundingClientRect();
       const selectedRect = selectedEl.getBoundingClientRect();
-      setPillRect({
-        left: selectedRect.left - containerRect.left,
-        top: selectedRect.top - containerRect.top,
-        width: selectedRect.width,
-        height: selectedRect.height,
-      });
+      indicator.style.transform = `translate(${
+        selectedRect.left - containerRect.left
+      }px, ${selectedRect.top - containerRect.top}px)`;
+      indicator.style.width = `${selectedRect.width}px`;
+      indicator.style.height = `${selectedRect.height}px`;
+      indicator.style.opacity = "1";
     };
-    measure();
+    apply();
 
-    const observer = new ResizeObserver(measure);
+    const observer = new ResizeObserver(apply);
     observer.observe(container);
     return () => observer.disconnect();
   }, [value, items.length]);
@@ -135,14 +128,6 @@ export function SlidingPills<T extends string>({
     [items, onChange, value],
   );
 
-  const indicatorStyle: CSSProperties = pillRect
-    ? {
-        transform: `translate(${pillRect.left}px, ${pillRect.top}px)`,
-        width: `${pillRect.width}px`,
-        height: `${pillRect.height}px`,
-      }
-    : { opacity: 0 };
-
   const rootClassName = [styles.root, className].filter(Boolean).join(" ");
   const indicatorClass = [styles.indicator, indicatorClassName]
     .filter(Boolean)
@@ -157,11 +142,11 @@ export function SlidingPills<T extends string>({
       onKeyDown={handleKeyDown}
     >
       <span
+        ref={indicatorRef}
         aria-hidden
         className={indicatorClass}
         data-sliding-pills-indicator=""
         data-active-id={value}
-        style={indicatorStyle}
       />
       {items.map((item) => {
         const isSelected = item.id === value;
