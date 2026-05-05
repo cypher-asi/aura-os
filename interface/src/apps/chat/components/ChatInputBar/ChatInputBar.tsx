@@ -651,19 +651,6 @@ export const DesktopChatInputBar = memo(
             </span>
           </div>
         ) : null}
-        {needsImageForThreeD ? (
-          <div
-            className={`${styles.threeDHint}${needsImageHintFlash ? ` ${styles.threeDHintFlash}` : ""}`}
-            role="status"
-            aria-live="polite"
-            data-agent-surface="chat-input-3d-image-hint"
-          >
-            <span className={styles.threeDHintDot} aria-hidden="true" />
-            <span className={styles.threeDHintLabel}>
-              Upload or paste an image of a 3D object to generate.
-            </span>
-          </div>
-        ) : null}
         {modelsForMode.length > 0 ? (
           <div className={inputBarShellStyles.mobileModelBar}>
             <span className={inputBarShellStyles.mobileModelLabel}>Model</span>
@@ -692,12 +679,29 @@ export const DesktopChatInputBar = memo(
       </button>
     );
 
-    const inputRowEnd = selectedCommands.length > 0 ? (
-      <CommandChips
-        commands={selectedCommands}
-        onRemove={handleCommandRemove}
-        variant="inline"
-      />
+    const inputRowEnd = selectedCommands.length > 0 || needsImageForThreeD ? (
+      <>
+        {selectedCommands.length > 0 ? (
+          <CommandChips
+            commands={selectedCommands}
+            onRemove={handleCommandRemove}
+            variant="inline"
+          />
+        ) : null}
+        {needsImageForThreeD ? (
+          <div
+            className={`${styles.threeDHint} ${styles.threeDHintInline}${needsImageHintFlash ? ` ${styles.threeDHintFlash}` : ""}`}
+            role="status"
+            aria-live="polite"
+            data-agent-surface="chat-input-3d-image-hint"
+          >
+            <span className={styles.threeDHintDot} aria-hidden="true" />
+            <span className={styles.threeDHintLabel}>
+              Add an image to generate.
+            </span>
+          </div>
+        ) : null}
+      </>
     ) : null;
 
     const infoBarStart = (

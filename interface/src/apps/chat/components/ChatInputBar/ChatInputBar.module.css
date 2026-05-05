@@ -88,6 +88,16 @@
   transition: background 220ms ease, transform 220ms ease;
 }
 
+/* Variant used when the chip is rendered inside the input row's
+   absolutely-positioned `inputRowEnd` slot rather than stacked above
+   the textarea. Drops the stacked-layout outer margin so the chip
+   sits flush inside the slot and does not change the input row height
+   when 3D mode is toggled. (Right-side breathing room from the send
+   button is handled by `.inputRowEnd` itself in InputBarShell.) */
+.threeDHintInline {
+  margin: 0;
+}
+
 .threeDHintFlash {
   background: color-mix(in srgb, var(--color-accent) 28%, transparent);
   animation: threeDHintShake 280ms ease;

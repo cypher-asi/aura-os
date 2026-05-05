@@ -193,11 +193,17 @@
 
 .inputRowEnd {
   position: absolute;
-  right: 42px;
-  bottom: 5px;
+  /* Sit clear of the send button's hit area (right: 14px, width: 24px,
+     so left edge ~38px from the right) plus enough breathing room so
+     inline chips don't visually crowd the arrow. */
+  right: 52px;
+  /* Vertically center inside the input row so chips don't read as
+     bottom-anchored relative to the textarea. */
+  top: 50%;
+  transform: translateY(-50%);
   z-index: 2;
   display: flex;
-  max-width: min(170px, calc(100% - 84px));
+  max-width: min(170px, calc(100% - 94px));
   min-width: 0;
   align-items: center;
 }
@@ -506,9 +512,8 @@
   }
 
   .inputRowEnd {
-    right: 50px;
-    bottom: 11px;
-    max-width: min(170px, calc(100% - 106px));
+    right: 58px;
+    max-width: min(170px, calc(100% - 116px));
   }
 
   .inputInfoBar {
