@@ -3,7 +3,8 @@
 // Regenerate every desktop / web icon asset from the master orb in
 // apps/aura-os-desktop/assets/source/aura-icon-source.png. Output:
 //
-//   apps/aura-os-desktop/assets/icons/icon-{16,32,48,64,128,192,256,512,1024}.png
+//   apps/aura-os-desktop/assets/icons/icon-{16,32,48,64,128,192,256,512}.png
+//   apps/aura-os-desktop/assets/icons/icon-1024@2x.png
 //   apps/aura-os-desktop/assets/installer/installer-icon.ico
 //   apps/aura-os-desktop/assets/installer/header.bmp        (NSIS, 150x57, BMP3)
 //   apps/aura-os-desktop/assets/installer/sidebar.bmp       (NSIS, 164x314, BMP3)
@@ -45,6 +46,15 @@ for (const dir of [iconsDir, installerDir]) {
 }
 
 const SIZES = [16, 32, 48, 64, 128, 192, 256, 512, 1024];
+
+// cargo-packager's icns generator uses the `@2x` suffix on the file stem to
+// pick the 2x density slot. ICNS only defines a 1024px slot at density=2 (the
+// 512x512 retina entry, OSType `ic10`), so the 1024 export must land at
+// `icon-1024@2x.png` — otherwise `cargo packager` errors with
+// `No matching IconType` and the macOS .app build fails.
+function iconFilename(size) {
+  return size === 1024 ? `icon-${size}@2x.png` : `icon-${size}.png`;
+}
 // macOS Big Sur+ icons use a corner radius around 22.5% of the canvas. Use
 // the same value across platforms so the icon reads consistently.
 const SQUIRCLE_RADIUS_RATIO = 0.225;
@@ -269,7 +279,7 @@ async function main() {
   // Rounded PNGs at every standard size.
   const pngBuffers = {};
   for (const size of SIZES) {
-    const out = path.join(iconsDir, `icon-${size}.png`);
+    const out = path.join(iconsDir, iconFilename(size));
     const buf = await writeRoundedPng(size, out);
     pngBuffers[size] = buf;
     console.log(`  wrote ${path.relative(repoRoot, out)} (${buf.length} bytes)`);

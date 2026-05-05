@@ -40,7 +40,11 @@ product-name = "AURA"
 identifier = "com.aura.desktop"
 category = "DeveloperTool"
 icons = [
-    "assets/icons/icon-1024.png",
+    # 1024px must use the `@2x` suffix so cargo-packager's icns generator
+    # treats it as the 512x512 retina (`ic10`) slot. icns has no entry for
+    # `(1024, 1024, density=1)`, so without the suffix `cargo packager` aborts
+    # the macOS .app build with `No matching IconType`.
+    "assets/icons/icon-1024@2x.png",
     "assets/icons/icon-512.png",
     "assets/icons/icon-256.png",
     "assets/icons/icon-128.png",
