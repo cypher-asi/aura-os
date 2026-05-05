@@ -9,6 +9,8 @@ import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useDesktopWindowStore } from "../../stores/desktop-window-store";
 import { useAppUIStore } from "../../stores/app-ui-store";
 import { useAuth } from "../../stores/auth-store";
+import { useAura3DStore } from "../../stores/aura3d-store";
+import { DEFAULT_IMAGE_MODEL_ID } from "../../constants/models";
 import { useOnboardingStore } from "../../features/onboarding/onboarding-store";
 import { useOnboardingTaskWatcher } from "../../features/onboarding/useOnboardingTaskWatcher";
 import { useShallow } from "zustand/react/shallow";
@@ -130,8 +132,7 @@ async function resetCaptureAppSpecificState(): Promise<void> {
         liveRunNodeId: null,
       });
     }),
-    import("../../stores/aura3d-store").then(async ({ useAura3DStore }) => {
-      const { DEFAULT_IMAGE_MODEL_ID } = await import("../../constants/models");
+    Promise.resolve().then(() => {
       useAura3DStore.setState({
         activeTab: "image",
         selectedProjectId: null,

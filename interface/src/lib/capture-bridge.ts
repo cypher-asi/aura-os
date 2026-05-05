@@ -25,6 +25,7 @@ import type { ProjectStatsData } from "../shared/api/projects";
 import { writeCaptureDemoProjectStats } from "./capture-demo-stats";
 import { useFeedStore } from "../stores/feed-store";
 import { useLoopActivityStore } from "../stores/loop-activity-store";
+import { useAura3DStore } from "../stores/aura3d-store";
 
 const DESKTOP_WINDOWS_STORAGE_KEY = "aura:desktopWindows";
 const DEMO_PROJECT_ID = "22222222-2222-4222-8222-222222222222";
@@ -1426,7 +1427,6 @@ export async function applyAuraCaptureSeedPlan(
   }
 
   if (shouldApplyAura3DSeed(seedPlan, targetAppId)) {
-    const { useAura3DStore } = await import("../stores/aura3d-store");
     const openModelSurface = shouldOpenAura3DModelSurface(seedPlan);
     const images = demoAura3DImages();
     const image = images[0];
