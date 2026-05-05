@@ -81,21 +81,21 @@ jobs:
             exit 1
           fi
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         if: steps.release-check.outputs.released == 'true'
         with:
           ref: ${{ steps.trigger.outputs.head_sha }}
           fetch-depth: 0
           path: repo
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         if: steps.release-check.outputs.released == 'true'
         with:
           ref: ${{ github.ref }}
           fetch-depth: 1
           path: workflow
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         if: steps.release-check.outputs.released == 'true'
         with:
           ref: gh-pages
@@ -104,13 +104,13 @@ jobs:
 
       - name: Install Node.js
         if: steps.release-check.outputs.released == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 25.9.0
 
       - name: Download release artifacts from the triggering run
         if: steps.release-check.outputs.released == 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           pattern: installers-*
           path: all-artifacts
@@ -121,7 +121,7 @@ jobs:
       - name: Download release metadata from the triggering run
         if: steps.release-check.outputs.released == 'true'
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: release-metadata
           path: release-metadata
@@ -278,7 +278,7 @@ jobs:
 
       - name: Upload changelog media plan
         if: steps.release-check.outputs.released == 'true' && hashFiles('changelog-media-plan/media-plan-summary.json') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: changelog-media-plan
           path: changelog-media-plan
@@ -313,7 +313,7 @@ jobs:
 
       - name: Upload changelog publish metadata
         if: steps.release-check.outputs.released == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: changelog-publish-metadata
           path: changelog-publish-metadata/changelog-publish-metadata.json

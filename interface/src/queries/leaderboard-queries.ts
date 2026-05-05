@@ -34,7 +34,7 @@ export function mapLeaderboardEntries(
   entries: LeaderboardEntryDto[],
 ): LeaderboardUser[] {
   return entries
-    .map((entry) => ({
+    .map((entry): LeaderboardUser => ({
       id: entry.profile_id,
       name: displayNameForEntry(entry),
       avatarUrl: entry.avatar_url ?? undefined,

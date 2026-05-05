@@ -38,7 +38,7 @@ jobs:
     runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Prepare harness sibling workspace
         uses: ./.github/actions/setup-harness-sibling
@@ -82,7 +82,7 @@ jobs:
           sudo apt-get install -y build-essential clang pkg-config libatomic1 libssl-dev libdbus-1-dev
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 25.9.0
 
@@ -120,7 +120,7 @@ jobs:
           tar -cf desktop-sidecar.tar -C apps/aura-os-desktop/resources sidecar
 
       - name: Upload sidecar artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: sidecar-${{ matrix.target }}-${{ matrix.arch }}
           path: desktop-sidecar.tar
@@ -159,7 +159,7 @@ jobs:
     runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1.94.1
@@ -197,7 +197,7 @@ jobs:
           sudo apt-get install -y build-essential clang pkg-config libatomic1 libssl-dev libdbus-1-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 25.9.0
           cache: npm
@@ -277,7 +277,7 @@ jobs:
 
       - name: Upload Cargo timings
         if: always() && (matrix.target == 'windows' || (matrix.target == 'macos' && matrix.arch == 'x86_64'))
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: cargo-timings-stable-build-app-${{ matrix.target }}-${{ matrix.arch }}
           path: cargo-timings-upload
@@ -296,7 +296,7 @@ jobs:
           tar -cf desktop-build-inputs.tar -C build-inputs .
 
       - name: Upload desktop build inputs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: build-inputs-${{ matrix.target }}-${{ matrix.arch }}
           path: desktop-build-inputs.tar
@@ -333,7 +333,7 @@ jobs:
     runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1.94.1
@@ -345,7 +345,7 @@ jobs:
           sudo apt-get install -y build-essential clang pkg-config libatomic1 libssl-dev libdbus-1-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 25.9.0
 
@@ -387,13 +387,13 @@ jobs:
           version: 0.11.8
 
       - name: Download sidecar artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: sidecar-${{ matrix.target }}-${{ matrix.arch }}
           path: downloaded-sidecar
 
       - name: Download desktop build inputs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: build-inputs-${{ matrix.target }}-${{ matrix.arch }}
           path: downloaded-build-inputs
@@ -680,7 +680,7 @@ jobs:
           cat "dist/release-summary-${{ matrix.target }}-${{ matrix.arch }}.md" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: installers-${{ matrix.target }}-${{ matrix.arch }}
           path: dist/
@@ -689,7 +689,7 @@ jobs:
     needs: package
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Determine version
         id: version
@@ -704,7 +704,7 @@ jobs:
           fi
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           pattern: installers-*
           path: all-artifacts
@@ -729,7 +729,7 @@ jobs:
             }' > release-metadata/release-metadata.json
 
       - name: Upload release metadata
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: release-metadata
           path: release-metadata/release-metadata.json
@@ -757,20 +757,20 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
           path: repo
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: gh-pages
           fetch-depth: 0
           path: pages
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 25.9.0
 
@@ -787,7 +787,7 @@ jobs:
           fi
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           pattern: installers-*
           path: all-artifacts

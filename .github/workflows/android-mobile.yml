@@ -55,24 +55,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 25.9.0
           cache: npm
           cache-dependency-path: interface/package-lock.json
 
       - name: Install Java 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
           cache: gradle
 
       - name: Install Android SDK tools
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
 
       - name: Install Android SDK packages
         run: |
@@ -87,7 +87,7 @@ jobs:
         run: cat mobile-release-summary/android-validate-summary.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Android validation artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: android-validate-artifacts
           if-no-files-found: ignore
@@ -109,24 +109,24 @@ jobs:
       VITE_NATIVE_DEFAULT_HOST: ${{ vars.VITE_NATIVE_DEFAULT_HOST }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 25.9.0
           cache: npm
           cache-dependency-path: interface/package-lock.json
 
       - name: Install Java 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
           cache: gradle
 
       - name: Install Android SDK tools
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
 
       - name: Install Android SDK packages
         run: |
@@ -232,7 +232,7 @@ jobs:
         run: cat mobile-release-summary/android-ship-summary.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Android release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: android-release-artifacts
           if-no-files-found: ignore

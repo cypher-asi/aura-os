@@ -47,10 +47,10 @@ jobs:
     runs-on: macos-26
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 25.9.0
           cache: npm
@@ -75,7 +75,7 @@ jobs:
         run: cat mobile-release-summary/ios-validate-summary.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload iOS validation artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ios-validate-artifacts
           if-no-files-found: ignore
@@ -107,10 +107,10 @@ jobs:
       VITE_NATIVE_DEFAULT_HOST: ${{ vars.VITE_NATIVE_DEFAULT_HOST }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 25.9.0
           cache: npm
@@ -224,7 +224,7 @@ jobs:
         run: cat mobile-release-summary/ios-ship-summary.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload iOS release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ios-release-artifacts
           if-no-files-found: ignore
@@ -236,7 +236,7 @@ jobs:
 
       - name: Upload iOS build logs on failure
         if: failure() || cancelled()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ios-release-logs
           if-no-files-found: ignore

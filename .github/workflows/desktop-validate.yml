@@ -86,7 +86,7 @@ jobs:
     runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Prepare harness sibling workspace
         uses: ./.github/actions/setup-harness-sibling
@@ -131,7 +131,7 @@ jobs:
           sudo apt-get install -y build-essential clang pkg-config libatomic1 libssl-dev libdbus-1-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev xvfb
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 25.9.0
           cache: npm
@@ -176,7 +176,7 @@ jobs:
 
       - name: Upload Cargo timings
         if: always() && (matrix.target == 'windows-x64' || matrix.target == 'macos-x64')
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: cargo-timings-desktop-validate-${{ matrix.target }}
           path: cargo-timings-upload
@@ -424,14 +424,14 @@ jobs:
 
       - name: Upload desktop smoke logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: desktop-smoke-${{ matrix.target }}
           path: desktop-smoke-logs/${{ matrix.target }}
 
       - name: Upload packaged desktop artifacts
         if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: desktop-package-${{ matrix.target }}
           path: packaged/${{ matrix.target }}

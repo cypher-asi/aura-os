@@ -21,10 +21,10 @@ jobs:
         working-directory: interface
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 25.9.0
           cache: npm
@@ -36,7 +36,7 @@ jobs:
 
       - name: Upload smoke artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: aura-evals-smoke
           path: |
@@ -51,10 +51,10 @@ jobs:
         working-directory: interface
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 25.9.0
           cache: npm
@@ -66,7 +66,7 @@ jobs:
 
       - name: Upload workflow artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: aura-evals-workflow
           path: |
@@ -81,10 +81,10 @@ jobs:
         working-directory: infra/evals/promptfoo
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 25.9.0
           cache: npm
@@ -95,7 +95,7 @@ jobs:
 
       - name: Upload behavior eval artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: aura-evals-behavior
           path: |
@@ -111,10 +111,10 @@ jobs:
         working-directory: interface
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 25.9.0
           cache: npm
@@ -130,7 +130,7 @@ jobs:
 
       - name: Upload live benchmark artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: aura-evals-live-benchmark
           path: |
