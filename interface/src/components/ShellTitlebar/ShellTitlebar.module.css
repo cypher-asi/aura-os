@@ -1,0 +1,35 @@
+/*
+ * The chrome tokens (`--shell-chrome-*`) are defined at `:root` in
+ * `interface/src/index.css` so any shell surface — this titlebar pill, the
+ * BottomTaskbar pills, etc. — resolves the same values regardless of where
+ * it lives in the tree.
+ */
+.alignRail {
+  padding-left: 0;
+  padding-right: 0;
+  margin: var(--shell-chrome-inset);
+  border-radius: var(--shell-chrome-radius);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Match BottomTaskbar `.left` pill internal padding so the leading slot's
+   first child (org avatar in DesktopTitlebar; aura-icon in LoginView) sits
+   on the same X as the bottom-left Desktop Circle icon. */
+.alignRail > :first-child > :first-child {
+  min-width: 44px;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  padding-left: var(--space-2);
+}
+
+.blur {
+  height: var(--shell-chrome-height);
+  min-height: var(--shell-chrome-height);
+  box-sizing: border-box;
+  background: var(--shell-chrome-background) !important;
+  backdrop-filter: var(--shell-chrome-backdrop-filter);
+  -webkit-backdrop-filter: var(--shell-chrome-backdrop-filter);
+  border: 1px solid var(--color-border);
+}
