@@ -119,6 +119,8 @@ function ModelsPanel() {
   const selectedModelId = useAura3DStore((s) => s.selectedModelId);
   const selectModel = useAura3DStore((s) => s.selectModel);
   const deleteModel = useAura3DStore((s) => s.deleteModel);
+  const isGenerating3D = useAura3DStore((s) => s.isGenerating3D);
+  const generateSourceImage = useAura3DStore((s) => s.generateSourceImage);
 
   const resolveItem = useCallback(
     (nodeId: string) => {
@@ -144,7 +146,7 @@ function ModelsPanel() {
     [menu, closeMenu, deleteModel],
   );
 
-  if (models.length === 0) {
+  if (models.length === 0 && !isGenerating3D) {
     return (
       <EmptyState icon={<Box size={24} />}>
         Generated 3D models will appear here.
@@ -161,6 +163,37 @@ function ModelsPanel() {
     >
       <h4 className={styles.heading}>3D Models</h4>
       <div className={styles.grid}>
+        {isGenerating3D && (
+          // Pending placeholder pinned at the front of the 3D gallery
+          // while a generation is in flight. Shows the source image as
+          // its base (matching how completed model thumbs render) with
+          // a spinner overlay so the user has a concrete "selected"
+          // target the moment they click Generate. Non-interactive
+          // <div> so it sits outside the `model:<id>` context-menu
+          // resolver above.
+          <div
+            className={`${styles.thumb} ${styles.thumbSelected} ${styles.thumbPending}`}
+            data-agent-surface="aura3d-model-pending-thumb"
+            data-agent-proof="model-generation-pending"
+            aria-label="Generating new 3D model"
+            role="img"
+          >
+            {generateSourceImage ? (
+              <>
+                <img
+                  src={generateSourceImage.imageUrl}
+                  alt=""
+                  className={`${styles.thumbImage} ${styles.thumbImageDim}`}
+                />
+                <div className={styles.thumbSpinnerOverlay}>
+                  <Spinner size="sm" />
+                </div>
+              </>
+            ) : (
+              <Spinner size="sm" />
+            )}
+          </div>
+        )}
         {models.map((model) => {
           const sourceImage = images.find((img) => img.id === model.sourceImageId);
           return (

@@ -460,7 +460,21 @@ export const useAura3DStore = create<Aura3DState>()((set, get) => ({
   setGenerating3D: (generating) =>
     set({
       isGenerating3D: generating,
-      ...(generating ? { generate3DProgress: 0, generate3DProgressMessage: "", error: null } : {}),
+      // Mirrors `setGeneratingImage`: starting a new 3D generation drops
+      // any previously selected model so the main viewer renders its
+      // clean loading state and the Models sidekick can show a fresh
+      // pending placeholder pinned at the top. `generateSourceImage` is
+      // intentionally preserved — the pending thumb shows it as its
+      // base image, and we still need it for the in-flight stream.
+      ...(generating
+        ? {
+            generate3DProgress: 0,
+            generate3DProgressMessage: "",
+            error: null,
+            current3DModel: null,
+            selectedModelId: null,
+          }
+        : {}),
     }),
   set3DProgress: (progress, message) =>
     set({ generate3DProgress: progress, generate3DProgressMessage: message ?? "" }),

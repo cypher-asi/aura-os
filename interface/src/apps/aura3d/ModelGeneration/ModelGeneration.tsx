@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 import { Box, Grid3x3, Triangle, Paintbrush } from "lucide-react";
+import { Spinner } from "@cypher-asi/zui";
 import { useAura3DStore } from "../../../stores/aura3d-store";
 import { generate3dStream } from "../../../api/streams";
 import { EventType } from "../../../shared/types/aura-events";
@@ -203,7 +204,21 @@ export function ModelGeneration() {
       data-agent-surface="aura3d-model-generation"
     >
       <div className={styles.viewerArea}>
-        {current3DModel ? (
+        {isGenerating3D && !current3DModel ? (
+          // Clean loading state during in-flight 3D generation.
+          // Replaces the source-image preview so the user gets a clear
+          // "we're working" affordance instead of staring at the
+          // pre-generation source as if nothing happened. Mirrors
+          // `ImagePreview`'s loading branch on the image side.
+          <div
+            className={styles.loadingState}
+            data-agent-surface="aura3d-model-loading"
+            data-agent-proof="model-generation-loading"
+          >
+            <Spinner size="md" />
+            <span className={styles.loadingText}>{progressMessage}</span>
+          </div>
+        ) : current3DModel ? (
           <div
             className={styles.viewerWrapper}
             onContextMenu={handleViewerContextMenu}

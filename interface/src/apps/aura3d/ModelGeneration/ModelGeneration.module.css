@@ -118,3 +118,20 @@
   border-radius: 8px;
 }
 
+/* Replaces the source-image preview while a 3D generation is in
+   flight. Visually mirrors `ImagePreview`'s loading state so both
+   tabs feel like the same product. */
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-6);
+}
+
+.loadingText {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+

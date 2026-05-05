@@ -54,6 +54,7 @@
 }
 
 .thumbPending {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -61,6 +62,21 @@
   color: var(--color-text-muted);
   cursor: default;
   animation: thumbPulse 1.4s ease-in-out infinite;
+}
+
+/* When a pending 3D thumb shows the source image as its base, dim it
+   so the spinner overlay reads as the dominant signal. */
+.thumbImageDim {
+  opacity: 0.5;
+}
+
+.thumbSpinnerOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
 }
 
 @keyframes thumbPulse {

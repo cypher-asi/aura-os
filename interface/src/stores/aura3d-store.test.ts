@@ -190,6 +190,66 @@ describe("aura3d-store", () => {
     expect(state.partialImageData).toBeNull();
   });
 
+  it("setGenerating3D(true) deselects current model so a pending thumb can render", () => {
+    // Mirrors the image-side behavior: starting a new 3D generation
+    // must drop `current3DModel` / `selectedModelId` so the main viewer
+    // shows its loading state and the Models sidekick can pin a fresh
+    // pending thumb at the top. `generateSourceImage` is preserved
+    // because the pending thumb shows it as its base image and the
+    // in-flight stream still needs it.
+    const image = {
+      id: "img-1",
+      prompt: "p",
+      imageUrl: "u",
+      originalUrl: "",
+      model: "",
+      createdAt: "",
+    };
+    const model = {
+      id: "model-1",
+      sourceImageId: "img-1",
+      sourceImageUrl: "u",
+      glbUrl: "g",
+      taskId: "",
+      createdAt: "",
+    };
+    useAura3DStore.setState({
+      models: [model],
+      selectedModelId: "model-1",
+      current3DModel: model,
+      generateSourceImage: image,
+    });
+    useAura3DStore.getState().setGenerating3D(true);
+    const state = useAura3DStore.getState();
+    expect(state.isGenerating3D).toBe(true);
+    expect(state.current3DModel).toBeNull();
+    expect(state.selectedModelId).toBeNull();
+    expect(state.generateSourceImage).toEqual(image);
+    expect(state.generate3DProgress).toBe(0);
+  });
+
+  it("setGenerating3D(false) does not touch the current selection", () => {
+    const model = {
+      id: "model-1",
+      sourceImageId: "img-1",
+      sourceImageUrl: "u",
+      glbUrl: "g",
+      taskId: "",
+      createdAt: "",
+    };
+    useAura3DStore.setState({
+      isGenerating3D: true,
+      models: [model],
+      selectedModelId: "model-1",
+      current3DModel: model,
+    });
+    useAura3DStore.getState().setGenerating3D(false);
+    const state = useAura3DStore.getState();
+    expect(state.isGenerating3D).toBe(false);
+    expect(state.current3DModel).toEqual(model);
+    expect(state.selectedModelId).toBe("model-1");
+  });
+
   it("setGeneratingImage(false) does not touch the current selection", () => {
     // Symmetric guard: turning the flag off (e.g. on completion-by-error
     // paths) must not re-clear whatever the completion handler just set.
