@@ -2,21 +2,20 @@
   {
     "date": "2026-05-04",
     "channel": "nightly",
-    "version": "0.1.0-nightly.446.1",
-    "title": "Theming overhaul, agent modes, and a self-diagnosing desktop updater",
-    "intro": "A heavy day for Aura: the app gained a real light/dark theming system with custom tokens and presets, an end-to-end agent MODE selector for chat, a native-style desktop menu bar, and a long-overdue diagnostic backbone for the auto-updater. Onboarding, settings navigation, and chat reliability all picked up meaningful improvements alongside.",
+    "version": "0.1.0-nightly.447.1",
+    "title": "Theming overhaul, agent modes, and a desktop menu bar",
+    "intro": "Today's nightly is a big one for surface polish and power-user controls. Aura ships a full light/dark theming system with custom token overrides and saved presets, a brand-new agent MODE selector that retargets the chat input between Code, Plan, Image, and 3D, an onboarding checklist for first-time users, and a native-style File/Edit/View/Help menu bar in the desktop titlebar — backed by a self-diagnosing auto-updater on Windows and macOS.",
     "entryCount": 6,
     "highlights": [
-      "Full light/dark theming with custom tokens, presets, and JSON import/export",
-      "Agent MODE selector (Code/Plan/Image/3D) above every chat input",
-      "Self-diagnosing desktop auto-updater on Windows and macOS",
-      "Native File/Edit/View/Help menu bar in the desktop titlebar",
-      "Onboarding welcome flow and checklist with task auto-detection",
-      "Sectioned Settings with deep links, merged into the taskbar gear"
+      "Light mode lands across the app with editable tokens and saved presets",
+      "Agent chat gains a Code / Plan / Image / 3D mode selector",
+      "Desktop titlebar gets a real File/Edit/View/Help menu bar",
+      "Auto-updater now writes its own diagnostic logs on Windows and macOS",
+      "First-run onboarding: welcome modal, checklist, and prompt suggestions"
     ],
-    "rawCommitCount": 93,
-    "generatedAt": "2026-05-04T23:44:19.219Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.446.1",
+    "rawCommitCount": 94,
+    "generatedAt": "2026-05-05T00:31:26.827Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.447.1",
     "path": "history/2026-05-04.json"
   },
   {

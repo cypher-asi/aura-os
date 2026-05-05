@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-04T23:44:19.219Z",
+  "generatedAt": "2026-05-05T00:31:26.827Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.446.1",
+  "version": "0.1.0-nightly.447.1",
   "date": "2026-05-04",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.446.1",
-  "lastIncludedSha": "917c64aa2df38e027f34cd8f850117a8d2b2fddd",
-  "previousProcessedSha": "4165166d3218e0164f4b38bfba7d16a8e2ccbfe8",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.447.1",
+  "lastIncludedSha": "8d25e4afaf32e213568c09178e673ccf17b2ea24",
+  "previousProcessedSha": "917c64aa2df38e027f34cd8f850117a8d2b2fddd",
   "commitShas": [
     "bd804201205eb0d6fa131e14e53f6e7bf1cc6066",
     "988eee696ffa6cf9d70a1730c43aebcc09989807",
@@ -102,10 +102,11 @@
     "3694dd654af172b63d1f1ff36eb78bda51266c76",
     "0b403641f4ccc8d6e3cefe6da8c748aab4456de0",
     "5c94d6a2dd69bbb30cb6f3ad4b239d16cead676d",
-    "917c64aa2df38e027f34cd8f850117a8d2b2fddd"
+    "917c64aa2df38e027f34cd8f850117a8d2b2fddd",
+    "8d25e4afaf32e213568c09178e673ccf17b2ea24"
   ],
-  "rawCommitCount": 93,
-  "filteredCommitCount": 91,
+  "rawCommitCount": 94,
+  "filteredCommitCount": 92,
   "rawCommits": [
     {
       "sha": "bd804201205eb0d6fa131e14e53f6e7bf1cc6066",
@@ -4107,6 +4108,44 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "8d25e4afaf32e213568c09178e673ccf17b2ea24",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-04T17:17:46-07:00",
+      "subject": "fix(menubar): drop stray leading divider in View menu",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "917c64aa2df38e027f34cd8f850117a8d2b2fddd"
+      ],
+      "files": [
+        "interface/src/components/MenuBar/menu-config.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 0,
+        "deletions": 1
+      },
+      "committedAtMs": 1777940266000,
+      "cleanSubject": "drop stray leading divider in View menu",
+      "keywords": [
+        "drop",
+        "stray",
+        "leading",
+        "divider",
+        "view",
+        "menu"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 6,
@@ -4118,36 +4157,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11719123
+          "sizeBytes": 11719003
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.446.1",
+      "version": "0.1.0-nightly.447.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.446.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.447.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 35665420
+          "sizeBytes": 35664830
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.446.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.447.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.446.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.447.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 102873592
+          "sizeBytes": 102869496
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.446.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.447.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -4157,29 +4196,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.446.1",
+      "version": "0.1.0-nightly.447.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.446.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.447.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 32142796
+          "sizeBytes": 32148755
         },
         {
-          "name": "Aura_0.1.0-nightly.446.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.447.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.446.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.447.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 31962058
+          "sizeBytes": 31965301
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.446.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.447.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -4189,29 +4228,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.446.1",
+      "version": "0.1.0-nightly.447.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.446.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.447.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33738413
+          "sizeBytes": 33742790
         },
         {
-          "name": "Aura_0.1.0-nightly.446.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.447.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.446.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.447.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33594480
+          "sizeBytes": 33593150
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.446.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.447.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -4221,17 +4260,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.446.1",
+      "version": "0.1.0-nightly.447.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.446.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.447.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24258509
+          "sizeBytes": 24262895
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.446.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.447.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -4240,40 +4279,30 @@
     }
   ],
   "rendered": {
-    "title": "Theming overhaul, agent modes, and a self-diagnosing desktop updater",
-    "intro": "A heavy day for Aura: the app gained a real light/dark theming system with custom tokens and presets, an end-to-end agent MODE selector for chat, a native-style desktop menu bar, and a long-overdue diagnostic backbone for the auto-updater. Onboarding, settings navigation, and chat reliability all picked up meaningful improvements alongside.",
+    "title": "Theming overhaul, agent modes, and a desktop menu bar",
+    "intro": "Today's nightly is a big one for surface polish and power-user controls. Aura ships a full light/dark theming system with custom token overrides and saved presets, a brand-new agent MODE selector that retargets the chat input between Code, Plan, Image, and 3D, an onboarding checklist for first-time users, and a native-style File/Edit/View/Help menu bar in the desktop titlebar — backed by a self-diagnosing auto-updater on Windows and macOS.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "8:11 PM",
         "started_at": "2026-05-03T03:11:15.000Z",
         "ended_at": "2026-05-04T19:41:28.000Z",
-        "title": "Theming, settings, onboarding and a long chat-reliability sweep",
-        "summary": "The bulk of the day landed in one long thread: a multi-phase theming system, a sectioned Settings surface, the first onboarding flow, and a series of fixes for stubborn chat and desktop-shell bugs.",
+        "title": "Light mode, theming editor, and onboarding land together",
+        "summary": "A multi-phase theming program rebuilds Aura's surface system, adds a real Settings page with deep links, and ships a first-run onboarding checklist — alongside a clutch of chat reliability fixes.",
         "items": [
           {
-            "text": "Shipped a full light/dark theming system: shared token layer with light/dark variants, a Settings > Appearance section with theme-mode and accent pickers, a titlebar quick toggle, dynamic highlight.js theme, and migration of process canvas, xterm, sidekick log, chat input, IDE, preview, billing modals and more off raw hex onto tokens — guarded by a lint:colors check against module CSS color literals.",
+            "text": "Introduced a full light/dark theming system: shell de-darkified onto CSS tokens, dynamic highlight.js theme, Settings → Appearance with mode and accent pickers, and titlebar / mobile topbar quick toggles that now flip cleanly between light and dark.",
             "commit_shas": [
               "e4a35e7d2bea44d035ef8bc5c5f07d4396d418f6",
               "43d01ee52f3f9c9aa2abdedef5edd434e5b35cd2",
               "7f6bb743f744eee884ace2311e4960e15c0c6cdf",
-              "3424cb5a39f0018ab2708face5791ef0512927ed",
-              "47721ecb43c8abe4c486c39fa6136a9da6506ae7",
-              "aca46ece60619bcf98458f774d849ff9db3b2954",
-              "7d2fb89ab8aa138b38909f1580f920d6f0a28c28",
-              "c56ba5006331dd65e40a450679129613f4249e1d",
-              "4281fd02cd2c541f075b7a9b350f7a0b4e112c08",
-              "fe9bfeb86ef21e472b0a546c10b060b5a7f802eb",
-              "53bc7a416f9c720e36d4f62aa1be2ce17c1b7484",
-              "1ca212d7411d8367a591f67219bdadb00609e731",
-              "abb325f6c5e5e1809403cdb254458636de2f8c9c",
-              "f6cb1463314404db131b855ab7c66c37284daad6",
-              "827720857c150c5dc38dbe32e9edff7213bd9122"
+              "79f001d3c30d45451b9d999292a6a87e69b2d2ac",
+              "401d9fbb507bd96a0d5c65629a6c9769350b0d4f"
             ],
             "confidence": "high"
           },
           {
-            "text": "Layered an advanced theming editor on top: per-token chrome overrides for sidebar, sidekick, titlebar and surface tints persisted per resolved theme, plus named presets with rename/delete/import/export to JSON and built-in Aura Dark / Aura Light presets.",
+            "text": "Added a power-user theming editor: per-token overrides for sidebar, sidekick, titlebar and surface tints, plus named presets with JSON import/export and built-in Aura Dark / Aura Light baselines.",
             "commit_shas": [
               "aaee109b54f4b8e7019d54f2e41ef8caa839791b",
               "0928dc60748d4be2cbeebd1641a3529fd31b133f"
@@ -4281,46 +4310,37 @@
             "confidence": "high"
           },
           {
-            "text": "Made light mode actually usable: routed chat bubbles, rails, sidekick, modals and mobile screens through theme-aware tokens, fixed the AURA wordmark to invert on light backgrounds, kept the user message bubble dark for sender contrast, and flattened dark side panels to match the taskbar background. The titlebar toggle is now a clean two-state light/dark switch with icon and aria-label reflecting the resolved theme.",
+            "text": "Closed the long tail of light-mode contrast bugs across chat bubbles, rails, sidekick, modals and form inputs, with a lint guard that fails CI on raw color literals in migrated CSS modules.",
             "commit_shas": [
               "9f52c4ea0249f890dd8035c1b665fc62679f103a",
-              "085ff9aabe631c4fdadb5f9525a5222f8d515dc1",
-              "ee633089a0815b8b19ca41ea893c9078ab7327eb",
-              "401d9fbb507bd96a0d5c65629a6c9769350b0d4f",
               "8706839f94f73df6ea124fb5dae77f8ee042c721",
-              "f111847f8192d3781e84b53b99a3b876be3db520",
-              "6fe2f649bcf69a312d2354faace87cee77955662"
+              "085ff9aabe631c4fdadb5f9525a5222f8d515dc1",
+              "f6cb1463314404db131b855ab7c66c37284daad6"
             ],
             "confidence": "high"
           },
           {
-            "text": "Restructured Settings into About / Appearance / Notifications / Keyboard / Advanced sections with /settings/:section deep links and a matching mobile drill-in screen, then merged the app-level Appearance controls into the taskbar gear's Settings modal so theme controls are finally reachable from the desktop chrome. A mobile theme toggle now sits in the persistent topbar.",
+            "text": "Reworked Settings into a sectioned view with /settings/:section deep links and folded Appearance + app settings into the taskbar gear modal so theme controls are finally reachable from the chrome.",
             "commit_shas": [
               "b94ad56c501cb0a1cb6b4bcf584f9ef1a513deee",
-              "79f001d3c30d45451b9d999292a6a87e69b2d2ac",
               "7ec29ea70835fe69725828e510eca910158bf555"
             ],
             "confidence": "high"
           },
           {
-            "text": "Introduced a first-run onboarding experience: a Zustand-backed onboarding store with localStorage persistence, a 2-step welcome modal, a floating bottom-right checklist with progress, a help button in the taskbar, and a task watcher that auto-completes steps as the user sends a first message, creates a project or agent, generates an image, or opens billing — with baseline counting so pre-existing defaults don't falsely complete tasks.",
+            "text": "Shipped a first-run onboarding flow: a 2-step welcome modal, a floating 5-task checklist with auto-detection, prompt suggestions on empty chat, and a Help button in the taskbar to bring it back.",
             "commit_shas": [
               "bd804201205eb0d6fa131e14e53f6e7bf1cc6066",
               "988eee696ffa6cf9d70a1730c43aebcc09989807",
               "708e75e6a2f331a85237b0a1add008371b631519",
               "6f91ff35d4277c128be32eb41b64fb374637c94c",
               "e5d310e08572b84be906c7426277872209e2b250",
-              "ec62961b1c1549b0c63641125906a06ae704355f",
-              "11fc11649e7c4db2ef86897e6cb7194721a2c61d",
-              "779d73718c8032ab53b36f567e26980b00f90a54",
-              "0d96fae04302d0af22cd2ad908dfa840386d0838",
-              "2f9dbb19fb74b1c33c7b71167974fa407a39f8c9",
-              "8d0ab5a615456a346710620c5e4cfd10c64c8cc2"
+              "11fc11649e7c4db2ef86897e6cb7194721a2c61d"
             ],
             "confidence": "high"
           },
           {
-            "text": "Closed two long-standing chat regressions: the CEO chat \"blink\" caused by the LRU evicting the active history key under sidebar prefetch is now fixed by pinning the active key, and a separate \"black panel on cold reload\" caused by a one-shot anchor-ready gate is solved by a proactive transcript reveal that no longer depends on signal ordering.",
+            "text": "Fixed two longstanding chat regressions: pinned the active history entry in the LRU to stop the CEO chat blink, and added a proactive cold-load reveal so re-entering CEO/MEOW no longer renders a black panel.",
             "commit_shas": [
               "35271989c803e4c0321d66cafb34c3b4390b8b29",
               "4bc972e968c78ac488f6db527e9d8b8fa6bffa00"
@@ -4328,68 +4348,25 @@
             "confidence": "high"
           },
           {
-            "text": "Tightened the agents experience: deleting a template now cascades through every project binding (with a confirm modal that lists the projects, and a server-side guard against the chat-side self-heal racing the cascade), and the agent's Projects tab annotates Home bindings that live in another org or are archived. Debug is hidden from the taskbar by default in a way that still respects user customization.",
+            "text": "Made deleting an agent actually work end-to-end by cascading project-binding teardown through a shared hook, and stopped the chat-side self-heal from racing the cascade.",
             "commit_shas": [
-              "95f172f257cd25e486bcd78ba0787f28854a91c1",
-              "4b47c85048a7f8d2a2208e3d54fa5946be896881"
+              "95f172f257cd25e486bcd78ba0787f28854a91c1"
             ],
             "confidence": "high"
           },
           {
-            "text": "Restored keyboard focus visibility across the app by removing the global outline:none override and adding a single :focus-visible base rule wired to the focus-ring token.",
+            "text": "Restored keyboard focus visibility app-wide after Phase 1 had suppressed all outlines, and added a boot/error fallback titlebar so the desktop window stays draggable and closable even when the React app fails to mount.",
             "commit_shas": [
-              "e69bc319fd3842f5c26ecdc11f9958073530ba7a"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Hardened the desktop shell with a native-HTML fallback titlebar in index.html so window controls remain draggable and closable even when React fails to mount (dev-server unreachable or boot error overlay).",
-            "commit_shas": [
+              "e69bc319fd3842f5c26ecdc11f9958073530ba7a",
               "d2848bda4d8938636b37f18e15638e9e8e5dfd0d"
             ],
             "confidence": "high"
           },
           {
-            "text": "Polished titlebar chrome: aligned theme/host icons with the sidekick and window-control buttons on a unified 14px / size-sm rhythm, and rendered the sidekick drawer toggle in primary text color when open instead of the accent-glow selected state.",
+            "text": "Hid the Debug app from the taskbar by default and aligned the Settings, Aura3D, and Apps modal title bars to the 32px sidebar-search rhythm for a calmer chrome.",
             "commit_shas": [
-              "3199ec493eb5d6fb7295dee1d1076a67bcd73b26",
-              "401d59110cdec85ba3861756ca5e325620da3a4e"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Fixed a desktop boot regression where REQUIRE_ZERO_PRO defaulted to true when the env var was unset, by defaulting it to false in both the server and the desktop build.",
-            "commit_shas": [
-              "ae418f34acd254dc90ad8db71103ed9ae7cfc8a2",
-              "d9871255dad6ca07cfb297bf2088fee12aa83760"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Aligned the Settings, Aura3D, and Apps modal title bars to a 32px height that matches the sidebar search input, via an opt-in compactHeader on the ZUI Modal.",
-            "commit_shas": [
+              "4b47c85048a7f8d2a2208e3d54fa5946be896881",
               "ac89c2fd2d1031e7e84e414bb53d11fd35649f40"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Wired VITE_MIXPANEL_TOKEN into the desktop nightly workflow so analytics ship with nightly builds.",
-            "commit_shas": [
-              "814d6630da888efdbf8bfc0c204f7f7c6ce04146"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Continued large-file decomposition without behavior changes: PermissionsTab, aura-events, notes-store, chat-history-sync, shared entities, AgentEnvironment, and the stream handler test suite were each split into focused modules behind preserved import paths.",
-            "commit_shas": [
-              "78c08f29481cf34007294ae860db8111abf90434",
-              "3ee06ead3ba2dbc0ae82ff295d8606044d5726a1",
-              "60f0af6dbb72ef1fd9c6d6174c0eb96032f851ef",
-              "f2b997e862286d59830b1707bd12f3e4fd64aaa9",
-              "1d3e8e89f31bd486a4f39e244342bf8950b31591",
-              "e57e0be5bc46d54733e7e358238adf1bf20ba245",
-              "0b2c8a5f8eebe8b730c71645e4a9f6faf1a6f3ee",
-              "671d0b2b5c3ae339332024706bee8321cbb5de76"
             ],
             "confidence": "medium"
           }
@@ -4400,11 +4377,11 @@
         "time_label": "12:42 PM",
         "started_at": "2026-05-04T19:42:32.000Z",
         "ended_at": "2026-05-04T19:45:06.000Z",
-        "title": "Slim 32px modal header becomes the ZUI default",
-        "summary": "A short follow-up that promoted the compact modal header from an opt-in to the default across ZUI.",
+        "title": "Slim 32px modal headers become the ZUI default",
+        "summary": "After a brief detour through an opt-in compactHeader prop, the slim modal header was promoted to the default in ZUI so every Aura modal lines up with the sidebar search bar.",
         "items": [
           {
-            "text": "Introduced compactHeader on ZUI Modal, applied it to the Apps and Settings modals, then promoted the 32px header to the ZUI Modal default and dropped the now-redundant prop and per-caller overrides.",
+            "text": "Baked the 32px control-height header straight into ZUI's Modal so Apps, Settings, and every other modal share one consistent title-bar rhythm without per-caller overrides.",
             "commit_shas": [
               "621104e3ac47a1adcec575921dd104cfe3e3a8ca",
               "3702057369a9f71b8d313ef6716e73fb8ffe3887",
@@ -4419,11 +4396,11 @@
         "time_label": "12:46 PM",
         "started_at": "2026-05-04T19:46:00.000Z",
         "ended_at": "2026-05-04T19:46:00.000Z",
-        "title": "Mixpanel token now flows to mobile nightly builds",
-        "summary": "Mirrored the desktop change earlier in the day for the mobile nightly pipeline.",
+        "title": "Mixpanel token wired into mobile nightly builds",
+        "summary": "Release infrastructure tweak so mobile nightlies pick up product analytics the same way the desktop pipeline does.",
         "items": [
           {
-            "text": "Pass VITE_MIXPANEL_TOKEN through to the mobile nightly workflow so Android builds ship with analytics configured.",
+            "text": "Pass VITE_MIXPANEL_TOKEN through to the mobile nightly GitHub Actions workflow so analytics ship with Android builds.",
             "commit_shas": [
               "a60654c5637f906fad5f8f7e72e118fc3eb45708"
             ],
@@ -4437,10 +4414,10 @@
         "started_at": "2026-05-04T19:48:06.000Z",
         "ended_at": "2026-05-04T22:01:54.000Z",
         "title": "Agent MODE selector and a self-diagnosing desktop updater",
-        "summary": "Two large pieces landed back-to-back: an end-to-end Code/Plan/Image/3D mode selector across the chat input, and a diagnostic backbone for the desktop auto-updater so the silent \"click Install and nothing happens\" failure mode finally has visibility.",
+        "summary": "Chat input gains a four-way MODE switch that retargets the whole send pipeline, while the desktop auto-updater finally tells you why an install died.",
         "items": [
           {
-            "text": "Added a per-agent MODE selector (Code, Plan, Image, 3D) above every chat input on desktop and mobile. Selection persists like the model picker and steers the entire pipeline: image and 3D modes inject their slash commands on send, Plan switches to spec generation, the model list narrows per mode, and /image and /3d become keyboard shortcuts. Behavior is modeled as discriminated unions so the wire shape stays clean.",
+            "text": "Added a Code / Plan / Image / 3D MODE row above the chat input on desktop and mobile, persisted per agent and wired end-to-end so each mode steers the model list, slash-command behavior, and send pipeline.",
             "commit_shas": [
               "4165166d3218e0164f4b38bfba7d16a8e2ccbfe8",
               "b35614b6f76066760c589b001ad330c37c101b1f",
@@ -4449,36 +4426,29 @@
             "confidence": "high"
           },
           {
-            "text": "Made the desktop auto-updater self-diagnosing: tracing now writes to a daily file under <data_dir>/logs even on Windows GUI builds, every install step is appended to updater.log with a single-record updater-state.json, a boot-time reconcile surfaces failed steps if a previous attempt died, the Windows handoff is gated on a sentinel file so Aura no longer exits when PowerShell never starts, and macOS replaces process::exit with a graceful ShutdownForUpdate handshake. UpdateControl exposes the failed step and a \"Show updater logs\" button.",
+            "text": "Made the Windows + macOS auto-updater self-diagnosing: every install step is now appended to a daily desktop.log and updater.log, /api/update-status surfaces the last persisted state, and the UI exposes a 'Show updater logs' button and the failed step (e.g. 'Stopped at: Handoff spawned').",
             "commit_shas": [
               "7f8e1d708d0b94da149805b6e1954816b4343a71"
             ],
             "confidence": "high"
           },
           {
-            "text": "Aura3D now remembers context across sessions: the nav hydrates from the last selected project (or falls back to the most recently created one), tab switches auto-pick the latest image and its linked model or the latest model, and loading a project's artifacts seeds sensible default selections instead of an empty pane.",
+            "text": "Aura3D now remembers context across sessions: nav auto-hydrates the last project, and switching tabs or opening a project lands on the latest image (and its linked 3D model) instead of an empty editor.",
             "commit_shas": [
               "4f2675891bda2a6ecc51cb43300ab069717414c3"
             ],
             "confidence": "high"
           },
           {
-            "text": "Extracted a shared InputBarShell from the chat input and the Aura3D prompt input so both surfaces converge on one shell, model picker, and styling system — setup work that the new MODE selector then plugs into.",
+            "text": "Extracted a shared InputBarShell so chat and Aura3D's prompt input render through one component, and tightened the agent editor by placing Name and Role side-by-side on wide viewports.",
             "commit_shas": [
-              "c2f8653ddf376fc450df4ba2df672db88dfb952d"
+              "c2f8653ddf376fc450df4ba2df672db88dfb952d",
+              "a86946a829ac96eafc1cb87dbfd8f0a9a4b13759"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           },
           {
-            "text": "Tuned secondary chrome details: agent editor now lays Name and Role side-by-side with a single-column fallback under 640px, and onboarding only completes create tasks when counts exceed the user's initial defaults.",
-            "commit_shas": [
-              "a86946a829ac96eafc1cb87dbfd8f0a9a4b13759",
-              "c9514dbfd1e794559f8e5784c749702807710ae0"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Plumbed the Z_BILLING_API_KEY secret through the desktop nightly workflow and baked it into the desktop binary via build.rs so billing-dependent features work in shipped builds.",
+            "text": "Plumbed the Z_BILLING_API_KEY secret through the desktop nightly workflow and baked it into the binary via build.rs so billing-gated features work in shipped builds.",
             "commit_shas": [
               "d24847f3396e99deca4fce1c7026b970ad58d770",
               "abc33929ee5189e9629408c7d8dd07f066f11873"
@@ -4492,11 +4462,11 @@
         "time_label": "3:07 PM",
         "started_at": "2026-05-04T22:07:43.000Z",
         "ended_at": "2026-05-04T22:07:43.000Z",
-        "title": "Self-heal restored on the bare-agent first-chat path",
-        "summary": "Closed a 422 regression where new users hit a missing aura_session_id on their first chat with a fresh agent.",
+        "title": "Bare-agent first chat self-heals its Home binding",
+        "summary": "Server-side fix that restores a missing Home-project binding on the chat hot path so a new user's first message to a freshly created agent no longer 422s.",
         "items": [
           {
-            "text": "Restored the Home-project binding self-heal on the deduped chat hot path so a transient failure during agent create no longer leaves the next first-chat turn returning a 422 missing-session-identity error. The repair is shared with reset_agent_session and busts the per-(jwt, agent_id) discovery cache before persistence and history loading run.",
+            "text": "Restored the lazy Home-project binding repair on the deduped chat persistence path, so first chats with a brand-new agent succeed even when the create-time auto-bind silently failed.",
             "commit_shas": [
               "8b5b7d76c05ffd3d80dacb574dd5bf5fd3bc9cdf"
             ],
@@ -4508,23 +4478,30 @@
         "batch_id": "entry-6",
         "time_label": "3:12 PM",
         "started_at": "2026-05-04T22:12:25.000Z",
-        "ended_at": "2026-05-04T23:29:03.000Z",
-        "title": "Desktop menu bar lands and the mode pill animation finally sticks",
-        "summary": "Two threads dominated the evening: a real File/Edit/View/Help menu bar in the desktop titlebar, and a long iteration to make the chat MODE selector pill actually animate between segments instead of snapping.",
+        "ended_at": "2026-05-05T00:17:46.000Z",
+        "title": "Native-style desktop menu bar in the titlebar",
+        "summary": "A real File / Edit / View / Help menu bar lands in the desktop titlebar, with cross-platform shortcuts, zoom controls, multi-window support, and a final round of mode-selector polish.",
         "items": [
           {
-            "text": "Added a native-style File/Edit/View/Help menu bar to the left of the org icon in the desktop titlebar, with hover-to-switch dropdowns, cross-platform shortcut formatting (Cmd glyphs on macOS, Ctrl+ on Windows/Linux), and global hotkey handlers. Coverage includes New Agent / New Window / New Project / Settings / Exit, sidekick toggle, zoom in/out/reset, previous/next agent (context-aware over standalone vs project agents), and toggle full screen. New Rust IPC commands back ToggleFullscreen and OpenMainWindow, and secondary main windows are tracked and closed independently of the app lifecycle.",
+            "text": "Added a File / Edit / View / Help menu bar to the desktop titlebar with hover-to-switch dropdowns, right-aligned shortcuts (Cmd glyphs on macOS, Ctrl+ on Win/Linux), context-aware Previous/Next Agent, and a new Rust-side IPC for opening secondary windows and toggling fullscreen.",
             "commit_shas": [
               "0bb9d9290f6365c74448c8d68cfb83ede70b1e8f",
-              "3694dd654af172b63d1f1ff36eb78bda51266c76",
-              "0b403641f4ccc8d6e3cefe6da8c748aab4456de0",
-              "5c94d6a2dd69bbb30cb6f3ad4b239d16cead676d",
-              "917c64aa2df38e027f34cd8f850117a8d2b2fddd"
+              "3694dd654af172b63d1f1ff36eb78bda51266c76"
             ],
             "confidence": "high"
           },
           {
-            "text": "Iterated the chat mode selector pill to a stable animation: after a CSS-grid/variable approach and a FLIP-style ref pattern both raced React's commit timing, the final fix drives transform via inline React style with measured pixel positions from getBoundingClientRect plus a ResizeObserver, so the pill reliably slides between Code, Plan, Image, and 3D.",
+            "text": "Polished the menu bar with theme-aware overlay tokens for hover/open states, lighter trigger weight, and the org avatar correctly seated to its left.",
+            "commit_shas": [
+              "0b403641f4ccc8d6e3cefe6da8c748aab4456de0",
+              "5c94d6a2dd69bbb30cb6f3ad4b239d16cead676d",
+              "917c64aa2df38e027f34cd8f850117a8d2b2fddd",
+              "8d25e4afaf32e213568c09178e673ccf17b2ea24"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Settled the chat MODE pill animation after several iterations: the indicator now uses measured pixel positions written as inline transforms, sliding reliably between Code, Plan, Image, and 3D across browsers.",
             "commit_shas": [
               "7a6715abc3e2c45eaa2fcce86773ace436dc3950",
               "45a46a85cc1336e6809837da386664bc0c6cfa20",
@@ -4536,35 +4513,34 @@
             "confidence": "high"
           },
           {
-            "text": "Cleaned up surrounding chat chrome: kept slash command tags inline in the input, lifted the cooking indicator clear of the now-taller input bar, and aligned its label with message text.",
-            "commit_shas": [
-              "91fac390859b5b64f13ef451c1d2704287000f5e",
-              "bea99198d494f00703866b0e7113f7b9c0b8a501",
-              "ee74d74d05780fd3b30a7d410880f49c5c0ee35c"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Finished light-mode polish for small UI bits: the org switcher dropped its hardcoded black ring and avatar slab in favor of theme-aware tokens, team avatars now use the same fallback tint as user/agent avatars, and the image-crop zoom knob's broken --color-primary reference was replaced with --color-accent so the ring renders in both themes.",
+            "text": "Cleaned up several small light-mode papercuts: the org switcher's avatar ring and dropdown are theme-aware, team avatar fallbacks match user/agent ones, the image-crop zoom knob ring is visible again, and the cooking indicator clears the taller input bar.",
             "commit_shas": [
               "5b35a3bc5269ea8cacaaa8828cb9d5e416807b95",
               "57aca98b227bce629826c4507b7cc013b792c4ec",
               "e4b94028fe5939d495971cd46789badf1b80b119",
-              "ca3cf0acbeb05d0cf0bb98b2eb52f1002af5f700"
+              "ca3cf0acbeb05d0cf0bb98b2eb52f1002af5f700",
+              "bea99198d494f00703866b0e7113f7b9c0b8a501",
+              "ee74d74d05780fd3b30a7d410880f49c5c0ee35c"
             ],
-            "confidence": "high"
+            "confidence": "medium"
+          },
+          {
+            "text": "Kept slash-command chips inline in the input bar so MODE + chips share the same row without wrapping.",
+            "commit_shas": [
+              "91fac390859b5b64f13ef451c1d2704287000f5e"
+            ],
+            "confidence": "medium"
           }
         ]
       }
     ],
     "highlights": [
-      "Full light/dark theming with custom tokens, presets, and JSON import/export",
-      "Agent MODE selector (Code/Plan/Image/3D) above every chat input",
-      "Self-diagnosing desktop auto-updater on Windows and macOS",
-      "Native File/Edit/View/Help menu bar in the desktop titlebar",
-      "Onboarding welcome flow and checklist with task auto-detection",
-      "Sectioned Settings with deep links, merged into the taskbar gear"
+      "Light mode lands across the app with editable tokens and saved presets",
+      "Agent chat gains a Code / Plan / Image / 3D mode selector",
+      "Desktop titlebar gets a real File/Edit/View/Help menu bar",
+      "Auto-updater now writes its own diagnostic logs on Windows and macOS",
+      "First-run onboarding: welcome modal, checklist, and prompt suggestions"
     ],
-    "raw_commit_count": 91
+    "raw_commit_count": 92
   }
 }
