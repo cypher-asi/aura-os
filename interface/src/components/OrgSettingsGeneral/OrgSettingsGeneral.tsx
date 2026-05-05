@@ -207,6 +207,9 @@ export function OrgSettingsGeneral({
             <span className={styles.rowDescription}>Check and install new versions.</span>
             {lastCheckedLabel ? (
               <>
+                <span className={styles.rowDescription} aria-hidden>
+                  &nbsp;
+                </span>
                 <span
                   className={styles.rowDescription}
                   data-testid="settings-update-last-checked-label"
