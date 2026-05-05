@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Spinner } from "@cypher-asi/zui";
+import { ModalConfirm, Spinner } from "@cypher-asi/zui";
 import {
   useAura3DStore,
   type Generated3DModel,
@@ -111,17 +111,29 @@ function ImagesPanel() {
   const { menu, menuRef, handleContextMenu, closeMenu } =
     useSidekickItemContextMenu({ resolveItem });
 
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
   const handleAction = useCallback(
     (action: string) => {
       const target = menu?.item;
       closeMenu();
       if (!target) return;
       if (action === "delete") {
-        void deleteImage(target.id);
+        setPendingDeleteId(target.id);
       }
     },
-    [menu, closeMenu, deleteImage],
+    [menu, closeMenu],
   );
+
+  const handleConfirmDelete = useCallback(() => {
+    if (!pendingDeleteId) return;
+    void deleteImage(pendingDeleteId);
+    setPendingDeleteId(null);
+  }, [pendingDeleteId, deleteImage]);
+
+  const handleCancelDelete = useCallback(() => {
+    setPendingDeleteId(null);
+  }, []);
 
   if (images.length === 0 && !isGeneratingImage) {
     return (
@@ -187,6 +199,16 @@ function ImagesPanel() {
           actions={["delete"]}
         />
       )}
+      <ModalConfirm
+        isOpen={pendingDeleteId !== null}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        title="Delete Image"
+        message="Delete this generated image? This cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        danger
+      />
     </div>
   );
 }
@@ -212,17 +234,29 @@ function ModelsPanel() {
   const { menu, menuRef, handleContextMenu, closeMenu } =
     useSidekickItemContextMenu({ resolveItem });
 
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
   const handleAction = useCallback(
     (action: string) => {
       const target = menu?.item;
       closeMenu();
       if (!target) return;
       if (action === "delete") {
-        void deleteModel(target.id);
+        setPendingDeleteId(target.id);
       }
     },
-    [menu, closeMenu, deleteModel],
+    [menu, closeMenu],
   );
+
+  const handleConfirmDelete = useCallback(() => {
+    if (!pendingDeleteId) return;
+    void deleteModel(pendingDeleteId);
+    setPendingDeleteId(null);
+  }, [pendingDeleteId, deleteModel]);
+
+  const handleCancelDelete = useCallback(() => {
+    setPendingDeleteId(null);
+  }, []);
 
   if (models.length === 0 && !isGenerating3D) {
     return (
@@ -297,6 +331,16 @@ function ModelsPanel() {
           actions={["delete"]}
         />
       )}
+      <ModalConfirm
+        isOpen={pendingDeleteId !== null}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        title="Delete 3D Model"
+        message="Delete this 3D model? This cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        danger
+      />
     </div>
   );
 }

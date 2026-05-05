@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
+import { ModalConfirm } from "@cypher-asi/zui";
 import { useAura3DStore, STYLE_LOCK_SUFFIX } from "../../../stores/aura3d-store";
 import { generateImageStream } from "../../../api/streams";
 import { EventType } from "../../../shared/types/aura-events";
@@ -28,6 +29,7 @@ export function ImageGeneration() {
 
   const abortRef = useRef<AbortController | null>(null);
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Outside-click + Escape teardown for the main-panel context menu.
@@ -67,11 +69,21 @@ export function ImageGeneration() {
       setMenuPos(null);
       if (!target) return;
       if (action === "delete") {
-        void deleteImage(target.id);
+        setPendingDeleteId(target.id);
       }
     },
-    [currentImage, deleteImage],
+    [currentImage],
   );
+
+  const handleConfirmDelete = useCallback(() => {
+    if (!pendingDeleteId) return;
+    void deleteImage(pendingDeleteId);
+    setPendingDeleteId(null);
+  }, [pendingDeleteId, deleteImage]);
+
+  const handleCancelDelete = useCallback(() => {
+    setPendingDeleteId(null);
+  }, []);
 
   const handleGenerate = useCallback(() => {
     const prompt = imaginePrompt.trim();
@@ -181,6 +193,16 @@ export function ImageGeneration() {
         placeholder={selectedProjectId ? "Describe a static image of what your desired 3D model." : "Select a project first"}
         selectedModel={imagineModel}
         onModelChange={setImagineModel}
+      />
+      <ModalConfirm
+        isOpen={pendingDeleteId !== null}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        title="Delete Image"
+        message="Delete this generated image? This cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        danger
       />
     </div>
   );

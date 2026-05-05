@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 import { Box, Grid3x3, Triangle, Paintbrush } from "lucide-react";
-import { Spinner } from "@cypher-asi/zui";
+import { ModalConfirm, Spinner } from "@cypher-asi/zui";
 import { useAura3DStore } from "../../../stores/aura3d-store";
 import { generate3dStream } from "../../../api/streams";
 import { EventType } from "../../../shared/types/aura-events";
@@ -59,7 +59,6 @@ export function ModelGeneration() {
   const complete3DGeneration = useAura3DStore((s) => s.complete3DGeneration);
   const setError = useAura3DStore((s) => s.setError);
   const deleteImage = useAura3DStore((s) => s.deleteImage);
-  const deleteModel = useAura3DStore((s) => s.deleteModel);
   const uploadModelThumbnail = useAura3DStore((s) => s.uploadModelThumbnail);
 
   const currentModelId = current3DModel?.id;
@@ -90,6 +89,7 @@ export function ModelGeneration() {
     y: number;
     target: MenuTarget;
   } | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<MenuTarget | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -142,14 +142,24 @@ export function ModelGeneration() {
       setMenu(null);
       if (!target) return;
       if (action !== "delete") return;
-      if (target.kind === "image") {
-        void deleteImage(target.id);
-      } else {
-        void deleteModel(target.id);
-      }
+      setPendingDelete(target);
     },
-    [menu, deleteImage, deleteModel],
+    [menu],
   );
+
+  const handleConfirmDelete = useCallback(() => {
+    if (!pendingDelete) return;
+    if (pendingDelete.kind === "image") {
+      void deleteImage(pendingDelete.id);
+    } else {
+      void deleteModel(pendingDelete.id);
+    }
+    setPendingDelete(null);
+  }, [pendingDelete, deleteImage, deleteModel]);
+
+  const handleCancelDelete = useCallback(() => {
+    setPendingDelete(null);
+  }, []);
 
   const handleGenerate3D = useCallback(() => {
     if (!generateSourceImage) return;
@@ -336,6 +346,20 @@ export function ModelGeneration() {
           requireText={false}
         />
       )}
+      <ModalConfirm
+        isOpen={pendingDelete !== null}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        title={pendingDelete?.kind === "model" ? "Delete 3D Model" : "Delete Image"}
+        message={
+          pendingDelete?.kind === "model"
+            ? "Delete this 3D model? This cannot be undone."
+            : "Delete this generated image? This cannot be undone."
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        danger
+      />
     </div>
   );
 }
