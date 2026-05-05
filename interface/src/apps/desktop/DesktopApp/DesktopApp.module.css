@@ -12,8 +12,3 @@
   position: absolute;
   z-index: 1;
 }
-
-.contextMenuOverlay {
-  position: fixed;
-  z-index: 9999;
-}
