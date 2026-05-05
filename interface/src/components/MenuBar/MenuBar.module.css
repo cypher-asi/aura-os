@@ -30,7 +30,9 @@
   color: var(--color-text-primary);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  /* zui's --radius-sm token is 0 by design; use a small hard-coded radius
+     so the hover/open pill matches native app menu bars. */
+  border-radius: 4px;
   cursor: pointer;
   transition: background var(--transition-fast, 120ms ease), color var(--transition-fast, 120ms ease);
 }
