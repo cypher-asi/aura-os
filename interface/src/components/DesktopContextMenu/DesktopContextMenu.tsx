@@ -6,6 +6,7 @@ import {
   useState,
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
+  type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 import { Image, Settings as SettingsIcon } from "lucide-react";
@@ -71,8 +72,8 @@ export interface UseDesktopContextMenuResult {
    * buttons) before invoking this handler.
    */
   handleContextMenu: (event: ReactMouseEvent) => void;
-  /** JSX element to render (typically near the consumer's root). */
-  menuElement: JSX.Element | null;
+  /** Element to render (typically near the consumer's root). */
+  menuElement: ReactNode;
   /** Imperatively dismiss the menu (e.g. on route change). */
   dismiss: () => void;
 }
