@@ -2,21 +2,21 @@
   {
     "date": "2026-05-04",
     "channel": "nightly",
-    "version": "0.1.0-nightly.449.1",
-    "title": "Theming overhaul, agent modes, and a self-diagnosing desktop updater",
-    "intro": "A heavy-traffic nightly day: Aura gained a real light/dark theming system with custom tokens and presets, a brand-new agent MODE selector, a native-style desktop menu bar, an onboarding flow for first-time users, and — critically — a deeply instrumented Windows/macOS auto-updater that can finally explain why an install failed.",
+    "version": "0.1.0-nightly.450.1",
+    "title": "Themeable shell, agent modes, and a self-diagnosing updater",
+    "intro": "A big day for Aura's surface area: light mode finally works end to end with editable themes and presets, the desktop chrome gains a proper menu bar and an in-titlebar Update pill, the chat input picks up a Code/Plan/Image/3D mode selector, and the Windows/macOS auto-updater is rebuilt to log every step instead of silently dying. New users get an onboarding checklist, and a couple of nasty chat reliability bugs (CEO blink, black panel, first-chat 422) are fixed at the root.",
     "entryCount": 6,
     "highlights": [
-      "Full light/dark theming with custom tokens and presets",
-      "New Code/Plan/Image/3D mode selector in chat",
-      "Desktop File/Edit/View/Help menu bar with global shortcuts",
-      "Self-diagnosing auto-updater with on-disk logs and reconciliation",
-      "First-run onboarding: welcome modal, checklist, and prompt suggestions",
-      "Sectioned Settings consolidated into a single Settings modal"
+      "Light mode rolled out across chat, rails, sidekick, and modals with a full theming editor and presets",
+      "File/Edit/View/Help menu bar plus a compact Update pill in the desktop titlebar",
+      "Chat input gains a Code/Plan/Image/3D mode selector that steers slash commands and models",
+      "Auto-updater on Windows/macOS now writes diagnostics, recovers from failed handoffs, and switched to cmd.exe",
+      "First-time user onboarding with welcome modal, checklist, and prompt suggestions",
+      "Fixes for CEO chat blink, black ChatPanel on cold load, and 422 on first chat with new agents"
     ],
-    "rawCommitCount": 100,
-    "generatedAt": "2026-05-05T01:24:57.966Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.449.1",
+    "rawCommitCount": 101,
+    "generatedAt": "2026-05-05T01:48:42.393Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.450.1",
     "path": "history/2026-05-04.json"
   },
   {
