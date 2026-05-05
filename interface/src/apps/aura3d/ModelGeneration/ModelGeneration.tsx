@@ -63,17 +63,21 @@ export function ModelGeneration() {
   const uploadModelThumbnail = useAura3DStore((s) => s.uploadModelThumbnail);
 
   const currentModelId = current3DModel?.id;
-  const currentModelHasThumbnail = Boolean(current3DModel?.thumbnailUrl);
   const handleThumbnailReady = useCallback(
     (blob: Blob) => {
       if (!currentModelId) return;
-      // Skip when we already have a captured thumbnail to avoid a
-      // re-upload on every open of an existing model. The viewer's
-      // own `capturedUrlRef` also dedupes per `glbUrl` mount.
-      if (currentModelHasThumbnail) return;
+      // We intentionally do NOT short-circuit on
+      // `current3DModel.thumbnailUrl` here. `artifactToModel`
+      // synthesises that URL for every loaded model regardless of
+      // whether a PNG has actually been written, so a "skip if URL
+      // is set" guard misfires and prevents the very first capture
+      // from ever uploading. Re-upload pressure is bounded by
+      // `WebGLViewer`'s `capturedUrlRef`, which dedupes per `glbUrl`
+      // mount — at worst the user re-opens a model and we POST one
+      // ~30 KB PNG that overwrites the previous snapshot.
       void uploadModelThumbnail(currentModelId, blob);
     },
-    [currentModelId, currentModelHasThumbnail, uploadModelThumbnail],
+    [currentModelId, uploadModelThumbnail],
   );
 
   const abortRef = useRef<AbortController | null>(null);
@@ -172,8 +176,16 @@ export function ModelGeneration() {
               break;
             case EventType.GenerationCompleted:
               if (event.content.glbUrl) {
+                // Forward the server-assigned `artifactId` into the
+                // in-memory model so the very first viewer open can
+                // upload its captured PNG snapshot via
+                // `uploadModelThumbnail` (which bails when
+                // `artifactId` is missing). Without this the upload
+                // path stays disabled until the user reloads the
+                // project and `artifactToModel` rehydrates the id.
                 complete3DGeneration({
                   id: `model-${Date.now()}`,
+                  artifactId: event.content.artifactId,
                   sourceImageId: generateSourceImage.id,
                   sourceImageUrl: generateSourceImage.imageUrl,
                   glbUrl: event.content.glbUrl,

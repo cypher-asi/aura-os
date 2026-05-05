@@ -5,6 +5,27 @@ import {
   DEFAULT_IMAGE_MODEL_ID,
 } from "../constants/models";
 import { setLastProject } from "../utils/storage";
+import { getStoredJwt } from "../shared/lib/auth-token";
+
+/**
+ * Append the current JWT to a URL as a `?token=` query param so a
+ * bare `<img src=...>` (or any browser-driven GET that can't set an
+ * `Authorization` header) can authenticate against
+ * `protected_api_router`. The server's `extract_request_token`
+ * already accepts this fallback — it was added for WebSockets, and
+ * the same constraint applies to `<img>` requests for thumbnails.
+ *
+ * No-op when no JWT is cached (logged-out boot, tests). Callers
+ * still get a usable URL; the `<img onError>` chain in
+ * `Aura3DSidekickPanel` handles 401 the same as 404 so the tile
+ * downgrades cleanly to the source-image / cube fallback.
+ */
+function withToken(url: string): string {
+  const jwt = getStoredJwt();
+  if (!jwt) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}token=${encodeURIComponent(jwt)}`;
+}
 
 export type Aura3DTab = "image" | "3d";
 
@@ -92,7 +113,11 @@ function artifactToModel(a: ProjectArtifact): Generated3DModel {
     // and rely on `<img onError>` in the sidekick to fall back to the
     // source image / cube placeholder when no PNG has been captured
     // yet. This avoids needing a PATCH on the storage record.
-    thumbnailUrl: `/api/artifacts/${a.id}/thumbnail`,
+    //
+    // The URL is wrapped in `withToken(...)` because the route lives
+    // under `protected_api_router` — a bare `<img>` would 401 without
+    // it. See `withToken` above for the fallback rationale.
+    thumbnailUrl: withToken(`/api/artifacts/${a.id}/thumbnail`),
     glbUrl: a.assetUrl ?? "",
     polyCount: (a.meta?.polyCount as number) ?? undefined,
     taskId: "",
@@ -457,8 +482,10 @@ export const useAura3DStore = create<Aura3DState>()((set, get) => ({
       );
       // Cache-bust so an `<img>` already mounted with the previous
       // (possibly 404) URL re-fetches and shows the new snapshot
-      // without waiting for a route navigation.
-      const versioned = `${thumbnailUrl}?v=${Date.now()}`;
+      // without waiting for a route navigation. Wrap with the JWT
+      // so the `<img>` GET passes the protected-router auth guard
+      // (mirrors `artifactToModel`).
+      const versioned = withToken(`${thumbnailUrl}?v=${Date.now()}`);
       set((s) => ({
         models: s.models.map((m) =>
           m.id === modelId ? { ...m, thumbnailUrl: versioned } : m,

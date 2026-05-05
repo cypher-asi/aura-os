@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { useAura3DStore, STYLE_LOCK_SUFFIX } from "./aura3d-store";
 import { artifactsApi } from "../shared/api/artifacts";
+import * as authToken from "../shared/lib/auth-token";
 
 const LAST_PROJECT_KEY = "aura-last-project";
 
@@ -93,6 +94,28 @@ describe("aura3d-store", () => {
     expect(state.models).toHaveLength(1);
     expect(state.selectedModelId).toBe("model-1");
     expect(state.isGenerating3D).toBe(false);
+  });
+
+  it("complete3DGeneration preserves the server-assigned artifactId", () => {
+    // Regression: the SSE `GenerationCompleted` event carries the
+    // server-side artifact id, and `ModelGeneration` forwards it into
+    // the in-memory model. Without this, `uploadModelThumbnail` bails
+    // out on its `if (!model?.artifactId) return` guard the very
+    // first time the user opens the freshly-generated model — so the
+    // captured PNG never reaches the server until a project reload
+    // rehydrates the id via `artifactToModel`.
+    useAura3DStore.getState().complete3DGeneration({
+      id: "model-local-1",
+      artifactId: "art-server-99",
+      sourceImageId: "img-1",
+      sourceImageUrl: "u",
+      glbUrl: "g",
+      taskId: "",
+      createdAt: "",
+    });
+    const state = useAura3DStore.getState();
+    expect(state.models[0].artifactId).toBe("art-server-99");
+    expect(state.current3DModel?.artifactId).toBe("art-server-99");
   });
 
   it("selectImage sets current image and generate source", () => {
@@ -473,6 +496,39 @@ describe("aura3d-store", () => {
     });
   });
 
+  describe("loadProjectArtifacts", () => {
+    it("synthesises a token-bearing thumbnailUrl for every loaded model", async () => {
+      // `artifactToModel` always points `thumbnailUrl` at the
+      // protected GET route so the sidekick `<img>` can probe for a
+      // captured PNG and fall back to the source image / cube via
+      // `onError` when none exists yet. The URL MUST carry the JWT
+      // because the route requires `require_verified_session`.
+      const jwtSpy = vi
+        .spyOn(authToken, "getStoredJwt")
+        .mockReturnValue("test-jwt");
+      const listSpy = vi.spyOn(artifactsApi, "listArtifacts").mockResolvedValue([
+        {
+          id: "art-model-99",
+          type: "model",
+          name: "3D Model",
+          assetUrl: "https://example.com/model.glb",
+          parentId: "art-img-1",
+          createdAt: "2026-04-23T00:00:00Z",
+        },
+      ]);
+
+      await useAura3DStore.getState().loadProjectArtifacts("proj-1");
+
+      const state = useAura3DStore.getState();
+      expect(state.models).toHaveLength(1);
+      const url = state.models[0].thumbnailUrl ?? "";
+      expect(url).toContain("/api/artifacts/art-model-99/thumbnail");
+      expect(url).toContain("token=test-jwt");
+      listSpy.mockRestore();
+      jwtSpy.mockRestore();
+    });
+  });
+
   describe("setSelectedProjectId persistence", () => {
     it("writes the project id to localStorage so it survives app open/close", () => {
       useAura3DStore.getState().setSelectedProjectId("proj-42");
@@ -558,6 +614,42 @@ describe("aura3d-store", () => {
       expect(spy).not.toHaveBeenCalled();
       expect(useAura3DStore.getState().models[0].thumbnailUrl).toBeUndefined();
       spy.mockRestore();
+    });
+
+    it("appends the JWT as ?token= so the protected GET succeeds via <img>", async () => {
+      // The thumbnail GET route lives under `protected_api_router`,
+      // which requires `require_verified_session`. A bare
+      // `<img src="/api/...">` carries no `Authorization` header, so
+      // without the `?token=` fallback every tile would 401 and
+      // permanently fall through to the cube placeholder. Mirrors
+      // the same pattern used by SSE / WebSocket URL builders.
+      const model = {
+        id: "model-1",
+        artifactId: "art-model-1",
+        sourceImageId: "img-1",
+        sourceImageUrl: "u",
+        glbUrl: "g",
+        taskId: "",
+        createdAt: "",
+      };
+      const jwtSpy = vi
+        .spyOn(authToken, "getStoredJwt")
+        .mockReturnValue("test-jwt");
+      const spy = vi
+        .spyOn(artifactsApi, "uploadThumbnail")
+        .mockResolvedValue({
+          thumbnailUrl: "/api/artifacts/art-model-1/thumbnail",
+        });
+      useAura3DStore.setState({ models: [model], current3DModel: model });
+
+      await useAura3DStore.getState().uploadModelThumbnail("model-1", blob);
+
+      const url = useAura3DStore.getState().models[0].thumbnailUrl ?? "";
+      expect(url).toContain("/api/artifacts/art-model-1/thumbnail");
+      expect(url).toContain("token=test-jwt");
+      expect(url).toMatch(/[?&]v=\d+/);
+      spy.mockRestore();
+      jwtSpy.mockRestore();
     });
 
     it("swallows upload failures so a flaky network never crashes the viewer", async () => {
