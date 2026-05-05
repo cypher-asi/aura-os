@@ -11,15 +11,15 @@ export function LeaderboardContent() {
   const { selectedUserId, selectUser, entries } = useLeaderboard();
   const users = entries;
 
-  const maxTokens = useMemo(
-    () => Math.max(...users.map((u) => u.tokens), 1),
+  const maxCost = useMemo(
+    () => Math.max(...users.map((u) => u.estimatedCostUsd), 0.0001),
     [users],
   );
 
   return (
     <div className={styles.list}>
       {users.map((user, i) => {
-        const barPct = (user.tokens / maxTokens) * 100;
+        const barPct = (user.estimatedCostUsd / maxCost) * 100;
         return (
           <div
             key={user.id}

@@ -33,17 +33,26 @@ function displayNameForEntry(entry: LeaderboardEntryDto): string {
 export function mapLeaderboardEntries(
   entries: LeaderboardEntryDto[],
 ): LeaderboardUser[] {
-  return entries.map((entry) => ({
-    id: entry.profile_id,
-    name: displayNameForEntry(entry),
-    avatarUrl: entry.avatar_url ?? undefined,
-    profileId: entry.profile_id,
-    type: entry.profile_type === "agent" ? "agent" : "user",
-    tokens: typeof entry.tokens_used === "number" ? entry.tokens_used : 0,
-    estimatedCostUsd:
-      typeof entry.estimated_cost_usd === "number" ? entry.estimated_cost_usd : 0,
-    eventCount: typeof entry.event_count === "number" ? entry.event_count : 0,
-  }));
+  return entries
+    .map((entry) => ({
+      id: entry.profile_id,
+      name: displayNameForEntry(entry),
+      avatarUrl: entry.avatar_url ?? undefined,
+      profileId: entry.profile_id,
+      type: entry.profile_type === "agent" ? "agent" : "user",
+      tokens: typeof entry.tokens_used === "number" ? entry.tokens_used : 0,
+      estimatedCostUsd:
+        typeof entry.estimated_cost_usd === "number"
+          ? entry.estimated_cost_usd
+          : 0,
+      eventCount: typeof entry.event_count === "number" ? entry.event_count : 0,
+    }))
+    .sort((a, b) => {
+      if (b.estimatedCostUsd !== a.estimatedCostUsd) {
+        return b.estimatedCostUsd - a.estimatedCostUsd;
+      }
+      return b.tokens - a.tokens;
+    });
 }
 
 export function leaderboardEntriesQueryOptions(period: TimePeriod) {
