@@ -449,6 +449,17 @@ jobs:
           cargo_toml.write_text(text, encoding="utf-8")
           PY
 
+      - name: Disable Spotlight indexing for DMG packaging
+        if: matrix.target == 'macos'
+        shell: bash
+        # Spotlight (mds / mdworker_shared) holds open file handles on freshly
+        # mounted DMGs, which makes `hdiutil detach` fail with `Resource busy`
+        # at the end of `create-dmg`. Disabling indexing for the runner keeps
+        # cargo-packager's DMG step from getting wedged.
+        run: |
+          sudo mdutil -a -i off || true
+          sudo mdutil -i off /Volumes || true
+
       - name: Clean stale macOS DMG mounts
         if: matrix.target == 'macos'
         shell: bash
