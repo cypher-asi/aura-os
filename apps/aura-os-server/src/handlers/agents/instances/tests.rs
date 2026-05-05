@@ -1,5 +1,4 @@
 use super::*;
-use super::*;
 use aura_os_store::SettingsStore;
 use std::sync::Arc;
 
