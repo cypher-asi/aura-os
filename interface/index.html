@@ -4,21 +4,32 @@
     <meta charset="UTF-8" />
     <meta name="color-scheme" content="light dark" />
     <link rel="icon" type="image/png" href="/aura-icon.png" />
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="manifest" id="aura-manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
     />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#05070d" />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+    <!--
+      Single theme-color tag we own; the inline boot script below and the
+      React BrowserChromeThemeBridge keep its content (and the manifest
+      link's href) in sync with the ZUI ThemeProvider's resolved theme so
+      the browser tab/URL-bar chrome follows AURA's in-app light/dark
+      choice rather than the OS-level prefers-color-scheme.
+    -->
+    <meta name="theme-color" id="aura-theme-color" content="#05070d" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <script>
       // Stamp <html data-theme="..."> before any CSS or React boots so the
       // first paint matches the user's persisted ZUI ThemeProvider choice
       // (avoids a dark <-> light flash). Mirrors the storage shape
-      // ThemeProvider writes to localStorage["zui-theme"].
+      // ThemeProvider writes to localStorage["zui-theme"]. Also points
+      // the theme-color meta and PWA manifest link at the right palette
+      // so the browser chrome (Chrome tab thumbnail, mobile URL bar,
+      // installed-PWA window) is correct on the very first frame; the
+      // BrowserChromeThemeBridge React component keeps these in sync on
+      // subsequent theme flips.
       (function () {
         try {
           var raw = localStorage.getItem('zui-theme');
@@ -32,6 +43,12 @@
           }
           if (theme !== 'dark' && theme !== 'light') theme = 'dark';
           document.documentElement.setAttribute('data-theme', theme);
+          var color = theme === 'light' ? '#ffffff' : '#05070d';
+          var manifestHref = theme === 'light' ? '/manifest-light.webmanifest' : '/manifest.webmanifest';
+          var meta = document.getElementById('aura-theme-color');
+          if (meta) meta.setAttribute('content', color);
+          var manifest = document.getElementById('aura-manifest');
+          if (manifest) manifest.setAttribute('href', manifestHref);
         } catch (_) {
           document.documentElement.setAttribute('data-theme', 'dark');
         }

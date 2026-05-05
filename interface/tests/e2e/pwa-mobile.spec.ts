@@ -205,7 +205,12 @@ test("mobile login page renders with PWA metadata", async ({ page }) => {
   await page.goto("/login");
 
   await expect(page).toHaveTitle(/AURA/);
+  // Single theme-color meta we own (no prefers-color-scheme variants); the
+  // BrowserChromeThemeBridge keeps it pointed at the dark palette while the
+  // unauthenticated /login screen runs on AURA's default dark theme.
+  await expect(page.locator('meta[name="theme-color"]')).toHaveCount(1);
   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#05070d");
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("id", "aura-theme-color");
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute("href", "/manifest.webmanifest");
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Host .*?(online|auth required|unreachable|error|checking)/i })).toBeVisible();
