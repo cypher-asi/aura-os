@@ -124,6 +124,10 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
       void loadInvites();
       void loadBilling();
       void loadCreditBalance();
+      // Pre-warm the subscription so navigating into Billing / Z Credit
+      // History / Rewards is instant on cold opens (no per-section
+      // request-then-render layout shift).
+      void useBillingStore.getState().fetchSubscription();
     });
     return () => window.cancelAnimationFrame(frame);
   }, [isOpen, orgId, refreshMembers, refreshIntegrations, loadInvites, loadBilling, loadCreditBalance]);

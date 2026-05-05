@@ -103,13 +103,13 @@ export function AppearanceSection() {
         </div>
       </div>
 
-      <PresetsPanel />
-
       <CustomTokensPanel />
 
       <Text variant="muted" size="xs">
         Custom colors persist per dark/light mode in this browser.
       </Text>
+
+      <PresetsPanel />
     </Panel>
   );
 }

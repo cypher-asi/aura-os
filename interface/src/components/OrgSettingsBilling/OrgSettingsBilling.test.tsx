@@ -24,6 +24,19 @@ vi.mock("../../hooks/use-aura-capabilities", () => ({
   useAuraCapabilities: () => mockUseAuraCapabilities(),
 }));
 
+vi.mock("../../stores/billing-store", () => {
+  const state = {
+    subscription: null as { plan: string; is_subscribed: boolean; monthly_credits: number } | null,
+    subscriptionLoading: false,
+    fetchSubscription: vi.fn().mockResolvedValue(undefined),
+  };
+  const store = Object.assign(
+    (sel: (s: typeof state) => unknown) => sel(state),
+    { getState: () => state, setState: vi.fn() },
+  );
+  return { useBillingStore: store };
+});
+
 import { OrgSettingsBilling } from "./OrgSettingsBilling";
 import type { CheckoutPollingStatus } from "../../hooks/use-checkout-polling";
 

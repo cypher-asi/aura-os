@@ -11,12 +11,21 @@ interface Props {
   onRevokeInvite: (inviteId: string) => void;
 }
 
+// Shareable invite links must always point at the production marketing host
+// regardless of where the user happens to be running AURA (localhost dev,
+// native bundle, or a self-hosted instance), since the recipient generally
+// won't have access to those origins.
+const INVITE_BASE_URL = "https://aura.ai";
+
+function buildInviteLink(token: string): string {
+  return `${INVITE_BASE_URL}/invite/${token}`;
+}
+
 export function OrgSettingsInvites({ invites, isAdminOrOwner, onCreateInvite, onRevokeInvite }: Props) {
   const pendingInvites = invites.filter((i) => i.status === "pending");
 
   const copyInviteLink = (token: string) => {
-    const link = `${window.location.origin}/invite/${token}`;
-    navigator.clipboard.writeText(link);
+    navigator.clipboard.writeText(buildInviteLink(token));
   };
 
   return (
@@ -35,7 +44,7 @@ export function OrgSettingsInvites({ invites, isAdminOrOwner, onCreateInvite, on
         {pendingInvites.map((inv) => (
           <div key={inv.invite_id} className={styles.inviteRow}>
             <code className={styles.inviteToken}>
-              {`${window.location.origin}/invite/${inv.token}`}
+              {buildInviteLink(inv.token)}
             </code>
             <Button
               variant="ghost"

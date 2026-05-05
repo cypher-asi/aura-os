@@ -1,32 +1,27 @@
-import { useState, useEffect } from "react";
-import { Gift } from "lucide-react";
-import { authApi } from "../../shared/api/auth";
+import { useEffect, useState } from "react";
+import { Button } from "@cypher-asi/zui";
+import { useAuth } from "../../stores/auth-store";
+import { useInviteCodeStore } from "../../stores/invite-code-store";
 import styles from "../OrgSettingsPanel/OrgSettingsPanel.module.css";
 import rewardStyles from "./OrgSettingsRewards.module.css";
 
-export function OrgSettingsRewards() {
-  const [inviteCode, setInviteCode] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+interface Props {
+  onUpgrade?: () => void;
+}
+
+export function OrgSettingsRewards({ onUpgrade }: Props) {
+  const { user } = useAuth();
+  const userId = user?.user_id ?? null;
+  const inviteCode = useInviteCodeStore((s) => s.code);
+  const inviteLoading = useInviteCodeStore((s) => s.loading);
+  const inviteError = useInviteCodeStore((s) => s.error);
+  const ensureInviteCode = useInviteCodeStore((s) => s.ensure);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    authApi
-      .getMyInviteCode()
-      .then((data) => {
-        if (!cancelled) setInviteCode(data.slug);
-      })
-      .catch(() => {
-        if (!cancelled) setInviteCode(null);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (!userId) return;
+    void ensureInviteCode(userId);
+  }, [userId, ensureInviteCode]);
 
   const handleCopy = () => {
     if (!inviteCode) return;
@@ -51,18 +46,20 @@ export function OrgSettingsRewards() {
           <div className={styles.rowInfo}>
             <span className={styles.rowLabel}>Invite Code</span>
             <span className={styles.rowDescription}>
-              Share with others. When they subscribe, you both earn bonus Z credits.
+              Share with others. When they subscribe, you both earn bonus Z credits for compute.
             </span>
           </div>
           <div className={styles.rowControl}>
-            {loading ? (
-              <span className={rewardStyles.codeLoading}>Loading...</span>
-            ) : inviteCode ? (
+            {inviteCode ? (
               <code className={rewardStyles.codeClickable} onClick={handleCopy}>
                 {copied ? "Copied!" : inviteCode}
               </code>
-            ) : (
+            ) : inviteLoading ? (
+              <span className={rewardStyles.codeLoading}>Loading...</span>
+            ) : inviteError ? (
               <span className={rewardStyles.codeLoading}>Unavailable</span>
+            ) : (
+              <span className={rewardStyles.codeLoading}>Loading...</span>
             )}
           </div>
         </div>
@@ -86,7 +83,7 @@ export function OrgSettingsRewards() {
           <div className={styles.rowInfo}>
             <span className={styles.rowLabel}>Daily Active Reward</span>
             <span className={styles.rowDescription}>
-              Earned each day you use AURA. Upgrade your tier for more.
+              Earned each day you use AURA. Upgrade for more.
             </span>
           </div>
           <div className={styles.rowControl}>
@@ -99,7 +96,7 @@ export function OrgSettingsRewards() {
           <div className={styles.rowInfo}>
             <span className={styles.rowLabel}>Referral Bonus</span>
             <span className={styles.rowDescription}>
-              Earned when someone you invited subscribes to a paid plan.
+              Earned when someone you invited subscribes.
             </span>
           </div>
           <div className={styles.rowControl}>
@@ -112,12 +109,20 @@ export function OrgSettingsRewards() {
 
       <div className={styles.settingsGroupLabel}>Earn More</div>
       <div className={styles.settingsGroup}>
-        <div className={rewardStyles.proPromo}>
-          <Gift size={16} />
-          <span>
-            Upgrade your tier to earn more daily Z credits and monthly
-            credit allowances.
-          </span>
+        <div className={styles.settingsRow}>
+          <div className={styles.rowInfo}>
+            <span className={styles.rowLabel}>Upgrade your plan</span>
+            <span className={styles.rowDescription}>
+              Upgrade to earn more daily and monthly Z credits.
+            </span>
+          </div>
+          <div className={styles.rowControl}>
+            {onUpgrade && (
+              <Button variant="primary" size="sm" onClick={onUpgrade}>
+                Upgrade
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </>

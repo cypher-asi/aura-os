@@ -8,7 +8,15 @@ import {
   billingTransactionsQueryOptions,
 } from "../queries/billing-queries";
 import { queryClient } from "../shared/lib/query-client";
+import { orgsApi } from "../shared/api/orgs";
 import type { CreditBalance, CreditTransaction, BillingAccount, CheckoutSessionResponse } from "../shared/types";
+
+export interface SubscriptionInfo {
+  plan: string;
+  is_subscribed: boolean;
+  monthly_credits: number;
+  current_period_end?: string;
+}
 
 interface BillingState {
   balance: CreditBalance | null;
@@ -19,10 +27,13 @@ interface BillingState {
   account: BillingAccount | null;
   accountLoading: boolean;
   purchaseLoading: boolean;
+  subscription: SubscriptionInfo | null;
+  subscriptionLoading: boolean;
 
   fetchBalance: (orgId: string) => Promise<void>;
   fetchTransactions: (orgId: string) => Promise<void>;
   fetchAccount: (orgId: string) => Promise<void>;
+  fetchSubscription: () => Promise<void>;
   purchase: (orgId: string, amountUsd: number) => Promise<CheckoutSessionResponse | null>;
   reset: () => void;
 }
@@ -37,6 +48,8 @@ const INITIAL: Pick<
   | "account"
   | "accountLoading"
   | "purchaseLoading"
+  | "subscription"
+  | "subscriptionLoading"
 > = {
   balance: null,
   balanceLoading: false,
@@ -46,6 +59,8 @@ const INITIAL: Pick<
   account: null,
   accountLoading: false,
   purchaseLoading: false,
+  subscription: null,
+  subscriptionLoading: false,
 };
 
 export const useBillingStore = create<BillingState>()((set) => ({
@@ -94,6 +109,16 @@ export const useBillingStore = create<BillingState>()((set) => ({
     }
   },
 
+  fetchSubscription: async () => {
+    set({ subscriptionLoading: true });
+    try {
+      const sub = await orgsApi.getSubscriptionStatus();
+      set({ subscription: sub, subscriptionLoading: false });
+    } catch {
+      set({ subscriptionLoading: false });
+    }
+  },
+
   purchase: async (orgId, amountUsd) => {
     set({ purchaseLoading: true });
     try {
@@ -126,9 +151,12 @@ export function useBilling() {
       account: s.account,
       accountLoading: s.accountLoading,
       purchaseLoading: s.purchaseLoading,
+      subscription: s.subscription,
+      subscriptionLoading: s.subscriptionLoading,
       fetchBalance: s.fetchBalance,
       fetchTransactions: s.fetchTransactions,
       fetchAccount: s.fetchAccount,
+      fetchSubscription: s.fetchSubscription,
       purchase: s.purchase,
       reset: s.reset,
     })),

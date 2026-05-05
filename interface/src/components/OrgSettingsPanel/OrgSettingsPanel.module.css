@@ -66,6 +66,13 @@
 .logoutButton {
   width: 100%;
   justify-content: flex-start;
+  /* Match Navigator items so the Logout entry reads as part of the same
+     sidebar list rather than a faded action button. */
+  color: var(--color-text-secondary);
+}
+
+.logoutButton:hover {
+  color: var(--color-text-primary);
 }
 
 /* ── Right content area ── */

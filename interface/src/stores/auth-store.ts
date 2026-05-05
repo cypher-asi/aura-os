@@ -258,6 +258,14 @@ export const useAuthStore = create<AuthState>()((set) => ({
     }
     await endLocalSession();
     disconnectEventSocket();
+    // Drop any per-user caches that hang off the previous session so a
+    // different user logging into the same browser does not see stale data.
+    try {
+      const { useInviteCodeStore } = await import("./invite-code-store");
+      useInviteCodeStore.getState().reset();
+    } catch {
+      // best-effort; missing store should not block logout
+    }
     // Setting `hasResolvedInitialSession: true` flips the App.tsx gate so
     // `showShell` immediately follows the live (`user === null`) state
     // instead of the sticky `initiallyLoggedIn` boot snapshot. React Router

@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { Input, Button } from "@cypher-asi/zui";
 import type { OrgBilling, CreditBalance } from "../../shared/types";
 import type { CheckoutPollingStatus } from "../../hooks/use-checkout-polling";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { NATIVE_BILLING_MESSAGE } from "../../lib/billing";
-import { orgsApi } from "../../shared/api/orgs";
+import { useBillingStore } from "../../stores/billing-store";
 import styles from "../OrgSettingsPanel/OrgSettingsPanel.module.css";
 import billingStyles from "./OrgSettingsBilling.module.css";
 
@@ -39,33 +39,24 @@ export function OrgSettingsBilling({
 }: Props) {
   const { isNativeApp } = useAuraCapabilities();
   const [customAmount, setCustomAmount] = useState("");
-  const [periodEnd, setPeriodEnd] = useState<string | null>(null);
-  const [periodLoading, setPeriodLoading] = useState(true);
-  const [isPaidPlan, setIsPaidPlan] = useState(false);
-  const [isActive, setIsActive] = useState(false);
+  const subscription = useBillingStore((s) => s.subscription);
+  const fetchSubscription = useBillingStore((s) => s.fetchSubscription);
 
-  const fetchSubscription = useCallback(() => {
-    setPeriodLoading(true);
-    orgsApi.getSubscriptionStatus()
-      .then((s) => {
-        if (s.current_period_end) setPeriodEnd(s.current_period_end);
-        setIsPaidPlan(s.plan !== "mortal");
-        setIsActive(s.is_subscribed);
-      })
-      .catch(() => {})
-      .finally(() => setPeriodLoading(false));
-  }, []);
-
-  useEffect(() => { fetchSubscription(); }, [fetchSubscription]);
-
-  // Auto-refresh when user returns to tab (e.g. after Stripe checkout/portal)
+  // Refresh on tab return (e.g. after Stripe checkout/portal). The initial
+  // load happens in `useOrgSettingsData` so the first paint already has data.
   useEffect(() => {
     const handler = () => {
-      if (document.visibilityState === "visible") fetchSubscription();
+      if (document.visibilityState === "visible") void fetchSubscription();
     };
     document.addEventListener("visibilitychange", handler);
     return () => document.removeEventListener("visibilitychange", handler);
   }, [fetchSubscription]);
+
+  const isPaidPlan = subscription !== null && subscription.plan !== "mortal";
+  const isActive = subscription?.is_subscribed ?? false;
+  const periodEnd = subscription?.current_period_end ?? null;
+  const planLabel = subscription?.plan ?? balance?.plan ?? billing?.plan ?? "mortal";
+
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
 
   const customNum = parseFloat(customAmount);
@@ -89,6 +80,25 @@ export function OrgSettingsBilling({
   const handlePurchaseClick = () => {
     if (effectiveAmount !== null) onPurchase(effectiveAmount);
   };
+
+  // Always render both rows in the Plan group so the section keeps a fixed
+  // height across the subscription fetch lifecycle. For free-tier users the
+  // second row carries neutral copy instead of being conditionally removed.
+  const secondRowLabel = isPaidPlan
+    ? isActive
+      ? "Next Billing Date"
+      : "Plan Ends"
+    : "Plan Includes";
+  const secondRowDescription = isPaidPlan
+    ? isActive
+      ? "Next monthly Z credit top-up"
+      : "Your plan will revert to Mortal"
+    : "Pay as you go for additional Z credits";
+  const secondRowValue = isPaidPlan
+    ? periodEnd
+      ? new Date(periodEnd).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+      : "—"
+    : "Free tier benefits";
 
   return (
     <>
@@ -134,7 +144,7 @@ export function OrgSettingsBilling({
             </span>
           </div>
           <div className={styles.rowControl} style={{ marginLeft: "auto" }}>
-            <span className={styles.roleBadge}>{periodLoading ? "..." : balance?.plan ?? billing?.plan ?? "mortal"}</span>
+            <span className={styles.roleBadge}>{planLabel}</span>
             {onUpgrade && (
               <Button variant="ghost" size="sm" onClick={onUpgrade} style={{ padding: 0, display: "flex", justifyContent: "flex-end" }}>
                 Change Plan
@@ -142,21 +152,15 @@ export function OrgSettingsBilling({
             )}
           </div>
         </div>
-        {isPaidPlan && (
-          <div className={styles.settingsRow}>
-            <div className={styles.rowInfo}>
-              <span className={styles.rowLabel}>{isActive ? "Next Billing Date" : "Plan Ends"}</span>
-              <span className={styles.rowDescription}>
-                {isActive ? "Next monthly Z credit top-up" : "Your plan will revert to Mortal"}
-              </span>
-            </div>
-            <div className={styles.rowControl}>
-              {periodLoading ? "Loading..." : periodEnd
-                ? new Date(periodEnd).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
-                : "---"}
-            </div>
+        <div className={styles.settingsRow}>
+          <div className={styles.rowInfo}>
+            <span className={styles.rowLabel}>{secondRowLabel}</span>
+            <span className={styles.rowDescription}>{secondRowDescription}</span>
           </div>
-        )}
+          <div className={styles.rowControl}>
+            {secondRowValue}
+          </div>
+        </div>
       </div>
 
       {/* Purchase Credits */}

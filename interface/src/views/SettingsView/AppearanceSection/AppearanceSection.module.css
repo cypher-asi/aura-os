@@ -15,7 +15,7 @@
 .themeButtons {
   display: flex;
   gap: var(--space-1);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .accentSwatches {

@@ -83,7 +83,7 @@ function OrgSectionContent({ data, onUpgrade }: { data: ReturnType<typeof useOrg
         <OrgSettingsInvites invites={data.invites} isAdminOrOwner={data.isAdminOrOwner} onCreateInvite={data.handleCreateInvite} onRevokeInvite={data.handleRevokeInvite} />
       )}
       {data.section === "rewards" && (
-        <OrgSettingsRewards />
+        <OrgSettingsRewards onUpgrade={onUpgrade} />
       )}
       {data.section === "billing" && (
         <OrgSettingsBilling billing={data.billing} isAdminOrOwner={data.isAdminOrOwner} balance={data.balance} balanceLoading={data.balanceLoading} balanceError={data.balanceError} checkoutError={data.checkoutError} pollingStatus={data.pollingStatus} onPurchase={data.handlePurchase} onRetryBalance={data.loadCreditBalance} onUpgrade={onUpgrade} />

@@ -98,7 +98,10 @@ vi.mock("../../stores/billing-store", () => {
     balance: { balance_cents: 1000, plan: "free", balance_formatted: "$10.00" },
     balanceLoading: false,
     purchaseLoading: false,
+    subscription: null,
+    subscriptionLoading: false,
     fetchBalance: vi.fn(),
+    fetchSubscription: vi.fn().mockResolvedValue(undefined),
     purchase: vi.fn(),
   };
   const store = Object.assign(

@@ -1,15 +1,10 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { orgsApi } from "../../shared/api/orgs";
 import { useOrgStore } from "../../stores/org-store";
+import { useBillingStore } from "../../stores/billing-store";
 import type { CreditTransaction, BillingAccount } from "../../shared/types";
 import styles from "../OrgSettingsPanel/OrgSettingsPanel.module.css";
 import historyStyles from "./OrgSettingsCreditHistory.module.css";
-
-interface SubscriptionInfo {
-  plan: string;
-  is_subscribed: boolean;
-  monthly_credits: number;
-}
 
 const TYPE_LABELS: Record<string, string> = {
   signupgrant: "Welcome Bonus",
@@ -35,9 +30,10 @@ function formatDate(iso: string): string {
 export function OrgSettingsCreditHistory() {
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [account, setAccount] = useState<BillingAccount | null>(null);
-  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const orgId = useOrgStore((s) => s.activeOrg?.org_id);
+  const subscription = useBillingStore((s) => s.subscription);
+  const fetchSubscription = useBillingStore((s) => s.fetchSubscription);
 
   useEffect(() => {
     if (!orgId) return;
@@ -46,14 +42,14 @@ export function OrgSettingsCreditHistory() {
     Promise.all([
       orgsApi.getTransactions(orgId).catch(() => ({ transactions: [], has_more: false })),
       orgsApi.getAccount(orgId).catch(() => null),
-      orgsApi.getSubscriptionStatus().catch(() => null),
-    ]).then(([txRes, acc, sub]) => {
+    ]).then(([txRes, acc]) => {
       setTransactions(txRes.transactions);
       setAccount(acc);
-      setSubscription(sub);
       setLoading(false);
     });
-  }, [orgId]);
+    // Subscription is cached in the billing store; only refetch if missing.
+    if (!subscription) void fetchSubscription();
+  }, [orgId, subscription, fetchSubscription]);
 
   const planStatus = subscription?.is_subscribed
     ? "Active"
@@ -136,7 +132,7 @@ export function OrgSettingsCreditHistory() {
                         {tx.amount_cents >= 0 ? "+" : ""}{tx.amount_cents.toLocaleString()} Z
                       </span>
                       <span className={historyStyles.txBalance}>
-                        bal: {tx.balance_after_cents.toLocaleString()} Z
+                        Balance: {tx.balance_after_cents.toLocaleString()} Z
                       </span>
                     </div>
                   </div>
