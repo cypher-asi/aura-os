@@ -4531,7 +4531,46 @@
             ],
             "confidence": "medium"
           }
-        ]
+        ],
+        "media": {
+          "schemaVersion": 1,
+          "status": "published",
+          "type": "image",
+          "assetPath": "assets/changelog/nightly/2026-05-04/entry-6-3ecb4a5c3596.png",
+          "alt": "Native-style desktop menu bar in the titlebar",
+          "caption": "Aura's desktop titlebar now has a native-style File / Edit / View / Help menu bar with cross-platform shortcuts and multi-window controls.",
+          "width": 2560,
+          "height": 1440,
+          "bytes": 2243946,
+          "sourceCommitShas": [
+            "0bb9d9290f6365c74448c8d68cfb83ede70b1e8f",
+            "3694dd654af172b63d1f1ff36eb78bda51266c76",
+            "0b403641f4ccc8d6e3cefe6da8c748aab4456de0",
+            "5c94d6a2dd69bbb30cb6f3ad4b239d16cead676d",
+            "917c64aa2df38e027f34cd8f850117a8d2b2fddd",
+            "8d25e4afaf32e213568c09178e673ccf17b2ea24",
+            "7a6715abc3e2c45eaa2fcce86773ace436dc3950",
+            "45a46a85cc1336e6809837da386664bc0c6cfa20",
+            "32e45e16c1a2972595d60c7cd658ed4b16930eb2",
+            "bbb8eae32e62b668c03aa10f9f4805897b964bde",
+            "708a892ac8a5c88e0624533a8fa5de924bc9093b",
+            "840f24132626f2013eaae384208c9643c9bed521",
+            "5b35a3bc5269ea8cacaaa8828cb9d5e416807b95",
+            "57aca98b227bce629826c4507b7cc013b792c4ec",
+            "e4b94028fe5939d495971cd46789badf1b80b119",
+            "ca3cf0acbeb05d0cf0bb98b2eb52f1002af5f700",
+            "bea99198d494f00703866b0e7113f7b9c0b8a501",
+            "ee74d74d05780fd3b30a7d410880f49c5c0ee35c",
+            "91fac390859b5b64f13ef451c1d2704287000f5e"
+          ],
+          "gates": {
+            "rawQuality": "accepted",
+            "rawVision": "accepted",
+            "brandedQuality": "accepted",
+            "brandedVision": "accepted"
+          },
+          "updatedAt": "2026-05-05T00:44:19.885Z"
+        }
       }
     ],
     "highlights": [
