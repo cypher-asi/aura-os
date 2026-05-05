@@ -1,25 +1,8 @@
-use axum::extract::DefaultBodyLimit;
 use axum::routing::{delete, get, post, put};
 use axum::Router;
 
 use crate::handlers::{generation, process};
 use crate::state::AppState;
-
-/// Per-request body cap for the image / 3D generation SSE endpoints.
-///
-/// Chat image and 3D modes inline pasted / uploaded images directly
-/// into the JSON body as `data:image/<type>;base64,...` strings (see
-/// [`crate::handlers::generation::generate_3d_stream`] and
-/// [`crate::handlers::generation::generate_image_stream`]). Axum's
-/// default body limit is 2 MiB, which trips on a single retina
-/// screenshot once base64-encoded — surfaces in the UI as
-/// `SSE request failed (413): Failed to buffer the request body:
-/// length limit exceeded`.
-///
-/// 25 MiB comfortably covers a base64-encoded ~18 MiB raw image (high
-/// resolution screenshots, phone photos, multi-image prompts) while
-/// still bounding worst-case payload size on this route.
-const GENERATION_MAX_BYTES: usize = 25 * 1024 * 1024;
 
 pub(super) fn process_routes() -> Router<AppState> {
     Router::new()
@@ -79,12 +62,10 @@ pub(super) fn generation_routes() -> Router<AppState> {
     Router::new()
         .route(
             "/api/generate/image/stream",
-            post(generation::generate_image_stream)
-                .layer(DefaultBodyLimit::max(GENERATION_MAX_BYTES)),
+            post(generation::generate_image_stream),
         )
         .route(
             "/api/generate/3d/stream",
-            post(generation::generate_3d_stream)
-                .layer(DefaultBodyLimit::max(GENERATION_MAX_BYTES)),
+            post(generation::generate_3d_stream),
         )
 }
