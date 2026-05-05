@@ -3,20 +3,22 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-05T12:01:48.436Z",
+  "generatedAt": "2026-05-05T16:22:40.849Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.460.1",
+  "version": "0.1.0-nightly.461.1",
   "date": "2026-05-05",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.460.1",
-  "lastIncludedSha": "32f8ad03e8ddbea27776cb4e37e8a43f158c4484",
-  "previousProcessedSha": "25abb62ffe6132b0e0b71165b4fc0cf947b3badc",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.461.1",
+  "lastIncludedSha": "634521373040a7053b7dc80be4998b33e696da8f",
+  "previousProcessedSha": "32f8ad03e8ddbea27776cb4e37e8a43f158c4484",
   "commitShas": [
     "25abb62ffe6132b0e0b71165b4fc0cf947b3badc",
-    "32f8ad03e8ddbea27776cb4e37e8a43f158c4484"
+    "32f8ad03e8ddbea27776cb4e37e8a43f158c4484",
+    "4fd0e5ee80d88002c8eb154b6320fe9a58e6aad6",
+    "634521373040a7053b7dc80be4998b33e696da8f"
   ],
-  "rawCommitCount": 2,
-  "filteredCommitCount": 2,
+  "rawCommitCount": 4,
+  "filteredCommitCount": 4,
   "rawCommits": [
     {
       "sha": "25abb62ffe6132b0e0b71165b4fc0cf947b3badc",
@@ -95,9 +97,127 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "4fd0e5ee80d88002c8eb154b6320fe9a58e6aad6",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T09:08:04-07:00",
+      "subject": "revert: restore shell chrome, mode selector pill, and shared right-click menu",
+      "body": "Reverts 2a5a27ee8 (\"refactor(interface): trim shell chrome and input UI\nexperiments\"), which swept away polished UI work in favor of a thinner\nzui-Topbar / plain mode-pill / inline right-click setup. That sweep\ncaused multiple visible regressions:\n\n- Mode selector lost its measured/animated indicator pill and the\n  min-height matching --control-height-sm, so the row no longer reads\n  as the same height as the input control.\n- Desktop titlebar dropped the bespoke ShellTitlebar + MenuBar +\n  compact UpdatePill, falling back to a plain Topbar with the floating\n  UpdateBanner re-attached as a sibling. Update affordance lost its\n  compact pill placement next to the theme toggle.\n- BottomTaskbar stopped wiring useDesktopContextMenu, so right-clicks\n  on the empty taskbar area no longer opened the desktop context menu.\n- DesktopApp re-implemented its own inline portal, losing both the\n  shared menu's viewport-aware bottom/right anchoring (so the menu\n  flew off-screen near the taskbar) and its Settings item.\n- AgentEditorForm stacked Name/Role, renamed \"Advanced\" to \"Advanced\n  options\", and added an extra Advanced header above the runtime\n  section.\n- InputBarShell removed the inputRowEnd slot and the inline\n  CommandChips variant, so slash command tags no longer render inline\n  next to the textarea.\n- 125 lines of right-click context menu test coverage in\n  BottomTaskbar.test.tsx were dropped along with the wiring.\n\nRestoring 2a5a27ee8 brings back all of the above. The two conflicts\nintroduced by post-trim commits (42ba4dc69's mode-selector tint and\nae662311f's textarea focus comment) are resolved by taking the\npre-trim shape; the per-mode tint is re-ported in the follow-up\ncommit so the per-mode accent lands on the restored indicator pill\ninstead of the now-removed plain segment background.\n\nMixpanel analytics, the onboarding stack, and the Settings page\nUpdates row layout fixes (0ad443224, 1257a4563) live in unrelated\nfiles and are unaffected.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "32f8ad03e8ddbea27776cb4e37e8a43f158c4484"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentEditorModal/AgentEditorForm.tsx",
+        "interface/src/apps/agents/components/AgentEditorModal/AgentEditorModal.module.css",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/CommandChips.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.module.css",
+        "interface/src/apps/desktop/DesktopApp/DesktopApp.module.css",
+        "interface/src/apps/desktop/DesktopApp/DesktopApp.tsx",
+        "interface/src/components/Avatar/Avatar.module.css",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.module.css",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.render-churn.test.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.test.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.tsx",
+        "interface/src/components/DesktopShell/DesktopShell.module.css",
+        "interface/src/components/DesktopShell/DesktopShell.test.tsx",
+        "interface/src/components/DesktopShell/DesktopShell.tsx",
+        "interface/src/components/DesktopShell/DesktopTitlebar.tsx",
+        "interface/src/components/EmptyState/EmptyState.tsx",
+        "interface/src/components/ImageCropModal/ImageCropModal.module.css",
+        "interface/src/components/InputBarShell/InputBarShell.module.css",
+        "interface/src/components/InputBarShell/InputBarShell.tsx",
+        "interface/src/components/InputBarShell/ModeSelector.module.css",
+        "interface/src/components/InputBarShell/ModeSelector.tsx",
+        "interface/src/components/OrgSelector/OrgSelector.module.css",
+        "interface/src/components/Sidekick/Sidekick.module.css",
+        "interface/src/components/UpdateBanner/index.ts",
+        "interface/src/index.css",
+        "interface/src/views/LoginView/LoginView.module.css",
+        "interface/src/views/LoginView/LoginView.tsx"
+      ],
+      "stats": {
+        "fileCount": 30,
+        "insertions": 509,
+        "deletions": 219
+      },
+      "committedAtMs": 1777997284000,
+      "cleanSubject": "revert: restore shell chrome, mode selector pill, and shared right-click menu",
+      "keywords": [
+        "revert",
+        "restore",
+        "shell",
+        "chrome",
+        "mode",
+        "selector",
+        "pill",
+        "shared",
+        "right",
+        "click",
+        "menu"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/index.css",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "634521373040a7053b7dc80be4998b33e696da8f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T09:08:04-07:00",
+      "subject": "feat(mode-selector): re-port per-mode tint onto restored animated indicator",
+      "body": "Previously 42ba4dc69 added per-mode border accents to the active\nselection pill (success/green for Code, warning/amber for Plan,\ninfo/cyan for Image, purple for 3D). That commit assumed the trim's\nplain `.segmentActive { background; border }` shape, which the\npreceding revert undid in favor of the absolutely-positioned animated\n`.indicator` pill that slides between segments.\n\nRe-port the per-mode accents onto the restored indicator instead:\n\n- Tag the indicator span with `data-mode={selectedMode}` so CSS can\n  match the active mode without React re-applying inline styles.\n- Give `.indicator` a default `1px solid var(--color-border)` ring and\n  add per-mode overrides via `.indicator[data-mode=\"…\"]` that animate\n  alongside the existing transform/width transition on\n  `.indicatorReady`.\n\nAlso fix two adjacent issues uncovered while re-running the suite:\n\n- `interface/src/test/setup.ts`: install a global no-op\n  ResizeObserver. JSDOM doesn't ship one, so consumers of the\n  animated mode pill (ChatInputBar, DesktopShell sidekick scrollbar,\n  use-overflow-tabs, etc.) crashed at mount in tests that didn't\n  install their own mock. The trim accidentally masked this by\n  removing the only ResizeObserver caller in ModeSelector.\n- `interface/src/components/UpdateBanner/UpdatePill.module.css`:\n  tighten the pill's horizontal padding from `var(--space-3)` (12px)\n  to `7px` so the compact pill sits cleanly in the titlebar actions\n  next to the theme toggle.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "4fd0e5ee80d88002c8eb154b6320fe9a58e6aad6"
+      ],
+      "files": [
+        "interface/src/components/InputBarShell/ModeSelector.module.css",
+        "interface/src/components/InputBarShell/ModeSelector.tsx",
+        "interface/src/components/UpdateBanner/UpdatePill.module.css",
+        "interface/src/test/setup.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 42,
+        "deletions": 2
+      },
+      "committedAtMs": 1777997284000,
+      "cleanSubject": "re-port per-mode tint onto restored animated indicator",
+      "keywords": [
+        "port",
+        "mode",
+        "tint",
+        "onto",
+        "restored",
+        "animated",
+        "indicator"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/test"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 2,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -106,36 +226,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11798199
+          "sizeBytes": 11802555
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.460.1",
+      "version": "0.1.0-nightly.461.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.460.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.461.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 36559056
+          "sizeBytes": 36562396
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.460.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.461.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.460.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.461.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 103696888
+          "sizeBytes": 103705080
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.460.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.461.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -145,29 +265,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.460.1",
+      "version": "0.1.0-nightly.461.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.460.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.461.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33669864
+          "sizeBytes": 33673640
         },
         {
-          "name": "AURA_0.1.0-nightly.460.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.461.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.460.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.461.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 32809682
+          "sizeBytes": 32811996
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.460.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.461.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -177,29 +297,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.460.1",
+      "version": "0.1.0-nightly.461.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.460.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.461.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 35260959
+          "sizeBytes": 35259096
         },
         {
-          "name": "AURA_0.1.0-nightly.460.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.461.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.460.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.461.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 34451223
+          "sizeBytes": 34452020
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.460.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.461.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -209,17 +329,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.460.1",
+      "version": "0.1.0-nightly.461.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.460.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.461.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24637991
+          "sizeBytes": 24632343
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.460.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.461.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -228,28 +348,66 @@
     }
   ],
   "rendered": {
-    "title": "Sharper analytics signals for sessions and checkout",
-    "intro": "A focused analytics-instrumentation day: the desktop app now emits a clearer daily-active session signal at sign-in, and purchase funnel events have been renamed to honestly reflect checkout intent rather than completed payments.",
+    "title": "Shell chrome restored and analytics sharpened",
+    "intro": "Today's nightly rolls back a shell-trim experiment that had quietly regressed the desktop titlebar, mode selector, and right-click menu, then re-lands the per-mode color accents on the restored animated pill. Earlier in the day, analytics events were tightened so DAU and checkout funnels reflect what actually happened.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "3:33 AM",
         "started_at": "2026-05-05T10:33:36.000Z",
         "ended_at": "2026-05-05T11:47:45.000Z",
-        "title": "Honest analytics for sessions and checkout funnels",
-        "summary": "The app shell now identifies the user and fires a session_active event once per signed-in session, while credits and subscription tracking calls were renamed to make clear they mark checkout start, not a completed purchase.",
+        "title": "Truthful analytics for sessions and checkout intent",
+        "summary": "Analytics instrumentation was reworked so DAU reflects real activity and purchase events no longer overstate completion.",
         "items": [
           {
-            "text": "Added a per-user session_active analytics event in AppShell that fires once after onboarding hydration, paired with identifyUser, giving DAU metrics a reliable signal instead of inferring activity from unrelated events.",
+            "text": "Added a session_active event fired once per authenticated user load, with user identification, so DAU tracking reflects actual signed-in usage instead of incidental page hits.",
             "commit_shas": [
               "25abb62ffe6132b0e0b71165b4fc0cf947b3badc"
             ],
             "confidence": "high"
           },
           {
-            "text": "Renamed the credits modal's `credits_purchased` event to `credits_checkout_started` and the tier modal's `subscription_started` to `subscription_checkout_started`, so funnel dashboards no longer overcount Stripe redirects as completed conversions.",
+            "text": "Renamed credits_purchased and subscription_started to credits_checkout_started and subscription_checkout_started so funnel data reflects checkout intent rather than completed purchases.",
             "commit_shas": [
               "32f8ad03e8ddbea27776cb4e37e8a43f158c4484"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "9:08 AM",
+        "started_at": "2026-05-05T16:08:04.000Z",
+        "ended_at": "2026-05-05T16:08:04.000Z",
+        "title": "Desktop shell chrome and mode pill restored after trim regressions",
+        "summary": "A prior shell-trim refactor was reverted to bring back the bespoke titlebar, animated mode selector, and shared right-click menu, with per-mode accents re-ported onto the restored pill.",
+        "items": [
+          {
+            "text": "Reverted the shell-trim experiment to restore the bespoke ShellTitlebar with MenuBar and the compact UpdatePill placed next to the theme toggle, replacing the plain Topbar and detached UpdateBanner that had shipped in its place.",
+            "commit_shas": [
+              "4fd0e5ee80d88002c8eb154b6320fe9a58e6aad6"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Brought back the measured, animated mode selector indicator that slides between segments and matches the input control's height, and reinstated the inline CommandChips slot so slash-command tags render next to the textarea again.",
+            "commit_shas": [
+              "4fd0e5ee80d88002c8eb154b6320fe9a58e6aad6"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Rewired the BottomTaskbar and DesktopApp to the shared useDesktopContextMenu, restoring viewport-aware right-click positioning near the taskbar and the Settings entry that had gone missing with the inline portal.",
+            "commit_shas": [
+              "4fd0e5ee80d88002c8eb154b6320fe9a58e6aad6"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Re-ported per-mode accent colors (green for Code, amber for Plan, cyan for Image, purple for 3D) onto the restored animated indicator via a data-mode attribute, and tightened the UpdatePill's horizontal padding so it sits cleanly in the titlebar; a global no-op ResizeObserver in the test setup keeps mode-pill consumers from crashing under JSDOM.",
+            "commit_shas": [
+              "634521373040a7053b7dc80be4998b33e696da8f"
             ],
             "confidence": "high"
           }
@@ -257,9 +415,10 @@
       }
     ],
     "highlights": [
-      "Accurate DAU tracking via a new session_active event",
-      "Credits and subscription events renamed to reflect checkout intent"
+      "Desktop shell chrome and right-click menu restored",
+      "Per-mode tint re-ported onto animated mode pill",
+      "Analytics: session_active event and clearer checkout naming"
     ],
-    "raw_commit_count": 2
+    "raw_commit_count": 4
   }
 }

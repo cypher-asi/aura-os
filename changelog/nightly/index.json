@@ -2,17 +2,18 @@
   {
     "date": "2026-05-05",
     "channel": "nightly",
-    "version": "0.1.0-nightly.460.1",
-    "title": "Sharper analytics signals for sessions and checkout",
-    "intro": "A focused analytics-instrumentation day: the desktop app now emits a clearer daily-active session signal at sign-in, and purchase funnel events have been renamed to honestly reflect checkout intent rather than completed payments.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.461.1",
+    "title": "Shell chrome restored and analytics sharpened",
+    "intro": "Today's nightly rolls back a shell-trim experiment that had quietly regressed the desktop titlebar, mode selector, and right-click menu, then re-lands the per-mode color accents on the restored animated pill. Earlier in the day, analytics events were tightened so DAU and checkout funnels reflect what actually happened.",
+    "entryCount": 2,
     "highlights": [
-      "Accurate DAU tracking via a new session_active event",
-      "Credits and subscription events renamed to reflect checkout intent"
+      "Desktop shell chrome and right-click menu restored",
+      "Per-mode tint re-ported onto animated mode pill",
+      "Analytics: session_active event and clearer checkout naming"
     ],
-    "rawCommitCount": 2,
-    "generatedAt": "2026-05-05T12:01:48.436Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.460.1",
+    "rawCommitCount": 4,
+    "generatedAt": "2026-05-05T16:22:40.849Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.461.1",
     "path": "history/2026-05-05.json"
   },
   {
