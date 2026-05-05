@@ -53,10 +53,11 @@ vi.mock("../api/client", () => ({
 
 vi.mock("../api/streams", () => ({
   generateImageStream: vi.fn().mockResolvedValue(undefined),
+  generate3dStream: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { api } from "../api/client";
-import { generateImageStream } from "../api/streams";
+import { generate3dStream, generateImageStream } from "../api/streams";
 
 describe("useChatStream", () => {
   beforeEach(() => {
@@ -65,6 +66,7 @@ describe("useChatStream", () => {
     vi.clearAllMocks();
     vi.mocked(api.sendEventStream).mockReset().mockResolvedValue(undefined);
     vi.mocked(generateImageStream).mockReset().mockResolvedValue(undefined);
+    vi.mocked(generate3dStream).mockReset().mockResolvedValue(undefined);
   });
 
   it("returns streamKey, sendMessage, stopStreaming, resetEvents", () => {
@@ -200,6 +202,71 @@ describe("useChatStream", () => {
       artifactId: "artifact-cat",
     });
     expect(entry.activeToolCalls).toHaveLength(0);
+  });
+
+  it("routes 3D generation through the dedicated 3D stream", async () => {
+    const attachments = [
+      {
+        type: "image" as const,
+        media_type: "image/png",
+        data: "abc123",
+        name: "reference.png",
+      },
+    ];
+    const { result } = renderHook(() =>
+      useChatStream({ projectId: "p-1", agentInstanceId: "ai-1" }),
+    );
+
+    await act(async () => {
+      await result.current.sendMessage(
+        "model of an eagle",
+        null,
+        "tripo-v2",
+        attachments,
+        ["generate_3d"],
+        undefined,
+        "3d",
+      );
+    });
+
+    expect(api.sendEventStream).not.toHaveBeenCalled();
+    expect(generateImageStream).not.toHaveBeenCalled();
+    expect(
+      useStreamStore.getState().entries[result.current.streamKey]?.progressText,
+    ).toBe("Generating 3D model...");
+    expect(generate3dStream).toHaveBeenCalledWith(
+      { kind: "data", imageData: "data:image/png;base64,abc123" },
+      "model of an eagle",
+      expect.any(Object),
+      expect.any(AbortSignal),
+      "p-1",
+    );
+  });
+
+  it("surfaces an error when 3D mode is sent without an image attachment", async () => {
+    const { result } = renderHook(() =>
+      useChatStream({ projectId: "p-1", agentInstanceId: "ai-1" }),
+    );
+
+    await act(async () => {
+      await result.current.sendMessage(
+        "model of an eagle",
+        null,
+        "tripo-v2",
+        undefined,
+        ["generate_3d"],
+        undefined,
+        "3d",
+      );
+    });
+
+    expect(api.sendEventStream).not.toHaveBeenCalled();
+    expect(generate3dStream).not.toHaveBeenCalled();
+    const entry = useStreamStore.getState().entries[result.current.streamKey];
+    const errorMsg = entry.events.find((m) =>
+      m.content.includes("3D mode requires an attached or pasted image"),
+    );
+    expect(errorMsg).toBeTruthy();
   });
 
   it("does nothing for empty content without action", async () => {
