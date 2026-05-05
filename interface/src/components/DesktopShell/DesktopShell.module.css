@@ -194,6 +194,9 @@
   min-width: 44px;
   justify-content: flex-start;
   flex-shrink: 0;
+  /* Match BottomTaskbar .left pill internal padding so the org avatar
+     centers on the same X as the bottom-left Desktop Circle icon. */
+  padding-left: var(--space-2);
 }
 
 .titleLeading {
