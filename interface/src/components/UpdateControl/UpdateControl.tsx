@@ -3,7 +3,10 @@ import { AlertTriangle, Check, Download, RefreshCw } from "lucide-react";
 import { useUpdateStatus } from "./useUpdateStatus";
 import styles from "./UpdateControl.module.css";
 
-function formatLastChecked(timestamp: number | null, locale?: string): string | null {
+export function formatLastChecked(
+  timestamp: number | null,
+  locale?: string,
+): string | null {
   if (!timestamp) return null;
   const parsed = new Date(timestamp);
   if (Number.isNaN(parsed.getTime())) return null;
@@ -27,9 +30,18 @@ interface UpdateControlProps {
    * actionable (available / downloading / installing / failed).
    */
   layout?: UpdateControlLayout;
+  /**
+   * When `false`, suppress the inline "Last checked: …" line. Use this when
+   * the consumer renders that information itself (e.g. aligned with the row
+   * description on the left side of a settings row).
+   */
+  showLastChecked?: boolean;
 }
 
-export function UpdateControl({ layout = "inline" }: UpdateControlProps = {}) {
+export function UpdateControl({
+  layout = "inline",
+  showLastChecked = true,
+}: UpdateControlProps = {}) {
   const {
     supported,
     loaded,
@@ -119,6 +131,7 @@ export function UpdateControl({ layout = "inline" }: UpdateControlProps = {}) {
     checkForUpdates,
     revealUpdaterLogs,
     revealPending,
+    showLastChecked,
   });
 }
 
@@ -148,7 +161,10 @@ function formatLastStepLabel(step: string | null): string | null {
 }
 
 function renderInline(
-  props: RenderCommon & { lastCheckedAt: number | null },
+  props: RenderCommon & {
+    lastCheckedAt: number | null;
+    showLastChecked: boolean;
+  },
 ): React.ReactElement {
   const {
     status,
@@ -165,6 +181,7 @@ function renderInline(
     installUpdate,
     revealUpdaterLogs,
     revealPending,
+    showLastChecked,
   } = props;
 
   const lastCheckedLabel = formatLastChecked(lastCheckedAt);
@@ -271,17 +288,6 @@ function renderInline(
         {isChecking ? "Checking\u2026" : "Try again"}
       </Button>
     );
-  } else if (isChecking) {
-    testId = "settings-update-checking";
-    message = (
-      <>
-        <Spinner size="sm" />
-        <Text as="span" size="sm">
-          Checking for updates&hellip;
-        </Text>
-      </>
-    );
-    actions = null;
   } else {
     testId = "settings-update-latest";
     message = (
@@ -304,7 +310,7 @@ function renderInline(
     >
       <div className={styles.updateStatus}>{message}</div>
       {actions ? <div className={styles.updateActions}>{actions}</div> : null}
-      {lastCheckedLabel ? (
+      {showLastChecked && lastCheckedLabel ? (
         <Text
           as="span"
           variant="muted"

@@ -1,11 +1,17 @@
 import { Panel, Text } from "@cypher-asi/zui";
 import { formatBuildTime, getBuildInfo } from "../../../lib/build-info";
-import { UpdateControl } from "../../../components/UpdateControl";
+import {
+  UpdateControl,
+  formatLastChecked,
+  useUpdateStatus,
+} from "../../../components/UpdateControl";
 import styles from "./AboutSection.module.css";
 
 export function AboutSection() {
   const build = getBuildInfo();
   const channelLabel = build.channel.charAt(0).toUpperCase() + build.channel.slice(1);
+  const { lastCheckedAt } = useUpdateStatus();
+  const lastCheckedLabel = formatLastChecked(lastCheckedAt);
 
   return (
     <Panel
@@ -31,7 +37,7 @@ export function AboutSection() {
           <Text as="span" variant="muted" size="sm" data-testid="settings-channel">
             ({channelLabel})
           </Text>
-          <UpdateControl />
+          <UpdateControl showLastChecked={false} />
         </dd>
         <dt>
           <Text as="span" variant="muted" size="sm">
@@ -53,6 +59,20 @@ export function AboutSection() {
             {formatBuildTime(build.buildTime)}
           </Text>
         </dd>
+        {lastCheckedLabel ? (
+          <>
+            <dt>
+              <Text as="span" variant="muted" size="sm">
+                Last checked
+              </Text>
+            </dt>
+            <dd>
+              <Text as="span" size="sm" data-testid="settings-update-last-checked">
+                {lastCheckedLabel}
+              </Text>
+            </dd>
+          </>
+        ) : null}
       </dl>
     </Panel>
   );

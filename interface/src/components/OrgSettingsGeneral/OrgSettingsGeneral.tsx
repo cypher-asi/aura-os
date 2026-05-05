@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Input, Text } from "@cypher-asi/zui";
 import { ImagePlus, X } from "lucide-react";
 import { formatBuildTime, getBuildInfo } from "../../lib/build-info";
-import { UpdateControl } from "../UpdateControl";
+import { UpdateControl, formatLastChecked } from "../UpdateControl";
 import { useUpdateStatus } from "../UpdateControl/useUpdateStatus";
 import { ImageCropModal } from "../ImageCropModal";
 import styles from "../OrgSettingsPanel/OrgSettingsPanel.module.css";
@@ -33,7 +33,13 @@ export function OrgSettingsGeneral({
 }: Props) {
   const build = getBuildInfo();
   const channelLabel = build.channel.charAt(0).toUpperCase() + build.channel.slice(1);
-  const { supported: updaterSupported, status: updateStatus, installPending } = useUpdateStatus();
+  const {
+    supported: updaterSupported,
+    status: updateStatus,
+    installPending,
+    lastCheckedAt,
+  } = useUpdateStatus();
+  const lastCheckedLabel = formatLastChecked(lastCheckedAt);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [rawImageSrc, setRawImageSrc] = useState("");
   const [cropOpen, setCropOpen] = useState(false);
@@ -198,10 +204,26 @@ export function OrgSettingsGeneral({
         <div className={styles.settingsRow}>
           <div className={styles.rowInfo}>
             <span className={styles.rowLabel}>Updates</span>
-            <span className={styles.rowDescription}>Check for and install new versions of Aura</span>
+            <span className={styles.rowDescription}>Check and install new versions.</span>
+            {lastCheckedLabel ? (
+              <>
+                <span
+                  className={styles.rowDescription}
+                  data-testid="settings-update-last-checked-label"
+                >
+                  Last checked:
+                </span>
+                <span
+                  className={styles.rowDescription}
+                  data-testid="settings-update-last-checked"
+                >
+                  {lastCheckedLabel}
+                </span>
+              </>
+            ) : null}
           </div>
           <div className={`${styles.rowControl} ${styles.rowControlWide}`}>
-            <UpdateControl layout="inline" />
+            <UpdateControl layout="inline" showLastChecked={false} />
           </div>
         </div>
         {showUpdatePanel ? (
