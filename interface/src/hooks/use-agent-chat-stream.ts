@@ -1,7 +1,11 @@
 import { useRef, useCallback, useEffect } from "react";
 import { api } from "../api/client";
 import { generate3dStream, generateImageStream } from "../api/streams";
-import type { ChatAttachment, StreamEventHandler } from "../api/streams";
+import type {
+  ChatAttachment,
+  Generate3dSource,
+  StreamEventHandler,
+} from "../api/streams";
 import type { GenerationMode } from "../constants/models";
 import { buildUserChatMessage } from "./attachment-helpers";
 import type { Spec, Task } from "../shared/types";
@@ -215,12 +219,12 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
             return;
           }
           core.setProgressText("Generating 3D model...");
-          const source = imageAttachment
-            ? ({
-                kind: "data" as const,
+          const source: Generate3dSource = imageAttachment
+            ? {
+                kind: "data",
                 imageData: `data:${imageAttachment.media_type};base64,${imageAttachment.data}`,
-              })
-            : null;
+              }
+            : { kind: "none" };
           await generate3dStream(
             source,
             trimmedPrompt || null,

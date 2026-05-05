@@ -3,7 +3,7 @@ import { api } from "../../api/client";
 import { generate3dStream, generateImageStream } from "../../api/streams";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { useProjectActions } from "../../stores/project-action-store";
-import type { ChatAttachment } from "../../api/streams";
+import type { ChatAttachment, Generate3dSource } from "../../api/streams";
 import type { GenerationMode } from "../../constants/models";
 
 import {
@@ -109,12 +109,12 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
             return;
           }
           core.setProgressText("Generating 3D model...");
-          const source = imageAttachment
-            ? ({
-                kind: "data" as const,
+          const source: Generate3dSource = imageAttachment
+            ? {
+                kind: "data",
                 imageData: `data:${imageAttachment.media_type};base64,${imageAttachment.data}`,
-              })
-            : null;
+              }
+            : { kind: "none" };
           await generate3dStream(
             source,
             trimmedPrompt || null,

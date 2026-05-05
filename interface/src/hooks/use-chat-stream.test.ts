@@ -262,7 +262,7 @@ describe("useChatStream", () => {
 
     expect(api.sendEventStream).not.toHaveBeenCalled();
     expect(generate3dStream).toHaveBeenCalledWith(
-      null,
+      { kind: "none" },
       "model of an eagle",
       expect.any(Object),
       expect.any(AbortSignal),
