@@ -843,7 +843,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.resolve-version.outputs.tag }}
-          name: Aura ${{ needs.resolve-version.outputs.version }}
+          name: AURA ${{ needs.resolve-version.outputs.version }}
           draft: false
           prerelease: true
           make_latest: false
@@ -1059,10 +1059,10 @@ jobs:
               },
               "mac": {
                 "apple-silicon": {
-                  "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/Aura_${VERSION}_aarch64.dmg"
+                  "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/AURA_${VERSION}_aarch64.dmg"
                 },
                 "intel": {
-                  "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/Aura_${VERSION}_x64.dmg"
+                  "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/AURA_${VERSION}_x64.dmg"
                 }
               },
               "linux": {

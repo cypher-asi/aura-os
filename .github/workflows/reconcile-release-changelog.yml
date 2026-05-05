@@ -175,12 +175,12 @@ jobs:
                 artifact_version="${filename#aura-os-desktop_}"
                 printf '%s\n' "${artifact_version%_amd64.deb}"
                 ;;
-              Aura_*_aarch64.dmg)
-                artifact_version="${filename#Aura_}"
+              AURA_*_aarch64.dmg|Aura_*_aarch64.dmg)
+                artifact_version="${filename#*_}"
                 printf '%s\n' "${artifact_version%_aarch64.dmg}"
                 ;;
-              Aura_*_x64.dmg)
-                artifact_version="${filename#Aura_}"
+              AURA_*_x64.dmg|Aura_*_x64.dmg)
+                artifact_version="${filename#*_}"
                 printf '%s\n' "${artifact_version%_x64.dmg}"
                 ;;
               *)

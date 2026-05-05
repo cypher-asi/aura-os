@@ -22,9 +22,9 @@ pub(crate) fn install_macos_app_menu() {
 
     let menu = Menu::new();
 
-    let app_submenu = Submenu::new("Aura", true);
+    let app_submenu = Submenu::new("AURA", true);
     if let Err(error) = app_submenu.append_items(&[
-        &PredefinedMenuItem::about(Some("Aura"), None),
+        &PredefinedMenuItem::about(Some("AURA"), None),
         &PredefinedMenuItem::separator(),
         &PredefinedMenuItem::hide(None),
         &PredefinedMenuItem::hide_others(None),

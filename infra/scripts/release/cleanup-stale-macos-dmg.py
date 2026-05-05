@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import Sequence
 
 
-VOLUME_PATTERN = re.compile(r"^/Volumes/Aura(?: \d+)?$")
-IMAGE_PATTERN = re.compile(r"^(?:rw\.)?Aura(?:_.*)?\.dmg$")
+VOLUME_PATTERN = re.compile(r"^/Volumes/(?:AURA|Aura)(?: \d+)?$")
+IMAGE_PATTERN = re.compile(r"^(?:rw\.)?(?:AURA|Aura)(?:_.*)?\.dmg$")
 ROOT_DEVICE_PATTERN = re.compile(r"^(/dev/disk\d+)")
 RETRYABLE_DETACH_EXIT_CODES = {16}
 
@@ -161,7 +161,7 @@ def detach_stale_images() -> None:
             if not normalized_device or normalized_device in seen_devices:
                 continue
             seen_devices.add(normalized_device)
-            print(f"Detaching stale DMG device {normalized_device} from {image_name or 'Aura image'}")
+            print(f"Detaching stale DMG device {normalized_device} from {image_name or 'AURA image'}")
             if not detach_device(normalized_device, mount_points=mount_points):
                 print(f"Warning: failed to fully detach {normalized_device}; continuing cleanup")
 
@@ -175,7 +175,7 @@ def remove_stale_files() -> None:
     if not release_path.exists():
         return
 
-    for pattern in ("rw.Aura*.dmg", "Aura_*.dmg"):
+    for pattern in ("rw.AURA*.dmg", "AURA_*.dmg", "rw.Aura*.dmg", "Aura_*.dmg"):
         for path in release_path.glob(pattern):
             print(f"Removing stale DMG file {path}")
             path.unlink(missing_ok=True)

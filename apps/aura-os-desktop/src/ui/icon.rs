@@ -17,7 +17,7 @@ impl IconData {
 }
 
 pub(crate) fn load_icon_data() -> IconData {
-    let png_bytes = include_bytes!("../../assets/aura-icon.png");
+    let png_bytes = include_bytes!("../../assets/icons/icon-512.png");
     let img = image::load_from_memory(png_bytes).expect("failed to decode icon");
     let rgba = img.to_rgba8();
     let (w, h) = rgba.dimensions();

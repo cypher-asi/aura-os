@@ -36,15 +36,29 @@ objc = "0.2"
 muda = "0.15"
 
 [package.metadata.packager]
-product-name = "Aura"
+product-name = "AURA"
 identifier = "com.aura.desktop"
 category = "DeveloperTool"
-icons = ["../../interface/public/pwa-512.png", "assets/aura-icon.png"]
+icons = [
+    "assets/icons/icon-1024.png",
+    "assets/icons/icon-512.png",
+    "assets/icons/icon-256.png",
+    "assets/icons/icon-128.png",
+    "assets/icons/icon-64.png",
+    "assets/icons/icon-32.png",
+    "assets/icons/icon-16.png",
+]
 before-packaging-command = "cargo build --release --package aura-os-desktop"
 resources = ["../../interface/dist", "resources"]
 
 [package.metadata.packager.nsis]
 installer-mode = "currentUser"
+installer-icon = "assets/installer/installer-icon.ico"
+header-image = "assets/installer/header.bmp"
+sidebar-image = "assets/installer/sidebar.bmp"
+
+[package.metadata.packager.dmg]
+background = "assets/installer/dmg-background.png"
 
 [package.metadata.packager.macos]
 minimum-system-version = "10.15"

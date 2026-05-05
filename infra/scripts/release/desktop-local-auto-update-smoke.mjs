@@ -89,7 +89,7 @@ function parseArgs(argv) {
 function printHelp() {
   console.log(`Usage:
   node infra/scripts/release/desktop-local-auto-update-smoke.mjs \\
-    --app /path/to/Aura.app  (macOS) or C:\\\\path\\\\to\\\\Aura.exe (Windows) \\
+    --app /path/to/AURA.app  (macOS) or C:\\\\path\\\\to\\\\aura-os-desktop.exe (Windows) \\
     --update-bundle /path/to/update.tar.gz (macOS) or update-x64-setup.exe (Windows) \\
     --signature /path/to/update.sig \\
     --target-version 0.1.1
@@ -143,7 +143,7 @@ function assertAppPath(appPath) {
   } else {
     ensureFile(appPath, "app executable");
     if (path.extname(appPath).toLowerCase() !== ".exe") {
-      throw new Error(`expected --app to point at Aura.exe on Windows, got ${appPath}`);
+      throw new Error(`expected --app to point at the AURA .exe on Windows, got ${appPath}`);
     }
   }
 }

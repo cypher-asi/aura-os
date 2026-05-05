@@ -48,10 +48,10 @@ function buildNightlyManifest(baseUrl, releaseUrl) {
       },
       mac: {
         "apple-silicon": {
-          url: `${baseUrl}/Aura_0.1.0-nightly.291.1_aarch64.dmg`,
+          url: `${baseUrl}/AURA_0.1.0-nightly.291.1_aarch64.dmg`,
         },
         intel: {
-          url: `${baseUrl}/Aura_0.1.0-nightly.291.1_x64.dmg`,
+          url: `${baseUrl}/AURA_0.1.0-nightly.291.1_x64.dmg`,
         },
       },
       linux: {
@@ -67,8 +67,8 @@ test("nightly download validation rejects mutable nightly release URLs", () => {
   const manifestPath = path.join(tempDir, "nightly.json");
   for (const name of [
     "aura-os-desktop_0.1.0-nightly.291.1_x64-setup.exe",
-    "Aura_0.1.0-nightly.291.1_aarch64.dmg",
-    "Aura_0.1.0-nightly.291.1_x64.dmg",
+    "AURA_0.1.0-nightly.291.1_aarch64.dmg",
+    "AURA_0.1.0-nightly.291.1_x64.dmg",
     "aura-os-desktop_0.1.0-nightly.291.1_x86_64.AppImage",
   ]) {
     writeArtifact(artifactsDir, name);
@@ -95,8 +95,8 @@ test("nightly download validation accepts immutable release URLs", () => {
   const manifestPath = path.join(tempDir, "nightly.json");
   for (const name of [
     "aura-os-desktop_0.1.0-nightly.291.1_x64-setup.exe",
-    "Aura_0.1.0-nightly.291.1_aarch64.dmg",
-    "Aura_0.1.0-nightly.291.1_x64.dmg",
+    "AURA_0.1.0-nightly.291.1_aarch64.dmg",
+    "AURA_0.1.0-nightly.291.1_x64.dmg",
     "aura-os-desktop_0.1.0-nightly.291.1_x86_64.AppImage",
   ]) {
     writeArtifact(artifactsDir, name);

@@ -93,12 +93,12 @@ mod tests {
 
     #[test]
     fn interface_dir_candidates_include_macos_bundle_resources() {
-        let exe_dir = Path::new("/tmp/Aura.app/Contents/MacOS");
+        let exe_dir = Path::new("/tmp/AURA.app/Contents/MacOS");
         let candidates = interface_dir_candidates(Some(exe_dir));
 
-        assert!(candidates.contains(&PathBuf::from("/tmp/Aura.app/Contents/Resources/dist")));
+        assert!(candidates.contains(&PathBuf::from("/tmp/AURA.app/Contents/Resources/dist")));
         assert!(candidates.contains(&PathBuf::from(
-            "/tmp/Aura.app/Contents/Resources/interface/dist"
+            "/tmp/AURA.app/Contents/Resources/interface/dist"
         )));
     }
 }
