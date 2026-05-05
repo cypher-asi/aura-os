@@ -113,6 +113,15 @@ const HARNESS_NATIVE_TOOL_NAMES: &[&str] = &[
     // or integration tool with the same name without providing any
     // replacement in `installed_tools`, and could mask permission-gating
     // bugs in the harness-native catalog.
+    //
+    // NOTE: `list_agents` specifically calls back into our control
+    // plane via `GET /api/agents?view=slim` (see `AgentListView` in
+    // `crate::handlers::agents::crud::list`). If that tool's
+    // `tool_result` ever balloons again — long history, truncated
+    // names mid-payload, etc. — the first thing to check is whether
+    // the harness-side hook (`AuraServerAgentHook::list_agents` in
+    // `../aura-harness/crates/aura-runtime/src/session/cross_agent_hook.rs`)
+    // is still appending `view=slim`.
 ];
 
 /// Drop any `InstalledTool` whose name is claimed natively by the

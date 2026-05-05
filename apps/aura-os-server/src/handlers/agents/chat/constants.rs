@@ -8,11 +8,15 @@ pub(super) const MAX_AGENT_HISTORY_WINDOW_LIMIT: usize = 400;
 /// the harness on a cold start. Anything beyond this is replaced with
 /// a "... [truncated N bytes]" marker.
 ///
-/// Tool payloads like the old `list_agents` response used to land here
-/// in the tens-of-kilobytes range because the full `NetworkAgent`
-/// record carries multi-KB `system_prompt` / `personality` fields per
-/// agent. Even after slimming those tools, a buggy or verbose tool
-/// could still blow the context — this cap is the defense in depth.
+/// The harness-native `list_agents` tool calls
+/// `GET /api/agents?view=slim` (see [`AgentListView`] in
+/// `crate::handlers::agents::crud::list` and `AuraServerAgentHook::list_agents`
+/// in `../aura-harness/crates/aura-runtime/src/session/cross_agent_hook.rs`)
+/// so its tool result stays in the low-kilobyte range. This cap is the
+/// defense in depth in case a future caller forgets the slim view —
+/// without it, full `Agent` records carrying base64 WebP icons
+/// (~15–50 KB each) plus multi-KB `system_prompt` / `personality`
+/// fields blew out the context after a single turn.
 pub(super) const TOOL_BLOB_MAX_BYTES: usize = 2048;
 
 /// Tighter cap used for tool blobs in turns *outside* the recent
