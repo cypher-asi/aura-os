@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { FileText } from "lucide-react";
 import type { DisplaySessionEvent } from "../../../../shared/types/stream";
 import { langFromPath } from "../../../../ide/lang";
@@ -7,6 +7,7 @@ import { useUIModalStore } from "../../../../stores/ui-modal-store";
 import styles from "./MessageBubble.module.css";
 import { ResponseBlock } from "../../../../components/ResponseBlock";
 import { CopyButton } from "../../../../components/CopyButton";
+import { useGallery, type GalleryItem } from "../../../../components/Gallery";
 import { LLMOutput } from "../LLMOutput";
 import { LargeTextBlock, isLargeText } from "./LargeTextBlock";
 
@@ -63,6 +64,7 @@ export const MessageBubble = memo(function MessageBubble({
   initialActivitiesExpanded,
 }: Props) {
   const openBuyCredits = useUIModalStore((state) => state.openBuyCredits);
+  const { openGallery } = useGallery();
   const hasContent = message.content && message.content.trim().length > 0;
   const hasToolCalls = message.toolCalls && message.toolCalls.length > 0;
   const hasArtifactRefs = message.artifactRefs && message.artifactRefs.length > 0;
@@ -71,6 +73,19 @@ export const MessageBubble = memo(function MessageBubble({
   const hasTimeline = message.timeline && message.timeline.length > 0;
   const isInsufficientCreditsError = message.displayVariant === "insufficientCreditsError";
   const isStreamDropped = message.displayVariant === "streamDropped";
+
+  const galleryImages = useMemo<GalleryItem[]>(() => {
+    if (!hasContentBlocks || !message.contentBlocks) return [];
+    return message.contentBlocks.flatMap((block, i): GalleryItem[] =>
+      block.type === "image"
+        ? [{
+            id: `${message.id}-img-${i}`,
+            src: `data:${block.media_type};base64,${block.data}`,
+            alt: "Attached image",
+          }]
+        : [],
+    );
+  }, [hasContentBlocks, message.contentBlocks, message.id]);
   // Models sometimes emit an empty text block right before a tool_use; that
   // still leaves contentBlocks non-empty but nothing renderable, so ignore
   // whitespace-only text blocks when deciding if the bubble carries prose.
@@ -127,14 +142,24 @@ export const MessageBubble = memo(function MessageBubble({
                 <span key={i}>{block.text}</span>
               )
             ) : (
-              <div key={i} className={styles.messageImageWrapper}>
+              <button
+                key={i}
+                type="button"
+                className={styles.messageImageWrapper}
+                onClick={() => {
+                  const targetId = `${message.id}-img-${i}`;
+                  if (galleryImages.length === 0) return;
+                  openGallery({ items: galleryImages, initialId: targetId });
+                }}
+                aria-label="Open image in gallery"
+              >
                 <img
                   src={`data:${block.media_type};base64,${block.data}`}
                   alt=""
                   className={styles.messageImage}
                   loading="lazy"
                 />
-              </div>
+              </button>
             ),
           )}
         </div>

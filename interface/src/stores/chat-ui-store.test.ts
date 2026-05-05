@@ -6,6 +6,7 @@ const mockLoadPersistedModel = vi.fn(
     "claude-opus-4-6",
 );
 const mockHasAgentScopedModel = vi.fn((_agentId: string) => false);
+const mockLoadPersistedImageModel = vi.fn((_agentId?: string) => "gpt-image-2");
 
 vi.mock("../constants/models", () => ({
   availableModelsForAdapter: (_adapterType?: string) => [
@@ -18,6 +19,8 @@ vi.mock("../constants/models", () => ({
     defaultModel?: string | null,
     agentId?: string,
   ) => mockLoadPersistedModel(adapterType, defaultModel, agentId),
+  loadPersistedImageModel: (agentId?: string) =>
+    mockLoadPersistedImageModel(agentId),
   persistModel: vi.fn(),
   hasAgentScopedModel: (agentId: string) => mockHasAgentScopedModel(agentId),
 }));
@@ -29,11 +32,17 @@ function resetStore() {
 describe("chat-ui-store", () => {
   beforeEach(() => {
     resetStore();
+    try {
+      localStorage.clear();
+    } catch {
+      // localStorage may be unavailable
+    }
     mockLoadPersistedModel.mockImplementation(
       (_adapterType?: string, _defaultModel?: string | null, _agentId?: string) =>
         "claude-opus-4-6",
     );
     mockHasAgentScopedModel.mockImplementation(() => false);
+    mockLoadPersistedImageModel.mockImplementation(() => "gpt-image-2");
   });
 
   it("init populates selectedModel from persisted value", () => {
@@ -154,6 +163,57 @@ describe("chat-ui-store", () => {
       .syncAvailableModels("stream-1", "default", null, "agent-xyz");
     expect(useChatUIStore.getState().streams["stream-1"]?.selectedModel).toBe(
       "claude-sonnet-4-6",
+    );
+  });
+
+  it("init seeds the image model when the persisted mode is `image`", () => {
+    // The persisted mode lives in localStorage; the real
+    // `loadPersistedAgentMode` reads from there. Setting the default
+    // mode key to "image" must steer init through the image-model
+    // branch (not the chat fallback that would land on Sonnet/Opus).
+    localStorage.setItem("aura-selected-mode:default", "image");
+    mockLoadPersistedImageModel.mockClear();
+    mockLoadPersistedModel.mockClear();
+    mockLoadPersistedImageModel.mockImplementation(() => "gpt-image-2");
+
+    useChatUIStore.getState().init("stream-1");
+
+    expect(useChatUIStore.getState().streams["stream-1"]?.selectedMode).toBe("image");
+    expect(useChatUIStore.getState().streams["stream-1"]?.selectedModel).toBe(
+      "gpt-image-2",
+    );
+    // The chat-model loader must NOT have been consulted on the
+    // image path; otherwise a stale Sonnet id leaks through.
+    expect(mockLoadPersistedModel).not.toHaveBeenCalled();
+    expect(mockLoadPersistedImageModel).toHaveBeenCalled();
+  });
+
+  it("setSelectedMode switching from chat to image installs the image default", () => {
+    useChatUIStore.getState().init("stream-1");
+    expect(useChatUIStore.getState().streams["stream-1"]?.selectedMode).toBe("code");
+
+    mockLoadPersistedImageModel.mockImplementation(() => "gpt-image-2");
+    useChatUIStore.getState().setSelectedMode("stream-1", "image");
+
+    expect(useChatUIStore.getState().streams["stream-1"]?.selectedMode).toBe("image");
+    expect(useChatUIStore.getState().streams["stream-1"]?.selectedModel).toBe(
+      "gpt-image-2",
+    );
+  });
+
+  it("syncAvailableModels keeps the image model when in image mode", () => {
+    localStorage.setItem("aura-selected-mode:default", "image");
+    mockLoadPersistedImageModel.mockImplementation(() => "gpt-image-2");
+    useChatUIStore.getState().init("stream-1");
+    expect(useChatUIStore.getState().streams["stream-1"]?.selectedModel).toBe(
+      "gpt-image-2",
+    );
+
+    // A chat-adapter sync arrives later (e.g. when adapter metadata
+    // resolves). It MUST NOT clobber the image model with a chat one.
+    useChatUIStore.getState().syncAvailableModels("stream-1", "default");
+    expect(useChatUIStore.getState().streams["stream-1"]?.selectedModel).toBe(
+      "gpt-image-2",
     );
   });
 });

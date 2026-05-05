@@ -1,6 +1,7 @@
 import { Image as ImageIcon } from "lucide-react";
 import type { ToolCallEntry } from "../../../shared/types/stream";
 import { Block } from "../Block";
+import { useGallery } from "../../Gallery";
 import styles from "./renderers.module.css";
 
 function parseResult(result: string | null | undefined): Record<string, unknown> | null {
@@ -19,6 +20,7 @@ interface ImageBlockProps {
 }
 
 export function ImageBlock({ entry, defaultExpanded }: ImageBlockProps) {
+  const { openGallery } = useGallery();
   const data = parseResult(entry.result);
   const payload = data?.payload && typeof data.payload === "object"
     ? data.payload as Record<string, unknown>
@@ -49,21 +51,37 @@ export function ImageBlock({ entry, defaultExpanded }: ImageBlockProps) {
 
   const status = entry.pending ? "pending" : entry.isError ? "error" : "done";
 
+  const openInGallery = (): void => {
+    if (!imageUrl) return;
+    openGallery({
+      items: [
+        {
+          id: entry.id,
+          src: imageUrl,
+          alt: prompt ?? "Generated image",
+          downloadUrl: originalUrl || imageUrl,
+          caption: prompt,
+        },
+      ],
+      initialId: entry.id,
+    });
+  };
+
   if (imageUrl && status === "done") {
     return (
       <div className={styles.generatedImageResult} data-agent-proof="generated-image-visible">
-        <a
-          href={originalUrl || imageUrl}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          type="button"
           className={styles.generatedImageLink}
+          onClick={openInGallery}
+          aria-label="Open generated image in gallery"
         >
           <img
             src={imageUrl}
             alt={prompt ?? "Generated image"}
             className={styles.generatedImage}
           />
-        </a>
+        </button>
       </div>
     );
   }
@@ -78,9 +96,14 @@ export function ImageBlock({ entry, defaultExpanded }: ImageBlockProps) {
     >
       <div className={styles.mediaWrap}>
         {imageUrl ? (
-          <a href={originalUrl || imageUrl} target="_blank" rel="noopener noreferrer">
+          <button
+            type="button"
+            className={styles.mediaImageButton}
+            onClick={openInGallery}
+            aria-label="Open generated image in gallery"
+          >
             <img src={imageUrl} alt={prompt ?? "Generated"} className={styles.mediaImage} />
-          </a>
+          </button>
         ) : entry.pending ? (
           <div className={styles.listEmpty}>Generating…</div>
         ) : (

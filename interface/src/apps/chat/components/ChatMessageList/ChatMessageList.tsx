@@ -10,6 +10,7 @@ import { StreamingBubble } from "../StreamingBubble";
 import type { DisplaySessionEvent } from "../../../../shared/types/stream";
 
 import { useStreamStore } from "../../../../hooks/stream/store";
+import { useImageScrollPin } from "../../../../shared/hooks/use-image-scroll-pin";
 
 interface ChatMessageListProps {
   messages: DisplaySessionEvent[];
@@ -22,6 +23,11 @@ interface ChatMessageListProps {
   onInitialAnchorReady?: () => void;
   isAutoFollowing?: boolean;
   density?: "desktop" | "mobile";
+  /** Optional UNIX-ms deadline; while now < deadline, image-load
+   * events re-pin the scroll container even if the user isn't strictly
+   * auto-following yet. Used by `ChatPanel` to keep the cold-load
+   * reveal anchored while attachments decode. */
+  imagePinUntil?: number;
 }
 
 const EMPTY_TOOL_CALLS: NonNullable<
@@ -63,7 +69,12 @@ export function ChatMessageList({
   onInitialAnchorReady,
   isAutoFollowing = true,
   density = "desktop",
+  imagePinUntil,
 }: ChatMessageListProps) {
+  useImageScrollPin(scrollRef, {
+    isAutoFollowing,
+    initialRevealUntil: imagePinUntil,
+  });
   const {
     isStreaming,
     isWriting,

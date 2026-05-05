@@ -35,7 +35,11 @@ describe("ImageBlock", () => {
       "src",
       "https://cdn.example.com/cat.png",
     );
-    expect(screen.queryByRole("button", { name: /generated image/i })).not.toBeInTheDocument();
+    // The image is wrapped in a button that opens the shared gallery
+    // overlay rather than navigating away in a new tab.
+    expect(
+      screen.getByRole("button", { name: /open generated image in gallery/i }),
+    ).toBeInTheDocument();
   });
 
   it("renders nested payload asset_url results", () => {

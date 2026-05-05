@@ -33,7 +33,8 @@
 }
 
 .thumbSelected {
-  border-color: var(--color-accent, #4aeaa8);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent-muted);
 }
 
 .thumbImage {

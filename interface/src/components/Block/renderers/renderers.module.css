@@ -278,6 +278,28 @@
   max-width: min(100%, 520px);
   border: 1px solid var(--color-border);
   background: rgba(255, 255, 255, 0.02);
+  padding: 0;
+  cursor: zoom-in;
+  border-radius: 4px;
+}
+
+.generatedImageLink:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.mediaImageButton {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+  border-radius: 4px;
+}
+
+.mediaImageButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 .generatedImage {

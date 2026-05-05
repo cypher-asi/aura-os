@@ -77,6 +77,15 @@
   overflow: hidden;
   border-radius: 8px;
   background: var(--color-bg-secondary);
+  border: 0;
+  padding: 0;
+  cursor: zoom-in;
+  display: block;
+}
+
+.messageImageWrapper:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 .messageImage {

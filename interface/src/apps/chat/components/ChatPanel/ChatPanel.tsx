@@ -26,6 +26,11 @@ import styles from "./ChatPanel.module.css";
 
 type ChatPanelHandoffMode = "create-agent";
 const LOADING_OVERLAY_FADE_MS = 120;
+// How long after the cold-load reveal we keep image-load pinning active.
+// Covers the typical browser image decode tail (a few hundred ms for
+// dataURL attachments) so reopening a thread with images doesn't leave
+// the viewport drifting above the last bubble.
+const IMAGE_PIN_AFTER_REVEAL_MS = 800;
 
 export interface ChatPanelProps {
   streamKey: string;
@@ -175,6 +180,13 @@ export function ChatPanel({
   const [isInitialThreadRevealReady, setIsInitialThreadRevealReady] = useState(() => historyResolved);
   const [isLoadingOverlayVisible, setIsLoadingOverlayVisible] = useState(() => !historyResolved);
   const [isLoadingOverlayFadingOut, setIsLoadingOverlayFadingOut] = useState(false);
+  // Deadline for the image-load auto-pin window. Updated on every
+  // thread switch (`scrollResetKey`) and again after the reveal so
+  // late-decoding images keep the viewport anchored to the bottom
+  // for `IMAGE_PIN_AFTER_REVEAL_MS` after the reveal completes.
+  const [imagePinUntil, setImagePinUntil] = useState<number>(
+    () => Date.now() + IMAGE_PIN_AFTER_REVEAL_MS,
+  );
 
   const contentReady = historyResolved && !isLoading;
   const shouldHideThreadForInitialReveal =
@@ -199,6 +211,7 @@ export function ChatPanel({
     }
     setIsLoadingOverlayVisible(!historyResolved);
     setIsLoadingOverlayFadingOut(false);
+    setImagePinUntil(Date.now() + IMAGE_PIN_AFTER_REVEAL_MS);
   }, [initialHandoff, scrollResetKey]);
 
   useEffect(() => {
@@ -246,6 +259,7 @@ export function ChatPanel({
         initialColdLoadRef.current = false;
         hasInitiallyRevealedRef.current = true;
         setIsInitialThreadRevealReady(true);
+        setImagePinUntil(Date.now() + IMAGE_PIN_AFTER_REVEAL_MS);
       });
     });
   }, [historyResolved, messages.length]);
@@ -306,6 +320,7 @@ export function ChatPanel({
         initialColdLoadRef.current = false;
         hasInitiallyRevealedRef.current = true;
         setIsInitialThreadRevealReady(true);
+        setImagePinUntil(Date.now() + IMAGE_PIN_AFTER_REVEAL_MS);
       });
     });
   }, [historyResolved, messages.length]);
@@ -379,6 +394,7 @@ export function ChatPanel({
                 onInitialAnchorReady={handleInitialAnchorReady}
                 isAutoFollowing={isAutoFollowing}
                 density={isMobileLayout ? "mobile" : "desktop"}
+                imagePinUntil={imagePinUntil}
               />
             </div>
           </div>
