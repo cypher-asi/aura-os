@@ -183,7 +183,7 @@ jobs:
       # for App Store Connect uploads as of 2026-04-28, and we want our
       # nightly IPAs to be archived against the same toolchain.
       - name: Select Xcode 26
-        run: sudo xcode-select -s /Applications/Xcode_26.app
+        run: sudo xcode-select -s /Applications/Xcode_26.4.app
 
       - name: Print Xcode and SDK versions
         run: |

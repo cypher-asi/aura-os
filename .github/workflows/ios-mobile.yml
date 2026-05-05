@@ -60,7 +60,7 @@ jobs:
       # upload as of 2026-04-28. Pin the runner toolchain explicitly so PR
       # validation matches what `ship-ios` will archive against.
       - name: Select Xcode 26
-        run: sudo xcode-select -s /Applications/Xcode_26.app
+        run: sudo xcode-select -s /Applications/Xcode_26.4.app
 
       - name: Print Xcode and SDK versions
         run: |
@@ -124,7 +124,7 @@ jobs:
       # Apple requires the iOS 26 SDK (Xcode 26+) for any App Store Connect
       # upload as of 2026-04-28; otherwise altool rejects the IPA with a 409.
       - name: Select Xcode 26
-        run: sudo xcode-select -s /Applications/Xcode_26.app
+        run: sudo xcode-select -s /Applications/Xcode_26.4.app
 
       - name: Print Xcode and SDK versions
         run: |

@@ -161,7 +161,7 @@ export function assertXcodeMajorAtLeast(minimumMajor = XCODE_MAJOR) {
     fail(
       `iOS release lanes require Xcode >= ${minimumMajor}.0, but found "${output.split("\n")[0]}". ` +
         "Apple's App Store Connect upload validation requires the iOS 26 SDK (Xcode 26+) since 2026-04-28; " +
-        "select a newer toolchain via `sudo xcode-select -s /Applications/Xcode_26.app` or pin the runner image to macos-26.",
+        "select a newer toolchain via `sudo xcode-select -s /Applications/Xcode_26.4.app` or pin the runner image to macos-26.",
     );
   }
 }
