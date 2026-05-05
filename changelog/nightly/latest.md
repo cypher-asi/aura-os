@@ -1,20 +1,21 @@
-# Per-session analytics signal for accurate DAU
+# Sharper analytics signals for sessions and checkout
 
 - Date: `2026-05-05`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.459.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.459.1
+- Version: `0.1.0-nightly.460.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.460.1
 
-A small but meaningful instrumentation change landed today: the desktop app now emits a dedicated session signal once per authenticated user, giving daily active user metrics a more reliable foundation. No other product or platform changes shipped in this nightly.
+A focused analytics-instrumentation day: the desktop app now emits a clearer daily-active session signal at sign-in, and purchase funnel events have been renamed to honestly reflect checkout intent rather than completed payments.
 
-## 3:33 AM — session_active event wired into AppShell for DAU accuracy
+## 3:33 AM — Honest analytics for sessions and checkout funnels
 
-The app shell now identifies the authenticated user and fires a single session_active event per user load, so daily active user counts no longer depend on noisier proxy events.
+The app shell now identifies the user and fires a session_active event once per signed-in session, while credits and subscription tracking calls were renamed to make clear they mark checkout start, not a completed purchase.
 
-- On user hydration, AppShell now lazy-loads the analytics module, calls identifyUser, and emits a session_active event exactly once per user_id via a tracking ref — giving DAU a clean, deduplicated signal. (`25abb62`)
+- Added a per-user session_active analytics event in AppShell that fires once after onboarding hydration, paired with identifyUser, giving DAU metrics a reliable signal instead of inferring activity from unrelated events. (`25abb62`)
+- Renamed the credits modal's `credits_purchased` event to `credits_checkout_started` and the tier modal's `subscription_started` to `subscription_checkout_started`, so funnel dashboards no longer overcount Stripe redirects as completed conversions. (`32f8ad0`)
 
 ## Highlights
 
-- New session_active analytics event for trustworthy DAU
-- Identifies the signed-in user once per session in the AppShell
+- Accurate DAU tracking via a new session_active event
+- Credits and subscription events renamed to reflect checkout intent
 

@@ -2,17 +2,17 @@
   {
     "date": "2026-05-05",
     "channel": "nightly",
-    "version": "0.1.0-nightly.459.1",
-    "title": "Per-session analytics signal for accurate DAU",
-    "intro": "A small but meaningful instrumentation change landed today: the desktop app now emits a dedicated session signal once per authenticated user, giving daily active user metrics a more reliable foundation. No other product or platform changes shipped in this nightly.",
+    "version": "0.1.0-nightly.460.1",
+    "title": "Sharper analytics signals for sessions and checkout",
+    "intro": "A focused analytics-instrumentation day: the desktop app now emits a clearer daily-active session signal at sign-in, and purchase funnel events have been renamed to honestly reflect checkout intent rather than completed payments.",
     "entryCount": 1,
     "highlights": [
-      "New session_active analytics event for trustworthy DAU",
-      "Identifies the signed-in user once per session in the AppShell"
+      "Accurate DAU tracking via a new session_active event",
+      "Credits and subscription events renamed to reflect checkout intent"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-05-05T10:45:59.806Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.459.1",
+    "rawCommitCount": 2,
+    "generatedAt": "2026-05-05T12:01:48.436Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.460.1",
     "path": "history/2026-05-05.json"
   },
   {

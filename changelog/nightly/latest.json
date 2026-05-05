@@ -3,19 +3,20 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-05T10:45:59.806Z",
+  "generatedAt": "2026-05-05T12:01:48.436Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.459.1",
+  "version": "0.1.0-nightly.460.1",
   "date": "2026-05-05",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.459.1",
-  "lastIncludedSha": "25abb62ffe6132b0e0b71165b4fc0cf947b3badc",
-  "previousProcessedSha": "ae662311fd7c51f5d993ee1b6c2e2a9442a5f31d",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.460.1",
+  "lastIncludedSha": "32f8ad03e8ddbea27776cb4e37e8a43f158c4484",
+  "previousProcessedSha": "25abb62ffe6132b0e0b71165b4fc0cf947b3badc",
   "commitShas": [
-    "25abb62ffe6132b0e0b71165b4fc0cf947b3badc"
+    "25abb62ffe6132b0e0b71165b4fc0cf947b3badc",
+    "32f8ad03e8ddbea27776cb4e37e8a43f158c4484"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 2,
+  "filteredCommitCount": 2,
   "rawCommits": [
     {
       "sha": "25abb62ffe6132b0e0b71165b4fc0cf947b3badc",
@@ -53,6 +54,47 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "32f8ad03e8ddbea27776cb4e37e8a43f158c4484",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-05T12:47:45+01:00",
+      "subject": "fix(analytics): rename purchase/subscription events to reflect checkout intent, not completion",
+      "body": "",
+      "parents": [
+        "25abb62ffe6132b0e0b71165b4fc0cf947b3badc"
+      ],
+      "files": [
+        "interface/src/components/BuyCreditsModal/BuyCreditsModal.tsx",
+        "interface/src/components/TierSubscriptionModal/TierSubscriptionModal.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 2,
+        "deletions": 2
+      },
+      "committedAtMs": 1777981665000,
+      "cleanSubject": "rename purchase/subscription events to reflect checkout intent, not completion",
+      "keywords": [
+        "rename",
+        "purchase",
+        "subscription",
+        "events",
+        "reflect",
+        "checkout",
+        "intent",
+        "completion"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 1,
@@ -64,36 +106,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11798171
+          "sizeBytes": 11798199
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.459.1",
+      "version": "0.1.0-nightly.460.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.459.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.460.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 36561538
+          "sizeBytes": 36559056
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.459.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.460.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.459.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.460.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 103692792
+          "sizeBytes": 103696888
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.459.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.460.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -103,29 +145,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.459.1",
+      "version": "0.1.0-nightly.460.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.459.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.460.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33666811
+          "sizeBytes": 33669864
         },
         {
-          "name": "AURA_0.1.0-nightly.459.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.460.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.459.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.460.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 32811162
+          "sizeBytes": 32809682
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.459.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.460.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -135,29 +177,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.459.1",
+      "version": "0.1.0-nightly.460.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.459.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.460.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 35255308
+          "sizeBytes": 35260959
         },
         {
-          "name": "AURA_0.1.0-nightly.459.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.460.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.459.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.460.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 34442654
+          "sizeBytes": 34451223
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.459.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.460.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -167,17 +209,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.459.1",
+      "version": "0.1.0-nightly.460.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.459.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.460.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24633111
+          "sizeBytes": 24637991
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.459.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.460.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -186,21 +228,28 @@
     }
   ],
   "rendered": {
-    "title": "Per-session analytics signal for accurate DAU",
-    "intro": "A small but meaningful instrumentation change landed today: the desktop app now emits a dedicated session signal once per authenticated user, giving daily active user metrics a more reliable foundation. No other product or platform changes shipped in this nightly.",
+    "title": "Sharper analytics signals for sessions and checkout",
+    "intro": "A focused analytics-instrumentation day: the desktop app now emits a clearer daily-active session signal at sign-in, and purchase funnel events have been renamed to honestly reflect checkout intent rather than completed payments.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "3:33 AM",
         "started_at": "2026-05-05T10:33:36.000Z",
-        "ended_at": "2026-05-05T10:33:36.000Z",
-        "title": "session_active event wired into AppShell for DAU accuracy",
-        "summary": "The app shell now identifies the authenticated user and fires a single session_active event per user load, so daily active user counts no longer depend on noisier proxy events.",
+        "ended_at": "2026-05-05T11:47:45.000Z",
+        "title": "Honest analytics for sessions and checkout funnels",
+        "summary": "The app shell now identifies the user and fires a session_active event once per signed-in session, while credits and subscription tracking calls were renamed to make clear they mark checkout start, not a completed purchase.",
         "items": [
           {
-            "text": "On user hydration, AppShell now lazy-loads the analytics module, calls identifyUser, and emits a session_active event exactly once per user_id via a tracking ref — giving DAU a clean, deduplicated signal.",
+            "text": "Added a per-user session_active analytics event in AppShell that fires once after onboarding hydration, paired with identifyUser, giving DAU metrics a reliable signal instead of inferring activity from unrelated events.",
             "commit_shas": [
               "25abb62ffe6132b0e0b71165b4fc0cf947b3badc"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Renamed the credits modal's `credits_purchased` event to `credits_checkout_started` and the tier modal's `subscription_started` to `subscription_checkout_started`, so funnel dashboards no longer overcount Stripe redirects as completed conversions.",
+            "commit_shas": [
+              "32f8ad03e8ddbea27776cb4e37e8a43f158c4484"
             ],
             "confidence": "high"
           }
@@ -208,9 +257,9 @@
       }
     ],
     "highlights": [
-      "New session_active analytics event for trustworthy DAU",
-      "Identifies the signed-in user once per session in the AppShell"
+      "Accurate DAU tracking via a new session_active event",
+      "Credits and subscription events renamed to reflect checkout intent"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 2
   }
 }
