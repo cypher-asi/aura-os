@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { Spinner } from "@cypher-asi/zui";
 import { useAura3DStore } from "../../../stores/aura3d-store";
 import { ImageIcon, Box } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
@@ -13,6 +14,8 @@ function ImagesPanel() {
   const selectedImageId = useAura3DStore((s) => s.selectedImageId);
   const selectImage = useAura3DStore((s) => s.selectImage);
   const deleteImage = useAura3DStore((s) => s.deleteImage);
+  const isGeneratingImage = useAura3DStore((s) => s.isGeneratingImage);
+  const partialImageData = useAura3DStore((s) => s.partialImageData);
 
   // The hook resolves the right-clicked thumb by `<button id={img.id}>`.
   // We prefix the id so a stray click on a placeholder element with the
@@ -42,7 +45,7 @@ function ImagesPanel() {
     [menu, closeMenu, deleteImage],
   );
 
-  if (images.length === 0) {
+  if (images.length === 0 && !isGeneratingImage) {
     return (
       <EmptyState icon={<ImageIcon size={24} />}>
         Generated images will appear here.
@@ -59,6 +62,31 @@ function ImagesPanel() {
     >
       <h4 className={styles.heading}>Images</h4>
       <div className={styles.grid}>
+        {isGeneratingImage && (
+          // Pending placeholder pinned at the front of the gallery while
+          // a generation is in flight. Rendered as a non-interactive div
+          // (not a button) so it sits outside the `image:<id>` context-
+          // menu resolver above. Promotes to the streamed partial image
+          // once the model emits one; otherwise shows a spinner so the
+          // sidekick has something concrete to anchor "selected".
+          <div
+            className={`${styles.thumb} ${styles.thumbSelected} ${styles.thumbPending}`}
+            data-agent-surface="aura3d-image-pending-thumb"
+            data-agent-proof="image-generation-pending"
+            aria-label="Generating new image"
+            role="img"
+          >
+            {partialImageData ? (
+              <img
+                src={partialImageData}
+                alt=""
+                className={styles.thumbImage}
+              />
+            ) : (
+              <Spinner size="sm" />
+            )}
+          </div>
+        )}
         {images.map((img) => (
           <button
             key={img.id}

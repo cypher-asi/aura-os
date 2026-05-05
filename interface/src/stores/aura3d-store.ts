@@ -421,7 +421,22 @@ export const useAura3DStore = create<Aura3DState>()((set, get) => ({
   setGeneratingImage: (generating) =>
     set({
       isGeneratingImage: generating,
-      ...(generating ? { imageProgress: 0, imageProgressMessage: "", partialImageData: null, error: null } : {}),
+      // Starting a generation: drop the previously selected image so the
+      // main panel renders its clean loading state instead of overlaying
+      // the prior image, and the sidekick can show a fresh "pending"
+      // thumb at the top. `generateSourceImage` is intentionally left
+      // alone — it powers the 3D tab's source preview / Generate button
+      // and shouldn't disappear mid-flight from an image-side action.
+      ...(generating
+        ? {
+            imageProgress: 0,
+            imageProgressMessage: "",
+            partialImageData: null,
+            error: null,
+            currentImage: null,
+            selectedImageId: null,
+          }
+        : {}),
     }),
   setImageProgress: (progress, message) =>
     set({ imageProgress: progress, imageProgressMessage: message ?? "" }),

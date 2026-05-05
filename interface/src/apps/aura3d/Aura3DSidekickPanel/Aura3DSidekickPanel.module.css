@@ -52,3 +52,23 @@
   background: rgba(255, 255, 255, 0.04);
   color: var(--color-text-muted);
 }
+
+.thumbPending {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text-muted);
+  cursor: default;
+  animation: thumbPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes thumbPulse {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 1;
+  }
+}

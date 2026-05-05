@@ -158,6 +158,62 @@ describe("aura3d-store", () => {
     expect(useAura3DStore.getState().showTexture).toBe(false);
   });
 
+  it("setGeneratingImage(true) deselects current image so a pending thumb can render", () => {
+    // Starting a new generation must drop `currentImage` /
+    // `selectedImageId` so the main panel renders its clean loading
+    // state (instead of overlaying the prior image) and the sidekick
+    // can show a fresh pending placeholder pinned at the top.
+    // `generateSourceImage` is intentionally preserved — it powers the
+    // 3D tab's source preview / Generate button and shouldn't disappear
+    // mid-flight from an image-side action.
+    const image = {
+      id: "img-1",
+      prompt: "p",
+      imageUrl: "u",
+      originalUrl: "",
+      model: "",
+      createdAt: "",
+    };
+    useAura3DStore.setState({
+      images: [image],
+      selectedImageId: "img-1",
+      currentImage: image,
+      generateSourceImage: image,
+    });
+    useAura3DStore.getState().setGeneratingImage(true);
+    const state = useAura3DStore.getState();
+    expect(state.isGeneratingImage).toBe(true);
+    expect(state.currentImage).toBeNull();
+    expect(state.selectedImageId).toBeNull();
+    expect(state.generateSourceImage).toEqual(image);
+    expect(state.imageProgress).toBe(0);
+    expect(state.partialImageData).toBeNull();
+  });
+
+  it("setGeneratingImage(false) does not touch the current selection", () => {
+    // Symmetric guard: turning the flag off (e.g. on completion-by-error
+    // paths) must not re-clear whatever the completion handler just set.
+    const image = {
+      id: "img-1",
+      prompt: "p",
+      imageUrl: "u",
+      originalUrl: "",
+      model: "",
+      createdAt: "",
+    };
+    useAura3DStore.setState({
+      isGeneratingImage: true,
+      images: [image],
+      selectedImageId: "img-1",
+      currentImage: image,
+    });
+    useAura3DStore.getState().setGeneratingImage(false);
+    const state = useAura3DStore.getState();
+    expect(state.isGeneratingImage).toBe(false);
+    expect(state.currentImage).toEqual(image);
+    expect(state.selectedImageId).toBe("img-1");
+  });
+
   it("setError stops both generation states", () => {
     useAura3DStore.setState({ isGeneratingImage: true, isGenerating3D: true });
     useAura3DStore.getState().setError("something failed");
