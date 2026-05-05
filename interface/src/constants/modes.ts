@@ -8,7 +8,7 @@ export const AGENT_MODE_ORDER: readonly AgentMode[] = [
   "code",
   "plan",
   "image",
-  "3d",
+  // "3d", // Temporarily hidden from the mode selector while 3D mode is paused.
 ];
 
 export type HarnessAction = "generate_specs";

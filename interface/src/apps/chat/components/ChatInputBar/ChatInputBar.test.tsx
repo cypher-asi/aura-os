@@ -342,13 +342,16 @@ describe("ChatInputBar", () => {
     );
   });
 
-  it("renders all four modes in the segmented selector", () => {
+  it("renders the visible modes in the segmented selector", () => {
     render(<ChatInputBar {...makeProps()} />);
 
     expect(screen.getByRole("radio", { name: "Code mode" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Plan mode" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Image mode" })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "3D mode" })).toBeInTheDocument();
+    // 3D mode is temporarily hidden from the selector.
+    expect(
+      screen.queryByRole("radio", { name: "3D mode" }),
+    ).not.toBeInTheDocument();
   });
 
   it("renders selected slash commands inline and removes them", async () => {

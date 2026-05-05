@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { ModeSelector } from "./ModeSelector";
 
 describe("ModeSelector", () => {
-  it("renders all four agent modes as a radiogroup with the correct active mode", () => {
+  it("renders the visible agent modes as a radiogroup with the correct active mode", () => {
     render(<ModeSelector selectedMode="plan" onChange={vi.fn()} />);
 
     const group = screen.getByRole("radiogroup", { name: "Agent mode" });
@@ -21,10 +21,8 @@ describe("ModeSelector", () => {
       "aria-checked",
       "false",
     );
-    expect(screen.getByRole("radio", { name: "3D mode" })).toHaveAttribute(
-      "aria-checked",
-      "false",
-    );
+    // 3D mode is temporarily hidden from the selector.
+    expect(screen.queryByRole("radio", { name: "3D mode" })).not.toBeInTheDocument();
   });
 
   it("calls onChange with the clicked mode but ignores re-clicks on the active one", async () => {
