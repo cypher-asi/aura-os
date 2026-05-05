@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import { useAura3DStore } from "../../../stores/aura3d-store";
 import { ImageIcon, Box } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
@@ -6,7 +6,6 @@ import {
   SidekickItemContextMenu,
   useSidekickItemContextMenu,
 } from "../../../components/SidekickItemContextMenu";
-import { useGallery, type GalleryItem } from "../../../components/Gallery";
 import styles from "./Aura3DSidekickPanel.module.css";
 
 function ImagesPanel() {
@@ -14,19 +13,6 @@ function ImagesPanel() {
   const selectedImageId = useAura3DStore((s) => s.selectedImageId);
   const selectImage = useAura3DStore((s) => s.selectImage);
   const deleteImage = useAura3DStore((s) => s.deleteImage);
-  const { openGallery } = useGallery();
-
-  const galleryItems = useMemo<GalleryItem[]>(
-    () =>
-      images.map((img) => ({
-        id: img.id,
-        src: img.imageUrl,
-        alt: img.prompt,
-        downloadUrl: img.imageUrl,
-        caption: img.prompt,
-      })),
-    [images],
-  );
 
   // The hook resolves the right-clicked thumb by `<button id={img.id}>`.
   // We prefix the id so a stray click on a placeholder element with the
@@ -79,10 +65,7 @@ function ImagesPanel() {
             id={`image:${img.id}`}
             type="button"
             className={`${styles.thumb} ${img.id === selectedImageId ? styles.thumbSelected : ""}`}
-            onClick={() => {
-              selectImage(img.id);
-              openGallery({ items: galleryItems, initialId: img.id });
-            }}
+            onClick={() => selectImage(img.id)}
             title={img.prompt}
           >
             <img src={img.imageUrl} alt={img.prompt} className={styles.thumbImage} />
