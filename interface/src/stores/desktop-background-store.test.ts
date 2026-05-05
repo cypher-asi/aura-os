@@ -46,77 +46,121 @@ vi.stubGlobal("indexedDB", {
 
 import { useDesktopBackgroundStore } from "./desktop-background-store";
 
+const NONE = { mode: "none" as const, color: "", imageDataUrl: "" };
+
 beforeEach(() => {
   localStorage.removeItem(STORAGE_KEY);
   mockIdbState.current = null;
   useDesktopBackgroundStore.setState({
-    mode: "none",
-    color: "",
-    imageDataUrl: "",
+    light: { ...NONE },
+    dark: { ...NONE },
   });
 });
 
 describe("desktop-background-store", () => {
   describe("initial state", () => {
-    it("defaults to mode none", () => {
-      expect(useDesktopBackgroundStore.getState().mode).toBe("none");
+    it("defaults both slots to mode none", () => {
+      const s = useDesktopBackgroundStore.getState();
+      expect(s.light.mode).toBe("none");
+      expect(s.dark.mode).toBe("none");
     });
 
-    it("has empty color and imageDataUrl", () => {
-      expect(useDesktopBackgroundStore.getState().color).toBe("");
-      expect(useDesktopBackgroundStore.getState().imageDataUrl).toBe("");
+    it("has empty color and imageDataUrl on both slots", () => {
+      const s = useDesktopBackgroundStore.getState();
+      expect(s.light.color).toBe("");
+      expect(s.light.imageDataUrl).toBe("");
+      expect(s.dark.color).toBe("");
+      expect(s.dark.imageDataUrl).toBe("");
     });
   });
 
   describe("setColor", () => {
-    it("sets mode to color and stores the color", () => {
-      useDesktopBackgroundStore.getState().setColor("#ff0000");
+    it("sets color on the requested slot only", () => {
+      useDesktopBackgroundStore.getState().setColor("light", "#ff0000");
       const s = useDesktopBackgroundStore.getState();
-      expect(s.mode).toBe("color");
-      expect(s.color).toBe("#ff0000");
-      expect(s.imageDataUrl).toBe("");
+      expect(s.light.mode).toBe("color");
+      expect(s.light.color).toBe("#ff0000");
+      expect(s.light.imageDataUrl).toBe("");
+      expect(s.dark.mode).toBe("none");
     });
 
-    it("persists color to localStorage", () => {
-      useDesktopBackgroundStore.getState().setColor("#00ff00");
+    it("sets dark color independently from light", () => {
+      useDesktopBackgroundStore.getState().setColor("light", "#ff0000");
+      useDesktopBackgroundStore.getState().setColor("dark", "#00ff00");
+      const s = useDesktopBackgroundStore.getState();
+      expect(s.light.color).toBe("#ff0000");
+      expect(s.dark.color).toBe("#00ff00");
+    });
+
+    it("persists both slots to localStorage", () => {
+      useDesktopBackgroundStore.getState().setColor("light", "#ff0000");
+      useDesktopBackgroundStore.getState().setColor("dark", "#00ff00");
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
-      expect(stored.mode).toBe("color");
-      expect(stored.color).toBe("#00ff00");
+      expect(stored.light.mode).toBe("color");
+      expect(stored.light.color).toBe("#ff0000");
+      expect(stored.dark.mode).toBe("color");
+      expect(stored.dark.color).toBe("#00ff00");
     });
   });
 
   describe("setImage", () => {
-    it("sets mode to image with dataUrl", () => {
-      useDesktopBackgroundStore.getState().setImage("data:image/png;base64,abc");
+    it("sets image on the requested slot", () => {
+      useDesktopBackgroundStore
+        .getState()
+        .setImage("dark", "data:image/png;base64,abc");
       const s = useDesktopBackgroundStore.getState();
-      expect(s.mode).toBe("image");
-      expect(s.imageDataUrl).toBe("data:image/png;base64,abc");
-      expect(s.color).toBe("");
+      expect(s.dark.mode).toBe("image");
+      expect(s.dark.imageDataUrl).toBe("data:image/png;base64,abc");
+      expect(s.dark.color).toBe("");
+      expect(s.light.mode).toBe("none");
     });
 
-    it("persists to localStorage without the full image data", () => {
-      useDesktopBackgroundStore.getState().setImage("data:image/png;base64,abc");
+    it("strips image data URL from localStorage but keeps other slot intact", () => {
+      useDesktopBackgroundStore.getState().setColor("light", "#abcdef");
+      useDesktopBackgroundStore
+        .getState()
+        .setImage("dark", "data:image/png;base64,abc");
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
-      expect(stored.mode).toBe("image");
-      expect(stored.imageDataUrl).toBe("");
+      expect(stored.dark.mode).toBe("image");
+      expect(stored.dark.imageDataUrl).toBe("");
+      expect(stored.light.mode).toBe("color");
+      expect(stored.light.color).toBe("#abcdef");
     });
   });
 
   describe("clearBackground", () => {
-    it("resets to defaults", () => {
-      useDesktopBackgroundStore.getState().setColor("#ff0000");
-      useDesktopBackgroundStore.getState().clearBackground();
+    it("resets only the requested slot", () => {
+      useDesktopBackgroundStore.getState().setColor("light", "#ff0000");
+      useDesktopBackgroundStore.getState().setColor("dark", "#00ff00");
+      useDesktopBackgroundStore.getState().clearBackground("light");
       const s = useDesktopBackgroundStore.getState();
-      expect(s.mode).toBe("none");
-      expect(s.color).toBe("");
-      expect(s.imageDataUrl).toBe("");
+      expect(s.light.mode).toBe("none");
+      expect(s.light.color).toBe("");
+      expect(s.dark.mode).toBe("color");
+      expect(s.dark.color).toBe("#00ff00");
     });
 
-    it("persists cleared state", () => {
-      useDesktopBackgroundStore.getState().setColor("#ff0000");
-      useDesktopBackgroundStore.getState().clearBackground();
+    it("persists cleared state for that slot", () => {
+      useDesktopBackgroundStore.getState().setColor("dark", "#ff0000");
+      useDesktopBackgroundStore.getState().clearBackground("dark");
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
-      expect(stored.mode).toBe("none");
+      expect(stored.dark.mode).toBe("none");
+    });
+  });
+
+  describe("legacy migration", () => {
+    it("copies a legacy single-config localStorage value into both slots on import", async () => {
+      vi.resetModules();
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ mode: "color", color: "#abcabc", imageDataUrl: "" }),
+      );
+      const mod = await import("./desktop-background-store");
+      const s = mod.useDesktopBackgroundStore.getState();
+      expect(s.light.mode).toBe("color");
+      expect(s.light.color).toBe("#abcabc");
+      expect(s.dark.mode).toBe("color");
+      expect(s.dark.color).toBe("#abcabc");
     });
   });
 });
