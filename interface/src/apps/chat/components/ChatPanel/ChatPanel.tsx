@@ -31,6 +31,13 @@ const LOADING_OVERLAY_FADE_MS = 120;
 // dataURL attachments) so reopening a thread with images doesn't leave
 // the viewport drifting above the last bubble.
 const IMAGE_PIN_AFTER_REVEAL_MS = 800;
+// How long after a stream ends we keep the image-pin window alive.
+// Image generation finishes the SSE turn slightly before the browser
+// finishes decoding the returned URL, so the bubble's intrinsic
+// height grows after `isStreaming` flips back to false. The window
+// lets `useImageScrollPin` re-pin on that late layout shift even if
+// the user happened to nudge auto-follow off mid-generation.
+const IMAGE_PIN_AFTER_STREAM_MS = 6000;
 
 export interface ChatPanelProps {
   streamKey: string;
@@ -324,6 +331,16 @@ export function ChatPanel({
       });
     });
   }, [historyResolved, messages.length]);
+
+  // Refresh the image-pin window every time `isStreaming` toggles.
+  // - When a turn starts, an image-mode generation may finish many
+  //   seconds later; the window covers that whole interval.
+  // - When the turn ends, the window covers the post-stream image
+  //   decode so the final bubble lands at the bottom even if the
+  //   user lost auto-follow during generation.
+  useEffect(() => {
+    setImagePinUntil(Date.now() + IMAGE_PIN_AFTER_STREAM_MS);
+  }, [isStreaming]);
 
   useEffect(() => {
     if (!focusInputOnThreadReady || isMobileLayout || !threadReady || inputFocusReadyRef.current) {
