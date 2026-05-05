@@ -25,7 +25,6 @@ interface DesktopBackgroundState extends PersistedState {
 }
 
 const NONE: BackgroundConfig = { mode: "none", color: "", imageDataUrl: "" };
-const DEFAULTS: PersistedState = { light: NONE, dark: NONE };
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
