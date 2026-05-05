@@ -56,3 +56,30 @@ export function formatDuration(
   const hr = Math.floor(min / 60);
   return `${hr}h ${min % 60}m`;
 }
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function startOfDay(d: Date): number {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+
+/**
+ * ChatGPT-style date bucket label for a session timestamp.
+ * Returns a stable string suitable for grouping and as a section header.
+ */
+export function getDateBucket(iso: string, now: Date = new Date()): string {
+  const date = new Date(iso);
+  const todayStart = startOfDay(now);
+  const dayMs = 86_400_000;
+  const dateStart = startOfDay(date);
+  const diffDays = Math.round((todayStart - dateStart) / dayMs);
+
+  if (diffDays <= 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return "Previous 7 Days";
+  if (diffDays < 30) return "Previous 30 Days";
+  return `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`;
+}

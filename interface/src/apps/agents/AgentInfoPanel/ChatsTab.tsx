@@ -1,16 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ExplorerNode } from "@cypher-asi/zui";
-import { Explorer } from "@cypher-asi/zui";
 import { EmptyState } from "../../../components/EmptyState";
 import { api } from "../../../api/client";
-import { type AnnotatedSession } from "./agent-info-utils";
+import { type AnnotatedSession, getDateBucket } from "./agent-info-utils";
 import {
   SidekickItemContextMenu,
   useSidekickItemContextMenu,
 } from "../../../components/SidekickItemContextMenu";
-import type { ExplorerNodeWithSuffix } from "../../../lib/zui-compat";
 import type { Agent } from "../../../shared/types";
-import viewStyles from "../../../views/aura.module.css";
 import styles from "./AgentInfoPanel.module.css";
 
 function truncate(text: string, max: number): string {
@@ -33,15 +29,14 @@ function useAgentSessions(
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (projectBindings.length === 0) {
-      setSessions([]);
-      setLoading(false);
-      return;
-    }
-
     let cancelled = false;
-    setLoading(true);
 
+    // Always run through Promise.all so empty-bindings still goes through the
+    // same async path (avoids a synchronous setState branch in the effect).
+    // `loading` starts true via useState and is flipped to false by the
+    // resolved callback below; we don't reset it on subsequent re-fetches,
+    // matching `useSessionListData`'s "loading is only the initial signal"
+    // pattern, so we never trigger a synchronous setState in this effect.
     Promise.all(
       projectBindings.map((b) =>
         api.listSessions(b.project_id, b.project_agent_id)
@@ -84,37 +79,73 @@ function useAgentSessions(
 }
 
 function useSessionSummaries(sessions: AnnotatedSession[]) {
-  const [summaries, setSummaries] = useState<Record<string, string>>({});
+  // Persisted summaries are derived directly from the session list so we
+  // don't need a synchronous setState inside an effect to mirror them.
+  const persistedSummaries = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const s of sessions) {
+      if (s.summary_of_previous_context) {
+        out[s.session_id] = s.summary_of_previous_context;
+      }
+    }
+    return out;
+  }, [sessions]);
+
+  const [fetchedSummaries, setFetchedSummaries] = useState<Record<string, string>>({});
   const summarizingRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     for (const session of sessions) {
-      if (session.summary_of_previous_context) {
-        setSummaries((prev) => ({
-          ...prev,
-          [session.session_id]: session.summary_of_previous_context,
-        }));
-      } else if (
-        session.status !== "active" &&
-        !summarizingRef.current.has(session.session_id)
-      ) {
-        summarizingRef.current.add(session.session_id);
-        api
-          .summarizeSession(session._projectId, session._agentInstanceId, session.session_id)
-          .then((updated) => {
-            if (updated.summary_of_previous_context) {
-              setSummaries((prev) => ({
-                ...prev,
-                [session.session_id]: updated.summary_of_previous_context,
-              }));
-            }
-          })
-          .catch(() => {});
-      }
+      if (session.summary_of_previous_context) continue;
+
+      // Trigger Haiku summary as soon as the session has had at least one
+      // user+assistant exchange (matches ChatGPT's "title once first turn
+      // completes" UX). The token-count proxy keeps us from spamming the LLM
+      // for empty sessions; the backend also no-ops on empty transcripts.
+      const hasFirstTurn =
+        session.total_input_tokens > 0 && session.total_output_tokens > 0;
+      if (!hasFirstTurn) continue;
+      if (summarizingRef.current.has(session.session_id)) continue;
+
+      summarizingRef.current.add(session.session_id);
+      api
+        .summarizeSession(session._projectId, session._agentInstanceId, session.session_id)
+        .then((updated) => {
+          if (updated.summary_of_previous_context) {
+            setFetchedSummaries((prev) => ({
+              ...prev,
+              [session.session_id]: updated.summary_of_previous_context,
+            }));
+          }
+        })
+        .catch(() => {});
     }
   }, [sessions]);
 
-  return summaries;
+  return useMemo(
+    () => ({ ...fetchedSummaries, ...persistedSummaries }),
+    [fetchedSummaries, persistedSummaries],
+  );
+}
+
+type DateBucket = {
+  label: string;
+  sessions: AnnotatedSession[];
+};
+
+function bucketizeByDate(sessions: AnnotatedSession[]): DateBucket[] {
+  const now = new Date();
+  const order: string[] = [];
+  const map = new Map<string, AnnotatedSession[]>();
+  for (const session of sessions) {
+    const bucket = getDateBucket(session.started_at, now);
+    if (!map.has(bucket)) {
+      map.set(bucket, []);
+      order.push(bucket);
+    }
+    map.get(bucket)!.push(session);
+  }
+  return order.map((label) => ({ label, sessions: map.get(label)! }));
 }
 
 export function ChatsTab({
@@ -135,42 +166,7 @@ export function ChatsTab({
     [sessions],
   );
 
-  const explorerData: ExplorerNode[] = useMemo(() => {
-    const byProject = new Map<string, AnnotatedSession[]>();
-    for (const session of sessions) {
-      const list = byProject.get(session._projectId) ?? [];
-      list.push(session);
-      byProject.set(session._projectId, list);
-    }
-
-    const groups: ExplorerNodeWithSuffix[] = [];
-    for (const [projectId, list] of byProject) {
-      const projectName = list[0]?._projectName ?? "Project";
-      const children: ExplorerNodeWithSuffix[] = list.map((session, index) => {
-        const number = list.length - index;
-        const summary = summaries[session.session_id];
-        const label = summary
-          ? `S${number} · ${truncate(summary, 80)}`
-          : `S${number}`;
-        return {
-          id: session.session_id,
-          label,
-          metadata: { type: "session" },
-        };
-      });
-      groups.push({
-        id: `__project_${projectId}__`,
-        label: projectName,
-        children,
-      });
-    }
-    return groups;
-  }, [sessions, summaries]);
-
-  const defaultExpandedIds = useMemo(
-    () => explorerData.map((n) => n.id),
-    [explorerData],
-  );
+  const buckets = useMemo(() => bucketizeByDate(sessions), [sessions]);
 
   const resolveMenuTarget = useCallback(
     (nodeId: string): AnnotatedSession | null =>
@@ -212,15 +208,28 @@ export function ChatsTab({
 
   return (
     <>
-      <div onContextMenu={handleContextMenu}>
-        <Explorer
-          data={explorerData}
-          className={viewStyles.taskExplorer}
-          expandOnSelect
-          enableDragDrop={false}
-          enableMultiSelect={false}
-          defaultExpandedIds={defaultExpandedIds}
-        />
+      <div className={styles.chatsList} onContextMenu={handleContextMenu}>
+        {buckets.map((bucket) => (
+          <section key={bucket.label} className={styles.chatsBucket}>
+            <div className={styles.chatsBucketHeader}>{bucket.label}</div>
+            {bucket.sessions.map((session) => {
+              const summary = summaries[session.session_id];
+              const hasSummary = Boolean(summary);
+              const label = hasSummary ? truncate(summary, 80) : "New chat";
+              return (
+                <button
+                  key={session.session_id}
+                  type="button"
+                  id={session.session_id}
+                  className={`${styles.chatsRow} ${hasSummary ? "" : styles.chatsRowPlaceholder}`}
+                  data-session-id={session.session_id}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </section>
+        ))}
       </div>
       {menu && (
         <SidekickItemContextMenu

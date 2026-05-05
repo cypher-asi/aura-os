@@ -867,3 +867,55 @@
   color: var(--color-text-muted);
   font-size: var(--font-size-sm, 13px);
 }
+
+/* ── Chats tab: ChatGPT-style sectioned list ── */
+
+.chatsList {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2) 0;
+}
+
+.chatsBucket {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--space-3);
+}
+
+.chatsBucketHeader {
+  /* Header text starts at the same x as session row text below.
+     This is what makes children "left align with parent text". */
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  font-size: var(--font-size-xs, 11px);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.chatsRow {
+  display: block;
+  width: 100%;
+  text-align: left;
+  /* Same horizontal padding as the bucket header so the label text lines up. */
+  padding: var(--space-1) var(--space-3);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm, 13px);
+  line-height: 1.4;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chatsRow:hover {
+  background: var(--color-overlay-subtle);
+}
+
+.chatsRowPlaceholder {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
