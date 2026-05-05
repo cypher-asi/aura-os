@@ -465,6 +465,16 @@ jobs:
         shell: bash
         run: python3 infra/scripts/release/cleanup-stale-macos-dmg.py
 
+      - name: Install patched create-dmg script
+        if: matrix.target == 'macos'
+        shell: bash
+        # cargo-packager 0.11.8 only downloads upstream create-dmg v1.1.1 if the
+        # cache file does not exist. Pre-seeding the cache with our patched copy
+        # (-nobrowse on attach, -force on detach retries) is what fixes the
+        # recurring `hdiutil: couldn't eject ... Resource busy` failure on the
+        # macOS Intel runner.
+        run: bash infra/scripts/release/install-patched-create-dmg.sh
+
       - name: Prepare macOS signing inputs
         if: matrix.target == 'macos'
         shell: bash
@@ -608,6 +618,7 @@ jobs:
           cleanup_retryable_packaging_failure() {
             if [ "${{ matrix.target }}" = "macos" ]; then
               python3 infra/scripts/release/cleanup-stale-macos-dmg.py
+              bash infra/scripts/release/install-patched-create-dmg.sh
             fi
 
             rm -f packager.log
