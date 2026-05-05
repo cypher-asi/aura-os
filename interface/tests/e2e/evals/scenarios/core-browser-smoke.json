@@ -11,7 +11,9 @@
         "label": "open_login",
         "navigate": "/login",
         "expect": {
-          "visibleTexts": ["Login to AURA"]
+          "visibleRoles": [
+            { "role": "button", "name": "Sign In", "exact": true }
+          ]
         }
       }
     ]
@@ -31,7 +33,9 @@
         "label": "open_login",
         "navigate": "/login",
         "expect": {
-          "visibleTexts": ["Sign in"]
+          "visibleRoles": [
+            { "role": "button", "name": "Sign In", "exact": true }
+          ]
         }
       }
     ]

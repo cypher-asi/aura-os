@@ -66,6 +66,24 @@ You can compare a fresh summary against the checked-in baselines with:
 npm run test:evals:compare -- test-results/aura-evals-summary.json ../infra/evals/reports/baselines/workflow-summary.json workflow-compare
 ```
 
+### Refreshing baselines after a scenario rename
+
+The CI compare step diffs the freshly-generated `aura-evals-summary.json`
+against the checked-in baseline files in
+`infra/evals/reports/baselines/`. If you rename a scenario `id` in
+`core-browser-smoke.json` or `workflow-e2e.json`, those baseline files
+become stale and CI will fail with a `[stale-baseline]` notice. Refresh
+them from `interface/`:
+
+```bash
+npm run test:evals:smoke && npm run evals:refresh-baseline smoke
+npm run test:evals:workflow && npm run evals:refresh-baseline workflow
+```
+
+`evals:refresh-baseline` reads `test-results/aura-evals-summary.json`,
+keeps the entries whose `suite` matches the lane you passed, and
+overwrites `infra/evals/reports/baselines/{lane}-summary.json`.
+
 ## Running locally
 
 From `interface/`:

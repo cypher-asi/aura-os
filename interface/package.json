@@ -41,6 +41,7 @@
     "test:mcp-smoke": "node ./scripts/test-dynamic-mcp-sidecar.mjs",
     "test:evals:report": "node ./scripts/summarize-evals.mjs",
     "test:evals:compare": "node ./scripts/compare-evals.mjs",
+    "evals:refresh-baseline": "node ./scripts/refresh-evals-baseline.mjs",
     "codegen:protocol": "cd .. && cargo test -p aura-protocol --features typescript export_typescript_bindings -- --nocapture && node interface/scripts/sync-protocol-bindings.mjs"
   },
   "dependencies": {

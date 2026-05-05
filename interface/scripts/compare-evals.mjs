@@ -28,24 +28,34 @@ function compareScenario(candidate, baseline) {
     );
   }
 
-  if ((candidate.metrics.buildSteps ?? 0) < (baseline.metrics.buildSteps ?? 0)) {
-    blocking.push(`build steps dropped from ${baseline.metrics.buildSteps} to ${candidate.metrics.buildSteps}`);
+  // Smoke scenarios are browser-only with no model-backed work, so build/test
+  // step counts and token/cost metrics are always 0 in the baseline. Comparing
+  // them just adds false-positive surface area when a future scenario starts
+  // measuring something — keep the thresholds for the workflow lane only.
+  if (baseline.suite !== "smoke") {
+    if ((candidate.metrics.buildSteps ?? 0) < (baseline.metrics.buildSteps ?? 0)) {
+      blocking.push(`build steps dropped from ${baseline.metrics.buildSteps} to ${candidate.metrics.buildSteps}`);
+    }
+
+    if ((candidate.metrics.testSteps ?? 0) < (baseline.metrics.testSteps ?? 0)) {
+      blocking.push(`test steps dropped from ${baseline.metrics.testSteps} to ${candidate.metrics.testSteps}`);
+    }
+
+    if ((candidate.metrics.totalTokens ?? 0) > (baseline.metrics.totalTokens ?? 0) * 1.1) {
+      blocking.push(`tokens increased from ${baseline.metrics.totalTokens} to ${candidate.metrics.totalTokens}`);
+    }
+
+    if ((candidate.metrics.estimatedCostUsd ?? 0) > (baseline.metrics.estimatedCostUsd ?? 0) * 1.1) {
+      blocking.push(`cost increased from ${baseline.metrics.estimatedCostUsd} to ${candidate.metrics.estimatedCostUsd}`);
+    }
   }
 
-  if ((candidate.metrics.testSteps ?? 0) < (baseline.metrics.testSteps ?? 0)) {
-    blocking.push(`test steps dropped from ${baseline.metrics.testSteps} to ${candidate.metrics.testSteps}`);
-  }
-
-  if ((candidate.metrics.totalTokens ?? 0) > (baseline.metrics.totalTokens ?? 0) * 1.1) {
-    blocking.push(`tokens increased from ${baseline.metrics.totalTokens} to ${candidate.metrics.totalTokens}`);
-  }
-
-  if ((candidate.metrics.estimatedCostUsd ?? 0) > (baseline.metrics.estimatedCostUsd ?? 0) * 1.1) {
-    blocking.push(`cost increased from ${baseline.metrics.estimatedCostUsd} to ${candidate.metrics.estimatedCostUsd}`);
-  }
-
-  if ((candidate.metrics.totalDurationMs ?? 0) > (baseline.metrics.totalDurationMs ?? 0) * 1.5) {
-    warnings.push(`duration increased from ${baseline.metrics.totalDurationMs}ms to ${candidate.metrics.totalDurationMs}ms`);
+  // Skip the duration warning if the baseline doesn't have a measured value
+  // yet (0). Otherwise any non-zero candidate duration is "infinity-x" larger
+  // and we'd warn on every run until someone refreshes the baseline.
+  const baselineDuration = baseline.metrics.totalDurationMs ?? 0;
+  if (baselineDuration > 0 && (candidate.metrics.totalDurationMs ?? 0) > baselineDuration * 1.5) {
+    warnings.push(`duration increased from ${baselineDuration}ms to ${candidate.metrics.totalDurationMs}ms`);
   }
 
   return { blocking, warnings };
@@ -62,6 +72,13 @@ function toMarkdown(report) {
     `Warnings: ${report.warnings.length}`,
     "",
   ];
+
+  if (report.staleBaseline) {
+    lines.push(
+      "> **Stale baseline detected.** Most baseline scenarios were not found in the candidate run, which usually means a scenario `id` was renamed without refreshing the baseline. Run `npm run evals:refresh-baseline <lane>` to regenerate.",
+    );
+    lines.push("");
+  }
 
   if (report.blockingRegressions.length > 0) {
     lines.push("## Blocking");
@@ -93,6 +110,12 @@ function toMarkdown(report) {
   return `${lines.join("\n")}\n`;
 }
 
+function inferLaneFromBaseline(baselinePath) {
+  const base = path.basename(baselinePath);
+  const match = base.match(/^([a-z0-9-]+)-summary\.json$/i);
+  return match ? match[1] : null;
+}
+
 async function main() {
   const [summaryRaw, baselineRaw] = await Promise.all([
     fs.readFile(summaryPath, "utf8"),
@@ -107,11 +130,13 @@ async function main() {
   const comparisons = [];
   const blockingRegressions = [];
   const warnings = [];
+  const missingScenarios = [];
 
   for (const baselineEntry of baselineEntries) {
     const candidate = summaryMap.get(scenarioKey(baselineEntry));
     if (!candidate) {
       const message = `missing scenario ${baselineEntry.title} (${baselineEntry.device})`;
+      missingScenarios.push(message);
       blockingRegressions.push(message);
       comparisons.push({
         title: baselineEntry.title,
@@ -136,10 +161,39 @@ async function main() {
     });
   }
 
+  // Detect baseline drift: if at least half of the baseline scenarios are
+  // missing in the candidate AND the candidate produced roughly the same
+  // total number of scenarios, the most likely cause is that scenario IDs
+  // were renamed in the source-of-truth JSON without refreshing the
+  // baseline. Surface this with a single actionable message instead of N
+  // noisy "missing scenario" lines, which previously read like real
+  // regressions.
+  const candidateCount = summaryMap.size;
+  const missingCount = missingScenarios.length;
+  const baselineCount = baselineEntries.length;
+  const lane = inferLaneFromBaseline(baselinePath);
+  const isStaleBaseline =
+    baselineCount > 0
+    && missingCount >= Math.ceil(baselineCount / 2)
+    && Math.abs(candidateCount - baselineCount) <= Math.max(1, Math.floor(baselineCount * 0.25));
+
+  if (isStaleBaseline) {
+    const refreshHint = lane
+      ? `npm run test:evals:${lane} && npm run evals:refresh-baseline ${lane}`
+      : "npm run test:evals:<lane> && npm run evals:refresh-baseline <lane>";
+    process.stderr.write(
+      `\n[stale-baseline] ${missingCount}/${baselineCount} baseline scenarios were not found in the candidate run.\n`
+      + "The scenario IDs likely changed since the baseline was last regenerated.\n"
+      + `Run:\n    ${refreshHint}\n`
+      + "to refresh the baseline, then re-run compare.\n\n",
+    );
+  }
+
   const report = {
     generatedAt: new Date().toISOString(),
     summaryPath: path.relative(cwd, summaryPath),
     baselinePath: path.relative(cwd, baselinePath),
+    staleBaseline: isStaleBaseline,
     blockingRegressions,
     warnings,
     comparisons,

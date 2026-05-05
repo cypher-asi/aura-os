@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-03-28T20:12:34.587Z",
+  "generatedAt": "2026-05-04T00:00:00.000Z",
   "scenarios": [
     {
-      "scenarioId": "desktop-login-host-connection",
-      "title": "Desktop login screen exposes the host connection controls",
+      "scenarioId": "desktop-login-screen",
+      "title": "Desktop login screen shows the login form",
       "suite": "smoke",
       "kind": "browser_core",
       "device": "eval-desktop-chromium",
@@ -17,8 +17,8 @@
         "artifactChecks": 0
       },
       "metrics": {
-        "totalDurationMs": 419,
-        "totalSteps": 2,
+        "totalDurationMs": 0,
+        "totalSteps": 1,
         "totalTokens": 0,
         "estimatedCostUsd": 0,
         "buildSteps": 0,
@@ -43,7 +43,7 @@
         "artifactChecks": 0
       },
       "metrics": {
-        "totalDurationMs": 792,
+        "totalDurationMs": 0,
         "totalSteps": 2,
         "totalTokens": 0,
         "estimatedCostUsd": 0,
@@ -54,8 +54,8 @@
       }
     },
     {
-      "scenarioId": "mobile-login-host-connection",
-      "title": "Mobile login screen exposes the host connection controls",
+      "scenarioId": "mobile-login-screen",
+      "title": "Mobile login screen shows the sign in form",
       "suite": "smoke",
       "kind": "browser_core",
       "device": "eval-mobile-chromium",
@@ -69,8 +69,8 @@
         "artifactChecks": 0
       },
       "metrics": {
-        "totalDurationMs": 418,
-        "totalSteps": 2,
+        "totalDurationMs": 0,
+        "totalSteps": 1,
         "totalTokens": 0,
         "estimatedCostUsd": 0,
         "buildSteps": 0,
@@ -80,8 +80,8 @@
       }
     },
     {
-      "scenarioId": "mobile-login-host-connection",
-      "title": "Mobile login screen exposes the host connection controls",
+      "scenarioId": "mobile-login-screen",
+      "title": "Mobile login screen shows the sign in form",
       "suite": "smoke",
       "kind": "browser_core",
       "device": "eval-mobile-webkit",
@@ -95,8 +95,8 @@
         "artifactChecks": 0
       },
       "metrics": {
-        "totalDurationMs": 288,
-        "totalSteps": 2,
+        "totalDurationMs": 0,
+        "totalSteps": 1,
         "totalTokens": 0,
         "estimatedCostUsd": 0,
         "buildSteps": 0,
