@@ -164,6 +164,14 @@ export function publishChangelogMedia({
       results.push({ status: "missing-entry", entryId });
       continue;
     }
+    if (latestMatchesDate && !historyDoc) {
+      results.push({ status: "missing-history-doc", entryId, date: resolvedDate });
+      continue;
+    }
+    if (latestMatchesDate && historyDoc && !findEntry(historyDoc, entryId)) {
+      results.push({ status: "missing-history-entry", entryId, date: resolvedDate });
+      continue;
+    }
     if (!refreshExisting && isPublishedMedia(targetMatch.entry.media)) {
       results.push({
         status: "skipped-existing",

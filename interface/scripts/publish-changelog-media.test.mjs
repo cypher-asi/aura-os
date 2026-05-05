@@ -170,3 +170,139 @@ test("publishChangelogMedia backfills historical dates without mutating latest",
   assert.equal(nextHistory.rendered.entries[0].media.status, "published");
   assert.ok(nextHistory.rendered.entries[0].media.assetPath.includes("2026-04-24/entry-model-picker-"));
 });
+
+test("publishChangelogMedia preserves existing media when no assets are publishable", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-publish-media-"));
+  const pagesDir = path.join(tempDir, "pages");
+  const doc = changelogDoc();
+  doc.rendered.entries[0].media = {
+    schemaVersion: 1,
+    status: "published",
+    type: "image",
+    assetPath: "assets/changelog/nightly/2026-04-24/existing.png",
+    caption: "Existing published media should remain untouched.",
+  };
+  writeJson(path.join(pagesDir, "changelog", "nightly", "latest.json"), doc);
+  writeJson(path.join(pagesDir, "changelog", "nightly", "history", "2026-04-24.json"), doc);
+  const manifestPath = path.join(tempDir, "manifest.json");
+  writeJson(manifestPath, {
+    schemaVersion: 1,
+    assets: [],
+    recoveryPolicy: {
+      publishOnlyListedAssets: true,
+      failedOrMissingMediaBehavior: "omit-media-entirely",
+    },
+  });
+
+  const report = publishChangelogMedia({
+    manifestFile: manifestPath,
+    pagesDir,
+    channel: "nightly",
+    date: "2026-04-24",
+  });
+
+  assert.equal(report.publishedCount, 0);
+  assert.equal(report.assetCount, 0);
+  const latest = JSON.parse(fs.readFileSync(path.join(pagesDir, "changelog", "nightly", "latest.json"), "utf8"));
+  const history = JSON.parse(fs.readFileSync(path.join(pagesDir, "changelog", "nightly", "history", "2026-04-24.json"), "utf8"));
+  assert.deepEqual(latest.rendered.entries[0].media, doc.rendered.entries[0].media);
+  assert.deepEqual(history.rendered.entries[0].media, doc.rendered.entries[0].media);
+});
+
+test("publishChangelogMedia publishes valid assets while isolating missing sources", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-publish-media-"));
+  const pagesDir = path.join(tempDir, "pages");
+  const sourcePng = path.join(tempDir, "out", "valid.png");
+  writePngPlaceholder(sourcePng, "image-v4");
+  const doc = changelogDoc();
+  doc.rendered.entries.push({
+    batch_id: "entry-taskbar",
+    title: "Desktop taskbar redesigned",
+    summary: "The desktop taskbar now uses the refreshed floating shell.",
+    items: [
+      {
+        text: "Redesigned the desktop taskbar.",
+        commit_shas: ["def456"],
+      },
+    ],
+    media: {
+      schemaVersion: 1,
+      status: "published",
+      type: "image",
+      assetPath: "assets/changelog/nightly/2026-04-24/taskbar-existing.png",
+    },
+  });
+  writeJson(path.join(pagesDir, "changelog", "nightly", "latest.json"), doc);
+  writeJson(path.join(pagesDir, "changelog", "nightly", "history", "2026-04-24.json"), doc);
+  const manifestPath = path.join(tempDir, "manifest.json");
+  writeJson(manifestPath, {
+    assets: [
+      {
+        entryId: "entry-model-picker",
+        title: "GPT-5.5 available in the chat model picker",
+        source: { brandedPngPath: sourcePng },
+        dimensions: { width: 2560, height: 1440 },
+      },
+      {
+        entryId: "entry-missing-source",
+        title: "Missing source should not stop valid media",
+        source: { brandedPngPath: path.join(tempDir, "out", "missing.png") },
+        dimensions: { width: 2560, height: 1440 },
+      },
+    ],
+  });
+
+  const report = publishChangelogMedia({
+    manifestFile: manifestPath,
+    pagesDir,
+    channel: "nightly",
+    date: "2026-04-24",
+  });
+
+  assert.equal(report.publishedCount, 1);
+  assert.equal(report.missingCount, 1);
+  assert.equal(report.results[0].status, "published");
+  assert.equal(report.results[1].status, "missing-source");
+  const latest = JSON.parse(fs.readFileSync(path.join(pagesDir, "changelog", "nightly", "latest.json"), "utf8"));
+  assert.equal(latest.rendered.entries[0].media.status, "published");
+  assert.ok(latest.rendered.entries[0].media.assetPath.includes("entry-model-picker-"));
+  assert.equal(latest.rendered.entries[1].media.assetPath, "assets/changelog/nightly/2026-04-24/taskbar-existing.png");
+});
+
+test("publishChangelogMedia refuses current-date media when the history entry is missing", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-publish-media-"));
+  const pagesDir = path.join(tempDir, "pages");
+  const sourcePng = path.join(tempDir, "out", "valid.png");
+  writePngPlaceholder(sourcePng, "image-v5");
+  const latest = changelogDoc();
+  const history = changelogDoc();
+  history.rendered.entries[0].batch_id = "different-entry";
+  history.rendered.entries[0].title = "Different history entry";
+  writeJson(path.join(pagesDir, "changelog", "nightly", "latest.json"), latest);
+  writeJson(path.join(pagesDir, "changelog", "nightly", "history", "2026-04-24.json"), history);
+  const manifestPath = path.join(tempDir, "manifest.json");
+  writeJson(manifestPath, {
+    assets: [
+      {
+        entryId: "entry-model-picker",
+        title: "GPT-5.5 available in the chat model picker",
+        source: { brandedPngPath: sourcePng },
+        dimensions: { width: 2560, height: 1440 },
+      },
+    ],
+  });
+
+  const report = publishChangelogMedia({
+    manifestFile: manifestPath,
+    pagesDir,
+    channel: "nightly",
+    date: "2026-04-24",
+  });
+
+  assert.equal(report.publishedCount, 0);
+  assert.equal(report.missingCount, 1);
+  assert.equal(report.results[0].status, "missing-history-entry");
+  const nextLatest = JSON.parse(fs.readFileSync(path.join(pagesDir, "changelog", "nightly", "latest.json"), "utf8"));
+  assert.equal(nextLatest.rendered.entries[0].media, undefined);
+  assert.equal(fs.existsSync(path.join(pagesDir, "assets", "changelog", "nightly")), false);
+});
