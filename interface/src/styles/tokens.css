@@ -196,7 +196,9 @@
 
   /* Process canvas — light overrides. */
   --color-canvas-bg: #f9fafb;
-  --color-canvas-grid: #e5e7eb;
+  /* Bumped from #e5e7eb so the dot grid is actually visible against the
+     near-white canvas background (previous value blended into the bg). */
+  --color-canvas-grid: #cbd5e1;
   --color-canvas-overlay: rgba(255, 255, 255, 0.8);
   --color-canvas-edge: #9ca3af;
 
