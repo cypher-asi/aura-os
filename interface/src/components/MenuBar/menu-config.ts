@@ -78,7 +78,6 @@ export const MENU_DEFINITIONS: MenuDefinition[] = [
     id: "view",
     label: "View",
     entries: [
-      DIVIDER,
       { type: "item", id: "view.toggleSidekick", label: "Toggle Sidekick", shortcut: { key: "b", mod: true } },
       DIVIDER,
       { type: "item", id: "view.zoomIn", label: "Zoom In", shortcut: { key: "=", mod: true } },
