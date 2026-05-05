@@ -44,6 +44,20 @@ pub(crate) enum UpdateStep {
     HandoffSpawned,
     HandoffSentinelDetected,
     HandoffSentinelTimeout,
+    /// Spawned handoff child exited before writing the sentinel — usually
+    /// means the script itself errored out (AppLocker / WDAC / malformed
+    /// args). We capture stderr alongside this step so the cause is visible
+    /// in `updater.log` instead of being lost.
+    HandoffChildExitedEarly,
+    /// Soft deadline elapsed but the child is still alive. We continue
+    /// polling up to a hard ceiling rather than failing immediately, so
+    /// slow AV / AMSI introspection on a freshly-written script does not
+    /// abort an otherwise-healthy install.
+    HandoffSentinelExtended,
+    /// Tail of the spawned handoff's stdout/stderr that was attached to
+    /// `updater.log` after a timeout, so post-mortem inspection has the
+    /// child's own console output without needing a second log file.
+    HandoffChildOutputCaptured,
     InstallInnerStarted,
     InstallInnerFinished,
     RelaunchSpawned,
@@ -71,6 +85,9 @@ impl UpdateStep {
             Self::HandoffSpawned => "handoff_spawned",
             Self::HandoffSentinelDetected => "handoff_sentinel_detected",
             Self::HandoffSentinelTimeout => "handoff_sentinel_timeout",
+            Self::HandoffChildExitedEarly => "handoff_child_exited_early",
+            Self::HandoffSentinelExtended => "handoff_sentinel_extended",
+            Self::HandoffChildOutputCaptured => "handoff_child_output_captured",
             Self::InstallInnerStarted => "install_inner_started",
             Self::InstallInnerFinished => "install_inner_finished",
             Self::RelaunchSpawned => "relaunch_spawned",
