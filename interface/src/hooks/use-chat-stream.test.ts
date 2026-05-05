@@ -154,7 +154,11 @@ describe("useChatStream", () => {
       attachments,
       expect.any(Object),
       expect.any(AbortSignal),
-      "p-1",
+      // Project chat must forward both ids so the server resolves the
+      // project chat session and persists the image-mode turn into
+      // history (otherwise it's only in the in-memory stream store and
+      // disappears on reload).
+      { projectId: "p-1", agentInstanceId: "ai-1" },
     );
   });
 

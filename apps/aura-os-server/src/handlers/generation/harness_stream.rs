@@ -18,11 +18,13 @@ use aura_os_core::ZeroAuthSession;
 
 use crate::error::{map_network_error, ApiError, ApiResult};
 use crate::handlers::agents::chat::errors::map_harness_error_to_api;
+use crate::handlers::agents::chat::ChatPersistCtx;
 use crate::handlers::agents::session_identity::{
     validate_session_identity, SessionIdentityRequirements,
 };
 use crate::state::AppState;
 
+use super::persist::{spawn_generation_persist_task, GenerationPersistMeta};
 use super::sse::{SseResponse, SseStream, SSE_NO_BUFFERING_HEADERS};
 
 const DEFAULT_GENERATION_EVENT_IDLE_TIMEOUT_SECS: u64 = 120;
@@ -97,11 +99,22 @@ async fn fallback_user_primary_org_id(state: &AppState, jwt: &str) -> ApiResult<
         .ok_or_else(|| ApiError::session_identity_missing("aura_org_id", "generation_session"))
 }
 
+/// Optional chat-history persistence wiring. When provided, a sibling
+/// task subscribes to the harness session's outbound channel and writes
+/// the turn's `user_message` + `assistant_message_end` rows into the
+/// agent's chat session so image-mode results survive reload (see
+/// [`super::persist`] for the rationale and shape).
+pub(super) struct GenerationPersistArgs {
+    pub(super) ctx: ChatPersistCtx,
+    pub(super) meta: GenerationPersistMeta,
+}
+
 pub(super) async fn open_generation_stream(
     state: AppState,
     jwt: String,
     request: GenerationRequest,
     identity: GenerationIdentity,
+    persist: Option<GenerationPersistArgs>,
 ) -> ApiResult<SseResponse> {
     let generation_id = uuid::Uuid::new_v4().to_string();
     let harness_mode = HarnessMode::Local;
@@ -176,6 +189,19 @@ pub(super) async fn open_generation_stream(
     );
 
     let rx = session.events_tx.subscribe();
+    if let Some(persist) = persist {
+        // Subscribe a *second* receiver before sending the
+        // `GenerationRequest`, so the persist task and SSE adapter
+        // both see the full event sequence (broadcast subscribers
+        // miss any messages emitted before they joined).
+        let persist_rx = session.events_tx.subscribe();
+        spawn_generation_persist_task(
+            persist_rx,
+            persist.ctx,
+            state.event_broadcast.clone(),
+            persist.meta,
+        );
+    }
     session
         .commands_tx
         .try_send(HarnessInbound::GenerationRequest(request))
@@ -550,7 +576,7 @@ fn env_duration_secs(key: &str, default_secs: u64) -> Duration {
     Duration::from_secs(secs)
 }
 
-fn normalize_generation_completed_payload(
+pub(super) fn normalize_generation_completed_payload(
     mode: String,
     payload: serde_json::Value,
 ) -> serde_json::Value {

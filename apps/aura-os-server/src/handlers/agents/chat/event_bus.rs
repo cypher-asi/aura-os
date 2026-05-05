@@ -37,7 +37,7 @@ pub(crate) fn publish_user_message_event(
 /// Publish an `assistant_message_end` event on the app-wide WebSocket
 /// event bus after a successful persist. Same consumer story as
 /// `publish_user_message_event`.
-pub(super) fn publish_assistant_message_end_event(
+pub(crate) fn publish_assistant_message_end_event(
     bus: &tokio::sync::broadcast::Sender<serde_json::Value>,
     ctx: &ChatPersistCtx,
     message_id: &str,

@@ -15,7 +15,7 @@ use crate::state::{AppState, AuthJwt};
 use super::discovery::{find_matching_project_agents, invalidate_agent_discovery_cache};
 use super::persist::{resolve_chat_session, ChatPersistCtx};
 
-pub(super) async fn setup_project_chat_persistence(
+pub(crate) async fn setup_project_chat_persistence(
     state: &AppState,
     project_id: &ProjectId,
     agent_instance_id: &AgentInstanceId,

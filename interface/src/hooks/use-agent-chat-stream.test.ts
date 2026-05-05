@@ -92,7 +92,11 @@ describe("useAgentChatStream", () => {
       attachments,
       expect.any(Object),
       expect.any(AbortSignal),
-      "p-1",
+      // Standalone agent chat must forward `agentId` so the server can
+      // resolve the agent's chat session and persist this turn into
+      // history (otherwise it lives only in the in-memory stream store
+      // and disappears on hard reload).
+      { agentId: "agent-1", projectId: "p-1" },
     );
   });
 

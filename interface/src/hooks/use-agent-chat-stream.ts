@@ -183,13 +183,18 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
         nextSendStartsNewSessionRef.current = false;
         if (_generationMode === "image") {
           core.setProgressText("Generating image...");
+          // Forward `agentId` (and `projectId` when present) so the
+          // server can resolve the agent's chat session and persist
+          // this turn into history — without it the synthesized
+          // `generate_image` tool turn is in-memory only and is lost
+          // on hard reload.
           await generateImageStream(
             userMsg.content,
             selectedModel,
             attachments,
             handler,
             controller.signal,
-            projectId,
+            { agentId, projectId },
           );
           return;
         }

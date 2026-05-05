@@ -134,7 +134,7 @@ export function ImageGeneration() {
         },
       },
       controller.signal,
-      selectedProjectId ?? undefined,
+      selectedProjectId ? { projectId: selectedProjectId } : undefined,
     );
   }, [
     imaginePrompt,

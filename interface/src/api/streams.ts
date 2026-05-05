@@ -206,17 +206,38 @@ export function sendAgentEventStream(
 
 /* ── Generation streams (image / 3D) ─────────────────────────────── */
 
+/**
+ * Optional chat-history scope for an image-mode generation. When the
+ * caller is the chat input bar (project chat or standalone agent
+ * chat), the server uses these ids to resolve the same chat session
+ * the regular chat route writes into and persist this turn as a
+ * normal `user_message` + `assistant_message_end` row pair — without
+ * which the synthesized in-memory `generate_image` tool turn the UI
+ * builds from `GenerationCompleted` is lost on hard reload.
+ *
+ * Either `agentId` (standalone agent chat) or both `projectId` and
+ * `agentInstanceId` (project chat) should be set; the AURA 3D app
+ * passes none and generation runs in the legacy in-memory-only mode.
+ */
+export interface GenerateImageChatScope {
+  agentId?: string;
+  projectId?: string;
+  agentInstanceId?: string;
+}
+
 export function generateImageStream(
   prompt: string,
   model?: string | null,
   attachments?: ChatAttachment[],
   handler: StreamEventHandler = { onEvent: () => {}, onError: () => {} },
   signal?: AbortSignal,
-  projectId?: string,
+  scope?: GenerateImageChatScope,
 ) {
   const body: Record<string, unknown> = { prompt };
   if (model) body.model = model;
-  if (projectId) body.projectId = projectId;
+  if (scope?.projectId) body.projectId = scope.projectId;
+  if (scope?.agentId) body.agentId = scope.agentId;
+  if (scope?.agentInstanceId) body.agentInstanceId = scope.agentInstanceId;
   if (attachments && attachments.length > 0) {
     body.images = attachments
       .filter((a) => a.type === "image")

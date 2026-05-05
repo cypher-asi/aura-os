@@ -293,6 +293,19 @@ pub(crate) struct GenerateImageRequest {
     pub project_id: Option<String>,
     #[serde(rename = "isIteration")]
     pub is_iteration: Option<bool>,
+    /// Standalone agent chat: org-level `agents.agent_id` of the chat the
+    /// user is generating into. When set, the handler resolves the
+    /// agent's chat session and persists this turn (user prompt +
+    /// generated image) so it survives reload — without this the
+    /// synthetic in-memory `generate_image` tool turn the UI renders
+    /// from `GenerationCompleted` is lost on hard refresh.
+    #[serde(default, rename = "agentId")]
+    pub agent_id: Option<String>,
+    /// Project chat: project-binding id of the agent instance. Threaded
+    /// alongside `project_id` so the handler can resolve the same
+    /// project chat session the regular `instance_route` uses.
+    #[serde(default, rename = "agentInstanceId")]
+    pub agent_instance_id: Option<String>,
 }
 
 /// 3D generation request. Exactly one of `image_url` (a real URL,

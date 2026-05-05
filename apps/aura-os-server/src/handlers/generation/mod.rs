@@ -1,6 +1,7 @@
 mod harness_stream;
 mod image;
 mod model3d;
+mod persist;
 mod router_proxy;
 mod sse;
 

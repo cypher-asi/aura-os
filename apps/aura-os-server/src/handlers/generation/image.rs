@@ -10,7 +10,8 @@ use crate::error::{ApiError, ApiResult};
 use crate::handlers::billing;
 use crate::state::{AppState, AuthJwt, AuthSession};
 
-use super::harness_stream::{open_generation_stream, resolve_generation_identity};
+use super::harness_stream::{open_generation_stream, resolve_generation_identity, GenerationPersistArgs};
+use super::persist::{persist_user_prompt, resolve_persist_ctx, GenerationPersistMeta};
 use super::router_proxy::router_url;
 use super::sse::SseResponse;
 
@@ -26,6 +27,35 @@ pub(crate) async fn generate_image_stream(
     let identity =
         resolve_generation_identity(&state, &auth_session, &jwt, body.project_id.as_deref())
             .await?;
+
+    // Image-mode generation lives outside the regular chat stream, so
+    // we resolve the chat-session persistence context separately and
+    // (best-effort) write a `user_message` row up front. The companion
+    // assistant turn is persisted by the sibling task spawned inside
+    // `open_generation_stream`. If no chat scope was threaded through
+    // (legacy clients, AURA 3D app), `persist` stays `None` and
+    // generation behaves exactly like before.
+    let persist_ctx = resolve_persist_ctx(
+        &state,
+        &jwt,
+        body.agent_id.as_deref(),
+        body.project_id.as_deref(),
+        body.agent_instance_id.as_deref(),
+    )
+    .await;
+    if let Some(ctx) = persist_ctx.as_ref() {
+        persist_user_prompt(&state, ctx, &body.prompt, body.images.as_deref()).await;
+    }
+    let persist_args = persist_ctx.map(|ctx| GenerationPersistArgs {
+        ctx,
+        meta: GenerationPersistMeta {
+            prompt: body.prompt.clone(),
+            model: body.model.clone(),
+            size: body.size.clone(),
+            tool_name: "generate_image",
+        },
+    });
+
     open_generation_stream(
         state,
         jwt,
@@ -41,6 +71,7 @@ pub(crate) async fn generate_image_stream(
             is_iteration: body.is_iteration,
         },
         identity,
+        persist_args,
     )
     .await
 }

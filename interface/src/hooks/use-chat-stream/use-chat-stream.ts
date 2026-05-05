@@ -77,13 +77,17 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
         nextSendStartsNewSessionRef.current = false;
         if (_generationMode === "image") {
           core.setProgressText("Generating image...");
+          // Forward project + agent-instance ids so the server can
+          // resolve the project chat session and persist this turn
+          // into history — without it the synthesized `generate_image`
+          // tool turn is in-memory only and is lost on hard reload.
           await generateImageStream(
             userMsg.content,
             selectedModel,
             attachments,
             handler,
             controller.signal,
-            projectId,
+            { projectId, agentInstanceId },
           );
           return;
         }

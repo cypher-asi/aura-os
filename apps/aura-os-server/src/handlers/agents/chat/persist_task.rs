@@ -240,7 +240,7 @@ pub(super) fn log_stream_summary(
     );
 }
 
-pub(super) async fn persist_event(ctx: &ChatPersistCtx, event_type: &str, content: Value) -> bool {
+pub(crate) async fn persist_event(ctx: &ChatPersistCtx, event_type: &str, content: Value) -> bool {
     let req = aura_os_storage::CreateSessionEventRequest {
         session_id: Some(ctx.session_id.clone()),
         user_id: None,
