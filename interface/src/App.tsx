@@ -4,6 +4,7 @@ import { useAuthStore } from "./stores/auth-store";
 import { useAppUIStore } from "./stores/app-ui-store";
 import { RequireAuth } from "./components/RequireAuth";
 import { AppShell } from "./components/AppShell";
+import { NativeContextMenuOverride } from "./components/NativeContextMenuOverride";
 import { LoginView } from "./views/LoginView";
 import { CaptureLoginView } from "./views/CaptureLoginView";
 import { apps } from "./apps/registry";
@@ -162,6 +163,7 @@ export function App() {
 
   return (
     <BrowserRouter>
+      <NativeContextMenuOverride />
       <AppRoutes showShell={showShell} />
     </BrowserRouter>
   );
