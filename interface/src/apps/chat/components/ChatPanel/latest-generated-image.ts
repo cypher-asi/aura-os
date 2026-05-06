@@ -75,11 +75,14 @@ function extractImage(entry: ToolCallEntry): LatestGeneratedImage | null {
  * successful `generate_image` tool result and return its public URL.
  * Returns `null` when the thread contains no usable image.
  *
- * Used by chat 3D mode: the 3D pill in the input bar is gated on a
- * non-null result here so the user must follow the same "image first"
- * path the standalone AURA 3D app enforces. Manual file attachments
- * are intentionally NOT considered — that proxy path is currently
- * disabled (see `useChatStream` / `useAgentChatStream`).
+ * Used by `ChatPanel` to one-shot seed the chat 3D mode's pinned source
+ * thumb when the user enters 3D mode and the thread already contains
+ * a generated image — preserving the "generate in Image mode → switch
+ * to 3D → send" power-user shortcut. Once seeded (or after the first
+ * in-bar image step lands), the pin is owned by `chat-ui-store`'s
+ * `pinnedSourceImage` slice and this helper is no longer consulted.
+ * Manual file attachments are intentionally NOT considered — the
+ * router's data-URL 3D path is still disabled.
  */
 export function findLatestGeneratedImage(
   messages: readonly DisplaySessionEvent[] | undefined,

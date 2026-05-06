@@ -288,8 +288,9 @@ export const DesktopChatInputBar = memo(
           ? "3d"
           : "chat";
 
-    // 3D mode forces the "Image first, then 3D" path: manual file
-    // attachments are not a valid 3D source today (the proxy path is
+    // 3D mode is a two-step in-bar pipeline (image step → model step,
+    // see the `isThreeDMode` block below). Manual file attachments are
+    // not a valid 3D source today (the router's data-URL path is
     // disabled, see `useChatStream`), so the Attach button, paste
     // image hijack, and drag-drop intake all early-return when 3D
     // mode is active. Other modes are unaffected.
