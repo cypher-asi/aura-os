@@ -10,15 +10,17 @@ use crate::harness::binary::resolve_managed_harness_binary;
 use crate::init::env::env_string;
 use crate::net::probe::{is_local_bind_host, parse_host_port, probe_http_ok};
 
-pub(crate) const PREFERRED_LOCAL_HARNESS_PORT: u16 = 19080;
+pub(crate) fn preferred_local_harness_port() -> u16 {
+    aura_os_core::Channel::current().preferred_sidecar_port()
+}
 
 pub(crate) fn maybe_spawn_local_harness_sidecar(data_dir: &Path) -> Option<Child> {
     let explicit_harness_url =
         env_string("LOCAL_HARNESS_URL").map(|value| value.trim_end_matches('/').to_string());
     let harness_binary = resolve_managed_harness_binary(data_dir);
-    let harness_url = explicit_harness_url
-        .clone()
-        .unwrap_or_else(|| format!("http://127.0.0.1:{PREFERRED_LOCAL_HARNESS_PORT}"));
+    let harness_url = explicit_harness_url.clone().unwrap_or_else(|| {
+        format!("http://127.0.0.1:{}", preferred_local_harness_port())
+    });
 
     if let Some(ref configured_url) = explicit_harness_url {
         if probe_http_ok(configured_url, "/health") {

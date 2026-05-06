@@ -34,7 +34,15 @@ run("npm", ["run", "build"], { cwd: interfaceDir });
 run("node", ["infra/scripts/release/desktop-frontend-assets-validate.mjs", "--dist", "interface/dist"], {
   cwd: repoRoot,
 });
-const cargoArgs = ["build", "--release", "--package", "aura-os-desktop"];
+const cargoArgs = [
+  "build",
+  "--release",
+  "--no-default-features",
+  "--features",
+  "stable-channel",
+  "--package",
+  "aura-os-desktop",
+];
 
 if (process.env.AURA_CARGO_TIMINGS === "1") {
   cargoArgs.push("--timings");

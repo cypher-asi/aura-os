@@ -57,7 +57,13 @@ uuid = { workspace = true }
 url = { workspace = true }
 
 [features]
-default = []
+default = ["dev-channel"]
+# Build-time channel selector. `dev-channel` is the default so plain
+# `cargo run -p aura-os-server` always produces a dev build (different data
+# dir, ports, etc.) that can run alongside an installed stable AURA. Release
+# packaging must invoke `--no-default-features --features stable-channel`.
+dev-channel = ["aura-os-core/dev-channel"]
+stable-channel = ["aura-os-core/stable-channel"]
 # Enables the real Chromium/CDP-backed browser backend. Requires a local
 # Chromium/Chrome executable at runtime; Chromium is launched lazily on
 # the first browser spawn so the server boots even without it.
@@ -69,6 +75,7 @@ tokio = { workspace = true, features = ["test-util"] }
 reqwest = { workspace = true }
 tower = { version = "0.5", features = ["util"] }
 uuid = { workspace = true }
+aura-os-core = { path = "../../crates/aura-os-core" }
 aura-os-storage = { path = "../../crates/aura-os-storage", features = ["test-utils"] }
 aura-os-harness = { path = "../../crates/aura-os-harness", features = ["test-support"] }
 

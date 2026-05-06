@@ -8,7 +8,7 @@ use axum::response::IntoResponse;
 use crate::state::AppState;
 
 use super::frontmatter::extract_frontmatter_field;
-use super::{create_skill_name_valid, USER_CREATED_SOURCE_MARKER};
+use super::{create_skill_name_valid, user_skills_root, USER_CREATED_SOURCE_MARKER};
 
 #[derive(serde::Serialize)]
 struct MySkillEntry {
@@ -57,13 +57,12 @@ fn skill_entry_from_dir(path: &std::path::Path) -> Option<MySkillEntry> {
 }
 
 /// List skills the current user authored via `POST /api/harness/skills`.
-/// Scans `~/.aura/skills/*/SKILL.md` and returns only entries whose
-/// frontmatter carries `source: "user-created"` — this reliably excludes
-/// shop-installed skills, which share the same on-disk layout but do not
-/// carry that marker.
+/// Scans `<skills_root>/*/SKILL.md` (channel-specific — see
+/// `user_skills_root`) and returns only entries whose frontmatter carries
+/// `source: "user-created"` — this reliably excludes shop-installed skills,
+/// which share the same on-disk layout but do not carry that marker.
 pub(crate) async fn list_my_skills() -> Result<axum::response::Response, StatusCode> {
-    let home = dirs::home_dir().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
-    let skills_root = home.join(".aura").join("skills");
+    let skills_root = user_skills_root().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let entries = match std::fs::read_dir(&skills_root) {
         Ok(entries) => entries,
@@ -149,8 +148,8 @@ async fn agents_blocking_skill_delete(
 }
 
 /// Permanently delete a user-authored skill. Removes
-/// `~/.aura/skills/<name>/` from disk and fires a best-effort
-/// `DELETE api/skills/<name>` at the harness catalog.
+/// `<skills_root>/<name>/` (channel-specific) from disk and fires a
+/// best-effort `DELETE api/skills/<name>` at the harness catalog.
 ///
 /// Preconditions:
 /// - The on-disk SKILL.md must carry the `source: "user-created"`
@@ -170,8 +169,9 @@ pub(crate) async fn delete_my_skill(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    let home = dirs::home_dir().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
-    let skill_dir = home.join(".aura").join("skills").join(&name);
+    let skill_dir = user_skills_root()
+        .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?
+        .join(&name);
     let skill_path = skill_dir.join("SKILL.md");
 
     // Existence + ownership check before touching anything else.
@@ -205,7 +205,7 @@ pub(crate) async fn delete_my_skill(
 
     // Remove the whole skill directory so supporting files (if any)
     // also go away. Only the SKILL.md has been verified, so this is a
-    // targeted directory name under ~/.aura/skills/.
+    // targeted directory name under the channel's skills root.
     if skill_dir.exists() {
         std::fs::remove_dir_all(&skill_dir).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     }

@@ -90,7 +90,11 @@ fn record_join_failure(state: &UpdateState, error: tokio::task::JoinError, sourc
 /// Spawn the background update-check loop. Call once at startup.
 pub(crate) fn spawn_update_loop(state: UpdateState) {
     if !updater_supported() {
-        info!("native updater disabled: updater public key is not configured");
+        if aura_os_core::Channel::current().is_dev() {
+            info!("native updater disabled: dev-channel build does not auto-update");
+        } else {
+            info!("native updater disabled: updater public key is not configured");
+        }
         set_status(&state.status, UpdateStatus::Idle);
         return;
     }

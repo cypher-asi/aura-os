@@ -45,7 +45,7 @@ async fn create_skill_registers_with_harness_and_installs_for_agent() {
     // The SKILL.md file should be written under the temp HOME.
     let skill_path = home_dir
         .path()
-        .join(".aura")
+        .join(aura_os_core::Channel::current().skills_home_name())
         .join("skills")
         .join("my-skill")
         .join("SKILL.md");
@@ -177,7 +177,7 @@ async fn create_skill_marker_survives_harness_overwrite() {
 
     let skill_path = home_dir
         .path()
-        .join(".aura")
+        .join(aura_os_core::Channel::current().skills_home_name())
         .join("skills")
         .join("racey-skill")
         .join("SKILL.md");

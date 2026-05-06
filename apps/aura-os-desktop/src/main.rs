@@ -261,7 +261,8 @@ fn self_heal_loopback_overrides(server_port: u16) {
     // an unset `AURA_SERVER_PORT` and stamps the hardcoded
     // `http://127.0.0.1:3100` default onto
     // `AgentRuntimeService.local_server_base_url` — but the embedded
-    // server binds to `PREFERRED_PORT` (19847) or an OS-chosen port,
+    // server binds to the channel's preferred port (19847 stable / 19848
+    // dev) or an OS-chosen port,
     // so every agent-runtime loopback callback
     // (`send_to_agent`, `list_agents`, spec fetches, etc.) hits a
     // closed port and surfaces as `external tool callback unreachable`.

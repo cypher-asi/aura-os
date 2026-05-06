@@ -21,10 +21,11 @@ pub(crate) fn install_macos_app_menu() {
     use muda::{Menu, PredefinedMenuItem, Submenu};
 
     let menu = Menu::new();
+    let app_title = aura_os_core::Channel::current().window_title();
 
-    let app_submenu = Submenu::new("AURA", true);
+    let app_submenu = Submenu::new(app_title, true);
     if let Err(error) = app_submenu.append_items(&[
-        &PredefinedMenuItem::about(Some("AURA"), None),
+        &PredefinedMenuItem::about(Some(app_title), None),
         &PredefinedMenuItem::separator(),
         &PredefinedMenuItem::hide(None),
         &PredefinedMenuItem::hide_others(None),

@@ -1,6 +1,7 @@
 //! Filesystem layout for the desktop binary's data, store, and bundled
 //! interface assets.
 
+use aura_os_core::Channel;
 use std::path::{Path, PathBuf};
 use tracing::{info, warn};
 
@@ -13,7 +14,7 @@ pub(crate) fn default_data_dir() -> PathBuf {
     }
     dirs::data_local_dir()
         .unwrap_or_else(|| PathBuf::from("."))
-        .join("aura")
+        .join(Channel::current().data_dir_name())
 }
 
 pub(crate) fn find_interface_dir() -> Option<PathBuf> {

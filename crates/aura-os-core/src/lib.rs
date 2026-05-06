@@ -1,3 +1,4 @@
+pub mod channel;
 pub mod entities;
 pub mod enums;
 pub mod expertise;
@@ -18,6 +19,7 @@ pub trait JwtProvider: Send + Sync {
     fn get_jwt(&self) -> Option<String>;
 }
 
+pub use channel::Channel;
 pub use entities::{
     effective_auth_source, Agent, AgentInstance, AgentOrchestration, AgentOrchestrationStep,
     AgentRuntimeConfig, BillingAccount, BuildStepRecord, ChatContentBlock, CheckoutSessionResponse,

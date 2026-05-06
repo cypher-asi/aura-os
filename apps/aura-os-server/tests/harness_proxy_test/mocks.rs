@@ -106,7 +106,10 @@ pub(crate) async fn start_clobbering_mock_harness(home: std::path::PathBuf) -> S
     let skills_post = move |axum::Json(body): axum::Json<Body>| {
         let home = home_post.clone();
         async move {
-            let dir = home.join(".aura").join("skills").join(&body.name);
+            let dir = home
+                .join(aura_os_core::Channel::current().skills_home_name())
+                .join("skills")
+                .join(&body.name);
             let _ = std::fs::create_dir_all(&dir);
             let desc = body.description.unwrap_or_default();
             // Frontmatter shape modelled on what the real harness

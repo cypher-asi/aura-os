@@ -96,10 +96,33 @@ The server reads `.env` from the current working directory when you run `aura-os
 
 All protected API endpoints require a JWT via `Authorization: Bearer <token>` header. WebSocket connections use `?token=<jwt>` query parameter. The JWT is obtained from the `/api/auth/login` or `/api/auth/register` response (`access_token` field) and persisted client-side in IndexedDB with an in-memory runtime cache for active requests. The same auth flow works for both the desktop app and web deployment.
 
+### Dev vs Stable channel
+
+AURA ships in two flavors that can run side-by-side on one machine so you can use the installed stable AURA to build the next version of AURA without colliding on local files, ports, or single-instance locks.
+
+| Identifier | Stable (installed) | Dev (`cargo run`) |
+| --- | --- | --- |
+| Data dir | `%LOCALAPPDATA%\aura` (`~/Library/Application Support/aura`, `~/.local/share/aura`) | `…\aura-dev` |
+| User skills | `~/.aura/skills` | `~/.aura-dev/skills` |
+| Standalone server port | `3100` | `3101` |
+| Embedded desktop server port | `19847` | `19848` |
+| Harness sidecar port | `19080` | `19081` |
+| Default harness URL port | `8080` | `8081` |
+| Vite dev server port | `5173` | `5174` |
+| Window title | `AURA` | `AURA Dev` |
+| Windows single-instance mutex | `Local\com.aura.desktop.single-instance` | `Local\com.aura.desktop-dev.single-instance` |
+| Auto-updater | enabled | disabled |
+
+Channel selection is a build-time cargo feature on `aura-os-core`. `cargo run -p aura-os-desktop` and the `scripts/dev/*` runners default to the `dev-channel` feature; the release pipeline (`cargo packager`, `scripts/ci/verify-desktop.mjs`, and the `release-stable` / `release-nightly` workflows) builds with `--no-default-features --features stable-channel`. There is no runtime override — the channel is baked into the binary.
+
+Remote services (`AURA_NETWORK_URL`, `AURA_STORAGE_URL`, `BILLING_SERVER_URL`, `ORBIT_BASE_URL`, etc.) are unaffected by the channel and shared via `.env`.
+
+If you run `npm run dev` directly (without the dev script wrapper) and want it to talk to a dev-channel `aura-os-server`, set `AURA_SERVER_PORT=3101` so the Vite proxy targets the dev backend instead of the stable one on `3100`.
+
 ### Server URLs (local development)
 
-- **Backend (Axum):** `http://127.0.0.1:3100` — API at `/api`, WebSocket at `/ws`
-- **Frontend (Vite dev):** `http://localhost:5173` — proxies `/api` and `/ws` to the backend
+- **Backend (Axum):** `http://127.0.0.1:3100` — API at `/api`, WebSocket at `/ws` (stable; dev-channel uses `3101`)
+- **Frontend (Vite dev):** `http://localhost:5173` — proxies `/api` and `/ws` to the backend (stable; dev-channel uses `5174`)
 
 ### Run backend
 

@@ -17,16 +17,19 @@ use crate::init::env::ci_mode_enabled;
 use crate::route_state::RouteState;
 use crate::updater::{self, UpdateState};
 
-pub(crate) const PREFERRED_PORT: u16 = 19847;
+pub(crate) fn preferred_port() -> u16 {
+    aura_os_core::Channel::current().preferred_desktop_port()
+}
 
 pub(crate) fn bind_listener() -> (StdTcpListener, u16, String) {
+    let preferred = preferred_port();
     let configured_port = std::env::var("AURA_SERVER_PORT")
         .ok()
         .and_then(|value| value.parse::<u16>().ok())
         .filter(|port| *port > 0);
 
     let bind_fallback_listener = || {
-        StdTcpListener::bind(format!("127.0.0.1:{PREFERRED_PORT}"))
+        StdTcpListener::bind(format!("127.0.0.1:{preferred}"))
             .or_else(|_| StdTcpListener::bind("127.0.0.1:0"))
             .expect("failed to bind to an available port")
     };
@@ -41,7 +44,7 @@ pub(crate) fn bind_listener() -> (StdTcpListener, u16, String) {
                 warn!(
                     %error,
                     configured_port = port,
-                    fallback_port = PREFERRED_PORT,
+                    fallback_port = preferred,
                     "configured AURA_SERVER_PORT unavailable; falling back to an available port"
                 );
                 bind_fallback_listener()

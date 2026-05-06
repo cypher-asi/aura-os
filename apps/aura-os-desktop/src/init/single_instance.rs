@@ -41,8 +41,8 @@ impl Drop for SingleInstanceGuard {
 
 #[cfg(target_os = "windows")]
 fn acquire_single_instance() -> Result<Option<SingleInstanceGuard>, String> {
-    const MUTEX_NAME: &str = "Local\\com.aura.desktop.single-instance";
-    let wide_name: Vec<u16> = MUTEX_NAME
+    let mutex_name = aura_os_core::Channel::current().single_instance_mutex();
+    let wide_name: Vec<u16> = mutex_name
         .encode_utf16()
         .chain(std::iter::once(0))
         .collect();

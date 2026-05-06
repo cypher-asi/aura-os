@@ -498,6 +498,7 @@ dependencies = [
 name = "aura-os-desktop"
 version = "0.1.0"
 dependencies = [
+ "aura-os-core",
  "aura-os-ide",
  "aura-os-integrations",
  "aura-os-server",
@@ -544,6 +545,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "aura-os-core",
  "aura-protocol",
  "base64",
  "futures-util",

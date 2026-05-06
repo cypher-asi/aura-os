@@ -3,8 +3,11 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-FRONTEND_PORT="${AURA_FRONTEND_PORT:-5173}"
-BACKEND_PORT="${AURA_SERVER_PORT:-3100}"
+# Default to dev-channel ports (5174 frontend, 3101 backend) so the mobile
+# dev stack does not collide with an installed stable AURA on the canonical
+# 5173/3100 ports. Override via the env vars to share an origin with stable.
+FRONTEND_PORT="${AURA_FRONTEND_PORT:-5174}"
+BACKEND_PORT="${AURA_SERVER_PORT:-3101}"
 FRONTEND_HOST="${AURA_FRONTEND_HOST:-127.0.0.1}"
 BACKEND_HOST="${AURA_SERVER_HOST:-127.0.0.1}"
 PUBLIC_HOST="${AURA_PUBLIC_HOST:-$FRONTEND_HOST}"

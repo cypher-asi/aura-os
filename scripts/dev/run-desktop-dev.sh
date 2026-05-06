@@ -4,7 +4,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 FRONTEND_HOST="${AURA_FRONTEND_HOST:-127.0.0.1}"
-FRONTEND_PORT="${AURA_FRONTEND_PORT:-5173}"
+# Default to the dev-channel Vite port (5174) so a dev-built shell does not
+# collide with an installed stable AURA serving on 5173.
+FRONTEND_PORT="${AURA_FRONTEND_PORT:-5174}"
 FRONTEND_CONNECT_HOST="${AURA_DESKTOP_FRONTEND_CONNECT_HOST:-$FRONTEND_HOST}"
 DESKTOP_TARGET_DIR="${AURA_DESKTOP_TARGET_DIR:-${CARGO_TARGET_DIR:-$ROOT/target/desktop-dev}}"
 DESKTOP_SERVER_PORT="${AURA_DESKTOP_SERVER_PORT:-}"

@@ -47,7 +47,7 @@ async fn list_my_skills_returns_only_user_created_entries() {
     // user-created marker. list_my_skills must NOT include it.
     let shop_dir = home_dir
         .path()
-        .join(".aura")
+        .join(aura_os_core::Channel::current().skills_home_name())
         .join("skills")
         .join("shop-skill");
     std::fs::create_dir_all(&shop_dir).unwrap();
@@ -60,7 +60,7 @@ async fn list_my_skills_returns_only_user_created_entries() {
     // Also drop a malformed SKILL.md to confirm the scanner skips it gracefully.
     let bad_dir = home_dir
         .path()
-        .join(".aura")
+        .join(aura_os_core::Channel::current().skills_home_name())
         .join("skills")
         .join("broken-skill");
     std::fs::create_dir_all(&bad_dir).unwrap();
@@ -97,7 +97,10 @@ async fn list_skills_filters_entries_missing_on_disk() {
         std::env::set_var("HOME", home_dir.path());
     }
 
-    let skills_root = home_dir.path().join(".aura").join("skills");
+    let skills_root = home_dir
+        .path()
+        .join(aura_os_core::Channel::current().skills_home_name())
+        .join("skills");
     let kept_dir = skills_root.join("kept-skill");
     std::fs::create_dir_all(&kept_dir).unwrap();
     std::fs::write(

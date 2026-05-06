@@ -7,6 +7,9 @@ license.workspace = true
 repository.workspace = true
 
 [features]
+default = ["stable-channel"]
+stable-channel = []
+dev-channel = []
 test-utils = ["dep:tempfile"]
 
 [dependencies]

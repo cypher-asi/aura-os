@@ -14,7 +14,9 @@ if (Test-Path .env) {
 }
 
 $frontendBindHost = if ($env:AURA_FRONTEND_HOST) { $env:AURA_FRONTEND_HOST } else { "127.0.0.1" }
-$frontendPort = if ($env:AURA_FRONTEND_PORT) { $env:AURA_FRONTEND_PORT } else { "5173" }
+# Default to the dev-channel Vite port (5174) so a dev-built shell does not
+# collide with an installed stable AURA serving on 5173.
+$frontendPort = if ($env:AURA_FRONTEND_PORT) { $env:AURA_FRONTEND_PORT } else { "5174" }
 $frontendConnectHost = if ($env:AURA_DESKTOP_FRONTEND_CONNECT_HOST) {
     $env:AURA_DESKTOP_FRONTEND_CONNECT_HOST
 } else {

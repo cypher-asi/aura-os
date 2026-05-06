@@ -10,7 +10,9 @@ use serde::Deserialize;
 use crate::state::AppState;
 
 use super::frontmatter::{extract_frontmatter_field, strip_frontmatter, yaml_escape_scalar};
-use super::{create_skill_name_valid, skills_base_dir, USER_CREATED_SOURCE_MARKER};
+use super::{
+    create_skill_name_valid, skills_base_dir, user_skills_root, USER_CREATED_SOURCE_MARKER,
+};
 
 #[derive(Deserialize)]
 pub(crate) struct CreateSkillBody {
@@ -97,8 +99,9 @@ pub(crate) async fn create_skill(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    let home = dirs::home_dir().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
-    let skill_dir = home.join(".aura").join("skills").join(&payload.name);
+    let skill_dir = user_skills_root()
+        .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?
+        .join(&payload.name);
     std::fs::create_dir_all(&skill_dir).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let frontmatter = build_skill_frontmatter(&payload);
@@ -110,7 +113,7 @@ pub(crate) async fn create_skill(
     // Without this the UI's catalog (backed by the harness' `GET api/skills`)
     // stays empty and the newly created skill is invisible.
     //
-    // NB: the harness writes its OWN `~/.aura/skills/<name>/SKILL.md` on
+    // NB: the harness writes its OWN `<skills_root>/<name>/SKILL.md` on
     // this POST (with a different frontmatter shape — `name:` included,
     // `user-invocable:` spelled with a hyphen, and crucially NO `source:`
     // marker). We therefore have to do the harness call *before* our own
@@ -205,8 +208,9 @@ pub(crate) async fn install_from_shop(
 
     let content = load_shop_skill_markdown(&name, &body).await?;
 
-    let home = dirs::home_dir().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
-    let skill_dir = home.join(".aura").join("skills").join(&name);
+    let skill_dir = user_skills_root()
+        .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?
+        .join(&name);
     std::fs::create_dir_all(&skill_dir).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let skill_path = skill_dir.join("SKILL.md");

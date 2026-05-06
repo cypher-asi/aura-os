@@ -16,6 +16,7 @@ default = []
 test-support = []
 
 [dependencies]
+aura-os-core = { path = "../aura-os-core" }
 aura-protocol = { path = "../aura-protocol" }
 anyhow = { workspace = true }
 async-trait = { workspace = true }

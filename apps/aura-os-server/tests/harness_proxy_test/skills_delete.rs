@@ -44,7 +44,7 @@ async fn delete_my_skill_removes_user_created_and_refuses_shop_skill() {
 
     let skill_dir = home_dir
         .path()
-        .join(".aura")
+        .join(aura_os_core::Channel::current().skills_home_name())
         .join("skills")
         .join("doomed-skill");
     assert!(skill_dir.join("SKILL.md").exists());
@@ -53,7 +53,7 @@ async fn delete_my_skill_removes_user_created_and_refuses_shop_skill() {
     // refuse to remove it — that would be a foot-gun.
     let shop_dir = home_dir
         .path()
-        .join(".aura")
+        .join(aura_os_core::Channel::current().skills_home_name())
         .join("skills")
         .join("shop-skill");
     std::fs::create_dir_all(&shop_dir).unwrap();
@@ -157,7 +157,7 @@ async fn delete_my_skill_blocked_when_installed_on_any_agent() {
     // The on-disk SKILL.md must still be there since delete was rejected.
     let skill_path = home_dir
         .path()
-        .join(".aura")
+        .join(aura_os_core::Channel::current().skills_home_name())
         .join("skills")
         .join("cascade-skill")
         .join("SKILL.md");
@@ -214,7 +214,7 @@ async fn delete_my_skill_proceeds_when_not_installed_anywhere() {
 
     let skill_path = home_dir
         .path()
-        .join(".aura")
+        .join(aura_os_core::Channel::current().skills_home_name())
         .join("skills")
         .join("unblocked-skill")
         .join("SKILL.md");

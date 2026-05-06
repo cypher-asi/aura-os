@@ -53,6 +53,14 @@ fn updater_public_key() -> Result<String, String> {
 }
 
 pub(crate) fn updater_supported() -> bool {
+    // Dev-channel builds are produced from local source by `cargo run` and
+    // must never silently replace themselves with the published stable
+    // installer. Gate the entire updater on this check; downstream entry
+    // points (`spawn_update_loop`, `trigger_recheck`, `start_install`,
+    // `stage_only`) already early-return when this returns false.
+    if !aura_os_core::Channel::current().updater_enabled() {
+        return false;
+    }
     updater_public_key().is_ok()
 }
 

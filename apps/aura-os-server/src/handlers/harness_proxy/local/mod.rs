@@ -25,18 +25,26 @@ pub(crate) use manage::{delete_my_skill, list_my_skills};
 /// ~/.aura/skills/ on disk).
 pub(crate) const USER_CREATED_SOURCE_MARKER: &str = "user-created";
 
-/// Returns `true` iff `~/.aura/skills/<name>/SKILL.md` exists. Used by the
+/// Path to the user's per-channel skills tree (`~/<channel>/skills`). Returns
+/// `None` if the home directory cannot be resolved. Stable channel uses
+/// `~/.aura/skills`; dev channel uses `~/.aura-dev/skills` so a dev build
+/// cannot mutate the skills the installed stable build relies on.
+pub(crate) fn user_skills_root() -> Option<std::path::PathBuf> {
+    let home = dirs::home_dir()?;
+    Some(
+        home.join(aura_os_core::Channel::current().skills_home_name())
+            .join("skills"),
+    )
+}
+
+/// Returns `true` iff `<skills_root>/<name>/SKILL.md` exists. Used by the
 /// catalog proxy in `list_skills` to hide skills the user has deleted even
 /// when the harness hasn't rescanned its catalog yet.
 pub(crate) fn skill_exists_on_disk(name: &str) -> bool {
-    let Some(home) = dirs::home_dir() else {
+    let Some(root) = user_skills_root() else {
         return false;
     };
-    home.join(".aura")
-        .join("skills")
-        .join(name)
-        .join("SKILL.md")
-        .exists()
+    root.join(name).join("SKILL.md").exists()
 }
 
 pub(super) fn create_skill_name_valid(name: &str) -> bool {

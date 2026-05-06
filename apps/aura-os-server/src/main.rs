@@ -1,6 +1,7 @@
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 
+use aura_os_core::Channel;
 use tokio::net::TcpListener;
 use tracing::{info, warn};
 use tracing_subscriber::EnvFilter;
@@ -14,7 +15,7 @@ fn default_data_dir() -> PathBuf {
     }
     dirs::data_local_dir()
         .unwrap_or_else(|| PathBuf::from("."))
-        .join("aura")
+        .join(Channel::current().data_dir_name())
 }
 
 /// One-shot migration: the local settings store used to live in `<data>/db/`
@@ -83,7 +84,7 @@ async fn main() {
     let port: u16 = std::env::var("AURA_SERVER_PORT")
         .ok()
         .and_then(|s| s.parse().ok())
-        .unwrap_or(3100);
+        .unwrap_or_else(|| Channel::current().default_standalone_port());
     let host: IpAddr = std::env::var("AURA_SERVER_HOST")
         .ok()
         .and_then(|s| s.parse().ok())

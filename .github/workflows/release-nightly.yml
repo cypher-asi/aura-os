@@ -598,7 +598,7 @@ jobs:
           set -o pipefail
 
           package_once() {
-            cargo packager --release --packages aura-os-desktop 2>&1 | tee packager.log
+            cargo packager --release --no-default-features --features stable-channel --packages aura-os-desktop 2>&1 | tee packager.log
           }
 
           should_retry_packaging() {
