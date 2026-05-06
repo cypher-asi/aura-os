@@ -1,6 +1,8 @@
+use axum::extract::DefaultBodyLimit;
 use axum::routing::{delete, get, post};
 use axum::Router;
 
+use super::ATTACHMENT_REQUEST_MAX_BYTES;
 use crate::handlers::{agents, remote_files, swarm};
 use crate::state::AppState;
 
@@ -66,7 +68,11 @@ pub(super) fn agent_routes() -> Router<AppState> {
         )
         .route(
             "/api/agents/:agent_id/events/stream",
-            post(agents::send_agent_event_stream),
+            // Chat input bar inlines base64 image attachments in the
+            // request body; raise above Axum's default 2 MiB cap so a
+            // pasted screenshot doesn't surface as `Failed to fetch`.
+            post(agents::send_agent_event_stream)
+                .layer(DefaultBodyLimit::max(ATTACHMENT_REQUEST_MAX_BYTES)),
         )
         .route(
             "/api/agents/:agent_id/reset-session",
@@ -96,7 +102,10 @@ pub(super) fn agent_routes() -> Router<AppState> {
         )
         .route(
             "/api/projects/:project_id/agents/:agent_instance_id/events/stream",
-            post(agents::send_event_stream),
+            // Same attachment-body rationale as the standalone-agent
+            // events stream above.
+            post(agents::send_event_stream)
+                .layer(DefaultBodyLimit::max(ATTACHMENT_REQUEST_MAX_BYTES)),
         )
         .route(
             "/api/projects/:project_id/agents/:agent_instance_id/reset-session",

@@ -1,6 +1,8 @@
+use axum::extract::DefaultBodyLimit;
 use axum::routing::{delete, get, post, put};
 use axum::Router;
 
+use super::ATTACHMENT_REQUEST_MAX_BYTES;
 use crate::handlers::{generation, process};
 use crate::state::AppState;
 
@@ -59,13 +61,20 @@ pub(super) fn process_routes() -> Router<AppState> {
 }
 
 pub(super) fn generation_routes() -> Router<AppState> {
+    // Both routes accept JSON bodies that inline base64 image data
+    // (image-mode attachments / chat 3D's `image_data` field). Without
+    // this override Axum's default 2 MiB cap rejects any pasted image
+    // larger than ~1.5 MB, and the connection close mid-upload surfaces
+    // in the browser as `TypeError: Failed to fetch` rather than 413.
     Router::new()
         .route(
             "/api/generate/image/stream",
-            post(generation::generate_image_stream),
+            post(generation::generate_image_stream)
+                .layer(DefaultBodyLimit::max(ATTACHMENT_REQUEST_MAX_BYTES)),
         )
         .route(
             "/api/generate/3d/stream",
-            post(generation::generate_3d_stream),
+            post(generation::generate_3d_stream)
+                .layer(DefaultBodyLimit::max(ATTACHMENT_REQUEST_MAX_BYTES)),
         )
 }

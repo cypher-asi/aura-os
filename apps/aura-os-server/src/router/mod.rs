@@ -29,6 +29,18 @@ mod specs;
 mod tasks;
 mod users_orgs_billing;
 
+/// Maximum request body size (in bytes) for routes that accept inlined
+/// base64 image attachments. The chat input bar caps total uploads at
+/// 10 MB raw (see `useFileAttachments.ts::MAX_TOTAL_SIZE_MB`); base64
+/// inflates that to ~13.3 MiB, plus JSON envelope overhead. 16 MiB
+/// gives comfortable headroom while still bounding the body so a
+/// pathological client can't keep posting unbounded payloads.
+///
+/// Routes still inherit Axum's default 2 MiB cap unless they explicitly
+/// opt into this larger limit, so the looser bound is scoped only to
+/// attachment-bearing endpoints.
+pub(super) const ATTACHMENT_REQUEST_MAX_BYTES: usize = 16 * 1024 * 1024;
+
 use agents::agent_routes;
 use auth::{auth_routes, protected_auth_routes};
 pub use cors::build_local_api_cors_layer;
