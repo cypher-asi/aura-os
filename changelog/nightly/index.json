@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-05-06",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.465.1",
+    "title": "Native desktop polish, dual build channels, and a rebuilt 3D chat flow",
+    "intro": "Tonight's nightly leans heavily into making AURA feel like a real desktop app: the browser context menu is gone, the Windows top edge is finally grabbable, and async-loading modals stop flickering open. Underneath, AURA now ships as parallel dev and stable channels so contributors can run a cargo build alongside their installed app, and the chat 3D mode returns with a redesigned image-then-model pipeline.",
+    "entryCount": 6,
+    "highlights": [
+      "Native browser context menu replaced by in-app Cut/Copy/Paste and Copy-on-selection menus",
+      "Windows top edge resize widened from ~4px to a reliable 10px band",
+      "Dev and stable build channels can now run side-by-side on one machine",
+      "Chat 3D mode returns as a two-step image-then-3D pipeline with a pinned source thumb"
+    ],
+    "rawCommitCount": 11,
+    "generatedAt": "2026-05-06T07:05:27.610Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.465.1",
+    "path": "history/2026-05-06.json"
+  },
+  {
     "date": "2026-05-05",
     "channel": "nightly",
     "version": "0.1.0-nightly.463.1",
