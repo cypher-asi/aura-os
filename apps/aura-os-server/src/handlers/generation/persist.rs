@@ -97,13 +97,34 @@ pub(super) async fn resolve_persist_ctx(
     None
 }
 
-/// Image-mode reference inputs arrive as inline base64 data URLs. Persisting
-/// those bytes into chat history can exceed aura-storage's event limit and is
-/// not needed for the generated image result, so durable history stores the
-/// user prompt only.
+const MAX_PERSISTED_IMAGE_BASE64_BYTES: usize = 1_600_000;
+
+/// Image-mode reference inputs arrive as inline base64 data URLs. Persist
+/// the compressed references when they are small enough so history refreshes
+/// do not replace the optimistic pasted-image row with a prompt-only row.
 fn data_urls_to_attachments(images: Option<&[String]>) -> Option<Vec<ChatAttachmentDto>> {
-    let _images = images?;
-    None
+    let mut total_base64_len = 0usize;
+    let attachments: Vec<ChatAttachmentDto> = images?
+        .iter()
+        .filter_map(|image| {
+            let rest = image.strip_prefix("data:")?;
+            let (media_type, data) = rest.split_once(";base64,")?;
+            if media_type.is_empty() || data.is_empty() {
+                return None;
+            }
+            total_base64_len = total_base64_len.saturating_add(data.len());
+            if total_base64_len > MAX_PERSISTED_IMAGE_BASE64_BYTES {
+                return None;
+            }
+            Some(ChatAttachmentDto {
+                type_: "image".to_string(),
+                media_type: media_type.to_string(),
+                data: data.to_string(),
+                name: None,
+            })
+        })
+        .collect();
+    (!attachments.is_empty()).then_some(attachments)
 }
 
 /// Persist the user prompt (plus any reference images) as a
@@ -277,12 +298,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn data_urls_to_attachments_omits_inline_base64_payloads() {
+    fn data_urls_to_attachments_keeps_small_inline_base64_payloads() {
         let images = vec![
             "data:image/png;base64,iVBORw0KGgo".to_string(),
             "data:image/jpeg;base64,/9j/4AAQ".to_string(),
         ];
-        assert!(data_urls_to_attachments(Some(&images)).is_none());
+        let attachments = data_urls_to_attachments(Some(&images)).expect("attachments");
+
+        assert_eq!(attachments.len(), 2);
+        assert_eq!(attachments[0].type_, "image");
+        assert_eq!(attachments[0].media_type, "image/png");
+        assert_eq!(attachments[0].data, "iVBORw0KGgo");
+        assert_eq!(attachments[1].media_type, "image/jpeg");
+        assert_eq!(attachments[1].data, "/9j/4AAQ");
     }
 
     #[test]
@@ -292,6 +320,16 @@ mod tests {
         assert!(data_urls_to_attachments(Some(&["not-a-data-url".to_string()])).is_none());
         let invalid = vec!["data:;base64,abc".to_string()];
         assert!(data_urls_to_attachments(Some(&invalid)).is_none());
+    }
+
+    #[test]
+    fn data_urls_to_attachments_skips_payloads_over_storage_cap() {
+        let oversized = format!(
+            "data:image/jpeg;base64,{}",
+            "a".repeat(MAX_PERSISTED_IMAGE_BASE64_BYTES + 1)
+        );
+
+        assert!(data_urls_to_attachments(Some(&[oversized])).is_none());
     }
 
     /// Pin the on-disk shape of the synthetic `assistant_message_end`
