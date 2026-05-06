@@ -7,7 +7,8 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-aura-os-server = { path = "../aura-os-server", features = ["browser-cdp"] }
+aura-os-core = { path = "../../crates/aura-os-core", default-features = false }
+aura-os-server = { path = "../aura-os-server", default-features = false, features = ["browser-cdp"] }
 aura-os-ide = { path = "../aura-os-ide" }
 aura-os-store = { path = "../../crates/aura-os-store" }
 aura-os-integrations = { path = "../../crates/aura-os-integrations" }
@@ -29,11 +30,23 @@ tracing-appender = "0.2"
 cargo-packager-updater = "0.2"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-windows = { version = "0.58", features = ["Win32_Graphics_Dwm", "Win32_Graphics_Gdi", "Win32_UI_WindowsAndMessaging", "Win32_Foundation", "Win32_System_Diagnostics_Debug", "Win32_System_Kernel", "Win32_System_Threading", "Win32_Security"] }
+windows = { version = "0.58", features = ["Win32_Graphics_Dwm", "Win32_Graphics_Gdi", "Win32_UI_WindowsAndMessaging", "Win32_UI_HiDpi", "Win32_UI_Shell", "Win32_Foundation", "Win32_System_Diagnostics_Debug", "Win32_System_Kernel", "Win32_System_Threading", "Win32_Security"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc = "0.2"
 muda = "0.15"
+
+[features]
+default = ["dev-channel"]
+# Build-time channel selector. `dev-channel` is the default so plain
+# `cargo run -p aura-os-desktop` and the `scripts/dev/*` runners produce a
+# dev build that uses parallel-but-distinct identifiers (data dir name,
+# ports, single-instance mutex, window title, skills tree) and can run
+# alongside an installed stable AURA without colliding. The release pipeline
+# builds with `--no-default-features --features stable-channel` (see the
+# `before-packaging-command` below).
+dev-channel = ["aura-os-core/dev-channel", "aura-os-server/dev-channel"]
+stable-channel = ["aura-os-core/stable-channel", "aura-os-server/stable-channel"]
 
 [package.metadata.packager]
 product-name = "AURA"
@@ -52,7 +65,7 @@ icons = [
     "assets/icons/icon-32.png",
     "assets/icons/icon-16.png",
 ]
-before-packaging-command = "cargo build --release --package aura-os-desktop"
+before-packaging-command = "cargo build --release --no-default-features --features stable-channel --package aura-os-desktop"
 resources = ["../../interface/dist", "resources"]
 
 [package.metadata.packager.nsis]

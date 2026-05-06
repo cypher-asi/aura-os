@@ -8,7 +8,9 @@ use tracing::{debug, info, warn};
 use wry::{WebContext, WebView, WebViewBuilder};
 
 use crate::events::{UserEvent, WinCmd};
-use crate::ui::chrome::{disable_window_background_erase, set_square_corners};
+use crate::ui::chrome::{
+    disable_window_background_erase, expand_top_resize_border, set_square_corners,
+};
 use crate::ui::icon::IconData;
 
 const INITIAL_BLANK_PAGE_URL: &str = "about:blank";
@@ -56,7 +58,7 @@ pub(crate) fn create_main_window(
     icon_data: &IconData,
 ) -> (tao::window::Window, WindowId) {
     let window = WindowBuilder::new()
-        .with_title("AURA")
+        .with_title(aura_os_core::Channel::current().window_title())
         .with_decorations(false)
         .with_visible(false)
         .with_window_icon(Some(icon_data.to_icon()))
@@ -66,6 +68,7 @@ pub(crate) fn create_main_window(
 
     set_square_corners(&window);
     disable_window_background_erase(&window);
+    expand_top_resize_border(&window);
 
     let id = window.id();
     info!("window created");
@@ -137,7 +140,7 @@ pub(crate) fn open_secondary_main_window<E: 'static>(
     make_ipc: impl FnOnce(WindowId) -> Box<dyn Fn(wry::http::Request<String>) + 'static>,
 ) -> Result<(Window, WebView), Box<dyn std::error::Error>> {
     let mut wb = WindowBuilder::new()
-        .with_title("AURA")
+        .with_title(aura_os_core::Channel::current().window_title())
         .with_decorations(false)
         .with_visible(false)
         .with_inner_size(tao::dpi::LogicalSize::new(1280.0, 800.0));
@@ -147,6 +150,7 @@ pub(crate) fn open_secondary_main_window<E: 'static>(
     let window = wb.build(event_loop)?;
     set_square_corners(&window);
     disable_window_background_erase(&window);
+    expand_top_resize_border(&window);
 
     let ipc = make_ipc(window.id());
     let builder = WebViewBuilder::new_with_web_context(web_context)
