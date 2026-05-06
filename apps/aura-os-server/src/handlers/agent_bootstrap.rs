@@ -32,18 +32,44 @@ pub(crate) struct CleanupCeoResponse {
     pub failed: Vec<String>,
 }
 
+/// Distinctive opening of the system prompt produced by
+/// [`ceo_system_prompt`]. Used as a third identity signal in
+/// [`looks_like_ceo`] so a CEO that was created before the
+/// `bootstrap:ceo_agent_id` stamping landed (commit `2dabef61a`,
+/// April 20) can still be recognised after the user renames it —
+/// the agent editor preserves `system_prompt` on save unless the
+/// user explicitly rewrites it, so this prefix survives a rename.
+const CEO_SYSTEM_PROMPT_PREFIX: &str = "You are the CEO SuperAgent";
+
 /// True if a network agent record has the explicit CEO bootstrap identity.
 ///
 /// Do not infer CEO identity from [`AgentPermissions::is_ceo_preset`]: that
 /// method recognizes the full-access capability bundle, and ordinary agents
-/// can legitimately carry that same bundle. The persisted bootstrap agent id
-/// keeps renamed CEOs recognizable without falling back to capability shape.
+/// can legitimately carry that same bundle. We instead rely on three
+/// explicit signals:
+///
+/// 1. The locally-stamped bootstrap `agent_id` — set by every successful
+///    `setup_ceo_agent` run via `AgentService::remember_ceo_agent_id`.
+/// 2. The hardcoded `name == "CEO" && role == "CEO"` pair from the
+///    bootstrap template.
+/// 3. The canonical [`CEO_SYSTEM_PROMPT_PREFIX`] — recovers renamed CEOs
+///    whose local stamp was never written (CEO created before the
+///    stamping fix, signed-in on a fresh device, multi-account device
+///    where another user overwrote the unscoped key, etc.). Without
+///    this clause the dedupe step returns `canonical: None` and
+///    `setup_ceo_agent` happily creates a duplicate `name="CEO"` agent
+///    next to the user's renamed one.
 fn looks_like_ceo(net: &NetworkAgent, bootstrapped_ceo_agent_id: Option<&str>) -> bool {
     if bootstrapped_ceo_agent_id.is_some_and(|id| id == net.id) {
         return true;
     }
     let role = net.role.as_deref().unwrap_or("");
-    net.name.eq_ignore_ascii_case("CEO") && role.eq_ignore_ascii_case("CEO")
+    if net.name.eq_ignore_ascii_case("CEO") && role.eq_ignore_ascii_case("CEO") {
+        return true;
+    }
+    net.system_prompt
+        .as_deref()
+        .is_some_and(|p| p.starts_with(CEO_SYSTEM_PROMPT_PREFIX))
 }
 
 /// Sort CEO candidates so the oldest record is first. `created_at == None`
@@ -85,6 +111,9 @@ fn ceo_agent_template(org_name: &str, org_id: &str) -> CeoTemplate {
 }
 
 fn ceo_system_prompt(org_name: &str, org_id: &str) -> String {
+    // Keep the opening line in lock-step with `CEO_SYSTEM_PROMPT_PREFIX`
+    // so the prefix-based clause in `looks_like_ceo` stays accurate.
+    debug_assert!(CEO_SYSTEM_PROMPT_PREFIX == "You are the CEO SuperAgent");
     format!(
         r#"You are the CEO SuperAgent for the "{org_name}" organization in Aura OS.
 
@@ -447,11 +476,20 @@ mod tests {
     use aura_os_core::AgentPermissions;
     use aura_os_network::NetworkAgent;
 
-    use super::looks_like_ceo;
+    use super::{ceo_system_prompt, looks_like_ceo, CEO_SYSTEM_PROMPT_PREFIX};
 
     fn network_agent(
         name: &str,
         role: Option<&str>,
+        permissions: AgentPermissions,
+    ) -> NetworkAgent {
+        network_agent_with_prompt(name, role, None, permissions)
+    }
+
+    fn network_agent_with_prompt(
+        name: &str,
+        role: Option<&str>,
+        system_prompt: Option<&str>,
         permissions: AgentPermissions,
     ) -> NetworkAgent {
         NetworkAgent {
@@ -459,7 +497,7 @@ mod tests {
             name: name.to_string(),
             role: role.map(str::to_string),
             personality: None,
-            system_prompt: None,
+            system_prompt: system_prompt.map(str::to_string),
             skills: None,
             icon: None,
             harness: None,
@@ -506,5 +544,64 @@ mod tests {
 
         assert!(!looks_like_ceo(&only_name, None));
         assert!(!looks_like_ceo(&only_role, None));
+    }
+
+    /// Regression for the "duplicate CEO after rename + re-login" bug.
+    /// The user renamed their CEO from "CEO" to "Maia" but kept the
+    /// canonical role and the bootstrap-template `system_prompt`. With
+    /// no local `bootstrap:ceo_agent_id` stamp (created before that
+    /// stamping landed) neither the id nor the strict name+role
+    /// fallback match — only the system-prompt prefix can save us.
+    #[test]
+    fn system_prompt_prefix_recognizes_renamed_ceo() {
+        let agent = network_agent_with_prompt(
+            "Maia",
+            Some("CEO"),
+            Some(&ceo_system_prompt("Acme", "org-1")),
+            AgentPermissions::ceo_preset(),
+        );
+        assert!(looks_like_ceo(&agent, None));
+    }
+
+    /// Same scenario, but the user also rewrote the role (e.g. "Maia"
+    /// the "Strategist"). The system-prompt prefix is the only signal
+    /// left.
+    #[test]
+    fn system_prompt_prefix_handles_full_rename() {
+        let agent = network_agent_with_prompt(
+            "Maia",
+            Some("Strategist"),
+            Some(&ceo_system_prompt("Acme", "org-1")),
+            AgentPermissions::ceo_preset(),
+        );
+        assert!(looks_like_ceo(&agent, None));
+    }
+
+    /// An ordinary agent with full-access permissions and a custom
+    /// system prompt must not be misclassified as the bootstrap CEO —
+    /// users can legitimately mint full-access regular agents.
+    #[test]
+    fn arbitrary_system_prompt_is_not_ceo() {
+        let agent = network_agent_with_prompt(
+            "Builder",
+            Some("Engineer"),
+            Some("You are a helpful coding assistant."),
+            AgentPermissions::full_access(),
+        );
+        assert!(!looks_like_ceo(&agent, None));
+    }
+
+    /// Documents the prefix invariant that
+    /// [`crate::handlers::agent_bootstrap::ceo_system_prompt`] relies
+    /// on. If the template ever changes its opening line, this test
+    /// (and `CEO_SYSTEM_PROMPT_PREFIX`) must be updated together so
+    /// `looks_like_ceo` keeps recognising bootstrap CEOs.
+    #[test]
+    fn ceo_system_prompt_starts_with_canonical_prefix() {
+        let prompt = ceo_system_prompt("Acme", "org-1");
+        assert!(
+            prompt.starts_with(CEO_SYSTEM_PROMPT_PREFIX),
+            "ceo_system_prompt drifted from CEO_SYSTEM_PROMPT_PREFIX: {prompt:?}"
+        );
     }
 }
