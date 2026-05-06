@@ -1,6 +1,10 @@
 import { memo, useMemo } from "react";
 import { FileText } from "lucide-react";
-import type { DisplaySessionEvent } from "../../../../shared/types/stream";
+import type {
+  DisplayContentBlock,
+  DisplayImageBlock,
+  DisplaySessionEvent,
+} from "../../../../shared/types/stream";
 import { langFromPath } from "../../../../ide/lang";
 import { useHighlightedHtml } from "../../../../shared/hooks/use-highlighted-html";
 import { useUIModalStore } from "../../../../stores/ui-modal-store";
@@ -74,18 +78,33 @@ export const MessageBubble = memo(function MessageBubble({
   const isInsufficientCreditsError = message.displayVariant === "insufficientCreditsError";
   const isStreamDropped = message.displayVariant === "streamDropped";
 
+  // Track image vs non-image blocks separately so user attachments render as
+  // their own thumbnail strip *above* the dark text bubble instead of being
+  // crammed into the same padded card. We keep the original `contentBlocks`
+  // index alongside each entry so gallery ids stay stable (`<msgId>-img-<i>`)
+  // regardless of how we split or filter for rendering.
+  const { imageBlocks, nonImageBlocks } = useMemo(() => {
+    const images: { block: DisplayImageBlock; index: number }[] = [];
+    const others: { block: DisplayContentBlock; index: number }[] = [];
+    if (hasContentBlocks && message.contentBlocks) {
+      message.contentBlocks.forEach((block, index) => {
+        if (block.type === "image") {
+          images.push({ block, index });
+        } else {
+          others.push({ block, index });
+        }
+      });
+    }
+    return { imageBlocks: images, nonImageBlocks: others };
+  }, [hasContentBlocks, message.contentBlocks]);
+
   const galleryImages = useMemo<GalleryItem[]>(() => {
-    if (!hasContentBlocks || !message.contentBlocks) return [];
-    return message.contentBlocks.flatMap((block, i): GalleryItem[] =>
-      block.type === "image"
-        ? [{
-            id: `${message.id}-img-${i}`,
-            src: `data:${block.media_type};base64,${block.data}`,
-            alt: "Attached image",
-          }]
-        : [],
-    );
-  }, [hasContentBlocks, message.contentBlocks, message.id]);
+    return imageBlocks.map(({ block, index }) => ({
+      id: `${message.id}-img-${index}`,
+      src: `data:${block.media_type};base64,${block.data}`,
+      alt: "Attached image",
+    }));
+  }, [imageBlocks, message.id]);
   // Models sometimes emit an empty text block right before a tool_use; that
   // still leaves contentBlocks non-empty but nothing renderable, so ignore
   // whitespace-only text blocks when deciding if the bubble carries prose.
@@ -107,19 +126,17 @@ export const MessageBubble = memo(function MessageBubble({
     && !hasThinking
     && (hasToolCalls || hasTimeline);
 
-  // A user message is "widget-only" when every renderable block is either
-  // a file attachment (`[File: ...]`) or qualifies as a large-text doc.
-  // In that case we drop the grey chat-bubble chrome so the widget itself
-  // reads as the message, matching the app background.
+  // A user message is "widget-only" when every renderable text block is
+  // either a file attachment (`[File: ...]`) or qualifies as a large-text
+  // doc. Image blocks now render in their own strip above the bubble, so
+  // they don't disqualify the bubble chrome from being dropped around the
+  // remaining text/file widgets.
   const userBlocksAreAllWidgets = (() => {
     if (message.role !== "user") return false;
     if (hasContentBlocks && message.contentBlocks) {
-      const textBlocks = message.contentBlocks.filter((b) => b.type === "text");
-      if (textBlocks.length === 0) return false;
-      if (message.contentBlocks.some((b) => b.type !== "text")) return false;
-      return textBlocks.every((b) => {
-        const t = (b as { type: "text"; text: string }).text;
-        return FILE_PREFIX_RE.test(t) || isLargeText(t);
+      if (nonImageBlocks.length === 0) return false;
+      return nonImageBlocks.every(({ block }) => {
+        return FILE_PREFIX_RE.test(block.text) || isLargeText(block.text);
       });
     }
     if (hasContent && isLargeText(message.content)) return true;
@@ -132,36 +149,15 @@ export const MessageBubble = memo(function MessageBubble({
     if (hasContentBlocks && message.contentBlocks) {
       return (
         <div className={styles.userMessageBlocks}>
-          {message.contentBlocks.map((block, i) =>
-            block.type === "text" ? (
-              FILE_PREFIX_RE.test(block.text) ? (
-                <FileAttachmentBlock key={i} text={block.text} />
-              ) : isLargeText(block.text) ? (
-                <LargeTextBlock key={i} text={block.text} />
-              ) : (
-                <span key={i}>{block.text}</span>
-              )
-            ) : (
-              <button
-                key={i}
-                type="button"
-                className={styles.messageImageWrapper}
-                onClick={() => {
-                  const targetId = `${message.id}-img-${i}`;
-                  if (galleryImages.length === 0) return;
-                  openGallery({ items: galleryImages, initialId: targetId });
-                }}
-                aria-label="Open image in gallery"
-              >
-                <img
-                  src={`data:${block.media_type};base64,${block.data}`}
-                  alt=""
-                  className={styles.messageImage}
-                  loading="lazy"
-                />
-              </button>
-            ),
-          )}
+          {nonImageBlocks.map(({ block, index }) => {
+            if (FILE_PREFIX_RE.test(block.text)) {
+              return <FileAttachmentBlock key={index} text={block.text} />;
+            }
+            if (isLargeText(block.text)) {
+              return <LargeTextBlock key={index} text={block.text} />;
+            }
+            return <span key={index}>{block.text}</span>;
+          })}
         </div>
       );
     }
@@ -247,27 +243,59 @@ export const MessageBubble = memo(function MessageBubble({
     );
   };
 
+  const isUser = message.role === "user";
+  const hasUserImages = isUser && imageBlocks.length > 0;
+  // For user messages we suppress the dark text bubble entirely when the
+  // message is image-only -- the image strip becomes the message itself.
+  // When contentBlocks isn't used (legacy plain-text path) we always show
+  // the bubble. Assistant rendering is unaffected.
+  const renderUserBubble =
+    isUser && (!hasContentBlocks || nonImageBlocks.length > 0);
+  const renderBubble = isUser ? renderUserBubble : true;
+
   return (
     <div
       className={`${styles.message} ${
-        message.role === "user" ? styles.messageUser : styles.messageAssistant
+        isUser ? styles.messageUser : styles.messageAssistant
       } ${userBlocksAreAllWidgets ? styles.messageUserWidgetOnly : ""}`}
     >
-      <div
-        className={`${styles.bubble} ${
-          message.role === "user"
-            ? styles.bubbleUser
-            : styles.bubbleAssistant
-        } ${isAssistantToolOnly ? styles.bubbleAssistantCompact : ""} ${
-          userBlocksAreAllWidgets ? styles.bubbleUserWidgetOnly : ""
-        }`}
-      >
-        {message.role === "user" ? (
-          renderUserContent()
-        ) : (
-          renderAssistantContent()
-        )}
-      </div>
+      {hasUserImages && (
+        <div className={styles.userImageStrip}>
+          {imageBlocks.map(({ block, index }) => (
+            <button
+              key={index}
+              type="button"
+              className={styles.messageImageWrapper}
+              onClick={() => {
+                if (galleryImages.length === 0) return;
+                openGallery({
+                  items: galleryImages,
+                  initialId: `${message.id}-img-${index}`,
+                });
+              }}
+              aria-label="Open image in gallery"
+            >
+              <img
+                src={`data:${block.media_type};base64,${block.data}`}
+                alt=""
+                className={styles.messageImage}
+                loading="lazy"
+              />
+            </button>
+          ))}
+        </div>
+      )}
+      {renderBubble && (
+        <div
+          className={`${styles.bubble} ${
+            isUser ? styles.bubbleUser : styles.bubbleAssistant
+          } ${isAssistantToolOnly ? styles.bubbleAssistantCompact : ""} ${
+            userBlocksAreAllWidgets ? styles.bubbleUserWidgetOnly : ""
+          }`}
+        >
+          {isUser ? renderUserContent() : renderAssistantContent()}
+        </div>
+      )}
     </div>
   );
 });

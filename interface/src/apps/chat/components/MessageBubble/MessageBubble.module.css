@@ -3,6 +3,7 @@
   display: flex;
   flex-direction: column;
   max-width: 85%;
+  gap: var(--space-1);
 }
 
 .messageUser {
@@ -69,18 +70,30 @@
   gap: var(--space-2);
 }
 
+/* Image attachments render as a row of thumbnails *above* the dark
+   text bubble (sibling of `.bubble`, inside `.message`). The strip
+   right-aligns under `.messageUser`, wraps on overflow, and uses a
+   fixed thumbnail size so two pasted images sit side-by-side as a
+   compact preview rather than stretching across the column. */
+.userImageStrip {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-1);
+}
+
 .messageImageWrapper {
-  width: 100%;
-  max-width: 480px;
-  aspect-ratio: 16 / 9;
+  width: 96px;
+  height: 96px;
   position: relative;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--color-bg-secondary);
   border: 0;
   padding: 0;
   cursor: zoom-in;
   display: block;
+  flex-shrink: 0;
 }
 
 .messageImageWrapper:focus-visible {
@@ -94,7 +107,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 /* File attachment block — content-specific styles (structure in ResponseBlock) */
@@ -274,6 +287,16 @@
     max-width: 100%;
     width: 100%;
     padding-right: 0;
+  }
+
+  .userImageStrip {
+    gap: 6px;
+  }
+
+  .messageImageWrapper {
+    width: 104px;
+    height: 104px;
+    border-radius: 8px;
   }
 }
 
