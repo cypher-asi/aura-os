@@ -47,6 +47,7 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 dirs = { workspace = true }
 base64 = { workspace = true }
+bytes = { workspace = true }
 blake3 = { workspace = true }
 dashmap = { workspace = true }
 dotenvy = "0.15"

@@ -57,14 +57,9 @@ pub(super) async fn resolve_persist_ctx(
         let parsed_project = project_id.parse::<ProjectId>().ok();
         let parsed_instance = agent_instance_id.parse::<AgentInstanceId>().ok();
         if let (Some(parsed_project), Some(parsed_instance)) = (parsed_project, parsed_instance) {
-            if let Some(ctx) = setup_project_chat_persistence(
-                state,
-                &parsed_project,
-                &parsed_instance,
-                jwt,
-                false,
-            )
-            .await
+            if let Some(ctx) =
+                setup_project_chat_persistence(state, &parsed_project, &parsed_instance, jwt, false)
+                    .await
             {
                 return Some(ctx);
             }
@@ -102,33 +97,13 @@ pub(super) async fn resolve_persist_ctx(
     None
 }
 
-/// Decode the request's `images` field (a list of `data:<media>;base64,<payload>`
-/// URLs the chat input collected for image-to-image generation) into the
-/// `ChatAttachmentDto` shape `persist_user_message` expects.
+/// Image-mode reference inputs arrive as inline base64 data URLs. Persisting
+/// those bytes into chat history can exceed aura-storage's event limit and is
+/// not needed for the generated image result, so durable history stores the
+/// user prompt only.
 fn data_urls_to_attachments(images: Option<&[String]>) -> Option<Vec<ChatAttachmentDto>> {
-    let images = images?;
-    let attachments: Vec<ChatAttachmentDto> = images
-        .iter()
-        .filter_map(|url| {
-            let after_data = url.strip_prefix("data:")?;
-            let (header, data) = after_data.split_once(',')?;
-            let media_type = header.split(';').next()?.to_string();
-            if media_type.is_empty() {
-                return None;
-            }
-            Some(ChatAttachmentDto {
-                type_: "image".to_string(),
-                media_type,
-                data: data.to_string(),
-                name: None,
-            })
-        })
-        .collect();
-    if attachments.is_empty() {
-        None
-    } else {
-        Some(attachments)
-    }
+    let _images = images?;
+    None
 }
 
 /// Persist the user prompt (plus any reference images) as a
@@ -196,10 +171,7 @@ async fn run_generation_persist_loop(
                 persist_completion(&ctx, &event_bus, &meta, &payload).await;
                 return;
             }
-            Ok(
-                HarnessOutbound::GenerationError(_)
-                | HarnessOutbound::Error(_),
-            ) => {
+            Ok(HarnessOutbound::GenerationError(_) | HarnessOutbound::Error(_)) => {
                 // Generation failed upstream. The user_message row
                 // already exists in storage; we deliberately do not
                 // synthesize an empty assistant turn so the UI can
@@ -248,8 +220,8 @@ pub(super) async fn persist_completion(
         input.insert("size".to_string(), json!(size));
     }
 
-    let tool_result_content = serde_json::to_string(completed_payload)
-        .unwrap_or_else(|_| "{}".to_string());
+    let tool_result_content =
+        serde_json::to_string(completed_payload).unwrap_or_else(|_| "{}".to_string());
 
     let content_blocks = vec![
         json!({
@@ -305,18 +277,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn data_urls_to_attachments_decodes_media_type_and_data() {
+    fn data_urls_to_attachments_omits_inline_base64_payloads() {
         let images = vec![
             "data:image/png;base64,iVBORw0KGgo".to_string(),
             "data:image/jpeg;base64,/9j/4AAQ".to_string(),
         ];
-        let atts = data_urls_to_attachments(Some(&images)).expect("attachments");
-        assert_eq!(atts.len(), 2);
-        assert_eq!(atts[0].type_, "image");
-        assert_eq!(atts[0].media_type, "image/png");
-        assert_eq!(atts[0].data, "iVBORw0KGgo");
-        assert_eq!(atts[1].media_type, "image/jpeg");
-        assert_eq!(atts[1].data, "/9j/4AAQ");
+        assert!(data_urls_to_attachments(Some(&images)).is_none());
     }
 
     #[test]
@@ -324,7 +290,6 @@ mod tests {
         assert!(data_urls_to_attachments(None).is_none());
         assert!(data_urls_to_attachments(Some(&[])).is_none());
         assert!(data_urls_to_attachments(Some(&["not-a-data-url".to_string()])).is_none());
-        // Missing media type still returns None for that entry.
         let invalid = vec!["data:;base64,abc".to_string()];
         assert!(data_urls_to_attachments(Some(&invalid)).is_none());
     }
@@ -419,9 +384,7 @@ mod tests {
         assert_eq!(tool_use["input"]["prompt"], "draw a fox");
         assert_eq!(tool_use["input"]["model"], "gpt-image-2");
         assert_eq!(tool_use["input"]["size"], "1024x1024");
-        let tool_use_id = tool_use["id"]
-            .as_str()
-            .expect("tool_use.id is a string");
+        let tool_use_id = tool_use["id"].as_str().expect("tool_use.id is a string");
         assert!(tool_use_id.starts_with("gen-"));
 
         let tool_result = &blocks[1];
