@@ -2,20 +2,20 @@
   {
     "date": "2026-05-06",
     "channel": "nightly",
-    "version": "0.1.0-nightly.469.1",
-    "title": "Desktop chrome polish, chat 3D revival, and dev/stable channel split",
-    "intro": "A dense day of platform work: AURA's desktop chrome stops feeling like a browser, chat regains a working 3D pipeline with an embedded GLB viewer, and the codebase grows a clean dev/stable channel split so contributors can run a cargo build alongside the installed app. Smaller threads landed across modals, sidebars, feedback, and S3-backed attachment uploads.",
+    "version": "0.1.0-nightly.470.1",
+    "title": "Native-feeling chrome, a reworked 3D chat flow, and side-by-side dev builds",
+    "intro": "Today's nightly tightens the desktop OS feel with a fully in-app right-click menu and a more forgiving Windows resize edge, rebuilds chat's 3D mode around an inline image-then-model pipeline, and introduces dev/stable build channels so contributors can run a development AURA next to the installed app. A long evening batch also landed clickable chat session history, S3-backed attachment uploads, and a feedback sidekick split into Details and Comments.",
     "entryCount": 6,
     "highlights": [
-      "Native browser context menu replaced with in-app menus",
-      "Chat 3D mode rebuilt as a two-step image-then-model pipeline with embedded GLB viewer",
-      "Dev and stable channels can now run side-by-side",
-      "Windows top-edge resize hit area widened",
-      "S3 presigned upload path added for chat attachments"
+      "Native browser context menus replaced with in-app Cut/Copy/Paste, selection copy, and image copy",
+      "Chat 3D mode reworked into an inline image-then-model pipeline with embedded GLB viewer",
+      "Dev and stable build channels can now run side-by-side on one machine",
+      "Chat session history is clickable, auto-titled, and a new \"+\" starts a fresh session",
+      "Attachments now upload to S3 via presigned URLs before send"
     ],
-    "rawCommitCount": 43,
-    "generatedAt": "2026-05-06T21:07:37.374Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.469.1",
+    "rawCommitCount": 44,
+    "generatedAt": "2026-05-06T22:27:47.521Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.470.1",
     "path": "history/2026-05-06.json"
   },
   {
