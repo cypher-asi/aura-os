@@ -70,16 +70,14 @@ export interface Generated3DModel {
 export type Aura3DSidekickTab = "images" | "models";
 
 /**
- * Stylized prompt suffix used **only** by the AURA 3D app's image
- * generation flow ([ImageGeneration.tsx](../apps/aura3d/ImageGeneration/ImageGeneration.tsx)).
- * The product framing here (jet black background, isolated 3/4 angle,
- * etc.) is intentional: it produces inputs that read well as 3D
- * sculpture sources for the downstream Tripo conversion.
- *
- * This suffix MUST NOT be appended to chat-mode image / 3D generation
- * (see `interface/src/hooks/use-agent-chat-stream.ts`); chat mode sends
- * the user's prompt verbatim so a free-form chat send never gets a
- * product-photography lens forced onto it.
+ * Historical prompt suffix that the AURA 3D app's image generation
+ * flow used to append to every prompt. New sends do NOT include it —
+ * image generation (in chat and the 3D app alike) now sends the
+ * user's prompt verbatim. The constant is retained solely so
+ * `stripStyleLock` / `artifactToImage` can clean the suffix off
+ * legacy `ProjectArtifact` rows persisted before this change, so the
+ * sidekick / nav don't render the full product-photography
+ * boilerplate as the saved label.
  */
 export const STYLE_LOCK_SUFFIX =
   ", standalone product only, 3/4 angle view, single object centered, fully in frame with no cropping, no other objects or elements in frame, jet black background with subtle vignette, photorealistic, high-poly, textured 3D sculpture, subject pops from background, cinematic depth, isolated product presentation";

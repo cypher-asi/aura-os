@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 import { ModalConfirm } from "@cypher-asi/zui";
-import { useAura3DStore, STYLE_LOCK_SUFFIX } from "../../../stores/aura3d-store";
+import { useAura3DStore } from "../../../stores/aura3d-store";
 import { generateImageStream } from "../../../api/streams";
 import { EventType } from "../../../shared/types/aura-events";
 import { ImagePreview } from "../ImagePreview";
@@ -93,12 +93,10 @@ export function ImageGeneration() {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const fullPrompt = prompt + STYLE_LOCK_SUFFIX;
-
     setGeneratingImage(true);
 
     generateImageStream(
-      fullPrompt,
+      prompt,
       imagineModel,
       undefined,
       {
