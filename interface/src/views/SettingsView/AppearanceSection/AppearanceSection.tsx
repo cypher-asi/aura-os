@@ -71,6 +71,7 @@ export function AppearanceSection() {
                 size="sm"
                 variant={theme === mode ? "filled" : "ghost"}
                 icon={<Icon size={14} />}
+                fullWidth
                 onClick={() => setTheme(mode)}
               >
                 {THEME_LABELS[mode]}

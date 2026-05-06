@@ -136,7 +136,7 @@ Interactive elements use standard dimensions for consistency and accessibility:
 ### Widths
 | Token | Value | Usage |
 |-------|-------|-------|
-| `--control-width-default` | 200px | Default min-width for buttons and inputs |
+| `--control-width-default` | 200px | Default min-width for inputs (Button is content-sized; opt into filling with the `fullWidth` prop) |
 
 Note: Touch targets should be at least 44x44px (--control-height-lg) for accessibility.
 

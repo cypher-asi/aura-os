@@ -10,7 +10,6 @@
   border-radius: var(--radius-md);
   transition: all var(--transition-fast);
   min-height: var(--control-height-md);
-  min-width: var(--control-width-default);
   cursor: pointer;
   text-decoration: none;
   border: 1px solid transparent;
