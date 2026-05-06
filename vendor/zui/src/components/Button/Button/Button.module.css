@@ -153,11 +153,11 @@
   color: var(--color-text-primary);
 }
 
-.fullWidth {
+.button.fullWidth {
   display: flex;
   width: 100%;
   min-width: 0;
-  flex: 1 1 0;
+  flex: 1 1 0%;
 }
 
 .sm {
