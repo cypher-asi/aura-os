@@ -33,6 +33,8 @@ import { AdvancedSection } from "../../views/SettingsView/AdvancedSection";
 import { TierSubscriptionModal } from "../TierSubscriptionModal";
 import { useAuth } from "../../stores/auth-store";
 import { track } from "../../lib/analytics";
+import { useBillingStore } from "../../stores/billing-store";
+import { useDeferredModalOpen } from "../../shared/hooks/use-deferred-modal-open";
 import { useOrgSettingsData, isOrgSection, type Section } from "./useOrgSettingsData";
 import styles from "./OrgSettingsPanel.module.css";
 
@@ -64,7 +66,15 @@ const ORG_NAV_ITEMS: NavigatorItemProps[] = [
   { id: "integrations", label: "Integrations", icon: <Plug size={14} /> },
 ];
 
-function OrgSectionContent({ data, onUpgrade }: { data: ReturnType<typeof useOrgSettingsData>; onUpgrade: () => void }) {
+function OrgSectionContent({
+  data,
+  onUpgrade,
+  upgradePreparing,
+}: {
+  data: ReturnType<typeof useOrgSettingsData>;
+  onUpgrade: () => void;
+  upgradePreparing: boolean;
+}) {
   return (
     <>
       {data.section === "general" && (
@@ -84,10 +94,10 @@ function OrgSectionContent({ data, onUpgrade }: { data: ReturnType<typeof useOrg
         <OrgSettingsInvites invites={data.invites} isAdminOrOwner={data.isAdminOrOwner} onCreateInvite={data.handleCreateInvite} onRevokeInvite={data.handleRevokeInvite} />
       )}
       {data.section === "rewards" && (
-        <OrgSettingsRewards onUpgrade={onUpgrade} />
+        <OrgSettingsRewards onUpgrade={onUpgrade} upgradePreparing={upgradePreparing} />
       )}
       {data.section === "billing" && (
-        <OrgSettingsBilling billing={data.billing} isAdminOrOwner={data.isAdminOrOwner} balance={data.balance} balanceLoading={data.balanceLoading} balanceError={data.balanceError} checkoutError={data.checkoutError} pollingStatus={data.pollingStatus} onPurchase={data.handlePurchase} onRetryBalance={data.loadCreditBalance} onUpgrade={onUpgrade} />
+        <OrgSettingsBilling billing={data.billing} isAdminOrOwner={data.isAdminOrOwner} balance={data.balance} balanceLoading={data.balanceLoading} balanceError={data.balanceError} checkoutError={data.checkoutError} pollingStatus={data.pollingStatus} onPurchase={data.handlePurchase} onRetryBalance={data.loadCreditBalance} onUpgrade={onUpgrade} upgradePreparing={upgradePreparing} />
       )}
       {data.section === "credit-history" && (
         <OrgSettingsCreditHistory />
@@ -120,9 +130,18 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
   const data = useOrgSettingsData(isOpen, initialSection);
   const { logout } = useAuth();
   const navigate = useNavigate();
-  const [tierModalOpen, setTierModalOpen] = useState(false);
+  const [tierModalRequested, setTierModalRequested] = useState(false);
   const navScrollRef = useRef<HTMLDivElement>(null);
   const contentScrollRef = useRef<HTMLDivElement>(null);
+
+  // Defer opening the tier modal until subscription status is in the
+  // billing store, so the modal renders straight to the tier grid at its
+  // final size (no "Loading plan details..." shimmer).
+  const { isOpen: tierModalOpen, isPreparing: tierPreparing } =
+    useDeferredModalOpen({
+      requestedOpen: tierModalRequested,
+      prepare: () => useBillingStore.getState().fetchSubscription(),
+    });
 
   useEffect(() => { if (isOpen) track("settings_opened"); }, [isOpen]);
 
@@ -185,7 +204,7 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
                 </div>
               </div>
             ) : onOrgSection ? (
-              <OrgSectionContent data={data} onUpgrade={() => setTierModalOpen(true)} />
+              <OrgSectionContent data={data} onUpgrade={() => setTierModalRequested(true)} upgradePreparing={tierPreparing} />
             ) : (
               <AppSectionContent section={data.section} />
             )}
@@ -193,7 +212,7 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
           <OverlayScrollbar scrollRef={contentScrollRef} />
         </div>
       </div>
-      <TierSubscriptionModal isOpen={tierModalOpen} onClose={() => setTierModalOpen(false)} />
+      <TierSubscriptionModal isOpen={tierModalOpen} onClose={() => setTierModalRequested(false)} />
     </Modal>
   );
 }

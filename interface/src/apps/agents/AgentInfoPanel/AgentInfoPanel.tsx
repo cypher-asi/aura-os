@@ -19,6 +19,7 @@ import {
   type AgentProjectBinding,
 } from "../hooks/use-cascade-delete-agent";
 import { DeleteAgentConfirmModal } from "../hooks/DeleteAgentConfirmModal";
+import { useDeferredModalOpen } from "../../../shared/hooks/use-deferred-modal-open";
 import { SkillsTab } from "./SkillsTab";
 import { MemoryTab } from "./MemoryTab";
 import { SkillPreview } from "./SkillPreview";
@@ -204,6 +205,16 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
     [cascade, selectedAgent],
   );
 
+  // Defer opening the confirm modal until cascade bindings have loaded
+  // so the footer button label and cascade-warning paragraph are stable
+  // from first paint. The mobile-standalone Delete button is disabled
+  // during the brief preparing window.
+  const { isOpen: deleteModalOpen, isPreparing: deletePreparing } =
+    useDeferredModalOpen({
+      requestedOpen: showDeleteConfirm,
+      prepare: () => cascade.refresh(),
+    });
+
   const openDeleteConfirm = useCallback(() => {
     cascade.reset();
     requestDelete();
@@ -304,7 +315,7 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
       {isMobileStandalone && isOwnAgent && (
         <div className={styles.mobileActions}>
           <Button variant="ghost" size="sm" onClick={requestEdit}>Edit</Button>
-          <Button variant="ghost" size="sm" onClick={openDeleteConfirm}>Delete</Button>
+          <Button variant="ghost" size="sm" onClick={openDeleteConfirm} disabled={deletePreparing}>Delete</Button>
         </div>
       )}
 
@@ -321,13 +332,12 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
       />
 
       <DeleteAgentConfirmModal
-        isOpen={showDeleteConfirm}
+        isOpen={deleteModalOpen}
         onClose={handleCloseDeleteConfirm}
         onDelete={handleConfirmDelete}
         deleting={cascade.deleting}
         deleteError={cascade.error}
         bindings={cascade.bindings}
-        bindingsLoading={cascade.bindingsLoading}
         agentName={a.name}
       />
     </div>

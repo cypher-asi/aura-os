@@ -29,6 +29,7 @@ import { createAgentChatHandoffState } from "../../../utils/chat-handoff";
 import { standaloneAgentHandoffTarget } from "../../../utils/chat-handoff";
 import { useCascadeDeleteAgent } from "../hooks/use-cascade-delete-agent";
 import { DeleteAgentConfirmModal } from "../hooks/DeleteAgentConfirmModal";
+import { useDeferredModalOpen } from "../../../shared/hooks/use-deferred-modal-open";
 
 import type { Agent } from "../../../shared/types";
 import { isSuperAgent as isSuperAgentByPerms } from "../../../shared/types/permissions";
@@ -177,6 +178,13 @@ export function AgentList({ mode = "default" }: AgentListProps) {
   const [deleteTarget, setDeleteTarget] = useState<Agent | null>(null);
   const [optimisticDeletedAgentId, setOptimisticDeletedAgentId] = useState<string | null>(null);
   const cascade = useCascadeDeleteAgent(deleteTarget);
+  // Defer opening the confirm modal until bindings have loaded so the
+  // modal opens once at its final size (footer button label depends on
+  // bindings.length; without this it widens mid-render).
+  const { isOpen: deleteModalOpen } = useDeferredModalOpen({
+    requestedOpen: !!deleteTarget,
+    prepare: () => cascade.refresh(),
+  });
   const scrollRef = useRef<HTMLDivElement>(null);
   const { thumbStyle, visible, onThumbPointerDown } = useOverlayScrollbar(scrollRef);
 
@@ -501,7 +509,7 @@ export function AgentList({ mode = "default" }: AgentListProps) {
         )}
 
       <DeleteAgentConfirmModal
-        isOpen={!!deleteTarget}
+        isOpen={deleteModalOpen}
         onClose={() => {
           setDeleteTarget(null);
           cascade.reset();
@@ -510,7 +518,6 @@ export function AgentList({ mode = "default" }: AgentListProps) {
         deleting={cascade.deleting}
         deleteError={cascade.error}
         bindings={cascade.bindings}
-        bindingsLoading={cascade.bindingsLoading}
         agentName={deleteTarget?.name ?? ""}
       />
 

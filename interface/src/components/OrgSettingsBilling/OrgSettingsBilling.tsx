@@ -19,6 +19,8 @@ interface Props {
   onPurchase: (amountUsd: number) => void;
   onRetryBalance: () => void;
   onUpgrade?: () => void;
+  /** True while the tier modal is preparing (subscription fetch in flight). */
+  upgradePreparing?: boolean;
 }
 
 const PRESETS = [25, 50, 100, 250];
@@ -36,6 +38,7 @@ export function OrgSettingsBilling({
   onPurchase,
   onRetryBalance,
   onUpgrade,
+  upgradePreparing = false,
 }: Props) {
   const { isNativeApp } = useAuraCapabilities();
   const [customAmount, setCustomAmount] = useState("");
@@ -146,7 +149,7 @@ export function OrgSettingsBilling({
           <div className={styles.rowControl} style={{ marginLeft: "auto" }}>
             <span className={styles.roleBadge}>{planLabel}</span>
             {onUpgrade && (
-              <Button variant="ghost" size="sm" onClick={onUpgrade} style={{ padding: 0, display: "flex", justifyContent: "flex-end" }}>
+              <Button variant="ghost" size="sm" onClick={onUpgrade} disabled={upgradePreparing} style={{ padding: 0, display: "flex", justifyContent: "flex-end" }}>
                 Change Plan
               </Button>
             )}

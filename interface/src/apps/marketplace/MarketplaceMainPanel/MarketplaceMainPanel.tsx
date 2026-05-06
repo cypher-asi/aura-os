@@ -6,6 +6,8 @@ import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
 import { AgentTalentCard } from "../AgentTalentCard";
 import { HireProjectPickerModal } from "../HireProjectPickerModal";
 import { useFilteredMarketplaceAgents, useMarketplaceStore } from "../stores";
+import { useProjectsListStore } from "../../../stores/projects-list-store";
+import { useDeferredModalOpen } from "../../../shared/hooks/use-deferred-modal-open";
 import type { MarketplaceAgent } from "../marketplace-types";
 import styles from "./MarketplaceMainPanel.module.css";
 
@@ -19,6 +21,16 @@ export function MarketplaceMainPanel() {
   const { agentId } = useParams();
   const [hireTarget, setHireTarget] = useState<MarketplaceAgent | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Defer opening the hire modal until the projects list is hydrated so
+  // the modal renders straight to the project list (no in-modal spinner)
+  // and at its final size.
+  const { isOpen: hireModalOpen, isPreparing: hirePreparing } =
+    useDeferredModalOpen({
+      requestedOpen: hireTarget !== null,
+      prepare: () => useProjectsListStore.getState().refreshProjects(),
+    });
+  const preparingAgentId = hirePreparing ? hireTarget?.agent.agent_id ?? null : null;
 
   useEffect(() => {
     setSelectedAgentId(agentId ?? null);
@@ -58,6 +70,7 @@ export function MarketplaceMainPanel() {
                   isSelected={marketAgent.agent.agent_id === agentId}
                   onSelect={() => handleSelect(marketAgent)}
                   onHire={() => setHireTarget(marketAgent)}
+                  hirePreparing={preparingAgentId === marketAgent.agent.agent_id}
                 />
               ))}
             </div>
@@ -67,7 +80,7 @@ export function MarketplaceMainPanel() {
       </div>
 
       <HireProjectPickerModal
-        isOpen={hireTarget !== null}
+        isOpen={hireModalOpen}
         agent={hireTarget?.agent ?? null}
         onClose={() => setHireTarget(null)}
         onHired={() => setHireTarget(null)}

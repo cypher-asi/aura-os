@@ -9,6 +9,12 @@ import type { AgentProjectBinding } from "./use-cascade-delete-agent";
  * sidebar context menu, the agent detail panel, the marketplace
  * panel, etc.) can import it without dragging in transitive
  * dependencies of the larger surfaces.
+ *
+ * Callers must defer opening this modal until cascade bindings have
+ * loaded (typically via [`useDeferredModalOpen`](../../../shared/hooks/use-deferred-modal-open.ts)
+ * with `prepare: () => cascade.refresh()`). With that contract the
+ * footer label and body content are stable from first paint, so the
+ * modal opens once at its final size with no jank.
  */
 export function DeleteAgentConfirmModal({
   isOpen,
@@ -17,7 +23,6 @@ export function DeleteAgentConfirmModal({
   deleting,
   deleteError,
   bindings,
-  bindingsLoading,
   agentName,
 }: {
   isOpen: boolean;
@@ -26,7 +31,6 @@ export function DeleteAgentConfirmModal({
   deleting: boolean;
   deleteError: string | null;
   bindings: AgentProjectBinding[];
-  bindingsLoading: boolean;
   agentName: string;
 }) {
   const bindingCount = bindings.length;
@@ -36,7 +40,7 @@ export function DeleteAgentConfirmModal({
   const buttonLabel = deleting
     ? "Deleting..."
     : bindingCount > 0
-      ? `Delete and remove from ${bindingCount} project${bindingCount === 1 ? "" : "s"}`
+      ? `Delete (${bindingCount} project${bindingCount === 1 ? "" : "s"})`
       : "Delete";
 
   return (
@@ -48,7 +52,7 @@ export function DeleteAgentConfirmModal({
       footer={
         <div className={styles.footer}>
           <Button variant="ghost" onClick={onClose} disabled={deleting}>Cancel</Button>
-          <Button variant="danger" onClick={onDelete} disabled={deleting || bindingsLoading}>
+          <Button variant="danger" onClick={onDelete} disabled={deleting}>
             {deleting ? (
               <><Loader2 size={14} className={styles.spin} /> Deleting...</>
             ) : (
@@ -61,12 +65,7 @@ export function DeleteAgentConfirmModal({
       <Text size="sm">
         Are you sure you want to delete <strong>{agentName}</strong>? This cannot be undone.
       </Text>
-      {bindingsLoading && (
-        <Text size="xs" variant="muted" className={styles.cascadeNote}>
-          Checking which projects this agent is added to...
-        </Text>
-      )}
-      {!bindingsLoading && bindingCount > 0 && (
+      {bindingCount > 0 && (
         <Text size="xs" variant="muted" className={styles.cascadeNote}>
           This agent is currently added to: <strong>{projectList}</strong>. Deleting will remove it from {bindingCount === 1 ? "this project" : "these projects"} first.
         </Text>

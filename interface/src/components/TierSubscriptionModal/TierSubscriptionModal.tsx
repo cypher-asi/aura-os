@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Modal, Button } from "@cypher-asi/zui";
 import { orgsApi } from "../../shared/api/orgs";
 import { track } from "../../lib/analytics";
+import { useBillingStore } from "../../stores/billing-store";
 import styles from "./TierSubscriptionModal.module.css";
 
 interface Props {
@@ -76,24 +77,21 @@ const TIERS: TierInfo[] = [
 ];
 
 export function TierSubscriptionModal({ isOpen, onClose }: Props) {
-  const [currentPlan, setCurrentPlan] = useState<string | null>(null);
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  // Subscription status is owned by the billing store and prefetched by
+  // the caller via useDeferredModalOpen(prepare: fetchSubscription), so
+  // the modal opens with `subscription` already resolved and renders
+  // straight to the tier grid (no in-modal "Loading plan details..."
+  // shimmer that previously caused a height jump).
+  const subscription = useBillingStore((s) => s.subscription);
+  const currentPlan = subscription?.plan ?? "mortal";
+  const isSubscribed = subscription?.is_subscribed ?? false;
+
   const [loading, setLoading] = useState(false);
-  const [planLoading, setPlanLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
     track("tier_modal_opened");
-    setPlanLoading(true);
-    orgsApi
-      .getSubscriptionStatus()
-      .then((status) => {
-        setCurrentPlan(status.plan);
-        setIsSubscribed(status.is_subscribed);
-      })
-      .catch(() => { setCurrentPlan("mortal"); })
-      .finally(() => setPlanLoading(false));
   }, [isOpen]);
 
   const handleSubscribe = async (planId: string) => {
@@ -133,10 +131,6 @@ export function TierSubscriptionModal({ isOpen, onClose }: Props) {
       <div className={styles.root}>
         {error && <div className={styles.error}>{error}</div>}
 
-        {planLoading ? (
-          <div className={styles.loadingState}>Loading plan details...</div>
-        ) : (
-        <>
         <div className={styles.tierGrid}>
           {TIERS.map((tier) => {
             const isCurrent = tier.id === currentPlan;
@@ -205,8 +199,6 @@ export function TierSubscriptionModal({ isOpen, onClose }: Props) {
           When you upgrade mid-cycle, you'll be charged the prorated price difference and receive the corresponding difference in Z credits for the remainder of your billing period.
           If you originally subscribed to Zero Pro via ZERO, your legacy $10/mo rate is preserved.
         </p>
-        </>
-        )}
       </div>
     </Modal>
   );

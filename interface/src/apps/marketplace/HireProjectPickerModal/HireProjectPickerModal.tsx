@@ -19,8 +19,10 @@ interface HireProjectPickerModalProps {
 
 /**
  * Picks a project to add a hireable marketplace agent to. Thin shell around
- * `api.createAgentInstance`; the list of projects comes from the already-
- * hydrated projects-list store, so this doesn't re-fetch when opened.
+ * `api.createAgentInstance`. Callers must defer opening this modal until
+ * the projects list is hydrated (typically via [`useDeferredModalOpen`](../../../shared/hooks/use-deferred-modal-open.ts)
+ * with `prepare: () => projectsStore.refreshProjects()`); the modal renders
+ * straight to the empty-state or the project list with no in-modal spinner.
  */
 export function HireProjectPickerModal({
   isOpen,
@@ -29,8 +31,6 @@ export function HireProjectPickerModal({
   onHired,
 }: HireProjectPickerModalProps) {
   const projects = useProjectsListStore((s) => s.projects);
-  const loadingProjects = useProjectsListStore((s) => s.loadingProjects);
-  const refreshProjects = useProjectsListStore((s) => s.refreshProjects);
   const refreshProjectAgents = useProjectsListStore((s) => s.refreshProjectAgents);
   const setAgentsByProject = useProjectsListStore((s) => s.setAgentsByProject);
   const [hiringProjectId, setHiringProjectId] = useState<string | null>(null);
@@ -42,12 +42,6 @@ export function HireProjectPickerModal({
       setHiringProjectId(null);
     }
   }, [isOpen]);
-
-  useEffect(() => {
-    if (isOpen && projects.length === 0 && !loadingProjects) {
-      void refreshProjects();
-    }
-  }, [isOpen, loadingProjects, projects.length, refreshProjects]);
 
   const handleHire = async (project: Project) => {
     if (!agent) return;
@@ -91,11 +85,7 @@ export function HireProjectPickerModal({
         </Button>
       }
     >
-      {loadingProjects && projects.length === 0 ? (
-        <div className={styles.loadingWrap}>
-          <Spinner size="sm" />
-        </div>
-      ) : projects.length === 0 ? (
+      {projects.length === 0 ? (
         <EmptyState>Create a project first, then you can add agents to it.</EmptyState>
       ) : (
         <div className={styles.projectList}>

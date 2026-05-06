@@ -7,9 +7,11 @@ import rewardStyles from "./OrgSettingsRewards.module.css";
 
 interface Props {
   onUpgrade?: () => void;
+  /** True while the tier modal is preparing (subscription fetch in flight). */
+  upgradePreparing?: boolean;
 }
 
-export function OrgSettingsRewards({ onUpgrade }: Props) {
+export function OrgSettingsRewards({ onUpgrade, upgradePreparing = false }: Props) {
   const { user } = useAuth();
   const userId = user?.user_id ?? null;
   const inviteCode = useInviteCodeStore((s) => s.code);
@@ -118,7 +120,7 @@ export function OrgSettingsRewards({ onUpgrade }: Props) {
           </div>
           <div className={styles.rowControl}>
             {onUpgrade && (
-              <Button variant="primary" size="sm" onClick={onUpgrade}>
+              <Button variant="primary" size="sm" onClick={onUpgrade} disabled={upgradePreparing}>
                 Upgrade
               </Button>
             )}

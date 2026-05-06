@@ -11,6 +11,8 @@ interface AgentTalentCardProps {
   isSelected: boolean;
   onSelect: () => void;
   onHire: () => void;
+  /** True while the hire modal is loading projects for this card. */
+  hirePreparing?: boolean;
 }
 
 function primaryExpertise(expertise: readonly string[] | undefined) {
@@ -42,6 +44,7 @@ export function AgentTalentCard({
   isSelected,
   onSelect,
   onHire,
+  hirePreparing = false,
 }: AgentTalentCardProps) {
   const { agent, description, completed_tasks, revenue_usd } = marketplaceAgent;
   const expertise = primaryExpertise(agent.expertise);
@@ -110,6 +113,7 @@ export function AgentTalentCard({
             e.stopPropagation();
             onHire();
           }}
+          disabled={hirePreparing}
           aria-label={`Hire ${agent.name}`}
         >
           Hire
