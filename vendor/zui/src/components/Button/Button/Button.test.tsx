@@ -130,4 +130,24 @@ describe('Button', () => {
       expect(span.tagName).toBe('SPAN');
     });
   });
+
+  describe('fullWidth', () => {
+    it('should not apply fullWidth class by default', () => {
+      render(<Button>Default</Button>);
+      const button = screen.getByRole('button', { name: 'Default' });
+      expect(hasModuleClass(button, 'fullWidth')).toBe(false);
+    });
+
+    it('should apply fullWidth class when prop is true', () => {
+      render(<Button fullWidth>Wide</Button>);
+      const button = screen.getByRole('button', { name: 'Wide' });
+      expect(hasModuleClass(button, 'fullWidth')).toBe(true);
+    });
+
+    it('should not apply fullWidth class when prop is false', () => {
+      render(<Button fullWidth={false}>Narrow</Button>);
+      const button = screen.getByRole('button', { name: 'Narrow' });
+      expect(hasModuleClass(button, 'fullWidth')).toBe(false);
+    });
+  });
 });

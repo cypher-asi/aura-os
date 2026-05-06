@@ -59,6 +59,14 @@ export type ButtonProps = (ButtonAsButton | ButtonAsSpan) & {
    */
   dimUnselected?: boolean;
   /**
+   * When true, the button stretches to fill the available horizontal space.
+   * In a flex row of multiple `fullWidth` buttons, each button shares the row
+   * equally. Overrides the default `min-width` so buttons can shrink in narrow
+   * containers.
+   * @default false
+   */
+  fullWidth?: boolean;
+  /**
    * All possible content states the button might display.
    * When provided, the button will size itself to fit the largest state,
    * preventing layout shifts when content changes.
@@ -68,7 +76,7 @@ export type ButtonProps = (ButtonAsButton | ButtonAsSpan) & {
 
 export const Button = forwardRef<HTMLButtonElement | HTMLSpanElement, ButtonProps>(
   (
-    { variant = 'primary', size = 'md', rounded = 'md', textCase = 'none', iconOnly = false, icon, selected = false, selectedBgColor, dimUnselected = true, className, as = 'button', contentStates, children, ...props },
+    { variant = 'primary', size = 'md', rounded = 'md', textCase = 'none', iconOnly = false, icon, selected = false, selectedBgColor, dimUnselected = true, fullWidth = false, className, as = 'button', contentStates, children, ...props },
     ref
   ) => {
     const classNames = clsx(
@@ -80,6 +88,7 @@ export const Button = forwardRef<HTMLButtonElement | HTMLSpanElement, ButtonProp
       iconOnly && styles.iconOnly,
       selected && styles.selected,
       !dimUnselected && styles.noDim,
+      fullWidth && styles.fullWidth,
       contentStates && styles.stableSize,
       className
     );

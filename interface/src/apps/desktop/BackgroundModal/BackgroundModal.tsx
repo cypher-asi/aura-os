@@ -69,6 +69,7 @@ function BackgroundConfigSection({
           size="sm"
           variant={view === "color" ? "secondary" : "ghost"}
           selected={view === "color"}
+          fullWidth
           onClick={() => setView("color")}
           role="tab"
           aria-selected={view === "color"}
@@ -79,6 +80,7 @@ function BackgroundConfigSection({
           size="sm"
           variant={view === "image" ? "secondary" : "ghost"}
           selected={view === "image"}
+          fullWidth
           onClick={() => setView("image")}
           role="tab"
           aria-selected={view === "image"}

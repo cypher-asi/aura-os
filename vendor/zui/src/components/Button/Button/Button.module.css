@@ -153,6 +153,13 @@
   color: var(--color-text-primary);
 }
 
+.fullWidth {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex: 1 1 0;
+}
+
 .sm {
   padding: var(--space-1-5) var(--space-3);
   font-size: var(--text-sm);
