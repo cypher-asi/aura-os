@@ -1,57 +1,60 @@
-# Native desktop polish, dual build channels, and a rebuilt 3D chat flow
+# Native desktop chrome, a rebuilt 3D chat flow, and dev/stable channel split
 
 - Date: `2026-05-06`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.465.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.465.1
+- Version: `0.1.0-nightly.466.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.466.1
 
-Tonight's nightly leans heavily into making AURA feel like a real desktop app: the browser context menu is gone, the Windows top edge is finally grabbable, and async-loading modals stop flickering open. Underneath, AURA now ships as parallel dev and stable channels so contributors can run a cargo build alongside their installed app, and the chat 3D mode returns with a redesigned image-then-model pipeline.
+Today's nightly reshapes how AURA feels as a desktop app — taking back the right-click menu, fixing a long-standing Windows resize annoyance — and lands a major rework of chat's 3D mode into an in-bar two-step pipeline. Underneath, the project also gained side-by-side dev and stable build channels so contributors can run a cargo build of AURA next to their installed copy without collisions.
 
-## 8:16 PM — Right-click chrome, Windows resize edge, and modal open jank
+## 8:16 PM — Desktop chrome reclaims right-click and the Windows top resize edge
 
-A trio of desktop polish fixes: AURA reclaims right-click from the WebView, makes the Windows top edge actually grabbable, and stops confirm modals from resizing themselves on open.
+Two foundational desktop polish fixes: AURA now owns the right-click menu instead of WebView2, and the borderless window's top resize zone no longer demands pixel-perfect aim.
 
-- Right-clicking AURA chrome no longer surfaces the WebView2/Chromium native menu (Back, Refresh, Save as, Inspect…). A document-level override defers to in-app context menus when present, suppresses the native one elsewhere, and replaces it inside text fields with a compact Cut / Copy / Paste / Select All. (`52cdd47`)
-- On Windows, the borderless main window now reports HTTOP/HTTOPLEFT/HTTOPRIGHT across a 10-logical-px band along the top edge via a Win32 WM_NCHITTEST subclass, replacing the ~4px default that made resizing alongside the floating titlebar pill require pixel-perfect aim. The subclass is DPI-aware and disables itself while maximized. (`bc327be`)
-- Async-loading confirm modals no longer pop open and then visibly reflow. A new useDeferredModalOpen hook waits for prepare() to resolve (with a 3s failsafe) before flipping the modal open, applied to the Delete Agent confirm, the marketplace Hire picker, and the Tier subscription modal. The cascade label was also shortened to “Delete (N projects)” for stable width. (`8cc4d0d`)
+- Right-clicking empty AURA chrome no longer pops the WebView2/Chromium menu (Back, Refresh, Inspect, …); a document-level override defers to in-app menus where present and otherwise replaces the native menu with a compact in-app Cut / Copy / Paste / Select All inside text fields. (`52cdd47`)
+- On Windows, a Win32 WM_NCHITTEST subclass widens the top resize hit zone from the OS default ~4 px to a 10 logical-px band, so grabbing the top edge of the borderless window works reliably without fighting the floating titlebar pill — and stays correct across mixed-DPI monitors and while maximized. (`bc327be`)
 
-## 8:45 PM — Dev and stable channels can coexist on one machine
+## 8:43 PM — Confirm and subscription modals stop flickering on open
 
-AURA now compiles into two distinct channels — stable (installed) and dev (cargo run) — that no longer collide on data dirs, ports, single-instance locks, or the auto-updater.
+A new shared deferred-open hook eliminates the jank where modals popped up and then visibly reshaped as their async data arrived.
 
-- A new Channel enum in aura-os-core is the single source of truth for per-channel identity: data dir (aura vs aura-dev), skills home (~/.aura vs ~/.aura-dev), Windows single-instance mutex, window/menu title, embedded server (19847/19848), standalone server (3100/3101), harness sidecar (19080/19081), default harness URL port, and updater enablement (off in dev so a cargo build can never replace the installed stable app). (`718a47c`)
-- cargo run and the scripts/dev/* runners default to dev-channel via cargo's default feature, while the release-stable, release-nightly, and desktop-validate workflows build with --no-default-features --features stable-channel. Vite (5174) and the mobile backend (3101) also moved to dev ports so npm run dev no longer binds on top of an installed AURA. (`718a47c`)
+- useDeferredModalOpen now keeps Delete-Agent, marketplace Hire, and Tier subscription modals closed (with their trigger button briefly disabled) until cascade bindings, project lists, or billing data resolve, so each modal opens once at its final size and copy — with a 3000ms failsafe and stale-cycle guards. (`8cc4d0d`)
+- Delete-agent's footer label is shortened to "Delete (N projects)" so its width stays stable regardless of how many bindings the agent has. (`8cc4d0d`)
 
-## 9:04 PM — Chat 3D mode returns with an image-first source thumbnail
+## 8:45 PM — Dev and stable AURA can now run side-by-side
 
-The 3D pill is back in the chat mode selector, wired through a generate-image-then-convert flow that mirrors the standalone AURA 3D app, and a stray style-lock suffix in the 3D app's Image tab is removed.
+A new build-time channel selector lets a cargo-built dev AURA coexist with an installed stable AURA on the same machine without colliding on data, ports, or single-instance locks.
 
-- Chat 3D mode is re-enabled and now derives its source from the most recent successful generate_image tool result in the thread, surfaced as a “Source for 3D” thumbnail above the textarea. Send is blocked with a switch-to-Image hint until a source exists, and manual attachments are intentionally hidden while the proxy decode-and-forward path is broken. (`15aa431`)
-- The AURA 3D app's Image tab no longer silently appends the product-photography STYLE_LOCK_SUFFIX to user prompts, so image generation there now matches /image and /3d behavior. The constant is retained so stripStyleLock can still clean legacy artifacts. (`5897137`)
+- A new Channel enum in aura-os-core is the single source of truth for per-channel identifiers — data dir (aura vs aura-dev), skills home, Windows single-instance mutex, window/menu title, embedded server (19847/19848), standalone server (3100/3101), harness sidecar (19080/19081), default harness URL port, and updater enablement (off in dev so a cargo build can never silently swap itself for the stable installer). (`718a47c`)
+- cargo run and the scripts/dev runners default to dev-channel via cargo's default feature; release pipelines (desktop-validate, release-nightly, release-stable) build with stable-channel, and the desktop crate disables default features on its core/server deps so a packaging build can't pull dev-channel in transitively. (`718a47c`)
+- Dev script ports moved to dev-channel defaults (Vite 5174, mobile backend 3101) so npm run dev no longer binds on top of an installed stable AURA. (`718a47c`)
 
-## 9:26 PM — Renamed CEO agents survive re-login without duplication
+## 9:04 PM — 3D chat mode returns with an image-first send flow
 
-Logging in after renaming the bootstrap CEO no longer mints a duplicate “CEO” agent for users whose CEO predates the local stamping fix.
+The 3D pill is back in the chat mode selector, wired to the same generate-image-then-convert path the standalone AURA 3D app uses.
 
-- looks_like_ceo gained a third identity signal — the canonical CEO system_prompt prefix (“You are the CEO SuperAgent”) — extracted into a shared constant so the matcher and template stay in lock-step. Combined with the editor preserving system_prompt across renames, dedupe_ceo_agents can now pick the renamed CEO as canonical and remove the freshly-minted duplicate. (`2da2e55`)
+- Chat 3D mode derives its source from the most recent successful generate_image tool result in the thread, surfaces it as a "Source for 3D" thumbnail above the textarea, and blocks Send with a switch-to-Image hint until one exists; the request dispatches via generate3dStream's URL form across both live and queue-replay paths. Manual image attachments stay disabled until the proxy decode-and-forward route is fixed. (`15aa431`)
+- The AURA 3D app's Image tab no longer appends the product-photography STYLE_LOCK_SUFFIX to user prompts, so its image generation behaves consistently with /image and /3d (the constant is retained so stripStyleLock can still clean legacy artifacts). (`5897137`)
 
-## 9:57 PM — In-bar two-step 3D pipeline and a Copy menu for chat selections
+## 9:26 PM — Renamed CEO agents no longer get duplicated on login
 
-The 3D chat flow gets a second pass — a removable pinned source thumb replaces the gate — and the new context-menu override learns to handle selected text in non-editable surfaces like chat messages.
+The bootstrap CEO matcher learned a third identity signal so renaming the CEO no longer causes a duplicate to be minted at the next login.
 
-- Right-clicking selected text in chat output and other static markdown now surfaces a Copy-only menu instead of doing nothing. The override detects a non-collapsed selection that contains the click target; editable fields, app-claimed events, and empty non-editable areas keep their existing behavior. (`90c31ed`)
-- Chat 3D mode is reworked into an in-bar two-step pipeline: the “generate an image first” gate is replaced by a removable pinned source thumb owned by chat-ui-store, with one-shot seeding from thread history. The 3D wire variant splits into image_step / model_step branches across resolve-send, useChatStream, and useAgentChatStream, and STYLE_LOCK_SUFFIX is scoped to the chat 3D image step only. Stale doc comments describing the old gate were also refreshed. (`2b78e87`, `d5a5270`)
+- looks_like_ceo now also matches the canonical CEO system_prompt prefix ("You are the CEO SuperAgent"), extracted into a shared constant kept in lock-step with the template. CEOs created before the local stamping fix now get correctly recognized after a rename, so dedupe_ceo_agents picks the renamed agent as canonical and the freshly-minted duplicate is best-effort deleted on the next setup pass. (`2da2e55`)
 
-## 11:52 PM — Unblock CI packaging after the channel split
+## 9:57 PM — Chat 3D becomes an in-bar two-step pipeline, plus a CI packager fix
 
-A follow-up to the dev/stable channel split removes cargo-build flags from the cargo packager invocation that was failing CI.
+Following the earlier 3D revival, this batch reworks the flow into a removable pinned source thumb with an explicit image_step / model_step split, adds a copy menu for selected non-editable text, and unblocks the release pipeline.
 
-- cargo-packager 0.11.8 doesn't accept --no-default-features or --features on its own CLI, which broke desktop-validate and both release workflows with “unexpected argument”. The flags are dropped from the packager call and the stable-channel feature is now applied via before-packaging-command in apps/aura-os-desktop/Cargo.toml, which cargo-packager runs internally. (`a457cab`)
+- Chat 3D mode now runs as an in-bar two-step pipeline: a removable pinned source thumb owned by chat-ui-store replaces the "generate an image first" gate, the wire variant splits into image_step / model_step branches across resolve-send, useChatStream, and useAgentChatStream, and one-shot seeding from thread history preserves the cross-mode shortcut. (`2b78e87`, `d5a5270`)
+- STYLE_LOCK_SUFFIX is dropped from chat 3D image prompts (and relocated to interface/src/constants/generation.ts), so chat 3D's image step generates verbatim from the user prompt like every other entry point. (`2b78e87`, `ffd4da5`)
+- Right-clicking a text selection in chat or LLM markdown output — previously suppressed to nothing after the native-menu override — now surfaces a Copy-only menu, while editable fields and empty non-editable areas keep their existing behavior. (`90c31ed`)
+- Release Infrastructure: the desktop-validate, release-nightly, and release-stable workflows stopped passing --no-default-features / --features to cargo packager (which 0.11.8's CLI rejects); the stable-channel feature is already applied via before-packaging-command, so CI is unblocked. (`a457cab`)
 
 ## Highlights
 
-- Native browser context menu replaced by in-app Cut/Copy/Paste and Copy-on-selection menus
-- Windows top edge resize widened from ~4px to a reliable 10px band
-- Dev and stable build channels can now run side-by-side on one machine
-- Chat 3D mode returns as a two-step image-then-3D pipeline with a pinned source thumb
+- Native browser context menu replaced with in-app Cut/Copy/Paste
+- Windows top-edge resize is finally easy to grab
+- Chat 3D mode rebuilt as an in-bar image→model pipeline
+- Dev and stable build channels can now coexist on one machine
 

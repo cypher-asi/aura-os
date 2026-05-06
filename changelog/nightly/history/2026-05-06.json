@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-06T07:05:27.610Z",
+  "generatedAt": "2026-05-06T11:00:51.721Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.465.1",
+  "version": "0.1.0-nightly.466.1",
   "date": "2026-05-06",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.465.1",
-  "lastIncludedSha": "a457cabce1ec34459f8967a9eee56ad2b827b346",
-  "previousProcessedSha": "071a3dab9bd14e82713700b28c72637ff3cf198b",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.466.1",
+  "lastIncludedSha": "ffd4da5868c0ab5203f3ef7b6c9058fa90cb38de",
+  "previousProcessedSha": "a457cabce1ec34459f8967a9eee56ad2b827b346",
   "commitShas": [
     "52cdd479fdb0520d4286710b63274cfa0fcfc672",
     "bc327bedc014762db3e42ec8de995866abfca726",
@@ -22,10 +22,11 @@
     "90c31ede9c670cb6bb7adc575a4a270b08786a16",
     "2b78e87b4a35201a8ae4200fa4efc43f79def032",
     "d5a52702887fa51e3b6e5c2a1e85d3311fbb8ec2",
-    "a457cabce1ec34459f8967a9eee56ad2b827b346"
+    "a457cabce1ec34459f8967a9eee56ad2b827b346",
+    "ffd4da5868c0ab5203f3ef7b6c9058fa90cb38de"
   ],
-  "rawCommitCount": 11,
-  "filteredCommitCount": 11,
+  "rawCommitCount": 12,
+  "filteredCommitCount": 12,
   "rawCommits": [
     {
       "sha": "52cdd479fdb0520d4286710b63274cfa0fcfc672",
@@ -569,6 +570,53 @@
       "areas": [
         "Release Infrastructure"
       ]
+    },
+    {
+      "sha": "ffd4da5868c0ab5203f3ef7b6c9058fa90cb38de",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-06T11:47:02+01:00",
+      "subject": "feat(3d): remove style lock from image generation prompts",
+      "body": "",
+      "parents": [
+        "a457cabce1ec34459f8967a9eee56ad2b827b346"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatPanel/resolve-send.ts",
+        "interface/src/hooks/use-agent-chat-stream.test.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream.test.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts",
+        "interface/src/stores/aura3d-store.test.ts",
+        "interface/src/stores/aura3d-store.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 6,
+        "deletions": 19
+      },
+      "committedAtMs": 1778064422000,
+      "cleanSubject": "remove style lock from image generation prompts",
+      "keywords": [
+        "remove",
+        "style",
+        "lock",
+        "from",
+        "image",
+        "generation",
+        "prompts"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/hooks",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 6,
@@ -580,36 +628,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11817483
+          "sizeBytes": 11817335
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.465.1",
+      "version": "0.1.0-nightly.466.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.465.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.466.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 36661182
+          "sizeBytes": 36662392
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.465.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.466.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.465.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.466.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 103762424
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.465.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.466.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -619,29 +667,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.465.1",
+      "version": "0.1.0-nightly.466.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.465.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.466.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33760549
+          "sizeBytes": 33760261
         },
         {
-          "name": "AURA_0.1.0-nightly.465.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.466.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.465.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.466.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 32898427
+          "sizeBytes": 32897075
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.465.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.466.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -651,29 +699,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.465.1",
+      "version": "0.1.0-nightly.466.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.465.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.466.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 35370678
+          "sizeBytes": 35371401
         },
         {
-          "name": "AURA_0.1.0-nightly.465.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.466.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.465.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.466.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 34541480
+          "sizeBytes": 34543865
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.465.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.466.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -683,17 +731,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.465.1",
+      "version": "0.1.0-nightly.466.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.465.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.466.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24749070
+          "sizeBytes": 24729576
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.465.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.466.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -702,33 +750,50 @@
     }
   ],
   "rendered": {
-    "title": "Native desktop polish, dual build channels, and a rebuilt 3D chat flow",
-    "intro": "Tonight's nightly leans heavily into making AURA feel like a real desktop app: the browser context menu is gone, the Windows top edge is finally grabbable, and async-loading modals stop flickering open. Underneath, AURA now ships as parallel dev and stable channels so contributors can run a cargo build alongside their installed app, and the chat 3D mode returns with a redesigned image-then-model pipeline.",
+    "title": "Native desktop chrome, a rebuilt 3D chat flow, and dev/stable channel split",
+    "intro": "Today's nightly reshapes how AURA feels as a desktop app — taking back the right-click menu, fixing a long-standing Windows resize annoyance — and lands a major rework of chat's 3D mode into an in-bar two-step pipeline. Underneath, the project also gained side-by-side dev and stable build channels so contributors can run a cargo build of AURA next to their installed copy without collisions.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "8:16 PM",
         "started_at": "2026-05-06T03:16:25.000Z",
-        "ended_at": "2026-05-06T03:43:41.000Z",
-        "title": "Right-click chrome, Windows resize edge, and modal open jank",
-        "summary": "A trio of desktop polish fixes: AURA reclaims right-click from the WebView, makes the Windows top edge actually grabbable, and stops confirm modals from resizing themselves on open.",
+        "ended_at": "2026-05-06T03:38:54.000Z",
+        "title": "Desktop chrome reclaims right-click and the Windows top resize edge",
+        "summary": "Two foundational desktop polish fixes: AURA now owns the right-click menu instead of WebView2, and the borderless window's top resize zone no longer demands pixel-perfect aim.",
         "items": [
           {
-            "text": "Right-clicking AURA chrome no longer surfaces the WebView2/Chromium native menu (Back, Refresh, Save as, Inspect…). A document-level override defers to in-app context menus when present, suppresses the native one elsewhere, and replaces it inside text fields with a compact Cut / Copy / Paste / Select All.",
+            "text": "Right-clicking empty AURA chrome no longer pops the WebView2/Chromium menu (Back, Refresh, Inspect, …); a document-level override defers to in-app menus where present and otherwise replaces the native menu with a compact in-app Cut / Copy / Paste / Select All inside text fields.",
             "commit_shas": [
               "52cdd479fdb0520d4286710b63274cfa0fcfc672"
             ],
             "confidence": "high"
           },
           {
-            "text": "On Windows, the borderless main window now reports HTTOP/HTTOPLEFT/HTTOPRIGHT across a 10-logical-px band along the top edge via a Win32 WM_NCHITTEST subclass, replacing the ~4px default that made resizing alongside the floating titlebar pill require pixel-perfect aim. The subclass is DPI-aware and disables itself while maximized.",
+            "text": "On Windows, a Win32 WM_NCHITTEST subclass widens the top resize hit zone from the OS default ~4 px to a 10 logical-px band, so grabbing the top edge of the borderless window works reliably without fighting the floating titlebar pill — and stays correct across mixed-DPI monitors and while maximized.",
             "commit_shas": [
               "bc327bedc014762db3e42ec8de995866abfca726"
             ],
             "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "8:43 PM",
+        "started_at": "2026-05-06T03:43:41.000Z",
+        "ended_at": "2026-05-06T03:43:41.000Z",
+        "title": "Confirm and subscription modals stop flickering on open",
+        "summary": "A new shared deferred-open hook eliminates the jank where modals popped up and then visibly reshaped as their async data arrived.",
+        "items": [
+          {
+            "text": "useDeferredModalOpen now keeps Delete-Agent, marketplace Hire, and Tier subscription modals closed (with their trigger button briefly disabled) until cascade bindings, project lists, or billing data resolve, so each modal opens once at its final size and copy — with a 3000ms failsafe and stale-cycle guards.",
+            "commit_shas": [
+              "8cc4d0d158682e19beea46542fa1fab450409cc6"
+            ],
+            "confidence": "high"
           },
           {
-            "text": "Async-loading confirm modals no longer pop open and then visibly reflow. A new useDeferredModalOpen hook waits for prepare() to resolve (with a 3s failsafe) before flipping the modal open, applied to the Delete Agent confirm, the marketplace Hire picker, and the Tier subscription modal. The cascade label was also shortened to “Delete (N projects)” for stable width.",
+            "text": "Delete-agent's footer label is shortened to \"Delete (N projects)\" so its width stays stable regardless of how many bindings the agent has.",
             "commit_shas": [
               "8cc4d0d158682e19beea46542fa1fab450409cc6"
             ],
@@ -737,22 +802,29 @@
         ]
       },
       {
-        "batch_id": "entry-2",
+        "batch_id": "entry-3",
         "time_label": "8:45 PM",
         "started_at": "2026-05-06T03:45:21.000Z",
         "ended_at": "2026-05-06T03:45:21.000Z",
-        "title": "Dev and stable channels can coexist on one machine",
-        "summary": "AURA now compiles into two distinct channels — stable (installed) and dev (cargo run) — that no longer collide on data dirs, ports, single-instance locks, or the auto-updater.",
+        "title": "Dev and stable AURA can now run side-by-side",
+        "summary": "A new build-time channel selector lets a cargo-built dev AURA coexist with an installed stable AURA on the same machine without colliding on data, ports, or single-instance locks.",
         "items": [
           {
-            "text": "A new Channel enum in aura-os-core is the single source of truth for per-channel identity: data dir (aura vs aura-dev), skills home (~/.aura vs ~/.aura-dev), Windows single-instance mutex, window/menu title, embedded server (19847/19848), standalone server (3100/3101), harness sidecar (19080/19081), default harness URL port, and updater enablement (off in dev so a cargo build can never replace the installed stable app).",
+            "text": "A new Channel enum in aura-os-core is the single source of truth for per-channel identifiers — data dir (aura vs aura-dev), skills home, Windows single-instance mutex, window/menu title, embedded server (19847/19848), standalone server (3100/3101), harness sidecar (19080/19081), default harness URL port, and updater enablement (off in dev so a cargo build can never silently swap itself for the stable installer).",
             "commit_shas": [
               "718a47c6b5841fddac879218919d013c944df605"
             ],
             "confidence": "high"
           },
           {
-            "text": "cargo run and the scripts/dev/* runners default to dev-channel via cargo's default feature, while the release-stable, release-nightly, and desktop-validate workflows build with --no-default-features --features stable-channel. Vite (5174) and the mobile backend (3101) also moved to dev ports so npm run dev no longer binds on top of an installed AURA.",
+            "text": "cargo run and the scripts/dev runners default to dev-channel via cargo's default feature; release pipelines (desktop-validate, release-nightly, release-stable) build with stable-channel, and the desktop crate disables default features on its core/server deps so a packaging build can't pull dev-channel in transitively.",
+            "commit_shas": [
+              "718a47c6b5841fddac879218919d013c944df605"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Dev script ports moved to dev-channel defaults (Vite 5174, mobile backend 3101) so npm run dev no longer binds on top of an installed stable AURA.",
             "commit_shas": [
               "718a47c6b5841fddac879218919d013c944df605"
             ],
@@ -761,22 +833,22 @@
         ]
       },
       {
-        "batch_id": "entry-3",
+        "batch_id": "entry-4",
         "time_label": "9:04 PM",
         "started_at": "2026-05-06T04:04:51.000Z",
         "ended_at": "2026-05-06T04:08:14.000Z",
-        "title": "Chat 3D mode returns with an image-first source thumbnail",
-        "summary": "The 3D pill is back in the chat mode selector, wired through a generate-image-then-convert flow that mirrors the standalone AURA 3D app, and a stray style-lock suffix in the 3D app's Image tab is removed.",
+        "title": "3D chat mode returns with an image-first send flow",
+        "summary": "The 3D pill is back in the chat mode selector, wired to the same generate-image-then-convert path the standalone AURA 3D app uses.",
         "items": [
           {
-            "text": "Chat 3D mode is re-enabled and now derives its source from the most recent successful generate_image tool result in the thread, surfaced as a “Source for 3D” thumbnail above the textarea. Send is blocked with a switch-to-Image hint until a source exists, and manual attachments are intentionally hidden while the proxy decode-and-forward path is broken.",
+            "text": "Chat 3D mode derives its source from the most recent successful generate_image tool result in the thread, surfaces it as a \"Source for 3D\" thumbnail above the textarea, and blocks Send with a switch-to-Image hint until one exists; the request dispatches via generate3dStream's URL form across both live and queue-replay paths. Manual image attachments stay disabled until the proxy decode-and-forward route is fixed.",
             "commit_shas": [
               "15aa4319fb3748ebdf7f666aa6988ca4bcfa85da"
             ],
             "confidence": "high"
           },
           {
-            "text": "The AURA 3D app's Image tab no longer silently appends the product-photography STYLE_LOCK_SUFFIX to user prompts, so image generation there now matches /image and /3d behavior. The constant is retained so stripStyleLock can still clean legacy artifacts.",
+            "text": "The AURA 3D app's Image tab no longer appends the product-photography STYLE_LOCK_SUFFIX to user prompts, so its image generation behaves consistently with /image and /3d (the constant is retained so stripStyleLock can still clean legacy artifacts).",
             "commit_shas": [
               "5897137de70a3d83bdf22f16f1e179c56d903bad"
             ],
@@ -785,15 +857,15 @@
         ]
       },
       {
-        "batch_id": "entry-4",
+        "batch_id": "entry-5",
         "time_label": "9:26 PM",
         "started_at": "2026-05-06T04:26:01.000Z",
         "ended_at": "2026-05-06T04:26:01.000Z",
-        "title": "Renamed CEO agents survive re-login without duplication",
-        "summary": "Logging in after renaming the bootstrap CEO no longer mints a duplicate “CEO” agent for users whose CEO predates the local stamping fix.",
+        "title": "Renamed CEO agents no longer get duplicated on login",
+        "summary": "The bootstrap CEO matcher learned a third identity signal so renaming the CEO no longer causes a duplicate to be minted at the next login.",
         "items": [
           {
-            "text": "looks_like_ceo gained a third identity signal — the canonical CEO system_prompt prefix (“You are the CEO SuperAgent”) — extracted into a shared constant so the matcher and template stay in lock-step. Combined with the editor preserving system_prompt across renames, dedupe_ceo_agents can now pick the renamed CEO as canonical and remove the freshly-minted duplicate.",
+            "text": "looks_like_ceo now also matches the canonical CEO system_prompt prefix (\"You are the CEO SuperAgent\"), extracted into a shared constant kept in lock-step with the template. CEOs created before the local stamping fix now get correctly recognized after a rename, so dedupe_ceo_agents picks the renamed agent as canonical and the freshly-minted duplicate is best-effort deleted on the next setup pass.",
             "commit_shas": [
               "2da2e559c6901b48adeb4694a7035113e8ad26c5"
             ],
@@ -802,40 +874,38 @@
         ]
       },
       {
-        "batch_id": "entry-5",
+        "batch_id": "entry-6",
         "time_label": "9:57 PM",
         "started_at": "2026-05-06T04:57:44.000Z",
-        "ended_at": "2026-05-06T05:49:23.000Z",
-        "title": "In-bar two-step 3D pipeline and a Copy menu for chat selections",
-        "summary": "The 3D chat flow gets a second pass — a removable pinned source thumb replaces the gate — and the new context-menu override learns to handle selected text in non-editable surfaces like chat messages.",
+        "ended_at": "2026-05-06T10:47:02.000Z",
+        "title": "Chat 3D becomes an in-bar two-step pipeline, plus a CI packager fix",
+        "summary": "Following the earlier 3D revival, this batch reworks the flow into a removable pinned source thumb with an explicit image_step / model_step split, adds a copy menu for selected non-editable text, and unblocks the release pipeline.",
         "items": [
           {
-            "text": "Right-clicking selected text in chat output and other static markdown now surfaces a Copy-only menu instead of doing nothing. The override detects a non-collapsed selection that contains the click target; editable fields, app-claimed events, and empty non-editable areas keep their existing behavior.",
+            "text": "Chat 3D mode now runs as an in-bar two-step pipeline: a removable pinned source thumb owned by chat-ui-store replaces the \"generate an image first\" gate, the wire variant splits into image_step / model_step branches across resolve-send, useChatStream, and useAgentChatStream, and one-shot seeding from thread history preserves the cross-mode shortcut.",
+            "commit_shas": [
+              "2b78e87b4a35201a8ae4200fa4efc43f79def032",
+              "d5a52702887fa51e3b6e5c2a1e85d3311fbb8ec2"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "STYLE_LOCK_SUFFIX is dropped from chat 3D image prompts (and relocated to interface/src/constants/generation.ts), so chat 3D's image step generates verbatim from the user prompt like every other entry point.",
+            "commit_shas": [
+              "2b78e87b4a35201a8ae4200fa4efc43f79def032",
+              "ffd4da5868c0ab5203f3ef7b6c9058fa90cb38de"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Right-clicking a text selection in chat or LLM markdown output — previously suppressed to nothing after the native-menu override — now surfaces a Copy-only menu, while editable fields and empty non-editable areas keep their existing behavior.",
             "commit_shas": [
               "90c31ede9c670cb6bb7adc575a4a270b08786a16"
             ],
             "confidence": "high"
           },
           {
-            "text": "Chat 3D mode is reworked into an in-bar two-step pipeline: the “generate an image first” gate is replaced by a removable pinned source thumb owned by chat-ui-store, with one-shot seeding from thread history. The 3D wire variant splits into image_step / model_step branches across resolve-send, useChatStream, and useAgentChatStream, and STYLE_LOCK_SUFFIX is scoped to the chat 3D image step only. Stale doc comments describing the old gate were also refreshed.",
-            "commit_shas": [
-              "2b78e87b4a35201a8ae4200fa4efc43f79def032",
-              "d5a52702887fa51e3b6e5c2a1e85d3311fbb8ec2"
-            ],
-            "confidence": "high"
-          }
-        ]
-      },
-      {
-        "batch_id": "entry-6",
-        "time_label": "11:52 PM",
-        "started_at": "2026-05-06T06:52:31.000Z",
-        "ended_at": "2026-05-06T06:52:31.000Z",
-        "title": "Unblock CI packaging after the channel split",
-        "summary": "A follow-up to the dev/stable channel split removes cargo-build flags from the cargo packager invocation that was failing CI.",
-        "items": [
-          {
-            "text": "cargo-packager 0.11.8 doesn't accept --no-default-features or --features on its own CLI, which broke desktop-validate and both release workflows with “unexpected argument”. The flags are dropped from the packager call and the stable-channel feature is now applied via before-packaging-command in apps/aura-os-desktop/Cargo.toml, which cargo-packager runs internally.",
+            "text": "Release Infrastructure: the desktop-validate, release-nightly, and release-stable workflows stopped passing --no-default-features / --features to cargo packager (which 0.11.8's CLI rejects); the stable-channel feature is already applied via before-packaging-command, so CI is unblocked.",
             "commit_shas": [
               "a457cabce1ec34459f8967a9eee56ad2b827b346"
             ],
@@ -845,11 +915,11 @@
       }
     ],
     "highlights": [
-      "Native browser context menu replaced by in-app Cut/Copy/Paste and Copy-on-selection menus",
-      "Windows top edge resize widened from ~4px to a reliable 10px band",
-      "Dev and stable build channels can now run side-by-side on one machine",
-      "Chat 3D mode returns as a two-step image-then-3D pipeline with a pinned source thumb"
+      "Native browser context menu replaced with in-app Cut/Copy/Paste",
+      "Windows top-edge resize is finally easy to grab",
+      "Chat 3D mode rebuilt as an in-bar image→model pipeline",
+      "Dev and stable build channels can now coexist on one machine"
     ],
-    "raw_commit_count": 11
+    "raw_commit_count": 12
   }
 }
