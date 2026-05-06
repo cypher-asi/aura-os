@@ -110,7 +110,7 @@ export function applyMarketplaceFilters(
       return filtered.sort((a, b) => b.reputation - a.reputation);
     case "trending":
     default:
-      return filtered.sort((a, b) => b.jobs - a.jobs);
+      return filtered.sort((a, b) => b.completed_tasks - a.completed_tasks);
   }
 }
 

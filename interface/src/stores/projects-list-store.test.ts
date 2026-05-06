@@ -328,6 +328,18 @@ describe("projects-list-store", () => {
       expect(useProjectsListStore.getState().agentsByProject["p1"]).toEqual([agent]);
     });
 
+    it("bypasses fresh query cache when refreshing agents for a project", async () => {
+      const agent = makeAgentInstance();
+      queryClient.setQueryData(["projects", "agents", "p1"], []);
+      mockApi.listAgentInstances.mockResolvedValue([agent]);
+
+      const result = await useProjectsListStore.getState().refreshProjectAgents("p1");
+
+      expect(mockApi.listAgentInstances).toHaveBeenCalledWith("p1");
+      expect(result).toEqual([agent]);
+      expect(useProjectsListStore.getState().agentsByProject["p1"]).toEqual([agent]);
+    });
+
     it("handles API failure", async () => {
       mockApi.listAgentInstances.mockRejectedValue(new Error("fail"));
 

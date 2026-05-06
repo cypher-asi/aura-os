@@ -2,7 +2,7 @@ import type { Agent, AgentId } from "../../shared/types";
 
 /**
  * Projection of a `network.Agent` augmented with marketplace-only stats
- * (jobs / revenue / reputation) and a resolved creator display name. In
+ * (completed tasks / revenue / reputation) and a resolved creator display name. In
  * Phase 1 the fields are populated from mock data; in Phase 2 they come
  * from `GET /api/marketplace/agents`.
  *
@@ -12,7 +12,7 @@ import type { Agent, AgentId } from "../../shared/types";
 export interface MarketplaceAgent {
   agent: Agent;
   description: string;
-  jobs: number;
+  completed_tasks: number;
   revenue_usd: number;
   reputation: number;
   creator_display_name: string;

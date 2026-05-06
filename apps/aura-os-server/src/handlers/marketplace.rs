@@ -56,10 +56,17 @@ pub(crate) async fn list_marketplace_agents(
     let source_agents = load_hireable_agents(&state, &jwt, &net_params).await?;
     let client = state.network_client.as_deref();
     let profiles = resolve_creator_profiles(client, &jwt, &source_agents).await;
+    let completed_task_counts = completed_task_counts_by_agent(&state, &jwt, &source_agents).await;
 
     let mut entries: Vec<MarketplaceAgent> = source_agents
         .into_iter()
-        .map(|agent| build_marketplace_agent(agent, &profiles))
+        .map(|agent| {
+            let completed_tasks = completed_task_counts
+                .get(&agent.agent_id.to_string())
+                .copied()
+                .unwrap_or(0);
+            build_marketplace_agent(agent, &profiles, completed_tasks)
+        })
         .collect();
 
     if let Some(slug) = expertise {
@@ -94,7 +101,17 @@ pub(crate) async fn get_marketplace_agent(
     }
     let client = state.network_client.as_deref();
     let profiles = resolve_creator_profiles(client, &jwt, std::slice::from_ref(&agent)).await;
-    Ok(Json(build_marketplace_agent(agent, &profiles)))
+    let completed_task_counts =
+        completed_task_counts_by_agent(&state, &jwt, std::slice::from_ref(&agent)).await;
+    let completed_tasks = completed_task_counts
+        .get(&agent.agent_id.to_string())
+        .copied()
+        .unwrap_or(0);
+    Ok(Json(build_marketplace_agent(
+        agent,
+        &profiles,
+        completed_tasks,
+    )))
 }
 
 // ---------------------------------------------------------------------------
@@ -198,11 +215,7 @@ async fn load_hireable_agents(
 /// Union the three hireable-agent sources by `agent_id`, with marketplace
 /// rows winning over caller-scoped rows winning over local shadows. Pure
 /// function so it can be unit-tested without standing up an `AppState`.
-fn union_hireable_by_id(
-    local: Vec<Agent>,
-    owned: Vec<Agent>,
-    market: Vec<Agent>,
-) -> Vec<Agent> {
+fn union_hireable_by_id(local: Vec<Agent>, owned: Vec<Agent>, market: Vec<Agent>) -> Vec<Agent> {
     let mut by_id: HashMap<AgentId, Agent> = HashMap::new();
     for agent in local.into_iter().chain(owned).chain(market) {
         // Insert order is local -> owned -> market, so the latest insert
@@ -230,6 +243,99 @@ async fn load_agent(state: &AppState, jwt: &str, agent_id: &AgentId) -> ApiResul
 
 fn agent_is_hireable(agent: &Agent) -> bool {
     matches!(agent.listing_status, AgentListingStatus::Hireable)
+}
+
+async fn completed_task_counts_by_agent(
+    state: &AppState,
+    jwt: &str,
+    agents: &[Agent],
+) -> HashMap<String, u64> {
+    let agent_ids: HashSet<String> = agents
+        .iter()
+        .map(|agent| agent.agent_id.to_string())
+        .collect();
+    if agent_ids.is_empty() {
+        return HashMap::new();
+    }
+
+    let storage = match state.require_storage_client() {
+        Ok(storage) => storage,
+        Err(_) => return HashMap::new(),
+    };
+
+    let mut project_ids: HashSet<String> = state
+        .project_service
+        .list_projects()
+        .map(|projects| {
+            projects
+                .into_iter()
+                .map(|project| project.project_id.to_string())
+                .collect()
+        })
+        .unwrap_or_default();
+
+    if let Some(client) = state.network_client.as_ref() {
+        let org_ids: HashSet<String> = agents
+            .iter()
+            .filter_map(|agent| agent.org_id.as_ref().map(|org_id| org_id.to_string()))
+            .collect();
+        for org_id in org_ids {
+            match client.list_projects_by_org(&org_id, jwt).await {
+                Ok(projects) => {
+                    project_ids.extend(projects.into_iter().map(|project| project.id));
+                }
+                Err(err) => {
+                    warn!(%err, %org_id, "marketplace: listing projects for task counts failed");
+                }
+            }
+        }
+    }
+
+    let mut counts: HashMap<String, u64> = HashMap::new();
+    for project_id in project_ids {
+        let project_agents = match storage.list_project_agents(&project_id, jwt).await {
+            Ok(project_agents) => project_agents,
+            Err(err) => {
+                warn!(%err, %project_id, "marketplace: listing project agents for task counts failed");
+                continue;
+            }
+        };
+        let project_agent_to_agent: HashMap<String, String> = project_agents
+            .into_iter()
+            .filter_map(|project_agent| {
+                let agent_id = project_agent.agent_id?;
+                if !agent_ids.contains(&agent_id) {
+                    return None;
+                }
+                Some((project_agent.id, agent_id))
+            })
+            .collect();
+        if project_agent_to_agent.is_empty() {
+            continue;
+        }
+
+        let tasks = match storage.list_tasks(&project_id, jwt).await {
+            Ok(tasks) => tasks,
+            Err(err) => {
+                warn!(%err, %project_id, "marketplace: listing tasks for completed task counts failed");
+                continue;
+            }
+        };
+        for task in tasks {
+            if task.status.as_deref() != Some("done") {
+                continue;
+            }
+            let Some(project_agent_id) = task.assigned_project_agent_id else {
+                continue;
+            };
+            let Some(agent_id) = project_agent_to_agent.get(&project_agent_id) else {
+                continue;
+            };
+            *counts.entry(agent_id.clone()).or_insert(0) += 1;
+        }
+    }
+
+    counts
 }
 
 // ---------------------------------------------------------------------------
@@ -300,6 +406,7 @@ async fn resolve_creator_profiles(
 fn build_marketplace_agent(
     agent: Agent,
     profiles: &HashMap<String, NetworkProfile>,
+    completed_tasks: u64,
 ) -> MarketplaceAgent {
     let creator_user_id = agent.user_id.clone();
     let creator_display_name = profiles
@@ -316,6 +423,7 @@ fn build_marketplace_agent(
     MarketplaceAgent {
         agent,
         description,
+        completed_tasks,
         jobs,
         revenue_usd,
         reputation,
@@ -362,7 +470,7 @@ fn sort_to_str(sort: MarketplaceSort) -> &'static str {
 fn sort_entries(entries: &mut [MarketplaceAgent], sort: MarketplaceSort) {
     match sort {
         MarketplaceSort::Trending => {
-            entries.sort_by(|a, b| b.jobs.cmp(&a.jobs));
+            entries.sort_by(|a, b| b.completed_tasks.cmp(&a.completed_tasks));
         }
         MarketplaceSort::Latest => {
             entries.sort_by(|a, b| b.listed_at.cmp(&a.listed_at));
@@ -476,10 +584,12 @@ mod tests {
             build_marketplace_agent(
                 sample_agent("older", AgentListingStatus::Hireable, vec![], 10),
                 &profiles,
+                0,
             ),
             build_marketplace_agent(
                 sample_agent("newer", AgentListingStatus::Hireable, vec![], 100),
                 &profiles,
+                0,
             ),
         ];
         sort_entries(&mut entries, MarketplaceSort::Latest);
@@ -493,12 +603,14 @@ mod tests {
         let entry = build_marketplace_agent(
             sample_agent("x", AgentListingStatus::Hireable, vec![], 0),
             &profiles,
+            0,
         );
         assert_eq!(entry.description, "role-x");
         assert_eq!(entry.creator_user_id, "user-x");
         // When no profile is available, fall back to the raw user_id so the
         // UI still has *something* to render.
         assert_eq!(entry.creator_display_name, "user-x");
+        assert_eq!(entry.completed_tasks, 0);
         assert_eq!(entry.jobs, 0);
     }
 
@@ -514,14 +626,15 @@ mod tests {
             4.75,
             0,
         );
-        let entry = build_marketplace_agent(agent, &profiles);
+        let entry = build_marketplace_agent(agent, &profiles, 7);
+        assert_eq!(entry.completed_tasks, 7);
         assert_eq!(entry.jobs, 42);
         assert!((entry.revenue_usd - 9_876.54).abs() < f64::EPSILON);
         assert!((entry.reputation - 4.75).abs() < f32::EPSILON);
     }
 
     #[test]
-    fn sort_trending_orders_by_jobs_desc() {
+    fn sort_trending_orders_by_completed_tasks_desc() {
         let profiles = HashMap::new();
         let mut entries = vec![
             build_marketplace_agent(
@@ -535,6 +648,7 @@ mod tests {
                     0,
                 ),
                 &profiles,
+                1,
             ),
             build_marketplace_agent(
                 sample_agent_with_stats(
@@ -547,6 +661,7 @@ mod tests {
                     0,
                 ),
                 &profiles,
+                100,
             ),
         ];
         sort_entries(&mut entries, MarketplaceSort::Trending);
@@ -562,12 +677,26 @@ mod tests {
         // different `jobs` counts and checking the marketplace one survives.
         let shared_id = AgentId::new();
 
-        let mut local =
-            sample_agent_with_stats("local", AgentListingStatus::Hireable, vec![], 1, 0.0, 0.0, 0);
+        let mut local = sample_agent_with_stats(
+            "local",
+            AgentListingStatus::Hireable,
+            vec![],
+            1,
+            0.0,
+            0.0,
+            0,
+        );
         local.agent_id = shared_id;
 
-        let mut owned =
-            sample_agent_with_stats("owned", AgentListingStatus::Hireable, vec![], 5, 0.0, 0.0, 0);
+        let mut owned = sample_agent_with_stats(
+            "owned",
+            AgentListingStatus::Hireable,
+            vec![],
+            5,
+            0.0,
+            0.0,
+            0,
+        );
         owned.agent_id = shared_id;
 
         let mut market = sample_agent_with_stats(

@@ -4,6 +4,8 @@ import { FolderOpen } from "lucide-react";
 import { api } from "../../../api/client";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
 import { EmptyState } from "../../../components/EmptyState";
+import { mergeAgentIntoProjectAgents, projectQueryKeys } from "../../../queries/project-queries";
+import { queryClient } from "../../../shared/lib/query-client";
 import type { Agent, AgentInstance, Project } from "../../../shared/types";
 import { getApiErrorMessage } from "../../../shared/utils/api-errors";
 import styles from "./HireProjectPickerModal.module.css";
@@ -30,6 +32,7 @@ export function HireProjectPickerModal({
   const loadingProjects = useProjectsListStore((s) => s.loadingProjects);
   const refreshProjects = useProjectsListStore((s) => s.refreshProjects);
   const refreshProjectAgents = useProjectsListStore((s) => s.refreshProjectAgents);
+  const setAgentsByProject = useProjectsListStore((s) => s.setAgentsByProject);
   const [hiringProjectId, setHiringProjectId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,6 +55,14 @@ export function HireProjectPickerModal({
     setHiringProjectId(project.project_id);
     try {
       const instance = await api.createAgentInstance(project.project_id, agent.agent_id);
+      setAgentsByProject((previous) => ({
+        ...previous,
+        [project.project_id]: mergeAgentIntoProjectAgents(previous[project.project_id], instance),
+      }));
+      queryClient.setQueryData(
+        projectQueryKeys.agentInstance(project.project_id, instance.agent_instance_id),
+        instance,
+      );
       await refreshProjectAgents(project.project_id);
       const { track } = await import("../../../lib/analytics");
       track("marketplace_agent_hired");

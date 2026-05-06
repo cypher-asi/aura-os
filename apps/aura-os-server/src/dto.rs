@@ -213,6 +213,7 @@ pub(crate) struct UpdateAgentRequest {
 pub(crate) struct MarketplaceAgent {
     pub agent: Agent,
     pub description: String,
+    pub completed_tasks: u64,
     pub jobs: u64,
     pub revenue_usd: f64,
     pub reputation: f32,

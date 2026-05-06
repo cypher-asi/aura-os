@@ -169,7 +169,7 @@ pub(crate) async fn create_agent_instance(
     let agent = match (body.agent_id, body.kind.as_deref()) {
         (Some(agent_id), None) => state
             .agent_service
-            .get_agent_async(&user_id, &agent_id)
+            .get_agent_with_jwt(&jwt, &agent_id)
             .await
             .map_err(|e| match &e {
                 aura_os_agents::AgentError::NotFound => {

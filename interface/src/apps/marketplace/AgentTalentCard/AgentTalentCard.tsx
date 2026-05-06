@@ -43,7 +43,7 @@ export function AgentTalentCard({
   onSelect,
   onHire,
 }: AgentTalentCardProps) {
-  const { agent, description, jobs, revenue_usd } = marketplaceAgent;
+  const { agent, description, completed_tasks, revenue_usd } = marketplaceAgent;
   const expertise = primaryExpertise(agent.expertise);
   const roleText = agent.role.trim();
   const descriptionText = description.trim();
@@ -90,9 +90,9 @@ export function AgentTalentCard({
         <dl className={styles.statsRow}>
           <div className={styles.stat}>
             <dt className={styles.statLabel}>
-              <Briefcase size={12} /> Jobs
+              <Briefcase size={12} /> Tasks
             </dt>
-            <dd className={styles.statValue}>{formatCompact(jobs)}</dd>
+            <dd className={styles.statValue}>{formatCompact(completed_tasks)}</dd>
           </div>
           <div className={styles.stat}>
             <dt className={styles.statLabel}>Revenue</dt>

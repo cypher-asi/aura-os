@@ -281,9 +281,10 @@ export const useProjectsListStore = create<ProjectsListState>()((set, get) => ({
     let result = get().agentsByProject[projectId] ?? [];
 
     try {
-      const nextAgents = await queryClient.fetchQuery(
-        projectAgentsQueryOptions(projectId),
-      );
+      const nextAgents = await queryClient.fetchQuery({
+        ...projectAgentsQueryOptions(projectId),
+        staleTime: 0,
+      });
       if (agentRefreshRequestIds[projectId] !== requestId) {
         return get().agentsByProject[projectId] ?? result;
       }

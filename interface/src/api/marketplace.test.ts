@@ -87,7 +87,7 @@ describe("marketplaceApi", () => {
         name: "x",
       },
       description: "",
-      jobs: 0,
+      completed_tasks: 0,
       revenue_usd: 0,
       reputation: 0,
       creator_display_name: "u",

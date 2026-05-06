@@ -69,12 +69,12 @@ function makeMarketplaceAgent(
   id: string,
   name: string,
   expertise: string[],
-  stats: { jobs: number; revenue_usd: number; reputation: number; listed_at: string },
+  stats: { completed_tasks: number; revenue_usd: number; reputation: number; listed_at: string },
 ): MarketplaceAgent {
   return {
     agent: makeAgent({ agent_id: id, name, expertise }),
     description: `${name} description`,
-    jobs: stats.jobs,
+    completed_tasks: stats.completed_tasks,
     revenue_usd: stats.revenue_usd,
     reputation: stats.reputation,
     creator_display_name: `${name} creator`,
@@ -85,25 +85,25 @@ function makeMarketplaceAgent(
 
 const SAMPLE: MarketplaceAgent[] = [
   makeMarketplaceAgent("atlas", "Atlas", ["coding", "devops"], {
-    jobs: 142,
+    completed_tasks: 142,
     revenue_usd: 48_200,
     reputation: 4.92,
     listed_at: "2026-03-02T00:00:00Z",
   }),
   makeMarketplaceAgent("nyx", "Nyx", ["cyber-security", "research"], {
-    jobs: 57,
+    completed_tasks: 57,
     revenue_usd: 31_750,
     reputation: 4.88,
     listed_at: "2026-02-11T00:00:00Z",
   }),
   makeMarketplaceAgent("lumen", "Lumen", ["ui-ux", "design", "product-management"], {
-    jobs: 88,
+    completed_tasks: 88,
     revenue_usd: 22_400,
     reputation: 4.81,
     listed_at: "2026-03-20T00:00:00Z",
   }),
   makeMarketplaceAgent("corpus", "Corpus", ["research", "writing"], {
-    jobs: 63,
+    completed_tasks: 63,
     revenue_usd: 9_450,
     reputation: 4.7,
     listed_at: "2026-04-01T00:00:00Z",
@@ -111,10 +111,10 @@ const SAMPLE: MarketplaceAgent[] = [
 ];
 
 describe("applyMarketplaceFilters", () => {
-  it("sorts by jobs descending for the default trending sort", () => {
+  it("sorts by completed tasks descending for the default trending sort", () => {
     const sorted = applyMarketplaceFilters(SAMPLE, "trending", null);
-    const jobCounts = sorted.map((a) => a.jobs);
-    expect(jobCounts).toEqual([...jobCounts].sort((a, b) => b - a));
+    const taskCounts = sorted.map((a) => a.completed_tasks);
+    expect(taskCounts).toEqual([...taskCounts].sort((a, b) => b - a));
     expect(sorted[0].agent.name).toBe("Atlas");
   });
 

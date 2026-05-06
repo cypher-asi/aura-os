@@ -73,7 +73,7 @@ const atlas: MarketplaceAgent = {
   }),
   description:
     "Ships production-ready TypeScript, Rust, and infra. Opinionated about tests and telemetry.",
-  jobs: 142,
+  completed_tasks: 142,
   revenue_usd: 48_200,
   reputation: 4.92,
   creator_display_name: "Mira Osei",
@@ -95,6 +95,8 @@ describe("AgentTalentCard", () => {
     expect(screen.getByText(atlas.agent.name)).toBeInTheDocument();
     expect(screen.getByText(atlas.agent.role)).toBeInTheDocument();
     expect(screen.getByText(atlas.description)).toBeInTheDocument();
+    expect(screen.getByText("Tasks")).toBeInTheDocument();
+    expect(screen.getByText("142")).toBeInTheDocument();
   });
 
   it("does not render the description when it duplicates the role", () => {
