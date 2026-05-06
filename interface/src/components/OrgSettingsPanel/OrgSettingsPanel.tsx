@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Modal, Navigator, Text } from "@cypher-asi/zui";
 import type { NavigatorItemProps } from "@cypher-asi/zui";
+import { OverlayScrollbar } from "../OverlayScrollbar";
 import {
   Settings,
   Users,
@@ -120,6 +121,8 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [tierModalOpen, setTierModalOpen] = useState(false);
+  const navScrollRef = useRef<HTMLDivElement>(null);
+  const contentScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { if (isOpen) track("settings_opened"); }, [isOpen]);
 
@@ -145,43 +148,49 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
     <Modal isOpen={isOpen} onClose={onClose} title="Settings" size="xl" noPadding fullHeight>
       <div className={styles.settingsLayout}>
         <div className={styles.settingsNav}>
-          <div className={styles.navHeader}>
-            <h3>{data.activeOrg?.name ?? "Settings"}</h3>
-            <span>{data.activeOrg ? "Team settings" : "App settings"}</span>
+          <div ref={navScrollRef} className={styles.settingsNavScroll}>
+            <div className={styles.navHeader}>
+              <h3>{data.activeOrg?.name ?? "Settings"}</h3>
+              <span>{data.activeOrg ? "Team settings" : "App settings"}</span>
+            </div>
+            <div className={styles.navGroupLabel}>App</div>
+            <Navigator items={APP_NAV_ITEMS} value={data.section} onChange={handleNavChange} />
+            <div className={styles.navGroupLabel}>Team</div>
+            <Navigator items={ORG_NAV_ITEMS} value={data.section} onChange={handleNavChange} />
+            <div className={styles.navFooter}>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<LogOut size={14} />}
+                className={styles.logoutButton}
+                onClick={() => { void logout(); }}
+              >
+                Logout
+              </Button>
+            </div>
           </div>
-          <div className={styles.navGroupLabel}>App</div>
-          <Navigator items={APP_NAV_ITEMS} value={data.section} onChange={handleNavChange} />
-          <div className={styles.navGroupLabel}>Team</div>
-          <Navigator items={ORG_NAV_ITEMS} value={data.section} onChange={handleNavChange} />
-          <div className={styles.navFooter}>
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={<LogOut size={14} />}
-              className={styles.logoutButton}
-              onClick={() => { void logout(); }}
-            >
-              Logout
-            </Button>
-          </div>
+          <OverlayScrollbar scrollRef={navScrollRef} />
         </div>
         <div className={styles.settingsContent}>
-          {onOrgSection && orgUnavailable ? (
-            <div className={styles.unavailableState}>
-              <Text size="sm">{data.isLoading ? "Loading team settings..." : "Team settings are currently unavailable."}</Text>
-              <Text variant="muted" size="sm">Aura couldn't load your team from the current host. Check the host connection and try again.</Text>
-              <div className={styles.unavailableActions}>
-                <Button variant="ghost" onClick={onClose}>Close</Button>
-                <Button variant="primary" onClick={data.handleRetryOrg} disabled={data.retryingOrg || data.isLoading}>
-                  {data.retryingOrg ? "Retrying..." : "Retry"}
-                </Button>
+          <div ref={contentScrollRef} className={styles.settingsContentScroll}>
+            {onOrgSection && orgUnavailable ? (
+              <div className={styles.unavailableState}>
+                <Text size="sm">{data.isLoading ? "Loading team settings..." : "Team settings are currently unavailable."}</Text>
+                <Text variant="muted" size="sm">Aura couldn't load your team from the current host. Check the host connection and try again.</Text>
+                <div className={styles.unavailableActions}>
+                  <Button variant="ghost" onClick={onClose}>Close</Button>
+                  <Button variant="primary" onClick={data.handleRetryOrg} disabled={data.retryingOrg || data.isLoading}>
+                    {data.retryingOrg ? "Retrying..." : "Retry"}
+                  </Button>
+                </div>
               </div>
-            </div>
-          ) : onOrgSection ? (
-            <OrgSectionContent data={data} onUpgrade={() => setTierModalOpen(true)} />
-          ) : (
-            <AppSectionContent section={data.section} />
-          )}
+            ) : onOrgSection ? (
+              <OrgSectionContent data={data} onUpgrade={() => setTierModalOpen(true)} />
+            ) : (
+              <AppSectionContent section={data.section} />
+            )}
+          </div>
+          <OverlayScrollbar scrollRef={contentScrollRef} />
         </div>
       </div>
       <TierSubscriptionModal isOpen={tierModalOpen} onClose={() => setTierModalOpen(false)} />
