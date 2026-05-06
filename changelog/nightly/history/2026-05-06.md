@@ -1,65 +1,67 @@
-# Native chrome polish, 3D chat returns, and dev/stable channel split
+# Native desktop polish, chat 3D pipeline, and S3 attachment uploads
 
 - Date: `2026-05-06`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.471.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.471.1
+- Version: `0.1.0-nightly.472.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.472.1
 
-A dense night of desktop-feel work: AURA stops feeling like a web view with a new context-menu system, the chat 3D pipeline comes back as a real two-step image-to-model flow with an embedded GLB viewer, and a build-time channel split lets developers run a dev AURA next to the installed stable one without collisions. Smaller fixes tighten modals, sidebars, agent sessions, and S3 attachment uploads.
+A dense nightly that reshapes how AURA feels as a desktop app — taking over the right-click menu, fixing Windows top-edge resize, and splitting dev from stable builds — while rebuilding chat 3D mode end-to-end and wiring image attachments through S3 presigned uploads. Feedback, agent sessions, and a handful of UI papercuts also got meaningful attention.
 
-## 8:16 PM — In-app context menu replaces the WebView2 native menu
+## 8:16 PM — AURA takes over the right-click menu
 
-Right-clicking AURA chrome no longer surfaces Chromium's Back / Refresh / Inspect menu, restoring the desktop-OS feel.
+The Chromium/WebView2 native context menu no longer leaks through AURA's chrome, replaced by an in-app editing menu where it matters.
 
-- A document-level override suppresses the native context menu everywhere, defers to in-app handlers like DesktopContextMenu and NotesEntryContextMenu via defaultPrevented, and replaces it with a compact Cut / Copy / Paste / Select All menu inside editable fields. (`52cdd47`)
+- Right-clicking empty AURA chrome no longer pops the WebView2/Chromium menu (Back, Refresh, Inspect, Save as…); a single document-level listener defers to in-app handlers like DesktopContextMenu and otherwise cancels the native menu, restoring the desktop OS feel. (`52cdd47`)
+- Inside inputs, textareas, and contenteditable fields, right-click now shows a compact in-app Cut / Copy / Paste / Select All so text editing keeps working without ceding control of the chrome. (`52cdd47`)
 
-## 8:38 PM — Easier top-edge window resize on Windows
+## 8:38 PM — Forgiving top-edge window resize on Windows
 
-The borderless main window now has a forgiving resize zone along its top edge.
+Grabbing the top edge of the borderless main window no longer requires pixel-perfect aim.
 
-- A Win32 subclass on the main HWND reports HTTOP/HTTOPLEFT/HTTOPRIGHT within a 10-logical-pixel band along the top edge so resizing no longer requires pixel-perfect aim around the floating titlebar pill, while titlebar drag, side resize, and Chromium app-region behavior stay intact and the override no-ops when maximized and re-reads DPI per hit-test. (`bc327be`)
+- A Win32 subclass on the main HWND now reports HTTOP/HTTOPLEFT/HTTOPRIGHT across a 10‑logical‑px band along the top edge instead of tao's default ~4px, so resize from the top works reliably alongside the floating titlebar pill. The subclass becomes a no-op when maximized, re-reads DPI per hit-test for mixed-DPI setups, and leaves titlebar drag, side resize, and Chromium app-region behavior untouched. (`bc327be`)
 
-## 8:43 PM — Modals wait for their data before opening
+## 8:43 PM — Modals open at their final size instead of janking
 
-Confirm and subscription modals stop janking from spinner to final layout as bindings load.
+A new shared hook delays opening async-loading modals until their data is ready, eliminating the post-open relayout flicker.
 
-- A new useDeferredModalOpen hook keeps modals closed (with a disabled trigger and a 3000ms failsafe) until prepare() resolves, eliminating mid-open relayout in the agent delete confirm, marketplace Hire picker, and Tier subscription modals. (`8cc4d0d`)
-- The agent delete cascade label is shortened to "Delete (N projects)" so the footer button width stays stable across binding counts. (`8cc4d0d`)
+- Introduced useDeferredModalOpen, which keeps the modal closed and disables its trigger until a prepare() promise resolves (with a 3000ms failsafe), then opens at the final size. Stale resolutions from earlier open cycles are ignored via an internal cycle token. (`8cc4d0d`)
+- Applied to three high-visibility surfaces: the Delete Agent confirm modal (cascade label shortened to "Delete (N projects)" so width is stable), the marketplace Hire project picker (no more in-modal spinner), and the Tier subscription modal (now reads from the billing store instead of fetching on open). (`8cc4d0d`)
 
-## 8:45 PM — Dev and Stable channels can run side-by-side
+## 8:45 PM — Dev and stable AURA can run side-by-side
 
-A new build-time channel selector keeps a cargo-built dev AURA from colliding with the installed stable AURA.
+A new build-time channel selector keeps a cargo-built dev AURA from colliding with an installed stable AURA on the same machine.
 
-- A new aura-os-core::channel module is the single source of truth for per-channel data dirs (aura vs aura-dev), skills home, Windows single-instance mutex, window/menu title, embedded desktop server port (19847/19848), standalone server port (3100/3101), harness sidecar port (19080/19081), default harness URL port, and updater enablement (off in dev so a cargo build can never silently install over stable). (`718a47c`)
-- Release pipelines (desktop-validate, release-nightly, release-stable) now build with --no-default-features --features stable-channel, while cargo run and the dev runner scripts default to the dev channel and bind on dev ports (Vite 5174, mobile backend 3101). (`718a47c`)
+- Added a Channel enum in aura-os-core as the single source of truth for per-channel identifiers — data dir (aura vs aura-dev), skills home, Windows single-instance mutex, window/menu title, embedded desktop server port (19847/19848), standalone server port (3100/3101), harness sidecar port (19080/19081), default harness URL port, and updater enablement (off in dev so cargo builds can never silently replace the installed stable shell). (`718a47c`)
+- cargo run and the scripts/dev/* runners default to dev-channel via cargo's default feature; the release-stable, release-nightly, and desktop-validate workflows build with --no-default-features --features stable-channel, and the desktop crate disables default features on its core/server deps so a packaging build can't pull in dev-channel transitively. Dev script ports also moved off stable defaults (Vite 5174, mobile backend 3101). (`718a47c`)
 
-## 9:04 PM — 3D chat mode returns with an image-first flow
+## 9:04 PM — Chat 3D mode returns with an image-first flow
 
-The 3D pill is back in the chat mode selector, wired to generate an image first and then convert it to 3D.
+The 3D pill is back in the chat mode selector, wired to the same image-then-3D path as the standalone AURA 3D app.
 
-- Chat 3D mode derives its source from the most recent successful generate_image tool result, surfaces a "Source for 3D" thumbnail above the textarea, blocks Send with a switch-to-Image hint until one exists, and dispatches via generate3dStream's URL form through both the live and queue-replay send paths. (`15aa431`)
-- The standalone AURA 3D app's Image tab no longer appends the product-photography STYLE_LOCK_SUFFIX to user prompts, so image generation behaves consistently with /image and /3d (the constant is kept so stripStyleLock can clean legacy artifacts). (`5897137`)
+- Re-enabled 3D chat mode and rewired it so the only valid path is generate an image first, then convert it to 3D. The input bar derives its source from the most recent successful generate_image tool result, surfaces it as a "Source for 3D" thumbnail above the textarea, blocks Send with a switch-to-Image hint until one exists, and dispatches via generate3dStream's URL form with sourceImageUrl carried through both live and queue-replay paths. (`15aa431`)
+- Stopped appending the product-photography STYLE_LOCK_SUFFIX to user prompts in the AURA 3D app's Image tab so it now matches /image and /3d behavior; stripStyleLock is retained to clean the suffix off legacy artifacts. (`5897137`)
 
-## 9:26 PM — Chat sessions, S3 uploads, and a wave of UI polish
+## 9:26 PM — Chat 3D pipeline, S3 attachment uploads, sessions sidekick, and theme work
 
-The largest batch of the night reworked chat 3D into a true two-step pipeline, added S3-backed attachment uploads, restructured agent chat sessions, refreshed the feedback sidekick, and corrected a long tail of interaction details.
+The day's longest stretch reshaped chat 3D mode into a real two-step pipeline, moved image attachments to S3 presigned uploads, made the agent Chats sidekick clickable, and landed a wave of theming and reliability fixes.
 
-- Chat 3D was rebuilt as an in-bar two-step image-then-3D pipeline with a removable pinned source thumb owned by chat-ui-store, split image_step / model_step wire variants, an inline thumb in the input row's start slot, image-only send support, and an embedded WebGLViewer (lazy-loaded) replacing the old "Download GLB" link, with auto-expand for generated 3D model blocks. (`2b78e87`, `d5a5270`, `ffd4da5`, `69f1276`, `73fd9f9`)
-- Chat attachments now upload directly to S3 via a new presign proxy endpoint and frontend upload module: Send is blocked while uploads are in flight, uploading thumbnails dim, message bubbles render from the S3 URL, and a new source_url field on MessageAttachment carries the uploaded URL through the protocol. (`acf466a`, `8492dee`, `a15dc03`, `b28b211`, `3b95dde`, `49df699`, `9725ce4`, `0070fe2`, `ea6f43f`)
-- Agent chat sessions got real titles and navigation: the Chats sidekick now always attempts a Haiku summary (untitled rows are hidden until one lands), rows are clickable into the historical transcript, a new "+" button starts a fresh session and scopes the live transcript to it via a new live-session store, and the sidekick auto-refreshes when sessions are created elsewhere — with click handling kept inside the agents app shell. (`42c97f6`, `ee49740`, `309f35b`, `9cdc19b`)
-- The right-click override learned two new surfaces: a Copy menu for selected non-editable text (chat / markdown output) and a Copy Image action on any <img> that writes the bitmap to the OS clipboard via ClipboardItem, re-encoding to PNG when needed. The desktop background context-menu label was also shortened to "Background". (`90c31ed`, `5c24a16`, `d0ce2d5`)
-- Feedback got two upgrades: every new submission is tagged with the active app build (rendered as a vX.Y.Z chip on feed cards) via a metadata.appVersion field on activity_events, and the sidekick splits into Notes-style Details and Comments tabs driven by a new sidekickTab store slice. (`d0d49f8`, `b08b8d7`)
-- Theme and chrome polish: a new --color-modal-bg token paints modals jet-black in dark mode (with a paired Dark+Light editor in Appearance settings), the zui Button dim timing was inverted so unselected buttons sit at full opacity at rest and fade on hover, the titlebar Update pill now renders at full accent saturation, focus-visible outlines no longer paint around dialog/modal wrappers, and the mode-selector row no longer text-selects on drag. (`ba64c3d`, `a16bc58`, `dc169b9`, `4f87ed6`, `4cf0bd6`)
-- Chat reading and composition got steadier: an explicit upward-scroll signal in useScrollAnchorV2 now overrides streaming tail-pin and the post-stream image-pin window so user scroll-up sticks; the bottom-bar environment slot reserves space while agent metadata loads to stop "/ for commands" from snapping; user image attachments get breathing room; and the empty-state input bar pulse slows from 2s to 6s with a redesigned 2x2 segmented suggestion-chip row. (`5828b1b`, `426e8cb`, `8d9acaf`, `c6cdeab`, `3edae9d`, `163267c`, `9862578`)
-- Project settings can now attach an Orbit repo from the edit modal (mirroring the new-project flow, with the server's update_project handler calling orbit.ensure_repo when a brand-new owner+repo is provided), and unnamed agents render a shared "New Agent" placeholder across AgentList, the project explorer, and the Tasks tree. (`73176b7`, `279ecdb`)
-- Server-side, renamed bootstrap CEO agents are now recognized via the canonical "You are the CEO SuperAgent" system-prompt prefix, so logging in after a CEO rename no longer mints a duplicate "CEO" agent for users created before the local-stamp fix. (`2da2e55`)
-- Release CI was unblocked by dropping --no-default-features and --features from the cargo packager invocation across desktop-validate, release-nightly, and release-stable; cargo-packager 0.11.8 doesn't accept those flags, and the stable-channel feature is already applied via before-packaging-command. (`a457cab`)
+- Reworked chat 3D as an in-bar two-step image→model pipeline: a removable pinned source thumb (now inline in the input row's start slot) replaces the "generate an image first" gate, the wire variant splits into image_step / model_step, image-only sends are allowed, and Model3DBlock now embeds a lazy-loaded WebGLViewer with a download link instead of a bare GLB link. Auto-expanded generate_3d_model so freshly generated models render their viewer on first paint. (`2b78e87`, `d5a5270`, `ffd4da5`, `69f1276`, `73fd9f9`)
+- Image attachments now flow through S3: a new presign proxy endpoint and upload_routes() on the server, a frontend upload API, and a MessageAttachment.source_url field on the protocol. The chat input wires presigned uploads in, blocks Send while uploads are in progress, dims uploading thumbnails, and renders uploaded images from the S3 URL in message bubbles. Includes follow-up fixes for stale ref closures and threading source_url through history and stream paths. (`acf466a`, `8492dee`, `a15dc03`, `b28b211`, `3b95dde`, `49df699`, `9725ce4`, `0070fe2`, `ea6f43f`, `c46a262`)
+- The agent Chats sidekick is now usable: rows are clickable and open the historical transcript, untitled sessions get an immediate Haiku title attempt (the lagging token-count gate is gone) and stay hidden until they have a real label, a new "+" button on the input mode row starts a fresh session distinct from the soft reset, and a sessions-list version counter auto-refreshes the sidekick when sessions are created elsewhere. Clicks from the agents app stay inside the agents shell instead of jumping to the projects shell. (`42c97f6`, `ee49740`, `309f35b`, `9cdc19b`)
+- Extended the right-click override with a Copy action for non-editable text selections in chat/markdown output and a Copy Image action that re-encodes to PNG via canvas when needed, and shortened the desktop background label to "Background". (`90c31ed`, `5c24a16`, `d0ce2d5`)
+- Theme and chrome polish: a new --color-modal-bg ZUI token paints modals jet-black in dark mode (with a paired Dark+Light editor in Settings → Appearance → Custom colors), the base Button now sits at full opacity at rest and dims on hover, and the titlebar Update pill renders at full accent saturation again. Focus-visible rings no longer paint around modal/dialog wrappers when Chromium flips into keyboard-modality. (`ba64c3d`, `a16bc58`, `dc169b9`, `4f87ed6`)
+- New chat empty-state suggestions render as a 2x2 segmented row of icon-prefixed chips with proper gaps, the input bar's empty-state border pulse slowed from 2s to 6s, the bottom-bar Local/Remote slot stays width-stable while agent metadata loads, image-attachment strips got breathing room, mode-row labels are no longer text-selectable, and sidebar agent rows fall back to "New Agent" when names are missing. (`c6cdeab`, `3edae9d`, `163267c`, `426e8cb`, `8d9acaf`, `4cf0bd6`, `9862578`, `279ecdb`)
+- Chat scrolling now respects user intent: explicit upward wheel/touch/keyboard scroll is detected in useScrollAnchorV2 and gates both the streaming tail-pin layout effect and the 6-second post-stream image pin, so reading older messages mid-stream isn't yanked back to the bottom. (`5828b1b`)
+- Feedback got a Notes-style sidekick split into Details and Comments tabs (driven by a sidekickTab slice on the feedback store), and every new submission is now tagged with the active app version — surfaced as "Tagged with version X" in the modal and a vX.Y.Z chip on each card — riding the existing activity_events metadata blob with no schema migration. (`b08b8d7`, `d0d49f8`)
+- Project Settings can now attach an Orbit repo from the edit modal — reusing OrbitRepoSection from the new-project flow — and update_project on the server calls orbit.ensure_repo when a request attaches a brand-new owner+repo so the repo actually gets provisioned. (`73176b7`)
+- Bootstrap CEO recognition now matches on the canonical system_prompt prefix in addition to the local stamp and exact name+role, so renamed CEOs from before the stamping fix no longer cause a duplicate "CEO" agent to be minted on next login. (`2da2e55`)
+- Release pipeline fix: dropped --no-default-features and --features from the cargo packager invocation in desktop-validate, release-nightly, and release-stable workflows; cargo-packager 0.11.8's CLI rejected those as cargo-build flags, and the stable-channel feature is already wired via before-packaging-command, unblocking CI. (`a457cab`)
 
 ## Highlights
 
-- Native browser context menu replaced across the app
-- Chat 3D mode rebuilt as image-then-model with inline GLB viewer
-- Dev and Stable channels can now coexist on one machine
-- S3 presigned uploads wired into chat attachments
-- Windows top-edge resize hit area widened
+- AURA now owns the right-click menu across the app
+- Chat 3D mode shipped as a real two-step image→model pipeline with inline GLB viewer
+- Dev and stable AURA builds can finally run side-by-side
+- Image attachments now upload to S3 via presigned URLs
+- Windows top-edge resize is forgiving again
 
