@@ -32,7 +32,14 @@ pub struct NetworkAgent {
     pub tags: Option<Vec<String>>,
     /// Marketplace listing status. Serialized as `"closed"` / `"hireable"`;
     /// absent on older records, so the server treats `None` as "closed".
-    #[serde(default)]
+    ///
+    /// Aliases the snake_case key as a defensive measure: the struct's
+    /// `rename_all = "camelCase"` makes `listingStatus` the canonical wire
+    /// name, but the migration doc and some upstream fixtures emit
+    /// `listing_status`. Without the alias those rows would deserialize
+    /// with `None` and `derive_listing_status` would silently fall back to
+    /// `Closed`, hiding hireable agents from the marketplace.
+    #[serde(default, alias = "listing_status")]
     pub listing_status: Option<String>,
     /// Marketplace expertise slugs.
     #[serde(default)]
@@ -40,7 +47,8 @@ pub struct NetworkAgent {
     /// Aggregated marketplace stats. Computed server-side.
     #[serde(default)]
     pub jobs: Option<u64>,
-    #[serde(default)]
+    /// Aliases the snake_case key for the same reason as `listing_status`.
+    #[serde(default, alias = "revenue_usd")]
     pub revenue_usd: Option<f64>,
     #[serde(default)]
     pub reputation: Option<f32>,

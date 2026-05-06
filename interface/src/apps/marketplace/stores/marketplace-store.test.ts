@@ -159,6 +159,7 @@ describe("useMarketplaceStore.refresh", () => {
       agents: [],
       loading: false,
       error: null,
+      inflight: null,
       sort: "trending",
       expertiseFilter: null,
       selectedAgentId: null,
@@ -209,8 +210,40 @@ describe("useMarketplaceStore.refresh", () => {
   });
 
   it("short-circuits when a refresh is already in flight", async () => {
-    useMarketplaceStore.setState({ loading: true });
-    await useMarketplaceStore.getState().refresh();
+    // Simulate an outstanding request by parking a never-resolving promise on
+    // the dedupe field. `loading` is *not* used for dedupe anymore (it doubles
+    // as the spinner flag), so seeding it would not block a second refresh.
+    const pending = new Promise<void>(() => {});
+    useMarketplaceStore.setState({ inflight: pending });
+
+    await Promise.race([
+      useMarketplaceStore.getState().refresh(),
+      new Promise((resolve) => setTimeout(resolve, 0)),
+    ]);
+
     expect(mockApi.marketplace.list).not.toHaveBeenCalled();
+  });
+
+  it("fires the request from the default initial state where loading is true", async () => {
+    // Regression for the bug where refresh() short-circuited on the initial
+    // `loading: true` and the marketplace was stuck on "Loading marketplace…".
+    useMarketplaceStore.setState({
+      agents: [],
+      loading: true,
+      error: null,
+      inflight: null,
+    });
+    mockApi.marketplace.list.mockResolvedValueOnce({
+      agents: SAMPLE.slice(0, 1),
+      total: 1,
+    });
+
+    await useMarketplaceStore.getState().refresh();
+
+    expect(mockApi.marketplace.list).toHaveBeenCalledTimes(1);
+    const state = useMarketplaceStore.getState();
+    expect(state.loading).toBe(false);
+    expect(state.inflight).toBeNull();
+    expect(state.agents).toHaveLength(1);
   });
 });

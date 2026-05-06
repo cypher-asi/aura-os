@@ -5,6 +5,7 @@ mod projects;
 mod social;
 mod users;
 
+pub use agents::ListMarketplaceAgentsParams;
 pub use social::CreatePostParams;
 
 use std::env;

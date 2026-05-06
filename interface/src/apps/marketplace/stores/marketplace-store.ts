@@ -21,6 +21,10 @@ interface MarketplaceState {
   agents: MarketplaceAgent[];
   loading: boolean;
   error: string | null;
+  // In-flight refresh promise. Used to dedupe concurrent `refresh()` calls
+  // without conflating it with `loading` (which doubles as the spinner flag
+  // and is initialised `true` to avoid an empty-state flash on first mount).
+  inflight: Promise<void> | null;
 
   sort: MarketplaceTrendingSort;
   expertiseFilter: string | null;
@@ -39,30 +43,39 @@ export const useMarketplaceStore = create<MarketplaceState>()((set, get) => ({
   // the first request resolves.
   loading: true,
   error: null,
+  inflight: null,
 
   sort: DEFAULT_MARKETPLACE_SORT,
   expertiseFilter: null,
   selectedAgentId: null,
 
-  refresh: async () => {
-    if (get().loading) return;
+  refresh: () => {
+    const existing = get().inflight;
+    if (existing) return existing;
+
     set({ loading: true, error: null });
-    try {
-      const { sort, expertiseFilter } = get();
-      const response = await api.marketplace.list({
-        sort,
-        expertise: expertiseFilter ?? undefined,
-      });
-      set({ agents: response.agents, loading: false, error: null });
-    } catch (err) {
-      const message =
-        err instanceof ApiClientError
-          ? err.body.error || err.message
-          : err instanceof Error
-            ? err.message
-            : "Failed to load marketplace";
-      set({ loading: false, error: message });
-    }
+    const p = (async () => {
+      try {
+        const { sort, expertiseFilter } = get();
+        const response = await api.marketplace.list({
+          sort,
+          expertise: expertiseFilter ?? undefined,
+        });
+        set({ agents: response.agents, loading: false, error: null });
+      } catch (err) {
+        const message =
+          err instanceof ApiClientError
+            ? err.body.error || err.message
+            : err instanceof Error
+              ? err.message
+              : "Failed to load marketplace";
+        set({ loading: false, error: message });
+      } finally {
+        set({ inflight: null });
+      }
+    })();
+    set({ inflight: p });
+    return p;
   },
 
   setSort: (sort) => set({ sort }),

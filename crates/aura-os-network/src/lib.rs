@@ -3,7 +3,7 @@ pub mod error;
 pub mod orbit;
 pub mod types;
 
-pub use client::NetworkClient;
+pub use client::{ListMarketplaceAgentsParams, NetworkClient};
 pub use error::NetworkError;
 pub use orbit::{OrbitClient, OrbitDiscovery, OrbitError};
 pub use types::{

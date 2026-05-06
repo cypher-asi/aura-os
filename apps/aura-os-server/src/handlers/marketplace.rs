@@ -15,11 +15,11 @@ use std::collections::{HashMap, HashSet};
 use axum::extract::{Path, Query, State};
 use axum::Json;
 use futures_util::future::join_all;
-use tracing::warn;
+use tracing::{info, warn};
 
 use aura_os_core::listing_status::AgentListingStatus;
 use aura_os_core::{Agent, AgentId};
-use aura_os_network::{NetworkClient, NetworkProfile};
+use aura_os_network::{ListMarketplaceAgentsParams, NetworkClient, NetworkProfile};
 
 use crate::dto::{ListMarketplaceAgentsQuery, ListMarketplaceAgentsResponse, MarketplaceAgent};
 use crate::error::{map_network_error, ApiError, ApiResult};
@@ -42,7 +42,18 @@ pub(crate) async fn list_marketplace_agents(
         .clamp(1, MAX_PAGE_LIMIT);
     let offset = query.offset.unwrap_or(0);
 
-    let source_agents = load_hireable_agents(&state, &jwt).await?;
+    // Forward the parsed params to the network so it can return the
+    // public marketplace view (cross-user) instead of the caller's own
+    // roster. We still re-apply expertise/sort/pagination locally below
+    // so `total` and ordering remain authoritative on this server.
+    let net_params = ListMarketplaceAgentsParams {
+        sort: Some(sort_to_str(sort)),
+        expertise,
+        limit: Some(limit),
+        offset: Some(offset),
+    };
+
+    let source_agents = load_hireable_agents(&state, &jwt, &net_params).await?;
     let client = state.network_client.as_deref();
     let profiles = resolve_creator_profiles(client, &jwt, &source_agents).await;
 
@@ -90,26 +101,115 @@ pub(crate) async fn get_marketplace_agent(
 // Data loading
 // ---------------------------------------------------------------------------
 
-async fn load_hireable_agents(state: &AppState, jwt: &str) -> ApiResult<Vec<Agent>> {
-    let agents = match state.network_client.as_ref() {
-        Some(client) => {
-            let net_agents = client.list_agents(jwt).await.map_err(map_network_error)?;
-            net_agents
+/// Load the union of hireable agents from every source we know about.
+///
+/// We can't rely on the cross-user `client.list_marketplace_agents` view
+/// alone: aura-network may not yet expose other users' hireable agents to
+/// the caller, and several upstream deployments scope `GET /api/agents`
+/// (with or without `listing_status` filters) to the calling user. To make
+/// "I marked my agent hireable" actually surface in the marketplace UI,
+/// we union three sources by `agent_id`:
+///
+/// 1. `client.list_marketplace_agents` — the public marketplace view.
+///    Highest priority on duplicates because its aggregated stats
+///    (`jobs`, `revenue_usd`, …) are server-computed.
+/// 2. `client.list_agents` — the caller-scoped network roster, filtered
+///    locally to `Hireable`. This catches the user's own listings even
+///    when the marketplace view excludes them.
+/// 3. `state.agent_service.list_agents` — local shadows, filtered to
+///    `Hireable`. This catches listings whose `listing_status` flip is
+///    persisted locally but hasn't yet round-tripped from the network
+///    response.
+///
+/// Errors from sources 2 and 3 are logged and swallowed — they're
+/// best-effort fallbacks. Only source 1's failure surfaces as an
+/// `ApiError`, since that's the canonical marketplace endpoint.
+async fn load_hireable_agents(
+    state: &AppState,
+    jwt: &str,
+    net_params: &ListMarketplaceAgentsParams<'_>,
+) -> ApiResult<Vec<Agent>> {
+    // Source 3 (lowest priority): local shadows.
+    let local: Vec<Agent> = match state.agent_service.list_agents() {
+        Ok(locals) => locals.into_iter().filter(agent_is_hireable).collect(),
+        Err(err) => {
+            warn!(%err, "marketplace: listing local agents failed");
+            Vec::new()
+        }
+    };
+
+    // Source 2: caller-scoped network roster (network mode only).
+    let owned: Vec<Agent> = if let Some(client) = state.network_client.as_ref() {
+        match client.list_agents(jwt).await {
+            Ok(net_agents) => net_agents
                 .iter()
                 .map(|na| {
                     let mut agent = agent_from_network(na);
                     let _ = state.agent_service.apply_runtime_config(&mut agent);
                     agent
                 })
-                .collect::<Vec<_>>()
+                .filter(agent_is_hireable)
+                .collect(),
+            Err(err) => {
+                warn!(%err, "marketplace: caller-scoped list_agents failed");
+                Vec::new()
+            }
         }
-        None => state
-            .agent_service
-            .list_agents()
-            .map_err(|e| ApiError::internal(format!("listing agents: {e}")))?,
+    } else {
+        Vec::new()
     };
 
-    Ok(agents.into_iter().filter(agent_is_hireable).collect())
+    // Source 1 (highest priority): cross-user marketplace view. When a
+    // network client is configured this is the canonical endpoint; if it
+    // fails we propagate the error rather than silently falling back to
+    // only the caller's own agents.
+    let market: Vec<Agent> = if let Some(client) = state.network_client.as_ref() {
+        let net_agents = client
+            .list_marketplace_agents(jwt, net_params)
+            .await
+            .map_err(map_network_error)?;
+        net_agents
+            .iter()
+            .map(|na| {
+                let mut agent = agent_from_network(na);
+                let _ = state.agent_service.apply_runtime_config(&mut agent);
+                agent
+            })
+            .filter(agent_is_hireable)
+            .collect()
+    } else {
+        Vec::new()
+    };
+
+    let local_count = local.len();
+    let owned_count = owned.len();
+    let market_count = market.len();
+    let result = union_hireable_by_id(local, owned, market);
+    info!(
+        marketplace = market_count,
+        owned = owned_count,
+        local = local_count,
+        total = result.len(),
+        "marketplace load_hireable_agents counts"
+    );
+    Ok(result)
+}
+
+/// Union the three hireable-agent sources by `agent_id`, with marketplace
+/// rows winning over caller-scoped rows winning over local shadows. Pure
+/// function so it can be unit-tested without standing up an `AppState`.
+fn union_hireable_by_id(
+    local: Vec<Agent>,
+    owned: Vec<Agent>,
+    market: Vec<Agent>,
+) -> Vec<Agent> {
+    let mut by_id: HashMap<AgentId, Agent> = HashMap::new();
+    for agent in local.into_iter().chain(owned).chain(market) {
+        // Insert order is local -> owned -> market, so the latest insert
+        // wins on duplicates and gives marketplace the highest priority.
+        by_id.insert(agent.agent_id, agent);
+    }
+    by_id.into_values().collect()
 }
 
 async fn load_agent(state: &AppState, jwt: &str, agent_id: &AgentId) -> ApiResult<Agent> {
@@ -247,6 +347,15 @@ fn parse_sort(raw: Option<&str>) -> ApiResult<MarketplaceSort> {
         Some(other) => Err(ApiError::bad_request(format!(
             "unsupported marketplace sort `{other}`"
         ))),
+    }
+}
+
+fn sort_to_str(sort: MarketplaceSort) -> &'static str {
+    match sort {
+        MarketplaceSort::Trending => "trending",
+        MarketplaceSort::Latest => "latest",
+        MarketplaceSort::Revenue => "revenue",
+        MarketplaceSort::Reputation => "reputation",
     }
 }
 
@@ -443,5 +552,57 @@ mod tests {
         sort_entries(&mut entries, MarketplaceSort::Trending);
         assert_eq!(entries[0].agent.name, "high");
         assert_eq!(entries[1].agent.name, "low");
+    }
+
+    #[test]
+    fn union_keeps_marketplace_row_over_owned_and_local_for_same_id() {
+        // The marketplace endpoint's stats are server-computed and freshest,
+        // so when the same agent appears in multiple sources the marketplace
+        // row must win. We assert this by giving the same `agent_id` three
+        // different `jobs` counts and checking the marketplace one survives.
+        let shared_id = AgentId::new();
+
+        let mut local =
+            sample_agent_with_stats("local", AgentListingStatus::Hireable, vec![], 1, 0.0, 0.0, 0);
+        local.agent_id = shared_id;
+
+        let mut owned =
+            sample_agent_with_stats("owned", AgentListingStatus::Hireable, vec![], 5, 0.0, 0.0, 0);
+        owned.agent_id = shared_id;
+
+        let mut market = sample_agent_with_stats(
+            "market",
+            AgentListingStatus::Hireable,
+            vec![],
+            42,
+            0.0,
+            0.0,
+            0,
+        );
+        market.agent_id = shared_id;
+
+        let result = union_hireable_by_id(vec![local], vec![owned], vec![market]);
+
+        assert_eq!(result.len(), 1, "duplicates should be deduped by agent_id");
+        assert_eq!(result[0].name, "market");
+        assert_eq!(result[0].jobs, 42);
+    }
+
+    #[test]
+    fn union_includes_distinct_ids_from_every_source() {
+        // Sanity: when every source contributes a different agent, all three
+        // appear in the union. Order is HashMap-driven so we assert via set
+        // membership rather than positional equality.
+        let local = sample_agent("only-local", AgentListingStatus::Hireable, vec![], 0);
+        let owned = sample_agent("only-owned", AgentListingStatus::Hireable, vec![], 0);
+        let market = sample_agent("only-market", AgentListingStatus::Hireable, vec![], 0);
+
+        let result = union_hireable_by_id(vec![local], vec![owned], vec![market]);
+
+        let names: HashSet<String> = result.into_iter().map(|a| a.name).collect();
+        assert_eq!(names.len(), 3);
+        assert!(names.contains("only-local"));
+        assert!(names.contains("only-owned"));
+        assert!(names.contains("only-market"));
     }
 }
