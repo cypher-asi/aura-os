@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-06T19:34:00.519Z",
+  "generatedAt": "2026-05-06T20:39:17.479Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.467.1",
+  "version": "0.1.0-nightly.468.1",
   "date": "2026-05-06",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.467.1",
-  "lastIncludedSha": "9862578dccb48e68a5a89fa15e023f1ae45c404c",
-  "previousProcessedSha": "ffd4da5868c0ab5203f3ef7b6c9058fa90cb38de",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.468.1",
+  "lastIncludedSha": "9cdc19b75b9a757d0b82cf28bf11cbbecb740bfc",
+  "previousProcessedSha": "9862578dccb48e68a5a89fa15e023f1ae45c404c",
   "commitShas": [
     "52cdd479fdb0520d4286710b63274cfa0fcfc672",
     "bc327bedc014762db3e42ec8de995866abfca726",
@@ -36,10 +36,21 @@
     "3edae9dbc5786589c1040d87b8a9e4a323ff3be1",
     "163267cd1ba8db0496ecb367e51325dffff70b46",
     "4cf0bd627acfce0375f6ed3a0d8b786193c0b850",
-    "9862578dccb48e68a5a89fa15e023f1ae45c404c"
+    "9862578dccb48e68a5a89fa15e023f1ae45c404c",
+    "d0d49f8ad93200faba6553250a050fb9ab8dd0de",
+    "69f1276ad7d52197186b68ab6a40b9464795c948",
+    "b08b8d79e8270593375b76e690d32e47a29d74df",
+    "5c24a16b02e500e7d80afaf0767e6c7b9858c868",
+    "5828b1b27d3e7c9d09640c0389bc8b5ca4ab0151",
+    "42c97f674092e272fe47c99c2dbea19876457b11",
+    "ee497404d474556bb6b1a38367bb9c4fc5adbc57",
+    "8d9acaf0c2af01ccdbd9fc5dbb9f832052483677",
+    "309f35b21f4958fb1c68d92172fe524eecfd4bc7",
+    "73fd9f971cdc6574a801546ff76168bcb90d1f7c",
+    "9cdc19b75b9a757d0b82cf28bf11cbbecb740bfc"
   ],
-  "rawCommitCount": 25,
-  "filteredCommitCount": 25,
+  "rawCommitCount": 36,
+  "filteredCommitCount": 36,
   "rawCommits": [
     {
       "sha": "52cdd479fdb0520d4286710b63274cfa0fcfc672",
@@ -1172,6 +1183,501 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "d0d49f8ad93200faba6553250a050fb9ab8dd0de",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T12:27:56-07:00",
+      "subject": "feat(feedback): tag new feedback with the active app version",
+      "body": "Inject the build version into every new feedback submission so support\ncan correlate reports with the exact build the user is running. The\nmodal renders a muted \"Tagged with version X\" line beneath the\nselectors, and each feed card shows a small `vX.Y.Z` chip in its header\nwhen the item carries one (legacy items without a version simply hide\nthe chip).\n\nThe version rides the existing free-form `metadata` JSON blob on\n`activity_events`, so no aura-network schema or migration changes are\nneeded; the aura-os-server feedback handler just writes/reads\n`metadata.appVersion` and exposes it as a flat `appVersion` field on\nthe response DTO.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "9862578dccb48e68a5a89fa15e023f1ae45c404c"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/feedback/mod.rs",
+        "apps/aura-os-server/src/handlers/feedback/types.rs",
+        "apps/aura-os-server/tests/feedback_api_tests/create.rs",
+        "interface/src/api/feedback.ts",
+        "interface/src/apps/feedback/FeedbackItemCard/FeedbackItemCard.module.css",
+        "interface/src/apps/feedback/FeedbackItemCard/FeedbackItemCard.test.tsx",
+        "interface/src/apps/feedback/FeedbackItemCard/FeedbackItemCard.tsx",
+        "interface/src/apps/feedback/NewFeedbackModal/NewFeedbackModal.module.css",
+        "interface/src/apps/feedback/NewFeedbackModal/NewFeedbackModal.test.tsx",
+        "interface/src/apps/feedback/NewFeedbackModal/NewFeedbackModal.tsx",
+        "interface/src/apps/feedback/types.ts",
+        "interface/src/stores/feedback-store.test.ts",
+        "interface/src/stores/feedback-store.ts"
+      ],
+      "stats": {
+        "fileCount": 13,
+        "insertions": 278,
+        "deletions": 12
+      },
+      "committedAtMs": 1778095676000,
+      "cleanSubject": "tag new feedback with the active app version",
+      "keywords": [
+        "feedback",
+        "with",
+        "active",
+        "version"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "interface/src/api",
+        "interface/src/apps",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "69f1276ad7d52197186b68ab6a40b9464795c948",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T12:43:37-07:00",
+      "subject": "fix(chat-3d): inline source thumb, allow image-only send, render GLB widget",
+      "body": "- Move the \"Source for 3D\" thumbnail from above the input into the\n  input row's start slot so the bar stays a single line and the\n  pinned \"Generating 3D model...\" cooking indicator above the bar is\n  no longer covered.\n- Let `sendMessage` dispatch the 3D model step when only a pinned\n  source image is present: the input bar already enables Send in\n  that case, but both stream hooks shared the chat-mode empty-content\n  guard and silently no-op'd. Falls back to \"Generate 3D model\" copy\n  for the optimistic user bubble.\n- Replace `Model3DBlock`'s \"Download GLB\" link with an embedded\n  `WebGLViewer` (lazy-imported so non-3D conversations don't pull in\n  Three.js + the GLTF loader) plus a small download link below.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "d0d49f8ad93200faba6553250a050fb9ab8dd0de"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/components/Block/renderers/Model3DBlock.tsx",
+        "interface/src/components/Block/renderers/renderers.module.css",
+        "interface/src/hooks/use-agent-chat-stream.test.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream.test.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.module.css",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.tsx"
+      ],
+      "stats": {
+        "fileCount": 10,
+        "insertions": 278,
+        "deletions": 147
+      },
+      "committedAtMs": 1778096617000,
+      "cleanSubject": "inline source thumb, allow image-only send, render GLB widget",
+      "keywords": [
+        "inline",
+        "source",
+        "thumb",
+        "allow",
+        "image",
+        "only",
+        "send",
+        "render",
+        "widget"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/hooks",
+        "interface/src/mobile"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "b08b8d79e8270593375b76e690d32e47a29d74df",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T12:45:29-07:00",
+      "subject": "feat(feedback): split sidekick into Details and Comments tabs",
+      "body": "Replace the single-purpose sidekick header with a Notes-style tab bar so a\nselected feedback item exposes two distinct surfaces: a new Details panel\n(title, full description, author, category, status, product, vote totals)\nand the existing comment thread, each driven by a `sidekickTab` slice on\nthe feedback store.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "69f1276ad7d52197186b68ab6a40b9464795c948"
+      ],
+      "files": [
+        "interface/src/apps/feedback/FeedbackApp.ts",
+        "interface/src/apps/feedback/FeedbackCommentsPanel/FeedbackCommentsPanel.module.css",
+        "interface/src/apps/feedback/FeedbackCommentsPanel/FeedbackCommentsPanel.test.tsx",
+        "interface/src/apps/feedback/FeedbackCommentsPanel/FeedbackCommentsPanel.tsx",
+        "interface/src/apps/feedback/FeedbackCommentsPanel/index.ts",
+        "interface/src/apps/feedback/FeedbackDetailsPanel/FeedbackDetailsPanel.module.css",
+        "interface/src/apps/feedback/FeedbackDetailsPanel/FeedbackDetailsPanel.test.tsx",
+        "interface/src/apps/feedback/FeedbackDetailsPanel/FeedbackDetailsPanel.tsx",
+        "interface/src/apps/feedback/FeedbackDetailsPanel/index.ts",
+        "interface/src/apps/feedback/FeedbackSidekickHeader/FeedbackSidekickHeader.module.css",
+        "interface/src/apps/feedback/FeedbackSidekickHeader/FeedbackSidekickHeader.test.tsx",
+        "interface/src/apps/feedback/FeedbackSidekickHeader/FeedbackSidekickHeader.tsx",
+        "interface/src/apps/feedback/FeedbackSidekickHeader/index.ts",
+        "interface/src/apps/feedback/FeedbackSidekickPanel/FeedbackSidekickPanel.module.css",
+        "interface/src/apps/feedback/FeedbackSidekickPanel/FeedbackSidekickPanel.test.tsx",
+        "interface/src/apps/feedback/FeedbackSidekickPanel/FeedbackSidekickPanel.tsx",
+        "interface/src/apps/feedback/FeedbackSidekickTaskbar/FeedbackSidekickTaskbar.test.tsx",
+        "interface/src/apps/feedback/FeedbackSidekickTaskbar/FeedbackSidekickTaskbar.tsx",
+        "interface/src/apps/feedback/FeedbackSidekickTaskbar/index.ts",
+        "interface/src/apps/feedback/types.ts",
+        "interface/src/stores/feedback-store.ts"
+      ],
+      "stats": {
+        "fileCount": 21,
+        "insertions": 757,
+        "deletions": 325
+      },
+      "committedAtMs": 1778096729000,
+      "cleanSubject": "split sidekick into Details and Comments tabs",
+      "keywords": [
+        "split",
+        "sidekick",
+        "into",
+        "details",
+        "comments",
+        "tabs"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "5c24a16b02e500e7d80afaf0767e6c7b9858c868",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T12:53:44-07:00",
+      "subject": "feat(context-menu): right-click an image to copy it via the standard menu",
+      "body": "Adds an image branch to NativeContextMenuOverride so right-clicking any\n<img> opens our standard menu with a Copy Image action that writes the\nbitmap to the OS clipboard via ClipboardItem (re-encoding to PNG via\ncanvas when the source isn't already PNG, with a CORS fallback). Per-\ncomponent context-menu handlers that preventDefault keep working\nunchanged.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "b08b8d79e8270593375b76e690d32e47a29d74df"
+      ],
+      "files": [
+        "interface/src/components/NativeContextMenuOverride/NativeContextMenuOverride.test.tsx",
+        "interface/src/components/NativeContextMenuOverride/NativeContextMenuOverride.tsx",
+        "interface/src/components/NativeContextMenuOverride/image-target.test.ts",
+        "interface/src/components/NativeContextMenuOverride/image-target.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 451,
+        "deletions": 3
+      },
+      "committedAtMs": 1778097224000,
+      "cleanSubject": "right-click an image to copy it via the standard menu",
+      "keywords": [
+        "right",
+        "click",
+        "image",
+        "copy",
+        "standard",
+        "menu"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "5828b1b27d3e7c9d09640c0389bc8b5ca4ab0151",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T12:55:19-07:00",
+      "subject": "fix(chat): let user scroll-up intent override auto-follow",
+      "body": "Wheel/touch/keyboard scroll-up on the chat message area was being undone\nby the streaming tail-pin layout effect (228px hysteresis kept the user\nconsidered \"pinned\") and by the 6-second post-stream image-pin window\n(repinned even when not auto-following). Detect explicit upward intent\nin `useScrollAnchorV2` and surface it as `getUserUnpinnedAt`; gate the\n`ChatMessageList` tail-pin layout effect and `useImageScrollPin` on it\nso neither path can fight the user's reading position.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "5c24a16b02e500e7d80afaf0767e6c7b9858c868"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatMessageList/ChatMessageList.test.tsx",
+        "interface/src/apps/chat/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/apps/chat/components/ChatPanel/useChatPanelState.ts",
+        "interface/src/shared/hooks/use-image-scroll-pin.test.ts",
+        "interface/src/shared/hooks/use-image-scroll-pin.ts",
+        "interface/src/shared/hooks/use-scroll-anchor-v2.test.ts",
+        "interface/src/shared/hooks/use-scroll-anchor-v2.ts"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 356,
+        "deletions": 8
+      },
+      "committedAtMs": 1778097319000,
+      "cleanSubject": "let user scroll-up intent override auto-follow",
+      "keywords": [
+        "user",
+        "scroll",
+        "intent",
+        "override",
+        "auto",
+        "follow"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "42c97f674092e272fe47c99c2dbea19876457b11",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T13:02:02-07:00",
+      "subject": "feat(chat-sessions): summarize titles, clickable rows, \"+\" new chat",
+      "body": "- ChatsTab: drop the token-count gate so any session without a summary\n  gets a Haiku title attempt (those counters lag behind the events\n  table, leaving real conversations stuck on \"New chat\"). Wire each\n  row's onClick to navigate to AgentChatView with `?session=` so\n  clicking opens the historical transcript.\n\n- Add a \"+\" button to the right end of the chat input mode row\n  (desktop and mobile), wired through ChatInputBar -> ChatPanel as a\n  new `onNewChat` prop. Distinct from the existing RotateCcw soft\n  reset: handleNewChat blanks the visible transcript via clearHistory\n  + resetEvents and arms the next send to start a fresh session.\n\n- Scope the live transcript to the current session after either reset\n  path. New `useLiveSessionStore` pins a session id per surface; both\n  chat stream handlers capture it from the next `SessionReady` event,\n  and AgentChatView / useStandaloneAgentChat switch their historyKey\n  + fetchFn to a `live-session:` slot (using listSessionEvents) while\n  keeping send enabled.\n\n- Auto-refresh the agent Chats sidekick when a new session is created\n  elsewhere via a tiny `useSessionsListStore` version counter, bumped\n  by handleNewChat and by the stream on `SessionReady`.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "5828b1b27d3e7c9d09640c0389bc8b5ca4ab0151"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentInfoPanel/ChatsTab.tsx",
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream/build-stream-handler.ts",
+        "interface/src/hooks/use-standalone-agent-chat.ts",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.module.css",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.tsx",
+        "interface/src/stores/live-session-store.ts",
+        "interface/src/stores/sessions-list-store.ts"
+      ],
+      "stats": {
+        "fileCount": 12,
+        "insertions": 473,
+        "deletions": 25
+      },
+      "committedAtMs": 1778097722000,
+      "cleanSubject": "summarize titles, clickable rows, \"+\" new chat",
+      "keywords": [
+        "summarize",
+        "titles",
+        "clickable",
+        "rows",
+        "chat"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/hooks",
+        "interface/src/mobile",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "ee497404d474556bb6b1a38367bb9c4fc5adbc57",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T13:04:31-07:00",
+      "subject": "fix(chat-sessions): hide untitled rows instead of showing \"New chat\"",
+      "body": "Sessions without a real title (no persisted summary, no fetched Haiku\nsummary) are now omitted from the Chats sidekick instead of rendering\nas a placeholder \"New chat\" row. The summarize attempt still fires\nfor every untitled session, so rows pop in as soon as Haiku produces\na title; truly empty sessions stay hidden.\n\nDrops the `chatsRowPlaceholder` italic-muted variant since the only\nrows we ever render now have real labels.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "42c97f674092e272fe47c99c2dbea19876457b11"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentInfoPanel/ChatsTab.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 59,
+        "deletions": 26
+      },
+      "committedAtMs": 1778097871000,
+      "cleanSubject": "hide untitled rows instead of showing \"New chat\"",
+      "keywords": [
+        "hide",
+        "untitled",
+        "rows",
+        "instead",
+        "showing",
+        "chat"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "8d9acaf0c2af01ccdbd9fc5dbb9f832052483677",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T13:08:03-07:00",
+      "subject": "fix(chat): add breathing room around user image attachments",
+      "body": "Bumps inter-thumbnail gap and adds vertical margin around the image\nstrip so consecutive images, and image-only messages, no longer visually\ntouch their neighbors. Also widens the gap between the strip and the\nin-message text bubble for image+text submissions.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "ee497404d474556bb6b1a38367bb9c4fc5adbc57"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/MessageBubble/MessageBubble.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 4,
+        "deletions": 3
+      },
+      "committedAtMs": 1778098083000,
+      "cleanSubject": "add breathing room around user image attachments",
+      "keywords": [
+        "breathing",
+        "room",
+        "around",
+        "user",
+        "image",
+        "attachments"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "309f35b21f4958fb1c68d92172fe524eecfd4bc7",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T13:10:25-07:00",
+      "subject": "fix(chat-sessions): keep historical session click in current app shell",
+      "body": "Clicking a row in the agent ChatsTab used to always route to\n`/projects/:projectId/agents/:agentInstanceId?session=...`, which\nswapped the active app from the agents shell to the projects shell —\nunmounting the very sidekick the user just clicked from. Branch the\nclick handler on `useActiveAppId()`: from the agents app, navigate to\n`/agents/:agentId?project=&instance=&session=` so the URL stays under\n`/agents/...`. AgentChatView now recognizes that combination and\nrenders ProjectAgentChatPanel (so we keep the existing per-session\nhistory wiring) without leaving the agents app. Exiting the session\nview in that branch also clears the encoded project/instance pointers\nso \"Back to live\" lands cleanly on the standalone agent chat.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "8d9acaf0c2af01ccdbd9fc5dbb9f832052483677"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentInfoPanel/ChatsTab.tsx",
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 57,
+        "deletions": 5
+      },
+      "committedAtMs": 1778098225000,
+      "cleanSubject": "keep historical session click in current app shell",
+      "keywords": [
+        "keep",
+        "historical",
+        "session",
+        "click",
+        "current",
+        "shell"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "73fd9f971cdc6574a801546ff76168bcb90d1f7c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T13:14:54-07:00",
+      "subject": "fix(chat-3d): auto-expand generated 3D model blocks",
+      "body": "`Model3DBlock` wraps its `WebGLViewer` in the shared `Block` primitive,\nwhose body is collapsed by default unless the tool is in\n`AUTO_EXPAND_TOOLS`. `generate_3d_model` wasn't in that set, so freshly-\ngenerated 3D models rendered as a single collapsed header — the user\nsaw \"Generated 3D model\" with a chevron and no widget.\n\n`generate_image` avoids the same trap by bypassing the Block wrapper\nentirely on success; 3D keeps the wrapper for the download link / poly-\ncount badge, so adding it to the auto-expand list is the correct fix.\nAlso extend the existing 3D model step test to assert the assistant\nevent is committed with the synthesized `generate_3d_model` tool call\nresult containing `glbUrl`.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "309f35b21f4958fb1c68d92172fe524eecfd4bc7"
+      ],
+      "files": [
+        "interface/src/components/Block/registry.tsx",
+        "interface/src/hooks/use-agent-chat-stream.test.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 19,
+        "deletions": 0
+      },
+      "committedAtMs": 1778098494000,
+      "cleanSubject": "auto-expand generated 3D model blocks",
+      "keywords": [
+        "auto",
+        "expand",
+        "generated",
+        "model",
+        "blocks"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "9cdc19b75b9a757d0b82cf28bf11cbbecb740bfc",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T13:23:39-07:00",
+      "subject": "fix(chat): align + new-chat button with send button axis",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "73fd9f971cdc6574a801546ff76168bcb90d1f7c"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 6,
+        "deletions": 2
+      },
+      "committedAtMs": 1778099019000,
+      "cleanSubject": "align + new-chat button with send button axis",
+      "keywords": [
+        "align",
+        "chat",
+        "button",
+        "with",
+        "send",
+        "axis"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 6,
@@ -1183,36 +1689,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11819499
+          "sizeBytes": 11822746
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.467.1",
+      "version": "0.1.0-nightly.468.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.467.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.468.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 36647484
+          "sizeBytes": 36658642
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.467.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.468.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.467.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.468.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 105421304
+          "sizeBytes": 105458168
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.467.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.468.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -1222,29 +1728,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.467.1",
+      "version": "0.1.0-nightly.468.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.467.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.468.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33748034
+          "sizeBytes": 33757672
         },
         {
-          "name": "AURA_0.1.0-nightly.467.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.468.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.467.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.468.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 32892226
+          "sizeBytes": 32898184
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.467.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.468.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1254,29 +1760,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.467.1",
+      "version": "0.1.0-nightly.468.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.467.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.468.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 35380443
+          "sizeBytes": 35374152
         },
         {
-          "name": "AURA_0.1.0-nightly.467.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.468.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.467.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.468.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 34548510
+          "sizeBytes": 34545533
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.467.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.468.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1286,17 +1792,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.467.1",
+      "version": "0.1.0-nightly.468.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.467.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.468.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24741001
+          "sizeBytes": 24730984
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.467.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.468.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -1305,26 +1811,26 @@
     }
   ],
   "rendered": {
-    "title": "Native chrome polish, dual build channels, and a rebuilt 3D chat flow",
-    "intro": "A dense nightly that reshaped how AURA feels as a desktop app: the browser context menu is gone in favor of a native-feeling in-app one, Windows users can finally grab the top edge to resize, and modals stop flickering as their data loads. Underneath, AURA now ships as separate dev and stable channels so contributors can run a `cargo` build alongside the installed app, and the chat 3D mode came back as a proper two-step image-then-model pipeline.",
+    "title": "Native-feeling chrome, a reborn 3D chat flow, and side-by-side dev builds",
+    "intro": "Today's nightly reshapes how AURA feels as a desktop app — right-click menus, resize edges, and modal openings all behave more like native chrome — while chat picks up a proper image-to-3D pipeline, clickable session history, and a \"+\" for starting a fresh conversation. Under the hood, dev and stable builds can now coexist on the same machine without stepping on each other.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "8:16 PM",
         "started_at": "2026-05-06T03:16:25.000Z",
         "ended_at": "2026-05-06T03:16:25.000Z",
-        "title": "Native browser context menu replaced with an in-app menu",
-        "summary": "Right-clicking AURA chrome no longer surfaces the WebView2/Chromium menu; editable fields get a compact Cut/Copy/Paste/Select All instead.",
+        "title": "In-app context menu replaces the WebView2 native menu",
+        "summary": "Right-clicking AURA chrome no longer leaks the Chromium Back/Refresh/Inspect menu; editable fields get a tailored Cut/Copy/Paste/Select All instead.",
         "items": [
           {
-            "text": "A document-level listener now suppresses the native Back/Refresh/Inspect menu across AURA chrome while still deferring to in-app handlers like DesktopContextMenu, NotesEntryContextMenu, and ProcessCanvas via defaultPrevented.",
+            "text": "A document-level handler suppresses the native WebView2/Chromium context menu across AURA chrome while still deferring to in-app menus (DesktopContextMenu, NotesEntryContextMenu, ProcessCanvas) that call preventDefault.",
             "commit_shas": [
               "52cdd479fdb0520d4286710b63274cfa0fcfc672"
             ],
             "confidence": "high"
           },
           {
-            "text": "Inputs, textareas, and contenteditable fields get a purpose-built in-app Cut / Copy / Paste / Select All menu so right-click editing keeps working without ceding the chrome to the browser.",
+            "text": "Inside inputs, textareas, and contenteditable regions, right-click now opens a compact in-app Cut / Copy / Paste / Select All menu so editing keyboards still work without giving up control of the chrome.",
             "commit_shas": [
               "52cdd479fdb0520d4286710b63274cfa0fcfc672"
             ],
@@ -1337,18 +1843,18 @@
         "time_label": "8:38 PM",
         "started_at": "2026-05-06T03:38:54.000Z",
         "ended_at": "2026-05-06T03:38:54.000Z",
-        "title": "Windows top-edge resize is no longer pixel-perfect",
-        "summary": "A Win32 WM_NCHITTEST subclass widens the borderless main window's top resize band to 10 logical pixels.",
+        "title": "Easier top-edge window resize on Windows",
+        "summary": "The borderless main window now exposes a generous resize band along the top edge so dragging to resize no longer requires pixel-perfect aim.",
         "items": [
           {
-            "text": "On Windows, the top of the main window now reports HTTOP/HTTOPLEFT/HTTOPRIGHT across a 10 px band instead of tao's default ~4 px frame, so grabbing the edge to resize stops fighting the floating titlebar pill.",
+            "text": "A Win32 subclass on the main HWND reports HTTOP/HTTOPLEFT/HTTOPRIGHT for any cursor inside a 10-logical-px band along the top edge, replacing tao's default ~4px frame and fixing the conflict with the floating titlebar pill.",
             "commit_shas": [
               "bc327bedc014762db3e42ec8de995866abfca726"
             ],
             "confidence": "high"
           },
           {
-            "text": "The subclass installs after tao's so it runs first, becomes a no-op while maximized, and re-reads DPI on each hit-test to stay correct on mixed-DPI multi-monitor setups; titlebar drag, side resize, and Chromium app-region behavior are unchanged.",
+            "text": "The hit-test becomes a no-op while maximized, re-reads DPI on every call for mixed-DPI setups, and falls through to DefSubclassProc so titlebar drag, side resize, and Chromium app-region behavior are unchanged.",
             "commit_shas": [
               "bc327bedc014762db3e42ec8de995866abfca726"
             ],
@@ -1361,18 +1867,18 @@
         "time_label": "8:43 PM",
         "started_at": "2026-05-06T03:43:41.000Z",
         "ended_at": "2026-05-06T03:43:41.000Z",
-        "title": "Async-loading modals open once at their final size",
-        "summary": "A new useDeferredModalOpen hook fixes the jank where Delete, Hire, and Tier modals popped open and then resized as data arrived.",
+        "title": "Modals open at their final size instead of jumping",
+        "summary": "A new shared hook holds modals closed until their async data is ready, eliminating the flicker on agent delete, marketplace hire, and tier upgrade.",
         "items": [
           {
-            "text": "Introduced a shared useDeferredModalOpen hook that runs a prepare() step (cascade refresh, project list fetch, billing subscription) with the trigger disabled, then opens the modal at its final state — with a 3000 ms failsafe and a cycle token that drops stale resolutions.",
+            "text": "Introduced useDeferredModalOpen, which runs a prepare() step (cascade refresh, projects refresh, billing fetch), keeps the trigger disabled until it resolves, and only then opens the modal — with a 3000ms failsafe and stale-cycle guard.",
             "commit_shas": [
               "8cc4d0d158682e19beea46542fa1fab450409cc6"
             ],
             "confidence": "high"
           },
           {
-            "text": "Wired the pattern into DeleteAgentConfirmModal (AgentList + AgentInfoPanel), the marketplace HireProjectPickerModal, and the TierSubscriptionModal, and shortened the cascade label to \"Delete (N projects)\" so the footer width stays stable across binding counts.",
+            "text": "Applied to DeleteAgentConfirmModal, HireProjectPickerModal, and TierSubscriptionModal so each opens once at its final width with stable copy; the cascade button label was also shortened to 'Delete (N projects)' so width no longer depends on binding count.",
             "commit_shas": [
               "8cc4d0d158682e19beea46542fa1fab450409cc6"
             ],
@@ -1385,25 +1891,25 @@
         "time_label": "8:45 PM",
         "started_at": "2026-05-06T03:45:21.000Z",
         "ended_at": "2026-05-06T03:45:21.000Z",
-        "title": "AURA splits into dev and stable build channels",
-        "summary": "A build-time channel selector lets a `cargo run` dev build coexist with the installed stable AURA without colliding on data dirs, ports, or single-instance locks.",
+        "title": "Dev and stable AURA can now coexist on one machine",
+        "summary": "A build-time channel selector gives dev builds their own data dir, ports, single-instance lock, and disabled updater so a cargo-run AURA never collides with the installed stable app.",
         "items": [
           {
-            "text": "Added a Channel enum in aura-os-core that drives every per-channel identifier — data dir (`aura` vs `aura-dev`), skills home, Windows single-instance mutex, window/menu title, and the embedded server, standalone server, harness sidecar, and harness URL ports.",
+            "text": "Added a Channel enum in aura-os-core as the single source of truth for per-channel identity: data dir (aura vs aura-dev), skills home, Windows mutex, window/menu title, embedded server port (19847/19848), standalone server port (3100/3101), harness sidecar port (19080/19081), and default harness URL port (8080/8081).",
             "commit_shas": [
               "718a47c6b5841fddac879218919d013c944df605"
             ],
             "confidence": "high"
           },
           {
-            "text": "The updater is disabled in dev builds so a `cargo run` shell can never silently replace itself with the stable installer, and the desktop crate disables default features on its core/server deps so a packaging build can't pull in dev-channel transitively.",
+            "text": "The updater is compiled out in dev so a cargo-built shell can never silently replace itself with the stable installer, and the desktop crate disables default features on its core/server deps so stable packaging can't transitively pull in dev-channel.",
             "commit_shas": [
               "718a47c6b5841fddac879218919d013c944df605"
             ],
             "confidence": "high"
           },
           {
-            "text": "Release pipelines (desktop-validate, release-nightly, release-stable) and verify-desktop.mjs now build with `--no-default-features --features stable-channel`, while `cargo run` and the scripts/dev runners default to dev — Vite moves to 5174 and the mobile backend to 3101 so `npm run dev` doesn't bind on top of an installed AURA.",
+            "text": "CI release workflows (desktop-validate, release-nightly, release-stable) and dev runner scripts were rewired so packaged builds use stable-channel while npm run dev / cargo run default to dev-channel on isolated ports (Vite 5174, mobile backend 3101).",
             "commit_shas": [
               "718a47c6b5841fddac879218919d013c944df605"
             ],
@@ -1417,17 +1923,17 @@
         "started_at": "2026-05-06T04:04:51.000Z",
         "ended_at": "2026-05-06T04:08:14.000Z",
         "title": "3D chat mode returns with an image-first pipeline",
-        "summary": "The 3D pill is back in the chat mode selector, wired to require an existing generated image as the source — and the standalone AURA 3D Image tab now sends prompts verbatim.",
+        "summary": "The 3D pill is back in the chat mode selector, wired to derive its source image from the latest in-thread generation, and AURA 3D's image tab stops silently style-locking prompts.",
         "items": [
           {
-            "text": "Re-enabled 3D mode in chat: the input bar derives its source from the most recent successful generate_image tool result, surfaces it as a \"Source for 3D\" thumbnail, blocks Send with a switch-to-Image hint until a source exists, and dispatches via generate3dStream's URL form on both live and queue-replay paths.",
+            "text": "Re-enabled the 3D mode pill and rewired chat so 3D requests pull their source from the most recent successful generate_image tool result, surfaced as a 'Source for 3D' thumbnail above the textarea; the resolved-send pipeline carries sourceImageUrl through both live and queue-replay paths.",
             "commit_shas": [
               "15aa4319fb3748ebdf7f666aa6988ca4bcfa85da"
             ],
             "confidence": "high"
           },
           {
-            "text": "The AURA 3D app's Image tab no longer appends the product-photography STYLE_LOCK_SUFFIX, so its prompts behave consistently with /image and /3d; the constant is retained only so stripStyleLock can clean up legacy artifacts.",
+            "text": "Stopped appending the product-photography STYLE_LOCK_SUFFIX to user prompts in the AURA 3D app's Image tab so image generation behaves consistently with chat /image and /3d; stripStyleLock still cleans the suffix off legacy artifacts.",
             "commit_shas": [
               "5897137de70a3d83bdf22f16f1e179c56d903bad"
             ],
@@ -1439,86 +1945,91 @@
         "batch_id": "entry-6",
         "time_label": "9:26 PM",
         "started_at": "2026-05-06T04:26:01.000Z",
-        "ended_at": "2026-05-06T19:14:56.000Z",
-        "title": "Two-step 3D pipeline, theme tokens, and chat empty-state polish",
-        "summary": "A long evening of interface work: chat 3D became a true in-bar two-step flow, modals went jet-black with per-mode overrides, the right-click menu learned to copy selected text, and a packager CI break was fixed.",
+        "ended_at": "2026-05-06T20:23:39.000Z",
+        "title": "Chat 3D pipeline, clickable sessions, and a wave of UI polish",
+        "summary": "A long evening of interface work: chat 3D became a true two-step in-bar pipeline with an inline GLB viewer, chat sessions got titles and click-to-open, feedback gained a Details/Comments split, plus dozens of smaller fixes across context menus, theming, and release tooling.",
         "items": [
           {
-            "text": "Reworked chat 3D as an in-bar image_step → model_step pipeline: replaced the \"generate an image first\" gate with a removable pinned source thumb owned by chat-ui-store, split the wire variant in resolve-send and the chat-stream hooks, and later dropped the style-lock suffix from the image step entirely.",
+            "text": "Reworked chat 3D as an in-bar two-step image→model pipeline with a removable pinned source thumb owned by chat-ui-store, then moved that thumb inline into the input row, allowed image-only sends to dispatch the model step, and replaced Model3DBlock's download link with an embedded lazy-loaded WebGLViewer plus auto-expand for generated 3D blocks.",
             "commit_shas": [
               "2b78e87b4a35201a8ae4200fa4efc43f79def032",
               "d5a52702887fa51e3b6e5c2a1e85d3311fbb8ec2",
-              "ffd4da5868c0ab5203f3ef7b6c9058fa90cb38de"
+              "ffd4da5868c0ab5203f3ef7b6c9058fa90cb38de",
+              "69f1276ad7d52197186b68ab6a40b9464795c948",
+              "73fd9f971cdc6574a801546ff76168bcb90d1f7c"
             ],
             "confidence": "high"
           },
           {
-            "text": "The native-menu override now shows a Copy-only menu when right-clicking inside a non-collapsed selection on static markdown or LLM output, so selecting and copying chat replies works again after the native menu was suppressed.",
+            "text": "Agent Chats sidekick now auto-summarizes session titles via Haiku regardless of token-count gating, hides truly untitled rows, and rows are clickable — opening the historical transcript while staying inside the current app shell (agents stays in agents). A new '+' button on the chat input mode row starts a fresh session, scoped via a live-session store so the visible transcript belongs to the current SessionReady.",
             "commit_shas": [
-              "90c31ede9c670cb6bb7adc575a4a270b08786a16"
+              "42c97f674092e272fe47c99c2dbea19876457b11",
+              "ee497404d474556bb6b1a38367bb9c4fc5adbc57",
+              "309f35b21f4958fb1c68d92172fe524eecfd4bc7",
+              "9cdc19b75b9a757d0b82cf28bf11cbbecb740bfc"
             ],
             "confidence": "high"
           },
           {
-            "text": "Modals adopt a new ZUI `--color-modal-bg` token (jet black in dark mode, elevated surface in light) without affecting dropdowns or cards, and Settings → Appearance → Custom colors gained a paired Dark + Light editor backed by an extended setToken(token, value, targetTheme?) API.",
+            "text": "Extended the new in-app context menu with a Copy entry for non-editable text selections in chat/markdown output and an image branch with Copy Image (re-encoding non-PNG sources to PNG via canvas, with a CORS fallback) so right-click works everywhere it should.",
             "commit_shas": [
-              "ba64c3d93368fd844eaba1c393b25fcddf3c925c"
+              "90c31ede9c670cb6bb7adc575a4a270b08786a16",
+              "5c24a16b02e500e7d80afaf0767e6c7b9858c868"
             ],
             "confidence": "high"
           },
           {
-            "text": "Inverted ZUI Button dimming so unselected buttons sit at full opacity at rest and fade on hover, and explicitly opted the titlebar Update PillButton out of dimming so it renders at full accent saturation.",
+            "text": "Feedback got a Notes-style sidekick split into Details and Comments tabs (driven by a sidekickTab slice on the feedback store), and every new submission is now tagged with the active app version — surfaced in the modal and as a vX.Y.Z chip on each feed card — via the existing metadata blob with no schema changes.",
             "commit_shas": [
+              "b08b8d79e8270593375b76e690d32e47a29d74df",
+              "d0d49f8ad93200faba6553250a050fb9ab8dd0de"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Theming and chrome polish: a new --color-modal-bg token gives modals a jet-black background in dark mode (with a paired Dark+Light editor in Settings → Appearance), the zui Button dim now sits at full opacity at rest and dims on hover, the titlebar Update pill renders at full accent saturation, and dialog wrappers no longer paint a stray focus ring on Shift/Tab.",
+            "commit_shas": [
+              "ba64c3d93368fd844eaba1c393b25fcddf3c925c",
               "a16bc5898f404b9a2e6aa5ff23be2bd55f087571",
-              "dc169b9a51839144e6c4570345d0f725b7553842"
+              "dc169b9a51839144e6c4570345d0f725b7553842",
+              "4f87ed6a073b267352296a1f95c127695d87dc72"
             ],
             "confidence": "high"
           },
           {
-            "text": "Redesigned the empty-chat state: four prompt-suggestion chips now float between the input bar and taskbar as a 2x2 grid with Lucide icons and proper gaps, and the empty-state input bar pulse slowed from 2s to 6s so it breathes instead of blinking.",
+            "text": "Chat reading and composing improvements: explicit upward scroll intent now overrides streaming auto-follow and the post-stream image pin so the user's reading position holds, the empty-state suggestion chips were redesigned as a 2x2 segmented grid with a slower 6s input pulse, the bottom-bar environment slot stays width-stable while agent metadata loads, image attachments get breathing room, and the MODE row no longer text-selects on drag.",
             "commit_shas": [
+              "5828b1b27d3e7c9d09640c0389bc8b5ca4ab0151",
               "c6cdeab2e03fff414ee9c71efb2763bb858a3143",
               "3edae9dbc5786589c1040d87b8a9e4a323ff3be1",
-              "163267cd1ba8db0496ecb367e51325dffff70b46"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Sidebars now fall back to a \"New Agent\" label via a shared agentDisplayName helper for blank or whitespace-only names, the bottom-bar environment slot reserves space while agent metadata loads so siblings don't shift, the desktop right-click label was shortened to \"Background\", and dialog/modal wrappers no longer paint a stray focus ring on Shift-keypress.",
-            "commit_shas": [
-              "279ecdbc560473896e3d4e3df2a08bd776268a6d",
+              "163267cd1ba8db0496ecb367e51325dffff70b46",
               "426e8cbff4af56e65f45b903cbd23457fa3f883e",
-              "d0ce2d56d585ca2cbdbf5310dfef71e738ab368d",
-              "4f87ed6a073b267352296a1f95c127695d87dc72",
-              "4cf0bd627acfce0375f6ed3a0d8b786193c0b850"
+              "8d9acaf0c2af01ccdbd9fc5dbb9f832052483677",
+              "4cf0bd627acfce0375f6ed3a0d8b786193c0b850",
+              "9862578dccb48e68a5a89fa15e023f1ae45c404c",
+              "d0ce2d56d585ca2cbdbf5310dfef71e738ab368d"
             ],
             "confidence": "high"
           },
           {
-            "text": "Project Settings can now attach an Orbit repo via the same create-default / create-custom / link-existing choices as the new-project flow, with the server's update_project handler calling orbit.ensure_repo when a fresh owner+repo is supplied.",
+            "text": "Project settings can now attach an Orbit repo from the edit modal (reusing OrbitRepoSection from the new-project flow) with the server's update_project handler calling orbit.ensure_repo when a brand-new owner+repo is supplied, and sidebar agent rows fall back to a 'New Agent' label so blank-named agents still have a recognizable identifier.",
             "commit_shas": [
-              "73176b7cc8b76c4a9f4a96bfe35c1cec8d01268c"
+              "73176b7cc8b76c4a9f4a96bfe35c1cec8d01268c",
+              "279ecdbc560473896e3d4e3df2a08bd776268a6d"
             ],
             "confidence": "high"
           },
           {
-            "text": "Server-side, a renamed bootstrap CEO is now recognized via a shared CEO_SYSTEM_PROMPT_PREFIX so post-rename logins stop minting duplicate \"CEO\" agents when the local stamp is missing.",
+            "text": "Server-side, renamed CEO agents (e.g. 'CEO' → 'Maia') are now recognized via a canonical system_prompt prefix so post-rename logins no longer mint duplicate 'CEO' agents that the dedupe step couldn't reconcile.",
             "commit_shas": [
               "2da2e559c6901b48adeb4694a7035113e8ad26c5"
             ],
             "confidence": "high"
           },
           {
-            "text": "Unblocked CI by removing `--no-default-features --features stable-channel` from the `cargo packager` invocations in desktop-validate, release-nightly, and release-stable — packager 0.11.8 rejects those as cargo-build flags, and the channel feature is already applied via the crate's before-packaging-command.",
+            "text": "Release pipeline fix: cargo packager 0.11.8 doesn't accept --no-default-features/--features, which was breaking CI; those flags are now applied via before-packaging-command in the desktop crate's Cargo.toml so packaged builds still pin to stable-channel.",
             "commit_shas": [
               "a457cabce1ec34459f8967a9eee56ad2b827b346"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Small AURA 3D fix-up: removed a stray \"what\" from the image prompt placeholder.",
-            "commit_shas": [
-              "9862578dccb48e68a5a89fa15e023f1ae45c404c"
             ],
             "confidence": "high"
           }
@@ -1526,13 +2037,12 @@
       }
     ],
     "highlights": [
-      "Native browser context menu replaced with in-app Cut/Copy/Paste",
-      "Windows top-edge resize hit area widened to 10 px",
-      "Dev and stable channels can now run side-by-side",
-      "3D chat mode rebuilt as in-bar image-then-3D pipeline",
-      "Async modals open once at final size instead of janking",
-      "Jet-black modal background with per-mode color override"
+      "Native browser context menu replaced with in-app menus across editable, text, and image targets",
+      "Chat 3D mode reborn as a two-step image→model flow with an embedded GLB viewer",
+      "Dev and stable AURA builds run side-by-side with isolated data dirs and ports",
+      "Windows top-edge resize is finally easy to grab",
+      "Agent chat sessions are now clickable, auto-titled, and a '+' starts a fresh chat"
     ],
-    "raw_commit_count": 25
+    "raw_commit_count": 36
   }
 }

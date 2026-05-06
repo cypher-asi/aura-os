@@ -2,21 +2,20 @@
   {
     "date": "2026-05-06",
     "channel": "nightly",
-    "version": "0.1.0-nightly.467.1",
-    "title": "Native chrome polish, dual build channels, and a rebuilt 3D chat flow",
-    "intro": "A dense nightly that reshaped how AURA feels as a desktop app: the browser context menu is gone in favor of a native-feeling in-app one, Windows users can finally grab the top edge to resize, and modals stop flickering as their data loads. Underneath, AURA now ships as separate dev and stable channels so contributors can run a `cargo` build alongside the installed app, and the chat 3D mode came back as a proper two-step image-then-model pipeline.",
+    "version": "0.1.0-nightly.468.1",
+    "title": "Native-feeling chrome, a reborn 3D chat flow, and side-by-side dev builds",
+    "intro": "Today's nightly reshapes how AURA feels as a desktop app — right-click menus, resize edges, and modal openings all behave more like native chrome — while chat picks up a proper image-to-3D pipeline, clickable session history, and a \"+\" for starting a fresh conversation. Under the hood, dev and stable builds can now coexist on the same machine without stepping on each other.",
     "entryCount": 6,
     "highlights": [
-      "Native browser context menu replaced with in-app Cut/Copy/Paste",
-      "Windows top-edge resize hit area widened to 10 px",
-      "Dev and stable channels can now run side-by-side",
-      "3D chat mode rebuilt as in-bar image-then-3D pipeline",
-      "Async modals open once at final size instead of janking",
-      "Jet-black modal background with per-mode color override"
+      "Native browser context menu replaced with in-app menus across editable, text, and image targets",
+      "Chat 3D mode reborn as a two-step image→model flow with an embedded GLB viewer",
+      "Dev and stable AURA builds run side-by-side with isolated data dirs and ports",
+      "Windows top-edge resize is finally easy to grab",
+      "Agent chat sessions are now clickable, auto-titled, and a '+' starts a fresh chat"
     ],
-    "rawCommitCount": 25,
-    "generatedAt": "2026-05-06T19:34:00.519Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.467.1",
+    "rawCommitCount": 36,
+    "generatedAt": "2026-05-06T20:39:17.479Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.468.1",
     "path": "history/2026-05-06.json"
   },
   {
