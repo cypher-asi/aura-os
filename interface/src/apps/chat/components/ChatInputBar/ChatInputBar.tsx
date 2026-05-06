@@ -48,6 +48,7 @@ import { CommandChips } from "./CommandChips";
 import { useChatUI } from "../../../../stores/chat-ui-store";
 import type { SlashCommand } from "../../../../constants/commands";
 import type { Project } from "../../../../shared/types";
+import type { LatestGeneratedImage } from "../ChatPanel/latest-generated-image";
 import styles from "./ChatInputBar.module.css";
 
 export interface ChatInputBarHandle {
@@ -131,6 +132,18 @@ export interface ChatInputBarProps {
   compact?: boolean;
   contextUsage?: ContextUsageEntry;
   onNewSession?: () => void;
+  /**
+   * Most recent successful image generation in the current chat
+   * thread, or `null` if none. When 3D mode is active and this is
+   * non-null, the input bar shows a small "Source for 3D" thumb
+   * above the textarea and Send dispatches an image-to-3D request
+   * against the image's URL. When 3D mode is active and this is
+   * null, Send is gated and the user is told to switch to Image
+   * mode first. Mirrors the AURA 3D app's "Image tab -> 3D tab"
+   * flow; the manual file-attach path for 3D is intentionally
+   * suppressed because the proxy route is currently broken.
+   */
+  latestGeneratedImage?: LatestGeneratedImage | null;
 }
 
 function AttachmentPreviews({
@@ -195,6 +208,7 @@ export const DesktopChatInputBar = memo(
       compact = false,
       contextUsage,
       onNewSession,
+      latestGeneratedImage = null,
     },
     ref,
   ) {
@@ -256,48 +270,6 @@ export const DesktopChatInputBar = memo(
       textareaRefShim as React.RefObject<HTMLTextAreaElement | null>,
     );
 
-    const handleDragOver = useCallback((e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsDragOver(true);
-    }, []);
-    const handleDragLeave = useCallback((e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsDragOver(false);
-    }, []);
-    const handleDrop = useCallback(
-      (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragOver(false);
-        addFiles(e.dataTransfer.files);
-      },
-      [addFiles],
-    );
-
-    const handlePaste = useCallback(
-      (e: React.ClipboardEvent) => {
-        const items = e.clipboardData?.items;
-        if (!items) return;
-        const imageFiles: File[] = [];
-        for (let i = 0; i < items.length; i++) {
-          const item = items[i];
-          if (item.type.startsWith("image/")) {
-            const file = item.getAsFile();
-            if (file) imageFiles.push(file);
-          }
-        }
-        if (imageFiles.length > 0) {
-          e.preventDefault();
-          const dt = new DataTransfer();
-          imageFiles.forEach((f) => dt.items.add(f));
-          addFiles(dt.files);
-        }
-      },
-      [addFiles],
-    );
-
     useEffect(() => {
       if (!projectMenuOpen) return;
       const onClickOutside = (e: MouseEvent) => {
@@ -329,6 +301,59 @@ export const DesktopChatInputBar = memo(
         : modeBehavior.kind === "generate_3d"
           ? "3d"
           : "chat";
+
+    // 3D mode forces the "Image first, then 3D" path: manual file
+    // attachments are not a valid 3D source today (the proxy path is
+    // disabled, see `useChatStream`), so the Attach button, paste
+    // image hijack, and drag-drop intake all early-return when 3D
+    // mode is active. Other modes are unaffected.
+    const handleDragOver = useCallback(
+      (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (generationMode === "3d") return;
+        setIsDragOver(true);
+      },
+      [generationMode],
+    );
+    const handleDragLeave = useCallback((e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragOver(false);
+    }, []);
+    const handleDrop = useCallback(
+      (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+        if (generationMode === "3d") return;
+        addFiles(e.dataTransfer.files);
+      },
+      [addFiles, generationMode],
+    );
+
+    const handlePaste = useCallback(
+      (e: React.ClipboardEvent) => {
+        if (generationMode === "3d") return;
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        const imageFiles: File[] = [];
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (item.type.startsWith("image/")) {
+            const file = item.getAsFile();
+            if (file) imageFiles.push(file);
+          }
+        }
+        if (imageFiles.length > 0) {
+          e.preventDefault();
+          const dt = new DataTransfer();
+          imageFiles.forEach((f) => dt.items.add(f));
+          addFiles(dt.files);
+        }
+      },
+      [addFiles, generationMode],
+    );
     // In chat mode, let the (only) `aura_harness` adapter drive the available
     // model list. In image/3d mode, use the mode-filtered model list (image/3d
     // generation is provider-agnostic today).
@@ -454,13 +479,16 @@ export const DesktopChatInputBar = memo(
       [slashMenuOpen],
     );
 
-    const hasImageAttachment = attachments.some(
-      (a) => a.attachmentType === "image",
-    );
-    const needsImageForThreeD =
-      generationMode === "3d" && !hasImageAttachment;
+    // 3D mode mirrors the standalone AURA 3D app: the user must first
+    // generate an image in this chat (Image mode) and then convert it
+    // here. Manual file attachments are NOT a valid 3D source today
+    // (the aura-router proxy only exposes URL-based image-to-3D), so
+    // gating is purely "do we have an in-thread generated image?".
+    const isThreeDMode = generationMode === "3d";
+    const has3DSource = isThreeDMode && latestGeneratedImage != null;
+    const needsImageForThreeD = isThreeDMode && !latestGeneratedImage;
     const [needsImageHintFlash, setNeedsImageHintFlash] = useState(false);
-    // Drop the flash class once the user actually attaches an image so
+    // Drop the flash class once the user actually has a source image so
     // the persistent hint settles back into its calm baseline state.
     useEffect(() => {
       if (!needsImageForThreeD && needsImageHintFlash) {
@@ -470,10 +498,9 @@ export const DesktopChatInputBar = memo(
 
     const handleSubmit = useCallback(() => {
       if (needsImageForThreeD) {
-        // Don't dispatch an empty 3D request — the upstream proxy
-        // requires a source image. Flash the persistent hint so the
-        // user sees what's missing, but keep `input` and `attachments`
-        // intact so they can attach an image and immediately retry.
+        // Don't dispatch an empty 3D request — we need a generated
+        // image to convert. Flash the persistent hint so the user
+        // sees what's missing and is nudged to switch to Image mode.
         setNeedsImageHintFlash(true);
         shellRef.current?.focus();
         return;
@@ -638,6 +665,24 @@ export const DesktopChatInputBar = memo(
           attachments={attachments}
           onRemove={handleRemove}
         />
+        {has3DSource && latestGeneratedImage ? (
+          <div
+            className={styles.sourceImagePreview}
+            data-agent-surface="chat-input-3d-source-thumb"
+            data-agent-proof="3d-source-image-ready"
+          >
+            <div className={styles.sourceImageThumb}>
+              <img
+                src={latestGeneratedImage.imageUrl}
+                alt={latestGeneratedImage.prompt ?? "Source for 3D generation"}
+              />
+            </div>
+            <span className={styles.sourceImageLabel}>
+              <span className={styles.sourceImageLabelTitle}>Source for 3D</span>
+              <span>Latest generated image</span>
+            </span>
+          </div>
+        ) : null}
         {isQueued ? (
           <div
             className={styles.queuedHint}
@@ -667,17 +712,23 @@ export const DesktopChatInputBar = memo(
       </>
     );
 
-    const inputRowStart = (
-      <button
-        type="button"
-        className={inputBarShellStyles.attachButton}
-        onClick={() => fileInputRef.current?.click()}
-        disabled={!canAddMore}
-        aria-label="Attach file"
-      >
-        <Plus size={16} strokeWidth={1} />
-      </button>
-    );
+    // Hide the attach affordance in 3D mode — manual attachments are
+    // intentionally not a valid path here (see `handlePaste` /
+    // `handleDrop` early-returns above). The user-facing affordance
+    // for picking a source is the auto-derived "Source for 3D" thumb
+    // rendered in `containerTop`.
+    const inputRowStart =
+      generationMode === "3d" ? null : (
+        <button
+          type="button"
+          className={inputBarShellStyles.attachButton}
+          onClick={() => fileInputRef.current?.click()}
+          disabled={!canAddMore}
+          aria-label="Attach file"
+        >
+          <Plus size={16} strokeWidth={1} />
+        </button>
+      );
 
     const inputRowEnd = selectedCommands.length > 0 || needsImageForThreeD ? (
       <>
@@ -697,7 +748,7 @@ export const DesktopChatInputBar = memo(
           >
             <span className={styles.threeDHintDot} aria-hidden="true" />
             <span className={styles.threeDHintLabel}>
-              Add an image to generate.
+              Generate an image first &mdash; switch to Image mode.
             </span>
           </div>
         ) : null}
@@ -836,6 +887,20 @@ export const DesktopChatInputBar = memo(
       />
     );
 
+    // In 3D mode the conversion is image-driven, not text-driven: the
+    // textarea becomes optional refinement copy (forwarded to the
+    // backend as the prompt) and the source is the latest generated
+    // image. So Send enables purely on `has3DSource`. Other modes
+    // keep the historical "text or attachments or chips" rule.
+    const isSendEnabled = isThreeDMode
+      ? has3DSource
+      : input.trim().length > 0 ||
+        attachments.length > 0 ||
+        selectedCommands.length > 0;
+    const placeholder = isThreeDMode
+      ? "Refine your 3D model (optional)"
+      : "What do you want to create?";
+
     return (
       <InputBarShell
         ref={shellRef}
@@ -844,16 +909,12 @@ export const DesktopChatInputBar = memo(
         onSubmit={handleSubmit}
         onStop={onStop}
         isStreaming={isStreaming}
-        isSendEnabled={
-          input.trim().length > 0 ||
-          attachments.length > 0 ||
-          selectedCommands.length > 0
-        }
+        isSendEnabled={isSendEnabled}
         isVisible={isVisible}
         isCentered={isCentered}
         isPulsing={isCentered}
         isDropZone={isDragOver}
-        placeholder="What do you want to create?"
+        placeholder={placeholder}
         textareaProps={{ "data-agent-field": "chat-input" }}
         onTextareaKeyDown={handleTextareaKeyDown}
         onTextareaPaste={handlePaste}

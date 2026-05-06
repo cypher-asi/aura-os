@@ -47,7 +47,16 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
   }, [projectId, agentInstanceId, core.key]);
 
   const sendMessage = useCallback(
-    async (content: string, action: string | null = null, selectedModel?: string | null, attachments?: ChatAttachment[], commands?: string[], _projectIdOverride?: string, _generationMode?: GenerationMode) => {
+    async (
+      content: string,
+      action: string | null = null,
+      selectedModel?: string | null,
+      attachments?: ChatAttachment[],
+      commands?: string[],
+      _projectIdOverride?: string,
+      _generationMode?: GenerationMode,
+      _sourceImageUrl?: string,
+    ) => {
       if (!projectId || !agentInstanceId || inFlightRef.current || getIsStreaming(core.key)) return;
       const trimmed = content.trim();
       if (!trimmed && !action && !(attachments && attachments.length > 0)) return;
@@ -101,35 +110,48 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
         }
 
         if (_generationMode === "3d") {
-          // Mirror the standalone-agent path in `use-agent-chat-stream.ts`:
-          // chat 3D mode bypasses the agent and calls the same generation
-          // endpoint the AURA 3D app uses. The aura-router proxy only
-          // exposes image-to-3D for Tripo today, so we require an
-          // attached / pasted image. The input bar already gates this in
-          // the normal flow (see `ChatInputBar.handleSubmit`); the check
-          // here is defense-in-depth for any path (e.g. queue replay)
-          // that bypasses that guard.
-          const imageAttachment = attachments?.find((a) => a.type === "image");
-          if (!imageAttachment) {
-            handleStreamError(
-              refs,
-              setters,
-              "Upload or paste an image of a 3D object to generate, then send again.",
+          // Chat 3D mode now mirrors the standalone AURA 3D app's
+          // "Image -> 3D" pipeline: the source must be a previously-
+          // generated image in this thread, surfaced from the chat
+          // panel as `_sourceImageUrl`. The aura-router proxy only
+          // exposes URL-based image-to-3D for Tripo, and the legacy
+          // base64 / data-URL path is currently broken — see the
+          // FF block below for the disabled fallback.
+          if (_sourceImageUrl) {
+            core.setProgressText("Generating 3D model...");
+            await generate3dStream(
+              { kind: "url", imageUrl: _sourceImageUrl },
+              trimmed || null,
+              handler,
+              controller.signal,
+              projectId,
             );
             return;
           }
-          core.setProgressText("Generating 3D model...");
-          const dataUrl = `data:${imageAttachment.media_type};base64,${imageAttachment.data}`;
-          // `trimmed` is the user's actual input; `userMsg.content` may be
-          // a synthesized fallback like "[1 image(s)]" when there are
-          // attachments but no text, which we don't want to forward as
-          // the 3D prompt.
-          await generate3dStream(
-            { kind: "data", imageData: dataUrl },
-            trimmed || null,
-            handler,
-            controller.signal,
-            projectId,
+
+          // FF: chat 3D manual-attach path is disabled while the
+          // proxy decode-and-forward route is broken. The block below
+          // is intentionally kept (commented) so flipping a flag once
+          // the route is fixed is a one-line restore.
+          //
+          // const imageAttachment = attachments?.find((a) => a.type === "image");
+          // if (imageAttachment) {
+          //   const dataUrl = `data:${imageAttachment.media_type};base64,${imageAttachment.data}`;
+          //   core.setProgressText("Generating 3D model...");
+          //   await generate3dStream(
+          //     { kind: "data", imageData: dataUrl },
+          //     trimmed || null,
+          //     handler,
+          //     controller.signal,
+          //     projectId,
+          //   );
+          //   return;
+          // }
+
+          handleStreamError(
+            refs,
+            setters,
+            "Generate an image first, then switch to 3D mode and send again.",
           );
           return;
         }

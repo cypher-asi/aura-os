@@ -253,6 +253,49 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* "Source for 3D" thumbnail row rendered above the textarea when chat
+   3D mode is active and the thread already has a generated image to
+   convert. Mirrors `attachmentPreviews` framing so it sits flush in
+   the same slot, but pairs the thumb with a static caption (no remove
+   control) since the source comes from the conversation. */
+.sourceImagePreview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 0;
+}
+
+.sourceImageThumb {
+  position: relative;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: color-mix(in srgb, #000 34%, transparent);
+}
+
+.sourceImageThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sourceImageLabel {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--color-text-secondary);
+}
+
+.sourceImageLabelTitle {
+  color: var(--color-text-primary);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
 .attachmentThumb {
   position: relative;
   display: flex;

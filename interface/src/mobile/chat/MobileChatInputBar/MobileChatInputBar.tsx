@@ -105,6 +105,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       isCentered = false,
       contextUsage,
       onNewSession,
+      latestGeneratedImage = null,
     },
     ref,
   ) {
@@ -142,9 +143,19 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
           ? "3d"
           : "chat";
     const isLocalAgent = machineType === "local";
-    const canSend = !isLocalAgent && !isStreaming && (
-      input.trim().length > 0 || attachments.length > 0 || selectedCommands.length > 0
-    );
+    const isThreeDMode = generationMode === "3d";
+    const has3DSource = isThreeDMode && latestGeneratedImage != null;
+    // 3D mode is image-driven: Send enables purely on the presence
+    // of a generated image in the thread (mirrors desktop input bar
+    // and the standalone AURA 3D app's "Image -> 3D" pipeline).
+    const canSend =
+      !isLocalAgent &&
+      !isStreaming &&
+      (isThreeDMode
+        ? has3DSource
+        : input.trim().length > 0 ||
+          attachments.length > 0 ||
+          selectedCommands.length > 0);
 
     const modelsForMode =
       generationMode === "chat"
@@ -339,11 +350,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       [onInputChange, slashMenuOpen],
     );
 
-    const hasImageAttachment = attachments.some(
-      (a) => a.attachmentType === "image",
-    );
-    const needsImageForThreeD =
-      generationMode === "3d" && !hasImageAttachment;
+    const needsImageForThreeD = isThreeDMode && !latestGeneratedImage;
     const [needsImageHintFlash, setNeedsImageHintFlash] = useState(false);
     useEffect(() => {
       if (!needsImageForThreeD && needsImageHintFlash) {
@@ -352,15 +359,15 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
     }, [needsImageForThreeD, needsImageHintFlash]);
 
     const submitMessage = useCallback(() => {
-      if (!canSend) return;
       if (needsImageForThreeD) {
-        // The aura-router proxy only exposes image-to-3D today, so
-        // bail out before clearing input and let the persistent hint
-        // (rendered above the input) ask the user to attach an image.
+        // 3D mode mirrors the standalone AURA 3D app: source image
+        // must come from a prior Image-mode generation in this chat.
+        // Flash the hint so the user knows to switch to Image mode.
         setNeedsImageHintFlash(true);
         textareaRef.current?.focus();
         return;
       }
+      if (!canSend) return;
       // Mode lives in the per-stream store; the panel state reads it
       // when constructing the resolved send.
       onSend(input, undefined, undefined);
@@ -376,8 +383,13 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       }
     };
 
+    // 3D mode disables manual file intake (paste / drop / attach
+    // button) for parity with the desktop input bar — the only
+    // valid 3D source is a previously-generated image surfaced via
+    // `latestGeneratedImage`. Other modes are unaffected.
     const handlePaste = useCallback(
       (event: React.ClipboardEvent) => {
+        if (isThreeDMode) return;
         const items = event.clipboardData?.items;
         if (!items) return;
         const imageFiles: File[] = [];
@@ -398,14 +410,18 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
           addFiles(dt.files);
         }
       },
-      [addFiles],
+      [addFiles, isThreeDMode],
     );
 
-    const handleDragOver = useCallback((event: React.DragEvent) => {
-      event.preventDefault();
-      event.stopPropagation();
-      setIsDragOver(true);
-    }, []);
+    const handleDragOver = useCallback(
+      (event: React.DragEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (isThreeDMode) return;
+        setIsDragOver(true);
+      },
+      [isThreeDMode],
+    );
 
     const handleDragLeave = useCallback((event: React.DragEvent) => {
       event.preventDefault();
@@ -418,9 +434,10 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
         event.preventDefault();
         event.stopPropagation();
         setIsDragOver(false);
+        if (isThreeDMode) return;
         addFiles(event.dataTransfer.files);
       },
-      [addFiles],
+      [addFiles, isThreeDMode],
     );
 
     const excludeIds = new Set(selectedCommands.map((command) => command.id));
@@ -541,6 +558,24 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
             className={styles.modeSelector}
           />
           <AttachmentPreviews attachments={attachments} onRemove={handleRemove} />
+          {has3DSource && latestGeneratedImage ? (
+            <div
+              className={styles.sourceImagePreview}
+              data-agent-surface="mobile-chat-input-3d-source-thumb"
+              data-agent-proof="3d-source-image-ready"
+            >
+              <div className={styles.sourceImageThumb}>
+                <img
+                  src={latestGeneratedImage.imageUrl}
+                  alt={latestGeneratedImage.prompt ?? "Source for 3D generation"}
+                />
+              </div>
+              <span className={styles.sourceImageLabel}>
+                <span className={styles.sourceImageLabelTitle}>Source for 3D</span>
+                <span>Latest generated image</span>
+              </span>
+            </div>
+          ) : null}
           <CommandChips commands={selectedCommands} onRemove={handleCommandRemove} />
           {needsImageForThreeD ? (
             <div
@@ -551,20 +586,22 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
             >
               <span className={styles.threeDHintDot} aria-hidden="true" />
               <span className={styles.threeDHintLabel}>
-                Upload or paste an image of a 3D object to generate.
+                Generate an image first &mdash; switch to Image mode.
               </span>
             </div>
           ) : null}
           <div className={styles.inputRow}>
-            <button
-              type="button"
-              className={styles.attachButton}
-              onClick={() => fileInputRef.current?.click()}
-              disabled={!canAddMore}
-              aria-label="Attach file"
-            >
-              <Plus size={18} strokeWidth={1.8} />
-            </button>
+            {isThreeDMode ? null : (
+              <button
+                type="button"
+                className={styles.attachButton}
+                onClick={() => fileInputRef.current?.click()}
+                disabled={!canAddMore}
+                aria-label="Attach file"
+              >
+                <Plus size={18} strokeWidth={1.8} />
+              </button>
+            )}
             <textarea
               ref={textareaRef}
               className={styles.textarea}
@@ -578,7 +615,13 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
               onBlur={() => setIsTextInputFocused(false)}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
-              placeholder={isLocalAgent ? "Remote agent required" : "Message agent"}
+              placeholder={
+                isLocalAgent
+                  ? "Remote agent required"
+                  : isThreeDMode
+                    ? "Refine your 3D model (optional)"
+                    : "Message agent"
+              }
               rows={1}
               data-agent-field="chat-input"
             />

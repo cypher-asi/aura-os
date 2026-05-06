@@ -43,6 +43,16 @@ export type ResolvedSend =
       content: string;
       attachments: ChatAttachment[];
       commands: string[];
+      /**
+       * URL of the source image to convert to 3D. Required — chat 3D
+       * mode is gated by the input bar on the presence of a recently
+       * generated image (`findLatestGeneratedImage`), so the resolver
+       * should never be invoked without one. Empty-string defends
+       * against the gate being bypassed (e.g. queue replay before the
+       * snapshot rehydrates) — the stream layer drops sends with no
+       * URL.
+       */
+      sourceImageUrl: string;
     };
 
 export interface ResolveSendInput {
@@ -52,6 +62,13 @@ export interface ResolveSendInput {
   attachments: ChatAttachment[];
   /** Slash-command IDs the user already attached as chips. */
   userCommandIds: string[];
+  /**
+   * URL of the most recent generated image in the thread, or null if
+   * the user hasn't produced one yet. Surfaced from the chat panel
+   * (`findLatestGeneratedImage(messages)`); only consumed by the
+   * `generate_3d` branch.
+   */
+  latestGeneratedImageUrl?: string | null;
 }
 
 /**
@@ -67,6 +84,7 @@ export function resolveSend({
   selectedModel,
   attachments,
   userCommandIds,
+  latestGeneratedImageUrl,
 }: ResolveSendInput): ResolvedSend {
   const behavior = AGENT_MODE_DESCRIPTORS[mode].behavior;
   switch (behavior.kind) {
@@ -99,8 +117,13 @@ export function resolveSend({
       return {
         kind: "3d",
         content,
-        attachments,
+        // Manual attachments are intentionally dropped on the 3D wire
+        // shape today — the proxy path only accepts a public URL via
+        // `sourceImageUrl`. See `useChatStream` for the FF-gated
+        // legacy code path.
+        attachments: [],
         commands: dedupe([behavior.commandId, ...userCommandIds]),
+        sourceImageUrl: latestGeneratedImageUrl ?? "",
       };
   }
 }
@@ -109,6 +132,9 @@ export function resolveSend({
  * Adapter from `ResolvedSend` to the legacy `onSend` callback shape.
  * The cast at the boundary is intentional and isolated: every other
  * file consumes `ResolvedSend` directly and gets full exhaustiveness.
+ *
+ * `sourceImageUrl` is only meaningful for the 3D variant; downstream
+ * stream hooks ignore it for every other generation mode.
  */
 export type LegacyOnSend = (
   content: string,
@@ -118,6 +144,7 @@ export type LegacyOnSend = (
   commands: string[] | undefined,
   projectId: string | undefined,
   generationMode: GenerationMode | undefined,
+  sourceImageUrl?: string,
 ) => void;
 
 export function dispatch(
@@ -155,8 +182,19 @@ export function dispatch(
       return;
     case "3d":
       // 3D intentionally has no `model` field on the variant; pass
-      // null on the wire so the request body omits it.
-      onSend(send.content, null, null, attachments, commands, projectId, "3d");
+      // null on the wire so the request body omits it. The trailing
+      // `sourceImageUrl` carries the resolved source so the stream
+      // layer can call `generate3dStream` with `{ kind: "url", ... }`.
+      onSend(
+        send.content,
+        null,
+        null,
+        attachments,
+        commands,
+        projectId,
+        "3d",
+        send.sourceImageUrl,
+      );
       return;
   }
 }
@@ -173,6 +211,12 @@ export interface QueuedSendRecord {
   attachments: ChatAttachment[] | undefined;
   commands: string[] | undefined;
   generationMode: GenerationMode | undefined;
+  /**
+   * Only set for the 3D variant; carried so a queued 3D send can
+   * replay against the same source image even after `messages`
+   * mutates between enqueue and dequeue.
+   */
+  sourceImageUrl?: string;
 }
 
 export function toQueuedRecord(send: ResolvedSend): QueuedSendRecord {
@@ -214,6 +258,7 @@ export function toQueuedRecord(send: ResolvedSend): QueuedSendRecord {
         attachments,
         commands,
         generationMode: "3d",
+        sourceImageUrl: send.sourceImageUrl,
       };
   }
 }

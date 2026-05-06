@@ -21,8 +21,10 @@ describe("ModeSelector", () => {
       "aria-checked",
       "false",
     );
-    // 3D mode is temporarily hidden from the selector.
-    expect(screen.queryByRole("radio", { name: "3D mode" })).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "3D mode" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
   });
 
   it("calls onChange with the clicked mode but ignores re-clicks on the active one", async () => {

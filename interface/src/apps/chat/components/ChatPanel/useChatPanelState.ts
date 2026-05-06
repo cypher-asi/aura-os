@@ -20,6 +20,7 @@ import {
   toQueuedRecord,
   type LegacyOnSend,
 } from "./resolve-send";
+import { findLatestGeneratedImage } from "./latest-generated-image";
 
 export interface UseChatPanelStateOptions {
   streamKey: string;
@@ -31,6 +32,7 @@ export interface UseChatPanelStateOptions {
     commands?: string[],
     projectId?: string,
     generationMode?: GenerationMode,
+    sourceImageUrl?: string,
   ) => void;
   adapterType?: string;
   defaultModel?: string | null;
@@ -173,12 +175,20 @@ export function useChatPanelState({
             : undefined;
       const effectiveAgentMode = overrideMode ?? selectedMode;
 
+      // Pin the source image at send-time so the request matches what
+      // the user actually saw in the input bar's "Source for 3D" thumb,
+      // even if a follow-up image generation lands before the 3D
+      // request dequeues.
+      const latestImage = findLatestGeneratedImage(messages);
+      const latestGeneratedImageUrl = latestImage?.imageUrl ?? null;
+
       const resolved = resolveSend({
         mode: effectiveAgentMode,
         content,
         selectedModel,
         attachments: apiAttachments,
         userCommandIds,
+        latestGeneratedImageUrl,
       });
 
       setAttachments([]);
@@ -201,6 +211,7 @@ export function useChatPanelState({
           attachments: record.attachments,
           commands: record.commands,
           generationMode: record.generationMode,
+          sourceImageUrl: record.sourceImageUrl,
         });
         scrollToBottom();
       } else {
@@ -217,6 +228,7 @@ export function useChatPanelState({
             record.commands,
             selectedProjectId,
             record.generationMode,
+            record.sourceImageUrl,
           );
         } else {
           dispatchResolvedSend(resolved, onSend as LegacyOnSend, selectedProjectId);
@@ -227,6 +239,7 @@ export function useChatPanelState({
       buildApiAttachments,
       commands,
       isStreaming,
+      messages,
       onSend,
       scrollToBottom,
       selectedMode,
@@ -264,6 +277,7 @@ export function useChatPanelState({
           next.commands,
           selectedProjectIdRef.current,
           next.generationMode,
+          next.sourceImageUrl,
         );
         scrollToBottom();
       }

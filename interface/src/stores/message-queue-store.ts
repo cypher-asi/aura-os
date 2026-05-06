@@ -11,6 +11,13 @@ export interface QueuedMessage {
   attachments?: ChatAttachment[];
   commands?: string[];
   generationMode?: GenerationMode;
+  /**
+   * Only meaningful for `generationMode === "3d"` queued sends. Pinned
+   * at enqueue-time so a 3D dequeue replays against the source image
+   * the user actually saw, even if `messages` has gained more images
+   * since.
+   */
+  sourceImageUrl?: string;
 }
 
 interface MessageQueueState {

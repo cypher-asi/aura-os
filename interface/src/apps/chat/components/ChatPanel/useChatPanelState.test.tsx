@@ -33,7 +33,10 @@ const mockChatUI: {
 };
 
 let mockIsStreaming = false;
-let mockStreamMessages: Array<{ id: string }> = [];
+// Loosened from `Array<{ id: string }>` so individual tests can drive
+// the snapshot through richer message shapes (e.g. assistant events
+// with `toolCalls`) without fighting TypeScript at the call site.
+let mockStreamMessages: Array<Record<string, unknown>> = [];
 let requestAnimationFrameSpy: ReturnType<typeof vi.spyOn> | null = null;
 
 vi.mock("../../../../shared/hooks/use-scroll-anchor-v2", () => ({
@@ -146,7 +149,7 @@ describe("useChatPanelState", () => {
     );
     expect(mockScrollToBottom).toHaveBeenCalledTimes(1);
 
-    mockStreamMessages = [{ id: "msg-1" }];
+    mockStreamMessages = [{ id: "msg-1", role: "assistant", content: "" }];
     act(() => {
       rerender();
     });
@@ -262,6 +265,51 @@ describe("useChatPanelState", () => {
       ["generate_image"],
       "project-1",
       "image",
+      undefined,
+    );
+  });
+
+  it("forwards the latest generated image URL when sending in 3D mode", () => {
+    mockChatUI.selectedMode = "3d";
+    mockChatUI.selectedModel = "tripo-v2";
+    mockStreamMessages = [
+      {
+        id: "m-1",
+        role: "assistant",
+        content: "",
+        toolCalls: [
+          {
+            id: "tc-img",
+            name: "generate_image",
+            input: {},
+            result: JSON.stringify({
+              imageUrl: "https://cdn.example.com/owl.png",
+              artifactId: "art-owl",
+            }),
+          },
+        ],
+      },
+    ];
+    const onSend = vi.fn();
+    const { result } = renderHook(() =>
+      useChatPanelState({
+        streamKey: "stream-1",
+        onSend,
+        selectedProjectId: "project-1",
+      }),
+    );
+
+    act(() => result.current.handleSend("optional refinement"));
+
+    expect(onSend).toHaveBeenCalledWith(
+      "optional refinement",
+      null,
+      null,
+      undefined,
+      ["generate_3d"],
+      "project-1",
+      "3d",
+      "https://cdn.example.com/owl.png",
     );
   });
 

@@ -208,15 +208,7 @@ describe("useChatStream", () => {
     expect(entry.activeToolCalls).toHaveLength(0);
   });
 
-  it("routes 3D generation through the dedicated 3D stream", async () => {
-    const attachments = [
-      {
-        type: "image" as const,
-        media_type: "image/png",
-        data: "abc123",
-        name: "reference.png",
-      },
-    ];
+  it("routes 3D generation through the URL form when a source image is supplied", async () => {
     const { result } = renderHook(() =>
       useChatStream({ projectId: "p-1", agentInstanceId: "ai-1" }),
     );
@@ -226,10 +218,11 @@ describe("useChatStream", () => {
         "model of an eagle",
         null,
         "tripo-v2",
-        attachments,
+        undefined,
         ["generate_3d"],
         undefined,
         "3d",
+        "https://cdn.example.com/owl.png",
       );
     });
 
@@ -239,7 +232,7 @@ describe("useChatStream", () => {
       useStreamStore.getState().entries[result.current.streamKey]?.progressText,
     ).toBe("Generating 3D model...");
     expect(generate3dStream).toHaveBeenCalledWith(
-      { kind: "data", imageData: "data:image/png;base64,abc123" },
+      { kind: "url", imageUrl: "https://cdn.example.com/owl.png" },
       "model of an eagle",
       expect.any(Object),
       expect.any(AbortSignal),
@@ -247,19 +240,10 @@ describe("useChatStream", () => {
     );
   });
 
-  it("surfaces an upload-image hint when 3D mode is sent without an image attachment", async () => {
-    // A non-image attachment bypasses `sendMessage`'s outer empty-content
-    // guard (which only checks `attachments.length > 0`) and reaches the
-    // 3D branch's image-required check; the input-bar guard is the
-    // primary gate, but this defends paths that bypass it.
-    const fileAttachment = [
-      {
-        type: "text" as const,
-        media_type: "text/plain",
-        data: "aGVsbG8=",
-        name: "notes.txt",
-      },
-    ];
+  it("surfaces a generate-image-first hint when 3D mode is sent without a source URL", async () => {
+    // Defense-in-depth: the input bar gates this path on the presence
+    // of a generated image in the thread; this covers any caller (e.g.
+    // queue replay during snapshot rehydration) that bypasses the gate.
     const { result } = renderHook(() =>
       useChatStream({ projectId: "p-1", agentInstanceId: "ai-1" }),
     );
@@ -269,10 +253,11 @@ describe("useChatStream", () => {
         "model of an eagle",
         null,
         "tripo-v2",
-        fileAttachment,
+        undefined,
         ["generate_3d"],
         undefined,
         "3d",
+        undefined,
       );
     });
 
@@ -280,7 +265,7 @@ describe("useChatStream", () => {
     expect(generate3dStream).not.toHaveBeenCalled();
     const entry = useStreamStore.getState().entries[result.current.streamKey];
     const errorMsg = entry.events.find((m) =>
-      m.content.includes("Upload or paste an image of a 3D object"),
+      m.content.includes("Generate an image first"),
     );
     expect(errorMsg).toBeTruthy();
   });

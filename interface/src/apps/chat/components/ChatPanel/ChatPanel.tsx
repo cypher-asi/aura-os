@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ForwardRefExoticComponent,
@@ -16,6 +17,7 @@ import { OverlayScrollbar } from "../../../../components/OverlayScrollbar";
 import { PromptSuggestions } from "../PromptSuggestions/PromptSuggestions";
 import { ChatStreamingIndicator } from "./ChatStreamingIndicator";
 import { useChatPanelState } from "./useChatPanelState";
+import { findLatestGeneratedImage } from "./latest-generated-image";
 import { useProgressText } from "../../../../hooks/stream/hooks";
 import type { ChatAttachment } from "../../../../api/streams";
 import type { Project } from "../../../../shared/types";
@@ -49,6 +51,7 @@ export interface ChatPanelProps {
     commands?: string[],
     projectId?: string,
     generationMode?: GenerationMode,
+    sourceImageUrl?: string,
   ) => void;
   onStop: () => void;
   /**
@@ -166,6 +169,18 @@ export function ChatPanel({
   // "queued and the actual turn hasn't started yet".
   const progressText = useProgressText(streamKey);
   const isQueued = progressText === "queued";
+
+  // Source image for chat 3D mode: the most recent successful
+  // `generate_image` tool result in the thread. Mirrors the AURA 3D
+  // app's "Image tab -> 3D tab" flow — the input bar uses this to
+  // decide whether 3D mode can dispatch and to render a small source
+  // thumbnail above the textarea. Recomputed only when the message
+  // list reference changes, which covers both new sends (snapshot
+  // replaces the array) and history reloads.
+  const latestGeneratedImage = useMemo(
+    () => findLatestGeneratedImage(messages),
+    [messages],
+  );
 
   const initialHandoffReadyRef = useRef(false);
   const inputFocusReadyRef = useRef(false);
@@ -478,6 +493,7 @@ export function ChatPanel({
           compact={compact}
           contextUsage={contextUsage}
           onNewSession={onNewSession}
+          latestGeneratedImage={latestGeneratedImage}
         />
       </div>
     </div>

@@ -348,10 +348,54 @@ describe("ChatInputBar", () => {
     expect(screen.getByRole("radio", { name: "Code mode" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Plan mode" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Image mode" })).toBeInTheDocument();
-    // 3D mode is temporarily hidden from the selector.
+    expect(screen.getByRole("radio", { name: "3D mode" })).toBeInTheDocument();
+  });
+
+  it("blocks send and surfaces a generate-image-first hint when 3D mode has no source image", () => {
+    mockSelectedMode = "3d";
+    const onSend = vi.fn();
+    render(<ChatInputBar {...makeProps({ onSend })} />);
+
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+    const hint = screen.getByRole("status");
+    expect(hint).toHaveTextContent(/generate an image first/i);
+    expect(hint).toHaveTextContent(/switch to image mode/i);
+    expect(onSend).not.toHaveBeenCalled();
+  });
+
+  it("hides the attach button in 3D mode (manual attachments are not a valid source)", () => {
+    mockSelectedMode = "3d";
+    render(<ChatInputBar {...makeProps()} />);
+
     expect(
-      screen.queryByRole("radio", { name: "3D mode" }),
+      screen.queryByRole("button", { name: "Attach file" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("renders the source-for-3D thumb and enables send once an image exists", async () => {
+    const user = userEvent.setup();
+    mockSelectedMode = "3d";
+    const onSend = vi.fn();
+    render(
+      <ChatInputBar
+        {...makeProps({
+          onSend,
+          latestGeneratedImage: {
+            id: "tc-1",
+            imageUrl: "https://cdn.example.com/owl.png",
+            prompt: "an owl",
+          },
+        })}
+      />,
+    );
+
+    const thumb = screen.getByRole("img", { name: "an owl" });
+    expect(thumb).toHaveAttribute("src", "https://cdn.example.com/owl.png");
+
+    const send = screen.getByRole("button", { name: "Send" });
+    expect(send).toBeEnabled();
+    await user.click(send);
+    expect(onSend).toHaveBeenCalledWith("", undefined, undefined);
   });
 
   it("renders selected slash commands inline and removes them", async () => {
