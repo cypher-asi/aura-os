@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "postinstall": "npm ci --prefix ../vendor/zui --omit=dev",
+    "postinstall": "npm ci --prefix ../vendor/zui --omit=dev --workspaces=false --include-workspace-root",
     "dev": "vite",
     "dev:mobile": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
