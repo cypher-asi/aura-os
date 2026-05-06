@@ -2,7 +2,6 @@ import { renderHook, act } from "@testing-library/react";
 import { useAgentChatStream } from "./use-agent-chat-stream";
 import { useStreamStore, streamMetaMap } from "./stream/store";
 import { useChatUIStore } from "../stores/chat-ui-store";
-import { STYLE_LOCK_SUFFIX } from "../constants/generation";
 import { EventType, type AuraEvent } from "../shared/types/aura-events";
 
 vi.mock("../api/client", () => ({
@@ -186,7 +185,7 @@ describe("useAgentChatStream", () => {
     expect(api.agents.sendEventStream).not.toHaveBeenCalled();
     expect(generate3dStream).not.toHaveBeenCalled();
     expect(generateImageStream).toHaveBeenCalledWith(
-      `an eagle${STYLE_LOCK_SUFFIX}`,
+      "an eagle",
       expect.any(String),
       undefined,
       expect.any(Object),

@@ -4,14 +4,13 @@ import {
   DEFAULT_3D_MODEL_ID,
   DEFAULT_IMAGE_MODEL_ID,
 } from "../constants/models";
-import { STYLE_LOCK_SUFFIX, stripStyleLock } from "../constants/generation";
+import { stripStyleLock } from "../constants/generation";
 import { setLastProject } from "../utils/storage";
 import { getStoredJwt } from "../shared/lib/auth-token";
 
 // Re-export so existing consumers (and the AURA 3D app, which still
 // composes its own prompts) can keep importing from this module while
 // the canonical definition lives in `constants/generation.ts`.
-export { STYLE_LOCK_SUFFIX };
 
 /**
  * Append the current JWT to a URL as a `?token=` query param so a

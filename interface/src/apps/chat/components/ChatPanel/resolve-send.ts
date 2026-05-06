@@ -17,7 +17,7 @@ import {
  * pinned; a `3d_model_step` runs the image-to-3D conversion against
  * the pinned image when one exists. The split is the source of truth
  * for `useChatStream` / `useAgentChatStream` to choose between
- * `generateImageStream` (with `STYLE_LOCK_SUFFIX` appended) and
+ * `generateImageStream` and
  * `generate3dStream`.
  */
 export type ResolvedSend =

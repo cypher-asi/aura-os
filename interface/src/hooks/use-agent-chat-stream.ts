@@ -3,7 +3,6 @@ import { api } from "../api/client";
 import { generate3dStream, generateImageStream } from "../api/streams";
 import type { ChatAttachment, StreamEventHandler } from "../api/streams";
 import { DEFAULT_IMAGE_MODEL_ID, type GenerationMode } from "../constants/models";
-import { STYLE_LOCK_SUFFIX } from "../constants/generation";
 import { buildUserChatMessage } from "./attachment-helpers";
 import type { Spec, Task } from "../shared/types";
 import type { AuraEvent } from "../shared/types/aura-events";
@@ -219,10 +218,9 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
           // the pinned source image: image step when no thumb,
           // model step when one is pinned.
           if (!_sourceImageUrl) {
-            const styledPrompt = `${userMsg.content}${STYLE_LOCK_SUFFIX}`;
             core.setProgressText("Generating image...");
             await generateImageStream(
-              styledPrompt,
+              userMsg.content,
               DEFAULT_IMAGE_MODEL_ID,
               attachments,
               {

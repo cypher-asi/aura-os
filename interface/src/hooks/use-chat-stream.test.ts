@@ -2,7 +2,6 @@ import { renderHook, act } from "@testing-library/react";
 import { useChatStream } from "./use-chat-stream";
 import { useStreamStore, streamMetaMap } from "./stream/store";
 import { useChatUIStore } from "../stores/chat-ui-store";
-import { STYLE_LOCK_SUFFIX } from "../constants/generation";
 import { EventType, type AuraEvent } from "../shared/types/aura-events";
 
 const mockSetStreamingAgentInstanceId = vi.fn();
@@ -246,7 +245,7 @@ describe("useChatStream", () => {
     expect(api.sendEventStream).not.toHaveBeenCalled();
     expect(generate3dStream).not.toHaveBeenCalled();
     expect(generateImageStream).toHaveBeenCalledWith(
-      `an eagle${STYLE_LOCK_SUFFIX}`,
+      "an eagle",
       // The image step pins to the default image model regardless of
       // the chat-3D model selection, so the aura router accepts the
       // request.
