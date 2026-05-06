@@ -526,6 +526,53 @@ describe("useChatHistorySync", () => {
     });
   });
 
+  it("retries matched chat-event refetches after storage has settled", async () => {
+    vi.useFakeTimers();
+    try {
+      const resetEvents = vi.fn();
+      const fetchFn = vi.fn(async () => []);
+
+      renderHook(() =>
+        useChatHistorySync({
+          historyKey: "agent:agent-1",
+          streamKey: "agent-1",
+          fetchFn,
+          resetEvents,
+          watchAgentId: "agent-1",
+        }),
+      );
+      mocks.state.fetchHistory.mockClear();
+
+      emit("user_message", {
+        content: {
+          project_agent_id: "pa-42",
+          agent_id: "agent-1",
+          session_id: "s-1",
+        },
+      });
+
+      expect(mocks.state.fetchHistory).toHaveBeenCalledTimes(1);
+      expect(mocks.state.fetchHistory).toHaveBeenLastCalledWith(
+        "agent:agent-1",
+        fetchFn,
+        { force: true },
+      );
+
+      await vi.advanceTimersByTimeAsync(749);
+      expect(mocks.state.fetchHistory).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(mocks.state.fetchHistory).toHaveBeenCalledTimes(2);
+      expect(mocks.state.fetchHistory).toHaveBeenLastCalledWith(
+        "agent:agent-1",
+        fetchFn,
+        { force: true },
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("debounces refetches triggered by assistant_turn_progress events", async () => {
     vi.useFakeTimers();
     try {

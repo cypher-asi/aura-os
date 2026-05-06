@@ -30,6 +30,7 @@ import {
 // the `[aura.chatMerge]` snapshot logs to identify which mutation
 // landed inside the merge's empty-frame window.
 const CHAT_MERGE_DEBUG_KEY = "aura.debug.chatMerge";
+const LIVE_EVENT_SETTLE_REFETCH_MS = 750;
 const chatHistorySyncDebugEnabled = ((): boolean => {
   try {
     return (
@@ -215,16 +216,28 @@ export function useChatHistorySync({
       return false;
     };
 
-    const onChatEvent = (event: { content?: Record<string, unknown> }) => {
-      if (!matches(event.content)) return;
-      chatHistorySyncLog("history: WS-triggered refetch (UserMessage/AssistantEnd)", {
+    let settleRefetchTimer: ReturnType<typeof setTimeout> | undefined;
+    const forceFetchHistory = (tag: string, event?: { content?: Record<string, unknown> }) => {
+      chatHistorySyncLog(tag, {
         historyKey,
         streamKey,
-        eventContentKeys: event.content ? Object.keys(event.content) : [],
+        eventContentKeys: event?.content ? Object.keys(event.content) : [],
       });
       useChatHistoryStore
         .getState()
         .fetchHistory(historyKey, fetchFn, { force: true });
+    };
+
+    const onChatEvent = (event: { content?: Record<string, unknown> }) => {
+      if (!matches(event.content)) return;
+      forceFetchHistory("history: WS-triggered refetch (UserMessage/AssistantEnd)", event);
+      if (settleRefetchTimer !== undefined) {
+        clearTimeout(settleRefetchTimer);
+      }
+      settleRefetchTimer = setTimeout(() => {
+        settleRefetchTimer = undefined;
+        forceFetchHistory("history: settled WS-triggered refetch (UserMessage/AssistantEnd)", event);
+      }, LIVE_EVENT_SETTLE_REFETCH_MS);
     };
 
     // `assistant_turn_progress` is throttled to ~one publish per 400ms by
@@ -264,6 +277,7 @@ export function useChatHistorySync({
       unsubEnd();
       unsubProgress();
       if (progressTimer !== undefined) clearTimeout(progressTimer);
+      if (settleRefetchTimer !== undefined) clearTimeout(settleRefetchTimer);
     };
   }, [
     historyKey,
