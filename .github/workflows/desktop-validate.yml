@@ -340,7 +340,12 @@ jobs:
           set -o pipefail
 
           package_once() {
-            cargo packager --release --no-default-features --features stable-channel --packages aura-os-desktop 2>&1 | tee packager.log
+            # cargo-packager 0.11.8 does not accept cargo build flags
+            # (--no-default-features / --features) directly. The stable-channel
+            # feature is wired in via `before-packaging-command` in
+            # apps/aura-os-desktop/Cargo.toml, which cargo-packager runs to
+            # build the binary before packaging it.
+            cargo packager --release --packages aura-os-desktop 2>&1 | tee packager.log
           }
 
           should_retry_packaging() {
