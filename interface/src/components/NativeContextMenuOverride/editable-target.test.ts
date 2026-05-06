@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   copyFromTarget,
+  copyPlainText,
   cutFromTarget,
   getEditableTarget,
   getEditableTargetState,
+  getNonEditableSelection,
   pasteIntoTarget,
   selectAllInTarget,
 } from "./editable-target";
@@ -287,5 +289,117 @@ describe("pasteIntoTarget", () => {
     const ok = await pasteIntoTarget({ kind: "input", el });
     expect(ok).toBe(true);
     expect(execSpy).toHaveBeenCalledWith("paste");
+  });
+});
+
+describe("getNonEditableSelection", () => {
+  function selectAcrossNode(node: Node): void {
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const selection = window.getSelection();
+    if (!selection) throw new Error("no selection in jsdom");
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  afterEach(() => {
+    window.getSelection()?.removeAllRanges();
+  });
+
+  it("returns null when there is no selection", () => {
+    const p = document.createElement("p");
+    p.textContent = "hello";
+    document.body.appendChild(p);
+    expect(getNonEditableSelection(p)).toBeNull();
+  });
+
+  it("returns the selected text when the selection contains the target", () => {
+    const p = document.createElement("p");
+    p.textContent = "hello world";
+    document.body.appendChild(p);
+    selectAcrossNode(p);
+    // jsdom's Selection sometimes uses different containment semantics
+    // than real browsers; stub containsNode so the helper sees the
+    // expected "yes, the click landed inside the selected node" answer.
+    const sel = window.getSelection()!;
+    vi.spyOn(sel, "containsNode").mockReturnValue(true);
+    expect(getNonEditableSelection(p)).toEqual({ text: "hello world" });
+  });
+
+  it("returns null when the selection does not contain the target", () => {
+    const a = document.createElement("p");
+    a.textContent = "selected";
+    document.body.appendChild(a);
+    const b = document.createElement("p");
+    b.textContent = "untouched";
+    document.body.appendChild(b);
+    selectAcrossNode(a);
+    const sel = window.getSelection()!;
+    vi.spyOn(sel, "containsNode").mockReturnValue(false);
+    expect(getNonEditableSelection(b)).toBeNull();
+  });
+
+  it("returns null when the target is not a Node", () => {
+    const p = document.createElement("p");
+    p.textContent = "x";
+    document.body.appendChild(p);
+    selectAcrossNode(p);
+    expect(getNonEditableSelection(null)).toBeNull();
+  });
+});
+
+describe("copyPlainText", () => {
+  let stub: { restore: () => void };
+
+  beforeEach(() => {
+    stub = installExecCommandStub();
+  });
+
+  afterEach(() => {
+    stub.restore();
+    Object.defineProperty(navigator, "clipboard", {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  it("uses navigator.clipboard.writeText when available", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      writable: true,
+      configurable: true,
+    });
+    expect(await copyPlainText("hello")).toBe(true);
+    expect(writeText).toHaveBeenCalledWith("hello");
+  });
+
+  it("falls back to a hidden textarea + execCommand('copy') when the async API is missing", async () => {
+    const execSpy = vi
+      .spyOn(document, "execCommand")
+      .mockImplementation(() => true);
+    expect(await copyPlainText("hello")).toBe(true);
+    expect(execSpy).toHaveBeenCalledWith("copy");
+    // The temp textarea must be cleaned up so we don't pollute the DOM
+    // for the next test.
+    expect(document.querySelectorAll("textarea")).toHaveLength(0);
+    execSpy.mockRestore();
+  });
+
+  it("falls back when writeText rejects (permission denied)", async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error("denied"));
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      writable: true,
+      configurable: true,
+    });
+    const execSpy = vi
+      .spyOn(document, "execCommand")
+      .mockImplementation(() => true);
+    expect(await copyPlainText("hello")).toBe(true);
+    expect(writeText).toHaveBeenCalledWith("hello");
+    expect(execSpy).toHaveBeenCalledWith("copy");
+    execSpy.mockRestore();
   });
 });

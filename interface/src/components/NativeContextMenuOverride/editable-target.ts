@@ -188,6 +188,75 @@ function insertTextIntoTarget(target: EditableTarget, text: string): void {
   }
 }
 
+/**
+ * If `window.getSelection()` is non-collapsed AND the right-click target
+ * is at least partially inside the selection, return the selected text.
+ * Otherwise return null. Mirrors native Chrome/Safari behaviour: a Copy
+ * menu only makes sense when you click *into* a selection — clicking
+ * anywhere else clears it (we leave clearing to the browser).
+ */
+export function getNonEditableSelection(
+  target: EventTarget | null,
+): { text: string } | null {
+  if (typeof window === "undefined") return null;
+  const selection = window.getSelection();
+  if (!selection || selection.isCollapsed) return null;
+  const text = selection.toString();
+  if (text.length === 0) return null;
+
+  if (target instanceof Node) {
+    // `containsNode(node, true)` returns true if the selection at least
+    // partially covers the node, which is what we want — clicking on a
+    // child span of a fully-selected paragraph should still match.
+    try {
+      if (!selection.containsNode(target, true)) return null;
+    } catch {
+      // Some older WebKit builds throw when the node isn't attached;
+      // fall through and treat it as "not in selection".
+      return null;
+    }
+  } else {
+    return null;
+  }
+
+  return { text };
+}
+
+/**
+ * Cross-platform clipboard write used by the selection-mode Copy menu.
+ * Prefers the async API, falls back to a hidden textarea + execCommand
+ * (same shape as `interface/src/shared/utils/clipboard.ts` but returns
+ * a success boolean so the caller can swallow failures cleanly).
+ */
+export async function copyPlainText(text: string): Promise<boolean> {
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // fall through to the textarea fallback
+    }
+  }
+  if (typeof document === "undefined") return false;
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.setAttribute("readonly", "");
+  ta.style.position = "fixed";
+  ta.style.opacity = "0";
+  ta.style.pointerEvents = "none";
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try {
+    ok = document.execCommand("copy");
+  } catch {
+    ok = false;
+  } finally {
+    ta.remove();
+  }
+  return ok;
+}
+
 export async function pasteIntoTarget(target: EditableTarget): Promise<boolean> {
   if (getEditableTargetState(target).isReadonly) return false;
   focusEditable(target);

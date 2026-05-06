@@ -179,6 +179,74 @@ describe("NativeContextMenuOverride", () => {
     });
   });
 
+  it("opens a Copy-only menu when right-clicking inside selected non-editable text", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      writable: true,
+      configurable: true,
+    });
+
+    render(
+      <>
+        <NativeContextMenuOverride />
+        <p data-testid="msg">hello world</p>
+      </>,
+    );
+
+    const msg = screen.getByTestId("msg");
+    const range = document.createRange();
+    range.selectNodeContents(msg);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+    // jsdom's containsNode is unreliable across versions, so make the
+    // helper see "yes, this click is inside the selection".
+    vi.spyOn(selection, "containsNode").mockReturnValue(true);
+
+    fireEvent.contextMenu(msg, { clientX: 20, clientY: 20 });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("native-context-menu-override")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Copy")).toBeInTheDocument();
+    expect(screen.queryByText("Cut")).toBeNull();
+    expect(screen.queryByText("Paste")).toBeNull();
+    expect(screen.queryByText("Select All")).toBeNull();
+
+    fireEvent.click(screen.getByText("Copy"));
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith("hello world");
+    });
+    await waitFor(() => {
+      expect(screen.queryByTestId("native-context-menu-override")).toBeNull();
+    });
+  });
+
+  it("does not open a Copy menu when the right-click is outside the selection", () => {
+    render(
+      <>
+        <NativeContextMenuOverride />
+        <p data-testid="selected">selected</p>
+        <p data-testid="other">untouched</p>
+      </>,
+    );
+
+    const selected = screen.getByTestId("selected");
+    const other = screen.getByTestId("other");
+
+    const range = document.createRange();
+    range.selectNodeContents(selected);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+    vi.spyOn(selection, "containsNode").mockImplementation((node) => node === selected);
+
+    fireEvent.contextMenu(other, { clientX: 5, clientY: 5 });
+    expect(screen.queryByTestId("native-context-menu-override")).toBeNull();
+  });
+
   it("removes the document listener on unmount", () => {
     function Harness() {
       const [mounted, setMounted] = useState(true);

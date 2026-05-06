@@ -13,6 +13,9 @@
  *   3. Replaces the native input/textarea/contenteditable menu with a
  *      compact in-app Cut / Copy / Paste / Select All menu so right-click
  *      editing still works in text fields.
+ *   4. Shows a Copy-only menu when the right-click lands inside a
+ *      non-collapsed selection on otherwise non-editable content (chat
+ *      messages, LLM output, anywhere selectable text exists).
  *
  * The listener attaches in the document's bubble phase, so by the time
  * we run, React's synthetic event system has already dispatched every
@@ -35,9 +38,11 @@ import { Menu } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
 import {
   copyFromTarget,
+  copyPlainText,
   cutFromTarget,
   getEditableTarget,
   getEditableTargetState,
+  getNonEditableSelection,
   pasteIntoTarget,
   selectAllInTarget,
   type EditableTarget,
@@ -53,12 +58,19 @@ interface MenuPosition {
   y: number;
 }
 
-interface ActiveMenu {
-  position: MenuPosition;
-  target: EditableTarget;
-  hasSelection: boolean;
-  isReadonly: boolean;
-}
+type ActiveMenu =
+  | {
+      kind: "editable";
+      position: MenuPosition;
+      target: EditableTarget;
+      hasSelection: boolean;
+      isReadonly: boolean;
+    }
+  | {
+      kind: "selection";
+      position: MenuPosition;
+      text: string;
+    };
 
 type MenuActionId = "cut" | "copy" | "paste" | "select-all";
 
@@ -92,6 +104,16 @@ function computeOverlayStyle(position: MenuPosition): CSSProperties {
 }
 
 function buildMenuItems(active: ActiveMenu): MenuItem[] {
+  if (active.kind === "selection") {
+    return [
+      {
+        id: "copy" satisfies MenuActionId,
+        label: "Copy",
+        icon: <Copy size={14} />,
+      },
+    ];
+  }
+
   const items: MenuItem[] = [];
   if (!active.isReadonly) {
     items.push({
@@ -142,21 +164,32 @@ export function NativeContextMenuOverride(): ReactNode {
       }
 
       event.preventDefault();
+      const position = { x: event.clientX, y: event.clientY };
 
       const editable = getEditableTarget(event.target);
-      if (!editable) {
-        // Non-editable area + no app menu → suppress and show nothing.
-        setActive(null);
+      if (editable) {
+        const state = getEditableTargetState(editable);
+        setActive({
+          kind: "editable",
+          position,
+          target: editable,
+          hasSelection: state.hasSelection,
+          isReadonly: state.isReadonly,
+        });
         return;
       }
 
-      const state = getEditableTargetState(editable);
-      setActive({
-        position: { x: event.clientX, y: event.clientY },
-        target: editable,
-        hasSelection: state.hasSelection,
-        isReadonly: state.isReadonly,
-      });
+      // Non-editable target — only open a menu if there's a non-collapsed
+      // selection that actually covers the click point. This is what
+      // makes right-clicking selected text in a chat message show a Copy
+      // menu while right-clicking empty chrome still shows nothing.
+      const selection = getNonEditableSelection(event.target);
+      if (selection) {
+        setActive({ kind: "selection", position, text: selection.text });
+        return;
+      }
+
+      setActive(null);
     };
 
     document.addEventListener("contextmenu", handler);
@@ -196,11 +229,19 @@ export function NativeContextMenuOverride(): ReactNode {
     (id: string) => {
       if (!active) return;
       const action = id as MenuActionId;
-      const target = active.target;
       // Close the menu immediately so focus can return to the field
       // before async clipboard work completes — otherwise the menu
       // stays visible while we await readText().
       setActive(null);
+
+      if (active.kind === "selection") {
+        if (action === "copy") {
+          void copyPlainText(active.text);
+        }
+        return;
+      }
+
+      const target = active.target;
       switch (action) {
         case "cut":
           cutFromTarget(target);
