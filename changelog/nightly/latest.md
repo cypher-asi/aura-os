@@ -1,60 +1,69 @@
-# Native desktop chrome, a rebuilt 3D chat flow, and dev/stable channel split
+# Native chrome polish, dual build channels, and a rebuilt 3D chat flow
 
 - Date: `2026-05-06`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.466.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.466.1
+- Version: `0.1.0-nightly.467.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.467.1
 
-Today's nightly reshapes how AURA feels as a desktop app — taking back the right-click menu, fixing a long-standing Windows resize annoyance — and lands a major rework of chat's 3D mode into an in-bar two-step pipeline. Underneath, the project also gained side-by-side dev and stable build channels so contributors can run a cargo build of AURA next to their installed copy without collisions.
+A dense nightly that reshaped how AURA feels as a desktop app: the browser context menu is gone in favor of a native-feeling in-app one, Windows users can finally grab the top edge to resize, and modals stop flickering as their data loads. Underneath, AURA now ships as separate dev and stable channels so contributors can run a `cargo` build alongside the installed app, and the chat 3D mode came back as a proper two-step image-then-model pipeline.
 
-## 8:16 PM — Desktop chrome reclaims right-click and the Windows top resize edge
+## 8:16 PM — Native browser context menu replaced with an in-app menu
 
-Two foundational desktop polish fixes: AURA now owns the right-click menu instead of WebView2, and the borderless window's top resize zone no longer demands pixel-perfect aim.
+Right-clicking AURA chrome no longer surfaces the WebView2/Chromium menu; editable fields get a compact Cut/Copy/Paste/Select All instead.
 
-- Right-clicking empty AURA chrome no longer pops the WebView2/Chromium menu (Back, Refresh, Inspect, …); a document-level override defers to in-app menus where present and otherwise replaces the native menu with a compact in-app Cut / Copy / Paste / Select All inside text fields. (`52cdd47`)
-- On Windows, a Win32 WM_NCHITTEST subclass widens the top resize hit zone from the OS default ~4 px to a 10 logical-px band, so grabbing the top edge of the borderless window works reliably without fighting the floating titlebar pill — and stays correct across mixed-DPI monitors and while maximized. (`bc327be`)
+- A document-level listener now suppresses the native Back/Refresh/Inspect menu across AURA chrome while still deferring to in-app handlers like DesktopContextMenu, NotesEntryContextMenu, and ProcessCanvas via defaultPrevented. (`52cdd47`)
+- Inputs, textareas, and contenteditable fields get a purpose-built in-app Cut / Copy / Paste / Select All menu so right-click editing keeps working without ceding the chrome to the browser. (`52cdd47`)
 
-## 8:43 PM — Confirm and subscription modals stop flickering on open
+## 8:38 PM — Windows top-edge resize is no longer pixel-perfect
 
-A new shared deferred-open hook eliminates the jank where modals popped up and then visibly reshaped as their async data arrived.
+A Win32 WM_NCHITTEST subclass widens the borderless main window's top resize band to 10 logical pixels.
 
-- useDeferredModalOpen now keeps Delete-Agent, marketplace Hire, and Tier subscription modals closed (with their trigger button briefly disabled) until cascade bindings, project lists, or billing data resolve, so each modal opens once at its final size and copy — with a 3000ms failsafe and stale-cycle guards. (`8cc4d0d`)
-- Delete-agent's footer label is shortened to "Delete (N projects)" so its width stays stable regardless of how many bindings the agent has. (`8cc4d0d`)
+- On Windows, the top of the main window now reports HTTOP/HTTOPLEFT/HTTOPRIGHT across a 10 px band instead of tao's default ~4 px frame, so grabbing the edge to resize stops fighting the floating titlebar pill. (`bc327be`)
+- The subclass installs after tao's so it runs first, becomes a no-op while maximized, and re-reads DPI on each hit-test to stay correct on mixed-DPI multi-monitor setups; titlebar drag, side resize, and Chromium app-region behavior are unchanged. (`bc327be`)
 
-## 8:45 PM — Dev and stable AURA can now run side-by-side
+## 8:43 PM — Async-loading modals open once at their final size
 
-A new build-time channel selector lets a cargo-built dev AURA coexist with an installed stable AURA on the same machine without colliding on data, ports, or single-instance locks.
+A new useDeferredModalOpen hook fixes the jank where Delete, Hire, and Tier modals popped open and then resized as data arrived.
 
-- A new Channel enum in aura-os-core is the single source of truth for per-channel identifiers — data dir (aura vs aura-dev), skills home, Windows single-instance mutex, window/menu title, embedded server (19847/19848), standalone server (3100/3101), harness sidecar (19080/19081), default harness URL port, and updater enablement (off in dev so a cargo build can never silently swap itself for the stable installer). (`718a47c`)
-- cargo run and the scripts/dev runners default to dev-channel via cargo's default feature; release pipelines (desktop-validate, release-nightly, release-stable) build with stable-channel, and the desktop crate disables default features on its core/server deps so a packaging build can't pull dev-channel in transitively. (`718a47c`)
-- Dev script ports moved to dev-channel defaults (Vite 5174, mobile backend 3101) so npm run dev no longer binds on top of an installed stable AURA. (`718a47c`)
+- Introduced a shared useDeferredModalOpen hook that runs a prepare() step (cascade refresh, project list fetch, billing subscription) with the trigger disabled, then opens the modal at its final state — with a 3000 ms failsafe and a cycle token that drops stale resolutions. (`8cc4d0d`)
+- Wired the pattern into DeleteAgentConfirmModal (AgentList + AgentInfoPanel), the marketplace HireProjectPickerModal, and the TierSubscriptionModal, and shortened the cascade label to "Delete (N projects)" so the footer width stays stable across binding counts. (`8cc4d0d`)
 
-## 9:04 PM — 3D chat mode returns with an image-first send flow
+## 8:45 PM — AURA splits into dev and stable build channels
 
-The 3D pill is back in the chat mode selector, wired to the same generate-image-then-convert path the standalone AURA 3D app uses.
+A build-time channel selector lets a `cargo run` dev build coexist with the installed stable AURA without colliding on data dirs, ports, or single-instance locks.
 
-- Chat 3D mode derives its source from the most recent successful generate_image tool result in the thread, surfaces it as a "Source for 3D" thumbnail above the textarea, and blocks Send with a switch-to-Image hint until one exists; the request dispatches via generate3dStream's URL form across both live and queue-replay paths. Manual image attachments stay disabled until the proxy decode-and-forward route is fixed. (`15aa431`)
-- The AURA 3D app's Image tab no longer appends the product-photography STYLE_LOCK_SUFFIX to user prompts, so its image generation behaves consistently with /image and /3d (the constant is retained so stripStyleLock can still clean legacy artifacts). (`5897137`)
+- Added a Channel enum in aura-os-core that drives every per-channel identifier — data dir (`aura` vs `aura-dev`), skills home, Windows single-instance mutex, window/menu title, and the embedded server, standalone server, harness sidecar, and harness URL ports. (`718a47c`)
+- The updater is disabled in dev builds so a `cargo run` shell can never silently replace itself with the stable installer, and the desktop crate disables default features on its core/server deps so a packaging build can't pull in dev-channel transitively. (`718a47c`)
+- Release pipelines (desktop-validate, release-nightly, release-stable) and verify-desktop.mjs now build with `--no-default-features --features stable-channel`, while `cargo run` and the scripts/dev runners default to dev — Vite moves to 5174 and the mobile backend to 3101 so `npm run dev` doesn't bind on top of an installed AURA. (`718a47c`)
 
-## 9:26 PM — Renamed CEO agents no longer get duplicated on login
+## 9:04 PM — 3D chat mode returns with an image-first pipeline
 
-The bootstrap CEO matcher learned a third identity signal so renaming the CEO no longer causes a duplicate to be minted at the next login.
+The 3D pill is back in the chat mode selector, wired to require an existing generated image as the source — and the standalone AURA 3D Image tab now sends prompts verbatim.
 
-- looks_like_ceo now also matches the canonical CEO system_prompt prefix ("You are the CEO SuperAgent"), extracted into a shared constant kept in lock-step with the template. CEOs created before the local stamping fix now get correctly recognized after a rename, so dedupe_ceo_agents picks the renamed agent as canonical and the freshly-minted duplicate is best-effort deleted on the next setup pass. (`2da2e55`)
+- Re-enabled 3D mode in chat: the input bar derives its source from the most recent successful generate_image tool result, surfaces it as a "Source for 3D" thumbnail, blocks Send with a switch-to-Image hint until a source exists, and dispatches via generate3dStream's URL form on both live and queue-replay paths. (`15aa431`)
+- The AURA 3D app's Image tab no longer appends the product-photography STYLE_LOCK_SUFFIX, so its prompts behave consistently with /image and /3d; the constant is retained only so stripStyleLock can clean up legacy artifacts. (`5897137`)
 
-## 9:57 PM — Chat 3D becomes an in-bar two-step pipeline, plus a CI packager fix
+## 9:26 PM — Two-step 3D pipeline, theme tokens, and chat empty-state polish
 
-Following the earlier 3D revival, this batch reworks the flow into a removable pinned source thumb with an explicit image_step / model_step split, adds a copy menu for selected non-editable text, and unblocks the release pipeline.
+A long evening of interface work: chat 3D became a true in-bar two-step flow, modals went jet-black with per-mode overrides, the right-click menu learned to copy selected text, and a packager CI break was fixed.
 
-- Chat 3D mode now runs as an in-bar two-step pipeline: a removable pinned source thumb owned by chat-ui-store replaces the "generate an image first" gate, the wire variant splits into image_step / model_step branches across resolve-send, useChatStream, and useAgentChatStream, and one-shot seeding from thread history preserves the cross-mode shortcut. (`2b78e87`, `d5a5270`)
-- STYLE_LOCK_SUFFIX is dropped from chat 3D image prompts (and relocated to interface/src/constants/generation.ts), so chat 3D's image step generates verbatim from the user prompt like every other entry point. (`2b78e87`, `ffd4da5`)
-- Right-clicking a text selection in chat or LLM markdown output — previously suppressed to nothing after the native-menu override — now surfaces a Copy-only menu, while editable fields and empty non-editable areas keep their existing behavior. (`90c31ed`)
-- Release Infrastructure: the desktop-validate, release-nightly, and release-stable workflows stopped passing --no-default-features / --features to cargo packager (which 0.11.8's CLI rejects); the stable-channel feature is already applied via before-packaging-command, so CI is unblocked. (`a457cab`)
+- Reworked chat 3D as an in-bar image_step → model_step pipeline: replaced the "generate an image first" gate with a removable pinned source thumb owned by chat-ui-store, split the wire variant in resolve-send and the chat-stream hooks, and later dropped the style-lock suffix from the image step entirely. (`2b78e87`, `d5a5270`, `ffd4da5`)
+- The native-menu override now shows a Copy-only menu when right-clicking inside a non-collapsed selection on static markdown or LLM output, so selecting and copying chat replies works again after the native menu was suppressed. (`90c31ed`)
+- Modals adopt a new ZUI `--color-modal-bg` token (jet black in dark mode, elevated surface in light) without affecting dropdowns or cards, and Settings → Appearance → Custom colors gained a paired Dark + Light editor backed by an extended setToken(token, value, targetTheme?) API. (`ba64c3d`)
+- Inverted ZUI Button dimming so unselected buttons sit at full opacity at rest and fade on hover, and explicitly opted the titlebar Update PillButton out of dimming so it renders at full accent saturation. (`a16bc58`, `dc169b9`)
+- Redesigned the empty-chat state: four prompt-suggestion chips now float between the input bar and taskbar as a 2x2 grid with Lucide icons and proper gaps, and the empty-state input bar pulse slowed from 2s to 6s so it breathes instead of blinking. (`c6cdeab`, `3edae9d`, `163267c`)
+- Sidebars now fall back to a "New Agent" label via a shared agentDisplayName helper for blank or whitespace-only names, the bottom-bar environment slot reserves space while agent metadata loads so siblings don't shift, the desktop right-click label was shortened to "Background", and dialog/modal wrappers no longer paint a stray focus ring on Shift-keypress. (`279ecdb`, `426e8cb`, `d0ce2d5`, `4f87ed6`, `4cf0bd6`)
+- Project Settings can now attach an Orbit repo via the same create-default / create-custom / link-existing choices as the new-project flow, with the server's update_project handler calling orbit.ensure_repo when a fresh owner+repo is supplied. (`73176b7`)
+- Server-side, a renamed bootstrap CEO is now recognized via a shared CEO_SYSTEM_PROMPT_PREFIX so post-rename logins stop minting duplicate "CEO" agents when the local stamp is missing. (`2da2e55`)
+- Unblocked CI by removing `--no-default-features --features stable-channel` from the `cargo packager` invocations in desktop-validate, release-nightly, and release-stable — packager 0.11.8 rejects those as cargo-build flags, and the channel feature is already applied via the crate's before-packaging-command. (`a457cab`)
+- Small AURA 3D fix-up: removed a stray "what" from the image prompt placeholder. (`9862578`)
 
 ## Highlights
 
 - Native browser context menu replaced with in-app Cut/Copy/Paste
-- Windows top-edge resize is finally easy to grab
-- Chat 3D mode rebuilt as an in-bar image→model pipeline
-- Dev and stable build channels can now coexist on one machine
+- Windows top-edge resize hit area widened to 10 px
+- Dev and stable channels can now run side-by-side
+- 3D chat mode rebuilt as in-bar image-then-3D pipeline
+- Async modals open once at final size instead of janking
+- Jet-black modal background with per-mode color override
 

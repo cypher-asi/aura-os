@@ -2,19 +2,21 @@
   {
     "date": "2026-05-06",
     "channel": "nightly",
-    "version": "0.1.0-nightly.466.1",
-    "title": "Native desktop chrome, a rebuilt 3D chat flow, and dev/stable channel split",
-    "intro": "Today's nightly reshapes how AURA feels as a desktop app — taking back the right-click menu, fixing a long-standing Windows resize annoyance — and lands a major rework of chat's 3D mode into an in-bar two-step pipeline. Underneath, the project also gained side-by-side dev and stable build channels so contributors can run a cargo build of AURA next to their installed copy without collisions.",
+    "version": "0.1.0-nightly.467.1",
+    "title": "Native chrome polish, dual build channels, and a rebuilt 3D chat flow",
+    "intro": "A dense nightly that reshaped how AURA feels as a desktop app: the browser context menu is gone in favor of a native-feeling in-app one, Windows users can finally grab the top edge to resize, and modals stop flickering as their data loads. Underneath, AURA now ships as separate dev and stable channels so contributors can run a `cargo` build alongside the installed app, and the chat 3D mode came back as a proper two-step image-then-model pipeline.",
     "entryCount": 6,
     "highlights": [
       "Native browser context menu replaced with in-app Cut/Copy/Paste",
-      "Windows top-edge resize is finally easy to grab",
-      "Chat 3D mode rebuilt as an in-bar image→model pipeline",
-      "Dev and stable build channels can now coexist on one machine"
+      "Windows top-edge resize hit area widened to 10 px",
+      "Dev and stable channels can now run side-by-side",
+      "3D chat mode rebuilt as in-bar image-then-3D pipeline",
+      "Async modals open once at final size instead of janking",
+      "Jet-black modal background with per-mode color override"
     ],
-    "rawCommitCount": 12,
-    "generatedAt": "2026-05-06T11:00:51.721Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.466.1",
+    "rawCommitCount": 25,
+    "generatedAt": "2026-05-06T19:34:00.519Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.467.1",
     "path": "history/2026-05-06.json"
   },
   {
