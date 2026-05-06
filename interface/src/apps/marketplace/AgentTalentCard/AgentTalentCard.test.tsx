@@ -97,6 +97,30 @@ describe("AgentTalentCard", () => {
     expect(screen.getByText(atlas.description)).toBeInTheDocument();
   });
 
+  it("does not render the description when it duplicates the role", () => {
+    const duplicateRoleAgent: MarketplaceAgent = {
+      ...atlas,
+      agent: makeAgent({
+        agent_id: "test-agent-silo",
+        name: "Silo",
+        role: "CTO",
+        expertise: [],
+      }),
+      description: "CTO",
+    };
+
+    render(
+      <AgentTalentCard
+        marketplaceAgent={duplicateRoleAgent}
+        isSelected={false}
+        onSelect={vi.fn()}
+        onHire={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByText("CTO")).toHaveLength(1);
+  });
+
   it("renders the primary expertise badge derived from the typed expertise field", () => {
     render(
       <AgentTalentCard

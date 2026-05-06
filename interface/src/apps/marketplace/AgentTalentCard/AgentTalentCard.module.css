@@ -38,7 +38,7 @@
 .cover {
   position: relative;
   width: 100%;
-  aspect-ratio: 2 / 1;
+  aspect-ratio: 8 / 5;
   display: flex;
   align-items: center;
   justify-content: center;

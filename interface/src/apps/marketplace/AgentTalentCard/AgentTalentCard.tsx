@@ -45,6 +45,11 @@ export function AgentTalentCard({
 }: AgentTalentCardProps) {
   const { agent, description, jobs, revenue_usd } = marketplaceAgent;
   const expertise = primaryExpertise(agent.expertise);
+  const roleText = agent.role.trim();
+  const descriptionText = description.trim();
+  const showDescription =
+    descriptionText.length > 0 &&
+    descriptionText.toLocaleLowerCase() !== roleText.toLocaleLowerCase();
 
   return (
     <article
@@ -69,16 +74,16 @@ export function AgentTalentCard({
               <span>{expertise.label}</span>
             </span>
           ) : null}
-          {agent.role ? (
+          {roleText ? (
             <Text size="sm" variant="muted" className={styles.role}>
-              {agent.role}
+              {roleText}
             </Text>
           ) : null}
         </div>
 
-        {description ? (
+        {showDescription ? (
           <Text size="sm" variant="muted" className={styles.description}>
-            {description}
+            {descriptionText}
           </Text>
         ) : null}
 
