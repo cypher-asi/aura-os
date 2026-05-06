@@ -1,7 +1,9 @@
 import { renderHook, act } from "@testing-library/react";
 import { useAgentChatStream } from "./use-agent-chat-stream";
 import { useStreamStore, streamMetaMap } from "./stream/store";
-import { EventType } from "../shared/types/aura-events";
+import { useChatUIStore } from "../stores/chat-ui-store";
+import { STYLE_LOCK_SUFFIX } from "../constants/generation";
+import { EventType, type AuraEvent } from "../shared/types/aura-events";
 
 vi.mock("../api/client", () => ({
   api: {
@@ -17,17 +19,20 @@ vi.mock("../api/client", () => ({
 
 vi.mock("../api/streams", () => ({
   generateImageStream: vi.fn().mockResolvedValue(undefined),
+  generate3dStream: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { api } from "../api/client";
-import { generateImageStream } from "../api/streams";
+import { generate3dStream, generateImageStream } from "../api/streams";
 
 describe("useAgentChatStream", () => {
   beforeEach(() => {
     streamMetaMap.clear();
     useStreamStore.setState({ entries: {} });
+    useChatUIStore.setState({ streams: {} });
     vi.mocked(api.agents.sendEventStream).mockReset().mockResolvedValue(undefined);
     vi.mocked(generateImageStream).mockReset().mockResolvedValue(undefined);
+    vi.mocked(generate3dStream).mockReset().mockResolvedValue(undefined);
   });
 
   it("returns streamKey, sendMessage, stopStreaming, resetEvents", () => {
@@ -144,6 +149,112 @@ describe("useAgentChatStream", () => {
       artifactId: "artifact-cat",
     });
     expect(entry.activeToolCalls).toHaveLength(0);
+  });
+
+  it("3D image step: routes a no-pin send through generateImageStream with the AURA style suffix and pins the result", async () => {
+    vi.mocked(generateImageStream).mockImplementation(
+      async (_prompt, _model, _attachments, handler) => {
+        handler?.onEvent({
+          type: EventType.GenerationCompleted,
+          content: {
+            mode: "image",
+            imageUrl: "https://cdn.example.com/eagle.png",
+            originalUrl: "https://cdn.example.com/eagle-orig.png",
+            artifactId: "artifact-eagle",
+          },
+        } as AuraEvent);
+      },
+    );
+
+    const { result } = renderHook(() =>
+      useAgentChatStream({ agentId: "agent-1" }),
+    );
+
+    await act(async () => {
+      await result.current.sendMessage(
+        "an eagle",
+        null,
+        "tripo-v2",
+        undefined,
+        ["generate_3d"],
+        "p-1",
+        "3d",
+        undefined,
+      );
+    });
+
+    expect(api.agents.sendEventStream).not.toHaveBeenCalled();
+    expect(generate3dStream).not.toHaveBeenCalled();
+    expect(generateImageStream).toHaveBeenCalledWith(
+      `an eagle${STYLE_LOCK_SUFFIX}`,
+      expect.any(String),
+      undefined,
+      expect.any(Object),
+      expect.any(AbortSignal),
+      { agentId: "agent-1", projectId: "p-1" },
+    );
+    const pinned = useChatUIStore
+      .getState()
+      .getPinnedSourceImage(result.current.streamKey);
+    expect(pinned).toEqual({
+      imageUrl: "https://cdn.example.com/eagle.png",
+      originalUrl: "https://cdn.example.com/eagle-orig.png",
+      prompt: "an eagle",
+    });
+  });
+
+  it("3D model step: routes a pinned-image send through generate3dStream and clears the pin on completion", async () => {
+    vi.mocked(generate3dStream).mockImplementation(
+      async (_image, _prompt, handler) => {
+        handler?.onEvent({
+          type: EventType.GenerationCompleted,
+          content: {
+            mode: "3d",
+            glbUrl: "https://cdn.example.com/eagle.glb",
+            artifactId: "artifact-eagle-3d",
+          },
+        } as AuraEvent);
+      },
+    );
+
+    const { result } = renderHook(() =>
+      useAgentChatStream({ agentId: "agent-1" }),
+    );
+
+    act(() => {
+      useChatUIStore.getState().setPinnedSourceImage(result.current.streamKey, {
+        imageUrl: "https://cdn.example.com/owl.png",
+        originalUrl: "https://cdn.example.com/owl-orig.png",
+        prompt: "an owl",
+      });
+    });
+
+    await act(async () => {
+      await result.current.sendMessage(
+        "make it brass",
+        null,
+        "tripo-v2",
+        undefined,
+        ["generate_3d"],
+        "p-1",
+        "3d",
+        "https://cdn.example.com/owl.png",
+      );
+    });
+
+    expect(api.agents.sendEventStream).not.toHaveBeenCalled();
+    expect(generateImageStream).not.toHaveBeenCalled();
+    expect(generate3dStream).toHaveBeenCalledWith(
+      { kind: "url", imageUrl: "https://cdn.example.com/owl.png" },
+      "make it brass",
+      expect.any(Object),
+      expect.any(AbortSignal),
+      "p-1",
+    );
+    const pinned = useChatUIStore
+      .getState()
+      .getPinnedSourceImage(result.current.streamKey);
+    expect(pinned).toBeNull();
   });
 
   it("does nothing when agentId is undefined", async () => {

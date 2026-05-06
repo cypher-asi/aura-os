@@ -48,7 +48,6 @@ import { CommandChips } from "./CommandChips";
 import { useChatUI } from "../../../../stores/chat-ui-store";
 import type { SlashCommand } from "../../../../constants/commands";
 import type { Project } from "../../../../shared/types";
-import type { LatestGeneratedImage } from "../ChatPanel/latest-generated-image";
 import styles from "./ChatInputBar.module.css";
 
 export interface ChatInputBarHandle {
@@ -132,18 +131,6 @@ export interface ChatInputBarProps {
   compact?: boolean;
   contextUsage?: ContextUsageEntry;
   onNewSession?: () => void;
-  /**
-   * Most recent successful image generation in the current chat
-   * thread, or `null` if none. When 3D mode is active and this is
-   * non-null, the input bar shows a small "Source for 3D" thumb
-   * above the textarea and Send dispatches an image-to-3D request
-   * against the image's URL. When 3D mode is active and this is
-   * null, Send is gated and the user is told to switch to Image
-   * mode first. Mirrors the AURA 3D app's "Image tab -> 3D tab"
-   * flow; the manual file-attach path for 3D is intentionally
-   * suppressed because the proxy route is currently broken.
-   */
-  latestGeneratedImage?: LatestGeneratedImage | null;
 }
 
 function AttachmentPreviews({
@@ -208,7 +195,6 @@ export const DesktopChatInputBar = memo(
       compact = false,
       contextUsage,
       onNewSession,
-      latestGeneratedImage = null,
     },
     ref,
   ) {
@@ -479,37 +465,26 @@ export const DesktopChatInputBar = memo(
       [slashMenuOpen],
     );
 
-    // 3D mode mirrors the standalone AURA 3D app: the user must first
-    // generate an image in this chat (Image mode) and then convert it
-    // here. Manual file attachments are NOT a valid 3D source today
-    // (the aura-router proxy only exposes URL-based image-to-3D), so
-    // gating is purely "do we have an in-thread generated image?".
+    // 3D mode is a two-step in-bar pipeline: with no source image
+    // pinned, the user types a prompt and the first send runs the
+    // AURA-styled image step (which then pins the result); with an
+    // image pinned, the next send runs the image-to-3D conversion.
+    // The pin lives in `chat-ui-store` so it persists across sends
+    // and survives snapshot rehydrates.
     const isThreeDMode = generationMode === "3d";
-    const has3DSource = isThreeDMode && latestGeneratedImage != null;
-    const needsImageForThreeD = isThreeDMode && !latestGeneratedImage;
-    const [needsImageHintFlash, setNeedsImageHintFlash] = useState(false);
-    // Drop the flash class once the user actually has a source image so
-    // the persistent hint settles back into its calm baseline state.
-    useEffect(() => {
-      if (!needsImageForThreeD && needsImageHintFlash) {
-        setNeedsImageHintFlash(false);
-      }
-    }, [needsImageForThreeD, needsImageHintFlash]);
+    const pinnedSourceImage = chatUI.pinnedSourceImage;
+    const has3DSource = isThreeDMode && pinnedSourceImage != null;
+    const setPinnedSourceImage = chatUI.setPinnedSourceImage;
+    const handleClearPinnedSource = useCallback(() => {
+      setPinnedSourceImage(streamKey, null);
+    }, [setPinnedSourceImage, streamKey]);
 
     const handleSubmit = useCallback(() => {
-      if (needsImageForThreeD) {
-        // Don't dispatch an empty 3D request — we need a generated
-        // image to convert. Flash the persistent hint so the user
-        // sees what's missing and is nudged to switch to Image mode.
-        setNeedsImageHintFlash(true);
-        shellRef.current?.focus();
-        return;
-      }
       track("chat_message_sent", { model: selectedModel, mode: selectedMode });
       // Mode is read from the store inside `useChatPanelState.handleSend`;
       // we no longer need to thread `generationMode` through here.
       onSend(input, undefined, undefined);
-    }, [input, needsImageForThreeD, onSend, selectedModel, selectedMode]);
+    }, [input, onSend, selectedModel, selectedMode]);
 
     const providerLabel = (provider: string): string => {
       switch (provider) {
@@ -665,7 +640,7 @@ export const DesktopChatInputBar = memo(
           attachments={attachments}
           onRemove={handleRemove}
         />
-        {has3DSource && latestGeneratedImage ? (
+        {has3DSource && pinnedSourceImage ? (
           <div
             className={styles.sourceImagePreview}
             data-agent-surface="chat-input-3d-source-thumb"
@@ -673,13 +648,21 @@ export const DesktopChatInputBar = memo(
           >
             <div className={styles.sourceImageThumb}>
               <img
-                src={latestGeneratedImage.imageUrl}
-                alt={latestGeneratedImage.prompt ?? "Source for 3D generation"}
+                src={pinnedSourceImage.imageUrl}
+                alt={pinnedSourceImage.prompt || "Source for 3D generation"}
               />
+              <button
+                type="button"
+                className={styles.sourceImageRemove}
+                onClick={handleClearPinnedSource}
+                aria-label="Remove source image"
+              >
+                <X size={10} />
+              </button>
             </div>
             <span className={styles.sourceImageLabel}>
               <span className={styles.sourceImageLabelTitle}>Source for 3D</span>
-              <span>Latest generated image</span>
+              <span>Pinned image</span>
             </span>
           </div>
         ) : null}
@@ -730,29 +713,12 @@ export const DesktopChatInputBar = memo(
         </button>
       );
 
-    const inputRowEnd = selectedCommands.length > 0 || needsImageForThreeD ? (
-      <>
-        {selectedCommands.length > 0 ? (
-          <CommandChips
-            commands={selectedCommands}
-            onRemove={handleCommandRemove}
-            variant="inline"
-          />
-        ) : null}
-        {needsImageForThreeD ? (
-          <div
-            className={`${styles.threeDHint} ${styles.threeDHintInline}${needsImageHintFlash ? ` ${styles.threeDHintFlash}` : ""}`}
-            role="status"
-            aria-live="polite"
-            data-agent-surface="chat-input-3d-image-hint"
-          >
-            <span className={styles.threeDHintDot} aria-hidden="true" />
-            <span className={styles.threeDHintLabel}>
-              Generate an image first &mdash; switch to Image mode.
-            </span>
-          </div>
-        ) : null}
-      </>
+    const inputRowEnd = selectedCommands.length > 0 ? (
+      <CommandChips
+        commands={selectedCommands}
+        onRemove={handleCommandRemove}
+        variant="inline"
+      />
     ) : null;
 
     const infoBarStart = (
@@ -887,18 +853,24 @@ export const DesktopChatInputBar = memo(
       />
     );
 
-    // In 3D mode the conversion is image-driven, not text-driven: the
-    // textarea becomes optional refinement copy (forwarded to the
-    // backend as the prompt) and the source is the latest generated
-    // image. So Send enables purely on `has3DSource`. Other modes
-    // keep the historical "text or attachments or chips" rule.
+    // In 3D mode the bar is a two-step pipeline:
+    //  - no thumb (image step): typed prompt becomes the seed for an
+    //    AURA-styled image generation, so Send requires text.
+    //  - thumb pinned (model step): textarea is optional refinement
+    //    copy, so Send is always enabled (matches today's flow).
+    // Other modes keep the historical "text or attachments or chips"
+    // rule.
     const isSendEnabled = isThreeDMode
-      ? has3DSource
+      ? has3DSource ||
+        input.trim().length > 0 ||
+        selectedCommands.length > 0
       : input.trim().length > 0 ||
         attachments.length > 0 ||
         selectedCommands.length > 0;
     const placeholder = isThreeDMode
-      ? "Refine your 3D model (optional)"
+      ? has3DSource
+        ? "Refine your 3D model (optional)"
+        : "Describe an image to generate\u2026"
       : "What do you want to create?";
 
     return (

@@ -23,6 +23,7 @@ vi.mock("../constants/models", () => ({
     mockLoadPersistedImageModel(agentId),
   persistModel: vi.fn(),
   hasAgentScopedModel: (agentId: string) => mockHasAgentScopedModel(agentId),
+  DEFAULT_3D_MODEL_ID: "tripo-v2",
 }));
 
 function resetStore() {
@@ -215,5 +216,83 @@ describe("chat-ui-store", () => {
     expect(useChatUIStore.getState().streams["stream-1"]?.selectedModel).toBe(
       "gpt-image-2",
     );
+  });
+
+  describe("pinnedSourceImage", () => {
+    it("starts null on a freshly initialised stream", () => {
+      useChatUIStore.getState().init("stream-1");
+      expect(
+        useChatUIStore.getState().getPinnedSourceImage("stream-1"),
+      ).toBeNull();
+    });
+
+    it("setPinnedSourceImage stores and clears the per-stream pin", () => {
+      useChatUIStore.getState().init("stream-1");
+      useChatUIStore.getState().setPinnedSourceImage("stream-1", {
+        imageUrl: "https://cdn.example.com/owl.png",
+        originalUrl: "https://cdn.example.com/owl-orig.png",
+        prompt: "an owl",
+      });
+      expect(useChatUIStore.getState().getPinnedSourceImage("stream-1")).toEqual({
+        imageUrl: "https://cdn.example.com/owl.png",
+        originalUrl: "https://cdn.example.com/owl-orig.png",
+        prompt: "an owl",
+      });
+      useChatUIStore.getState().setPinnedSourceImage("stream-1", null);
+      expect(
+        useChatUIStore.getState().getPinnedSourceImage("stream-1"),
+      ).toBeNull();
+    });
+
+    it("multiple streams have independent pins", () => {
+      useChatUIStore.getState().init("stream-a");
+      useChatUIStore.getState().init("stream-b");
+      useChatUIStore.getState().setPinnedSourceImage("stream-a", {
+        imageUrl: "https://cdn.example.com/a.png",
+        prompt: "a",
+      });
+      expect(
+        useChatUIStore.getState().getPinnedSourceImage("stream-a")?.imageUrl,
+      ).toBe("https://cdn.example.com/a.png");
+      expect(
+        useChatUIStore.getState().getPinnedSourceImage("stream-b"),
+      ).toBeNull();
+    });
+
+    it("setSelectedMode clears the pin when switching away from 3D", () => {
+      // Start in 3D with a pin.
+      useChatUIStore.getState().init("stream-1");
+      useChatUIStore.getState().setSelectedMode("stream-1", "3d");
+      useChatUIStore.getState().setPinnedSourceImage("stream-1", {
+        imageUrl: "https://cdn.example.com/owl.png",
+        prompt: "an owl",
+      });
+      expect(
+        useChatUIStore.getState().getPinnedSourceImage("stream-1"),
+      ).not.toBeNull();
+
+      // Switch to a non-3D mode → pin must drop.
+      useChatUIStore.getState().setSelectedMode("stream-1", "code");
+      expect(
+        useChatUIStore.getState().getPinnedSourceImage("stream-1"),
+      ).toBeNull();
+    });
+
+    it("setSelectedMode preserves the pin when re-entering 3D from another mode", () => {
+      // Pin while in 3D, then leave (which clears it), then come back
+      // to 3D — the pin stays cleared (we don't restore from history
+      // here; that's `ChatPanel`'s seeding effect's job).
+      useChatUIStore.getState().init("stream-1");
+      useChatUIStore.getState().setSelectedMode("stream-1", "3d");
+      useChatUIStore.getState().setPinnedSourceImage("stream-1", {
+        imageUrl: "https://cdn.example.com/owl.png",
+        prompt: "an owl",
+      });
+      useChatUIStore.getState().setSelectedMode("stream-1", "code");
+      useChatUIStore.getState().setSelectedMode("stream-1", "3d");
+      expect(
+        useChatUIStore.getState().getPinnedSourceImage("stream-1"),
+      ).toBeNull();
+    });
   });
 });

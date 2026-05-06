@@ -254,10 +254,10 @@
 }
 
 /* "Source for 3D" thumbnail row rendered above the textarea when chat
-   3D mode is active and the thread already has a generated image to
-   convert. Mirrors `attachmentPreviews` framing so it sits flush in
-   the same slot, but pairs the thumb with a static caption (no remove
-   control) since the source comes from the conversation. */
+   3D mode is active and a source image is pinned. Mirrors
+   `attachmentPreviews` framing so it sits flush in the same slot. The
+   X button clears the per-stream pin and drops the input bar back to
+   the image-step state. */
 .sourceImagePreview {
   display: flex;
   align-items: center;
@@ -294,6 +294,23 @@
   color: var(--color-text-primary);
   font-weight: 500;
   letter-spacing: 0.01em;
+}
+
+.sourceImageRemove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: none;
+  background: color-mix(in srgb, #000 55%, transparent);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  padding: 0;
 }
 
 .attachmentThumb {

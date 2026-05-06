@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { useAura3DStore, STYLE_LOCK_SUFFIX } from "./aura3d-store";
+import { useAura3DStore } from "./aura3d-store";
+import { STYLE_LOCK_SUFFIX } from "../constants/generation";
 import { artifactsApi } from "../shared/api/artifacts";
 import * as authToken from "../shared/lib/auth-token";
 

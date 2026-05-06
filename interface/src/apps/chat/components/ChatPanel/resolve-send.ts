@@ -8,12 +8,17 @@ import {
 
 /**
  * Fully-typed description of one send. Each variant carries ONLY the
- * fields that variant uses, so a `3d` send literally cannot reference
- * a `model`, and a `chat` send literally cannot reference an `action`.
- * This is the source of truth between the panel state and the legacy
- * `onSend` wire signature; `dispatch()` is the only place that adapts
- * back to the historic `(content, action, model, attachments,
- * commands, projectId, generationMode)` tuple.
+ * fields that variant uses, so a `3d_model_step` send literally
+ * cannot reference a `model`, and a `chat` send literally cannot
+ * reference an `action`.
+ *
+ * 3D mode is a two-step pipeline: a `3d_image_step` runs an
+ * AURA-styled image generation when the input bar has no source thumb
+ * pinned; a `3d_model_step` runs the image-to-3D conversion against
+ * the pinned image when one exists. The split is the source of truth
+ * for `useChatStream` / `useAgentChatStream` to choose between
+ * `generateImageStream` (with `STYLE_LOCK_SUFFIX` appended) and
+ * `generate3dStream`.
  */
 export type ResolvedSend =
   | {
@@ -39,18 +44,20 @@ export type ResolvedSend =
       commands: string[];
     }
   | {
-      kind: "3d";
+      kind: "3d_image_step";
+      content: string;
+      attachments: ChatAttachment[];
+      commands: string[];
+    }
+  | {
+      kind: "3d_model_step";
       content: string;
       attachments: ChatAttachment[];
       commands: string[];
       /**
-       * URL of the source image to convert to 3D. Required — chat 3D
-       * mode is gated by the input bar on the presence of a recently
-       * generated image (`findLatestGeneratedImage`), so the resolver
-       * should never be invoked without one. Empty-string defends
-       * against the gate being bypassed (e.g. queue replay before the
-       * snapshot rehydrates) — the stream layer drops sends with no
-       * URL.
+       * URL of the pinned source image. Sourced from the per-stream
+       * `pinnedSourceImage` slice of `chat-ui-store` — never derived
+       * from the chat history snapshot.
        */
       sourceImageUrl: string;
     };
@@ -63,12 +70,12 @@ export interface ResolveSendInput {
   /** Slash-command IDs the user already attached as chips. */
   userCommandIds: string[];
   /**
-   * URL of the most recent generated image in the thread, or null if
-   * the user hasn't produced one yet. Surfaced from the chat panel
-   * (`findLatestGeneratedImage(messages)`); only consumed by the
-   * `generate_3d` branch.
+   * URL of the source image pinned in the input bar (for 3D mode), or
+   * null when no thumb is pinned. Sourced from the chat-ui store's
+   * per-stream `pinnedSourceImage` slice; only consumed by the 3D
+   * branch to choose between the image step and the 3D model step.
    */
-  latestGeneratedImageUrl?: string | null;
+  pinnedSourceImageUrl?: string | null;
 }
 
 /**
@@ -77,6 +84,10 @@ export interface ResolveSendInput {
  * 3D) inject the matching command id and dedupe against any chip the
  * user already added, so picking Image mode + hitting Send produces
  * the exact same payload as typing `/image` and hitting Send.
+ *
+ * 3D mode splits on the presence of a pinned source image: no thumb
+ * means we run the image step (AURA-styled prompt), thumb means we
+ * run the model step against the pinned URL.
  */
 export function resolveSend({
   mode,
@@ -84,7 +95,7 @@ export function resolveSend({
   selectedModel,
   attachments,
   userCommandIds,
-  latestGeneratedImageUrl,
+  pinnedSourceImageUrl,
 }: ResolveSendInput): ResolvedSend {
   const behavior = AGENT_MODE_DESCRIPTORS[mode].behavior;
   switch (behavior.kind) {
@@ -113,18 +124,29 @@ export function resolveSend({
         attachments,
         commands: dedupe([behavior.commandId, ...userCommandIds]),
       };
-    case "generate_3d":
+    case "generate_3d": {
+      const commands = dedupe([behavior.commandId, ...userCommandIds]);
+      // Manual attachments are intentionally dropped on the 3D wire
+      // shape today — neither branch accepts an arbitrary file (the
+      // proxy path is disabled and the model step uses the pinned
+      // URL exclusively).
+      const empty: ChatAttachment[] = [];
+      if (pinnedSourceImageUrl) {
+        return {
+          kind: "3d_model_step",
+          content,
+          attachments: empty,
+          commands,
+          sourceImageUrl: pinnedSourceImageUrl,
+        };
+      }
       return {
-        kind: "3d",
+        kind: "3d_image_step",
         content,
-        // Manual attachments are intentionally dropped on the 3D wire
-        // shape today — the proxy path only accepts a public URL via
-        // `sourceImageUrl`. See `useChatStream` for the FF-gated
-        // legacy code path.
-        attachments: [],
-        commands: dedupe([behavior.commandId, ...userCommandIds]),
-        sourceImageUrl: latestGeneratedImageUrl ?? "",
+        attachments: empty,
+        commands,
       };
+    }
   }
 }
 
@@ -133,8 +155,8 @@ export function resolveSend({
  * The cast at the boundary is intentional and isolated: every other
  * file consumes `ResolvedSend` directly and gets full exhaustiveness.
  *
- * `sourceImageUrl` is only meaningful for the 3D variant; downstream
- * stream hooks ignore it for every other generation mode.
+ * `sourceImageUrl` is only meaningful for the `3d_model_step` variant;
+ * downstream stream hooks ignore it for every other generation mode.
  */
 export type LegacyOnSend = (
   content: string,
@@ -180,11 +202,16 @@ export function dispatch(
         "image",
       );
       return;
-    case "3d":
-      // 3D intentionally has no `model` field on the variant; pass
-      // null on the wire so the request body omits it. The trailing
-      // `sourceImageUrl` carries the resolved source so the stream
-      // layer can call `generate3dStream` with `{ kind: "url", ... }`.
+    case "3d_image_step":
+      // Image step of chat 3D mode: dispatched as `generationMode:
+      // "3d"` so `useChatStream` / `useAgentChatStream` route through
+      // the chat-3D branch (which sees the missing `sourceImageUrl`
+      // and runs the AURA-styled `generateImageStream`).
+      onSend(send.content, null, null, attachments, commands, projectId, "3d", undefined);
+      return;
+    case "3d_model_step":
+      // Model step: forward the pinned URL so the stream layer calls
+      // `generate3dStream` with `{ kind: "url", ... }`.
       onSend(
         send.content,
         null,
@@ -212,9 +239,9 @@ export interface QueuedSendRecord {
   commands: string[] | undefined;
   generationMode: GenerationMode | undefined;
   /**
-   * Only set for the 3D variant; carried so a queued 3D send can
-   * replay against the same source image even after `messages`
-   * mutates between enqueue and dequeue.
+   * Only set for the `3d_model_step` variant; carried so a queued 3D
+   * model send can replay against the same source image even if the
+   * pin state changes between enqueue and dequeue.
    */
   sourceImageUrl?: string;
 }
@@ -250,7 +277,16 @@ export function toQueuedRecord(send: ResolvedSend): QueuedSendRecord {
         commands,
         generationMode: "image",
       };
-    case "3d":
+    case "3d_image_step":
+      return {
+        content: send.content,
+        action: null,
+        model: null,
+        attachments,
+        commands,
+        generationMode: "3d",
+      };
+    case "3d_model_step":
       return {
         content: send.content,
         action: null,

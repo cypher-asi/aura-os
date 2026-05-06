@@ -25,8 +25,14 @@ vi.mock("../../../../hooks/use-aura-capabilities", () => ({
 
 let mockSelectedModel: string | null = null;
 let mockSelectedMode: "code" | "plan" | "image" | "3d" = "code";
+let mockPinnedSourceImage: {
+  imageUrl: string;
+  originalUrl?: string;
+  prompt: string;
+} | null = null;
 const mockSetSelectedModel = vi.fn();
 const mockSetSelectedMode = vi.fn();
+const mockSetPinnedSourceImage = vi.fn();
 const mockAddFiles = vi.fn();
 const mockHandleRemove = vi.fn();
 vi.mock("../../../../stores/chat-ui-store", () => ({
@@ -34,9 +40,11 @@ vi.mock("../../../../stores/chat-ui-store", () => ({
     selectedMode: mockSelectedMode,
     selectedModel: mockSelectedModel,
     projectId: null,
+    pinnedSourceImage: mockPinnedSourceImage,
     setSelectedMode: mockSetSelectedMode,
     setSelectedModel: mockSetSelectedModel,
     setProjectId: vi.fn(),
+    setPinnedSourceImage: mockSetPinnedSourceImage,
     init: vi.fn(),
     syncAvailableModels: vi.fn(),
   }),
@@ -107,8 +115,10 @@ beforeEach(() => {
   mockIsMobileLayout = false;
   mockSelectedModel = null;
   mockSelectedMode = "code";
+  mockPinnedSourceImage = null;
   mockSetSelectedModel.mockClear();
   mockSetSelectedMode.mockClear();
+  mockSetPinnedSourceImage.mockClear();
   mockAddFiles.mockClear();
   mockHandleRemove.mockClear();
 });
@@ -351,16 +361,36 @@ describe("ChatInputBar", () => {
     expect(screen.getByRole("radio", { name: "3D mode" })).toBeInTheDocument();
   });
 
-  it("blocks send and surfaces a generate-image-first hint when 3D mode has no source image", () => {
+  it("3D image step (no thumb): shows the image-step placeholder and Send enables on text", () => {
     mockSelectedMode = "3d";
-    const onSend = vi.fn();
-    render(<ChatInputBar {...makeProps({ onSend })} />);
+    mockPinnedSourceImage = null;
+    render(<ChatInputBar {...makeProps({ input: "" })} />);
 
+    expect(
+      screen.getByPlaceholderText("Describe an image to generate\u2026"),
+    ).toBeInTheDocument();
+    // No persistent "generate an image first" hint anymore — the
+    // textarea itself prompts the user to describe the image.
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    // Empty text → Send disabled.
     expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
-    const hint = screen.getByRole("status");
-    expect(hint).toHaveTextContent(/generate an image first/i);
-    expect(hint).toHaveTextContent(/switch to image mode/i);
-    expect(onSend).not.toHaveBeenCalled();
+  });
+
+  it("3D image step (no thumb): Send enables once the user types a prompt", async () => {
+    const user = userEvent.setup();
+    mockSelectedMode = "3d";
+    mockPinnedSourceImage = null;
+    const onSend = vi.fn();
+    render(
+      <ChatInputBar
+        {...makeProps({ input: "a brass robot", onSend })}
+      />,
+    );
+
+    const send = screen.getByRole("button", { name: "Send" });
+    expect(send).toBeEnabled();
+    await user.click(send);
+    expect(onSend).toHaveBeenCalledWith("a brass robot", undefined, undefined);
   });
 
   it("hides the attach button in 3D mode (manual attachments are not a valid source)", () => {
@@ -372,30 +402,41 @@ describe("ChatInputBar", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("renders the source-for-3D thumb and enables send once an image exists", async () => {
+  it("3D model step (with thumb): renders the pinned source thumb and Send is enabled even with empty text", async () => {
     const user = userEvent.setup();
     mockSelectedMode = "3d";
+    mockPinnedSourceImage = {
+      imageUrl: "https://cdn.example.com/owl.png",
+      prompt: "an owl",
+    };
     const onSend = vi.fn();
-    render(
-      <ChatInputBar
-        {...makeProps({
-          onSend,
-          latestGeneratedImage: {
-            id: "tc-1",
-            imageUrl: "https://cdn.example.com/owl.png",
-            prompt: "an owl",
-          },
-        })}
-      />,
-    );
+    render(<ChatInputBar {...makeProps({ onSend })} />);
 
     const thumb = screen.getByRole("img", { name: "an owl" });
     expect(thumb).toHaveAttribute("src", "https://cdn.example.com/owl.png");
+    expect(
+      screen.getByPlaceholderText("Refine your 3D model (optional)"),
+    ).toBeInTheDocument();
 
     const send = screen.getByRole("button", { name: "Send" });
     expect(send).toBeEnabled();
     await user.click(send);
     expect(onSend).toHaveBeenCalledWith("", undefined, undefined);
+  });
+
+  it("3D model step (with thumb): X button on the thumb clears the pinned source image", async () => {
+    const user = userEvent.setup();
+    mockSelectedMode = "3d";
+    mockPinnedSourceImage = {
+      imageUrl: "https://cdn.example.com/owl.png",
+      prompt: "an owl",
+    };
+    render(<ChatInputBar {...makeProps()} />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Remove source image" }),
+    );
+    expect(mockSetPinnedSourceImage).toHaveBeenCalledWith("test-stream", null);
   });
 
   it("renders selected slash commands inline and removes them", async () => {

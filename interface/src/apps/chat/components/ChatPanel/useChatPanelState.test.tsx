@@ -21,15 +21,19 @@ const mockDequeue = vi.fn();
 const mockChatUI: {
   selectedMode: "code" | "plan" | "image" | "3d";
   selectedModel: string | null;
+  pinnedSourceImage: { imageUrl: string; originalUrl?: string; prompt: string } | null;
   init: ReturnType<typeof vi.fn>;
   syncAvailableModels: ReturnType<typeof vi.fn>;
   setSelectedMode: ReturnType<typeof vi.fn>;
+  setPinnedSourceImage: ReturnType<typeof vi.fn>;
 } = {
   selectedMode: "code",
   selectedModel: "gpt-5.4",
+  pinnedSourceImage: null,
   init: vi.fn(),
   syncAvailableModels: vi.fn(),
   setSelectedMode: vi.fn(),
+  setPinnedSourceImage: vi.fn(),
 };
 
 let mockIsStreaming = false;
@@ -106,6 +110,7 @@ describe("useChatPanelState", () => {
     mockStreamMessages = [];
     mockChatUI.selectedModel = "gpt-5.4";
     mockChatUI.selectedMode = "code";
+    mockChatUI.pinnedSourceImage = null;
     mockHandleScroll.mockReset();
     mockScrollToBottom.mockReset();
     mockUseScrollAnchorV2.mockClear();
@@ -114,6 +119,7 @@ describe("useChatPanelState", () => {
     mockChatUI.init.mockReset();
     mockChatUI.syncAvailableModels.mockReset();
     mockChatUI.setSelectedMode.mockReset();
+    mockChatUI.setPinnedSourceImage.mockReset();
     requestAnimationFrameSpy = vi
       .spyOn(globalThis, "requestAnimationFrame")
       .mockImplementation((callback: FrameRequestCallback) => {
@@ -269,9 +275,64 @@ describe("useChatPanelState", () => {
     );
   });
 
-  it("forwards the latest generated image URL when sending in 3D mode", () => {
+  it("3D model step: forwards the pinned source image URL from chat-ui-store (not from chat history)", () => {
     mockChatUI.selectedMode = "3d";
     mockChatUI.selectedModel = "tripo-v2";
+    // The pin lives on the store; chat history is intentionally
+    // populated with a *different* image to prove the resolver does
+    // not derive from messages anymore.
+    mockChatUI.pinnedSourceImage = {
+      imageUrl: "https://cdn.example.com/owl-pinned.png",
+      prompt: "an owl",
+    };
+    mockStreamMessages = [
+      {
+        id: "m-1",
+        role: "assistant",
+        content: "",
+        toolCalls: [
+          {
+            id: "tc-img",
+            name: "generate_image",
+            input: {},
+            result: JSON.stringify({
+              imageUrl: "https://cdn.example.com/different-image.png",
+              artifactId: "art-other",
+            }),
+          },
+        ],
+      },
+    ];
+    const onSend = vi.fn();
+    const { result } = renderHook(() =>
+      useChatPanelState({
+        streamKey: "stream-1",
+        onSend,
+        selectedProjectId: "project-1",
+      }),
+    );
+
+    act(() => result.current.handleSend("optional refinement"));
+
+    expect(onSend).toHaveBeenCalledWith(
+      "optional refinement",
+      null,
+      null,
+      undefined,
+      ["generate_3d"],
+      "project-1",
+      "3d",
+      "https://cdn.example.com/owl-pinned.png",
+    );
+  });
+
+  it("3D image step: dispatches with no source URL when no thumb is pinned", () => {
+    mockChatUI.selectedMode = "3d";
+    mockChatUI.selectedModel = "tripo-v2";
+    mockChatUI.pinnedSourceImage = null;
+    // History contains a generated image; the resolver should NOT
+    // pick it up — only the per-stream pin slot drives 3D source
+    // resolution.
     mockStreamMessages = [
       {
         id: "m-1",
@@ -299,17 +360,17 @@ describe("useChatPanelState", () => {
       }),
     );
 
-    act(() => result.current.handleSend("optional refinement"));
+    act(() => result.current.handleSend("a brass robot"));
 
     expect(onSend).toHaveBeenCalledWith(
-      "optional refinement",
+      "a brass robot",
       null,
       null,
       undefined,
       ["generate_3d"],
       "project-1",
       "3d",
-      "https://cdn.example.com/owl.png",
+      undefined,
     );
   });
 

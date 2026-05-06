@@ -105,7 +105,6 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       isCentered = false,
       contextUsage,
       onNewSession,
-      latestGeneratedImage = null,
     },
     ref,
   ) {
@@ -144,15 +143,24 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
           : "chat";
     const isLocalAgent = machineType === "local";
     const isThreeDMode = generationMode === "3d";
-    const has3DSource = isThreeDMode && latestGeneratedImage != null;
-    // 3D mode is image-driven: Send enables purely on the presence
-    // of a generated image in the thread (mirrors desktop input bar
-    // and the standalone AURA 3D app's "Image -> 3D" pipeline).
+    const pinnedSourceImage = chatUI.pinnedSourceImage;
+    const has3DSource = isThreeDMode && pinnedSourceImage != null;
+    const setPinnedSourceImage = chatUI.setPinnedSourceImage;
+    const handleClearPinnedSource = useCallback(() => {
+      setPinnedSourceImage(streamKey, null);
+    }, [setPinnedSourceImage, streamKey]);
+    // 3D mode is a two-step pipeline:
+    //  - no thumb (image step): typed text seeds an AURA-styled image
+    //    generation, so Send requires text;
+    //  - thumb pinned (model step): Send is enabled regardless of
+    //    text (refinement is optional).
     const canSend =
       !isLocalAgent &&
       !isStreaming &&
       (isThreeDMode
-        ? has3DSource
+        ? has3DSource ||
+          input.trim().length > 0 ||
+          selectedCommands.length > 0
         : input.trim().length > 0 ||
           attachments.length > 0 ||
           selectedCommands.length > 0);
@@ -350,28 +358,12 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       [onInputChange, slashMenuOpen],
     );
 
-    const needsImageForThreeD = isThreeDMode && !latestGeneratedImage;
-    const [needsImageHintFlash, setNeedsImageHintFlash] = useState(false);
-    useEffect(() => {
-      if (!needsImageForThreeD && needsImageHintFlash) {
-        setNeedsImageHintFlash(false);
-      }
-    }, [needsImageForThreeD, needsImageHintFlash]);
-
     const submitMessage = useCallback(() => {
-      if (needsImageForThreeD) {
-        // 3D mode mirrors the standalone AURA 3D app: source image
-        // must come from a prior Image-mode generation in this chat.
-        // Flash the hint so the user knows to switch to Image mode.
-        setNeedsImageHintFlash(true);
-        textareaRef.current?.focus();
-        return;
-      }
       if (!canSend) return;
       // Mode lives in the per-stream store; the panel state reads it
       // when constructing the resolved send.
       onSend(input, undefined, undefined);
-    }, [canSend, input, needsImageForThreeD, onSend]);
+    }, [canSend, input, onSend]);
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (slashMenuOpen && ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(event.key)) {
@@ -385,8 +377,9 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
 
     // 3D mode disables manual file intake (paste / drop / attach
     // button) for parity with the desktop input bar — the only
-    // valid 3D source is a previously-generated image surfaced via
-    // `latestGeneratedImage`. Other modes are unaffected.
+    // valid 3D source is the per-stream pinned image (set by the
+    // 3D image step or seeded from chat history). Other modes are
+    // unaffected.
     const handlePaste = useCallback(
       (event: React.ClipboardEvent) => {
         if (isThreeDMode) return;
@@ -558,7 +551,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
             className={styles.modeSelector}
           />
           <AttachmentPreviews attachments={attachments} onRemove={handleRemove} />
-          {has3DSource && latestGeneratedImage ? (
+          {has3DSource && pinnedSourceImage ? (
             <div
               className={styles.sourceImagePreview}
               data-agent-surface="mobile-chat-input-3d-source-thumb"
@@ -566,30 +559,25 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
             >
               <div className={styles.sourceImageThumb}>
                 <img
-                  src={latestGeneratedImage.imageUrl}
-                  alt={latestGeneratedImage.prompt ?? "Source for 3D generation"}
+                  src={pinnedSourceImage.imageUrl}
+                  alt={pinnedSourceImage.prompt || "Source for 3D generation"}
                 />
+                <button
+                  type="button"
+                  className={styles.sourceImageRemove}
+                  onClick={handleClearPinnedSource}
+                  aria-label="Remove source image"
+                >
+                  <X size={12} />
+                </button>
               </div>
               <span className={styles.sourceImageLabel}>
                 <span className={styles.sourceImageLabelTitle}>Source for 3D</span>
-                <span>Latest generated image</span>
+                <span>Pinned image</span>
               </span>
             </div>
           ) : null}
           <CommandChips commands={selectedCommands} onRemove={handleCommandRemove} />
-          {needsImageForThreeD ? (
-            <div
-              className={`${styles.threeDHint}${needsImageHintFlash ? ` ${styles.threeDHintFlash}` : ""}`}
-              role="status"
-              aria-live="polite"
-              data-agent-surface="mobile-chat-input-3d-image-hint"
-            >
-              <span className={styles.threeDHintDot} aria-hidden="true" />
-              <span className={styles.threeDHintLabel}>
-                Generate an image first &mdash; switch to Image mode.
-              </span>
-            </div>
-          ) : null}
           <div className={styles.inputRow}>
             {isThreeDMode ? null : (
               <button
@@ -619,7 +607,9 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
                 isLocalAgent
                   ? "Remote agent required"
                   : isThreeDMode
-                    ? "Refine your 3D model (optional)"
+                    ? has3DSource
+                      ? "Refine your 3D model (optional)"
+                      : "Describe an image to generate\u2026"
                     : "Message agent"
               }
               rows={1}

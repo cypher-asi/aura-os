@@ -4,8 +4,14 @@ import {
   DEFAULT_3D_MODEL_ID,
   DEFAULT_IMAGE_MODEL_ID,
 } from "../constants/models";
+import { STYLE_LOCK_SUFFIX, stripStyleLock } from "../constants/generation";
 import { setLastProject } from "../utils/storage";
 import { getStoredJwt } from "../shared/lib/auth-token";
+
+// Re-export so existing consumers (and the AURA 3D app, which still
+// composes its own prompts) can keep importing from this module while
+// the canonical definition lives in `constants/generation.ts`.
+export { STYLE_LOCK_SUFFIX };
 
 /**
  * Append the current JWT to a URL as a `?token=` query param so a
@@ -68,24 +74,6 @@ export interface Generated3DModel {
 }
 
 export type Aura3DSidekickTab = "images" | "models";
-
-/**
- * Historical prompt suffix that the AURA 3D app's image generation
- * flow used to append to every prompt. New sends do NOT include it —
- * image generation (in chat and the 3D app alike) now sends the
- * user's prompt verbatim. The constant is retained solely so
- * `stripStyleLock` / `artifactToImage` can clean the suffix off
- * legacy `ProjectArtifact` rows persisted before this change, so the
- * sidekick / nav don't render the full product-photography
- * boilerplate as the saved label.
- */
-export const STYLE_LOCK_SUFFIX =
-  ", standalone product only, 3/4 angle view, single object centered, fully in frame with no cropping, no other objects or elements in frame, jet black background with subtle vignette, photorealistic, high-poly, textured 3D sculpture, subject pops from background, cinematic depth, isolated product presentation";
-
-function stripStyleLock(prompt: string): string {
-  const idx = prompt.indexOf(STYLE_LOCK_SUFFIX);
-  return idx >= 0 ? prompt.slice(0, idx).trim() : prompt;
-}
 
 function artifactToImage(a: ProjectArtifact): GeneratedImage {
   return {

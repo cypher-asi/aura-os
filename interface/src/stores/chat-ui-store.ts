@@ -32,10 +32,24 @@ function modelForMode(
   return loadPersistedModel(adapterType, defaultModel ?? undefined, agentId);
 }
 
+/**
+ * The image pinned above the chat input bar in 3D mode. Acts as the
+ * source image for the next 3D-step send. Owned by this store (not
+ * derived from chat history) so it persists across sends, survives
+ * snapshot rehydrates, and the input bar's X button can clear it
+ * without touching the message thread.
+ */
+export interface PinnedSourceImage {
+  imageUrl: string;
+  originalUrl?: string;
+  prompt: string;
+}
+
 interface StreamState {
   selectedMode: AgentMode;
   selectedModel: string | null;
   projectId: string | null;
+  pinnedSourceImage: PinnedSourceImage | null;
 }
 
 interface ChatUIState {
@@ -68,6 +82,9 @@ interface ChatUIActions {
    * re-derives the model when switching into / out of a mode whose
    * model list differs from the current selection (e.g. switching to
    * Image mode swaps the chat model for an image model).
+   *
+   * Switching away from `3d` clears the pinned source image so the
+   * thumb doesn't bleed across mode changes.
    */
   setSelectedMode: (
     streamKey: string,
@@ -76,6 +93,18 @@ interface ChatUIActions {
     agentId?: string,
   ) => void;
   getSelectedMode: (streamKey: string) => AgentMode;
+  /**
+   * Pin (or clear, when passed `null`) the image that the chat 3D
+   * mode will use as the source for the next 3D-step send. Set on
+   * the `GenerationCompleted` event for the in-mode image step;
+   * cleared when the 3D step completes, when the user clicks the X
+   * on the thumb, or when the user switches away from 3D mode.
+   */
+  setPinnedSourceImage: (
+    streamKey: string,
+    image: PinnedSourceImage | null,
+  ) => void;
+  getPinnedSourceImage: (streamKey: string) => PinnedSourceImage | null;
 }
 
 type ChatUIStore = ChatUIState & ChatUIActions;
@@ -85,6 +114,7 @@ const getStream = (state: ChatUIState, key: string): StreamState =>
     selectedMode: DEFAULT_AGENT_MODE,
     selectedModel: null,
     projectId: null,
+    pinnedSourceImage: null,
   };
 
 export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
@@ -182,16 +212,38 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
         const restored = loadPersistedModel(adapterType, undefined, agentId);
         nextModel = restored;
       }
+      // Switching away from 3D drops the pinned source image — the
+      // thumb only makes sense in 3D mode, and leaving it pinned
+      // would silently affect the next 3D send the user makes.
+      const nextPinned =
+        behavior.kind === "generate_3d" ? current.pinnedSourceImage : null;
       return {
         streams: {
           ...s.streams,
-          [streamKey]: { ...current, selectedMode: mode, selectedModel: nextModel },
+          [streamKey]: {
+            ...current,
+            selectedMode: mode,
+            selectedModel: nextModel,
+            pinnedSourceImage: nextPinned,
+          },
         },
       };
     });
   },
 
   getSelectedMode: (streamKey) => getStream(get(), streamKey).selectedMode,
+
+  setPinnedSourceImage: (streamKey, image) => {
+    set((s) => ({
+      streams: {
+        ...s.streams,
+        [streamKey]: { ...getStream(s, streamKey), pinnedSourceImage: image },
+      },
+    }));
+  },
+
+  getPinnedSourceImage: (streamKey) =>
+    getStream(get(), streamKey).pinnedSourceImage,
 
   syncAvailableModels: (streamKey, adapterType, defaultModel, agentId) => {
     const chatModels = availableModelsForAdapter(adapterType);
@@ -266,18 +318,24 @@ export function useChatUI(streamKey: string) {
   );
   const selectedModel = useChatUIStore((s) => s.streams[streamKey]?.selectedModel ?? null);
   const projectId = useChatUIStore((s) => s.streams[streamKey]?.projectId ?? null);
+  const pinnedSourceImage = useChatUIStore(
+    (s) => s.streams[streamKey]?.pinnedSourceImage ?? null,
+  );
   const setSelectedModel = useChatUIStore((s) => s.setSelectedModel);
   const setProjectId = useChatUIStore((s) => s.setProjectId);
   const setSelectedMode = useChatUIStore((s) => s.setSelectedMode);
+  const setPinnedSourceImage = useChatUIStore((s) => s.setPinnedSourceImage);
   const init = useChatUIStore((s) => s.init);
   const syncAvailableModels = useChatUIStore((s) => s.syncAvailableModels);
   return {
     selectedMode,
     selectedModel,
     projectId,
+    pinnedSourceImage,
     setSelectedMode,
     setSelectedModel,
     setProjectId,
+    setPinnedSourceImage,
     init,
     syncAvailableModels,
   };

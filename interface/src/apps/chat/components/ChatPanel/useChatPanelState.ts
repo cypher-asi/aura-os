@@ -20,7 +20,6 @@ import {
   toQueuedRecord,
   type LegacyOnSend,
 } from "./resolve-send";
-import { findLatestGeneratedImage } from "./latest-generated-image";
 
 export interface UseChatPanelStateOptions {
   streamKey: string;
@@ -175,12 +174,11 @@ export function useChatPanelState({
             : undefined;
       const effectiveAgentMode = overrideMode ?? selectedMode;
 
-      // Pin the source image at send-time so the request matches what
-      // the user actually saw in the input bar's "Source for 3D" thumb,
-      // even if a follow-up image generation lands before the 3D
-      // request dequeues.
-      const latestImage = findLatestGeneratedImage(messages);
-      const latestGeneratedImageUrl = latestImage?.imageUrl ?? null;
+      // Read the pinned source image straight from the chat-ui store
+      // so the request reflects exactly what the input bar's thumb
+      // shows, and ignores any image that may have landed in the
+      // chat history after the user removed the pin.
+      const pinnedSourceImageUrl = chatUI.pinnedSourceImage?.imageUrl ?? null;
 
       const resolved = resolveSend({
         mode: effectiveAgentMode,
@@ -188,7 +186,7 @@ export function useChatPanelState({
         selectedModel,
         attachments: apiAttachments,
         userCommandIds,
-        latestGeneratedImageUrl,
+        pinnedSourceImageUrl,
       });
 
       setAttachments([]);
@@ -237,9 +235,9 @@ export function useChatPanelState({
     },
     [
       buildApiAttachments,
+      chatUI.pinnedSourceImage,
       commands,
       isStreaming,
-      messages,
       onSend,
       scrollToBottom,
       selectedMode,

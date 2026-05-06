@@ -1,7 +1,6 @@
 import {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
   type ForwardRefExoticComponent,
@@ -18,6 +17,7 @@ import { PromptSuggestions } from "../PromptSuggestions/PromptSuggestions";
 import { ChatStreamingIndicator } from "./ChatStreamingIndicator";
 import { useChatPanelState } from "./useChatPanelState";
 import { findLatestGeneratedImage } from "./latest-generated-image";
+import { useChatUIStore } from "../../../../stores/chat-ui-store";
 import { useProgressText } from "../../../../hooks/stream/hooks";
 import type { ChatAttachment } from "../../../../api/streams";
 import type { Project } from "../../../../shared/types";
@@ -170,17 +170,38 @@ export function ChatPanel({
   const progressText = useProgressText(streamKey);
   const isQueued = progressText === "queued";
 
-  // Source image for chat 3D mode: the most recent successful
-  // `generate_image` tool result in the thread. Mirrors the AURA 3D
-  // app's "Image tab -> 3D tab" flow — the input bar uses this to
-  // decide whether 3D mode can dispatch and to render a small source
-  // thumbnail above the textarea. Recomputed only when the message
-  // list reference changes, which covers both new sends (snapshot
-  // replaces the array) and history reloads.
-  const latestGeneratedImage = useMemo(
-    () => findLatestGeneratedImage(messages),
-    [messages],
+  // One-shot pin seeding for chat 3D mode: the moment the user
+  // enters 3D mode, if the chat thread already contains a generated
+  // image and the per-stream pin slot is empty, auto-pin the most
+  // recent one. Preserves the historical "generate in Image mode →
+  // switch to 3D → send" power-user shortcut. After this initial
+  // seed, the pin is owned exclusively by `chat-ui-store` (cleared by
+  // the input bar's X button, the 3D-step `GenerationCompleted`
+  // handler, or `setSelectedMode` switching away from 3D).
+  const selectedMode = useChatUIStore(
+    (s) => s.streams[streamKey]?.selectedMode,
   );
+  const seededFor3DKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (selectedMode !== "3d") {
+      // Reset the latch so re-entering 3D later re-runs the seed
+      // (the pin may have since been cleared by the user / a
+      // completed 3D step / a mode switch).
+      seededFor3DKeyRef.current = null;
+      return;
+    }
+    if (seededFor3DKeyRef.current === streamKey) return;
+    seededFor3DKeyRef.current = streamKey;
+    const existing = useChatUIStore.getState().getPinnedSourceImage(streamKey);
+    if (existing) return;
+    const latest = findLatestGeneratedImage(messages);
+    if (!latest) return;
+    useChatUIStore.getState().setPinnedSourceImage(streamKey, {
+      imageUrl: latest.imageUrl,
+      originalUrl: latest.originalUrl,
+      prompt: latest.prompt ?? "",
+    });
+  }, [streamKey, messages, selectedMode]);
 
   const initialHandoffReadyRef = useRef(false);
   const inputFocusReadyRef = useRef(false);
@@ -493,7 +514,6 @@ export function ChatPanel({
           compact={compact}
           contextUsage={contextUsage}
           onNewSession={onNewSession}
-          latestGeneratedImage={latestGeneratedImage}
         />
       </div>
     </div>

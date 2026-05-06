@@ -3,8 +3,11 @@ import { api } from "../../api/client";
 import { generate3dStream, generateImageStream } from "../../api/streams";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { useProjectActions } from "../../stores/project-action-store";
+import { useChatUIStore } from "../../stores/chat-ui-store";
 import type { ChatAttachment } from "../../api/streams";
-import type { GenerationMode } from "../../constants/models";
+import { DEFAULT_IMAGE_MODEL_ID, type GenerationMode } from "../../constants/models";
+import { STYLE_LOCK_SUFFIX } from "../../constants/generation";
+import { EventType } from "../../shared/types/aura-events";
 
 import {
   useStreamCore,
@@ -110,48 +113,67 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
         }
 
         if (_generationMode === "3d") {
-          // Chat 3D mode now mirrors the standalone AURA 3D app's
-          // "Image -> 3D" pipeline: the source must be a previously-
-          // generated image in this thread, surfaced from the chat
-          // panel as `_sourceImageUrl`. The aura-router proxy only
-          // exposes URL-based image-to-3D for Tripo, and the legacy
-          // base64 / data-URL path is currently broken — see the
-          // FF block below for the disabled fallback.
-          if (_sourceImageUrl) {
-            core.setProgressText("Generating 3D model...");
-            await generate3dStream(
-              { kind: "url", imageUrl: _sourceImageUrl },
-              trimmed || null,
-              handler,
+          // Chat 3D mode is a two-step in-bar pipeline:
+          //   - no pinned source image → run the AURA-styled image
+          //     step and pin the result so the next send can
+          //     convert it to 3D;
+          //   - pinned source image → run the image-to-3D model step
+          //     against the pinned URL and clear the pin on
+          //     completion.
+          // The branch is keyed on `_sourceImageUrl`, which the
+          // panel-state layer sources from the per-stream pinned
+          // image slice in `chat-ui-store` (NOT from chat history).
+          if (!_sourceImageUrl) {
+            const styledPrompt = `${userMsg.content}${STYLE_LOCK_SUFFIX}`;
+            core.setProgressText("Generating image...");
+            await generateImageStream(
+              styledPrompt,
+              DEFAULT_IMAGE_MODEL_ID,
+              attachments,
+              {
+                ...handler,
+                onEvent(event) {
+                  handler.onEvent(event);
+                  if (
+                    event.type === EventType.GenerationCompleted &&
+                    event.content.mode === "image" &&
+                    event.content.imageUrl
+                  ) {
+                    useChatUIStore.getState().setPinnedSourceImage(core.key, {
+                      imageUrl: event.content.imageUrl,
+                      originalUrl: event.content.originalUrl,
+                      // Persist the user's verbatim prompt (without the
+                      // style suffix) so the thumb tooltip / future
+                      // refinement chips read naturally.
+                      prompt: userMsg.content,
+                    });
+                  }
+                },
+              },
               controller.signal,
-              projectId,
+              { projectId, agentInstanceId },
             );
             return;
           }
-
-          // FF: chat 3D manual-attach path is disabled while the
-          // proxy decode-and-forward route is broken. The block below
-          // is intentionally kept (commented) so flipping a flag once
-          // the route is fixed is a one-line restore.
-          //
-          // const imageAttachment = attachments?.find((a) => a.type === "image");
-          // if (imageAttachment) {
-          //   const dataUrl = `data:${imageAttachment.media_type};base64,${imageAttachment.data}`;
-          //   core.setProgressText("Generating 3D model...");
-          //   await generate3dStream(
-          //     { kind: "data", imageData: dataUrl },
-          //     trimmed || null,
-          //     handler,
-          //     controller.signal,
-          //     projectId,
-          //   );
-          //   return;
-          // }
-
-          handleStreamError(
-            refs,
-            setters,
-            "Generate an image first, then switch to 3D mode and send again.",
+          core.setProgressText("Generating 3D model...");
+          await generate3dStream(
+            { kind: "url", imageUrl: _sourceImageUrl },
+            trimmed || null,
+            {
+              ...handler,
+              onEvent(event) {
+                handler.onEvent(event);
+                if (
+                  event.type === EventType.GenerationCompleted &&
+                  event.content.mode === "3d" &&
+                  event.content.glbUrl
+                ) {
+                  useChatUIStore.getState().setPinnedSourceImage(core.key, null);
+                }
+              },
+            },
+            controller.signal,
+            projectId,
           );
           return;
         }

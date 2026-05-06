@@ -25,11 +25,10 @@
   overflow-y: hidden;
 }
 
-/* 3D-mode "Source for 3D" thumbnail rendered above the input when the
-   chat thread already has a generated image to convert. Mirrors
-   `attachmentPreviews` framing so it sits flush in the same slot, but
-   pairs the thumb with a static caption (no remove button) since the
-   source is derived from the conversation, not user-supplied. */
+/* 3D-mode source thumbnail rendered above the input when the user has
+   pinned an image to convert. Mirrors `attachmentPreviews` framing so
+   it sits flush in the same slot. The X button clears the per-stream
+   pin and drops the input bar back to the image-step state. */
 .sourceImagePreview {
   display: flex;
   align-items: center;
@@ -66,6 +65,30 @@
   color: var(--color-text-primary);
   font-weight: 500;
   letter-spacing: 0.01em;
+}
+
+.sourceImageRemove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-image-scrim);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1;
+  transition: background 0.15s ease;
+}
+
+.sourceImageRemove:hover {
+  background: var(--color-image-scrim-strong);
 }
 
 /* Phase 3 server-side `progress: queued` SSE event surfaces here as
