@@ -2,20 +2,21 @@
   {
     "date": "2026-05-05",
     "channel": "nightly",
-    "version": "0.1.0-nightly.462.1",
-    "title": "AURA 3D comes online in chat, with a sharper image experience",
-    "intro": "Today's nightly is dominated by a deep push on the AURA 3D app and the new in-chat 3D mode: a usable image-to-3D pipeline, persistent thumbnails, calmer error states, and an end-to-end image experience that finally survives reload. Alongside it, the mode selector pill was rebuilt twice on the way to a clean shared component, and theme handling now reaches all the way out to the browser tab and PWA chrome.",
+    "version": "0.1.0-nightly.463.1",
+    "title": "AURA 3D, image flows, and Settings polish",
+    "intro": "A heavy day for AURA's creative surfaces: chat 3D mode landed (and was carefully walked back to image-only), image generations now persist across reloads, the desktop wallpaper splits per theme, and the Settings panel got a wide pass for layout stability and overlay scrollbars. A late stretch hardened image upload paths through the server router and tightened the marketplace end-to-end.",
     "entryCount": 6,
     "highlights": [
-      "Chat 3D mode lands (then narrows to image-to-3D with a calmer hint)",
-      "Image-mode generations now persist into chat history across reloads",
-      "Per-theme desktop wallpapers and theme-synced browser/PWA chrome",
-      "Sliding mode-selector pill rebuilt as a reusable SlidingPills component",
-      "3D viewer captures and persists snapshot thumbnails for the sidekick"
+      "Chat 3D mode shipped via Tripo, then scoped to image-required",
+      "Image-mode generations now persist across reload",
+      "Per-theme desktop wallpapers with light/dark slots",
+      "Shared in-app Gallery for every image surface",
+      "Marketplace loading + hire flow fixed end-to-end",
+      "Settings panel stabilized with overlay scrollbars and prewarmed billing"
     ],
-    "rawCommitCount": 43,
-    "generatedAt": "2026-05-05T20:56:21.928Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.462.1",
+    "rawCommitCount": 69,
+    "generatedAt": "2026-05-06T03:20:43.979Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.463.1",
     "path": "history/2026-05-05.json"
   },
   {

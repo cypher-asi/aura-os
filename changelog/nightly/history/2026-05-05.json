@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-05T20:56:21.928Z",
+  "generatedAt": "2026-05-06T03:20:43.979Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.462.1",
+  "version": "0.1.0-nightly.463.1",
   "date": "2026-05-05",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.462.1",
-  "lastIncludedSha": "148a5cc6db79ede379fdcd0c419fcf5958b52d6a",
-  "previousProcessedSha": "634521373040a7053b7dc80be4998b33e696da8f",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.463.1",
+  "lastIncludedSha": "071a3dab9bd14e82713700b28c72637ff3cf198b",
+  "previousProcessedSha": "148a5cc6db79ede379fdcd0c419fcf5958b52d6a",
   "commitShas": [
     "25abb62ffe6132b0e0b71165b4fc0cf947b3badc",
     "32f8ad03e8ddbea27776cb4e37e8a43f158c4484",
@@ -54,10 +54,36 @@
     "5df9dea82624e676e0a08be1f83f4d355732f47e",
     "19fefbe368d6cb0517a0404443f942adf42258ee",
     "cb67da1b946bc0ecd95f84c6ab1de808d18ac5a0",
-    "148a5cc6db79ede379fdcd0c419fcf5958b52d6a"
+    "148a5cc6db79ede379fdcd0c419fcf5958b52d6a",
+    "5613b42ae90f3145bbbad0e79b8b490c0fd087ac",
+    "30a578a355ac1d1b58b6dd2fab9de0a7a30ba782",
+    "1a2d6d584385daaba84ff43875c43c7b3b0dbe06",
+    "61767d03333509482d5d31c2fc997d571ed064bb",
+    "2c119d7008149f2ed39e2b264e3ebf283da4b2fa",
+    "a742ee9303389463ebe5aa26ba98e685f2f858f3",
+    "bc28e942a39aabc9fce5c46c3e1349e25e5c096b",
+    "5c796bfa05841c9d597541bb80285909011c229e",
+    "172ebdce2f8870746e90933cf65c4ee7aee3ac75",
+    "23bcd6c30e6978e36544637ddea606ba3a420f28",
+    "a201362720285ddf0c776281f19fb1a306374cfc",
+    "dcfc92ce66fcc86ee2911b38615408396fe5b003",
+    "f0a76414563863cc61f21dbcf0b7083dbd7280a0",
+    "9701cb9c3b2ac737c4960bec7b6f13e89c933e9e",
+    "835fff7086b39a47b2b2f486976d4e344c708dcf",
+    "b44a3fecf07a9eecb9b323e5781c3ec5bbbcfaeb",
+    "291cf39d525efa9e059c1b700ec3a2c4a218e92d",
+    "fbc39495fb652661fc98e8804cb6ddd9f1acf99c",
+    "bd59d0239531fd6b699152543b80230bcaae48d9",
+    "72ad4ef62dc630ead0f8fdef6b959bfd2df623c1",
+    "962d7e44b7d65e32d70af0689c1d2901beb488a7",
+    "c871fad37d2a9ee5db73f1f404e6825d037e83f1",
+    "cbefa6b62c9c160c382a7dcac8bb5cfe6269f887",
+    "550d033c58b7eb0884fa2302749932a9461ec0a1",
+    "1522dc4df2263b1420822cd278e213d35efffc11",
+    "071a3dab9bd14e82713700b28c72637ff3cf198b"
   ],
-  "rawCommitCount": 43,
-  "filteredCommitCount": 43,
+  "rawCommitCount": 69,
+  "filteredCommitCount": 69,
   "rawCommits": [
     {
       "sha": "25abb62ffe6132b0e0b71165b4fc0cf947b3badc",
@@ -1928,6 +1954,1077 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "5613b42ae90f3145bbbad0e79b8b490c0fd087ac",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T15:37:27-07:00",
+      "subject": "fix(interface): prevent horizontal scroll in Settings modal sidebar",
+      "body": "Clip horizontal overflow on the OrgSettingsPanel left nav and ellipsize\nlong team names in the nav header so the sidebar fits the fixed 220px\ncolumn without a stray bottom scrollbar.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "148a5cc6db79ede379fdcd0c419fcf5958b52d6a"
+      ],
+      "files": [
+        "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 5,
+        "deletions": 0
+      },
+      "committedAtMs": 1778020647000,
+      "cleanSubject": "prevent horizontal scroll in Settings modal sidebar",
+      "keywords": [
+        "prevent",
+        "horizontal",
+        "scroll",
+        "settings",
+        "modal",
+        "sidebar"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "30a578a355ac1d1b58b6dd2fab9de0a7a30ba782",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T15:45:44-07:00",
+      "subject": "feat(interface): compact background modal with Color/Image type toggle",
+      "body": "Each theme section now starts with a small Color | Image toggle that\ngates the controls below, so only the relevant view renders. Removes\nthe dedicated default-reset swatch in favor of pre-selected white\n(light) / black (dark) defaults, which are also added to the preset\nswatch grid.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "5613b42ae90f3145bbbad0e79b8b490c0fd087ac"
+      ],
+      "files": [
+        "interface/src/apps/desktop/BackgroundModal/BackgroundModal.module.css",
+        "interface/src/apps/desktop/BackgroundModal/BackgroundModal.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 89,
+        "deletions": 58
+      },
+      "committedAtMs": 1778021144000,
+      "cleanSubject": "compact background modal with Color/Image type toggle",
+      "keywords": [
+        "compact",
+        "background",
+        "modal",
+        "with",
+        "color",
+        "image",
+        "type",
+        "toggle"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "1a2d6d584385daaba84ff43875c43c7b3b0dbe06",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T15:49:12-07:00",
+      "subject": "fix(interface): stabilize Settings > Updates row and align \"Last checked\" with description",
+      "body": "- Shorten the team Updates row description to \"Check and install new versions.\"\n- Move \"Last checked: / <date>\" from below the button to under the description in the left rowInfo column, sharing the rowDescription styling so the two lines align with the description text.\n- Render an equivalent \"Last checked\" dt/dd row in the App > About panel for consistency.\n- Stop the row from jerking when \"Check for updates\" is clicked: the inline checking state no longer wipes the actions slot and replaces the message with a spinner; instead the button itself shows the spinner+\"Checking...\" while the row layout stays put.\n- Expose `formatLastChecked` and add a `showLastChecked` prop on `UpdateControl` so consumers can render the timestamp themselves.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "30a578a355ac1d1b58b6dd2fab9de0a7a30ba782"
+      ],
+      "files": [
+        "interface/src/components/OrgSettingsGeneral/OrgSettingsGeneral.tsx",
+        "interface/src/components/UpdateControl/UpdateControl.tsx",
+        "interface/src/components/UpdateControl/index.ts",
+        "interface/src/views/SettingsView/AboutSection/AboutSection.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 70,
+        "deletions": 22
+      },
+      "committedAtMs": 1778021352000,
+      "cleanSubject": "stabilize Settings > Updates row and align \"Last checked\" with description",
+      "keywords": [
+        "stabilize",
+        "settings",
+        "updates",
+        "align",
+        "last",
+        "checked",
+        "with",
+        "description"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "61767d03333509482d5d31c2fc997d571ed064bb",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T15:56:17-07:00",
+      "subject": "fix(interface): polish Settings panel rewards/billing/appearance UX",
+      "body": "Cache the user invite code in a zustand+localStorage store so opening Rewards\nno longer flashes a loading state on every visit, and reset it on logout. Move\nsubscription status into the billing store and pre-warm it when the Settings\npanel opens, plus reserve layout space for the optional billing-period row, so\nnavigating into Billing (or Z Credit History) no longer jerks while the\nsubscription resolves.\n\nTighten the Rewards copy (clearer reward descriptions, \"Upgrade for more\"),\nadd an Upgrade CTA that opens the tier modal, rename the transaction row's\n\"bal:\" label to \"Balance:\", and hardcode the shareable invite link to\nhttps://aura.ai so links generated from native or local hosts still work for\nrecipients.\n\nIn the Settings sidebar, color the Logout button to match the Navigator items\ninstead of fading it out. In the Appearance section, force the Light/Dark/\nSystem theme buttons onto a single row and surface \"Custom colors\" above\n\"Theme presets\" since users hit it more often.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "1a2d6d584385daaba84ff43875c43c7b3b0dbe06"
+      ],
+      "files": [
+        "interface/src/components/OrgSettingsBilling/OrgSettingsBilling.test.tsx",
+        "interface/src/components/OrgSettingsBilling/OrgSettingsBilling.tsx",
+        "interface/src/components/OrgSettingsCreditHistory/OrgSettingsCreditHistory.tsx",
+        "interface/src/components/OrgSettingsInvites/OrgSettingsInvites.tsx",
+        "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.module.css",
+        "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.test.tsx",
+        "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.tsx",
+        "interface/src/components/OrgSettingsPanel/useOrgSettingsData.ts",
+        "interface/src/components/OrgSettingsRewards/OrgSettingsRewards.tsx",
+        "interface/src/stores/auth-store.ts",
+        "interface/src/stores/billing-store.ts",
+        "interface/src/stores/invite-code-store.ts",
+        "interface/src/views/SettingsView/AppearanceSection/AppearanceSection.module.css",
+        "interface/src/views/SettingsView/AppearanceSection/AppearanceSection.tsx"
+      ],
+      "stats": {
+        "fileCount": 14,
+        "insertions": 269,
+        "deletions": 94
+      },
+      "committedAtMs": 1778021777000,
+      "cleanSubject": "polish Settings panel rewards/billing/appearance UX",
+      "keywords": [
+        "polish",
+        "settings",
+        "panel",
+        "rewards",
+        "billing",
+        "appearance"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/stores",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "2c119d7008149f2ed39e2b264e3ebf283da4b2fa",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T16:08:37-07:00",
+      "subject": "fix(interface): add blank line between Updates description and \"Last checked\"",
+      "body": "Insert an empty `rowDescription` span (nbsp) between \"Check and install new versions.\" and \"Last checked:\" so the timestamp visually separates from the description.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "61767d03333509482d5d31c2fc997d571ed064bb"
+      ],
+      "files": [
+        "interface/src/components/OrgSettingsGeneral/OrgSettingsGeneral.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 3,
+        "deletions": 0
+      },
+      "committedAtMs": 1778022517000,
+      "cleanSubject": "add blank line between Updates description and \"Last checked\"",
+      "keywords": [
+        "blank",
+        "line",
+        "between",
+        "updates",
+        "description",
+        "last",
+        "checked"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "a742ee9303389463ebe5aa26ba98e685f2f858f3",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T16:13:41-07:00",
+      "subject": "fix(interface): clarify \"Earn More\" upgrade copy",
+      "body": "Reword the description in the team rewards Earn More row to call out that upgrading boosts the monthly Z credit allowance and the daily bonus.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "2c119d7008149f2ed39e2b264e3ebf283da4b2fa"
+      ],
+      "files": [
+        "interface/src/components/OrgSettingsRewards/OrgSettingsRewards.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1778022821000,
+      "cleanSubject": "clarify \"Earn More\" upgrade copy",
+      "keywords": [
+        "clarify",
+        "earn",
+        "more",
+        "upgrade",
+        "copy"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "bc28e942a39aabc9fce5c46c3e1349e25e5c096b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T16:19:22-07:00",
+      "subject": "feat(interface): hover-only overlay scrollbar in Settings left nav",
+      "body": "Match the chat sidebar / LeftMenu UX so the Settings nav scrolls\nindependently with a thin custom thumb that fades in on hover. Aligns\nthe shared OverlayScrollbar component to the LeftMenu design tokens\n(--color-overlay-focus / --color-scrollbar-thumb-hover) so any future\nreuse is visually consistent.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "a742ee9303389463ebe5aa26ba98e685f2f858f3"
+      ],
+      "files": [
+        "interface/src/components/OverlayScrollbar/OverlayScrollbar.module.css",
+        "interface/src/views/SettingsView/SettingsView.module.css",
+        "interface/src/views/SettingsView/SettingsView.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 42,
+        "deletions": 14
+      },
+      "committedAtMs": 1778023162000,
+      "cleanSubject": "hover-only overlay scrollbar in Settings left nav",
+      "keywords": [
+        "hover",
+        "only",
+        "overlay",
+        "scrollbar",
+        "settings",
+        "left"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "5c796bfa05841c9d597541bb80285909011c229e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T16:35:34-07:00",
+      "subject": "fix(agents): add view=slim to GET /api/agents to stop list_agents tool bloat",
+      "body": "The harness-native `list_agents` LLM tool currently calls `GET /api/agents`\nand forwards the full `Vec<Agent>` (icons, system_prompt, personality,\npermissions, ...) into the tool result. A single `Agent` JSON entry runs\n~15-50KB because of the base64 WebP icon, so even a small fleet overflows\nthe harness's 8000-char per-tool-result cap mid-record before the model\ncan read agent names past the first one or two -- producing the observed\n\"every list_agents call gets truncated before I reach the name fields\".\n\nAdd an opt-in `view=slim` query knob that returns `Vec<AgentSummary>`\nwith exactly `{agent_id, name, role}` instead. Default stays `full` so\nthe UI sidebar / AgentSelectorModal / editor keep their full payload.\nThe slim path also skips the icon shadow merge, runtime-config apply,\npermissions reconciliation, and background shadow flush since none of\nthat affects the slim shape and the tool path is hot.\n\nPin the wire shape with a unit test asserting the JSON keys are exactly\n`{agent_id, name, role}` and that none of the heavy fields can sneak\nback in. Field creep here is what re-bloats the tool result, so this\ncatches the regression cheaper than another round of harness-side\ntruncation patches.\n\nUpdate the chat-history `TOOL_BLOB_MAX_BYTES` comment and the\n`tool_dedupe` cross-agent note so the next person debugging a bloated\ncontext finds the slim view immediately. The matching aura-harness\nchange (`AuraServerAgentHook::list_agents` appending `view=slim`) ships\nin the sibling repo so the LLM sees the slim payload immediately.\n\nMade-with: Cursor\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "bc28e942a39aabc9fce5c46c3e1349e25e5c096b"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/constants.rs",
+        "apps/aura-os-server/src/handlers/agents/crud/list.rs",
+        "apps/aura-os-server/src/handlers/agents/tool_dedupe.rs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 228,
+        "deletions": 12
+      },
+      "committedAtMs": 1778024134000,
+      "cleanSubject": "add view=slim to GET /api/agents to stop list_agents tool bloat",
+      "keywords": [
+        "view",
+        "slim",
+        "agents",
+        "stop",
+        "list",
+        "tool",
+        "bloat"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "172ebdce2f8870746e90933cf65c4ee7aee3ac75",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T16:38:29-07:00",
+      "subject": "fix(interface): stop CEO first-chat from streaming twice on rapid double-send",
+      "body": "The synchronous latch in `sendMessage` for both `useAgentChatStream` and\n`useChatStream` covers the gap between invocation and the moment\n`setIsStreaming(true)` propagates through Zustand. The previous\n`getIsStreaming(core.key)` guard was racy when two calls landed in the\nsame microtask (double-click Send / Enter twice / queue-dequeue replay\nreaching the hook before the first send had returned): both reads saw\n`false`, both writes proceeded, and two parallel POSTs to the chat\nstream endpoint fired.\n\nThat race surfaced especially loudly on the very first chat with the\nCEO, where `lazy_repair_home_project_binding` makes\n`send_agent_event_stream` hold the HTTP request for several seconds\nbefore returning the SSE response — long enough that an impatient user\nre-clicks and the second click squeezes through the gap.\n\nA regression test pins the contract: a second `sendMessage` issued in\nthe same microtask while the first is mid-await must short-circuit and\nmust not produce a second user message.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "5c796bfa05841c9d597541bb80285909011c229e"
+      ],
+      "files": [
+        "interface/src/hooks/use-agent-chat-stream.test.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 60,
+        "deletions": 2
+      },
+      "committedAtMs": 1778024309000,
+      "cleanSubject": "stop CEO first-chat from streaming twice on rapid double-send",
+      "keywords": [
+        "stop",
+        "first",
+        "chat",
+        "from",
+        "streaming",
+        "twice",
+        "rapid",
+        "double",
+        "send"
+      ],
+      "fileGroups": [
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "23bcd6c30e6978e36544637ddea606ba3a420f28",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T16:41:22-07:00",
+      "subject": "chore(chat): add gated tracer for CEO chat user-message flap diagnosis",
+      "body": "Multiple users have reported a CEO-chat regression where a just-sent\nuser message visibly flickers / is briefly overwritten before settling.\nRecent commit history (`stop transcript flash on history flap mid-turn`,\n`stop CEO transcript blink`, `stop stream history blink regression`,\n`pin active history key in LRU to stop CEO chat blink`) shows this\nfamily of races has been patched piecemeal — the comments at lines\n156-166 of `use-conversation-snapshot.ts` literally describe a previous\nflavor as \"user prompt remains, all assistant content gone right when\nthe turn finishes\".\n\nBefore guessing at another merge tweak, capture the actual event\ntimeline. Add a behind-flag tracer that's strictly opt-in:\n\n  localStorage.setItem(\"aura.debug.chatMerge\", \"1\") and reload\n\nWhen enabled, the tracer logs every recompute branch in\n`combineStoredAndStreamMessages` plus every stream-store mutation in\n`useChatHistorySync` (post-stream forced refetch, two WS-triggered\nrefetches, two `resetEvents(...)` paths). The flag is read once at\nmodule load so disabled-path cost is a single boolean read; no work\nhappens on the hot render path otherwise.\n\nLining the `[aura.chatMerge]` snapshot logs up against the matching\nhistory-sync logs pinpoints which race is firing — stale post-stream\nhistory clobber, WS refetch landing inside the merge's empty-frame\nwindow, message-store thread reset, or `lastNonEmptyRef` cache miss —\nwithout speculating across two stores and three subscriptions.\n\nPhase 2 patch ships once we have a captured trace from a real repro;\neither way this tracer can stay (DEV-gated) afterwards because the\nrecurrence pattern here strongly suggests the next regression is\nalready coming.\n\nMade-with: Cursor\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "172ebdce2f8870746e90933cf65c4ee7aee3ac75"
+      ],
+      "files": [
+        "interface/src/hooks/use-chat-history-sync/use-chat-history-sync.ts",
+        "interface/src/hooks/use-conversation-snapshot.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 178,
+        "deletions": 7
+      },
+      "committedAtMs": 1778024482000,
+      "cleanSubject": "add gated tracer for CEO chat user-message flap diagnosis",
+      "keywords": [
+        "gated",
+        "tracer",
+        "chat",
+        "user",
+        "message",
+        "flap",
+        "diagnosis"
+      ],
+      "fileGroups": [
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "a201362720285ddf0c776281f19fb1a306374cfc",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T17:30:19-07:00",
+      "subject": "feat(zui): add fullWidth prop to Button and use it in BackgroundModal toggle",
+      "body": "Adds a `fullWidth` prop on `Button` that switches it to `display: flex`,\n`width: 100%`, `min-width: 0` and `flex: 1 1 0`, so a row of buttons in\na flex container shares the available horizontal space equally and the\ndefault 200px `--control-width-default` floor stops constraining narrow\nlayouts.\n\nUses the new prop on the Color | Image toggle in the desktop background\nmodal so each button takes half the row and the pair is visually\ncentered.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "23bcd6c30e6978e36544637ddea606ba3a420f28"
+      ],
+      "files": [
+        "interface/src/apps/desktop/BackgroundModal/BackgroundModal.tsx",
+        "vendor/zui/src/components/Button/Button/Button.module.css",
+        "vendor/zui/src/components/Button/Button/Button.test.tsx",
+        "vendor/zui/src/components/Button/Button/Button.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 39,
+        "deletions": 1
+      },
+      "committedAtMs": 1778027419000,
+      "cleanSubject": "add fullWidth prop to Button and use it in BackgroundModal toggle",
+      "keywords": [
+        "fullwidth",
+        "prop",
+        "button",
+        "backgroundmodal",
+        "toggle"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "vendor/zui/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "dcfc92ce66fcc86ee2911b38615408396fe5b003",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T17:37:49-07:00",
+      "subject": "feat(interface): hover-only overlay scrollbar in OrgSettingsPanel",
+      "body": "The Settings modal still showed the OS native scrollbar on both the\nleft nav and the right content area. Wrap each panel with the shared\nOverlayScrollbar component (the same pattern used by chat sidebar /\nLeftMenu) so the thumb fades in only on mouseover and disappears when\nnot needed. Native scrollbars are hidden on the inner scroll wrappers\nvia scrollbar-width:none and ::-webkit-scrollbar { display:none }.\n\nPadding moves from the outer panels to the inner scroll wrappers so\ncontent still has the same insets while the overlay thumb sits flush\nagainst the panel edge.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "a201362720285ddf0c776281f19fb1a306374cfc"
+      ],
+      "files": [
+        "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.module.css",
+        "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 77,
+        "deletions": 37
+      },
+      "committedAtMs": 1778027869000,
+      "cleanSubject": "hover-only overlay scrollbar in OrgSettingsPanel",
+      "keywords": [
+        "hover",
+        "only",
+        "overlay",
+        "scrollbar",
+        "orgsettingspanel"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f0a76414563863cc61f21dbcf0b7083dbd7280a0",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T17:37:55-07:00",
+      "subject": "fix(zui): strengthen Button .fullWidth specificity to override base min-width",
+      "body": "Uses the compound selector `.button.fullWidth` (specificity 0,2,0)\ninstead of `.fullWidth` (0,1,0) so the rule reliably beats the base\n`.button` `min-width: var(--control-width-default)` regardless of\nsource-order assumptions or downstream override rules. Also makes\n`flex-basis` explicit (`0%`) for older browsers that mishandle the\nunitless `0` form.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "dcfc92ce66fcc86ee2911b38615408396fe5b003"
+      ],
+      "files": [
+        "vendor/zui/src/components/Button/Button/Button.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 2,
+        "deletions": 2
+      },
+      "committedAtMs": 1778027875000,
+      "cleanSubject": "strengthen Button .fullWidth specificity to override base min-width",
+      "keywords": [
+        "strengthen",
+        "button",
+        "fullwidth",
+        "specificity",
+        "override",
+        "base",
+        "width"
+      ],
+      "fileGroups": [
+        "vendor/zui/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "9701cb9c3b2ac737c4960bec7b6f13e89c933e9e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T17:38:39-07:00",
+      "subject": "fix(marketplace): unblock loading and surface hireable agents end-to-end",
+      "body": "The Marketplace app was stuck on \"Loading marketplace...\" and, once\nunstuck, returned an empty list even after the user marked their own\nagents hireable. Two compounding bugs:\n\n1. Front-end refresh dedupe collided with the initial spinner flag.\n   `useMarketplaceStore` started with `loading: true` to avoid an\n   empty-state flash, but `refresh()` short-circuited whenever\n   `loading` was true, so the very first call from\n   `MarketplaceMainPanel` no-oped and the API was never hit. Decouple\n   dedupe from the spinner: track an `inflight: Promise | null` field\n   and dedupe on it; keep `loading: true` purely as the UI flag.\n\n2. Back-end only queried the cross-user marketplace view. The handler\n   called the new `GET /api/agents?listing_status=hireable&...` (per\n   the Phase 3 migration doc), but if aura-network excludes the\n   caller's own listings from that view, the user can never see the\n   agents they just marked hireable. Union three sources by\n   `agent_id`: marketplace > caller-scoped `client.list_agents` >\n   local shadows. Marketplace wins on duplicates so its\n   server-computed stats stay authoritative.\n\nAlso:\n\n- Add `serde(alias = \"listing_status\")` and `alias = \"revenue_usd\"`\n  to `NetworkAgent` so snake_case responses don't silently decode to\n  `None` and get dropped by the hireable filter. The struct uses\n  `rename_all = \"camelCase\"`, but the migration doc example and some\n  upstream emitters use snake_case.\n- Add `tracing::info!` source counts in `load_hireable_agents` and\n  `tracing::debug!` the marketplace URL so we can tell which source\n  surfaced a row when debugging future empty-marketplace reports.\n- Tests: vitest 16/16 green; new dedup-by-id and distinct-id unit\n  tests for the union helper; existing marketplace handler and\n  network unit tests still green.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "f0a76414563863cc61f21dbcf0b7083dbd7280a0"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/marketplace.rs",
+        "crates/aura-os-network/src/client/agents.rs",
+        "crates/aura-os-network/src/client/mod.rs",
+        "crates/aura-os-network/src/lib.rs",
+        "crates/aura-os-network/src/types/agent.rs",
+        "interface/src/apps/marketplace/stores/marketplace-store.test.ts",
+        "interface/src/apps/marketplace/stores/marketplace-store.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 304,
+        "deletions": 37
+      },
+      "committedAtMs": 1778027919000,
+      "cleanSubject": "unblock loading and surface hireable agents end-to-end",
+      "keywords": [
+        "unblock",
+        "loading",
+        "surface",
+        "hireable",
+        "agents"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-network/src",
+        "interface/src/apps"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "835fff7086b39a47b2b2f486976d4e344c708dcf",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T18:03:20-07:00",
+      "subject": "refactor(zui): drop Button width baseline so it sizes to content or fullWidth",
+      "body": "Removes `min-width: var(--control-width-default)` from the base\n`.button` rule. Buttons no longer carry a 200px floor; they size to\ntheir content by default and can opt into filling via the existing\n`fullWidth` prop. The token stays in `tokens.css` for `Input`, and\nthe design guide is updated to reflect the new, input-only role.\n\nApplies `fullWidth` to the Light / Dark / System theme buttons in the\nAppearance settings row so they share the row equally now that the\nimplicit floor is gone, mirroring the desktop background modal toggle.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "9701cb9c3b2ac737c4960bec7b6f13e89c933e9e"
+      ],
+      "files": [
+        "interface/src/views/SettingsView/AppearanceSection/AppearanceSection.tsx",
+        "vendor/zui/docs/DESIGN_GUIDE.md",
+        "vendor/zui/src/components/Button/Button/Button.module.css"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 2,
+        "deletions": 2
+      },
+      "committedAtMs": 1778029400000,
+      "cleanSubject": "drop Button width baseline so it sizes to content or fullWidth",
+      "keywords": [
+        "drop",
+        "button",
+        "width",
+        "baseline",
+        "sizes",
+        "content",
+        "fullwidth"
+      ],
+      "fileGroups": [
+        "interface/src/views",
+        "vendor/zui/docs",
+        "vendor/zui/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "b44a3fecf07a9eecb9b323e5781c3ec5bbbcfaeb",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T18:33:37-07:00",
+      "subject": "fix(server): raise body limit on attachment-bearing routes",
+      "body": "Image-mode generation (and the chat / 3D streams that share the same\ninlined-base64 attachment shape) ride Axum 0.7's default 2 MiB body\ncap. Pasting a normal screenshot inflates past that almost immediately,\nthe connection closes mid-upload, and the browser surfaces it as\n`TypeError: Failed to fetch` instead of a parsable 413.\n\nAdd a shared 16 MiB ATTACHMENT_REQUEST_MAX_BYTES (covers the chat\ninput bar's 10 MB total cap with base64 + JSON overhead) and apply it\nper-route to:\n- POST /api/generate/image/stream\n- POST /api/generate/3d/stream\n- POST /api/agents/:agent_id/events/stream\n- POST /api/projects/:project_id/agents/:agent_instance_id/events/stream\n\nOther routes keep the tighter default.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "835fff7086b39a47b2b2f486976d4e344c708dcf"
+      ],
+      "files": [
+        "apps/aura-os-server/src/router/agents.rs",
+        "apps/aura-os-server/src/router/mod.rs",
+        "apps/aura-os-server/src/router/process_generation.rs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 34,
+        "deletions": 4
+      },
+      "committedAtMs": 1778031217000,
+      "cleanSubject": "raise body limit on attachment-bearing routes",
+      "keywords": [
+        "raise",
+        "body",
+        "limit",
+        "attachment",
+        "bearing",
+        "routes"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "291cf39d525efa9e059c1b700ec3a2c4a218e92d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T18:46:04-07:00",
+      "subject": "fix(left-menu): hide FolderSection parent chevrons until hover",
+      "body": "Bring Feedback (and other FolderSection consumers - Marketplace,\nIntegrations) in line with the project-tree pattern in LeftMenuTree:\nparent chevrons are right-aligned, hidden by default, and fade in on\nrow hover/focus instead of being permanently visible.\n\nMatch LeftMenuTree's .projectChevronWrap exactly (color, opacity,\ntransition) so all left-menu parents share the same chevron behavior.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "b44a3fecf07a9eecb9b323e5781c3ec5bbbcfaeb"
+      ],
+      "files": [
+        "interface/src/components/FolderSection/FolderSection.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 8,
+        "deletions": 3
+      },
+      "committedAtMs": 1778031964000,
+      "cleanSubject": "hide FolderSection parent chevrons until hover",
+      "keywords": [
+        "hide",
+        "foldersection",
+        "parent",
+        "chevrons",
+        "until",
+        "hover"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "fbc39495fb652661fc98e8804cb6ddd9f1acf99c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T18:50:16-07:00",
+      "subject": "refactor(chat): render attached images as a strip above the bubble",
+      "body": "User-pasted images now render in their own thumbnail strip above the\ndark text bubble (sibling of `.bubble`, inside `.message`) instead of\nsharing the bubble with the message text. Image-only messages skip\nthe bubble entirely so the strip stands alone.\n\nSplits `contentBlocks` into image vs non-image groups while preserving\noriginal indices so gallery `initialId` lookups stay 1:1. Resizes\n`.messageImageWrapper` from a 480px-wide 16:9 panel to a 96px (104px\non mobile) square thumbnail with `object-fit: cover`, matching the\ntarget preview row layout.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "291cf39d525efa9e059c1b700ec3a2c4a218e92d"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/MessageBubble/MessageBubble.module.css",
+        "interface/src/apps/chat/components/MessageBubble/MessageBubble.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 124,
+        "deletions": 73
+      },
+      "committedAtMs": 1778032216000,
+      "cleanSubject": "render attached images as a strip above the bubble",
+      "keywords": [
+        "render",
+        "attached",
+        "images",
+        "strip",
+        "above",
+        "bubble"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "bd59d0239531fd6b699152543b80230bcaae48d9",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T18:51:18-07:00",
+      "subject": "fix(chat): retry live history refresh after delivery",
+      "body": "Add a settled follow-up refetch for matched chat delivery events so target agent panels recover when the immediate history read races storage visibility.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "fbc39495fb652661fc98e8804cb6ddd9f1acf99c"
+      ],
+      "files": [
+        "interface/src/hooks/use-chat-history-sync/use-chat-history-sync.test.ts",
+        "interface/src/hooks/use-chat-history-sync/use-chat-history-sync.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 65,
+        "deletions": 4
+      },
+      "committedAtMs": 1778032278000,
+      "cleanSubject": "retry live history refresh after delivery",
+      "keywords": [
+        "retry",
+        "live",
+        "history",
+        "refresh",
+        "after",
+        "delivery"
+      ],
+      "fileGroups": [
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "72ad4ef62dc630ead0f8fdef6b959bfd2df623c1",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T18:53:38-07:00",
+      "subject": "fix(server): stream image generation through router",
+      "body": "Route image-mode SSE directly to the router so startup failures surface promptly, and avoid persisting inline base64 reference images that exceed storage limits.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "bd59d0239531fd6b699152543b80230bcaae48d9"
+      ],
+      "files": [
+        "Cargo.lock",
+        "apps/aura-os-server/Cargo.toml",
+        "apps/aura-os-server/src/handlers/generation/image.rs",
+        "apps/aura-os-server/src/handlers/generation/persist.rs"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 379,
+        "deletions": 75
+      },
+      "committedAtMs": 1778032418000,
+      "cleanSubject": "stream image generation through router",
+      "keywords": [
+        "stream",
+        "image",
+        "generation",
+        "through",
+        "router"
+      ],
+      "fileGroups": [
+        "Cargo.lock",
+        "apps/aura-os-server/Cargo.toml",
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "962d7e44b7d65e32d70af0689c1d2901beb488a7",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T19:05:01-07:00",
+      "subject": "fix(server): avoid direct image router upload",
+      "body": "Restore image-mode streaming through the harness so large inline image inputs do not hit the router HTTP body buffer introduced by the previous change.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "72ad4ef62dc630ead0f8fdef6b959bfd2df623c1"
+      ],
+      "files": [
+        "Cargo.lock",
+        "apps/aura-os-server/Cargo.toml",
+        "apps/aura-os-server/src/handlers/generation/image.rs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 23,
+        "deletions": 362
+      },
+      "committedAtMs": 1778033101000,
+      "cleanSubject": "avoid direct image router upload",
+      "keywords": [
+        "avoid",
+        "direct",
+        "image",
+        "router",
+        "upload"
+      ],
+      "fileGroups": [
+        "Cargo.lock",
+        "apps/aura-os-server/Cargo.toml",
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "c871fad37d2a9ee5db73f1f404e6825d037e83f1",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T19:47:20-07:00",
+      "subject": "fix(image): keep pasted image generation responsive",
+      "body": "Stream image mode directly from the router, compress pasted image inputs before upload, and persist storage-safe references so history refreshes keep the thumbnail visible.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "962d7e44b7d65e32d70af0689c1d2901beb488a7"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/generation/image.rs",
+        "apps/aura-os-server/src/handlers/generation/persist.rs",
+        "interface/src/apps/chat/components/ChatInputBar/useFileAttachments.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 425,
+        "deletions": 35
+      },
+      "committedAtMs": 1778035640000,
+      "cleanSubject": "keep pasted image generation responsive",
+      "keywords": [
+        "keep",
+        "pasted",
+        "image",
+        "generation",
+        "responsive"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/apps"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "cbefa6b62c9c160c382a7dcac8bb5cfe6269f887",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T19:49:34-07:00",
+      "subject": "fix(marketplace): polish talent card layout",
+      "body": "Make marketplace cards show taller cover art and avoid repeating role text when the description duplicates it.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "c871fad37d2a9ee5db73f1f404e6825d037e83f1"
+      ],
+      "files": [
+        "interface/src/apps/marketplace/AgentTalentCard/AgentTalentCard.module.css",
+        "interface/src/apps/marketplace/AgentTalentCard/AgentTalentCard.test.tsx",
+        "interface/src/apps/marketplace/AgentTalentCard/AgentTalentCard.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 34,
+        "deletions": 5
+      },
+      "committedAtMs": 1778035774000,
+      "cleanSubject": "polish talent card layout",
+      "keywords": [
+        "polish",
+        "talent",
+        "card",
+        "layout"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "550d033c58b7eb0884fa2302749932a9461ec0a1",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T19:56:51-07:00",
+      "subject": "fix(marketplace): attach hired agents and show task counts",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "cbefa6b62c9c160c382a7dcac8bb5cfe6269f887"
+      ],
+      "files": [
+        "apps/aura-os-server/src/dto.rs",
+        "apps/aura-os-server/src/handlers/agents/instances/mod.rs",
+        "apps/aura-os-server/src/handlers/marketplace.rs",
+        "interface/src/api/marketplace.test.ts",
+        "interface/src/apps/marketplace/AgentTalentCard/AgentTalentCard.test.tsx",
+        "interface/src/apps/marketplace/AgentTalentCard/AgentTalentCard.tsx",
+        "interface/src/apps/marketplace/HireProjectPickerModal/HireProjectPickerModal.tsx",
+        "interface/src/apps/marketplace/marketplace-types.ts",
+        "interface/src/apps/marketplace/stores/marketplace-store.test.ts",
+        "interface/src/apps/marketplace/stores/marketplace-store.ts",
+        "interface/src/stores/projects-list-store.test.ts",
+        "interface/src/stores/projects-list-store.ts"
+      ],
+      "stats": {
+        "fileCount": 12,
+        "insertions": 191,
+        "deletions": 35
+      },
+      "committedAtMs": 1778036211000,
+      "cleanSubject": "attach hired agents and show task counts",
+      "keywords": [
+        "attach",
+        "hired",
+        "agents",
+        "show",
+        "task",
+        "counts"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/api",
+        "interface/src/apps",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "1522dc4df2263b1420822cd278e213d35efffc11",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T20:06:30-07:00",
+      "subject": "fix(interface): scope zui postinstall to vendor workspace",
+      "body": "Adding --workspaces=false --include-workspace-root prevents the parent\nworkspace install from recursing back into the interface package.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "550d033c58b7eb0884fa2302749932a9461ec0a1"
+      ],
+      "files": [
+        "interface/package.json"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1778036790000,
+      "cleanSubject": "scope zui postinstall to vendor workspace",
+      "keywords": [
+        "scope",
+        "postinstall",
+        "vendor",
+        "workspace"
+      ],
+      "fileGroups": [
+        "interface/package.json"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "071a3dab9bd14e82713700b28c72637ff3cf198b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-05T20:06:35-07:00",
+      "subject": "fix(feedback): float header above scroll area",
+      "body": "Make the feed header absolutely positioned so it overlays the scroll\narea, and pad the scroll area top by the header height so content\nisn't hidden behind it.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "1522dc4df2263b1420822cd278e213d35efffc11"
+      ],
+      "files": [
+        "interface/src/apps/feedback/FeedbackMainPanel/FeedbackMainPanel.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 14,
+        "deletions": 3
+      },
+      "committedAtMs": 1778036795000,
+      "cleanSubject": "float header above scroll area",
+      "keywords": [
+        "float",
+        "header",
+        "above",
+        "scroll",
+        "area"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 6,
@@ -1939,36 +3036,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11809282
+          "sizeBytes": 11813789
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.462.1",
+      "version": "0.1.0-nightly.463.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.462.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.463.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 36674166
+          "sizeBytes": 36729186
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.462.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.463.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.462.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.463.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 103787000
+          "sizeBytes": 103852536
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.462.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.463.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -1978,29 +3075,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.462.1",
+      "version": "0.1.0-nightly.463.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.462.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.463.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33792510
+          "sizeBytes": 33815076
         },
         {
-          "name": "AURA_0.1.0-nightly.462.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.463.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.462.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.463.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 32919539
+          "sizeBytes": 32950210
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.462.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.463.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -2010,29 +3107,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.462.1",
+      "version": "0.1.0-nightly.463.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.462.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.463.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 35397304
+          "sizeBytes": 35440965
         },
         {
-          "name": "AURA_0.1.0-nightly.462.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.463.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.462.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.463.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 34563340
+          "sizeBytes": 34616981
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.462.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.463.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -2042,17 +3139,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.462.1",
+      "version": "0.1.0-nightly.463.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.462.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.463.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24726431
+          "sizeBytes": 24755450
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.462.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.463.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -2061,26 +3158,26 @@
     }
   ],
   "rendered": {
-    "title": "AURA 3D comes online in chat, with a sharper image experience",
-    "intro": "Today's nightly is dominated by a deep push on the AURA 3D app and the new in-chat 3D mode: a usable image-to-3D pipeline, persistent thumbnails, calmer error states, and an end-to-end image experience that finally survives reload. Alongside it, the mode selector pill was rebuilt twice on the way to a clean shared component, and theme handling now reaches all the way out to the browser tab and PWA chrome.",
+    "title": "AURA 3D, image flows, and Settings polish",
+    "intro": "A heavy day for AURA's creative surfaces: chat 3D mode landed (and was carefully walked back to image-only), image generations now persist across reloads, the desktop wallpaper splits per theme, and the Settings panel got a wide pass for layout stability and overlay scrollbars. A late stretch hardened image upload paths through the server router and tightened the marketplace end-to-end.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "3:33 AM",
         "started_at": "2026-05-05T10:33:36.000Z",
         "ended_at": "2026-05-05T11:47:45.000Z",
-        "title": "More accurate DAU and checkout-intent analytics",
-        "summary": "Tightened the analytics surface so daily active users and paywall funnels reflect what's actually happening.",
+        "title": "More accurate Mixpanel signals for DAU and checkout",
+        "summary": "Analytics events were realigned so DAU and purchase funnels reflect actual user behavior.",
         "items": [
           {
-            "text": "Added a session_active event in the AppShell so DAU tracking is grounded in real session activity rather than incidental page loads.",
+            "text": "Added a session_active event from AppShell for accurate daily-active-user tracking.",
             "commit_shas": [
               "25abb62ffe6132b0e0b71165b4fc0cf947b3badc"
             ],
             "confidence": "high"
           },
           {
-            "text": "Renamed purchase and subscription events in the Buy Credits and Tier Subscription modals so they read as checkout intent rather than completed transactions.",
+            "text": "Renamed purchase and subscription events in the Buy Credits and Tier modals to reflect checkout intent rather than completion, so funnel analytics no longer overcount conversions.",
             "commit_shas": [
               "32f8ad03e8ddbea27776cb4e37e8a43f158c4484"
             ],
@@ -2092,75 +3189,61 @@
         "batch_id": "entry-2",
         "time_label": "9:08 AM",
         "started_at": "2026-05-05T16:08:04.000Z",
-        "ended_at": "2026-05-05T17:00:34.000Z",
-        "title": "Mode selector pill restored and rebuilt to actually slide",
-        "summary": "Reverted a chrome-trimming sweep that had quietly regressed the shell, then iterated the mode pill until its slide animation was smooth and reliable.",
+        "ended_at": "2026-05-05T23:19:22.000Z",
+        "title": "AURA 3D viewer overhaul and chat 3D mode lifecycle",
+        "summary": "A long arc that restored the polished shell chrome, rebuilt the mode-selector pill animation, brought chat 3D mode online via Tripo, then walked it back to image-required after upstream limits surfaced — alongside a shared Gallery, per-theme desktop wallpapers, and Settings polish.",
         "items": [
           {
-            "text": "Rolled back an earlier interface trim to bring back the animated mode-selector indicator, the bespoke desktop titlebar with compact UpdatePill, the shared right-click menu on the taskbar, the inline CommandChips slot, and 125 lines of context-menu test coverage.",
+            "text": "Reverted a regressing UI trim and restored the desktop titlebar's compact UpdatePill, the BottomTaskbar right-click menu, the inline CommandChips slot, and the AgentEditorForm Name/Role row.",
             "commit_shas": [
               "4fd0e5ee80d88002c8eb154b6320fe9a58e6aad6"
             ],
             "confidence": "high"
           },
           {
-            "text": "Worked through several iterations on the sliding pill — re-porting the per-mode tint, switching to a CSS-variable-driven slide, fixing translateX reference bugs, and finally emitting a literal transform per render — so the indicator reliably animates between Code, Plan, Image, and 3D instead of snapping.",
+            "text": "Rebuilt the mode-selector indicator from the ground up — first as a CSS-variable slide, then with literal per-render transforms after Chromium collapsed the variable updates — and finally extracted a generic SlidingPills primitive (radiogroup, keyboard nav, variable-width segments) that ModeSelector composes on top.",
             "commit_shas": [
               "634521373040a7053b7dc80be4998b33e696da8f",
+              "8fa4a8a748f1efd2ce0945bae5f50f3ce28b1daf",
               "af9baf722d14ee275063e332e0dd45dabfe779dc",
               "c10d3213ad3bac2cdf0ae73bea603bb6653855bd",
-              "93e858df223334624b7546a1ff54cd468d994b44"
+              "93e858df223334624b7546a1ff54cd468d994b44",
+              "e86a27fe1ea9c56bd5c65a259a235974ed6361d9",
+              "eeaddb7127fc71829291c897521ae99ab8cbe011"
             ],
             "confidence": "high"
           },
           {
-            "text": "Settled on a single accent color for the active mode pill instead of per-mode hues, for a more consistent look across modes.",
-            "commit_shas": [
-              "8fa4a8a748f1efd2ce0945bae5f50f3ce28b1daf"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Redesigned the agent info Chats tab as a flat, ChatGPT-style date-bucketed list (Today / Yesterday / Previous 7 Days…) with auto-summarized titles that populate as soon as a session has its first exchange.",
-            "commit_shas": [
-              "b55579d3d8fd913c40f6183448b16d2bd1094d28"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Darkened the light-mode process canvas dot grid so it's actually visible against the near-white background.",
-            "commit_shas": [
-              "f96d5c35f63a1fd6d49fb8dd1b3862c9841ed182"
-            ],
-            "confidence": "high"
-          }
-        ]
-      },
-      {
-        "batch_id": "entry-3",
-        "time_label": "10:01 AM",
-        "started_at": "2026-05-05T17:01:19.000Z",
-        "ended_at": "2026-05-05T17:52:09.000Z",
-        "title": "AURA 3D viewer overhaul and chat 3D mode wiring",
-        "summary": "A major pass on the 3D app fixed long-standing viewer glitches, brought 3D generation into chat, and unified image viewing across the product.",
-        "items": [
-          {
-            "text": "Fixed eight stacked AURA 3D issues at once: the WebGL viewer no longer flashes blank when resizing, scene background and grid are theme-aware, the Image→3D flow stops auto-promoting old models, right-click delete now works on both image and 3D thumbnails, and main-panel previews are no longer capped at 360px.",
-            "commit_shas": [
-              "31a743c27df0c87c4ed0a05a2760d2c935951142"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Wired chat's 3D mode straight to Tripo for both standalone and project-scoped agent chats, sending pasted/uploaded images as data URLs instead of falling through to the LLM.",
+            "text": "Overhauled the AURA 3D app: theme-aware viewer chrome, coalesced ResizeObserver renders to stop blank frames on resize, full-bleed viewer with floating bottom-right toggles, larger main-panel images, right-click delete with confirm, pending thumbnails during generation, and captured PNG snapshots persisted as sidekick thumbnails via a new /api/artifacts/:id/thumbnail endpoint.",
             "commit_shas": [
               "31a743c27df0c87c4ed0a05a2760d2c935951142",
-              "a39cfb2cb529a8995cd9d201e8224ed732b0674b"
+              "a3e6206aaa7909706ebcd444b23e978773cad7e6",
+              "d2f348a1d520237898a4d004c02c2aabd19df549",
+              "36903518d1ae069f3845da152d9cbcfde263faee",
+              "2505150143b7e8d7c87645fb34c00e4a6be8ed93",
+              "94b76d293faf6bd179444782224f28dd387fa4a5",
+              "3514966e3d874fb4afb5f533f9df183ef7d3ef44",
+              "cafe3915a1a38f5b62f597ecf0d8b62759592296",
+              "12adeef6557f01709a9b1110dfa3ae7f66ee17df",
+              "695e1e8655f73de6e7b73ef431bbd44e253f16b5",
+              "148a5cc6db79ede379fdcd0c419fcf5958b52d6a"
             ],
             "confidence": "high"
           },
           {
-            "text": "Introduced a single shared Gallery overlay used by chat attachments, generated images, and the 3D sidekick, plus a useImageScrollPin hook that re-anchors the chat to the latest message as new images decode.",
+            "text": "Brought chat 3D mode online by routing 3D sends through Tripo with pasted image data URLs in both standalone and project chats, briefly opened a text-to-3D path, then reverted to image-required when aura-router's upstream stayed image-only — replacing the hard error with an inline 'Add an image to generate.' hint and ultimately hiding 3D from the mode selector for now.",
+            "commit_shas": [
+              "a39cfb2cb529a8995cd9d201e8224ed732b0674b",
+              "83f8acbb86fdcbdb5d64e2c934dbf5b470e95596",
+              "165bd660c9d4fc609f52e9a451757e1a4a75a9d4",
+              "8613b09691b3b2157107384f7758f4c1ca3a5114",
+              "cdd9c4e49d02f4a2bb1844c8733e6d6b3cf8b3d9",
+              "534c7c42b2087530bde61a060c52b13025b9cc8b"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Shipped a single shared in-app Gallery overlay (prev/next, ESC, download) used by chat attachments, generated ImageBlock results, and 3D sidekick thumbs, plus a useImageScrollPin hook that re-pins the chat to the bottom while images decode mid-generation.",
             "commit_shas": [
               "f180965b2fc6ffc6128a2f0ebbb596a6104c2d3a",
               "9d2333803781726592628f5cf87c508237121668"
@@ -2168,65 +3251,136 @@
             "confidence": "high"
           },
           {
-            "text": "Synced the browser tab thumbnail and PWA manifest to AURA's in-app ZUI theme via a new BrowserChromeThemeBridge and a sibling light-mode manifest, so OS-dark / app-light no longer leaves a dark Chrome tab.",
+            "text": "Image-mode generations now persist into chat history: the request carries chat scope and the server writes a user_message + assistant_message_end pair so generated images survive a hard reload through the existing ImageBlock path.",
             "commit_shas": [
-              "0fe61f917bc54c0e5426983ed3717dc08d3e6933"
+              "9a9d18e89d8f4ee36c91e24bb9ca4898501ba7d6"
             ],
             "confidence": "high"
           },
           {
-            "text": "Replaced the 3D tab's bare Generate button with the same prompt input shell used by the Image tab so previews stop resizing when switching tabs, and made a single click on a sidekick image just re-select it instead of opening the gallery.",
+            "text": "Hardened theme handling: browser tab and PWA chrome now sync to the in-app ZUI theme via a BrowserChromeThemeBridge and a sibling light manifest, the in-app Browser tab strip stops painting black in light mode, and the ReactFlow canvas dot grid is visible against the light background.",
             "commit_shas": [
-              "a3e6206aaa7909706ebcd444b23e978773cad7e6",
-              "d2f348a1d520237898a4d004c02c2aabd19df549"
-            ],
-            "confidence": "high"
-          }
-        ]
-      },
-      {
-        "batch_id": "entry-4",
-        "time_label": "10:58 AM",
-        "started_at": "2026-05-05T17:58:55.000Z",
-        "ended_at": "2026-05-05T18:16:03.000Z",
-        "title": "SlidingPills component, per-theme wallpapers, and theme leak fixes",
-        "summary": "Extracted the segmented-pill into a reusable component, added per-theme desktop backgrounds, and closed several theme-token leaks that left light mode dark.",
-        "items": [
-          {
-            "text": "Extracted the segmented control into a generic SlidingPills component (controlled, role=radiogroup, keyboard-navigable, variable-width segments) and rebuilt ModeSelector as a thin wrapper on top.",
-            "commit_shas": [
-              "eeaddb7127fc71829291c897521ae99ab8cbe011"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "The desktop background store now holds independent Light Mode and Dark Mode slots, and the right-click Set Background modal exposes both side-by-side; legacy single-config users are migrated by copying their existing wallpaper into both slots.",
-            "commit_shas": [
-              "7986e096f046c472723fe009a5be718cba20e63d",
-              "aac2256deb46760a10cf619790f2b57f5924a5e6"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Briefly opened a text-to-3D path in chat, then refactored the source argument into an explicit discriminated union covering url / data / none variants.",
-            "commit_shas": [
-              "83f8acbb86fdcbdb5d64e2c934dbf5b470e95596",
-              "165bd660c9d4fc609f52e9a451757e1a4a75a9d4"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Finished wiring the BrowserChromeThemeBridge into index.html and main.tsx, and added theme-aware aliases for --color-bg-subtle / -bg-elevated / -border-strong so the in-app Browser tab strip and other surfaces stop painting black slabs in light mode.",
-            "commit_shas": [
+              "f96d5c35f63a1fd6d49fb8dd1b3862c9841ed182",
+              "0fe61f917bc54c0e5426983ed3717dc08d3e6933",
               "5d8b7709adfde0abf0cdbf96d4a88b66f729b298",
               "1e6a6ecf3c56281075fc7f1e10bb4bfe30d52af7"
             ],
             "confidence": "high"
           },
           {
-            "text": "Floated the AURA 3D viewer's Grid / Wireframe / Texture toggles into a translucent bottom-right overlay and made the viewer full-bleed below the tab bar.",
+            "text": "Added per-theme desktop wallpapers — the background store now holds separate light/dark slots and the modal exposes a Color/Image toggle with sensible white/black defaults; legacy single-config users are migrated into both slots.",
             "commit_shas": [
-              "36903518d1ae069f3845da152d9cbcfde263faee"
+              "7986e096f046c472723fe009a5be718cba20e63d",
+              "aac2256deb46760a10cf619790f2b57f5924a5e6",
+              "30a578a355ac1d1b58b6dd2fab9de0a7a30ba782"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Redesigned the agent info Chats tab as a flat, ChatGPT-style date-bucketed list (Today / Yesterday / Previous 7 Days / ...) with Haiku-summarized titles populated as soon as a session has its first turn.",
+            "commit_shas": [
+              "b55579d3d8fd913c40f6183448b16d2bd1094d28"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Settings panel polish: stabilized the Updates row layout so 'Check for updates' no longer jerks, aligned 'Last checked' under the description, added a hover-only overlay scrollbar to the left nav, prewarmed billing subscription state and cached the invite code so Rewards/Billing stop flashing loading on every open, and forced Light/Dark/System onto a single row.",
+            "commit_shas": [
+              "5613b42ae90f3145bbbad0e79b8b490c0fd087ac",
+              "1a2d6d584385daaba84ff43875c43c7b3b0dbe06",
+              "61767d03333509482d5d31c2fc997d571ed064bb",
+              "2c119d7008149f2ed39e2b264e3ebf283da4b2fa",
+              "a742ee9303389463ebe5aa26ba98e685f2f858f3",
+              "bc28e942a39aabc9fce5c46c3e1349e25e5c096b"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Server reliability for large attachments: raised the SSE body cap to 25 MiB for image/3D streams, added an 8 MiB cap on inline 3D data URLs with a clear 413, then reverted the 25 MiB bump after follow-up routing changes; chat-persist precedence (424) was kept ahead of the Tier-1 preflight so send_to_agent consumers see the contract-stable error.",
+            "commit_shas": [
+              "2a201a15da34b56f925a3d739e53b1f129d304cc",
+              "35f25626965de64eca02e4b1be60da22746491b9",
+              "02c0b019fb6c891784b734a93882d70984d3e740",
+              "cb67da1b946bc0ecd95f84c6ab1de808d18ac5a0"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "4:35 PM",
+        "started_at": "2026-05-05T23:35:34.000Z",
+        "ended_at": "2026-05-05T23:41:22.000Z",
+        "title": "list_agents tool slimming and CEO double-send fix",
+        "summary": "Backend and chat-stream fixes targeting two specific user-visible failure modes — truncated agent listings inside the LLM tool path, and a duplicated first message on the CEO chat.",
+        "items": [
+          {
+            "text": "Added an opt-in view=slim parameter to GET /api/agents that returns just {agent_id, name, role}, so the harness-native list_agents tool no longer overflows its 8000-char per-result cap on icon-heavy agent fleets.",
+            "commit_shas": [
+              "5c796bfa05841c9d597541bb80285909011c229e"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Fixed a race where rapid double-sends on the very first CEO chat could fire two parallel POSTs to the chat stream endpoint; sendMessage now uses a synchronous latch so the second invocation in the same microtask short-circuits.",
+            "commit_shas": [
+              "172ebdce2f8870746e90933cf65c4ee7aee3ac75"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added a behind-flag chat-merge tracer (localStorage aura.debug.chatMerge=1) to capture the event timeline behind reported CEO-chat user-message flap reports without speculating across stores.",
+            "commit_shas": [
+              "23bcd6c30e6978e36544637ddea606ba3a420f28"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-4",
+        "time_label": "5:30 PM",
+        "started_at": "2026-05-06T00:30:19.000Z",
+        "ended_at": "2026-05-06T01:50:16.000Z",
+        "title": "Marketplace unblocked and ZUI Button width rework",
+        "summary": "The Marketplace finally surfaces hireable agents end-to-end, ZUI buttons stop carrying an implicit 200px floor, and the Settings modal gains overlay scrollbars and an attached-image strip in chat bubbles.",
+        "items": [
+          {
+            "text": "Unblocked the Marketplace: separated the loading flag from inflight dedupe so the first refresh actually hits the API, and unioned marketplace listings with caller-scoped agents and local shadows so users can see agents they marked hireable themselves.",
+            "commit_shas": [
+              "9701cb9c3b2ac737c4960bec7b6f13e89c933e9e"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Reworked ZUI Button sizing: dropped the 200px min-width baseline so buttons size to content by default, added a fullWidth prop with stronger specificity, and applied it to the Color/Image background toggle and the Light/Dark/System theme row.",
+            "commit_shas": [
+              "a201362720285ddf0c776281f19fb1a306374cfc",
+              "f0a76414563863cc61f21dbcf0b7083dbd7280a0",
+              "835fff7086b39a47b2b2f486976d4e344c708dcf"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added hover-only overlay scrollbars to the OrgSettingsPanel left nav and content area, hiding the OS-native scrollbars to match chat sidebar / LeftMenu UX.",
+            "commit_shas": [
+              "dcfc92ce66fcc86ee2911b38615408396fe5b003"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Raised the body limit on attachment-bearing routes to 16 MiB (image/3D streams and both chat event endpoints), so a normal pasted screenshot no longer surfaces as 'TypeError: Failed to fetch'.",
+            "commit_shas": [
+              "b44a3fecf07a9eecb9b323e5781c3ec5bbbcfaeb"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Refined chat UI: pasted images now render as a 96px thumbnail strip above the bubble (image-only messages skip the bubble entirely), and FolderSection parent chevrons hide until row hover to match the project tree.",
+            "commit_shas": [
+              "fbc39495fb652661fc98e8804cb6ddd9f1acf99c",
+              "291cf39d525efa9e059c1b700ec3a2c4a218e92d"
             ],
             "confidence": "high"
           }
@@ -2234,60 +3388,16 @@
       },
       {
         "batch_id": "entry-5",
-        "time_label": "11:20 AM",
-        "started_at": "2026-05-05T18:20:35.000Z",
-        "ended_at": "2026-05-05T20:42:34.000Z",
-        "title": "Persistent image history, 3D thumbnails, and a calmer chat 3D experience",
-        "summary": "Image and 3D generation got production-grade polish: results survive reload, 3D models earn real preview thumbnails, and the chat 3D guardrails are friendlier when something is missing.",
+        "time_label": "6:51 PM",
+        "started_at": "2026-05-06T01:51:18.000Z",
+        "ended_at": "2026-05-06T01:51:18.000Z",
+        "title": "Settled refetch for chat history after delivery",
+        "summary": "Closes a small race where the immediate history read after a delivery event could miss storage visibility.",
         "items": [
           {
-            "text": "Image-mode generations now persist into chat history. The /api/generate/image/stream request carries chat scope (agentId or projectId+agentInstanceId), and a sibling task writes user_message + assistant_message_end rows so cold reload re-renders the image through the existing ImageBlock path.",
+            "text": "Added a settled follow-up refetch for matched chat delivery events so target agent panels recover when the immediate history read races storage visibility.",
             "commit_shas": [
-              "9a9d18e89d8f4ee36c91e24bb9ca4898501ba7d6"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "AURA 3D viewer now snapshots freshly-rendered scenes to a PNG and POSTs them to a new /api/artifacts/:id/thumbnail endpoint, so sidekick model tiles render the actual model preview with image and cube fallbacks; a follow-up wired the artifactId end-to-end and added a token query param so unauthenticated <img> tags can fetch the protected thumbnail.",
-            "commit_shas": [
-              "cafe3915a1a38f5b62f597ecf0d8b62759592296",
-              "12adeef6557f01709a9b1110dfa3ae7f66ee17df"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Generating an image or 3D model now clears the previous selection and pins a fresh placeholder thumbnail in the sidekick, so the main panel shows a clean loading state instead of stale content while the new asset streams in.",
-            "commit_shas": [
-              "94b76d293faf6bd179444782224f28dd387fa4a5",
-              "3514966e3d874fb4afb5f533f9df183ef7d3ef44",
-              "2505150143b7e8d7c87645fb34c00e4a6be8ed93"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Pulled chat 3D back to image-only after the upstream router rejected prompt-only requests as a confusing 502, replacing the hard error with a persistent inline 'Add an image to generate.' hint in both desktop and mobile composers, and routed delete actions through the standard ModalConfirm.",
-            "commit_shas": [
-              "8613b09691b3b2157107384f7758f4c1ca3a5114",
-              "cdd9c4e49d02f4a2bb1844c8733e6d6b3cf8b3d9",
-              "695e1e8655f73de6e7b73ef431bbd44e253f16b5"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Iterated on SSE body limits for inlined images: tried a 25 MiB route-level cap, reverted it in favor of an explicit 8 MiB pre-flight check on data URLs in the 3D handler that returns a clear 413 instead of a 120-second watchdog timeout.",
-            "commit_shas": [
-              "2a201a15da34b56f925a3d739e53b1f129d304cc",
-              "35f25626965de64eca02e4b1be60da22746491b9",
-              "02c0b019fb6c891784b734a93882d70984d3e740"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Hid 3D mode from the mode selector for now (Code / Plan / Image only) while keeping the underlying pipeline intact, fixed a server-side ordering bug that was masking chat_persist_unavailable (424) as a generic missing_aura_session_id (422), and dropped an ineffective dynamic import of aura3d-store flagged by Vite.",
-            "commit_shas": [
-              "534c7c42b2087530bde61a060c52b13025b9cc8b",
-              "cb67da1b946bc0ecd95f84c6ab1de808d18ac5a0",
-              "5df9dea82624e676e0a08be1f83f4d355732f47e"
+              "bd59d0239531fd6b699152543b80230bcaae48d9"
             ],
             "confidence": "high"
           }
@@ -2295,29 +3405,54 @@
       },
       {
         "batch_id": "entry-6",
-        "time_label": "1:42 PM",
-        "started_at": "2026-05-05T20:42:46.000Z",
-        "ended_at": "2026-05-05T20:42:46.000Z",
-        "title": "Right-click delete now works for 3D models too",
-        "summary": "Closed the loop on the AURA 3D delete-confirm flow.",
+        "time_label": "6:53 PM",
+        "started_at": "2026-05-06T01:53:38.000Z",
+        "ended_at": "2026-05-06T03:06:35.000Z",
+        "title": "Image upload routing, marketplace hiring, and feedback header",
+        "summary": "An end-of-day stretch reworked image-mode streaming through the router with pasted-image compression, fixed marketplace hiring + task counts, and polished the feedback feed and talent cards.",
         "items": [
           {
-            "text": "Bound the deleteModel store action in ModelGeneration so the right-click delete confirm actually removes 3D models, matching the image side that was already wired through deleteImage.",
+            "text": "Reworked image-mode streaming: first routed it directly through aura-router for prompt failure surfacing, then reverted when large inline inputs hit the router's body buffer, then landed a final shape that streams through the router with pasted-image compression on upload and storage-safe persisted references so reloads keep the thumbnail visible.",
             "commit_shas": [
-              "148a5cc6db79ede379fdcd0c419fcf5958b52d6a"
+              "72ad4ef62dc630ead0f8fdef6b959bfd2df623c1",
+              "962d7e44b7d65e32d70af0689c1d2901beb488a7",
+              "c871fad37d2a9ee5db73f1f404e6825d037e83f1"
             ],
             "confidence": "high"
+          },
+          {
+            "text": "Marketplace flow now actually attaches hired agents and shows task counts on talent cards, with cleaner cover-art-heavy layout that avoids repeating role text when the description duplicates it.",
+            "commit_shas": [
+              "cbefa6b62c9c160c382a7dcac8bb5cfe6269f887",
+              "550d033c58b7eb0884fa2302749932a9461ec0a1"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Floated the Feedback feed header above the scroll area with matching top padding so content no longer hides behind it.",
+            "commit_shas": [
+              "071a3dab9bd14e82713700b28c72637ff3cf198b"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Scoped the ZUI postinstall to the vendor workspace so the parent install no longer recurses back into the interface package.",
+            "commit_shas": [
+              "1522dc4df2263b1420822cd278e213d35efffc11"
+            ],
+            "confidence": "medium"
           }
         ]
       }
     ],
     "highlights": [
-      "Chat 3D mode lands (then narrows to image-to-3D with a calmer hint)",
-      "Image-mode generations now persist into chat history across reloads",
-      "Per-theme desktop wallpapers and theme-synced browser/PWA chrome",
-      "Sliding mode-selector pill rebuilt as a reusable SlidingPills component",
-      "3D viewer captures and persists snapshot thumbnails for the sidekick"
+      "Chat 3D mode shipped via Tripo, then scoped to image-required",
+      "Image-mode generations now persist across reload",
+      "Per-theme desktop wallpapers with light/dark slots",
+      "Shared in-app Gallery for every image surface",
+      "Marketplace loading + hire flow fixed end-to-end",
+      "Settings panel stabilized with overlay scrollbars and prewarmed billing"
     ],
-    "raw_commit_count": 43
+    "raw_commit_count": 69
   }
 }
