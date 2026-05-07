@@ -1,62 +1,66 @@
-# Fresh-canvas chat sessions and a fail-closed updater channel
+# New chat flow gets a real sidekick, real titles, and a safer updater
 
 - Date: `2026-05-07`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.477.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.477.1
+- Version: `0.1.0-nightly.479.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.479.1
 
-Today's nightly is dominated by a deep rework of the agents-shell chat sessions experience: the "+" new-chat flow, the sidekick session list, ChatGPT-style auto-titles, and the cross-session navigation that drives them. A late-night release fix also flips the desktop default Cargo channel to stable so a workflow regression can't silently ship dead binaries again.
+Today's nightly is dominated by a top-to-bottom rework of how new chats appear in the agents sidekick: empty "New chat" ghosts are gone, the "+" button now lands on a clean canvas, fresh sessions pop into the sidekick on send, and Haiku-generated titles stream in live. The day closes with a critical release-channel safety flip so the desktop updater can never silently ship dead builds again, plus image upload fixes that restore reliable attachment previews and history.
 
-## 5:47 PM — Rebuilt "+ new chat" flow in the agents shell
+## 5:47 PM — Rebuilt the agents sidekick "+ new chat" experience
 
-A long arc of fixes makes session switching, the new-chat button, and the chats sidekick behave like a fresh canvas instead of leaking state across sessions.
+An evening-long rework made the agents-shell chat sidekick behave the way users expect: clicking + lands on a real fresh canvas, prior sessions stay clickable, and the input bar no longer churns on every navigation.
 
-- Zero-event sessions are now filtered out of the project and agent session list endpoints, so orphaned "New chat" rows from racey first-turn persistence and pre-lazy-+ legacy data no longer appear as unclickable ghosts in the sidekick. (`c16c910`)
-- Clicking "+" or switching sessions in the agents shell now reliably lands on a clean canvas: the chat lane clears destination history keys and the shared stream slot, the prior assistant bubble stays mounted across sends, and the input bar no longer churns through React.memo on same-agent navigation. (`81d8b6f`, `8e0129c`, `2c795b8`, `c3aeb20`, `fd7a552`, `d957b25`, `bbee79c`)
-- Chat transcripts are now scoped by session key and the agents panel stays mounted for known sessions, so flipping between recent chats no longer reuses stale same-agent history or briefly flashes the previous transcript. (`b1a41d8`, `d354bd2`, `f118ae8`, `5a427a4`)
-- After several iterations, the new-chat "+" action now resets only local state and lets the first sent message create the real, persisted sidekick row, with pending rows promoted as soon as the server assigns a session id. (`186c9ae`, `6c7012d`)
-- Two backend reliability fixes round out the thread: legacy null-org agents are healed on first chat instead of returning a 424, and chat turns now prepend an identity preamble (name, role, personality, skills) so PersonalityTab edits actually take effect in conversation. (`6a7ded1`, `9a33549`)
-- The selected row in the sidekick "Sessions" list now uses the same neutral overlay treatment as the selected agent row, ending the accent-tinted highlight from an undefined token, and an image-mode upload send-gate bug was fixed. (`9480f8a`, `c826bd6`)
+- Filtered zero-event orphan sessions out of the project and agent session list endpoints so the sidekick no longer renders unclickable "New chat" ghosts left over from persist races or pre-lazy-+ legacy data, with fail-open probes that preserve real chats during a storage hiccup. (`c16c910`)
+- Fixed the agents-shell "+" button so it actually delivers a fresh canvas: the resolver now distinguishes a cold load from an explicit clear, the chat lane wipes the right destination keys instead of inheriting old messages, and clicking between sessions no longer leaves the lane pinned to a blank placeholder or the previous session's events. (`c3aeb20`, `2c795b8`, `fd7a552`, `bbee79c`)
+- Stabilized the desktop chat input bar across session switches by holding attachments, commands, and send/new-chat/stop callbacks referentially stable per stream key, so React.memo actually short-circuits and the bar stops re-rendering on every sidekick click. (`8e0129c`, `d957b25`)
+- Made first-turn sessions promote and persist cleanly: the assistant bubble stays mounted when a new user message is appended, transcripts are scoped per session key so switches don't leak history, the new-chat latch survives the URL flip, and pending rows are promoted to real session ids the moment the server assigns them. (`81d8b6f`, `b1a41d8`, `d354bd2`, `f118ae8`, `186c9ae`, `6c7012d`, `5a427a4`)
+- Healed legacy null-org agents so their first chat saves instead of returning 424, and started routing each chat turn through an agent-identity preamble so name, role, personality, and skills configured in the UI actually shape the conversation. (`6a7ded1`, `9a33549`)
+- Polished sidekick visuals and a stuck image-mode upload gate: selected session rows now share the neutral overlay treatment of the agent list, and the image-mode send button correctly unlocks when an attachment is present. (`9480f8a`, `c826bd6`)
 
-## 10:30 PM — Content-agnostic session summary prompt
+## 10:30 PM — Session summaries handle non-coding chats gracefully
 
-The Haiku summarizer no longer assumes every chat is a coding session, so trivial or non-coding turns stop producing refusal prose as session titles.
+The Haiku summarizer no longer assumes every chat is a coding session, eliminating refusal-style titles in the sidekick.
 
-- Reworded the summarizer system prompt to be content-agnostic, eliminating persisted titles like "I don't have any agent coding session to summarize" on non-coding chats. (`aa14044`)
+- Replaced the coding-specific summarizer prompt with a content-agnostic one so trivial or non-coding turns stop persisting refusals like "I don't have any agent coding session to summarize" as the session title. (`aa14044`)
 
-## 10:42 PM — ChatGPT-style auto-titles and server-sourced agent bindings
+## 10:42 PM — Live ChatGPT-style titles and trustworthy agent bindings
 
-Brand-new chats now get a short, human-readable title generated from the first message and pushed live to the sidekick, while agent bindings are read from the authoritative server endpoint instead of the active-org sidebar.
+The sidekick gained on-send optimistic rows, live-streamed Haiku titles, and a server-authoritative source of truth for which projects an agent is bound to.
 
-- On the first user message, the server now spawns a Haiku title task that generates a 2-5 word noun-phrase title, persists it as the session summary, and pushes it over the WebSocket event bus so the sidekick row flips from "New chat" to the real label before the assistant finishes streaming. (`44738c8`, `0d2fe13`)
-- Optimistic "New chat" rows now appear in both the agents-app and projects-app sidekicks the moment the first message is sent, with the synthetic id swapped for the real session id once SessionReady arrives — and the chat input regains focus on the fresh canvas after pressing "+". (`a579da2`, `e3fcec1`)
-- The agents-app "Chats" tab and the standalone-agent default-session redirect now fetch authoritative bindings from GET /api/agents/:agent_id/projects, fixing the case where remote agents auto-bound to a Home project outside the active org showed "No sessions yet" despite real chats in storage. (`198f5f2`)
-- Two race fixes around title delivery: late-arriving titles are now stashed by real session id and reattached on the optimistic-to-real id swap so concurrent new chats never cross-contaminate, and the prior assistant bubble keeps its alias when a send appends a new user message in the same render. (`fff04e7`, `53ab98f`, `91c47d4`)
-- Added [attach]-prefixed instrumentation and FileReader error handling to the desktop chat input intake path to track down a silent paste/drop/picker attachment failure on /agents/<uuid>. (`95f0d0a`)
+- Replaced the lazy multi-line summary flow with a short ChatGPT-style title generated the moment the user's first prompt is persisted, pushed live to the sidekick over the WebSocket bus so the row label flips from "New chat" to a real 2–5 word title before the assistant finishes streaming. (`44738c8`, `0d2fe13`)
+- Inserted an optimistic "New chat" row into both the agents-app and projects-app sidekicks the instant the first message is sent, then swapped its synthetic id for the real session id once SessionReady arrives — no more waiting on an SSE round-trip plus refetch for the row to appear. (`a579da2`)
+- Reconciled title and id races in the sessions store so a title arriving before SessionReady attaches to the right row, late titles can no longer stamp unrelated optimistic placeholders during concurrent new-chat creates, and duplicate rows after the swap are gone. (`fff04e7`, `53ab98f`)
+- Started sourcing agent-to-project bindings from GET /api/agents/:id/projects instead of the active-org sidebar snapshot, so remote agents like Glenn and Machina with cross-org Home-project bindings finally show their existing chats instead of "No sessions yet", with a pending lane while the binding fetch is in flight. (`198f5f2`)
+- Smoothed the fresh-canvas micro-UX: the chat input auto-focuses after pressing + on desktop, and the prior assistant bubble keeps its alias across the same-render send so it no longer flashes a remount when a new user message is appended. (`e3fcec1`, `91c47d4`)
+- Added [attach]-prefixed instrumentation and FileReader error handling along the desktop paste / drag-drop / file-picker intake path so silently-dropped attachments now surface a clear console trail and stop hanging the intake promise on reader failures. (`95f0d0a`)
 
-## 12:32 AM — Cargo default flipped to stable-channel for desktop and server
+## 12:32 AM — Desktop release channel fails closed to stable
 
-After dev-channel binaries silently shipped to users earlier this week with the in-app updater disabled, the desktop and server crates now default to stable-channel so the failure mode is fail-closed.
+A release-safety change prevents the dev channel — which disables the in-app updater — from ever shipping to users again if a workflow flag is dropped.
 
-- Flipped the default Cargo features on aura-os-desktop and aura-os-server from dev-channel to stable-channel, so a future workflow regression that drops --features stable-channel produces a stable, updater-enabled binary instead of a silently-broken dev one. (`e86897a`)
-- Local dev runners (run-desktop-dev.sh/.ps1, run-mobile-dev.sh) now explicitly pass --no-default-features --features dev-channel so developer builds keep their distinct identifiers and can run alongside an installed stable AURA. (`e86897a`)
+- Flipped the cargo default for aura-os-desktop and aura-os-server from dev-channel to stable-channel so a plain build now produces a stable, updater-enabled binary; if a release workflow ever drops the explicit --features stable-channel flag, the result is still stable instead of a silently-broken dev binary like the one shipped between May 5 and 6. (`e86897a`)
+- Updated the desktop and mobile dev runner scripts and README to pass --features dev-channel explicitly, preserving parallel dev/stable installs with distinct data dirs, ports, and window titles. (`e86897a`)
 
-## 1:58 AM — Attachment thumbnail no longer disappears mid-upload
+## 1:58 AM — Attachment thumbnail no longer disappears after upload
 
-Moved the attachment update logic into the file-attachments hook so the preview thumbnail stays visible through the upload lifecycle on desktop and mobile.
+Moved attachment update logic into the dedicated hook so the preview thumbnail stays visible across the upload lifecycle on both desktop and mobile chat input bars.
 
-- Centralized attachment state updates inside useFileAttachments, fixing a thumbnail-disappearing regression in the desktop and mobile chat input bars. (`7f5f0af`)
+- Consolidated attachment update logic inside useFileAttachments so the chat input thumbnail stops disappearing mid-upload on desktop and mobile. (`7f5f0af`)
 
-## 2:53 AM — S3 asset bucket and IAM provisioning scripts
+## 2:53 AM — Reliable image uploads and history rendering
 
-New deploy scripts stand up the aura-asi-production-assets bucket with public-read and CORS, plus a dedicated S3-only IAM user for aura-router.
+Image attachments now survive history reloads, large files are no longer silently rejected, and the production S3 bucket and IAM user for aura-router are scripted for repeatable deploys.
 
-- Added deploy/setup-s3.sh and deploy/create-s3-iam-user.sh to provision the production assets bucket and a least-privilege IAM user for the router. (`031d8fb`)
+- Persisted source_url alongside base64 data for user image content blocks and ensured the frontend always includes base64 as a fallback, so images render reliably when a session is reloaded from history instead of breaking when the S3 upload path was used. (`f6903cd`)
+- Removed the per-file 5MB and total 10MB upload caps that were silently rejecting larger images with no user feedback, since compression already sizes images for the LLM and S3 handles large uploads. (`b9a8fda`)
+- Added deploy scripts to provision the aura-asi-production-assets S3 bucket with public-read and CORS, plus a dedicated S3-only IAM user for aura-router. (`031d8fb`)
 
 ## Highlights
 
-- Fresh-canvas "+ new chat" flow with optimistic sidekick rows
-- ChatGPT-style auto-generated session titles on first message
-- Desktop updater can no longer silently ship as dev-channel
-- Agents shell now sources bindings from the server, not the active-org sidebar
+- ChatGPT-style fresh-canvas + button with optimistic sidekick rows
+- Live-streamed session titles replace lazy summaries
+- Agent personality now actually shapes chat replies
+- Desktop updater fail-closes to stable channel
+- Image attachments survive history reloads and large files
 
