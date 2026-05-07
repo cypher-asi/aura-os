@@ -2,20 +2,19 @@
   {
     "date": "2026-05-07",
     "channel": "nightly",
-    "version": "0.1.0-nightly.474.1",
-    "title": "A \"+ new chat\" overhaul: instant fresh canvas, live titles, and durable sessions",
-    "intro": "Today's nightly is almost entirely about making the Chats sidekick feel right. The team rebuilt the \"+ new chat\" flow end to end — from the orphan \"New chat\" rows that did nothing on click, through the messy session-switch remounts, to a brand-new ChatGPT-style title generator that streams a real session label into the sidekick before the assistant even finishes its first reply. Along the way, agent personality finally reaches chat turns, and a long tail of binding, focus, and bubble-remount glitches got cleaned up.",
-    "entryCount": 5,
+    "version": "0.1.0-nightly.475.1",
+    "title": "Fresh-canvas chats, live titles, and an updater safety net",
+    "intro": "Today's nightly is a deep pass on the agents-shell chat experience: the \"+\" new-chat button now behaves like a real fresh canvas, sessions get ChatGPT-style titles the moment you send your first message, and a string of session-list and binding fixes make the sidekick honest about what's actually persisted. The day closes with a critical release-channel safeguard so a workflow regression can't silently ship a broken updater again.",
+    "entryCount": 6,
     "highlights": [
-      "Sidekick no longer shows orphan \"New chat\" rows that go nowhere",
-      "ChatGPT-style session titles generated on first message and pushed live over WS",
-      "Stable chat input bar and assistant bubble across session switches",
-      "Agent personality, role, and skills now flow into chat turns",
-      "Cross-org agent bindings (e.g. Glenn, Machina) now surface their real chats"
+      "+ new chat now delivers a true fresh canvas",
+      "First message auto-generates a short session title",
+      "Empty/orphan sessions filtered server-side",
+      "Desktop release defaults to stable channel"
     ],
-    "rawCommitCount": 29,
-    "generatedAt": "2026-05-07T07:05:34.329Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.474.1",
+    "rawCommitCount": 31,
+    "generatedAt": "2026-05-07T07:46:14.994Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.475.1",
     "path": "history/2026-05-07.json"
   },
   {

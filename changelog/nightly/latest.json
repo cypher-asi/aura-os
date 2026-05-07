@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-07T07:05:34.329Z",
+  "generatedAt": "2026-05-07T07:46:14.994Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.474.1",
+  "version": "0.1.0-nightly.475.1",
   "date": "2026-05-07",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.474.1",
-  "lastIncludedSha": "91c47d4e12c0780f70452efb031af1f86f336626",
-  "previousProcessedSha": "c005adccfb92165e6c557b5710dac2e21c581ffb",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.475.1",
+  "lastIncludedSha": "e86897a53d7815b2318efed10efae7003b39fcbf",
+  "previousProcessedSha": "91c47d4e12c0780f70452efb031af1f86f336626",
   "commitShas": [
     "c16c9103bd1ff96d0504f516f3fa2107341c9805",
     "81d8b6fa2ef540bc5828b43e48a29fc4609b9729",
@@ -40,10 +40,12 @@
     "198f5f2800f3cafe93eb0d53a093d7e574431b11",
     "0d2fe13e44e1650f58ca7e5e40b51dffa2fc34cb",
     "fff04e71d5ee81693f0998e17ab01f9d58bb5979",
-    "91c47d4e12c0780f70452efb031af1f86f336626"
+    "91c47d4e12c0780f70452efb031af1f86f336626",
+    "53ab98f16dce79915273a4d18dd77543f0f7e68e",
+    "e86897a53d7815b2318efed10efae7003b39fcbf"
   ],
-  "rawCommitCount": 29,
-  "filteredCommitCount": 29,
+  "rawCommitCount": 31,
+  "filteredCommitCount": 31,
   "rawCommits": [
     {
       "sha": "c16c9103bd1ff96d0504f516f3fa2107341c9805",
@@ -1259,9 +1261,102 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "53ab98f16dce79915273a4d18dd77543f0f7e68e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T00:01:12-07:00",
+      "subject": "fix(sessions): stop title events from stamping unrelated optimistic rows",
+      "body": "`setSessionSummary` matched any optimistic row in the surface, not\njust the placeholder for the session whose title arrived. When the\nuser clicked \"+\" and sent a second chat before Title-1 finished\ngenerating, the late-arriving Title-1 event would patch the still-\nin-flight `opt-2` placeholder alongside `real-1`. After\n`replaceSessionId` swapped `opt-2 -> real-2` the row carried the\nwrong title and rendered as a duplicate of `real-1` until refresh\nre-fetched server-persisted summaries.\n\nDrop the optimistic-row arm and stash the summary in a new\n`pendingSummariesById` map keyed on the real session id.\n`replaceSessionId` reads (and clears) the entry when swapping, so a\ntitle that lands before SessionReady still attaches to the right row\nthe moment we know the optimistic placeholder maps to it - no cross-\ncontamination across concurrent new-chat creates.\n\nAlso drop any pending entry on `removeSession` so deleted sessions\ndon't leak summaries forever.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "91c47d4e12c0780f70452efb031af1f86f336626"
+      ],
+      "files": [
+        "interface/src/stores/sessions-list-store.test.tsx",
+        "interface/src/stores/sessions-list-store.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 255,
+        "deletions": 30
+      },
+      "committedAtMs": 1778137272000,
+      "cleanSubject": "stop title events from stamping unrelated optimistic rows",
+      "keywords": [
+        "stop",
+        "title",
+        "events",
+        "from",
+        "stamping",
+        "unrelated",
+        "optimistic",
+        "rows"
+      ],
+      "fileGroups": [
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "e86897a53d7815b2318efed10efae7003b39fcbf",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T00:32:17-07:00",
+      "subject": "fix(release): flip cargo default to stable-channel so the updater can't silently ship dead",
+      "body": "The two-job release pipeline introduced in 718a47c6b silently shipped\ndev-channel binaries to users between May 5 and May 6. Dev-channel\ndisables the in-app updater (`Channel::current().updater_enabled() ==\nfalse` for Dev), so every entry point in `apps/aura-os-desktop/src/updater/`\nearly-returns and the binary never checks for updates. The follow-up fix\nin 6122ad6ef added `--no-default-features --features stable-channel` to\nthe release workflows, but already-installed broken builds cannot recover\nthemselves — `updater_supported()` is gated by a `cfg!`-baked channel\nconstant — so users on nightly.472 or earlier need a manual reinstall.\n\nMake the failure mode fail *closed* by flipping the cargo default from\n`dev-channel` to `stable-channel` on `aura-os-desktop` and\n`aura-os-server`. After this change, plain `cargo build -p aura-os-desktop`\nproduces a stable binary; if a workflow regression ever drops the\nexplicit `--features stable-channel` flag again, the result is still\nstable rather than a silently-broken dev binary that ships to users.\n\nDev runners (`scripts/dev/run-desktop-dev.sh`, `run-desktop-dev.ps1`,\n`run-mobile-dev.sh`) now pass `--no-default-features --features\ndev-channel` to cargo so they keep producing dev builds with parallel-\nbut-distinct identifiers (data dir name, ports, single-instance mutex,\nwindow title, skills tree) that can run alongside an installed stable\nAURA. Release workflows keep their explicit\n`--no-default-features --features stable-channel` flags as\nbelt-and-suspenders to encode intent and survive future default flips.\n\n`crates/aura-os-core/Cargo.toml` already defaults to `stable-channel`,\nso no change there. Update the README channel-selection paragraph and\nthe \"Run desktop app (live dev)\" section to match the new behavior.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "53ab98f16dce79915273a4d18dd77543f0f7e68e"
+      ],
+      "files": [
+        "README.md",
+        "apps/aura-os-desktop/Cargo.toml",
+        "apps/aura-os-server/Cargo.toml",
+        "scripts/dev/run-desktop-dev.ps1",
+        "scripts/dev/run-desktop-dev.sh",
+        "scripts/dev/run-mobile-dev.sh"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 27,
+        "deletions": 19
+      },
+      "committedAtMs": 1778139137000,
+      "cleanSubject": "flip cargo default to stable-channel so the updater can't silently ship dead",
+      "keywords": [
+        "flip",
+        "cargo",
+        "default",
+        "stable",
+        "channel",
+        "updater",
+        "silently",
+        "ship",
+        "dead"
+      ],
+      "fileGroups": [
+        "README.md",
+        "apps/aura-os-desktop/Cargo.toml",
+        "apps/aura-os-server/Cargo.toml",
+        "scripts/dev/run-desktop-dev.ps1",
+        "scripts/dev/run-desktop-dev.sh",
+        "scripts/dev/run-mobile-dev.sh"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Desktop"
+      ]
     }
   ],
-  "batchCount": 5,
+  "batchCount": 6,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -1270,36 +1365,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11830077
+          "sizeBytes": 11830117
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.474.1",
+      "version": "0.1.0-nightly.475.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.474.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.475.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 36795738
+          "sizeBytes": 36795958
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.474.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.475.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.474.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.475.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 105576952
+          "sizeBytes": 105568760
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.474.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.475.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -1309,29 +1404,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.474.1",
+      "version": "0.1.0-nightly.475.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.474.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.475.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33899438
+          "sizeBytes": 33905677
         },
         {
-          "name": "AURA_0.1.0-nightly.474.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.475.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.474.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.475.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33043979
+          "sizeBytes": 33042764
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.474.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.475.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1341,29 +1436,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.474.1",
+      "version": "0.1.0-nightly.475.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.474.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.475.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 35493414
+          "sizeBytes": 35494373
         },
         {
-          "name": "AURA_0.1.0-nightly.474.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.475.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.474.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.475.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 34684887
+          "sizeBytes": 34686841
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.474.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.475.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1373,17 +1468,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.474.1",
+      "version": "0.1.0-nightly.475.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.474.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.475.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24896342
+          "sizeBytes": 24896052
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.474.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.475.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -1392,80 +1487,38 @@
     }
   ],
   "rendered": {
-    "title": "A \"+ new chat\" overhaul: instant fresh canvas, live titles, and durable sessions",
-    "intro": "Today's nightly is almost entirely about making the Chats sidekick feel right. The team rebuilt the \"+ new chat\" flow end to end — from the orphan \"New chat\" rows that did nothing on click, through the messy session-switch remounts, to a brand-new ChatGPT-style title generator that streams a real session label into the sidekick before the assistant even finishes its first reply. Along the way, agent personality finally reaches chat turns, and a long tail of binding, focus, and bubble-remount glitches got cleaned up.",
+    "title": "Fresh-canvas chats, live titles, and an updater safety net",
+    "intro": "Today's nightly is a deep pass on the agents-shell chat experience: the \"+\" new-chat button now behaves like a real fresh canvas, sessions get ChatGPT-style titles the moment you send your first message, and a string of session-list and binding fixes make the sidekick honest about what's actually persisted. The day closes with a critical release-channel safeguard so a workflow regression can't silently ship a broken updater again.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "5:47 PM",
         "started_at": "2026-05-07T00:47:42.000Z",
-        "ended_at": "2026-05-07T02:44:21.000Z",
-        "title": "Dead \"New chat\" rows and unstable session switches, fixed at the source",
-        "summary": "An evening of foundational fixes for the Chats sidekick: orphan sessions are filtered server-side, agents heal their org bindings, and clicking between sessions stops thrashing the chat panel.",
+        "ended_at": "2026-05-07T04:43:08.000Z",
+        "title": "New-chat lane and session-switch reliability in the agents shell",
+        "summary": "A long thread of fixes makes session navigation, the \"+\" button, and the chat input bar behave predictably across the agents-app sidekick.",
         "items": [
           {
-            "text": "List endpoints now drop zero-event sessions via a fan-out `list_events?limit=1` probe with fail-open behavior, killing the unclickable \"New chat\" rows that came from orphaned or pre-lazy-`+` legacy sessions.",
+            "text": "The chats sidekick no longer surfaces orphan \"New chat\" rows that did nothing on click: list endpoints now probe each session for at least one event and drop empty ones, with fail-open behavior so a transient storage hiccup never erases a real chat.",
             "commit_shas": [
               "c16c9103bd1ff96d0504f516f3fa2107341c9805"
             ],
             "confidence": "high"
           },
           {
-            "text": "Legacy agents with a missing `org_id` now self-heal by falling back to the caller's single org, so the very first chat turn no longer 424s with `chat_persist_unavailable`; multi-org callers stay ambiguous on purpose.",
+            "text": "Clicking \"+\" in the agents shell now reliably clears the lane, surfaces an optimistic \"New chat\" placeholder in the sidekick, and routes the first send into a fresh persisted session instead of getting pinned on a blank placeholder or inheriting the previous session's transcript.",
             "commit_shas": [
-              "6a7ded18d3932fd629b48dffcc0f53987ec6f9e2"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Switching sessions in the agents shell no longer remounts the bottom chat input bar or unmounts the prior assistant bubble — callbacks and empty-array props are now stable per `streamKey`, and an id-alias map preserves the assistant's React key across the placeholder-to-persisted swap.",
-            "commit_shas": [
-              "8e0129c339282d7c51a6bcbe5f28afcec696c6b3",
-              "81d8b6fa2ef540bc5828b43e48a29fc4609b9729"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Cross-session clicks now reset the shared stream slot at the resolver layer instead of inside the panel, fixing the \"first click does nothing, second click works\" report where a new session inherited the previous session's events.",
-            "commit_shas": [
+              "c3aeb20a69ebd14568a3ac8ca1af3c651fd72ea5",
+              "fd7a5529db5f7f3db246bfc6b0ca0112411b3c37",
               "2c795b8d047f8d8e9ce671e4fe3544391aefa95f"
             ],
             "confidence": "high"
           },
           {
-            "text": "Agent identity (name, role, personality, skills) is now composed into a preamble and prepended to the chat system prompt on both interactive routes, so edits in the PersonalityTab actually change how the agent talks.",
+            "text": "Switching between sessions no longer remounts the chat input bar or loses the prior assistant bubble: props are held stable per stream key, transcripts are scoped by session key, and id-aliasing keeps the previous turn mounted across the placeholder-to-persisted swap.",
             "commit_shas": [
-              "9a3354926df9ec68b69b0f256588f26d16ad5b1a"
-            ],
-            "confidence": "high"
-          }
-        ]
-      },
-      {
-        "batch_id": "entry-2",
-        "time_label": "8:56 PM",
-        "started_at": "2026-05-07T03:56:05.000Z",
-        "ended_at": "2026-05-07T04:43:08.000Z",
-        "title": "Rebuilding the \"+\" fresh-canvas flow",
-        "summary": "A focused push on the \"+ new chat\" experience: the lane clears properly, the sidekick gets an optimistic placeholder, and transcripts stop bleeding across sessions.",
-        "items": [
-          {
-            "text": "Clicking \"+\" in the agents shell now reliably mounts a fresh-canvas panel instead of leaving a blank `lanePlaceholder` div, by teaching the shell-target resolver to distinguish a cold load from an explicit user-cleared session.",
-            "commit_shas": [
-              "c3aeb20a69ebd14568a3ac8ca1af3c651fd72ea5"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "`handleNewChat` now clears every destination history key and the standalone stream slot (gated on active streaming), and the sidekick gains an optimistic muted \"New chat\" row with proper deletion and summarize-call guards.",
-            "commit_shas": [
-              "fd7a5529db5f7f3db246bfc6b0ca0112411b3c37"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Transcript snapshots are now scoped by the active history key and the agent chat panel stays mounted for known sessions, so warm switches no longer rearm the cold-load path or inherit stale same-agent history.",
-            "commit_shas": [
+              "8e0129c339282d7c51a6bcbe5f28afcec696c6b3",
+              "81d8b6fa2ef540bc5828b43e48a29fc4609b9729",
               "b1a41d8e53282a2d4d128a31708d5e6b45a1b9ca",
               "d354bd2a4e1c08340cebb6c4b4fa7c297c2d8197",
               "d957b2504f8ec75543c3c3d3292365aec0374926"
@@ -1473,7 +1526,15 @@
             "confidence": "high"
           },
           {
-            "text": "Selected sidekick rows now share the neutral overlay tokens used by the agent list (no more accent-tinted highlight from an undefined token, no font-weight shift on selection), and the image-mode upload send gate was repaired.",
+            "text": "Agent personality, role, and skills edited in the UI now actually shape chat replies: an identity preamble is composed server-side and prepended to the system prompt on both interactive chat routes. Legacy null-org agents also self-heal on first chat so they no longer 424 with \"not bound to any project\".",
+            "commit_shas": [
+              "9a3354926df9ec68b69b0f256588f26d16ad5b1a",
+              "6a7ded18d3932fd629b48dffcc0f53987ec6f9e2"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Smaller polish: selected sidekick rows now match the selected agent row's neutral overlay treatment, image-mode upload sending is gated correctly, and fresh-chat transcript resets are covered by tests.",
             "commit_shas": [
               "9480f8a50eb9fb376f868e8778235e8fda9ff6ec",
               "c826bd6d4c98a362b13e7d70ee7dbf070ddd1324",
@@ -1484,48 +1545,48 @@
         ]
       },
       {
-        "batch_id": "entry-3",
+        "batch_id": "entry-2",
         "time_label": "9:46 PM",
         "started_at": "2026-05-07T04:46:14.000Z",
         "ended_at": "2026-05-07T05:25:50.000Z",
-        "title": "Pivot to server-persisted sessions for new chats",
-        "summary": "After live-testing the optimistic placeholder, the team pivoted: \"+\" now resets only local state and lets the first sent message create the real sidekick row through the persisted session list.",
+        "title": "Letting persisted sessions drive the sidekick row",
+        "summary": "A follow-up pass simplifies the new-chat flow so the server-assigned session id is the single source of truth for sidekick rows.",
         "items": [
           {
-            "text": "The \"+\" action no longer synthesizes a client-side placeholder row; instead, the first sent message creates the durable sidekick entry through the persisted session list, removing ~660 lines of optimistic-row plumbing.",
+            "text": "The \"+\" action now resets only local chat state and lets the first sent message create the real sidekick row through the persisted session list, removing a large swath of optimistic-placeholder plumbing in favor of a cleaner promotion path.",
             "commit_shas": [
-              "6c7012dffcf24a0ab4af7eecd3f1f057f1c65004"
+              "6c7012dffcf24a0ab4af7eecd3f1f057f1c65004",
+              "bbee79c10a8062bd46177f7be3acc3cf76b5b6a5"
             ],
             "confidence": "high"
           },
           {
-            "text": "Pending chat rows are now promoted as soon as the server assigns a session id, and early summary attempts retry with backoff, so first-turn sessions become clickable and titled without a fragile refresh race.",
+            "text": "First-turn sessions become durable, clickable, and titled without a fragile refresh race: pending rows are promoted as soon as the server assigns a session id, and early summary attempts are retried when the first response comes back empty.",
             "commit_shas": [
               "186c9ae3feb5ee6ff3be6e0edb50730e39ee1914"
             ],
             "confidence": "high"
           },
           {
-            "text": "The project chat panel stays mounted across the post-`+` URL flip so the first send uses the stream that was armed to create a new persisted session, and reclicking the already-selected agent preserves its session.",
+            "text": "Reclicking the currently selected agent in the agent list now preserves the active session instead of resetting it, and standalone-agent target narrowing was corrected.",
             "commit_shas": [
-              "bbee79c10a8062bd46177f7be3acc3cf76b5b6a5",
               "5a427a47c1c6998ec9100c2592d56a4e0fd67ebb",
               "13c2c1ba12bb984ffeff0267170520b28723f68f"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           }
         ]
       },
       {
-        "batch_id": "entry-4",
+        "batch_id": "entry-3",
         "time_label": "10:30 PM",
         "started_at": "2026-05-07T05:30:19.000Z",
         "ended_at": "2026-05-07T05:30:19.000Z",
-        "title": "Session summaries stop refusing non-coding chats",
-        "summary": "The Haiku summarizer's prompt is now content-agnostic, ending the \"I don't have any agent coding session to summarize\" titles that were getting persisted on trivial chats.",
+        "title": "Content-agnostic session summaries",
+        "summary": "The Haiku summarizer no longer assumes every chat is a coding session, so trivial or non-coding turns stop producing refusal-prose titles in the sidekick.",
         "items": [
           {
-            "text": "The session-summary system prompt no longer assumes every chat is an \"agent coding session,\" so trivial or non-coding turns get a real title instead of refusal prose persisted as the row label.",
+            "text": "Replaced the \"agent coding session\" framing in the summarizer's system prompt so non-coding chats no longer get persisted titles like \"I don't have any agent coding session to summarize\".",
             "commit_shas": [
               "aa14044d912d533fa6afc42da8b1d15d26b8880b"
             ],
@@ -1534,15 +1595,15 @@
         ]
       },
       {
-        "batch_id": "entry-5",
+        "batch_id": "entry-4",
         "time_label": "10:42 PM",
         "started_at": "2026-05-07T05:42:10.000Z",
         "ended_at": "2026-05-07T06:39:12.000Z",
-        "title": "ChatGPT-style live titles and authoritative agent bindings",
-        "summary": "The night ends with the marquee feature: short, human-readable session titles generated on the first message and streamed into the sidekick over the WebSocket bus — plus a fix for agents whose chats were invisible because their bindings lived outside the active org.",
+        "title": "ChatGPT-style titles that land while the first reply streams",
+        "summary": "New chats now get short, human-readable titles generated from the first prompt and pushed live to the sidekick, with a tighter optimistic-row lifecycle around it.",
         "items": [
           {
-            "text": "Brand-new sessions now get a 2–5 word title (e.g. \"Heartburn During Water Fast\") generated by a tokio-spawned Haiku call on the user's first prompt, persisted as `summary_of_previous_context`, and pushed live over the WS event bus so the sidekick row flips from \"New chat\" before the assistant finishes streaming.",
+            "text": "On the first persisted user message, the server kicks off a Haiku title generator in parallel with the assistant turn and publishes a session_summary_updated event over the WebSocket bus, so the sidekick label flips from \"New chat\" to a 2–5 word noun phrase before the assistant finishes streaming. The legacy /summarize endpoint is retained for backfill.",
             "commit_shas": [
               "44738c8276692315438ce47a547c1add5d75eb7a",
               "0d2fe13e44e1650f58ca7e5e40b51dffa2fc34cb"
@@ -1550,7 +1611,7 @@
             "confidence": "high"
           },
           {
-            "text": "An optimistic \"New chat\" row is now inserted into both agents-app and projects-app sidekicks the moment the first message is sent, and gets its synthetic id swapped for the real `session_id` on `SessionReady` — without racing the live title patch.",
+            "text": "After clicking \"+\" and sending the first message, an optimistic \"New chat\" row now appears in both the agents-app and projects-app sidekicks immediately and is swapped for the real session id when SessionReady arrives, instead of waiting for an SSE round-trip plus refetch.",
             "commit_shas": [
               "a579da267c05b4d36104b24ce830def6674d0289",
               "fff04e71d5ee81693f0998e17ab01f9d58bb5979"
@@ -1558,37 +1619,64 @@
             "confidence": "high"
           },
           {
-            "text": "Agent project bindings now come from `GET /api/agents/:agent_id/projects` rather than the active-org sidebar snapshot, so remote agents like Glenn and Machina that were auto-bound to a per-org Home project no longer render \"No sessions yet\" while real sessions sit in storage; a new pending lane prevents the fresh-canvas flicker.",
+            "text": "Agent bindings are now sourced from the authoritative GET /api/agents/:id/projects endpoint instead of the active-org sidebar, so older remote agents (e.g. Glenn, Machina) bound to a per-org Home project finally show their real prior chats instead of \"No sessions yet\".",
             "commit_shas": [
               "198f5f2800f3cafe93eb0d53a093d7e574431b11"
             ],
             "confidence": "high"
           },
           {
-            "text": "Pressing \"+\" now drops the cursor straight into the chat input on desktop (mobile keeps no auto-focus to avoid keyboard pop-ups), and the prior assistant bubble stays aliased even when Send appends a new user message in the same render as the end-of-turn swap.",
+            "text": "Smaller chat-input polish: pressing \"+\" now focuses the input on desktop so the fresh canvas is immediately ready to type into, the prior assistant bubble survives an in-flight Send without a remount flash, and silent paste/drag-drop/picker attachment failures are now instrumented end-to-end with hardened FileReader error paths.",
             "commit_shas": [
               "e3fcec1bc3a6e9d8b03689ddf27114c58477d405",
-              "91c47d4e12c0780f70452efb031af1f86f336626"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Desktop chat-input attachment intake (paste, drag-drop, file picker) is now instrumented end-to-end with `[attach]`-prefixed logs, and `processImageFile`/`processTextFile` were hardened with `FileReader` error handlers so a synthetic clipboard file can't make `Promise.all` hang forever.",
-            "commit_shas": [
+              "91c47d4e12c0780f70452efb031af1f86f336626",
               "95f0d0ae8a8195b54cb66d7a039860cf8698664d"
             ],
             "confidence": "medium"
           }
         ]
+      },
+      {
+        "batch_id": "entry-5",
+        "time_label": "12:01 AM",
+        "started_at": "2026-05-07T07:01:12.000Z",
+        "ended_at": "2026-05-07T07:01:12.000Z",
+        "title": "Concurrent new-chat title isolation",
+        "summary": "Title events for one new chat can no longer stamp an unrelated optimistic row when the user fires off a second \"+\" before the first title finishes.",
+        "items": [
+          {
+            "text": "setSessionSummary now stashes early-arriving titles in a pendingSummariesById map keyed on the real session id rather than patching whatever optimistic row happens to be in the surface, eliminating the duplicate-row + wrong-title state that appeared when two new chats were created in quick succession. Pending entries are also cleared on session removal.",
+            "commit_shas": [
+              "53ab98f16dce79915273a4d18dd77543f0f7e68e"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-6",
+        "time_label": "12:32 AM",
+        "started_at": "2026-05-07T07:32:17.000Z",
+        "ended_at": "2026-05-07T07:32:17.000Z",
+        "title": "Desktop release channel fails closed to stable",
+        "summary": "A critical safeguard so a workflow regression can never again silently ship dev-channel desktop builds with the in-app updater disabled.",
+        "items": [
+          {
+            "text": "Flipped the cargo default for aura-os-desktop and aura-os-server from dev-channel to stable-channel so a plain cargo build now produces a stable binary with the updater enabled. Dev runner scripts on Mac, Windows, and Linux explicitly opt back into dev-channel, and release workflows keep their stable-channel flag as belt-and-suspenders.",
+            "commit_shas": [
+              "e86897a53d7815b2318efed10efae7003b39fcbf"
+            ],
+            "confidence": "high"
+          }
+        ]
       }
     ],
     "highlights": [
-      "Sidekick no longer shows orphan \"New chat\" rows that go nowhere",
-      "ChatGPT-style session titles generated on first message and pushed live over WS",
-      "Stable chat input bar and assistant bubble across session switches",
-      "Agent personality, role, and skills now flow into chat turns",
-      "Cross-org agent bindings (e.g. Glenn, Machina) now surface their real chats"
+      "+ new chat now delivers a true fresh canvas",
+      "First message auto-generates a short session title",
+      "Empty/orphan sessions filtered server-side",
+      "Desktop release defaults to stable channel"
     ],
-    "raw_commit_count": 29
+    "raw_commit_count": 31
   }
 }
