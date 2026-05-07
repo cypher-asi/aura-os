@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-06T23:52:26.847Z",
+  "generatedAt": "2026-05-07T00:26:13.157Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.472.1",
+  "version": "0.1.0-nightly.473.1",
   "date": "2026-05-06",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.472.1",
-  "lastIncludedSha": "c46a262f924445e85e290b45cef5c12bfe9165f4",
-  "previousProcessedSha": "ea6f43f964c4b11916eeeffd49b4080a18692fc6",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.473.1",
+  "lastIncludedSha": "c005adccfb92165e6c557b5710dac2e21c581ffb",
+  "previousProcessedSha": "c46a262f924445e85e290b45cef5c12bfe9165f4",
   "commitShas": [
     "52cdd479fdb0520d4286710b63274cfa0fcfc672",
     "bc327bedc014762db3e42ec8de995866abfca726",
@@ -57,10 +57,28 @@
     "9725ce4ec185faed0bdc8629dccb7bff45b662f1",
     "0070fe23813b20bc763b5cd345c2255d173184df",
     "ea6f43f964c4b11916eeeffd49b4080a18692fc6",
-    "c46a262f924445e85e290b45cef5c12bfe9165f4"
+    "c46a262f924445e85e290b45cef5c12bfe9165f4",
+    "da507572029e539c060b43c76110ae5de0f1ed0f",
+    "1cf3dcc689a0b4a2d9f3f969a1c5edcf9c31cd06",
+    "ced57ed3c9f4104772a97c6cc975eed2c7860e61",
+    "a3978b5dc9cd7f540a255e25a67afc776347a554",
+    "6122ad6efdae751f1bdd63eeb93de77747682b0e",
+    "908d9d935294c000e62a35f401092d2ed7a65c54",
+    "ea9c8e6c99d7ccc2fa1cf62cbedebe11d9becfb1",
+    "7c6ebf17933f8199e7128fd55d1b270f1efa7fb8",
+    "3cde64e9f78b734ef031e5c469221daa2cd2bd6d",
+    "adb8a333523fc1b9be05fb52dfcf1d4c1b58745a",
+    "eef2a67f886fb3bac0d5dd33a247a3f114a666a4",
+    "1aa47dd107e0ece7acab43bce5761b52990554d1",
+    "2c907e10a3f848e761456872c6bc67f5f02067a3",
+    "d15c2671c583bd20e778d65319ce975948aa457d",
+    "fe37f65d9a10445deac9dfddf98b3924dd337c18",
+    "44c42f35fd2e0805bad087e1df70329db90ed348",
+    "fca8f3996ff5491992ec97efc65efb457bf7a4b9",
+    "c005adccfb92165e6c557b5710dac2e21c581ffb"
   ],
-  "rawCommitCount": 46,
-  "filteredCommitCount": 46,
+  "rawCommitCount": 64,
+  "filteredCommitCount": 64,
   "rawCommits": [
     {
       "sha": "52cdd479fdb0520d4286710b63274cfa0fcfc672",
@@ -2100,6 +2118,813 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "da507572029e539c060b43c76110ae5de0f1ed0f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T17:12:36-07:00",
+      "subject": "fix(chat): keep scroll-up intent sticky until user reaches the very bottom",
+      "body": "After the previous fix, a wheel-up by less than ~180px still snapped back:\nthe synchronous wheel handler unpinned the user, but the very next scroll\nevent ran handleScroll, saw distFromBottom inside the enter-follow band,\nand re-pinned them — which re-fired the ChatMessageList tail-pin layout\neffect on the resulting isAutoFollowing flip and pulled the viewport\nback to the bottom. While userUnpinnedAt is non-zero, skip the\nposition-band re-pin entirely; only clear the intent flag and re-engage\nfollow once the user has scrolled all the way back to the very bottom\n(distFromBottom <= 1).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "c46a262f924445e85e290b45cef5c12bfe9165f4"
+      ],
+      "files": [
+        "interface/src/shared/hooks/use-scroll-anchor-v2.test.ts",
+        "interface/src/shared/hooks/use-scroll-anchor-v2.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 77,
+        "deletions": 8
+      },
+      "committedAtMs": 1778112756000,
+      "cleanSubject": "keep scroll-up intent sticky until user reaches the very bottom",
+      "keywords": [
+        "keep",
+        "scroll",
+        "intent",
+        "sticky",
+        "until",
+        "user",
+        "reaches",
+        "very",
+        "bottom"
+      ],
+      "fileGroups": [
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "1cf3dcc689a0b4a2d9f3f969a1c5edcf9c31cd06",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T17:12:36-07:00",
+      "subject": "fix(chat-3d): render scene as standalone widget (no Block wrapper)",
+      "body": "`Model3DBlock` now mirrors `ImageBlock`'s success-state pattern: when\n`glbUrl` is present and the tool finished, it returns a standalone\n`<WebGLViewer />` plus a small download link, with no collapsible\n`Block` wrapper. The pending / error / no-glb branches still use the\nBlock chrome so the user gets a status header while generation is\nin flight.\n\nThis fixes the \"I had to close the app and come back to see the scene\"\nsymptom. The previous fix added `generate_3d_model` to\n`AUTO_EXPAND_TOOLS`, but `defaultActivitiesExpanded` is only true for\nthe just-finalized bubble — once `ChatMessageList`'s `justFinalizedIdRef`\nclears (any navigation away or app remount), the bubble re-rendered\ncollapsed and hid the embedded viewer. Bypassing the Block on success\nmakes the widget render unconditionally so the scene shows up\nimmediately in the current chat session, and stays visible after\nremount. The auto-expand entry is no longer needed and is removed.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "da507572029e539c060b43c76110ae5de0f1ed0f"
+      ],
+      "files": [
+        "interface/src/components/Block/registry.tsx",
+        "interface/src/components/Block/renderers/Model3DBlock.tsx",
+        "interface/src/components/Block/renderers/renderers.module.css"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 98,
+        "deletions": 43
+      },
+      "committedAtMs": 1778112756000,
+      "cleanSubject": "render scene as standalone widget (no Block wrapper)",
+      "keywords": [
+        "render",
+        "scene",
+        "standalone",
+        "widget",
+        "block",
+        "wrapper"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "ced57ed3c9f4104772a97c6cc975eed2c7860e61",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T17:12:36-07:00",
+      "subject": "feat(chat-sessions): unify sidekick session list and default to most recent",
+      "body": "Both apps now use one shared `SessionsList` component (date-bucketed\nbuttons, summaries, selected-row highlight). Clicking a session in the\nproject sidekick now navigates the main chat to that session — the row\nclick was previously unwired. The chat view auto-redirects to the most\nrecent session by `started_at` when the URL has no `?session=` and no\nlive-session pin, in both the project route and the agents-shell\nstandalone route.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "1cf3dcc689a0b4a2d9f3f969a1c5edcf9c31cd06"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentInfoPanel/AgentInfoPanel.module.css",
+        "interface/src/apps/agents/AgentInfoPanel/ChatsTab.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/agent-info-utils.ts",
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.tsx",
+        "interface/src/components/SessionsList/SessionsList.module.css",
+        "interface/src/components/SessionsList/SessionsList.test.tsx",
+        "interface/src/components/SessionsList/SessionsList.tsx",
+        "interface/src/components/SessionsList/index.ts",
+        "interface/src/components/SessionsList/session-row-utils.ts",
+        "interface/src/components/SessionsList/use-default-session-redirect.ts",
+        "interface/src/components/SessionsList/use-session-navigate.ts",
+        "interface/src/components/SessionsList/use-session-summaries.ts",
+        "interface/src/views/SessionList/SessionList.tsx",
+        "interface/src/views/SessionList/useSessionListData.test.tsx",
+        "interface/src/views/SessionList/useSessionListData.ts"
+      ],
+      "stats": {
+        "fileCount": 15,
+        "insertions": 949,
+        "deletions": 440
+      },
+      "committedAtMs": 1778112756000,
+      "cleanSubject": "unify sidekick session list and default to most recent",
+      "keywords": [
+        "unify",
+        "sidekick",
+        "session",
+        "list",
+        "default",
+        "most",
+        "recent"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "a3978b5dc9cd7f540a255e25a67afc776347a554",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T17:12:36-07:00",
+      "subject": "fix(chat-sessions): unify session-list state in zustand store, fix infinite-loop crash",
+      "body": "The previous unification commit shipped a `selectAgentBindings` selector\nthat returned a fresh `{ projectId, agentInstanceId }` array on every\ncall. `useShallow` compares array items by reference, so each render\nsaw \"new\" objects, committed, re-rendered, and looped — surfacing as\n\"Maximum update depth exceeded\" the moment any agent chat mounted on\n`/agents/:agentId` without a session in the URL. Conversations stopped\nloading entirely.\n\nReplace the ad-hoc selector with a single `useSessionsListStore` that\nowns `sessionsBySurface` keyed by `agent:{agentId}` /\n`project:{projectId}`, plus `loadAgentSessions`, `loadProjectSessions`,\noptimistic `removeSession` / `restoreSession`, and per-surface\nrequest-id race protection. Both default-session redirects, the agents\n`ChatsTab`, and the projects `SessionList` now read from this one\nsource of truth — no more duplicated fetches and no more derived-array\nselectors.\n\nWhile here:\n- Drop the `agent` / `projectBindings` props on `ChatsTab`; pull from\n  `useSelectedAgent()` and a stable `useAgentBindingsKey` string\n  fingerprint instead.\n- Drop the redundant 5-second poll in `useSessionListData`; the\n  existing `version` bump on `SessionReady` and the new-chat path\n  drives reads.\n- Add regression tests for selector identity stability, store\n  request-id ordering, and no-infinite-loop on standalone redirect.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "ced57ed3c9f4104772a97c6cc975eed2c7860e61"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentInfoPanel/AgentInfoPanel.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/ChatsTab.tsx",
+        "interface/src/components/SessionsList/use-default-session-redirect.test.tsx",
+        "interface/src/components/SessionsList/use-default-session-redirect.ts",
+        "interface/src/stores/sessions-list-store.test.tsx",
+        "interface/src/stores/sessions-list-store.ts",
+        "interface/src/views/SessionList/useSessionListData.test.tsx",
+        "interface/src/views/SessionList/useSessionListData.ts"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 1007,
+        "deletions": 256
+      },
+      "committedAtMs": 1778112756000,
+      "cleanSubject": "unify session-list state in zustand store, fix infinite-loop crash",
+      "keywords": [
+        "unify",
+        "session",
+        "list",
+        "state",
+        "zustand",
+        "store",
+        "infinite",
+        "loop",
+        "crash"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/stores",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "6122ad6efdae751f1bdd63eeb93de77747682b0e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T17:12:36-07:00",
+      "subject": "fix(release): build packaged desktop binary with stable-channel feature",
+      "body": "The two-job release pipeline (build-app -> package) never activated the\nstable-channel cargo feature, so every published \"stable\" / \"nightly\"\ninstaller shipped the dev-channel binary: window/taskbar title was\n\"AURA Dev\", per-user data lived in `aura-dev` instead of `aura`, dev\nports were used, and the in-app updater was silently disabled\n(updater_enabled() is false for Dev). The build-app job ran\n`cargo build --release --package aura-os-desktop`, which picks up\naura-os-desktop's default `dev-channel` features. The package job then\nstrips `before-packaging-command` from Cargo.toml (to avoid a duplicate\nprebuild) and packages the prebuilt binary verbatim via the\n`binaries-dir = \"../../prebuilt-binaries\"` injection.\n\nAdd `--no-default-features --features stable-channel` to the\n`Build release binary` step in both release workflows so the artifact\nthat gets packaged actually compiles as Stable. Also rewrite the\nmisleading `Package installer` comment in both files (and the matching\none in desktop-validate.yml) which still claimed the channel feature\nwas wired in via `before-packaging-command` even though that line is\ndeleted earlier in the same job.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "a3978b5dc9cd7f540a255e25a67afc776347a554"
+      ],
+      "files": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 37,
+        "deletions": 13
+      },
+      "committedAtMs": 1778112756000,
+      "cleanSubject": "build packaged desktop binary with stable-channel feature",
+      "keywords": [
+        "build",
+        "packaged",
+        "desktop",
+        "binary",
+        "with",
+        "stable",
+        "channel",
+        "feature"
+      ],
+      "fileGroups": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "908d9d935294c000e62a35f401092d2ed7a65c54",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T17:12:36-07:00",
+      "subject": "fix(desktop): embed AURA icon into Windows .exe PE resources",
+      "body": "Start Menu, File Explorer, \"pin to taskbar\" tile, and Alt+Tab fallback\nall read the icon from disk (via the .lnk shortcut or the .exe's first\nRT_GROUP_ICON resource). The runtime tao::WindowBuilder::with_window_icon\nHICON only covers the live taskbar of the running window, so without an\nembedded resource Windows fell back to the generic blue/white executable\nglyph everywhere else.\n\nWire winresource into apps/aura-os-desktop/build.rs (Windows-only build\ndep) and compile assets/installer/installer-icon.ico - already generated\nas a multi-size 16/32/48/64/128/256 ICO by\ninfra/scripts/icons/generate-app-icons.mjs - into the produced binary,\nalong with ProductName/FileDescription/CompanyName/LegalCopyright strings\nso Task Manager and the .exe properties dialog stop showing the bare\ncrate name. Compile failures (e.g. missing llvm-rc on a cross host) emit\na cargo:warning instead of panicking so local non-Windows builds keep\nworking.\n\nVerified by rebuilding aura-os-desktop and extracting the icon from the\nrelease .exe (32x32 AURA orb) and inspecting VersionInfo via\nGet-Item.VersionInfo.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "6122ad6efdae751f1bdd63eeb93de77747682b0e"
+      ],
+      "files": [
+        "Cargo.lock",
+        "apps/aura-os-desktop/Cargo.toml",
+        "apps/aura-os-desktop/build.rs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 77,
+        "deletions": 3
+      },
+      "committedAtMs": 1778112756000,
+      "cleanSubject": "embed AURA icon into Windows .exe PE resources",
+      "keywords": [
+        "embed",
+        "aura",
+        "icon",
+        "into",
+        "windows",
+        "resources"
+      ],
+      "fileGroups": [
+        "Cargo.lock",
+        "apps/aura-os-desktop/Cargo.toml",
+        "apps/aura-os-desktop/build.rs"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop",
+        "Other"
+      ]
+    },
+    {
+      "sha": "ea9c8e6c99d7ccc2fa1cf62cbedebe11d9becfb1",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T17:12:36-07:00",
+      "subject": "feat(chat-sessions): make historical sessions editable, URL is source of truth",
+      "body": "Clicking a session in the agents/projects sidekick now opens it as a\nlive, editable thread instead of a read-only banner view: the next\nmessage extends the existing session with the correct historical\ncontext. The \"+\" chat-input button drops the URL `?session=` and\nclears the visible transcript so the next send creates a fresh\nsession server-side; SessionReady mirrors the new id back into the\nURL so it stays the single source of truth.\n\nBackend\n- Add `session_id: Option<String>` to `SendChatRequest`.\n- New `try_pin_session` validates the pin against the agent's session\n  list and returns a typed `PinnedSessionOutcome`. Mismatches surface\n  as a structured 400 (`session_id ... does not belong to agent ...`)\n  instead of silently writing into the wrong thread.\n- `resolve_chat_session_with_pin` honors the pin (force_new wins);\n  `setup_*_chat_persistence` and `load_*_session_events_for_*` accept\n  the pin so persistence and LLM context come from the same session.\n- Live harness session is force-evicted when the pin disagrees with\n  the resident `ChatSession.session_id`, otherwise switching sessions\n  would keep the old conversation hot in memory.\n\nFrontend\n- Delete `useLiveSessionStore`. Replace its pinning with an\n  `onSessionReady(id)` callback wired into `useChatStream` /\n  `useAgentChatStream`; the chat panel writes `?session=<id>` into\n  the URL via `setSearchParams({ replace: true })`.\n- `AgentChatView` (project + standalone branches) drops\n  `SessionBanner`, `noopSend`, and the `isSessionView` read-only\n  branch -- `historyKey` is just `session:...` when pinned, send is\n  always real, and the `+` button clears `?session=` rather than\n  hitting the reset endpoint.\n- Default-session redirects no longer take a `liveSessionId` --\n  cold-opening `/agents/:agentId` (or the project equivalent) drops\n  you on the most recent editable session, ChatGPT-style.\n\nTests\n- New `pin_tests` cover NotRequested / Matched / Mismatch and the\n  force_new-overrides-pin path.\n- Frontend stream tests assert the new 11th `sessionId` arg.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "908d9d935294c000e62a35f401092d2ed7a65c54"
+      ],
+      "files": [
+        "apps/aura-os-server/src/dto.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/agent_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/loaders.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/persist.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/setup.rs",
+        "apps/aura-os-server/src/handlers/generation/persist.rs",
+        "interface/src/api/streams.ts",
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/components/SessionsList/use-default-session-redirect.ts",
+        "interface/src/hooks/use-agent-chat-stream.test.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream.test.ts",
+        "interface/src/hooks/use-chat-stream/build-stream-handler.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts",
+        "interface/src/hooks/use-standalone-agent-chat.test.ts",
+        "interface/src/hooks/use-standalone-agent-chat.ts",
+        "interface/src/stores/live-session-store.ts"
+      ],
+      "stats": {
+        "fileCount": 19,
+        "insertions": 809,
+        "deletions": 382
+      },
+      "committedAtMs": 1778112756000,
+      "cleanSubject": "make historical sessions editable, URL is source of truth",
+      "keywords": [
+        "make",
+        "historical",
+        "sessions",
+        "editable",
+        "source",
+        "truth"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/api",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/hooks",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "7c6ebf17933f8199e7128fd55d1b270f1efa7fb8",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T17:12:36-07:00",
+      "subject": "fix(terminal): keep xterm palette in sync with theme toggle",
+      "body": "XTerminal's resolvedTheme effect ran before ZUI ThemeProvider's effect\nthat flips <html data-theme>, so getXtermTheme's getComputedStyle read\nthe previous palette and the terminal background lagged the rest of the\nchrome by one toggle. Observe data-theme directly via MutationObserver\nto decouple from React effect ordering.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "ea9c8e6c99d7ccc2fa1cf62cbedebe11d9becfb1"
+      ],
+      "files": [
+        "interface/src/components/XTerminal/XTerminal.test.tsx",
+        "interface/src/components/XTerminal/XTerminal.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 137,
+        "deletions": 7
+      },
+      "committedAtMs": 1778112756000,
+      "cleanSubject": "keep xterm palette in sync with theme toggle",
+      "keywords": [
+        "keep",
+        "xterm",
+        "palette",
+        "sync",
+        "with",
+        "theme",
+        "toggle"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "3cde64e9f78b734ef031e5c469221daa2cd2bd6d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T17:12:36-07:00",
+      "subject": "fix(chat-sessions): clear stream slot when navigating between sessions",
+      "body": "Clicking a different session in the sidekick was leaving the previous\nsession's events visible in the main panel. The hydrate-to-stream\nguard in `useChatHistorySync` skips the reset whenever\n`streamCount >= historyMessages.length` (a defense against blinking\nthe just-finished stream while history catches up mid-turn), so the\nold session's events stayed pinned until something pushed a new\nevent in.\n\nBoth chat panels now explicitly clear the stream slot whenever the\nURL `?session=` flips. The mid-turn `null -> defined` transition\n(from the post-send `SessionReady` URL update) is excluded so a\nfresh-canvas first send doesn't wipe its own in-flight events.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "7c6ebf17933f8199e7128fd55d1b270f1efa7fb8"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.tsx",
+        "interface/src/hooks/use-standalone-agent-chat.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 37,
+        "deletions": 1
+      },
+      "committedAtMs": 1778112756000,
+      "cleanSubject": "clear stream slot when navigating between sessions",
+      "keywords": [
+        "clear",
+        "stream",
+        "slot",
+        "when",
+        "navigating",
+        "between",
+        "sessions"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "adb8a333523fc1b9be05fb52dfcf1d4c1b58745a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T17:12:36-07:00",
+      "subject": "fix(terminal): match xterm bg to surrounding pane in both themes",
+      "body": "The terminal palette in tokens.css hardcoded `--color-terminal-bg`\n(and `--color-terminal-cursor-accent`) to `#1e1e1e` (dark) / `#ffffff`\n(light), but the TerminalPanel container itself paints `var(--color-bg)`\n(`#09090b` in dark, `#ffffff` in light). In dark mode the difference\nshowed up as a visibly lighter rectangle wherever the embedded terminal\nwas mounted (sidekick terminal, project terminal pane, etc.).\n\nAlias `--color-terminal-bg` and `--color-terminal-cursor-accent` to\n`var(--color-bg)` in both `[data-theme='dark']` and `[data-theme='light']`\nso xterm renders flush with the pane chrome and follows any\nuser-customized `--color-bg` from theme overrides. The other terminal\ntokens (foreground, ANSI palette, selection) keep their VS Code-derived\nvalues.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "3cde64e9f78b734ef031e5c469221daa2cd2bd6d"
+      ],
+      "files": [
+        "interface/src/styles/tokens.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 14,
+        "deletions": 8
+      },
+      "committedAtMs": 1778112756000,
+      "cleanSubject": "match xterm bg to surrounding pane in both themes",
+      "keywords": [
+        "match",
+        "xterm",
+        "surrounding",
+        "pane",
+        "both",
+        "themes"
+      ],
+      "fileGroups": [
+        "interface/src/styles"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "eef2a67f886fb3bac0d5dd33a247a3f114a666a4",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T17:12:36-07:00",
+      "subject": "fix(desktop): widen top window resize hit zone to 14px",
+      "body": "The 10px Win32 WM_NCHITTEST band on the main window's top edge was\nhard to grab reliably. Bump TOP_RESIZE_BORDER_LOGICAL_PX to 14 so the\ntop edge resizes comfortably; pill button centerline clicks remain\nunaffected and existing chrome tests still pass.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "adb8a333523fc1b9be05fb52dfcf1d4c1b58745a"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/ui/chrome.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 19,
+        "deletions": 4
+      },
+      "committedAtMs": 1778112756000,
+      "cleanSubject": "widen top window resize hit zone to 14px",
+      "keywords": [
+        "widen",
+        "window",
+        "resize",
+        "zone",
+        "14px"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/src"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop"
+      ]
+    },
+    {
+      "sha": "1aa47dd107e0ece7acab43bce5761b52990554d1",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T17:12:36-07:00",
+      "subject": "fix(sessions): clean session sidekick labels and show new sessions immediately",
+      "body": "The sidekick had two display bugs that landed together after the\nsession-continuation refactor:\n\n- The Haiku summarizer was unconstrained, so persisted summaries\n  occasionally started with `# Session Summary` / `**Title**` /\n  list markers, which leaked through verbatim into the chats list.\n- Any session whose `summary_of_previous_context` was still empty\n  was hidden entirely while Haiku ran, so a brand-new `+`-button\n  session sat invisible for the 1-3s round-trip and the panel\n  showed \"No sessions yet\" mid-conversation.\n\nRender-time fix in `session-row-utils.ts` strips ATX headings,\nblockquotes, list markers, and wrapping bold/italic/code from the\nfirst visible line, so existing summaries in the database render\ncleanly without a backfill. The Haiku system prompt is also\ntightened to forbid markdown going forward.\n\n`deriveSessionLabel` now returns a non-null `\"New chat\"` placeholder\nwhen no summary is available, and `SessionsList` drops the\nnull-skip so every session in the API response renders immediately.\n`useSessionSummaries` upgrades the label in place when Haiku\nreturns. After the lazy-`+` refactor, every row in\n`listProjectSessions` already has at least one user message, so\nthere are no \"truly empty\" sessions to filter out.\n\nAdds `session-row-utils.test.ts` with regressions for the markdown\nstrip, the placeholder fallback, and the upgrade-in-place flow.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "eef2a67f886fb3bac0d5dd33a247a3f114a666a4"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/sessions.rs",
+        "interface/src/components/SessionsList/SessionsList.tsx",
+        "interface/src/components/SessionsList/session-row-utils.test.ts",
+        "interface/src/components/SessionsList/session-row-utils.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 177,
+        "deletions": 15
+      },
+      "committedAtMs": 1778112756000,
+      "cleanSubject": "clean session sidekick labels and show new sessions immediately",
+      "keywords": [
+        "clean",
+        "session",
+        "sidekick",
+        "labels",
+        "show",
+        "sessions",
+        "immediately"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "2c907e10a3f848e761456872c6bc67f5f02067a3",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T17:12:36-07:00",
+      "subject": "fix(mode-selector): keep textarea focused when clicking mode pills",
+      "body": "Calling preventDefault on the segment button's mousedown stops the pill\nfrom grabbing focus from the chat textarea below it, so switching\nbetween Code / Plan / Image / 3D no longer defocuses the input. Click\nselection and arrow-key navigation are unaffected.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "1aa47dd107e0ece7acab43bce5761b52990554d1"
+      ],
+      "files": [
+        "interface/src/components/SlidingPills/SlidingPills.test.tsx",
+        "interface/src/components/SlidingPills/SlidingPills.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 39,
+        "deletions": 0
+      },
+      "committedAtMs": 1778112756000,
+      "cleanSubject": "keep textarea focused when clicking mode pills",
+      "keywords": [
+        "keep",
+        "textarea",
+        "focused",
+        "when",
+        "clicking",
+        "mode",
+        "pills"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "d15c2671c583bd20e778d65319ce975948aa457d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T17:12:36-07:00",
+      "subject": "fix(chat-sessions): defer standalone panel mount during agent switch",
+      "body": "Clicking another agent in the sidebar navigates to `/agents/B` with no\nsession params, so `AgentChatView` was mounting `StandaloneAgentChatPanel`\nfor one render cycle, firing its per-agent timeline fetch, and then\nunmounting it as soon as `useDefaultStandaloneSessionRedirect` pushed\n`?project=&instance=&session=` into the URL and `ProjectAgentChatPanel`\ntook over with a different `streamKey`. The two back-to-back cold-load\nreveals produced the agent-switch flicker.\n\nGate the standalone arm on a \"redirect not imminent\" signal computed\nsynchronously from `sessions-list-store` + `useAgentBindingsKey`. While\nthe redirect is pending (bindings exist and either sessions are cached\nor the surface hasn't been loaded yet), render a stable lane-coloured\nplaceholder so only `ProjectAgentChatPanel` mounts. Agents with no\nbindings or with an empty sessions surface still render the standalone\npanel immediately - no behaviour change for them.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "2c907e10a3f848e761456872c6bc67f5f02067a3"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.module.css",
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.test.tsx",
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 213,
+        "deletions": 6
+      },
+      "committedAtMs": 1778112756000,
+      "cleanSubject": "defer standalone panel mount during agent switch",
+      "keywords": [
+        "defer",
+        "standalone",
+        "panel",
+        "mount",
+        "during",
+        "agent",
+        "switch"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "fe37f65d9a10445deac9dfddf98b3924dd337c18",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T17:12:36-07:00",
+      "subject": "fix(chat-sessions): wait for session events cache before mounting chat panel",
+      "body": "The previous fix suppressed the transient `StandaloneAgentChatPanel`\nmount, but on the cold path the user still saw `ProjectAgentChatPanel`\nmount with empty content while its per-session events fetch was in\nflight - the chat structure (header, input bar) painted first and the\nmessages faded in on top.\n\nReplace the boolean defer-redirect gate with `useAgentsShellTarget`,\na single resolver that:\n\n- picks the target session synchronously (URL params, falling back to\n  the agent's `mostRecent`),\n- eagerly calls `chat-history-store.fetchHistory` for that session so\n  `useChatHistorySync` finds the entry already in flight (or `ready`),\n- keeps the lane placeholder up until the entry reports `ready`/`error`,\n  AT WHICH POINT `ProjectAgentChatPanel` mounts hot - `historyResolved`\n  is true on the first render so the cold-load overlay never trips and\n  the transcript appears in one go.\n\nNet result: clicking an agent goes lane background -> fully populated\nchat, with no chat-shell flash in between, on both the warm path\n(sessions cached) and the cold path (first-time fetch).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "d15c2671c583bd20e778d65319ce975948aa457d"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.test.tsx",
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 267,
+        "deletions": 62
+      },
+      "committedAtMs": 1778112756000,
+      "cleanSubject": "wait for session events cache before mounting chat panel",
+      "keywords": [
+        "wait",
+        "session",
+        "events",
+        "cache",
+        "before",
+        "mounting",
+        "chat",
+        "panel"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "44c42f35fd2e0805bad087e1df70329db90ed348",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T17:12:37-07:00",
+      "subject": "fix(desktop): add JS top-resize bridge to actually widen the hit area",
+      "body": "The Win32 WM_NCHITTEST subclass on the parent HWND never fires for\ncursor positions over the WebView2 child, which fills the entire\nclient area as a WS_CHILD that returns HTCLIENT. Bumping its band\nconstant in chrome.rs (10 -> 14 px) was effectively cosmetic — the\nonly place the subclass actually fires is the 1-logical-pixel\nnon-client strip tao reserves on the very top of the parent on\nWindows 11 (0 px on Windows 10).\n\nMirror the existing native-titlebar-drag.ts approach: the web layer\nDOES see pointer events even when the native child swallows them, so\ninstall a document-level handler that paints `cursor: n-resize` while\nthe pointer sits in the top 14 logical px and IPCs `resize-n` on a\nnon-interactive primary-button pointerdown. A new\n`WinCmd::Resize(ResizeDirection)` is wired through the event loop\n(both main and secondary windows) to call\n`tao::Window::drag_resize_window(North)`, handing off to the OS\nnative resize loop.\n\nRefresh the doc comment over `TOP_RESIZE_BORDER_LOGICAL_PX` to be\nhonest about the subclass's limited reach. Keep the constant in sync\nwith the JS band so the corner kiss-zones the subclass reports\n(HTTOPLEFT / HTTOPRIGHT) line up with the JS band's top edge.\n\nTests: 16 new vitest cases in native-titlebar-resize.test.ts cover\nband geometry, interactive-target exclusion, cursor painting, and\nthe no-bridge no-op path. All 73 aura-os-desktop unit tests still\npass.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "fe37f65d9a10445deac9dfddf98b3924dd337c18"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/events.rs",
+        "apps/aura-os-desktop/src/ui/chrome.rs",
+        "apps/aura-os-desktop/src/ui/main_window.rs",
+        "apps/aura-os-desktop/src/ui/runtime.rs",
+        "interface/src/lib/native-titlebar-resize.test.ts",
+        "interface/src/lib/native-titlebar-resize.ts",
+        "interface/src/main.tsx"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 434,
+        "deletions": 21
+      },
+      "committedAtMs": 1778112757000,
+      "cleanSubject": "add JS top-resize bridge to actually widen the hit area",
+      "keywords": [
+        "resize",
+        "bridge",
+        "actually",
+        "widen",
+        "area"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/src",
+        "interface/src/lib",
+        "interface/src/main.tsx"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "fca8f3996ff5491992ec97efc65efb457bf7a4b9",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T17:12:37-07:00",
+      "subject": "fix(sessions): surface aura-storage errors when right-click delete fails",
+      "body": "`delete_session` was collapsing every non-404 from aura-storage into an\nopaque `internal_error` 500 with no server-side log, and the FE only\n`console.error`d before silently restoring the row — so right-click\n\"Delete session\" appeared to do nothing whenever the upstream rejected\nthe DELETE.\n\nServer: log the upstream status + body preview and reuse\n`map_storage_error` so the real status (e.g. 409 / 502) flows through\nto the response, matching how `get_session` and the other sibling\nhandlers already work. Adds a regression test that a 409 from the\nupstream comes back as 409 instead of 500.\n\nFrontend: thread a per-surface `deleteErrorBySurface` through\n`useSessionsListStore`, surface it as a small dismissible alert at the\ntop of `SessionsList` (used by both the agents `ChatsTab` and the\nprojects `SessionList`), and format the message from `ApiClientError`\nas \"Couldn't delete session (status): server message\".\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "44c42f35fd2e0805bad087e1df70329db90ed348"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/sessions.rs",
+        "apps/aura-os-server/tests/session_delete_test.rs",
+        "interface/src/apps/agents/AgentInfoPanel/ChatsTab.tsx",
+        "interface/src/components/SessionsList/SessionsList.module.css",
+        "interface/src/components/SessionsList/SessionsList.test.tsx",
+        "interface/src/components/SessionsList/SessionsList.tsx",
+        "interface/src/components/SessionsList/format-delete-error.test.ts",
+        "interface/src/components/SessionsList/format-delete-error.ts",
+        "interface/src/components/SessionsList/index.ts",
+        "interface/src/stores/sessions-list-store.ts",
+        "interface/src/views/SessionList/SessionList.tsx",
+        "interface/src/views/SessionList/useSessionListData.ts"
+      ],
+      "stats": {
+        "fileCount": 12,
+        "insertions": 371,
+        "deletions": 10
+      },
+      "committedAtMs": 1778112757000,
+      "cleanSubject": "surface aura-storage errors when right-click delete fails",
+      "keywords": [
+        "surface",
+        "aura",
+        "storage",
+        "errors",
+        "when",
+        "right",
+        "click",
+        "delete",
+        "fails"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/stores",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "c005adccfb92165e6c557b5710dac2e21c581ffb",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-06T17:12:37-07:00",
+      "subject": "fix(chat-sessions): stop wiping the stream on the post-SessionReady URL flip",
+      "body": "Tighten the panel session-transition effect so it only clears the\nstream slot on a true cross-session navigation (defined to different\ndefined) when no turn is actively streaming, and skip the\ninvalidate-before-fetch step in `useChatHistorySync` while the\nstreamKey is live. Together these stop a fresh-canvas first send from\nflashing `.messageContentHidden` over the optimistic user bubble (and\nthen clobbering the previous turn on the next send) once `SessionReady`\nrecomputes the panel's `historyKey`.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "fca8f3996ff5491992ec97efc65efb457bf7a4b9"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.test.tsx",
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.tsx",
+        "interface/src/hooks/use-chat-history-sync/use-chat-history-sync.test.ts",
+        "interface/src/hooks/use-chat-history-sync/use-chat-history-sync.ts",
+        "interface/src/hooks/use-standalone-agent-chat.test.ts",
+        "interface/src/hooks/use-standalone-agent-chat.ts"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 263,
+        "deletions": 19
+      },
+      "committedAtMs": 1778112757000,
+      "cleanSubject": "stop wiping the stream on the post-SessionReady URL flip",
+      "keywords": [
+        "stop",
+        "wiping",
+        "stream",
+        "post",
+        "sessionready",
+        "flip"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 6,
@@ -2111,36 +2936,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11823338
+          "sizeBytes": 11827041
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.472.1",
+      "version": "0.1.0-nightly.473.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.472.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.473.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 36700344
+          "sizeBytes": 36762886
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.472.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.473.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.472.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.473.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 105470456
+          "sizeBytes": 105576952
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.472.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.473.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -2150,29 +2975,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.472.1",
+      "version": "0.1.0-nightly.473.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.472.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.473.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33789380
+          "sizeBytes": 33887051
         },
         {
-          "name": "AURA_0.1.0-nightly.472.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.473.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.472.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.473.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 32922987
+          "sizeBytes": 33013781
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.472.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.473.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -2182,29 +3007,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.472.1",
+      "version": "0.1.0-nightly.473.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.472.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.473.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 35386955
+          "sizeBytes": 35456900
         },
         {
-          "name": "AURA_0.1.0-nightly.472.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.473.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.472.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.473.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 34563055
+          "sizeBytes": 34644822
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.472.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.473.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -2214,17 +3039,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.472.1",
+      "version": "0.1.0-nightly.473.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.472.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.473.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24740106
+          "sizeBytes": 24856682
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.472.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.473.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -2233,26 +3058,26 @@
     }
   ],
   "rendered": {
-    "title": "Native desktop polish, chat 3D pipeline, and S3 attachment uploads",
-    "intro": "A dense nightly that reshapes how AURA feels as a desktop app — taking over the right-click menu, fixing Windows top-edge resize, and splitting dev from stable builds — while rebuilding chat 3D mode end-to-end and wiring image attachments through S3 presigned uploads. Feedback, agent sessions, and a handful of UI papercuts also got meaningful attention.",
+    "title": "Native chrome polish, editable chat sessions, and a real Stable channel",
+    "intro": "A dense day for AURA: right-click finally feels native across the desktop, the chat sidekick gets a unified, editable session list with summarized titles, 3D chat lands as a true two-step image-then-model pipeline, and the release pipeline is rewired so installers actually ship the Stable channel binary. Plenty of Windows-specific polish too, from a wider top-edge resize zone to an embedded app icon.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "8:16 PM",
         "started_at": "2026-05-06T03:16:25.000Z",
         "ended_at": "2026-05-06T03:16:25.000Z",
-        "title": "AURA takes over the right-click menu",
-        "summary": "The Chromium/WebView2 native context menu no longer leaks through AURA's chrome, replaced by an in-app editing menu where it matters.",
+        "title": "Right-click on AURA chrome stops opening the WebView2 menu",
+        "summary": "A document-level override replaces Chromium's native context menu with in-app behavior, restoring the desktop-OS feel.",
         "items": [
           {
-            "text": "Right-clicking empty AURA chrome no longer pops the WebView2/Chromium menu (Back, Refresh, Inspect, Save as…); a single document-level listener defers to in-app handlers like DesktopContextMenu and otherwise cancels the native menu, restoring the desktop OS feel.",
+            "text": "Right-clicking empty AURA chrome no longer surfaces the WebView2 Back/Refresh/Inspect menu; in-app handlers like DesktopContextMenu and NotesEntryContextMenu are still respected via defaultPrevented.",
             "commit_shas": [
               "52cdd479fdb0520d4286710b63274cfa0fcfc672"
             ],
             "confidence": "high"
           },
           {
-            "text": "Inside inputs, textareas, and contenteditable fields, right-click now shows a compact in-app Cut / Copy / Paste / Select All so text editing keeps working without ceding control of the chrome.",
+            "text": "Inside inputs, textareas, and contenteditable fields, right-click now opens a compact in-app Cut / Copy / Paste / Select All menu so editing keeps working without the native chrome.",
             "commit_shas": [
               "52cdd479fdb0520d4286710b63274cfa0fcfc672"
             ],
@@ -2265,11 +3090,18 @@
         "time_label": "8:38 PM",
         "started_at": "2026-05-06T03:38:54.000Z",
         "ended_at": "2026-05-06T03:38:54.000Z",
-        "title": "Forgiving top-edge window resize on Windows",
-        "summary": "Grabbing the top edge of the borderless main window no longer requires pixel-perfect aim.",
+        "title": "Easier top-edge window resizing on Windows",
+        "summary": "A Win32 subclass widens the resize hit zone along the top of the borderless main window so grabbing it no longer requires pixel-perfect aim.",
         "items": [
           {
-            "text": "A Win32 subclass on the main HWND now reports HTTOP/HTTOPLEFT/HTTOPRIGHT across a 10‑logical‑px band along the top edge instead of tao's default ~4px, so resize from the top works reliably alongside the floating titlebar pill. The subclass becomes a no-op when maximized, re-reads DPI per hit-test for mixed-DPI setups, and leaves titlebar drag, side resize, and Chromium app-region behavior untouched.",
+            "text": "On Windows, the main window now reports HTTOP/HTTOPLEFT/HTTOPRIGHT across a 10-logical-pixel band along the top edge, leaving titlebar drag, side resizes, and Chromium app-region behavior untouched.",
+            "commit_shas": [
+              "bc327bedc014762db3e42ec8de995866abfca726"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The hit-test re-reads DPI on every event and becomes a no-op while the window is maximized, so behavior stays correct across mixed-DPI monitor setups.",
             "commit_shas": [
               "bc327bedc014762db3e42ec8de995866abfca726"
             ],
@@ -2282,18 +3114,18 @@
         "time_label": "8:43 PM",
         "started_at": "2026-05-06T03:43:41.000Z",
         "ended_at": "2026-05-06T03:43:41.000Z",
-        "title": "Modals open at their final size instead of janking",
-        "summary": "A new shared hook delays opening async-loading modals until their data is ready, eliminating the post-open relayout flicker.",
+        "title": "Modals wait for their data before opening",
+        "summary": "A new useDeferredModalOpen hook removes the jank where Delete Agent, Hire, and Tier modals would open empty and then reflow as data loaded.",
         "items": [
           {
-            "text": "Introduced useDeferredModalOpen, which keeps the modal closed and disables its trigger until a prepare() promise resolves (with a 3000ms failsafe), then opens at the final size. Stale resolutions from earlier open cycles are ignored via an internal cycle token.",
+            "text": "DeleteAgentConfirmModal, HireProjectPickerModal, and TierSubscriptionModal now keep their trigger button briefly disabled while data loads and only open once content is ready, with a 3000ms failsafe so the modal can't get stuck closed.",
             "commit_shas": [
               "8cc4d0d158682e19beea46542fa1fab450409cc6"
             ],
             "confidence": "high"
           },
           {
-            "text": "Applied to three high-visibility surfaces: the Delete Agent confirm modal (cascade label shortened to \"Delete (N projects)\" so width is stable), the marketplace Hire project picker (no more in-modal spinner), and the Tier subscription modal (now reads from the billing store instead of fetching on open).",
+            "text": "The cascade label on Delete Agent is shortened from 'Delete and remove from N projects' to 'Delete (N projects)' so the button width stays stable regardless of binding count.",
             "commit_shas": [
               "8cc4d0d158682e19beea46542fa1fab450409cc6"
             ],
@@ -2306,18 +3138,25 @@
         "time_label": "8:45 PM",
         "started_at": "2026-05-06T03:45:21.000Z",
         "ended_at": "2026-05-06T03:45:21.000Z",
-        "title": "Dev and stable AURA can run side-by-side",
-        "summary": "A new build-time channel selector keeps a cargo-built dev AURA from colliding with an installed stable AURA on the same machine.",
+        "title": "Dev and stable AURA can now coexist on one machine",
+        "summary": "A new build-time channel selector gives the dev build its own data dir, ports, single-instance lock, and window identity so it no longer collides with an installed AURA.",
         "items": [
           {
-            "text": "Added a Channel enum in aura-os-core as the single source of truth for per-channel identifiers — data dir (aura vs aura-dev), skills home, Windows single-instance mutex, window/menu title, embedded desktop server port (19847/19848), standalone server port (3100/3101), harness sidecar port (19080/19081), default harness URL port, and updater enablement (off in dev so cargo builds can never silently replace the installed stable shell).",
+            "text": "aura-os-core gains a Channel enum that drives every per-channel identifier — data dir (aura vs aura-dev), skills home, Windows mutex, window/menu title, embedded server port (19847/19848), standalone server (3100/3101), harness sidecar (19080/19081), and updater enablement.",
             "commit_shas": [
               "718a47c6b5841fddac879218919d013c944df605"
             ],
             "confidence": "high"
           },
           {
-            "text": "cargo run and the scripts/dev/* runners default to dev-channel via cargo's default feature; the release-stable, release-nightly, and desktop-validate workflows build with --no-default-features --features stable-channel, and the desktop crate disables default features on its core/server deps so a packaging build can't pull in dev-channel transitively. Dev script ports also moved off stable defaults (Vite 5174, mobile backend 3101).",
+            "text": "cargo run and the scripts/dev runners default to the dev channel, while release-stable and release-nightly workflows build with --no-default-features --features stable-channel so packaged installers stay on the stable identity.",
+            "commit_shas": [
+              "718a47c6b5841fddac879218919d013c944df605"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The in-app updater is disabled in dev builds so a cargo-built shell can never silently replace the installed Stable binary.",
             "commit_shas": [
               "718a47c6b5841fddac879218919d013c944df605"
             ],
@@ -2330,18 +3169,18 @@
         "time_label": "9:04 PM",
         "started_at": "2026-05-06T04:04:51.000Z",
         "ended_at": "2026-05-06T04:08:14.000Z",
-        "title": "Chat 3D mode returns with an image-first flow",
-        "summary": "The 3D pill is back in the chat mode selector, wired to the same image-then-3D path as the standalone AURA 3D app.",
+        "title": "3D chat mode returns with an image-first flow",
+        "summary": "The 3D pill is back in the chat mode selector, wired to generate an image first and then convert it, mirroring the standalone AURA 3D app.",
         "items": [
           {
-            "text": "Re-enabled 3D chat mode and rewired it so the only valid path is generate an image first, then convert it to 3D. The input bar derives its source from the most recent successful generate_image tool result, surfaces it as a \"Source for 3D\" thumbnail above the textarea, blocks Send with a switch-to-Image hint until one exists, and dispatches via generate3dStream's URL form with sourceImageUrl carried through both live and queue-replay paths.",
+            "text": "The chat input derives its 3D source from the most recent successful generate_image tool result, surfaces it as a 'Source for 3D' thumbnail, and dispatches the request via generate3dStream's URL form; manual image attachments stay disabled until the proxy decode-and-forward path is fixed.",
             "commit_shas": [
               "15aa4319fb3748ebdf7f666aa6988ca4bcfa85da"
             ],
             "confidence": "high"
           },
           {
-            "text": "Stopped appending the product-photography STYLE_LOCK_SUFFIX to user prompts in the AURA 3D app's Image tab so it now matches /image and /3d behavior; stripStyleLock is retained to clean the suffix off legacy artifacts.",
+            "text": "The AURA 3D app's Image tab no longer appends the product-photography STYLE_LOCK_SUFFIX to user prompts, so image generation now behaves consistently with /image and /3d.",
             "commit_shas": [
               "5897137de70a3d83bdf22f16f1e179c56d903bad"
             ],
@@ -2353,23 +3192,57 @@
         "batch_id": "entry-6",
         "time_label": "9:26 PM",
         "started_at": "2026-05-06T04:26:01.000Z",
-        "ended_at": "2026-05-06T23:39:53.000Z",
-        "title": "Chat 3D pipeline, S3 attachment uploads, sessions sidekick, and theme work",
-        "summary": "The day's longest stretch reshaped chat 3D mode into a real two-step pipeline, moved image attachments to S3 presigned uploads, made the agent Chats sidekick clickable, and landed a wave of theming and reliability fixes.",
+        "ended_at": "2026-05-07T00:12:37.000Z",
+        "title": "Editable chat sessions, native context menus, and Stable-channel installers",
+        "summary": "The evening's long batch reshapes the chat session model, finishes the native-feel context menu work, lands S3 image uploads, and fixes a string of Windows desktop and release-pipeline bugs.",
         "items": [
           {
-            "text": "Reworked chat 3D as an in-bar two-step image→model pipeline: a removable pinned source thumb (now inline in the input row's start slot) replaces the \"generate an image first\" gate, the wire variant splits into image_step / model_step, image-only sends are allowed, and Model3DBlock now embeds a lazy-loaded WebGLViewer with a download link instead of a bare GLB link. Auto-expanded generate_3d_model so freshly generated models render their viewer on first paint.",
+            "text": "The agents and projects sidekicks now share one SessionsList: rows are clickable, default to the most recent session, get Haiku-summarized titles (with markdown stripped from the labels), and surface real server errors when right-click delete fails. State is consolidated into a single useSessionsListStore, fixing a 'Maximum update depth exceeded' crash that had blocked agent chat from loading at all.",
+            "commit_shas": [
+              "42c97f674092e272fe47c99c2dbea19876457b11",
+              "ee497404d474556bb6b1a38367bb9c4fc5adbc57",
+              "309f35b21f4958fb1c68d92172fe524eecfd4bc7",
+              "ced57ed3c9f4104772a97c6cc975eed2c7860e61",
+              "a3978b5dc9cd7f540a255e25a67afc776347a554",
+              "1aa47dd107e0ece7acab43bce5761b52990554d1",
+              "fca8f3996ff5491992ec97efc65efb457bf7a4b9"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Historical sessions are now live, editable threads instead of read-only banners: a server-side session_id pin validates against the agent's session list, the URL becomes the source of truth via SessionReady, and the chat input '+' button starts a fresh session by clearing the URL. Several follow-ups stop the stream slot from flashing or wiping itself across session navigations and during agent switches.",
+            "commit_shas": [
+              "ea9c8e6c99d7ccc2fa1cf62cbedebe11d9becfb1",
+              "3cde64e9f78b734ef031e5c469221daa2cd2bd6d",
+              "d15c2671c583bd20e778d65319ce975948aa457d",
+              "fe37f65d9a10445deac9dfddf98b3924dd337c18",
+              "c005adccfb92165e6c557b5710dac2e21c581ffb"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Chat 3D is reworked into an in-bar two-step image-then-model pipeline: the source thumb moves inline with a removable pin, image-only sends now dispatch the 3D model step, and finished models render as a standalone WebGLViewer with a download link instead of a collapsed Block. The chat-only style-lock suffix is later removed entirely.",
             "commit_shas": [
               "2b78e87b4a35201a8ae4200fa4efc43f79def032",
               "d5a52702887fa51e3b6e5c2a1e85d3311fbb8ec2",
               "ffd4da5868c0ab5203f3ef7b6c9058fa90cb38de",
               "69f1276ad7d52197186b68ab6a40b9464795c948",
-              "73fd9f971cdc6574a801546ff76168bcb90d1f7c"
+              "73fd9f971cdc6574a801546ff76168bcb90d1f7c",
+              "1cf3dcc689a0b4a2d9f3f969a1c5edcf9c31cd06"
             ],
             "confidence": "high"
           },
           {
-            "text": "Image attachments now flow through S3: a new presign proxy endpoint and upload_routes() on the server, a frontend upload API, and a MessageAttachment.source_url field on the protocol. The chat input wires presigned uploads in, blocks Send while uploads are in progress, dims uploading thumbnails, and renders uploaded images from the S3 URL in message bubbles. Includes follow-up fixes for stale ref closures and threading source_url through history and stream paths.",
+            "text": "The native-feel context menu work expands: right-clicking selected text in markdown output now offers Copy, right-clicking an image offers Copy Image (re-encoding to PNG via canvas when needed), and the desktop background entry is shortened to 'Background'.",
+            "commit_shas": [
+              "90c31ede9c670cb6bb7adc575a4a270b08786a16",
+              "5c24a16b02e500e7d80afaf0767e6c7b9858c868",
+              "d0ce2d56d585ca2cbdbf5310dfef71e738ab368d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Image attachments now upload to S3 via a new presign proxy endpoint: the chat input blocks send while uploads are in flight, dims uploading thumbnails, and message bubbles render images directly from their S3 source_url through both the live stream and history paths.",
             "commit_shas": [
               "acf466a8ee60caf200355fa93be4210e9a8699b5",
               "8492dee2d85602ff812d50c3c498b14645f99ec6",
@@ -2385,57 +3258,38 @@
             "confidence": "high"
           },
           {
-            "text": "The agent Chats sidekick is now usable: rows are clickable and open the historical transcript, untitled sessions get an immediate Haiku title attempt (the lagging token-count gate is gone) and stay hidden until they have a real label, a new \"+\" button on the input mode row starts a fresh session distinct from the soft reset, and a sessions-list version counter auto-refreshes the sidekick when sessions are created elsewhere. Clicks from the agents app stay inside the agents shell instead of jumping to the projects shell.",
+            "text": "Released installers finally ship as Stable: the build-app job now compiles aura-os-desktop with --no-default-features --features stable-channel, fixing 'AURA Dev' titles, the wrong data dir, dev ports, and a silently-disabled updater in shipped builds. An earlier flag mistake on cargo packager itself is also corrected.",
             "commit_shas": [
-              "42c97f674092e272fe47c99c2dbea19876457b11",
-              "ee497404d474556bb6b1a38367bb9c4fc5adbc57",
-              "309f35b21f4958fb1c68d92172fe524eecfd4bc7",
-              "9cdc19b75b9a757d0b82cf28bf11cbbecb740bfc"
+              "6122ad6efdae751f1bdd63eeb93de77747682b0e",
+              "a457cabce1ec34459f8967a9eee56ad2b827b346"
             ],
             "confidence": "high"
           },
           {
-            "text": "Extended the right-click override with a Copy action for non-editable text selections in chat/markdown output and a Copy Image action that re-encodes to PNG via canvas when needed, and shortened the desktop background label to \"Background\".",
+            "text": "On Windows, the AURA orb icon is embedded into the .exe's PE resources via winresource so Start Menu, File Explorer, taskbar pin, and Alt+Tab fallbacks stop showing the generic executable glyph; ProductName/FileDescription metadata is set too.",
             "commit_shas": [
-              "90c31ede9c670cb6bb7adc575a4a270b08786a16",
-              "5c24a16b02e500e7d80afaf0767e6c7b9858c868",
-              "d0ce2d56d585ca2cbdbf5310dfef71e738ab368d"
+              "908d9d935294c000e62a35f401092d2ed7a65c54"
             ],
             "confidence": "high"
           },
           {
-            "text": "Theme and chrome polish: a new --color-modal-bg ZUI token paints modals jet-black in dark mode (with a paired Dark+Light editor in Settings → Appearance → Custom colors), the base Button now sits at full opacity at rest and dims on hover, and the titlebar Update pill renders at full accent saturation again. Focus-visible rings no longer paint around modal/dialog wrappers when Chromium flips into keyboard-modality.",
+            "text": "The top-edge resize zone is widened to 14 logical pixels and now actually fires over the WebView2 child via a JS bridge that paints n-resize and IPCs into a new WinCmd::Resize that calls tao's drag_resize_window — the original Win32 subclass alone couldn't reach the WebView's client area.",
             "commit_shas": [
-              "ba64c3d93368fd844eaba1c393b25fcddf3c925c",
-              "a16bc5898f404b9a2e6aa5ff23be2bd55f087571",
-              "dc169b9a51839144e6c4570345d0f725b7553842",
-              "4f87ed6a073b267352296a1f95c127695d87dc72"
+              "eef2a67f886fb3bac0d5dd33a247a3f114a666a4",
+              "44c42f35fd2e0805bad087e1df70329db90ed348"
             ],
             "confidence": "high"
           },
           {
-            "text": "New chat empty-state suggestions render as a 2x2 segmented row of icon-prefixed chips with proper gaps, the input bar's empty-state border pulse slowed from 2s to 6s, the bottom-bar Local/Remote slot stays width-stable while agent metadata loads, image-attachment strips got breathing room, mode-row labels are no longer text-selectable, and sidebar agent rows fall back to \"New Agent\" when names are missing.",
+            "text": "Chat scrolling now respects user intent: an explicit upward scroll suspends auto-follow until the user reaches the very bottom again, so streaming output and the post-stream image pin can no longer yank the viewport back down mid-read.",
             "commit_shas": [
-              "c6cdeab2e03fff414ee9c71efb2763bb858a3143",
-              "3edae9dbc5786589c1040d87b8a9e4a323ff3be1",
-              "163267cd1ba8db0496ecb367e51325dffff70b46",
-              "426e8cbff4af56e65f45b903cbd23457fa3f883e",
-              "8d9acaf0c2af01ccdbd9fc5dbb9f832052483677",
-              "4cf0bd627acfce0375f6ed3a0d8b786193c0b850",
-              "9862578dccb48e68a5a89fa15e023f1ae45c404c",
-              "279ecdbc560473896e3d4e3df2a08bd776268a6d"
+              "5828b1b27d3e7c9d09640c0389bc8b5ca4ab0151",
+              "da507572029e539c060b43c76110ae5de0f1ed0f"
             ],
             "confidence": "high"
           },
           {
-            "text": "Chat scrolling now respects user intent: explicit upward wheel/touch/keyboard scroll is detected in useScrollAnchorV2 and gates both the streaming tail-pin layout effect and the 6-second post-stream image pin, so reading older messages mid-stream isn't yanked back to the bottom.",
-            "commit_shas": [
-              "5828b1b27d3e7c9d09640c0389bc8b5ca4ab0151"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Feedback got a Notes-style sidekick split into Details and Comments tabs (driven by a sidekickTab slice on the feedback store), and every new submission is now tagged with the active app version — surfaced as \"Tagged with version X\" in the modal and a vX.Y.Z chip on each card — riding the existing activity_events metadata blob with no schema migration.",
+            "text": "The feedback app gets a Notes-style sidekick split into Details and Comments tabs, and every new submission is auto-tagged with the active app version (rendered as a small vX.Y.Z chip on each card) so support can correlate reports with the exact build.",
             "commit_shas": [
               "b08b8d79e8270593375b76e690d32e47a29d74df",
               "d0d49f8ad93200faba6553250a050fb9ab8dd0de"
@@ -2443,36 +3297,45 @@
             "confidence": "high"
           },
           {
-            "text": "Project Settings can now attach an Orbit repo from the edit modal — reusing OrbitRepoSection from the new-project flow — and update_project on the server calls orbit.ensure_repo when a request attaches a brand-new owner+repo so the repo actually gets provisioned.",
-            "commit_shas": [
-              "73176b7cc8b76c4a9f4a96bfe35c1cec8d01268c"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Bootstrap CEO recognition now matches on the canonical system_prompt prefix in addition to the local stamp and exact name+role, so renamed CEOs from before the stamping fix no longer cause a duplicate \"CEO\" agent to be minted on next login.",
+            "text": "A duplicate 'CEO' agent could appear after renaming the bootstrap CEO and re-logging in; the matcher now also recognizes the canonical 'You are the CEO SuperAgent' system-prompt prefix so renamed CEOs survive dedupe.",
             "commit_shas": [
               "2da2e559c6901b48adeb4694a7035113e8ad26c5"
             ],
             "confidence": "high"
           },
           {
-            "text": "Release pipeline fix: dropped --no-default-features and --features from the cargo packager invocation in desktop-validate, release-nightly, and release-stable workflows; cargo-packager 0.11.8's CLI rejected those as cargo-build flags, and the stable-channel feature is already wired via before-packaging-command, unblocking CI.",
+            "text": "Smaller interface polish: a jet-black modal background token with per-mode override in Settings > Appearance, inverted ZUI button dim so rest is full opacity and hover fades, the titlebar Update pill at full accent saturation, a 'New Agent' fallback for nameless sidebar rows, suppressed focus rings on dialog wrappers, redesigned empty-state prompt suggestions with a slower input pulse, a stable bottom-bar environment slot during agent switches, attaching an Orbit repo from the project settings modal, mode pills that no longer steal focus from the textarea, terminal palette that follows theme toggles in real time and matches the surrounding pane, and breathing room around chat image attachments.",
             "commit_shas": [
-              "a457cabce1ec34459f8967a9eee56ad2b827b346"
+              "ba64c3d93368fd844eaba1c393b25fcddf3c925c",
+              "a16bc5898f404b9a2e6aa5ff23be2bd55f087571",
+              "dc169b9a51839144e6c4570345d0f725b7553842",
+              "279ecdbc560473896e3d4e3df2a08bd776268a6d",
+              "4f87ed6a073b267352296a1f95c127695d87dc72",
+              "c6cdeab2e03fff414ee9c71efb2763bb858a3143",
+              "3edae9dbc5786589c1040d87b8a9e4a323ff3be1",
+              "163267cd1ba8db0496ecb367e51325dffff70b46",
+              "426e8cbff4af56e65f45b903cbd23457fa3f883e",
+              "73176b7cc8b76c4a9f4a96bfe35c1cec8d01268c",
+              "4cf0bd627acfce0375f6ed3a0d8b786193c0b850",
+              "9862578dccb48e68a5a89fa15e023f1ae45c404c",
+              "9cdc19b75b9a757d0b82cf28bf11cbbecb740bfc",
+              "2c907e10a3f848e761456872c6bc67f5f02067a3",
+              "7c6ebf17933f8199e7128fd55d1b270f1efa7fb8",
+              "adb8a333523fc1b9be05fb52dfcf1d4c1b58745a",
+              "8d9acaf0c2af01ccdbd9fc5dbb9f832052483677"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           }
         ]
       }
     ],
     "highlights": [
-      "AURA now owns the right-click menu across the app",
-      "Chat 3D mode shipped as a real two-step image→model pipeline with inline GLB viewer",
-      "Dev and stable AURA builds can finally run side-by-side",
-      "Image attachments now upload to S3 via presigned URLs",
-      "Windows top-edge resize is forgiving again"
+      "Native browser context menu replaced with in-app menus across editable text, selections, and images",
+      "Chat sessions are now editable, summarized, and unified between the agents and projects sidekicks",
+      "3D chat mode rebuilt as an in-bar image-then-model pipeline with embedded GLB viewer",
+      "Stable installers now actually ship the stable-channel binary, with proper Windows icons embedded",
+      "New dev/stable channel split lets a cargo-built AURA run alongside the installed app"
     ],
-    "raw_commit_count": 46
+    "raw_commit_count": 64
   }
 }
