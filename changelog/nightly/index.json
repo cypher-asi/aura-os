@@ -1,5 +1,24 @@
 [
   {
+    "date": "2026-05-07",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.474.1",
+    "title": "A \"+ new chat\" overhaul: instant fresh canvas, live titles, and durable sessions",
+    "intro": "Today's nightly is almost entirely about making the Chats sidekick feel right. The team rebuilt the \"+ new chat\" flow end to end — from the orphan \"New chat\" rows that did nothing on click, through the messy session-switch remounts, to a brand-new ChatGPT-style title generator that streams a real session label into the sidekick before the assistant even finishes its first reply. Along the way, agent personality finally reaches chat turns, and a long tail of binding, focus, and bubble-remount glitches got cleaned up.",
+    "entryCount": 5,
+    "highlights": [
+      "Sidekick no longer shows orphan \"New chat\" rows that go nowhere",
+      "ChatGPT-style session titles generated on first message and pushed live over WS",
+      "Stable chat input bar and assistant bubble across session switches",
+      "Agent personality, role, and skills now flow into chat turns",
+      "Cross-org agent bindings (e.g. Glenn, Machina) now surface their real chats"
+    ],
+    "rawCommitCount": 29,
+    "generatedAt": "2026-05-07T07:05:34.329Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.474.1",
+    "path": "history/2026-05-07.json"
+  },
+  {
     "date": "2026-05-06",
     "channel": "nightly",
     "version": "0.1.0-nightly.473.1",
