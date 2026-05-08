@@ -2,20 +2,20 @@
   {
     "date": "2026-05-07",
     "channel": "nightly",
-    "version": "0.1.0-nightly.479.1",
-    "title": "New chat flow gets a real sidekick, real titles, and a safer updater",
-    "intro": "Today's nightly is dominated by a top-to-bottom rework of how new chats appear in the agents sidekick: empty \"New chat\" ghosts are gone, the \"+\" button now lands on a clean canvas, fresh sessions pop into the sidekick on send, and Haiku-generated titles stream in live. The day closes with a critical release-channel safety flip so the desktop updater can never silently ship dead builds again, plus image upload fixes that restore reliable attachment previews and history.",
+    "version": "0.1.0-nightly.483.1",
+    "title": "New chat flow rebuilt and the macOS updater learns to recover itself",
+    "intro": "A heavy day on the chat surface: the \"+\" new-chat experience was rebuilt end to end, session sidekick rows are now optimistic and live-titled, and a long-standing chat-bubble flicker on send was finally root-caused with a stable clientId rewrite. On the platform side, the macOS updater can now detect read-only / translocated bundles and offer one-click recovery, the Windows installer follows system light/dark mode, and a quietly-broken release default that had been shipping dev binaries to users was closed off.",
     "entryCount": 6,
     "highlights": [
-      "ChatGPT-style fresh-canvas + button with optimistic sidekick rows",
-      "Live-streamed session titles replace lazy summaries",
-      "Agent personality now actually shapes chat replies",
-      "Desktop updater fail-closes to stable channel",
-      "Image attachments survive history reloads and large files"
+      "Rebuilt new-chat lane with optimistic sidekick rows and ChatGPT-style auto-titles",
+      "macOS updater preflights translocated bundles and offers one-click relocate",
+      "Stable clientId projector kills the assistant-bubble flicker on send",
+      "Windows NSIS installer now matches system light/dark theme",
+      "Release channel default flipped so dev builds can't silently ship to users"
     ],
-    "rawCommitCount": 35,
-    "generatedAt": "2026-05-07T11:18:15.827Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.479.1",
+    "rawCommitCount": 67,
+    "generatedAt": "2026-05-08T06:19:43.621Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.483.1",
     "path": "history/2026-05-07.json"
   },
   {

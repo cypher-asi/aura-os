@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-07T11:18:15.827Z",
+  "generatedAt": "2026-05-08T06:19:43.621Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.479.1",
+  "version": "0.1.0-nightly.483.1",
   "date": "2026-05-07",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.479.1",
-  "lastIncludedSha": "b9a8fda6c140df9597f6038288a822c129563972",
-  "previousProcessedSha": "031d8fb8953494050adefdccdabce84165d88372",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.483.1",
+  "lastIncludedSha": "63b3bdac92fddb5da1c23f29a49a85268a30d691",
+  "previousProcessedSha": "b9a8fda6c140df9597f6038288a822c129563972",
   "commitShas": [
     "c16c9103bd1ff96d0504f516f3fa2107341c9805",
     "81d8b6fa2ef540bc5828b43e48a29fc4609b9729",
@@ -46,10 +46,42 @@
     "7f5f0afbf533f50d0b2c217380132760c08da6f0",
     "031d8fb8953494050adefdccdabce84165d88372",
     "f6903cd27deac7a30f0db83c4aa5bd4a2416fa60",
-    "b9a8fda6c140df9597f6038288a822c129563972"
+    "b9a8fda6c140df9597f6038288a822c129563972",
+    "94063f8435ffdcf6b2920dd2774cceb8d345c5f9",
+    "649d3bdbde940a8102390dad6f3717b89d64a117",
+    "32c4d898780c6ca5f9ed53381d6ef35298fab85e",
+    "6b67e64cc6760c88aea9d5f7c910def39de58a44",
+    "43ff6e6914b1ea0a047d4b4cfc38000670fad72e",
+    "7fcdb9040129fd3a033fc150fc218f14bdb85e0e",
+    "ab0b9f5cab8b4ba1a03453acfa59d6965f808f3d",
+    "15ec2b6428ba21f1059af53272c9ee636469eac1",
+    "af8409d4061dd4bede20ae8e2c70151b87cd86ad",
+    "1aa1d089bd079581d4724cbcad9658f4dd6609e9",
+    "a59e2da9c331611750c2e696d05e083a1062bc72",
+    "3f685dd877b61ca113576996fa4ca14b6883c504",
+    "6280aa3e8cfc5eadd1ca50417a581db81329db35",
+    "71de03a612c2c449b5f60d1c8c5d7bae755e74a2",
+    "89db17204f46fcc5327cd886111da9af41e2791a",
+    "7e2e6a3653123a8f6ac17f11f14142165a346c1d",
+    "45ea067f1c95a3461b90d2eebde6b4bf7009d57f",
+    "0ee8e18535402f24421d8a40908f2bbf747c4fac",
+    "7799d950e8f2a3e2aa10bff305425b199198a117",
+    "01f7de00c3970e04c874a852ec801b2fc40c67be",
+    "b8ed3df0cf23856cecdefa2ed9fa9e0302525f8e",
+    "30ccaa3669a09377c0b22fd87a52083ec8402210",
+    "f043c7107d0e935f58fbd453cb6a79cb45b3dd1b",
+    "54017ef8f99848980ec402d31bf471d8ee1a7ea3",
+    "c74a9b0bc7785b518fa8dce45e29ffa3aa9f8211",
+    "7f35aa0616f7c136290aba65e7812c51c4d1605e",
+    "49c3b63ac31fdb32024df7751a0aac51880df88c",
+    "94432a17fc00358e613c563743c7a5effaa175f8",
+    "e827bc9d66eecaf24f09683bcb7269e8d14cbfec",
+    "be5fe360eee50e241cafd902ebf7773d920f2874",
+    "163ca014551df5d1c96b16ef3247970a51ddd3e7",
+    "63b3bdac92fddb5da1c23f29a49a85268a30d691"
   ],
-  "rawCommitCount": 35,
-  "filteredCommitCount": 35,
+  "rawCommitCount": 67,
+  "filteredCommitCount": 67,
   "rawCommits": [
     {
       "sha": "c16c9103bd1ff96d0504f516f3fa2107341c9805",
@@ -1528,6 +1560,1404 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "94063f8435ffdcf6b2920dd2774cceb8d345c5f9",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T09:46:03-07:00",
+      "subject": "fix(chat): reinstate prior assistant when send-frame merge drops it",
+      "body": "The first attempt at this regression (91c47d4e1) only fixed the React\nkey-stability path: it kept `applyTailIdAliases` from remounting the\nprior assistant bubble when its placeholder->persisted id swap landed\nin the same render that appended a new optimistic user prompt. That\naddresses one specific race but the user still observes \"sending a new\nmessage removes the last message for a split second then it pops back.\"\n\nStatic analysis of every merge input (`useStreamEvents`, message-store\nthread, history-store events, `combineStoredAndStreamMessages`,\n`applyTailIdAliases`) couldn't pin the symptom to a single race. There\nare at least three independent ways the prior assistant can briefly\nvanish during a send: a WS-driven force refetch returning a mid-persist\nsnapshot before the new turn's MessageEnd, an LRU eviction of the\nshared per-(project, instance) stream entry, and an in-flight\n`invalidateHistory` clearing the message-store thread between the\noptimistic stream append and the next render.\n\nRather than chase each race independently, enforce the end-state\ninvariant in `useConversationSnapshot`: when the merged result ends\nwith an optimistic local user prompt — the canonical \"user just hit\nSend\" frame — and the previous-frame cache for the same transcriptKey\ncarries persisted entries that are now missing from the merge, splice\nthem back in chronological order before the trailing optimistic prompt.\n\nThe reinstate path is gated on the trailing optimistic-user invariant,\nso idle (between-turn) refreshes — including legitimate server-side\ndeletions that drop a prior assistant from history — pass through the\nno-op branch and trust the merge result. Cached optimistic ids are\nnever reinstated; we only restore persisted ids whose disappearance\nmid-send is structurally suspicious.\n\nTwo tests cover the fix:\n1. The reinstate path: simulate a force-refetch race that drops the\n   prior assistant from both stored and history while a follow-up\n   `temp-2` lands in the stream. Without the splice the merged tail\n   is `[user-1, temp-2]`; the fix restores `[user-1, asst-1, temp-2]`.\n2. The non-trigger guard: an idle refresh that drops the prior\n   assistant (no optimistic user prompt at the tail) must NOT\n   resurrect the assistant — proving the splice respects legitimate\n   server-side state changes.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "b9a8fda6c140df9597f6038288a822c129563972"
+      ],
+      "files": [
+        "interface/src/hooks/use-conversation-snapshot.test.ts",
+        "interface/src/hooks/use-conversation-snapshot.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 242,
+        "deletions": 0
+      },
+      "committedAtMs": 1778172363000,
+      "cleanSubject": "reinstate prior assistant when send-frame merge drops it",
+      "keywords": [
+        "reinstate",
+        "prior",
+        "assistant",
+        "when",
+        "send",
+        "frame",
+        "merge",
+        "drops"
+      ],
+      "fileGroups": [
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "649d3bdbde940a8102390dad6f3717b89d64a117",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T10:20:42-07:00",
+      "subject": "style(updater): right-align inline UpdateControl status and stack actions",
+      "body": "The Updates row in Org Settings rendered the inline UpdateControl with\nits status text hugging the left edge of the right column while the\nbutton wrapped below at the right, leaving the layout out of sync with\nthe rest of the About fields. Switch the inline layout to a vertically\nstacked column with flex-end alignment so the status text right-aligns\nto match neighboring values and the action button drops beneath it with\nspacing that matches the blank line on the left side of the row.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "94063f8435ffdcf6b2920dd2774cceb8d345c5f9"
+      ],
+      "files": [
+        "interface/src/components/UpdateControl/UpdateControl.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 3,
+        "deletions": 6
+      },
+      "committedAtMs": 1778174442000,
+      "cleanSubject": "style(updater): right-align inline UpdateControl status and stack actions",
+      "keywords": [
+        "style",
+        "updater",
+        "right",
+        "align",
+        "inline",
+        "updatecontrol",
+        "status",
+        "stack",
+        "actions"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "32c4d898780c6ca5f9ed53381d6ef35298fab85e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T10:37:34-07:00",
+      "subject": "fix(updater): preflight macOS read-only / translocated bundles + offer one-click recovery",
+      "body": "cargo_packager_updater::Update::install on macOS fails with\n`Read-only file system (os error 30)` (EROFS) whenever the running\nAura.app sits on a read-only mount -- the most common cause being\nGatekeeper Path Randomization (\"App Translocation\"), which serves\nthe bundle from a randomised firmlink under\n/private/var/folders/.../AppTranslocation/. The upstream crate only\nfalls back to `osascript ... with administrator privileges` for\nErrorKind::PermissionDenied, and EROFS is a different ErrorKind, so\nthe user sees an opaque \"Stopped at: Install Inner Started\" mid-\ninstall with no actionable guidance.\n\nThis was always going to fail (it has been latent since the\nauto-install commit on Mar 30) but only became visible after the\ndiagnostics overhaul on May 4 surfaced step labels prominently.\n\nDetect the condition up front and surface a real recovery flow:\n\n- New `updater::bundle_path` module classifies the running bundle\n  (translocated / read_only / on_dmg) using path inspection plus\n  libc::statfs(2) MNT_RDONLY on macOS.\n- New UpdateStep variants (BundlePathResolved, PreflightFailed,\n  RelocateRequested/Spawned/Failed) leave a complete forensic trail\n  of every install attempt's resolved bundle path + filesystem\n  flags in updater.log, so any future read-only failure mode that\n  is *not* App Translocation (mounted DMG, MDM-managed\n  /Applications, ...) is also identifiable from the on-disk record.\n- perform_update_install + start_install run the preflight before\n  building the updater so a read-only-mount install fails fast\n  with an actionable message instead of consuming bandwidth only\n  to fail at Update::install.\n- New macOS-only relocate_and_relaunch_macos runs an authenticated\n  `osascript ... with administrator privileges` ditto + xattr -dr\n  com.apple.quarantine + atomic mv into /Applications, then\n  `open -n` and exits. Quarantine is cleared on the destination so\n  the relocated bundle is *not* re-translocated on the next launch.\n- New endpoints GET /api/update-bundle-info and\n  POST /api/update-relocate-and-relaunch expose the inspection +\n  recovery to the renderer; both refuse on non-macOS or for\n  bundles that are already in a writable location.\n- UpdateControl renders a macOS-specific recovery card (in both the\n  inline and panel layouts) when bundleInfo indicates the read-only\n  condition: plain-language explanation of App Translocation, the\n  resolved bundle path, \"Move to /Applications and relaunch\"\n  primary action, \"Reveal in Finder\" secondary action, and the\n  existing \"Show updater logs\" affordance.\n\nTests: bundle_path classification (translocation, /Volumes,\n/Applications, ~/Applications, blocks_in_place_update predicate)\nand a new UpdateControl Vitest suite covering the recovery card\nrendering, button wiring, pending state, and panel layout.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "649d3bdbde940a8102390dad6f3717b89d64a117"
+      ],
+      "files": [
+        "Cargo.lock",
+        "apps/aura-os-desktop/Cargo.toml",
+        "apps/aura-os-desktop/src/handlers.rs",
+        "apps/aura-os-desktop/src/net/server.rs",
+        "apps/aura-os-desktop/src/updater/bundle_path.rs",
+        "apps/aura-os-desktop/src/updater/diagnostics.rs",
+        "apps/aura-os-desktop/src/updater/install.rs",
+        "apps/aura-os-desktop/src/updater/mod.rs",
+        "interface/src/components/UpdateControl/UpdateControl.module.css",
+        "interface/src/components/UpdateControl/UpdateControl.test.tsx",
+        "interface/src/components/UpdateControl/UpdateControl.tsx",
+        "interface/src/components/UpdateControl/useUpdateStatus.ts",
+        "interface/src/shared/api/desktop.ts",
+        "interface/src/test/mocks/api.ts"
+      ],
+      "stats": {
+        "fileCount": 14,
+        "insertions": 1281,
+        "deletions": 77
+      },
+      "committedAtMs": 1778175454000,
+      "cleanSubject": "preflight macOS read-only / translocated bundles + offer one-click recovery",
+      "keywords": [
+        "preflight",
+        "macos",
+        "read",
+        "only",
+        "translocated",
+        "bundles",
+        "offer",
+        "click",
+        "recovery"
+      ],
+      "fileGroups": [
+        "Cargo.lock",
+        "apps/aura-os-desktop/Cargo.toml",
+        "apps/aura-os-desktop/src",
+        "interface/src/components",
+        "interface/src/shared",
+        "interface/src/test"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop",
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "6b67e64cc6760c88aea9d5f7c910def39de58a44",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T10:42:09-07:00",
+      "subject": "fix(chat): prefetch destination history on hover to stop chat-lane flicker",
+      "body": "Switching agents in either the agents shell or the projects shell briefly\nrevealed `ChatPanel`'s cold-load reveal cycle: the input bar stayed put\nwhile the message area went `visibility: hidden` and a fading overlay\nflashed before the new transcript appeared. The cause was that the\nchat-history-store entry for the destination key (`session:p:i:s` or\n`project:p:i`) was `idle` at click time, so `historyResolved` flipped\nfalse on the first render and re-armed the gate.\n\nWarm the destination chat-history-store entries proactively:\n- `AgentList` hover and the desktop sidebar-mount worker now chain\n  `loadAgentSessions` + `fetchHistory(sessionHistoryKey(...))` so the\n  most-recent project session for each visible agent lands as `\"ready\"`\n  before the click. (`prefetchHistory` only warmed React Query, not the\n  store the panel actually reads.)\n- `SessionsList` exposes a new `onSessionHover` hook, wired by both the\n  agents `ChatsTab` and the projects `SessionList` to `fetchHistory` the\n  per-session events on row pointer-enter.\n- `ProjectList` (zui Explorer) delegates `onMouseOver` from the wrapping\n  div to look up the hovered agent row and warm both the no-session\n  `projectChatHistoryKey` and the most-recent session entry.\n\nAlso gate `useChatHistorySync`'s `invalidateBeforeFetch` path on the\nentry's freshness — without this, `invalidateHistory` would clobber\n`fetchedAt=0` immediately after the prefetch and re-trigger the flicker.\nThe follow-up `fetchHistory` still runs, so cross-tab freshness is\npreserved.\n\nPromotes `sessionHistoryKey` from `AgentChatView` to `chat-history-store`\nso prefetchers and the panel agree on the cache key shape.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "32c4d898780c6ca5f9ed53381d6ef35298fab85e"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentInfoPanel/ChatsTab.tsx",
+        "interface/src/apps/agents/AgentList/AgentList.test.tsx",
+        "interface/src/apps/agents/AgentList/AgentList.tsx",
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.test.tsx",
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.tsx",
+        "interface/src/components/ProjectList/ProjectList.tsx",
+        "interface/src/components/SessionsList/SessionsList.test.tsx",
+        "interface/src/components/SessionsList/SessionsList.tsx",
+        "interface/src/hooks/use-chat-history-sync/use-chat-history-sync.test.ts",
+        "interface/src/hooks/use-chat-history-sync/use-chat-history-sync.ts",
+        "interface/src/stores/chat-history-store.ts",
+        "interface/src/views/SessionList/SessionList.tsx"
+      ],
+      "stats": {
+        "fileCount": 12,
+        "insertions": 458,
+        "deletions": 14
+      },
+      "committedAtMs": 1778175729000,
+      "cleanSubject": "prefetch destination history on hover to stop chat-lane flicker",
+      "keywords": [
+        "prefetch",
+        "destination",
+        "history",
+        "hover",
+        "stop",
+        "chat",
+        "lane",
+        "flicker"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/hooks",
+        "interface/src/stores",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "43ff6e6914b1ea0a047d4b4cfc38000670fad72e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T10:46:08-07:00",
+      "subject": "fix(channel): default cargo features back to dev-channel so cargo run is a Dev build",
+      "body": "Plain `cargo run -p aura-os-desktop` now produces a Dev binary\n(window title \"AURA Dev\", `aura-dev` data dir, dev ports, dev\nsingle-instance mutex, in-app updater disabled), restoring the\nergonomics where a developer can run a debug build alongside an\ninstalled stable AURA without colliding on data dir, ports, or\nthe lock.\n\nStable (published-installer) builds remain safe because every\nrelease path already passes `--no-default-features --features\nstable-channel` explicitly: scripts/ci/verify-desktop.mjs,\nrelease-stable.yml, release-nightly.yml, and the\n`before-packaging-command` for `cargo packager` in\napps/aura-os-desktop/Cargo.toml. The channel is baked in at\ncompile time, so picking the wrong one is loud (different title,\ndifferent data dir) rather than silent.\n\nReverts the default flip from e86897a53. Refreshes the comments\nin the three Cargo.toml manifests, the channel.rs module\ndocstring, and the README sections to match the new default.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "6b67e64cc6760c88aea9d5f7c910def39de58a44"
+      ],
+      "files": [
+        "README.md",
+        "apps/aura-os-desktop/Cargo.toml",
+        "apps/aura-os-server/Cargo.toml",
+        "crates/aura-os-core/Cargo.toml",
+        "crates/aura-os-core/src/channel.rs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 48,
+        "deletions": 30
+      },
+      "committedAtMs": 1778175968000,
+      "cleanSubject": "default cargo features back to dev-channel so cargo run is a Dev build",
+      "keywords": [
+        "default",
+        "cargo",
+        "features",
+        "back",
+        "channel",
+        "build"
+      ],
+      "fileGroups": [
+        "README.md",
+        "apps/aura-os-desktop/Cargo.toml",
+        "apps/aura-os-server/Cargo.toml",
+        "crates/aura-os-core/Cargo.toml",
+        "crates/aura-os-core/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Other",
+        "Desktop"
+      ]
+    },
+    {
+      "sha": "7fcdb9040129fd3a033fc150fc218f14bdb85e0e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T11:01:41-07:00",
+      "subject": "fix(chat): keep previous panel mounted during agent-switch resolver pending",
+      "body": "Switching to an uncached agent flashed a blank lane for one or two\nframes before `ProjectAgentChatPanel` finally mounted: the resolver\nreturned `kind: \"pending\"` while `loadAgentSessions` was in flight,\nwhich made `AgentChatView` render an empty `lanePlaceholder` div. The\nin-panel `ChatPanel` cold-load reveal can't mask this gap because the\npanel isn't even mounted during it. Result: a faint but visible flicker\non the *first* navigation to each agent (subsequent visits are cached\nand skip pending).\n\nWraps `useAgentsShellTarget` in `useStableAgentsShellTarget` that holds\nthe last successfully-resolved target in a ref. While the resolver is\npending, return the cached target so `ProjectAgentChatPanel` stays\nmounted with the previous chat's `(projectId, agentInstanceId,\nsessionId)` tuple. Once bindings + sessions arrive for the new agent,\nthe same panel re-renders with the new props and the existing in-panel\ncold-load reveal handles the smooth swap (already warmed by the\nprefetch chain landed in the prior commit). On a true cold first boot\n(no cached target yet) it falls back to `pending` so the original\nlane-placeholder behavior still applies.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "43ff6e6914b1ea0a047d4b4cfc38000670fad72e"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.test.tsx",
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 122,
+        "deletions": 1
+      },
+      "committedAtMs": 1778176901000,
+      "cleanSubject": "keep previous panel mounted during agent-switch resolver pending",
+      "keywords": [
+        "keep",
+        "previous",
+        "panel",
+        "mounted",
+        "during",
+        "agent",
+        "switch",
+        "resolver",
+        "pending"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "ab0b9f5cab8b4ba1a03453acfa59d6965f808f3d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T11:07:05-07:00",
+      "subject": "fix(chat): avoid flicker when switching agents",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "7fcdb9040129fd3a033fc150fc218f14bdb85e0e"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.test.tsx",
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 62,
+        "deletions": 19
+      },
+      "committedAtMs": 1778177225000,
+      "cleanSubject": "avoid flicker when switching agents",
+      "keywords": [
+        "avoid",
+        "flicker",
+        "when",
+        "switching",
+        "agents"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "15ec2b6428ba21f1059af53272c9ee636469eac1",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T11:25:17-07:00",
+      "subject": "fix(chat): smooth project agent route switches",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "ab0b9f5cab8b4ba1a03453acfa59d6965f808f3d"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.test.tsx",
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 206,
+        "deletions": 5
+      },
+      "committedAtMs": 1778178317000,
+      "cleanSubject": "smooth project agent route switches",
+      "keywords": [
+        "smooth",
+        "project",
+        "agent",
+        "route",
+        "switches"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "af8409d4061dd4bede20ae8e2c70151b87cd86ad",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T11:29:29-07:00",
+      "subject": "fix(sidekick): align child item text styling",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "15ec2b6428ba21f1059af53272c9ee636469eac1"
+      ],
+      "files": [
+        "interface/src/components/Sidekick/Sidekick.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 4,
+        "deletions": 1
+      },
+      "committedAtMs": 1778178569000,
+      "cleanSubject": "align child item text styling",
+      "keywords": [
+        "align",
+        "child",
+        "item",
+        "text",
+        "styling"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "1aa1d089bd079581d4724cbcad9658f4dd6609e9",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T11:30:38-07:00",
+      "subject": "fix(chat): keep mode selector global",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "af8409d4061dd4bede20ae8e2c70151b87cd86ad"
+      ],
+      "files": [
+        "interface/src/constants/modes.test.ts",
+        "interface/src/constants/modes.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 48,
+        "deletions": 15
+      },
+      "committedAtMs": 1778178638000,
+      "cleanSubject": "keep mode selector global",
+      "keywords": [
+        "keep",
+        "mode",
+        "selector",
+        "global"
+      ],
+      "fileGroups": [
+        "interface/src/constants"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "a59e2da9c331611750c2e696d05e083a1062bc72",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T11:34:25-07:00",
+      "subject": "feat(installer): match Windows light/dark mode in NSIS wizard",
+      "body": "Vendor cargo-packager's NSIS template and read\nHKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize\\AppsUseLightTheme\nin .onInit to swap header/sidebar bitmaps to light variants when the user's\nWindows is in Light mode. Default bitmaps remain dark to match the running\napp's default theme. Also enables DWMWA_USE_IMMERSIVE_DARK_MODE for a dark\ntitle bar in dark mode (Win10 1809+).\n\nLight bitmaps are placeholders generated by RGB-inverting the dark variants\n(scripts/installer/generate-light-bitmaps.ps1). Designers should replace\nheader-light.bmp / sidebar-light.bmp with hand-tuned artwork before GA.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "1aa1d089bd079581d4724cbcad9658f4dd6609e9"
+      ],
+      "files": [
+        "apps/aura-os-desktop/Cargo.toml",
+        "apps/aura-os-desktop/assets/installer/header-dark.bmp",
+        "apps/aura-os-desktop/assets/installer/header-light.bmp",
+        "apps/aura-os-desktop/assets/installer/header.bmp",
+        "apps/aura-os-desktop/assets/installer/installer.tera.nsi",
+        "apps/aura-os-desktop/assets/installer/sidebar-dark.bmp",
+        "apps/aura-os-desktop/assets/installer/sidebar-light.bmp",
+        "apps/aura-os-desktop/assets/installer/sidebar.bmp",
+        "scripts/installer/generate-light-bitmaps.ps1"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 915,
+        "deletions": 2
+      },
+      "committedAtMs": 1778178865000,
+      "cleanSubject": "match Windows light/dark mode in NSIS wizard",
+      "keywords": [
+        "match",
+        "windows",
+        "light",
+        "dark",
+        "mode",
+        "nsis",
+        "wizard"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/Cargo.toml",
+        "apps/aura-os-desktop/assets",
+        "scripts/installer/generate-light-bitmaps.ps1"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop",
+        "Other"
+      ]
+    },
+    {
+      "sha": "3f685dd877b61ca113576996fa4ca14b6883c504",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T11:59:54-07:00",
+      "subject": "fix(memory): read partitioned harness memories",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "a59e2da9c331611750c2e696d05e083a1062bc72"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/harness_proxy/memory.rs",
+        "apps/aura-os-server/tests/harness_proxy_test/proxy_forwards.rs",
+        "interface/src/apps/agents/AgentInfoPanel/MemoryTab.test.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/MemoryTab.tsx",
+        "interface/src/shared/api/memory.test.ts",
+        "interface/src/shared/api/memory.ts"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 86,
+        "deletions": 46
+      },
+      "committedAtMs": 1778180394000,
+      "cleanSubject": "read partitioned harness memories",
+      "keywords": [
+        "read",
+        "partitioned",
+        "harness",
+        "memories"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "interface/src/apps",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "6280aa3e8cfc5eadd1ca50417a581db81329db35",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T12:14:03-07:00",
+      "subject": "fix(sidekick): render sessions as explorer items",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "3f685dd877b61ca113576996fa4ca14b6883c504"
+      ],
+      "files": [
+        "interface/src/components/SessionsList/SessionsList.module.css",
+        "interface/src/components/SessionsList/SessionsList.test.tsx",
+        "interface/src/components/SessionsList/SessionsList.tsx",
+        "interface/src/components/Sidekick/Sidekick.module.css"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 123,
+        "deletions": 78
+      },
+      "committedAtMs": 1778181243000,
+      "cleanSubject": "render sessions as explorer items",
+      "keywords": [
+        "render",
+        "sessions",
+        "explorer",
+        "items"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "71de03a612c2c449b5f60d1c8c5d7bae755e74a2",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T12:33:37-07:00",
+      "subject": "fix(sidekick): align navigation item styling",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "6280aa3e8cfc5eadd1ca50417a581db81329db35"
+      ],
+      "files": [
+        "interface/src/components/SessionsList/SessionsList.module.css",
+        "interface/src/components/Sidekick/Sidekick.module.css",
+        "interface/src/components/SidekickTaskbar/SidekickTaskbar.tsx",
+        "interface/src/features/left-menu/LeftMenuTree/LeftMenuTree.module.css"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 28,
+        "deletions": 12
+      },
+      "committedAtMs": 1778182417000,
+      "cleanSubject": "align navigation item styling",
+      "keywords": [
+        "align",
+        "navigation",
+        "item",
+        "styling"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "89db17204f46fcc5327cd886111da9af41e2791a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T12:37:49-07:00",
+      "subject": "fix(terminal): avoid redundant xterm fits",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "71de03a612c2c449b5f60d1c8c5d7bae755e74a2"
+      ],
+      "files": [
+        "interface/src/components/XTerminal/XTerminal.test.tsx",
+        "interface/src/components/XTerminal/XTerminal.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 188,
+        "deletions": 37
+      },
+      "committedAtMs": 1778182669000,
+      "cleanSubject": "avoid redundant xterm fits",
+      "keywords": [
+        "avoid",
+        "redundant",
+        "xterm",
+        "fits"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "7e2e6a3653123a8f6ac17f11f14142165a346c1d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T12:37:52-07:00",
+      "subject": "fix(chat): preserve prior assistant during send",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "89db17204f46fcc5327cd886111da9af41e2791a"
+      ],
+      "files": [
+        "interface/src/hooks/use-conversation-snapshot.test.ts",
+        "interface/src/hooks/use-conversation-snapshot.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 85,
+        "deletions": 23
+      },
+      "committedAtMs": 1778182672000,
+      "cleanSubject": "preserve prior assistant during send",
+      "keywords": [
+        "preserve",
+        "prior",
+        "assistant",
+        "during",
+        "send"
+      ],
+      "fileGroups": [
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "45ea067f1c95a3461b90d2eebde6b4bf7009d57f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T13:28:19-07:00",
+      "subject": "refactor(agents): split AgentChatView into focused components and hooks",
+      "body": "Phase A of the agent-chat bottoms-up refactor. Replaces the 1157-line\n`AgentChatView` orchestrator with focused single-responsibility units\nunder `apps/agents/components/` and `apps/agents/hooks/`:\n\n  - `AgentChatRoute`: thin route entry, dispatches to the right panel\n    based on a single `ConversationTarget` returned by the resolver\n  - `AgentChatPanel`: the project-scoped chat panel (was inline\n    `ProjectAgentChatPanel`); composes the new hooks below\n  - `StandaloneAgentChatPanel`: the genuine \"agent has no bindings\"\n    fallback (was inline `StandaloneAgentChatPanel`)\n  - `ProjectAgentSwitcher`: the in-project agent picker modal/sheet\n\nResolver consolidation: `useStableAgentsShellTarget` and\n`useStableProjectRouteTarget` collapse into one `useConversationTarget`\nhook returning a discriminated-union `ConversationTarget`, plus a\nsibling `usePreviousReadyTarget` that holds the prior panel across\n`pending` windows. The cross-cutting `userClearedSession` latch is\nisolated in its own helper hook.\n\nExtracted hooks: `use-fresh-canvas` (unified `+`/RotateCcw reset),\n`use-optimistic-session-row` (insert + swap on `SessionReady`),\n`use-auto-rename-from-prompt`, `use-new-session-url-sync`.\n\nStream hooks (`useChatStream`, `useAgentChatStream`) now return a\nstable `markNextSendAsNewSession` via `useCallback`, eliminating two\ncaller-side `useRef` mirrors.\n\nBoth `/agents/:agentId` and `/projects/:projectId/agents/:agentInstanceId`\ncontinue to resolve through `AgentChatRoute`, so the `?session=` URL\ncontract is preserved on both routes.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "7e2e6a3653123a8f6ac17f11f14142165a346c1d"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentIndexRedirect/AgentIndexRedirect.tsx",
+        "interface/src/apps/agents/AgentList/AgentList.tsx",
+        "interface/src/apps/agents/components/AgentChatPanel/AgentChatPanel.module.css",
+        "interface/src/apps/agents/components/AgentChatPanel/AgentChatPanel.tsx",
+        "interface/src/apps/agents/components/AgentChatPanel/index.ts",
+        "interface/src/apps/agents/components/AgentChatRoute/AgentChatRoute.module.css",
+        "interface/src/apps/agents/components/AgentChatRoute/AgentChatRoute.test.tsx",
+        "interface/src/apps/agents/components/AgentChatRoute/AgentChatRoute.tsx",
+        "interface/src/apps/agents/components/AgentChatRoute/index.ts",
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.module.css",
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.test.tsx",
+        "interface/src/apps/agents/components/AgentChatView/AgentChatView.tsx",
+        "interface/src/apps/agents/components/AgentChatView/index.ts",
+        "interface/src/apps/agents/components/ProjectAgentSwitcher/ProjectAgentSwitcher.module.css",
+        "interface/src/apps/agents/components/ProjectAgentSwitcher/ProjectAgentSwitcher.tsx",
+        "interface/src/apps/agents/components/ProjectAgentSwitcher/index.ts",
+        "interface/src/apps/agents/components/StandaloneAgentChatPanel/StandaloneAgentChatPanel.tsx",
+        "interface/src/apps/agents/components/StandaloneAgentChatPanel/index.ts",
+        "interface/src/apps/agents/hooks/use-auto-rename-from-prompt.ts",
+        "interface/src/apps/agents/hooks/use-conversation-target.ts",
+        "interface/src/apps/agents/hooks/use-fresh-canvas.ts",
+        "interface/src/apps/agents/hooks/use-new-session-url-sync.ts",
+        "interface/src/apps/agents/hooks/use-optimistic-session-row.ts",
+        "interface/src/apps/agents/routes.tsx",
+        "interface/src/apps/chat/components/ChatView/index.ts",
+        "interface/src/apps/projects/routes.tsx",
+        "interface/src/components/SessionsList/use-session-navigate.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts",
+        "interface/src/stores/sessions-list-store.ts"
+      ],
+      "stats": {
+        "fileCount": 30,
+        "insertions": 1629,
+        "deletions": 2592
+      },
+      "committedAtMs": 1778185699000,
+      "cleanSubject": "split AgentChatView into focused components and hooks",
+      "keywords": [
+        "split",
+        "agentchatview",
+        "into",
+        "focused",
+        "components",
+        "hooks"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/hooks",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "0ee8e18535402f24421d8a40908f2bbf747c4fac",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T13:41:59-07:00",
+      "subject": "refactor(chat): stable clientId keys + pure conversation projector",
+      "body": "Replaces the brittle \"merge three transcript stores\" pipeline with a\nsingle source of truth for React reconciliation: every DisplaySessionEvent\ncarries a stable `clientId` from the moment it is created.\n\nChanges:\n\n- Add `clientId?: string` to DisplaySessionEvent. ChatMessageList now keys\n  on `clientId ?? id`, so the bubble does NOT unmount/remount when the\n  temp- placeholder id is swapped for a persisted event_id at end of turn.\n  This removes the entire `applyTailIdAliases` walk that previously\n  compensated for the same race after the fact.\n\n- Assign `clientId` at every creation site:\n  * buildUserChatMessage (optimistic user)\n  * lifecycle.handleAssistantTurnBoundary (stream placeholder)\n  * lifecycle.finalizeStream / handleStreamError (terminal frames)\n  * lifecycle.handleEventSaved (default = event_id)\n  * mergeSavedAssistantMessage preserves the original placeholder's\n    clientId across the temp- -> event_id swap\n  * buildDisplayEvents (hydrated history rows)\n\n- Introduce `shared/lib/conversation-projector.ts` as the single pure\n  function that merges history + stream into the displayed transcript.\n  Single-pass strategy:\n    1. Take history wholesale.\n    2. Drop stream rows whose id is already in history.\n    3. Drop an optimistic temp- user only when it exactly matches the\n       *immediately trailing* unanswered user in history (so a content-\n       equal new prompt after an assistant reply is preserved).\n  Includes focused unit tests in conversation-projector.test.ts.\n\n- Collapse `useConversationSnapshot` from ~525 lines of anchor rules,\n  `reinstateMissingPersistedOnSend` backstop, and `lastNonEmptyRef`\n  flicker guards down to a thin wrapper that calls projectConversation.\n  Old snapshot test file removed; coverage moves to the projector tests\n  and the existing ChatMessageList tests (now updated to the clientId\n  contract).\n\nNet: -1134 lines, no new render-time hacks, identical visible behavior\nwith stable React identity end-to-end.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "45ea067f1c95a3461b90d2eebde6b4bf7009d57f"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatMessageList/ChatMessageList.test.tsx",
+        "interface/src/apps/chat/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/hooks/attachment-helpers.ts",
+        "interface/src/hooks/stream/handlers/lifecycle.ts",
+        "interface/src/hooks/use-conversation-snapshot.test.ts",
+        "interface/src/hooks/use-conversation-snapshot.ts",
+        "interface/src/shared/lib/conversation-projector.test.ts",
+        "interface/src/shared/lib/conversation-projector.ts",
+        "interface/src/shared/types/stream.ts",
+        "interface/src/utils/build-display-messages.ts"
+      ],
+      "stats": {
+        "fileCount": 10,
+        "insertions": 312,
+        "deletions": 1242
+      },
+      "committedAtMs": 1778186519000,
+      "cleanSubject": "stable clientId keys + pure conversation projector",
+      "keywords": [
+        "stable",
+        "clientid",
+        "keys",
+        "pure",
+        "conversation",
+        "projector"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/hooks",
+        "interface/src/shared",
+        "interface/src/utils"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "7799d950e8f2a3e2aa10bff305425b199198a117",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T13:52:32-07:00",
+      "subject": "refactor(chat): collapse history->stream hydrate into single source of truth",
+      "body": "Now that the projector deduplicates history+stream events by stable\nclientId, the legacy \"copy history into the stream store\" path in\nuseChatHistorySync became dead weight: it produced two parallel copies\nof the same transcript, and the second copy needed an entire\nSTREAM_FINISH_GRACE_MS guard to prevent it from clobbering live SSE\nwhen the post-stream forced refetch raced with server persistence.\n\nChanges:\n\n- AgentChatPanel: pass `hydrateToStream: false` (matching the path\n  StandaloneAgentChatPanel already used). Both consumers now render\n  straight from the chat-history-store snapshot via\n  useConversationSnapshot's pure projector.\n\n- useChatHistorySync: remove the `hydrateToStream` option entirely\n  and delete the ~80-line \"Sync fetched history into the stream store\n  for rendering\" effect. The remaining clear-on-catch-up effect is\n  refocused as a memory-pressure release (the projector handles\n  visual deduplication; this just frees the stream store entry).\n\n- helpers.ts: delete STREAM_FINISH_GRACE_MS — the race it guarded\n  against is now structurally impossible because we no longer overwrite\n  stream events with history snapshots.\n\n- useConversationSnapshot: drop the unused `liveAssistantHasContent`\n  selector that was carried for forward-compat with a deferred store\n  rewrite. Projector signature trimmed to `(history, stream)`.\n\n- use-standalone-agent-chat: drop the now-redundant\n  `hydrateToStream: false` flag (it was the only behavior).\n\n- Tests: convert the legacy \"hydrates by default\" expectation into a\n  documentation comment + a positive \"never hydrates ready history\n  into the stream store\" assertion. Strip remaining `hydrateToStream`\n  references.\n\nNet: -132 lines, no observable behavior change for the user, fewer\nrace surfaces, single source of truth for transcript rendering.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "0ee8e18535402f24421d8a40908f2bbf747c4fac"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentChatPanel/AgentChatPanel.tsx",
+        "interface/src/hooks/use-chat-history-sync/helpers.ts",
+        "interface/src/hooks/use-chat-history-sync/use-chat-history-sync.test.ts",
+        "interface/src/hooks/use-chat-history-sync/use-chat-history-sync.ts",
+        "interface/src/hooks/use-conversation-snapshot.ts",
+        "interface/src/hooks/use-standalone-agent-chat.ts",
+        "interface/src/shared/lib/conversation-projector.test.ts",
+        "interface/src/shared/lib/conversation-projector.ts"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 64,
+        "deletions": 196
+      },
+      "committedAtMs": 1778187152000,
+      "cleanSubject": "collapse history->stream hydrate into single source of truth",
+      "keywords": [
+        "collapse",
+        "history",
+        "stream",
+        "hydrate",
+        "into",
+        "single",
+        "source",
+        "truth"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/hooks",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "01f7de00c3970e04c874a852ec801b2fc40c67be",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T13:58:24-07:00",
+      "subject": "refactor(agents): rename stale ProjectAgentChatPanel refs + add switcher tests",
+      "body": "Phase C cleanup pass against rules-react-components.md and\nrules-typescript.md after the Phase A/B AgentChatView teardown.\n\n- Rename remaining `ProjectAgentChatPanel` doc/comment references to\n  the canonical `AgentChatPanel` name across stores, sessions list,\n  agent list, chats tab, fresh-canvas hook, optimistic-session-row\n  hook, switcher, and standalone agent chat. No behavior change.\n\n- Add focused unit tests for ProjectAgentSwitcher covering: closed\n  no-op, desktop modal rendering with one row per agent, current-row\n  disable + label, click-to-switch dispatch, and the mobile-sheet\n  delegation path. Brings the new component up to the rules-react\n  \"TSX + module.css + tests + index.ts\" expectation.\n\nVerified clean across:\n- typecheck (tsc --noEmit)\n- targeted vitest run on chat/agents surface (all green)\n- repo-wide vitest pass (only the same 17 pre-existing unrelated\n  failures: log-stream, new-project-form, terminal/orgs APIs,\n  use-active-app — none touched by this branch)\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "7799d950e8f2a3e2aa10bff305425b199198a117"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentInfoPanel/ChatsTab.tsx",
+        "interface/src/apps/agents/AgentList/AgentList.tsx",
+        "interface/src/apps/agents/components/ProjectAgentSwitcher/ProjectAgentSwitcher.test.tsx",
+        "interface/src/apps/agents/components/ProjectAgentSwitcher/ProjectAgentSwitcher.tsx",
+        "interface/src/apps/agents/hooks/use-fresh-canvas.ts",
+        "interface/src/apps/agents/hooks/use-optimistic-session-row.ts",
+        "interface/src/components/SessionsList/SessionsList.tsx",
+        "interface/src/hooks/use-standalone-agent-chat.ts",
+        "interface/src/stores/chat-history-store.ts"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 143,
+        "deletions": 13
+      },
+      "committedAtMs": 1778187504000,
+      "cleanSubject": "rename stale ProjectAgentChatPanel refs + add switcher tests",
+      "keywords": [
+        "rename",
+        "stale",
+        "projectagentchatpanel",
+        "refs",
+        "switcher",
+        "tests"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/hooks",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "b8ed3df0cf23856cecdefa2ed9fa9e0302525f8e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T16:54:13-07:00",
+      "subject": "fix(chat): close optimistic-row title clobber + leaked-row revisit races",
+      "body": "Two regressions surfaced after the agent-chat refactor:\n\n1. New session stays \"New chat\" — Haiku title never sticks. The\n   bumpVersion() that fires on SessionReady kicks off a fresh\n   loadProjectSessions / loadAgentSessions; if the session_summary_updated\n   WS event lands first, setSessionSummary patches the row AND stashes\n   the title in pendingSummariesById, but the load then writes the\n   server's empty-summary row over it — pendingSummariesById was only\n   ever consulted by replaceSessionId, so the cached title was orphaned.\n   Fix: applyPendingSummariesToList in both loaders so cached titles\n   re-attach to the materialized row, and dropAppliedEntries trims the\n   cache once each entry has been planted.\n\n2. \"Bad Request\" when revisiting a session created during this chat. If\n   the panel tore down before SessionReady (navigated away mid-stream,\n   stream aborted, etc.), the optimistic placeholder leaked into\n   sessionsBySurface. preserveOptimisticRows kept it across loads, and\n   useMostRecentSession / useDefaultProjectSessionRedirect picked it as\n   the redirect target — priming ?session=optimistic:... and 400ing the\n   next history fetch.\n   Fixes:\n   - useMostRecentSession + mostRecentForInstance now skip rows whose\n     id starts with OPTIMISTIC_SESSION_ID_PREFIX.\n   - useOptimisticSessionRow now sweeps any non-swapped pending row\n     from both surfaces on unmount, eliminating the leak at the source.\n\nTests: load-after-WS keeps the title, server-non-empty wins over a stale\ncache entry, useMostRecentSession skips optimistic rows, the project\ndefault-redirect picks the next non-optimistic candidate, and the\noptimistic-row hook cleans up on unmount before swap.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "01f7de00c3970e04c874a852ec801b2fc40c67be"
+      ],
+      "files": [
+        "interface/src/apps/agents/hooks/use-optimistic-session-row.test.tsx",
+        "interface/src/apps/agents/hooks/use-optimistic-session-row.ts",
+        "interface/src/components/SessionsList/use-default-session-redirect.test.tsx",
+        "interface/src/components/SessionsList/use-default-session-redirect.ts",
+        "interface/src/stores/sessions-list-store.test.tsx",
+        "interface/src/stores/sessions-list-store.ts"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 476,
+        "deletions": 24
+      },
+      "committedAtMs": 1778198053000,
+      "cleanSubject": "close optimistic-row title clobber + leaked-row revisit races",
+      "keywords": [
+        "close",
+        "optimistic",
+        "title",
+        "clobber",
+        "leaked",
+        "revisit",
+        "races"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "30ccaa3669a09377c0b22fd87a52083ec8402210",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T21:04:02-07:00",
+      "subject": "fix(chat): stabilize session routing after new chat",
+      "body": "Keep optimistic session ids out of routing and history-fetch boundaries so freshly-created chats cannot poison URLs or prefetch state. Also refresh session lists when title events arrive before rows materialize and hold the current thread while clicked-session history warms.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "b8ed3df0cf23856cecdefa2ed9fa9e0302525f8e"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentList/AgentList.tsx",
+        "interface/src/apps/agents/components/AgentChatRoute/AgentChatRoute.test.tsx",
+        "interface/src/apps/agents/components/AgentChatRoute/AgentChatRoute.tsx",
+        "interface/src/apps/agents/hooks/use-conversation-target.ts",
+        "interface/src/components/ProjectList/ProjectList.tsx",
+        "interface/src/stores/sessions-list-store.test.tsx",
+        "interface/src/stores/sessions-list-store.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 205,
+        "deletions": 23
+      },
+      "committedAtMs": 1778213042000,
+      "cleanSubject": "stabilize session routing after new chat",
+      "keywords": [
+        "stabilize",
+        "session",
+        "routing",
+        "after",
+        "chat"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f043c7107d0e935f58fbd453cb6a79cb45b3dd1b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T21:07:53-07:00",
+      "subject": "fix(chat): unblock session row navigation",
+      "body": "Render explicitly clicked sessions immediately instead of holding the previous panel until destination history is ready. The chat panel already owns loading state, and route-level history gating made clicks appear blocked when warming was slow or stale.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "30ccaa3669a09377c0b22fd87a52083ec8402210"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentChatRoute/AgentChatRoute.test.tsx",
+        "interface/src/apps/agents/components/AgentChatRoute/AgentChatRoute.tsx",
+        "interface/src/apps/agents/hooks/use-conversation-target.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 8,
+        "deletions": 19
+      },
+      "committedAtMs": 1778213273000,
+      "cleanSubject": "unblock session row navigation",
+      "keywords": [
+        "unblock",
+        "session",
+        "navigation"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "54017ef8f99848980ec402d31bf471d8ee1a7ea3",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T21:37:43-07:00",
+      "subject": "fix(chat): single-writer session URL + controlled sessions list",
+      "body": "Three user-visible bugs all fed off the same root: multiple writers\nracing for the agent chat surface's `?session=` and a remount of the\nZUI Explorer on every selection change. This consolidates the writers\nto a single resolver-owned redirect, makes the Explorer's selection\ncontrollable, and adds defense-in-depth against an `optimistic:` id\never leaking into a history fetch.\n\n- vendor/zui Explorer: expose a controlled `selectedIds` prop\n  (the underlying `ExplorerProvider` already supported it). Lets\n  callers drive selection from external state without keying the\n  Explorer to remount its DnD context on every click.\n- SessionsList: drop the `${bucket}:${sessionId}` Explorer key hack\n  and pass a memoized `selectedIds={[selectedSessionId]}` instead.\n  Session rows are now referentially stable across selection changes,\n  removing the flicker that swallowed the second click in the agents\n  and projects sidekicks.\n- useConversationTarget: become the single writer of `?session=` for\n  the project route. The duplicate `useDefaultProjectSessionRedirect`\n  call inside `AgentChatPanel` is removed and the hook itself\n  deleted; the resolver short-circuits when `?session=` is already\n  pinned (was previously clobbering explicit older-session clicks\n  with \"most recent for instance\"). Defense-in-depth: an\n  `optimistic:` value in the URL is treated as missing so the\n  redirect can replace it before `api.listSessionEvents` would 400\n  on the synthetic id.\n- sessions-list-store: generalize `preserveOptimisticRows` to\n  `preservePendingRows`. After `replaceSessionId` swaps an\n  optimistic placeholder for a real id, a stale `list_sessions`\n  response can arrive without the new id (server filters\n  zero-event sessions and persistence may still be in flight).\n  The store now carries forward any local row newer than the\n  newest server-known row, bounded by a TTL so authoritative\n  server deletes still win out.\n- Tests: Explorer controlled-selection coverage (no remount on\n  selection change), SessionsList no-remount regression,\n  conversation-target explicit-click guard + optimistic-URL\n  defensive coverage, and sessions-list-store real-id preservation\n  + stale-row drop tests.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "f043c7107d0e935f58fbd453cb6a79cb45b3dd1b"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentChatPanel/AgentChatPanel.tsx",
+        "interface/src/apps/agents/components/AgentChatRoute/AgentChatRoute.test.tsx",
+        "interface/src/apps/agents/hooks/use-conversation-target.ts",
+        "interface/src/components/SessionsList/SessionsList.test.tsx",
+        "interface/src/components/SessionsList/SessionsList.tsx",
+        "interface/src/components/SessionsList/use-default-session-redirect.test.tsx",
+        "interface/src/components/SessionsList/use-default-session-redirect.ts",
+        "interface/src/stores/sessions-list-store.test.tsx",
+        "interface/src/stores/sessions-list-store.ts",
+        "vendor/zui/src/components/Explorer/Explorer.test.tsx",
+        "vendor/zui/src/components/Explorer/Explorer.tsx",
+        "vendor/zui/src/components/Explorer/types.ts"
+      ],
+      "stats": {
+        "fileCount": 12,
+        "insertions": 432,
+        "deletions": 243
+      },
+      "committedAtMs": 1778215063000,
+      "cleanSubject": "single-writer session URL + controlled sessions list",
+      "keywords": [
+        "single",
+        "writer",
+        "session",
+        "controlled",
+        "sessions",
+        "list"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/stores",
+        "vendor/zui/src"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "c74a9b0bc7785b518fa8dce45e29ffa3aa9f8211",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T21:40:29-07:00",
+      "subject": "fix(chat): highlight optimistic New chat + drop stale placeholders",
+      "body": "Two related polish fixes layered on top of the controlled-selection\nSessionsList refactor.\n\n- SessionsList now falls back to the optimistic `optimistic:<uuid>`\n  row when no `?session=` is pinned. After the user clicks `+` the\n  URL holds no real session id until SessionReady streams back, so\n  without this fallback the just-inserted placeholder visibly sits\n  at the top of the list with nothing reading as selected — the\n  user has no visual confirmation that their first send will land\n  in this new chat. Reuses `isOptimisticSessionId` from the store\n  so the placeholder convention stays in one place.\n- `preservePendingRows` now drops an optimistic placeholder whose\n  `started_at` is older than the newest server-known row for the\n  same `(projectId, agentInstanceId)` binding. Without this, a\n  leaked placeholder (panel torn down before SessionReady or\n  cleanup ran) could survive indefinitely as a sibling to a newer\n  real session. Bounding by binding (rather than across the whole\n  list) avoids accidentally pruning a placeholder for a different\n  agent that legitimately predates the server's newest row.\n- Added regression tests for both behaviors.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "54017ef8f99848980ec402d31bf471d8ee1a7ea3"
+      ],
+      "files": [
+        "interface/src/components/SessionsList/SessionsList.test.tsx",
+        "interface/src/components/SessionsList/SessionsList.tsx",
+        "interface/src/stores/sessions-list-store.test.tsx",
+        "interface/src/stores/sessions-list-store.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 113,
+        "deletions": 5
+      },
+      "committedAtMs": 1778215229000,
+      "cleanSubject": "highlight optimistic New chat + drop stale placeholders",
+      "keywords": [
+        "highlight",
+        "optimistic",
+        "chat",
+        "drop",
+        "stale",
+        "placeholders"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "7f35aa0616f7c136290aba65e7812c51c4d1605e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T22:03:31-07:00",
+      "subject": "fix(sessions): make selected row visually distinct from hover",
+      "body": "Each per-day Explorer in SessionsList is rendered in controlled mode\nwith a single URL-bound selectedSessionId, so only one row is ever\ntruly selected. The list nonetheless looked like it was multi-selecting\nacross date buckets because the selected-state override and ZUI's\ndefault :hover rule both painted with --color-overlay-subtle --- a\nhovered row in one bucket was indistinguishable from the selected row\nin another. Mirror the AgentConversationRow pattern: subtle hover,\nmedium selected, heavy selected+hover.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "c74a9b0bc7785b518fa8dce45e29ffa3aa9f8211"
+      ],
+      "files": [
+        "interface/src/components/SessionsList/SessionsList.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 13,
+        "deletions": 2
+      },
+      "committedAtMs": 1778216611000,
+      "cleanSubject": "make selected row visually distinct from hover",
+      "keywords": [
+        "make",
+        "selected",
+        "visually",
+        "distinct",
+        "from",
+        "hover"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "49c3b63ac31fdb32024df7751a0aac51880df88c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T22:04:10-07:00",
+      "subject": "fix(chat): focus input when creating agent from project '+' button",
+      "body": "The mount/reset effect in `ChatPanel` pre-arms `inputFocusReadyRef`\non every chat switch where the textarea was not previously focused,\nto avoid stealing focus from somewhere else the user is typing.\nThat latch incorrectly fires for the create-agent handoff: clicking\nthe '+' next to a project name moves focus from the previous chat's\ntextarea to the '+' button before the new agent's panel mounts, so\nthe focus-on-thread-ready effect never runs and the user has to\nclick into the input manually.\n\nBypass the latch when `initialHandoff === 'create-agent'` so the\nexplicit \"start a new agent\" action always lands the cursor in the\nchat input. Standalone-agent creates already pass the same handoff,\nso they benefit too.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "7f35aa0616f7c136290aba65e7812c51c4d1605e"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.test.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 70,
+        "deletions": 3
+      },
+      "committedAtMs": 1778216650000,
+      "cleanSubject": "focus input when creating agent from project '+' button",
+      "keywords": [
+        "focus",
+        "input",
+        "when",
+        "creating",
+        "agent",
+        "from",
+        "project",
+        "button"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "94432a17fc00358e613c563743c7a5effaa175f8",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T22:06:17-07:00",
+      "subject": "chore(deploy): harden S3 setup scripts for missing creds and Windows shells",
+      "body": "Verify AWS credentials up front, parse create-access-key output with sed\n(removing the python3 dependency that fails in Git Bash on Windows), and\nonly swallow benign \"bucket already owned\" errors so misconfiguration\nsurfaces instead of silently continuing.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "49c3b63ac31fdb32024df7751a0aac51880df88c"
+      ],
+      "files": [
+        "deploy/create-s3-iam-user.sh",
+        "deploy/setup-s3.sh"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 54,
+        "deletions": 7
+      },
+      "committedAtMs": 1778216777000,
+      "cleanSubject": "harden S3 setup scripts for missing creds and Windows shells",
+      "keywords": [
+        "harden",
+        "setup",
+        "scripts",
+        "missing",
+        "creds",
+        "windows",
+        "shells"
+      ],
+      "fileGroups": [
+        "deploy/create-s3-iam-user.sh",
+        "deploy/setup-s3.sh"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "e827bc9d66eecaf24f09683bcb7269e8d14cbfec",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T22:10:00-07:00",
+      "subject": "fix(sessions): select new chat row in sidekick on \"+\" press",
+      "body": "Inserting the optimistic session placeholder on the first send (rather\nthan the moment \"+\" was clicked) meant the sidekick had no row to\nhighlight on a brand-new chat: the URL had no ?session=, no optimistic\nrow existed yet, and SessionsList's effectiveSelectedSessionId fallback\nhad nothing to find -- so no row read as selected. Move the insert into\narm() so the placeholder lands the moment the user presses \"+\", which\nlets the existing optimistic-fallback branch pick it up immediately.\narm() is idempotent on a pending placeholder so a double-click on \"+\"\ndoesn't stack rows; wrap() is now a passthrough since the row is\nalready in place by send time.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "94432a17fc00358e613c563743c7a5effaa175f8"
+      ],
+      "files": [
+        "interface/src/apps/agents/hooks/use-optimistic-session-row.test.tsx",
+        "interface/src/apps/agents/hooks/use-optimistic-session-row.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 114,
+        "deletions": 31
+      },
+      "committedAtMs": 1778217000000,
+      "cleanSubject": "select new chat row in sidekick on \"+\" press",
+      "keywords": [
+        "select",
+        "chat",
+        "sidekick",
+        "press"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "be5fe360eee50e241cafd902ebf7773d920f2874",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T22:43:55-07:00",
+      "subject": "fix(installer): escape literal {{...}} in NSI comments to satisfy Handlebars",
+      "body": "The NSI template is rendered through cargo-packager's Handlebars (not Tera),\nwhich parses the entire file before NSIS sees it. The Tera-style pipe example\ninside an NSIS comment (`{{header_image | replace(...)}}`) tripped the\nHandlebars parser. Escape comment-only mustaches with `\\{{...}}` so they\nrender as literal text, and do the same for the bare `{{header_image}}` /\n`{{sidebar_image}}` references in surrounding docs so they don't get\nsilently substituted with bitmap paths.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "e827bc9d66eecaf24f09683bcb7269e8d14cbfec"
+      ],
+      "files": [
+        "apps/aura-os-desktop/assets/installer/installer.tera.nsi"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 5,
+        "deletions": 5
+      },
+      "committedAtMs": 1778219035000,
+      "cleanSubject": "escape literal {{...}} in NSI comments to satisfy Handlebars",
+      "keywords": [
+        "escape",
+        "literal",
+        "comments",
+        "satisfy",
+        "handlebars"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/assets"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop"
+      ]
+    },
+    {
+      "sha": "163ca014551df5d1c96b16ef3247970a51ddd3e7",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T22:58:31-07:00",
+      "subject": "fix(installer): use MUI_CUSTOMFUNCTION_GUIINIT instead of bare .onGUIInit",
+      "body": "MUI2 auto-generates its own `.onGUIInit` from MUI_PAGE_* macro expansion,\nso the AURA-added `Function .onGUIInit ... FunctionEnd` collided with it\nand makensis aborted on `Function named \".onGUIInit\" already exists`.\n\nSwitch to the documented MUI2 hook: register a custom function name via\n`MUI_CUSTOMFUNCTION_GUIINIT` and rename our function to `AuraOnGUIInit`\nso MUI's generated `.onGUIInit` calls us from there. Update the file's\nre-sync notes so future upstream merges don't regress this.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "be5fe360eee50e241cafd902ebf7773d920f2874"
+      ],
+      "files": [
+        "apps/aura-os-desktop/assets/installer/installer.tera.nsi"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 19,
+        "deletions": 4
+      },
+      "committedAtMs": 1778219911000,
+      "cleanSubject": "use MUI_CUSTOMFUNCTION_GUIINIT instead of bare .onGUIInit",
+      "keywords": [
+        "customfunction",
+        "guiinit",
+        "instead",
+        "bare",
+        "onguiinit"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/assets"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop"
+      ]
+    },
+    {
+      "sha": "63b3bdac92fddb5da1c23f29a49a85268a30d691",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-07T23:06:27-07:00",
+      "subject": "fix(installer): use real MUI2 hook for welcome/finish show callback",
+      "body": "`MUI_WELCOMEFINISHPAGE_CUSTOMFUNCTION_SHOW` is not a real MUI2 define; both\nWelcome.nsh and Finish.nsh call `MUI_PAGE_FUNCTION_CUSTOM SHOW`, which only\nreads `MUI_PAGE_CUSTOMFUNCTION_${TYPE}`. The previous wiring meant\n`AuraThemedWelcomeShow` was never invoked, so the runtime LoadImageW swap\nthat compensates for MUI's per-page GUIInit re-extracting the dark sidebar\nbitmap never ran (and the dark-mode title bar fix on the inner dialog was\nalso dead).\n\nSwitch to `MUI_PAGE_CUSTOMFUNCTION_SHOW` and re-define it before BOTH\nMUI_PAGE_WELCOME and MUI_PAGE_FINISH, since `MUI_PAGE_FUNCTION_CUSTOM`\n`!undef`s the symbol after each consumption. Update the AURA-modifications\nheader to reflect the corrected hook.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "163ca014551df5d1c96b16ef3247970a51ddd3e7"
+      ],
+      "files": [
+        "apps/aura-os-desktop/assets/installer/installer.tera.nsi"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 23,
+        "deletions": 10
+      },
+      "committedAtMs": 1778220387000,
+      "cleanSubject": "use real MUI2 hook for welcome/finish show callback",
+      "keywords": [
+        "real",
+        "mui2",
+        "hook",
+        "welcome",
+        "finish",
+        "show",
+        "callback"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/assets"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop"
+      ]
     }
   ],
   "batchCount": 6,
@@ -1539,36 +2969,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11830033
+          "sizeBytes": 11831629
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.479.1",
+      "version": "0.1.0-nightly.483.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.479.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.483.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 36802102
+          "sizeBytes": 36738790
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.479.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.483.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.479.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.483.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 105572856
+          "sizeBytes": 105527800
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.479.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.483.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -1578,29 +3008,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.479.1",
+      "version": "0.1.0-nightly.483.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.479.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.483.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33909368
+          "sizeBytes": 33872622
         },
         {
-          "name": "AURA_0.1.0-nightly.479.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.483.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.479.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.483.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33046683
+          "sizeBytes": 32995972
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.479.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.483.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1610,29 +3040,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.479.1",
+      "version": "0.1.0-nightly.483.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.479.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.483.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 35497337
+          "sizeBytes": 35445213
         },
         {
-          "name": "AURA_0.1.0-nightly.479.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.483.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.479.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.483.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 34686523
+          "sizeBytes": 34626456
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.479.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.483.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1642,17 +3072,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.479.1",
+      "version": "0.1.0-nightly.483.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.479.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.483.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24901021
+          "sizeBytes": 24872013
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.479.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.483.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -1661,85 +3091,76 @@
     }
   ],
   "rendered": {
-    "title": "New chat flow gets a real sidekick, real titles, and a safer updater",
-    "intro": "Today's nightly is dominated by a top-to-bottom rework of how new chats appear in the agents sidekick: empty \"New chat\" ghosts are gone, the \"+\" button now lands on a clean canvas, fresh sessions pop into the sidekick on send, and Haiku-generated titles stream in live. The day closes with a critical release-channel safety flip so the desktop updater can never silently ship dead builds again, plus image upload fixes that restore reliable attachment previews and history.",
+    "title": "New chat flow rebuilt and the macOS updater learns to recover itself",
+    "intro": "A heavy day on the chat surface: the \"+\" new-chat experience was rebuilt end to end, session sidekick rows are now optimistic and live-titled, and a long-standing chat-bubble flicker on send was finally root-caused with a stable clientId rewrite. On the platform side, the macOS updater can now detect read-only / translocated bundles and offer one-click recovery, the Windows installer follows system light/dark mode, and a quietly-broken release default that had been shipping dev binaries to users was closed off.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "5:47 PM",
         "started_at": "2026-05-07T00:47:42.000Z",
-        "ended_at": "2026-05-07T05:25:50.000Z",
-        "title": "Rebuilt the agents sidekick \"+ new chat\" experience",
-        "summary": "An evening-long rework made the agents-shell chat sidekick behave the way users expect: clicking + lands on a real fresh canvas, prior sessions stay clickable, and the input bar no longer churns on every navigation.",
+        "ended_at": "2026-05-07T07:01:12.000Z",
+        "title": "New-chat lane rebuilt: optimistic sidekick rows, live titles, and stable session switching",
+        "summary": "A long evening of work on the agents shell turned the \"+\" button into a real ChatGPT-style fresh-canvas flow, with optimistic placeholders, live-streamed session titles, and a host of session-switching races finally closed.",
         "items": [
           {
-            "text": "Filtered zero-event orphan sessions out of the project and agent session list endpoints so the sidekick no longer renders unclickable \"New chat\" ghosts left over from persist races or pre-lazy-+ legacy data, with fail-open probes that preserve real chats during a storage hiccup.",
-            "commit_shas": [
-              "c16c9103bd1ff96d0504f516f3fa2107341c9805"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Fixed the agents-shell \"+\" button so it actually delivers a fresh canvas: the resolver now distinguishes a cold load from an explicit clear, the chat lane wipes the right destination keys instead of inheriting old messages, and clicking between sessions no longer leaves the lane pinned to a blank placeholder or the previous session's events.",
+            "text": "Clicking \"+\" now reliably clears the chat lane and surfaces an optimistic \"New chat\" row in the sidekick that swaps to the real session id (and live-streamed title) the moment SessionReady arrives — fixing the \"first click does nothing, second one works\" behavior and the blank-placeholder lock-up.",
             "commit_shas": [
               "c3aeb20a69ebd14568a3ac8ca1af3c651fd72ea5",
-              "2c795b8d047f8d8e9ce671e4fe3544391aefa95f",
               "fd7a5529db5f7f3db246bfc6b0ca0112411b3c37",
-              "bbee79c10a8062bd46177f7be3acc3cf76b5b6a5"
+              "2c795b8d047f8d8e9ce671e4fe3544391aefa95f",
+              "bbee79c10a8062bd46177f7be3acc3cf76b5b6a5",
+              "6c7012dffcf24a0ab4af7eecd3f1f057f1c65004",
+              "a579da267c05b4d36104b24ce830def6674d0289",
+              "186c9ae3feb5ee6ff3be6e0edb50730e39ee1914"
             ],
             "confidence": "high"
           },
           {
-            "text": "Stabilized the desktop chat input bar across session switches by holding attachments, commands, and send/new-chat/stop callbacks referentially stable per stream key, so React.memo actually short-circuits and the bar stops re-rendering on every sidekick click.",
+            "text": "Session summaries are now generated as short, human-readable 2–5 word titles the moment the first prompt is persisted, pushed live to the sidekick over the event bus so rows flip from \"New chat\" to e.g. \"Cyberpunk Character Design\" before the assistant finishes streaming. The Haiku summarizer prompt was also made content-agnostic so trivial chats no longer get titled with refusal prose.",
             "commit_shas": [
-              "8e0129c339282d7c51a6bcbe5f28afcec696c6b3",
-              "d957b2504f8ec75543c3c3d3292365aec0374926"
+              "44738c8276692315438ce47a547c1add5d75eb7a",
+              "aa14044d912d533fa6afc42da8b1d15d26b8880b",
+              "0d2fe13e44e1650f58ca7e5e40b51dffa2fc34cb",
+              "fff04e71d5ee81693f0998e17ab01f9d58bb5979",
+              "53ab98f16dce79915273a4d18dd77543f0f7e68e"
             ],
             "confidence": "high"
           },
           {
-            "text": "Made first-turn sessions promote and persist cleanly: the assistant bubble stays mounted when a new user message is appended, transcripts are scoped per session key so switches don't leak history, the new-chat latch survives the URL flip, and pending rows are promoted to real session ids the moment the server assigns them.",
+            "text": "Chat bubble flicker on send is fixed: the prior assistant message stays mounted across the placeholder→persisted swap via an id-alias map, and a snapshot reinstate path keeps it from disappearing for a frame when send-time merges drop it. The desktop chat input bar also no longer re-renders on session switches thanks to stable, ref-backed callbacks.",
             "commit_shas": [
               "81d8b6fa2ef540bc5828b43e48a29fc4609b9729",
-              "b1a41d8e53282a2d4d128a31708d5e6b45a1b9ca",
-              "d354bd2a4e1c08340cebb6c4b4fa7c297c2d8197",
-              "f118ae85dfc8f0a8fd928a32e1b7829ed46edc3c",
-              "186c9ae3feb5ee6ff3be6e0edb50730e39ee1914",
-              "6c7012dffcf24a0ab4af7eecd3f1f057f1c65004",
-              "5a427a47c1c6998ec9100c2592d56a4e0fd67ebb"
+              "91c47d4e12c0780f70452efb031af1f86f336626",
+              "8e0129c339282d7c51a6bcbe5f28afcec696c6b3",
+              "d957b2504f8ec75543c3c3d3292365aec0374926",
+              "e3fcec1bc3a6e9d8b03689ddf27114c58477d405"
             ],
             "confidence": "high"
           },
           {
-            "text": "Healed legacy null-org agents so their first chat saves instead of returning 424, and started routing each chat turn through an agent-identity preamble so name, role, personality, and skills configured in the UI actually shape the conversation.",
+            "text": "Backend session list endpoints now filter zero-event sessions so orphan \"New chat\" rows from failed first turns disappear, and chat now actually injects the agent's name, role, personality and skills into the system prompt so PersonalityTab edits are felt in conversation. Legacy null-org agents also self-heal on first chat instead of returning 424.",
             "commit_shas": [
+              "c16c9103bd1ff96d0504f516f3fa2107341c9805",
+              "9a3354926df9ec68b69b0f256588f26d16ad5b1a",
               "6a7ded18d3932fd629b48dffcc0f53987ec6f9e2",
-              "9a3354926df9ec68b69b0f256588f26d16ad5b1a"
+              "198f5f2800f3cafe93eb0d53a093d7e574431b11"
             ],
             "confidence": "high"
-          },
-          {
-            "text": "Polished sidekick visuals and a stuck image-mode upload gate: selected session rows now share the neutral overlay treatment of the agent list, and the image-mode send button correctly unlocks when an attachment is present.",
-            "commit_shas": [
-              "9480f8a50eb9fb376f868e8778235e8fda9ff6ec",
-              "c826bd6d4c98a362b13e7d70ee7dbf070ddd1324"
-            ],
-            "confidence": "medium"
           }
         ]
       },
       {
         "batch_id": "entry-2",
-        "time_label": "10:30 PM",
-        "started_at": "2026-05-07T05:30:19.000Z",
-        "ended_at": "2026-05-07T05:30:19.000Z",
-        "title": "Session summaries handle non-coding chats gracefully",
-        "summary": "The Haiku summarizer no longer assumes every chat is a coding session, eliminating refusal-style titles in the sidekick.",
+        "time_label": "12:32 AM",
+        "started_at": "2026-05-07T07:32:17.000Z",
+        "ended_at": "2026-05-07T07:32:17.000Z",
+        "title": "Release channel default flipped to stable so the updater can't silently ship dead",
+        "summary": "A latent regression had been shipping dev-channel binaries — which disable the in-app updater — to real users. Cargo defaults now fail closed.",
         "items": [
           {
-            "text": "Replaced the coding-specific summarizer prompt with a content-agnostic one so trivial or non-coding turns stop persisting refusals like \"I don't have any agent coding session to summarize\" as the session title.",
+            "text": "Flipped the cargo default on aura-os-desktop and aura-os-server from dev-channel to stable-channel so a plain `cargo build` produces a stable, updater-enabled binary; release workflows keep their explicit `--features stable-channel` flags as belt-and-suspenders. Dev runner scripts now opt into dev-channel explicitly so local development still gets a parallel, isolated build.",
             "commit_shas": [
-              "aa14044d912d533fa6afc42da8b1d15d26b8880b"
+              "e86897a53d7815b2318efed10efae7003b39fcbf"
             ],
             "confidence": "high"
           }
@@ -1747,54 +3168,77 @@
       },
       {
         "batch_id": "entry-3",
-        "time_label": "10:42 PM",
-        "started_at": "2026-05-07T05:42:10.000Z",
-        "ended_at": "2026-05-07T07:01:12.000Z",
-        "title": "Live ChatGPT-style titles and trustworthy agent bindings",
-        "summary": "The sidekick gained on-send optimistic rows, live-streamed Haiku titles, and a server-authoritative source of truth for which projects an agent is bound to.",
+        "time_label": "1:58 AM",
+        "started_at": "2026-05-07T08:58:39.000Z",
+        "ended_at": "2026-05-08T05:04:10.000Z",
+        "title": "macOS updater recovery, themed Windows installer, and a from-scratch chat projector",
+        "summary": "The morning-into-evening session paired big platform fixes (translocation-aware updater, light/dark NSIS installer) with a structural rewrite of how chat transcripts are reconciled, eliminating an entire class of flicker bugs.",
         "items": [
           {
-            "text": "Replaced the lazy multi-line summary flow with a short ChatGPT-style title generated the moment the user's first prompt is persisted, pushed live to the sidekick over the WebSocket bus so the row label flips from \"New chat\" to a real 2–5 word title before the assistant finishes streaming.",
+            "text": "macOS updater now preflights the running bundle and detects App Translocation / read-only mounts before install, surfacing a recovery card in Org Settings with a one-click \"Move to /Applications and relaunch\" flow (authenticated ditto + quarantine clear + atomic move) instead of the opaque mid-install EROFS failure users were seeing.",
             "commit_shas": [
-              "44738c8276692315438ce47a547c1add5d75eb7a",
-              "0d2fe13e44e1650f58ca7e5e40b51dffa2fc34cb"
+              "32c4d898780c6ca5f9ed53381d6ef35298fab85e",
+              "649d3bdbde940a8102390dad6f3717b89d64a117"
             ],
             "confidence": "high"
           },
           {
-            "text": "Inserted an optimistic \"New chat\" row into both the agents-app and projects-app sidekicks the instant the first message is sent, then swapped its synthetic id for the real session id once SessionReady arrives — no more waiting on an SSE round-trip plus refetch for the row to appear.",
+            "text": "The Windows NSIS installer now reads AppsUseLightTheme and swaps to light header/sidebar bitmaps when the system is in light mode, and enables DWMWA_USE_IMMERSIVE_DARK_MODE for a dark title bar in dark mode (Win10 1809+). Bitmap assets are vendored alongside a generation script.",
             "commit_shas": [
-              "a579da267c05b4d36104b24ce830def6674d0289"
+              "a59e2da9c331611750c2e696d05e083a1062bc72"
             ],
             "confidence": "high"
           },
           {
-            "text": "Reconciled title and id races in the sessions store so a title arriving before SessionReady attaches to the right row, late titles can no longer stamp unrelated optimistic placeholders during concurrent new-chat creates, and duplicate rows after the swap are gone.",
+            "text": "Replaced the brittle three-store transcript merge with a stable `clientId` on every DisplaySessionEvent and a single pure `conversation-projector` — net −1134 lines, no more `applyTailIdAliases` walks, no more STREAM_FINISH_GRACE_MS race guard, and identical visible behavior with stable React identity end-to-end. The 1157-line AgentChatView was also split into focused components (AgentChatRoute, AgentChatPanel, StandaloneAgentChatPanel, ProjectAgentSwitcher) and hooks.",
             "commit_shas": [
-              "fff04e71d5ee81693f0998e17ab01f9d58bb5979",
-              "53ab98f16dce79915273a4d18dd77543f0f7e68e"
+              "0ee8e18535402f24421d8a40908f2bbf747c4fac",
+              "7799d950e8f2a3e2aa10bff305425b199198a117",
+              "45ea067f1c95a3461b90d2eebde6b4bf7009d57f",
+              "01f7de00c3970e04c874a852ec801b2fc40c67be",
+              "94063f8435ffdcf6b2920dd2774cceb8d345c5f9",
+              "7e2e6a3653123a8f6ac17f11f14142165a346c1d"
             ],
             "confidence": "high"
           },
           {
-            "text": "Started sourcing agent-to-project bindings from GET /api/agents/:id/projects instead of the active-org sidebar snapshot, so remote agents like Glenn and Machina with cross-org Home-project bindings finally show their existing chats instead of \"No sessions yet\", with a pending lane while the binding fetch is in flight.",
+            "text": "Agent and session switching is now flicker-free: hovering an agent or session row prefetches destination history into the chat-history-store, the previous panel stays mounted while the resolver is pending, and the sessions sidekick uses the ZUI Explorer's new controlled-selection mode so rows no longer remount on every click.",
             "commit_shas": [
-              "198f5f2800f3cafe93eb0d53a093d7e574431b11"
+              "6b67e64cc6760c88aea9d5f7c910def39de58a44",
+              "7fcdb9040129fd3a033fc150fc218f14bdb85e0e",
+              "ab0b9f5cab8b4ba1a03453acfa59d6965f808f3d",
+              "15ec2b6428ba21f1059af53272c9ee636469eac1",
+              "54017ef8f99848980ec402d31bf471d8ee1a7ea3",
+              "f043c7107d0e935f58fbd453cb6a79cb45b3dd1b"
             ],
             "confidence": "high"
           },
           {
-            "text": "Smoothed the fresh-canvas micro-UX: the chat input auto-focuses after pressing + on desktop, and the prior assistant bubble keeps its alias across the same-render send so it no longer flashes a remount when a new user message is appended.",
+            "text": "Chat image attachments are more forgiving: per-file 5 MB and total 10 MB caps that silently rejected uploads are gone, the server now persists `source_url` alongside base64 so images survive history reload, thumbnails no longer disappear after upload, and S3 + IAM bootstrap scripts ship for the production assets bucket.",
             "commit_shas": [
-              "e3fcec1bc3a6e9d8b03689ddf27114c58477d405",
-              "91c47d4e12c0780f70452efb031af1f86f336626"
+              "f6903cd27deac7a30f0db83c4aa5bd4a2416fa60",
+              "b9a8fda6c140df9597f6038288a822c129563972",
+              "7f5f0afbf533f50d0b2c217380132760c08da6f0",
+              "031d8fb8953494050adefdccdabce84165d88372"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added [attach]-prefixed instrumentation and FileReader error handling along the desktop paste / drag-drop / file-picker intake path so silently-dropped attachments now surface a clear console trail and stop hanging the intake promise on reader failures.",
+            "text": "Optimistic placeholder rows no longer leak into routing or get clobbered by stale loads: cached titles re-attach to materialized rows, optimistic ids are kept out of `?session=` and history fetches, and the sessions list visually distinguishes selected from hovered so the per-day Explorer no longer looks like it's multi-selecting across date buckets.",
             "commit_shas": [
-              "95f0d0ae8a8195b54cb66d7a039860cf8698664d"
+              "b8ed3df0cf23856cecdefa2ed9fa9e0302525f8e",
+              "30ccaa3669a09377c0b22fd87a52083ec8402210",
+              "c74a9b0bc7785b518fa8dce45e29ffa3aa9f8211",
+              "7f35aa0616f7c136290aba65e7812c51c4d1605e",
+              "49c3b63ac31fdb32024df7751a0aac51880df88c"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Plain `cargo run -p aura-os-desktop` is once again a Dev build (separate window title, data dir, ports, single-instance mutex) so developers can run debug alongside an installed stable AURA — released installers remain safe because every release path passes `--features stable-channel` explicitly. A read of partitioned harness memories also lands so MemoryTab returns the right data.",
+            "commit_shas": [
+              "43ff6e6914b1ea0a047d4b4cfc38000670fad72e",
+              "3f685dd877b61ca113576996fa4ca14b6883c504"
             ],
             "confidence": "high"
           }
@@ -1802,23 +3246,16 @@
       },
       {
         "batch_id": "entry-4",
-        "time_label": "12:32 AM",
-        "started_at": "2026-05-07T07:32:17.000Z",
-        "ended_at": "2026-05-07T07:32:17.000Z",
-        "title": "Desktop release channel fails closed to stable",
-        "summary": "A release-safety change prevents the dev channel — which disables the in-app updater — from ever shipping to users again if a workflow flag is dropped.",
+        "time_label": "10:06 PM",
+        "started_at": "2026-05-08T05:06:17.000Z",
+        "ended_at": "2026-05-08T05:06:17.000Z",
+        "title": "S3 deploy scripts hardened for missing creds and Windows shells",
+        "summary": "The new S3 setup tooling now fails loudly on misconfiguration and works correctly under Git Bash on Windows.",
         "items": [
           {
-            "text": "Flipped the cargo default for aura-os-desktop and aura-os-server from dev-channel to stable-channel so a plain build now produces a stable, updater-enabled binary; if a release workflow ever drops the explicit --features stable-channel flag, the result is still stable instead of a silently-broken dev binary like the one shipped between May 5 and 6.",
+            "text": "S3 setup and IAM-user scripts verify AWS credentials up front, parse `create-access-key` output with sed (dropping the python3 dependency that broke under Git Bash on Windows), and only swallow the benign \"bucket already owned\" error so real misconfiguration surfaces instead of silently continuing.",
             "commit_shas": [
-              "e86897a53d7815b2318efed10efae7003b39fcbf"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Updated the desktop and mobile dev runner scripts and README to pass --features dev-channel explicitly, preserving parallel dev/stable installs with distinct data dirs, ports, and window titles.",
-            "commit_shas": [
-              "e86897a53d7815b2318efed10efae7003b39fcbf"
+              "94432a17fc00358e613c563743c7a5effaa175f8"
             ],
             "confidence": "high"
           }
@@ -1826,16 +3263,16 @@
       },
       {
         "batch_id": "entry-5",
-        "time_label": "1:58 AM",
-        "started_at": "2026-05-07T08:58:39.000Z",
-        "ended_at": "2026-05-07T08:58:39.000Z",
-        "title": "Attachment thumbnail no longer disappears after upload",
-        "summary": "Moved attachment update logic into the dedicated hook so the preview thumbnail stays visible across the upload lifecycle on both desktop and mobile chat input bars.",
+        "time_label": "10:10 PM",
+        "started_at": "2026-05-08T05:10:00.000Z",
+        "ended_at": "2026-05-08T05:10:00.000Z",
+        "title": "Sidekick highlights the new chat row the instant \"+\" is pressed",
+        "summary": "A small but meaningful follow-up so users get immediate visual confirmation when starting a new chat.",
         "items": [
           {
-            "text": "Consolidated attachment update logic inside useFileAttachments so the chat input thumbnail stops disappearing mid-upload on desktop and mobile.",
+            "text": "Inserted the optimistic session placeholder when \"+\" is pressed (rather than at first send) so SessionsList's optimistic-fallback branch can immediately highlight the new-chat row; arm() is idempotent so double-clicking \"+\" doesn't stack rows.",
             "commit_shas": [
-              "7f5f0afbf533f50d0b2c217380132760c08da6f0"
+              "e827bc9d66eecaf24f09683bcb7269e8d14cbfec"
             ],
             "confidence": "high"
           }
@@ -1843,30 +3280,30 @@
       },
       {
         "batch_id": "entry-6",
-        "time_label": "2:53 AM",
-        "started_at": "2026-05-07T09:53:56.000Z",
-        "ended_at": "2026-05-07T11:04:30.000Z",
-        "title": "Reliable image uploads and history rendering",
-        "summary": "Image attachments now survive history reloads, large files are no longer silently rejected, and the production S3 bucket and IAM user for aura-router are scripted for repeatable deploys.",
+        "time_label": "10:43 PM",
+        "started_at": "2026-05-08T05:43:55.000Z",
+        "ended_at": "2026-05-08T06:06:27.000Z",
+        "title": "Windows installer template fixes so the themed NSIS wizard actually builds and runs its hooks",
+        "summary": "Three follow-up fixes to the new themed NSIS template — required for the installer to compile under cargo-packager's Handlebars renderer and for the dark-mode hooks to actually fire.",
         "items": [
           {
-            "text": "Persisted source_url alongside base64 data for user image content blocks and ensured the frontend always includes base64 as a fallback, so images render reliably when a session is reloaded from history instead of breaking when the S3 upload path was used.",
+            "text": "Escaped literal `{{...}}` examples in NSI comments so cargo-packager's Handlebars renderer no longer chokes on Tera-style pipe syntax, and surrounding doc references to `{{header_image}}` / `{{sidebar_image}}` no longer get silently substituted with bitmap paths.",
             "commit_shas": [
-              "f6903cd27deac7a30f0db83c4aa5bd4a2416fa60"
+              "be5fe360eee50e241cafd902ebf7773d920f2874"
             ],
             "confidence": "high"
           },
           {
-            "text": "Removed the per-file 5MB and total 10MB upload caps that were silently rejecting larger images with no user feedback, since compression already sizes images for the LLM and S3 handles large uploads.",
+            "text": "Replaced the bare `.onGUIInit` function with `MUI_CUSTOMFUNCTION_GUIINIT` registering `AuraOnGUIInit`, so it no longer collides with MUI2's auto-generated `.onGUIInit` and aborts makensis with \"Function already exists\".",
             "commit_shas": [
-              "b9a8fda6c140df9597f6038288a822c129563972"
+              "163ca014551df5d1c96b16ef3247970a51ddd3e7"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added deploy scripts to provision the aura-asi-production-assets S3 bucket with public-read and CORS, plus a dedicated S3-only IAM user for aura-router.",
+            "text": "Switched the welcome/finish page show callback to the real `MUI_PAGE_CUSTOMFUNCTION_SHOW` hook (re-defined before each page since MUI `!undef`s it after consumption), so the runtime sidebar bitmap swap and dark-mode title-bar attribute on the inner dialog actually run.",
             "commit_shas": [
-              "031d8fb8953494050adefdccdabce84165d88372"
+              "63b3bdac92fddb5da1c23f29a49a85268a30d691"
             ],
             "confidence": "high"
           }
@@ -1874,12 +3311,12 @@
       }
     ],
     "highlights": [
-      "ChatGPT-style fresh-canvas + button with optimistic sidekick rows",
-      "Live-streamed session titles replace lazy summaries",
-      "Agent personality now actually shapes chat replies",
-      "Desktop updater fail-closes to stable channel",
-      "Image attachments survive history reloads and large files"
+      "Rebuilt new-chat lane with optimistic sidekick rows and ChatGPT-style auto-titles",
+      "macOS updater preflights translocated bundles and offers one-click relocate",
+      "Stable clientId projector kills the assistant-bubble flicker on send",
+      "Windows NSIS installer now matches system light/dark theme",
+      "Release channel default flipped so dev builds can't silently ship to users"
     ],
-    "raw_commit_count": 35
+    "raw_commit_count": 67
   }
 }
