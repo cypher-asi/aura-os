@@ -2,17 +2,17 @@
   {
     "date": "2026-05-08",
     "channel": "nightly",
-    "version": "0.1.0-nightly.484.1",
-    "title": "Logout now fully clears the previous user's session",
-    "intro": "A focused nightly that closes a privacy and correctness gap around account switching on desktop: signing out now wipes the cached profile, feed, and billing state instead of leaving it visible to the next user.",
+    "version": "0.1.0-nightly.485.1",
+    "title": "Account switching and avatar persistence fixes",
+    "intro": "A focused nightly that closes two long-standing profile bugs: leftover data leaking between accounts after logout, and avatars silently disappearing after save. Both land in the desktop interface and ship across Mac, Windows, and Linux builds.",
     "entryCount": 1,
     "highlights": [
-      "Account switching no longer leaks the previous user's data",
-      "Profile, feed, and billing stores reset cleanly on logout"
+      "Logout now fully clears the previous user's profile, feed, and billing data",
+      "Profile avatars upload to S3 and persist across sessions"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-05-08T10:46:52.233Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.484.1",
+    "rawCommitCount": 2,
+    "generatedAt": "2026-05-08T11:47:55.066Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.485.1",
     "path": "history/2026-05-08.json"
   },
   {

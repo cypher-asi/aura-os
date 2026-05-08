@@ -1,21 +1,21 @@
-# Logout now fully clears the previous user's session
+# Account switching and avatar persistence fixes
 
 - Date: `2026-05-08`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.484.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.484.1
+- Version: `0.1.0-nightly.485.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.485.1
 
-A focused nightly that closes a privacy and correctness gap around account switching on desktop: signing out now wipes the cached profile, feed, and billing state instead of leaving it visible to the next user.
+A focused nightly that closes two long-standing profile bugs: leftover data leaking between accounts after logout, and avatars silently disappearing after save. Both land in the desktop interface and ship across Mac, Windows, and Linux builds.
 
-## 3:32 AM — Account switching no longer carries over the previous user's data
+## 3:32 AM — Logout cleanup and persistent profile avatars
 
-Logout now resets per-user client state so a second account signing in on the same desktop session sees a clean app instead of stale data from the prior user.
+Two profile-layer fixes resolve user data bleeding between accounts on logout and avatars failing to persist after editing.
 
-- Signing out now resets the profile, feed, and billing stores, fixing a bug where a second user logging in on the same session would see the previous user's profile, feed, and billing details until the app was restarted. (`922a392`)
-- Each store gained a dedicated reset path — including tearing down feed event subscriptions and clearing seen-id caches — so logout leaves no lingering subscriptions or cached identifiers behind. (`922a392`)
+- Logging out now resets the profile, feed, and billing stores so a second user signing into the same session no longer sees the previous account's data until restart. (`922a392`)
+- Profile editor uploads cropped avatars to S3 via presigned URL instead of saving a data URL, so profile images now persist through the API; the Save button also reflects an in-progress 'Saving…' state while the upload completes. (`aa30419`)
 
 ## Highlights
 
-- Account switching no longer leaks the previous user's data
-- Profile, feed, and billing stores reset cleanly on logout
+- Logout now fully clears the previous user's profile, feed, and billing data
+- Profile avatars upload to S3 and persist across sessions
 

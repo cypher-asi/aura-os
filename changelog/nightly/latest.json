@@ -3,19 +3,20 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-08T10:46:52.233Z",
+  "generatedAt": "2026-05-08T11:47:55.066Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.484.1",
+  "version": "0.1.0-nightly.485.1",
   "date": "2026-05-08",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.484.1",
-  "lastIncludedSha": "922a392dbcf3511fe7bf93f58acaa89cdfac1c91",
-  "previousProcessedSha": "63b3bdac92fddb5da1c23f29a49a85268a30d691",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.485.1",
+  "lastIncludedSha": "aa30419f13a438fd2961e542d922b6d8ccdd83bf",
+  "previousProcessedSha": "922a392dbcf3511fe7bf93f58acaa89cdfac1c91",
   "commitShas": [
-    "922a392dbcf3511fe7bf93f58acaa89cdfac1c91"
+    "922a392dbcf3511fe7bf93f58acaa89cdfac1c91",
+    "aa30419f13a438fd2961e542d922b6d8ccdd83bf"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 2,
+  "filteredCommitCount": 2,
   "rawCommits": [
     {
       "sha": "922a392dbcf3511fe7bf93f58acaa89cdfac1c91",
@@ -55,6 +56,43 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "aa30419f13a438fd2961e542d922b6d8ccdd83bf",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-08T12:31:39+01:00",
+      "subject": "fix(profile): upload avatar to S3 so profile image persists",
+      "body": "Avatar was saved as a data URL which didn't persist through the API.\nNow uploads cropped image to S3 via presign and saves the S3 URL.",
+      "parents": [
+        "922a392dbcf3511fe7bf93f58acaa89cdfac1c91"
+      ],
+      "files": [
+        "interface/src/apps/profile/ProfileEditorModal/ProfileEditorModal.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 26,
+        "deletions": 5
+      },
+      "committedAtMs": 1778239899000,
+      "cleanSubject": "upload avatar to S3 so profile image persists",
+      "keywords": [
+        "upload",
+        "avatar",
+        "profile",
+        "image",
+        "persists"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 1,
@@ -66,36 +104,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11835023
+          "sizeBytes": 11835150
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.484.1",
+      "version": "0.1.0-nightly.485.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.484.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.485.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 36734498
+          "sizeBytes": 36738564
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.484.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.485.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.484.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.485.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 105507320
+          "sizeBytes": 105515512
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.484.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.485.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -105,29 +143,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.484.1",
+      "version": "0.1.0-nightly.485.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.484.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.485.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33873222
+          "sizeBytes": 33873791
         },
         {
-          "name": "AURA_0.1.0-nightly.484.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.485.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.484.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.485.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 32993695
+          "sizeBytes": 32992895
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.484.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.485.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -137,29 +175,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.484.1",
+      "version": "0.1.0-nightly.485.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.484.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.485.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 35444885
+          "sizeBytes": 35445811
         },
         {
-          "name": "AURA_0.1.0-nightly.484.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.485.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.484.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.485.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 34630079
+          "sizeBytes": 34633862
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.484.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.485.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -169,17 +207,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.484.1",
+      "version": "0.1.0-nightly.485.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.484.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.485.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24872216
+          "sizeBytes": 24878222
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.484.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.485.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -188,28 +226,28 @@
     }
   ],
   "rendered": {
-    "title": "Logout now fully clears the previous user's session",
-    "intro": "A focused nightly that closes a privacy and correctness gap around account switching on desktop: signing out now wipes the cached profile, feed, and billing state instead of leaving it visible to the next user.",
+    "title": "Account switching and avatar persistence fixes",
+    "intro": "A focused nightly that closes two long-standing profile bugs: leftover data leaking between accounts after logout, and avatars silently disappearing after save. Both land in the desktop interface and ship across Mac, Windows, and Linux builds.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "3:32 AM",
         "started_at": "2026-05-08T10:32:08.000Z",
-        "ended_at": "2026-05-08T10:32:08.000Z",
-        "title": "Account switching no longer carries over the previous user's data",
-        "summary": "Logout now resets per-user client state so a second account signing in on the same desktop session sees a clean app instead of stale data from the prior user.",
+        "ended_at": "2026-05-08T11:31:39.000Z",
+        "title": "Logout cleanup and persistent profile avatars",
+        "summary": "Two profile-layer fixes resolve user data bleeding between accounts on logout and avatars failing to persist after editing.",
         "items": [
           {
-            "text": "Signing out now resets the profile, feed, and billing stores, fixing a bug where a second user logging in on the same session would see the previous user's profile, feed, and billing details until the app was restarted.",
+            "text": "Logging out now resets the profile, feed, and billing stores so a second user signing into the same session no longer sees the previous account's data until restart.",
             "commit_shas": [
               "922a392dbcf3511fe7bf93f58acaa89cdfac1c91"
             ],
             "confidence": "high"
           },
           {
-            "text": "Each store gained a dedicated reset path — including tearing down feed event subscriptions and clearing seen-id caches — so logout leaves no lingering subscriptions or cached identifiers behind.",
+            "text": "Profile editor uploads cropped avatars to S3 via presigned URL instead of saving a data URL, so profile images now persist through the API; the Save button also reflects an in-progress 'Saving…' state while the upload completes.",
             "commit_shas": [
-              "922a392dbcf3511fe7bf93f58acaa89cdfac1c91"
+              "aa30419f13a438fd2961e542d922b6d8ccdd83bf"
             ],
             "confidence": "high"
           }
@@ -217,9 +255,9 @@
       }
     ],
     "highlights": [
-      "Account switching no longer leaks the previous user's data",
-      "Profile, feed, and billing stores reset cleanly on logout"
+      "Logout now fully clears the previous user's profile, feed, and billing data",
+      "Profile avatars upload to S3 and persist across sessions"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 2
   }
 }
