@@ -2,19 +2,19 @@
   {
     "date": "2026-05-11",
     "channel": "nightly",
-    "version": "0.1.0-nightly.496.1",
-    "title": "Stable channel rescue, a rebuilt agent picker, and steadier sessions",
-    "intro": "Today's nightly leans heavily on reliability: a critical fix stops the Stable installer from silently behaving as a Dev build, the Add Agent flow is rebuilt around a searchable Telegram-style picker, and a string of smaller corrections tightens session selection, sidebar navigation, and Windows installer packaging. The release-media pipeline also learns to fail more gracefully when third‑party API credits run dry.",
+    "version": "0.1.0-nightly.497.1",
+    "title": "A searchable agent picker, a stable channel rescue, and sharper release diagnostics",
+    "intro": "Today's nightly centers on a redesigned project agent picker — now a searchable, keyboard-driven list backed by the full org fleet — plus a critical fix that stops stable installers from silently running as Dev. Smaller polish lands across chat, sessions, the 3D viewer, the marketplace, and the release-media pipeline.",
     "entryCount": 5,
     "highlights": [
-      "Stable desktop builds no longer ship as Dev-in-disguise",
-      "Add Agent gets a searchable, keyboard-driven picker",
-      "Windows NSIS installer themed bitmaps and uninstaller fixes",
-      "Changelog-media CI degrades gracefully on credit exhaustion"
+      "Project agent picker reborn as a searchable Telegram-style list",
+      "Stable installer no longer ships as a Dev binary in disguise",
+      "Remote agents auto-recover once on provisioning failure",
+      "Release-media pipeline names the provider that ran out of credits"
     ],
-    "rawCommitCount": 27,
-    "generatedAt": "2026-05-11T18:54:39.684Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.496.1",
+    "rawCommitCount": 29,
+    "generatedAt": "2026-05-11T21:02:20.670Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.497.1",
     "path": "history/2026-05-11.json"
   },
   {
