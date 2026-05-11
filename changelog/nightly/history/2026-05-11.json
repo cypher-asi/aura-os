@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-11T18:15:11.466Z",
+  "generatedAt": "2026-05-11T18:54:39.684Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.495.1",
+  "version": "0.1.0-nightly.496.1",
   "date": "2026-05-11",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.495.1",
-  "lastIncludedSha": "4392204e6f6ffacfad9b55821dce29bb12bbfe31",
-  "previousProcessedSha": "6529e8609560ed54b9358c3a48339569d7d25284",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.496.1",
+  "lastIncludedSha": "f64e077532abc51cfe3b76b99a22c14e3c64760a",
+  "previousProcessedSha": "4392204e6f6ffacfad9b55821dce29bb12bbfe31",
   "commitShas": [
     "c128b77bf61da12527762f67c641a9f0284fc6d0",
     "649fa9f4b1fcca4c3ef6b98ca375853724e6fb10",
@@ -34,10 +34,11 @@
     "6529e8609560ed54b9358c3a48339569d7d25284",
     "4aaeec5249cf3d8783a54577838b254203005b98",
     "25bb8121d2adf5546ff0b2a3686026b28a3bad32",
-    "4392204e6f6ffacfad9b55821dce29bb12bbfe31"
+    "4392204e6f6ffacfad9b55821dce29bb12bbfe31",
+    "f64e077532abc51cfe3b76b99a22c14e3c64760a"
   ],
-  "rawCommitCount": 26,
-  "filteredCommitCount": 23,
+  "rawCommitCount": 27,
+  "filteredCommitCount": 24,
   "rawCommits": [
     {
       "sha": "c128b77bf61da12527762f67c641a9f0284fc6d0",
@@ -1054,6 +1055,102 @@
       "areas": [
         "Other"
       ]
+    },
+    {
+      "sha": "f64e077532abc51cfe3b76b99a22c14e3c64760a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-11T11:35:45-07:00",
+      "subject": "fix(channel): stop stable build from running as Dev via feature unification",
+      "body": "The published \"AURA\" installer was silently running as a Dev binary at\nruntime - same single-instance mutex, same `aura-dev` data dir, \"AURA\nDev\" window title, in-app updater disabled - because `aura-os-core`\ndeclared `default = [\"dev-channel\"]` and every library crate depended\non it without `default-features = false`. Cargo feature unification\nre-activated `aura-os-core/dev-channel` for every workspace build,\nincluding the release pipeline's `--no-default-features --features\nstable-channel` build of `aura-os-desktop`, so `Channel::current()`\nalways resolved to Dev. Result: `cargo run -p aura-os-desktop` and the\ninstalled prod binary both held `Local\\com.aura.desktop-dev.single-instance`\nand the second to start logged \"another Aura instance is already\nrunning\" and exited.\n\n- Drop `aura-os-core`'s default channel; add `default-features = false`\n  to every internal `aura-os-core = { path = \"...\" }` dep across 17\n  workspace crates so library deps can no longer pin the workspace to\n  a channel.\n- Flip `Channel::current()` to prefer `stable-channel` when both\n  features happen to be active, with Dev as the bare-library fallback\n  so plain `cargo test` keeps writing to the dev tree.\n- Add a `--print-channel` flag to `aura-os-desktop` that prints\n  `channel=Stable ...` (or `channel=Dev ...`) and exits before any\n  startup side-effects; wire `scripts/ci/verify-desktop.mjs` to run\n  the just-built stable binary with it and fail the release if the\n  binary doesn't self-report Stable, so this regression can't return\n  silently.\n- Add a one-shot recovery in `init_data_dirs`: on Stable, if\n  `~/<localdata>/aura-dev` has user state and `~/<localdata>/aura/store`\n  doesn't, move the dev tree over (same for `~/.aura-dev/skills` ->\n  `~/.aura/skills`), gated by a `.migrated-from-aura-dev` marker so it\n  runs exactly once. Covered by unit tests for the four edge cases.\n- Update doc comments in `aura-os-core/src/channel.rs`, the two binary\n  Cargo.toml feature sections, and the release-stable/release-nightly\n  workflows to spell out the new invariant: libraries opt out of\n  defaults, the CI `--print-channel` assertion enforces it.\n\nVerified locally: `..\\.aura-shared-target\\release\\aura-os-desktop.exe\n--print-channel` prints `channel=Stable data_dir=aura ...\nwindow_title=\"AURA\" mutex=Local\\com.aura.desktop.single-instance\ndesktop_port=19847 updater_enabled=true`, while the debug build prints\n`channel=Dev data_dir=aura-dev ... desktop_port=19848`.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "4392204e6f6ffacfad9b55821dce29bb12bbfe31"
+      ],
+      "files": [
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "Cargo.lock",
+        "apps/aura-os-desktop/Cargo.toml",
+        "apps/aura-os-desktop/src/init/cli.rs",
+        "apps/aura-os-desktop/src/init/paths.rs",
+        "apps/aura-os-desktop/src/main.rs",
+        "apps/aura-os-server/Cargo.toml",
+        "apps/aura-run-analyze/Cargo.toml",
+        "crates/aura-loop-log-schema/Cargo.toml",
+        "crates/aura-os-agents/Cargo.toml",
+        "crates/aura-os-auth/Cargo.toml",
+        "crates/aura-os-billing/Cargo.toml",
+        "crates/aura-os-browser/Cargo.toml",
+        "crates/aura-os-core/Cargo.toml",
+        "crates/aura-os-core/src/channel.rs",
+        "crates/aura-os-events/Cargo.toml",
+        "crates/aura-os-harness/Cargo.toml",
+        "crates/aura-os-integrations/Cargo.toml",
+        "crates/aura-os-loops/Cargo.toml",
+        "crates/aura-os-network/Cargo.toml",
+        "crates/aura-os-orgs/Cargo.toml",
+        "crates/aura-os-projects/Cargo.toml",
+        "crates/aura-os-sessions/Cargo.toml",
+        "crates/aura-os-storage/Cargo.toml",
+        "crates/aura-os-store/Cargo.toml",
+        "crates/aura-os-tasks/Cargo.toml",
+        "crates/aura-run-heuristics/Cargo.toml",
+        "scripts/ci/verify-desktop.mjs"
+      ],
+      "stats": {
+        "fileCount": 29,
+        "insertions": 634,
+        "deletions": 49
+      },
+      "committedAtMs": 1778524545000,
+      "cleanSubject": "stop stable build from running as Dev via feature unification",
+      "keywords": [
+        "stop",
+        "stable",
+        "build",
+        "from",
+        "running",
+        "feature",
+        "unification"
+      ],
+      "fileGroups": [
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "Cargo.lock",
+        "apps/aura-os-desktop/Cargo.toml",
+        "apps/aura-os-desktop/src",
+        "apps/aura-os-server/Cargo.toml",
+        "apps/aura-run-analyze/Cargo.toml",
+        "crates/aura-loop-log-schema/Cargo.toml",
+        "crates/aura-os-agents/Cargo.toml",
+        "crates/aura-os-auth/Cargo.toml",
+        "crates/aura-os-billing/Cargo.toml",
+        "crates/aura-os-browser/Cargo.toml",
+        "crates/aura-os-core/Cargo.toml",
+        "crates/aura-os-core/src",
+        "crates/aura-os-events/Cargo.toml",
+        "crates/aura-os-harness/Cargo.toml",
+        "crates/aura-os-integrations/Cargo.toml",
+        "crates/aura-os-loops/Cargo.toml",
+        "crates/aura-os-network/Cargo.toml",
+        "crates/aura-os-orgs/Cargo.toml",
+        "crates/aura-os-projects/Cargo.toml",
+        "crates/aura-os-sessions/Cargo.toml",
+        "crates/aura-os-storage/Cargo.toml",
+        "crates/aura-os-store/Cargo.toml",
+        "crates/aura-os-tasks/Cargo.toml",
+        "crates/aura-run-heuristics/Cargo.toml",
+        "scripts/ci/verify-desktop.mjs"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Desktop",
+        "Other",
+        "Release Infrastructure"
+      ]
     }
   ],
   "batchCount": 6,
@@ -1065,36 +1162,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11835946
+          "sizeBytes": 11835982
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.495.1",
+      "version": "0.1.0-nightly.496.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.495.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.496.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 36777124
+          "sizeBytes": 36849312
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.495.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.496.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.495.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.496.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 105544184
+          "sizeBytes": 105630200
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.495.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.496.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -1104,29 +1201,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.495.1",
+      "version": "0.1.0-nightly.496.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.495.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.496.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33908925
+          "sizeBytes": 33956249
         },
         {
-          "name": "AURA_0.1.0-nightly.495.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.496.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.495.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.496.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33025236
+          "sizeBytes": 33103256
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.495.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.496.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1136,29 +1233,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.495.1",
+      "version": "0.1.0-nightly.496.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.495.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.496.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 35511048
+          "sizeBytes": 35613262
         },
         {
-          "name": "AURA_0.1.0-nightly.495.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.496.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.495.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.496.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 34695913
+          "sizeBytes": 34794818
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.495.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.496.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1168,17 +1265,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.495.1",
+      "version": "0.1.0-nightly.496.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.495.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.496.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24918745
+          "sizeBytes": 24959372
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.495.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.496.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -1187,45 +1284,45 @@
     }
   ],
   "rendered": {
-    "title": "Searchable agent picker, sturdier provisioning, and a calmer media pipeline",
-    "intro": "Today's nightly reshapes how you add agents to a project — the old card grid is gone, replaced by a Telegram-style searchable list with keyboard navigation and a one-keystroke Standard Agent shortcut. Around that headline change, remote agent startup now self-heals once before bothering you, the Windows installer's theme handling got two real fixes, and the release-media workflow stops taking the whole job down when a third-party API runs out of credits.",
+    "title": "Stable channel rescue, a rebuilt agent picker, and steadier sessions",
+    "intro": "Today's nightly leans heavily on reliability: a critical fix stops the Stable installer from silently behaving as a Dev build, the Add Agent flow is rebuilt around a searchable Telegram-style picker, and a string of smaller corrections tightens session selection, sidebar navigation, and Windows installer packaging. The release-media pipeline also learns to fail more gracefully when third‑party API credits run dry.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "11:23 PM",
         "started_at": "2026-05-08T06:23:31.000Z",
         "ended_at": "2026-05-10T07:08:48.000Z",
-        "title": "Add Agent picker rebuilt as a searchable list",
-        "summary": "The project Add Agent flow is now a single Telegram-style picker with search, keyboard nav, and a one-press Standard Agent shortcut — plus fixes to session selection and the Windows installer's themed assets.",
+        "title": "Searchable Add Agent picker and a steadier new-session highlight",
+        "summary": "A multi-commit rebuild replaces the grid-of-cards Add Agent modal with a Telegram-style searchable list, while fixes land for new-session selection and Windows installer theming.",
         "items": [
           {
-            "text": "Replaced the grid-of-cards AgentSelectorModal with a new searchable AgentSelectorList: autofocused search, a Standard Agent row pinned to the top, arrow-key + Enter navigation, hover sync, and per-row spinners during create. The old '+ Create New Agent' footer and separate AgentEditorModal are gone — pressing Enter on the Standard row hits the same default-create endpoint the project '+' used to fire silently.",
+            "text": "Rebuilt the project Add Agent modal as a searchable list with a Standard Agent row at the top, live name/role filtering, arrow-key + Enter navigation, per-row spinners during create, and a row-based Telegram-style layout that adapts between the desktop Modal and the mobile Drawer. The project-row '+' now routes through the same picker instead of silently creating a generic agent.",
             "commit_shas": [
+              "4c2eaffb809a2545ce0f73175aa642ebaf6e9427",
+              "462dbbc06b9923d74e9dd5912640d7cd0a11dfb6",
               "7ce656119546afa3b6fdb8dc6c4ddd264712d4e8",
               "33f0a1f053d909e8edfb84e2e94edca00311a26e",
               "49890ce4a539bc94458cee08bd3e753c20e95608",
-              "462dbbc06b9923d74e9dd5912640d7cd0a11dfb6",
-              "4c2eaffb809a2545ce0f73175aa642ebaf6e9427",
               "637d1908fae8e12675e8d440ae42c03ac8752301"
             ],
             "confidence": "high"
           },
           {
-            "text": "Fixed a sessions bug where a brand-new chat would briefly read as unselected after the optimistic→real id swap; SessionsList now falls back to the newest row in the surface during that window so the just-created session stays highlighted.",
+            "text": "Fixed a regression where a freshly created chat session would appear at the top of the sessions list but read as unselected during the brief window between the optimistic→real ID swap and the URL update; the list now falls back to the newest row across the swap.",
             "commit_shas": [
               "c128b77bf61da12527762f67c641a9f0284fc6d0"
             ],
             "confidence": "high"
           },
           {
-            "text": "Remote agents that fail their initial provisioning readiness check now auto-recover once in the background and, if that still fails, surface the real swarm reason (e.g. Unschedulable PodScheduled) in both the StatusCard banner and manual Recovery errors instead of hanging on 'Starting up…'.",
+            "text": "Hardened remote agent provisioning so a brand-new agent that times out or errors during initial readiness auto-recovers once, surfaces the underlying swarm reason (e.g. Unschedulable PodScheduled) in the StatusCard, and exits the indeterminate 'Starting up…' state instead of hanging.",
             "commit_shas": [
               "f365e3af128622f404a8630e0219944c733cddfc"
             ],
             "confidence": "high"
           },
           {
-            "text": "Windows installer now stages dark and light themed bitmaps directly into $PLUGINSDIR (no more root-relative writes from .onInit), swaps the header bitmap at GUI init in light mode, applies the dark title-bar hook to the uninstaller, and fails the build with a clear error if the bitmap naming convention is broken. Chat attachments also now accept .json and .sql files.",
+            "text": "Windows installer now stages dark/light themed bitmaps into the plugin dir, swaps the header bitmap correctly in light mode, and applies the dark title-bar hook to the uninstaller; chat attachments also accept .json and .sql files.",
             "commit_shas": [
               "649fa9f4b1fcca4c3ef6b98ca375853724e6fb10",
               "4aaeec5249cf3d8783a54577838b254203005b98"
@@ -1239,25 +1336,25 @@
         "time_label": "3:34 AM",
         "started_at": "2026-05-11T10:34:33.000Z",
         "ended_at": "2026-05-11T15:40:33.000Z",
-        "title": "Picker polish, project navigation, and a CEO-only capability fix",
-        "summary": "Follow-up fixes harden the new Add Agent modal, improve project sidebar navigation, add a GLB download to the 3D viewer, and roll back an accidental 'all agents get full access' regression.",
+        "title": "Permission scope correction and project sidebar polish",
+        "summary": "A capability-leak fix walks back blanket full-access defaults to CEO-only, alongside several small but visible improvements to chat errors, sidebar navigation, and the 3D viewer.",
         "items": [
           {
-            "text": "Reverted a regression where every newly created agent inherited full_access capabilities; the blanket empty→full_access promotion is now restricted to the CEO bootstrap, and non-CEO agents once again start with an empty bundle and opt in via the Permissions tab.",
+            "text": "Reverted a regression that silently granted every newly created agent full capabilities; non-CEO agents once again start with an empty bundle and must opt into permissions explicitly via the Permissions tab. CEO bootstrap and project-scoped splicing are unchanged.",
             "commit_shas": [
               "8dcebabf9d7065368585c9c1aa53b8269f6a4ff5"
             ],
             "confidence": "high"
           },
           {
-            "text": "Add Agent modal no longer gets stuck: stale busy state could trap users by blocking Close/Escape and disabling Create indefinitely — close always works now and Create is only disabled during an active API call.",
+            "text": "Add Agent modal no longer becomes unresponsive: the close button and Escape work even mid-transition, and Create is only disabled during an active API call instead of being stuck by stale state.",
             "commit_shas": [
               "638aedb7dd7267c31775f34e64b738f06e1632be"
             ],
             "confidence": "high"
           },
           {
-            "text": "Project sidebar auto-expands to reveal the active agent when you navigate into a project (e.g. switching from the Agents app), and session rows now show the project name when sessions span multiple projects.",
+            "text": "Sidebar now auto-expands the project containing the active agent when navigating in from elsewhere, and session rows show their project name when sessions span multiple projects.",
             "commit_shas": [
               "838e63edcc2cd75db8aa7a713df2107d0fffdcb1",
               "1c473d6d877b4ecc9c76f1067c8da5a83eb4ec94"
@@ -1265,7 +1362,7 @@
             "confidence": "high"
           },
           {
-            "text": "Chat now shows a helpful error when an agent has no project assigned instead of failing silently, and the aura3d WebGL viewer gained a Download button to save the generated GLB.",
+            "text": "Chat surfaces a clear error when an agent isn't assigned to a project, and the Aura 3D viewer gains a Download button to save the generated GLB file.",
             "commit_shas": [
               "182213c170228e6d6c54d03c7c95317b49db1e69",
               "25bb8121d2adf5546ff0b2a3686026b28a3bad32"
@@ -1279,11 +1376,11 @@
         "time_label": "9:33 AM",
         "started_at": "2026-05-11T16:33:14.000Z",
         "ended_at": "2026-05-11T16:33:14.000Z",
-        "title": "Windows uninstaller GUI-init callback fix",
-        "summary": "Unblocked makensis builds that were aborting on the uninstaller's GUI-init hook.",
+        "title": "Windows uninstaller no longer aborts at install time",
+        "summary": "An NSIS callback-naming fix unblocks the Windows installer build.",
         "items": [
           {
-            "text": "Renamed the uninstaller's GUI-init callback to use the required `un.` prefix (AuraUnOnGUIInit → un.AuraOnGUIInit) so MUI_LANGUAGE no longer aborts expansion of MUI_UNFUNCTION_GUIINIT, with an inline note documenting the NSIS constraint to prevent regressions.",
+            "text": "Renamed the uninstaller's GUI-init callback to the required `un.`-prefixed form so makensis stops aborting while expanding MUI_LANGUAGE, restoring a clean Windows installer build.",
             "commit_shas": [
               "b0c6b231537e8265e308738de056f71992f399ba"
             ],
@@ -1296,27 +1393,28 @@
         "time_label": "9:58 AM",
         "started_at": "2026-05-11T16:58:58.000Z",
         "ended_at": "2026-05-11T17:09:36.000Z",
-        "title": "Project agent picker stabilization and Terminal-by-default sidekick",
-        "summary": "A second pass on the new picker stops it from resizing or flashing empty mid-selection and shows the full org fleet; Projects also reliably lands on the Terminal tab again.",
+        "title": "Project agent picker stops resizing and shows the full org fleet",
+        "summary": "Follow-up polish for the new Add Agent picker stabilizes its layout and broadens which agents it surfaces, plus two small project-sidebar fixes.",
         "items": [
           {
-            "text": "Agent picker now passes the active org id to api.agents.list() so teammates' shared agents appear (matching the Agents app sidebar), locks the modal's vertical footprint with a 360px floor across loading/empty/list states, and keeps the just-selected row visible through the create+handoff transition to prevent the 'No agents match your search.' flash.",
+            "text": "Project Add Agent picker now keeps a fixed 360px vertical footprint across loading, empty, and loaded states, and keeps a just-clicked row visible through the create-and-handoff transition so it no longer flashes 'No agents match your search.'",
             "commit_shas": [
               "250ebd0f99072a8c22cd907969c14b3c470b148d"
             ],
             "confidence": "high"
           },
           {
-            "text": "Projects' sidekick panel now forces the Terminal tab on app entry, so a previous click on Sessions — or writes from the Tasks app or spec-generation stream — no longer sticks across reloads. Switching tabs inside a session still persists as before.",
+            "text": "Picker now fetches the full org-wide agent fleet (matching the Agents app sidebar) instead of only agents authored by the current user, surfacing teammates' shared agents.",
             "commit_shas": [
-              "36d460645b6e23eee611cb7a1c799136b98bed3d"
+              "250ebd0f99072a8c22cd907969c14b3c470b148d"
             ],
             "confidence": "high"
           },
           {
-            "text": "Renamed the project sidebar's agent context-menu action to 'Remove from Project' to match the existing modal copy and make the project-scoped nature of the action obvious.",
+            "text": "Project sidebar's agent context-menu delete is now labeled 'Remove from Project' to match the modal copy, and Projects reliably lands on the Terminal tab on entry instead of inheriting a stale tab from Tasks or spec generation.",
             "commit_shas": [
-              "86811dfbefe028bc0bebbd21f441edc446d3f80c"
+              "86811dfbefe028bc0bebbd21f441edc446d3f80c",
+              "36d460645b6e23eee611cb7a1c799136b98bed3d"
             ],
             "confidence": "high"
           }
@@ -1326,20 +1424,28 @@
         "batch_id": "entry-6",
         "time_label": "10:26 AM",
         "started_at": "2026-05-11T17:26:47.000Z",
-        "ended_at": "2026-05-11T17:59:46.000Z",
-        "title": "Changelog-media pipeline tolerates Browser Use credit outages",
-        "summary": "Release-media CI no longer goes red when a paid API runs out of credits — failures are clearly tagged by provider and Browser Use credit exhaustion now degrades gracefully.",
+        "ended_at": "2026-05-11T18:35:45.000Z",
+        "title": "Stable channel no longer ships as Dev, and changelog-media survives credit outages",
+        "summary": "A critical channel-selection fix prevents the published Stable installer from running as a Dev binary, paired with CI hardening so release-media credit failures don't redden the whole workflow.",
         "items": [
           {
-            "text": "Every Anthropic, OpenAI, and Browser Use call in the publish-release-changelog-media pipeline now routes through a shared helper that prefixes the failing provider and names the env var to top up (e.g. `[Browser Use] credit balance is too low (top up the account tied to BROWSER_USE_API_KEY …)`), so CI logs always identify which account needs attention.",
+            "text": "Fixed a long-standing Cargo feature-unification bug that caused the published 'AURA' Stable installer to silently run as Dev — wrong data dir (`aura-dev`), 'AURA Dev' window title, disabled in-app updater, and a Dev-shaped single-instance mutex that made two launches collide. Every internal `aura-os-core` dependency now opts out of defaults across 17 crates, `Channel::current()` prefers Stable, and a new `--print-channel` self-check in `verify-desktop.mjs` fails the release if a Stable build doesn't self-report Stable.",
             "commit_shas": [
-              "6529e8609560ed54b9358c3a48339569d7d25284"
+              "f64e077532abc51cfe3b76b99a22c14e3c64760a"
             ],
             "confidence": "high"
           },
           {
-            "text": "A low Browser Use balance used to crash the entire workflow on the first capture; it now flips remaining candidates to a `blocked` result with the credit message, emits a `browser-use-credit-exhausted` progress event, exits 0, and lets the downstream gh-pages publish step no-op cleanly. Non-credit failures still throw.",
+            "text": "Added a one-shot migration so users coming off a Dev-in-disguise Stable build don't lose their data: on first Stable launch, an existing `aura-dev` store and skills tree is moved to the canonical `aura` location, gated by a marker file so it runs exactly once.",
             "commit_shas": [
+              "f64e077532abc51cfe3b76b99a22c14e3c64760a"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Release-media CI now tags every Anthropic, OpenAI, and Browser Use failure with the failing provider and the env var to top up, and a low Browser Use balance downgrades to a warning — candidates are marked `blocked`, the SDK is skipped for the rest of the run, and the workflow exits 0 instead of taking the whole job red.",
+            "commit_shas": [
+              "6529e8609560ed54b9358c3a48339569d7d25284",
               "4392204e6f6ffacfad9b55821dce29bb12bbfe31"
             ],
             "confidence": "high"
@@ -1348,11 +1454,11 @@
       }
     ],
     "highlights": [
-      "Searchable, keyboard-driven Add Agent picker",
-      "Remote agents auto-recover once on provisioning failure",
-      "Windows installer themed-bitmap and uninstaller fixes",
-      "Changelog media pipeline survives Browser Use credit outages"
+      "Stable desktop builds no longer ship as Dev-in-disguise",
+      "Add Agent gets a searchable, keyboard-driven picker",
+      "Windows NSIS installer themed bitmaps and uninstaller fixes",
+      "Changelog-media CI degrades gracefully on credit exhaustion"
     ],
-    "raw_commit_count": 23
+    "raw_commit_count": 24
   }
 }

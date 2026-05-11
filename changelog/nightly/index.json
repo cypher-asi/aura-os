@@ -2,19 +2,19 @@
   {
     "date": "2026-05-11",
     "channel": "nightly",
-    "version": "0.1.0-nightly.495.1",
-    "title": "Searchable agent picker, sturdier provisioning, and a calmer media pipeline",
-    "intro": "Today's nightly reshapes how you add agents to a project — the old card grid is gone, replaced by a Telegram-style searchable list with keyboard navigation and a one-keystroke Standard Agent shortcut. Around that headline change, remote agent startup now self-heals once before bothering you, the Windows installer's theme handling got two real fixes, and the release-media workflow stops taking the whole job down when a third-party API runs out of credits.",
+    "version": "0.1.0-nightly.496.1",
+    "title": "Stable channel rescue, a rebuilt agent picker, and steadier sessions",
+    "intro": "Today's nightly leans heavily on reliability: a critical fix stops the Stable installer from silently behaving as a Dev build, the Add Agent flow is rebuilt around a searchable Telegram-style picker, and a string of smaller corrections tightens session selection, sidebar navigation, and Windows installer packaging. The release-media pipeline also learns to fail more gracefully when third‑party API credits run dry.",
     "entryCount": 5,
     "highlights": [
-      "Searchable, keyboard-driven Add Agent picker",
-      "Remote agents auto-recover once on provisioning failure",
-      "Windows installer themed-bitmap and uninstaller fixes",
-      "Changelog media pipeline survives Browser Use credit outages"
+      "Stable desktop builds no longer ship as Dev-in-disguise",
+      "Add Agent gets a searchable, keyboard-driven picker",
+      "Windows NSIS installer themed bitmaps and uninstaller fixes",
+      "Changelog-media CI degrades gracefully on credit exhaustion"
     ],
-    "rawCommitCount": 26,
-    "generatedAt": "2026-05-11T18:15:11.466Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.495.1",
+    "rawCommitCount": 27,
+    "generatedAt": "2026-05-11T18:54:39.684Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.496.1",
     "path": "history/2026-05-11.json"
   },
   {
