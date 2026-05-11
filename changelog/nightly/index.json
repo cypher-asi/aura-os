@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-05-11",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.492.1",
+    "title": "Searchable agent picker, stuck-provision recovery, and Windows installer fixes",
+    "intro": "Today's nightly rebuilds the Add Agent flow around a Telegram-style searchable picker, teaches remote agent provisioning to self-heal when the first pod gets stuck, and clears two Windows installer regressions. A handful of sidebar and chat fixes round out the day, alongside a permissions correction that stops shipping every new agent with full access.",
+    "entryCount": 5,
+    "highlights": [
+      "Searchable Add Agent picker with keyboard nav",
+      "Remote agents auto-recover from failed first provision",
+      "Windows installer themed bitmaps and uninstaller fixed",
+      "Full-access default rolled back to CEO only"
+    ],
+    "rawCommitCount": 18,
+    "generatedAt": "2026-05-11T16:47:09.775Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.492.1",
+    "path": "history/2026-05-11.json"
+  },
+  {
     "date": "2026-05-08",
     "channel": "nightly",
     "version": "0.1.0-nightly.485.1",
