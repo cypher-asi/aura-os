@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-11T17:40:31.842Z",
+  "generatedAt": "2026-05-11T18:15:11.466Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.493.1",
+  "version": "0.1.0-nightly.495.1",
   "date": "2026-05-11",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.493.1",
-  "lastIncludedSha": "6529e8609560ed54b9358c3a48339569d7d25284",
-  "previousProcessedSha": "b0c6b231537e8265e308738de056f71992f399ba",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.495.1",
+  "lastIncludedSha": "4392204e6f6ffacfad9b55821dce29bb12bbfe31",
+  "previousProcessedSha": "6529e8609560ed54b9358c3a48339569d7d25284",
   "commitShas": [
     "c128b77bf61da12527762f67c641a9f0284fc6d0",
     "649fa9f4b1fcca4c3ef6b98ca375853724e6fb10",
@@ -31,10 +31,13 @@
     "86811dfbefe028bc0bebbd21f441edc446d3f80c",
     "36d460645b6e23eee611cb7a1c799136b98bed3d",
     "250ebd0f99072a8c22cd907969c14b3c470b148d",
-    "6529e8609560ed54b9358c3a48339569d7d25284"
+    "6529e8609560ed54b9358c3a48339569d7d25284",
+    "4aaeec5249cf3d8783a54577838b254203005b98",
+    "25bb8121d2adf5546ff0b2a3686026b28a3bad32",
+    "4392204e6f6ffacfad9b55821dce29bb12bbfe31"
   ],
-  "rawCommitCount": 22,
-  "filteredCommitCount": 20,
+  "rawCommitCount": 26,
+  "filteredCommitCount": 23,
   "rawCommits": [
     {
       "sha": "c128b77bf61da12527762f67c641a9f0284fc6d0",
@@ -904,6 +907,153 @@
       "areas": [
         "Other"
       ]
+    },
+    {
+      "sha": "4aaeec5249cf3d8783a54577838b254203005b98",
+      "author": {
+        "name": "real-sma11",
+        "email": "admin@blackbook.market"
+      },
+      "committedAt": "2026-05-09T10:24:40-06:00",
+      "subject": "fix(chat): accept .json and .sql files as prompt attachments",
+      "body": "Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>",
+      "parents": [
+        "e624d42575b6373a508e106958281ff0c1bf5a9e"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatInputBar/useFileAttachments.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 10,
+        "deletions": 2
+      },
+      "committedAtMs": 1778343880000,
+      "cleanSubject": "accept .json and .sql files as prompt attachments",
+      "keywords": [
+        "accept",
+        "json",
+        "files",
+        "prompt",
+        "attachments"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "25bb8121d2adf5546ff0b2a3686026b28a3bad32",
+      "author": {
+        "name": "real-sma11",
+        "email": "admin@blackbook.market"
+      },
+      "committedAt": "2026-05-11T08:04:05-06:00",
+      "subject": "feat(aura3d): add GLB download button to 3D viewer toolbar",
+      "body": "Adds a Download icon at the far right of the WebGL viewer controls so\nusers can save the generated GLB file. Implemented as an anchor with\n`download`/`target=_blank` to match the desktop-webview-friendly\npattern already used by Gallery and Model3DBlock.\n\nCo-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>",
+      "parents": [
+        "4aaeec5249cf3d8783a54577838b254203005b98"
+      ],
+      "files": [
+        "interface/src/apps/aura3d/ModelGeneration/ModelGeneration.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 12,
+        "deletions": 1
+      },
+      "committedAtMs": 1778508245000,
+      "cleanSubject": "add GLB download button to 3D viewer toolbar",
+      "keywords": [
+        "download",
+        "button",
+        "viewer",
+        "toolbar"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "4f3d8b801b77fe67414b3959bd10e1199ba5d865",
+      "author": {
+        "name": "n3o",
+        "email": "69747643+real-n3o@users.noreply.github.com"
+      },
+      "committedAt": "2026-05-11T11:53:28-06:00",
+      "subject": "Merge pull request #12 from real-sma11/feat/aura3d-glb-download",
+      "body": "feat(aura3d): add GLB download button to 3D viewer toolbar",
+      "parents": [
+        "6529e8609560ed54b9358c3a48339569d7d25284",
+        "25bb8121d2adf5546ff0b2a3686026b28a3bad32"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 22,
+        "deletions": 3
+      },
+      "committedAtMs": 1778522008000,
+      "cleanSubject": "Merge pull request #12 from real-sma11/feat/aura3d-glb-download",
+      "keywords": [
+        "merge",
+        "pull",
+        "request",
+        "from",
+        "real",
+        "sma11",
+        "feat",
+        "aura3d",
+        "download"
+      ],
+      "fileGroups": [],
+      "primaryArea": "Other",
+      "areas": []
+    },
+    {
+      "sha": "4392204e6f6ffacfad9b55821dce29bb12bbfe31",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-11T10:59:46-07:00",
+      "subject": "chore(changelog-media): downgrade Browser Use credit-low to a warning",
+      "body": "Previously a low Browser Use balance crashed the entire\npublish-release-changelog-media workflow at the first capture\nattempt - even though the rest of the pipeline (planner, report,\nmanifest) had nothing to do with that account. The pipeline is\nalready best-effort (the desktop release and text changelog ship\nbefore this workflow even runs), so the right behavior is to skip\nthe Browser Use flow for the cycle and exit cleanly.\n\nrunChangelogMediaEvaluation now wraps the runBrowserUseTaskImpl call:\nwhen wrapProviderError raises a `[Browser Use]` credit-low error\n(providerCreditError === true && provider === \"browser-use\"), the\ncurrent candidate becomes a `blocked` result with the credit message\nin `blockers[]`, a `browser-use-credit-exhausted` progress event\nfires, and a flag short-circuits every remaining candidate so the\nSDK isn't called again. Non-credit Browser Use failures still throw.\n\nThe report and stdout summary now carry `browserUseCreditExhausted`,\n`browserUseCreditMessage`, and `counts.captureSkippedForCredits`, and\nthe script exits 0 - so the downstream \"Publish accepted media into\ngh-pages\" step finds an empty manifest and no-ops cleanly instead of\nthe whole job going red.\n\nRegression test plans two candidates, has runBrowserUseTaskImpl\nthrow a credit-tagged error, and asserts the SDK is called exactly\nonce while both candidates land as blocked with the credit blocker.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "4f3d8b801b77fe67414b3959bd10e1199ba5d865"
+      ],
+      "files": [
+        "interface/scripts/evaluate-changelog-media-pipeline.mjs",
+        "interface/scripts/evaluate-changelog-media-pipeline.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 260,
+        "deletions": 13
+      },
+      "committedAtMs": 1778522386000,
+      "cleanSubject": "downgrade Browser Use credit-low to a warning",
+      "keywords": [
+        "downgrade",
+        "browser",
+        "credit",
+        "warning"
+      ],
+      "fileGroups": [
+        "interface/scripts/evaluate-changelog-media-pipeline.mjs",
+        "interface/scripts/evaluate-changelog-media-pipeline.test.mjs"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
     }
   ],
   "batchCount": 6,
@@ -915,36 +1065,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11835830
+          "sizeBytes": 11835946
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.493.1",
+      "version": "0.1.0-nightly.495.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.493.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.495.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 36770000
+          "sizeBytes": 36777124
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.493.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.495.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.493.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.495.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 105544184
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.493.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.495.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -954,29 +1104,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.493.1",
+      "version": "0.1.0-nightly.495.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.493.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.495.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33907193
+          "sizeBytes": 33908925
         },
         {
-          "name": "AURA_0.1.0-nightly.493.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.495.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.493.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.495.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33023827
+          "sizeBytes": 33025236
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.493.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.495.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -986,29 +1136,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.493.1",
+      "version": "0.1.0-nightly.495.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.493.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.495.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 35514721
+          "sizeBytes": 35511048
         },
         {
-          "name": "AURA_0.1.0-nightly.493.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.495.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.493.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.495.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 34696819
+          "sizeBytes": 34695913
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.493.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.495.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1018,17 +1168,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.493.1",
+      "version": "0.1.0-nightly.495.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.493.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.495.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24917730
+          "sizeBytes": 24918745
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.493.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.495.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -1037,47 +1187,48 @@
     }
   ],
   "rendered": {
-    "title": "Searchable agent picker, sturdier Windows installer, and clearer recovery paths",
-    "intro": "Today's nightly centers on a redesigned Add Agent picker for projects — a Telegram-style searchable list with a one-key Standard Agent shortcut — alongside meaningful reliability work: the Windows installer's themed bitmaps and uninstaller callback are fixed, stuck remote agents now auto-recover and surface real swarm errors, and a regression that handed every new agent full capabilities is rolled back.",
+    "title": "Searchable agent picker, sturdier provisioning, and a calmer media pipeline",
+    "intro": "Today's nightly reshapes how you add agents to a project — the old card grid is gone, replaced by a Telegram-style searchable list with keyboard navigation and a one-keystroke Standard Agent shortcut. Around that headline change, remote agent startup now self-heals once before bothering you, the Windows installer's theme handling got two real fixes, and the release-media workflow stops taking the whole job down when a third-party API runs out of credits.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "11:23 PM",
         "started_at": "2026-05-08T06:23:31.000Z",
         "ended_at": "2026-05-10T07:08:48.000Z",
-        "title": "Redesigned Add Agent picker with search and keyboard nav",
-        "summary": "The project Add Agent flow becomes a searchable Telegram-style list with a one-press Standard Agent shortcut, plus fixes for installer theming and stuck remote agents.",
+        "title": "Add Agent picker rebuilt as a searchable list",
+        "summary": "The project Add Agent flow is now a single Telegram-style picker with search, keyboard nav, and a one-press Standard Agent shortcut — plus fixes to session selection and the Windows installer's themed assets.",
         "items": [
           {
-            "text": "The Add Agent modal swaps its grid of cards for an autofocused search input and a vertical list — a top 'Standard Agent' row plus the user's fleet — navigable with arrow keys and Enter, with case-insensitive filtering over name and role. The old '+ Create New Agent' footer and editor detour are gone; pressing Enter on the Standard row spawns a generic agent through the same endpoint the project-row '+' used to call directly.",
+            "text": "Replaced the grid-of-cards AgentSelectorModal with a new searchable AgentSelectorList: autofocused search, a Standard Agent row pinned to the top, arrow-key + Enter navigation, hover sync, and per-row spinners during create. The old '+ Create New Agent' footer and separate AgentEditorModal are gone — pressing Enter on the Standard row hits the same default-create endpoint the project '+' used to fire silently.",
             "commit_shas": [
-              "4c2eaffb809a2545ce0f73175aa642ebaf6e9427",
-              "462dbbc06b9923d74e9dd5912640d7cd0a11dfb6",
               "7ce656119546afa3b6fdb8dc6c4ddd264712d4e8",
               "33f0a1f053d909e8edfb84e2e94edca00311a26e",
               "49890ce4a539bc94458cee08bd3e753c20e95608",
+              "462dbbc06b9923d74e9dd5912640d7cd0a11dfb6",
+              "4c2eaffb809a2545ce0f73175aa642ebaf6e9427",
               "637d1908fae8e12675e8d440ae42c03ac8752301"
             ],
             "confidence": "high"
           },
           {
-            "text": "Fixed a long-standing glitch where a newly created session briefly appeared unselected after sending its first message: SessionsList now falls back to the newest row in the surface during the optimistic-to-real id swap window, so the freshly created chat stays highlighted across the transition.",
+            "text": "Fixed a sessions bug where a brand-new chat would briefly read as unselected after the optimistic→real id swap; SessionsList now falls back to the newest row in the surface during that window so the just-created session stays highlighted.",
             "commit_shas": [
               "c128b77bf61da12527762f67c641a9f0284fc6d0"
             ],
             "confidence": "high"
           },
           {
-            "text": "Windows installer now stages dark and light themed bitmaps directly into $PLUGINSDIR instead of root-relative paths, hardens light-bitmap derivation with explicit preprocessor errors, swaps the header bitmap at GUI init for light mode, and extends the dark title-bar hook to the uninstaller.",
+            "text": "Remote agents that fail their initial provisioning readiness check now auto-recover once in the background and, if that still fails, surface the real swarm reason (e.g. Unschedulable PodScheduled) in both the StatusCard banner and manual Recovery errors instead of hanging on 'Starting up…'.",
             "commit_shas": [
-              "649fa9f4b1fcca4c3ef6b98ca375853724e6fb10"
+              "f365e3af128622f404a8630e0219944c733cddfc"
             ],
             "confidence": "high"
           },
           {
-            "text": "Remote agents that fail their initial provision no longer sit forever on 'Starting up…': the server now auto-recovers once on initial-provision failure, and if that also fails it broadcasts a terminal startup_failed state carrying the swarm's actual reason (e.g. an Unschedulable PodScheduled message) instead of a generic error, so the StatusCard exits limbo and shows manual Recovery with the real cause.",
+            "text": "Windows installer now stages dark and light themed bitmaps directly into $PLUGINSDIR (no more root-relative writes from .onInit), swaps the header bitmap at GUI init in light mode, applies the dark title-bar hook to the uninstaller, and fails the build with a clear error if the bitmap naming convention is broken. Chat attachments also now accept .json and .sql files.",
             "commit_shas": [
-              "f365e3af128622f404a8630e0219944c733cddfc"
+              "649fa9f4b1fcca4c3ef6b98ca375853724e6fb10",
+              "4aaeec5249cf3d8783a54577838b254203005b98"
             ],
             "confidence": "high"
           }
@@ -1088,25 +1239,25 @@
         "time_label": "3:34 AM",
         "started_at": "2026-05-11T10:34:33.000Z",
         "ended_at": "2026-05-11T15:40:33.000Z",
-        "title": "Chat, sidebar, and permissions polish",
-        "summary": "A cluster of fixes around chat errors, the projects sidebar, session rows, and a rolled-back permissions default.",
+        "title": "Picker polish, project navigation, and a CEO-only capability fix",
+        "summary": "Follow-up fixes harden the new Add Agent modal, improve project sidebar navigation, add a GLB download to the 3D viewer, and roll back an accidental 'all agents get full access' regression.",
         "items": [
           {
-            "text": "Chat now surfaces a helpful error when a message is sent to an agent that isn't assigned to a project, instead of failing silently.",
+            "text": "Reverted a regression where every newly created agent inherited full_access capabilities; the blanket empty→full_access promotion is now restricted to the CEO bootstrap, and non-CEO agents once again start with an empty bundle and opt in via the Permissions tab.",
             "commit_shas": [
-              "182213c170228e6d6c54d03c7c95317b49db1e69"
+              "8dcebabf9d7065368585c9c1aa53b8269f6a4ff5"
             ],
             "confidence": "high"
           },
           {
-            "text": "The Add Agent modal can no longer get wedged: Close and Escape are no longer blocked by stale busy state, and the Create button is only disabled during an actual in-flight API call.",
+            "text": "Add Agent modal no longer gets stuck: stale busy state could trap users by blocking Close/Escape and disabling Create indefinitely — close always works now and Create is only disabled during an active API call.",
             "commit_shas": [
               "638aedb7dd7267c31775f34e64b738f06e1632be"
             ],
             "confidence": "high"
           },
           {
-            "text": "Navigating into a project now auto-expands its tree in the sidebar to reveal the active agent, and session rows show their project name when the visible sessions span more than one project.",
+            "text": "Project sidebar auto-expands to reveal the active agent when you navigate into a project (e.g. switching from the Agents app), and session rows now show the project name when sessions span multiple projects.",
             "commit_shas": [
               "838e63edcc2cd75db8aa7a713df2107d0fffdcb1",
               "1c473d6d877b4ecc9c76f1067c8da5a83eb4ec94"
@@ -1114,9 +1265,10 @@
             "confidence": "high"
           },
           {
-            "text": "Reverted a regression that quietly handed every new agent full capabilities: non-CEO agents once again start with an empty permission bundle and must opt in through the Permissions tab, while the CEO bootstrap and project-scoped self-caps splice are preserved.",
+            "text": "Chat now shows a helpful error when an agent has no project assigned instead of failing silently, and the aura3d WebGL viewer gained a Download button to save the generated GLB.",
             "commit_shas": [
-              "8dcebabf9d7065368585c9c1aa53b8269f6a4ff5"
+              "182213c170228e6d6c54d03c7c95317b49db1e69",
+              "25bb8121d2adf5546ff0b2a3686026b28a3bad32"
             ],
             "confidence": "high"
           }
@@ -1127,11 +1279,11 @@
         "time_label": "9:33 AM",
         "started_at": "2026-05-11T16:33:14.000Z",
         "ended_at": "2026-05-11T16:33:14.000Z",
-        "title": "Uninstaller GUI-init callback no longer aborts makensis",
-        "summary": "A second installer fix unblocks Windows builds by satisfying NSIS's naming rule for uninstaller callbacks.",
+        "title": "Windows uninstaller GUI-init callback fix",
+        "summary": "Unblocked makensis builds that were aborting on the uninstaller's GUI-init hook.",
         "items": [
           {
-            "text": "makensis was aborting while expanding MUI_LANGUAGE because the uninstaller's GUI-init callback was emitted as a Call inside the uninstaller section without the required 'un.' prefix. Renaming AuraUnOnGUIInit to un.AuraOnGUIInit at both the !define and the Function declaration restores the Windows installer build.",
+            "text": "Renamed the uninstaller's GUI-init callback to use the required `un.` prefix (AuraUnOnGUIInit → un.AuraOnGUIInit) so MUI_LANGUAGE no longer aborts expansion of MUI_UNFUNCTION_GUIINIT, with an inline note documenting the NSIS constraint to prevent regressions.",
             "commit_shas": [
               "b0c6b231537e8265e308738de056f71992f399ba"
             ],
@@ -1144,25 +1296,25 @@
         "time_label": "9:58 AM",
         "started_at": "2026-05-11T16:58:58.000Z",
         "ended_at": "2026-05-11T17:09:36.000Z",
-        "title": "Project agent picker stability and copy cleanup",
-        "summary": "Follow-up polish on the new Add Agent picker plus small but visible project-sidebar tweaks.",
+        "title": "Project agent picker stabilization and Terminal-by-default sidekick",
+        "summary": "A second pass on the new picker stops it from resizing or flashing empty mid-selection and shows the full org fleet; Projects also reliably lands on the Terminal tab again.",
         "items": [
           {
-            "text": "The project Add Agent picker now shows the full org fleet (matching the Agents app sidebar) instead of only agents the current user authored, keeps a stable 360px-tall body across loading, empty, and loaded states, and no longer flashes 'No agents match your search' or hides the just-selected row during the create+handoff transition.",
+            "text": "Agent picker now passes the active org id to api.agents.list() so teammates' shared agents appear (matching the Agents app sidebar), locks the modal's vertical footprint with a 360px floor across loading/empty/list states, and keeps the just-selected row visible through the create+handoff transition to prevent the 'No agents match your search.' flash.",
             "commit_shas": [
               "250ebd0f99072a8c22cd907969c14b3c470b148d"
             ],
             "confidence": "high"
           },
           {
-            "text": "The Projects sidebar reliably opens on the Terminal tab again: ProjectMainPanel now pins the shared sidekick store to 'terminal' once per mount, so writes from the Tasks app or spec-generation stream no longer leak across reloads.",
+            "text": "Projects' sidekick panel now forces the Terminal tab on app entry, so a previous click on Sessions — or writes from the Tasks app or spec-generation stream — no longer sticks across reloads. Switching tabs inside a session still persists as before.",
             "commit_shas": [
               "36d460645b6e23eee611cb7a1c799136b98bed3d"
             ],
             "confidence": "high"
           },
           {
-            "text": "The agent context-menu action in the Projects sidebar is now labeled 'Remove from Project', matching the existing modal copy and clarifying that the removal is project-scoped.",
+            "text": "Renamed the project sidebar's agent context-menu action to 'Remove from Project' to match the existing modal copy and make the project-scoped nature of the action obvious.",
             "commit_shas": [
               "86811dfbefe028bc0bebbd21f441edc446d3f80c"
             ],
@@ -1174,14 +1326,21 @@
         "batch_id": "entry-6",
         "time_label": "10:26 AM",
         "started_at": "2026-05-11T17:26:47.000Z",
-        "ended_at": "2026-05-11T17:26:47.000Z",
-        "title": "Changelog-media CI names the provider when credits run out",
-        "summary": "Release tooling now identifies which paid API account needs a top-up when the changelog-media workflow fails.",
+        "ended_at": "2026-05-11T17:59:46.000Z",
+        "title": "Changelog-media pipeline tolerates Browser Use credit outages",
+        "summary": "Release-media CI no longer goes red when a paid API runs out of credits — failures are clearly tagged by provider and Browser Use credit exhaustion now degrades gracefully.",
         "items": [
           {
-            "text": "Every HTTP/SDK failure in the publish-release-changelog-media pipeline now flows through a shared helper that prefixes the failing provider (Anthropic, OpenAI, or Browser Use) and names the env var to top up, so a low-credit error in CI logs reads like '[Browser Use] credit balance is too low (top up the account tied to BROWSER_USE_API_KEY …)' instead of an unattributed balance message. Non-credit failures also pick up the provider tag.",
+            "text": "Every Anthropic, OpenAI, and Browser Use call in the publish-release-changelog-media pipeline now routes through a shared helper that prefixes the failing provider and names the env var to top up (e.g. `[Browser Use] credit balance is too low (top up the account tied to BROWSER_USE_API_KEY …)`), so CI logs always identify which account needs attention.",
             "commit_shas": [
               "6529e8609560ed54b9358c3a48339569d7d25284"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "A low Browser Use balance used to crash the entire workflow on the first capture; it now flips remaining candidates to a `blocked` result with the credit message, emits a `browser-use-credit-exhausted` progress event, exits 0, and lets the downstream gh-pages publish step no-op cleanly. Non-credit failures still throw.",
+            "commit_shas": [
+              "4392204e6f6ffacfad9b55821dce29bb12bbfe31"
             ],
             "confidence": "high"
           }
@@ -1189,11 +1348,11 @@
       }
     ],
     "highlights": [
-      "New searchable, keyboard-driven Add Agent picker",
-      "Windows installer no longer aborts on uninstaller GUI init",
-      "Stuck remote agents auto-recover with a real error message",
-      "Non-CEO agents go back to empty-by-default permissions"
+      "Searchable, keyboard-driven Add Agent picker",
+      "Remote agents auto-recover once on provisioning failure",
+      "Windows installer themed-bitmap and uninstaller fixes",
+      "Changelog media pipeline survives Browser Use credit outages"
     ],
-    "raw_commit_count": 20
+    "raw_commit_count": 23
   }
 }
