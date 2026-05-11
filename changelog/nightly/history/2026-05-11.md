@@ -1,53 +1,54 @@
-# Searchable agent picker, stuck-provision recovery, and Windows installer fixes
+# Searchable agent picker, sturdier Windows installer, and clearer recovery paths
 
 - Date: `2026-05-11`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.492.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.492.1
+- Version: `0.1.0-nightly.493.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.493.1
 
-Today's nightly rebuilds the Add Agent flow around a Telegram-style searchable picker, teaches remote agent provisioning to self-heal when the first pod gets stuck, and clears two Windows installer regressions. A handful of sidebar and chat fixes round out the day, alongside a permissions correction that stops shipping every new agent with full access.
+Today's nightly centers on a redesigned Add Agent picker for projects — a Telegram-style searchable list with a one-key Standard Agent shortcut — alongside meaningful reliability work: the Windows installer's themed bitmaps and uninstaller callback are fixed, stuck remote agents now auto-recover and surface real swarm errors, and a regression that handed every new agent full capabilities is rolled back.
 
-## 11:23 PM — New chat row stays selected after the optimistic→real swap
+## 11:23 PM — Redesigned Add Agent picker with search and keyboard nav
 
-Closes a UI gap where a just-created chat looked unselected during the window between renaming the optimistic row and the URL updating.
+The project Add Agent flow becomes a searchable Telegram-style list with a one-press Standard Agent shortcut, plus fixes for installer theming and stuck remote agents.
 
-- SessionsList now falls back to the newest row when the URL has no ?session= and no optimistic row exists, so a freshly created chat stays highlighted across the optimistic→real id swap (back/forward and suspended tab cases included). (`c128b77`)
+- The Add Agent modal swaps its grid of cards for an autofocused search input and a vertical list — a top 'Standard Agent' row plus the user's fleet — navigable with arrow keys and Enter, with case-insensitive filtering over name and role. The old '+ Create New Agent' footer and editor detour are gone; pressing Enter on the Standard row spawns a generic agent through the same endpoint the project-row '+' used to call directly. (`4c2eaff`, `462dbbc`, `7ce6561`, `33f0a1f`, `49890ce`, `637d190`)
+- Fixed a long-standing glitch where a newly created session briefly appeared unselected after sending its first message: SessionsList now falls back to the newest row in the surface during the optimistic-to-real id swap window, so the freshly created chat stays highlighted across the transition. (`c128b77`)
+- Windows installer now stages dark and light themed bitmaps directly into $PLUGINSDIR instead of root-relative paths, hardens light-bitmap derivation with explicit preprocessor errors, swaps the header bitmap at GUI init for light mode, and extends the dark title-bar hook to the uninstaller. (`649fa9f`)
+- Remote agents that fail their initial provision no longer sit forever on 'Starting up…': the server now auto-recovers once on initial-provision failure, and if that also fails it broadcasts a terminal startup_failed state carrying the swarm's actual reason (e.g. an Unschedulable PodScheduled message) instead of a generic error, so the StatusCard exits limbo and shows manual Recovery with the real cause. (`f365e3a`)
 
-## 9:10 AM — Themed installer bitmaps staged correctly on Windows
+## 3:34 AM — Chat, sidebar, and permissions polish
 
-Fixes the NSIS installer's light/dark bitmap handling and extends the dark title bar treatment to the uninstaller.
+A cluster of fixes around chat errors, the projects sidebar, session rows, and a rolled-back permissions default.
 
-- Dark and light header/sidebar bitmaps are now staged directly into $PLUGINSDIR so .onInit no longer writes to root-relative paths, and light-mode header swap happens at GUI init. (`649fa9f`)
-- Light-bitmap path derivation now fails the build with a clear preprocessor error if the source bitmaps don't end in -dark.bmp, and the dark title-bar DWM hook is applied to the uninstaller as well. (`649fa9f`)
+- Chat now surfaces a helpful error when a message is sent to an agent that isn't assigned to a project, instead of failing silently. (`182213c`)
+- The Add Agent modal can no longer get wedged: Close and Escape are no longer blocked by stale busy state, and the Create button is only disabled during an actual in-flight API call. (`638aedb`)
+- Navigating into a project now auto-expands its tree in the sidebar to reveal the active agent, and session rows show their project name when the visible sessions span more than one project. (`838e63e`, `1c473d6`)
+- Reverted a regression that quietly handed every new agent full capabilities: non-CEO agents once again start with an empty permission bundle and must opt in through the Permissions tab, while the CEO bootstrap and project-scoped self-caps splice are preserved. (`8dcebab`)
 
-## 1:08 PM — Telegram-style Add Agent picker and self-healing remote provisioning
+## 9:33 AM — Uninstaller GUI-init callback no longer aborts makensis
 
-Replaces the Add Agent grid with a searchable, keyboard-driven list and makes a stuck remote-agent startup recover itself once before surfacing the real cause.
+A second installer fix unblocks Windows builds by satisfying NSIS's naming rule for uninstaller callbacks.
 
-- Remote agents whose initial readiness wait times out or errors now trigger one automatic recovery pass instead of stranding the UI on 'Starting up...'; the swarm-supplied reason (e.g. Unschedulable) is carried through to the StatusCard banner and the manual Recovery error, with new starting and startup_failed phases wired into PHASE_NOTICES. (`f365e3a`)
-- The project row '+' and the right-click 'Add Agent' menu now both open a single AgentSelectorModal whose body is a searchable list: an autofocused search input filters live over name and role, a Standard Agent row sits at the top, and Up/Down + Enter activate rows with the selection scrolled into view. (`4c2eaff`, `462dbbc`, `7ce6561`, `33f0a1f`)
-- The picker drops the old '+ Create New Agent' footer and AgentEditorModal detour — pressing Enter on the Standard row hits the same default-create endpoint the project '+' used to fire, spawning a generic agent without leaving the modal. Custom agent authoring still lives in the Agents app. (`33f0a1f`)
-- Picker styling is rebuilt as a Telegram-contacts row layout with hover/active states, a 360px scrollable list on desktop, and larger touch targets inside the mobile Drawer; end-to-end tests cover search filtering, keyboard activation, mobile remote-only filtering, and disabled rows during creation. (`49890ce`, `637d190`)
+- makensis was aborting while expanding MUI_LANGUAGE because the uninstaller's GUI-init callback was emitted as a Call inside the uninstaller section without the required 'un.' prefix. Renaming AuraUnOnGUIInit to un.AuraOnGUIInit at both the !define and the Function declaration restores the Windows installer build. (`b0c6b23`)
 
-## 3:34 AM — Permissions default narrowed and several sidebar/chat fixes
+## 9:58 AM — Project agent picker stability and copy cleanup
 
-Walks back a regression that gave every new agent full access, plus a cluster of smaller fixes around chat errors, modal responsiveness, and project navigation.
+Follow-up polish on the new Add Agent picker plus small but visible project-sidebar tweaks.
 
-- Only the CEO agent now defaults to the full-access preset; regular agents keep an empty permissions bundle and must opt into capabilities from the Permissions tab, reversing the blanket empty→full_access promotion that had shipped every agent with everything turned on. (`8dcebab`)
-- The Add Agent modal no longer gets stuck: Close and Escape always work, and the Create button is only disabled during an active API call rather than by a stale transition flag from a previous creation. (`638aedb`)
-- Chat surfaces a helpful error when an agent isn't assigned to a project instead of failing silently, and the sidebar now auto-expands the project tree to reveal the active agent when navigating in from elsewhere. (`182213c`, `838e63e`)
-- Session rows show their project name when the list spans multiple projects, making cross-project session lists easier to scan. (`1c473d6`)
+- The project Add Agent picker now shows the full org fleet (matching the Agents app sidebar) instead of only agents the current user authored, keeps a stable 360px-tall body across loading, empty, and loaded states, and no longer flashes 'No agents match your search' or hides the just-selected row during the create+handoff transition. (`250ebd0`)
+- The Projects sidebar reliably opens on the Terminal tab again: ProjectMainPanel now pins the shared sidekick store to 'terminal' once per mount, so writes from the Tasks app or spec-generation stream no longer leak across reloads. (`36d4606`)
+- The agent context-menu action in the Projects sidebar is now labeled 'Remove from Project', matching the existing modal copy and clarifying that the removal is project-scoped. (`86811df`)
 
-## 9:33 AM — Uninstaller GUI-init callback unblocks Windows builds
+## 10:26 AM — Changelog-media CI names the provider when credits run out
 
-Restores Windows installer builds after the previous uninstaller dark-title-bar hook tripped an NSIS naming rule.
+Release tooling now identifies which paid API account needs a top-up when the changelog-media workflow fails.
 
-- Renamed the uninstaller GUI-init callback to un.AuraOnGUIInit so makensis stops aborting when expanding MUI_LANGUAGE → MUI_UNFUNCTION_GUIINIT; the 'un.' prefix requirement is documented inline to prevent regressions. (`b0c6b23`)
+- Every HTTP/SDK failure in the publish-release-changelog-media pipeline now flows through a shared helper that prefixes the failing provider (Anthropic, OpenAI, or Browser Use) and names the env var to top up, so a low-credit error in CI logs reads like '[Browser Use] credit balance is too low (top up the account tied to BROWSER_USE_API_KEY …)' instead of an unattributed balance message. Non-credit failures also pick up the provider tag. (`6529e86`)
 
 ## Highlights
 
-- Searchable Add Agent picker with keyboard nav
-- Remote agents auto-recover from failed first provision
-- Windows installer themed bitmaps and uninstaller fixed
-- Full-access default rolled back to CEO only
+- New searchable, keyboard-driven Add Agent picker
+- Windows installer no longer aborts on uninstaller GUI init
+- Stuck remote agents auto-recover with a real error message
+- Non-CEO agents go back to empty-by-default permissions
 

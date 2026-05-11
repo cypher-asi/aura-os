@@ -2,19 +2,19 @@
   {
     "date": "2026-05-11",
     "channel": "nightly",
-    "version": "0.1.0-nightly.492.1",
-    "title": "Searchable agent picker, stuck-provision recovery, and Windows installer fixes",
-    "intro": "Today's nightly rebuilds the Add Agent flow around a Telegram-style searchable picker, teaches remote agent provisioning to self-heal when the first pod gets stuck, and clears two Windows installer regressions. A handful of sidebar and chat fixes round out the day, alongside a permissions correction that stops shipping every new agent with full access.",
+    "version": "0.1.0-nightly.493.1",
+    "title": "Searchable agent picker, sturdier Windows installer, and clearer recovery paths",
+    "intro": "Today's nightly centers on a redesigned Add Agent picker for projects — a Telegram-style searchable list with a one-key Standard Agent shortcut — alongside meaningful reliability work: the Windows installer's themed bitmaps and uninstaller callback are fixed, stuck remote agents now auto-recover and surface real swarm errors, and a regression that handed every new agent full capabilities is rolled back.",
     "entryCount": 5,
     "highlights": [
-      "Searchable Add Agent picker with keyboard nav",
-      "Remote agents auto-recover from failed first provision",
-      "Windows installer themed bitmaps and uninstaller fixed",
-      "Full-access default rolled back to CEO only"
+      "New searchable, keyboard-driven Add Agent picker",
+      "Windows installer no longer aborts on uninstaller GUI init",
+      "Stuck remote agents auto-recover with a real error message",
+      "Non-CEO agents go back to empty-by-default permissions"
     ],
-    "rawCommitCount": 18,
-    "generatedAt": "2026-05-11T16:47:09.775Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.492.1",
+    "rawCommitCount": 22,
+    "generatedAt": "2026-05-11T17:40:31.842Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.493.1",
     "path": "history/2026-05-11.json"
   },
   {

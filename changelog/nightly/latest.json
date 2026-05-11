@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-11T16:47:09.775Z",
+  "generatedAt": "2026-05-11T17:40:31.842Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.492.1",
+  "version": "0.1.0-nightly.493.1",
   "date": "2026-05-11",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.492.1",
-  "lastIncludedSha": "b0c6b231537e8265e308738de056f71992f399ba",
-  "previousProcessedSha": "aa30419f13a438fd2961e542d922b6d8ccdd83bf",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.493.1",
+  "lastIncludedSha": "6529e8609560ed54b9358c3a48339569d7d25284",
+  "previousProcessedSha": "b0c6b231537e8265e308738de056f71992f399ba",
   "commitShas": [
     "c128b77bf61da12527762f67c641a9f0284fc6d0",
     "649fa9f4b1fcca4c3ef6b98ca375853724e6fb10",
@@ -27,10 +27,14 @@
     "838e63edcc2cd75db8aa7a713df2107d0fffdcb1",
     "1c473d6d877b4ecc9c76f1067c8da5a83eb4ec94",
     "8dcebabf9d7065368585c9c1aa53b8269f6a4ff5",
-    "b0c6b231537e8265e308738de056f71992f399ba"
+    "b0c6b231537e8265e308738de056f71992f399ba",
+    "86811dfbefe028bc0bebbd21f441edc446d3f80c",
+    "36d460645b6e23eee611cb7a1c799136b98bed3d",
+    "250ebd0f99072a8c22cd907969c14b3c470b148d",
+    "6529e8609560ed54b9358c3a48339569d7d25284"
   ],
-  "rawCommitCount": 18,
-  "filteredCommitCount": 16,
+  "rawCommitCount": 22,
+  "filteredCommitCount": 20,
   "rawCommits": [
     {
       "sha": "c128b77bf61da12527762f67c641a9f0284fc6d0",
@@ -737,6 +741,169 @@
       "areas": [
         "Desktop"
       ]
+    },
+    {
+      "sha": "86811dfbefe028bc0bebbd21f441edc446d3f80c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-11T09:58:58-07:00",
+      "subject": "fix(projects): label agent context-menu delete as 'Remove from Project'",
+      "body": "Clarifies that removing an agent from the Projects sidebar is a project-scoped removal, matching the existing 'Remove Agent' modal copy.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "b0c6b231537e8265e308738de056f71992f399ba"
+      ],
+      "files": [
+        "interface/src/components/ProjectList/ExplorerContextMenu.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1778518738000,
+      "cleanSubject": "label agent context-menu delete as 'Remove from Project'",
+      "keywords": [
+        "label",
+        "agent",
+        "context",
+        "menu",
+        "delete",
+        "remove",
+        "from",
+        "project"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "36d460645b6e23eee611cb7a1c799136b98bed3d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-11T10:07:32-07:00",
+      "subject": "fix(projects): default sidekick tab to Terminal on app entry",
+      "body": "The shared sidekick store persists its active tab to localStorage and is\nalso mutated by the Tasks app (writes \"tasks\") and the spec-generation\nstream (writes \"specs\"). Once a user clicked Sessions in Projects, that\nvalue stuck across reloads and other apps could pollute it, so Projects\nno longer reliably landed on Terminal.\n\nForce ProjectMainPanel to call setActiveTab(\"terminal\") once per mount,\nguarded by a ref so switching tabs inside the session still persists.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "86811dfbefe028bc0bebbd21f441edc446d3f80c"
+      ],
+      "files": [
+        "interface/src/apps/projects/ProjectMainPanel/ProjectMainPanel.test.tsx",
+        "interface/src/apps/projects/ProjectMainPanel/ProjectMainPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 68,
+        "deletions": 1
+      },
+      "committedAtMs": 1778519252000,
+      "cleanSubject": "default sidekick tab to Terminal on app entry",
+      "keywords": [
+        "default",
+        "sidekick",
+        "terminal",
+        "entry"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "250ebd0f99072a8c22cd907969c14b3c470b148d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-11T10:09:36-07:00",
+      "subject": "fix(agents): stabilize project agent picker size and show full org fleet",
+      "body": "The project sidebar's Add Agent picker (AgentSelectorModal) was resizing\nbetween loading and loaded states, again after a row was selected (the\njust-clicked agent disappeared once it landed in agentsByProject), and\nin some cases flashed \"No agents match your search.\" for a frame when\nthat row was the only match. It also only fetched agents the current\nuser authored, hiding teammates' shared agents that the Agents app\nsidebar surfaces.\n\n- Pass activeOrg.org_id to api.agents.list() in useAgentSelectorData so\n  the picker shows the full org fleet (matching useAgentStore.fetchAgents).\n- Wrap the loading/empty/list region in a new .pickerBody with a 360px\n  min-height floor (waived inside the mobile drawer) so the modal keeps\n  the same vertical footprint across states.\n- Track recentlySelectedId in AgentSelectorModal and exclude it from\n  the assigned-agents filter, keeping the row visible during the\n  create+handoff transition and preventing the empty-state flash.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "36d460645b6e23eee611cb7a1c799136b98bed3d"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentSelectorModal/AgentSelectorList.tsx",
+        "interface/src/apps/agents/components/AgentSelectorModal/AgentSelectorModal.module.css",
+        "interface/src/apps/agents/components/AgentSelectorModal/AgentSelectorModal.tsx",
+        "interface/src/apps/agents/components/AgentSelectorModal/useAgentSelectorData.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 108,
+        "deletions": 46
+      },
+      "committedAtMs": 1778519376000,
+      "cleanSubject": "stabilize project agent picker size and show full org fleet",
+      "keywords": [
+        "stabilize",
+        "project",
+        "agent",
+        "picker",
+        "size",
+        "show",
+        "full",
+        "fleet"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "6529e8609560ed54b9358c3a48339569d7d25284",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-11T10:26:47-07:00",
+      "subject": "chore(changelog-media): tag credit-low errors with the failing provider",
+      "body": "The publish-release-changelog-media workflow calls three different paid\nAPIs (Anthropic, OpenAI, Browser Use). When one runs out of credits, the\nprevious wording made it ambiguous which account actually needed a top-up\n- e.g. \"You need at least $1.00 in credits. Current balance: $0.34\" with\nno provider name attached.\n\nRoute every HTTP/SDK failure in the pipeline through a shared helper that\nprefixes the failing provider and names the env var to top up:\n\n  [Browser Use] credit balance is too low (top up the account tied to\n  BROWSER_USE_API_KEY - https://cloud.browser-use.com/billing): You need\n  at least $1.00 in credits. Current balance: $0.34\n\nNon-credit failures also pick up the provider tag so CI logs always\nidentify the source.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "250ebd0f99072a8c22cd907969c14b3c470b148d"
+      ],
+      "files": [
+        "interface/scripts/changelog-media-browser-use-trial.mjs",
+        "interface/scripts/lib/api-credit-errors.mjs",
+        "interface/scripts/lib/api-credit-errors.test.mjs",
+        "interface/scripts/lib/changelog-media-branding.mjs",
+        "interface/scripts/lib/changelog-media-planner.mjs",
+        "interface/scripts/lib/changelog-media-quality.mjs"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 280,
+        "deletions": 21
+      },
+      "committedAtMs": 1778520407000,
+      "cleanSubject": "tag credit-low errors with the failing provider",
+      "keywords": [
+        "credit",
+        "errors",
+        "with",
+        "failing",
+        "provider"
+      ],
+      "fileGroups": [
+        "interface/scripts/changelog-media-browser-use-trial.mjs",
+        "interface/scripts/lib"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
     }
   ],
   "batchCount": 6,
@@ -748,36 +915,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11835742
+          "sizeBytes": 11835830
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.492.1",
+      "version": "0.1.0-nightly.493.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.492.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.493.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 36775414
+          "sizeBytes": 36770000
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.492.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.493.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.492.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.493.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 105535992
+          "sizeBytes": 105544184
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.492.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.493.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -787,29 +954,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.492.1",
+      "version": "0.1.0-nightly.493.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.492.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.493.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33906033
+          "sizeBytes": 33907193
         },
         {
-          "name": "AURA_0.1.0-nightly.492.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.493.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.492.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.493.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33024192
+          "sizeBytes": 33023827
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.492.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.493.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -819,29 +986,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.492.1",
+      "version": "0.1.0-nightly.493.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.492.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.493.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 35517114
+          "sizeBytes": 35514721
         },
         {
-          "name": "AURA_0.1.0-nightly.492.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.493.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.492.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.493.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 34698307
+          "sizeBytes": 34696819
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.492.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.493.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -851,17 +1018,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.492.1",
+      "version": "0.1.0-nightly.493.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.492.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.493.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24916471
+          "sizeBytes": 24917730
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.492.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.493.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -870,45 +1037,47 @@
     }
   ],
   "rendered": {
-    "title": "Searchable agent picker, stuck-provision recovery, and Windows installer fixes",
-    "intro": "Today's nightly rebuilds the Add Agent flow around a Telegram-style searchable picker, teaches remote agent provisioning to self-heal when the first pod gets stuck, and clears two Windows installer regressions. A handful of sidebar and chat fixes round out the day, alongside a permissions correction that stops shipping every new agent with full access.",
+    "title": "Searchable agent picker, sturdier Windows installer, and clearer recovery paths",
+    "intro": "Today's nightly centers on a redesigned Add Agent picker for projects — a Telegram-style searchable list with a one-key Standard Agent shortcut — alongside meaningful reliability work: the Windows installer's themed bitmaps and uninstaller callback are fixed, stuck remote agents now auto-recover and surface real swarm errors, and a regression that handed every new agent full capabilities is rolled back.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "11:23 PM",
         "started_at": "2026-05-08T06:23:31.000Z",
-        "ended_at": "2026-05-08T06:23:31.000Z",
-        "title": "New chat row stays selected after the optimistic→real swap",
-        "summary": "Closes a UI gap where a just-created chat looked unselected during the window between renaming the optimistic row and the URL updating.",
+        "ended_at": "2026-05-10T07:08:48.000Z",
+        "title": "Redesigned Add Agent picker with search and keyboard nav",
+        "summary": "The project Add Agent flow becomes a searchable Telegram-style list with a one-press Standard Agent shortcut, plus fixes for installer theming and stuck remote agents.",
         "items": [
           {
-            "text": "SessionsList now falls back to the newest row when the URL has no ?session= and no optimistic row exists, so a freshly created chat stays highlighted across the optimistic→real id swap (back/forward and suspended tab cases included).",
+            "text": "The Add Agent modal swaps its grid of cards for an autofocused search input and a vertical list — a top 'Standard Agent' row plus the user's fleet — navigable with arrow keys and Enter, with case-insensitive filtering over name and role. The old '+ Create New Agent' footer and editor detour are gone; pressing Enter on the Standard row spawns a generic agent through the same endpoint the project-row '+' used to call directly.",
+            "commit_shas": [
+              "4c2eaffb809a2545ce0f73175aa642ebaf6e9427",
+              "462dbbc06b9923d74e9dd5912640d7cd0a11dfb6",
+              "7ce656119546afa3b6fdb8dc6c4ddd264712d4e8",
+              "33f0a1f053d909e8edfb84e2e94edca00311a26e",
+              "49890ce4a539bc94458cee08bd3e753c20e95608",
+              "637d1908fae8e12675e8d440ae42c03ac8752301"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Fixed a long-standing glitch where a newly created session briefly appeared unselected after sending its first message: SessionsList now falls back to the newest row in the surface during the optimistic-to-real id swap window, so the freshly created chat stays highlighted across the transition.",
             "commit_shas": [
               "c128b77bf61da12527762f67c641a9f0284fc6d0"
             ],
             "confidence": "high"
-          }
-        ]
-      },
-      {
-        "batch_id": "entry-2",
-        "time_label": "9:10 AM",
-        "started_at": "2026-05-08T16:10:25.000Z",
-        "ended_at": "2026-05-08T16:10:25.000Z",
-        "title": "Themed installer bitmaps staged correctly on Windows",
-        "summary": "Fixes the NSIS installer's light/dark bitmap handling and extends the dark title bar treatment to the uninstaller.",
-        "items": [
+          },
           {
-            "text": "Dark and light header/sidebar bitmaps are now staged directly into $PLUGINSDIR so .onInit no longer writes to root-relative paths, and light-mode header swap happens at GUI init.",
+            "text": "Windows installer now stages dark and light themed bitmaps directly into $PLUGINSDIR instead of root-relative paths, hardens light-bitmap derivation with explicit preprocessor errors, swaps the header bitmap at GUI init for light mode, and extends the dark title-bar hook to the uninstaller.",
             "commit_shas": [
               "649fa9f4b1fcca4c3ef6b98ca375853724e6fb10"
             ],
             "confidence": "high"
           },
           {
-            "text": "Light-bitmap path derivation now fails the build with a clear preprocessor error if the source bitmaps don't end in -dark.bmp, and the dark title-bar DWM hook is applied to the uninstaller as well.",
+            "text": "Remote agents that fail their initial provision no longer sit forever on 'Starting up…': the server now auto-recovers once on initial-provision failure, and if that also fails it broadcasts a terminal startup_failed state carrying the swarm's actual reason (e.g. an Unschedulable PodScheduled message) instead of a generic error, so the StatusCard exits limbo and shows manual Recovery with the real cause.",
             "commit_shas": [
-              "649fa9f4b1fcca4c3ef6b98ca375853724e6fb10"
+              "f365e3af128622f404a8630e0219944c733cddfc"
             ],
             "confidence": "high"
           }
@@ -916,41 +1085,55 @@
       },
       {
         "batch_id": "entry-3",
-        "time_label": "1:08 PM",
-        "started_at": "2026-05-08T20:08:11.000Z",
-        "ended_at": "2026-05-10T07:08:48.000Z",
-        "title": "Telegram-style Add Agent picker and self-healing remote provisioning",
-        "summary": "Replaces the Add Agent grid with a searchable, keyboard-driven list and makes a stuck remote-agent startup recover itself once before surfacing the real cause.",
+        "time_label": "3:34 AM",
+        "started_at": "2026-05-11T10:34:33.000Z",
+        "ended_at": "2026-05-11T15:40:33.000Z",
+        "title": "Chat, sidebar, and permissions polish",
+        "summary": "A cluster of fixes around chat errors, the projects sidebar, session rows, and a rolled-back permissions default.",
         "items": [
           {
-            "text": "Remote agents whose initial readiness wait times out or errors now trigger one automatic recovery pass instead of stranding the UI on 'Starting up...'; the swarm-supplied reason (e.g. Unschedulable) is carried through to the StatusCard banner and the manual Recovery error, with new starting and startup_failed phases wired into PHASE_NOTICES.",
+            "text": "Chat now surfaces a helpful error when a message is sent to an agent that isn't assigned to a project, instead of failing silently.",
             "commit_shas": [
-              "f365e3af128622f404a8630e0219944c733cddfc"
+              "182213c170228e6d6c54d03c7c95317b49db1e69"
             ],
             "confidence": "high"
           },
           {
-            "text": "The project row '+' and the right-click 'Add Agent' menu now both open a single AgentSelectorModal whose body is a searchable list: an autofocused search input filters live over name and role, a Standard Agent row sits at the top, and Up/Down + Enter activate rows with the selection scrolled into view.",
+            "text": "The Add Agent modal can no longer get wedged: Close and Escape are no longer blocked by stale busy state, and the Create button is only disabled during an actual in-flight API call.",
             "commit_shas": [
-              "4c2eaffb809a2545ce0f73175aa642ebaf6e9427",
-              "462dbbc06b9923d74e9dd5912640d7cd0a11dfb6",
-              "7ce656119546afa3b6fdb8dc6c4ddd264712d4e8",
-              "33f0a1f053d909e8edfb84e2e94edca00311a26e"
+              "638aedb7dd7267c31775f34e64b738f06e1632be"
             ],
             "confidence": "high"
           },
           {
-            "text": "The picker drops the old '+ Create New Agent' footer and AgentEditorModal detour — pressing Enter on the Standard row hits the same default-create endpoint the project '+' used to fire, spawning a generic agent without leaving the modal. Custom agent authoring still lives in the Agents app.",
+            "text": "Navigating into a project now auto-expands its tree in the sidebar to reveal the active agent, and session rows show their project name when the visible sessions span more than one project.",
             "commit_shas": [
-              "33f0a1f053d909e8edfb84e2e94edca00311a26e"
+              "838e63edcc2cd75db8aa7a713df2107d0fffdcb1",
+              "1c473d6d877b4ecc9c76f1067c8da5a83eb4ec94"
             ],
             "confidence": "high"
           },
           {
-            "text": "Picker styling is rebuilt as a Telegram-contacts row layout with hover/active states, a 360px scrollable list on desktop, and larger touch targets inside the mobile Drawer; end-to-end tests cover search filtering, keyboard activation, mobile remote-only filtering, and disabled rows during creation.",
+            "text": "Reverted a regression that quietly handed every new agent full capabilities: non-CEO agents once again start with an empty permission bundle and must opt in through the Permissions tab, while the CEO bootstrap and project-scoped self-caps splice are preserved.",
             "commit_shas": [
-              "49890ce4a539bc94458cee08bd3e753c20e95608",
-              "637d1908fae8e12675e8d440ae42c03ac8752301"
+              "8dcebabf9d7065368585c9c1aa53b8269f6a4ff5"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-4",
+        "time_label": "9:33 AM",
+        "started_at": "2026-05-11T16:33:14.000Z",
+        "ended_at": "2026-05-11T16:33:14.000Z",
+        "title": "Uninstaller GUI-init callback no longer aborts makensis",
+        "summary": "A second installer fix unblocks Windows builds by satisfying NSIS's naming rule for uninstaller callbacks.",
+        "items": [
+          {
+            "text": "makensis was aborting while expanding MUI_LANGUAGE because the uninstaller's GUI-init callback was emitted as a Call inside the uninstaller section without the required 'un.' prefix. Renaming AuraUnOnGUIInit to un.AuraOnGUIInit at both the !define and the Function declaration restores the Windows installer build.",
+            "commit_shas": [
+              "b0c6b231537e8265e308738de056f71992f399ba"
             ],
             "confidence": "high"
           }
@@ -958,38 +1141,30 @@
       },
       {
         "batch_id": "entry-5",
-        "time_label": "3:34 AM",
-        "started_at": "2026-05-11T10:34:33.000Z",
-        "ended_at": "2026-05-11T15:40:33.000Z",
-        "title": "Permissions default narrowed and several sidebar/chat fixes",
-        "summary": "Walks back a regression that gave every new agent full access, plus a cluster of smaller fixes around chat errors, modal responsiveness, and project navigation.",
+        "time_label": "9:58 AM",
+        "started_at": "2026-05-11T16:58:58.000Z",
+        "ended_at": "2026-05-11T17:09:36.000Z",
+        "title": "Project agent picker stability and copy cleanup",
+        "summary": "Follow-up polish on the new Add Agent picker plus small but visible project-sidebar tweaks.",
         "items": [
           {
-            "text": "Only the CEO agent now defaults to the full-access preset; regular agents keep an empty permissions bundle and must opt into capabilities from the Permissions tab, reversing the blanket empty→full_access promotion that had shipped every agent with everything turned on.",
+            "text": "The project Add Agent picker now shows the full org fleet (matching the Agents app sidebar) instead of only agents the current user authored, keeps a stable 360px-tall body across loading, empty, and loaded states, and no longer flashes 'No agents match your search' or hides the just-selected row during the create+handoff transition.",
             "commit_shas": [
-              "8dcebabf9d7065368585c9c1aa53b8269f6a4ff5"
+              "250ebd0f99072a8c22cd907969c14b3c470b148d"
             ],
             "confidence": "high"
           },
           {
-            "text": "The Add Agent modal no longer gets stuck: Close and Escape always work, and the Create button is only disabled during an active API call rather than by a stale transition flag from a previous creation.",
+            "text": "The Projects sidebar reliably opens on the Terminal tab again: ProjectMainPanel now pins the shared sidekick store to 'terminal' once per mount, so writes from the Tasks app or spec-generation stream no longer leak across reloads.",
             "commit_shas": [
-              "638aedb7dd7267c31775f34e64b738f06e1632be"
+              "36d460645b6e23eee611cb7a1c799136b98bed3d"
             ],
             "confidence": "high"
           },
           {
-            "text": "Chat surfaces a helpful error when an agent isn't assigned to a project instead of failing silently, and the sidebar now auto-expands the project tree to reveal the active agent when navigating in from elsewhere.",
+            "text": "The agent context-menu action in the Projects sidebar is now labeled 'Remove from Project', matching the existing modal copy and clarifying that the removal is project-scoped.",
             "commit_shas": [
-              "182213c170228e6d6c54d03c7c95317b49db1e69",
-              "838e63edcc2cd75db8aa7a713df2107d0fffdcb1"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Session rows show their project name when the list spans multiple projects, making cross-project session lists easier to scan.",
-            "commit_shas": [
-              "1c473d6d877b4ecc9c76f1067c8da5a83eb4ec94"
+              "86811dfbefe028bc0bebbd21f441edc446d3f80c"
             ],
             "confidence": "high"
           }
@@ -997,16 +1172,16 @@
       },
       {
         "batch_id": "entry-6",
-        "time_label": "9:33 AM",
-        "started_at": "2026-05-11T16:33:14.000Z",
-        "ended_at": "2026-05-11T16:33:14.000Z",
-        "title": "Uninstaller GUI-init callback unblocks Windows builds",
-        "summary": "Restores Windows installer builds after the previous uninstaller dark-title-bar hook tripped an NSIS naming rule.",
+        "time_label": "10:26 AM",
+        "started_at": "2026-05-11T17:26:47.000Z",
+        "ended_at": "2026-05-11T17:26:47.000Z",
+        "title": "Changelog-media CI names the provider when credits run out",
+        "summary": "Release tooling now identifies which paid API account needs a top-up when the changelog-media workflow fails.",
         "items": [
           {
-            "text": "Renamed the uninstaller GUI-init callback to un.AuraOnGUIInit so makensis stops aborting when expanding MUI_LANGUAGE → MUI_UNFUNCTION_GUIINIT; the 'un.' prefix requirement is documented inline to prevent regressions.",
+            "text": "Every HTTP/SDK failure in the publish-release-changelog-media pipeline now flows through a shared helper that prefixes the failing provider (Anthropic, OpenAI, or Browser Use) and names the env var to top up, so a low-credit error in CI logs reads like '[Browser Use] credit balance is too low (top up the account tied to BROWSER_USE_API_KEY …)' instead of an unattributed balance message. Non-credit failures also pick up the provider tag.",
             "commit_shas": [
-              "b0c6b231537e8265e308738de056f71992f399ba"
+              "6529e8609560ed54b9358c3a48339569d7d25284"
             ],
             "confidence": "high"
           }
@@ -1014,11 +1189,11 @@
       }
     ],
     "highlights": [
-      "Searchable Add Agent picker with keyboard nav",
-      "Remote agents auto-recover from failed first provision",
-      "Windows installer themed bitmaps and uninstaller fixed",
-      "Full-access default rolled back to CEO only"
+      "New searchable, keyboard-driven Add Agent picker",
+      "Windows installer no longer aborts on uninstaller GUI init",
+      "Stuck remote agents auto-recover with a real error message",
+      "Non-CEO agents go back to empty-by-default permissions"
     ],
-    "raw_commit_count": 16
+    "raw_commit_count": 20
   }
 }
