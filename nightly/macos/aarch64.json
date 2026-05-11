@@ -1,6 +1,6 @@
 {
-  "version": "0.1.0-nightly.493.1",
-  "url": "https://github.com/cypher-asi/aura-os/releases/download/v0.1.0-nightly.493.1/aura-os-desktop_0.1.0-nightly.493.1_aarch64.app.tar.gz",
-  "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIGNhcmdvLXBhY2thZ2VyIHNlY3JldCBrZXkKUlVUSFhQYVV5cTUycXdWemJKQ0tITHd4OEhxU0QzdnltVnBrMXlEOXhpWkFOMkNMa1loTnc3M0l5QTBNbU9mc1h6dFhYbmRqV2YxRkY5UGYzM0p1VWNTd0Ezd3BpRHRVM0FvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc4NTIxMDEzCWZpbGU6YXVyYS1vcy1kZXNrdG9wXzAuMS4wLW5pZ2h0bHkuNDkzLjFfYWFyY2g2NC5hcHAudGFyLmd6Cm1xQm41TFNqMm9GKzNmY1ZRcFExa1VUUUxKMW5VWXEyNTI4RTFWOUQzdmZ4d3oyd3dwSVRUcHk5emFrMHV6WjZqd0RiSm5FbU9GY3NFa21xYXdTc0N3PT0K",
+  "version": "0.1.0-nightly.495.1",
+  "url": "https://github.com/cypher-asi/aura-os/releases/download/v0.1.0-nightly.495.1/aura-os-desktop_0.1.0-nightly.495.1_aarch64.app.tar.gz",
+  "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIGNhcmdvLXBhY2thZ2VyIHNlY3JldCBrZXkKUlVUSFhQYVV5cTUycTB1bUMxT2daRGpsKzRzTXdOQ2dqQzJWTCtRT2FJVVhId2NjRlAxNndPZ09FMlk0Y2NGbjNoaGVWQ0VUWkdjWEU2blFkczJTajBLdXNLRnI4c1F4MFFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc4NTIzMTQyCWZpbGU6YXVyYS1vcy1kZXNrdG9wXzAuMS4wLW5pZ2h0bHkuNDk1LjFfYWFyY2g2NC5hcHAudGFyLmd6CjRKMDM5SGhWdU1waWl2UFdlQnpsaElwRVNBZUpEUy9ncTcwcVBlUG9iU3FPNTdvd1lRbmRIcW5hNm9Xb0M4V01GeS9IcDYzUG9KWkJGL3NUbmhRMkFnPT0K",
   "format": "app"
 }
