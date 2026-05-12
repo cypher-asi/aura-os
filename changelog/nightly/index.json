@@ -2,19 +2,19 @@
   {
     "date": "2026-05-12",
     "channel": "nightly",
-    "version": "0.1.0-nightly.501.1",
-    "title": "Invite flow, desktop shell polish, and a Windows startup rescue",
-    "intro": "A busy nightly: a new invite-a-friend entry point landed in the taskbar, the desktop shell got a coherent visual pass around panel borders, corners, and a single shared sidekick width, and the Windows app picked up a self-healing fix for the silent-launch failure some upgraders were hitting. Release infrastructure also got tougher against flaky GitHub asset uploads.",
-    "entryCount": 5,
+    "version": "0.1.0-nightly.504.1",
+    "title": "AURA Video debuts, Windows startup self-heals, and the desktop shell gets a chrome refresh",
+    "intro": "A dense nightly: a brand-new AURA Video generation app lands end-to-end, the Windows desktop client learns to recover from corrupt settings instead of vanishing, and the desktop shell, taskbar, and chat input bar get a coordinated polish pass. Release infrastructure also got tougher against Apple notary blips and dropped GitHub asset uploads.",
+    "entryCount": 6,
     "highlights": [
-      "Invite friends modal in the bottom taskbar",
-      "Unified sidekick width across every app",
-      "Self-healing recovery for corrupt Windows settings",
-      "Release pipeline no longer fails on dropped asset uploads"
+      "New AURA Video generation app with left nav, sidekick gallery, and Veo models",
+      "Windows installer no longer dies silently on a corrupt settings file",
+      "Release pipeline reconciles dropped GitHub uploads and retries Apple notary outages",
+      "Unified sidekick width, rounded lane corners, and a refreshed icon-hover system"
     ],
-    "rawCommitCount": 7,
-    "generatedAt": "2026-05-12T18:44:51.971Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.501.1",
+    "rawCommitCount": 47,
+    "generatedAt": "2026-05-12T22:55:40.232Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.504.1",
     "path": "history/2026-05-12.json"
   },
   {

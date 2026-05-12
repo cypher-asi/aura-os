@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-12T18:44:51.971Z",
+  "generatedAt": "2026-05-12T22:55:40.232Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.501.1",
+  "version": "0.1.0-nightly.504.1",
   "date": "2026-05-12",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.501.1",
-  "lastIncludedSha": "6591e077185e094941d1e52795f70eaf1d7313f2",
-  "previousProcessedSha": "7d609292f8c05ca0090c2bdd5f28a44873ab67e6",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.504.1",
+  "lastIncludedSha": "1d75419c70c7d09be871fa84d0c8077a052abc1e",
+  "previousProcessedSha": "6591e077185e094941d1e52795f70eaf1d7313f2",
   "commitShas": [
     "11dcaf400a2ae3832ff5d074551a21ae990dabed",
     "3540be2f4bfcce364c1f7c76f7933be246bc8ed7",
@@ -18,10 +18,50 @@
     "7d609292f8c05ca0090c2bdd5f28a44873ab67e6",
     "efe1f31eda21248d3e1c7179a0797c23282d7da1",
     "d08ec6b4b21b6a25eac96beb36d70f325a8af309",
-    "6591e077185e094941d1e52795f70eaf1d7313f2"
+    "6591e077185e094941d1e52795f70eaf1d7313f2",
+    "b56deec5978bd5dd93fc20956c14d2beeae0da32",
+    "d74058759543e729e29978b8b66a59f10a85d775",
+    "f82551bff43c84a30d939336aa46421a68ac1f84",
+    "2775e2fa6de22906aa1a9c97364e12ce33846606",
+    "3ff67336d58f70c53e004184d12740647a653dfd",
+    "a7c70aa721947bef3e2fe5f759864172dd39b8c4",
+    "df125f6d73f6470a0073b456d430a1bf85536b21",
+    "e20c9a1db98e5bafed5736c7271080aa941c5467",
+    "e064f2c7b45c6c4696327836a45ca1881f8879ad",
+    "a21417842c290da9b168598a1c0d134e8e61454f",
+    "f6646feda1255eb73852fee1419de839721b0241",
+    "e34befdb7e024892d70615c8c8e721b54d1fb035",
+    "815715f64e70b3f61daa8bc81fdd3b019b99a77b",
+    "3c50616ca28a31ebc22618991efc190ae977ddb8",
+    "6d00de8551211d10e692d0a9c8e0bab56a318423",
+    "c039c02ce4b4b347e109f1699d55640fa69a3527",
+    "677c33fdb9d18c6ecdd97141b4e793132bffbd53",
+    "608603c4d4085af69b902324e7a623173c35d9cd",
+    "7164b3f6fe6991f9f34f87517724bc89d6649fda",
+    "e0f57912147691c86e24b2ddad8b1f990f38307d",
+    "aa45bee5c252cde17abb501c72d5fb9fb5e2b85f",
+    "0338e1d64dc997115d29146307c34ec4fdd4f32d",
+    "346686244f7a9a6d236621449a8941f7c4eec8c8",
+    "c44941d6138526516e2ab9536c723e589158b402",
+    "d9aaba806fc2c22ceed8809aa0ea896dc6ff2b1d",
+    "053f04ccdeb1d4eb88fde308d84fde5fbe282df1",
+    "43ba1eb1610968e8df6aac6afe939fc8a0a52474",
+    "501818284b222a954394a7d6a319404ea592851f",
+    "64ba005d8d81657ca51b08d64bcb4328cc91b0f1",
+    "249f6f65869611b16e1b8dd9313ad56aff00e3c8",
+    "f68b5c6320220de5e8d99d61629ae6cffc265283",
+    "b3d6b6137cec12ce67197da24e035ac5c12a45af",
+    "758c18fba9a19d7af349a029667df17d6407ddb4",
+    "ed75519b115710fa39d22d8cef949e06b91677ed",
+    "60fdc4af7f9158b80f15fe162353968835eb394b",
+    "a102b478ce6583e067071e6c09de6bbf140f620e",
+    "abfd57e8ce2edcfadceea810767592a0d9fa8a94",
+    "de299524046634d3ed5435ef8ae6f79c88218687",
+    "5d07c04b3a74a74acb1e8dd4d6ffd2191bc02c2a",
+    "1d75419c70c7d09be871fa84d0c8077a052abc1e"
   ],
-  "rawCommitCount": 7,
-  "filteredCommitCount": 7,
+  "rawCommitCount": 47,
+  "filteredCommitCount": 47,
   "rawCommits": [
     {
       "sha": "11dcaf400a2ae3832ff5d074551a21ae990dabed",
@@ -329,9 +369,1699 @@
         "Desktop",
         "Core Rust"
       ]
+    },
+    {
+      "sha": "b56deec5978bd5dd93fc20956c14d2beeae0da32",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-12T21:01:57+01:00",
+      "subject": "feat(video): add video generation proxy and extend protocol",
+      "body": "Extends GenerationRequest with video-specific fields (aspect_ratio,\nduration_seconds, resolution, generate_audio). Adds video generation\nproxy handler at /api/generate/video/stream using the same harness\npipeline as image and 3D generation.",
+      "parents": [
+        "6591e077185e094941d1e52795f70eaf1d7313f2"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/generation/mod.rs",
+        "apps/aura-os-server/src/handlers/generation/model3d.rs",
+        "apps/aura-os-server/src/handlers/generation/video.rs",
+        "apps/aura-os-server/src/router/process_generation.rs",
+        "crates/aura-protocol/src/client.rs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 83,
+        "deletions": 0
+      },
+      "committedAtMs": 1778616117000,
+      "cleanSubject": "add video generation proxy and extend protocol",
+      "keywords": [
+        "video",
+        "generation",
+        "proxy",
+        "extend",
+        "protocol"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-protocol/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "d74058759543e729e29978b8b66a59f10a85d775",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-12T21:01:57+01:00",
+      "subject": "feat(video): add video store, stream API, and model definitions",
+      "body": "Zustand store for video generation state with artifact persistence.\nStream function for /api/generate/video/stream SSE endpoint. Three\nVeo models (Fast default, Standard, Lite) with video GenerationMode.",
+      "parents": [
+        "b56deec5978bd5dd93fc20956c14d2beeae0da32"
+      ],
+      "files": [
+        "interface/src/api/streams.ts",
+        "interface/src/constants/models.ts",
+        "interface/src/stores/auravideo-store.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 230,
+        "deletions": 1
+      },
+      "committedAtMs": 1778616117000,
+      "cleanSubject": "add video store, stream API, and model definitions",
+      "keywords": [
+        "video",
+        "store",
+        "stream",
+        "model",
+        "definitions"
+      ],
+      "fileGroups": [
+        "interface/src/api",
+        "interface/src/constants",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f82551bff43c84a30d939336aa46421a68ac1f84",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-12T21:01:57+01:00",
+      "subject": "feat(video): add AURA Video app with main panel and registration",
+      "body": "Standalone video generation app registered in the app system with\nFilm icon. Main panel includes prompt input with model picker,\nvideo preview player, progress indicator, and SSE stream handler.",
+      "parents": [
+        "d74058759543e729e29978b8b66a59f10a85d775"
+      ],
+      "files": [
+        "interface/src/apps/auravideo/AuraVideoApp.ts",
+        "interface/src/apps/auravideo/AuraVideoMainPanel/AuraVideoMainPanel.module.css",
+        "interface/src/apps/auravideo/AuraVideoMainPanel/AuraVideoMainPanel.tsx",
+        "interface/src/apps/auravideo/routes.tsx",
+        "interface/src/apps/registry.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 321,
+        "deletions": 0
+      },
+      "committedAtMs": 1778616117000,
+      "cleanSubject": "add AURA Video app with main panel and registration",
+      "keywords": [
+        "aura",
+        "video",
+        "with",
+        "main",
+        "panel",
+        "registration"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "2775e2fa6de22906aa1a9c97364e12ce33846606",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-12T21:01:57+01:00",
+      "subject": "feat(video): add left nav, sidekick gallery, and sidekick taskbar",
+      "body": "Project tree in left panel with video items. Sidekick panel shows\nvideo thumbnail grid with context menu delete. Sidekick taskbar\nwith Videos tab. Full panel layout matching AURA 3D app.",
+      "parents": [
+        "f82551bff43c84a30d939336aa46421a68ac1f84"
+      ],
+      "files": [
+        ".gitignore",
+        "apps/aura-os-server/src/handlers/generation/harness_stream.rs",
+        "apps/aura-os-server/src/handlers/generation/video.rs",
+        "interface/src/apps/auravideo/AuraVideoApp.ts",
+        "interface/src/apps/auravideo/AuraVideoMainPanel/AuraVideoMainPanel.module.css",
+        "interface/src/apps/auravideo/AuraVideoMainPanel/AuraVideoMainPanel.tsx",
+        "interface/src/apps/auravideo/AuraVideoNav/AuraVideoNav.module.css",
+        "interface/src/apps/auravideo/AuraVideoNav/AuraVideoNav.tsx",
+        "interface/src/apps/auravideo/AuraVideoSidekickPanel/AuraVideoSidekickPanel.module.css",
+        "interface/src/apps/auravideo/AuraVideoSidekickPanel/AuraVideoSidekickPanel.tsx",
+        "interface/src/apps/auravideo/AuraVideoSidekickTaskbar/AuraVideoSidekickTaskbar.tsx",
+        "interface/src/apps/registry.ts",
+        "interface/src/constants/models.ts",
+        "interface/src/shared/api/artifacts.ts",
+        "interface/src/stores/auravideo-store.ts"
+      ],
+      "stats": {
+        "fileCount": 15,
+        "insertions": 460,
+        "deletions": 63
+      },
+      "committedAtMs": 1778616117000,
+      "cleanSubject": "add left nav, sidekick gallery, and sidekick taskbar",
+      "keywords": [
+        "left",
+        "sidekick",
+        "gallery",
+        "taskbar"
+      ],
+      "fileGroups": [
+        ".gitignore",
+        "apps/aura-os-server/src",
+        "interface/src/apps",
+        "interface/src/constants",
+        "interface/src/shared",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "3ff67336d58f70c53e004184d12740647a653dfd",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T13:05:58-07:00",
+      "subject": "feat(ui): inset and round selected sidebar item highlights",
+      "body": "Apply a Cursor-style pill (8px horizontal inset, 6px radius) to the\nselection/hover background on standalone Agent rows, project agent\nleaves in the LeftMenu, and Explorer rows in the Sidekick (Tasks,\nSpecs, Sessions) so highlights no longer paint edge-to-edge.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "2775e2fa6de22906aa1a9c97364e12ce33846606"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentConversationRow/AgentConversationRow.module.css",
+        "interface/src/components/SessionsList/SessionsList.module.css",
+        "interface/src/components/Sidekick/Sidekick.module.css",
+        "interface/src/features/left-menu/LeftMenuTree/LeftMenuTree.module.css"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 13,
+        "deletions": 4
+      },
+      "committedAtMs": 1778616358000,
+      "cleanSubject": "inset and round selected sidebar item highlights",
+      "keywords": [
+        "inset",
+        "round",
+        "selected",
+        "sidebar",
+        "item",
+        "highlights"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "a7c70aa721947bef3e2fe5f759864172dd39b8c4",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T13:05:58-07:00",
+      "subject": "fix(memory): read by bare template id, not partition key",
+      "body": "The May 7 fix routed memory reads through `${agent_id}::default`,\nbut the harness keys long-term memory by the bare template id (via\n`Session::memory_agent_id`, which derives an `AgentId` from the\nbilling `aura_agent_id` UUID). Its router's `parse_agent_id` only\naccepts UUID / 32-byte hex, so every partitioned memory request\nreturned 400 and the UI fell back to \"no memories yet\".\n\nRevert MemoryTab + the proxy back to the bare `agent.agent_id`,\nrestore the strongly-typed `Path<AgentId>` extractors so a malformed\ncaller fails at the proxy edge instead of being forwarded as a bad\nstring, and drop the partition-shaped tests that asserted the wrong\ncontract (the mock harness happily echoed the partition key while\nthe real harness was rejecting it).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "3ff67336d58f70c53e004184d12740647a653dfd"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/harness_proxy/memory.rs",
+        "apps/aura-os-server/tests/harness_proxy_test/proxy_forwards.rs",
+        "interface/src/apps/agents/AgentInfoPanel/MemoryTab.test.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/MemoryTab.tsx",
+        "interface/src/shared/api/memory.test.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 31,
+        "deletions": 66
+      },
+      "committedAtMs": 1778616358000,
+      "cleanSubject": "read by bare template id, not partition key",
+      "keywords": [
+        "read",
+        "bare",
+        "template",
+        "partition"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "interface/src/apps",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "df125f6d73f6470a0073b456d430a1bf85536b21",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T13:05:58-07:00",
+      "subject": "feat(taskbar): restyle Earn Credits button as solid accent pill",
+      "body": "Drop the gift icon and pulsing glow border in favor of a flat\naccent-background button with black uppercase label, making the\ncall-to-action read more like a primary button.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "a7c70aa721947bef3e2fe5f759864172dd39b8c4"
+      ],
+      "files": [
+        "interface/src/components/BottomTaskbar/BottomTaskbar.module.css",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 11,
+        "deletions": 28
+      },
+      "committedAtMs": 1778616358000,
+      "cleanSubject": "restyle Earn Credits button as solid accent pill",
+      "keywords": [
+        "restyle",
+        "earn",
+        "credits",
+        "button",
+        "solid",
+        "accent",
+        "pill"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "e20c9a1db98e5bafed5736c7271080aa941c5467",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T13:05:58-07:00",
+      "subject": "fix(mode-selector): equal-width segments to stop pill border jitter",
+      "body": "The SlidingPills indicator transitions transform, width and height\ntogether when the active mode changes. transform runs on a composited\nlayer but width / height force a CPU layout + paint each frame, so the\n1px accent border lands at slightly different sub-pixel positions on\nintermediate frames and reads as a small wobble on the pill outline\nduring the slide.\n\nPin every mode segment to the same min-width (56px desktop, 68px on\nthe mobile breakpoint, both border-box so the value covers padding) so\nevery segment measures identically. The width / height transitions\nthen become no-ops on mode changes and only transform actually\nanimates, which is fully GPU-composited and pixel-stable.\n\nSlidingPills itself is left untouched so any future consumer that\ngenuinely needs unequal segment widths still gets the size transition.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "df125f6d73f6470a0073b456d430a1bf85536b21"
+      ],
+      "files": [
+        "interface/src/components/InputBarShell/ModeSelector.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 18,
+        "deletions": 0
+      },
+      "committedAtMs": 1778616358000,
+      "cleanSubject": "equal-width segments to stop pill border jitter",
+      "keywords": [
+        "equal",
+        "width",
+        "segments",
+        "stop",
+        "pill",
+        "border",
+        "jitter"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "e064f2c7b45c6c4696327836a45ca1881f8879ad",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T13:05:58-07:00",
+      "subject": "style(ui): unify selected sidebar item bg and freeze it on hover",
+      "body": "Use --color-overlay-medium for the selected highlight on standalone\nAgent rows, project agent leaves, and Sidekick Explorer rows so all\nfour surfaces share the same selected color, and hold that same color\nwhen the cursor enters a row that is already selected.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "e20c9a1db98e5bafed5736c7271080aa941c5467"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentConversationRow/AgentConversationRow.module.css",
+        "interface/src/components/SessionsList/SessionsList.module.css",
+        "interface/src/components/Sidekick/Sidekick.module.css",
+        "interface/src/features/left-menu/LeftMenuTree/LeftMenuTree.module.css"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 4,
+        "deletions": 4
+      },
+      "committedAtMs": 1778616358000,
+      "cleanSubject": "style(ui): unify selected sidebar item bg and freeze it on hover",
+      "keywords": [
+        "style",
+        "unify",
+        "selected",
+        "sidebar",
+        "item",
+        "freeze",
+        "hover"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "a21417842c290da9b168598a1c0d134e8e61454f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T13:05:58-07:00",
+      "subject": "feat(taskbar): move Earn Credits pill to titlebar next to theme toggle",
+      "body": "Relocate the EARN CREDITS call-to-action from the bottom-left of the\ntaskbar into the desktop titlebar action row alongside the theme\ntoggle, sized to match the existing Update pill so the two CTAs share\nthe same affordance.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "e064f2c7b45c6c4696327836a45ca1881f8879ad"
+      ],
+      "files": [
+        "interface/src/components/BottomTaskbar/BottomTaskbar.module.css",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.tsx",
+        "interface/src/components/DesktopShell/DesktopShell.module.css",
+        "interface/src/components/DesktopShell/DesktopTitlebar.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 60,
+        "deletions": 62
+      },
+      "committedAtMs": 1778616358000,
+      "cleanSubject": "move Earn Credits pill to titlebar next to theme toggle",
+      "keywords": [
+        "move",
+        "earn",
+        "credits",
+        "pill",
+        "titlebar",
+        "next",
+        "theme",
+        "toggle"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f6646feda1255eb73852fee1419de839721b0241",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T13:05:58-07:00",
+      "subject": "style(ui): restyle PanelSearch as a chrome pill with inset padding",
+      "body": "Wrap the search row in an inner chrome element and reuse the same\n--shell-chrome-* tokens that drive the titlebar and bottom taskbar pills\nso every search row (desktop sidebar, sidekick, project files, mobile)\nreads as part of the same chrome family. The outer .root now carries the\nchrome inset padding for breathing room, and the icon/+-action stay\ninside the rounded pill instead of sitting flush against the panel edge.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "a21417842c290da9b168598a1c0d134e8e61454f"
+      ],
+      "files": [
+        "interface/src/components/PanelSearch/PanelSearch.module.css",
+        "interface/src/components/PanelSearch/PanelSearch.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 41,
+        "deletions": 17
+      },
+      "committedAtMs": 1778616358000,
+      "cleanSubject": "style(ui): restyle PanelSearch as a chrome pill with inset padding",
+      "keywords": [
+        "style",
+        "restyle",
+        "panelsearch",
+        "chrome",
+        "pill",
+        "with",
+        "inset",
+        "padding"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "e34befdb7e024892d70615c8c8e721b54d1fb035",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T13:05:58-07:00",
+      "subject": "style(panel-search): fade chrome border so the pill reads softer",
+      "body": "Drop the search pill border from the full --color-border-chrome stroke\nto a 30%-of-chrome color-mix so the outline barely registers against the\npanel surface, matching the subtle border treatment used by the mobile\nproject screens.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "f6646feda1255eb73852fee1419de839721b0241"
+      ],
+      "files": [
+        "interface/src/components/PanelSearch/PanelSearch.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1778616358000,
+      "cleanSubject": "style(panel-search): fade chrome border so the pill reads softer",
+      "keywords": [
+        "style",
+        "panel",
+        "search",
+        "fade",
+        "chrome",
+        "border",
+        "pill",
+        "reads",
+        "softer"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "815715f64e70b3f61daa8bc81fdd3b019b99a77b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T13:05:58-07:00",
+      "subject": "style(invite-modal): use secondary text color for body paragraphs",
+      "body": "Bump the InviteModal description text from --color-text-muted to\n--color-text-secondary so it matches the main text color used in the\nchat surface across all themes.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "e34befdb7e024892d70615c8c8e721b54d1fb035"
+      ],
+      "files": [
+        "interface/src/components/InviteModal/InviteModal.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1778616358000,
+      "cleanSubject": "style(invite-modal): use secondary text color for body paragraphs",
+      "keywords": [
+        "style",
+        "invite",
+        "modal",
+        "secondary",
+        "text",
+        "color",
+        "body",
+        "paragraphs"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "3c50616ca28a31ebc22618991efc190ae977ddb8",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T13:05:58-07:00",
+      "subject": "Revert \"feat(taskbar): move Earn Credits pill to titlebar next to theme toggle\"",
+      "body": "Move the EARN CREDITS button back to the bottom-left of the taskbar,\nrestoring its original solid accent pill styling. Also restores\nUpdatePill to the titlebar action row (out of MenuBar's trailingSlot)\nsince the move had relocated both at once.\n\nThis reverts commit f199694c343ae2b58c9fc16b74475bf430b0cf89.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "815715f64e70b3f61daa8bc81fdd3b019b99a77b"
+      ],
+      "files": [
+        "interface/src/components/BottomTaskbar/BottomTaskbar.module.css",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.tsx",
+        "interface/src/components/DesktopShell/DesktopShell.module.css",
+        "interface/src/components/DesktopShell/DesktopTitlebar.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 62,
+        "deletions": 60
+      },
+      "committedAtMs": 1778616358000,
+      "cleanSubject": "Revert \"feat(taskbar): move Earn Credits pill to titlebar next to theme toggle\"",
+      "keywords": [
+        "revert",
+        "feat",
+        "taskbar",
+        "move",
+        "earn",
+        "credits",
+        "pill",
+        "titlebar",
+        "next",
+        "theme",
+        "toggle"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "6d00de8551211d10e692d0a9c8e0bab56a318423",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T13:05:58-07:00",
+      "subject": "style(mode-selector): fill selected pill with accent + contrast text",
+      "body": "Override the SlidingPills indicator chrome from the ModeSelector\nconsumer so the active mode reads as a fully tinted accent chip\ninstead of an elevated-surface fill with a 1px accent border. The\nselected segment label switches to --color-accent-contrast so it\nstays legible across all accent themes (near-black on\ncyan/green/orange, white on blue/purple/rose) without touching the\ngeneric SlidingPills component.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "3c50616ca28a31ebc22618991efc190ae977ddb8"
+      ],
+      "files": [
+        "interface/src/components/InputBarShell/ModeSelector.module.css",
+        "interface/src/components/InputBarShell/ModeSelector.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 19,
+        "deletions": 0
+      },
+      "committedAtMs": 1778616358000,
+      "cleanSubject": "style(mode-selector): fill selected pill with accent + contrast text",
+      "keywords": [
+        "style",
+        "mode",
+        "selector",
+        "fill",
+        "selected",
+        "pill",
+        "with",
+        "accent",
+        "contrast",
+        "text"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "c039c02ce4b4b347e109f1699d55640fa69a3527",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T13:05:58-07:00",
+      "subject": "refactor(mode-selector): drop MODE label and hideLabel prop",
+      "body": "The leading \"MODE\" label is redundant now that the segmented pill\nchrome reads as a clear control on its own. Removing it lets the\nselector slide all the way to the left edge of the row chrome\n(only the existing 12px row padding remains), which both reclaims\nthe label width for the pill group and keeps the leading edge\nflush with the rest of the input bar surface.\n\nDrops the now-dead `hideLabel` prop and label CSS, prunes the\nhideLabel coverage from ModeSelector.test.tsx (replaced with a\nsanity check that no MODE text is rendered), and removes the\n`hideLabel={compact}` callsites in ChatInputBar.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "6d00de8551211d10e692d0a9c8e0bab56a318423"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/components/InputBarShell/ModeSelector.module.css",
+        "interface/src/components/InputBarShell/ModeSelector.test.tsx",
+        "interface/src/components/InputBarShell/ModeSelector.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 12,
+        "deletions": 42
+      },
+      "committedAtMs": 1778616358000,
+      "cleanSubject": "drop MODE label and hideLabel prop",
+      "keywords": [
+        "drop",
+        "mode",
+        "label",
+        "hidelabel",
+        "prop"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "677c33fdb9d18c6ecdd97141b4e793132bffbd53",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T13:05:58-07:00",
+      "subject": "style(taskbar): restyle Invite button as chrome pill",
+      "body": "Use the chrome background with backdrop blur and an accent-colored\nborder/text instead of a solid accent fill, so the Invite button reads\nas part of the chrome rather than competing with it.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "c039c02ce4b4b347e109f1699d55640fa69a3527"
+      ],
+      "files": [
+        "interface/src/components/BottomTaskbar/BottomTaskbar.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 9,
+        "deletions": 7
+      },
+      "committedAtMs": 1778616358000,
+      "cleanSubject": "style(taskbar): restyle Invite button as chrome pill",
+      "keywords": [
+        "style",
+        "taskbar",
+        "restyle",
+        "invite",
+        "button",
+        "chrome",
+        "pill"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "608603c4d4085af69b902324e7a623173c35d9cd",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T13:05:58-07:00",
+      "subject": "feat(menu-bar): add trailingSlot prop for trailing content",
+      "body": "Allow consumers to render content after the last menu trigger, enabling\nhost shells to attach extras (e.g. theme toggles, action pills) inline\nwith the menu bar without forking the component.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "677c33fdb9d18c6ecdd97141b4e793132bffbd53"
+      ],
+      "files": [
+        "interface/src/components/MenuBar/MenuBar.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 8,
+        "deletions": 1
+      },
+      "committedAtMs": 1778616358000,
+      "cleanSubject": "add trailingSlot prop for trailing content",
+      "keywords": [
+        "trailingslot",
+        "prop",
+        "trailing",
+        "content"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "7164b3f6fe6991f9f34f87517724bc89d6649fda",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T13:05:58-07:00",
+      "subject": "refactor(sidekick): drop bottom border overlay on taskbar",
+      "body": "Remove the absolutely-positioned ::after divider on the Sidekick\ntaskbar; the surrounding chrome already provides the visual separation\nthis overlay was compensating for.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "608603c4d4085af69b902324e7a623173c35d9cd"
+      ],
+      "files": [
+        "interface/src/components/Sidekick/Sidekick.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 0,
+        "deletions": 14
+      },
+      "committedAtMs": 1778616358000,
+      "cleanSubject": "drop bottom border overlay on taskbar",
+      "keywords": [
+        "drop",
+        "bottom",
+        "border",
+        "overlay",
+        "taskbar"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "e0f57912147691c86e24b2ddad8b1f990f38307d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T14:38:03-07:00",
+      "subject": "feat(taskbar): move theme toggle from titlebar to bottom taskbar",
+      "body": "Place the day/night theme toggle inline with the other taskbar pill\nbuttons, immediately left of Help, so it matches the visual weight of\nSettings/Credits/Help and frees space in the desktop titlebar.\n\nAdds ThemeToggleButton built on TaskbarIconButton (the same primitive\nused by Help, Settings, etc.) and removes the bespoke ghost-button\nvariant that lived inside DesktopTitlebar. Existing lib/theme-toggle.ts\nhelpers and aria-label semantics are reused verbatim. Mobile shell's\nMobileThemeToggleButton is unchanged.\n\nTests: BottomTaskbar suites now mock Sun/Moon, useTheme, InviteModal,\nand the full UI-modal-store shape so they actually render the component\n(they were already broken on main due to the recent InviteModal +\napps-modal additions).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "7164b3f6fe6991f9f34f87517724bc89d6649fda"
+      ],
+      "files": [
+        "interface/src/components/BottomTaskbar/BottomTaskbar.render-churn.test.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.test.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.tsx",
+        "interface/src/components/BottomTaskbar/ThemeToggleButton.tsx",
+        "interface/src/components/DesktopShell/DesktopTitlebar.tsx"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 96,
+        "deletions": 70
+      },
+      "committedAtMs": 1778621883000,
+      "cleanSubject": "move theme toggle from titlebar to bottom taskbar",
+      "keywords": [
+        "move",
+        "theme",
+        "toggle",
+        "from",
+        "titlebar",
+        "bottom",
+        "taskbar"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "aa45bee5c252cde17abb501c72d5fb9fb5e2b85f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T14:43:24-07:00",
+      "subject": "feat(taskbar): collapse right cluster to profile-only",
+      "body": "The right-side chevron now toggles the entire right cluster instead of\njust the credits balance label. When collapsed (the default, persisted\nvia localStorage), only the chevron and profile shortcut remain visible;\nexpanding restores the credits, settings, theme toggle, and help buttons.\nThe ephemeral inline credits balance label is removed.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "e0f57912147691c86e24b2ddad8b1f990f38307d"
+      ],
+      "files": [
+        "interface/src/components/BottomTaskbar/BottomTaskbar.module.css",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.test.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.tsx",
+        "interface/src/constants.ts",
+        "interface/src/utils/storage.test.ts",
+        "interface/src/utils/storage.ts"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 139,
+        "deletions": 100
+      },
+      "committedAtMs": 1778622204000,
+      "cleanSubject": "collapse right cluster to profile-only",
+      "keywords": [
+        "collapse",
+        "right",
+        "cluster",
+        "profile",
+        "only"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/constants.ts",
+        "interface/src/utils"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "0338e1d64dc997115d29146307c34ec4fdd4f32d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T14:44:59-07:00",
+      "subject": "feat(sidebar): float EARN CREDITS button at bottom of left sidebar",
+      "body": "Move the invite-friend call-to-action out of taskbar chrome and into a\nfloating pill anchored at the bottom-center of the desktop left sidebar\nso it stays visible across every app. The new button sits at a smaller\n22px height with a neutral gray border and a slightly heavier (500)\nlabel weight, matching the calmer bottom-of-panel placement.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "aa45bee5c252cde17abb501c72d5fb9fb5e2b85f"
+      ],
+      "files": [
+        "interface/src/components/DesktopShell/DesktopShell.module.css",
+        "interface/src/components/DesktopShell/DesktopShell.test.tsx",
+        "interface/src/components/DesktopShell/DesktopShell.tsx",
+        "interface/src/components/EarnCreditsButton/EarnCreditsButton.module.css",
+        "interface/src/components/EarnCreditsButton/EarnCreditsButton.tsx",
+        "interface/src/components/EarnCreditsButton/index.ts"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 62,
+        "deletions": 0
+      },
+      "committedAtMs": 1778622299000,
+      "cleanSubject": "float EARN CREDITS button at bottom of left sidebar",
+      "keywords": [
+        "float",
+        "earn",
+        "credits",
+        "button",
+        "bottom",
+        "left",
+        "sidebar"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "346686244f7a9a6d236621449a8941f7c4eec8c8",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T14:45:57-07:00",
+      "subject": "feat(chat-input): add '@ for context' to slash hint label",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "0338e1d64dc997115d29146307c34ec4fdd4f32d"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1778622357000,
+      "cleanSubject": "add '@ for context' to slash hint label",
+      "keywords": [
+        "context",
+        "slash",
+        "hint",
+        "label"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "c44941d6138526516e2ab9536c723e589158b402",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T14:48:17-07:00",
+      "subject": "feat(titlebar): move EARN button into titlebar next to drawer toggle",
+      "body": "Relocate the invite call-to-action from its floating spot at the bottom\nof the left sidebar to the top titlebar's actions cluster, sitting just\nleft of the sidekick (drawer) toggle. Shorten the label from\n\"EARN CREDITS\" to \"EARN\" so the pill stays compact in the chrome row,\nand drop the now-unused absolute positioning + sidebar `position:\nrelative` anchor.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "346686244f7a9a6d236621449a8941f7c4eec8c8"
+      ],
+      "files": [
+        "interface/src/components/DesktopShell/DesktopShell.module.css",
+        "interface/src/components/DesktopShell/DesktopShell.tsx",
+        "interface/src/components/DesktopShell/DesktopTitlebar.tsx",
+        "interface/src/components/EarnCreditsButton/EarnCreditsButton.module.css",
+        "interface/src/components/EarnCreditsButton/EarnCreditsButton.tsx"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 8,
+        "deletions": 14
+      },
+      "committedAtMs": 1778622497000,
+      "cleanSubject": "move EARN button into titlebar next to drawer toggle",
+      "keywords": [
+        "move",
+        "earn",
+        "button",
+        "into",
+        "titlebar",
+        "next",
+        "drawer",
+        "toggle"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "d9aaba806fc2c22ceed8809aa0ea896dc6ff2b1d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T14:50:11-07:00",
+      "subject": "fix(ci): retry desktop packaging on Apple notary 5xx/429",
+      "body": "xcrun notarytool occasionally fails with `HTTP status code: 5xx` (and\nsometimes 429) when Apple's notary service has a transient outage,\nwhich then aborts the entire macOS packaging job. Extend the existing\nshould_retry_packaging matcher (previously only catching hdiutil\n\"Resource busy\" flakes) to also retry when notarytool surfaces\n`HTTP status code: (429|5[0-9][0-9])` in packager.log, so a brief\nApple-side outage no longer reds the build.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "c44941d6138526516e2ab9536c723e589158b402"
+      ],
+      "files": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 12,
+        "deletions": 3
+      },
+      "committedAtMs": 1778622611000,
+      "cleanSubject": "retry desktop packaging on Apple notary 5xx/429",
+      "keywords": [
+        "retry",
+        "desktop",
+        "packaging",
+        "apple",
+        "notary"
+      ],
+      "fileGroups": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "053f04ccdeb1d4eb88fde308d84fde5fbe282df1",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T14:59:39-07:00",
+      "subject": "style(mode-selector): align pill chip with attach button",
+      "body": "The mode-selector row had `padding: 0 12px`, which combined with the\ninner `SlidingPills` wrapper's own 2px of padding pushed the active\npill chip ~14px from the input container's left edge — visually\ndisconnected from the `+` attach button anchored at `left: 2px` on\nthe row below. Drop the left padding to 6px (desktop) / 12px (mobile)\nso the pill chip's left edge lines up with the visible left edge of\nthe centred `+` glyph rather than the invisible button bounding box.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "d9aaba806fc2c22ceed8809aa0ea896dc6ff2b1d"
+      ],
+      "files": [
+        "interface/src/components/InputBarShell/ModeSelector.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 16,
+        "deletions": 2
+      },
+      "committedAtMs": 1778623179000,
+      "cleanSubject": "style(mode-selector): align pill chip with attach button",
+      "keywords": [
+        "style",
+        "mode",
+        "selector",
+        "align",
+        "pill",
+        "chip",
+        "with",
+        "attach",
+        "button"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "43ba1eb1610968e8df6aac6afe939fc8a0a52474",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T15:00:09-07:00",
+      "subject": "feat(chat-input): drop slash hint button, set Code-mode placeholder to '/ for commands, @ for context'",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "053f04ccdeb1d4eb88fde308d84fde5fbe282df1"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 20,
+        "deletions": 67
+      },
+      "committedAtMs": 1778623209000,
+      "cleanSubject": "drop slash hint button, set Code-mode placeholder to '/ for commands, @ for context'",
+      "keywords": [
+        "drop",
+        "slash",
+        "hint",
+        "button",
+        "code",
+        "mode",
+        "placeholder",
+        "commands",
+        "context"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "501818284b222a954394a7d6a319404ea592851f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T15:05:31-07:00",
+      "subject": "feat(agents-chat): pin standalone-agent chat to Home project",
+      "body": "Standalone Agents-app surfaces (the `/agents/:agentId` route, the\n`empty` branch of `AgentChatRoute`, and the floating `AgentWindow`) now\ndefault the chat input bar's project picker to the agent's auto-created\nHome binding and lock the picker to a single non-interactive label.\n`useStandaloneAgentChat` looks up the Home project by mirroring the\nserver's name + `[aura:agent-home]` / `[aura:ceo-home]` description\nmarkers from `home_project.rs`, overrides `effectiveProjectId`, and\ndrops `onProjectChange` so `ChatInputBar` renders the existing\nsingle-project static button. Falls back to the previous multi-project\npicker when an agent has no Home binding yet so chat keeps working\nduring pre-bind / legacy states. Project-scoped chats under\n`/projects/:projectId/agents/...` are unaffected.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "43ba1eb1610968e8df6aac6afe939fc8a0a52474"
+      ],
+      "files": [
+        "interface/src/hooks/use-standalone-agent-chat.test.ts",
+        "interface/src/hooks/use-standalone-agent-chat.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 162,
+        "deletions": 4
+      },
+      "committedAtMs": 1778623531000,
+      "cleanSubject": "pin standalone-agent chat to Home project",
+      "keywords": [
+        "standalone",
+        "agent",
+        "chat",
+        "home",
+        "project"
+      ],
+      "fileGroups": [
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "64ba005d8d81657ca51b08d64bcb4328cc91b0f1",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T15:07:35-07:00",
+      "subject": "fix(chat-input): extend mode-bar divider to right edge",
+      "body": "The mode-pill row's bottom border was composed of two semi-transparent\nborder-bottoms on the ModeSelector .root and the new-chat button, but\nneither covered the .modeBarRow's 14px padding-right (which exists to\nalign the new-chat \"+\" with the send arrow below it). The line stopped\n14px short of the rounded right corner. Move the border to .modeBarRow\nitself so it spans the full row width, and suppress the now-redundant\nchild borders to avoid stacking a second semi-transparent line on top.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "501818284b222a954394a7d6a319404ea592851f"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 14,
+        "deletions": 3
+      },
+      "committedAtMs": 1778623655000,
+      "cleanSubject": "extend mode-bar divider to right edge",
+      "keywords": [
+        "extend",
+        "mode",
+        "divider",
+        "right",
+        "edge"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "249f6f65869611b16e1b8dd9313ad56aff00e3c8",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T15:07:37-07:00",
+      "subject": "style(sidebar,sidekick): add 1px row gap so highlights don't touch",
+      "body": "Add a 1px vertical margin to row backgrounds in the agent sidebar,\nproject tree (also rounded to match the pill style), sidekick lists,\nand sessions list so consecutive selected/hover highlights no longer\nbutt up against each other.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "64ba005d8d81657ca51b08d64bcb4328cc91b0f1"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentConversationRow/AgentConversationRow.module.css",
+        "interface/src/components/ProjectList/ProjectList.module.css",
+        "interface/src/components/SessionsList/SessionsList.module.css",
+        "interface/src/components/Sidekick/Sidekick.module.css"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 6,
+        "deletions": 3
+      },
+      "committedAtMs": 1778623657000,
+      "cleanSubject": "style(sidebar,sidekick): add 1px row gap so highlights don't touch",
+      "keywords": [
+        "style",
+        "sidebar",
+        "sidekick",
+        "highlights",
+        "touch"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f68b5c6320220de5e8d99d61629ae6cffc265283",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T15:10:33-07:00",
+      "subject": "style(input-bar): inset right corner buttons by 2px to match attach",
+      "body": "The attach (`+`) button on the input row is anchored at `left: 2px`\nbut the send arrow sat at `right: 14px` (a legacy gap reserved for\nthe native scrollbar) and the chat-row \"+\" new-chat button inherited\na matching `padding-right: 14px` from `.modeBarRow`. The two right\nbuttons therefore drifted 12px in from the rounded right corner\nrelative to attach's 2px on the left, breaking the visual symmetry.\n\nDrop both right insets to 2px so all four corner buttons share the\nsame offset from the container edges, and slide `.inputRowEnd` from\n`right: 52px` to `right: 40px` to keep the same 14px breathing room\nbetween inline command chips and the send arrow's new position. The\ntextarea's existing `padding: 6px 32px` already leaves a 6px gap\nbefore the arrow at the new position, so typed text is no longer\nhidden behind the send button.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "249f6f65869611b16e1b8dd9313ad56aff00e3c8"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/components/InputBarShell/InputBarShell.module.css"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 17,
+        "deletions": 12
+      },
+      "committedAtMs": 1778623833000,
+      "cleanSubject": "style(input-bar): inset right corner buttons by 2px to match attach",
+      "keywords": [
+        "style",
+        "input",
+        "inset",
+        "right",
+        "corner",
+        "buttons",
+        "match",
+        "attach"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "b3d6b6137cec12ce67197da24e035ac5c12a45af",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T15:13:38-07:00",
+      "subject": "style(left-menu): add 1px row gap to project-tree agent rows",
+      "body": "The desktop project tree renders through LeftMenuTree, not the shared\nExplorer-based ProjectList, so the earlier sidebar row-gap change\nmissed it. Add the same 1px vertical margin to .agentRow so adjacent\nagent highlights inside a project no longer touch.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "f68b5c6320220de5e8d99d61629ae6cffc265283"
+      ],
+      "files": [
+        "interface/src/features/left-menu/LeftMenuTree/LeftMenuTree.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1778624018000,
+      "cleanSubject": "style(left-menu): add 1px row gap to project-tree agent rows",
+      "keywords": [
+        "style",
+        "left",
+        "menu",
+        "project",
+        "tree",
+        "agent",
+        "rows"
+      ],
+      "fileGroups": [
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "758c18fba9a19d7af349a029667df17d6407ddb4",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T15:17:03-07:00",
+      "subject": "fix(agents-chat): always show 'Home' label in Agents app picker",
+      "body": "Existing agents created before the auto-Home heal landed are still\nbound to their original project (e.g. \"zero-sdk-10\") and never get a\nHome row, so the previous hook only relabeled the picker for *new*\nagents. The Agents-app surfaces now always render the project picker\nas a single non-interactive \"Home\" entry, regardless of which real\nproject the agent is bound to: when an auto-Home binding exists we\nuse it directly, otherwise we synthesize a single picker entry with\nthe legacy binding's id but `name: \"Home\"` so chat persistence keeps\nhitting the real binding while the UI reads consistently. Drops the\nnow-dead `handleProjectChange` / `persistAgentProject` writers and\nupdates `use-standalone-agent-chat.test.ts` accordingly.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "b3d6b6137cec12ce67197da24e035ac5c12a45af"
+      ],
+      "files": [
+        "interface/src/hooks/use-standalone-agent-chat.test.ts",
+        "interface/src/hooks/use-standalone-agent-chat.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 92,
+        "deletions": 71
+      },
+      "committedAtMs": 1778624223000,
+      "cleanSubject": "always show 'Home' label in Agents app picker",
+      "keywords": [
+        "always",
+        "show",
+        "home",
+        "label",
+        "agents",
+        "picker"
+      ],
+      "fileGroups": [
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "ed75519b115710fa39d22d8cef949e06b91677ed",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T15:18:34-07:00",
+      "subject": "style(icons): inner-plate hover for icon buttons + icon-system index",
+      "body": "Replace the \"fill the whole button\" hover slab on shared icon buttons\nwith a tighter rounded plate centered behind the glyph. Hit targets are\nunchanged for accessibility; only the visible hover background shrinks.\n\nDriven by three new tokens in styles/tokens.css:\n- --icon-hover-inset (3px)\n- --icon-hover-radius (defaults to --radius-md; overridden to 999px on\n  circular pills like BrowserAddressBar.actionButton)\n- --icon-hover-bg (defaults to --color-overlay-light; overridden per\n  module to --color-overlay-medium / --color-surface where needed)\n\nApplied at the shared layer (TaskbarIconButton via .taskbarBtn) plus a\nfew high-traffic bespoke styles: BrowserAddressBar .navButton /\n.actionButton, FolderPickerField .iconButton, OnboardingChecklist\n.iconButton. Implemented per-module via a ::before pseudo-element so we\ndon't have to touch any TSX call site or the vendored ZUI Button.\n\nAdds interface/docs/icon-system.md as the source-of-truth reference:\ndocuments the lucide-react-only rule, sizing conventions, shared wrapper\nguide (TaskbarIconButton vs ZUI Button iconOnly vs CopyButton, etc.),\ninline-SVG and brand-raster exceptions, and a consolidation backlog of\nremaining bespoke .iconButton / .actionButton / .controlBtn classes for\na future PR.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "758c18fba9a19d7af349a029667df17d6407ddb4"
+      ],
+      "files": [
+        "interface/docs/icon-system.md",
+        "interface/src/apps/browser/components/BrowserAddressBar/BrowserAddressBar.module.css",
+        "interface/src/components/AppNavRail/AppNavRail.module.css",
+        "interface/src/components/FolderPickerField/FolderPickerField.module.css",
+        "interface/src/features/onboarding/OnboardingChecklist/OnboardingChecklist.module.css",
+        "interface/src/styles/tokens.css"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 285,
+        "deletions": 7
+      },
+      "committedAtMs": 1778624314000,
+      "cleanSubject": "style(icons): inner-plate hover for icon buttons + icon-system index",
+      "keywords": [
+        "style",
+        "icons",
+        "inner",
+        "plate",
+        "hover",
+        "icon",
+        "buttons",
+        "system",
+        "index"
+      ],
+      "fileGroups": [
+        "interface/docs/icon-system.md",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/features",
+        "interface/src/styles"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "60fdc4af7f9158b80f15fe162353968835eb394b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T15:26:08-07:00",
+      "subject": "style(icons): grow hover plate by 2px and pin a non-zero radius",
+      "body": "The icon-hover halo was rendering square because --icon-hover-radius\nresolved to var(--radius-md), and --radius-md is intentionally 0 across\nthe design system. Hardcode 8px so the plate is visibly rounded, and\nshrink --icon-hover-inset from 3px to 2px so the plate sits a bit\nlarger behind the glyph. Update the recipe block in icon-system.md to\nmatch the new defaults and explain why the radius is hardcoded.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "ed75519b115710fa39d22d8cef949e06b91677ed"
+      ],
+      "files": [
+        "interface/docs/icon-system.md",
+        "interface/src/components/AppNavRail/AppNavRail.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.render-churn.test.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.test.tsx",
+        "interface/src/styles/tokens.css"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 18,
+        "deletions": 9
+      },
+      "committedAtMs": 1778624768000,
+      "cleanSubject": "style(icons): grow hover plate by 2px and pin a non-zero radius",
+      "keywords": [
+        "style",
+        "icons",
+        "grow",
+        "hover",
+        "plate",
+        "zero",
+        "radius"
+      ],
+      "fileGroups": [
+        "interface/docs/icon-system.md",
+        "interface/src/components",
+        "interface/src/styles"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "a102b478ce6583e067071e6c09de6bbf140f620e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T15:29:38-07:00",
+      "subject": "style(taskbar): bump icon to 19px in 30x30 hit target, lock centering",
+      "body": "Continues the taskbar icon polish:\n\n- TASKBAR_ICON_SIZE 17 -> 19 (lucide glyph another 2px bigger).\n- --taskbar-item-size 28 -> 30 (and the AppNavRail fallback) so the\n  larger glyph keeps a comfortable margin inside the inner-plate hover\n  bg instead of crowding it.\n- Lock icon centering: set line-height: 0 on .taskbarBtn and force\n  .taskbarBtn > svg { display: block; }. The inherited inline line-box\n  was nudging the icon off the geometric center on some zoom levels,\n  which read as a slight off-center inside the hover halo.\n\nSynced TASKBAR_ICON_SIZE in both BottomTaskbar test mocks and the\nsizing table in interface/docs/icon-system.md (17 -> 19, with the new\n30x30 hit target noted).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "60fdc4af7f9158b80f15fe162353968835eb394b"
+      ],
+      "files": [
+        "interface/docs/icon-system.md",
+        "interface/src/components/AppNavRail/AppNavRail.module.css",
+        "interface/src/components/AppNavRail/AppNavRail.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.module.css",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.render-churn.test.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.test.tsx"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 19,
+        "deletions": 9
+      },
+      "committedAtMs": 1778624978000,
+      "cleanSubject": "style(taskbar): bump icon to 19px in 30x30 hit target, lock centering",
+      "keywords": [
+        "style",
+        "taskbar",
+        "bump",
+        "icon",
+        "19px",
+        "30x30",
+        "target",
+        "lock",
+        "centering"
+      ],
+      "fileGroups": [
+        "interface/docs/icon-system.md",
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "abfd57e8ce2edcfadceea810767592a0d9fa8a94",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T15:31:46-07:00",
+      "subject": "style(taskbar): revert glyph size to 15 (was misread as the bg plate)",
+      "body": "Earlier \"make icons +2px\" requests were about the hover bg plate, not\nthe lucide glyph. Revert TASKBAR_ICON_SIZE 19 -> 15 (the original) in\nAppNavRail and the two BottomTaskbar test mocks. The hover plate keeps\nthe size growth that was actually intended (now 26x26 in a 30x30 hit\ntarget via --icon-hover-inset: 2px) and the centering safeguards\n(line-height: 0 + svg display: block) stay in place. Sizing table in\nicon-system.md updated accordingly.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "a102b478ce6583e067071e6c09de6bbf140f620e"
+      ],
+      "files": [
+        "interface/docs/icon-system.md",
+        "interface/src/components/AppNavRail/AppNavRail.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.render-churn.test.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.test.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 4,
+        "deletions": 4
+      },
+      "committedAtMs": 1778625106000,
+      "cleanSubject": "style(taskbar): revert glyph size to 15 (was misread as the bg plate)",
+      "keywords": [
+        "style",
+        "taskbar",
+        "revert",
+        "glyph",
+        "size",
+        "misread",
+        "plate"
+      ],
+      "fileGroups": [
+        "interface/docs/icon-system.md",
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "de299524046634d3ed5435ef8ae6f79c88218687",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T15:32:53-07:00",
+      "subject": "style(taskbar): bump glyph from 15 to 16",
+      "body": "TASKBAR_ICON_SIZE 15 -> 16 in AppNavRail and the two BottomTaskbar\ntest mocks; sizing table in icon-system.md updated to match.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "abfd57e8ce2edcfadceea810767592a0d9fa8a94"
+      ],
+      "files": [
+        "interface/docs/icon-system.md",
+        "interface/src/components/AppNavRail/AppNavRail.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.render-churn.test.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.test.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 4,
+        "deletions": 4
+      },
+      "committedAtMs": 1778625173000,
+      "cleanSubject": "style(taskbar): bump glyph from 15 to 16",
+      "keywords": [
+        "style",
+        "taskbar",
+        "bump",
+        "glyph",
+        "from"
+      ],
+      "fileGroups": [
+        "interface/docs/icon-system.md",
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "5d07c04b3a74a74acb1e8dd4d6ffd2191bc02c2a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T15:36:38-07:00",
+      "subject": "style(input-bar): apply shared icon-button hover plate to + and send",
+      "body": "The desktop attach (`+`) and send (arrow up) corner buttons in the LLM\ninput bar now share the same inner-plate hover treatment as\nTaskbarIconButton: a rounded plate centered behind the glyph, driven by\nthe global --icon-hover-inset / --icon-hover-radius / --icon-hover-bg\ntokens in styles/tokens.css. Same centering safeguards too\n(line-height: 0 + > svg { display: block }).\n\nThe mobile media query disables the ::before plate on both buttons,\nbecause the mobile sendButton already paints its own pill bg\n(--color-chat-mobile-send-bg) and the 44x44 attach button reads as a\nbig tap target rather than a chrome icon control.\n\nRemoves InputBarShell from the consolidation backlog in\ninterface/docs/icon-system.md and adds it to the \"already converted\"\nlist (with the mobile caveat).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "de299524046634d3ed5435ef8ae6f79c88218687"
+      ],
+      "files": [
+        "interface/docs/icon-system.md",
+        "interface/src/components/InputBarShell/InputBarShell.module.css"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 68,
+        "deletions": 2
+      },
+      "committedAtMs": 1778625398000,
+      "cleanSubject": "style(input-bar): apply shared icon-button hover plate to + and send",
+      "keywords": [
+        "style",
+        "input",
+        "apply",
+        "shared",
+        "icon",
+        "button",
+        "hover",
+        "plate",
+        "send"
+      ],
+      "fileGroups": [
+        "interface/docs/icon-system.md",
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "1d75419c70c7d09be871fa84d0c8077a052abc1e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T15:38:06-07:00",
+      "subject": "feat(agents-chat): decouple wire project_id from picker selection",
+      "body": "Introduces an `llmProjectId` prop on `ChatPanel` (forwarded through\n`useChatPanelState` as `wireProjectId`) that drives `body.project_id`\non the wire, separately from `selectedProjectId` which still anchors\nthe picker label and chat-persistence target. Defaults to\n`selectedProjectId` so existing callers (projects-app via\n`AgentChatPanel`, which now passes `llmProjectId={projectId}`\nexplicitly) keep their current behavior.\n\nThe agents-app side (`useStandaloneAgentChat`) computes\n`llmProjectId` so:\n- new sessions / fresh canvas / context reset always ship Home;\n- existing sessions opened via `/agents/:agentId?session=<id>` ship\n  the session-of-record's original project, recovered from\n  `sessions-list-store` via the new `findSessionProjectId` helper —\n  even when the user lands from a row unrelated to today's selected\n  display project;\n- legacy agents with no Home binding ship `undefined` and let the\n  server's lazy heal in\n  `setup_agent_chat_persistence_with_matched` create the binding on\n  first turn. A heal-refresh effect then nudges\n  `useProjectsListStore.refreshProjects` so the freshly-created Home\n  row materializes locally for subsequent sends instead of waiting\n  for a hard reload.\n\nTest updates wire matching mocks for\n`useProjectsListStore.refreshProjects`,\n`useSessionsListStore.{sessionsBySurface, replaceSessionId,\nbumpVersion, addOptimisticSession}`,\n`agentSessionsSurfaceKey` / `projectSessionsSurfaceKey`, and a\nminimal `buildOptimisticSession` shape.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "5d07c04b3a74a74acb1e8dd4d6ffd2191bc02c2a"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentChatPanel/AgentChatPanel.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/apps/chat/components/ChatPanel/useChatPanelState.ts",
+        "interface/src/hooks/use-standalone-agent-chat.test.ts",
+        "interface/src/hooks/use-standalone-agent-chat.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 319,
+        "deletions": 7
+      },
+      "committedAtMs": 1778625486000,
+      "cleanSubject": "decouple wire project_id from picker selection",
+      "keywords": [
+        "decouple",
+        "wire",
+        "project",
+        "from",
+        "picker",
+        "selection"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
-  "batchCount": 5,
+  "batchCount": 6,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -340,36 +2070,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11838209
+          "sizeBytes": 11844769
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.501.1",
+      "version": "0.1.0-nightly.504.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.501.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.504.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 36833266
+          "sizeBytes": 36893460
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.501.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.504.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.501.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.504.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 105581048
+          "sizeBytes": 105667064
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.501.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.504.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -379,29 +2109,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.501.1",
+      "version": "0.1.0-nightly.504.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.501.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.504.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33972075
+          "sizeBytes": 34010725
         },
         {
-          "name": "AURA_0.1.0-nightly.501.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.504.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.501.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.504.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33119362
+          "sizeBytes": 33152032
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.501.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.504.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -411,29 +2141,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.501.1",
+      "version": "0.1.0-nightly.504.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.501.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.504.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 35599100
+          "sizeBytes": 35675922
         },
         {
-          "name": "AURA_0.1.0-nightly.501.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.504.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.501.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.504.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 34777514
+          "sizeBytes": 34840006
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.501.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.504.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -443,17 +2173,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.501.1",
+      "version": "0.1.0-nightly.504.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.501.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.504.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24975599
+          "sizeBytes": 24976539
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.501.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.504.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -462,21 +2192,28 @@
     }
   ],
   "rendered": {
-    "title": "Invite flow, desktop shell polish, and a Windows startup rescue",
-    "intro": "A busy nightly: a new invite-a-friend entry point landed in the taskbar, the desktop shell got a coherent visual pass around panel borders, corners, and a single shared sidekick width, and the Windows app picked up a self-healing fix for the silent-launch failure some upgraders were hitting. Release infrastructure also got tougher against flaky GitHub asset uploads.",
+    "title": "AURA Video debuts, Windows startup self-heals, and the desktop shell gets a chrome refresh",
+    "intro": "A dense nightly: a brand-new AURA Video generation app lands end-to-end, the Windows desktop client learns to recover from corrupt settings instead of vanishing, and the desktop shell, taskbar, and chat input bar get a coordinated polish pass. Release infrastructure also got tougher against Apple notary blips and dropped GitHub asset uploads.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:24 AM",
         "started_at": "2026-05-12T09:24:24.000Z",
-        "ended_at": "2026-05-12T09:24:24.000Z",
-        "title": "Invite friends modal in the bottom taskbar",
-        "summary": "A pulsing invite button now lives in the bottom-left of the taskbar and opens a modal with the user's referral code and bonus details.",
+        "ended_at": "2026-05-12T16:17:55.000Z",
+        "title": "Invite friends modal and per-panel border tokens",
+        "summary": "An invite-a-friend entry point lands in the taskbar and the desktop lanes gain their own borderable surfaces.",
         "items": [
           {
-            "text": "Added an invite entry point in the bottom taskbar with a subtle pulse animation that opens a new modal showing a click-to-copy invite code and referral bonus details, wired through the existing invite code store and UI modal store.",
+            "text": "Added a pulsing Invite button to the bottom-left taskbar that opens a new modal showing the user's invite code (click to copy) and referral bonus details.",
             "commit_shas": [
               "11dcaf400a2ae3832ff5d074551a21ae990dabed"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Wrapped the sidebar, main panel, and sidekick lanes in a 1px border so they read as discrete surfaces, and introduced separate `--color-border-main-panel` and `--color-border-chrome` tokens exposed in Settings → Appearance → Custom colors for independent tinting.",
+            "commit_shas": [
+              "3540be2f4bfcce364c1f7c76f7933be246bc8ed7"
             ],
             "confidence": "high"
           }
@@ -484,23 +2221,16 @@
       },
       {
         "batch_id": "entry-2",
-        "time_label": "9:17 AM",
-        "started_at": "2026-05-12T16:17:55.000Z",
-        "ended_at": "2026-05-12T16:17:55.000Z",
-        "title": "Tintable borders around the desktop lanes",
-        "summary": "The sidebar, main panel, and sidekick now read as distinct surfaces with their own border token, separate from the topbar and taskbar chrome.",
+        "time_label": "9:52 AM",
+        "started_at": "2026-05-12T16:52:54.000Z",
+        "ended_at": "2026-05-12T16:52:54.000Z",
+        "title": "Release pipeline reconciles dropped GitHub asset uploads",
+        "summary": "A new retry-and-verify step makes transient upload failures recoverable instead of fatal across every release channel.",
         "items": [
           {
-            "text": "Added a 1px border around the three desktop lanes so they read as discrete surfaces like the taskbar pills, with lane borders automatically suppressed in desktop wallpaper mode.",
+            "text": "Added `upload-release-assets-with-retry.sh`, wired in after every `softprops/action-gh-release` step on nightly, stable, and mobile-nightly workflows. It diffs local artifacts against the published release and re-uploads only the missing or wrong-sized files via `gh release upload --clobber`, so a single dropped stream from GitHub's upload API no longer reds a 40-minute job.",
             "commit_shas": [
-              "3540be2f4bfcce364c1f7c76f7933be246bc8ed7"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Introduced separate `--color-border-main-panel` and `--color-border-chrome` tokens and exposed them in Settings → Appearance → Custom colors so panel borders can be tinted independently from the topbar and bottom-taskbar pills.",
-            "commit_shas": [
-              "3540be2f4bfcce364c1f7c76f7933be246bc8ed7"
+              "d08885c9cf89b206970b78b8d05f0fe312717a82"
             ],
             "confidence": "high"
           }
@@ -508,52 +2238,28 @@
       },
       {
         "batch_id": "entry-3",
-        "time_label": "9:52 AM",
-        "started_at": "2026-05-12T16:52:54.000Z",
-        "ended_at": "2026-05-12T16:52:54.000Z",
-        "title": "Release pipeline survives dropped GitHub asset uploads",
-        "summary": "Nightly, stable, and mobile-nightly release jobs no longer fail outright when GitHub's upload API drops a parallel asset stream mid-flight.",
-        "items": [
-          {
-            "text": "Added a reconciliation script that diffs local artifacts against the published release and re-uploads only missing or wrong-sized assets with `gh release upload --clobber`, retrying on the known transient errors (`other side closed`, EPIPE, ECONNRESET) and failing only if a real gap remains.",
-            "commit_shas": [
-              "d08885c9cf89b206970b78b8d05f0fe312717a82"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Wired the reconciler after every softprops/action-gh-release@v2 step across the nightly, nightly alias, stable, and mobile-nightly workflows with continue-on-error, so a flaky upload no longer wastes a 40+ minute release run.",
-            "commit_shas": [
-              "d08885c9cf89b206970b78b8d05f0fe312717a82"
-            ],
-            "confidence": "high"
-          }
-        ]
-      },
-      {
-        "batch_id": "entry-4",
         "time_label": "10:41 AM",
         "started_at": "2026-05-12T17:41:41.000Z",
         "ended_at": "2026-05-12T18:05:07.000Z",
-        "title": "Rounded panels, one sidekick width, and onboarding-only prompt chips",
-        "summary": "The desktop shell swapped its inset sidekick divider for rounded panel corners, collapsed per-app sidekick widths down to a single shared value, and stopped showing prompt suggestions to returning users.",
+        "title": "Rounded lanes, unified sidekick width, and onboarding-only prompt chips",
+        "summary": "Three focused shell changes simplify the desktop layout and trim noise from the chat empty state.",
         "items": [
           {
-            "text": "Replaced the inset shadow that separated the main panel from the sidekick with explicit rounded corners on the sidebar, sidekick lane, and (when the sidekick is collapsed) the main panel host, driven by a new visibility-aware modifier.",
+            "text": "Replaced the inset divider between the main panel and the sidekick with explicit rounded corners on the sidebar, sidekick lane, and main panel host, with the rounding conditional on sidekick visibility.",
             "commit_shas": [
               "7d609292f8c05ca0090c2bdd5f28a44873ab67e6"
             ],
             "confidence": "high"
           },
           {
-            "text": "Unified the sidekick lane to a single shared width across every app, persisted under one `aura-sidekick-width` key and migrated from the legacy shared, projects, and per-app entries so existing users keep their preferred size.",
+            "text": "Unified the sidekick lane to a single shared width across every app, persisted under one `aura-sidekick-width` key and migrated from the legacy shared / projects / per-app entries so existing users keep their preferred size.",
             "commit_shas": [
               "efe1f31eda21248d3e1c7179a0797c23282d7da1"
             ],
             "confidence": "high"
           },
           {
-            "text": "Prompt suggestion chips on empty chats are now gated on the onboarding `send_message` task, so they disappear the moment a user sends their first message ever and don't reappear in later empty threads.",
+            "text": "Restricted the empty-thread prompt suggestion chips to onboarding only — they now disappear permanently the moment a user sends their first message.",
             "commit_shas": [
               "d08ec6b4b21b6a25eac96beb36d70f325a8af309"
             ],
@@ -562,38 +2268,131 @@
         ]
       },
       {
-        "batch_id": "entry-5",
+        "batch_id": "entry-4",
         "time_label": "11:26 AM",
         "started_at": "2026-05-12T18:26:27.000Z",
-        "ended_at": "2026-05-12T18:26:27.000Z",
-        "title": "Windows startup recovers from a corrupt settings file",
-        "summary": "The Desktop app no longer vanishes silently when `settings.json` has been torn-written to NUL bytes, and it now shows a clear failure dialog instead of exiting without any UI.",
+        "ended_at": "2026-05-12T21:48:17.000Z",
+        "title": "AURA Video app, silent-launch Windows fix, and a taskbar refresh",
+        "summary": "The day's biggest batch ships a new video generation app, rescues Windows users hit by a corrupt settings file, restores agent memory, and cycles the Earn Credits / theme toggle / Invite button placement across the chrome.",
         "items": [
           {
-            "text": "The settings store now self-heals on load: a corrupt `settings.json` is renamed aside to `settings.json.corrupt-<ts>`, a warning is logged, and the app continues with an empty store instead of panicking on `serde_json::from_str`.",
+            "text": "Diagnosed and fixed the silent-launch failure on upgraded Windows installs: the settings store now renames a corrupt `settings.json` aside and continues with an empty store, persists writes through `sync_all` to prevent torn renames after a crash, propagates server-thread failures instead of `.expect`-panicking, and shows a native 'AURA could not start' MessageBox pointing at the crash log and recovery file.",
             "commit_shas": [
               "6591e077185e094941d1e52795f70eaf1d7313f2"
             ],
             "confidence": "high"
           },
           {
-            "text": "Hardened persistence by writing through `OpenOptions` + `write_all` + `sync_all` before the atomic rename, closing the torn-write window on NTFS that previously left the file at the right length but full of NUL bytes after a crash or power loss.",
+            "text": "Introduced AURA Video as a full standalone app: a video generation proxy at `/api/generate/video/stream`, a Zustand store with artifact persistence, three Veo models (Fast, Standard, Lite), and a complete shell with main panel, left nav project tree, sidekick thumbnail gallery, and sidekick taskbar tab.",
             "commit_shas": [
-              "6591e077185e094941d1e52795f70eaf1d7313f2"
+              "b56deec5978bd5dd93fc20956c14d2beeae0da32",
+              "d74058759543e729e29978b8b66a59f10a85d775",
+              "f82551bff43c84a30d939336aa46421a68ac1f84",
+              "2775e2fa6de22906aa1a9c97364e12ce33846606"
             ],
             "confidence": "high"
           },
           {
-            "text": "Fatal startup failures on Windows now surface a native `AURA could not start` message box (with macOS/Linux falling back to stderr) that names the data directory, the crash log path, and the settings file users can rename to recover, instead of the previous invisible exit under `windows_subsystem = \"windows\"`.",
+            "text": "Restored agent long-term memory reads by reverting the partition-key routing back to the bare agent id the harness actually expects, with strongly-typed `Path<AgentId>` extractors so malformed callers fail at the proxy edge.",
             "commit_shas": [
-              "6591e077185e094941d1e52795f70eaf1d7313f2"
+              "a7c70aa721947bef3e2fe5f759864172dd39b8c4"
             ],
             "confidence": "high"
           },
           {
-            "text": "Replaced `.expect` calls in the embedded server's ready channel with a `Result`-carrying signal so the main thread can react to startup errors (and `RecvError`) by showing the new dialog and exiting cleanly.",
+            "text": "Iterated heavily on chrome placement: restyled the Earn Credits button as an accent pill, moved it to the titlebar, reverted it back to the taskbar, floated it at the bottom of the left sidebar, and finally landed it as a compact 'EARN' pill in the titlebar next to the sidekick toggle; the theme toggle moved from the titlebar into the bottom taskbar, and the right cluster now collapses to a profile-only state by default.",
             "commit_shas": [
-              "6591e077185e094941d1e52795f70eaf1d7313f2"
+              "df125f6d73f6470a0073b456d430a1bf85536b21",
+              "a21417842c290da9b168598a1c0d134e8e61454f",
+              "3c50616ca28a31ebc22618991efc190ae977ddb8",
+              "e0f57912147691c86e24b2ddad8b1f990f38307d",
+              "aa45bee5c252cde17abb501c72d5fb9fb5e2b85f",
+              "0338e1d64dc997115d29146307c34ec4fdd4f32d",
+              "c44941d6138526516e2ab9536c723e589158b402",
+              "608603c4d4085af69b902324e7a623173c35d9cd"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Tightened sidebar and selector visuals: inset-pill row highlights with a unified selected color, a chrome-pill PanelSearch with a softer 30%-of-chrome border, fully-tinted accent fills for the active ModeSelector pill (with contrast-aware label color), and equal-width mode segments to eliminate sub-pixel border jitter during the slide animation.",
+            "commit_shas": [
+              "3ff67336d58f70c53e004184d12740647a653dfd",
+              "e064f2c7b45c6c4696327836a45ca1881f8879ad",
+              "f6646feda1255eb73852fee1419de839721b0241",
+              "e34befdb7e024892d70615c8c8e721b54d1fb035",
+              "6d00de8551211d10e692d0a9c8e0bab56a318423",
+              "c039c02ce4b4b347e109f1699d55640fa69a3527",
+              "e20c9a1db98e5bafed5736c7271080aa941c5467",
+              "815715f64e70b3f61daa8bc81fdd3b019b99a77b",
+              "677c33fdb9d18c6ecdd97141b4e793132bffbd53",
+              "7164b3f6fe6991f9f34f87517724bc89d6649fda",
+              "346686244f7a9a6d236621449a8941f7c4eec8c8"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-5",
+        "time_label": "2:50 PM",
+        "started_at": "2026-05-12T21:50:11.000Z",
+        "ended_at": "2026-05-12T21:50:11.000Z",
+        "title": "macOS packaging retries through Apple notary outages",
+        "summary": "The macOS release job now treats transient Apple notary errors as flakes instead of build failures.",
+        "items": [
+          {
+            "text": "Extended the `should_retry_packaging` matcher to recognize `xcrun notarytool` HTTP 429 and 5xx responses in packager.log, so brief Apple notary outages no longer abort the entire macOS packaging job alongside existing hdiutil 'Resource busy' retries.",
+            "commit_shas": [
+              "d9aaba806fc2c22ceed8809aa0ea896dc6ff2b1d"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-6",
+        "time_label": "2:59 PM",
+        "started_at": "2026-05-12T21:59:39.000Z",
+        "ended_at": "2026-05-12T22:38:06.000Z",
+        "title": "Standalone-agent chat pins to Home and the input bar gets icon-hover plates",
+        "summary": "Standalone agent chats now consistently target a 'Home' project on the wire while keeping the picker simple, and shared icon buttons adopt a tighter rounded hover plate.",
+        "items": [
+          {
+            "text": "Standalone Agents-app chats now always show a single non-interactive 'Home' label in the project picker — auto-created Home bindings are used directly, legacy agents get a synthesized 'Home' entry pointing at their existing binding, and a new `llmProjectId` prop decouples the wire `project_id` from the picker so fresh canvases ship Home while existing sessions ship their session-of-record's original project.",
+            "commit_shas": [
+              "501818284b222a954394a7d6a319404ea592851f",
+              "758c18fba9a19d7af349a029667df17d6407ddb4",
+              "1d75419c70c7d09be871fa84d0c8077a052abc1e"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Introduced a shared inner-plate hover style for icon buttons driven by new `--icon-hover-inset`, `--icon-hover-radius`, and `--icon-hover-bg` tokens, applied across taskbar icons, the browser address bar, folder picker, onboarding checklist, and the chat input's `+` / send buttons; also added `interface/docs/icon-system.md` as the source-of-truth for icon usage.",
+            "commit_shas": [
+              "ed75519b115710fa39d22d8cef949e06b91677ed",
+              "60fdc4af7f9158b80f15fe162353968835eb394b",
+              "5d07c04b3a74a74acb1e8dd4d6ffd2191bc02c2a"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Tuned taskbar icon centering and sizing — locking `line-height: 0` and `svg { display: block }` to fix sub-pixel off-center hover halos, then settling the lucide glyph at 16px inside a 30×30 hit target after a brief 19→15→16 iteration.",
+            "commit_shas": [
+              "a102b478ce6583e067071e6c09de6bbf140f620e",
+              "abfd57e8ce2edcfadceea810767592a0d9fa8a94",
+              "de299524046634d3ed5435ef8ae6f79c88218687"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Polished the chat input bar: dropped the slash hint button in favor of a `/ for commands, @ for context` Code-mode placeholder, aligned the mode pill with the attach button, extended the mode-bar divider to the right edge, and inset the send/new-chat buttons by 2px to match attach for symmetric corners. Sidebar, project tree, sidekick, and sessions list rows also gained a 1px gap so adjacent highlights no longer touch.",
+            "commit_shas": [
+              "053f04ccdeb1d4eb88fde308d84fde5fbe282df1",
+              "43ba1eb1610968e8df6aac6afe939fc8a0a52474",
+              "64ba005d8d81657ca51b08d64bcb4328cc91b0f1",
+              "f68b5c6320220de5e8d99d61629ae6cffc265283",
+              "249f6f65869611b16e1b8dd9313ad56aff00e3c8",
+              "b3d6b6137cec12ce67197da24e035ac5c12a45af"
             ],
             "confidence": "high"
           }
@@ -601,11 +2400,11 @@
       }
     ],
     "highlights": [
-      "Invite friends modal in the bottom taskbar",
-      "Unified sidekick width across every app",
-      "Self-healing recovery for corrupt Windows settings",
-      "Release pipeline no longer fails on dropped asset uploads"
+      "New AURA Video generation app with left nav, sidekick gallery, and Veo models",
+      "Windows installer no longer dies silently on a corrupt settings file",
+      "Release pipeline reconciles dropped GitHub uploads and retries Apple notary outages",
+      "Unified sidekick width, rounded lane corners, and a refreshed icon-hover system"
     ],
-    "raw_commit_count": 7
+    "raw_commit_count": 47
   }
 }
