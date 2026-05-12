@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-05-12",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.498.1",
+    "title": "Invite friends lands in the desktop taskbar",
+    "intro": "A focused nightly that introduces a new way for users to share Aura. A pulsing invite button now lives in the bottom-left of the desktop taskbar, opening a modal with the user's referral code and bonus details.",
+    "entryCount": 1,
+    "highlights": [
+      "New invite friends button in the bottom taskbar",
+      "One-click copy of your personal invite code",
+      "Referral bonus details surfaced in-app"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-05-12T09:46:42.071Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.498.1",
+    "path": "history/2026-05-12.json"
+  },
+  {
     "date": "2026-05-11",
     "channel": "nightly",
     "version": "0.1.0-nightly.497.1",
