@@ -1,43 +1,53 @@
-# Invite friends shortcut, themable lane borders, and a self-healing release pipeline
+# Invite flow, desktop shell polish, and a Windows startup rescue
 
 - Date: `2026-05-12`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.500.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.500.1
+- Version: `0.1.0-nightly.501.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.501.1
 
-Today's nightly brings a new invite-a-friend entry point into the desktop taskbar, a round of structural polish to how the three desktop lanes are framed, and a meaningful reliability upgrade to the GitHub release pipeline so a single dropped asset upload no longer torpedoes an entire 40-minute build.
+A busy nightly: a new invite-a-friend entry point landed in the taskbar, the desktop shell got a coherent visual pass around panel borders, corners, and a single shared sidekick width, and the Windows app picked up a self-healing fix for the silent-launch failure some upgraders were hitting. Release infrastructure also got tougher against flaky GitHub asset uploads.
 
-## 2:24 AM — Invite friends button arrives in the bottom taskbar
+## 2:24 AM — Invite friends modal in the bottom taskbar
 
-A pulsing invite entry point now lives in the bottom-left of the desktop, opening a modal with the user's referral code and bonus details.
+A pulsing invite button now lives in the bottom-left of the taskbar and opens a modal with the user's referral code and bonus details.
 
-- Added a gift-icon invite button to the bottom taskbar's left group that gently pulses to draw attention and opens a new Invite modal showing the user's referral code (click to copy) and bonus details, wired through the existing invite-code store and a new modal slot on the UI modal store. (`11dcaf4`)
+- Added an invite entry point in the bottom taskbar with a subtle pulse animation that opens a new modal showing a click-to-copy invite code and referral bonus details, wired through the existing invite code store and UI modal store. (`11dcaf4`)
 
-## 9:17 AM — Independent border tokens for desktop lanes vs. chrome pills
+## 9:17 AM — Tintable borders around the desktop lanes
 
-The sidebar, main panel, and sidekick lanes now read as discrete surfaces, with new theme tokens letting users tint lane borders separately from the topbar and taskbar pills.
+The sidebar, main panel, and sidekick now read as distinct surfaces with their own border token, separate from the topbar and taskbar chrome.
 
-- Drew a 1px border around the sidebar, main panel host, and sidekick lane so the three desktop lanes feel like distinct surfaces alongside the existing taskbar pills, while suppressing those borders in desktop wallpaper mode so the background stays clean. (`3540be2`)
-- Introduced --color-border-main-panel and --color-border-chrome tokens (both defaulting to --color-border) and exposed them in Settings → Appearance → Custom colors as "Main panel border" and "Topbar / taskbar border", so lane framing can be tinted independently from chrome. (`3540be2`)
+- Added a 1px border around the three desktop lanes so they read as discrete surfaces like the taskbar pills, with lane borders automatically suppressed in desktop wallpaper mode. (`3540be2`)
+- Introduced separate `--color-border-main-panel` and `--color-border-chrome` tokens and exposed them in Settings → Appearance → Custom colors so panel borders can be tinted independently from the topbar and bottom-taskbar pills. (`3540be2`)
 
-## 9:52 AM — Self-healing GitHub release uploads stop killing the pipeline
+## 9:52 AM — Release pipeline survives dropped GitHub asset uploads
 
-A new reconciler re-uploads only the assets that GitHub dropped mid-stream, so transient EPIPE/ECONNRESET failures no longer fail an otherwise successful 40+ minute release job.
+Nightly, stable, and mobile-nightly release jobs no longer fail outright when GitHub's upload API drops a parallel asset stream mid-flight.
 
-- Added infra/scripts/release/upload-release-assets-with-retry.sh, which diffs locally built artifacts against the published release and re-uploads only missing or wrong-sized files via `gh release upload --clobber`, retrying on the known transient "other side closed" / EPIPE / ECONNRESET patterns from softprops/action-gh-release@v2. (`d08885c`)
-- Wired the reconciler into the immutable nightly, nightly alias, stable, and mobile-nightly release workflows with continue-on-error on the softprops step, making asset verification the authoritative gate rather than the initial parallel upload. (`d08885c`)
+- Added a reconciliation script that diffs local artifacts against the published release and re-uploads only missing or wrong-sized assets with `gh release upload --clobber`, retrying on the known transient errors (`other side closed`, EPIPE, ECONNRESET) and failing only if a real gap remains. (`d08885c`)
+- Wired the reconciler after every softprops/action-gh-release@v2 step across the nightly, nightly alias, stable, and mobile-nightly workflows with continue-on-error, so a flaky upload no longer wastes a 40+ minute release run. (`d08885c`)
 
-## 10:41 AM — Rounded lane corners replace the inset sidekick divider
+## 10:41 AM — Rounded panels, one sidekick width, and onboarding-only prompt chips
 
-The desktop shell drops its inset shadow divider in favor of explicit rounded corners that adapt to whether the sidekick is open.
+The desktop shell swapped its inset sidekick divider for rounded panel corners, collapsed per-app sidekick widths down to a single shared value, and stopped showing prompt suggestions to returning users.
 
-- Removed the `inset -1px 0 0 0` box-shadow that the main panel host used as a divider against the sidekick, and instead rounded the outer corners of the sidebar (left) and sidekick lane (right) for a cleaner panel silhouette. (`7d60929`)
-- Added a `mainPanelHostNoSidekick` modifier, composed via `cn` from @cypher-asi/zui, so the main panel's right edge rounds off only when the sidekick is collapsed — with a DesktopShell test asserting the modifier is absent whenever the sidekick is mounted. (`7d60929`)
+- Replaced the inset shadow that separated the main panel from the sidekick with explicit rounded corners on the sidebar, sidekick lane, and (when the sidekick is collapsed) the main panel host, driven by a new visibility-aware modifier. (`7d60929`)
+- Unified the sidekick lane to a single shared width across every app, persisted under one `aura-sidekick-width` key and migrated from the legacy shared, projects, and per-app entries so existing users keep their preferred size. (`efe1f31`)
+- Prompt suggestion chips on empty chats are now gated on the onboarding `send_message` task, so they disappear the moment a user sends their first message ever and don't reappear in later empty threads. (`d08ec6b`)
+
+## 11:26 AM — Windows startup recovers from a corrupt settings file
+
+The Desktop app no longer vanishes silently when `settings.json` has been torn-written to NUL bytes, and it now shows a clear failure dialog instead of exiting without any UI.
+
+- The settings store now self-heals on load: a corrupt `settings.json` is renamed aside to `settings.json.corrupt-<ts>`, a warning is logged, and the app continues with an empty store instead of panicking on `serde_json::from_str`. (`6591e07`)
+- Hardened persistence by writing through `OpenOptions` + `write_all` + `sync_all` before the atomic rename, closing the torn-write window on NTFS that previously left the file at the right length but full of NUL bytes after a crash or power loss. (`6591e07`)
+- Fatal startup failures on Windows now surface a native `AURA could not start` message box (with macOS/Linux falling back to stderr) that names the data directory, the crash log path, and the settings file users can rename to recover, instead of the previous invisible exit under `windows_subsystem = "windows"`. (`6591e07`)
+- Replaced `.expect` calls in the embedded server's ready channel with a `Result`-carrying signal so the main thread can react to startup errors (and `RecvError`) by showing the new dialog and exiting cleanly. (`6591e07`)
 
 ## Highlights
 
-- New invite friends button and modal in the bottom taskbar
-- Desktop lanes now have their own borders with dedicated theme tokens
-- Rounded panel corners replace the inset sidekick divider
-- Release pipeline auto-reconciles dropped GitHub asset uploads
+- Invite friends modal in the bottom taskbar
+- Unified sidekick width across every app
+- Self-healing recovery for corrupt Windows settings
+- Release pipeline no longer fails on dropped asset uploads
 

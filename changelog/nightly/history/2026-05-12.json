@@ -3,22 +3,25 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-12T17:54:44.000Z",
+  "generatedAt": "2026-05-12T18:44:51.971Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.500.1",
+  "version": "0.1.0-nightly.501.1",
   "date": "2026-05-12",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.500.1",
-  "lastIncludedSha": "7d609292f8c05ca0090c2bdd5f28a44873ab67e6",
-  "previousProcessedSha": "11dcaf400a2ae3832ff5d074551a21ae990dabed",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.501.1",
+  "lastIncludedSha": "6591e077185e094941d1e52795f70eaf1d7313f2",
+  "previousProcessedSha": "7d609292f8c05ca0090c2bdd5f28a44873ab67e6",
   "commitShas": [
     "11dcaf400a2ae3832ff5d074551a21ae990dabed",
     "3540be2f4bfcce364c1f7c76f7933be246bc8ed7",
     "d08885c9cf89b206970b78b8d05f0fe312717a82",
-    "7d609292f8c05ca0090c2bdd5f28a44873ab67e6"
+    "7d609292f8c05ca0090c2bdd5f28a44873ab67e6",
+    "efe1f31eda21248d3e1c7179a0797c23282d7da1",
+    "d08ec6b4b21b6a25eac96beb36d70f325a8af309",
+    "6591e077185e094941d1e52795f70eaf1d7313f2"
   ],
-  "rawCommitCount": 4,
-  "filteredCommitCount": 4,
+  "rawCommitCount": 7,
+  "filteredCommitCount": 7,
   "rawCommits": [
     {
       "sha": "11dcaf400a2ae3832ff5d074551a21ae990dabed",
@@ -196,9 +199,139 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "efe1f31eda21248d3e1c7179a0797c23282d7da1",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T11:04:38-07:00",
+      "subject": "feat(desktop-shell): unify sidekick width across all apps",
+      "body": "The sidekick lane now uses a single shared width that stays identical\nwhen switching between apps. Per-app width persistence and the\n`useSidekickWidthRetargeting` effect that resized the lane on every app\nchange have been removed. Width is read once at mount, persisted under\na single `aura-sidekick-width` localStorage key, and migrated from the\nlegacy shared / projects / per-app entries on first load so existing\nusers keep their preferred size.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "7d609292f8c05ca0090c2bdd5f28a44873ab67e6"
+      ],
+      "files": [
+        "interface/src/components/DesktopShell/DesktopShell.test.tsx",
+        "interface/src/components/DesktopShell/DesktopShell.tsx",
+        "interface/src/components/DesktopShell/PersistentSidekickLane.tsx",
+        "interface/src/components/DesktopShell/desktop-shell-effects.ts",
+        "interface/src/components/DesktopShell/desktop-shell-sidekick.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 154,
+        "deletions": 322
+      },
+      "committedAtMs": 1778609078000,
+      "cleanSubject": "unify sidekick width across all apps",
+      "keywords": [
+        "unify",
+        "sidekick",
+        "width",
+        "across",
+        "apps"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "d08ec6b4b21b6a25eac96beb36d70f325a8af309",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T11:05:07-07:00",
+      "subject": "feat(chat): only show prompt suggestions during onboarding",
+      "body": "Gate the empty-thread chip row on the onboarding-store\n`send_message` task so it disappears the moment the user sends\ntheir first message ever. Subsequent empty chats no longer\ndisplay the suggestions.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "efe1f31eda21248d3e1c7179a0797c23282d7da1"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/features/onboarding/onboarding-store.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 14,
+        "deletions": 1
+      },
+      "committedAtMs": 1778609107000,
+      "cleanSubject": "only show prompt suggestions during onboarding",
+      "keywords": [
+        "only",
+        "show",
+        "prompt",
+        "suggestions",
+        "during",
+        "onboarding"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "6591e077185e094941d1e52795f70eaf1d7313f2",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T11:26:27-07:00",
+      "subject": "fix(desktop): self-heal corrupt settings store and surface fatal startup failures",
+      "body": "The published Windows installer was silently failing to launch on\nupgraded machines. Symptom: double-click AURA, the harness sidecar\n(aura-node-...) appears as a Background process in Task Manager,\nand then nothing — no window, no error dialog, no notification.\nOnly `<localdata>/aura/crash.log` showed evidence of what happened:\n\n  panicked at apps/aura-os-desktop/src/main.rs:106:10:\n  server thread failed before becoming ready: RecvError\n\nRoot cause is a chain of three bugs that combine into \"exits\nsilently with no UI\":\n\n1. `<localdata>/aura/store/settings.json` was a 1.1 MB file of\n   pure NUL bytes — a torn-write artifact from a prior crash.\n   `SettingsStore::load_cf` handed the bytes to\n   `serde_json::from_str`, which propagated `expected value at\n   line 1 column 1` straight up. The same store path is read in\n   two places: `init_script::load_bootstrapped_auth_literals`\n   already swallowed the error and warned, but the\n   server-thread path inside `aura-os-desktop` `.expect(...)`'d\n   on it and panicked.\n2. `persist_cf` wrote the tmp file with `fs::write` and renamed\n   it without `sync_all`. NTFS happily renames a file whose\n   contents the OS has not yet flushed; a power loss or hard\n   kill in that window leaves the destination as the right\n   length but full of NUL bytes, which is exactly the input\n   that bug 1 chokes on the next time around.\n3. The release Windows binary is built with\n   `windows_subsystem = \"windows\"`, so the panic's `eprintln!`\n   went to a stderr that has no console. The only surviving\n   evidence was `crash.log`, which a non-developer user has no\n   reason to look at.\n\nFixes:\n\n- `crates/aura-os-store/src/store.rs::load_cf`: on\n  `serde_json::from_str` failure, rename the bad file aside\n  to `<cf>.json.corrupt-<unix_ts>`, log a WARN, and return an\n  empty CF. Mirrors the per-entry tolerance the same function\n  already applies to invalid base64. Two new integration tests\n  cover the all-NUL and garbage-JSON shapes.\n- `crates/aura-os-store/src/store.rs::persist_cf`: replace\n  `fs::write` with `OpenOptions::open` + `write_all` + a\n  `sync_all` before the rename so the atomic-rename promise\n  actually holds across crashes. Costs one fsync per persist.\n- `apps/aura-os-desktop/src/net/server.rs::spawn_server`:\n  change the ready channel from `()` to `Result<(), String>`\n  and stop `.expect`ing on `build_app_state` /\n  `TcpListener::from_std`. On failure, log the error and send\n  `Err(message)` back so the main thread can react.\n- `apps/aura-os-desktop/src/main.rs`: handle the new ready\n  result. On `Ok(Err(_))` or `RecvError`, call a new\n  `init::fatal_dialog::show_fatal_startup_failure` helper\n  before exiting non-zero.\n- `apps/aura-os-desktop/src/init/fatal_dialog.rs` (new): pop\n  a native MessageBoxW with MB_TOPMOST + MB_SETFOREGROUND on\n  Windows; fall back to `eprintln!` on macOS / Linux. The\n  dialog body names the data dir, the path of the crash log,\n  and the corrupt settings file the user can rename to recover.\n\nVerified locally: `cargo test -p aura-os-store` (7 tests, both\nnew self-heal cases included) and\n`cargo run -p aura-os-desktop -- --print-channel` (Channel CI\ngate from f64e07753 still passes).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "d08ec6b4b21b6a25eac96beb36d70f325a8af309"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/init/fatal_dialog.rs",
+        "apps/aura-os-desktop/src/init/mod.rs",
+        "apps/aura-os-desktop/src/main.rs",
+        "apps/aura-os-desktop/src/net/server.rs",
+        "crates/aura-os-store/src/store.rs",
+        "crates/aura-os-store/tests/integration.rs"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 275,
+        "deletions": 12
+      },
+      "committedAtMs": 1778610387000,
+      "cleanSubject": "self-heal corrupt settings store and surface fatal startup failures",
+      "keywords": [
+        "self",
+        "heal",
+        "corrupt",
+        "settings",
+        "store",
+        "surface",
+        "fatal",
+        "startup",
+        "failures"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/src",
+        "crates/aura-os-store/src",
+        "crates/aura-os-store/tests"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop",
+        "Core Rust"
+      ]
     }
   ],
-  "batchCount": 4,
+  "batchCount": 5,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -207,36 +340,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11837422
+          "sizeBytes": 11838209
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.500.1",
+      "version": "0.1.0-nightly.501.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.500.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.501.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 36830642
+          "sizeBytes": 36833266
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.500.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.501.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.500.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.501.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 105605624
+          "sizeBytes": 105581048
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.500.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.501.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -246,29 +379,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.500.1",
+      "version": "0.1.0-nightly.501.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.500.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.501.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33957998
+          "sizeBytes": 33972075
         },
         {
-          "name": "AURA_0.1.0-nightly.500.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.501.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.500.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.501.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33105445
+          "sizeBytes": 33119362
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.500.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.501.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -278,29 +411,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.500.1",
+      "version": "0.1.0-nightly.501.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.500.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.501.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 35591980
+          "sizeBytes": 35599100
         },
         {
-          "name": "AURA_0.1.0-nightly.500.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.501.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.500.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.501.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 34770067
+          "sizeBytes": 34777514
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.500.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.501.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -310,17 +443,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.500.1",
+      "version": "0.1.0-nightly.501.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.500.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.501.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24952497
+          "sizeBytes": 24975599
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.500.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.501.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -329,19 +462,19 @@
     }
   ],
   "rendered": {
-    "title": "Invite friends shortcut, themable lane borders, and a self-healing release pipeline",
-    "intro": "Today's nightly brings a new invite-a-friend entry point into the desktop taskbar, a round of structural polish to how the three desktop lanes are framed, and a meaningful reliability upgrade to the GitHub release pipeline so a single dropped asset upload no longer torpedoes an entire 40-minute build.",
+    "title": "Invite flow, desktop shell polish, and a Windows startup rescue",
+    "intro": "A busy nightly: a new invite-a-friend entry point landed in the taskbar, the desktop shell got a coherent visual pass around panel borders, corners, and a single shared sidekick width, and the Windows app picked up a self-healing fix for the silent-launch failure some upgraders were hitting. Release infrastructure also got tougher against flaky GitHub asset uploads.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:24 AM",
         "started_at": "2026-05-12T09:24:24.000Z",
         "ended_at": "2026-05-12T09:24:24.000Z",
-        "title": "Invite friends button arrives in the bottom taskbar",
-        "summary": "A pulsing invite entry point now lives in the bottom-left of the desktop, opening a modal with the user's referral code and bonus details.",
+        "title": "Invite friends modal in the bottom taskbar",
+        "summary": "A pulsing invite button now lives in the bottom-left of the taskbar and opens a modal with the user's referral code and bonus details.",
         "items": [
           {
-            "text": "Added a gift-icon invite button to the bottom taskbar's left group that gently pulses to draw attention and opens a new Invite modal showing the user's referral code (click to copy) and bonus details, wired through the existing invite-code store and a new modal slot on the UI modal store.",
+            "text": "Added an invite entry point in the bottom taskbar with a subtle pulse animation that opens a new modal showing a click-to-copy invite code and referral bonus details, wired through the existing invite code store and UI modal store.",
             "commit_shas": [
               "11dcaf400a2ae3832ff5d074551a21ae990dabed"
             ],
@@ -354,18 +487,18 @@
         "time_label": "9:17 AM",
         "started_at": "2026-05-12T16:17:55.000Z",
         "ended_at": "2026-05-12T16:17:55.000Z",
-        "title": "Independent border tokens for desktop lanes vs. chrome pills",
-        "summary": "The sidebar, main panel, and sidekick lanes now read as discrete surfaces, with new theme tokens letting users tint lane borders separately from the topbar and taskbar pills.",
+        "title": "Tintable borders around the desktop lanes",
+        "summary": "The sidebar, main panel, and sidekick now read as distinct surfaces with their own border token, separate from the topbar and taskbar chrome.",
         "items": [
           {
-            "text": "Drew a 1px border around the sidebar, main panel host, and sidekick lane so the three desktop lanes feel like distinct surfaces alongside the existing taskbar pills, while suppressing those borders in desktop wallpaper mode so the background stays clean.",
+            "text": "Added a 1px border around the three desktop lanes so they read as discrete surfaces like the taskbar pills, with lane borders automatically suppressed in desktop wallpaper mode.",
             "commit_shas": [
               "3540be2f4bfcce364c1f7c76f7933be246bc8ed7"
             ],
             "confidence": "high"
           },
           {
-            "text": "Introduced --color-border-main-panel and --color-border-chrome tokens (both defaulting to --color-border) and exposed them in Settings → Appearance → Custom colors as \"Main panel border\" and \"Topbar / taskbar border\", so lane framing can be tinted independently from chrome.",
+            "text": "Introduced separate `--color-border-main-panel` and `--color-border-chrome` tokens and exposed them in Settings → Appearance → Custom colors so panel borders can be tinted independently from the topbar and bottom-taskbar pills.",
             "commit_shas": [
               "3540be2f4bfcce364c1f7c76f7933be246bc8ed7"
             ],
@@ -378,18 +511,18 @@
         "time_label": "9:52 AM",
         "started_at": "2026-05-12T16:52:54.000Z",
         "ended_at": "2026-05-12T16:52:54.000Z",
-        "title": "Self-healing GitHub release uploads stop killing the pipeline",
-        "summary": "A new reconciler re-uploads only the assets that GitHub dropped mid-stream, so transient EPIPE/ECONNRESET failures no longer fail an otherwise successful 40+ minute release job.",
+        "title": "Release pipeline survives dropped GitHub asset uploads",
+        "summary": "Nightly, stable, and mobile-nightly release jobs no longer fail outright when GitHub's upload API drops a parallel asset stream mid-flight.",
         "items": [
           {
-            "text": "Added infra/scripts/release/upload-release-assets-with-retry.sh, which diffs locally built artifacts against the published release and re-uploads only missing or wrong-sized files via `gh release upload --clobber`, retrying on the known transient \"other side closed\" / EPIPE / ECONNRESET patterns from softprops/action-gh-release@v2.",
+            "text": "Added a reconciliation script that diffs local artifacts against the published release and re-uploads only missing or wrong-sized assets with `gh release upload --clobber`, retrying on the known transient errors (`other side closed`, EPIPE, ECONNRESET) and failing only if a real gap remains.",
             "commit_shas": [
               "d08885c9cf89b206970b78b8d05f0fe312717a82"
             ],
             "confidence": "high"
           },
           {
-            "text": "Wired the reconciler into the immutable nightly, nightly alias, stable, and mobile-nightly release workflows with continue-on-error on the softprops step, making asset verification the authoritative gate rather than the initial parallel upload.",
+            "text": "Wired the reconciler after every softprops/action-gh-release@v2 step across the nightly, nightly alias, stable, and mobile-nightly workflows with continue-on-error, so a flaky upload no longer wastes a 40+ minute release run.",
             "commit_shas": [
               "d08885c9cf89b206970b78b8d05f0fe312717a82"
             ],
@@ -401,21 +534,66 @@
         "batch_id": "entry-4",
         "time_label": "10:41 AM",
         "started_at": "2026-05-12T17:41:41.000Z",
-        "ended_at": "2026-05-12T17:41:41.000Z",
-        "title": "Rounded lane corners replace the inset sidekick divider",
-        "summary": "The desktop shell drops its inset shadow divider in favor of explicit rounded corners that adapt to whether the sidekick is open.",
+        "ended_at": "2026-05-12T18:05:07.000Z",
+        "title": "Rounded panels, one sidekick width, and onboarding-only prompt chips",
+        "summary": "The desktop shell swapped its inset sidekick divider for rounded panel corners, collapsed per-app sidekick widths down to a single shared value, and stopped showing prompt suggestions to returning users.",
         "items": [
           {
-            "text": "Removed the `inset -1px 0 0 0` box-shadow that the main panel host used as a divider against the sidekick, and instead rounded the outer corners of the sidebar (left) and sidekick lane (right) for a cleaner panel silhouette.",
+            "text": "Replaced the inset shadow that separated the main panel from the sidekick with explicit rounded corners on the sidebar, sidekick lane, and (when the sidekick is collapsed) the main panel host, driven by a new visibility-aware modifier.",
             "commit_shas": [
               "7d609292f8c05ca0090c2bdd5f28a44873ab67e6"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a `mainPanelHostNoSidekick` modifier, composed via `cn` from @cypher-asi/zui, so the main panel's right edge rounds off only when the sidekick is collapsed — with a DesktopShell test asserting the modifier is absent whenever the sidekick is mounted.",
+            "text": "Unified the sidekick lane to a single shared width across every app, persisted under one `aura-sidekick-width` key and migrated from the legacy shared, projects, and per-app entries so existing users keep their preferred size.",
             "commit_shas": [
-              "7d609292f8c05ca0090c2bdd5f28a44873ab67e6"
+              "efe1f31eda21248d3e1c7179a0797c23282d7da1"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Prompt suggestion chips on empty chats are now gated on the onboarding `send_message` task, so they disappear the moment a user sends their first message ever and don't reappear in later empty threads.",
+            "commit_shas": [
+              "d08ec6b4b21b6a25eac96beb36d70f325a8af309"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-5",
+        "time_label": "11:26 AM",
+        "started_at": "2026-05-12T18:26:27.000Z",
+        "ended_at": "2026-05-12T18:26:27.000Z",
+        "title": "Windows startup recovers from a corrupt settings file",
+        "summary": "The Desktop app no longer vanishes silently when `settings.json` has been torn-written to NUL bytes, and it now shows a clear failure dialog instead of exiting without any UI.",
+        "items": [
+          {
+            "text": "The settings store now self-heals on load: a corrupt `settings.json` is renamed aside to `settings.json.corrupt-<ts>`, a warning is logged, and the app continues with an empty store instead of panicking on `serde_json::from_str`.",
+            "commit_shas": [
+              "6591e077185e094941d1e52795f70eaf1d7313f2"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Hardened persistence by writing through `OpenOptions` + `write_all` + `sync_all` before the atomic rename, closing the torn-write window on NTFS that previously left the file at the right length but full of NUL bytes after a crash or power loss.",
+            "commit_shas": [
+              "6591e077185e094941d1e52795f70eaf1d7313f2"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Fatal startup failures on Windows now surface a native `AURA could not start` message box (with macOS/Linux falling back to stderr) that names the data directory, the crash log path, and the settings file users can rename to recover, instead of the previous invisible exit under `windows_subsystem = \"windows\"`.",
+            "commit_shas": [
+              "6591e077185e094941d1e52795f70eaf1d7313f2"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Replaced `.expect` calls in the embedded server's ready channel with a `Result`-carrying signal so the main thread can react to startup errors (and `RecvError`) by showing the new dialog and exiting cleanly.",
+            "commit_shas": [
+              "6591e077185e094941d1e52795f70eaf1d7313f2"
             ],
             "confidence": "high"
           }
@@ -423,11 +601,11 @@
       }
     ],
     "highlights": [
-      "New invite friends button and modal in the bottom taskbar",
-      "Desktop lanes now have their own borders with dedicated theme tokens",
-      "Rounded panel corners replace the inset sidekick divider",
-      "Release pipeline auto-reconciles dropped GitHub asset uploads"
+      "Invite friends modal in the bottom taskbar",
+      "Unified sidekick width across every app",
+      "Self-healing recovery for corrupt Windows settings",
+      "Release pipeline no longer fails on dropped asset uploads"
     ],
-    "raw_commit_count": 4
+    "raw_commit_count": 7
   }
 }

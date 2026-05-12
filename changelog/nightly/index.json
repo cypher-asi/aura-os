@@ -2,19 +2,19 @@
   {
     "date": "2026-05-12",
     "channel": "nightly",
-    "version": "0.1.0-nightly.500.1",
-    "title": "Invite friends shortcut, themable lane borders, and a self-healing release pipeline",
-    "intro": "Today's nightly brings a new invite-a-friend entry point into the desktop taskbar, a round of structural polish to how the three desktop lanes are framed, and a meaningful reliability upgrade to the GitHub release pipeline so a single dropped asset upload no longer torpedoes an entire 40-minute build.",
-    "entryCount": 4,
+    "version": "0.1.0-nightly.501.1",
+    "title": "Invite flow, desktop shell polish, and a Windows startup rescue",
+    "intro": "A busy nightly: a new invite-a-friend entry point landed in the taskbar, the desktop shell got a coherent visual pass around panel borders, corners, and a single shared sidekick width, and the Windows app picked up a self-healing fix for the silent-launch failure some upgraders were hitting. Release infrastructure also got tougher against flaky GitHub asset uploads.",
+    "entryCount": 5,
     "highlights": [
-      "New invite friends button and modal in the bottom taskbar",
-      "Desktop lanes now have their own borders with dedicated theme tokens",
-      "Rounded panel corners replace the inset sidekick divider",
-      "Release pipeline auto-reconciles dropped GitHub asset uploads"
+      "Invite friends modal in the bottom taskbar",
+      "Unified sidekick width across every app",
+      "Self-healing recovery for corrupt Windows settings",
+      "Release pipeline no longer fails on dropped asset uploads"
     ],
-    "rawCommitCount": 4,
-    "generatedAt": "2026-05-12T17:54:44.000Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.500.1",
+    "rawCommitCount": 7,
+    "generatedAt": "2026-05-12T18:44:51.971Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.501.1",
     "path": "history/2026-05-12.json"
   },
   {
