@@ -2,18 +2,19 @@
   {
     "date": "2026-05-12",
     "channel": "nightly",
-    "version": "0.1.0-nightly.498.1",
-    "title": "Invite friends lands in the desktop taskbar",
-    "intro": "A focused nightly that introduces a new way for users to share Aura. A pulsing invite button now lives in the bottom-left of the desktop taskbar, opening a modal with the user's referral code and bonus details.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.500.1",
+    "title": "Invite friends shortcut, themable lane borders, and a self-healing release pipeline",
+    "intro": "Today's nightly brings a new invite-a-friend entry point into the desktop taskbar, a round of structural polish to how the three desktop lanes are framed, and a meaningful reliability upgrade to the GitHub release pipeline so a single dropped asset upload no longer torpedoes an entire 40-minute build.",
+    "entryCount": 4,
     "highlights": [
-      "New invite friends button in the bottom taskbar",
-      "One-click copy of your personal invite code",
-      "Referral bonus details surfaced in-app"
+      "New invite friends button and modal in the bottom taskbar",
+      "Desktop lanes now have their own borders with dedicated theme tokens",
+      "Rounded panel corners replace the inset sidekick divider",
+      "Release pipeline auto-reconciles dropped GitHub asset uploads"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-05-12T09:46:42.071Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.498.1",
+    "rawCommitCount": 4,
+    "generatedAt": "2026-05-12T17:54:44.000Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.500.1",
     "path": "history/2026-05-12.json"
   },
   {

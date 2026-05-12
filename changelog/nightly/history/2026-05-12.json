@@ -3,19 +3,22 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-12T09:46:42.071Z",
+  "generatedAt": "2026-05-12T17:54:44.000Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.498.1",
+  "version": "0.1.0-nightly.500.1",
   "date": "2026-05-12",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.498.1",
-  "lastIncludedSha": "11dcaf400a2ae3832ff5d074551a21ae990dabed",
-  "previousProcessedSha": "820a430990597e09fd988819bef0ffdaff683c5a",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.500.1",
+  "lastIncludedSha": "7d609292f8c05ca0090c2bdd5f28a44873ab67e6",
+  "previousProcessedSha": "11dcaf400a2ae3832ff5d074551a21ae990dabed",
   "commitShas": [
-    "11dcaf400a2ae3832ff5d074551a21ae990dabed"
+    "11dcaf400a2ae3832ff5d074551a21ae990dabed",
+    "3540be2f4bfcce364c1f7c76f7933be246bc8ed7",
+    "d08885c9cf89b206970b78b8d05f0fe312717a82",
+    "7d609292f8c05ca0090c2bdd5f28a44873ab67e6"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 4,
+  "filteredCommitCount": 4,
   "rawCommits": [
     {
       "sha": "11dcaf400a2ae3832ff5d074551a21ae990dabed",
@@ -58,9 +61,144 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "3540be2f4bfcce364c1f7c76f7933be246bc8ed7",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T09:17:55-07:00",
+      "subject": "feat(theme): border main panels and add separate border tokens for panels vs chrome",
+      "body": "Adds a 1px border around the three desktop lanes (sidebar, main panel,\nsidekick) so they read as discrete surfaces like the taskbar pills.\nIntroduces `--color-border-main-panel` and `--color-border-chrome` (both\ndefaulting to `--color-border`) and exposes them in Settings > Appearance\n> Custom colors so users can tint the lane borders independently from\nthe topbar / bottom-taskbar pills. Lane borders are suppressed in\ndesktop wallpaper mode to keep the background clean.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "11dcaf400a2ae3832ff5d074551a21ae990dabed"
+      ],
+      "files": [
+        "interface/src/components/BottomTaskbar/BottomTaskbar.module.css",
+        "interface/src/components/DesktopShell/DesktopShell.module.css",
+        "interface/src/components/ShellTitlebar/ShellTitlebar.module.css",
+        "interface/src/index.css",
+        "interface/src/lib/theme-overrides.ts",
+        "interface/src/views/SettingsView/AppearanceSection/CustomTokensPanel/CustomTokensPanel.test.tsx",
+        "interface/src/views/SettingsView/AppearanceSection/CustomTokensPanel/CustomTokensPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 30,
+        "deletions": 4
+      },
+      "committedAtMs": 1778602675000,
+      "cleanSubject": "border main panels and add separate border tokens for panels vs chrome",
+      "keywords": [
+        "border",
+        "main",
+        "panels",
+        "separate",
+        "tokens",
+        "chrome"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/index.css",
+        "interface/src/lib",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "d08885c9cf89b206970b78b8d05f0fe312717a82",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T09:52:54-07:00",
+      "subject": "fix(release): reconcile release assets so a dropped upload no longer fails the pipeline",
+      "body": "softprops/action-gh-release@v2 occasionally surfaces \"Error: other side\nclosed\" (also EPIPE / ECONNRESET) when GitHub's upload API closes one\nof its parallel asset streams mid-flight, failing the entire 40+ minute\nrelease job even though every other asset uploaded fine.\n\nAdd infra/scripts/release/upload-release-assets-with-retry.sh, which\ndiffs the local artifact set against the published release, re-uploads\nonly the missing or wrong-sized assets via `gh release upload --clobber`\nwith retry on the known transient patterns, and fails the step only if\nverification still shows a gap. Wire it after every softprops invocation\n(immutable nightly + nightly alias, stable, mobile-nightly) with\ncontinue-on-error so the reconciler becomes the authoritative gate.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "3540be2f4bfcce364c1f7c76f7933be246bc8ed7"
+      ],
+      "files": [
+        ".github/workflows/release-mobile-nightly.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "infra/scripts/release/upload-release-assets-with-retry.sh",
+        "infra/scripts/release/upload-release-assets-with-retry.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 496,
+        "deletions": 0
+      },
+      "committedAtMs": 1778604774000,
+      "cleanSubject": "reconcile release assets so a dropped upload no longer fails the pipeline",
+      "keywords": [
+        "reconcile",
+        "release",
+        "assets",
+        "dropped",
+        "upload",
+        "longer",
+        "fails",
+        "pipeline"
+      ],
+      "fileGroups": [
+        ".github/workflows/release-mobile-nightly.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "infra/scripts/release"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "7d609292f8c05ca0090c2bdd5f28a44873ab67e6",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T10:41:41-07:00",
+      "subject": "feat(desktop-shell): round panel corners and drop inset sidekick divider",
+      "body": "Replace the `box-shadow: inset -1px 0 0 0 var(--color-border)` divider\nthat the main panel host used to draw against the sidekick with explicit\nborder-radius corners on the sidebar (left), sidekick lane (right), and\nmain panel host (right, only when the sidekick is collapsed). The new\n`mainPanelHostNoSidekick` modifier is composed with `cn` from @cypher-asi/zui\nso the corner rounding follows the sidekick visibility state, and the\nDesktopShell test asserts the modifier is absent whenever the sidekick is\nmounted.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "d08885c9cf89b206970b78b8d05f0fe312717a82"
+      ],
+      "files": [
+        "interface/src/components/DesktopShell/DesktopShell.module.css",
+        "interface/src/components/DesktopShell/DesktopShell.test.tsx",
+        "interface/src/components/DesktopShell/DesktopShell.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 17,
+        "deletions": 10
+      },
+      "committedAtMs": 1778607701000,
+      "cleanSubject": "round panel corners and drop inset sidekick divider",
+      "keywords": [
+        "round",
+        "panel",
+        "corners",
+        "drop",
+        "inset",
+        "sidekick",
+        "divider"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 4,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -69,36 +207,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11837354
+          "sizeBytes": 11837422
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.498.1",
+      "version": "0.1.0-nightly.500.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.498.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.500.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 36839862
+          "sizeBytes": 36830642
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.498.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.500.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.498.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.500.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 105626104
+          "sizeBytes": 105605624
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.498.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.500.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -108,29 +246,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.498.1",
+      "version": "0.1.0-nightly.500.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.498.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.500.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33960325
+          "sizeBytes": 33957998
         },
         {
-          "name": "AURA_0.1.0-nightly.498.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.500.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.498.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.500.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33104551
+          "sizeBytes": 33105445
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.498.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.500.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -140,29 +278,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.498.1",
+      "version": "0.1.0-nightly.500.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.498.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.500.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 35595605
+          "sizeBytes": 35591980
         },
         {
-          "name": "AURA_0.1.0-nightly.498.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.500.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.498.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.500.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 34770477
+          "sizeBytes": 34770067
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.498.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.500.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -172,17 +310,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.498.1",
+      "version": "0.1.0-nightly.500.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.498.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.500.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24956633
+          "sizeBytes": 24952497
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.498.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.500.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -191,35 +329,93 @@
     }
   ],
   "rendered": {
-    "title": "Invite friends lands in the desktop taskbar",
-    "intro": "A focused nightly that introduces a new way for users to share Aura. A pulsing invite button now lives in the bottom-left of the desktop taskbar, opening a modal with the user's referral code and bonus details.",
+    "title": "Invite friends shortcut, themable lane borders, and a self-healing release pipeline",
+    "intro": "Today's nightly brings a new invite-a-friend entry point into the desktop taskbar, a round of structural polish to how the three desktop lanes are framed, and a meaningful reliability upgrade to the GitHub release pipeline so a single dropped asset upload no longer torpedoes an entire 40-minute build.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:24 AM",
         "started_at": "2026-05-12T09:24:24.000Z",
         "ended_at": "2026-05-12T09:24:24.000Z",
-        "title": "Invite friends button and referral modal in the bottom taskbar",
-        "summary": "A new gift-icon button in the bottom-left of the desktop taskbar opens an invite modal where users can copy their referral code and see bonus details.",
+        "title": "Invite friends button arrives in the bottom taskbar",
+        "summary": "A pulsing invite entry point now lives in the bottom-left of the desktop, opening a modal with the user's referral code and bonus details.",
         "items": [
           {
-            "text": "Added a pulsing invite button to the bottom-left of the desktop taskbar, grouped alongside the Desktop icon and favorite agents strip with a subtle teal glow animation to draw attention.",
+            "text": "Added a gift-icon invite button to the bottom taskbar's left group that gently pulses to draw attention and opens a new Invite modal showing the user's referral code (click to copy) and bonus details, wired through the existing invite-code store and a new modal slot on the UI modal store.",
             "commit_shas": [
               "11dcaf400a2ae3832ff5d074551a21ae990dabed"
             ],
             "confidence": "high"
-          },
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "9:17 AM",
+        "started_at": "2026-05-12T16:17:55.000Z",
+        "ended_at": "2026-05-12T16:17:55.000Z",
+        "title": "Independent border tokens for desktop lanes vs. chrome pills",
+        "summary": "The sidebar, main panel, and sidekick lanes now read as discrete surfaces, with new theme tokens letting users tint lane borders separately from the topbar and taskbar pills.",
+        "items": [
           {
-            "text": "Clicking the button opens a new Invite Friends modal that displays the user's invite code (click to copy) and surfaces referral bonus details, wired through the existing invite code store.",
+            "text": "Drew a 1px border around the sidebar, main panel host, and sidekick lane so the three desktop lanes feel like distinct surfaces alongside the existing taskbar pills, while suppressing those borders in desktop wallpaper mode so the background stays clean.",
             "commit_shas": [
-              "11dcaf400a2ae3832ff5d074551a21ae990dabed"
+              "3540be2f4bfcce364c1f7c76f7933be246bc8ed7"
             ],
             "confidence": "high"
           },
           {
-            "text": "Extended the UI modal store with open/close state for the invite modal so the new entry point integrates with Aura's existing modal management.",
+            "text": "Introduced --color-border-main-panel and --color-border-chrome tokens (both defaulting to --color-border) and exposed them in Settings → Appearance → Custom colors as \"Main panel border\" and \"Topbar / taskbar border\", so lane framing can be tinted independently from chrome.",
             "commit_shas": [
-              "11dcaf400a2ae3832ff5d074551a21ae990dabed"
+              "3540be2f4bfcce364c1f7c76f7933be246bc8ed7"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "9:52 AM",
+        "started_at": "2026-05-12T16:52:54.000Z",
+        "ended_at": "2026-05-12T16:52:54.000Z",
+        "title": "Self-healing GitHub release uploads stop killing the pipeline",
+        "summary": "A new reconciler re-uploads only the assets that GitHub dropped mid-stream, so transient EPIPE/ECONNRESET failures no longer fail an otherwise successful 40+ minute release job.",
+        "items": [
+          {
+            "text": "Added infra/scripts/release/upload-release-assets-with-retry.sh, which diffs locally built artifacts against the published release and re-uploads only missing or wrong-sized files via `gh release upload --clobber`, retrying on the known transient \"other side closed\" / EPIPE / ECONNRESET patterns from softprops/action-gh-release@v2.",
+            "commit_shas": [
+              "d08885c9cf89b206970b78b8d05f0fe312717a82"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Wired the reconciler into the immutable nightly, nightly alias, stable, and mobile-nightly release workflows with continue-on-error on the softprops step, making asset verification the authoritative gate rather than the initial parallel upload.",
+            "commit_shas": [
+              "d08885c9cf89b206970b78b8d05f0fe312717a82"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-4",
+        "time_label": "10:41 AM",
+        "started_at": "2026-05-12T17:41:41.000Z",
+        "ended_at": "2026-05-12T17:41:41.000Z",
+        "title": "Rounded lane corners replace the inset sidekick divider",
+        "summary": "The desktop shell drops its inset shadow divider in favor of explicit rounded corners that adapt to whether the sidekick is open.",
+        "items": [
+          {
+            "text": "Removed the `inset -1px 0 0 0` box-shadow that the main panel host used as a divider against the sidekick, and instead rounded the outer corners of the sidebar (left) and sidekick lane (right) for a cleaner panel silhouette.",
+            "commit_shas": [
+              "7d609292f8c05ca0090c2bdd5f28a44873ab67e6"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added a `mainPanelHostNoSidekick` modifier, composed via `cn` from @cypher-asi/zui, so the main panel's right edge rounds off only when the sidekick is collapsed — with a DesktopShell test asserting the modifier is absent whenever the sidekick is mounted.",
+            "commit_shas": [
+              "7d609292f8c05ca0090c2bdd5f28a44873ab67e6"
             ],
             "confidence": "high"
           }
@@ -227,10 +423,11 @@
       }
     ],
     "highlights": [
-      "New invite friends button in the bottom taskbar",
-      "One-click copy of your personal invite code",
-      "Referral bonus details surfaced in-app"
+      "New invite friends button and modal in the bottom taskbar",
+      "Desktop lanes now have their own borders with dedicated theme tokens",
+      "Rounded panel corners replace the inset sidekick divider",
+      "Release pipeline auto-reconciles dropped GitHub asset uploads"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 4
   }
 }
