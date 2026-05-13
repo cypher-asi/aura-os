@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-05-13",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.507.1",
+    "title": "Live video previews land in the Aura Video sidekick",
+    "intro": "A small but visible polish day for Aura Video: generated clips in the sidekick panel now show a real frame from the video itself instead of a generic placeholder, making it much easier to tell them apart at a glance.",
+    "entryCount": 1,
+    "highlights": [
+      "Generated videos now show real frame thumbnails in the sidekick",
+      "Graceful Film-icon fallback when a video URL is missing or fails to load"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-05-13T09:47:46.114Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.507.1",
+    "path": "history/2026-05-13.json"
+  },
+  {
     "date": "2026-05-12",
     "channel": "nightly",
     "version": "0.1.0-nightly.506.1",
