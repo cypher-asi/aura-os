@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-12T22:55:40.232Z",
+  "generatedAt": "2026-05-13T01:29:02.861Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.504.1",
+  "version": "0.1.0-nightly.506.1",
   "date": "2026-05-12",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.504.1",
-  "lastIncludedSha": "1d75419c70c7d09be871fa84d0c8077a052abc1e",
-  "previousProcessedSha": "6591e077185e094941d1e52795f70eaf1d7313f2",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.506.1",
+  "lastIncludedSha": "9b555c441021e938c529324d1627227cec82cc72",
+  "previousProcessedSha": "1d75419c70c7d09be871fa84d0c8077a052abc1e",
   "commitShas": [
     "11dcaf400a2ae3832ff5d074551a21ae990dabed",
     "3540be2f4bfcce364c1f7c76f7933be246bc8ed7",
@@ -58,10 +58,23 @@
     "abfd57e8ce2edcfadceea810767592a0d9fa8a94",
     "de299524046634d3ed5435ef8ae6f79c88218687",
     "5d07c04b3a74a74acb1e8dd4d6ffd2191bc02c2a",
-    "1d75419c70c7d09be871fa84d0c8077a052abc1e"
+    "1d75419c70c7d09be871fa84d0c8077a052abc1e",
+    "f9ac24878798df9b8fdae1d5f51dad4d6d576c06",
+    "0699f9297a2556289ea816953ac907778c21ca57",
+    "ec99e5719f0aaca2c2dd383dae56ecf0c920f7a3",
+    "92153243f12d1cb0265237c22fcf08836e359118",
+    "74077543913039eba1a491e03e94bfc578b4973f",
+    "5e7df7d457e160ea868a0b0528884ce1b7d643bc",
+    "f09317ba8800486e991dcc58095158edd3d58c3b",
+    "a03fe799c224e547e3d4446e7d073e78abadedfb",
+    "fad2fd48b832962d5bb97400002df98f797f0591",
+    "f28e2c62a54a0f5621f879b1f2fbc8237392b77c",
+    "21f0a3817394c6ec824469b46ff6ba5e8b8e92f3",
+    "2dd33dd298fee1e40eedc0665a503405146ab1de",
+    "22a6fca4baa4c55d0ddd4370b3030788ce07a47c"
   ],
-  "rawCommitCount": 47,
-  "filteredCommitCount": 47,
+  "rawCommitCount": 64,
+  "filteredCommitCount": 60,
   "rawCommits": [
     {
       "sha": "11dcaf400a2ae3832ff5d074551a21ae990dabed",
@@ -2059,6 +2072,690 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "f9ac24878798df9b8fdae1d5f51dad4d6d576c06",
+      "author": {
+        "name": "real-sma11",
+        "email": "admin@blackbook.market"
+      },
+      "committedAt": "2026-05-10T08:59:41-06:00",
+      "subject": "fix(ide): share main webview WebContext so IDE window inherits auth",
+      "body": "The IDE window was opened with a fresh isolated WebContext, so its\nlocalStorage started empty and the per-window init-script bootstrap that\nseeded `aura-jwt` / `aura-session` / `__AURA_BOOT_AUTH__` was not landing\nreliably on Windows WebView2. The frontend's `getStoredJwt()` then\nreturned null, `authHeaders()` was empty, and every API call (file\nlisting, file read) hit the server's auth guard with \"missing\nauthorization token\" — the file tree showed \"Could not load files\" and\nthe editor body rendered `ApiClientError: missing authorization token`.\n\nSwitch `open_ide_window` to take the parent's `&mut WebContext` and\nbuild via `WebViewBuilder::new_with_web_context`, mirroring how\n`open_secondary_main_window` already shares storage with the primary\nwindow. With localStorage shared, the IDE inherits the live session\ndirectly, no per-window auth bake-in needed, and login/logout in any\nwindow propagates to the others through the same web storage.\n\nCo-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>",
+      "parents": [
+        "4aaeec5249cf3d8783a54577838b254203005b98"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/ui/runtime.rs",
+        "apps/aura-os-ide/src/lib.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 28,
+        "deletions": 12
+      },
+      "committedAtMs": 1778425181000,
+      "cleanSubject": "share main webview WebContext so IDE window inherits auth",
+      "keywords": [
+        "share",
+        "main",
+        "webview",
+        "webcontext",
+        "window",
+        "inherits",
+        "auth"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/src",
+        "apps/aura-os-ide/src"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop",
+        "Other"
+      ]
+    },
+    {
+      "sha": "0699f9297a2556289ea816953ac907778c21ca57",
+      "author": {
+        "name": "real-sma11",
+        "email": "admin@blackbook.market"
+      },
+      "committedAt": "2026-05-10T11:23:39-06:00",
+      "subject": "feat(chat): add @-mention file autocomplete to input bar",
+      "body": "Typing `@` in a project-scoped chat now opens an autocomplete menu\nof the project's files (mirrors the existing `/` slash-command\ntrigger). Selecting a file strips the `@query` token and pushes\nthe file through the existing attachment pipeline, with the S3\nupload running in the background just like a drag/drop attach.\n\nStandalone (project-less) chats leave the menu dormant — the\n`workspacePath` resolved by `useTerminalTarget` gates activation,\nso the trigger is silent when there's no workspace to resolve\nfiles against.\n\nCo-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>",
+      "parents": [
+        "4aaeec5249cf3d8783a54577838b254203005b98"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentChatPanel/AgentChatPanel.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/FileMentionMenu.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/useFileAttachments.ts",
+        "interface/src/apps/chat/components/ChatInputBar/useProjectFiles.ts",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 426,
+        "deletions": 7
+      },
+      "committedAtMs": 1778433819000,
+      "cleanSubject": "add @-mention file autocomplete to input bar",
+      "keywords": [
+        "mention",
+        "file",
+        "autocomplete",
+        "input"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "ec99e5719f0aaca2c2dd383dae56ecf0c920f7a3",
+      "author": {
+        "name": "real-sma11",
+        "email": "admin@blackbook.market"
+      },
+      "committedAt": "2026-05-10T12:06:04-06:00",
+      "subject": "fix(chat): register @-mention attachment synchronously to block premature send",
+      "body": "`addFileFromPath` was async — fetching the file via `api.readFile`\nbefore registering the attachment in state. A user who typed\n`@foo`, hit Enter to pick the file, then hit Enter again to send\nwould race the file read: the second Enter fired `handleSend`\nwhile `attachments` was still empty, the message went out without\nthe file, and the agent only saw the bare prompt.\n\nPush a placeholder `AttachmentItem` (uploading=true, empty data)\nsynchronously BEFORE the API read so the chip appears immediately\nAND `isUploading` flips true — which the input bar already wires\ninto `disabled`, blocking Enter until the upload finishes. After\nthe file content arrives we replace the placeholder in place\n(same id) and kick the existing S3 upload pipeline. Mirrors the\nsynchronous-then-upload contract `addFiles` already provides via\nFileReader for drag/drop + paste flows.\n\nFailed reads drop the placeholder so the user isn't stuck with a\nphantom chip.\n\nCo-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>",
+      "parents": [
+        "0699f9297a2556289ea816953ac907778c21ca57"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatInputBar/useFileAttachments.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 39,
+        "deletions": 14
+      },
+      "committedAtMs": 1778436364000,
+      "cleanSubject": "register @-mention attachment synchronously to block premature send",
+      "keywords": [
+        "register",
+        "mention",
+        "attachment",
+        "synchronously",
+        "block",
+        "premature",
+        "send"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "92153243f12d1cb0265237c22fcf08836e359118",
+      "author": {
+        "name": "real-sma11",
+        "email": "admin@blackbook.market"
+      },
+      "committedAt": "2026-05-10T17:04:12-06:00",
+      "subject": "feat(feedback): show comments in Details and let authors close their own items",
+      "body": "The right sidekick's Details tab previously showed only a Comments: N\ncount; switch that row to an inline, newest-first comment list (with an\nempty hint when none have loaded), and reverse the Comments tab order\nso it matches. Both surfaces share the avatar/author/time/body row.\n\nThe Status row in the Details tab is now editable when the viewer is\nthe submitting author (matched via the new FeedbackAuthor.profileId\nthreaded through dtoToItem/dtoToComment). The author dropdown is\ndeliberately scoped: it shows the item's current status first, then\nNot Started / Done / Deployed (deduped against the current value) so\nthe most common closing transitions are one click away. Non-authors\nstill see the static status tag.\n\nCo-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>",
+      "parents": [
+        "e624d42575b6373a508e106958281ff0c1bf5a9e"
+      ],
+      "files": [
+        "interface/src/apps/feedback/FeedbackCommentsPanel/FeedbackCommentsPanel.test.tsx",
+        "interface/src/apps/feedback/FeedbackCommentsPanel/FeedbackCommentsPanel.tsx",
+        "interface/src/apps/feedback/FeedbackDetailsPanel/FeedbackDetailsPanel.module.css",
+        "interface/src/apps/feedback/FeedbackDetailsPanel/FeedbackDetailsPanel.test.tsx",
+        "interface/src/apps/feedback/FeedbackDetailsPanel/FeedbackDetailsPanel.tsx",
+        "interface/src/apps/feedback/types.ts",
+        "interface/src/stores/feedback-store.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 427,
+        "deletions": 20
+      },
+      "committedAtMs": 1778454252000,
+      "cleanSubject": "show comments in Details and let authors close their own items",
+      "keywords": [
+        "show",
+        "comments",
+        "details",
+        "authors",
+        "close",
+        "their",
+        "items"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "74077543913039eba1a491e03e94bfc578b4973f",
+      "author": {
+        "name": "real-sma11",
+        "email": "admin@blackbook.market"
+      },
+      "committedAt": "2026-05-10T17:36:26-06:00",
+      "subject": "feat(chat): persist unsent prompt drafts across session/route switches",
+      "body": "Lift the chat input's draft text out of `useChatPanelState`'s local\n`useState` into a new per-`streamKey` slot in `chat-ui-store.drafts`.\nSwitching sessions or navigating away and back now restores the\ntyped-but-unsent text for that chat. Attachments and slash-command\nchips still get wiped on session switch — they carry per-session\nupload / chip state that doesn't make sense outside the session\nthey were created in.\n\nThe `setDraft(streamKey, \"\")` action deletes the entry from the map,\nso the store contains exactly \"chats with currently-typed-but-unsent\ntext\" — handleSend's existing `setInput(\"\")` clears entries\nautomatically, and backspacing to empty drops them too. State is\nin-memory only; an app restart still starts every chat blank.\n\nCo-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>",
+      "parents": [
+        "e624d42575b6373a508e106958281ff0c1bf5a9e"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatPanel/useChatPanelState.test.tsx",
+        "interface/src/apps/chat/components/ChatPanel/useChatPanelState.ts",
+        "interface/src/stores/chat-ui-store.test.ts",
+        "interface/src/stores/chat-ui-store.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 120,
+        "deletions": 12
+      },
+      "committedAtMs": 1778456186000,
+      "cleanSubject": "persist unsent prompt drafts across session/route switches",
+      "keywords": [
+        "persist",
+        "unsent",
+        "prompt",
+        "drafts",
+        "across",
+        "session",
+        "route",
+        "switches"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "5e7df7d457e160ea868a0b0528884ce1b7d643bc",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T15:53:24-07:00",
+      "subject": "style(chat-input): match top-right \"+\" to bottom-left attach \"+\"",
+      "body": "The mode-bar new-chat button (`.modeNewChatButton`, top-right of the\nLLM input) now uses the same shared icon-button hover treatment as the\nattach button (`.attachButton`, bottom-left of the LLM input) in\nInputBarShell:\n\n- 24x24 hit target with the same inner-plate ::before hover plate\n  driven by --icon-hover-* tokens (was a slab fill of\n  --color-overlay-medium across the whole button).\n- Same centering safeguards: line-height: 0 and > svg display: block.\n- Plus glyph bumped from `size={14} strokeWidth={2}` to\n  `size={16} strokeWidth={1}` so the two `+` affordances on the LLM\n  input render visually identical.\n\nUpdated icon-system.md to mark `.modeNewChatButton` as already adopted\n(only `.newSessionButton` remains in the consolidation backlog for\nChatInputBar).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "1d75419c70c7d09be871fa84d0c8077a052abc1e"
+      ],
+      "files": [
+        "interface/docs/icon-system.md",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 37,
+        "deletions": 6
+      },
+      "committedAtMs": 1778626404000,
+      "cleanSubject": "style(chat-input): match top-right \"+\" to bottom-left attach \"+\"",
+      "keywords": [
+        "style",
+        "chat",
+        "input",
+        "match",
+        "right",
+        "bottom",
+        "left",
+        "attach"
+      ],
+      "fileGroups": [
+        "interface/docs/icon-system.md",
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "f09317ba8800486e991dcc58095158edd3d58c3b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T17:29:24-07:00",
+      "subject": "style(chat-input): vertically center top-right \"+\" on mode-bar row",
+      "body": "`.modeNewChatButton` was top-aligned inside the mode-bar row because\nthe row uses `align-items: stretch` and the button now has an explicit\n`height: 24px` (added to match the attach button); per CSS, items with\nan explicit cross-size fall back to `flex-start` instead of stretching.\n\nAdds `align-self: center` so the button is vertically centered on the\nmode-bar row alongside the Code/Plan/Image/3D pills.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "5e7df7d457e160ea868a0b0528884ce1b7d643bc"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 5,
+        "deletions": 0
+      },
+      "committedAtMs": 1778632164000,
+      "cleanSubject": "style(chat-input): vertically center top-right \"+\" on mode-bar row",
+      "keywords": [
+        "style",
+        "chat",
+        "input",
+        "vertically",
+        "center",
+        "right",
+        "mode"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "a03fe799c224e547e3d4446e7d073e78abadedfb",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T17:31:52-07:00",
+      "subject": "style(chat): add bottom margin to image-only user messages",
+      "body": "When a user message is image-only (no text bubble), the transcript-level\ngap is too tight against the assistant's reply, especially when the reply\nalso contains image components. Tag the .message shell with a new\nmessageUserImageOnly class and give it `margin-bottom: var(--space-2)` so\nthe user image and the assistant's first content read as distinct rows.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "f09317ba8800486e991dcc58095158edd3d58c3b"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/MessageBubble/MessageBubble.module.css",
+        "interface/src/apps/chat/components/MessageBubble/MessageBubble.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 13,
+        "deletions": 1
+      },
+      "committedAtMs": 1778632312000,
+      "cleanSubject": "style(chat): add bottom margin to image-only user messages",
+      "keywords": [
+        "style",
+        "chat",
+        "bottom",
+        "margin",
+        "image",
+        "only",
+        "user",
+        "messages"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "fad2fd48b832962d5bb97400002df98f797f0591",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T17:38:38-07:00",
+      "subject": "style(chat): bump desktop transcript gap from 2px to 8px",
+      "body": "The 2px inter-message gap on desktop made user-to-assistant transitions\nfeel cramped, especially when the assistant's reply began with an image\ncomponent (the user text bubble visually butted up against the cat image\npreview from generate_image). Bump desktop to 8px so transcript rows read\nas distinct messages rather than a single stack. Mobile is unchanged at\n6px since its larger bubbles + 12px paddings already separate rows.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "a03fe799c224e547e3d4446e7d073e78abadedfb"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatMessageList/ChatMessageList.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1778632718000,
+      "cleanSubject": "style(chat): bump desktop transcript gap from 2px to 8px",
+      "keywords": [
+        "style",
+        "chat",
+        "bump",
+        "desktop",
+        "transcript",
+        "from"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f28e2c62a54a0f5621f879b1f2fbc8237392b77c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T17:39:29-07:00",
+      "subject": "fix(agents-chat): clear `?project=` / `?instance=` alongside `?session=` on reset",
+      "body": "The standalone default-session redirect at `/agents/:agentId` writes\nthe full URL triple (`?project=`, `?instance=`, `?session=`) so a cold\nopen snaps to the most-recent session. The \"+\" and RotateCcw paths\nonly cleared `?session=`, leaving the `?project=` / `?instance=`\nmirrors behind — which the conversation-target resolver (step 3) read\nas a deep-link back into `AgentChatPanel` for the legacy binding (e.g.\n\"zero-sdk-10\") even after the user explicitly asked for a fresh\ncanvas. Result: the project picker stayed pinned to the legacy\nproject name instead of flipping to \"Home\", and the LLM input shipped\nthat legacy id as `body.project_id`, undoing the previous decoupling\nrefactor for any agent whose default-session redirect had ever fired.\n\nBoth writers (`useFreshCanvas.dropSessionParam` for the project /\nstep-4 resolution path, and `useStandaloneAgentChat`'s\n`handleNewSession` / `handleNewChat` for the standalone path) now drop\nall three keys together. In the projects route the path carries the\nbinding so the query mirrors are redundant — dropping them there is a\nsafe no-op.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "fad2fd48b832962d5bb97400002df98f797f0591"
+      ],
+      "files": [
+        "interface/src/apps/agents/hooks/use-fresh-canvas.ts",
+        "interface/src/hooks/use-standalone-agent-chat.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 26,
+        "deletions": 0
+      },
+      "committedAtMs": 1778632769000,
+      "cleanSubject": "clear `?project=` / `?instance=` alongside `?session=` on reset",
+      "keywords": [
+        "clear",
+        "project",
+        "instance",
+        "alongside",
+        "session",
+        "reset"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "21f0a3817394c6ec824469b46ff6ba5e8b8e92f3",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T17:42:26-07:00",
+      "subject": "fix(chat-input): stop mode-selector pill from sliding on app switch",
+      "body": "Suppress the SlidingPills indicator transition for non-user-driven\napplies (initial mount + ResizeObserver callbacks). The CSS rule\ndefaults `transform: translate(0, 0)` and declares 140ms transitions\non transform/width/height, so remounting ModeSelector when the user\nswitched apps slid the indicator from the origin into the active\nsegment, and post-mount layout settling (centered -> bottom reveal,\nscrollbar, font swap) re-triggered slides. Only animate when the\ncontrolled `value` actually changes between renders; otherwise write\n`transition: none`, set geometry, flush via `offsetWidth`, then\nrestore the cascaded transition for future user clicks.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "f28e2c62a54a0f5621f879b1f2fbc8237392b77c"
+      ],
+      "files": [
+        "interface/src/components/SlidingPills/SlidingPills.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 41,
+        "deletions": 3
+      },
+      "committedAtMs": 1778632946000,
+      "cleanSubject": "stop mode-selector pill from sliding on app switch",
+      "keywords": [
+        "stop",
+        "mode",
+        "selector",
+        "pill",
+        "from",
+        "sliding",
+        "switch"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "2dd33dd298fee1e40eedc0665a503405146ab1de",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T17:46:21-07:00",
+      "subject": "fix(chat): clip generated-image wrappers so the rounded border isn't notched at the corners",
+      "body": "`.generatedImageLink` and `.mediaImageButton` paint a 1px rounded frame around\nLLM-generated <img>s in assistant turns, but neither clipped its child. The\ninner image's square corners poked past the wrapper's rounded arcs and\nvisually punched out the border at each corner. Adding `overflow: hidden`\nkeeps the rounded frame intact regardless of the rendered image's\naspect-ratio.\n\nAlso gives `.mediaImage` a matching `border-radius: 4px` (and `display: block`)\nso its own 1px border isn't a sharp-cornered rectangle inside an otherwise\nrounded layout.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "21f0a3817394c6ec824469b46ff6ba5e8b8e92f3"
+      ],
+      "files": [
+        "interface/src/components/Block/renderers/renderers.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 11,
+        "deletions": 0
+      },
+      "committedAtMs": 1778633181000,
+      "cleanSubject": "clip generated-image wrappers so the rounded border isn't notched at the corners",
+      "keywords": [
+        "clip",
+        "generated",
+        "image",
+        "wrappers",
+        "rounded",
+        "border",
+        "notched",
+        "corners"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "22a6fca4baa4c55d0ddd4370b3030788ce07a47c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T18:09:52-07:00",
+      "subject": "fix(chat-sessions): restore + new-chat by keeping panel mounted on agents-shell",
+      "body": "Commit f28e2c62a started clearing `?project=` / `?instance=` alongside\n`?session=` from `useFreshCanvas.dropSessionParam` and the standalone\n`handleNewSession` / `handleNewChat`. On the agents-shell route\n(`/agents/:agentId`) that flipped `useConversationTarget` from `ready`\nto `empty`, swapping `AgentChatPanel` -> `StandaloneAgentChatPanel`\nmid-press. Two regressions followed:\n\n- The just-armed optimistic \"New chat\" row from\n  `useOptimisticSessionRow.arm()` was yanked by the hook's unmount\n  cleanup, so the sidekick never showed the new entry.\n- `StandaloneAgentChatPanel` mounted with `freshCanvasPending=false`\n  and re-fetched `api.agents.listEvents`, so the transcript visibly\n  re-populated with the agent's full timeline instead of clearing.\n\nDrop only `?session=` from all three writers so the agents-shell\npanel stays mounted on the same `(project, instance)` lane with\n`sessionId=null`. The panel's existing `freshCanvasPending` plumbing\n(history key flips to `fresh:...:nonce`, `fetchFn` short-circuits to\n`EMPTY_SESSION_EVENTS_FETCH`) takes over and clears the transcript;\n`useOptimisticSessionRow.arm()` keeps the row visible.\n\nDefensive change in `useConversationTarget` step 3: when\n`userClearedSession` is true and the query mirrors are missing (stale\ntab, deep-link share, external navigator), fall through to the agent's\nmost-recent binding instead of returning `kind: \"empty\"`. This keeps\n`AgentChatPanel` mounted in those edge cases too, so the optimistic\nrow still survives if the user takes the \"+\" path from there.\n\nTrade-off: the picker label / wire `body.project_id` for legacy agents\non a fresh canvas now show the legacy project again, exactly as they\ndid before f28e2c62a. The cleanup belongs in a dedicated agents-shell-aware\npicker/wire override on `AgentChatPanel`, not in a URL clear that breaks\nthe row-survival contract.\n\nTests:\n- `AgentChatRoute.test.tsx` regression for the realistic post-`+`\n  URL state (`?session=` removed, mirrors retained) — expects\n  `agent-chat-panel` (not `standalone-agent-chat-panel`) with\n  `sessionId=null`.\n- Defensive coverage for the no-query-mirrors case where\n  `mostRecentStandalone` keeps the panel mounted on its binding.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "2dd33dd298fee1e40eedc0665a503405146ab1de"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentChatRoute/AgentChatRoute.test.tsx",
+        "interface/src/apps/agents/hooks/use-conversation-target.ts",
+        "interface/src/apps/agents/hooks/use-fresh-canvas.ts",
+        "interface/src/hooks/use-standalone-agent-chat.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 110,
+        "deletions": 27
+      },
+      "committedAtMs": 1778634592000,
+      "cleanSubject": "restore + new-chat by keeping panel mounted on agents-shell",
+      "keywords": [
+        "restore",
+        "chat",
+        "keeping",
+        "panel",
+        "mounted",
+        "agents",
+        "shell"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "66121eb344877a9ffd4c02364b70f6d0111f5f84",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T18:14:00-07:00",
+      "subject": "Merge pull request #8 from real-sma11/fix/ide-shared-web-context",
+      "body": "fix(ide): share main webview WebContext so IDE inherits auth",
+      "parents": [
+        "22a6fca4baa4c55d0ddd4370b3030788ce07a47c",
+        "f9ac24878798df9b8fdae1d5f51dad4d6d576c06"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 28,
+        "deletions": 12
+      },
+      "committedAtMs": 1778634840000,
+      "cleanSubject": "Merge pull request #8 from real-sma11/fix/ide-shared-web-context",
+      "keywords": [
+        "merge",
+        "pull",
+        "request",
+        "from",
+        "real",
+        "sma11",
+        "shared",
+        "context"
+      ],
+      "fileGroups": [],
+      "primaryArea": "Other",
+      "areas": []
+    },
+    {
+      "sha": "295a753d380e6cef4abb1c883963bab3210b1113",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T18:14:34-07:00",
+      "subject": "Merge pull request #11 from real-sma11/feat/chat-draft-persistence",
+      "body": "feat(chat): persist unsent prompt drafts across session/route switches\n\nCo-authored-by: Cursor <cursoragent@cursor.com>\n\n# Conflicts:\n#\tinterface/src/apps/chat/components/ChatPanel/useChatPanelState.ts",
+      "parents": [
+        "66121eb344877a9ffd4c02364b70f6d0111f5f84",
+        "74077543913039eba1a491e03e94bfc578b4973f"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 120,
+        "deletions": 12
+      },
+      "committedAtMs": 1778634874000,
+      "cleanSubject": "Merge pull request #11 from real-sma11/feat/chat-draft-persistence",
+      "keywords": [
+        "merge",
+        "pull",
+        "request",
+        "from",
+        "real",
+        "sma11",
+        "feat",
+        "chat",
+        "draft",
+        "persistence"
+      ],
+      "fileGroups": [],
+      "primaryArea": "Other",
+      "areas": []
+    },
+    {
+      "sha": "06d813b294ad3c73ad616325f4f070f87efc7f6c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T18:14:42-07:00",
+      "subject": "Merge pull request #10 from real-sma11/feat/feedback-details-comments-and-status",
+      "body": "feat(feedback): show comments in Details and let authors close their own feedback items",
+      "parents": [
+        "295a753d380e6cef4abb1c883963bab3210b1113",
+        "92153243f12d1cb0265237c22fcf08836e359118"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 427,
+        "deletions": 20
+      },
+      "committedAtMs": 1778634882000,
+      "cleanSubject": "Merge pull request #10 from real-sma11/feat/feedback-details-comments-and-status",
+      "keywords": [
+        "merge",
+        "pull",
+        "request",
+        "from",
+        "real",
+        "sma11",
+        "feat",
+        "feedback",
+        "details",
+        "comments",
+        "status"
+      ],
+      "fileGroups": [],
+      "primaryArea": "Other",
+      "areas": []
+    },
+    {
+      "sha": "9b555c441021e938c529324d1627227cec82cc72",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-12T18:15:15-07:00",
+      "subject": "Merge pull request #9 from real-sma11/feat/chat-file-mentions",
+      "body": "feat(chat): add @-mention file autocomplete to chat input\n\nCo-authored-by: Cursor <cursoragent@cursor.com>\n\n# Conflicts:\n#\tinterface/src/apps/agents/components/AgentChatPanel/AgentChatPanel.tsx",
+      "parents": [
+        "06d813b294ad3c73ad616325f4f070f87efc7f6c",
+        "ec99e5719f0aaca2c2dd383dae56ecf0c920f7a3"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 451,
+        "deletions": 7
+      },
+      "committedAtMs": 1778634915000,
+      "cleanSubject": "Merge pull request #9 from real-sma11/feat/chat-file-mentions",
+      "keywords": [
+        "merge",
+        "pull",
+        "request",
+        "from",
+        "real",
+        "sma11",
+        "feat",
+        "chat",
+        "file",
+        "mentions"
+      ],
+      "fileGroups": [],
+      "primaryArea": "Other",
+      "areas": []
     }
   ],
   "batchCount": 6,
@@ -2070,36 +2767,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11844769
+          "sizeBytes": 11847221
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.504.1",
+      "version": "0.1.0-nightly.506.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.504.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.506.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 36893460
+          "sizeBytes": 36895072
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.504.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.506.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.504.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.506.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 105667064
+          "sizeBytes": 105658872
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.504.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.506.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -2109,29 +2806,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.504.1",
+      "version": "0.1.0-nightly.506.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.504.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.506.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 34010725
+          "sizeBytes": 34017266
         },
         {
-          "name": "AURA_0.1.0-nightly.504.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.506.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.504.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.506.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33152032
+          "sizeBytes": 33151339
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.504.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.506.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -2141,29 +2838,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.504.1",
+      "version": "0.1.0-nightly.506.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.504.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.506.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 35675922
+          "sizeBytes": 35683444
         },
         {
-          "name": "AURA_0.1.0-nightly.504.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.506.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.504.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.506.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 34840006
+          "sizeBytes": 34847922
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.504.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.506.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -2173,17 +2870,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.504.1",
+      "version": "0.1.0-nightly.506.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.504.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.506.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24976539
+          "sizeBytes": 24977475
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.504.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.506.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -2192,28 +2889,51 @@
     }
   ],
   "rendered": {
-    "title": "AURA Video debuts, Windows startup self-heals, and the desktop shell gets a chrome refresh",
-    "intro": "A dense nightly: a brand-new AURA Video generation app lands end-to-end, the Windows desktop client learns to recover from corrupt settings instead of vanishing, and the desktop shell, taskbar, and chat input bar get a coordinated polish pass. Release infrastructure also got tougher against Apple notary blips and dropped GitHub asset uploads.",
+    "title": "AURA Video launches, Windows startup self-heal, and chat input overhaul",
+    "intro": "A heavy day across the stack: a brand-new AURA Video app lands end-to-end, the Windows desktop client gains a self-healing settings store and a real \"could not start\" dialog, and the chat input bar picks up @-mention file context, persistent drafts, and a long sweep of pixel-level polish. Release pipelines also got tougher against flaky GitHub uploads and Apple notary outages.",
     "entries": [
       {
         "batch_id": "entry-1",
-        "time_label": "2:24 AM",
-        "started_at": "2026-05-12T09:24:24.000Z",
+        "time_label": "7:59 AM",
+        "started_at": "2026-05-10T14:59:41.000Z",
         "ended_at": "2026-05-12T16:17:55.000Z",
-        "title": "Invite friends modal and per-panel border tokens",
-        "summary": "An invite-a-friend entry point lands in the taskbar and the desktop lanes gain their own borderable surfaces.",
+        "title": "@-mention file context, persistent drafts, and feedback authoring",
+        "summary": "Chat picks up file autocomplete and draft persistence, while the feedback sidekick gains inline comments and author-controlled status changes.",
         "items": [
           {
-            "text": "Added a pulsing Invite button to the bottom-left taskbar that opens a new modal showing the user's invite code (click to copy) and referral bonus details.",
+            "text": "Typing @ in a project-scoped chat now opens a file autocomplete that attaches the picked file through the same S3 upload pipeline as drag-and-drop, with a synchronous placeholder chip so a fast double-Enter no longer races the file read and sends the message empty.",
             "commit_shas": [
-              "11dcaf400a2ae3832ff5d074551a21ae990dabed"
+              "0699f9297a2556289ea816953ac907778c21ca57",
+              "ec99e5719f0aaca2c2dd383dae56ecf0c920f7a3"
             ],
             "confidence": "high"
           },
           {
-            "text": "Wrapped the sidebar, main panel, and sidekick lanes in a 1px border so they read as discrete surfaces, and introduced separate `--color-border-main-panel` and `--color-border-chrome` tokens exposed in Settings → Appearance → Custom colors for independent tinting.",
+            "text": "Unsent chat prompts now persist per session in the chat UI store, so switching sessions or navigating away and back restores the text you were typing (attachments and slash chips still reset with the session).",
             "commit_shas": [
+              "74077543913039eba1a491e03e94bfc578b4973f"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The feedback Details tab now shows an inline newest-first comment list, and submitting authors can change Status directly from a scoped dropdown (current → Not Started / Done / Deployed) to close their own items in one click.",
+            "commit_shas": [
+              "92153243f12d1cb0265237c22fcf08836e359118"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added an Invite Friends modal triggered from a new pulsing taskbar button, and introduced separate border tokens so users can tint the desktop lane borders independently from the topbar and taskbar chrome in Settings → Appearance.",
+            "commit_shas": [
+              "11dcaf400a2ae3832ff5d074551a21ae990dabed",
               "3540be2f4bfcce364c1f7c76f7933be246bc8ed7"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Fixed a Windows-only IDE window auth bug by sharing the main webview's WebContext, so the IDE inherits the live session instead of rendering 'missing authorization token' for every file API call.",
+            "commit_shas": [
+              "f9ac24878798df9b8fdae1d5f51dad4d6d576c06"
             ],
             "confidence": "high"
           }
@@ -2224,11 +2944,11 @@
         "time_label": "9:52 AM",
         "started_at": "2026-05-12T16:52:54.000Z",
         "ended_at": "2026-05-12T16:52:54.000Z",
-        "title": "Release pipeline reconciles dropped GitHub asset uploads",
-        "summary": "A new retry-and-verify step makes transient upload failures recoverable instead of fatal across every release channel.",
+        "title": "Self-healing release uploads via reconcile-and-retry",
+        "summary": "Release jobs no longer fail outright when GitHub drops a single asset upload mid-flight.",
         "items": [
           {
-            "text": "Added `upload-release-assets-with-retry.sh`, wired in after every `softprops/action-gh-release` step on nightly, stable, and mobile-nightly workflows. It diffs local artifacts against the published release and re-uploads only the missing or wrong-sized files via `gh release upload --clobber`, so a single dropped stream from GitHub's upload API no longer reds a 40-minute job.",
+            "text": "Added a reconcile script that diffs local artifacts against the published release and re-uploads only missing or wrong-sized assets with retries on transient EPIPE / ECONNRESET / 'other side closed' errors. Wired into every release flow (immutable nightly, nightly alias, stable, mobile-nightly) so a single dropped softprops upload no longer reds an entire 40-minute pipeline.",
             "commit_shas": [
               "d08885c9cf89b206970b78b8d05f0fe312717a82"
             ],
@@ -2241,25 +2961,25 @@
         "time_label": "10:41 AM",
         "started_at": "2026-05-12T17:41:41.000Z",
         "ended_at": "2026-05-12T18:05:07.000Z",
-        "title": "Rounded lanes, unified sidekick width, and onboarding-only prompt chips",
-        "summary": "Three focused shell changes simplify the desktop layout and trim noise from the chat empty state.",
+        "title": "Unified sidekick width and cleaner desktop lane shaping",
+        "summary": "The desktop shell simplifies sidekick sizing and tightens the visual treatment of its main lanes.",
         "items": [
           {
-            "text": "Replaced the inset divider between the main panel and the sidekick with explicit rounded corners on the sidebar, sidekick lane, and main panel host, with the rounding conditional on sidekick visibility.",
-            "commit_shas": [
-              "7d609292f8c05ca0090c2bdd5f28a44873ab67e6"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Unified the sidekick lane to a single shared width across every app, persisted under one `aura-sidekick-width` key and migrated from the legacy shared / projects / per-app entries so existing users keep their preferred size.",
+            "text": "The sidekick lane now uses a single shared width across every app instead of per-app persistence and on-switch retargeting, with a one-time migration from the legacy keys so existing users keep their preferred size.",
             "commit_shas": [
               "efe1f31eda21248d3e1c7179a0797c23282d7da1"
             ],
             "confidence": "high"
           },
           {
-            "text": "Restricted the empty-thread prompt suggestion chips to onboarding only — they now disappear permanently the moment a user sends their first message.",
+            "text": "Replaced the inset divider against the sidekick with explicit rounded corners on the sidebar, main panel host, and sidekick lane, with the main panel only rounding its right edge when the sidekick is collapsed.",
+            "commit_shas": [
+              "7d609292f8c05ca0090c2bdd5f28a44873ab67e6"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Empty-chat prompt suggestions now appear only during onboarding and disappear the moment a user sends their first-ever message.",
             "commit_shas": [
               "d08ec6b4b21b6a25eac96beb36d70f325a8af309"
             ],
@@ -2272,18 +2992,11 @@
         "time_label": "11:26 AM",
         "started_at": "2026-05-12T18:26:27.000Z",
         "ended_at": "2026-05-12T21:48:17.000Z",
-        "title": "AURA Video app, silent-launch Windows fix, and a taskbar refresh",
-        "summary": "The day's biggest batch ships a new video generation app, rescues Windows users hit by a corrupt settings file, restores agent memory, and cycles the Earn Credits / theme toggle / Invite button placement across the chrome.",
+        "title": "AURA Video app and a no-more-silent-exit Windows fix",
+        "summary": "A new end-to-end video generation app lands alongside a major Windows reliability fix and a wave of taskbar and sidebar polish.",
         "items": [
           {
-            "text": "Diagnosed and fixed the silent-launch failure on upgraded Windows installs: the settings store now renames a corrupt `settings.json` aside and continues with an empty store, persists writes through `sync_all` to prevent torn renames after a crash, propagates server-thread failures instead of `.expect`-panicking, and shows a native 'AURA could not start' MessageBox pointing at the crash log and recovery file.",
-            "commit_shas": [
-              "6591e077185e094941d1e52795f70eaf1d7313f2"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Introduced AURA Video as a full standalone app: a video generation proxy at `/api/generate/video/stream`, a Zustand store with artifact persistence, three Veo models (Fast, Standard, Lite), and a complete shell with main panel, left nav project tree, sidekick thumbnail gallery, and sidekick taskbar tab.",
+            "text": "Shipped AURA Video as a standalone app: Veo Fast/Standard/Lite models, a /api/generate/video/stream proxy reusing the harness pipeline, a Zustand-backed store, prompt input with model picker and progress UI, a left-nav project tree, and a sidekick gallery with thumbnail grid and context-menu delete.",
             "commit_shas": [
               "b56deec5978bd5dd93fc20956c14d2beeae0da32",
               "d74058759543e729e29978b8b66a59f10a85d775",
@@ -2293,40 +3006,43 @@
             "confidence": "high"
           },
           {
-            "text": "Restored agent long-term memory reads by reverting the partition-key routing back to the bare agent id the harness actually expects, with strongly-typed `Path<AgentId>` extractors so malformed callers fail at the proxy edge.",
+            "text": "Fixed Windows installs that launched silently after a torn settings.json write: the store now quarantines corrupt files and returns an empty CF, persist now fsyncs before rename so atomic-rename actually holds across crashes, and a fatal startup failure now pops a native 'AURA could not start' dialog pointing at the crash log instead of vanishing into the windowed subsystem.",
+            "commit_shas": [
+              "6591e077185e094941d1e52795f70eaf1d7313f2"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Restored agent memory loading by reverting reads to the bare template id the harness keys on, with strongly-typed extractors that reject malformed ids at the proxy edge instead of forwarding 400s.",
             "commit_shas": [
               "a7c70aa721947bef3e2fe5f759864172dd39b8c4"
             ],
             "confidence": "high"
           },
           {
-            "text": "Iterated heavily on chrome placement: restyled the Earn Credits button as an accent pill, moved it to the titlebar, reverted it back to the taskbar, floated it at the bottom of the left sidebar, and finally landed it as a compact 'EARN' pill in the titlebar next to the sidekick toggle; the theme toggle moved from the titlebar into the bottom taskbar, and the right cluster now collapses to a profile-only state by default.",
+            "text": "Reworked the bottom taskbar: collapsed the right cluster to a profile-only default behind a chevron, moved the day/night theme toggle into the taskbar pills next to Help, and iterated the Earn Credits / Invite CTAs through several placements before landing the EARN pill in the titlebar action row.",
             "commit_shas": [
               "df125f6d73f6470a0073b456d430a1bf85536b21",
               "a21417842c290da9b168598a1c0d134e8e61454f",
               "3c50616ca28a31ebc22618991efc190ae977ddb8",
+              "677c33fdb9d18c6ecdd97141b4e793132bffbd53",
               "e0f57912147691c86e24b2ddad8b1f990f38307d",
               "aa45bee5c252cde17abb501c72d5fb9fb5e2b85f",
               "0338e1d64dc997115d29146307c34ec4fdd4f32d",
-              "c44941d6138526516e2ab9536c723e589158b402",
-              "608603c4d4085af69b902324e7a623173c35d9cd"
+              "c44941d6138526516e2ab9536c723e589158b402"
             ],
             "confidence": "high"
           },
           {
-            "text": "Tightened sidebar and selector visuals: inset-pill row highlights with a unified selected color, a chrome-pill PanelSearch with a softer 30%-of-chrome border, fully-tinted accent fills for the active ModeSelector pill (with contrast-aware label color), and equal-width mode segments to eliminate sub-pixel border jitter during the slide animation.",
+            "text": "Polished the mode selector and sidebar highlights: equal-width segments stop the active pill's border from jittering during slides, the selected segment now fills with accent + contrast text, the redundant MODE label is gone, and sidebar/sidekick row highlights share a single inset pill style.",
             "commit_shas": [
+              "e20c9a1db98e5bafed5736c7271080aa941c5467",
+              "6d00de8551211d10e692d0a9c8e0bab56a318423",
+              "c039c02ce4b4b347e109f1699d55640fa69a3527",
               "3ff67336d58f70c53e004184d12740647a653dfd",
               "e064f2c7b45c6c4696327836a45ca1881f8879ad",
               "f6646feda1255eb73852fee1419de839721b0241",
-              "e34befdb7e024892d70615c8c8e721b54d1fb035",
-              "6d00de8551211d10e692d0a9c8e0bab56a318423",
-              "c039c02ce4b4b347e109f1699d55640fa69a3527",
-              "e20c9a1db98e5bafed5736c7271080aa941c5467",
-              "815715f64e70b3f61daa8bc81fdd3b019b99a77b",
-              "677c33fdb9d18c6ecdd97141b4e793132bffbd53",
-              "7164b3f6fe6991f9f34f87517724bc89d6649fda",
-              "346686244f7a9a6d236621449a8941f7c4eec8c8"
+              "e34befdb7e024892d70615c8c8e721b54d1fb035"
             ],
             "confidence": "high"
           }
@@ -2337,11 +3053,11 @@
         "time_label": "2:50 PM",
         "started_at": "2026-05-12T21:50:11.000Z",
         "ended_at": "2026-05-12T21:50:11.000Z",
-        "title": "macOS packaging retries through Apple notary outages",
-        "summary": "The macOS release job now treats transient Apple notary errors as flakes instead of build failures.",
+        "title": "Mac packaging retries on Apple notary outages",
+        "summary": "Transient Apple notary failures no longer red the macOS packaging job.",
         "items": [
           {
-            "text": "Extended the `should_retry_packaging` matcher to recognize `xcrun notarytool` HTTP 429 and 5xx responses in packager.log, so brief Apple notary outages no longer abort the entire macOS packaging job alongside existing hdiutil 'Resource busy' retries.",
+            "text": "Extended the desktop packaging retry matcher so xcrun notarytool HTTP 429 and 5xx responses (in addition to existing hdiutil 'Resource busy' flakes) trigger a retry instead of aborting the macOS release.",
             "commit_shas": [
               "d9aaba806fc2c22ceed8809aa0ea896dc6ff2b1d"
             ],
@@ -2353,12 +3069,12 @@
         "batch_id": "entry-6",
         "time_label": "2:59 PM",
         "started_at": "2026-05-12T21:59:39.000Z",
-        "ended_at": "2026-05-12T22:38:06.000Z",
-        "title": "Standalone-agent chat pins to Home and the input bar gets icon-hover plates",
-        "summary": "Standalone agent chats now consistently target a 'Home' project on the wire while keeping the picker simple, and shared icon buttons adopt a tighter rounded hover plate.",
+        "ended_at": "2026-05-13T01:09:52.000Z",
+        "title": "Standalone agents chat pinned to Home, plus input bar refinement",
+        "summary": "Standalone agent chats get a consistent Home picker and a decoupled wire project id, while the chat input picks up a shared icon-button hover system and many alignment fixes.",
         "items": [
           {
-            "text": "Standalone Agents-app chats now always show a single non-interactive 'Home' label in the project picker — auto-created Home bindings are used directly, legacy agents get a synthesized 'Home' entry pointing at their existing binding, and a new `llmProjectId` prop decouples the wire `project_id` from the picker so fresh canvases ship Home while existing sessions ship their session-of-record's original project.",
+            "text": "Standalone Agents-app chats now always render the project picker as a single non-interactive 'Home' entry — auto-bound for new agents and synthesized for legacy bindings — and a new llmProjectId prop decouples the wire body.project_id from the picker label so fresh canvases ship Home, existing sessions ship their session-of-record's project, and legacy agents trigger a server-side lazy heal plus local refresh.",
             "commit_shas": [
               "501818284b222a954394a7d6a319404ea592851f",
               "758c18fba9a19d7af349a029667df17d6407ddb4",
@@ -2367,30 +3083,44 @@
             "confidence": "high"
           },
           {
-            "text": "Introduced a shared inner-plate hover style for icon buttons driven by new `--icon-hover-inset`, `--icon-hover-radius`, and `--icon-hover-bg` tokens, applied across taskbar icons, the browser address bar, folder picker, onboarding checklist, and the chat input's `+` / send buttons; also added `interface/docs/icon-system.md` as the source-of-truth for icon usage.",
+            "text": "Reset paths now only drop ?session= (not the whole URL triple), keeping AgentChatPanel mounted on the agents-shell route so the optimistic 'New chat' row survives in the sidekick and the transcript clears via freshCanvasPending instead of re-fetching the full timeline.",
+            "commit_shas": [
+              "f28e2c62a54a0f5621f879b1f2fbc8237392b77c",
+              "22a6fca4baa4c55d0ddd4370b3030788ce07a47c"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Introduced a shared inner-plate icon hover treatment driven by --icon-hover-inset / --icon-hover-radius / --icon-hover-bg tokens, applied across the taskbar, app nav rail, and the input bar's attach, send, and new-chat buttons, with centering safeguards and a new icon-system.md as the source of truth.",
             "commit_shas": [
               "ed75519b115710fa39d22d8cef949e06b91677ed",
               "60fdc4af7f9158b80f15fe162353968835eb394b",
-              "5d07c04b3a74a74acb1e8dd4d6ffd2191bc02c2a"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Tuned taskbar icon centering and sizing — locking `line-height: 0` and `svg { display: block }` to fix sub-pixel off-center hover halos, then settling the lucide glyph at 16px inside a 30×30 hit target after a brief 19→15→16 iteration.",
-            "commit_shas": [
               "a102b478ce6583e067071e6c09de6bbf140f620e",
               "abfd57e8ce2edcfadceea810767592a0d9fa8a94",
-              "de299524046634d3ed5435ef8ae6f79c88218687"
+              "de299524046634d3ed5435ef8ae6f79c88218687",
+              "5d07c04b3a74a74acb1e8dd4d6ffd2191bc02c2a",
+              "5e7df7d457e160ea868a0b0528884ce1b7d643bc",
+              "f09317ba8800486e991dcc58095158edd3d58c3b"
             ],
             "confidence": "high"
           },
           {
-            "text": "Polished the chat input bar: dropped the slash hint button in favor of a `/ for commands, @ for context` Code-mode placeholder, aligned the mode pill with the attach button, extended the mode-bar divider to the right edge, and inset the send/new-chat buttons by 2px to match attach for symmetric corners. Sidebar, project tree, sidekick, and sessions list rows also gained a 1px gap so adjacent highlights no longer touch.",
+            "text": "Stopped the mode-selector pill from sliding on every app switch or post-mount layout shift by suppressing SlidingPills' transition for non-user-driven updates and only animating when the controlled value actually changes.",
             "commit_shas": [
+              "21f0a3817394c6ec824469b46ff6ba5e8b8e92f3"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Tightened chat transcript and input chrome: desktop inter-message gap bumped from 2px to 8px, image-only user messages get extra bottom margin, generated-image wrappers clip their rounded frame, corner buttons share a 2px inset, the mode-bar divider spans the full row, and the Code-mode placeholder now hints '/ for commands, @ for context'.",
+            "commit_shas": [
+              "fad2fd48b832962d5bb97400002df98f797f0591",
+              "a03fe799c224e547e3d4446e7d073e78abadedfb",
+              "2dd33dd298fee1e40eedc0665a503405146ab1de",
+              "f68b5c6320220de5e8d99d61629ae6cffc265283",
+              "64ba005d8d81657ca51b08d64bcb4328cc91b0f1",
               "053f04ccdeb1d4eb88fde308d84fde5fbe282df1",
               "43ba1eb1610968e8df6aac6afe939fc8a0a52474",
-              "64ba005d8d81657ca51b08d64bcb4328cc91b0f1",
-              "f68b5c6320220de5e8d99d61629ae6cffc265283",
               "249f6f65869611b16e1b8dd9313ad56aff00e3c8",
               "b3d6b6137cec12ce67197da24e035ac5c12a45af"
             ],
@@ -2400,11 +3130,12 @@
       }
     ],
     "highlights": [
-      "New AURA Video generation app with left nav, sidekick gallery, and Veo models",
-      "Windows installer no longer dies silently on a corrupt settings file",
-      "Release pipeline reconciles dropped GitHub uploads and retries Apple notary outages",
-      "Unified sidekick width, rounded lane corners, and a refreshed icon-hover system"
+      "AURA Video app shipped with Veo models, gallery, and SSE streaming",
+      "Windows installer no longer fails silently on corrupt settings",
+      "@-mention file context in chat with persistent drafts",
+      "Release pipeline survives dropped uploads and Apple notary 5xx",
+      "Standalone agents chat now pinned to a consistent Home project"
     ],
-    "raw_commit_count": 47
+    "raw_commit_count": 60
   }
 }

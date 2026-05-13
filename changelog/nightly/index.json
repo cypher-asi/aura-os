@@ -2,19 +2,20 @@
   {
     "date": "2026-05-12",
     "channel": "nightly",
-    "version": "0.1.0-nightly.504.1",
-    "title": "AURA Video debuts, Windows startup self-heals, and the desktop shell gets a chrome refresh",
-    "intro": "A dense nightly: a brand-new AURA Video generation app lands end-to-end, the Windows desktop client learns to recover from corrupt settings instead of vanishing, and the desktop shell, taskbar, and chat input bar get a coordinated polish pass. Release infrastructure also got tougher against Apple notary blips and dropped GitHub asset uploads.",
+    "version": "0.1.0-nightly.506.1",
+    "title": "AURA Video launches, Windows startup self-heal, and chat input overhaul",
+    "intro": "A heavy day across the stack: a brand-new AURA Video app lands end-to-end, the Windows desktop client gains a self-healing settings store and a real \"could not start\" dialog, and the chat input bar picks up @-mention file context, persistent drafts, and a long sweep of pixel-level polish. Release pipelines also got tougher against flaky GitHub uploads and Apple notary outages.",
     "entryCount": 6,
     "highlights": [
-      "New AURA Video generation app with left nav, sidekick gallery, and Veo models",
-      "Windows installer no longer dies silently on a corrupt settings file",
-      "Release pipeline reconciles dropped GitHub uploads and retries Apple notary outages",
-      "Unified sidekick width, rounded lane corners, and a refreshed icon-hover system"
+      "AURA Video app shipped with Veo models, gallery, and SSE streaming",
+      "Windows installer no longer fails silently on corrupt settings",
+      "@-mention file context in chat with persistent drafts",
+      "Release pipeline survives dropped uploads and Apple notary 5xx",
+      "Standalone agents chat now pinned to a consistent Home project"
     ],
-    "rawCommitCount": 47,
-    "generatedAt": "2026-05-12T22:55:40.232Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.504.1",
+    "rawCommitCount": 64,
+    "generatedAt": "2026-05-13T01:29:02.861Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.506.1",
     "path": "history/2026-05-12.json"
   },
   {
