@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-14T11:31:41.171Z",
+  "generatedAt": "2026-05-14T21:44:58.296Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.512.1",
+  "version": "0.1.0-nightly.519.1",
   "date": "2026-05-14",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.512.1",
-  "lastIncludedSha": "f56188f3f736c17c955d1a7ef6565ad581d9da0f",
-  "previousProcessedSha": "d06e704c1baf7ea251e46394e485a7cfaaec7ab6",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.519.1",
+  "lastIncludedSha": "b09ebce722c098a0893ade908e5db9d2703a8b0a",
+  "previousProcessedSha": "f56188f3f736c17c955d1a7ef6565ad581d9da0f",
   "commitShas": [
     "a6d7ffe60ce262ab1c4cbf12ba05eda3f08b0235",
     "b99ce50cc50f073ea4ffdfe61066867ee30f3e3e",
@@ -25,10 +25,41 @@
     "287bc376931ce92aa9b0134f30e8eafd75a9b58e",
     "c63ce8d6d3f26595394baa131b7d333ce1c1c11b",
     "d06e704c1baf7ea251e46394e485a7cfaaec7ab6",
-    "f56188f3f736c17c955d1a7ef6565ad581d9da0f"
+    "f56188f3f736c17c955d1a7ef6565ad581d9da0f",
+    "ad43af09d4ba79fae1ad93a4c2334a598235ea8a",
+    "2b65d90caad74935eba010b17f12f872d4d0f227",
+    "fc3c1bc610f1977d3e114083804a420206a1ec3a",
+    "9b9499f3b43b622fe4da6d7f891115abbdce4290",
+    "c1d0c093a6d9ac268d7fa6659c10d7cd37e4f28f",
+    "107e4e8b65903a1f7a74b87045862fc6dcab732a",
+    "c7a9748ba58573c6b62db004e995f07465e1d982",
+    "3014a7dbba538fb918a82d03315c4c391d18979f",
+    "ad179dc57b6547eba8cb0b38c9f018c12cc6a94a",
+    "20cd00e2bfd175d71f5515a0e01187d24f89f9d6",
+    "4f275cde302adaa06287ea0565846f9fd3718b18",
+    "f6fd518fd59b383403182fda765ad18a3b438a13",
+    "1f126444dd3295a19123db5f79d5d98c490420c4",
+    "009505a4159f287c6290af32a3aa8e56e7ab4a85",
+    "892f054e566bda14d820b1d506d58730e5a2652d",
+    "cc84bc23fe02abd7c384162c70d0dd58d4fc2725",
+    "d9ff8fb2ba61620ee27bb199bf6036a1ab39f398",
+    "edf020ea746e3eb5a4b8a4e5c731b9392e2c0c46",
+    "96d270f287ca88412f4a7e56c4cc2e8119998e5b",
+    "187351f059b76101b8461af90840059923aee5a6",
+    "63455692539598b506d81b92a432b8d567ebd376",
+    "70d5fa62c817e8284bb8326a677f2a6565a5feba",
+    "f0bf353bc5cf281e219d3cb9e29ac1dc3c373c88",
+    "dbd61544df54c2da503d8e89f1680f5bad394316",
+    "4bfefba9401331bf277f40462fcb3a9dd5827d44",
+    "3c76651e6b6ab0e4532c2cf45b3cd3789c917b94",
+    "834072017e5608711133dc781f0b8edd5ce1271b",
+    "77b9f16299356dcdb3890acf6453d01ea768e0d5",
+    "918cb9b20659bb1d44da2aba95ac197961b6d758",
+    "6210a72b516dd78a978c86ec22cbd4add7519997",
+    "b09ebce722c098a0893ade908e5db9d2703a8b0a"
   ],
-  "rawCommitCount": 14,
-  "filteredCommitCount": 14,
+  "rawCommitCount": 45,
+  "filteredCommitCount": 45,
   "rawCommits": [
     {
       "sha": "a6d7ffe60ce262ab1c4cbf12ba05eda3f08b0235",
@@ -590,9 +621,1338 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "ad43af09d4ba79fae1ad93a4c2334a598235ea8a",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-14T19:56:42+01:00",
+      "subject": "fix(chat): reorder mode tabs to Code, Plan, Image, Video, 3D",
+      "body": "",
+      "parents": [
+        "f56188f3f736c17c955d1a7ef6565ad581d9da0f"
+      ],
+      "files": [
+        "interface/src/constants/modes.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1778785002000,
+      "cleanSubject": "reorder mode tabs to Code, Plan, Image, Video, 3D",
+      "keywords": [
+        "reorder",
+        "mode",
+        "tabs",
+        "code",
+        "plan",
+        "image",
+        "video"
+      ],
+      "fileGroups": [
+        "interface/src/constants"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "2b65d90caad74935eba010b17f12f872d4d0f227",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T12:27:28-07:00",
+      "subject": "fix(chat): queue messages instead of dropping when stream busy",
+      "body": "Adds streamHealth tracking (lastEventAt + stuckSince) and a\nuseStreamHealth hook with a 30s stuck threshold. Replaces the\nsilent return in both chat send pipelines with a path that\nenqueues the message into useMessageQueueStore so a typed\nmessage never disappears while a turn is in flight.\n\nPart of the \"agent stuck and silent drops\" fix series.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "ad43af09d4ba79fae1ad93a4c2334a598235ea8a"
+      ],
+      "files": [
+        "interface/src/hooks/stream/store.ts",
+        "interface/src/hooks/stream/use-stream-health.test.ts",
+        "interface/src/hooks/stream/use-stream-health.ts",
+        "interface/src/hooks/use-agent-chat-stream.test.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts",
+        "interface/src/stores/message-queue-store.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 476,
+        "deletions": 3
+      },
+      "committedAtMs": 1778786848000,
+      "cleanSubject": "queue messages instead of dropping when stream busy",
+      "keywords": [
+        "queue",
+        "messages",
+        "instead",
+        "dropping",
+        "when",
+        "stream",
+        "busy"
+      ],
+      "fileGroups": [
+        "interface/src/hooks",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "fc3c1bc610f1977d3e114083804a420206a1ec3a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T12:27:28-07:00",
+      "subject": "fix(projects): show Standard Agent immediately + block double-add",
+      "body": "In the project \"+\" agent picker, the entire row list (including the\nsynthetic Standard Agent row, which doesn't depend on the network) was\nhidden behind a spinner until `api.agents.list(orgId)` resolved -- the\ndominant latency on a fresh project. The Standard row now renders the\nmoment the modal mounts; the agent fetch surfaces as a small inline\n\"Loading agents...\" indicator below the list.\n\nAlso stops a fast double-click on a row from creating two agent\ninstances. The previous gate (`disabled={isCreating}` plus an\n`isCreating` check inside `activate`) wasn't enough: the rows fire on\n`onMouseDown`, which React's `disabled` attribute does not block, and\n`isCreating` is React state that only flips true after the upstream\n`setCreating(...)` from `useAgentSelectorData` is committed. A second\nmousedown landing before that render hit the stale closure and called\n`createAgentInstance` / `createGeneralAgentInstance` twice. A\nsynchronous `activatingRef` inside the list now short-circuits the\nsecond activation; an effect releases it when `creating` settles back\nto `null` (success, error, or modal close all hit the upstream\n`finally`).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "2b65d90caad74935eba010b17f12f872d4d0f227"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentSelectorModal/AgentSelectorList.tsx",
+        "interface/src/apps/agents/components/AgentSelectorModal/AgentSelectorModal.module.css",
+        "interface/src/apps/agents/components/AgentSelectorModal/AgentSelectorModal.test.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 94,
+        "deletions": 9
+      },
+      "committedAtMs": 1778786848000,
+      "cleanSubject": "show Standard Agent immediately + block double-add",
+      "keywords": [
+        "show",
+        "standard",
+        "agent",
+        "immediately",
+        "block",
+        "double"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "9b9499f3b43b622fe4da6d7f891115abbdce4290",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T12:27:28-07:00",
+      "subject": "feat(chat): stuck-stream pill with Stop/Retry/Report + 60s auto-timeout",
+      "body": "Watchdog from useStreamHealth flips the cooking indicator into a\nStuckStreamPill after 30s of no SSE events while isStreaming.\nStop calls baseStopStreaming, Retry replays the captured last\nsend args, Report is wired in Phase 5. At 60s the pill auto-\nfinalizes the stream and pushes a synthetic stuck-stream event\ninto the transcript so reopening the chat doesn't show a stale\nlive stream.\n\nPart of the \"agent stuck and silent drops\" fix series.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "fc3c1bc610f1977d3e114083804a420206a1ec3a"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatStreamingIndicator.test.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatStreamingIndicator.tsx",
+        "interface/src/components/StuckStreamPill/StuckStreamPill.module.css",
+        "interface/src/components/StuckStreamPill/StuckStreamPill.test.tsx",
+        "interface/src/components/StuckStreamPill/StuckStreamPill.tsx",
+        "interface/src/components/StuckStreamPill/index.ts",
+        "interface/src/hooks/stream/use-stream-health.test.ts",
+        "interface/src/hooks/stream/use-stream-health.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts"
+      ],
+      "stats": {
+        "fileCount": 10,
+        "insertions": 678,
+        "deletions": 4
+      },
+      "committedAtMs": 1778786848000,
+      "cleanSubject": "stuck-stream pill with Stop/Retry/Report + 60s auto-timeout",
+      "keywords": [
+        "stuck",
+        "stream",
+        "pill",
+        "with",
+        "stop",
+        "retry",
+        "report",
+        "auto",
+        "timeout"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "c1d0c093a6d9ac268d7fa6659c10d7cd37e4f28f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T12:27:28-07:00",
+      "subject": "fix(server): shorter chat watchdog + support_id on every error",
+      "body": "Drops DEFAULT_FIRST_EVENT_TIMEOUT_SECS 120 -> 90 to match the\nclient SSE idle, and DEFAULT_MAX_IDLE_TIMEOUT_SECS 1800 -> 180\nso a hung turn surfaces in 3 minutes instead of half an hour.\nAdds AURA_TURN_TOOL_HEARTBEAT_INTERVAL_SECS env knob (default\n20s) that Phase 6 harness heartbeats will honor.\n\nStamps every server-synthesized or remapped ErrorMsg with a\nshort support_id and emits a structured tracing log keyed by\nit, so users can paste the id back into feedback and support\ncan grep server logs immediately. Wire-compatible with the\nharness ErrorMsg today (id is appended to .message); Phase 6\nwill promote it to a first-class field.\n\nPart of the \"agent stuck and silent drops\" fix series.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "9b9499f3b43b622fe4da6d7f891115abbdce4290"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/errors.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/streaming.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/turn_slot.rs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 375,
+        "deletions": 52
+      },
+      "committedAtMs": 1778786848000,
+      "cleanSubject": "shorter chat watchdog + support_id on every error",
+      "keywords": [
+        "shorter",
+        "chat",
+        "watchdog",
+        "support",
+        "every",
+        "error"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "107e4e8b65903a1f7a74b87045862fc6dcab732a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T12:27:28-07:00",
+      "subject": "feat(chat): per-session events endpoint so reset actually resets",
+      "body": "Adds GET /api/agents/:agent_id/sessions/:session_id/events on the\nserver and rewires useStandaloneAgentChat to use it whenever a\n?session= pin is in the URL. Closes the long-standing gap where\npressing \"+\" or RotateCcw cleared local state but the next\nhistory fetch still pulled events across all of the agent's\nsessions from the per-agent timeline, dragging the old\nconversation back into view.\n\nAlso clears useMessageQueueStore on new-chat / new-session so a\nqueued send from the prior session doesn't leak forward.\n\nPart of the \"agent stuck and silent drops\" fix series.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "c1d0c093a6d9ac268d7fa6659c10d7cd37e4f28f"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/events.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/mod.rs",
+        "apps/aura-os-server/src/router/agents.rs",
+        "apps/aura-os-server/tests/sessions_events_isolation.rs",
+        "interface/src/hooks/use-standalone-agent-chat.test.ts",
+        "interface/src/hooks/use-standalone-agent-chat.ts",
+        "interface/src/shared/api/agents.test.ts",
+        "interface/src/shared/api/agents.ts"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 747,
+        "deletions": 16
+      },
+      "committedAtMs": 1778786848000,
+      "cleanSubject": "per-session events endpoint so reset actually resets",
+      "keywords": [
+        "session",
+        "events",
+        "endpoint",
+        "reset",
+        "actually",
+        "resets"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "interface/src/hooks",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "c7a9748ba58573c6b62db004e995f07465e1d982",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T12:27:28-07:00",
+      "subject": "fix watchdog stream recovery",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "107e4e8b65903a1f7a74b87045862fc6dcab732a"
+      ],
+      "files": [
+        "interface/src/hooks/stream/handlers.lifecycle.test.ts",
+        "interface/src/hooks/stream/handlers/lifecycle.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 56,
+        "deletions": 0
+      },
+      "committedAtMs": 1778786848000,
+      "cleanSubject": "fix watchdog stream recovery",
+      "keywords": [
+        "watchdog",
+        "stream",
+        "recovery"
+      ],
+      "fileGroups": [
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "3014a7dbba538fb918a82d03315c4c391d18979f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T12:27:28-07:00",
+      "subject": "fix(chat-stream): make Stop actually abort the in-flight SSE",
+      "body": "The per-partition send-control refactor (c7761524d) moved the\nAbortController that performSend hands to `api.sendEventStream` off\n`streamMetaMap[key].abort` and onto\n`partitionSendControlMap[key].currentController`. `stopStreaming`\nstill only routed through `core.baseStopStreaming()`, which aborts\nthe former — the chat path's controller was never touched, so\npressing Stop did nothing: the SSE reader kept running, deltas\nkept arriving, and the UI never flipped out of \"streaming\".\n\nAbort `ctrl.currentController` (and null it) in `stopStreaming`\nbefore falling through to `baseStopStreaming`. The agent-chat /\ntask-stream paths still use the legacy abort slot, so leave\n`baseStopStreaming`'s behavior intact.\n\nRegression test in parallel-chats.test.ts captures the AbortSignal\nhanded to `api.sendEventStream`, calls `stopStreaming`, and asserts\nthe signal flips to `aborted` and the partition's controller is\ncleared.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "c7a9748ba58573c6b62db004e995f07465e1d982"
+      ],
+      "files": [
+        "interface/src/hooks/use-chat-stream/parallel-chats.test.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 54,
+        "deletions": 0
+      },
+      "committedAtMs": 1778786848000,
+      "cleanSubject": "make Stop actually abort the in-flight SSE",
+      "keywords": [
+        "make",
+        "stop",
+        "actually",
+        "abort",
+        "flight"
+      ],
+      "fileGroups": [
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "ad179dc57b6547eba8cb0b38c9f018c12cc6a94a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T12:27:28-07:00",
+      "subject": "feat(chat-app): + button opens AgentSelectorModal scoped to CEO Home",
+      "body": "The chat sidebar's \"+\" used to navigate to /chat (a fresh canvas\nagainst the canonical CEO agent). It now opens the same\nAgentSelectorModal the Projects app shows on a project-row \"+\",\nscoped to the CEO chat agent's auto-Home project so picking an\nagent attaches it to that project and lands the user in\n/chat?agent=...&project=...&instance=... — keeping them inside the\nChat app instead of jumping into /projects/:pid/agents/:aid like\nthe Projects-app flow does.\n\nMirrors the projects-app handleAgentCreated cache writes\n(agentsByProject + queryClient + refreshProjectAgents) so the\ndestination route's useStandaloneAgentChat sees the new binding\nimmediately and ships the right body.project_id on the first\nturn. The \"+\" button is disabled until the CEO Home binding has\nloaded into useSessionsListStore.bindingsByAgent.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "3014a7dbba538fb918a82d03315c4c391d18979f"
+      ],
+      "files": [
+        "interface/src/apps/chat-app/components/ChatAppLeftPanel/ChatAppLeftPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 87,
+        "deletions": 12
+      },
+      "committedAtMs": 1778786848000,
+      "cleanSubject": "+ button opens AgentSelectorModal scoped to CEO Home",
+      "keywords": [
+        "button",
+        "opens",
+        "agentselectormodal",
+        "scoped",
+        "home"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "20cd00e2bfd175d71f5515a0e01187d24f89f9d6",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T12:27:28-07:00",
+      "subject": "harden chat stream truncation handling",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "ad179dc57b6547eba8cb0b38c9f018c12cc6a94a"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/streaming.rs",
+        "interface/src/hooks/stream/handlers.lifecycle.test.ts",
+        "interface/src/hooks/stream/handlers/lifecycle.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 351,
+        "deletions": 92
+      },
+      "committedAtMs": 1778786848000,
+      "cleanSubject": "harden chat stream truncation handling",
+      "keywords": [
+        "harden",
+        "chat",
+        "stream",
+        "truncation",
+        "handling"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "4f275cde302adaa06287ea0565846f9fd3718b18",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T12:27:28-07:00",
+      "subject": "fix(earn-button): optically center EARN label",
+      "body": "Add 2px top padding to the label so the uppercase text sits in the visual center of the pill instead of riding too high.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "20cd00e2bfd175d71f5515a0e01187d24f89f9d6"
+      ],
+      "files": [
+        "interface/src/components/EarnCreditsButton/EarnCreditsButton.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 0
+      },
+      "committedAtMs": 1778786848000,
+      "cleanSubject": "optically center EARN label",
+      "keywords": [
+        "optically",
+        "center",
+        "earn",
+        "label"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f6fd518fd59b383403182fda765ad18a3b438a13",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T12:27:28-07:00",
+      "subject": "feat(chat-context): per-bucket context breakdown in bottom-bar pill",
+      "body": "Surface a Cursor-style \"Context\" popover from the LLM bottom-right\nindicator with a stacked bar and per-category token counts (System\nprompt / Tools / Skills / MCP / Subagents / Conversation).\n\nThe harness now emits `SessionUsage.context_breakdown` on every\n`AssistantMessageEnd`, and the frontend store hangs the breakdown off\nthe existing per-stream entry so the popover renders without an extra\nroundtrip. The signal is strictly additive: an absent or all-zero\nbreakdown falls back to the legacy used/total view, and `mcp_tokens`\nis reserved at 0 today (hidden by the UI) until aura-harness gains\nMCP support.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "4f275cde302adaa06287ea0565846f9fd3718b18"
+      ],
+      "files": [
+        "crates/aura-protocol/bindings/ContextBreakdown.ts",
+        "crates/aura-protocol/bindings/SessionUsage.ts",
+        "crates/aura-protocol/src/lib.rs",
+        "crates/aura-protocol/src/server.rs",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/ContextUsageIndicator.test.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/ContextUsageIndicator.tsx",
+        "interface/src/hooks/use-chat-stream/build-stream-handler.ts",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.tsx",
+        "interface/src/shared/types/harness-protocol.ts",
+        "interface/src/stores/context-usage-store.test.ts",
+        "interface/src/stores/context-usage-store.ts"
+      ],
+      "stats": {
+        "fileCount": 13,
+        "insertions": 678,
+        "deletions": 28
+      },
+      "committedAtMs": 1778786848000,
+      "cleanSubject": "per-bucket context breakdown in bottom-bar pill",
+      "keywords": [
+        "bucket",
+        "context",
+        "breakdown",
+        "bottom",
+        "pill"
+      ],
+      "fileGroups": [
+        "crates/aura-protocol/bindings",
+        "crates/aura-protocol/src",
+        "interface/src/apps",
+        "interface/src/hooks",
+        "interface/src/mobile",
+        "interface/src/shared",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "1f126444dd3295a19123db5f79d5d98c490420c4",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T12:27:28-07:00",
+      "subject": "feat(chat-context): show context as a tiny progress ring + label",
+      "body": "Replace the plain \"NN%\" pill in the chat input bar with a small SVG\nprogress ring next to the lowercase \"NN% context\" label so it reads\nas a single chip the way Cursor's bottom bar does. Color states\n(warning >= 70%, danger >= 90%) flow through both the ring's filled\narc and the label so the existing thresholds stay legible at a glance.\n\nThe popover, hover/pin behavior, and the per-bucket breakdown stay\nunchanged — only the trigger's visual changes.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "f6fd518fd59b383403182fda765ad18a3b438a13"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/apps/chat/components/ChatInputBar/ContextUsageIndicator.test.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/ContextUsageIndicator.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 114,
+        "deletions": 2
+      },
+      "committedAtMs": 1778786848000,
+      "cleanSubject": "show context as a tiny progress ring + label",
+      "keywords": [
+        "show",
+        "context",
+        "tiny",
+        "progress",
+        "ring",
+        "label"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "009505a4159f287c6290af32a3aa8e56e7ab4a85",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T12:27:28-07:00",
+      "subject": "feat(observability): ring-buffer breadcrumbs + one-click Report Bug",
+      "body": "Promotes stream-close breadcrumbs into a 50-entry ring-buffer\nZustand store and parses the server-stamped support_id back out\nof error messages. Adds a ReportBugButton component that opens\nthe existing NewFeedbackModal pre-filled with build version,\nstream key, agent/session ids, the last 3 support_ids, and the\nlast 20 breadcrumbs for the stream. Wires it into the chat\nerror bubble, the StuckStreamPill (replacing the Phase-2\nconsole.warn placeholder), and a new auto-attach toggle on the\nfeedback modal itself.\n\nPart of the \"agent stuck and silent drops\" fix series.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "1f126444dd3295a19123db5f79d5d98c490420c4"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatStreamingIndicator.test.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatStreamingIndicator.tsx",
+        "interface/src/apps/chat/components/MessageBubble/MessageBubble.module.css",
+        "interface/src/apps/chat/components/MessageBubble/MessageBubble.tsx",
+        "interface/src/apps/feedback/NewFeedbackModal/NewFeedbackModal.module.css",
+        "interface/src/apps/feedback/NewFeedbackModal/NewFeedbackModal.tsx",
+        "interface/src/components/ReportBugButton/ReportBugButton.test.tsx",
+        "interface/src/components/ReportBugButton/ReportBugButton.tsx",
+        "interface/src/components/ReportBugButton/index.ts",
+        "interface/src/components/StuckStreamPill/StuckStreamPill.tsx",
+        "interface/src/hooks/stream/handlers/lifecycle.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts",
+        "interface/src/shared/observability/stream-breadcrumbs.test.ts",
+        "interface/src/shared/observability/stream-breadcrumbs.ts",
+        "interface/src/shared/observability/support-id.test.ts",
+        "interface/src/shared/observability/support-id.ts",
+        "interface/src/shared/types/stream.ts",
+        "interface/src/stores/stream-breadcrumbs-store.test.ts",
+        "interface/src/stores/stream-breadcrumbs-store.ts"
+      ],
+      "stats": {
+        "fileCount": 22,
+        "insertions": 1253,
+        "deletions": 81
+      },
+      "committedAtMs": 1778786848000,
+      "cleanSubject": "ring-buffer breadcrumbs + one-click Report Bug",
+      "keywords": [
+        "ring",
+        "buffer",
+        "breadcrumbs",
+        "click",
+        "report"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/hooks",
+        "interface/src/shared",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "892f054e566bda14d820b1d506d58730e5a2652d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T12:27:28-07:00",
+      "subject": "fix(chat-context): align context pill with sibling info-bar items",
+      "body": "The context pill in the chat input bar's bottom info row was using\nits own `padding: 1px 3px` / `border-radius: 3px` / inline `<span>`\nlayout, while the neighbouring project (\"Home\") and model\n(\"Sonnet 4.6\") buttons used `padding: 2px 6px` / `border-radius: 4px`\nwith `display: flex; align-items: center`. The smaller padding and\ninline-baseline layout pushed the ring + label up by ~1px relative\nto the sibling buttons, so the row read as misaligned.\n\nMirror the project/model button metrics on `.contextIndicator`\ndirectly (display/padding/border-radius/gap) and drop the now-redundant\n`.contextIndicatorRow` inner wrapper from the JSX so the trigger\nshares the exact same box-model as its siblings.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "009505a4159f287c6290af32a3aa8e56e7ab4a85"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/apps/chat/components/ChatInputBar/ContextUsageIndicator.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 44,
+        "deletions": 38
+      },
+      "committedAtMs": 1778786848000,
+      "cleanSubject": "align context pill with sibling info-bar items",
+      "keywords": [
+        "align",
+        "context",
+        "pill",
+        "with",
+        "sibling",
+        "info",
+        "items"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "cc84bc23fe02abd7c384162c70d0dd58d4fc2725",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T12:27:28-07:00",
+      "subject": "fix(chat-stream): keep cooking shimmer pinned for the entire active turn",
+      "body": "The pinned phase indicator above the chat input was popping in and out\nmid-turn because `getStreamingPhaseLabel` returned `null` whenever\n`isWriting` was true (word-by-word reveal in progress). `isWriting`\noscillates true -> false -> true on every reveal step, so the shimmer\nunmounted and remounted continuously instead of staying live for the\nfull turn. The visibility gate is already correctly defined upstream by\n`nowStreaming` (true while `isStreaming`, streamed text, thinking\nbuffer, or tool calls are active) and cleared by `finalizeStream` /\n`AssistantMessageEnd`, so we no longer need the `isWriting` short\ncircuit.\n\n- Drop the `isWriting` early-return in `getStreamingPhaseLabel` and the\n  `progressText === \"queued\"` -> null branch; the queued state now\n  surfaces as a stable \"Queued...\" shimmer so the pinned slot continues\n  to represent the active turn.\n- Stop selecting / forwarding `isWriting` from `ChatStreamingIndicator`\n  and drop the `hidden` prop on `CookingIndicator` (label is always\n  non-null on the active path).\n- Remove the duplicate input-bar queued pill: `ChatPanel` no longer\n  derives or forwards `isQueued`, since the pinned shimmer is now the\n  single source of truth for \"turn in progress\" including the queued\n  state.\n- Update unit tests: the writing-flag case now asserts the shimmer\n  stays mounted, and a new case asserts the \"Queued...\" label.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "892f054e566bda14d820b1d506d58730e5a2652d"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatStreamingIndicator.test.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatStreamingIndicator.tsx",
+        "interface/src/utils/streaming.test.ts",
+        "interface/src/utils/streaming.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 38,
+        "deletions": 26
+      },
+      "committedAtMs": 1778786848000,
+      "cleanSubject": "keep cooking shimmer pinned for the entire active turn",
+      "keywords": [
+        "keep",
+        "cooking",
+        "shimmer",
+        "pinned",
+        "entire",
+        "active",
+        "turn"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/utils"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "d9ff8fb2ba61620ee27bb199bf6036a1ab39f398",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T12:27:28-07:00",
+      "subject": "refactor(chat-context): drop the inline reset-context button",
+      "body": "The bottom-bar context pill rendered a small RotateCcw \"soft reset\"\nbutton that called `handleNewSession` to clear history, wipe the\nstream slot, and drop `?session=` from the URL. The \"+\" new-chat\naffordance already does the same thing (and more — cross-key\nclears + sessions-list version bump), so the inline reset was a\nredundant second path that cluttered the toolbar.\n\nRemoves the visible button and prunes the now-dead `onNewSession`\nprop chain end-to-end:\n  - `ContextUsageIndicator` no longer accepts/renders `onNewSession`\n    (or imports `RotateCcw`); the legacy `.newSessionButton` CSS\n    rule and its mobile-hidden entry are deleted.\n  - `ChatInputBar` / `MobileChatInputBar` / `ChatPanel` /\n    `AgentChatPanel` / `useStandaloneAgentChat` no longer thread\n    `onNewSession` through; matching tests and doc comments are\n    updated.\n  - `useFreshCanvas` drops its now-unused `newSession` callback,\n    leaving `newChat` as the single canonical reset entrypoint.\n\nAll \"reset / new conversation\" intent now flows through the \"+\"\nbutton. Typecheck (`tsc -b --noEmit`) is clean and the touched\ntest files (`ContextUsageIndicator`, `ChatPanel`,\n`useStandaloneAgentChat`) pass 62/62.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "cc84bc23fe02abd7c384162c70d0dd58d4fc2725"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentChatPanel/AgentChatPanel.tsx",
+        "interface/src/apps/agents/hooks/use-fresh-canvas.ts",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/ContextUsageIndicator.test.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/ContextUsageIndicator.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.test.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/hooks/use-standalone-agent-chat.test.ts",
+        "interface/src/hooks/use-standalone-agent-chat.ts",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.tsx",
+        "interface/src/stores/sessions-list-store.ts"
+      ],
+      "stats": {
+        "fileCount": 12,
+        "insertions": 49,
+        "deletions": 183
+      },
+      "committedAtMs": 1778786848000,
+      "cleanSubject": "drop the inline reset-context button",
+      "keywords": [
+        "drop",
+        "inline",
+        "reset",
+        "context",
+        "button"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/hooks",
+        "interface/src/mobile",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "edf020ea746e3eb5a4b8a4e5c731b9392e2c0c46",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T12:27:28-07:00",
+      "subject": "refactor(chat-input): inline model picker + context to far-right info-bar",
+      "body": "Reorganizes the desktop chat input bar so the active model is\nvisible alongside the typing target and the context utilization\nsits in the bottom info-bar's far-right slot.\n\n  - Move `<ModelPicker>` from the bottom info bar (`infoBarEnd`)\n    into the input row's `inputRowEnd` slot, where it sits\n    immediately to the left of the send button. A new\n    `.inlineModelPicker { margin-left: auto }` keeps the picker\n    hugged right inside the slot even when slash-command chips\n    share it. The shell's existing `.inputRowHasEnd` rule already\n    reserves textarea right-padding so typed text doesn't slide\n    under the picker, and the picker's menu opens upward (over\n    the transcript) which is the right direction for an\n    in-input-row trigger.\n\n  - Drop `<ModelPicker>` from `infoBarEnd`. With the picker gone,\n    `infoBarEnd` now renders just the project menu followed by\n    the `<ContextUsageIndicator>` — putting the context pill at\n    the far right of the row directly below the input.\n\nMobile (`MobileChatInputBar`) is intentionally untouched: its\ninput row is too tight for an inline picker, and the meta-row\nalready places the model and context affordances together.\n\nTypecheck (`tsc -b --noEmit`) clean. ChatInputBar / ChatPanel /\nContextUsageIndicator tests pass 73/73.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "d9ff8fb2ba61620ee27bb199bf6036a1ab39f398"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 36,
+        "deletions": 15
+      },
+      "committedAtMs": 1778786848000,
+      "cleanSubject": "inline model picker + context to far-right info-bar",
+      "keywords": [
+        "inline",
+        "model",
+        "picker",
+        "context",
+        "right",
+        "info"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "96d270f287ca88412f4a7e56c4cc2e8119998e5b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T12:27:29-07:00",
+      "subject": "fix(protocol): wire Phase 6 Progress variant + first-class support_id",
+      "body": "Lands the aura-os side of the Phase 6 harness changes so the\nworkspace compiles again after the new OutboundMessage::Progress\nvariant from aura-protocol/server.rs reached the server's\nexhaustive match in persist_task_dispatch::handle_outbound.\n\nChanges:\n- aura-protocol: add Progress(ProgressMsg) variant + promote\n  support_id to a first-class optional field on ErrorMsg\n  (#[serde(default, skip_serializing_if = \"Option::is_none\")]\n  keeps the wire backwards compatible in both directions).\n- aura-os-server: add the missing Progress(_) match arm to\n  is_persistable_outbound (returns false - heartbeats forward\n  to SSE but aren't persisted as SessionEvents and don't bump the\n  throttled progress publish since they ARE the progress publish).\n- aura-os-server::errors: when a remapped harness ErrorMsg\n  arrives with a pre-stamped support_id (Phase 6 in-process emit\n  sites pre-populate the field), reuse that id instead of minting\n  a fresh one so a single error never carries two different ids\n  across surfaces. Skip double-suffixing on retries.\n- aura-os-harness::ws_bridge + every server-side ErrorMsg\n  construction site: pass support_id: None so older emit sites\n  still compile.\n\nWithout this commit the entire server crate fails to build with\nerror[E0004] on the non-exhaustive match.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "edf020ea746e3eb5a4b8a4e5c731b9392e2c0c46"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/errors.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/persist_task_dispatch.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/streaming.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/turn_slot.rs",
+        "apps/aura-os-server/src/handlers/generation/harness_stream.rs",
+        "crates/aura-os-harness/src/ws_bridge.rs",
+        "crates/aura-protocol/src/lib.rs",
+        "crates/aura-protocol/src/server.rs"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 107,
+        "deletions": 6
+      },
+      "committedAtMs": 1778786849000,
+      "cleanSubject": "wire Phase 6 Progress variant + first-class support_id",
+      "keywords": [
+        "wire",
+        "phase",
+        "progress",
+        "variant",
+        "first",
+        "class",
+        "support"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-harness/src",
+        "crates/aura-protocol/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "187351f059b76101b8461af90840059923aee5a6",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T12:27:29-07:00",
+      "subject": "test(use-agent-chat-stream): align 3D step assertions with 8-arg call",
+      "body": "generate3dStream now accepts trailing parentId / agentId /\nagentInstanceId positional args (api/streams.ts:294), and the\nhook passes (signal, projectId, undefined, agentId, undefined)\nthrough. Update both \"3D model step\" assertions in\nuse-agent-chat-stream.test.ts to expect the full 8-arg shape so\nthe suite stops failing on stale 5-arg toHaveBeenCalledWith\nchecks. Behavior of the hook itself is unchanged.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "96d270f287ca88412f4a7e56c4cc2e8119998e5b"
+      ],
+      "files": [
+        "interface/src/hooks/use-agent-chat-stream.test.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 6,
+        "deletions": 0
+      },
+      "committedAtMs": 1778786849000,
+      "cleanSubject": "align 3D step assertions with 8-arg call",
+      "keywords": [
+        "align",
+        "step",
+        "assertions",
+        "with",
+        "call"
+      ],
+      "fileGroups": [
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "63455692539598b506d81b92a432b8d567ebd376",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-14T20:39:08+01:00",
+      "subject": "fix(ui): restore sliding pill animation on mode selector",
+      "body": "",
+      "parents": [
+        "187351f059b76101b8461af90840059923aee5a6"
+      ],
+      "files": [
+        "interface/src/components/SlidingPills/SlidingPills.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 11,
+        "deletions": 1
+      },
+      "committedAtMs": 1778787548000,
+      "cleanSubject": "restore sliding pill animation on mode selector",
+      "keywords": [
+        "restore",
+        "sliding",
+        "pill",
+        "animation",
+        "mode",
+        "selector"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "70d5fa62c817e8284bb8326a677f2a6565a5feba",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T13:33:30-07:00",
+      "subject": "refactor(spec-block): move Copy from body row into header trailing slot",
+      "body": "Frees up vertical space in the spec block by hoisting the Copy button\nout of its dedicated body toolbar row into the Block header's `trailing`\nslot, where it sits immediately to the left of the Spec/Update badge.\nThe body now starts directly with the markdown content.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "63455692539598b506d81b92a432b8d567ebd376"
+      ],
+      "files": [
+        "interface/src/components/Block/renderers/SpecBlock.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 5,
+        "deletions": 5
+      },
+      "committedAtMs": 1778790810000,
+      "cleanSubject": "move Copy from body row into header trailing slot",
+      "keywords": [
+        "move",
+        "copy",
+        "from",
+        "body",
+        "into",
+        "header",
+        "trailing",
+        "slot"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f0bf353bc5cf281e219d3cb9e29ac1dc3c373c88",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T13:33:30-07:00",
+      "subject": "feat(chat-input): drop model picker into bottom-left footer when textarea wraps",
+      "body": "Single-line state still hugs the picker to the send button (now ~6px gap\ninstead of ~14px so they read as a pair). When the textarea grows to a\nsecond visual row, the picker relocates into a new `containerBottom` slot\ninside the rounded input container — left-aligned past the attach button —\nand the textarea regains its full width for long prompts. Multi-line is\ndetected via `scrollHeight` against a lazily-captured single-line baseline\nin `InputBarShell`, exposed to consumers via `onMultiLineChange` and\n`data-multiline` so other surfaces can opt in later.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "70d5fa62c817e8284bb8326a677f2a6565a5feba"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/components/InputBarShell/InputBarShell.module.css",
+        "interface/src/components/InputBarShell/InputBarShell.tsx"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 228,
+        "deletions": 23
+      },
+      "committedAtMs": 1778790810000,
+      "cleanSubject": "drop model picker into bottom-left footer when textarea wraps",
+      "keywords": [
+        "drop",
+        "model",
+        "picker",
+        "into",
+        "bottom",
+        "left",
+        "footer",
+        "when",
+        "textarea",
+        "wraps"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "dbd61544df54c2da503d8e89f1680f5bad394316",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T13:33:30-07:00",
+      "subject": "fix(chat-input): align +/send buttons with model picker in multi-line state",
+      "body": "When the textarea wraps to a second visual row, the corner buttons stayed\nglued to the bottom of the (now tall) input row above the new picker\nfooter, leaving the model selector orphaned at the bottom while + and ↑\nfloated up by the textarea height. Drop `position: relative` from the\ninput row in the multi-line state so the buttons re-anchor to the\ncontainer itself, and bump their bottom inset to 6px to share a single\nhorizontal baseline with the picker (button centers + picker text center\nall land at 18px from the container bottom). Scoped to >640px so the\nmobile 44x44 pill buttons keep their `bottom: 0` layout and don't\noverlap the picker text.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "f0bf353bc5cf281e219d3cb9e29ac1dc3c373c88"
+      ],
+      "files": [
+        "interface/src/components/InputBarShell/InputBarShell.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 32,
+        "deletions": 1
+      },
+      "committedAtMs": 1778790810000,
+      "cleanSubject": "align +/send buttons with model picker in multi-line state",
+      "keywords": [
+        "align",
+        "send",
+        "buttons",
+        "with",
+        "model",
+        "picker",
+        "multi",
+        "line",
+        "state"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "4bfefba9401331bf277f40462fcb3a9dd5827d44",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T13:33:30-07:00",
+      "subject": "fix(chat-app): hydrate new general agent into store before navigating",
+      "body": "Selecting \"Standard Agent\" from the Chat app's `+` modal called\n`createGeneralAgentInstance` correctly, but `handleAgentCreated`\nthen navigated to `/chat?agent=<new_id>&...` before the brand-new\nproject-local agent was visible to `useAgents()`. `ChatAppRoute`\nresolves `?agent=<id>` against that store and falls back to the\nCEO agent on a miss, so the destination silently re-mounted the\nexisting CEO chat - visually \"nothing happened\".\n\nMirror the new agent into `useAgentStore` via `api.agents.get`\n(same pattern `use-chat-app-agent.ts` uses for the CEO bootstrap)\nbefore navigating, and kick a background `fetchAgents({ force })`\nso the rest of the UI converges without a reload.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "dbd61544df54c2da503d8e89f1680f5bad394316"
+      ],
+      "files": [
+        "interface/src/apps/chat-app/components/ChatAppLeftPanel/ChatAppLeftPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 43,
+        "deletions": 2
+      },
+      "committedAtMs": 1778790810000,
+      "cleanSubject": "hydrate new general agent into store before navigating",
+      "keywords": [
+        "hydrate",
+        "general",
+        "agent",
+        "into",
+        "store",
+        "before",
+        "navigating"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "3c76651e6b6ab0e4532c2cf45b3cd3789c917b94",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T13:33:30-07:00",
+      "subject": "feat(chat-context): wire context_breakdown into standalone agent chat",
+      "body": "Restores the rich per-bucket Context popover (System prompt / Tools /\nSkills / MCP / Subagents / Conversation) on the Chat-app and standalone\nagent surfaces, which were silently dropping the harness's\n`usage.context_breakdown` on `AssistantMessageEnd` and so always fell\nback to the legacy used/total card. Extracts the snake -> camel\nmapping into a shared `mapWireContextBreakdown` helper next to the\nstore and reuses it from both stream handlers. Also mirrors the\nproject-chat path's mid-turn `bumpEstimatedTokens` calls on\nTextDelta / ThinkingDelta / ToolResult so the ring moves live instead\nof jumping only at turn boundaries.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "4bfefba9401331bf277f40462fcb3a9dd5827d44"
+      ],
+      "files": [
+        "interface/src/hooks/use-agent-chat-stream.test.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream/build-stream-handler.ts",
+        "interface/src/stores/context-usage-store.test.ts",
+        "interface/src/stores/context-usage-store.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 231,
+        "deletions": 27
+      },
+      "committedAtMs": 1778790810000,
+      "cleanSubject": "wire context_breakdown into standalone agent chat",
+      "keywords": [
+        "wire",
+        "context",
+        "breakdown",
+        "into",
+        "standalone",
+        "agent",
+        "chat"
+      ],
+      "fileGroups": [
+        "interface/src/hooks",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "834072017e5608711133dc781f0b8edd5ce1271b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T13:33:30-07:00",
+      "subject": "fix(chat-input): keep wrapped prompt in multi-line layout on backspace",
+      "body": "The multi-line detector measured the textarea's `scrollHeight` at the\ncurrent layout, but the multi-line state itself widens the textarea (the\ninline-picker `padding-right: min(220px, 42%)` reservation gets dropped).\nThat widening made the same wrapping prompt fit on a single line at the\nnew width, so the very next keystroke flipped the detector back to\nsingle-line, slid the picker back inline, narrowed the textarea, and\nre-wrapped the text — a per-character oscillation that meant backspace\ninside a still-wrapping prompt visibly snapped the layout back to one\nline.\n\nTwo fixes:\n\n1. Anti-oscillation: when we're already in multi-line and the natural\n   measurement says single-line, re-measure with the inline-picker\n   padding-right reserved and only collapse when the prompt would also\n   fit on one line at that narrower width. The expression is wrapped\n   in `calc(...)` so JSDOM's CSSOM accepts it for the regression test\n   (real browsers parse both forms identically).\n\n2. Width-aware re-measure: a `ResizeObserver` on the textarea fires\n   `autoResize()` whenever the layout swap actually changes the\n   textarea's width (and on JSDOM where ResizeObserver is undefined,\n   the effect quietly no-ops). This keeps the inline `height` we set\n   and the multi-line flag coherent with the post-swap layout — without\n   it the textarea could be left taller than its current content after\n   the picker drops to the footer.\n\nAdds a regression test that stubs `scrollHeight` to mirror the\n\"narrow wraps, wide fits\" behavior and asserts the picker stays in\nthe bottom row across a backspace.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "3c76651e6b6ab0e4532c2cf45b3cd3789c917b94"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/components/InputBarShell/InputBarShell.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 130,
+        "deletions": 2
+      },
+      "committedAtMs": 1778790810000,
+      "cleanSubject": "keep wrapped prompt in multi-line layout on backspace",
+      "keywords": [
+        "keep",
+        "wrapped",
+        "prompt",
+        "multi",
+        "line",
+        "layout",
+        "backspace"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "77b9f16299356dcdb3890acf6453d01ea768e0d5",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T13:33:30-07:00",
+      "subject": "feat(chat-error-row): inline error message with Support ID + Report Bug",
+      "body": "The Support ID + Report Bug action row was correctly gated to error\nturns only, but the error string was concatenated into the bubble's\n`content` (often as `*Error: ...*`), so the chip and the message it\nreferred to ended up stacked on separate lines with no visual link\nbetween them. Split the error string off `content` into a dedicated\n`errorMessage` field on `DisplaySessionEvent`, and render it as the\nleading element of `errorActionsRow` -- truncated to a single line\nwith the full text exposed via `title` on hover.\n\nSide-effects of the split: `content` now carries only the partial\nstreaming buffer captured before the turn errored, so the buffered\nprose still renders through `LLMOutput` unchanged; the streamDropped\nbanner keeps its title but drops the duplicate message span; the\ninsufficient-credits \"Buy credits\" button moves into the action row\nso the whole error chrome reads as one line.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "834072017e5608711133dc781f0b8edd5ce1271b"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/MessageBubble/MessageBubble.module.css",
+        "interface/src/apps/chat/components/MessageBubble/MessageBubble.test.tsx",
+        "interface/src/apps/chat/components/MessageBubble/MessageBubble.tsx",
+        "interface/src/hooks/stream/handlers.lifecycle.test.ts",
+        "interface/src/hooks/stream/handlers/lifecycle.ts",
+        "interface/src/hooks/use-agent-chat-stream.test.ts",
+        "interface/src/hooks/use-chat-stream.test.ts",
+        "interface/src/shared/types/stream.ts"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 298,
+        "deletions": 103
+      },
+      "committedAtMs": 1778790810000,
+      "cleanSubject": "inline error message with Support ID + Report Bug",
+      "keywords": [
+        "inline",
+        "error",
+        "message",
+        "with",
+        "support",
+        "report"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/hooks",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "918cb9b20659bb1d44da2aba95ac197961b6d758",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T13:55:22-07:00",
+      "subject": "fix(ci): anchor rustc parity parser so rustup 1.29 banner stops failing macos-latest",
+      "body": "`scripts/ci/check-runtime.mjs desktop` was failing every macos-latest\naarch64 nightly with `found rustc 1.29.0` even though\n`dtolnay/rust-toolchain@1.94.1` and `rust-toolchain.toml` correctly\ninstall Rust 1.94.1. Root cause: `parseVersion` greedily matched the\nfirst `\\d+.\\d+.\\d+` in the combined stdout+stderr from `rustc --version`,\nand the macos-latest image now ships rustup 1.29.0 (released 2026-03-12),\nwhose proxy emits info lines mentioning its own `1.29.0` before stdout's\n`rustc 1.94.1` ever shows up.\n\nAnchor the parse to the literal program name (`rustc 1.94.1 (...)`) and\ninclude the raw capture in the failure message so the next stray version\nbanner is debuggable straight from the CI log.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "77b9f16299356dcdb3890acf6453d01ea768e0d5"
+      ],
+      "files": [
+        "scripts/ci/lib/utils.mjs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 21,
+        "deletions": 3
+      },
+      "committedAtMs": 1778792122000,
+      "cleanSubject": "anchor rustc parity parser so rustup 1.29 banner stops failing macos-latest",
+      "keywords": [
+        "anchor",
+        "rustc",
+        "parity",
+        "parser",
+        "rustup",
+        "banner",
+        "stops",
+        "failing",
+        "macos",
+        "latest"
+      ],
+      "fileGroups": [
+        "scripts/ci/lib"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "6210a72b516dd78a978c86ec22cbd4add7519997",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T14:24:55-07:00",
+      "subject": "fix(ci): resolve rustc via `rustup which` so Homebrew's rustup-init shim stops failing macos-latest",
+      "body": "Yesterday's anchor-the-regex fix was the right idea on the wrong layer:\nthe parity check is still failing on macos-latest aarch64 because\n`rustc --version` literally prints\n\n  rustup-init 1.29.0 (2026-03-05)\n\nThe macos-latest GitHub runner ships Homebrew's `rustup` formula, which\ninstalls `/opt/homebrew/bin/rustc` as a symlink to `rustup-init` and puts\n`/opt/homebrew/bin` ahead of `~/.cargo/bin` on PATH. Invoked under the\nname `rustc`, that `rustup-init` binary does not dispatch as a proxy --\nit just prints its own identity. No amount of regex hardening can recover\na rustc version from output that doesn't contain one.\n\nFix: resolve the rustc binary up front via `rustup which rustc`, which\nreturns the toolchain-managed path (e.g.\n`/Users/runner/.rustup/toolchains/1.94.1-aarch64-apple-darwin/bin/rustc`)\nregardless of what `rustc` on PATH would have hit. Add a `tryCapture`\nhelper for non-fatal probes, and gate the parsed output on a real\n`rustc X.Y.Z` line so a future shim regression fails with a targeted,\nactionable error instead of a misleading `found rustc 1.29.0`.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "918cb9b20659bb1d44da2aba95ac197961b6d758"
+      ],
+      "files": [
+        "scripts/ci/lib/utils.mjs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 47,
+        "deletions": 1
+      },
+      "committedAtMs": 1778793895000,
+      "cleanSubject": "resolve rustc via `rustup which` so Homebrew's rustup-init shim stops failing macos-latest",
+      "keywords": [
+        "resolve",
+        "rustc",
+        "rustup",
+        "which",
+        "homebrew",
+        "init",
+        "shim",
+        "stops",
+        "failing",
+        "macos",
+        "latest"
+      ],
+      "fileGroups": [
+        "scripts/ci/lib"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "b09ebce722c098a0893ade908e5db9d2703a8b0a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-14T14:30:27-07:00",
+      "subject": "chore(ci): re-run desktop nightly to validate macos-latest rustc + harness sync",
+      "body": "Re-trigger Desktop Nightly Release after two unblockers landed:\n\n  1. 6210a72b5 fix(ci): resolve rustc via `rustup which` so Homebrew's\n     rustup-init shim stops failing macos-latest. The macos-latest arm64\n     runner was reporting `rustc 1.29.0` because PATH resolved `rustc`\n     to `/opt/homebrew/bin/rustup-init`, which doesn't dispatch as a\n     proxy. The check now goes through `rustup which rustc`.\n\n  2. cypher-asi/aura-harness@c394e04 (fast-forwarded onto main from\n     fix/agent-stuck-and-reset). Lands the matching `ErrorMsg.support_id`\n     and `SessionUsage.context_breakdown` field initializers in\n     `aura-runtime`, so the sidecar build no longer hits 19 E0063\n     \"missing field\" errors against the new aura-protocol schema.\n\nThis commit is intentionally empty -- nothing to ship in aura-os itself,\njust a fresh push event to re-enter the workflow with both fixes in place.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "6210a72b516dd78a978c86ec22cbd4add7519997"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 0,
+        "deletions": 0
+      },
+      "committedAtMs": 1778794227000,
+      "cleanSubject": "re-run desktop nightly to validate macos-latest rustc + harness sync",
+      "keywords": [
+        "desktop",
+        "nightly",
+        "validate",
+        "macos",
+        "latest",
+        "rustc",
+        "harness",
+        "sync"
+      ],
+      "fileGroups": [],
+      "primaryArea": "Other",
+      "areas": []
     }
   ],
-  "batchCount": 3,
+  "batchCount": 6,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -601,36 +1961,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11853586
+          "sizeBytes": 11862782
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.512.1",
+      "version": "0.1.0-nightly.519.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.512.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.519.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 37074762
+          "sizeBytes": 37195418
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.512.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.519.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.512.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.519.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 105810424
+          "sizeBytes": 105929208
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.512.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.519.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -640,29 +2000,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.512.1",
+      "version": "0.1.0-nightly.519.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.512.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.519.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 34198692
+          "sizeBytes": 34368528
         },
         {
-          "name": "AURA_0.1.0-nightly.512.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.519.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.512.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.519.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33325313
+          "sizeBytes": 33494448
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.512.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.519.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -672,29 +2032,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.512.1",
+      "version": "0.1.0-nightly.519.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.512.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.519.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 35842894
+          "sizeBytes": 35897169
         },
         {
-          "name": "AURA_0.1.0-nightly.512.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.519.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.512.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.519.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 35004128
+          "sizeBytes": 35088607
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.512.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.519.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -704,17 +2064,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.512.1",
+      "version": "0.1.0-nightly.519.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.512.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.519.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 25085202
+          "sizeBytes": 25173014
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.512.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.519.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -723,70 +2083,134 @@
     }
   ],
   "rendered": {
-    "title": "Video generation lands in chat, with Seedance models and 3D persistence",
-    "intro": "Today's nightly brings end-to-end video generation into the chat experience: new Seedance models with provider-aware controls in the AURA Video app, a full wiring pass so video mode behaves correctly across desktop and mobile chat input bars, and matching chat-history persistence for both video and 3D generations. Late in the day, the in-chat video player picked up a real preview frame and an MP4 download.",
+    "title": "Video generation in chat, stuck-stream recovery, and a refreshed input bar",
+    "intro": "A heavy nightly that lands native video generation inside chat, ships an end-to-end \"agent stuck and silent drops\" recovery story (watchdogs, queued sends, support IDs, one-click bug reports), and reorganizes the chat input bar around an inline model picker and a richer per-bucket context indicator. Desktop release infrastructure also got unblocked on macOS-latest after a rustup shim regression.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:29 AM",
         "started_at": "2026-05-14T09:29:33.000Z",
-        "ended_at": "2026-05-14T09:30:59.000Z",
-        "title": "Video generation becomes a first-class chat mode",
-        "summary": "A coordinated push introduces Video as a full agent mode across the AURA Video app, chat input bars, stream hooks, and the server, with Seedance 2.0 / 2.0 Fast added alongside Veo.",
+        "ended_at": "2026-05-14T19:27:28.000Z",
+        "title": "Video generation joins chat, and stuck streams stop swallowing messages",
+        "summary": "A large morning push that introduces video as a first-class chat mode end to end and lands the core of the agent-stuck/silent-drops recovery work across client and server.",
         "items": [
           {
-            "text": "Added Seedance 2.0 and Seedance 2.0 Fast to the AURA Video app with provider-specific resolution (480p–1080p vs Veo's 720p–4k), duration (4–15s vs Veo's 4–8s), and a new aspect ratio picker (16:9, 9:16, 1:1, 4:3, 3:4, 21:9) shown only for Seedance; switching providers automatically clamps settings to a valid combination.",
-            "commit_shas": [
-              "a6d7ffe60ce262ab1c4cbf12ba05eda3f08b0235"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Wired Video as a full agent mode end-to-end: new generate_video slash command, mode descriptors, tool labels, GenerationCompleted/GenerationStart event variants, and a VideoBlock renderer that plays results inline with an HTML5 player.",
+            "text": "Video becomes a first-class chat generation mode: a new VideoBlock renders inline HTML5 playback (with a 0.5s poster frame and MP4 download), the agent mode system, slash command, model picker, progress text, and queue/dispatch paths all learn the video case, and the standalone-agent stream no longer misroutes video into image/3D rendering.",
             "commit_shas": [
               "b99ce50cc50f073ea4ffdfe61066867ee30f3e3e",
               "4a2a5d96c4ab3d852f9a13e378a4943740f9cec3",
-              "ec9c63bf93987fd757e0466d8c3ec52ff71da664"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Fixed a cluster of fall-through bugs that made early video mode silently behave like chat, 3D, or image: desktop and mobile input bars, agent chat streams, the /generate_video slash command, progress text, and the model picker now all recognize video mode and pin to DEFAULT_VIDEO_MODEL_ID.",
-            "commit_shas": [
+              "ec9c63bf93987fd757e0466d8c3ec52ff71da664",
               "1fd47899db45aad4a6624b849fd812a811800bb7",
               "007699f3715c686a5ae7d27bfafcc4c04a39e2a1",
-              "79c0834199a47160541093dbb16379b53fca8c49"
+              "79c0834199a47160541093dbb16379b53fca8c49",
+              "d06e704c1baf7ea251e46394e485a7cfaaec7ab6",
+              "f56188f3f736c17c955d1a7ef6565ad581d9da0f",
+              "ad43af09d4ba79fae1ad93a4c2334a598235ea8a"
             ],
             "confidence": "high"
           },
           {
-            "text": "On the server, the video generation handler now accepts agent_id and agent_instance_id and persists the user prompt before opening the generation stream, mirroring the image handler while staying backward compatible for callers without agent scope.",
+            "text": "AURA Video gains Seedance 2.0 and 2.0 Fast alongside Veo, with provider-aware resolution, duration, and aspect-ratio constraints; Seedance ships visible but disabled with a \"coming soon\" label until the BytePlus account is live.",
             "commit_shas": [
-              "afe964998c320a7e9f9e474b94a537414bb5196a"
+              "a6d7ffe60ce262ab1c4cbf12ba05eda3f08b0235",
+              "62a3dc170b02d8fcd77eed560fa7624367d601fe"
             ],
             "confidence": "high"
+          },
+          {
+            "text": "Video and 3D generation turns now persist into chat history: server handlers resolve the agent/session context and call the standard persist pipeline, and the frontend passes agentId/agentInstanceId through both project and standalone agent flows.",
+            "commit_shas": [
+              "afe964998c320a7e9f9e474b94a537414bb5196a",
+              "b430244fa721696a7041c7371eb228172f8d77c3",
+              "287bc376931ce92aa9b0134f30e8eafd75a9b58e",
+              "c63ce8d6d3f26595394baa131b7d333ce1c1c11b"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Stuck-stream recovery lands across the chat surface: a 30s SSE-idle watchdog flips the cooking indicator into a StuckStreamPill with Stop/Retry, a 60s auto-timeout finalizes the stream with a synthetic transcript event, and messages typed during an in-flight turn are now queued instead of silently dropped. Stop also actually aborts the in-flight SSE on the project-chat partition path.",
+            "commit_shas": [
+              "2b65d90caad74935eba010b17f12f872d4d0f227",
+              "9b9499f3b43b622fe4da6d7f891115abbdce4290",
+              "3014a7dbba538fb918a82d03315c4c391d18979f",
+              "c7a9748ba58573c6b62db004e995f07465e1d982",
+              "20cd00e2bfd175d71f5515a0e01187d24f89f9d6"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Server tightens hang detection and adds traceability: first-event timeout drops 120s→90s and max-idle 30min→3min, a tool-heartbeat env knob is added, and every SSE-bound ErrorMsg is now stamped with a short support_id and logged via structured tracing so user reports join cleanly to server logs.",
+            "commit_shas": [
+              "c1d0c093a6d9ac268d7fa6659c10d7cd37e4f28f"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Reset actually resets standalone agent chats: a new GET /api/agents/:agent_id/sessions/:session_id/events endpoint scopes history to the pinned session so pressing \"+\" or RotateCcw no longer drags prior-session messages back in, and the message queue is cleared on new-chat to prevent leaked sends.",
+            "commit_shas": [
+              "107e4e8b65903a1f7a74b87045862fc6dcab732a"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Project agent picker stops hiding the Standard Agent row behind a network spinner and guards against fast double-clicks creating duplicate instances, and the Chat app's \"+\" now opens the same AgentSelectorModal scoped to CEO Home so users stay inside the Chat app instead of jumping to /projects.",
+            "commit_shas": [
+              "fc3c1bc610f1977d3e114083804a420206a1ec3a",
+              "ad179dc57b6547eba8cb0b38c9f018c12cc6a94a"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Chat input bar gains a Cursor-style Context popover with per-bucket token counts (System prompt / Tools / Skills / MCP / Subagents / Conversation), powered by a new context_breakdown field on SessionUsage emitted from the harness.",
+            "commit_shas": [
+              "f6fd518fd59b383403182fda765ad18a3b438a13"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Small polish: the EARN credits pill label is optically recentered.",
+            "commit_shas": [
+              "4f275cde302adaa06287ea0565846f9fd3718b18"
+            ],
+            "confidence": "medium"
           }
         ]
       },
       {
         "batch_id": "entry-2",
-        "time_label": "2:30 AM",
-        "started_at": "2026-05-14T09:30:59.000Z",
-        "ended_at": "2026-05-14T09:30:59.000Z",
-        "title": "Video turns persist to chat history, Seedance gated as coming soon",
-        "summary": "The client now forwards agent identifiers so video generations are saved to chat history, while Seedance models are surfaced but disabled until the BytePlus account is live.",
+        "time_label": "12:27 PM",
+        "started_at": "2026-05-14T19:27:28.000Z",
+        "ended_at": "2026-05-14T19:27:28.000Z",
+        "title": "One-click Report Bug, progress-ring context pill, and a tidier input bar",
+        "summary": "A follow-up wave that turns the stuck-stream and support_id plumbing into a real bug-reporting flow and reshuffles the chat input bar so context and model controls finally read as one row.",
         "items": [
           {
-            "text": "Chat and agent chat streams now pass agentInstanceId / agentId on video generation requests so the server can resolve the session and persist video turns alongside text in chat history.",
+            "text": "Report Bug becomes one click: a 50-entry breadcrumb ring buffer plus support_id parsing now feed a new ReportBugButton that opens the existing feedback modal pre-filled with build version, stream key, agent/session ids, the last 3 support_ids, and the last 20 breadcrumbs — wired into the chat error bubble and the StuckStreamPill, replacing the Phase-2 console.warn placeholder.",
             "commit_shas": [
-              "b430244fa721696a7041c7371eb228172f8d77c3"
+              "009505a4159f287c6290af32a3aa8e56e7ab4a85"
             ],
             "confidence": "high"
           },
           {
-            "text": "Seedance 2.0 and 2.0 Fast are visible in both the AURA Video and chat model pickers but greyed out with a \"(coming soon)\" suffix and disabled clicks until the BytePlus integration is ready.",
+            "text": "The context pill becomes a small SVG progress ring + lowercase \"NN% context\" chip with warning (≥70%) and danger (≥90%) color states, and is re-aligned to share the exact box model as the neighbouring project and model buttons.",
             "commit_shas": [
-              "62a3dc170b02d8fcd77eed560fa7624367d601fe"
+              "1f126444dd3295a19123db5f79d5d98c490420c4",
+              "892f054e566bda14d820b1d506d58730e5a2652d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Desktop chat input reorganizes: the model picker moves inline next to the send button so the active model is visible alongside the typing target, leaving the context indicator alone at the far right of the bottom info bar.",
+            "commit_shas": [
+              "edf020ea746e3eb5a4b8a4e5c731b9392e2c0c46"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The pinned cooking shimmer now stays mounted for the entire active turn (including a stable \"Queued…\" state) instead of flickering on every word-by-word reveal step, and the redundant inline reset-context button is removed in favor of the single \"+\" new-chat affordance.",
+            "commit_shas": [
+              "cc84bc23fe02abd7c384162c70d0dd58d4fc2725",
+              "d9ff8fb2ba61620ee27bb199bf6036a1ab39f398"
             ],
             "confidence": "high"
           }
@@ -794,31 +2218,94 @@
       },
       {
         "batch_id": "entry-3",
-        "time_label": "3:18 AM",
-        "started_at": "2026-05-14T10:18:43.000Z",
-        "ended_at": "2026-05-14T11:06:46.000Z",
-        "title": "3D chat persistence plus polish for the in-chat video player",
-        "summary": "3D generation gets the same chat-history persistence as video and image, and the VideoBlock in chat picks up a real poster frame and an MP4 download link.",
+        "time_label": "12:27 PM",
+        "started_at": "2026-05-14T19:27:29.000Z",
+        "ended_at": "2026-05-14T19:27:29.000Z",
+        "title": "Protocol catch-up for Phase 6 progress events and first-class support_id",
+        "summary": "A targeted server/protocol change that re-syncs aura-os with the Phase 6 harness so the workspace builds and support IDs survive end-to-end.",
         "items": [
           {
-            "text": "3D generation now persists to chat history end-to-end: the server's Generate3dRequest accepts agent_id / agent_instance_id and runs resolve_persist_ctx + persist_user_prompt, and the client's generate3dStream forwards those IDs from both project and agent chats. The standalone AURA 3D app continues to work without persistence.",
+            "text": "aura-protocol gains an OutboundMessage::Progress variant for harness heartbeats and promotes support_id to a first-class optional field on ErrorMsg (kept wire-backwards-compatible via skip_serializing_if). The server handles the new variant in its exhaustive match, and the error remapper reuses a pre-stamped support_id instead of minting a second one — so a single error never carries two different IDs across surfaces.",
             "commit_shas": [
-              "287bc376931ce92aa9b0134f30e8eafd75a9b58e",
-              "c63ce8d6d3f26595394baa131b7d333ce1c1c11b"
+              "96d270f287ca88412f4a7e56c4cc2e8119998e5b"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-4",
+        "time_label": "12:27 PM",
+        "started_at": "2026-05-14T19:27:29.000Z",
+        "ended_at": "2026-05-14T20:33:30.000Z",
+        "title": "Multi-line input bar reflow and richer agent-chat context wiring",
+        "summary": "Afternoon polish on the input bar's layout when prompts wrap, plus restoring the per-bucket context view on the standalone agent surfaces.",
+        "items": [
+          {
+            "text": "When the chat textarea wraps to a second row, the model picker now drops into a new bottom-left footer slot inside the input container so long prompts get full width, with the +/send buttons re-anchored to share a baseline with the picker. A ResizeObserver + padding-aware re-measure prevents the picker from oscillating in and out of the footer on each keystroke when backspacing inside a still-wrapping prompt.",
+            "commit_shas": [
+              "f0bf353bc5cf281e219d3cb9e29ac1dc3c373c88",
+              "dbd61544df54c2da503d8e89f1680f5bad394316",
+              "834072017e5608711133dc781f0b8edd5ce1271b"
             ],
             "confidence": "high"
           },
           {
-            "text": "VideoBlock now seeks to 0.5s via a #t=0.5 media fragment so chat shows a real preview frame instead of a black first frame, matching the sidekick panel thumbnails.",
+            "text": "The rich per-bucket Context popover now works on the Chat-app and standalone agent surfaces too: usage.context_breakdown is parsed via a shared snake→camel helper, and mid-turn TextDelta / ThinkingDelta / ToolResult bumps make the context ring move live instead of jumping only at turn boundaries.",
             "commit_shas": [
-              "d06e704c1baf7ea251e46394e485a7cfaaec7ab6"
+              "3c76651e6b6ab0e4532c2cf45b3cd3789c917b94"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a Download MP4 link beneath the in-chat video player, reusing the styling from the 3D model download.",
+            "text": "Picking Standard Agent from the Chat app's \"+\" modal now hydrates the new agent into the store via api.agents.get before navigating, so the destination route renders the new chat immediately instead of silently falling back to the CEO agent.",
             "commit_shas": [
-              "f56188f3f736c17c955d1a7ef6565ad581d9da0f"
+              "4bfefba9401331bf277f40462fcb3a9dd5827d44"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The sliding-pill animation on the chat mode selector is restored, and the spec block hoists its Copy button into the header's trailing slot to free vertical space.",
+            "commit_shas": [
+              "63455692539598b506d81b92a432b8d567ebd376",
+              "70d5fa62c817e8284bb8326a677f2a6565a5feba",
+              "187351f059b76101b8461af90840059923aee5a6"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-5",
+        "time_label": "1:33 PM",
+        "started_at": "2026-05-14T20:33:30.000Z",
+        "ended_at": "2026-05-14T20:33:30.000Z",
+        "title": "Error bubbles read as one line with their Support ID and Report Bug action",
+        "summary": "The chat error chrome is reorganized so the error message, support_id chip, and primary action live on a single row.",
+        "items": [
+          {
+            "text": "Error messages are split off the bubble's content into a dedicated errorMessage field and rendered as the leading element of the error actions row — truncated to one line with full text on hover — so the Support ID chip and the Report Bug button finally sit next to the message they describe. The insufficient-credits \"Buy credits\" button also moves into the same row so the whole error chrome reads as one line.",
+            "commit_shas": [
+              "77b9f16299356dcdb3890acf6453d01ea768e0d5"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-6",
+        "time_label": "1:55 PM",
+        "started_at": "2026-05-14T20:55:22.000Z",
+        "ended_at": "2026-05-14T21:30:27.000Z",
+        "title": "macOS-latest nightly unblocked after a rustup-init shim regression",
+        "summary": "Desktop nightly was failing on the macos-latest arm64 runner because Homebrew's rustup-init was masquerading as rustc; the runtime parity check now resolves the real toolchain binary.",
+        "items": [
+          {
+            "text": "The desktop runtime parity check stopped trusting `rustc --version` output verbatim — first by anchoring the parser to a literal `rustc X.Y.Z` line, then by resolving rustc up front via `rustup which rustc` so Homebrew's `/opt/homebrew/bin/rustc` symlink to rustup-init can no longer report itself as \"rustc 1.29.0\" on macos-latest. A fresh empty commit re-triggers the Desktop Nightly Release workflow with the fix plus the matching aura-harness sync in place.",
+            "commit_shas": [
+              "918cb9b20659bb1d44da2aba95ac197961b6d758",
+              "6210a72b516dd78a978c86ec22cbd4add7519997",
+              "b09ebce722c098a0893ade908e5db9d2703a8b0a"
             ],
             "confidence": "high"
           }
@@ -826,11 +2313,11 @@
       }
     ],
     "highlights": [
-      "Video generation is now a first-class chat mode",
-      "Seedance 2.0 models added to AURA Video (gated as coming soon)",
-      "Video and 3D generations now persist into chat history",
-      "In-chat video player gets preview thumbnails and MP4 download"
+      "Video generation lands as a first-class chat mode with Veo + Seedance",
+      "Stuck-stream watchdog, queued sends, and Report Bug with support IDs",
+      "Per-bucket Context popover and inline model picker in the chat input",
+      "macOS-latest nightly unblocked after rustup-init shim regression"
     ],
-    "raw_commit_count": 14
+    "raw_commit_count": 45
   }
 }

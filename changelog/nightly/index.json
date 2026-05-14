@@ -2,19 +2,19 @@
   {
     "date": "2026-05-14",
     "channel": "nightly",
-    "version": "0.1.0-nightly.512.1",
-    "title": "Video generation lands in chat, with Seedance models and 3D persistence",
-    "intro": "Today's nightly brings end-to-end video generation into the chat experience: new Seedance models with provider-aware controls in the AURA Video app, a full wiring pass so video mode behaves correctly across desktop and mobile chat input bars, and matching chat-history persistence for both video and 3D generations. Late in the day, the in-chat video player picked up a real preview frame and an MP4 download.",
-    "entryCount": 3,
+    "version": "0.1.0-nightly.519.1",
+    "title": "Video generation in chat, stuck-stream recovery, and a refreshed input bar",
+    "intro": "A heavy nightly that lands native video generation inside chat, ships an end-to-end \"agent stuck and silent drops\" recovery story (watchdogs, queued sends, support IDs, one-click bug reports), and reorganizes the chat input bar around an inline model picker and a richer per-bucket context indicator. Desktop release infrastructure also got unblocked on macOS-latest after a rustup shim regression.",
+    "entryCount": 6,
     "highlights": [
-      "Video generation is now a first-class chat mode",
-      "Seedance 2.0 models added to AURA Video (gated as coming soon)",
-      "Video and 3D generations now persist into chat history",
-      "In-chat video player gets preview thumbnails and MP4 download"
+      "Video generation lands as a first-class chat mode with Veo + Seedance",
+      "Stuck-stream watchdog, queued sends, and Report Bug with support IDs",
+      "Per-bucket Context popover and inline model picker in the chat input",
+      "macOS-latest nightly unblocked after rustup-init shim regression"
     ],
-    "rawCommitCount": 14,
-    "generatedAt": "2026-05-14T11:31:41.171Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.512.1",
+    "rawCommitCount": 45,
+    "generatedAt": "2026-05-14T21:44:58.296Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.519.1",
     "path": "history/2026-05-14.json"
   },
   {
