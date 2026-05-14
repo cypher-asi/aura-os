@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-05-14",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.509.1",
+    "title": "Video generation lands in chat and the AURA Video app",
+    "intro": "Today's nightly turns video into a first-class generation mode alongside image and 3D. A new VideoBlock renders results inline in chat, the AURA Video app picks up Seedance models with provider-aware controls, and the server now persists video turns to chat history. A follow-up flips Seedance to a \"coming soon\" state while the BytePlus account is finalized.",
+    "entryCount": 2,
+    "highlights": [
+      "Video is now a first-class chat generation mode",
+      "Seedance 2.0 models added with provider-specific resolution, duration, and aspect ratio controls",
+      "Inline VideoBlock renderer with native HTML5 playback",
+      "Video generations persist to chat history server-side"
+    ],
+    "rawCommitCount": 10,
+    "generatedAt": "2026-05-14T09:48:46.363Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.509.1",
+    "path": "history/2026-05-14.json"
+  },
+  {
     "date": "2026-05-13",
     "channel": "nightly",
     "version": "0.1.0-nightly.508.1",
