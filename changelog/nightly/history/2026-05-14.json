@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-14T09:48:46.363Z",
+  "generatedAt": "2026-05-14T11:18:25.376Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.509.1",
+  "version": "0.1.0-nightly.511.1",
   "date": "2026-05-14",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.509.1",
-  "lastIncludedSha": "62a3dc170b02d8fcd77eed560fa7624367d601fe",
-  "previousProcessedSha": "629b0085a10934c62e540b464782eac8df7099fb",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.511.1",
+  "lastIncludedSha": "d06e704c1baf7ea251e46394e485a7cfaaec7ab6",
+  "previousProcessedSha": "62a3dc170b02d8fcd77eed560fa7624367d601fe",
   "commitShas": [
     "a6d7ffe60ce262ab1c4cbf12ba05eda3f08b0235",
     "b99ce50cc50f073ea4ffdfe61066867ee30f3e3e",
@@ -21,10 +21,13 @@
     "79c0834199a47160541093dbb16379b53fca8c49",
     "afe964998c320a7e9f9e474b94a537414bb5196a",
     "b430244fa721696a7041c7371eb228172f8d77c3",
-    "62a3dc170b02d8fcd77eed560fa7624367d601fe"
+    "62a3dc170b02d8fcd77eed560fa7624367d601fe",
+    "287bc376931ce92aa9b0134f30e8eafd75a9b58e",
+    "c63ce8d6d3f26595394baa131b7d333ce1c1c11b",
+    "d06e704c1baf7ea251e46394e485a7cfaaec7ab6"
   ],
-  "rawCommitCount": 10,
-  "filteredCommitCount": 10,
+  "rawCommitCount": 13,
+  "filteredCommitCount": 13,
   "rawCommits": [
     {
       "sha": "a6d7ffe60ce262ab1c4cbf12ba05eda3f08b0235",
@@ -434,9 +437,125 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "287bc376931ce92aa9b0134f30e8eafd75a9b58e",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-14T11:18:43+01:00",
+      "subject": "feat(3d): add chat persistence to 3D generation handler",
+      "body": "Add agent_id and agent_instance_id to Generate3dRequest for chat\nsession resolution. Call resolve_persist_ctx + persist_user_prompt\nbefore generation, pass GenerationPersistArgs to open_generation_stream.\nFollows video/image persistence pattern. Backward compatible —\nAURA 3D app continues without persistence.",
+      "parents": [
+        "62a3dc170b02d8fcd77eed560fa7624367d601fe"
+      ],
+      "files": [
+        "apps/aura-os-server/src/dto.rs",
+        "apps/aura-os-server/src/handlers/generation/model3d.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 36,
+        "deletions": 6
+      },
+      "committedAtMs": 1778753923000,
+      "cleanSubject": "add chat persistence to 3D generation handler",
+      "keywords": [
+        "chat",
+        "persistence",
+        "generation",
+        "handler"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "c63ce8d6d3f26595394baa131b7d333ce1c1c11b",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-14T11:21:22+01:00",
+      "subject": "feat(3d): pass agent/instance IDs for chat 3D persistence",
+      "body": "Add agentId and agentInstanceId params to generate3dStream and pass\nthem in the request body. Project chats pass agentInstanceId, agent\nchats pass agentId. Server uses these to resolve the chat session and\npersist 3D generation turns to chat history.",
+      "parents": [
+        "287bc376931ce92aa9b0134f30e8eafd75a9b58e"
+      ],
+      "files": [
+        "interface/src/api/streams.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 10,
+        "deletions": 0
+      },
+      "committedAtMs": 1778754082000,
+      "cleanSubject": "pass agent/instance IDs for chat 3D persistence",
+      "keywords": [
+        "pass",
+        "agent",
+        "instance",
+        "chat",
+        "persistence"
+      ],
+      "fileGroups": [
+        "interface/src/api",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "d06e704c1baf7ea251e46394e485a7cfaaec7ab6",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-14T11:54:23+01:00",
+      "subject": "fix(video): show preview frame instead of black poster in chat",
+      "body": "Add #t=0.5 media fragment to video src in VideoBlock so the browser\nseeks to 0.5s for the poster frame instead of showing a black first\nframe. Same approach used in the sidekick panel thumbnails.",
+      "parents": [
+        "c63ce8d6d3f26595394baa131b7d333ce1c1c11b"
+      ],
+      "files": [
+        "interface/src/components/Block/renderers/VideoBlock.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 2,
+        "deletions": 2
+      },
+      "committedAtMs": 1778756063000,
+      "cleanSubject": "show preview frame instead of black poster in chat",
+      "keywords": [
+        "show",
+        "preview",
+        "frame",
+        "instead",
+        "black",
+        "poster",
+        "chat"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
-  "batchCount": 2,
+  "batchCount": 3,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -445,36 +564,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11853406
+          "sizeBytes": 11853570
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.509.1",
+      "version": "0.1.0-nightly.511.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.509.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.511.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 37007894
+          "sizeBytes": 37070588
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.509.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.511.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.509.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.511.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 105757176
+          "sizeBytes": 105810424
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.509.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.511.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -484,29 +603,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.509.1",
+      "version": "0.1.0-nightly.511.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.509.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.511.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 34141107
+          "sizeBytes": 34196073
         },
         {
-          "name": "AURA_0.1.0-nightly.509.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.511.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.509.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.511.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33272195
+          "sizeBytes": 33325060
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.509.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.511.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -516,29 +635,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.509.1",
+      "version": "0.1.0-nightly.511.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.509.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.511.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 35716734
+          "sizeBytes": 35841539
         },
         {
-          "name": "AURA_0.1.0-nightly.509.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.511.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.509.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.511.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 34901468
+          "sizeBytes": 35009533
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.509.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.511.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -548,17 +667,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.509.1",
+      "version": "0.1.0-nightly.511.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.509.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.511.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 25044344
+          "sizeBytes": 25086274
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.509.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.511.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -567,49 +686,36 @@
     }
   ],
   "rendered": {
-    "title": "Video generation lands in chat and the AURA Video app",
-    "intro": "Today's nightly turns video into a first-class generation mode alongside image and 3D. A new VideoBlock renders results inline in chat, the AURA Video app picks up Seedance models with provider-aware controls, and the server now persists video turns to chat history. A follow-up flips Seedance to a \"coming soon\" state while the BytePlus account is finalized.",
+    "title": "Video generation lands in chat, with Seedance models on deck",
+    "intro": "Today's nightly brings end-to-end video generation into the chat experience: a new in-message video player, a fully wired Video mode across desktop and mobile input bars, server-side persistence so video turns survive in chat history, and groundwork for BytePlus Seedance models alongside the existing Veo lineup. A late polish pass also extends the same persistence pattern to 3D generation and fixes a black-poster glitch on rendered videos.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:29 AM",
         "started_at": "2026-05-14T09:29:33.000Z",
         "ended_at": "2026-05-14T09:30:59.000Z",
-        "title": "Video becomes a first-class generation mode in chat and the AURA Video app",
-        "summary": "A new end-to-end video pipeline lands across the chat stack and the AURA Video app, with inline playback, Seedance model support, and server-side chat persistence.",
+        "title": "Video becomes a first-class chat generation mode",
+        "summary": "A full video generation path lands in chat: new models, a dedicated mode, an inline player, and end-to-end wiring across desktop, mobile, and the agent stream — plus server-side persistence of video turns.",
         "items": [
           {
-            "text": "Added a dedicated Video agent mode end-to-end: new AgentMode type, mode descriptors, /generate_video slash command, tool labels, and GenerationStart/Completed event variants for mode \"video\".",
-            "commit_shas": [
-              "b99ce50cc50f073ea4ffdfe61066867ee30f3e3e"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Wired video dispatch through both project chat (use-chat-stream) and standalone agent chat (use-agent-chat-stream), including a new ResolvedSend \"video\" variant, queue records, build-stream-handler tool-name mapping, and chat-ui-store snapping selection to DEFAULT_VIDEO_MODEL_ID.",
-            "commit_shas": [
-              "ec9c63bf93987fd757e0466d8c3ec52ff71da664",
-              "1fd47899db45aad4a6624b849fd812a811800bb7"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Added the AURA Video app's Seedance 2.0 and Seedance 2.0 Fast models with provider-specific UI: 480p–1080p resolutions and 4–15s durations for Seedance, 720p–4k and 4–8s for Veo, plus a new aspect ratio picker (16:9, 9:16, 1:1, 4:3, 3:4, 21:9) shown only for Seedance, with automatic clamping when switching providers.",
+            "text": "Added Seedance 2.0 and Seedance 2.0 Fast to the AURA Video panel with provider-aware controls — Seedance gets 480p–1080p resolutions, 4–15s durations, and a new aspect ratio picker (16:9, 9:16, 1:1, 4:3, 3:4, 21:9), while Veo keeps its 720p–4k / 4–8s constraints, with model switching automatically clamping invalid settings.",
             "commit_shas": [
               "a6d7ffe60ce262ab1c4cbf12ba05eda3f08b0235"
             ],
             "confidence": "high"
           },
           {
-            "text": "Introduced a VideoBlock renderer that plays generated videos inline in chat messages via a native HTML5 player with controls, registered against the generate_video tool in the block registry.",
+            "text": "Promoted video to a first-class AgentMode across constants, slash commands, tool labels, and system event types, and introduced a new VideoBlock renderer that plays generated clips inline in chat with native HTML5 controls.",
             "commit_shas": [
+              "b99ce50cc50f073ea4ffdfe61066867ee30f3e3e",
               "4a2a5d96c4ab3d852f9a13e378a4943740f9cec3"
             ],
             "confidence": "high"
           },
           {
-            "text": "Closed several fall-through bugs that would have broken the new mode: desktop and mobile input bars now derive video mode correctly, the /generate_video slash command maps to video instead of 3D, progress text shows \"Generating video...\", GenerationCompleted maps to generate_video so results render as VideoBlock instead of a broken ImageBlock, and adapter syncs keep the video model pinned.",
+            "text": "Wired the video dispatch path through chat hooks, the stream handler, resolve-send, and the chat UI store so sending in Video mode actually calls generateVideoStream, snaps the model picker to the default video model, and routes /generate_video to video mode on both desktop and mobile input bars — closing fall-through bugs that previously sent video prompts as chat or 3D.",
             "commit_shas": [
+              "ec9c63bf93987fd757e0466d8c3ec52ff71da664",
               "1fd47899db45aad4a6624b849fd812a811800bb7",
               "79c0834199a47160541093dbb16379b53fca8c49",
               "007699f3715c686a5ae7d27bfafcc4c04a39e2a1"
@@ -617,7 +723,7 @@
             "confidence": "high"
           },
           {
-            "text": "Server-side video handler now resolves the chat session from agent_id/agent_instance_id and persists user prompts and generation turns to chat history, mirroring the image.rs pattern while staying backward compatible with callers that don't pass agent scope.",
+            "text": "On the server, the video generation handler now resolves a persist context and records the user prompt before streaming, mirroring the image handler so video turns land in chat history when an agent or instance ID is provided.",
             "commit_shas": [
               "afe964998c320a7e9f9e474b94a537414bb5196a"
             ],
@@ -630,20 +736,45 @@
         "time_label": "2:30 AM",
         "started_at": "2026-05-14T09:30:59.000Z",
         "ended_at": "2026-05-14T09:30:59.000Z",
-        "title": "Client wiring for video persistence and a temporary Seedance hold",
-        "summary": "The client now forwards agent scope so video turns can be persisted, and Seedance models are surfaced but disabled until the BytePlus account is ready.",
+        "title": "Seedance gated as 'coming soon' while persistence wires through",
+        "summary": "Client-side plumbing finishes the video persistence loop, and Seedance models are intentionally surfaced but disabled until the BytePlus account is live.",
         "items": [
           {
-            "text": "GenerateVideoOptions now carries agentId and agentInstanceId, sent from project chats (agentInstanceId) and agent chats (agentId) so the server can resolve the session and persist video generation turns to chat history.",
+            "text": "Project and agent chat streams now pass agentInstanceId and agentId on GenerateVideoOptions, completing the client side of video chat persistence introduced on the server.",
             "commit_shas": [
               "b430244fa721696a7041c7371eb228172f8d77c3"
             ],
             "confidence": "high"
           },
           {
-            "text": "Seedance 2.0 and 2.0 Fast are visible in both the AURA Video model picker and the chat mode picker but greyed out with a \"(coming soon)\" suffix and disabled clicks, pending BytePlus account activation.",
+            "text": "Seedance 2.0 and Seedance 2.0 Fast appear in both the AURA Video and chat model pickers but are greyed out with a '(coming soon)' suffix and click disabled, ready to be enabled once the BytePlus account is provisioned.",
             "commit_shas": [
               "62a3dc170b02d8fcd77eed560fa7624367d601fe"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "3:18 AM",
+        "started_at": "2026-05-14T10:18:43.000Z",
+        "ended_at": "2026-05-14T10:54:23.000Z",
+        "title": "3D generation joins chat history, and video posters stop showing black",
+        "summary": "The chat persistence pattern extends to 3D generations, and a small but visible fix replaces the black first frame on inline videos with a real preview.",
+        "items": [
+          {
+            "text": "3D generation now persists into chat history: the server handler accepts agent and instance IDs, resolves a persist context, and records the prompt before streaming, while the client passes those IDs through generate3dStream from both project and agent chats.",
+            "commit_shas": [
+              "287bc376931ce92aa9b0134f30e8eafd75a9b58e",
+              "c63ce8d6d3f26595394baa131b7d333ce1c1c11b"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Inline videos in chat now render a real preview frame instead of a black poster by appending a #t=0.5 media fragment to the video src, matching the sidekick thumbnail behavior.",
+            "commit_shas": [
+              "d06e704c1baf7ea251e46394e485a7cfaaec7ab6"
             ],
             "confidence": "high"
           }
@@ -651,11 +782,11 @@
       }
     ],
     "highlights": [
-      "Video is now a first-class chat generation mode",
-      "Seedance 2.0 models added with provider-specific resolution, duration, and aspect ratio controls",
-      "Inline VideoBlock renderer with native HTML5 playback",
-      "Video generations persist to chat history server-side"
+      "Video mode is now a first-class chat generation mode",
+      "Inline VideoBlock renders generated clips directly in messages",
+      "Seedance 2.0 models scaffolded with provider-aware resolution, duration, and aspect ratio controls",
+      "Video and 3D generations now persist into chat history"
     ],
-    "raw_commit_count": 10
+    "raw_commit_count": 13
   }
 }

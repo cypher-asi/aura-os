@@ -1,34 +1,39 @@
-# Video generation lands in chat and the AURA Video app
+# Video generation lands in chat, with Seedance models on deck
 
 - Date: `2026-05-14`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.509.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.509.1
+- Version: `0.1.0-nightly.511.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.511.1
 
-Today's nightly turns video into a first-class generation mode alongside image and 3D. A new VideoBlock renders results inline in chat, the AURA Video app picks up Seedance models with provider-aware controls, and the server now persists video turns to chat history. A follow-up flips Seedance to a "coming soon" state while the BytePlus account is finalized.
+Today's nightly brings end-to-end video generation into the chat experience: a new in-message video player, a fully wired Video mode across desktop and mobile input bars, server-side persistence so video turns survive in chat history, and groundwork for BytePlus Seedance models alongside the existing Veo lineup. A late polish pass also extends the same persistence pattern to 3D generation and fixes a black-poster glitch on rendered videos.
 
-## 2:29 AM — Video becomes a first-class generation mode in chat and the AURA Video app
+## 2:29 AM — Video becomes a first-class chat generation mode
 
-A new end-to-end video pipeline lands across the chat stack and the AURA Video app, with inline playback, Seedance model support, and server-side chat persistence.
+A full video generation path lands in chat: new models, a dedicated mode, an inline player, and end-to-end wiring across desktop, mobile, and the agent stream — plus server-side persistence of video turns.
 
-- Added a dedicated Video agent mode end-to-end: new AgentMode type, mode descriptors, /generate_video slash command, tool labels, and GenerationStart/Completed event variants for mode "video". (`b99ce50`)
-- Wired video dispatch through both project chat (use-chat-stream) and standalone agent chat (use-agent-chat-stream), including a new ResolvedSend "video" variant, queue records, build-stream-handler tool-name mapping, and chat-ui-store snapping selection to DEFAULT_VIDEO_MODEL_ID. (`ec9c63b`, `1fd4789`)
-- Added the AURA Video app's Seedance 2.0 and Seedance 2.0 Fast models with provider-specific UI: 480p–1080p resolutions and 4–15s durations for Seedance, 720p–4k and 4–8s for Veo, plus a new aspect ratio picker (16:9, 9:16, 1:1, 4:3, 3:4, 21:9) shown only for Seedance, with automatic clamping when switching providers. (`a6d7ffe`)
-- Introduced a VideoBlock renderer that plays generated videos inline in chat messages via a native HTML5 player with controls, registered against the generate_video tool in the block registry. (`4a2a5d9`)
-- Closed several fall-through bugs that would have broken the new mode: desktop and mobile input bars now derive video mode correctly, the /generate_video slash command maps to video instead of 3D, progress text shows "Generating video...", GenerationCompleted maps to generate_video so results render as VideoBlock instead of a broken ImageBlock, and adapter syncs keep the video model pinned. (`1fd4789`, `79c0834`, `007699f`)
-- Server-side video handler now resolves the chat session from agent_id/agent_instance_id and persists user prompts and generation turns to chat history, mirroring the image.rs pattern while staying backward compatible with callers that don't pass agent scope. (`afe9649`)
+- Added Seedance 2.0 and Seedance 2.0 Fast to the AURA Video panel with provider-aware controls — Seedance gets 480p–1080p resolutions, 4–15s durations, and a new aspect ratio picker (16:9, 9:16, 1:1, 4:3, 3:4, 21:9), while Veo keeps its 720p–4k / 4–8s constraints, with model switching automatically clamping invalid settings. (`a6d7ffe`)
+- Promoted video to a first-class AgentMode across constants, slash commands, tool labels, and system event types, and introduced a new VideoBlock renderer that plays generated clips inline in chat with native HTML5 controls. (`b99ce50`, `4a2a5d9`)
+- Wired the video dispatch path through chat hooks, the stream handler, resolve-send, and the chat UI store so sending in Video mode actually calls generateVideoStream, snaps the model picker to the default video model, and routes /generate_video to video mode on both desktop and mobile input bars — closing fall-through bugs that previously sent video prompts as chat or 3D. (`ec9c63b`, `1fd4789`, `79c0834`, `007699f`)
+- On the server, the video generation handler now resolves a persist context and records the user prompt before streaming, mirroring the image handler so video turns land in chat history when an agent or instance ID is provided. (`afe9649`)
 
-## 2:30 AM — Client wiring for video persistence and a temporary Seedance hold
+## 2:30 AM — Seedance gated as 'coming soon' while persistence wires through
 
-The client now forwards agent scope so video turns can be persisted, and Seedance models are surfaced but disabled until the BytePlus account is ready.
+Client-side plumbing finishes the video persistence loop, and Seedance models are intentionally surfaced but disabled until the BytePlus account is live.
 
-- GenerateVideoOptions now carries agentId and agentInstanceId, sent from project chats (agentInstanceId) and agent chats (agentId) so the server can resolve the session and persist video generation turns to chat history. (`b430244`)
-- Seedance 2.0 and 2.0 Fast are visible in both the AURA Video model picker and the chat mode picker but greyed out with a "(coming soon)" suffix and disabled clicks, pending BytePlus account activation. (`62a3dc1`)
+- Project and agent chat streams now pass agentInstanceId and agentId on GenerateVideoOptions, completing the client side of video chat persistence introduced on the server. (`b430244`)
+- Seedance 2.0 and Seedance 2.0 Fast appear in both the AURA Video and chat model pickers but are greyed out with a '(coming soon)' suffix and click disabled, ready to be enabled once the BytePlus account is provisioned. (`62a3dc1`)
+
+## 3:18 AM — 3D generation joins chat history, and video posters stop showing black
+
+The chat persistence pattern extends to 3D generations, and a small but visible fix replaces the black first frame on inline videos with a real preview.
+
+- 3D generation now persists into chat history: the server handler accepts agent and instance IDs, resolves a persist context, and records the prompt before streaming, while the client passes those IDs through generate3dStream from both project and agent chats. (`287bc37`, `c63ce8d`)
+- Inline videos in chat now render a real preview frame instead of a black poster by appending a #t=0.5 media fragment to the video src, matching the sidekick thumbnail behavior. (`d06e704`)
 
 ## Highlights
 
-- Video is now a first-class chat generation mode
-- Seedance 2.0 models added with provider-specific resolution, duration, and aspect ratio controls
-- Inline VideoBlock renderer with native HTML5 playback
-- Video generations persist to chat history server-side
+- Video mode is now a first-class chat generation mode
+- Inline VideoBlock renders generated clips directly in messages
+- Seedance 2.0 models scaffolded with provider-aware resolution, duration, and aspect ratio controls
+- Video and 3D generations now persist into chat history
 
