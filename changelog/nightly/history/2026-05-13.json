@@ -3,19 +3,33 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-13T09:47:46.114Z",
+  "generatedAt": "2026-05-14T01:09:06.337Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.507.1",
+  "version": "0.1.0-nightly.508.1",
   "date": "2026-05-13",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.507.1",
-  "lastIncludedSha": "f3e468aeb138ae47e978a587f2a36d40d3e22050",
-  "previousProcessedSha": "9b555c441021e938c529324d1627227cec82cc72",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.508.1",
+  "lastIncludedSha": "629b0085a10934c62e540b464782eac8df7099fb",
+  "previousProcessedSha": "f3e468aeb138ae47e978a587f2a36d40d3e22050",
   "commitShas": [
-    "f3e468aeb138ae47e978a587f2a36d40d3e22050"
+    "f3e468aeb138ae47e978a587f2a36d40d3e22050",
+    "4fee1da126a72f3ea23854a8f492c1097f89c37e",
+    "f50c007727a9b24be44d997beed90effa70bd392",
+    "13576dadb4bced666a8255b9141c65b79fb10f8b",
+    "609e9460a754914eabcfc1fccc57f26332ed7129",
+    "47592330d1a9f116d52adeba2699d26782467d42",
+    "b3c6e4f7b820d8af8ef7635319be7686922d9933",
+    "ea75e0087b310c19dbcb2bf9790d94c8998c65b5",
+    "ce9707b2abbc0fae05b8b20f8b1d8413abfe521d",
+    "bf563e07bca7dd0590d1d042f16cb2038923e6b4",
+    "6e7f92c671e5ae4bbf1d1f7694baa8f0783ae372",
+    "2e81f831d376d3e7c33b5dd15471422f25e69a12",
+    "1793c7030660b06844435f41d458e68123bad7f5",
+    "c7761524d25142f9ffb5954a8fde023e5b892cb8",
+    "629b0085a10934c62e540b464782eac8df7099fb"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 15,
+  "filteredCommitCount": 15,
   "rawCommits": [
     {
       "sha": "f3e468aeb138ae47e978a587f2a36d40d3e22050",
@@ -53,9 +67,678 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "4fee1da126a72f3ea23854a8f492c1097f89c37e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-13T17:53:13-07:00",
+      "subject": "feat(chat-app): add ChatGPT-style Chat app at /chat",
+      "body": "New top-level app for everyday LLM use. Left panel renders the\ndate-bucketed sessions list (with search + new-chat) for the user's\nsuper-agent (CEO), main panel mounts the standard ChatPanel /\nDesktopChatInputBar against that agent, and the sidekick reuses the\nagents-app AgentInfoPanel and is collapsed on first visit. Default\nmodel is seeded to aura-gpt-5-4-mini; user picks still persist via\nthe existing per-agent localStorage key.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "f3e468aeb138ae47e978a587f2a36d40d3e22050"
+      ],
+      "files": [
+        "interface/src/apps/chat-app/ChatApp.ts",
+        "interface/src/apps/chat-app/components/ChatAppLeftPanel/ChatAppLeftPanel.module.css",
+        "interface/src/apps/chat-app/components/ChatAppLeftPanel/ChatAppLeftPanel.tsx",
+        "interface/src/apps/chat-app/components/ChatAppLeftPanel/index.ts",
+        "interface/src/apps/chat-app/components/ChatAppMainPanel/ChatAppMainPanel.module.css",
+        "interface/src/apps/chat-app/components/ChatAppMainPanel/ChatAppMainPanel.tsx",
+        "interface/src/apps/chat-app/components/ChatAppMainPanel/index.ts",
+        "interface/src/apps/chat-app/components/ChatAppRoute/ChatAppRoute.tsx",
+        "interface/src/apps/chat-app/components/ChatAppRoute/index.ts",
+        "interface/src/apps/chat-app/hooks/use-chat-app-chat.ts",
+        "interface/src/apps/chat-app/routes.tsx",
+        "interface/src/apps/registry.ts"
+      ],
+      "stats": {
+        "fileCount": 12,
+        "insertions": 417,
+        "deletions": 0
+      },
+      "committedAtMs": 1778719993000,
+      "cleanSubject": "add ChatGPT-style Chat app at /chat",
+      "keywords": [
+        "chatgpt",
+        "style",
+        "chat"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f50c007727a9b24be44d997beed90effa70bd392",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-13T17:53:14-07:00",
+      "subject": "fix(chat-app): resolve chat agent via setup() so renamed CEOs work",
+      "body": "The route was stuck on \"Starting chat...\" for accounts whose CEO had\nbeen renamed because `useSuperAgent()` requires `name === \"ceo\" &&\nrole === \"ceo\"`. Switch to a one-shot, app-session-cached\n`api.superAgent.setup()` call (idempotent server-side) which returns\nthe canonical chat agent regardless of name/role, and feed it into\nthe agent store so the sidekick still has Profile/Memory/etc. The\nroute now also distinguishes \"loading\" from \"couldn't start chat\"\ninstead of showing \"Starting chat...\" for the error case.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "4fee1da126a72f3ea23854a8f492c1097f89c37e"
+      ],
+      "files": [
+        "interface/src/apps/chat-app/components/ChatAppLeftPanel/ChatAppLeftPanel.tsx",
+        "interface/src/apps/chat-app/components/ChatAppRoute/ChatAppRoute.tsx",
+        "interface/src/apps/chat-app/hooks/use-chat-app-agent.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 142,
+        "deletions": 38
+      },
+      "committedAtMs": 1778719994000,
+      "cleanSubject": "resolve chat agent via setup() so renamed CEOs work",
+      "keywords": [
+        "resolve",
+        "chat",
+        "agent",
+        "setup",
+        "renamed",
+        "ceos",
+        "work"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "13576dadb4bced666a8255b9141c65b79fb10f8b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-13T17:53:14-07:00",
+      "subject": "fix(chat): focus input when switching between agents/sessions",
+      "body": "The \"don't steal focus when switching desktop chats\" latch suppressed\nauto-focus whenever the input wasn't already focused at the moment of\nthe switch. In practice that meant any sidebar click (which moves\nfocus to the clicked row) left the cursor stranded outside the input,\nforcing a manual click before typing.\n\nRe-arm focus on every thread reset so navigating between agents,\nsessions, or fresh canvases drops the cursor straight into the chat\ninput on desktop. The focus effect's existing `isMobileLayout` guard\nstill prevents popping the on-screen keyboard on mobile.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "f50c007727a9b24be44d997beed90effa70bd392"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.test.tsx",
+        "interface/src/apps/chat/components/ChatPanel/ChatPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 10,
+        "deletions": 15
+      },
+      "committedAtMs": 1778719994000,
+      "cleanSubject": "focus input when switching between agents/sessions",
+      "keywords": [
+        "focus",
+        "input",
+        "when",
+        "switching",
+        "between",
+        "agents",
+        "sessions"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "609e9460a754914eabcfc1fccc57f26332ed7129",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-13T17:53:14-07:00",
+      "subject": "fix(video): drop unused `name` field from GenerateVideoRequest",
+      "body": "The downstream `aura_protocol::GenerationRequest` has no `name` field,\nso the value was deserialized and silently dropped. Remove it to clear\nthe dead_code warning; serde still ignores the unknown key sent by the\nfrontend, so behavior is unchanged.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "13576dadb4bced666a8255b9141c65b79fb10f8b"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/generation/video.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 0,
+        "deletions": 1
+      },
+      "committedAtMs": 1778719994000,
+      "cleanSubject": "drop unused `name` field from GenerateVideoRequest",
+      "keywords": [
+        "drop",
+        "unused",
+        "name",
+        "field",
+        "from",
+        "generatevideorequest"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "47592330d1a9f116d52adeba2699d26782467d42",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-13T17:53:14-07:00",
+      "subject": "feat(chat): soften turn watchdog + non-terminal stream-lagged + env-tunable broadcast capacity",
+      "body": "Raise the chat-turn watchdog from a hard 30s/300s pair to env-tunable\ndefaults of 120s first-event / 30-min sliding idle, so long Opus\nthinking + tool-use turns no longer trip a synthetic `turn_timeout`\nmid-stream. Demote `stream_lagged` from a terminal SSE error to a\ntransient `progress: lagged` hint so a slow consumer no longer kills\nthe live turn. Raise the harness WS broadcast channel from 4096 to\n16384 events and expose `AURA_HARNESS_BROADCAST_CAPACITY` so we can\ntune backpressure without a rebuild.\n\nPhase 1 of the agent-stream reliability plan.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "609e9460a754914eabcfc1fccc57f26332ed7129"
+      ],
+      "files": [
+        "apps/aura-os-server/src/app_builder/mod.rs",
+        "apps/aura-os-server/src/auth_guard/tests.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/streaming.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/turn_slot.rs",
+        "apps/aura-os-server/src/handlers/billing.rs",
+        "apps/aura-os-server/src/state/mod.rs",
+        "crates/aura-os-harness/src/ws_bridge.rs",
+        "interface/src/hooks/use-chat-stream/build-stream-handler.ts"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 357,
+        "deletions": 52
+      },
+      "committedAtMs": 1778719994000,
+      "cleanSubject": "soften turn watchdog + non-terminal stream-lagged + env-tunable broadcast capacity",
+      "keywords": [
+        "soften",
+        "turn",
+        "watchdog",
+        "terminal",
+        "stream",
+        "lagged",
+        "tunable",
+        "broadcast",
+        "capacity"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-harness/src",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "b3c6e4f7b820d8af8ef7635319be7686922d9933",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-13T17:53:14-07:00",
+      "subject": "fix(titlebar): vertically center EARN button label",
+      "body": "The label inherited the document line-height (~1.5), reserving phantom descender space that pushed the all-caps glyphs above the pill's flex center. Setting `line-height: 1` collapses the line box to glyph height so align-items: center lines up correctly.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "47592330d1a9f116d52adeba2699d26782467d42"
+      ],
+      "files": [
+        "interface/src/components/EarnCreditsButton/EarnCreditsButton.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 0
+      },
+      "committedAtMs": 1778719994000,
+      "cleanSubject": "vertically center EARN button label",
+      "keywords": [
+        "vertically",
+        "center",
+        "earn",
+        "button",
+        "label"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "ea75e0087b310c19dbcb2bf9790d94c8998c65b5",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-13T17:53:14-07:00",
+      "subject": "feat(harness,chat): retry initial WS connect + client auto-retry on stream-dropped",
+      "body": "LocalHarness and SwarmHarness now retry the initial WebSocket connect\nup to 3 times with exponential backoff (env-tunable via\nAURA_HARNESS_CONNECT_ATTEMPTS / AURA_HARNESS_CONNECT_TIMEOUT_SECS),\nso a transient network blip on session open no longer fails the\nchat. Capacity-exhausted (503/1013) and identity-preflight failures\nshort-circuit immediately and are never retried.\n\nOn the client, harness_ws_closed and harness_ws_read_error now\nclassify as the same recoverable streamDropped variant as\nSSEIdleTimeoutError, and the chat hook auto-retries the last user\nmessage up to 2 times with 1s/2s backoff. The harness picks up the\nconversation from storage on each retry, so the user sees the\nassistant turn resume after a \"Reconnecting...\" banner instead of\nlosing the message.\n\nTrue mid-turn session resume remains blocked on session_resume\nin aura-node and is called out in the ws_bridge TODO.\n\nPhase 2 of the agent-stream reliability plan.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "b3c6e4f7b820d8af8ef7635319be7686922d9933"
+      ],
+      "files": [
+        "crates/aura-os-harness/src/local_harness.rs",
+        "crates/aura-os-harness/src/swarm_harness.rs",
+        "crates/aura-os-harness/src/ws_bridge.rs",
+        "interface/src/hooks/stream/handlers/index.ts",
+        "interface/src/hooks/stream/handlers/lifecycle.ts",
+        "interface/src/hooks/use-chat-stream/auto-retry.test.ts",
+        "interface/src/hooks/use-chat-stream/build-stream-handler.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts",
+        "interface/src/hooks/use-stream-core.ts"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 755,
+        "deletions": 42
+      },
+      "committedAtMs": 1778719994000,
+      "cleanSubject": "retry initial WS connect + client auto-retry on stream-dropped",
+      "keywords": [
+        "retry",
+        "initial",
+        "connect",
+        "client",
+        "auto",
+        "stream",
+        "dropped"
+      ],
+      "fileGroups": [
+        "crates/aura-os-harness/src",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "ce9707b2abbc0fae05b8b20f8b1d8413abfe521d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-13T17:53:14-07:00",
+      "subject": "feat(chat): auto-fork chat sessions when context usage crosses threshold",
+      "body": "When AssistantMessageEnd.usage.context_utilization >= 0.80 (env\nAURA_CHAT_AUTO_FORK_THRESHOLD), the persist task now flags the\nstorage session row as `rolled_over` and writes a rollover_summary\nevent with a one-paragraph summary of the conversation. The next\nuser send detects the flag in resolve_chat_session_with_pin, mints\na fresh session via SessionService::create_chat_followup_session\ncarrying summary_of_previous_context forward, evicts the stale\ndelegated harness session, and emits a `progress: forked_for_context`\nSSE event so the chat UI updates `?session=` and shows a subtle\n\"Continued from previous chat\" banner. The in-flight turn that\ntriggered the rollover still finalizes on the original session;\nforking only affects the next user message.\n\nPhase 3 of the agent-stream reliability plan.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "ea75e0087b310c19dbcb2bf9790d94c8998c65b5"
+      ],
+      "files": [
+        "apps/aura-os-server/src/app_builder/mod.rs",
+        "apps/aura-os-server/src/auth_guard/tests.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/agent_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/persist.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/persist_task.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/setup.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/streaming.rs",
+        "apps/aura-os-server/src/handlers/billing.rs",
+        "apps/aura-os-server/src/handlers/generation/persist.rs",
+        "apps/aura-os-server/src/state/mod.rs",
+        "apps/aura-os-server/tests/common/mod.rs",
+        "crates/aura-os-sessions/src/session_service.rs",
+        "crates/aura-os-sessions/tests/auto_fork_chat.rs",
+        "interface/src/hooks/use-chat-stream/build-stream-handler.ts"
+      ],
+      "stats": {
+        "fileCount": 15,
+        "insertions": 1034,
+        "deletions": 57
+      },
+      "committedAtMs": 1778719994000,
+      "cleanSubject": "auto-fork chat sessions when context usage crosses threshold",
+      "keywords": [
+        "auto",
+        "fork",
+        "chat",
+        "sessions",
+        "when",
+        "context",
+        "usage",
+        "crosses",
+        "threshold"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-sessions/src",
+        "crates/aura-os-sessions/tests",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "bf563e07bca7dd0590d1d042f16cb2038923e6b4",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-13T17:53:14-07:00",
+      "subject": "feat(chat): per-(partition,model) registry + DashMap + raise queue cap to 4 + narrow bare-agent busy guard",
+      "body": "Concurrency rework: the chat-session registry is now keyed on\n(partition, model) and backed by DashMap, so two clients on the\nsame agent instance can run different models in parallel without\nevicting each other. The per-partition turn queue cap rises from\n2 to 4 (1 in-flight + 3 queued; env AURA_PARTITION_TURN_QUEUE).\nThe bare-agent route's automation busy guard is narrowed so a\nloop on a sibling instance no longer blocks bare-agent chat.\n\nAfter this phase a single user can have ~128 simultaneously active\nturns process-wide spread across as many distinct agents / models\nas they want, with no cross-agent serialization.\n\nPhase 4 of the agent-stream reliability plan.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "ce9707b2abbc0fae05b8b20f8b1d8413abfe521d"
+      ],
+      "files": [
+        "apps/aura-os-server/src/app_builder/mod.rs",
+        "apps/aura-os-server/src/auth_guard/tests.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/agent_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/busy.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/setup.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/streaming.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/turn_slot.rs",
+        "apps/aura-os-server/src/handlers/agents/crud/update.rs",
+        "apps/aura-os-server/src/handlers/agents/mod.rs",
+        "apps/aura-os-server/src/handlers/billing.rs",
+        "apps/aura-os-server/src/lib/handlers_test_support.rs",
+        "apps/aura-os-server/src/state/mod.rs",
+        "apps/aura-os-server/tests/common/mod.rs",
+        "apps/aura-os-server/tests/concurrent_agents.rs"
+      ],
+      "stats": {
+        "fileCount": 16,
+        "insertions": 622,
+        "deletions": 169
+      },
+      "committedAtMs": 1778719994000,
+      "cleanSubject": "per-(partition,model) registry + DashMap + raise queue cap to 4 + narrow bare-agent busy guard",
+      "keywords": [
+        "partition",
+        "model",
+        "registry",
+        "dashmap",
+        "raise",
+        "queue",
+        "narrow",
+        "bare",
+        "agent",
+        "busy",
+        "guard"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "6e7f92c671e5ae4bbf1d1f7694baa8f0783ae372",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-13T17:53:14-07:00",
+      "subject": "feat(stability): observability counters + /api/admin/health + client stream-close breadcrumbs",
+      "body": "Adds an in-process StabilityMetrics struct (lock-free AtomicU64\ncounters) covering the reliability work from phases 1-4: turns\nstarted/completed, stream_stalled, turn_timeout, stream_lagged,\nharness_ws_closed/read_error/protocol_mismatch, harness initial\nconnect retries, agent_busy_queue_full, auto_fork triggered/applied,\nand client auto-retry on streamDropped. Surfaces a JSON snapshot at\n/api/admin/health together with active chat-session and automaton\ncounts and the resolved env config.\n\nClient-side, every stream close fires a structured `aura:stream-close`\nCustomEvent breadcrumb and sets the `X-Aura-Client-Retry` request\nheader on Phase 2 auto-retries so the server counter is wired\nend-to-end. No new external metrics dependency; everything reads\nthrough the existing tracing + event infra.\n\nPhase 5 (final phase) of the agent-stream reliability plan.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "bf563e07bca7dd0590d1d042f16cb2038923e6b4"
+      ],
+      "files": [
+        "apps/aura-os-server/src/app_builder/mod.rs",
+        "apps/aura-os-server/src/auth_guard/tests.rs",
+        "apps/aura-os-server/src/handlers/admin.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/agent_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/persist_task.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/setup.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/streaming.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/turn_slot.rs",
+        "apps/aura-os-server/src/handlers/billing.rs",
+        "apps/aura-os-server/src/handlers/mod.rs",
+        "apps/aura-os-server/src/lib.rs",
+        "apps/aura-os-server/src/router/debug_loops.rs",
+        "apps/aura-os-server/src/stability_metrics.rs",
+        "apps/aura-os-server/src/state/mod.rs",
+        "apps/aura-os-server/tests/admin_health.rs",
+        "apps/aura-os-server/tests/common/mod.rs",
+        "crates/aura-os-harness/src/lib.rs",
+        "crates/aura-os-harness/src/local_harness.rs",
+        "crates/aura-os-harness/src/stability_metrics.rs",
+        "crates/aura-os-harness/src/swarm_harness.rs",
+        "crates/aura-os-harness/src/ws_bridge.rs",
+        "interface/src/api/streams.ts",
+        "interface/src/hooks/stream/handlers/lifecycle.ts",
+        "interface/src/hooks/use-chat-stream.test.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts",
+        "interface/src/shared/observability/stream-breadcrumbs.test.ts",
+        "interface/src/shared/observability/stream-breadcrumbs.ts"
+      ],
+      "stats": {
+        "fileCount": 28,
+        "insertions": 1620,
+        "deletions": 15
+      },
+      "committedAtMs": 1778719994000,
+      "cleanSubject": "observability counters + /api/admin/health + client stream-close breadcrumbs",
+      "keywords": [
+        "observability",
+        "counters",
+        "admin",
+        "health",
+        "client",
+        "stream",
+        "close",
+        "breadcrumbs"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-harness/src",
+        "interface/src/api",
+        "interface/src/hooks",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "2e81f831d376d3e7c33b5dd15471422f25e69a12",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-13T17:53:14-07:00",
+      "subject": "fix(observability): guard process.env behind globalThis under browser-only tsconfig",
+      "body": "The Phase 5 stream-close breadcrumb (`isDevBuild`) referenced\n`process.env.NODE_ENV` directly as a fallback when `import.meta.env.DEV`\nis absent. The interface ships with a browser-only tsconfig that does\nnot include `@types/node`, so `tsc -b` (run by aura-os-desktop's\nbuild.rs) fails with TS2591: \"Cannot find name 'process'\" and the whole\nTauri build aborts.\n\nThe fallback was always intended for Vitest's jsdom polyfill of\n`process.env`. Reach it via `globalThis` so the runtime probe still\nworks while the static type universe stays browser-only — no\n`@types/node` devDependency needed.\n\nVerified `npm run build` is clean and the 4 stream-breadcrumbs vitest\ncases still pass.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "6e7f92c671e5ae4bbf1d1f7694baa8f0783ae372"
+      ],
+      "files": [
+        "interface/src/shared/observability/stream-breadcrumbs.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 10,
+        "deletions": 1
+      },
+      "committedAtMs": 1778719994000,
+      "cleanSubject": "guard process.env behind globalThis under browser-only tsconfig",
+      "keywords": [
+        "guard",
+        "process",
+        "behind",
+        "globalthis",
+        "under",
+        "browser",
+        "only",
+        "tsconfig"
+      ],
+      "fileGroups": [
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "1793c7030660b06844435f41d458e68123bad7f5",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-13T17:53:14-07:00",
+      "subject": "fix(agent-env): show agent workspace folder in hover card",
+      "body": "The local \"File Path\" row was reading `envInfo.cwd`, i.e. the\naura-os-server process's launch directory, regardless of which\nagent/project the chat was bound to. That made the value misleading\nwhenever the agent's resolved workspace differed from the server CWD.\n\nWire the already-resolved `workspacePath` (from `useTerminalTarget`,\nwhich honors `AgentInstance.workspace_path`,\n`Agent.local_workspace_path`, and `Project.local_workspace_path`)\nthrough `ChatInputBar` / `MobileChatInputBar` into `AgentEnvironment`\nand rename the row to \"Workspace Folder\". The server CWD remains the\nfallback for project-less chats so behavior is unchanged when no\nworkspace is known.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "2e81f831d376d3e7c33b5dd15471422f25e69a12"
+      ],
+      "files": [
+        "interface/src/apps/agents/components/AgentEnvironment/AgentEnvironment.test.tsx",
+        "interface/src/apps/agents/components/AgentEnvironment/AgentEnvironment.tsx",
+        "interface/src/apps/agents/components/AgentEnvironment/StatusCard.tsx",
+        "interface/src/apps/chat/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.tsx"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 79,
+        "deletions": 7
+      },
+      "committedAtMs": 1778719994000,
+      "cleanSubject": "show agent workspace folder in hover card",
+      "keywords": [
+        "show",
+        "agent",
+        "workspace",
+        "folder",
+        "hover",
+        "card"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/mobile"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "c7761524d25142f9ffb5954a8fde023e5b892cb8",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-13T17:53:14-07:00",
+      "subject": "fix(chat-stream): per-partition send-control for parallel chats",
+      "body": "Repair the dual UI breakage that surfaced when chatting with two agents in\nthe kept-mounted AgentChatPanel:\n\n- Agent B's send no longer silently no-ops after switching from agent A\n  mid-stream. The inFlight gate is now per-(projectId, agentInstanceId)\n  via partition-send-control, so one partition's in-flight POST never\n  blocks another's entry.\n\n- Agent A's UI no longer freezes after the user switches away mid-stream.\n  sendMessage now captures (partitionKey, partitionSetters, partitionRefs,\n  agentInstanceId) at entry; the finally cleanup, the in-flight handler,\n  and the auto-retry replay path all write to A's slot via captured\n  setters regardless of which partition the panel is currently rendering.\n  Final assistant bubble and isStreaming/sidekick spinner clearance now\n  land on A's slot without requiring a refresh.\n\n- Auto-retry timer is partition-bound: it captures the originating\n  partition's identifiers and replays via api.sendEventStream against\n  the captured (projectId, agentInstanceId) so a transient SSE drop on\n  the previously-mounted agent recovers cleanly even if the user has\n  since navigated to a different agent.\n\n- useStreamCore useLayoutEffect cleanup no longer cancels in-flight\n  RAF/flushTimeout when the entry is still streaming (treats kept-mounted\n  prop change as a panel swap, not a true unmount).\n\nNew module: interface/src/hooks/use-chat-stream/partition-send-control.ts\nholds per-partition send-control state, mirroring the per-key Zustand\nstream store. clearPartitionSendControl wires into pruneStreamStore for\nunified partition lifecycle.\n\nTests: interface/src/hooks/use-chat-stream/parallel-chats.test.ts covers\nsymptom 1 (B silent after switch), symptom 2 (A finalization on captured\npartition), mid-stream switch with no second send, two-hook parallel\nsanity, and auto-retry-after-switch.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "1793c7030660b06844435f41d458e68123bad7f5"
+      ],
+      "files": [
+        "interface/src/hooks/stream/store.ts",
+        "interface/src/hooks/use-chat-stream/parallel-chats.test.ts",
+        "interface/src/hooks/use-chat-stream/partition-send-control.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts",
+        "interface/src/hooks/use-stream-core.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 760,
+        "deletions": 176
+      },
+      "committedAtMs": 1778719994000,
+      "cleanSubject": "per-partition send-control for parallel chats",
+      "keywords": [
+        "partition",
+        "send",
+        "control",
+        "parallel",
+        "chats"
+      ],
+      "fileGroups": [
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "629b0085a10934c62e540b464782eac8df7099fb",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-13T17:53:14-07:00",
+      "subject": "feat(chat-app): cross-agent session inbox with per-row avatars",
+      "body": "Broaden the Chat app's left panel into a unified ChatGPT-style inbox\nthat spans every agent the user has chatted with (not just the\ncanonical CEO chat agent), shows the session's agent avatar on the\nright of each row, eliminates the cross-bucket multi-select bug, and\nswaps both the chat panel and the sidekick to follow the selected\nsession's agent.\n\n- SessionsList now renders a single bucketed list of native <button>\n  rows instead of one ZUI Explorer per date bucket. Each per-bucket\n  Explorer kept its own provider/focus state, which made it possible\n  for rows in different time-period sections to read as simultaneously\n  highlighted. With a single parent-owned `effectiveSelectedSessionId`\n  there is exactly one selected row across the entire surface.\n- Added an optional `renderRowSuffix` prop so callers can paint custom\n  right-side content per row. The Agents `ChatsTab` and projects\n  `SessionList` keep their existing project-name suffix behavior;\n  the chat-app passes a per-session `<Avatar>` resolved from each\n  agent's project bindings.\n- New `useChatAppSessions` hook merges `sessionsBySurface` across\n  every agent and re-sorts via `sortSessionsDesc` (now exported from\n  `sessions-list-store`).\n- `ChatAppLeftPanel` fans out `loadAgentSessions(agentId)` across\n  `useAgents()` and navigates to `/chat?agent&project&instance&session`\n  so the route can mount the right chat panel before the merged\n  session list has loaded.\n- `ChatAppRoute` resolves the effective agent in URL > session > CEO\n  fallback order and mirrors it into `useSelectedAgent()` so the\n  shared `AgentInfoPanel` / `AgentSidekickTaskbar` automatically\n  re-render the right profile/chats/skills/memory tabs for whichever\n  agent owns the active conversation.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "c7761524d25142f9ffb5954a8fde023e5b892cb8"
+      ],
+      "files": [
+        "interface/src/apps/chat-app/components/ChatAppLeftPanel/ChatAppLeftPanel.module.css",
+        "interface/src/apps/chat-app/components/ChatAppLeftPanel/ChatAppLeftPanel.tsx",
+        "interface/src/apps/chat-app/components/ChatAppRoute/ChatAppRoute.tsx",
+        "interface/src/apps/chat-app/hooks/use-chat-app-sessions.ts",
+        "interface/src/components/SessionsList/SessionsList.module.css",
+        "interface/src/components/SessionsList/SessionsList.test.tsx",
+        "interface/src/components/SessionsList/SessionsList.tsx",
+        "interface/src/stores/sessions-list-store.ts"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 536,
+        "deletions": 233
+      },
+      "committedAtMs": 1778719994000,
+      "cleanSubject": "cross-agent session inbox with per-row avatars",
+      "keywords": [
+        "cross",
+        "agent",
+        "session",
+        "inbox",
+        "with",
+        "avatars"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 4,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -64,36 +747,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11847317
+          "sizeBytes": 11852494
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.507.1",
+      "version": "0.1.0-nightly.508.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.507.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.508.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 36890614
+          "sizeBytes": 36922982
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.507.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.508.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.507.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.508.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 105658872
+          "sizeBytes": 105691640
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.507.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.508.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -103,29 +786,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.507.1",
+      "version": "0.1.0-nightly.508.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.507.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.508.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 34022952
+          "sizeBytes": 34134348
         },
         {
-          "name": "AURA_0.1.0-nightly.507.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.508.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.507.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.508.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33154491
+          "sizeBytes": 33248189
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.507.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.508.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -135,29 +818,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.507.1",
+      "version": "0.1.0-nightly.508.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.507.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.508.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 35678841
+          "sizeBytes": 35719998
         },
         {
-          "name": "AURA_0.1.0-nightly.507.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.508.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.507.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.508.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 34845121
+          "sizeBytes": 34899689
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.507.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.508.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -167,17 +850,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.507.1",
+      "version": "0.1.0-nightly.508.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.507.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.508.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 24986447
+          "sizeBytes": 25026396
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.507.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.508.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -186,28 +869,137 @@
     }
   ],
   "rendered": {
-    "title": "Live video previews land in the Aura Video sidekick",
-    "intro": "A small but visible polish day for Aura Video: generated clips in the sidekick panel now show a real frame from the video itself instead of a generic placeholder, making it much easier to tell them apart at a glance.",
+    "title": "A standalone Chat app and a five-phase agent-stream reliability overhaul",
+    "intro": "Today's nightly lands a brand-new ChatGPT-style Chat app at /chat alongside a top-to-bottom reliability rework of the agent streaming pipeline — softer watchdogs, automatic WS reconnects, context-aware session forking, parallel turns per model, and end-to-end observability. A handful of smaller polish fixes round out the chat surface across desktop and mobile.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:28 AM",
         "started_at": "2026-05-13T09:28:44.000Z",
         "ended_at": "2026-05-13T09:28:44.000Z",
-        "title": "Frame-accurate thumbnails for generated videos",
-        "summary": "The Aura Video sidekick panel now renders a still frame from each generated clip as its thumbnail, with a safe fallback when playback isn't available.",
+        "title": "Video thumbnails in the Sidekick panel",
+        "summary": "AuraVideo's sidekick now previews real video frames instead of a generic icon.",
         "items": [
           {
-            "text": "Generated videos in the Aura Video sidekick panel now display an actual frame from the clip — pulled via a media fragment at the 0.5s mark with preload=auto — instead of a generic Film icon, making clips far easier to identify visually.",
+            "text": "Sidekick rows for videos render a still frame captured at the 0.5s mark via a media-fragment preload, with a Film icon as a graceful fallback when the frame can't be decoded.",
             "commit_shas": [
               "f3e468aeb138ae47e978a587f2a36d40d3e22050"
             ],
             "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "5:53 PM",
+        "started_at": "2026-05-14T00:53:13.000Z",
+        "ended_at": "2026-05-14T00:53:14.000Z",
+        "title": "ChatGPT-style Chat app at /chat",
+        "summary": "A dedicated everyday-LLM app ships with its own route, sessions list, and fixes for the first paper cuts.",
+        "items": [
+          {
+            "text": "New top-level Chat app at /chat mounts a date-bucketed sessions list, the standard ChatPanel against the user's super-agent, and reuses the Agents app's AgentInfoPanel as a collapsed-by-default sidekick; the default model is seeded to aura-gpt-5-4-mini.",
+            "commit_shas": [
+              "4fee1da126a72f3ea23854a8f492c1097f89c37e"
+            ],
+            "confidence": "high"
           },
           {
-            "text": "Added a graceful fallback: if the video URL is missing or the preview fails to load, the panel reverts to the Film icon so the layout stays intact.",
+            "text": "Accounts whose CEO agent had been renamed no longer get stuck on \"Starting chat…\" — the route now resolves the canonical chat agent through a cached api.superAgent.setup() call and distinguishes loading from an actual setup failure.",
             "commit_shas": [
-              "f3e468aeb138ae47e978a587f2a36d40d3e22050"
+              "f50c007727a9b24be44d997beed90effa70bd392"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Switching between agents or sessions in the sidebar now drops the cursor straight into the chat input on desktop instead of leaving focus stranded on the clicked row; the mobile keyboard guard is preserved.",
+            "commit_shas": [
+              "13576dadb4bced666a8255b9141c65b79fb10f8b"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "5:53 PM",
+        "started_at": "2026-05-14T00:53:14.000Z",
+        "ended_at": "2026-05-14T00:53:14.000Z",
+        "title": "Agent-stream reliability plan: phases 1–5",
+        "summary": "A coordinated five-phase rework hardens the chat streaming pipeline end-to-end, from watchdog timings to observability.",
+        "items": [
+          {
+            "text": "Phase 1 softens the chat-turn watchdog from a hard 30s/300s pair to env-tunable 120s first-event / 30-min sliding-idle defaults, demotes stream_lagged from a terminal SSE error to a transient progress hint, and quadruples the harness WS broadcast capacity to 16384 (tunable via AURA_HARNESS_BROADCAST_CAPACITY) so long Opus tool-use turns and slow consumers no longer kill live streams.",
+            "commit_shas": [
+              "47592330d1a9f116d52adeba2699d26782467d42"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Phase 2 makes WS connects resilient: LocalHarness and SwarmHarness retry the initial connect up to 3 times with 500ms/1s/2s backoff, and the client now treats harness_ws_closed/read_error as recoverable streamDropped, auto-retrying the last user message twice behind a \"Reconnecting…\" banner instead of losing it.",
+            "commit_shas": [
+              "ea75e0087b310c19dbcb2bf9790d94c8998c65b5"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Phase 3 introduces automatic session forking: once context_utilization crosses 0.80 (AURA_CHAT_AUTO_FORK_THRESHOLD), the next user send transparently mints a fresh session seeded with a rollover summary and the UI shows a subtle \"Continued from previous chat\" banner — no more hitting upstream context caps mid-conversation.",
+            "commit_shas": [
+              "ce9707b2abbc0fae05b8b20f8b1d8413abfe521d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Phase 4 reworks chat concurrency: the session registry is now keyed on (partition, model) and backed by DashMap, the per-partition turn queue grows from 2 to 4, and the bare-agent busy guard is narrowed so a loop on a sibling instance no longer blocks bare-agent chat — enabling ~128 simultaneous turns per user across distinct agents and models.",
+            "commit_shas": [
+              "bf563e07bca7dd0590d1d042f16cb2038923e6b4"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Phase 5 wires up observability: a new lock-free StabilityMetrics struct tracks every reliability counter from phases 1–4 and exposes them as a JSON snapshot at /api/admin/health alongside active session counts and resolved env config; the client emits aura:stream-close breadcrumbs and sets X-Aura-Client-Retry on auto-retries so the server counter is wired end-to-end.",
+            "commit_shas": [
+              "6e7f92c671e5ae4bbf1d1f7694baa8f0783ae372"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Follow-up fixes keep the EARN button label vertically centered in the titlebar, drop a dead `name` field from the video generation request to silence a dead_code warning, and guard the Phase 5 breadcrumb's process.env fallback behind globalThis so the browser-only tsconfig (and the Tauri desktop build) stays green.",
+            "commit_shas": [
+              "b3c6e4f7b820d8af8ef7635319be7686922d9933",
+              "609e9460a754914eabcfc1fccc57f26332ed7129",
+              "2e81f831d376d3e7c33b5dd15471422f25e69a12"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-4",
+        "time_label": "5:53 PM",
+        "started_at": "2026-05-14T00:53:14.000Z",
+        "ended_at": "2026-05-14T00:53:14.000Z",
+        "title": "Parallel chats and a cross-agent inbox for /chat",
+        "summary": "The Chat app gains a unified cross-agent session list, and the streaming hook is rebuilt around per-partition state so two chats can run side by side.",
+        "items": [
+          {
+            "text": "Chat's left panel becomes a unified cross-agent inbox: SessionsList now renders a single bucketed list of native button rows (eliminating the cross-bucket multi-select bug), each row paints the session's agent avatar via a new renderRowSuffix prop, and selecting a session swaps both the chat panel and the sidekick to that agent's profile, chats, skills, and memory.",
+            "commit_shas": [
+              "629b0085a10934c62e540b464782eac8df7099fb"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Chatting with two agents in a kept-mounted panel no longer breaks: a new per-(projectId, agentInstanceId) send-control module fixes Agent B silently no-op'ing after a mid-stream switch and Agent A's UI freezing on the final assistant bubble, with auto-retry timers now partition-bound so transient SSE drops recover cleanly even after the user navigates away.",
+            "commit_shas": [
+              "c7761524d25142f9ffb5954a8fde023e5b892cb8"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The agent environment hover card now shows the chat's actual workspace folder — resolved from AgentInstance, Agent, or Project bindings via useTerminalTarget — instead of always falling back to the aura-os-server launch directory, and the row is relabeled \"Workspace Folder\" on both desktop and mobile.",
+            "commit_shas": [
+              "1793c7030660b06844435f41d458e68123bad7f5"
             ],
             "confidence": "high"
           }
@@ -215,9 +1007,12 @@
       }
     ],
     "highlights": [
-      "Generated videos now show real frame thumbnails in the sidekick",
-      "Graceful Film-icon fallback when a video URL is missing or fails to load"
+      "New ChatGPT-style Chat app at /chat with cross-agent inbox",
+      "Five-phase agent-stream reliability plan shipped end-to-end",
+      "Auto-forking chat sessions when context fills up",
+      "Parallel chats per (agent, model) with per-partition send control",
+      "/api/admin/health snapshot for live stability counters"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 15
   }
 }
