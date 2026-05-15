@@ -113,3 +113,4 @@ export function persistAgentMode(mode: AgentMode, _agentId?: string): void {
     // localStorage may be unavailable
   }
 }
+// smoke test verification
