@@ -3,19 +3,36 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-16T16:38:13.238Z",
+  "generatedAt": "2026-05-16T20:56:56.297Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.533.1",
+  "version": "0.1.0-nightly.534.1",
   "date": "2026-05-16",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.533.1",
-  "lastIncludedSha": "71cb9e68ea11ab183d30b4b98a7e62c73646a52c",
-  "previousProcessedSha": "7cd35a7f5aeff6df0fbc7c54f1da8fca6c3030e7",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.534.1",
+  "lastIncludedSha": "5289c45124eec072d032a34aaa42392a4f842e13",
+  "previousProcessedSha": "71cb9e68ea11ab183d30b4b98a7e62c73646a52c",
   "commitShas": [
-    "71cb9e68ea11ab183d30b4b98a7e62c73646a52c"
+    "71cb9e68ea11ab183d30b4b98a7e62c73646a52c",
+    "26bdc6c4104c9629cb19597658407d006b6706e4",
+    "e03038e003b7c9c2cc7e59e29961aa55d367de10",
+    "813992ae2f59aa8159851b676fd105bb77b079cd",
+    "b37e8b6b4f44f7957f54542c5a8c883d2069241d",
+    "584204184b7c5ae1ee5885eefc03d29234b0053c",
+    "913ba83ccabd961e299cf24519f104ffca6d99f8",
+    "d740c0c09faaf74da234e53b49d418ebe69ae144",
+    "13a6bdec7159d74eef52eb51481cd76aa5adfaf5",
+    "388d2480c78123d9638992b208b05d10571f4cc6",
+    "2430397601edaaf9c768c6f1f4a067fd29da322e",
+    "895545a024865f8bbc999eb5b7c220332a138763",
+    "5c88139fe448511d2d9f5bd6174b921feaf78512",
+    "607f3a50a0e1cdde0b499503c358b068ae203a0e",
+    "414c532ccad88e505a32e655f88a9a9206af80ae",
+    "df34b2234116438376a3001c51cc73506b02f88d",
+    "e676f0352cf8af1843d0753410c68f6f1782459b",
+    "5289c45124eec072d032a34aaa42392a4f842e13"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 18,
+  "filteredCommitCount": 18,
   "rawCommits": [
     {
       "sha": "71cb9e68ea11ab183d30b4b98a7e62c73646a52c",
@@ -53,9 +70,768 @@
       "areas": [
         "Release Infrastructure"
       ]
+    },
+    {
+      "sha": "26bdc6c4104c9629cb19597658407d006b6706e4",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T11:10:03-07:00",
+      "subject": "fix(chat): plumb new-session flag through image / 3D / video modes",
+      "body": "Clicking the chat-input \"+\" affordance set `nextSendStartsNewSession` on\nthe per-partition send control, but only the regular chat fall-through\npath forwarded it to the server. Image / 3D / video sends routed through\n`generate*Stream` (and the matching server handlers' `resolve_persist_ctx`\nwhich always called `setup_*_chat_persistence` with `force_new=false /\npinned_session_id=None`) silently appended to the latest existing\nsession, so picking a non-code mode and pressing \"+\" never actually\nstarted a new conversation.\n\nFrontend: extend `generateImageStream`, `generate3dStream`,\n`generateVideoStream` with optional `newSession` / `sessionId` and\nforward `shouldStartNewSession` + `sessionIdRef.current` from both\n`useChatStream` and `useAgentChatStream` (also fixes\n`useStandaloneAgentChat`).\n\nBackend: add `new_session` / `session_id` to `GenerateImageRequest`,\n`Generate3dRequest`, and `GenerateVideoRequest`, then thread them\nthrough `resolve_persist_ctx` into the existing\n`setup_*_chat_persistence` plumbing. Downstream `pick_candidate_session`\nalready prioritises `force_new=true` over a pin (covered by\n`resolve_force_new_overrides_pin` in `agents/chat/persist.rs`), so a\nstale `?session=` in the URL no longer wins over an explicit \"+\" press.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "71cb9e68ea11ab183d30b4b98a7e62c73646a52c"
+      ],
+      "files": [
+        "apps/aura-os-server/src/dto.rs",
+        "apps/aura-os-server/src/handlers/generation/image.rs",
+        "apps/aura-os-server/src/handlers/generation/model3d.rs",
+        "apps/aura-os-server/src/handlers/generation/persist.rs",
+        "apps/aura-os-server/src/handlers/generation/tests.rs",
+        "apps/aura-os-server/src/handlers/generation/video.rs",
+        "interface/src/api/streams.ts",
+        "interface/src/hooks/use-agent-chat-stream.test.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream.test.ts",
+        "interface/src/hooks/use-chat-stream/parallel-chats.test.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts"
+      ],
+      "stats": {
+        "fileCount": 12,
+        "insertions": 517,
+        "deletions": 6
+      },
+      "committedAtMs": 1778955003000,
+      "cleanSubject": "plumb new-session flag through image / 3D / video modes",
+      "keywords": [
+        "plumb",
+        "session",
+        "flag",
+        "through",
+        "image",
+        "video",
+        "modes"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/api",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "e03038e003b7c9c2cc7e59e29961aa55d367de10",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T11:10:03-07:00",
+      "subject": "fix(updater): eliminate ping subprocess so Windows update no longer flashes a terminal",
+      "body": "The previous fix (22694c181) dropped DETACHED_PROCESS so CREATE_NO_WINDOW\nwould be honored, on the theory that cmd.exe would then own a hidden\nconsole which child console apps (ping.exe) would inherit silently. In\npractice, once the parent aura.exe has exited that inheritance is not\nreliable -- Windows can still allocate a freshly-visible console for\nthe child for a split second, which is exactly the flash users keep\nseeing.\n\nThe settle delay isn't load-bearing either: by the time the script\nruns ping, the NSIS installer has already exited (we just captured its\nERRORLEVEL), so its file handles are released by Windows, and the\nsubsequent `start \"\" \"!AURA_EXE!\"` targets the installed exe, not the\ninstaller.\n\nDrop the `ping -n 2 127.0.0.1 > nul` settle delay from the handoff\n.bat, update the surrounding rationale comments to reflect the new\ninvariant (no console subprocesses in the script, period), and add\n`handoff_script_has_no_console_subprocesses` to pin it as a regression\ntest. CREATE_NO_WINDOW and the breakaway-from-job retry are kept as\ndefense-in-depth.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "26bdc6c4104c9629cb19597658407d006b6706e4"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/updater/install.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 62,
+        "deletions": 18
+      },
+      "committedAtMs": 1778955003000,
+      "cleanSubject": "eliminate ping subprocess so Windows update no longer flashes a terminal",
+      "keywords": [
+        "eliminate",
+        "ping",
+        "subprocess",
+        "windows",
+        "update",
+        "longer",
+        "flashes",
+        "terminal"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/src"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop"
+      ]
+    },
+    {
+      "sha": "813992ae2f59aa8159851b676fd105bb77b079cd",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T11:10:03-07:00",
+      "subject": "feat(chat): stack error chrome over two lines and copy the error message in one click",
+      "body": "The end-of-turn error row was forcing the full diagnostic onto a single\nellipsised line, hiding the actually-useful contract-blocked details behind a\ntitle tooltip. Stack the chrome instead: line 1 carries the wrapping error\nmessage with a one-click copy icon, line 2 carries the Support ID chip plus\nthe Report bug button (and the variant-specific Buy credits action when\napplicable).",
+      "parents": [
+        "e03038e003b7c9c2cc7e59e29961aa55d367de10"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/MessageBubble/MessageBubble.module.css",
+        "interface/src/apps/chat/components/MessageBubble/MessageBubble.test.tsx",
+        "interface/src/apps/chat/components/MessageBubble/MessageBubble.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 130,
+        "deletions": 83
+      },
+      "committedAtMs": 1778955003000,
+      "cleanSubject": "stack error chrome over two lines and copy the error message in one click",
+      "keywords": [
+        "stack",
+        "error",
+        "chrome",
+        "over",
+        "lines",
+        "copy",
+        "message",
+        "click"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "b37e8b6b4f44f7957f54542c5a8c883d2069241d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T11:10:03-07:00",
+      "subject": "feat(chat): wire plan mode to a shared spec-planning policy that blocks code edits",
+      "body": "Plan mode (`action=generate_specs` / public `mode=plan`) now routes\nthrough `handlers::plan_mode` so the spec-planning prompt, the\nread-only tool surface, and the hard-disabled code-writing tools stay\nidentical across the auth'd chat handlers (instance + agent routes),\nthe public-chat handler, and the dedicated `/specs/generate*`\nendpoints. Cold-start sessions stamp the policy onto `SessionConfig`\n(suffixed system prompt + `tool_permissions` off entries for\nwrite/edit/delete/run/git/dev-loop tools); warm sessions still see a\nper-turn preamble wrapper + plan-mode `tool_hints` so a session that\nopened in code mode still gets steered into plan-mode behaviour on a\nplan turn, and flipping back to code mode produces an unwrapped turn\nso the model does not carry plan-mode framing forward.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "813992ae2f59aa8159851b676fd105bb77b079cd"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/agent_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/streaming.rs",
+        "apps/aura-os-server/src/handlers/mod.rs",
+        "apps/aura-os-server/src/handlers/plan_mode.rs",
+        "apps/aura-os-server/src/handlers/public/chat.rs",
+        "apps/aura-os-server/src/handlers/specs/gen.rs"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 607,
+        "deletions": 35
+      },
+      "committedAtMs": 1778955003000,
+      "cleanSubject": "wire plan mode to a shared spec-planning policy that blocks code edits",
+      "keywords": [
+        "wire",
+        "plan",
+        "mode",
+        "shared",
+        "spec",
+        "planning",
+        "policy",
+        "that",
+        "blocks",
+        "code",
+        "edits"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "584204184b7c5ae1ee5885eefc03d29234b0053c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T11:10:03-07:00",
+      "subject": "protocol: add cache_read_tokens + cache_creation_tokens to ContextBreakdown",
+      "body": "These additive fields let the harness surface per-turn prompt-cache\nhit/miss counts alongside the existing bucket breakdown, so the\ncontext-window popover can show how much of the conversation bucket\ncame from a cache read versus needed to be written. Both fields are\n`#[serde(default)]` and explicitly excluded from `total()` /\n`is_empty()` so older harness builds keep working unchanged.",
+      "parents": [
+        "b37e8b6b4f44f7957f54542c5a8c883d2069241d"
+      ],
+      "files": [
+        "crates/aura-protocol/bindings/ContextBreakdown.ts",
+        "crates/aura-protocol/src/server.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 16,
+        "deletions": 1
+      },
+      "committedAtMs": 1778955003000,
+      "cleanSubject": "protocol: add cache_read_tokens + cache_creation_tokens to ContextBreakdown",
+      "keywords": [
+        "protocol",
+        "cache",
+        "read",
+        "tokens",
+        "creation",
+        "contextbreakdown"
+      ],
+      "fileGroups": [
+        "crates/aura-protocol/bindings",
+        "crates/aura-protocol/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "913ba83ccabd961e299cf24519f104ffca6d99f8",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T11:10:03-07:00",
+      "subject": "sessions: backfill cache token fields in demo ContextBreakdown",
+      "body": "Commit b65d13cf0 added `cache_read_tokens` / `cache_creation_tokens`\nto `ContextBreakdown` but missed the demo constructor in\n`sessions::demo_context_breakdown`, breaking `cargo check` on the\nbranch. Initialise both to zero so the demo branch still builds; the\ndemo response intentionally has no upstream cache data to report.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "584204184b7c5ae1ee5885eefc03d29234b0053c"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/sessions.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 2,
+        "deletions": 0
+      },
+      "committedAtMs": 1778955003000,
+      "cleanSubject": "sessions: backfill cache token fields in demo ContextBreakdown",
+      "keywords": [
+        "sessions",
+        "backfill",
+        "cache",
+        "token",
+        "fields",
+        "demo",
+        "contextbreakdown"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "d740c0c09faaf74da234e53b49d418ebe69ae144",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T11:10:03-07:00",
+      "subject": "chat: derive stable prompt_cache_key per chat surface",
+      "body": "Pipes a per-surface stable cache key (agent:{id}, instance:{id},\ntool:{project}:{tool}, devloop:{project}:{instance}) into\nSessionModelOverrides so the harness can forward it to aura-router for\nOpenAI-family prompt caching. Pairs the key with 24h retention on\nlong-lived project surfaces; ephemeral test runs leave it unset. Wire\nshape is additive — older harness builds ignore the new fields.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "913ba83ccabd961e299cf24519f104ffca6d99f8"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/agent_route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route.rs",
+        "apps/aura-os-server/src/handlers/agents/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/runtime.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/start.rs",
+        "apps/aura-os-server/src/handlers/generation/harness_stream.rs",
+        "apps/aura-os-server/src/handlers/projects_helpers/session.rs",
+        "crates/aura-os-harness/src/automaton_client/tests.rs",
+        "crates/aura-protocol/bindings/SessionModelOverrides.ts",
+        "crates/aura-protocol/src/client.rs"
+      ],
+      "stats": {
+        "fileCount": 10,
+        "insertions": 118,
+        "deletions": 13
+      },
+      "committedAtMs": 1778955003000,
+      "cleanSubject": "chat: derive stable prompt_cache_key per chat surface",
+      "keywords": [
+        "chat",
+        "derive",
+        "stable",
+        "prompt",
+        "cache",
+        "surface"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-harness/src",
+        "crates/aura-protocol/bindings",
+        "crates/aura-protocol/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "13a6bdec7159d74eef52eb51481cd76aa5adfaf5",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T11:10:03-07:00",
+      "subject": "direct-http: attach cache_control + prompt-caching beta to Anthropic calls",
+      "body": "Adds `cache_control: ephemeral` to the system block in the Haiku\nsession-title and session-summary calls, and to the changelog\ngenerator's tool + system block, plus the\n`anthropic-beta: prompt-caching-2024-07-31` header so Anthropic\nactually applies the cache. The media planner library only has a\nreusable tool schema (no static system prompt) so cache_control rides\non the tool. The titles' system prompt and the generator's tool\nschema are identical across calls, so every retry / subsequent call\nbenefits from the cache read.",
+      "parents": [
+        "d740c0c09faaf74da234e53b49d418ebe69ae144"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/sessions.rs",
+        "infra/scripts/release/generate-daily-changelog.mjs",
+        "interface/scripts/lib/changelog-media-planner.mjs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 27,
+        "deletions": 5
+      },
+      "committedAtMs": 1778955003000,
+      "cleanSubject": "direct-http: attach cache_control + prompt-caching beta to Anthropic calls",
+      "keywords": [
+        "direct",
+        "http",
+        "attach",
+        "cache",
+        "control",
+        "prompt",
+        "caching",
+        "beta",
+        "anthropic",
+        "calls"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "infra/scripts/release",
+        "interface/scripts/lib"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "388d2480c78123d9638992b208b05d10571f4cc6",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T11:10:03-07:00",
+      "subject": "sessions + loop_log + dev_loop: accumulate prompt-cache tokens in usage rollups",
+      "body": "Extends UpdateContextUsageParams, loop_log RunCounters, and the\ndev-loop streaming side-effects to track cache_creation_input_tokens\nand cache_read_input_tokens alongside the existing input/output\naccumulators. CachedTaskOutput's existing total_cache_* fields are\nfinally written; the loop-log summary renders the new counters; and\nupdate_context_usage counts cached tokens toward context-window\nutilization so a cache-heavy turn correctly registers on the\nrollover threshold instead of looking artificially small.",
+      "parents": [
+        "13a6bdec7159d74eef52eb51481cd76aa5adfaf5"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop/streaming/side_effects.rs",
+        "apps/aura-os-server/src/loop_log/read.rs",
+        "apps/aura-os-server/src/loop_log/write.rs",
+        "crates/aura-loop-log-schema/src/lib.rs",
+        "crates/aura-os-sessions/src/params.rs",
+        "crates/aura-os-sessions/src/session_service.rs",
+        "crates/aura-os-sessions/tests/context_rollover.rs"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 122,
+        "deletions": 1
+      },
+      "committedAtMs": 1778955003000,
+      "cleanSubject": "sessions + loop_log + dev_loop: accumulate prompt-cache tokens in usage rollups",
+      "keywords": [
+        "sessions",
+        "loop",
+        "accumulate",
+        "prompt",
+        "cache",
+        "tokens",
+        "usage",
+        "rollups"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-loop-log-schema/src",
+        "crates/aura-os-sessions/src",
+        "crates/aura-os-sessions/tests"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Other"
+      ]
+    },
+    {
+      "sha": "2430397601edaaf9c768c6f1f4a067fd29da322e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T11:10:03-07:00",
+      "subject": "interface: render Cached row + plumb cache_read/creation_tokens in popover",
+      "body": "Extends the context-usage store's ContextBreakdown (and the wire shape)\nwith cacheReadTokens and cacheCreationTokens, and surfaces a \"Cached\nthis turn\" sub-row in the populated-breakdown popover variant. The row\nshows tokens read from cache, tokens written, and the hit percentage\nwhen at least one is non-zero; legacy harness builds that don't emit\nthe new fields default to 0 and hide the row. Cache fields are\ndeliberately excluded from isBreakdownEmpty so they can't promote an\notherwise-empty payload into the non-fallback popover branch.",
+      "parents": [
+        "388d2480c78123d9638992b208b05d10571f4cc6"
+      ],
+      "files": [
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/features/chat-ui/ChatInputBar/ContextUsageIndicator.test.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ContextUsageIndicator.tsx",
+        "interface/src/hooks/use-agent-chat-stream.test.ts",
+        "interface/src/hooks/use-hydrate-context-utilization.test.ts",
+        "interface/src/shared/types/harness-protocol.ts",
+        "interface/src/stores/context-usage-store.test.ts",
+        "interface/src/stores/context-usage-store.ts"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 134,
+        "deletions": 0
+      },
+      "committedAtMs": 1778955003000,
+      "cleanSubject": "interface: render Cached row + plumb cache_read/creation_tokens in popover",
+      "keywords": [
+        "interface",
+        "render",
+        "cached",
+        "plumb",
+        "cache",
+        "read",
+        "creation",
+        "tokens",
+        "popover"
+      ],
+      "fileGroups": [
+        "interface/src/features",
+        "interface/src/hooks",
+        "interface/src/shared",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "895545a024865f8bbc999eb5b7c220332a138763",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T11:46:26-07:00",
+      "subject": "chat-input: keep textarea focused when switching models",
+      "body": "Switching models used to blur the chat textarea because (a) the\nModelPicker trigger button grabbed focus on mousedown by default\nand (b) ChatInputBar explicitly called shellRef.current?.blur() in\nits onOpen handler. Mirror the SlidingPills pattern: preventDefault\nthe mousedown on the trigger and the menu wrapper so opening the\npicker and selecting a model both leave the caret exactly where the\nuser left it. Add a ModelPicker regression test covering both paths.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "2430397601edaaf9c768c6f1f4a067fd29da322e"
+      ],
+      "files": [
+        "interface/src/components/InputBarShell/ModelPicker.test.tsx",
+        "interface/src/components/InputBarShell/ModelPicker.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 110,
+        "deletions": 3
+      },
+      "committedAtMs": 1778957186000,
+      "cleanSubject": "chat-input: keep textarea focused when switching models",
+      "keywords": [
+        "chat",
+        "input",
+        "keep",
+        "textarea",
+        "focused",
+        "when",
+        "switching",
+        "models"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "5c88139fe448511d2d9f5bd6174b921feaf78512",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T12:21:31-07:00",
+      "subject": "fix(chat): drop new-session pin when user selects a session before sending",
+      "body": "The \"+\" affordance in the chat input bar arms `nextSendStartsNewSession`\nso the next send forces a fresh harness session id. The pin lived in\nthe per-partition `partition-send-control` map (project route) and a\nhook-scoped ref (standalone / chat-app), so it survived navigation.\nIf the user pressed \"+\", then clicked an existing session row before\ntyping, the next send still POSTed `new_session=true` and the server\nminted a brand-new session id. `SessionReady` then flipped the URL\naway from the clicked row, so the message visibly landed in a new\nchat instead of extending the one the user selected.\n\nClear the pin in both hooks when `sessionId` transitions to a real\nvalue -- the user has made an explicit \"extend THIS session\" choice.\nAlso reset the standalone ref when `core.key` changes, since (unlike\nthe project map) it isn't partition-keyed and would otherwise leak a\n\"+\" press from agent A into the first send on agent B inside the\nchat-app shell.\n\nTests cover the +/click/send sequence on the project route (plus the\nimage-mode variant) and both the session-pick and agent-swap cases on\nthe standalone hook.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "895545a024865f8bbc999eb5b7c220332a138763"
+      ],
+      "files": [
+        "interface/src/hooks/use-agent-chat-stream.test.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream.test.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 216,
+        "deletions": 4
+      },
+      "committedAtMs": 1778959291000,
+      "cleanSubject": "drop new-session pin when user selects a session before sending",
+      "keywords": [
+        "drop",
+        "session",
+        "when",
+        "user",
+        "selects",
+        "before",
+        "sending"
+      ],
+      "fileGroups": [
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "607f3a50a0e1cdde0b499503c358b068ae203a0e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T12:22:15-07:00",
+      "subject": "chat-input: open context breakdown on click, not hover",
+      "body": "The context indicator sits on the chat input bar; opening the breakdown\npopover on hover meant stray pointer moves toward the composer kept\ncovering it. Drop the hover-to-open + click-to-pin behavior in favor\nof a plain click toggle (with Enter/Space/Escape keyboard support),\nand update the tests to lock in the new contract.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "5c88139fe448511d2d9f5bd6174b921feaf78512"
+      ],
+      "files": [
+        "interface/src/features/chat-ui/ChatInputBar/ContextUsageIndicator.test.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ContextUsageIndicator.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 44,
+        "deletions": 35
+      },
+      "committedAtMs": 1778959335000,
+      "cleanSubject": "chat-input: open context breakdown on click, not hover",
+      "keywords": [
+        "chat",
+        "input",
+        "open",
+        "context",
+        "breakdown",
+        "click",
+        "hover"
+      ],
+      "fileGroups": [
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "414c532ccad88e505a32e655f88a9a9206af80ae",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T12:24:13-07:00",
+      "subject": "chat: make text selection visible inside accent user bubble",
+      "body": "The app-wide ::selection uses --color-selection (rgba 20%/10%), which\ndisappears against the saturated accent the user bubble paints with, so\ncopy-selecting text on a user message looked like nothing was selected.\nOverride ::selection inside .bubbleUser to invert the bubble's own\naccent/contrast pair (skipping the widget-only variant that has no\naccent fill), which zui guarantees is readable for every accent/theme\ncombination.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "607f3a50a0e1cdde0b499503c358b068ae203a0e"
+      ],
+      "files": [
+        "interface/src/apps/chat/components/MessageBubble/MessageBubble.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 17,
+        "deletions": 0
+      },
+      "committedAtMs": 1778959453000,
+      "cleanSubject": "chat: make text selection visible inside accent user bubble",
+      "keywords": [
+        "chat",
+        "make",
+        "text",
+        "selection",
+        "visible",
+        "inside",
+        "accent",
+        "user",
+        "bubble"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "df34b2234116438376a3001c51cc73506b02f88d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T12:45:07-07:00",
+      "subject": "fix(block): avoid nested <button> when trailing slot has a control",
+      "body": "Block rendered its collapsible header as a <button>, and renderers like\nSpecBlock pass a CopyButton through the `trailing` prop, producing\n<button><button/></button> and a React hydration warning. Render the\nheader as a <div role=\"button\"> with Enter/Space handling and\naria-expanded so the trailing slot can safely host interactive controls.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "414c532ccad88e505a32e655f88a9a9206af80ae"
+      ],
+      "files": [
+        "interface/src/components/Block/Block.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 24,
+        "deletions": 3
+      },
+      "committedAtMs": 1778960707000,
+      "cleanSubject": "avoid nested <button> when trailing slot has a control",
+      "keywords": [
+        "avoid",
+        "nested",
+        "button",
+        "when",
+        "trailing",
+        "slot",
+        "control"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "e676f0352cf8af1843d0753410c68f6f1782459b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T12:56:38-07:00",
+      "subject": "chat-input: drop noisy [attach] debug logs",
+      "body": "Removes the AttachmentPreviews render log that fired on every parent\nre-render, along with the addFiles / handleDrop / handlePaste /\nfileInput onChange traces and the panel-level setAttachments wrapper\nthat existed only to log. Keeps the warn() calls on real FileReader\nfailures and unsupported file types since those only fire on errors.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "df34b2234116438376a3001c51cc73506b02f88d"
+      ],
+      "files": [
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/useFileAttachments.ts",
+        "interface/src/features/chat-ui/ChatPanel/useChatPanelState.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 7,
+        "deletions": 82
+      },
+      "committedAtMs": 1778961398000,
+      "cleanSubject": "chat-input: drop noisy [attach] debug logs",
+      "keywords": [
+        "chat",
+        "input",
+        "drop",
+        "noisy",
+        "attach",
+        "debug",
+        "logs"
+      ],
+      "fileGroups": [
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "5289c45124eec072d032a34aaa42392a4f842e13",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T13:40:49-07:00",
+      "subject": "fix: harness session open hang + false stuck-stream pill on warm reopens",
+      "body": "Five layered changes fix the \"Local timeout reached\" / \"Agent paused\nfor Ns ago\" symptoms that fired on warm-reopened chat sessions:\n\n* Frontend (interface/src/hooks/stream/store.ts): setIsStreaming now\n  rebases lastEventAt and clears stuckSince on the false->true edge.\n  Previously the watchdog inherited the prior turn's last-event\n  timestamp, so a send after >30s of idle rendered the false-positive\n  \"Agent paused\" pill at T=0 before any wire event could land. Locked\n  in with three regression tests in store.test.ts and one\n  integration-shaped case in use-stream-health.test.ts pinning the\n  user-reported scenario.\n\n* Frontend heartbeat handling (build-stream-handler.ts,\n  use-agent-chat-stream.ts): silently consume the new\n  progress:heartbeat frames the server emits during long awaits,\n  keeping the stream-progress clock fresh without polluting the UI\n  with a heartbeat indicator.\n\n* Server safety net (apps/aura-os-server/src/handlers/agents/chat/\n  streaming.rs): wrap SessionBridge::open_and_send_user_message in a\n  60s tokio::time::timeout with begin/complete/TIMEOUT tracing.\n  Backstop against any future class of harness hang we haven't yet\n  observed; surfaces as a clean bad_gateway with a user-friendly\n  \"please retry or restart the harness\" message.\n\n* Harness client unblock (crates/aura-os-harness/src/local_harness.rs):\n  subscribe to the bridge events_tx BEFORE sending SessionInit (so an\n  immediate Error message isn't lost in the microseconds-wide race),\n  and wrap the SessionReady recv loop in tokio::time::timeout(30s).\n  The previous shape would hang forever when the harness WebSocket\n  closed early, because the function itself owned events_tx so\n  rx.recv() never saw Err(Closed). The 30s ceiling sits comfortably\n  under the server's 60s outer timeout so the more informative\n  message surfaces first.\n\n* Companion harness-runtime changes ship in the aura-harness repo:\n  classify_ws_frame now splits None/Err/Close into distinct\n  CloseReason variants with structured ws_transport_error frames sent\n  back over the wire, and the Wave 5 / T1.3 WS_MAX_FRAME_BYTES /\n  WS_MAX_MESSAGE_BYTES caps (64 KiB / 256 KiB) are removed in favour\n  of tungstenite's 16 MiB / 64 MiB defaults. Those caps were\n  artificially low for the Bearer-authed endpoints we run and were\n  false-positiving on legitimate ~77 KiB SessionInit payloads.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "e676f0352cf8af1843d0753410c68f6f1782459b"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/streaming.rs",
+        "crates/aura-os-harness/src/local_harness.rs",
+        "interface/src/hooks/stream/store.test.ts",
+        "interface/src/hooks/stream/store.ts",
+        "interface/src/hooks/stream/use-stream-health.test.ts",
+        "interface/src/hooks/use-chat-stream/build-stream-handler.ts"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 378,
+        "deletions": 23
+      },
+      "committedAtMs": 1778964049000,
+      "cleanSubject": "harness session open hang + false stuck-stream pill on warm reopens",
+      "keywords": [
+        "harness",
+        "session",
+        "open",
+        "hang",
+        "false",
+        "stuck",
+        "stream",
+        "pill",
+        "warm",
+        "reopens"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-harness/src",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Core Rust",
+        "Other"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 6,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -64,36 +840,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 17719919
+          "sizeBytes": 17720275
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.533.1",
+      "version": "0.1.0-nightly.534.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.533.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.534.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 43268400
+          "sizeBytes": 43362184
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.533.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.534.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.533.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.534.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 110701048
+          "sizeBytes": 110823928
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.533.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.534.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -103,29 +879,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.533.1",
+      "version": "0.1.0-nightly.534.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.533.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.534.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 40447181
+          "sizeBytes": 40432834
         },
         {
-          "name": "AURA_0.1.0-nightly.533.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.534.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.533.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.534.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 39551344
+          "sizeBytes": 39538905
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.533.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.534.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -135,29 +911,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.533.1",
+      "version": "0.1.0-nightly.534.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.533.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.534.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 42051229
+          "sizeBytes": 42177240
         },
         {
-          "name": "AURA_0.1.0-nightly.533.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.534.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.533.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.534.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 41197889
+          "sizeBytes": 41295453
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.533.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.534.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -167,17 +943,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.533.1",
+      "version": "0.1.0-nightly.534.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.533.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.534.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 29785208
+          "sizeBytes": 29828053
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.533.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.534.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -186,28 +962,155 @@
     }
   ],
   "rendered": {
-    "title": "Stable desktop builds get their billing credentials back",
-    "intro": "A small but high-impact CI fix today: stable desktop builds were shipping without a billing API key, silently breaking signup and recurring credit grants. One workflow change restores credits end-to-end for desktop users.",
+    "title": "Plan mode, prompt caching, and a tighter chat input",
+    "intro": "Today's nightly rebuilds chat around three big threads: a unified plan mode that locks the model into read-only spec planning, end-to-end prompt-cache accounting from the harness all the way into the context popover, and a sweep of chat-input fixes that finally make \"+\", model switching, and warm session reopens behave the way users expect. Desktop and release infrastructure also get pointed fixes — no more terminal flash during Windows updates, and stable desktop builds get their billing API key back.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "9:25 AM",
         "started_at": "2026-05-16T16:25:36.000Z",
         "ended_at": "2026-05-16T16:25:36.000Z",
-        "title": "Desktop credit grants restored on stable channel",
-        "summary": "The stable release workflow was missing the billing API key secret, so desktop builds compiled with an empty key and silently skipped credit grants on login. The secret is now wired into release-stable.yml to match the nightly pipeline.",
+        "title": "Stable desktop builds regain their billing API key",
+        "summary": "A missing CI secret had been silently disabling welcome and daily credits on every stable desktop login.",
         "items": [
           {
-            "text": "Stable desktop builds now receive Z_BILLING_API_KEY at build time, matching the nightly workflow and fixing parity between the two release pipelines.",
+            "text": "Restored Z_BILLING_API_KEY in the stable release workflow so desktop builds no longer ship with an empty billing key — grant_signup_credits now actually runs, returning welcome credits, daily credits, and pro top-ups on stable desktop logins.",
             "commit_shas": [
               "71cb9e68ea11ab183d30b4b98a7e62c73646a52c"
             ],
             "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "11:10 AM",
+        "started_at": "2026-05-16T18:10:03.000Z",
+        "ended_at": "2026-05-16T18:10:03.000Z",
+        "title": "\"+ new chat\" finally works in image, 3D, and video modes",
+        "summary": "The new-session flag now flows through every generation mode, not just regular chat.",
+        "items": [
+          {
+            "text": "Image, 3D, and video sends now honor the chat-input \"+\" affordance: the new-session flag and pinned session id are plumbed through generateImageStream / generate3dStream / generateVideoStream and into the matching server handlers, so picking a non-code mode and pressing \"+\" actually starts a fresh conversation instead of silently appending to the latest session.",
+            "commit_shas": [
+              "26bdc6c4104c9629cb19597658407d006b6706e4"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "11:10 AM",
+        "started_at": "2026-05-16T18:10:03.000Z",
+        "ended_at": "2026-05-16T18:10:03.000Z",
+        "title": "Windows updates stop flashing a terminal window",
+        "summary": "The updater's handoff script is now free of console subprocesses, killing the brief terminal flash on every Windows update.",
+        "items": [
+          {
+            "text": "Removed the `ping -n 2 127.0.0.1` settle delay from the Windows updater handoff .bat — that subprocess was the source of the terminal flash users kept seeing, because CREATE_NO_WINDOW inheritance isn't reliable once the parent aura.exe has exited. A new `handoff_script_has_no_console_subprocesses` regression test pins the no-console-children invariant.",
+            "commit_shas": [
+              "e03038e003b7c9c2cc7e59e29961aa55d367de10"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-4",
+        "time_label": "11:10 AM",
+        "started_at": "2026-05-16T18:10:03.000Z",
+        "ended_at": "2026-05-16T18:10:03.000Z",
+        "title": "Readable, copyable chat error messages",
+        "summary": "End-of-turn errors no longer hide their useful details behind an ellipsis and a tooltip.",
+        "items": [
+          {
+            "text": "Reworked the chat error chrome into two stacked lines: the full wrapping error message with a one-click copy button on top, and the Support ID chip plus Report bug and variant-specific actions (like Buy credits) on the row below. Contract-blocked diagnostics are now readable inline instead of being truncated behind a title tooltip.",
+            "commit_shas": [
+              "813992ae2f59aa8159851b676fd105bb77b079cd"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-5",
+        "time_label": "11:10 AM",
+        "started_at": "2026-05-16T18:10:03.000Z",
+        "ended_at": "2026-05-16T18:10:03.000Z",
+        "title": "Plan mode unified behind a shared spec-planning policy",
+        "summary": "Plan mode now routes through a single handler that enforces the read-only tool surface across every chat entry point.",
+        "items": [
+          {
+            "text": "`action=generate_specs` / public `mode=plan` now flow through a new shared `handlers::plan_mode` so the spec-planning system prompt and the hard-disabled write/edit/delete/run/git/dev-loop tools stay identical across the auth'd instance and agent routes, the public chat handler, and the dedicated `/specs/generate*` endpoints.",
+            "commit_shas": [
+              "b37e8b6b4f44f7957f54542c5a8c883d2069241d"
+            ],
+            "confidence": "high"
           },
           {
-            "text": "Restores welcome credits, daily credits, and pro top-ups for desktop users on Mac, Windows, and Linux — grant_signup_credits was silently no-opping on every desktop login before this fix.",
+            "text": "Cold-start sessions stamp the plan-mode policy onto `SessionConfig` directly; warm sessions get a per-turn preamble wrapper and plan-mode tool hints, so a session opened in code mode is still steered into plan-mode behavior on a plan turn — and flipping back to code mode produces a clean, unwrapped turn that doesn't carry plan framing forward.",
             "commit_shas": [
-              "71cb9e68ea11ab183d30b4b98a7e62c73646a52c"
+              "b37e8b6b4f44f7957f54542c5a8c883d2069241d"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-6",
+        "time_label": "11:10 AM",
+        "started_at": "2026-05-16T18:10:03.000Z",
+        "ended_at": "2026-05-16T20:40:49.000Z",
+        "title": "Prompt caching, warm-reopen reliability, and chat input polish",
+        "summary": "End-to-end prompt-cache accounting lands in the context popover, the harness gets heartbeats and timeouts that kill the false \"Agent paused\" pill, and a cluster of chat input fixes makes \"+\", model switching, and text selection behave correctly.",
+        "items": [
+          {
+            "text": "Wired prompt caching end-to-end: the protocol gains additive `cache_read_tokens` / `cache_creation_tokens` on ContextBreakdown, sessions and dev-loop usage rollups now accumulate cache-creation and cache-read input tokens (counting them toward context-window utilization), and a stable per-surface `prompt_cache_key` (agent / instance / tool / devloop) is derived and forwarded so OpenAI-family caching actually engages with 24h retention on long-lived surfaces.",
+            "commit_shas": [
+              "584204184b7c5ae1ee5885eefc03d29234b0053c",
+              "913ba83ccabd961e299cf24519f104ffca6d99f8",
+              "d740c0c09faaf74da234e53b49d418ebe69ae144",
+              "388d2480c78123d9638992b208b05d10571f4cc6"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Anthropic direct-HTTP calls (Haiku session title/summary and the changelog generator) now attach `cache_control: ephemeral` plus the `anthropic-beta: prompt-caching-2024-07-31` header so retries and subsequent calls actually benefit from a cache read.",
+            "commit_shas": [
+              "13a6bdec7159d74eef52eb51481cd76aa5adfaf5"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The context-usage popover gains a \"Cached this turn\" sub-row showing tokens read, tokens written, and hit percentage when non-zero — legacy harness builds that don't emit the new fields default to 0 and hide the row entirely.",
+            "commit_shas": [
+              "2430397601edaaf9c768c6f1f4a067fd29da322e"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Fixed the false \"Local timeout reached\" / \"Agent paused\" pill on warm-reopened chats with a five-layer fix: the frontend stream store now rebases `lastEventAt` on the false→true streaming edge, the server emits 15s `progress:heartbeat` SSE frames that the client silently consumes, the harness chat-open path is wrapped in a 60s server timeout with a clean bad_gateway message, and the local harness client subscribes before SessionInit with a 30s SessionReady ceiling so an early WebSocket close no longer hangs forever.",
+            "commit_shas": [
+              "5289c45124eec072d032a34aaa42392a4f842e13"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Chat input bar gets a focus and interaction sweep: switching models in the ModelPicker no longer blurs the textarea (mousedown preventDefault on the trigger and menu wrapper), the new-session pin is cleared as soon as the user picks an existing session row or swaps agents (so the \"+\" press doesn't leak across selections), and the context-usage indicator now opens on click instead of hover with full keyboard support.",
+            "commit_shas": [
+              "895545a024865f8bbc999eb5b7c220332a138763",
+              "5c88139fe448511d2d9f5bd6174b921feaf78512",
+              "607f3a50a0e1cdde0b499503c358b068ae203a0e"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Smaller chat polish: text selection inside the accent user bubble is now visible by inverting the bubble's own accent/contrast pair, collapsible Block headers render as `div role=\"button\"` so trailing slots like SpecBlock's CopyButton no longer produce nested-button hydration warnings, and the noisy `[attach]` debug logs on every attachment render / drop / paste have been removed (keeping only the real error warnings).",
+            "commit_shas": [
+              "414c532ccad88e505a32e655f88a9a9206af80ae",
+              "df34b2234116438376a3001c51cc73506b02f88d",
+              "e676f0352cf8af1843d0753410c68f6f1782459b"
             ],
             "confidence": "high"
           }
@@ -215,9 +1118,12 @@
       }
     ],
     "highlights": [
-      "Stable desktop builds now ship with billing credentials wired up",
-      "Welcome, daily, and pro top-up credits restored on desktop login"
+      "Plan mode now hard-blocks code-writing tools across every chat surface",
+      "Prompt-cache hits surface in the context popover with a new \"Cached this turn\" row",
+      "Warm-reopened chats no longer trip the false \"Agent paused\" pill",
+      "Windows updater stops flashing a terminal window during install",
+      "Stable desktop builds get their billing API key back, restoring signup credits"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 18
   }
 }
