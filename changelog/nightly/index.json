@@ -1,5 +1,25 @@
 [
   {
+    "date": "2026-05-15",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.532.1",
+    "title": "Public mode launches and cross-agent chat becomes legible",
+    "intro": "A big day for Aura: anonymous visitors can now try Code, Plan, Image, Video, and 3D directly from a new logged-out shell, cross-agent messages finally route and render correctly end-to-end, and a long tail of fixes tightened the Windows terminal, embedded browser error pages, image-generation ETAs, and the macOS/Windows release pipelines.",
+    "entryCount": 6,
+    "highlights": [
+      "New logged-out shell with 3-turn anonymous chat across all five modes",
+      "Cross-agent replies now live-update and show a 'from <agent>' badge",
+      "Windows terminal cursor and history glitches finally fixed",
+      "Themed in-app browser error page survives Chromium's native takeover",
+      "Image generation ETA and stuck-stream watchdog stop misfiring",
+      "Release CI hardened against Homebrew rustup shim and Windows rustc mixing"
+    ],
+    "rawCommitCount": 58,
+    "generatedAt": "2026-05-16T00:16:26.811Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.532.1",
+    "path": "history/2026-05-15.json"
+  },
+  {
     "date": "2026-05-14",
     "channel": "nightly",
     "version": "0.1.0-nightly.519.1",
