@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-05-16",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.533.1",
+    "title": "Stable desktop builds get their billing credentials back",
+    "intro": "A small but high-impact CI fix today: stable desktop builds were shipping without a billing API key, silently breaking signup and recurring credit grants. One workflow change restores credits end-to-end for desktop users.",
+    "entryCount": 1,
+    "highlights": [
+      "Stable desktop builds now ship with billing credentials wired up",
+      "Welcome, daily, and pro top-up credits restored on desktop login"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-05-16T16:38:13.238Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.533.1",
+    "path": "history/2026-05-16.json"
+  },
+  {
     "date": "2026-05-15",
     "channel": "nightly",
     "version": "0.1.0-nightly.532.1",
