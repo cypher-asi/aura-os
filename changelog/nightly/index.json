@@ -2,20 +2,20 @@
   {
     "date": "2026-05-16",
     "channel": "nightly",
-    "version": "0.1.0-nightly.535.1",
-    "title": "Plan mode, prompt caching, and a chat queue you can trust",
-    "intro": "A heavy day for chat: a shared plan-mode policy now blocks code edits across every entry point, prompt caching is wired end-to-end from Anthropic calls into the context popover, and a stack of race fixes finally makes the message queue, Send-now, and the new-session \"+\" affordance behave the way users expect. Desktop updates on Windows stop flashing a console, and a missing stable-build secret that was silently breaking signup credits is fixed.",
+    "version": "0.1.0-nightly.536.1",
+    "title": "Plan mode, prompt caching, and a deep pass on chat session reliability",
+    "intro": "Today's nightly is dominated by chat-surface work: a unified plan mode that hard-blocks code edits, end-to-end prompt-cache accounting from the harness to the context popover, and a long sequence of fixes that make new-session pins, queued prompts, and warm session reopens behave the way users expect. The Windows updater stops flashing a terminal, and a missing CI secret that had been silently breaking signup credits on stable desktop builds is restored.",
     "entryCount": 6,
     "highlights": [
-      "Stable desktop signup credits restored",
-      "Plan mode now hard-blocks code edits everywhere",
-      "Prompt caching wired from server to context popover",
-      "Chat queue Send-now and new-session pin races fixed",
-      "Windows updater no longer flashes a terminal"
+      "Plan mode now hard-blocks code edits across every chat surface",
+      "Prompt-cache tokens are tracked end-to-end and shown in the context popover",
+      "Multiple chat session race conditions and queue bugs resolved",
+      "Windows updater no longer flashes a console window",
+      "Stable desktop signup credits restored via missing CI secret"
     ],
-    "rawCommitCount": 26,
-    "generatedAt": "2026-05-16T22:37:39.391Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.535.1",
+    "rawCommitCount": 27,
+    "generatedAt": "2026-05-16T23:35:26.314Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.536.1",
     "path": "history/2026-05-16.json"
   },
   {

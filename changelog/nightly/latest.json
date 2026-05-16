@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-16T22:37:39.391Z",
+  "generatedAt": "2026-05-16T23:35:26.314Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.535.1",
+  "version": "0.1.0-nightly.536.1",
   "date": "2026-05-16",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.535.1",
-  "lastIncludedSha": "7f7665be3b9de00ea2c32bafa9a011e2b45900ca",
-  "previousProcessedSha": "5289c45124eec072d032a34aaa42392a4f842e13",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.536.1",
+  "lastIncludedSha": "1333c9e3047d1c608039a84dec4672d34d33a920",
+  "previousProcessedSha": "7f7665be3b9de00ea2c32bafa9a011e2b45900ca",
   "commitShas": [
     "71cb9e68ea11ab183d30b4b98a7e62c73646a52c",
     "26bdc6c4104c9629cb19597658407d006b6706e4",
@@ -37,10 +37,11 @@
     "a7f2c28db4d0e1eeefbb1316993db5bdf0bd82e7",
     "bcc915db9f7a62e437c2bdb23f2f86f662cb3c78",
     "e933377dac7d0c250f28187f53e78c4a8542576d",
-    "7f7665be3b9de00ea2c32bafa9a011e2b45900ca"
+    "7f7665be3b9de00ea2c32bafa9a011e2b45900ca",
+    "1333c9e3047d1c608039a84dec4672d34d33a920"
   ],
-  "rawCommitCount": 26,
-  "filteredCommitCount": 26,
+  "rawCommitCount": 27,
+  "filteredCommitCount": 27,
   "rawCommits": [
     {
       "sha": "71cb9e68ea11ab183d30b4b98a7e62c73646a52c",
@@ -1178,6 +1179,44 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "1333c9e3047d1c608039a84dec4672d34d33a920",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-16T23:44:14+01:00",
+      "subject": "fix(routing): show login screen on desktop instead of LoggedOutShell",
+      "body": "Desktop users who are not logged in were seeing the public chat shell\n(LoggedOutShell) which is intended for web visitors only. Desktop\nshould always show the login screen since public chat requires\nserver-side secrets not available in the desktop binary.\n\nAdd hasDesktopBridge check alongside isNativeApp so desktop falls\nthrough to the login redirect path.",
+      "parents": [
+        "7f7665be3b9de00ea2c32bafa9a011e2b45900ca"
+      ],
+      "files": [
+        "interface/src/App.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 3,
+        "deletions": 3
+      },
+      "committedAtMs": 1778971454000,
+      "cleanSubject": "show login screen on desktop instead of LoggedOutShell",
+      "keywords": [
+        "show",
+        "login",
+        "screen",
+        "desktop",
+        "instead",
+        "loggedoutshell"
+      ],
+      "fileGroups": [
+        "interface/src/App.tsx"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 6,
@@ -1189,36 +1228,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 17721051
+          "sizeBytes": 17721135
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.535.1",
+      "version": "0.1.0-nightly.536.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.535.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.536.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 43355660
+          "sizeBytes": 43357482
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.535.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.536.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.535.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.536.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 110823928
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.535.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.536.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -1228,29 +1267,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.535.1",
+      "version": "0.1.0-nightly.536.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.535.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.536.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 40432348
+          "sizeBytes": 40431414
         },
         {
-          "name": "AURA_0.1.0-nightly.535.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.536.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.535.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.536.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 39536341
+          "sizeBytes": 39535065
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.535.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.536.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1260,29 +1299,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.535.1",
+      "version": "0.1.0-nightly.536.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.535.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.536.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 42179337
+          "sizeBytes": 42179128
         },
         {
-          "name": "AURA_0.1.0-nightly.535.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.536.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.535.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.536.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 41294158
+          "sizeBytes": 41294383
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.535.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.536.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1292,17 +1331,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.535.1",
+      "version": "0.1.0-nightly.536.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.535.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.536.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 29830059
+          "sizeBytes": 29835307
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.535.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.536.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -1311,19 +1350,19 @@
     }
   ],
   "rendered": {
-    "title": "Plan mode, prompt caching, and a chat queue you can trust",
-    "intro": "A heavy day for chat: a shared plan-mode policy now blocks code edits across every entry point, prompt caching is wired end-to-end from Anthropic calls into the context popover, and a stack of race fixes finally makes the message queue, Send-now, and the new-session \"+\" affordance behave the way users expect. Desktop updates on Windows stop flashing a console, and a missing stable-build secret that was silently breaking signup credits is fixed.",
+    "title": "Plan mode, prompt caching, and a deep pass on chat session reliability",
+    "intro": "Today's nightly is dominated by chat-surface work: a unified plan mode that hard-blocks code edits, end-to-end prompt-cache accounting from the harness to the context popover, and a long sequence of fixes that make new-session pins, queued prompts, and warm session reopens behave the way users expect. The Windows updater stops flashing a terminal, and a missing CI secret that had been silently breaking signup credits on stable desktop builds is restored.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "9:25 AM",
         "started_at": "2026-05-16T16:25:36.000Z",
         "ended_at": "2026-05-16T16:25:36.000Z",
-        "title": "Stable desktop builds get their billing key back",
-        "summary": "A missing secret in the stable release workflow was silently disabling signup and daily credits for every desktop login.",
+        "title": "Stable desktop signup credits restored",
+        "summary": "A missing CI secret was silently breaking welcome, daily, and pro top-up credits on stable desktop builds.",
         "items": [
           {
-            "text": "Restored the Z_BILLING_API_KEY secret to the stable desktop release workflow so grant_signup_credits no longer no-ops — welcome credits, daily credits, and pro top-ups flow again on stable desktop logins.",
+            "text": "Added the missing Z_BILLING_API_KEY to the stable release workflow so grant_signup_credits no longer no-ops on desktop login — welcome credits, daily credits, and pro top-up now flow on stable builds.",
             "commit_shas": [
               "71cb9e68ea11ab183d30b4b98a7e62c73646a52c"
             ],
@@ -1336,11 +1375,11 @@
         "time_label": "11:10 AM",
         "started_at": "2026-05-16T18:10:03.000Z",
         "ended_at": "2026-05-16T18:10:03.000Z",
-        "title": "New-session \"+\" now works in image, 3D, and video modes",
-        "summary": "The chat input's new-session affordance was only honored on regular chat; image, 3D, and video sends silently appended to the existing session.",
+        "title": "New-session button now works in image, 3D, and video modes",
+        "summary": "The chat input's '+' affordance was silently appending to the latest session whenever a non-code mode was active.",
         "items": [
           {
-            "text": "Threaded the new_session / session_id flags through generateImageStream, generate3dStream, and generateVideoStream and the matching server-side persist context, so pressing \"+\" in a non-code mode actually starts a fresh conversation instead of extending the latest one.",
+            "text": "Image, 3D, and video generation requests now thread the new_session and session_id flags from the frontend stream helpers all the way through resolve_persist_ctx, so pressing '+' in any mode genuinely starts a fresh conversation instead of being overridden by a stale ?session= in the URL.",
             "commit_shas": [
               "26bdc6c4104c9629cb19597658407d006b6706e4"
             ],
@@ -1353,11 +1392,11 @@
         "time_label": "11:10 AM",
         "started_at": "2026-05-16T18:10:03.000Z",
         "ended_at": "2026-05-16T18:10:03.000Z",
-        "title": "Windows updater stops flashing a terminal",
-        "summary": "The post-install handoff script no longer spawns a console subprocess, eliminating the brief black window users were seeing after an update.",
+        "title": "Windows updater stops flashing a console window",
+        "summary": "The handoff script no longer spawns a console subprocess after the installer exits.",
         "items": [
           {
-            "text": "Dropped the ping-based settle delay from the Windows updater handoff .bat so no console subprocess runs after the installer exits, and pinned the invariant with a regression test that asserts the script has no console subprocesses.",
+            "text": "Removed the ping-based settle delay from the Windows updater handoff .bat so child consoles can no longer briefly flash during update install; CREATE_NO_WINDOW and the breakaway-from-job retry remain as defense-in-depth, and a regression test pins that the handoff script contains no console subprocesses.",
             "commit_shas": [
               "e03038e003b7c9c2cc7e59e29961aa55d367de10"
             ],
@@ -1370,11 +1409,11 @@
         "time_label": "11:10 AM",
         "started_at": "2026-05-16T18:10:03.000Z",
         "ended_at": "2026-05-16T18:10:03.000Z",
-        "title": "Readable end-of-turn error messages with one-click copy",
-        "summary": "The error row in chat bubbles no longer ellipsises diagnostics; the full message wraps on its own line with a copy button.",
+        "title": "Readable, copyable error chrome on chat messages",
+        "summary": "End-of-turn error details are no longer hidden behind an ellipsised single line.",
         "items": [
           {
-            "text": "Reworked the chat error chrome into two stacked lines — a wrapping error message with a one-click copy icon on top, and the Support ID chip, Report bug button, and variant-specific actions like Buy credits on the meta row below.",
+            "text": "Chat error rows now stack over two lines: the full wrapping error message with a one-click copy button on line 1, and the Support ID chip, Report bug action, and variant-specific actions like Buy credits on line 2 — so contract-blocked diagnostics are finally readable in place.",
             "commit_shas": [
               "813992ae2f59aa8159851b676fd105bb77b079cd"
             ],
@@ -1387,11 +1426,18 @@
         "time_label": "11:10 AM",
         "started_at": "2026-05-16T18:10:03.000Z",
         "ended_at": "2026-05-16T18:10:03.000Z",
-        "title": "Plan mode is now a single shared policy across every chat surface",
-        "summary": "Plan mode unifies the spec-planning prompt and a read-only tool surface across the auth'd, public, and /specs/generate endpoints, with code-writing tools hard-disabled.",
+        "title": "Plan mode unified behind a strict spec-planning policy",
+        "summary": "Plan mode now uses a shared policy that hard-disables code-writing tools across every chat surface.",
         "items": [
           {
-            "text": "Routed action=generate_specs and public mode=plan through a new handlers::plan_mode that appends the plan-mode system suffix and turns off write/edit/delete/run/git/dev-loop tool permissions on cold-start sessions, while warm sessions get a per-turn preamble and tool hints so a code-mode session steered into plan mode behaves consistently and flips cleanly back.",
+            "text": "Plan mode (action=generate_specs / public mode=plan) now routes through a single handlers::plan_mode module across the auth'd instance and agent routes, the public chat handler, and the /specs/generate* endpoints, applying the same spec-planning system prompt and read-only tool surface everywhere.",
+            "commit_shas": [
+              "b37e8b6b4f44f7957f54542c5a8c883d2069241d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Cold-start sessions stamp the policy onto SessionConfig with tool_permissions off for write/edit/delete/run/git/dev-loop tools, while warm sessions get a per-turn preamble and plan-mode tool_hints — so flipping a code-mode session into plan mode is safe, and flipping back produces a clean unwrapped turn.",
             "commit_shas": [
               "b37e8b6b4f44f7957f54542c5a8c883d2069241d"
             ],
@@ -1403,34 +1449,40 @@
         "batch_id": "entry-6",
         "time_label": "11:10 AM",
         "started_at": "2026-05-16T18:10:03.000Z",
-        "ended_at": "2026-05-16T22:24:29.000Z",
-        "title": "Prompt caching, chat queue reliability, and busy-agent signals",
-        "summary": "A long afternoon thread wired Anthropic prompt caching from the wire up to the context popover, fixed several chat-streaming races around Send-now and warm-reopened sessions, and lit up agent avatars whenever a template is actually working.",
+        "ended_at": "2026-05-16T22:44:14.000Z",
+        "title": "Prompt-cache accounting, busy-state polish, and a fleet of chat session fixes",
+        "summary": "A long afternoon thread shipped end-to-end prompt-cache visibility, fixed several chat session races, added live agent activity indicators, and resolved the warm-reopen 'Agent paused' false positive.",
         "items": [
           {
-            "text": "Wired Anthropic prompt caching end-to-end: stable per-surface prompt_cache_keys flow into the harness, cache_control + the prompt-caching beta header are attached to Haiku title/summary and changelog generator calls, cache_creation and cache_read tokens accumulate through sessions, loop_log, and dev-loop usage rollups, and a new \"Cached this turn\" row in the context-window popover surfaces tokens read, written, and the hit percentage.",
+            "text": "Prompt-cache tokens are now tracked end-to-end: ContextBreakdown carries cache_read_tokens and cache_creation_tokens (with a demo-path backfill), session and dev-loop usage rollups accumulate cache_creation_input_tokens and cache_read_input_tokens toward context-window utilization, and the context-usage popover renders a new 'Cached this turn' row with hit percentage when data is present.",
             "commit_shas": [
               "584204184b7c5ae1ee5885eefc03d29234b0053c",
               "913ba83ccabd961e299cf24519f104ffca6d99f8",
-              "d740c0c09faaf74da234e53b49d418ebe69ae144",
-              "13a6bdec7159d74eef52eb51481cd76aa5adfaf5",
               "388d2480c78123d9638992b208b05d10571f4cc6",
               "2430397601edaaf9c768c6f1f4a067fd29da322e"
             ],
             "confidence": "high"
           },
           {
-            "text": "Killed the false \"Agent paused\" pill on warm-reopened sessions and the underlying harness-open hang: the stream watchdog now rebases its clock on the streaming edge, the server emits silent 15s progress heartbeats and wraps open_and_send_user_message in a 60s timeout, and the harness client subscribes to events before SessionInit with a 30s SessionReady ceiling so closed sockets surface as a clean bad_gateway instead of stalling forever.",
+            "text": "Each chat surface now derives a stable prompt_cache_key (agent, instance, tool, devloop) plumbed into SessionModelOverrides, and the direct-HTTP Anthropic calls for Haiku session titles, summaries, and the changelog generator attach cache_control: ephemeral plus the prompt-caching beta header so cache reads actually take effect on repeat calls.",
+            "commit_shas": [
+              "d740c0c09faaf74da234e53b49d418ebe69ae144",
+              "13a6bdec7159d74eef52eb51481cd76aa5adfaf5"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Fixed the false 'Agent paused' / 'Local timeout reached' pill on warm-reopened sessions: the frontend stuck-stream watchdog now rebases lastEventAt on the streaming edge, the server emits a 15s progress:heartbeat SSE frame during quiet stretches, and SessionBridge::open_and_send_user_message is wrapped in a 60s server timeout with a 30s harness-side ceiling so hung opens surface a clean retry message instead of hanging forever.",
             "commit_shas": [
               "5289c45124eec072d032a34aaa42392a4f842e13"
             ],
             "confidence": "high"
           },
           {
-            "text": "Fixed the message queue end-to-end: queued prompts now reliably replay after a turn ends, a per-item Send-now affordance (ArrowUp icon) cancels the in-flight turn and dispatches the chosen prompt inline, and stopStreaming clears its in-flight latch synchronously while aborted SSE tails are guarded so they can't clobber the new turn's state.",
+            "text": "Queued prompts no longer vanish when a turn ends, and a new per-item Send-now affordance (ArrowUp icon) lets users force a queued prompt past the in-flight turn. Three stacked races in stopStreaming — stale in-flight latches, finally-block clobbering, and buffered SSE frames after abort — were fixed so cancel + dispatch + render all land cleanly.",
             "commit_shas": [
               "8a3cdac3c346ba21fd3fc2da2899fabb71173128",
-              "5c88139fe448511d2d9f5bd6174b921feaf78512",
+              "5289c45124eec072d032a34aaa42392a4f842e13",
               "51f64edb23aeda430dd07e01fc8271c7e55c9a3d",
               "69fba9208c5c49715ecf8c18f8b9469e0627ef53",
               "7f7665be3b9de00ea2c32bafa9a011e2b45900ca"
@@ -1438,7 +1490,14 @@
             "confidence": "high"
           },
           {
-            "text": "Agent rows in the agents-app sidebar now show a rotating ring and pulsing status dot whenever any binding of the template is busy — automation loop, standalone-agent chat, or a project-bound instance chat — with a thinner stroke, reliable rotation on Windows, and the reduce-motion gate removed so the indicator behaves like the sibling LoopProgress spinner.",
+            "text": "Pressing '+' and then clicking an existing session row before typing now correctly extends that session instead of minting a new one — the new-session pin is cleared when sessionId becomes a real value, and the standalone ref is reset on agent swap to prevent the pin leaking across agents in the chat-app shell.",
+            "commit_shas": [
+              "5c88139fe448511d2d9f5bd6174b921feaf78512"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Agents-app sidebar rows now light up an avatar ring and pulse the status dot whenever any binding of an agent template is working — automation loops, standalone-agent chats, or project-bound chats — via a new useIsAgentBusy hook. The ring's rotation was moved off the SVG onto the wrapping span for cross-browser reliability and slimmed to a subtler 1.4 stroke.",
             "commit_shas": [
               "6d8b08a69c4701ba383591a93cc71ce5553423c2",
               "a7f2c28db4d0e1eeefbb1316993db5bdf0bd82e7",
@@ -1448,13 +1507,26 @@
             "confidence": "high"
           },
           {
-            "text": "Polished the chat input: switching models keeps the textarea focused, the context-usage breakdown opens on click instead of hover (with Enter/Space/Escape support), text selection inside the accent user bubble is finally visible, Block headers stopped nesting buttons under trailing controls, and the noisy [attach] debug logs were removed.",
+            "text": "Chat input polish: switching models keeps the textarea focused, the context-usage popover now opens on click with keyboard support instead of hover (so stray pointer moves toward the composer stop covering it), and text selection inside the accent user bubble is finally visible by inverting the bubble's accent/contrast pair.",
             "commit_shas": [
               "895545a024865f8bbc999eb5b7c220332a138763",
               "607f3a50a0e1cdde0b499503c358b068ae203a0e",
-              "414c532ccad88e505a32e655f88a9a9206af80ae",
+              "414c532ccad88e505a32e655f88a9a9206af80ae"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Block headers now render as div role=button with Enter/Space handling so trailing slots (like SpecBlock's CopyButton) no longer produce nested-button hydration warnings, and the noisy [attach] debug logs were removed from the chat-input attachment paths while keeping real FileReader warnings.",
+            "commit_shas": [
               "df34b2234116438376a3001c51cc73506b02f88d",
               "e676f0352cf8af1843d0753410c68f6f1782459b"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Desktop now correctly shows the login screen for logged-out users instead of the web-only public chat shell, by checking hasDesktopBridge alongside isNativeApp before falling through to LoggedOutShell.",
+            "commit_shas": [
+              "1333c9e3047d1c608039a84dec4672d34d33a920"
             ],
             "confidence": "high"
           }
@@ -1462,12 +1534,12 @@
       }
     ],
     "highlights": [
-      "Stable desktop signup credits restored",
-      "Plan mode now hard-blocks code edits everywhere",
-      "Prompt caching wired from server to context popover",
-      "Chat queue Send-now and new-session pin races fixed",
-      "Windows updater no longer flashes a terminal"
+      "Plan mode now hard-blocks code edits across every chat surface",
+      "Prompt-cache tokens are tracked end-to-end and shown in the context popover",
+      "Multiple chat session race conditions and queue bugs resolved",
+      "Windows updater no longer flashes a console window",
+      "Stable desktop signup credits restored via missing CI secret"
     ],
-    "raw_commit_count": 26
+    "raw_commit_count": 27
   }
 }

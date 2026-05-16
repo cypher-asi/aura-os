@@ -1,57 +1,62 @@
-# Plan mode, prompt caching, and a chat queue you can trust
+# Plan mode, prompt caching, and a deep pass on chat session reliability
 
 - Date: `2026-05-16`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.535.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.535.1
+- Version: `0.1.0-nightly.536.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.536.1
 
-A heavy day for chat: a shared plan-mode policy now blocks code edits across every entry point, prompt caching is wired end-to-end from Anthropic calls into the context popover, and a stack of race fixes finally makes the message queue, Send-now, and the new-session "+" affordance behave the way users expect. Desktop updates on Windows stop flashing a console, and a missing stable-build secret that was silently breaking signup credits is fixed.
+Today's nightly is dominated by chat-surface work: a unified plan mode that hard-blocks code edits, end-to-end prompt-cache accounting from the harness to the context popover, and a long sequence of fixes that make new-session pins, queued prompts, and warm session reopens behave the way users expect. The Windows updater stops flashing a terminal, and a missing CI secret that had been silently breaking signup credits on stable desktop builds is restored.
 
-## 9:25 AM — Stable desktop builds get their billing key back
+## 9:25 AM — Stable desktop signup credits restored
 
-A missing secret in the stable release workflow was silently disabling signup and daily credits for every desktop login.
+A missing CI secret was silently breaking welcome, daily, and pro top-up credits on stable desktop builds.
 
-- Restored the Z_BILLING_API_KEY secret to the stable desktop release workflow so grant_signup_credits no longer no-ops — welcome credits, daily credits, and pro top-ups flow again on stable desktop logins. (`71cb9e6`)
+- Added the missing Z_BILLING_API_KEY to the stable release workflow so grant_signup_credits no longer no-ops on desktop login — welcome credits, daily credits, and pro top-up now flow on stable builds. (`71cb9e6`)
 
-## 11:10 AM — New-session "+" now works in image, 3D, and video modes
+## 11:10 AM — New-session button now works in image, 3D, and video modes
 
-The chat input's new-session affordance was only honored on regular chat; image, 3D, and video sends silently appended to the existing session.
+The chat input's '+' affordance was silently appending to the latest session whenever a non-code mode was active.
 
-- Threaded the new_session / session_id flags through generateImageStream, generate3dStream, and generateVideoStream and the matching server-side persist context, so pressing "+" in a non-code mode actually starts a fresh conversation instead of extending the latest one. (`26bdc6c`)
+- Image, 3D, and video generation requests now thread the new_session and session_id flags from the frontend stream helpers all the way through resolve_persist_ctx, so pressing '+' in any mode genuinely starts a fresh conversation instead of being overridden by a stale ?session= in the URL. (`26bdc6c`)
 
-## 11:10 AM — Windows updater stops flashing a terminal
+## 11:10 AM — Windows updater stops flashing a console window
 
-The post-install handoff script no longer spawns a console subprocess, eliminating the brief black window users were seeing after an update.
+The handoff script no longer spawns a console subprocess after the installer exits.
 
-- Dropped the ping-based settle delay from the Windows updater handoff .bat so no console subprocess runs after the installer exits, and pinned the invariant with a regression test that asserts the script has no console subprocesses. (`e03038e`)
+- Removed the ping-based settle delay from the Windows updater handoff .bat so child consoles can no longer briefly flash during update install; CREATE_NO_WINDOW and the breakaway-from-job retry remain as defense-in-depth, and a regression test pins that the handoff script contains no console subprocesses. (`e03038e`)
 
-## 11:10 AM — Readable end-of-turn error messages with one-click copy
+## 11:10 AM — Readable, copyable error chrome on chat messages
 
-The error row in chat bubbles no longer ellipsises diagnostics; the full message wraps on its own line with a copy button.
+End-of-turn error details are no longer hidden behind an ellipsised single line.
 
-- Reworked the chat error chrome into two stacked lines — a wrapping error message with a one-click copy icon on top, and the Support ID chip, Report bug button, and variant-specific actions like Buy credits on the meta row below. (`813992a`)
+- Chat error rows now stack over two lines: the full wrapping error message with a one-click copy button on line 1, and the Support ID chip, Report bug action, and variant-specific actions like Buy credits on line 2 — so contract-blocked diagnostics are finally readable in place. (`813992a`)
 
-## 11:10 AM — Plan mode is now a single shared policy across every chat surface
+## 11:10 AM — Plan mode unified behind a strict spec-planning policy
 
-Plan mode unifies the spec-planning prompt and a read-only tool surface across the auth'd, public, and /specs/generate endpoints, with code-writing tools hard-disabled.
+Plan mode now uses a shared policy that hard-disables code-writing tools across every chat surface.
 
-- Routed action=generate_specs and public mode=plan through a new handlers::plan_mode that appends the plan-mode system suffix and turns off write/edit/delete/run/git/dev-loop tool permissions on cold-start sessions, while warm sessions get a per-turn preamble and tool hints so a code-mode session steered into plan mode behaves consistently and flips cleanly back. (`b37e8b6`)
+- Plan mode (action=generate_specs / public mode=plan) now routes through a single handlers::plan_mode module across the auth'd instance and agent routes, the public chat handler, and the /specs/generate* endpoints, applying the same spec-planning system prompt and read-only tool surface everywhere. (`b37e8b6`)
+- Cold-start sessions stamp the policy onto SessionConfig with tool_permissions off for write/edit/delete/run/git/dev-loop tools, while warm sessions get a per-turn preamble and plan-mode tool_hints — so flipping a code-mode session into plan mode is safe, and flipping back produces a clean unwrapped turn. (`b37e8b6`)
 
-## 11:10 AM — Prompt caching, chat queue reliability, and busy-agent signals
+## 11:10 AM — Prompt-cache accounting, busy-state polish, and a fleet of chat session fixes
 
-A long afternoon thread wired Anthropic prompt caching from the wire up to the context popover, fixed several chat-streaming races around Send-now and warm-reopened sessions, and lit up agent avatars whenever a template is actually working.
+A long afternoon thread shipped end-to-end prompt-cache visibility, fixed several chat session races, added live agent activity indicators, and resolved the warm-reopen 'Agent paused' false positive.
 
-- Wired Anthropic prompt caching end-to-end: stable per-surface prompt_cache_keys flow into the harness, cache_control + the prompt-caching beta header are attached to Haiku title/summary and changelog generator calls, cache_creation and cache_read tokens accumulate through sessions, loop_log, and dev-loop usage rollups, and a new "Cached this turn" row in the context-window popover surfaces tokens read, written, and the hit percentage. (`5842041`, `913ba83`, `d740c0c`, `13a6bde`, `388d248`, `2430397`)
-- Killed the false "Agent paused" pill on warm-reopened sessions and the underlying harness-open hang: the stream watchdog now rebases its clock on the streaming edge, the server emits silent 15s progress heartbeats and wraps open_and_send_user_message in a 60s timeout, and the harness client subscribes to events before SessionInit with a 30s SessionReady ceiling so closed sockets surface as a clean bad_gateway instead of stalling forever. (`5289c45`)
-- Fixed the message queue end-to-end: queued prompts now reliably replay after a turn ends, a per-item Send-now affordance (ArrowUp icon) cancels the in-flight turn and dispatches the chosen prompt inline, and stopStreaming clears its in-flight latch synchronously while aborted SSE tails are guarded so they can't clobber the new turn's state. (`8a3cdac`, `5c88139`, `51f64ed`, `69fba92`, `7f7665b`)
-- Agent rows in the agents-app sidebar now show a rotating ring and pulsing status dot whenever any binding of the template is busy — automation loop, standalone-agent chat, or a project-bound instance chat — with a thinner stroke, reliable rotation on Windows, and the reduce-motion gate removed so the indicator behaves like the sibling LoopProgress spinner. (`6d8b08a`, `a7f2c28`, `bcc915d`, `e933377`)
-- Polished the chat input: switching models keeps the textarea focused, the context-usage breakdown opens on click instead of hover (with Enter/Space/Escape support), text selection inside the accent user bubble is finally visible, Block headers stopped nesting buttons under trailing controls, and the noisy [attach] debug logs were removed. (`895545a`, `607f3a5`, `414c532`, `df34b22`, `e676f03`)
+- Prompt-cache tokens are now tracked end-to-end: ContextBreakdown carries cache_read_tokens and cache_creation_tokens (with a demo-path backfill), session and dev-loop usage rollups accumulate cache_creation_input_tokens and cache_read_input_tokens toward context-window utilization, and the context-usage popover renders a new 'Cached this turn' row with hit percentage when data is present. (`5842041`, `913ba83`, `388d248`, `2430397`)
+- Each chat surface now derives a stable prompt_cache_key (agent, instance, tool, devloop) plumbed into SessionModelOverrides, and the direct-HTTP Anthropic calls for Haiku session titles, summaries, and the changelog generator attach cache_control: ephemeral plus the prompt-caching beta header so cache reads actually take effect on repeat calls. (`d740c0c`, `13a6bde`)
+- Fixed the false 'Agent paused' / 'Local timeout reached' pill on warm-reopened sessions: the frontend stuck-stream watchdog now rebases lastEventAt on the streaming edge, the server emits a 15s progress:heartbeat SSE frame during quiet stretches, and SessionBridge::open_and_send_user_message is wrapped in a 60s server timeout with a 30s harness-side ceiling so hung opens surface a clean retry message instead of hanging forever. (`5289c45`)
+- Queued prompts no longer vanish when a turn ends, and a new per-item Send-now affordance (ArrowUp icon) lets users force a queued prompt past the in-flight turn. Three stacked races in stopStreaming — stale in-flight latches, finally-block clobbering, and buffered SSE frames after abort — were fixed so cancel + dispatch + render all land cleanly. (`8a3cdac`, `5289c45`, `51f64ed`, `69fba92`, `7f7665b`)
+- Pressing '+' and then clicking an existing session row before typing now correctly extends that session instead of minting a new one — the new-session pin is cleared when sessionId becomes a real value, and the standalone ref is reset on agent swap to prevent the pin leaking across agents in the chat-app shell. (`5c88139`)
+- Agents-app sidebar rows now light up an avatar ring and pulse the status dot whenever any binding of an agent template is working — automation loops, standalone-agent chats, or project-bound chats — via a new useIsAgentBusy hook. The ring's rotation was moved off the SVG onto the wrapping span for cross-browser reliability and slimmed to a subtler 1.4 stroke. (`6d8b08a`, `a7f2c28`, `bcc915d`, `e933377`)
+- Chat input polish: switching models keeps the textarea focused, the context-usage popover now opens on click with keyboard support instead of hover (so stray pointer moves toward the composer stop covering it), and text selection inside the accent user bubble is finally visible by inverting the bubble's accent/contrast pair. (`895545a`, `607f3a5`, `414c532`)
+- Block headers now render as div role=button with Enter/Space handling so trailing slots (like SpecBlock's CopyButton) no longer produce nested-button hydration warnings, and the noisy [attach] debug logs were removed from the chat-input attachment paths while keeping real FileReader warnings. (`df34b22`, `e676f03`)
+- Desktop now correctly shows the login screen for logged-out users instead of the web-only public chat shell, by checking hasDesktopBridge alongside isNativeApp before falling through to LoggedOutShell. (`1333c9e`)
 
 ## Highlights
 
-- Stable desktop signup credits restored
-- Plan mode now hard-blocks code edits everywhere
-- Prompt caching wired from server to context popover
-- Chat queue Send-now and new-session pin races fixed
-- Windows updater no longer flashes a terminal
+- Plan mode now hard-blocks code edits across every chat surface
+- Prompt-cache tokens are tracked end-to-end and shown in the context popover
+- Multiple chat session race conditions and queue bugs resolved
+- Windows updater no longer flashes a console window
+- Stable desktop signup credits restored via missing CI secret
 
