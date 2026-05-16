@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-16T20:56:56.297Z",
+  "generatedAt": "2026-05-16T22:37:39.391Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.534.1",
+  "version": "0.1.0-nightly.535.1",
   "date": "2026-05-16",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.534.1",
-  "lastIncludedSha": "5289c45124eec072d032a34aaa42392a4f842e13",
-  "previousProcessedSha": "71cb9e68ea11ab183d30b4b98a7e62c73646a52c",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.535.1",
+  "lastIncludedSha": "7f7665be3b9de00ea2c32bafa9a011e2b45900ca",
+  "previousProcessedSha": "5289c45124eec072d032a34aaa42392a4f842e13",
   "commitShas": [
     "71cb9e68ea11ab183d30b4b98a7e62c73646a52c",
     "26bdc6c4104c9629cb19597658407d006b6706e4",
@@ -29,10 +29,18 @@
     "414c532ccad88e505a32e655f88a9a9206af80ae",
     "df34b2234116438376a3001c51cc73506b02f88d",
     "e676f0352cf8af1843d0753410c68f6f1782459b",
-    "5289c45124eec072d032a34aaa42392a4f842e13"
+    "5289c45124eec072d032a34aaa42392a4f842e13",
+    "8a3cdac3c346ba21fd3fc2da2899fabb71173128",
+    "6d8b08a69c4701ba383591a93cc71ce5553423c2",
+    "51f64edb23aeda430dd07e01fc8271c7e55c9a3d",
+    "69fba9208c5c49715ecf8c18f8b9469e0627ef53",
+    "a7f2c28db4d0e1eeefbb1316993db5bdf0bd82e7",
+    "bcc915db9f7a62e437c2bdb23f2f86f662cb3c78",
+    "e933377dac7d0c250f28187f53e78c4a8542576d",
+    "7f7665be3b9de00ea2c32bafa9a011e2b45900ca"
   ],
-  "rawCommitCount": 18,
-  "filteredCommitCount": 18,
+  "rawCommitCount": 26,
+  "filteredCommitCount": 26,
   "rawCommits": [
     {
       "sha": "71cb9e68ea11ab183d30b4b98a7e62c73646a52c",
@@ -829,6 +837,347 @@
         "Core Rust",
         "Other"
       ]
+    },
+    {
+      "sha": "8a3cdac3c346ba21fd3fc2da2899fabb71173128",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T14:05:11-07:00",
+      "subject": "fix(chat): keep queued prompts after turn ends + add Send-now affordance",
+      "body": "Queued prompts were disappearing instead of being replayed because\nsetIsStreaming(false) fires from inside SSE event handlers\n(AssistantMessageEnd non-tool_use, Done, GenerationCompleted, errors)\nwhile the outer async sendMessage / performSend is still awaiting the\nstream close. The dequeue-on-completion effect in useChatPanelState\nraced past the finally block, re-entered the hook, and was silently\nswallowed by the in-flight latch.\n\nClear inFlightRef / ctrl.inFlight in lockstep with every\nsetIsStreaming(false) so the dequeue's re-entry now lands cleanly.\nbuild-stream-handler gains an onStreamFinalized callback wired from\nperformSend to the same end so the project-chat hook follows the same\nshape.\n\nAlso add a per-item \"Send now\" (lightning bolt) button in the queued\nmessages list. It's only visible while a stream is in flight; the\nhandler removes the item, calls onStop, then dispatches the queued\npayload on the next microtask so the upstream stopStreaming finally\nhas time to settle.\n\nTests cover the latch-sync regression and the new force-send handler.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "5289c45124eec072d032a34aaa42392a4f842e13"
+      ],
+      "files": [
+        "interface/src/features/chat-ui/ChatPanel/ChatPanel.tsx",
+        "interface/src/features/chat-ui/ChatPanel/useChatPanelState.test.tsx",
+        "interface/src/features/chat-ui/ChatPanel/useChatPanelState.ts",
+        "interface/src/features/chat-ui/MessageQueue/MessageQueue.module.css",
+        "interface/src/features/chat-ui/MessageQueue/MessageQueue.tsx",
+        "interface/src/hooks/use-agent-chat-stream.test.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream/build-stream-handler.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 330,
+        "deletions": 6
+      },
+      "committedAtMs": 1778965511000,
+      "cleanSubject": "keep queued prompts after turn ends + add Send-now affordance",
+      "keywords": [
+        "keep",
+        "queued",
+        "prompts",
+        "after",
+        "turn",
+        "ends",
+        "send",
+        "affordance"
+      ],
+      "fileGroups": [
+        "interface/src/features",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "6d8b08a69c4701ba383591a93cc71ce5553423c2",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T14:14:42-07:00",
+      "subject": "agents: pulse avatar ring + status dot when an agent is working",
+      "body": "In the agents-app sidebar, surface live loop activity on each agent\nrow by rendering a rotating ring around the avatar and pulsing the\nexisting status dot whenever any session for that agent is active.\nBoth signals are derived from `selectAgentActivity` so the indicator\ndisappears automatically when the loop ends or transitions to a\nterminal status. The treatment respects `prefers-reduced-motion` and\npreserves per-status dot colors (running/idle/local/etc).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "8a3cdac3c346ba21fd3fc2da2899fabb71173128"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentConversationRow/AgentConversationRow.test.tsx",
+        "interface/src/apps/agents/AgentConversationRow/AgentConversationRow.tsx",
+        "interface/src/components/Avatar/Avatar.module.css",
+        "interface/src/components/Avatar/Avatar.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 185,
+        "deletions": 2
+      },
+      "committedAtMs": 1778966082000,
+      "cleanSubject": "agents: pulse avatar ring + status dot when an agent is working",
+      "keywords": [
+        "agents",
+        "pulse",
+        "avatar",
+        "ring",
+        "status",
+        "when",
+        "agent",
+        "working"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "51f64edb23aeda430dd07e01fc8271c7e55c9a3d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T14:28:40-07:00",
+      "subject": "chat: use ArrowRight icon for queue send-now affordance",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "6d8b08a69c4701ba383591a93cc71ce5553423c2"
+      ],
+      "files": [
+        "interface/src/features/chat-ui/MessageQueue/MessageQueue.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 2,
+        "deletions": 2
+      },
+      "committedAtMs": 1778966920000,
+      "cleanSubject": "chat: use ArrowRight icon for queue send-now affordance",
+      "keywords": [
+        "chat",
+        "arrowright",
+        "icon",
+        "queue",
+        "send",
+        "affordance"
+      ],
+      "fileGroups": [
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "69fba9208c5c49715ecf8c18f8b9469e0627ef53",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T14:34:12-07:00",
+      "subject": "chat: drop the disabled move-up button, use ArrowUp for send-now",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "51f64edb23aeda430dd07e01fc8271c7e55c9a3d"
+      ],
+      "files": [
+        "interface/src/features/chat-ui/ChatPanel/ChatPanel.tsx",
+        "interface/src/features/chat-ui/ChatPanel/useChatPanelState.test.tsx",
+        "interface/src/features/chat-ui/ChatPanel/useChatPanelState.ts",
+        "interface/src/features/chat-ui/MessageQueue/MessageQueue.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 12,
+        "deletions": 33
+      },
+      "committedAtMs": 1778967252000,
+      "cleanSubject": "chat: drop the disabled move-up button, use ArrowUp for send-now",
+      "keywords": [
+        "chat",
+        "drop",
+        "disabled",
+        "move",
+        "button",
+        "arrowup",
+        "send"
+      ],
+      "fileGroups": [
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "a7f2c28db4d0e1eeefbb1316993db5bdf0bd82e7",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T14:34:56-07:00",
+      "subject": "agents: also light avatar ring during chat (not just automation loops)",
+      "body": "The previous pass only watched `loop-activity-store`, which is fed by\n`LoopOpened` events that today are only emitted for `LoopKind::Automation`\nand `Spec`. Regular chat turns never open a registry loop, so an\nagent mid-response in the agents-app sidebar showed nothing.\n\nAdd `useIsAgentBusy(agentId)` that aggregates the three independent\n\"this template is working\" signals into a single boolean:\n\n  - automation loop activity for the template (existing path)\n  - standalone-agent chat stream (`useAgentChatStream` keys its\n    stream-store entry by template `agentId` directly)\n  - project-agent chat stream (`useChatStream` stamps the\n    project-scoped `agentInstanceId` into the sidekick store; we\n    map every known instance of this template back via\n    `projects-list-store.agentsByProject`)\n\nWire `AgentConversationRow` through the new hook so the avatar\nring and pulsing status dot light up the moment the user sends a\nchat to any binding of the template, not just when an automation\nloop is running.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "69fba9208c5c49715ecf8c18f8b9469e0627ef53"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentConversationRow/AgentConversationRow.test.tsx",
+        "interface/src/apps/agents/AgentConversationRow/AgentConversationRow.tsx",
+        "interface/src/hooks/use-is-agent-busy.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 203,
+        "deletions": 18
+      },
+      "committedAtMs": 1778967296000,
+      "cleanSubject": "agents: also light avatar ring during chat (not just automation loops)",
+      "keywords": [
+        "agents",
+        "also",
+        "light",
+        "avatar",
+        "ring",
+        "during",
+        "chat",
+        "just",
+        "automation",
+        "loops"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "bcc915db9f7a62e437c2bdb23f2f86f662cb3c78",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T14:51:14-07:00",
+      "subject": "agents: rotate the busy ring reliably + drop reduce-motion gate",
+      "body": "The ring rendered but stayed frozen on Windows: rotating the inner\n`<svg>` via CSS is unreliable (some browsers ignore\n`transform-origin: center` on SVG roots and rotate around the SVG\ncoordinate origin instead), and any user with OS-level \"reduce\nmotion\" enabled hit the `@media` guard and saw a static dashed\noutline that read as decoration rather than activity.\n\nMove the animation onto the wrapping `<span>` (plain HTML box —\n`transform-origin: 50% 50%` is well-defined and consistent across\nbrowsers), and drop the `prefers-reduced-motion` guard so behavior\nmatches the sibling `LoopProgress` spinner which also always spins.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "a7f2c28db4d0e1eeefbb1316993db5bdf0bd82e7"
+      ],
+      "files": [
+        "interface/src/components/Avatar/Avatar.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 15,
+        "deletions": 10
+      },
+      "committedAtMs": 1778968274000,
+      "cleanSubject": "agents: rotate the busy ring reliably + drop reduce-motion gate",
+      "keywords": [
+        "agents",
+        "rotate",
+        "busy",
+        "ring",
+        "reliably",
+        "drop",
+        "reduce",
+        "motion",
+        "gate"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "e933377dac7d0c250f28187f53e78c4a8542576d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T14:52:19-07:00",
+      "subject": "agents: thin the busy ring stroke (~30% slimmer)",
+      "body": "Drops `stroke-width` from 2 to 1.4 so the ring reads as a subtle\nactivity indicator rather than competing with the avatar outline.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "bcc915db9f7a62e437c2bdb23f2f86f662cb3c78"
+      ],
+      "files": [
+        "interface/src/components/Avatar/Avatar.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1778968339000,
+      "cleanSubject": "agents: thin the busy ring stroke (~30% slimmer)",
+      "keywords": [
+        "agents",
+        "thin",
+        "busy",
+        "ring",
+        "stroke",
+        "slimmer"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "7f7665be3b9de00ea2c32bafa9a011e2b45900ca",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-16T15:24:29-07:00",
+      "subject": "fix(chat): make queue Send-now actually cancel + dispatch + render",
+      "body": "Three stacked races caused the force-send affordance to silently drop\nthe queued prompt and leave the UI looking like nothing happened:\n\n1. `stopStreaming` (both `useAgentChatStream` and `useChatStream`)\n   aborted the controller but only cleared `inFlightRef` / `ctrl.inFlight`\n   from the outer async fn's `finally` — which fires in a microtask\n   after the SSE close propagates. The Send-now handler dispatched the\n   chosen prompt right after calling stop, so `sendMessage` saw a\n   stale `inFlight === true` and returned silently. Clear the latch\n   synchronously in `stopStreaming` so the very next dispatch lands.\n\n2. The aborted turn's `finally` then ran and unconditionally reset\n   the latch even though a fresh send had already taken over the\n   partition, clobbering the new turn's sync re-entry guard. Move\n   the latch reset inside the existing \"still my turn\"\n   (`abortRef.current === controller` / `ctrl.currentController ===\n   controller`) block so old tails can't stomp on a new send.\n\n3. Browsers don't synchronously flush an SSE reader's internal queue\n   on `abort()`. Buffered frames from the aborted turn still drove\n   the stale handler closure, calling `setIsStreaming(false)` and\n   resetting the stream buffer on the new turn. Guard the handler's\n   `onEvent`/`onError`/`onDone` with `controller.signal.aborted` so\n   the new turn owns the partition uncontested.\n\nWith the latch now clear synchronously, `handleQueueSendNow` can\ndispatch inline; React 18 batches the `setIsStreaming(false → true)`\ntoggles so the dequeue-on-completion effect never sees a `true → false`\nblip to race against.\n\nRegression coverage:\n- `use-agent-chat-stream.test.ts`: calls `stopStreaming()` and\n  `sendMessage()` in the same synchronous tick and asserts both\n  messages reach the wire even before the first turn's `finally`\n  runs — the exact pattern Send-now produces.\n- `useChatPanelState.test.tsx`: asserts inline `onStop → onSend`\n  dispatch order instead of the prior microtask-deferred path.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "e933377dac7d0c250f28187f53e78c4a8542576d"
+      ],
+      "files": [
+        "interface/src/features/chat-ui/ChatPanel/useChatPanelState.test.tsx",
+        "interface/src/features/chat-ui/ChatPanel/useChatPanelState.ts",
+        "interface/src/hooks/use-agent-chat-stream.test.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 188,
+        "deletions": 46
+      },
+      "committedAtMs": 1778970269000,
+      "cleanSubject": "make queue Send-now actually cancel + dispatch + render",
+      "keywords": [
+        "make",
+        "queue",
+        "send",
+        "actually",
+        "cancel",
+        "dispatch",
+        "render"
+      ],
+      "fileGroups": [
+        "interface/src/features",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 6,
@@ -840,36 +1189,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 17720275
+          "sizeBytes": 17721051
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.534.1",
+      "version": "0.1.0-nightly.535.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.534.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.535.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 43362184
+          "sizeBytes": 43355660
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.534.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.535.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.534.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.535.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 110823928
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.534.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.535.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -879,29 +1228,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.534.1",
+      "version": "0.1.0-nightly.535.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.534.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.535.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 40432834
+          "sizeBytes": 40432348
         },
         {
-          "name": "AURA_0.1.0-nightly.534.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.535.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.534.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.535.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 39538905
+          "sizeBytes": 39536341
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.534.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.535.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -911,29 +1260,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.534.1",
+      "version": "0.1.0-nightly.535.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.534.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.535.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 42177240
+          "sizeBytes": 42179337
         },
         {
-          "name": "AURA_0.1.0-nightly.534.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.535.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.534.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.535.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 41295453
+          "sizeBytes": 41294158
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.534.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.535.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -943,17 +1292,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.534.1",
+      "version": "0.1.0-nightly.535.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.534.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.535.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 29828053
+          "sizeBytes": 29830059
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.534.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.535.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -962,19 +1311,19 @@
     }
   ],
   "rendered": {
-    "title": "Plan mode, prompt caching, and a tighter chat input",
-    "intro": "Today's nightly rebuilds chat around three big threads: a unified plan mode that locks the model into read-only spec planning, end-to-end prompt-cache accounting from the harness all the way into the context popover, and a sweep of chat-input fixes that finally make \"+\", model switching, and warm session reopens behave the way users expect. Desktop and release infrastructure also get pointed fixes — no more terminal flash during Windows updates, and stable desktop builds get their billing API key back.",
+    "title": "Plan mode, prompt caching, and a chat queue you can trust",
+    "intro": "A heavy day for chat: a shared plan-mode policy now blocks code edits across every entry point, prompt caching is wired end-to-end from Anthropic calls into the context popover, and a stack of race fixes finally makes the message queue, Send-now, and the new-session \"+\" affordance behave the way users expect. Desktop updates on Windows stop flashing a console, and a missing stable-build secret that was silently breaking signup credits is fixed.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "9:25 AM",
         "started_at": "2026-05-16T16:25:36.000Z",
         "ended_at": "2026-05-16T16:25:36.000Z",
-        "title": "Stable desktop builds regain their billing API key",
-        "summary": "A missing CI secret had been silently disabling welcome and daily credits on every stable desktop login.",
+        "title": "Stable desktop builds get their billing key back",
+        "summary": "A missing secret in the stable release workflow was silently disabling signup and daily credits for every desktop login.",
         "items": [
           {
-            "text": "Restored Z_BILLING_API_KEY in the stable release workflow so desktop builds no longer ship with an empty billing key — grant_signup_credits now actually runs, returning welcome credits, daily credits, and pro top-ups on stable desktop logins.",
+            "text": "Restored the Z_BILLING_API_KEY secret to the stable desktop release workflow so grant_signup_credits no longer no-ops — welcome credits, daily credits, and pro top-ups flow again on stable desktop logins.",
             "commit_shas": [
               "71cb9e68ea11ab183d30b4b98a7e62c73646a52c"
             ],
@@ -987,11 +1336,11 @@
         "time_label": "11:10 AM",
         "started_at": "2026-05-16T18:10:03.000Z",
         "ended_at": "2026-05-16T18:10:03.000Z",
-        "title": "\"+ new chat\" finally works in image, 3D, and video modes",
-        "summary": "The new-session flag now flows through every generation mode, not just regular chat.",
+        "title": "New-session \"+\" now works in image, 3D, and video modes",
+        "summary": "The chat input's new-session affordance was only honored on regular chat; image, 3D, and video sends silently appended to the existing session.",
         "items": [
           {
-            "text": "Image, 3D, and video sends now honor the chat-input \"+\" affordance: the new-session flag and pinned session id are plumbed through generateImageStream / generate3dStream / generateVideoStream and into the matching server handlers, so picking a non-code mode and pressing \"+\" actually starts a fresh conversation instead of silently appending to the latest session.",
+            "text": "Threaded the new_session / session_id flags through generateImageStream, generate3dStream, and generateVideoStream and the matching server-side persist context, so pressing \"+\" in a non-code mode actually starts a fresh conversation instead of extending the latest one.",
             "commit_shas": [
               "26bdc6c4104c9629cb19597658407d006b6706e4"
             ],
@@ -1004,11 +1353,11 @@
         "time_label": "11:10 AM",
         "started_at": "2026-05-16T18:10:03.000Z",
         "ended_at": "2026-05-16T18:10:03.000Z",
-        "title": "Windows updates stop flashing a terminal window",
-        "summary": "The updater's handoff script is now free of console subprocesses, killing the brief terminal flash on every Windows update.",
+        "title": "Windows updater stops flashing a terminal",
+        "summary": "The post-install handoff script no longer spawns a console subprocess, eliminating the brief black window users were seeing after an update.",
         "items": [
           {
-            "text": "Removed the `ping -n 2 127.0.0.1` settle delay from the Windows updater handoff .bat — that subprocess was the source of the terminal flash users kept seeing, because CREATE_NO_WINDOW inheritance isn't reliable once the parent aura.exe has exited. A new `handoff_script_has_no_console_subprocesses` regression test pins the no-console-children invariant.",
+            "text": "Dropped the ping-based settle delay from the Windows updater handoff .bat so no console subprocess runs after the installer exits, and pinned the invariant with a regression test that asserts the script has no console subprocesses.",
             "commit_shas": [
               "e03038e003b7c9c2cc7e59e29961aa55d367de10"
             ],
@@ -1021,11 +1370,11 @@
         "time_label": "11:10 AM",
         "started_at": "2026-05-16T18:10:03.000Z",
         "ended_at": "2026-05-16T18:10:03.000Z",
-        "title": "Readable, copyable chat error messages",
-        "summary": "End-of-turn errors no longer hide their useful details behind an ellipsis and a tooltip.",
+        "title": "Readable end-of-turn error messages with one-click copy",
+        "summary": "The error row in chat bubbles no longer ellipsises diagnostics; the full message wraps on its own line with a copy button.",
         "items": [
           {
-            "text": "Reworked the chat error chrome into two stacked lines: the full wrapping error message with a one-click copy button on top, and the Support ID chip plus Report bug and variant-specific actions (like Buy credits) on the row below. Contract-blocked diagnostics are now readable inline instead of being truncated behind a title tooltip.",
+            "text": "Reworked the chat error chrome into two stacked lines — a wrapping error message with a one-click copy icon on top, and the Support ID chip, Report bug button, and variant-specific actions like Buy credits on the meta row below.",
             "commit_shas": [
               "813992ae2f59aa8159851b676fd105bb77b079cd"
             ],
@@ -1038,18 +1387,11 @@
         "time_label": "11:10 AM",
         "started_at": "2026-05-16T18:10:03.000Z",
         "ended_at": "2026-05-16T18:10:03.000Z",
-        "title": "Plan mode unified behind a shared spec-planning policy",
-        "summary": "Plan mode now routes through a single handler that enforces the read-only tool surface across every chat entry point.",
+        "title": "Plan mode is now a single shared policy across every chat surface",
+        "summary": "Plan mode unifies the spec-planning prompt and a read-only tool surface across the auth'd, public, and /specs/generate endpoints, with code-writing tools hard-disabled.",
         "items": [
           {
-            "text": "`action=generate_specs` / public `mode=plan` now flow through a new shared `handlers::plan_mode` so the spec-planning system prompt and the hard-disabled write/edit/delete/run/git/dev-loop tools stay identical across the auth'd instance and agent routes, the public chat handler, and the dedicated `/specs/generate*` endpoints.",
-            "commit_shas": [
-              "b37e8b6b4f44f7957f54542c5a8c883d2069241d"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Cold-start sessions stamp the plan-mode policy onto `SessionConfig` directly; warm sessions get a per-turn preamble wrapper and plan-mode tool hints, so a session opened in code mode is still steered into plan-mode behavior on a plan turn — and flipping back to code mode produces a clean, unwrapped turn that doesn't carry plan framing forward.",
+            "text": "Routed action=generate_specs and public mode=plan through a new handlers::plan_mode that appends the plan-mode system suffix and turns off write/edit/delete/run/git/dev-loop tool permissions on cold-start sessions, while warm sessions get a per-turn preamble and tool hints so a code-mode session steered into plan mode behaves consistently and flips cleanly back.",
             "commit_shas": [
               "b37e8b6b4f44f7957f54542c5a8c883d2069241d"
             ],
@@ -1061,53 +1403,55 @@
         "batch_id": "entry-6",
         "time_label": "11:10 AM",
         "started_at": "2026-05-16T18:10:03.000Z",
-        "ended_at": "2026-05-16T20:40:49.000Z",
-        "title": "Prompt caching, warm-reopen reliability, and chat input polish",
-        "summary": "End-to-end prompt-cache accounting lands in the context popover, the harness gets heartbeats and timeouts that kill the false \"Agent paused\" pill, and a cluster of chat input fixes makes \"+\", model switching, and text selection behave correctly.",
+        "ended_at": "2026-05-16T22:24:29.000Z",
+        "title": "Prompt caching, chat queue reliability, and busy-agent signals",
+        "summary": "A long afternoon thread wired Anthropic prompt caching from the wire up to the context popover, fixed several chat-streaming races around Send-now and warm-reopened sessions, and lit up agent avatars whenever a template is actually working.",
         "items": [
           {
-            "text": "Wired prompt caching end-to-end: the protocol gains additive `cache_read_tokens` / `cache_creation_tokens` on ContextBreakdown, sessions and dev-loop usage rollups now accumulate cache-creation and cache-read input tokens (counting them toward context-window utilization), and a stable per-surface `prompt_cache_key` (agent / instance / tool / devloop) is derived and forwarded so OpenAI-family caching actually engages with 24h retention on long-lived surfaces.",
+            "text": "Wired Anthropic prompt caching end-to-end: stable per-surface prompt_cache_keys flow into the harness, cache_control + the prompt-caching beta header are attached to Haiku title/summary and changelog generator calls, cache_creation and cache_read tokens accumulate through sessions, loop_log, and dev-loop usage rollups, and a new \"Cached this turn\" row in the context-window popover surfaces tokens read, written, and the hit percentage.",
             "commit_shas": [
               "584204184b7c5ae1ee5885eefc03d29234b0053c",
               "913ba83ccabd961e299cf24519f104ffca6d99f8",
               "d740c0c09faaf74da234e53b49d418ebe69ae144",
-              "388d2480c78123d9638992b208b05d10571f4cc6"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Anthropic direct-HTTP calls (Haiku session title/summary and the changelog generator) now attach `cache_control: ephemeral` plus the `anthropic-beta: prompt-caching-2024-07-31` header so retries and subsequent calls actually benefit from a cache read.",
-            "commit_shas": [
-              "13a6bdec7159d74eef52eb51481cd76aa5adfaf5"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "The context-usage popover gains a \"Cached this turn\" sub-row showing tokens read, tokens written, and hit percentage when non-zero — legacy harness builds that don't emit the new fields default to 0 and hide the row entirely.",
-            "commit_shas": [
+              "13a6bdec7159d74eef52eb51481cd76aa5adfaf5",
+              "388d2480c78123d9638992b208b05d10571f4cc6",
               "2430397601edaaf9c768c6f1f4a067fd29da322e"
             ],
             "confidence": "high"
           },
           {
-            "text": "Fixed the false \"Local timeout reached\" / \"Agent paused\" pill on warm-reopened chats with a five-layer fix: the frontend stream store now rebases `lastEventAt` on the false→true streaming edge, the server emits 15s `progress:heartbeat` SSE frames that the client silently consumes, the harness chat-open path is wrapped in a 60s server timeout with a clean bad_gateway message, and the local harness client subscribes before SessionInit with a 30s SessionReady ceiling so an early WebSocket close no longer hangs forever.",
+            "text": "Killed the false \"Agent paused\" pill on warm-reopened sessions and the underlying harness-open hang: the stream watchdog now rebases its clock on the streaming edge, the server emits silent 15s progress heartbeats and wraps open_and_send_user_message in a 60s timeout, and the harness client subscribes to events before SessionInit with a 30s SessionReady ceiling so closed sockets surface as a clean bad_gateway instead of stalling forever.",
             "commit_shas": [
               "5289c45124eec072d032a34aaa42392a4f842e13"
             ],
             "confidence": "high"
           },
           {
-            "text": "Chat input bar gets a focus and interaction sweep: switching models in the ModelPicker no longer blurs the textarea (mousedown preventDefault on the trigger and menu wrapper), the new-session pin is cleared as soon as the user picks an existing session row or swaps agents (so the \"+\" press doesn't leak across selections), and the context-usage indicator now opens on click instead of hover with full keyboard support.",
+            "text": "Fixed the message queue end-to-end: queued prompts now reliably replay after a turn ends, a per-item Send-now affordance (ArrowUp icon) cancels the in-flight turn and dispatches the chosen prompt inline, and stopStreaming clears its in-flight latch synchronously while aborted SSE tails are guarded so they can't clobber the new turn's state.",
             "commit_shas": [
-              "895545a024865f8bbc999eb5b7c220332a138763",
+              "8a3cdac3c346ba21fd3fc2da2899fabb71173128",
               "5c88139fe448511d2d9f5bd6174b921feaf78512",
-              "607f3a50a0e1cdde0b499503c358b068ae203a0e"
+              "51f64edb23aeda430dd07e01fc8271c7e55c9a3d",
+              "69fba9208c5c49715ecf8c18f8b9469e0627ef53",
+              "7f7665be3b9de00ea2c32bafa9a011e2b45900ca"
             ],
             "confidence": "high"
           },
           {
-            "text": "Smaller chat polish: text selection inside the accent user bubble is now visible by inverting the bubble's own accent/contrast pair, collapsible Block headers render as `div role=\"button\"` so trailing slots like SpecBlock's CopyButton no longer produce nested-button hydration warnings, and the noisy `[attach]` debug logs on every attachment render / drop / paste have been removed (keeping only the real error warnings).",
+            "text": "Agent rows in the agents-app sidebar now show a rotating ring and pulsing status dot whenever any binding of the template is busy — automation loop, standalone-agent chat, or a project-bound instance chat — with a thinner stroke, reliable rotation on Windows, and the reduce-motion gate removed so the indicator behaves like the sibling LoopProgress spinner.",
             "commit_shas": [
+              "6d8b08a69c4701ba383591a93cc71ce5553423c2",
+              "a7f2c28db4d0e1eeefbb1316993db5bdf0bd82e7",
+              "bcc915db9f7a62e437c2bdb23f2f86f662cb3c78",
+              "e933377dac7d0c250f28187f53e78c4a8542576d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Polished the chat input: switching models keeps the textarea focused, the context-usage breakdown opens on click instead of hover (with Enter/Space/Escape support), text selection inside the accent user bubble is finally visible, Block headers stopped nesting buttons under trailing controls, and the noisy [attach] debug logs were removed.",
+            "commit_shas": [
+              "895545a024865f8bbc999eb5b7c220332a138763",
+              "607f3a50a0e1cdde0b499503c358b068ae203a0e",
               "414c532ccad88e505a32e655f88a9a9206af80ae",
               "df34b2234116438376a3001c51cc73506b02f88d",
               "e676f0352cf8af1843d0753410c68f6f1782459b"
@@ -1118,12 +1462,12 @@
       }
     ],
     "highlights": [
-      "Plan mode now hard-blocks code-writing tools across every chat surface",
-      "Prompt-cache hits surface in the context popover with a new \"Cached this turn\" row",
-      "Warm-reopened chats no longer trip the false \"Agent paused\" pill",
-      "Windows updater stops flashing a terminal window during install",
-      "Stable desktop builds get their billing API key back, restoring signup credits"
+      "Stable desktop signup credits restored",
+      "Plan mode now hard-blocks code edits everywhere",
+      "Prompt caching wired from server to context popover",
+      "Chat queue Send-now and new-session pin races fixed",
+      "Windows updater no longer flashes a terminal"
     ],
-    "raw_commit_count": 18
+    "raw_commit_count": 26
   }
 }
