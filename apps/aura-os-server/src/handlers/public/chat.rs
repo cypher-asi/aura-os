@@ -159,7 +159,7 @@ fn build_public_session_config(
     action: Option<&'static str>,
     is_plan_mode: bool,
 ) -> SessionConfig {
-    let partition_agent_id = aura_os_core::harness_agent_id(&agent_id, None);
+    let partition_agent_id = aura_os_core::harness_agent_id(&agent_id, None, None);
     let conversation_messages = history_to_conversation(&body.history);
     let max_turns = action.map(|_| 12u32);
     let system_prompt = if is_plan_mode {

@@ -232,7 +232,7 @@ pub(super) async fn build_start_params(
 
     let params = AutomatonStartParams {
         project_id: ctx.project_id.to_string(),
-        agent_id: Some(harness_agent_id(&ctx.agent_id, Some(&agent_instance_id))),
+        agent_id: Some(harness_agent_id(&ctx.agent_id, Some(&agent_instance_id), None)),
         aura_agent_id: Some(ctx.agent_id.to_string()),
         template_agent_id: Some(ctx.agent_id.to_string()),
         auth_token: jwt,

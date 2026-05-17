@@ -99,7 +99,7 @@ pub(crate) async fn send_agent_event_stream(
     reject_if_partition_busy(&state, &agent_id, busy_scope).await?;
 
     let force_new = body.new_session.unwrap_or(false);
-    let partition_agent_id = aura_os_core::harness_agent_id(&agent_id, None);
+    let partition_agent_id = aura_os_core::harness_agent_id(&agent_id, None, None);
     let session_key = partition_agent_id.clone();
 
     // Validate the caller-supplied pin (`SendChatRequest.session_id`)

@@ -295,7 +295,7 @@ pub(crate) async fn reset_agent_session(
     AuthJwt(jwt): AuthJwt,
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<StatusCode> {
-    let session_key = aura_os_core::harness_agent_id(&agent_id, None);
+    let session_key = aura_os_core::harness_agent_id(&agent_id, None, None);
     remove_live_session(&state, &session_key).await;
     // `reset-session` is a destructive admin op, not a cross-agent
     // turn — there's no upstream sender to thread back into and the
@@ -327,6 +327,7 @@ pub(crate) async fn reset_instance_session(
         Ok(instance) => Some(aura_os_core::harness_agent_id(
             &instance.agent_id,
             Some(&agent_instance_id),
+            None,
         )),
         Err(e) => {
             warn!(

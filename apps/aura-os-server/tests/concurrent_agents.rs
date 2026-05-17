@@ -69,7 +69,7 @@ fn turn(content: &str) -> SessionBridgeTurn {
 
 fn cfg_for(template: &AgentId, instance: Option<&AgentInstanceId>) -> SessionConfig {
     SessionConfig {
-        agent_id: Some(harness_agent_id(template, instance)),
+        agent_id: Some(harness_agent_id(template, instance, None)),
         template_agent_id: Some(template.to_string()),
         ..Default::default()
     }
@@ -219,8 +219,8 @@ async fn concurrent_chat_same_agent_multi_instance() {
         agent_ids[0], agent_ids[1],
         "two AgentInstances of one template must hash to distinct partition agent_ids"
     );
-    let expected_a = harness_agent_id(&template, Some(&instance_a));
-    let expected_b = harness_agent_id(&template, Some(&instance_b));
+    let expected_a = harness_agent_id(&template, Some(&instance_a), None);
+    let expected_b = harness_agent_id(&template, Some(&instance_b), None);
     let mut sorted = agent_ids
         .iter()
         .map(|s| s.clone().expect("agent_id populated"))

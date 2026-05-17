@@ -115,7 +115,7 @@ async fn concurrent_agents_stress_32_partitions() {
     let baseline_started = SessionBridge::open_and_send_user_message(
         &fake,
         SessionConfig {
-            agent_id: Some(harness_agent_id(&template, Some(&instance_ids[0]))),
+            agent_id: Some(harness_agent_id(&template, Some(&instance_ids[0]), None)),
             template_agent_id: Some(template.to_string()),
             ..Default::default()
         },
@@ -142,7 +142,7 @@ async fn concurrent_agents_stress_32_partitions() {
         let instance = instance_ids[i];
         async move {
             let cfg = SessionConfig {
-                agent_id: Some(harness_agent_id(&template, Some(&instance))),
+                agent_id: Some(harness_agent_id(&template, Some(&instance), None)),
                 template_agent_id: Some(template.to_string()),
                 ..Default::default()
             };

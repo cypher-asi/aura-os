@@ -261,6 +261,7 @@ pub(crate) async fn project_tool_session_config(
         (HarnessMode::Swarm, Some(instance)) => Some(aura_os_core::harness_agent_id(
             &instance.agent_id,
             Some(&instance.agent_instance_id),
+            None,
         )),
         (HarnessMode::Local, _) => Some(format!("{tool_agent_name}-{project_id}")),
         (HarnessMode::Swarm, None) => None,
