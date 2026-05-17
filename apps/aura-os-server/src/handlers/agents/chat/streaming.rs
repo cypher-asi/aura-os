@@ -2,6 +2,46 @@
 //! header construction, attachment translation, and the
 //! `open_harness_chat_stream` orchestrator that ties persistence,
 //! session lookup, and the SSE response together.
+//!
+//! # Concurrency model and known caveats
+//!
+//! Since the parallel-session-chats change, two POSTs against the
+//! same `(project, agent_instance)` pair with different `session_id`
+//! values open two distinct `ChatSession` registry entries with
+//! distinct `turn_slot` mutexes (see
+//! [`aura_os_core::harness_agent_id`] for the partition string and
+//! [`crate::state::ChatSessionKey`] for the registry key). Turns on
+//! different storage sessions of the same instance therefore stream
+//! truly concurrently — no serialization at the chat-session layer.
+//!
+//! What is **not** isolated per session today:
+//!
+//! * **Working directory / cwd**: a project's working directory is
+//!   keyed at the project level, not the session level. Two
+//!   concurrent destructive turns on the same instance can race on
+//!   filesystem state (e.g. one turn renaming a file the other turn
+//!   is reading).
+//! * **Terminal PTY**: the long-lived PTY attached to a project's
+//!   terminal tool is shared across sessions of that project. Two
+//!   concurrent turns issuing terminal commands will interleave
+//!   command output on the same PTY.
+//! * **Destructive file / command tools**: `write_file`,
+//!   `delete_file`, shell-exec, and similar are not session-scoped.
+//!   Concurrent destructive turns can interleave in ways that are
+//!   not deterministic and not safely undoable.
+//!
+//! For chat-only or read-only workloads (e.g. side conversations,
+//! "ask about this code" sessions running alongside a long-running
+//! coding turn) the shared workspace is harmless. For two
+//! simultaneous *editing* turns on the same instance, callers should
+//! expect interleaved writes today; per-session worktree isolation
+//! is the planned follow-up.
+//!
+//! Cross-feature serialization (chat vs. dev loop / single-task /
+//! Swarm-tools) is preserved by the automaton registry's busy-guard,
+//! which keys on the bare `(template, instance)` partition. Chat
+//! sessions intentionally stay outside that guard so concurrent
+//! storage sessions on a single instance can stream in parallel.
 
 use std::convert::Infallible;
 use std::sync::atomic::AtomicUsize;
