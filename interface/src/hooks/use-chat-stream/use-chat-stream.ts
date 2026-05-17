@@ -85,7 +85,15 @@ export function useChatStream({
   useEffect(() => useSidekickStore.subscribe((s) => { sidekickRef.current = s; }), []);
   useEffect(() => { projectCtxRef.current = projectCtx; }, [projectCtx]);
 
-  const core = useStreamCore([projectId, agentInstanceId]);
+  // Phase 3: thread `sessionId` into the partition deps so each
+  // storage session of the same agent instance gets its own client
+  // streamKey. `sessionId ?? "fresh"` gives a freshly-opened canvas
+  // (no session id yet) a deterministic placeholder lane that survives
+  // until `SessionReady` migrates it via `migrateStreamPartition` to
+  // the real session id. Two sessions of the same instance can now
+  // stream concurrently without sharing isStreaming, abort, or
+  // partition-send-control state.
+  const core = useStreamCore([projectId, agentInstanceId, sessionId ?? "fresh"]);
   // `sessionId` and `onSessionReady` change whenever the URL
   // `?session=` flips. Reading them via refs in `sendMessage` keeps
   // the callback identity stable so the chat input bar's
@@ -146,20 +154,36 @@ export function useChatStream({
     async (args: LastSendArgs, captured: CapturedPartition) => {
       const { key: capturedKey, projectId: capturedProjectId, instanceId: capturedInstanceId } = captured;
 
+      // Phase 3: the partition key may flip mid-turn when the server
+      // emits `SessionReady` for a fresh-canvas first send (placeholder
+      // `…:fresh` → real session id) or auto-forks past the context
+      // budget (`progress { kind: "auto_fork", … }`). All in-flight
+      // setter, store-read, and migration sites read the *current*
+      // partition key off this holder so they follow the migration
+      // without rebinding a captured closure.
+      const partitionState = { key: capturedKey };
+      const getPartitionKey = (): string => partitionState.key;
+
       const partitionMeta = ensureEntry(capturedKey);
       const partitionRefs = partitionMeta.refs;
-      const partitionSetters = createSetters(capturedKey);
+      // Pass a getter so the setters always target whatever the current
+      // partition key is — see `migrateStreamPartition` callers.
+      const partitionSetters = createSetters(getPartitionKey);
+      // The `ctrl` object reference is preserved across migration
+      // (`migratePartitionSendControl` re-keys the map but reuses the
+      // same object), so capturing it once here is correct even when
+      // the key flips mid-turn.
       const ctrl = getPartitionSendControl(capturedKey);
       // Phase 5: snapshot the breadcrumb context for this turn so
       // every `handleStreamError` / `finalizeStream` call inside
       // the captured-partition closure stamps the persisted ring
       // entry with the originating stream key + session id. The
-      // project-chat hook is keyed on `(projectId, agentInstanceId)`
-      // — which IS the stream key — and the session id is read
-      // through the latched ref so a mid-turn URL flip doesn't
-      // strand the breadcrumb against a stale id.
+      // project-chat hook is now keyed on `(projectId,
+      // agentInstanceId, sessionId)`. The breadcrumb's `streamKey`
+      // mirrors the live partition key so a post-migration breadcrumb
+      // points at the new lane rather than the stale fresh-canvas one.
       const breadcrumbContext: StreamCloseContext = {
-        streamKey: capturedKey,
+        get streamKey() { return partitionState.key; },
         agentId: capturedInstanceId,
         sessionId: sessionIdRef.current ?? undefined,
       };
@@ -182,11 +206,11 @@ export function useChatStream({
       // to dropping. Stuck streams (>= STUCK_THRESHOLD_MS without a
       // wire event) stamp `pendingDueToStuckStream` so the Phase 2
       // banner can offer "Send anyway".
-      if (getIsStreaming(capturedKey)) {
-        const lastEventAt = getLastEventAt(capturedKey);
+      if (getIsStreaming(getPartitionKey())) {
+        const lastEventAt = getLastEventAt(getPartitionKey());
         const isStuck =
           lastEventAt != null && Date.now() - lastEventAt >= STUCK_THRESHOLD_MS;
-        useMessageQueueStore.getState().enqueue(capturedKey, {
+        useMessageQueueStore.getState().enqueue(getPartitionKey(), {
           content: args.content,
           action: args.action ?? null,
           model: args.selectedModel ?? null,
@@ -355,6 +379,15 @@ export function useChatStream({
         setters: partitionSetters,
         abortRef: partitionAbortRef,
         coreKey: capturedKey,
+        // Phase 3: the handler migrates the partition key on
+        // `SessionReady` (fresh-canvas → real session id) and on
+        // auto-fork progress (mid-stream session id flip). It calls
+        // back here so the in-flight closure in `performSend`
+        // follows the new key for setters, breadcrumbs, and any
+        // store reads/writes.
+        onPartitionMigrated: (newKey) => {
+          partitionState.key = newKey;
+        },
         setProgressText: partitionSetters.setProgressText,
         sidekickRef,
         projectCtxRef,
@@ -459,7 +492,7 @@ export function useChatStream({
                     event.content.mode === "image" &&
                     event.content.imageUrl
                   ) {
-                    useChatUIStore.getState().setPinnedSourceImage(capturedKey, {
+                    useChatUIStore.getState().setPinnedSourceImage(getPartitionKey(), {
                       imageUrl: event.content.imageUrl,
                       originalUrl: event.content.originalUrl,
                       // Persist the user's verbatim prompt (without the
@@ -495,7 +528,7 @@ export function useChatStream({
                   event.content.mode === "3d" &&
                   event.content.glbUrl
                 ) {
-                  useChatUIStore.getState().setPinnedSourceImage(capturedKey, null);
+                  useChatUIStore.getState().setPinnedSourceImage(getPartitionKey(), null);
                 }
               },
             },

@@ -22,6 +22,7 @@ import {
   sessionHistoryKey,
   useChatHistoryStore,
 } from "../../../../stores/chat-history-store";
+import { keyForAgentSession } from "../../../../hooks/stream/store";
 import { useProjectsListStore } from "../../../../stores/projects-list-store";
 import { queryClient } from "../../../../shared/lib/query-client";
 import {
@@ -326,6 +327,28 @@ export function ChatAppLeftPanel() {
     setDeleteError(primarySurfaceKey, null);
   }, [primarySurfaceKey, setDeleteError]);
 
+  // Chat-app sessions render through `useStandaloneAgentChat`, which
+  // drives `useAgentChatStream` keyed by `(agentId, session_id)` —
+  // distinct from the project-keyed default `SessionsList` uses for
+  // the agents/projects sidekicks. Resolve each session's owning
+  // agent via the same `bindingsByAgent`-backed map the avatar
+  // suffix uses and emit the agent-side streamKey so the per-row
+  // streaming indicator subscribes to the lane the panel actually
+  // writes to. An unresolved agent returns an empty key (no
+  // indicator) rather than guessing — the row would otherwise light
+  // up against a project lane the chat panel never touches.
+  //
+  // Declared above the early-return guard below so the Hook order
+  // stays stable across renders where `chatAgent` is still loading.
+  const streamKeyForSession = useCallback(
+    (target: AnnotatedSession): string => {
+      const agent = resolveSessionAgent(target);
+      if (!agent) return "";
+      return keyForAgentSession(agent.agent_id, target.session_id);
+    },
+    [resolveSessionAgent],
+  );
+
   if (!chatAgent) {
     if (agentStatus === "loading") {
       return (
@@ -351,6 +374,7 @@ export function ChatAppLeftPanel() {
         deleteError={deleteError}
         onDismissError={handleDismissError}
         renderRowSuffix={renderRowSuffix}
+        streamKeyForSession={streamKeyForSession}
       />
       {ceoHomeProjectId && (
         <AgentSelectorModal

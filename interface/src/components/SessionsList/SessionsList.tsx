@@ -12,6 +12,7 @@ import {
   type SessionRow,
 } from "./session-row-utils";
 import { useSessionSummaries } from "./use-session-summaries";
+import { useIsSessionStreaming } from "./use-session-streaming";
 import styles from "./SessionsList.module.css";
 
 interface SessionsListProps {
@@ -51,6 +52,80 @@ interface SessionsListProps {
    * behavior for that single row.
    */
   renderRowSuffix?: (session: AnnotatedSession) => ReactNode;
+  /**
+   * Per-session stream-lane key resolver. Mirrors `useStreamCore`'s
+   * deps shape so the per-row streaming indicator subscribes to the
+   * exact lane the chat panel writes to:
+   *
+   *   - Project chat (`useChatStream`, default): the row's own
+   *     `(_projectId, _agentInstanceId, session_id)` triple.
+   *   - Standalone-agent chat (`useAgentChatStream`, chat-app left
+   *     panel): `(agentId, session_id)` — callers resolve the
+   *     session's `agentId` first (e.g. via `bindingsByAgent`).
+   *
+   * Returning an empty string disables the indicator for that row
+   * (the lookup hits the empty `entries[""]` slot, which is never
+   * streaming). Passing `undefined` for the whole prop falls back to
+   * the project-keyed default, which matches the agents-app
+   * `ChatsTab` (each row maps to a project-chat lane) and the
+   * projects-app `SessionList`. Phase 4 tests assert against the
+   * same key shape via the exported `keyForProjectSession` /
+   * `keyForAgentSession` helpers.
+   */
+  streamKeyForSession?: (session: AnnotatedSession) => string;
+}
+
+interface SessionRowButtonProps {
+  session: AnnotatedSession;
+  label: string;
+  isSelected: boolean;
+  suffix: ReactNode;
+  onClick: (session: AnnotatedSession) => void;
+  onHover: (session: AnnotatedSession) => void;
+  streamKeyForSession?: (session: AnnotatedSession) => string;
+}
+
+/**
+ * Per-row component so each row owns its own
+ * `useIsSessionStreaming(session)` subscription. Hoisting the selector
+ * out to the parent would re-render every row whenever any session's
+ * `isStreaming` flips; subscribing per-row keeps the parent's render
+ * cost flat and isolates re-renders to the rows whose lane actually
+ * changed.
+ */
+function SessionRowButton({
+  session,
+  label,
+  isSelected,
+  suffix,
+  onClick,
+  onHover,
+  streamKeyForSession,
+}: SessionRowButtonProps) {
+  const isStreaming = useIsSessionStreaming(session, streamKeyForSession);
+  return (
+    <button
+      id={session.session_id}
+      type="button"
+      role="treeitem"
+      aria-selected={isSelected}
+      aria-current={isSelected ? "page" : undefined}
+      className={`${styles.sessionRow}${isSelected ? ` ${styles.sessionRowSelected}` : ""}`}
+      onClick={() => onClick(session)}
+      onMouseEnter={() => onHover(session)}
+      onFocus={() => onHover(session)}
+    >
+      {isStreaming && (
+        <span
+          className={styles.streamingDot}
+          aria-label="Streaming"
+          role="status"
+        />
+      )}
+      <span className={styles.sessionLabel}>{label}</span>
+      {suffix && <span className={styles.sessionSuffix}>{suffix}</span>}
+    </button>
+  );
 }
 
 /**
@@ -87,6 +162,7 @@ export function SessionsList({
   deleteError,
   onDismissError,
   renderRowSuffix,
+  streamKeyForSession,
 }: SessionsListProps) {
   const summaries = useSessionSummaries(sessions);
   const lastHoveredSessionIdRef = useRef<string | null>(null);
@@ -197,21 +273,16 @@ export function SessionsList({
       const suffix = customSuffix !== null ? customSuffix : defaultSuffix;
 
       return (
-        <button
+        <SessionRowButton
           key={session.session_id}
-          id={session.session_id}
-          type="button"
-          role="treeitem"
-          aria-selected={isSelected}
-          aria-current={isSelected ? "page" : undefined}
-          className={`${styles.sessionRow}${isSelected ? ` ${styles.sessionRowSelected}` : ""}`}
-          onClick={() => onSessionClick(session)}
-          onMouseEnter={() => handleRowMouseEnter(session)}
-          onFocus={() => handleRowMouseEnter(session)}
-        >
-          <span className={styles.sessionLabel}>{label}</span>
-          {suffix && <span className={styles.sessionSuffix}>{suffix}</span>}
-        </button>
+          session={session}
+          label={label}
+          isSelected={isSelected}
+          suffix={suffix}
+          onClick={onSessionClick}
+          onHover={handleRowMouseEnter}
+          streamKeyForSession={streamKeyForSession}
+        />
       );
     },
     [
@@ -220,6 +291,7 @@ export function SessionsList({
       hasMultipleProjects,
       onSessionClick,
       renderRowSuffix,
+      streamKeyForSession,
     ],
   );
 

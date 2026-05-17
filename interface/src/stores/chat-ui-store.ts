@@ -358,6 +358,45 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
   },
 }));
 
+/**
+ * Re-key the per-stream UI slice (selected mode/model, pinned source
+ * image, draft) from `oldKey` to `newKey`. Sibling of
+ * `migrateStreamPartition` in `stream/store.ts`; called from
+ * `build-stream-handler.ts` whenever the server flips a fresh-canvas
+ * placeholder session id to a real one (`SessionReady`) or auto-forks
+ * mid-stream to a new session. Without this migration, a 3D-mode
+ * pinned source image set during the fresh-canvas image step would
+ * stay keyed to `…:fresh` and the post-`SessionReady` chat would
+ * render the input bar empty.
+ *
+ * If `newKey` already has an entry, it wins and the `oldKey` entry is
+ * dropped (mirrors `migrateStreamPartition`).
+ */
+export function migrateChatUiPartition(oldKey: string, newKey: string): void {
+  if (oldKey === newKey) return;
+  useChatUIStore.setState((s) => {
+    const nextStreams = { ...s.streams };
+    const nextDrafts = { ...s.drafts };
+    let changed = false;
+    if (nextStreams[oldKey]) {
+      if (!nextStreams[newKey]) {
+        nextStreams[newKey] = nextStreams[oldKey];
+      }
+      delete nextStreams[oldKey];
+      changed = true;
+    }
+    if (nextDrafts[oldKey] !== undefined) {
+      if (nextDrafts[newKey] === undefined) {
+        nextDrafts[newKey] = nextDrafts[oldKey];
+      }
+      delete nextDrafts[oldKey];
+      changed = true;
+    }
+    if (!changed) return s;
+    return { streams: nextStreams, drafts: nextDrafts };
+  });
+}
+
 export function useChatUI(streamKey: string) {
   const selectedMode = useChatUIStore(
     (s) => s.streams[streamKey]?.selectedMode ?? DEFAULT_AGENT_MODE,

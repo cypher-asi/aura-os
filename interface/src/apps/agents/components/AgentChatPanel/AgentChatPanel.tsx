@@ -4,7 +4,6 @@ import { useShallow } from "zustand/react/shallow";
 import { api } from "../../../../api/client";
 import { useChatStream } from "../../../../hooks/use-chat-stream";
 import { useChatHistorySync } from "../../../../hooks/use-chat-history-sync";
-import { getIsStreaming } from "../../../../hooks/stream/store";
 import { useDelayedLoading } from "../../../../shared/hooks/use-delayed-loading";
 import { useAgentChatMeta } from "../../../../hooks/use-agent-chat-meta";
 import { setLastAgent, setLastProject } from "../../../../utils/storage";
@@ -144,19 +143,31 @@ export function AgentChatPanel({
   });
 
   // Clear the stream slot when navigating between two distinct
-  // historical sessions. Three transitions look like cross-session
-  // navigation but must NOT wipe the stream:
+  // historical sessions.
+  //
+  // Phase 3: with `useStreamCore` keyed by `(projectId, agentInstanceId,
+  // sessionId)`, a cross-session navigation also flips `streamKey`, so
+  // the previous session's stream lane is no longer visible to this
+  // panel and there is nothing to wipe — we just need to clear the
+  // *new* session's lane back to the empty placeholder before the
+  // history fetch repopulates it. The legacy `getIsStreaming(streamKey)`
+  // bail-out is gone with per-session keys: an active turn in session A
+  // can no longer leak deltas into session B's transcript regardless
+  // of the panel's current selection.
+  //
+  // Two transitions still must NOT wipe:
   //   - `null → defined`: post-`SessionReady` URL flip after a
-  //     fresh-canvas first send. The stream holds the live events.
-  //   - `defined → null`: the new-chat path already clears.
-  //   - while a turn is actively streaming: SSE is the source of truth.
+  //     fresh-canvas first send. The migration helper has already moved
+  //     the in-flight events to the new key; resetting would clobber
+  //     them.
+  //   - `defined → null`: the new-chat path already clears via
+  //     `useFreshCanvas`.
   const prevSessionIdRef = useRef<string | null>(sessionId);
   useEffect(() => {
     const previous = prevSessionIdRef.current;
     prevSessionIdRef.current = sessionId;
     if (previous === sessionId) return;
     if (previous === null || sessionId === null) return;
-    if (getIsStreaming(streamKey)) return;
     resetEvents([], { allowWhileStreaming: true });
   }, [sessionId, resetEvents, streamKey]);
 

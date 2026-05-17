@@ -109,6 +109,10 @@ export function ChatsTab() {
     return <EmptyState>Select an agent to see details</EmptyState>;
   }
 
+  // No `streamKeyForSession` override: agents-app sessions all render
+  // through `AgentChatPanel`, which drives `useChatStream` keyed by
+  // `(_projectId, _agentInstanceId, session_id)` — the same shape as
+  // `SessionsList`'s default `keyForProjectSession` resolver.
   return (
     <SessionsList
       sessions={sessions}

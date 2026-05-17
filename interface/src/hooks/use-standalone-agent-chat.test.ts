@@ -665,7 +665,15 @@ describe("useStandaloneAgentChat", () => {
       expect(mockResetEvents).not.toHaveBeenCalled();
     });
 
-    it("does not clear the stream while a turn is actively streaming on the pinned session", () => {
+    it("clears session B's slot on a cross-session navigation even while session A is still streaming", () => {
+      // Phase 3: `useStreamCore` is now keyed on `(agentId, sessionId)`,
+      // so `resetEvents` always targets the *new* pinned session's slot
+      // (here `agent-1:session-B`). Session A's in-flight stream lives
+      // on its own slot (`agent-1:session-A`) and is structurally
+      // untouchable by the destination's clear. The previous
+      // `getIsStreaming(streamKey)` bail-out guarded against the old
+      // shared-key model where A's stream and B's transcript collided.
+      // That guard is now dead code.
       mockGetIsStreaming.mockImplementation(() => true);
 
       const { rerender } = renderHook(
@@ -676,7 +684,10 @@ describe("useStandaloneAgentChat", () => {
       mockResetEvents.mockClear();
       rerender({ sid: "session-B" });
 
-      expect(mockResetEvents).not.toHaveBeenCalled();
+      expect(mockResetEvents).toHaveBeenCalledTimes(1);
+      expect(mockResetEvents).toHaveBeenCalledWith([], {
+        allowWhileStreaming: true,
+      });
     });
 
     it("clears the stream on a true cross-session navigation when idle", () => {

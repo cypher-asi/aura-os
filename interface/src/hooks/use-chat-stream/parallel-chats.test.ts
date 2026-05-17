@@ -174,10 +174,11 @@ describe("useChatStream parallel chats", () => {
     expect(capture.calls[1].content).toBe("hi from B");
 
     // Both partitions should be marked streaming on their own slots
-    // (no cross-partition leak).
+    // (no cross-partition leak). Phase 3: keys now embed the
+    // session-id placeholder ("fresh" when no `?session=` is pinned).
     const entries = useStreamStore.getState().entries;
-    expect(entries["p-1:ai-A"]?.isStreaming).toBe(true);
-    expect(entries["p-1:ai-B"]?.isStreaming).toBe(true);
+    expect(entries["p-1:ai-A:fresh"]?.isStreaming).toBe(true);
+    expect(entries["p-1:ai-B:fresh"]?.isStreaming).toBe(true);
 
     // Cleanup so unawaited promises don't hang the suite.
     for (const c of capture.calls) c.resolve();
@@ -226,7 +227,7 @@ describe("useChatStream parallel chats", () => {
       await Promise.resolve();
     });
 
-    const aEntry = useStreamStore.getState().entries["p-1:ai-A"];
+    const aEntry = useStreamStore.getState().entries["p-1:ai-A:fresh"];
     expect(aEntry).toBeDefined();
     expect(aEntry.isStreaming).toBe(false);
     // Should contain the user message + the assistant placeholder
@@ -239,7 +240,7 @@ describe("useChatStream parallel chats", () => {
     expect(mockSetAgentStreaming).toHaveBeenCalledWith("ai-A", false);
 
     // Partition send-control for A is no longer in-flight.
-    expect(_peekPartitionSendControl("p-1:ai-A")?.inFlight).toBe(false);
+    expect(_peekPartitionSendControl("p-1:ai-A:fresh")?.inFlight).toBe(false);
   });
 
   it("Mid-stream switch with no second send: A still finalizes on its partition", async () => {
@@ -273,7 +274,7 @@ describe("useChatStream parallel chats", () => {
       await Promise.resolve();
     });
 
-    const aEntry = useStreamStore.getState().entries["p-1:ai-A"];
+    const aEntry = useStreamStore.getState().entries["p-1:ai-A:fresh"];
     expect(aEntry.isStreaming).toBe(false);
     const assistant = aEntry.events.find((e) => e.role === "assistant");
     expect(assistant?.content).toBe("A finishes alone");
@@ -303,8 +304,8 @@ describe("useChatStream parallel chats", () => {
     expect(bCall?.content).toBe("from B");
 
     const entries = useStreamStore.getState().entries;
-    expect(entries["p-1:ai-A"]?.isStreaming).toBe(true);
-    expect(entries["p-1:ai-B"]?.isStreaming).toBe(true);
+    expect(entries["p-1:ai-A:fresh"]?.isStreaming).toBe(true);
+    expect(entries["p-1:ai-B:fresh"]?.isStreaming).toBe(true);
 
     for (const c of capture.calls) c.resolve();
   });
@@ -390,7 +391,7 @@ describe("useChatStream parallel chats", () => {
     const sentSignal = capture.calls[0].signal;
     expect(sentSignal).toBeDefined();
     expect(sentSignal!.aborted).toBe(false);
-    expect(useStreamStore.getState().entries["p-1:ai-A"]?.isStreaming).toBe(
+    expect(useStreamStore.getState().entries["p-1:ai-A:fresh"]?.isStreaming).toBe(
       true,
     );
 
@@ -400,10 +401,10 @@ describe("useChatStream parallel chats", () => {
     });
 
     expect(sentSignal!.aborted).toBe(true);
-    expect(useStreamStore.getState().entries["p-1:ai-A"]?.isStreaming).toBe(
+    expect(useStreamStore.getState().entries["p-1:ai-A:fresh"]?.isStreaming).toBe(
       false,
     );
-    expect(_peekPartitionSendControl("p-1:ai-A")?.currentController).toBeNull();
+    expect(_peekPartitionSendControl("p-1:ai-A:fresh")?.currentController).toBeNull();
 
     // Resolve the captured promise so the test doesn't leak it; in real
     // code the AbortError from `streamSSE` would reject this for us.

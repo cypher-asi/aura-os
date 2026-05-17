@@ -122,6 +122,35 @@ export function clearPartitionSendControl(key: string): void {
   partitionSendControlMap.delete(key);
 }
 
+/**
+ * Re-key the in-flight send-control entry from `oldKey` to `newKey`.
+ * Sibling of `migrateStreamPartition` in `stream/store.ts`; called
+ * from `build-stream-handler.ts` whenever the server flips a
+ * fresh-canvas placeholder session id to a real one (`SessionReady`)
+ * or auto-forks mid-stream to a new session. The same control object
+ * reference is reused so the captured `ctrl` inside the in-flight
+ * `performSend` closure (currentController, retryTimer, lastSendArgs,
+ * inFlight latch, etc.) keeps governing the migrated turn — anything
+ * else would strand the abort + retry budget against the now-orphan
+ * old key.
+ *
+ * If `newKey` already has an entry, it wins and the `oldKey` entry is
+ * dropped (with its retryTimer cleared); this matches the behaviour of
+ * `migrateStreamPartition` in the same scenario.
+ */
+export function migratePartitionSendControl(oldKey: string, newKey: string): void {
+  if (oldKey === newKey) return;
+  const oldCtrl = partitionSendControlMap.get(oldKey);
+  if (!oldCtrl) return;
+  if (partitionSendControlMap.has(newKey)) {
+    if (oldCtrl.retryTimer != null) clearTimeout(oldCtrl.retryTimer);
+    partitionSendControlMap.delete(oldKey);
+    return;
+  }
+  partitionSendControlMap.set(newKey, oldCtrl);
+  partitionSendControlMap.delete(oldKey);
+}
+
 /** Test-only peek for asserting on the map state in vitest. */
 export function _peekPartitionSendControl(
   key: string,

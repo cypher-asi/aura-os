@@ -88,6 +88,41 @@
   white-space: nowrap;
 }
 
+/* Per-session streaming indicator. Mirrors the existing "agent is
+   streaming" affordance but keyed off the per-session stream lane
+   (Phase 3 of the parallel-session-chats plan), so each row reflects
+   the state of its own turn rather than the agent instance as a
+   whole. Reads from `useIsStreamingByKey(keyForSession(session))`
+   in `SessionsList`; the dot is mounted before the label so it sits
+   flush with the row's left edge — same visual rhythm as the
+   sidekick "Run" badge in `AgentChatRow`. */
+.streamingDot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent, currentColor);
+  animation: sessionStreamingPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes sessionStreamingPulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .streamingDot {
+    animation: none;
+    opacity: 0.85;
+  }
+}
+
 .sessionSuffix {
   display: inline-flex;
   align-items: center;

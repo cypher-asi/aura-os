@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { SetStateAction } from "react";
+import { type SetStateAction } from "react";
 import type {
   DisplaySessionEvent,
   ToolCallEntry,
@@ -377,42 +377,68 @@ export function setStuckSince(key: string, value: number | null): void {
 }
 
 /**
+ * Either a static stream key or a getter that resolves the current
+ * key on every setter invocation. The getter form lets callers like
+ * `useChatStream`'s `performSend` follow a mid-turn key migration
+ * (fresh-canvas → real session id, or auto-fork to a new session id)
+ * without rebinding every captured setter reference. Static-string
+ * callers stay backwards compatible.
+ */
+export type StreamKeyResolver = string | (() => string);
+
+function resolveKey(r: StreamKeyResolver): string {
+  return typeof r === "function" ? r() : r;
+}
+
+/**
  * Create setters that update the Zustand store.
  * Same StreamSetters interface so handlers work unchanged.
+ *
+ * Pass a `() => string` getter when the underlying stream key may
+ * migrate mid-turn (see `migrateStreamPartition`); the setters will
+ * follow the latest key on every invocation. Static strings stay
+ * supported for the common case.
  */
-export function createSetters(key: string): StreamSetters {
+export function createSetters(keyOrResolver: StreamKeyResolver): StreamSetters {
+  const getKey = typeof keyOrResolver === "function" ? keyOrResolver : () => keyOrResolver;
   return {
     setStreamingText(v) {
+      const key = getKey();
       touchEntry(key);
       const cur = getStreamEntry(key);
       updateStreamEntry(key, { streamingText: resolve(v, cur?.streamingText ?? "") });
       markStreamProgress(key);
     },
     setThinkingText(v) {
+      const key = getKey();
       touchEntry(key);
       const cur = getStreamEntry(key);
       updateStreamEntry(key, { thinkingText: resolve(v, cur?.thinkingText ?? "") });
       markStreamProgress(key);
     },
     setThinkingDurationMs(v) {
+      const key = getKey();
       touchEntry(key);
       const cur = getStreamEntry(key);
       updateStreamEntry(key, { thinkingDurationMs: resolve(v, cur?.thinkingDurationMs ?? null) });
       markStreamProgress(key);
     },
     setActiveToolCalls(v) {
+      const key = getKey();
       touchEntry(key);
       const cur = getStreamEntry(key);
       updateStreamEntry(key, { activeToolCalls: resolve(v, cur?.activeToolCalls ?? []) });
       markStreamProgress(key);
     },
     setEvents(v) {
+      const key = getKey();
       touchEntry(key);
       const cur = getStreamEntry(key);
       updateStreamEntry(key, { events: resolve(v, cur?.events ?? []) });
       markStreamProgress(key);
     },
     setIsStreaming(v) {
+      const key = getKey();
       touchEntry(key);
       const cur = getStreamEntry(key);
       const wasStreaming = cur?.isStreaming ?? false;
@@ -428,23 +454,27 @@ export function createSetters(key: string): StreamSetters {
       updateStreamEntry(key, patch);
     },
     setIsWriting(v) {
+      const key = getKey();
       touchEntry(key);
       const cur = getStreamEntry(key);
       updateStreamEntry(key, { isWriting: resolve(v, cur?.isWriting ?? false) });
     },
     setProgressText(v) {
+      const key = getKey();
       touchEntry(key);
       const cur = getStreamEntry(key);
       updateStreamEntry(key, { progressText: resolve(v, cur?.progressText ?? "") });
       markStreamProgress(key);
     },
     setTimeline(v) {
+      const key = getKey();
       touchEntry(key);
       const cur = getStreamEntry(key);
       updateStreamEntry(key, { timeline: resolve(v, cur?.timeline ?? []) });
       markStreamProgress(key);
     },
     setGenerationState(v) {
+      const key = getKey();
       touchEntry(key);
       updateStreamEntry(key, {
         generationStartedAt: v.startedAt,
@@ -457,12 +487,14 @@ export function createSetters(key: string): StreamSetters {
       });
     },
     setGenerationPercent(v) {
+      const key = getKey();
       touchEntry(key);
       updateStreamEntry(key, { generationPercent: v });
       // Wire activity — keep the stuck-stream watchdog clock fresh.
       markStreamProgress(key);
     },
     clearGeneration() {
+      const key = getKey();
       touchEntry(key);
       updateStreamEntry(key, {
         generationStartedAt: null,
@@ -472,4 +504,106 @@ export function createSetters(key: string): StreamSetters {
       });
     },
   };
+}
+
+void resolveKey;
+
+/**
+ * Re-key any in-flight streaming state from `oldKey` to `newKey`. Used
+ * when the server flips a fresh-canvas placeholder session id to a real
+ * one (`SessionReady`) or auto-forks mid-stream to a new session. If
+ * `newKey` already has an entry, it is left intact and the `oldKey`
+ * entry is dropped (the new key's entry is the authoritative one — the
+ * fresh-canvas → real-id migration races with `useStreamCore`'s
+ * `ensureEntry(newKey)` on re-render, but the in-flight data lives at
+ * `oldKey` so this branch is rare).
+ *
+ * Migration covers:
+ *   - the Zustand `useStreamStore.entries` slice (events, isStreaming,
+ *     streamingText, etc.)
+ *   - the module-level `streamMetaMap` (refs, abort controller,
+ *     lastAccessedAt) so `ensureEntry(newKey)` after re-render finds
+ *     the in-flight refs object reference rather than minting a new
+ *     one
+ *
+ * Sibling helpers `migratePartitionSendControl`
+ * (`partition-send-control.ts`) and `migrateChatUiPartition`
+ * (`chat-ui-store.ts`) take care of their own per-key maps; callers
+ * are expected to invoke all three together at every session-id flip
+ * site.
+ */
+export function migrateStreamPartition(oldKey: string, newKey: string): void {
+  if (oldKey === newKey) return;
+
+  // Move the streamMeta (refs object reference + abort controller). We
+  // must not mint a fresh meta at `newKey` because the in-flight
+  // handler captured `partitionRefs = ensureEntry(oldKey).refs` and
+  // continues to mutate that exact object reference; minting a new
+  // meta would orphan those mutations.
+  const oldMeta = streamMetaMap.get(oldKey);
+  if (oldMeta) {
+    if (!streamMetaMap.has(newKey)) {
+      const moved: StreamMeta = {
+        key: newKey,
+        refs: oldMeta.refs,
+        abort: oldMeta.abort,
+        lastAccessedAt: oldMeta.lastAccessedAt,
+      };
+      streamMetaMap.set(newKey, moved);
+    }
+    streamMetaMap.delete(oldKey);
+  }
+
+  useStreamStore.setState((s) => {
+    const oldEntry = s.entries[oldKey];
+    if (!oldEntry) return s;
+    if (s.entries[newKey]) {
+      const { [oldKey]: _drop, ...rest } = s.entries;
+      void _drop;
+      return { entries: rest };
+    }
+    const { [oldKey]: moved, ...rest } = s.entries;
+    return { entries: { ...rest, [newKey]: moved } };
+  });
+}
+
+/**
+ * Per-session storeKey for a project-chat session row, mirroring the
+ * `useStreamCore([projectId, agentInstanceId, sessionId ?? "fresh"])`
+ * deps shape used by `useChatStream`. Phase 4 frontend tests reuse this
+ * to assert which lane a given streaming turn lives on.
+ */
+export function keyForProjectSession(
+  projectId: string,
+  agentInstanceId: string,
+  sessionId: string | null | undefined,
+): string {
+  return storeKey([projectId, agentInstanceId, sessionId ?? "fresh"]);
+}
+
+/**
+ * Per-session storeKey for the standalone-agent chat surface, mirroring
+ * `useStreamCore([agentId, sessionId ?? "fresh"])` in
+ * `useAgentChatStream`.
+ */
+export function keyForAgentSession(
+  agentId: string,
+  sessionId: string | null | undefined,
+): string {
+  return storeKey([agentId, sessionId ?? "fresh"]);
+}
+
+/**
+ * Reactive selector that returns `true` whenever the supplied stream
+ * key has an in-flight turn on the client. Zustand's selector-based
+ * subscription compares the returned primitive on every store update,
+ * so a row only re-renders when its own `isStreaming` flips — unrelated
+ * keys updating elsewhere in `entries` don't propagate through this
+ * subscriber. Cheap enough for the hundreds of rows the sidekick
+ * `SessionsList` may render on a long-lived agent.
+ */
+export function useIsStreamingByKey(key: string | undefined): boolean {
+  return useStreamStore((s) =>
+    key ? (s.entries[key]?.isStreaming ?? false) : false,
+  );
 }

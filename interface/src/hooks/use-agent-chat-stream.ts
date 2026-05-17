@@ -1,4 +1,5 @@
 import { useRef, useCallback, useEffect } from "react";
+import type { MutableRefObject } from "react";
 import { api } from "../api/client";
 import { generate3dStream, generateImageStream, generateVideoStream } from "../api/streams";
 import type { ChatAttachment, StreamEventHandler } from "../api/streams";
@@ -34,7 +35,16 @@ import {
 } from "../stores/context-usage-store";
 import { useSessionsListStore } from "../stores/sessions-list-store";
 import { useMessageQueueStore } from "../stores/message-queue-store";
-import { getLastEventAt, getStreamEntry, markStreamProgress } from "./stream/store";
+import {
+  createSetters,
+  getLastEventAt,
+  getStreamEntry,
+  keyForAgentSession,
+  markStreamProgress,
+  migrateStreamPartition,
+  streamMetaMap,
+} from "./stream/store";
+import { migrateChatUiPartition } from "../stores/chat-ui-store";
 import { STUCK_THRESHOLD_MS } from "./stream/use-stream-health";
 import type { StreamCloseContext } from "../shared/observability/stream-breadcrumbs";
 
@@ -151,8 +161,14 @@ export function useAgentChatStream({
   sessionId,
   onSessionReady,
 }: UseAgentChatStreamOptions): UseAgentChatStreamResult {
-  const core = useStreamCore([agentId]);
-  const { refs, setters, abortRef } = core;
+  // Phase 3: thread `sessionId` into the partition deps so each
+  // storage session of this agent gets its own client streamKey.
+  // `sessionId ?? "fresh"` keeps freshly-opened canvases on a
+  // deterministic placeholder lane until `SessionReady` migrates
+  // them to the real session id (see the inline `EventType.SessionReady`
+  // arm in the handler below).
+  const core = useStreamCore([agentId, sessionId ?? "fresh"]);
+  const { refs } = core;
   const nextSendStartsNewSessionRef = useRef(false);
   const sessionIdRef = useRef(sessionId ?? null);
   useEffect(() => {
@@ -230,6 +246,23 @@ export function useAgentChatStream({
         sourceImageUrl: _sourceImageUrl,
       };
 
+      // Phase 3: mutable holder for the in-flight partition key so
+      // mid-turn `SessionReady` (fresh-canvas placeholder → real
+      // session id) and `auto_fork` migrations can re-key all of this
+      // turn's setter / store-read sites without rebinding the
+      // captured closure. The handler updates `partitionState.key`
+      // after the migrate helpers have moved the underlying state.
+      const partitionState = { key: core.key };
+      const getPartitionKey = (): string => partitionState.key;
+      const partitionSetters = createSetters(getPartitionKey);
+      const partitionAbortRef: MutableRefObject<AbortController | null> = {
+        get current() { return streamMetaMap.get(getPartitionKey())?.abort ?? null; },
+        set current(v: AbortController | null) {
+          const m = streamMetaMap.get(getPartitionKey());
+          if (m) m.abort = v;
+        },
+      };
+
       // A turn is already in flight on this key. Instead of silently
       // dropping the typed message (the original behavior, which made
       // the chat feel broken), enqueue into the per-stream queue so
@@ -238,11 +271,11 @@ export function useAgentChatStream({
       // gone past `STUCK_THRESHOLD_MS` without a wire event, mark the
       // entry with `pendingDueToStuckStream` so a Phase 2 banner can
       // offer "Send anyway" — Phase 1 just preserves the message.
-      if (getIsStreaming(core.key)) {
-        const lastEventAt = getLastEventAt(core.key);
+      if (getIsStreaming(getPartitionKey())) {
+        const lastEventAt = getLastEventAt(getPartitionKey());
         const isStuck =
           lastEventAt != null && Date.now() - lastEventAt >= STUCK_THRESHOLD_MS;
-        useMessageQueueStore.getState().enqueue(core.key, {
+        useMessageQueueStore.getState().enqueue(getPartitionKey(), {
           content,
           action,
           model: selectedModel ?? null,
@@ -263,20 +296,48 @@ export function useAgentChatStream({
         is3DModelStep ? "Generate 3D model" : undefined,
       );
 
-      core.setEvents((prev) => [...prev, userMsg]);
-      core.setIsStreaming(true);
-      resetStreamBuffers(refs, setters);
+      partitionSetters.setEvents((prev) => [...prev, userMsg]);
+      partitionSetters.setIsStreaming(true);
+      resetStreamBuffers(refs, partitionSetters);
 
-      abortRef.current?.abort();
+      partitionAbortRef.current?.abort();
       const controller = new AbortController();
-      abortRef.current = controller;
+      partitionAbortRef.current = controller;
+
+      // Phase 3: migrate the in-flight partition to the new session
+      // key whenever the server flips the session id mid-turn. Used
+      // by both the `SessionReady` (fresh-canvas → real id) and the
+      // `auto_fork` progress branches. The migration MUST run before
+      // we forward the new id to `onSessionReady` (which kicks off
+      // the URL update → re-render), otherwise `useStreamCore`'s
+      // `ensureEntry(newKey)` would mint a fresh empty entry and
+      // clobber the in-flight events / streamingText / isStreaming
+      // we are mid-stream.
+      const migrateToSession = (newSessionId: string): void => {
+        if (!agentId) return;
+        const newKey = keyForAgentSession(agentId, newSessionId);
+        if (newKey === partitionState.key) return;
+        migrateStreamPartition(partitionState.key, newKey);
+        migrateChatUiPartition(partitionState.key, newKey);
+        // Also re-key the replay map so a post-migration stuck-stream
+        // retry resolves the cached `lastSendArgs` under the new key.
+        // The hook's per-key registration effect will follow on the
+        // next render.
+        const oldReplay = agentChatStreamReplayMap.get(partitionState.key);
+        if (oldReplay && !agentChatStreamReplayMap.has(newKey)) {
+          agentChatStreamReplayMap.set(newKey, oldReplay);
+          agentChatStreamReplayMap.delete(partitionState.key);
+        }
+        partitionState.key = newKey;
+      };
 
       // Phase 5: snapshot the breadcrumb context for this turn so
       // every error / finalize path inside the handler stamps the
       // persisted ring entry with the originating stream key +
-      // agent + session ids.
+      // agent + session ids. Uses a getter for `streamKey` so the
+      // breadcrumb follows any mid-turn migration to the new lane.
       const breadcrumbContext: StreamCloseContext = {
-        streamKey: core.key,
+        get streamKey() { return partitionState.key; },
         agentId,
         sessionId: sessionIdRef.current ?? undefined,
       };
@@ -297,19 +358,19 @@ export function useAgentChatStream({
             case EventType.Delta:
             case EventType.TextDelta: {
               const text = (event.content as { text: string }).text;
-              handleTextDelta(refs, setters, getThinkingDurationMs(core.key), text);
+              handleTextDelta(refs, partitionSetters, getThinkingDurationMs(getPartitionKey()), text);
               useContextUsageStore
                 .getState()
-                .bumpEstimatedTokens(core.key, approxTokensFromText(text));
+                .bumpEstimatedTokens(getPartitionKey(), approxTokensFromText(text));
               break;
             }
             case EventType.ThinkingDelta: {
               const tc = event.content as { text?: string; thinking?: string };
               const text = tc.text ?? tc.thinking ?? "";
-              handleThinkingDelta(refs, setters, text);
+              handleThinkingDelta(refs, partitionSetters, text);
               useContextUsageStore
                 .getState()
-                .bumpEstimatedTokens(core.key, approxTokensFromText(text));
+                .bumpEstimatedTokens(getPartitionKey(), approxTokensFromText(text));
               break;
             }
             case EventType.Progress: {
@@ -325,29 +386,55 @@ export function useAgentChatStream({
                 // render the literal "heartbeat" string in the
                 // streaming indicator (`getStreamingPhaseLabel`
                 // renders unknown stages verbatim).
-                markStreamProgress(core.key);
+                markStreamProgress(getPartitionKey());
                 break;
               }
-              core.setProgressText(stage);
+              if (stage === "forked_for_context" || stage === "auto_fork") {
+                // Phase 3 auto-fork: server transparently rolled this
+                // chat to a fresh storage session because context
+                // utilization crossed `AURA_CHAT_AUTO_FORK_THRESHOLD`.
+                // Migrate the in-flight lane to the new session key
+                // BEFORE forwarding to `onSessionReady` (which kicks
+                // off the URL flip → re-render); migrating after
+                // would race with `useStreamCore`'s `ensureEntry` and
+                // clobber the in-flight events.
+                const fork = event.content as {
+                  stage: string;
+                  previous_session_id?: string;
+                  new_session_id?: string;
+                  message?: string;
+                };
+                partitionSetters.setProgressText(
+                  fork.message ?? "Continued from previous chat — context was filling up",
+                );
+                if (fork.new_session_id && fork.new_session_id !== lastNotifiedSessionIdRef.current) {
+                  lastNotifiedSessionIdRef.current = fork.new_session_id;
+                  migrateToSession(fork.new_session_id);
+                  onSessionReadyRef.current?.(fork.new_session_id);
+                  useSessionsListStore.getState().bumpVersion();
+                }
+                break;
+              }
+              partitionSetters.setProgressText(stage);
               break;
             }
             case EventType.ToolCallStarted:
             case EventType.ToolUseStart:
-              handleToolCallStarted(refs, setters, event.content as { id: string; name: string });
+              handleToolCallStarted(refs, partitionSetters, event.content as { id: string; name: string });
               break;
             case EventType.ToolCallSnapshot:
-              handleToolCallSnapshot(refs, setters, event.content);
+              handleToolCallSnapshot(refs, partitionSetters, event.content);
               break;
             case EventType.ToolCall:
-              handleToolCall(refs, setters, event.content);
+              handleToolCall(refs, partitionSetters, event.content);
               break;
             case EventType.ToolResult: {
               const tr = event.content as { id: string; name: string; result: string; is_error: boolean };
-              handleToolResult(refs, setters, tr);
+              handleToolResult(refs, partitionSetters, tr);
               if (typeof tr.result === "string" && tr.result.length > 0) {
                 useContextUsageStore
                   .getState()
-                  .bumpEstimatedTokens(core.key, approxTokensFromText(tr.result));
+                  .bumpEstimatedTokens(getPartitionKey(), approxTokensFromText(tr.result));
               }
               break;
             }
@@ -358,10 +445,10 @@ export function useAgentChatStream({
               onTaskSavedRef.current?.(event.content.task);
               break;
             case EventType.MessageEnd:
-              handleEventSaved(refs, setters, event.content.event);
+              handleEventSaved(refs, partitionSetters, event.content.event);
               break;
             case EventType.AssistantMessageEnd: {
-              handleAssistantTurnBoundary(refs, setters);
+              handleAssistantTurnBoundary(refs, partitionSetters);
               const amc = event.content as {
                 stop_reason?: string;
                 usage?: {
@@ -377,14 +464,14 @@ export function useAgentChatStream({
                 useContextUsageStore
                   .getState()
                   .setContextUtilization(
-                    core.key,
+                    getPartitionKey(),
                     amc.usage.context_utilization,
                     amc.usage.estimated_context_tokens,
                     mapWireContextBreakdown(amc.usage.context_breakdown),
                   );
               }
               if (amc.stop_reason !== "tool_use") {
-                resetStreamBuffers(refs, setters);
+                resetStreamBuffers(refs, partitionSetters);
                 // Clear the synchronous re-entry latch in lockstep with
                 // `isStreaming` so the `useChatPanelState` dequeue effect,
                 // which fires on the `true -> false` transition, can
@@ -394,7 +481,7 @@ export function useAgentChatStream({
                 // resets the latch after the SSE has fully closed, which
                 // races with the dequeue and drops queued prompts.
                 inFlightRef.current = false;
-                core.setIsStreaming(false);
+                partitionSetters.setIsStreaming(false);
               }
               break;
             }
@@ -408,10 +495,16 @@ export function useAgentChatStream({
               // server assigns one — making the URL the single
               // source of truth for the session the user is
               // extending.
+              //
+              // Phase 3: migrate the in-flight lane to the real
+              // session key before the URL update kicks the next
+              // render of `useStreamCore`. See `migrateToSession` /
+              // `migrateStreamPartition` for the rationale.
               const payload = event.content as { session_id?: string };
               const newSessionId = payload?.session_id;
               if (newSessionId && newSessionId !== lastNotifiedSessionIdRef.current) {
                 lastNotifiedSessionIdRef.current = newSessionId;
+                migrateToSession(newSessionId);
                 onSessionReadyRef.current?.(newSessionId);
                 const sessionsStore = useSessionsListStore.getState();
                 sessionsStore.bumpVersion();
@@ -420,7 +513,7 @@ export function useAgentChatStream({
             }
             case EventType.GenerationStart: {
               const mode = event.content.mode;
-              core.setProgressText(
+              partitionSetters.setProgressText(
                 mode === "image" ? "Generating image..." :
                 mode === "video" ? "Generating video..." :
                 "Generating 3D model...",
@@ -432,9 +525,9 @@ export function useAgentChatStream({
               // callers reach us only via the SSE event).
               if (
                 (mode === "image" || mode === "video" || mode === "3d") &&
-                getStreamEntry(core.key)?.generationStartedAt == null
+                getStreamEntry(getPartitionKey())?.generationStartedAt == null
               ) {
-                setters.setGenerationState({
+                partitionSetters.setGenerationState({
                   startedAt: Date.now(),
                   model: selectedModel ?? null,
                   kind: mode,
@@ -443,8 +536,8 @@ export function useAgentChatStream({
               break;
             }
             case EventType.GenerationProgress:
-              core.setProgressText(event.content.message || `${event.content.percent}%`);
-              setters.setGenerationPercent(event.content.percent);
+              partitionSetters.setProgressText(event.content.message || `${event.content.percent}%`);
+              partitionSetters.setGenerationPercent(event.content.percent);
               break;
             case EventType.GenerationPartialImage:
               // Partial-image frames carry no text we want to render,
@@ -453,7 +546,7 @@ export function useAgentChatStream({
               // auto-aborts long partial-image renders like
               // `gpt-image-2` whose `progress` events are sparser than
               // the 60s window.
-              markStreamProgress(core.key);
+              markStreamProgress(getPartitionKey());
               break;
             case EventType.GenerationCompleted: {
               const gc = event.content;
@@ -462,37 +555,37 @@ export function useAgentChatStream({
                 gc.mode === "video" ? "generate_video" :
                 "generate_image";
               const toolId = `gen-${Date.now()}`;
-              handleToolCall(refs, setters, { id: toolId, name: toolName, input: {} });
-              handleToolResult(refs, setters, { id: toolId, name: toolName, result: JSON.stringify(gc), is_error: false });
-              setters.clearGeneration();
+              handleToolCall(refs, partitionSetters, { id: toolId, name: toolName, input: {} });
+              handleToolResult(refs, partitionSetters, { id: toolId, name: toolName, result: JSON.stringify(gc), is_error: false });
+              partitionSetters.clearGeneration();
               inFlightRef.current = false;
-              finalizeStream(refs, setters, abortRef, false, { reason: "completed", breadcrumbContext });
+              finalizeStream(refs, partitionSetters, partitionAbortRef, false, { reason: "completed", breadcrumbContext });
               break;
             }
             case EventType.GenerationError:
-              setters.clearGeneration();
+              partitionSetters.clearGeneration();
               inFlightRef.current = false;
-              handleStreamError(refs, setters, event.content.message, breadcrumbContext);
+              handleStreamError(refs, partitionSetters, event.content.message, breadcrumbContext);
               break;
             case EventType.Error:
               inFlightRef.current = false;
-              handleStreamError(refs, setters, event.content.message, breadcrumbContext);
+              handleStreamError(refs, partitionSetters, event.content.message, breadcrumbContext);
               break;
             case EventType.Done:
               inFlightRef.current = false;
-              finalizeStream(refs, setters, abortRef, false, { breadcrumbContext });
+              finalizeStream(refs, partitionSetters, partitionAbortRef, false, { breadcrumbContext });
               break;
           }
         },
         onError: (error) => {
           if (controller.signal.aborted) return;
           inFlightRef.current = false;
-          handleStreamError(refs, setters, error, breadcrumbContext);
+          handleStreamError(refs, partitionSetters, error, breadcrumbContext);
         },
         onDone: () => {
           if (controller.signal.aborted) return;
           inFlightRef.current = false;
-          finalizeStream(refs, setters, abortRef, false, { breadcrumbContext });
+          finalizeStream(refs, partitionSetters, partitionAbortRef, false, { breadcrumbContext });
         },
       };
 
@@ -500,12 +593,12 @@ export function useAgentChatStream({
         const shouldStartNewSession = nextSendStartsNewSessionRef.current;
         nextSendStartsNewSessionRef.current = false;
         if (_generationMode === "image") {
-          core.setProgressText("Generating image...");
+          partitionSetters.setProgressText("Generating image...");
           // Stamp the generation lifecycle synchronously so the
           // cooking-indicator ETA countdown starts the moment the
           // user hits send rather than waiting for the upstream
           // `generation_start` SSE frame to arrive.
-          setters.setGenerationState({
+          partitionSetters.setGenerationState({
             startedAt: Date.now(),
             model: selectedModel ?? null,
             kind: "image",
@@ -535,8 +628,8 @@ export function useAgentChatStream({
           // model step when one is pinned.
           if (!_sourceImageUrl) {
             const styledPrompt = `${userMsg.content}${STYLE_LOCK_SUFFIX}`;
-            core.setProgressText("Generating image...");
-            setters.setGenerationState({
+            partitionSetters.setProgressText("Generating image...");
+            partitionSetters.setGenerationState({
               startedAt: Date.now(),
               model: DEFAULT_IMAGE_MODEL_ID,
               kind: "image",
@@ -554,7 +647,7 @@ export function useAgentChatStream({
                     event.content.mode === "image" &&
                     event.content.imageUrl
                   ) {
-                    useChatUIStore.getState().setPinnedSourceImage(core.key, {
+                    useChatUIStore.getState().setPinnedSourceImage(getPartitionKey(), {
                       imageUrl: event.content.imageUrl,
                       originalUrl: event.content.originalUrl,
                       // Persist the user's verbatim prompt (without the
@@ -572,8 +665,8 @@ export function useAgentChatStream({
             );
             return;
           }
-          core.setProgressText("Generating 3D model...");
-          setters.setGenerationState({
+          partitionSetters.setProgressText("Generating 3D model...");
+          partitionSetters.setGenerationState({
             startedAt: Date.now(),
             model: selectedModel ?? null,
             kind: "3d",
@@ -590,7 +683,7 @@ export function useAgentChatStream({
                   event.content.mode === "3d" &&
                   event.content.glbUrl
                 ) {
-                  useChatUIStore.getState().setPinnedSourceImage(core.key, null);
+                  useChatUIStore.getState().setPinnedSourceImage(getPartitionKey(), null);
                 }
               },
             },
@@ -606,8 +699,8 @@ export function useAgentChatStream({
         }
 
         if (_generationMode === "video") {
-          core.setProgressText("Generating video...");
-          setters.setGenerationState({
+          partitionSetters.setProgressText("Generating video...");
+          partitionSetters.setGenerationState({
             startedAt: Date.now(),
             model: selectedModel ?? null,
             kind: "video",
@@ -643,7 +736,7 @@ export function useAgentChatStream({
         );
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
-        handleStreamError(refs, setters, err, breadcrumbContext);
+        handleStreamError(refs, partitionSetters, err, breadcrumbContext);
       } finally {
         // `inFlightRef` is gated by the same "still my turn" sentinel
         // as the rest of the cleanup. A "Send now" path calls
@@ -654,15 +747,15 @@ export function useAgentChatStream({
         // The aborted turn's microtask-deferred `finally` would
         // otherwise clobber that new latch even though `abortRef`
         // has moved on.
-        if (abortRef.current === controller) {
-          core.setIsStreaming(false);
+        if (partitionAbortRef.current === controller) {
+          partitionSetters.setIsStreaming(false);
           controller.abort();
-          abortRef.current = null;
+          partitionAbortRef.current = null;
           inFlightRef.current = false;
         }
       }
     },
-    [agentId, core.key, refs, setters, abortRef, core.setEvents, core.setIsStreaming, core.setProgressText],
+    [agentId, core.key, refs],
   );
 
   // Register the live `sendMessage` callable into the replay map so

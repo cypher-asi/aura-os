@@ -4,7 +4,6 @@ import { useShallow } from "zustand/react/shallow";
 import { api, STANDALONE_AGENT_HISTORY_LIMIT } from "../api/client";
 import { useAgentChatStream } from "./use-agent-chat-stream";
 import { useChatHistorySync } from "./use-chat-history-sync";
-import { getIsStreaming } from "./stream/store";
 import { useDelayedLoading } from "../shared/hooks/use-delayed-loading";
 import { useStandaloneAgentMeta } from "./use-agent-chat-meta";
 import {
@@ -311,16 +310,18 @@ export function useStandaloneAgentChat(
 
   // Clear the stream slot whenever the user navigates between two
   // historical sessions. Mirrors the same effect in
-  // `AgentChatPanel`; see that comment for the full rationale
-  // on why only the `defined → different-defined` transition is
-  // allowed to clear, and only when no turn is actively streaming.
+  // `AgentChatPanel`. Phase 3: with `useStreamCore` keyed by
+  // `(agentId, sessionId)` the leak guard
+  // (`if (getIsStreaming(streamKey)) return;`) is gone — an active
+  // stream in session A can no longer leak deltas into session B's
+  // transcript because each session owns its own lane. See the
+  // matching comment in `AgentChatPanel` for the full rationale.
   const prevPinnedSessionIdRef = useRef<string | null>(pinnedSessionId);
   useEffect(() => {
     const previous = prevPinnedSessionIdRef.current;
     prevPinnedSessionIdRef.current = pinnedSessionId;
     if (previous === pinnedSessionId) return;
     if (previous === null || pinnedSessionId === null) return;
-    if (getIsStreaming(streamKey)) return;
     resetEvents([], { allowWhileStreaming: true });
   }, [pinnedSessionId, resetEvents, streamKey]);
 
