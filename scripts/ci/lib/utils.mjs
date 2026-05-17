@@ -27,6 +27,18 @@ function commandName(command) {
   return command;
 }
 
+// Node 18.20.2 / 20.12.2 / 21.7.3 / 22+ refuse to spawn `.cmd`/`.bat` shims
+// without `shell: true` (CVE-2024-27980), and on Windows our `npm`/`npx`
+// invocations route through `npm.cmd`/`npx.cmd`. Without this, every Windows
+// CI lane fails immediately with `spawnSync npm.cmd EINVAL` before the shim
+// is ever launched. Keep this scoped to the commands we actually rewrite to
+// `.cmd`, so we don't opt every spawn into shell-quoting risk; current call
+// sites pass only simple tokens (`ci`, `run`, `build`, `--retries=1`, plain
+// paths) so cmd.exe parsing is safe.
+function needsShell(command) {
+  return process.platform === "win32" && (command === "npm" || command === "npx");
+}
+
 export function fail(message) {
   console.error(`\n[ci-parity] ${message}`);
   process.exit(1);
@@ -50,6 +62,7 @@ export function run(command, args, options = {}) {
     const result = spawnSync(commandName(command), args, {
       cwd: repoRoot,
       stdio: "inherit",
+      shell: needsShell(command),
       ...spawnOptions,
     });
 
@@ -75,6 +88,7 @@ export function capture(command, args, options = {}) {
     cwd: repoRoot,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
+    shell: needsShell(command),
     ...options,
   });
 
@@ -96,6 +110,7 @@ export function tryCapture(command, args, options = {}) {
     cwd: repoRoot,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
+    shell: needsShell(command),
     ...options,
   });
 
