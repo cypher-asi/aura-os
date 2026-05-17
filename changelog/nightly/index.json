@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-05-17",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.537.1",
+    "title": "Welcome and daily credits now reach updated users",
+    "intro": "A small but meaningful auth fix closes a gap where users who updated Aura without logging out never received their welcome and daily credits. The grant now also runs on session restore, so credits land the next time the app opens.",
+    "entryCount": 1,
+    "highlights": [
+      "Signup credits now granted on session restore",
+      "Idempotent, fire-and-forget — no impact on response time"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-05-17T18:42:42.982Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.537.1",
+    "path": "history/2026-05-17.json"
+  },
+  {
     "date": "2026-05-16",
     "channel": "nightly",
     "version": "0.1.0-nightly.536.1",
