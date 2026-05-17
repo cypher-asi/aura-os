@@ -34,8 +34,8 @@ use super::loaders::{
 use super::persist::{try_pin_session, ChatPersistCtx, ForkInfo, PinnedSessionOutcome};
 use super::request::slice_recent_agent_events;
 use super::setup::{
-    has_live_session, lazy_repair_home_project_binding, live_session_storage_id,
-    remove_live_session, setup_agent_chat_persistence_with_matched,
+    has_live_session, lazy_repair_home_project_binding,
+    setup_agent_chat_persistence_with_matched,
 };
 use super::streaming::{open_harness_chat_stream, OpenChatStreamArgs};
 use super::tools::{build_session_installed_tools, InstalledToolsCtx};
@@ -99,8 +99,6 @@ pub(crate) async fn send_agent_event_stream(
     reject_if_partition_busy(&state, &agent_id, busy_scope).await?;
 
     let force_new = body.new_session.unwrap_or(false);
-    let partition_agent_id = aura_os_core::harness_agent_id(&agent_id, None, None);
-    let session_key = partition_agent_id.clone();
 
     // Validate the caller-supplied pin (`SendChatRequest.session_id`)
     // against the agent's project bindings before we wire anything
@@ -113,19 +111,6 @@ pub(crate) async fn send_agent_event_stream(
             .await?
     };
 
-    // Evict the resident harness session whenever the requested
-    // session id differs from the one the live harness is bound to.
-    // See the matching logic in `instance_route::send_event_stream`.
-    let live_storage_id = live_session_storage_id(&state, &session_key).await;
-    let pin_changed = match (pinned_session_id.as_deref(), live_storage_id.as_deref()) {
-        (Some(pinned), Some(live)) => pinned != live,
-        _ => false,
-    };
-    if force_new || pin_changed {
-        remove_live_session(&state, &session_key).await;
-    }
-    let live_session = has_live_session(&state, &session_key).await;
-
     // Phase 3 cycle-depth read. Inbound POSTs from prior cross-agent
     // reply callbacks carry `X-Aura-Cross-Agent-Depth: <n>`; we
     // thread it onto `ChatPersistCtx` so `persist_task` can refuse
@@ -135,12 +120,21 @@ pub(crate) async fn send_agent_event_stream(
     // start at the "fresh chain" depth.
     let cross_agent_depth = read_cross_agent_depth(&headers);
 
+    // Phase 1 of parallel-session-chats: build the harness partition
+    // string AFTER `persist_ctx` is resolved so we can fold the storage
+    // `session_id` into it. The previous `live_session` flag depended on
+    // the bare partition; with per-session keys we compute it AFTER the
+    // partition string is known. To break the chicken-and-egg with
+    // `load_persistence_and_history` (which also wants `live_session`),
+    // we resolve persist first with `live_session = false` — the worst
+    // case is one extra history rebuild on a warm session, which is
+    // dominated by the harness IO that follows anyway.
     let (persist_ctx, fork_info, conversation_messages) = load_persistence_and_history(
         &state,
         &agent_id,
         &jwt,
         force_new,
-        live_session,
+        /* live_session */ false,
         pinned_session_id.as_deref(),
         // Phase 2 of the cross-agent reply plan: thread the harness's
         // `originating_agent_id` (set by `send_to_agent` in
@@ -167,21 +161,40 @@ pub(crate) async fn send_agent_event_stream(
     log_persistence_status(&agent_id, persist_ctx.is_some());
     log_history_size(&agent_id, conversation_messages.as_deref());
 
-    // Phase 3 auto-fork: if `resolve_chat_session_with_pin` minted a
-    // fresh session because the candidate crossed the context-pressure
-    // threshold, the in-memory ChatSession bound to the OLD storage
-    // session id must be evicted before the harness session opens.
-    // Without eviction, the next turn would reuse the old harness
-    // partition and the fresh `aura_session_id` would never propagate
-    // into outbound `/v1/messages` calls.
+    // Phase 1 of parallel-session-chats: fold the resolved storage
+    // `session_id` into the harness partition string so two POSTs
+    // against the same `(template, instance|None)` with different
+    // storage sessions open distinct ChatSession entries (and take
+    // distinct turn slots). `persist_ctx.session_id` is a `String`
+    // sourced from storage; storage session ids are UUIDs, so
+    // parsing succeeds in production. A parse failure (e.g. an
+    // unexpected non-UUID id from a future storage variant) falls
+    // back to the bare-partition behaviour so the chat path still
+    // works, just without the session-level lane split.
+    let session_segment: Option<aura_os_core::SessionId> = persist_ctx
+        .as_ref()
+        .and_then(|c| c.session_id.parse::<aura_os_core::SessionId>().ok());
+    let partition_agent_id =
+        aura_os_core::harness_agent_id(&agent_id, None, session_segment.as_ref());
+    let session_key = partition_agent_id.clone();
+
+    // After Phase 1 the live-session probe is per-(template, instance,
+    // storage_session) rather than per-instance: it answers "is the
+    // harness session backing THIS storage session warm?" so the
+    // downstream `load_project_state_for_agent` warm-skip is still
+    // correct, just narrower than before.
+    let live_session = has_live_session(&state, &session_key).await;
+
+    // Phase 3 auto-fork: with per-session keys we no longer evict the
+    // old `ChatSession` entry on fork — the fresh session lands on a
+    // brand-new `session_key` (the new storage session_id changes the
+    // third partition segment) and naturally has its own registry
+    // entry. The old entry is orphaned and reaped on the usual
+    // is_alive / dropped-channel path. The observability counter
+    // still fires because the "user transparently rolled into the
+    // fresh session" semantic is unchanged.
     if fork_info.is_some() {
-        // Phase 5 observability: pair with the `auto_fork_triggered`
-        // bump in `persist_task::maybe_spawn_auto_fork_marker`. This
-        // counter records the moment the next user send actually
-        // landed in the fresh session, so the gap between the two
-        // is "users we flagged but who never sent another turn".
         state.stability_metrics.inc_auto_fork_applied();
-        remove_live_session(&state, &session_key).await;
     }
 
     let project_state_snapshot =

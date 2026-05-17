@@ -251,38 +251,53 @@ pub(super) async fn has_live_session(state: &AppState, key: &str) -> bool {
         .any(|entry| entry.key().session_key == key && entry.value().is_alive())
 }
 
-/// Return the storage `session_id` the live harness session (if any)
-/// is currently writing into. The chat handlers compare this against
-/// the caller-supplied `SendChatRequest.session_id` to decide whether
-/// to evict the in-memory session before opening a new one. Without
-/// the eviction the harness would keep replying with conversation
-/// state from the previously-active session.
-///
-/// Phase 4: with `(session_key, model)` keys, multiple alive entries
-/// can exist for one partition, but every entry on the same partition
-/// is delegated against the same storage session — so returning the
-/// first alive entry's id is correct, and the per-model variants stay
-/// in sync.
-pub(super) async fn live_session_storage_id(state: &AppState, key: &str) -> Option<String> {
-    state
-        .chat_sessions
-        .iter()
-        .find(|entry| entry.key().session_key == key && entry.value().is_alive())
-        .map(|entry| entry.value().session_id.clone())
-}
-
 /// Drop EVERY chat-session entry that shares this `session_key`,
-/// regardless of model. Phase 3 rollover-eviction and Phase 4 pin /
-/// force-new flows both rely on this sweeping behaviour: when the
-/// storage session is replaced (auto-fork, force_new, pin change),
-/// every per-model entry on the partition is now stale and must be
-/// rebuilt on the next turn so the fresh `aura_session_id` propagates
-/// into outbound `/v1/messages` calls.
+/// regardless of model. After Phase 1 of parallel-session-chats the
+/// `session_key` is a three-segment `{template}::{instance|default}::{session_id}`
+/// string, so this helper sweeps every per-model entry for one
+/// specific storage session — and `reset_agent_session` uses it
+/// against the bare-template partition (no session segment) which is
+/// its own one-off entry.
+///
+/// For "evict every session on this instance" semantics (used by
+/// [`reset_instance_session`] below) callers want
+/// [`remove_live_sessions_for_instance`] instead.
 pub(super) async fn remove_live_session(state: &AppState, key: &str) {
     let stale_keys: Vec<crate::state::ChatSessionKey> = state
         .chat_sessions
         .iter()
         .filter(|entry| entry.key().session_key == key)
+        .map(|entry| entry.key().clone())
+        .collect();
+    for stale in stale_keys {
+        state.chat_sessions.remove(&stale);
+    }
+}
+
+/// Drop EVERY chat-session entry whose `session_key` starts with the
+/// given instance-partition prefix, regardless of model or storage
+/// session. Used by [`reset_instance_session`] to evict every
+/// per-session entry under one instance in a single sweep, since
+/// after Phase 1 of parallel-session-chats the registry holds one
+/// entry per `(template, instance, storage_session)` triple instead
+/// of one per instance.
+///
+/// The `==` branch covers the legacy two-segment form (callers that
+/// did not opt into a session segment, e.g. before
+/// `harness_agent_id` accepted a `SessionId`); the `starts_with`
+/// branch covers every three-segment per-session entry.
+pub(super) async fn remove_live_sessions_for_instance(
+    state: &AppState,
+    instance_partition: &str,
+) {
+    let prefix = format!("{instance_partition}::");
+    let stale_keys: Vec<crate::state::ChatSessionKey> = state
+        .chat_sessions
+        .iter()
+        .filter(|entry| {
+            entry.key().session_key == instance_partition
+                || entry.key().session_key.starts_with(&prefix)
+        })
         .map(|entry| entry.key().clone())
         .collect();
     for stale in stale_keys {
@@ -340,7 +355,16 @@ pub(crate) async fn reset_instance_session(
         }
     };
     if let Some(key) = live_session_key {
-        remove_live_session(&state, &key).await;
+        // The `live_session_key` built above is the two-segment
+        // instance partition (`harness_agent_id(template, Some(instance), None)`).
+        // After Phase 1 of parallel-session-chats the chat routes
+        // store per-session entries under three-segment keys whose
+        // prefix is exactly that string + `"::"`, so the prefix sweep
+        // evicts every storage session under this instance in one
+        // pass. The legacy two-segment form (callers that opted out
+        // of the session segment) is covered by the `==` branch in
+        // `remove_live_sessions_for_instance`.
+        remove_live_sessions_for_instance(&state, &key).await;
     }
     let _ = setup_project_chat_persistence(
         &state,

@@ -31,9 +31,7 @@ use super::loaders::{
     load_current_session_events_for_instance, load_pinned_session_events_for_instance,
 };
 use super::persist::{try_pin_session, PinnedSessionOutcome};
-use super::setup::{
-    has_live_session, live_session_storage_id, remove_live_session, setup_project_chat_persistence,
-};
+use super::setup::{has_live_session, setup_project_chat_persistence};
 use super::streaming::{open_harness_chat_stream, OpenChatStreamArgs};
 use super::tools::{build_session_installed_tools, InstalledToolsCtx};
 use super::types::SseResponse;
@@ -103,9 +101,6 @@ pub(crate) async fn send_event_stream(
     )
     .await?;
 
-    let partition_agent_id =
-        aura_os_core::harness_agent_id(&instance.agent_id, Some(&agent_instance_id), None);
-    let session_key = partition_agent_id.clone();
     let force_new = body.new_session.unwrap_or(false);
 
     // Validate the caller-supplied pin (`SendChatRequest.session_id`)
@@ -134,21 +129,6 @@ pub(crate) async fn send_event_stream(
             }
         }
     };
-
-    // Evict the in-memory harness session whenever the requested
-    // session id differs from the one the harness is currently
-    // writing into. Without this, switching from session A to session
-    // B (via the URL `?session=` pin) would keep the old conversation
-    // history hot in memory and the model would respond as if the
-    // user were still in session A.
-    let live_storage_id = live_session_storage_id(&state, &session_key).await;
-    let pin_changed = match (pinned_session_id.as_deref(), live_storage_id.as_deref()) {
-        (Some(pinned), Some(live)) => pinned != live,
-        _ => false,
-    };
-    if force_new || pin_changed {
-        remove_live_session(&state, &session_key).await;
-    }
 
     // Phase 3 cycle-depth read. Inbound POSTs from prior cross-agent
     // reply callbacks carry `X-Aura-Cross-Agent-Depth: <n>`; we
@@ -189,25 +169,35 @@ pub(crate) async fn send_event_stream(
         None => (None, None),
     };
 
-    // Phase 3 auto-fork: when the resolver minted a fresh session
-    // because the prior one crossed the context-pressure threshold,
-    // the in-memory ChatSession bound to the OLD storage session id
-    // must be evicted before we open the harness session. Without
-    // eviction the harness keeps replying with the previous session's
-    // history and the new `aura_session_id` never propagates onto
-    // outbound `/v1/messages` calls.
+    // Phase 1 of parallel-session-chats: fold the resolved storage
+    // `session_id` into the harness partition string so two POSTs
+    // against the same `(instance, model)` with different storage
+    // sessions open distinct ChatSession entries (and take distinct
+    // turn slots). `persist_ctx.session_id` is a `String` sourced
+    // from storage; storage session ids are UUIDs, so parsing
+    // succeeds in production. A parse failure falls back to the
+    // legacy two-segment partition behaviour so the chat path still
+    // works, just without the session-level lane split.
+    let session_segment: Option<aura_os_core::SessionId> = persist_ctx
+        .as_ref()
+        .and_then(|c| c.session_id.parse::<aura_os_core::SessionId>().ok());
+    let partition_agent_id = aura_os_core::harness_agent_id(
+        &instance.agent_id,
+        Some(&agent_instance_id),
+        session_segment.as_ref(),
+    );
+    let session_key = partition_agent_id.clone();
+
+    // Phase 3 auto-fork: with per-session keys the new fork session
+    // lands on a brand-new `session_key` (the new storage session_id
+    // changes the third partition segment) so the old `ChatSession`
+    // entry is naturally orphaned and reaped on the usual
+    // is_alive / dropped-channel path — no eviction needed. The
+    // observability counter still fires because the "user
+    // transparently rolled into the fresh session" semantic is
+    // unchanged.
     if fork_info.is_some() {
-        // Phase 5 observability: a fresh session was actually minted
-        // for this user send (the persist task previously flagged the
-        // candidate `rolled_over`, OR the `usage_estimate` fallback
-        // tripped). The matching `auto_fork_triggered` counter ticks
-        // earlier in the persist task; this counter ticks at the
-        // "next user send transparently rolled into the new session"
-        // boundary. Walking the gap between the two is how an
-        // operator spots users stuck on a flagged session that never
-        // sends another turn.
         state.stability_metrics.inc_auto_fork_applied();
-        remove_live_session(&state, &session_key).await;
     }
 
     let (conversation_messages, project_state_snapshot) = load_history_and_project_state(
@@ -354,12 +344,13 @@ async fn load_history_and_project_state(
     if force_new {
         return Ok((None, None));
     }
-    // When pinning we always rebuild conversation history from the
-    // pinned session's events — even if a live harness session is
-    // resident. The instance route invokes `remove_live_session`
-    // upstream when the pin disagrees with the live session id, so by
-    // the time we're here a live-session match means the pin and the
-    // resident harness agree and skipping the rebuild is safe.
+    // After Phase 1 of parallel-session-chats the `session_key` itself
+    // embeds the resolved storage session id, so "the partition has a
+    // live harness session" is the same statement as "this storage
+    // session has a warm harness session" — skipping the history
+    // rebuild on a hit is safe by construction; we no longer need to
+    // pre-evict on pin disagreement because a different storage
+    // session resolves to a different `session_key` entirely.
     if has_live_session(state, session_key).await {
         return Ok((None, None));
     }

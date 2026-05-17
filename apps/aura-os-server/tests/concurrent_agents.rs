@@ -28,7 +28,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use aura_os_core::{harness_agent_id, AgentId, AgentInstanceId, ProjectId};
+use aura_os_core::{harness_agent_id, AgentId, AgentInstanceId, ProjectId, SessionId};
 use aura_os_harness::test_support::FakeHarness;
 use aura_os_harness::{
     AssistantMessageEnd, FilesChanged, HarnessOutbound, SessionBridge, SessionBridgeError,
@@ -497,5 +497,103 @@ async fn fake_harness_capacity_exhausted_surfaces_typed_session_bridge_error() {
         fake.session_count().await,
         1,
         "FakeHarness must record exactly the sessions it accepted (= cap)"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Phase-1 parallel-session-chats regression: two storage sessions on the
+// SAME (template, agent_instance) pair must run concurrently because the
+// chat routes now thread the storage `session_id` into the harness
+// partition string. The dedicated test file `tests/concurrent_sessions.rs`
+// covers this end-to-end; this case is the in-suite regression guard so
+// `cargo test -p aura-os-server --test concurrent_agents` catches a
+// future refactor that collapses the three-segment partition back to the
+// two-segment per-instance form.
+// ---------------------------------------------------------------------------
+
+/// Phase-1 regression: distinct storage `session_id` values on the
+/// same `(template, agent_instance)` pair must produce DISTINCT
+/// harness partition agent_ids. Mirrors
+/// `concurrent_chat_same_agent_multi_instance` above but holds the
+/// instance fixed and varies the third partition segment instead of
+/// the second. A regression that drops the session segment would
+/// collapse both opens onto one partition, the harness would serialize
+/// them with `turn_in_progress`, and `observed_agent_ids` would
+/// contain two equal entries instead of two distinct ones.
+#[tokio::test]
+async fn concurrent_sessions_on_same_instance() {
+    let fake = FakeHarness::new();
+    fake.set_script(vec![text_delta("hi"), assistant_end()])
+        .await;
+    fake.set_initial_delay(Duration::from_millis(200)).await;
+
+    let template = AgentId::new();
+    let instance = AgentInstanceId::new();
+    let session_a = SessionId::new();
+    let session_b = SessionId::new();
+    assert_ne!(session_a, session_b);
+
+    let cfg_a = SessionConfig {
+        agent_id: Some(harness_agent_id(&template, Some(&instance), Some(&session_a))),
+        template_agent_id: Some(template.to_string()),
+        ..Default::default()
+    };
+    let cfg_b = SessionConfig {
+        agent_id: Some(harness_agent_id(&template, Some(&instance), Some(&session_b))),
+        template_agent_id: Some(template.to_string()),
+        ..Default::default()
+    };
+
+    let started_at = Instant::now();
+    let (mut sa, mut sb) = tokio::join!(
+        async {
+            SessionBridge::open_and_send_user_message(&fake, cfg_a, turn("hi-a"))
+                .await
+                .expect("open session A")
+        },
+        async {
+            SessionBridge::open_and_send_user_message(&fake, cfg_b, turn("hi-b"))
+                .await
+                .expect("open session B")
+        },
+    );
+
+    let (delta_a, delta_b) = tokio::join!(
+        first_text_delta_at(&mut sa, started_at, Duration::from_secs(2)),
+        first_text_delta_at(&mut sb, started_at, Duration::from_secs(2)),
+    );
+    let delta_a = delta_a.expect("A delta arrived");
+    let delta_b = delta_b.expect("B delta arrived");
+
+    let skew = if delta_a > delta_b {
+        delta_a - delta_b
+    } else {
+        delta_b - delta_a
+    };
+    assert!(
+        skew <= Duration::from_millis(250),
+        "two storage sessions on one instance must interleave, got skew={skew:?}"
+    );
+
+    let agent_ids = fake.observed_agent_ids().await;
+    assert_eq!(agent_ids.len(), 2);
+    assert_ne!(
+        agent_ids[0], agent_ids[1],
+        "two sessions on one instance must hash to distinct partition agent_ids"
+    );
+    let expected_a = harness_agent_id(&template, Some(&instance), Some(&session_a));
+    let expected_b = harness_agent_id(&template, Some(&instance), Some(&session_b));
+    let mut sorted: Vec<String> = agent_ids
+        .iter()
+        .map(|s| s.clone().expect("agent_id populated"))
+        .collect();
+    sorted.sort();
+    let mut expected = vec![expected_a, expected_b];
+    expected.sort();
+    assert_eq!(
+        sorted, expected,
+        "observed agent_ids must equal the three-segment partition strings built by \
+         harness_agent_id; a regression would collapse them onto the two-segment \
+         per-instance form and serialize the two turns"
     );
 }
