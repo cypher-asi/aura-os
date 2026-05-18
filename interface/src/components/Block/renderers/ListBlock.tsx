@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { ToolCallEntry } from "../../../shared/types/stream";
 import { TOOL_LABELS } from "../../../constants/tools";
 import { decodeCapturedOutput, summarizeInput } from "../../../shared/utils/format";
+import { CopyButton } from "../../CopyButton";
 import { Block } from "../Block";
 import styles from "./renderers.module.css";
 
@@ -130,16 +131,30 @@ export function ListBlock({ entry, defaultExpanded }: ListBlockProps) {
   const rows = resolveRows(entry.result);
 
   const status = entry.pending ? "pending" : entry.isError ? "error" : "done";
-  const trailing = !entry.pending ? (
-    <span className={styles.mediaCaption}>{rows.length} {rows.length === 1 ? "item" : "items"}</span>
-  ) : null;
+  const showCopy = !entry.pending && rows.length > 0;
+  // Serialize rows back to plaintext so pasting outside the chat gives
+  // a clean "primary[: secondary]" line per item -- matches what the
+  // body visually shows (icon column is purely decorative).
+  const getCopyText = () =>
+    rows
+      .map((r) => (r.secondary ? `${r.primary}: ${r.secondary}` : r.primary))
+      .join("\n");
+
+  const countLabel = !entry.pending
+    ? `${rows.length} ${rows.length === 1 ? "item" : "items"}`
+    : undefined;
 
   return (
     <Block
       icon={iconFor(entry.name)}
       title={label}
       summary={summary || undefined}
-      trailing={trailing}
+      trailing={
+        showCopy ? (
+          <CopyButton getText={getCopyText} ariaLabel={`Copy ${label} results`} />
+        ) : undefined
+      }
+      badge={countLabel}
       status={status}
       defaultExpanded={defaultExpanded ?? false}
       flushBody

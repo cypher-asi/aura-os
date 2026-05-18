@@ -119,7 +119,13 @@ describe("LLMOutput", () => {
       />,
     );
 
-    const headers = screen.getAllByRole("button");
+    // Filter to block headers (which carry `aria-expanded`); other
+    // role="button" elements like the per-block `CopyButton` are
+    // siblings inside the trailing slot and don't toggle expansion.
+    const headers = screen
+      .getAllByRole("button")
+      .filter((header) => header.hasAttribute("aria-expanded"));
+    expect(headers.length).toBeGreaterThan(0);
     for (const header of headers) {
       expect(header).toHaveAttribute("aria-expanded", "false");
     }

@@ -454,7 +454,14 @@ describe("ToolCallBlock (Block dispatch)", () => {
         />,
       );
 
-      const header = screen.getByRole("button");
+      // The Block's expandable header is a `<div role="button">` carrying
+      // `aria-expanded`; the per-block `CopyButton` in the trailing slot
+      // is also a `<button>` but never toggles state, so filter it out.
+      const headers = screen
+        .getAllByRole("button")
+        .filter((el) => el.hasAttribute("aria-expanded"));
+      expect(headers).toHaveLength(1);
+      const header = headers[0];
       expect(header).toHaveAttribute("aria-expanded", "true");
 
       fireEvent.click(header);
