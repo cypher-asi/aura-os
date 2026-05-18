@@ -8,7 +8,7 @@ import type {
   StreamSetters,
   GenerationKind,
 } from "../../shared/types/stream";
-import { clearPartitionSendControl } from "../use-chat-stream/partition-send-control";
+import { clearPartitionAutoRetry } from "./partition-state";
 
 /* ------------------------------------------------------------------ */
 /*  Zustand stream store                                               */
@@ -249,10 +249,13 @@ export function pruneStreamStore(preserveKey?: string): void {
 
   for (const key of toDelete) {
     streamMetaMap.delete(key);
-    // Keep the partition-send-control map in lockstep with the stream meta
-    // so an evicted partition doesn't leak its retry timer / cached send
-    // payload past its last live handler.
-    clearPartitionSendControl(key);
+    // Keep BOTH auto-retry maps (project-chat send-control + standalone-
+    // agent replay) in lockstep with the stream meta so an evicted
+    // partition can't leak its retry timer / cached send payload on
+    // either surface past its last live handler. The shared helper
+    // short-circuits when a map has no entry, so a project-chat-only
+    // key clears only the send-control map and vice versa.
+    clearPartitionAutoRetry(key);
   }
   useStreamStore.setState((s) => {
     const next = { ...s.entries };
@@ -526,11 +529,12 @@ void resolveKey;
  *     the in-flight refs object reference rather than minting a new
  *     one
  *
- * Sibling helpers `migratePartitionSendControl`
- * (`partition-send-control.ts`) and `migrateChatUiPartition`
- * (`chat-ui-store.ts`) take care of their own per-key maps; callers
- * are expected to invoke all three together at every session-id flip
- * site.
+ * Sibling helpers `migratePartitionAutoRetry`
+ * (`./partition-state.ts`, covers both per-surface auto-retry maps)
+ * and `migrateChatUiPartition` (`chat-ui-store.ts`) take care of
+ * their own per-key maps; the `migrateChatPartition` orchestrator in
+ * `./migration.ts` invokes all of them in lockstep at every
+ * session-id flip site.
  */
 export function migrateStreamPartition(oldKey: string, newKey: string): void {
   if (oldKey === newKey) return;

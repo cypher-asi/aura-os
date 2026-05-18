@@ -45,48 +45,25 @@ import {
   streamMetaMap,
 } from "./stream/store";
 import { migrateChatPartition } from "./stream/migration";
+import {
+  type AgentChatLastSendArgs,
+  getOrCreatePartitionAgentReplay,
+  peekPartitionAgentReplay,
+  _resetAllPartitionAgentReplay,
+} from "./stream/partition-state";
 import { STUCK_THRESHOLD_MS } from "./stream/use-stream-health";
 import type { StreamCloseContext } from "../shared/observability/stream-breadcrumbs";
 
 /**
  * Per-streamKey cache of the most recent `sendMessage` payload plus
- * the live hook callable. Mirrors the `partition-send-control`
- * pattern in `use-chat-stream/partition-send-control.ts`: the
- * project-chat branch already captures auto-retry args there, but
- * `useAgentChatStream` doesn't go through that map. Phase 2's
- * stuck-stream retry needs a uniform replay surface for both
- * branches, so we add an analogous Map here keyed by `streamKey`.
- *
- * `sendFn` is registered by every active hook instance via `useEffect`
- * so {@link replayLastSend} can re-fire the cached args without
- * dragging the hook return through the retry callback chain.
+ * the live hook callable lives in the shared
+ * `stream/partition-state` module alongside the project-chat
+ * `partitionSendControlMap`; the two surfaces are kept in lockstep
+ * by `migratePartitionAutoRetry` so a future per-key map can't be
+ * missed at a flip site. See the re-exported surface here for the
+ * standalone-agent-specific entry points.
  */
-interface AgentChatStreamReplayEntry {
-  lastSendArgs: AgentChatLastSendArgs | null;
-  sendFn: ((args: AgentChatLastSendArgs) => Promise<void>) | null;
-}
-
-export interface AgentChatLastSendArgs {
-  content: string;
-  action: string | null;
-  selectedModel?: string | null;
-  attachments?: ChatAttachment[];
-  commands?: string[];
-  projectId?: string;
-  generationMode?: GenerationMode;
-  sourceImageUrl?: string;
-}
-
-const agentChatStreamReplayMap = new Map<string, AgentChatStreamReplayEntry>();
-
-function getOrCreateReplayEntry(key: string): AgentChatStreamReplayEntry {
-  let entry = agentChatStreamReplayMap.get(key);
-  if (!entry) {
-    entry = { lastSendArgs: null, sendFn: null };
-    agentChatStreamReplayMap.set(key, entry);
-  }
-  return entry;
-}
+export type { AgentChatLastSendArgs };
 
 /**
  * Last captured `sendMessage` payload for the given stream, or `null`
@@ -95,7 +72,7 @@ function getOrCreateReplayEntry(key: string): AgentChatStreamReplayEntry {
  * to decide whether a retry is even possible.
  */
 export function getLastSendArgs(streamKey: string): AgentChatLastSendArgs | null {
-  return agentChatStreamReplayMap.get(streamKey)?.lastSendArgs ?? null;
+  return peekPartitionAgentReplay(streamKey)?.lastSendArgs ?? null;
 }
 
 /**
@@ -109,14 +86,14 @@ export function getLastSendArgs(streamKey: string): AgentChatLastSendArgs | null
  * before the replay tries to re-enter.
  */
 export async function replayLastSend(streamKey: string): Promise<void> {
-  const entry = agentChatStreamReplayMap.get(streamKey);
+  const entry = peekPartitionAgentReplay(streamKey);
   if (!entry?.lastSendArgs || !entry.sendFn) return;
   await entry.sendFn(entry.lastSendArgs);
 }
 
 /** Test-only reset for vitest `beforeEach` setup. */
 export function _resetAgentChatStreamReplayMap(): void {
-  agentChatStreamReplayMap.clear();
+  _resetAllPartitionAgentReplay();
 }
 
 interface UseAgentChatStreamOptions {
@@ -235,7 +212,7 @@ export function useAgentChatStream({
       // queue/in-flight branching so the most recent user-intended
       // send is always replayable. Mirrors `lastSendArgs` capture in
       // `use-chat-stream`'s `performSend`.
-      getOrCreateReplayEntry(core.key).lastSendArgs = {
+      getOrCreatePartitionAgentReplay(core.key).lastSendArgs = {
         content,
         action,
         selectedModel,
@@ -317,27 +294,18 @@ export function useAgentChatStream({
         if (!agentId) return;
         const newKey = keyForAgentSession(agentId, newSessionId);
         if (newKey === partitionState.key) return;
-        // Shared trio: stream entries + meta, partition send-control
-        // (no-op on this surface — standalone agent chat doesn't
-        // register entries in `partitionSendControlMap`, see the
-        // early `if (!oldCtrl) return;` guard in
-        // `partition-send-control.ts::migratePartitionSendControl`),
-        // and chat-ui-store. Calling the shared orchestrator instead
-        // of the individual helpers prevents the historical
-        // missed-call-site asymmetry where this surface skipped
-        // `migratePartitionSendControl`.
+        // The shared orchestrator handles every per-streamKey map
+        // — Zustand stream entries + meta, BOTH auto-retry maps
+        // (project-chat `partitionSendControlMap` and standalone-agent
+        // `partitionAgentReplayMap`, via `migratePartitionAutoRetry`
+        // — each short-circuits when its map has no entry, so only
+        // the standalone-agent map actually moves on this surface),
+        // and the chat-ui-store slice. There used to be a hand-rolled
+        // replay-map rekey block here that the orchestrator now
+        // subsumes; routing all migrations through one helper is what
+        // prevents the missed-call-site asymmetry that historically
+        // had this surface skipping the send-control rekey path.
         migrateChatPartition(partitionState.key, newKey);
-        // Surface-local: re-key the replay map so a post-migration
-        // stuck-stream retry resolves the cached `lastSendArgs` under
-        // the new key. The hook's per-key registration effect will
-        // follow on the next render. Lives outside the shared trio
-        // because only standalone agent chat owns this map; project
-        // chat uses `partition-send-control.ts` for the same job.
-        const oldReplay = agentChatStreamReplayMap.get(partitionState.key);
-        if (oldReplay && !agentChatStreamReplayMap.has(newKey)) {
-          agentChatStreamReplayMap.set(newKey, oldReplay);
-          agentChatStreamReplayMap.delete(partitionState.key);
-        }
         partitionState.key = newKey;
       };
 
@@ -774,7 +742,7 @@ export function useAgentChatStream({
   // only this hook's slot so unmounting doesn't strand a stale
   // closure that captures a torn-down React tree.
   useEffect(() => {
-    const entry = getOrCreateReplayEntry(core.key);
+    const entry = getOrCreatePartitionAgentReplay(core.key);
     const adapted = (args: AgentChatLastSendArgs): Promise<void> =>
       sendMessage(
         args.content,

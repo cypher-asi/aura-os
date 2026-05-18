@@ -1,5 +1,5 @@
 import { migrateStreamPartition } from "./store";
-import { migratePartitionSendControl } from "../use-chat-stream/partition-send-control";
+import { migratePartitionAutoRetry } from "./partition-state";
 import { migrateChatUiPartition } from "../../stores/chat-ui-store";
 
 /**
@@ -19,22 +19,26 @@ import { migrateChatUiPartition } from "../../stores/chat-ui-store";
  *    lastAccessedAt). The refs identity is preserved so the
  *    in-flight handler's captured `partitionRefs` keeps writing to
  *    the same buffer after the flip.
- *  - {@link migratePartitionSendControl} — the project-chat
- *    `partitionSendControlMap` (inFlight latch, retry timer,
- *    lastSendArgs, currentController, …). Standalone agent chat
- *    does NOT register entries here, so this call is a no-op for
- *    that surface — the helper short-circuits when the source key
- *    has no entry.
+ *  - {@link migratePartitionAutoRetry} — both per-surface auto-retry
+ *    maps: the project-chat `partitionSendControlMap` (inFlight
+ *    latch, retry timer, lastSendArgs, currentController, …) and the
+ *    standalone-agent `partitionAgentReplayMap` (lastSendArgs,
+ *    registered sendFn adapter). Each underlying helper short-circuits
+ *    when its map has no entry at `oldKey`, so the surface that only
+ *    uses one of the two maps gets a clean no-op for the other.
+ *    Before Tier 3 item 9 of the session-keying review this was two
+ *    separate calls plus a hand-rolled rekey block inside
+ *    `use-agent-chat-stream.ts`; consolidating to one helper is what
+ *    eliminates the missed-call-site pattern that previously had the
+ *    standalone-agent surface skipping the send-control rekey path.
  *  - {@link migrateChatUiPartition} — the per-streamKey
  *    chat-ui-store slice (selected mode/model, pinned source image,
  *    drafts).
  *
- * Adding a new per-streamKey map should be done *here* rather than
- * at every flip site, so the existing surfaces inherit the
- * migration without each having to be touched (the asymmetry that
- * previously had standalone-agent-chat skipping
- * `migratePartitionSendControl` was exactly the missed-call-site
- * pattern this orchestrator prevents).
+ * Adding a new per-streamKey map should be done *here* (and inside
+ * the shared `partition-state` module for any new per-surface
+ * auto-retry state) rather than at every flip site, so the existing
+ * surfaces inherit the migration without each having to be touched.
  *
  * Errors from the underlying helpers propagate. The current set of
  * helpers does not throw, but a `try`/`catch` here would mask a
@@ -45,6 +49,6 @@ import { migrateChatUiPartition } from "../../stores/chat-ui-store";
 export function migrateChatPartition(oldKey: string, newKey: string): void {
   if (oldKey === newKey) return;
   migrateStreamPartition(oldKey, newKey);
-  migratePartitionSendControl(oldKey, newKey);
+  migratePartitionAutoRetry(oldKey, newKey);
   migrateChatUiPartition(oldKey, newKey);
 }
