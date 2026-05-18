@@ -2,8 +2,8 @@ import { useMemo } from "react";
 import {
   keyForProjectSession,
   useIsStreamingByKey,
-} from "../../hooks/stream/store";
-import type { AnnotatedSession } from "./session-row-utils";
+} from "./stream/store";
+import type { AnnotatedSession } from "../components/SessionsList/session-row-utils";
 
 /**
  * Default per-session stream key for `SessionsList` rows: the
@@ -11,10 +11,12 @@ import type { AnnotatedSession } from "./session-row-utils";
  * Exported so Phase 4 tests can assert against the same string the
  * per-row indicator subscribes to.
  *
- * Lives in its own module (separate from `SessionsList.tsx`) so the
- * file can export this helper plus the `useIsSessionStreaming` hook
- * without tripping the `react-refresh/only-export-components` rule on
- * the component file.
+ * Tier 3 of the session-keying review plan moved this module out of
+ * `components/SessionsList/` into `hooks/` so the components folder
+ * stops carrying its own hook (per the React-component rules: apps
+ * depend on features and shared; hooks live in `hooks/`). The
+ * `components/SessionsList/index.ts` barrel still re-exports it for
+ * back-compat with existing import paths.
  */
 export function defaultSessionStreamKey(session: AnnotatedSession): string {
   return keyForProjectSession(

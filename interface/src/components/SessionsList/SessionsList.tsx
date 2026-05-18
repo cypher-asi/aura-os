@@ -12,7 +12,7 @@ import {
   type SessionRow,
 } from "./session-row-utils";
 import { useSessionSummaries } from "./use-session-summaries";
-import { useIsSessionStreaming } from "./use-session-streaming";
+import { useIsSessionStreaming } from "../../hooks/use-session-streaming";
 import styles from "./SessionsList.module.css";
 
 interface SessionsListProps {
