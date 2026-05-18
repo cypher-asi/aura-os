@@ -168,6 +168,27 @@ export const useSidekickStore = create<SidekickState>()((set, get) => ({
   streamingAgentInstanceId: null,
 
   setActiveTab: (tab) => {
+    // Gated diagnostic for the "sidekick auto-switches from Sessions to
+    // Tasks on send" bug. Enable from devtools with
+    // `window.__AURA_DEBUG_SIDEKICK_TAB__ = true` and reproduce — the
+    // `console.trace` line names the actual caller that flipped the tab,
+    // which is the only way to identify the offending effect because
+    // static analysis shows no production code path that should switch
+    // to "tasks" on a normal send from Sessions. The unmonitored path
+    // is a single property read so production cost is zero.
+    if (
+      typeof window !== "undefined" &&
+      (window as unknown as { __AURA_DEBUG_SIDEKICK_TAB__?: unknown })
+        .__AURA_DEBUG_SIDEKICK_TAB__
+    ) {
+      // eslint-disable-next-line no-console -- gated behind window flag, see comment above
+      console.debug("[aura.sidekickTab] setActiveTab", {
+        to: tab,
+        from: get().activeTab,
+      });
+      // eslint-disable-next-line no-console -- gated behind window flag, see comment above
+      console.trace("[aura.sidekickTab] caller");
+    }
     persistActiveTab(SIDEKICK_ACTIVE_TAB_KEY, tab);
     set({ activeTab: tab, showInfo: false, previewItem: null, previewHistory: [], canGoBack: false });
   },

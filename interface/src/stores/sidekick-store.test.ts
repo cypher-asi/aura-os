@@ -98,6 +98,67 @@ describe("sidekick-store", () => {
     });
   });
 
+  // Regression for the "sidekick switches from Sessions to Tasks when sending
+  // a message in the Projects app" bug. None of the store actions invoked by
+  // a normal chat send — task / spec / streaming-state mutations, preview
+  // pushes, agent-instance update notifications — may change `activeTab` as
+  // a side effect. The send path drives all of these (`pushPendingTask`,
+  // `pushTask` on `TaskSaved`, `setAgentStreaming` while in flight) and the
+  // user's Sessions selection must survive every one of them. If any future
+  // refactor wires a tab-flip into one of these store actions, the matching
+  // assertion here breaks and the regression is caught before it ships.
+  describe("send-flow tab invariant: pushing tasks/specs/streaming does not change activeTab", () => {
+    beforeEach(() => {
+      useSidekickStore.setState({ ...initialState, activeTab: "sessions" });
+    });
+
+    it("pushTask (real) does not change activeTab", () => {
+      useSidekickStore.getState().pushTask(makeTask("t1", 0));
+      expect(useSidekickStore.getState().activeTab).toBe("sessions");
+    });
+
+    it("pushTask (pending placeholder, like create_task at ToolUseStart) does not change activeTab", () => {
+      useSidekickStore.getState().pushTask({
+        ...makeTask("pending-tc1", 0),
+        title: "Creating task…",
+      });
+      expect(useSidekickStore.getState().activeTab).toBe("sessions");
+    });
+
+    it("pushSpec does not change activeTab", () => {
+      useSidekickStore.getState().pushSpec(makeSpec("s1", 0));
+      expect(useSidekickStore.getState().activeTab).toBe("sessions");
+    });
+
+    it("setAgentStreaming(true) and (false) do not change activeTab", () => {
+      const store = useSidekickStore.getState();
+      store.setAgentStreaming("ai1", true);
+      expect(useSidekickStore.getState().activeTab).toBe("sessions");
+      store.setAgentStreaming("ai1", false);
+      expect(useSidekickStore.getState().activeTab).toBe("sessions");
+    });
+
+    it("patchTask does not change activeTab", () => {
+      useSidekickStore.getState().pushTask(makeTask("t1", 0));
+      useSidekickStore.getState().patchTask("t1", { status: "in_progress" });
+      expect(useSidekickStore.getState().activeTab).toBe("sessions");
+    });
+
+    it("notifyAgentInstanceUpdate does not change activeTab", () => {
+      useSidekickStore
+        .getState()
+        .notifyAgentInstanceUpdate({ name: "Agent" } as AgentInstance);
+      expect(useSidekickStore.getState().activeTab).toBe("sessions");
+    });
+
+    it("removeTask + clearDeletedTasks do not change activeTab", () => {
+      useSidekickStore.getState().pushTask(makeTask("t1", 0));
+      useSidekickStore.getState().removeTask("t1");
+      useSidekickStore.getState().clearDeletedTasks();
+      expect(useSidekickStore.getState().activeTab).toBe("sessions");
+    });
+  });
+
   describe("viewSpec / viewTask / viewSession", () => {
     it("viewSpec sets spec preview and clears history", () => {
       const spec = makeSpec("s1", 0);
