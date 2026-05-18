@@ -30,7 +30,7 @@ use super::identity_preamble::build_identity_preamble;
 use super::loaders::{
     load_current_session_events_for_instance, load_pinned_session_events_for_instance,
 };
-use super::persist::{try_pin_session, PinnedSessionOutcome};
+use super::persist::{build_chat_partition, try_pin_session, PinnedSessionOutcome};
 use super::setup::{has_live_session, setup_project_chat_persistence};
 use super::streaming::{open_harness_chat_stream, OpenChatStreamArgs};
 use super::tools::{build_session_installed_tools, InstalledToolsCtx};
@@ -169,23 +169,14 @@ pub(crate) async fn send_event_stream(
         None => (None, None),
     };
 
-    // Phase 1 of parallel-session-chats: fold the resolved storage
-    // `session_id` into the harness partition string so two POSTs
-    // against the same `(instance, model)` with different storage
-    // sessions open distinct ChatSession entries (and take distinct
-    // turn slots). `persist_ctx.session_id` is a `String` sourced
-    // from storage; storage session ids are UUIDs, so parsing
-    // succeeds in production. A parse failure falls back to the
-    // legacy two-segment partition behaviour so the chat path still
-    // works, just without the session-level lane split.
-    let session_segment: Option<aura_os_core::SessionId> = persist_ctx
-        .as_ref()
-        .and_then(|c| c.session_id.parse::<aura_os_core::SessionId>().ok());
-    let partition_agent_id = aura_os_core::harness_agent_id(
-        &instance.agent_id,
-        Some(&agent_instance_id),
-        session_segment.as_ref(),
-    );
+    // Phase 1 of parallel-session-chats: two POSTs against the same
+    // `(instance, model)` with different storage sessions need to
+    // open distinct ChatSession entries (and take distinct turn
+    // slots). `build_chat_partition` folds `persist_ctx.session_id`
+    // into the third partition segment for us; see
+    // `persist::build_chat_partition` for the parse-failure fallback.
+    let partition_agent_id =
+        build_chat_partition(&instance.agent_id, Some(&agent_instance_id), persist_ctx.as_ref());
     let session_key = partition_agent_id.clone();
 
     // Phase 3 auto-fork: with per-session keys the new fork session

@@ -118,7 +118,7 @@ pub(crate) async fn setup_agent_chat_persistence(
 /// still fails we return whatever (still empty) match list we had.
 ///
 /// `pub(super)` so the deduped chat hot path in
-/// `agent_route::load_persistence_and_history` can run the same
+/// `agent_route::load_persistence_only` can run the same
 /// self-heal without re-fetching `find_matching_project_agents` twice.
 /// The original `setup_agent_chat_persistence` wrapper still calls
 /// this internally for `reset_agent_session`.
@@ -376,7 +376,7 @@ pub(crate) async fn reset_instance_session(
 mod tests {
     //! Pin down the precondition that motivates the lazy
     //! Home-project repair on the chat hot path. The deduped
-    //! `agent_route::load_persistence_and_history` path skips the
+    //! `agent_route::load_persistence_only` path skips the
     //! `setup_agent_chat_persistence` wrapper and feeds a shared
     //! `find_matching_project_agents` result directly into
     //! [`setup_agent_chat_persistence_with_matched`]; without an
@@ -420,7 +420,7 @@ mod tests {
             ctx.is_none(),
             "without a project_agent binding the helper must return None — \
              this is exactly the orphan state that the lazy_repair_home_project_binding \
-             call in agent_route::load_persistence_and_history is responsible for healing"
+             call in agent_route::load_persistence_only is responsible for healing"
         );
     }
 

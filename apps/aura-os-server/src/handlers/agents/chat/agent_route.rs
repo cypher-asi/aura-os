@@ -31,7 +31,9 @@ use super::instance_route::build_project_system_prompt;
 use super::loaders::{
     load_current_session_events_for_agent_with_matched, load_pinned_session_events_for_agent,
 };
-use super::persist::{try_pin_session, ChatPersistCtx, ForkInfo, PinnedSessionOutcome};
+use super::persist::{
+    build_chat_partition, try_pin_session, ChatPersistCtx, ForkInfo, PinnedSessionOutcome,
+};
 use super::request::slice_recent_agent_events;
 use super::setup::{
     has_live_session, lazy_repair_home_project_binding,
@@ -120,21 +122,21 @@ pub(crate) async fn send_agent_event_stream(
     // start at the "fresh chain" depth.
     let cross_agent_depth = read_cross_agent_depth(&headers);
 
-    // Phase 1 of parallel-session-chats: build the harness partition
-    // string AFTER `persist_ctx` is resolved so we can fold the storage
-    // `session_id` into it. The previous `live_session` flag depended on
-    // the bare partition; with per-session keys we compute it AFTER the
-    // partition string is known. To break the chicken-and-egg with
-    // `load_persistence_and_history` (which also wants `live_session`),
-    // we resolve persist first with `live_session = false` — the worst
-    // case is one extra history rebuild on a warm session, which is
-    // dominated by the harness IO that follows anyway.
-    let (persist_ctx, fork_info, conversation_messages) = load_persistence_and_history(
+    // Mirror the instance-route shape: resolve persist first, then
+    // build the per-session partition string via `build_chat_partition`,
+    // then check `has_live_session` against the real `session_key` so
+    // the cold-vs-warm decision uses the same key the registry stores
+    // under. This loses the cold-start `tokio::join` between persist
+    // and history-load that the pre-Phase-1 code had — same tradeoff
+    // `instance_route::load_history_and_project_state` already
+    // accepts — but in exchange we restore the warm-session
+    // history-rebuild skip that Phase 1's `live_session = false`
+    // workaround disabled.
+    let (persist_ctx, fork_info, matching) = load_persistence_only(
         &state,
         &agent_id,
         &jwt,
         force_new,
-        /* live_session */ false,
         pinned_session_id.as_deref(),
         // Phase 2 of the cross-agent reply plan: thread the harness's
         // `originating_agent_id` (set by `send_to_agent` in
@@ -159,31 +161,25 @@ pub(crate) async fn send_agent_event_stream(
     .await;
 
     log_persistence_status(&agent_id, persist_ctx.is_some());
-    log_history_size(&agent_id, conversation_messages.as_deref());
 
-    // Phase 1 of parallel-session-chats: fold the resolved storage
-    // `session_id` into the harness partition string so two POSTs
-    // against the same `(template, instance|None)` with different
-    // storage sessions open distinct ChatSession entries (and take
-    // distinct turn slots). `persist_ctx.session_id` is a `String`
-    // sourced from storage; storage session ids are UUIDs, so
-    // parsing succeeds in production. A parse failure (e.g. an
-    // unexpected non-UUID id from a future storage variant) falls
-    // back to the bare-partition behaviour so the chat path still
-    // works, just without the session-level lane split.
-    let session_segment: Option<aura_os_core::SessionId> = persist_ctx
-        .as_ref()
-        .and_then(|c| c.session_id.parse::<aura_os_core::SessionId>().ok());
-    let partition_agent_id =
-        aura_os_core::harness_agent_id(&agent_id, None, session_segment.as_ref());
+    let partition_agent_id = build_chat_partition(&agent_id, None, persist_ctx.as_ref());
     let session_key = partition_agent_id.clone();
 
-    // After Phase 1 the live-session probe is per-(template, instance,
-    // storage_session) rather than per-instance: it answers "is the
-    // harness session backing THIS storage session warm?" so the
-    // downstream `load_project_state_for_agent` warm-skip is still
-    // correct, just narrower than before.
     let live_session = has_live_session(&state, &session_key).await;
+
+    let conversation_messages = load_history_for_agent(
+        &state,
+        &session_key,
+        &agent_id,
+        &jwt,
+        force_new,
+        live_session,
+        pinned_session_id.as_deref(),
+        &matching,
+    )
+    .await;
+
+    log_history_size(&agent_id, conversation_messages.as_deref());
 
     // Phase 3 auto-fork: with per-session keys we no longer evict the
     // old `ChatSession` entry on fork — the fresh session lands on a
@@ -377,13 +373,17 @@ async fn resolve_pinned_session_for_agent(
     )))
 }
 
+/// Resolve `ChatPersistCtx` and fork state without loading any
+/// conversation history. The returned `matching` list is the
+/// one-time-fetched `find_matching_project_agents` result that the
+/// downstream [`load_history_for_agent`] reuses, preserving the
+/// once-per-turn dedup that the pre-refactor combined helper had.
 #[allow(clippy::too_many_arguments)]
-async fn load_persistence_and_history(
+async fn load_persistence_only(
     state: &AppState,
     agent_id: &AgentId,
     jwt: &str,
     force_new: bool,
-    live_session: bool,
     pinned_session_id: Option<&str>,
     originating_agent_id: Option<String>,
     cross_agent_depth: u32,
@@ -391,16 +391,10 @@ async fn load_persistence_and_history(
 ) -> (
     Option<ChatPersistCtx>,
     Option<ForkInfo>,
-    Option<Vec<ConversationMessage>>,
+    Vec<aura_os_storage::StorageProjectAgent>,
 ) {
-    // `setup_agent_chat_persistence` and the history loader both need
-    // the set of project agents bound to this agent id. Previously
-    // each called `find_matching_project_agents` independently, which
-    // doubled the `list_orgs` / `list_projects_by_org` /
-    // `list_project_agents` fan-out on every turn. Fetch it once here
-    // and thread it into both consumers.
     let Some(ref storage) = state.storage_client else {
-        return (None, None, None);
+        return (None, None, Vec::new());
     };
     let mut matching =
         find_matching_project_agents(state, storage, jwt, &agent_id.to_string()).await;
@@ -420,7 +414,7 @@ async fn load_persistence_and_history(
         matching = lazy_repair_home_project_binding(state, storage, agent_id, jwt).await;
     }
 
-    let persist_fut = setup_agent_chat_persistence_with_matched(
+    let persist_outcome = setup_agent_chat_persistence_with_matched(
         storage,
         agent_id,
         jwt,
@@ -432,40 +426,41 @@ async fn load_persistence_and_history(
         originating_agent_id,
         cross_agent_depth,
         from_agent_id,
-    );
-    let history_fut = build_history_future(
-        storage,
-        agent_id,
-        jwt,
-        &matching,
-        force_new,
-        live_session,
-        pinned_session_id,
-    );
-
-    let (persist_outcome, conversation_messages) = tokio::join!(persist_fut, history_fut);
+    )
+    .await;
     let (persist_ctx, fork_info) = match persist_outcome {
         Some((ctx, fork)) => (Some(ctx), fork),
         None => (None, None),
     };
-    (persist_ctx, fork_info, conversation_messages)
+    (persist_ctx, fork_info, matching)
 }
 
-async fn build_history_future(
-    storage: &aura_os_storage::StorageClient,
+/// Load the conversation-history slice for a cold-start agent chat
+/// turn, mirroring the warm-skip shape that
+/// `instance_route::load_history_and_project_state` uses. Bails early
+/// on `force_new` or when `live_session` is true so a warm bare-agent
+/// session reuses the harness's in-memory history instead of paying
+/// the storage round-trip + bounded-slice + format-conversion cost on
+/// every turn. `session_key` is logged so the cold/warm transition is
+/// greppable when a perf regression report points at the wrong key
+/// shape. `matching` is the dedup-shared list from
+/// [`load_persistence_only`].
+#[allow(clippy::too_many_arguments)]
+async fn load_history_for_agent(
+    state: &AppState,
+    session_key: &str,
     agent_id: &AgentId,
     jwt: &str,
-    matching: &[aura_os_storage::StorageProjectAgent],
     force_new: bool,
     live_session: bool,
     pinned_session_id: Option<&str>,
+    matching: &[aura_os_storage::StorageProjectAgent],
 ) -> Option<Vec<ConversationMessage>> {
-    // LLM context rebuild on cold start: load only the current storage
-    // session, not the full multi-session aggregate. See
-    // `load_current_session_events_for_agent` doc-comment for rationale.
     if force_new || live_session {
         return None;
     }
+    let storage = state.storage_client.as_ref()?;
+    info!(%agent_id, %session_key, "agent chat: cold start, loading history slice");
     let stored = match pinned_session_id {
         Some(session_id) => load_pinned_history_for_agent(storage, jwt, session_id, matching)
             .await
@@ -487,7 +482,7 @@ async fn build_history_future(
 /// `resolve_pinned_session_for_agent` already verified above; redoing
 /// it here keeps the data path simple at the cost of one extra
 /// `list_sessions` round trip per turn — the alternative would be
-/// threading the matched binding through `load_persistence_and_history`
+/// threading the matched binding through `load_history_for_agent`
 /// just for this branch.
 async fn load_pinned_history_for_agent(
     storage: &aura_os_storage::StorageClient,

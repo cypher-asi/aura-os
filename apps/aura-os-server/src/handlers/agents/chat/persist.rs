@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use aura_os_core::{ProjectId, SessionId};
+use aura_os_core::{AgentId, AgentInstanceId, ProjectId, SessionId};
 use aura_os_sessions::SessionService;
 use aura_os_storage::StorageClient;
 use chrono::Utc;
@@ -99,6 +99,32 @@ pub(crate) struct ChatPersistCtx {
     /// for routing the next async reply back; `from_agent_id`
     /// exists for display-side provenance.
     pub(crate) from_agent_id: Option<String>,
+}
+
+impl ChatPersistCtx {
+    /// Best-effort typed view of `session_id` for use as the third
+    /// segment in [`aura_os_core::harness_agent_id`]. Storage session
+    /// ids are UUIDs in production; a non-UUID falls back to `None`
+    /// and degrades to the legacy two-segment partition so the chat
+    /// path keeps working without the session-level lane split.
+    pub(super) fn parsed_session_id(&self) -> Option<SessionId> {
+        self.session_id.parse().ok()
+    }
+}
+
+/// Build the harness partition string for a chat route, folding in
+/// `persist.session_id` as the third segment when it parses as a
+/// `SessionId` so the registry, turn slot, and `SessionInit.agent_id`
+/// are all per-storage-session. See [`aura_os_core::harness_agent_id`]
+/// for the partition shape and `PARALLEL_SESSIONS.md` for why both
+/// chat routes share this builder.
+pub(super) fn build_chat_partition(
+    template: &AgentId,
+    instance: Option<&AgentInstanceId>,
+    persist: Option<&ChatPersistCtx>,
+) -> String {
+    let session = persist.and_then(|c| c.parsed_session_id());
+    aura_os_core::harness_agent_id(template, instance, session.as_ref())
 }
 
 /// Outcome of attempting to validate a caller-supplied
