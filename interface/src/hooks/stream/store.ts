@@ -8,7 +8,10 @@ import type {
   StreamSetters,
   GenerationKind,
 } from "../../shared/types/stream";
-import { clearPartitionAutoRetry } from "./partition-state";
+import {
+  clearAllPartitions,
+  registerPartitionRegistry,
+} from "./partition-registry";
 
 /* ------------------------------------------------------------------ */
 /*  Zustand stream store                                               */
@@ -247,21 +250,24 @@ export function pruneStreamStore(preserveKey?: string): void {
 
   if (toDelete.length === 0) return;
 
-  for (const key of toDelete) {
-    streamMetaMap.delete(key);
-    // Keep BOTH auto-retry maps (project-chat send-control + standalone-
-    // agent replay) in lockstep with the stream meta so an evicted
-    // partition can't leak its retry timer / cached send payload on
-    // either surface past its last live handler. The shared helper
-    // short-circuits when a map has no entry, so a project-chat-only
-    // key clears only the send-control map and vice versa.
-    clearPartitionAutoRetry(key);
-  }
+  // The Zustand `entries` slice gets cleared in one batched setState
+  // here, instead of letting the `stream-entries` registry's `clear`
+  // setState once per evicted key — the prune sweep often kicks N
+  // keys at a time and an N× setState fan-out would multiply the
+  // subscriber re-renders. The registry callbacks below then drop
+  // their own side-state (streamMetaMap, both auto-retry maps, and
+  // any future per-partition map). `stream-entries.clear` is written
+  // to be idempotent on the entries slice for this reason — the
+  // batched delete above has already removed the key by the time the
+  // registry callback runs.
   useStreamStore.setState((s) => {
     const next = { ...s.entries };
     for (const key of toDelete) delete next[key];
     return { entries: next };
   });
+  for (const key of toDelete) {
+    clearAllPartitions(key);
+  }
 }
 
 export function resolve<T>(action: SetStateAction<T>, prev: T): T {
@@ -529,12 +535,12 @@ void resolveKey;
  *     the in-flight refs object reference rather than minting a new
  *     one
  *
- * Sibling helpers `migratePartitionAutoRetry`
- * (`./partition-state.ts`, covers both per-surface auto-retry maps)
- * and `migrateChatUiPartition` (`chat-ui-store.ts`) take care of
- * their own per-key maps; the `migrateChatPartition` orchestrator in
- * `./migration.ts` invokes all of them in lockstep at every
- * session-id flip site.
+ * Registered as the `"stream-entries"` `PartitionRegistry` (see
+ * `./partition-registry.ts`); the `migrateChatPartition` orchestrator
+ * in `./migration.ts` invokes every registered partition migrate in
+ * lockstep at each session-id flip site. The named export here is
+ * kept for back-compat — vitest suites import it directly to pin the
+ * per-map rekey semantics.
  */
 export function migrateStreamPartition(oldKey: string, newKey: string): void {
   if (oldKey === newKey) return;
@@ -570,6 +576,28 @@ export function migrateStreamPartition(oldKey: string, newKey: string): void {
     return { entries: { ...rest, [newKey]: moved } };
   });
 }
+
+/**
+ * Drop one partition's stream-entry state. Called by
+ * `clearAllPartitions` from `pruneStreamStore`'s eviction loop;
+ * idempotent on the Zustand `entries` slice because the prune
+ * sweep batches that delete itself before invoking the registry.
+ */
+function clearStreamPartition(key: string): void {
+  streamMetaMap.delete(key);
+  useStreamStore.setState((s) => {
+    if (!(key in s.entries)) return s;
+    const next = { ...s.entries };
+    delete next[key];
+    return { entries: next };
+  });
+}
+
+registerPartitionRegistry({
+  name: "stream-entries",
+  migrate: migrateStreamPartition,
+  clear: clearStreamPartition,
+});
 
 /**
  * Placeholder session-id segment used in the streamKey deps array

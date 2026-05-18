@@ -1,5 +1,6 @@
 import type { ChatAttachment } from "../../api/streams";
 import type { GenerationMode } from "../../constants/models";
+import { registerPartitionRegistry } from "./partition-registry";
 
 /* ------------------------------------------------------------------ */
 /*  Per-partition auto-retry / replay state.                           */
@@ -23,12 +24,15 @@ import type { GenerationMode } from "../../constants/models";
 /*      dragging the hook return through the retry callback chain.     */
 /*                                                                     */
 /*  Rather than force a single shape on both, this module owns both    */
-/*  maps and exposes a unified `migratePartitionAutoRetry` helper that */
-/*  re-keys whichever map(s) actually have an entry at `oldKey`. The   */
-/*  `migrateChatPartition` orchestrator in `./migration.ts` calls it   */
-/*  once per session-id flip site, replacing the old two-call pattern  */
-/*  (and the hand-rolled rekey block that standalone agent chat used   */
-/*  to maintain inline) so a future per-surface map can't be missed.   */
+/*  maps and registers TWO independent `PartitionRegistry` records     */
+/*  (`partition-send-control` and `partition-agent-replay`) at module  */
+/*  load. Each registry's migrate/clear short-circuits when its map    */
+/*  has no entry at the supplied key, so the surface that only uses    */
+/*  one of the two maps gets a clean no-op for the other. The          */
+/*  `migrateChatPartition` orchestrator in `./migration.ts` iterates   */
+/*  all registered partitions in lockstep — replacing the historical   */
+/*  hand-rolled rekey block that standalone agent chat used to         */
+/*  maintain inline.                                                   */
 /* ------------------------------------------------------------------ */
 
 /**
@@ -185,9 +189,9 @@ export function getPartitionSendControl(key: string): PartitionSendControl {
 }
 
 /**
- * Drop a partition's send-control entry. Internal helper called from
- * {@link clearPartitionAutoRetry}; not exported because callers should
- * always clear both auto-retry maps in lockstep with the stream meta.
+ * Drop a partition's send-control entry. Bound to the
+ * `partition-send-control` registry's `clear` callback so
+ * `clearAllPartitions` (driven by `pruneStreamStore`) picks it up.
  */
 function clearPartitionSendControl(key: string): void {
   const ctrl = partitionSendControlMap.get(key);
@@ -200,10 +204,9 @@ function clearPartitionSendControl(key: string): void {
 
 /**
  * Re-key the project-chat partition send-control entry from `oldKey` to
- * `newKey`. Public so tests can exercise the helper in isolation; the
- * `migrateChatPartition` orchestrator in `./migration.ts` uses
- * {@link migratePartitionAutoRetry} instead, which moves both auto-retry
- * maps at once.
+ * `newKey`. Bound to the `partition-send-control` registry's `migrate`
+ * callback; the `migrateChatPartition` orchestrator iterates every
+ * registered partition migrate in lockstep at each flip site.
  *
  * The same control object reference is reused so the captured `ctrl`
  * inside the in-flight `performSend` closure (currentController,
@@ -257,12 +260,12 @@ export function peekPartitionAgentReplay(key: string): PartitionAgentReplay | un
 }
 
 /**
- * Drop a partition's replay entry. Internal helper called from
- * {@link clearPartitionAutoRetry}; symmetric with
- * `clearPartitionSendControl` above. The agent replay entry has no
- * timer to clear, so the body is a single `delete`.
+ * Drop a partition's replay entry. Bound to the
+ * `partition-agent-replay` registry's `clear` callback; symmetric
+ * with `clearPartitionSendControl` above. The agent replay entry has
+ * no timer to clear, so the body is a single `delete`.
  */
-function clearPartitionAgentReplayInternal(key: string): void {
+function clearPartitionAgentReplay(key: string): void {
   partitionAgentReplayMap.delete(key);
 }
 
@@ -278,24 +281,30 @@ function migratePartitionAgentReplayInternal(oldKey: string, newKey: string): vo
   partitionAgentReplayMap.delete(oldKey);
 }
 
-/* ---------------- Unified lifecycle helpers ------------------------- */
+/* ---------------- Registry wiring ----------------------------------- */
+
+registerPartitionRegistry({
+  name: "partition-send-control",
+  migrate: migratePartitionSendControlInternal,
+  clear: clearPartitionSendControl,
+});
+
+registerPartitionRegistry({
+  name: "partition-agent-replay",
+  migrate: migratePartitionAgentReplayInternal,
+  clear: clearPartitionAgentReplay,
+});
+
+/* ---------------- Back-compat exports ------------------------------- */
 
 /**
  * Re-key both auto-retry maps from `oldKey` to `newKey` in lockstep.
- * Called by `migrateChatPartition` at the two server-driven session-id
- * flip sites (project chat: `build-stream-handler.ts::migrateToSession`;
- * standalone agent chat: `use-agent-chat-stream.ts::migrateToSession`)
- * for the fresh-canvas placeholder → real session id swap on
- * `SessionReady` and the mid-stream `auto_fork` / `forked_for_context`
- * hand-off.
- *
- * Each underlying helper short-circuits when its map has no entry at
- * `oldKey`, so calling this on a surface that only registers in one of
- * the two maps is a no-op for the other (project chat never registers
- * in the agent replay map, standalone agent chat never registers in the
- * partition send-control map). Going through a single helper removes
- * the historical missed-call-site bug pattern where standalone agent
- * chat had to hand-roll its own rekey block inside `migrateToSession`.
+ * Kept as a narrow back-compat surface that only touches the two
+ * auto-retry registries — production callers (the
+ * `migrateChatPartition` orchestrator and the `pruneStreamStore`
+ * sweep) go through `migrateAllPartitions` /
+ * `clearAllPartitions` from `./partition-registry.ts` instead, which
+ * iterate every registered partition.
  */
 export function migratePartitionAutoRetry(oldKey: string, newKey: string): void {
   if (oldKey === newKey) return;
@@ -304,18 +313,14 @@ export function migratePartitionAutoRetry(oldKey: string, newKey: string): void 
 }
 
 /**
- * Drop both auto-retry entries for `key`. Called from
- * `pruneStreamStore`'s eviction loop so partition lifecycle stays
- * unified with the stream meta: an evicted partition can't leak its
- * retry timer / cached send payload on either surface past its last
- * live handler.
+ * Drop both auto-retry entries for `key`. Narrow back-compat surface
+ * mirroring {@link migratePartitionAutoRetry}; production callers
+ * route eviction through `clearAllPartitions`.
  */
 export function clearPartitionAutoRetry(key: string): void {
   clearPartitionSendControl(key);
-  clearPartitionAgentReplayInternal(key);
+  clearPartitionAgentReplay(key);
 }
-
-/* ---------------- Back-compat re-exports ---------------------------- */
 
 /**
  * Back-compat alias for the project-chat-only rekey helper. Kept

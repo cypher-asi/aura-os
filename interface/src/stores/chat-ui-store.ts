@@ -17,6 +17,7 @@ import {
   persistAgentMode,
   type AgentMode,
 } from "../constants/modes";
+import { registerPartitionRegistry } from "../hooks/stream/partition-registry";
 
 function modelForMode(
   mode: AgentMode,
@@ -371,6 +372,13 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
  *
  * If `newKey` already has an entry, it wins and the `oldKey` entry is
  * dropped (mirrors `migrateStreamPartition`).
+ *
+ * Bound to the `chat-ui-partition` `PartitionRegistry` (see
+ * `../hooks/stream/partition-registry.ts`) so the
+ * `migrateChatPartition` orchestrator picks it up alongside the
+ * stream-entries and auto-retry registries. The named export here is
+ * kept for back-compat — vitest suites import it directly to pin the
+ * per-map rekey semantics.
  */
 export function migrateChatUiPartition(oldKey: string, newKey: string): void {
   if (oldKey === newKey) return;
@@ -396,6 +404,20 @@ export function migrateChatUiPartition(oldKey: string, newKey: string): void {
     return { streams: nextStreams, drafts: nextDrafts };
   });
 }
+
+registerPartitionRegistry({
+  name: "chat-ui-partition",
+  migrate: migrateChatUiPartition,
+  // The chat-ui slice (drafts + selected mode/model + pinned source
+  // image) deliberately survives a stream-meta eviction: drafts in
+  // particular are the user's typed-but-unsent text, which we keep
+  // across in-session stream-store pruning so reopening a pruned
+  // partition restores the unsent prompt. Clear is a no-op for that
+  // reason; if a future code path needs to drop chat-ui state on
+  // partition eviction it should add an explicit helper rather than
+  // flipping this to a delete.
+  clear: () => {},
+});
 
 export function useChatUI(streamKey: string) {
   const selectedMode = useChatUIStore(

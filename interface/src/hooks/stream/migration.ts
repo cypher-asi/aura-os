@@ -1,54 +1,55 @@
-import { migrateStreamPartition } from "./store";
-import { migratePartitionAutoRetry } from "./partition-state";
-import { migrateChatUiPartition } from "../../stores/chat-ui-store";
+import { migrateAllPartitions } from "./partition-registry";
+// Side-effect imports: each module below registers a
+// `PartitionRegistry` at load time. Importing them here guarantees
+// the full registry list is wired up by the time any caller invokes
+// `migrateChatPartition`, regardless of which module the consumer
+// reached for first.
+import "./store";
+import "./partition-state";
+import "../../stores/chat-ui-store";
 
 /**
- * Re-key every per-streamKey map that the chat surfaces partition by
- * `streamKey` from `oldKey` to `newKey`, in lockstep. Used at the two
+ * Re-key every per-streamKey map registered with the partition
+ * registry from `oldKey` to `newKey`, in lockstep. Used at the two
  * server-driven session-id flip sites (project chat:
  * `build-stream-handler.ts::migrateToSession`; standalone agent chat:
  * `use-agent-chat-stream.ts::migrateToSession`) for the
  * fresh-canvas placeholder → real session id swap on `SessionReady`
  * and the mid-stream `auto_fork` / `forked_for_context` hand-off.
  *
- * The maps the orchestrator currently covers:
+ * The orchestrator deliberately has zero knowledge of how many
+ * registries exist; iteration is driven by
+ * {@link migrateAllPartitions}. Adding a new per-streamKey map means
+ * writing one module that calls `registerPartitionRegistry` once;
+ * the orchestrator (and the `pruneStreamStore` sweep that uses
+ * `clearAllPartitions`) picks it up automatically — closing the
+ * structural footgun where the historical Phase-3 asymmetry
+ * (standalone agent skipping `migratePartitionSendControl`) was
+ * caused by remembering-to-call-each-helper at every flip site.
  *
- *  - {@link migrateStreamPartition} — Zustand `useStreamStore.entries`
- *    (events, isStreaming, streamingText, …) plus the module-level
- *    `streamMetaMap` (refs object reference, abort controller,
- *    lastAccessedAt). The refs identity is preserved so the
- *    in-flight handler's captured `partitionRefs` keeps writing to
- *    the same buffer after the flip.
- *  - {@link migratePartitionAutoRetry} — both per-surface auto-retry
- *    maps: the project-chat `partitionSendControlMap` (inFlight
- *    latch, retry timer, lastSendArgs, currentController, …) and the
- *    standalone-agent `partitionAgentReplayMap` (lastSendArgs,
- *    registered sendFn adapter). Each underlying helper short-circuits
- *    when its map has no entry at `oldKey`, so the surface that only
- *    uses one of the two maps gets a clean no-op for the other.
- *    Before Tier 3 item 9 of the session-keying review this was two
- *    separate calls plus a hand-rolled rekey block inside
- *    `use-agent-chat-stream.ts`; consolidating to one helper is what
- *    eliminates the missed-call-site pattern that previously had the
- *    standalone-agent surface skipping the send-control rekey path.
- *  - {@link migrateChatUiPartition} — the per-streamKey
- *    chat-ui-store slice (selected mode/model, pinned source image,
- *    drafts).
+ * The registries currently registered are:
  *
- * Adding a new per-streamKey map should be done *here* (and inside
- * the shared `partition-state` module for any new per-surface
- * auto-retry state) rather than at every flip site, so the existing
- * surfaces inherit the migration without each having to be touched.
+ *   - `"stream-entries"`        — Zustand `useStreamStore.entries`
+ *                                  + the module-level `streamMetaMap`
+ *                                  (refs identity preserved so the
+ *                                  in-flight handler's captured
+ *                                  `partitionRefs` keeps writing to
+ *                                  the same buffer after the flip)
+ *   - `"partition-send-control"` — project-chat per-key send-control
+ *                                  (inFlight latch, retry timer,
+ *                                  lastSendArgs, currentController, …)
+ *   - `"partition-agent-replay"` — standalone-agent per-key replay
+ *                                  (lastSendArgs, registered sendFn
+ *                                  adapter)
+ *   - `"chat-ui-partition"`     — selected mode/model, pinned source
+ *                                  image, drafts
  *
- * Errors from the underlying helpers propagate. The current set of
- * helpers does not throw, but a `try`/`catch` here would mask a
- * future helper failing halfway and leaving the partition state
- * half-migrated; surfacing the failure at the flip site is the
- * correct behaviour.
+ * Errors from the underlying registries propagate. The current set
+ * of registries does not throw, but masking a future failure with a
+ * `try`/`catch` here would leave the partition state half-migrated;
+ * surfacing the failure at the flip site is the correct behaviour.
  */
 export function migrateChatPartition(oldKey: string, newKey: string): void {
   if (oldKey === newKey) return;
-  migrateStreamPartition(oldKey, newKey);
-  migratePartitionAutoRetry(oldKey, newKey);
-  migrateChatUiPartition(oldKey, newKey);
+  migrateAllPartitions(oldKey, newKey);
 }
