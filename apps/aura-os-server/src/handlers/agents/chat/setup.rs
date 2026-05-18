@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use aura_os_core::{AgentId, AgentInstanceId, ProjectId, SessionId};
+use aura_os_core::{AgentId, AgentInstanceId, ProjectId};
 use aura_os_storage::StorageClient;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -13,35 +13,25 @@ use crate::error::ApiResult;
 use crate::state::{AppState, AuthJwt};
 
 use super::discovery::{find_matching_project_agents, invalidate_agent_discovery_cache};
-use super::persist::{resolve_chat_session_with_pin, ChatPersistCtx, ForkInfo};
+use super::persist::{
+    resolve_chat_session_with_pin, ChatPersistCtx, ChatPersistRequest, ChatSessionResolveDeps,
+    ForkInfo,
+};
 
-#[allow(clippy::too_many_arguments)]
 pub(crate) async fn setup_project_chat_persistence(
     state: &AppState,
     project_id: &ProjectId,
     agent_instance_id: &AgentInstanceId,
-    jwt: &str,
-    force_new: bool,
-    pinned_session_id: Option<&SessionId>,
-    originating_agent_id: Option<String>,
-    cross_agent_depth: u32,
-    from_agent_id: Option<String>,
+    request: &ChatPersistRequest<'_>,
 ) -> Option<(ChatPersistCtx, Option<ForkInfo>)> {
     let storage = state.storage_client.as_ref()?.clone();
-    let jwt = jwt.to_string();
     let pai = agent_instance_id.to_string();
     let pid = project_id.to_string();
-    let resolved = resolve_chat_session_with_pin(
-        &storage,
-        &jwt,
-        &pai,
-        &pid,
-        force_new,
-        pinned_session_id,
-        state.session_service.as_ref(),
-        state.chat_auto_fork_threshold,
-    )
-    .await?;
+    let deps = ChatSessionResolveDeps {
+        session_service: state.session_service.as_ref(),
+        auto_fork_threshold: state.chat_auto_fork_threshold,
+    };
+    let resolved = resolve_chat_session_with_pin(&storage, &pai, &pid, request, &deps).await?;
     // NOTE: `inc_auto_fork_applied` is bumped by the call site in
     // `instance_route::send_event_stream` when `fork_info.is_some()`,
     // not here, so the project chat path counts each apply exactly
@@ -51,7 +41,7 @@ pub(crate) async fn setup_project_chat_persistence(
     Some((
         ChatPersistCtx {
             storage,
-            jwt,
+            jwt: request.jwt.to_string(),
             session_id: resolved.session_id,
             project_agent_id: pai,
             project_id: pid,
@@ -59,25 +49,18 @@ pub(crate) async fn setup_project_chat_persistence(
             // broadcast — the sidebar's standalone-chat view wouldn't key
             // on a project session anyway.
             agent_id: None,
-            originating_agent_id,
-            cross_agent_depth,
-            from_agent_id,
+            originating_agent_id: request.originating_agent_id.map(ToString::to_string),
+            cross_agent_depth: request.cross_agent_depth,
+            from_agent_id: request.from_agent_id.map(ToString::to_string),
         },
         resolved.fork,
     ))
 }
 
-#[allow(clippy::too_many_arguments)]
 pub(crate) async fn setup_agent_chat_persistence(
     state: &AppState,
     agent_id: &AgentId,
-    _agent_name: &str,
-    jwt: &str,
-    force_new: bool,
-    pinned_session_id: Option<&SessionId>,
-    originating_agent_id: Option<String>,
-    cross_agent_depth: u32,
-    from_agent_id: Option<String>,
+    request: &ChatPersistRequest<'_>,
 ) -> Option<(ChatPersistCtx, Option<ForkInfo>)> {
     let storage = match state.storage_client.as_ref() {
         Some(s) => s.clone(),
@@ -87,26 +70,18 @@ pub(crate) async fn setup_agent_chat_persistence(
         }
     };
     let mut matching =
-        find_matching_project_agents(state, &storage, jwt, &agent_id.to_string()).await;
+        find_matching_project_agents(state, &storage, request.jwt, &agent_id.to_string()).await;
 
     if matching.is_empty() {
-        matching = lazy_repair_home_project_binding(state, &storage, agent_id, jwt).await;
+        matching =
+            lazy_repair_home_project_binding(state, &storage, agent_id, request.jwt).await;
     }
 
-    setup_agent_chat_persistence_with_matched(
-        &storage,
-        agent_id,
-        jwt,
-        force_new,
-        &matching,
-        pinned_session_id,
-        state.session_service.as_ref(),
-        state.chat_auto_fork_threshold,
-        originating_agent_id,
-        cross_agent_depth,
-        from_agent_id,
-    )
-    .await
+    let deps = ChatSessionResolveDeps {
+        session_service: state.session_service.as_ref(),
+        auto_fork_threshold: state.chat_auto_fork_threshold,
+    };
+    setup_agent_chat_persistence_with_matched(&storage, agent_id, &matching, request, &deps).await
 }
 
 /// Lazy repair: if the agent has no project binding yet (e.g. it was
@@ -158,19 +133,12 @@ pub(super) async fn lazy_repair_home_project_binding(
 /// `find_matching_project_agents` once per turn and feeds the result
 /// into both this function and the history loader so we don't double
 /// the network/storage traffic for every CEO message.
-#[allow(clippy::too_many_arguments)]
 pub(crate) async fn setup_agent_chat_persistence_with_matched(
     storage: &Arc<StorageClient>,
     agent_id: &AgentId,
-    jwt: &str,
-    force_new: bool,
     matching: &[aura_os_storage::StorageProjectAgent],
-    pinned_session_id: Option<&SessionId>,
-    session_service: &aura_os_sessions::SessionService,
-    auto_fork_threshold: f64,
-    originating_agent_id: Option<String>,
-    cross_agent_depth: u32,
-    from_agent_id: Option<String>,
+    request: &ChatPersistRequest<'_>,
+    deps: &ChatSessionResolveDeps<'_>,
 ) -> Option<(ChatPersistCtx, Option<ForkInfo>)> {
     let (pai, pid) = if let Some(pa) = matching.first() {
         let pid = pa.project_id.clone().unwrap_or_default();
@@ -193,18 +161,7 @@ pub(crate) async fn setup_agent_chat_persistence_with_matched(
         return None;
     };
 
-    let resolved = match resolve_chat_session_with_pin(
-        storage,
-        jwt,
-        &pai,
-        &pid,
-        force_new,
-        pinned_session_id,
-        session_service,
-        auto_fork_threshold,
-    )
-    .await
-    {
+    let resolved = match resolve_chat_session_with_pin(storage, &pai, &pid, request, deps).await {
         Some(r) => r,
         None => {
             warn!(
@@ -225,14 +182,14 @@ pub(crate) async fn setup_agent_chat_persistence_with_matched(
     Some((
         ChatPersistCtx {
             storage: storage.clone(),
-            jwt: jwt.to_string(),
+            jwt: request.jwt.to_string(),
             session_id: resolved.session_id,
             project_agent_id: pai,
             project_id: pid,
             agent_id: Some(agent_id.to_string()),
-            originating_agent_id,
-            cross_agent_depth,
-            from_agent_id,
+            originating_agent_id: request.originating_agent_id.map(ToString::to_string),
+            cross_agent_depth: request.cross_agent_depth,
+            from_agent_id: request.from_agent_id.map(ToString::to_string),
         },
         resolved.fork,
     ))
@@ -301,8 +258,15 @@ pub(crate) async fn reset_agent_session(
     // `reset-session` is a destructive admin op, not a cross-agent
     // turn — there's no upstream sender to thread back into and the
     // chain depth resets to 0.
-    let _ =
-        setup_agent_chat_persistence(&state, &agent_id, "", &jwt, true, None, None, 0, None).await;
+    let request = ChatPersistRequest {
+        jwt: &jwt,
+        force_new: true,
+        pinned_session_id: None,
+        originating_agent_id: None,
+        cross_agent_depth: 0,
+        from_agent_id: None,
+    };
+    let _ = setup_agent_chat_persistence(&state, &agent_id, &request).await;
     info!(%agent_id, "Agent chat session reset");
     Ok(StatusCode::NO_CONTENT)
 }
@@ -352,22 +316,19 @@ pub(crate) async fn reset_instance_session(
         // `remove_live_sessions_for_partition`.
         remove_live_sessions_for_partition(&state, &key).await;
     }
-    let _ = setup_project_chat_persistence(
-        &state,
-        &project_id,
-        &agent_instance_id,
-        &jwt,
-        true,
-        None,
-        // Reset endpoints aren't cross-agent turns; no sender to record
-        // and the depth counter resets to 0.
-        None,
-        0,
-        // No cross-agent display provenance either — the reset endpoint
-        // is admin scope, not a chat turn.
-        None,
-    )
-    .await;
+    // Reset endpoints aren't cross-agent turns; no sender to record,
+    // the depth counter resets to 0, and there's no display-side
+    // provenance to thread — the reset endpoint is admin scope, not
+    // a chat turn.
+    let request = ChatPersistRequest {
+        jwt: &jwt,
+        force_new: true,
+        pinned_session_id: None,
+        originating_agent_id: None,
+        cross_agent_depth: 0,
+        from_agent_id: None,
+    };
+    let _ = setup_project_chat_persistence(&state, &project_id, &agent_instance_id, &request).await;
     info!(%agent_instance_id, "Instance chat session reset");
     Ok(StatusCode::NO_CONTENT)
 }
@@ -392,6 +353,7 @@ mod tests {
     use aura_os_storage::testutil::start_mock_storage;
     use aura_os_storage::{StorageClient, StorageProjectAgent};
 
+    use super::super::persist::{ChatPersistRequest, ChatSessionResolveDeps};
     use super::setup_agent_chat_persistence_with_matched;
 
     #[tokio::test]
@@ -401,18 +363,24 @@ mod tests {
         let agent_id = AgentId::new();
 
         let svc = test_session_service(storage.clone());
+        let request = ChatPersistRequest {
+            jwt: "jwt",
+            force_new: false,
+            pinned_session_id: None,
+            originating_agent_id: None,
+            cross_agent_depth: 0,
+            from_agent_id: None,
+        };
+        let deps = ChatSessionResolveDeps {
+            session_service: &svc,
+            auto_fork_threshold: 0.8,
+        };
         let ctx = setup_agent_chat_persistence_with_matched(
             &storage,
             &agent_id,
-            "jwt",
-            false,
             &[],
-            None,
-            &svc,
-            0.8,
-            None,
-            0,
-            None,
+            &request,
+            &deps,
         )
         .await;
 
@@ -454,18 +422,24 @@ mod tests {
         };
 
         let svc = test_session_service(storage.clone());
+        let request = ChatPersistRequest {
+            jwt: "jwt",
+            force_new: false,
+            pinned_session_id: None,
+            originating_agent_id: None,
+            cross_agent_depth: 0,
+            from_agent_id: None,
+        };
+        let deps = ChatSessionResolveDeps {
+            session_service: &svc,
+            auto_fork_threshold: 0.8,
+        };
         let (ctx, fork) = setup_agent_chat_persistence_with_matched(
             &storage,
             &agent_id,
-            "jwt",
-            false,
             std::slice::from_ref(&project_agent),
-            None,
-            &svc,
-            0.8,
-            None,
-            0,
-            None,
+            &request,
+            &deps,
         )
         .await
         .expect("non-empty matching with a project_id must yield a ChatPersistCtx");
@@ -527,18 +501,24 @@ mod tests {
 
         let svc = test_session_service(storage.clone());
         let sender = "ceo-agent-id".to_string();
+        let request = ChatPersistRequest {
+            jwt: "jwt",
+            force_new: false,
+            pinned_session_id: None,
+            originating_agent_id: Some(sender.as_str()),
+            cross_agent_depth: 2,
+            from_agent_id: None,
+        };
+        let deps = ChatSessionResolveDeps {
+            session_service: &svc,
+            auto_fork_threshold: 0.8,
+        };
         let (ctx, _fork) = setup_agent_chat_persistence_with_matched(
             &storage,
             &agent_id,
-            "jwt",
-            false,
             std::slice::from_ref(&project_agent),
-            None,
-            &svc,
-            0.8,
-            Some(sender.clone()),
-            2,
-            None,
+            &request,
+            &deps,
         )
         .await
         .expect("non-empty matching with a project_id must yield a ChatPersistCtx");
@@ -597,18 +577,24 @@ mod tests {
 
         let svc = test_session_service(storage.clone());
         let from_agent = "barret-agent-id".to_string();
+        let request = ChatPersistRequest {
+            jwt: "jwt",
+            force_new: false,
+            pinned_session_id: None,
+            originating_agent_id: None,
+            cross_agent_depth: 0,
+            from_agent_id: Some(from_agent.as_str()),
+        };
+        let deps = ChatSessionResolveDeps {
+            session_service: &svc,
+            auto_fork_threshold: 0.8,
+        };
         let (ctx, _fork) = setup_agent_chat_persistence_with_matched(
             &storage,
             &agent_id,
-            "jwt",
-            false,
             std::slice::from_ref(&project_agent),
-            None,
-            &svc,
-            0.8,
-            None,
-            0,
-            Some(from_agent.clone()),
+            &request,
+            &deps,
         )
         .await
         .expect("non-empty matching with a project_id must yield a ChatPersistCtx");

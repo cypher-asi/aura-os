@@ -31,7 +31,9 @@ use super::identity_preamble::build_identity_preamble;
 use super::loaders::{
     load_current_session_events_for_instance, load_pinned_session_events_for_instance,
 };
-use super::persist::{build_chat_partition, try_pin_session, PinnedSessionOutcome};
+use super::persist::{
+    build_chat_partition, try_pin_session, ChatPersistRequest, PinnedSessionOutcome,
+};
 use super::setup::{has_live_session, setup_project_chat_persistence};
 use super::streaming::{open_harness_chat_stream, OpenChatStreamArgs};
 use super::tools::{build_session_installed_tools, InstalledToolsCtx};
@@ -151,29 +153,27 @@ pub(crate) async fn send_event_stream(
     // start at the "fresh chain" depth.
     let cross_agent_depth = read_cross_agent_depth(&headers);
 
+    // Build the per-turn request once and reuse it across persist
+    // resolution so the cross-agent reply fields
+    // (originating_agent_id, cross_agent_depth, from_agent_id) and
+    // the pin/force_new flags stay in lockstep. See
+    // `persist::ChatPersistRequest` for the field-by-field rationale;
+    // borrowed shape mirrors the existing `OpenChatStreamArgs`
+    // pattern in `streaming.rs`.
+    let persist_request = ChatPersistRequest {
+        jwt: &jwt,
+        force_new,
+        pinned_session_id: pinned_session_id.as_ref(),
+        originating_agent_id: body.originating_agent_id.as_deref(),
+        cross_agent_depth,
+        from_agent_id: body.from_agent_id.as_deref(),
+    };
+
     let persist_outcome = setup_project_chat_persistence(
         &state,
         &project_id,
         &agent_instance_id,
-        &jwt,
-        force_new,
-        pinned_session_id.as_ref(),
-        // Phase 2 of the cross-agent reply plan: thread the harness's
-        // `originating_agent_id` (set by `send_to_agent` in
-        // aura-harness, commit 6a9b33d) onto the persist ctx so the
-        // Phase 3 AssistantMessageEnd callback can post the reply
-        // back into agent A's session.
-        body.originating_agent_id.clone(),
-        cross_agent_depth,
-        // Cross-agent provenance for *display*: when this turn was
-        // injected by another agent (either A→B inbound or B→A
-        // reply callback), the inbound `from_agent_id` is the
-        // sending agent's UUID. Threaded onto the persist ctx so
-        // the persisted `user_message` content carries it and the
-        // chat-row renderer can label the bubble "↩ from <agent>"
-        // instead of styling it indistinguishably from a real human
-        // prompt. `None` for direct user typing.
-        body.from_agent_id.clone(),
+        &persist_request,
     )
     .await;
     let (persist_ctx, fork_info) = match persist_outcome {

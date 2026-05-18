@@ -129,6 +129,53 @@ pub(super) fn build_chat_partition(
     aura_os_core::harness_agent_id(template, instance, persist.map(|c| &c.session_id))
 }
 
+/// Request-shape inputs shared by the chat persistence setup helpers
+/// (`setup_project_chat_persistence`, `setup_agent_chat_persistence`,
+/// `setup_agent_chat_persistence_with_matched`,
+/// `agent_route::load_persistence_only`) and by the underlying
+/// [`resolve_chat_session_with_pin`]. Bundles the per-turn flags
+/// (force_new, pinned session) with the cross-agent reply chain
+/// metadata so each helper signature stays inside the 5-parameter
+/// budget and the cross-agent fields can no longer drift out of
+/// lockstep at one call site.
+///
+/// Mirrors the existing `OpenChatStreamArgs` pattern in
+/// `streaming.rs`: borrowed fields throughout so the caller can
+/// construct it once at the top of a route handler and pass `&req`
+/// down without cloning the optional ids until the persist helper
+/// materialises a [`ChatPersistCtx`].
+pub(crate) struct ChatPersistRequest<'a> {
+    pub(crate) jwt: &'a str,
+    pub(crate) force_new: bool,
+    pub(crate) pinned_session_id: Option<&'a SessionId>,
+    /// Phase 2/3 cross-agent reply chain: set by `send_to_agent` in
+    /// the harness when agent A messages agent B; threaded onto
+    /// [`ChatPersistCtx::originating_agent_id`] so the
+    /// `AssistantMessageEnd` callback posts B's reply back into A's
+    /// session.
+    pub(crate) originating_agent_id: Option<&'a str>,
+    /// Cross-agent reply chain depth (Phase 3 cycle guard). Sourced
+    /// from the inbound `X-Aura-Cross-Agent-Depth` header by the
+    /// route handlers; defaults to 0 for direct user chats.
+    pub(crate) cross_agent_depth: u32,
+    /// Display-side cross-agent provenance: when this turn was
+    /// injected by another agent, the inbound `from_agent_id` is the
+    /// sending agent's UUID. Threaded onto the persist ctx so the
+    /// chat-row renderer can label the bubble "from <agent>".
+    pub(crate) from_agent_id: Option<&'a str>,
+}
+
+/// State-derived dependencies shared by
+/// [`resolve_chat_session_with_pin`] and
+/// [`super::setup::setup_agent_chat_persistence_with_matched`]. Both
+/// pull `session_service` + `chat_auto_fork_threshold` off `AppState`
+/// at the call site; bundling them keeps the resolver / matched
+/// helper signatures inside the 5-parameter budget.
+pub(crate) struct ChatSessionResolveDeps<'a> {
+    pub(crate) session_service: &'a SessionService,
+    pub(crate) auto_fork_threshold: f64,
+}
+
 /// Outcome of attempting to validate a caller-supplied
 /// `pinned_session_id` against the agent's session list. The mismatch
 /// arm carries enough detail for the handler to return a structured
@@ -189,24 +236,20 @@ pub(crate) async fn try_pin_session(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub(crate) async fn resolve_chat_session_with_pin(
     storage: &StorageClient,
-    jwt: &str,
     project_agent_id: &str,
     project_id: &str,
-    force_new: bool,
-    pinned_session_id: Option<&SessionId>,
-    session_service: &SessionService,
-    auto_fork_threshold: f64,
+    request: &ChatPersistRequest<'_>,
+    deps: &ChatSessionResolveDeps<'_>,
 ) -> Option<ResolvedChatSession> {
     let candidate = pick_candidate_session(
         storage,
-        jwt,
+        request.jwt,
         project_agent_id,
         project_id,
-        force_new,
-        pinned_session_id,
+        request.force_new,
+        request.pinned_session_id,
     )
     .await?;
     // Phase 3 auto-fork: if the candidate session already crossed the
@@ -220,12 +263,12 @@ pub(crate) async fn resolve_chat_session_with_pin(
     // `?session=` in the URL.
     match maybe_auto_fork_chat_session(
         storage,
-        jwt,
+        request.jwt,
         project_agent_id,
         project_id,
         &candidate,
-        session_service,
-        auto_fork_threshold,
+        deps.session_service,
+        deps.auto_fork_threshold,
     )
     .await
     {
@@ -700,7 +743,10 @@ mod pin_tests {
     use aura_os_storage::testutil::start_mock_storage;
     use aura_os_storage::{CreateSessionRequest, StorageClient};
 
-    use super::{resolve_chat_session_with_pin, try_pin_session, PinnedSessionOutcome};
+    use super::{
+        resolve_chat_session_with_pin, try_pin_session, ChatPersistRequest,
+        ChatSessionResolveDeps, PinnedSessionOutcome,
+    };
 
     /// Build a minimal `SessionService` wired to the same mock storage
     /// the rest of these tests use, so `resolve_chat_session_with_pin`
@@ -794,15 +840,24 @@ mod pin_tests {
         let (storage, sid) = fixture("agent-d").await;
         let storage_arc = Arc::new(storage);
         let svc = test_session_service(storage_arc.clone());
+        let request = ChatPersistRequest {
+            jwt: "jwt",
+            force_new: false,
+            pinned_session_id: Some(&sid),
+            originating_agent_id: None,
+            cross_agent_depth: 0,
+            from_agent_id: None,
+        };
+        let deps = ChatSessionResolveDeps {
+            session_service: &svc,
+            auto_fork_threshold: 0.8,
+        };
         let result = resolve_chat_session_with_pin(
             storage_arc.as_ref(),
-            "jwt",
             "agent-d",
             "project-x",
-            false,
-            Some(&sid),
-            &svc,
-            0.8,
+            &request,
+            &deps,
         )
         .await
         .expect("resolver should yield a session");
@@ -822,15 +877,24 @@ mod pin_tests {
         let (storage, sid) = fixture("agent-e").await;
         let storage_arc = Arc::new(storage);
         let svc = test_session_service(storage_arc.clone());
+        let request = ChatPersistRequest {
+            jwt: "jwt",
+            force_new: true,
+            pinned_session_id: Some(&sid),
+            originating_agent_id: None,
+            cross_agent_depth: 0,
+            from_agent_id: None,
+        };
+        let deps = ChatSessionResolveDeps {
+            session_service: &svc,
+            auto_fork_threshold: 0.8,
+        };
         let result = resolve_chat_session_with_pin(
             storage_arc.as_ref(),
-            "jwt",
             "agent-e",
             "project-x",
-            true,
-            Some(&sid),
-            &svc,
-            0.8,
+            &request,
+            &deps,
         )
         .await
         .expect("resolver should create a new session");

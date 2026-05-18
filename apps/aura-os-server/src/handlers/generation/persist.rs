@@ -26,7 +26,7 @@ use crate::dto::ChatAttachmentDto;
 use crate::handlers::agents::chat::{
     persist_event, persist_user_message, publish_assistant_message_end_event,
     publish_user_message_event, setup_agent_chat_persistence, setup_project_chat_persistence,
-    ChatPersistCtx,
+    ChatPersistCtx, ChatPersistRequest,
 };
 use crate::state::AppState;
 
@@ -41,11 +41,15 @@ pub(super) struct GenerationPersistMeta {
     pub(super) tool_name: &'static str,
 }
 
-/// Try to resolve a chat-session persistence context for an image-mode
-/// generation request. Returns `None` when the caller did not thread
-/// any chat scope through (legacy clients, non-chat callers like the
-/// AURA 3D app), or when storage / discovery fails — image generation
-/// MUST still succeed in those cases, we just skip durable persistence.
+/// Inputs to [`resolve_persist_ctx`]. Bundles the request flags
+/// (`jwt`, `force_new`, raw `pinned_session_id`) with the per-mode
+/// chat-scope optionals (`agent_id`, `project_id`,
+/// `agent_instance_id`) so the helper stays inside the 5-parameter
+/// budget. `pinned_session_id` is the raw wire string here — the
+/// helper parses it into a typed [`SessionId`] before threading it
+/// through [`ChatPersistRequest`] so a single warn-on-non-UUID lives
+/// at the boundary instead of being duplicated across image / 3D /
+/// video callers.
 ///
 /// `force_new` and `pinned_session_id` mirror the same flags on
 /// `SendChatRequest`. Threading them through here makes the chat-input
@@ -56,15 +60,23 @@ pub(super) struct GenerationPersistMeta {
 /// (`agents/chat/persist.rs`) already prioritises `force_new` over the
 /// pin, so a stale `?session=` in the URL never wins over an explicit
 /// "+" press.
-#[allow(clippy::too_many_arguments)]
+pub(super) struct GenerationPersistTargets<'a> {
+    pub(super) jwt: &'a str,
+    pub(super) agent_id: Option<&'a str>,
+    pub(super) project_id: Option<&'a str>,
+    pub(super) agent_instance_id: Option<&'a str>,
+    pub(super) force_new: bool,
+    pub(super) pinned_session_id: Option<&'a str>,
+}
+
+/// Try to resolve a chat-session persistence context for an image-mode
+/// generation request. Returns `None` when the caller did not thread
+/// any chat scope through (legacy clients, non-chat callers like the
+/// AURA 3D app), or when storage / discovery fails — image generation
+/// MUST still succeed in those cases, we just skip durable persistence.
 pub(super) async fn resolve_persist_ctx(
     state: &AppState,
-    jwt: &str,
-    agent_id: Option<&str>,
-    project_id: Option<&str>,
-    agent_instance_id: Option<&str>,
-    force_new: bool,
-    pinned_session_id: Option<&str>,
+    targets: &GenerationPersistTargets<'_>,
 ) -> Option<ChatPersistCtx> {
     // Parse the wire `session_id` into the typed `SessionId` once at
     // this boundary; downstream `setup_*_chat_persistence` only
@@ -72,7 +84,8 @@ pub(super) async fn resolve_persist_ctx(
     // effort dropped (image-mode persistence is non-blocking — a
     // mistyped `?session=` from a stale tab must never break the
     // generation stream itself).
-    let parsed_pin: Option<SessionId> = pinned_session_id
+    let parsed_pin: Option<SessionId> = targets
+        .pinned_session_id
         .map(str::trim)
         .filter(|s| !s.is_empty())
         .and_then(|s| match s.parse::<SessionId>() {
@@ -87,7 +100,22 @@ pub(super) async fn resolve_persist_ctx(
             }
         });
     let parsed_pin_ref = parsed_pin.as_ref();
-    if let (Some(project_id), Some(agent_instance_id)) = (project_id, agent_instance_id) {
+    // Image / 3D generation isn't a cross-agent reply — no sender to
+    // thread through, the chain depth is irrelevant for this
+    // synthetic turn, and `from_agent_id` stays `None` so the
+    // operator-initiated bubble doesn't get badged as a cross-agent
+    // reply.
+    let persist_request = ChatPersistRequest {
+        jwt: targets.jwt,
+        force_new: targets.force_new,
+        pinned_session_id: parsed_pin_ref,
+        originating_agent_id: None,
+        cross_agent_depth: 0,
+        from_agent_id: None,
+    };
+    if let (Some(project_id), Some(agent_instance_id)) =
+        (targets.project_id, targets.agent_instance_id)
+    {
         let parsed_project = project_id.parse::<ProjectId>().ok();
         let parsed_instance = agent_instance_id.parse::<AgentInstanceId>().ok();
         if let (Some(parsed_project), Some(parsed_instance)) = (parsed_project, parsed_instance) {
@@ -95,19 +123,7 @@ pub(super) async fn resolve_persist_ctx(
                 state,
                 &parsed_project,
                 &parsed_instance,
-                jwt,
-                force_new,
-                parsed_pin_ref,
-                // Image / 3D generation isn't a cross-agent reply
-                // — no sender to thread through, and the chain
-                // depth is irrelevant for this synthetic turn.
-                None,
-                0,
-                // Image generation is always operator-initiated;
-                // the synthetic user_message it produces is never
-                // a cross-agent reply, so the from_agent_id badge
-                // must stay off.
-                None,
+                &persist_request,
             )
             .await
             {
@@ -131,20 +147,10 @@ pub(super) async fn resolve_persist_ctx(
             );
         }
     }
-    if let Some(agent_id) = agent_id {
+    if let Some(agent_id) = targets.agent_id {
         if let Ok(parsed_agent) = agent_id.parse::<AgentId>() {
-            if let Some((ctx, _fork)) = setup_agent_chat_persistence(
-                state,
-                &parsed_agent,
-                "",
-                jwt,
-                force_new,
-                parsed_pin_ref,
-                None,
-                0,
-                None,
-            )
-            .await
+            if let Some((ctx, _fork)) =
+                setup_agent_chat_persistence(state, &parsed_agent, &persist_request).await
             {
                 // See the project-chat branch above: generation
                 // turns don't surface the auto-fork SSE event so

@@ -32,7 +32,8 @@ use super::loaders::{
     load_current_session_events_for_agent_with_matched, load_pinned_session_events_for_agent,
 };
 use super::persist::{
-    build_chat_partition, try_pin_session, ChatPersistCtx, ForkInfo, PinnedSessionOutcome,
+    build_chat_partition, try_pin_session, ChatPersistCtx, ChatPersistRequest,
+    ChatSessionResolveDeps, ForkInfo, PinnedSessionOutcome,
 };
 use super::request::slice_recent_agent_events;
 use super::setup::{
@@ -131,6 +132,22 @@ pub(crate) async fn send_agent_event_stream(
     // start at the "fresh chain" depth.
     let cross_agent_depth = read_cross_agent_depth(&headers);
 
+    // Build the per-turn request once and reuse it across the
+    // persist resolution + history loader so the cross-agent reply
+    // fields (originating_agent_id, cross_agent_depth, from_agent_id)
+    // and the pin/force_new flags stay in lockstep at every call
+    // site. See `persist::ChatPersistRequest` for the field-by-field
+    // rationale; the borrowed shape mirrors the existing
+    // `OpenChatStreamArgs` pattern in `streaming.rs`.
+    let persist_request = ChatPersistRequest {
+        jwt: &jwt,
+        force_new,
+        pinned_session_id: pinned_session_id.as_ref(),
+        originating_agent_id: body.originating_agent_id.as_deref(),
+        cross_agent_depth,
+        from_agent_id: body.from_agent_id.as_deref(),
+    };
+
     // Mirror the instance-route shape: resolve persist first, then
     // build the per-session partition string via `build_chat_partition`,
     // then check `has_live_session` against the real `session_key` so
@@ -141,33 +158,8 @@ pub(crate) async fn send_agent_event_stream(
     // accepts — but in exchange we restore the warm-session
     // history-rebuild skip that Phase 1's `live_session = false`
     // workaround disabled.
-    let (persist_ctx, fork_info, matching) = load_persistence_only(
-        &state,
-        &agent_id,
-        &jwt,
-        force_new,
-        pinned_session_id.as_ref(),
-        // Phase 2 of the cross-agent reply plan: thread the harness's
-        // `originating_agent_id` (set by `send_to_agent` in
-        // aura-harness, commit 6a9b33d) onto the persist ctx so the
-        // Phase 3 AssistantMessageEnd callback can post the reply
-        // back into agent A's session.
-        body.originating_agent_id.clone(),
-        cross_agent_depth,
-        // Cross-agent provenance for *display*: when this turn was
-        // injected by another agent (either the A→B inbound from the
-        // harness `send_to_agent` tool, or the B→A reply callback
-        // posted by `cross_agent_reply.rs` after Barret's turn
-        // finished), the inbound `from_agent_id` is the sending
-        // agent's UUID. Threaded onto the persist ctx so the
-        // persisted `user_message` content carries it and the
-        // chat-row renderer can label the bubble "↩ from <agent>"
-        // instead of styling it indistinguishably from a real human
-        // prompt. `None` for direct user typing — the field is
-        // strictly opt-in on the wire.
-        body.from_agent_id.clone(),
-    )
-    .await;
+    let (persist_ctx, fork_info, matching) =
+        load_persistence_only(&state, &agent_id, &persist_request).await;
 
     log_persistence_status(&agent_id, persist_ctx.is_some());
 
@@ -176,17 +168,15 @@ pub(crate) async fn send_agent_event_stream(
 
     let live_session = has_live_session(&state, &session_key).await;
 
-    let conversation_messages = load_history_for_agent(
-        &state,
-        &session_key,
-        &agent_id,
-        &jwt,
+    let history_ctx = LoadAgentHistoryCtx {
+        session_key: &session_key,
+        jwt: &jwt,
         force_new,
         live_session,
-        pinned_session_id.as_ref(),
-        &matching,
-    )
-    .await;
+        pinned_session_id: pinned_session_id.as_ref(),
+        matching: &matching,
+    };
+    let conversation_messages = load_history_for_agent(&state, &agent_id, &history_ctx).await;
 
     log_history_size(&agent_id, conversation_messages.as_deref());
 
@@ -405,16 +395,10 @@ pub(super) fn parse_wire_session_id(raw: Option<&str>) -> ApiResult<Option<Sessi
 /// one-time-fetched `find_matching_project_agents` result that the
 /// downstream [`load_history_for_agent`] reuses, preserving the
 /// once-per-turn dedup that the pre-refactor combined helper had.
-#[allow(clippy::too_many_arguments)]
 async fn load_persistence_only(
     state: &AppState,
     agent_id: &AgentId,
-    jwt: &str,
-    force_new: bool,
-    pinned_session_id: Option<&SessionId>,
-    originating_agent_id: Option<String>,
-    cross_agent_depth: u32,
-    from_agent_id: Option<String>,
+    request: &ChatPersistRequest<'_>,
 ) -> (
     Option<ChatPersistCtx>,
     Option<ForkInfo>,
@@ -424,7 +408,7 @@ async fn load_persistence_only(
         return (None, None, Vec::new());
     };
     let mut matching =
-        find_matching_project_agents(state, storage, jwt, &agent_id.to_string()).await;
+        find_matching_project_agents(state, storage, request.jwt, &agent_id.to_string()).await;
 
     // Self-heal: if the agent has no `project_agent` binding yet
     // (typically because the best-effort auto-bind in
@@ -438,28 +422,37 @@ async fn load_persistence_only(
     // repair busts the discovery cache and returns the refreshed match
     // list, so persist + history below see the just-created binding.
     if matching.is_empty() {
-        matching = lazy_repair_home_project_binding(state, storage, agent_id, jwt).await;
+        matching =
+            lazy_repair_home_project_binding(state, storage, agent_id, request.jwt).await;
     }
 
-    let persist_outcome = setup_agent_chat_persistence_with_matched(
-        storage,
-        agent_id,
-        jwt,
-        force_new,
-        &matching,
-        pinned_session_id,
-        state.session_service.as_ref(),
-        state.chat_auto_fork_threshold,
-        originating_agent_id,
-        cross_agent_depth,
-        from_agent_id,
-    )
-    .await;
+    let deps = ChatSessionResolveDeps {
+        session_service: state.session_service.as_ref(),
+        auto_fork_threshold: state.chat_auto_fork_threshold,
+    };
+    let persist_outcome =
+        setup_agent_chat_persistence_with_matched(storage, agent_id, &matching, request, &deps)
+            .await;
     let (persist_ctx, fork_info) = match persist_outcome {
         Some((ctx, fork)) => (Some(ctx), fork),
         None => (None, None),
     };
     (persist_ctx, fork_info, matching)
+}
+
+/// Inputs to [`load_history_for_agent`]. Bundles the per-turn flags
+/// (`force_new`, `live_session`, `pinned_session_id`) with the
+/// dedup-shared `matching` list and the `session_key` used for the
+/// cold-vs-warm log line so the helper stays inside the
+/// 5-parameter budget. Mirrors the existing `OpenChatStreamArgs`
+/// pattern in `streaming.rs`.
+pub(super) struct LoadAgentHistoryCtx<'a> {
+    pub(super) session_key: &'a str,
+    pub(super) jwt: &'a str,
+    pub(super) force_new: bool,
+    pub(super) live_session: bool,
+    pub(super) pinned_session_id: Option<&'a SessionId>,
+    pub(super) matching: &'a [aura_os_storage::StorageProjectAgent],
 }
 
 /// Load the conversation-history slice for a cold-start agent chat
@@ -472,29 +465,27 @@ async fn load_persistence_only(
 /// greppable when a perf regression report points at the wrong key
 /// shape. `matching` is the dedup-shared list from
 /// [`load_persistence_only`].
-#[allow(clippy::too_many_arguments)]
 async fn load_history_for_agent(
     state: &AppState,
-    session_key: &str,
     agent_id: &AgentId,
-    jwt: &str,
-    force_new: bool,
-    live_session: bool,
-    pinned_session_id: Option<&SessionId>,
-    matching: &[aura_os_storage::StorageProjectAgent],
+    ctx: &LoadAgentHistoryCtx<'_>,
 ) -> Option<Vec<ConversationMessage>> {
-    if force_new || live_session {
+    if ctx.force_new || ctx.live_session {
         return None;
     }
     let storage = state.storage_client.as_ref()?;
-    info!(%agent_id, %session_key, "agent chat: cold start, loading history slice");
-    let stored = match pinned_session_id {
-        Some(session_id) => load_pinned_history_for_agent(storage, jwt, session_id, matching)
-            .await
-            .unwrap_or_default(),
-        None => {
-            load_current_session_events_for_agent_with_matched(storage, agent_id, jwt, matching)
+    info!(%agent_id, session_key = %ctx.session_key, "agent chat: cold start, loading history slice");
+    let stored = match ctx.pinned_session_id {
+        Some(session_id) => {
+            load_pinned_history_for_agent(storage, ctx.jwt, session_id, ctx.matching)
                 .await
+                .unwrap_or_default()
+        }
+        None => {
+            load_current_session_events_for_agent_with_matched(
+                storage, agent_id, ctx.jwt, ctx.matching,
+            )
+            .await
         }
     };
     if stored.is_empty() {

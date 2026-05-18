@@ -206,24 +206,26 @@ pub(super) fn spawn_cross_agent_reply_callback(
     // pre-fix behavior.
     let from_agent_id = ctx.agent_id.clone();
 
+    let args = CrossAgentReplyCallbackArgs {
+        originating_agent_id,
+        sender_session_id: session_id,
+        sender_project_agent_id: project_agent_id,
+        bearer_jwt,
+        reply_body: truncated,
+        next_depth,
+        from_agent_id,
+    };
     tokio::spawn(async move {
-        run_cross_agent_reply_callback(
-            http_client,
-            originating_agent_id,
-            session_id,
-            project_agent_id,
-            bearer_jwt,
-            truncated,
-            next_depth,
-            from_agent_id,
-        )
-        .await;
+        run_cross_agent_reply_callback(http_client, args).await;
     });
 }
 
-#[allow(clippy::too_many_arguments)]
-async fn run_cross_agent_reply_callback(
-    http_client: reqwest::Client,
+/// Owned inputs to [`run_cross_agent_reply_callback`]. Bundled so the
+/// spawned future stays inside the 5-parameter budget without
+/// borrowing from the caller's frame (the surrounding
+/// `tokio::spawn(async move { ... })` already consumes all of these by
+/// value).
+struct CrossAgentReplyCallbackArgs {
     originating_agent_id: String,
     sender_session_id: String,
     sender_project_agent_id: String,
@@ -231,7 +233,21 @@ async fn run_cross_agent_reply_callback(
     reply_body: String,
     next_depth: u32,
     from_agent_id: Option<String>,
+}
+
+async fn run_cross_agent_reply_callback(
+    http_client: reqwest::Client,
+    args: CrossAgentReplyCallbackArgs,
 ) {
+    let CrossAgentReplyCallbackArgs {
+        originating_agent_id,
+        sender_session_id,
+        sender_project_agent_id,
+        bearer_jwt,
+        reply_body,
+        next_depth,
+        from_agent_id,
+    } = args;
     let base_url = aura_os_integrations::control_plane_api_base_url();
     if base_url.contains("127.0.0.1") || base_url.contains("localhost") {
         warn!(
