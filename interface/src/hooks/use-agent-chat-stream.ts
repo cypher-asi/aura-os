@@ -37,14 +37,14 @@ import { useSessionsListStore } from "../stores/sessions-list-store";
 import { useMessageQueueStore } from "../stores/message-queue-store";
 import {
   createSetters,
+  FRESH_SESSION_PLACEHOLDER,
   getLastEventAt,
   getStreamEntry,
   keyForAgentSession,
   markStreamProgress,
-  migrateStreamPartition,
   streamMetaMap,
 } from "./stream/store";
-import { migrateChatUiPartition } from "../stores/chat-ui-store";
+import { migrateChatPartition } from "./stream/migration";
 import { STUCK_THRESHOLD_MS } from "./stream/use-stream-health";
 import type { StreamCloseContext } from "../shared/observability/stream-breadcrumbs";
 
@@ -163,11 +163,11 @@ export function useAgentChatStream({
 }: UseAgentChatStreamOptions): UseAgentChatStreamResult {
   // Phase 3: thread `sessionId` into the partition deps so each
   // storage session of this agent gets its own client streamKey.
-  // `sessionId ?? "fresh"` keeps freshly-opened canvases on a
-  // deterministic placeholder lane until `SessionReady` migrates
-  // them to the real session id (see the inline `EventType.SessionReady`
-  // arm in the handler below).
-  const core = useStreamCore([agentId, sessionId ?? "fresh"]);
+  // `sessionId ?? FRESH_SESSION_PLACEHOLDER` keeps freshly-opened
+  // canvases on a deterministic placeholder lane until
+  // `SessionReady` migrates them to the real session id (see the
+  // inline `EventType.SessionReady` arm in the handler below).
+  const core = useStreamCore([agentId, sessionId ?? FRESH_SESSION_PLACEHOLDER]);
   const { refs } = core;
   const nextSendStartsNewSessionRef = useRef(false);
   const sessionIdRef = useRef(sessionId ?? null);
@@ -317,12 +317,22 @@ export function useAgentChatStream({
         if (!agentId) return;
         const newKey = keyForAgentSession(agentId, newSessionId);
         if (newKey === partitionState.key) return;
-        migrateStreamPartition(partitionState.key, newKey);
-        migrateChatUiPartition(partitionState.key, newKey);
-        // Also re-key the replay map so a post-migration stuck-stream
-        // retry resolves the cached `lastSendArgs` under the new key.
-        // The hook's per-key registration effect will follow on the
-        // next render.
+        // Shared trio: stream entries + meta, partition send-control
+        // (no-op on this surface — standalone agent chat doesn't
+        // register entries in `partitionSendControlMap`, see the
+        // early `if (!oldCtrl) return;` guard in
+        // `partition-send-control.ts::migratePartitionSendControl`),
+        // and chat-ui-store. Calling the shared orchestrator instead
+        // of the individual helpers prevents the historical
+        // missed-call-site asymmetry where this surface skipped
+        // `migratePartitionSendControl`.
+        migrateChatPartition(partitionState.key, newKey);
+        // Surface-local: re-key the replay map so a post-migration
+        // stuck-stream retry resolves the cached `lastSendArgs` under
+        // the new key. The hook's per-key registration effect will
+        // follow on the next render. Lives outside the shared trio
+        // because only standalone agent chat owns this map; project
+        // chat uses `partition-send-control.ts` for the same job.
         const oldReplay = agentChatStreamReplayMap.get(partitionState.key);
         if (oldReplay && !agentChatStreamReplayMap.has(newKey)) {
           agentChatStreamReplayMap.set(newKey, oldReplay);

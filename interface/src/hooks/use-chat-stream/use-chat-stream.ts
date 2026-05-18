@@ -20,7 +20,12 @@ import {
   handleStreamError,
   getIsStreaming,
 } from "../use-stream-core";
-import { ensureEntry, createSetters, getLastEventAt } from "../stream/store";
+import {
+  ensureEntry,
+  createSetters,
+  getLastEventAt,
+  FRESH_SESSION_PLACEHOLDER,
+} from "../stream/store";
 import { STUCK_THRESHOLD_MS } from "../stream/use-stream-health";
 import { useMessageQueueStore } from "../../stores/message-queue-store";
 import { buildUserChatMessage } from "../attachment-helpers";
@@ -87,13 +92,13 @@ export function useChatStream({
 
   // Phase 3: thread `sessionId` into the partition deps so each
   // storage session of the same agent instance gets its own client
-  // streamKey. `sessionId ?? "fresh"` gives a freshly-opened canvas
-  // (no session id yet) a deterministic placeholder lane that survives
-  // until `SessionReady` migrates it via `migrateStreamPartition` to
-  // the real session id. Two sessions of the same instance can now
-  // stream concurrently without sharing isStreaming, abort, or
-  // partition-send-control state.
-  const core = useStreamCore([projectId, agentInstanceId, sessionId ?? "fresh"]);
+  // streamKey. `sessionId ?? FRESH_SESSION_PLACEHOLDER` gives a
+  // freshly-opened canvas (no session id yet) a deterministic
+  // placeholder lane that survives until `SessionReady` migrates it
+  // via `migrateChatPartition` to the real session id. Two sessions
+  // of the same instance can now stream concurrently without sharing
+  // isStreaming, abort, or partition-send-control state.
+  const core = useStreamCore([projectId, agentInstanceId, sessionId ?? FRESH_SESSION_PLACEHOLDER]);
   // `sessionId` and `onSessionReady` change whenever the URL
   // `?session=` flips. Reading them via refs in `sendMessage` keeps
   // the callback identity stable so the chat input bar's

@@ -93,10 +93,11 @@ function setupAgentSendStreamCapture(): {
 }
 
 // Phase 4 (parallel-session-chats plan): standalone agent chat is
-// keyed by `(agentId, sessionId ?? "fresh")` so the same agent
-// template can carry truly concurrent turns on two different storage
-// sessions. These tests mirror the project-chat parallel-sessions
-// coverage in `use-chat-stream/parallel-chats.test.ts`.
+// keyed by `(agentId, sessionId ?? FRESH_SESSION_PLACEHOLDER)` so
+// the same agent template can carry truly concurrent turns on two
+// different storage sessions. These tests mirror the project-chat
+// parallel-sessions coverage in
+// `use-chat-stream/parallel-chats.test.ts`.
 describe("useAgentChatStream same instance, parallel sessions", () => {
   beforeEach(() => {
     streamMetaMap.clear();

@@ -311,6 +311,10 @@ describe("Phase 4 — migrate helpers: idempotency and edge cases", () => {
   });
 
   it("oldKey === newKey is a no-op across all three helpers (state untouched, nothing deleted)", () => {
+    // Wire-level key shape: `<projectId>:<agentInstanceId>:<sessionId>`.
+    // The `fresh` segment equals `FRESH_SESSION_PLACEHOLDER` from
+    // `stream/store.ts`; deliberately spelled as a literal here so the
+    // test pins what the helpers see in production.
     const key = "p-1:ai-X:fresh";
     const { refsRef, ctl, controller } = seedLaneState(key, {
       streamingText: "must-not-vanish",

@@ -179,7 +179,9 @@ describe("useChatStream parallel chats", () => {
 
     // Both partitions should be marked streaming on their own slots
     // (no cross-partition leak). Phase 3: keys now embed the
-    // session-id placeholder ("fresh" when no `?session=` is pinned).
+    // session-id placeholder (`fresh` here equals
+    // `FRESH_SESSION_PLACEHOLDER` from `stream/store.ts`; spelled as
+    // a literal so the test pins the on-the-wire key shape).
     const entries = useStreamStore.getState().entries;
     expect(entries["p-1:ai-A:fresh"]?.isStreaming).toBe(true);
     expect(entries["p-1:ai-B:fresh"]?.isStreaming).toBe(true);
@@ -417,11 +419,11 @@ describe("useChatStream parallel chats", () => {
 });
 
 // Phase 4 (parallel-session-chats plan): the lane is keyed by
-// `(projectId, agentInstanceId, sessionId ?? "fresh")` so the same
-// agent instance can carry truly concurrent turns on two different
-// storage sessions. These tests pin the per-session isolation that
-// makes that possible — view-no-leak, concurrent dispatch, and
-// independent completion.
+// `(projectId, agentInstanceId, sessionId ?? FRESH_SESSION_PLACEHOLDER)`
+// so the same agent instance can carry truly concurrent turns on two
+// different storage sessions. These tests pin the per-session
+// isolation that makes that possible — view-no-leak, concurrent
+// dispatch, and independent completion.
 describe("useChatStream same instance, parallel sessions", () => {
   beforeEach(() => {
     streamMetaMap.clear();

@@ -568,8 +568,22 @@ export function migrateStreamPartition(oldKey: string, newKey: string): void {
 }
 
 /**
+ * Placeholder session-id segment used in the streamKey deps array
+ * for a freshly-opened canvas before the server emits `SessionReady`.
+ * Must match the literal string `useStreamCore` produces via
+ * `storeKey` so `migrateStreamPartition` can re-key from this
+ * placeholder to the real session id when it lands.
+ *
+ * Hoisted to a constant so the project-chat surface
+ * (`useChatStream`), the standalone-agent surface
+ * (`useAgentChatStream`), and the `keyFor*Session` helpers below
+ * cannot drift from each other on a typo.
+ */
+export const FRESH_SESSION_PLACEHOLDER = "fresh";
+
+/**
  * Per-session storeKey for a project-chat session row, mirroring the
- * `useStreamCore([projectId, agentInstanceId, sessionId ?? "fresh"])`
+ * `useStreamCore([projectId, agentInstanceId, sessionId ?? FRESH_SESSION_PLACEHOLDER])`
  * deps shape used by `useChatStream`. Phase 4 frontend tests reuse this
  * to assert which lane a given streaming turn lives on.
  */
@@ -578,19 +592,19 @@ export function keyForProjectSession(
   agentInstanceId: string,
   sessionId: string | null | undefined,
 ): string {
-  return storeKey([projectId, agentInstanceId, sessionId ?? "fresh"]);
+  return storeKey([projectId, agentInstanceId, sessionId ?? FRESH_SESSION_PLACEHOLDER]);
 }
 
 /**
  * Per-session storeKey for the standalone-agent chat surface, mirroring
- * `useStreamCore([agentId, sessionId ?? "fresh"])` in
+ * `useStreamCore([agentId, sessionId ?? FRESH_SESSION_PLACEHOLDER])` in
  * `useAgentChatStream`.
  */
 export function keyForAgentSession(
   agentId: string,
   sessionId: string | null | undefined,
 ): string {
-  return storeKey([agentId, sessionId ?? "fresh"]);
+  return storeKey([agentId, sessionId ?? FRESH_SESSION_PLACEHOLDER]);
 }
 
 /**

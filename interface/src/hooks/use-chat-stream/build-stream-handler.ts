@@ -48,10 +48,8 @@ import {
   getStreamEntry,
   keyForProjectSession,
   markStreamProgress,
-  migrateStreamPartition,
 } from "../stream/store";
-import { migratePartitionSendControl } from "./partition-send-control";
-import { migrateChatUiPartition } from "../../stores/chat-ui-store";
+import { migrateChatPartition } from "../stream/migration";
 
 export interface DispatchDeps {
   projectId: string;
@@ -206,9 +204,7 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
     if (!agentInstanceId) return;
     const newKey = keyForProjectSession(projectId, agentInstanceId, newSessionId);
     if (newKey === activeKey) return;
-    migrateStreamPartition(activeKey, newKey);
-    migratePartitionSendControl(activeKey, newKey);
-    migrateChatUiPartition(activeKey, newKey);
+    migrateChatPartition(activeKey, newKey);
     activeKey = newKey;
     onPartitionMigrated?.(newKey);
   };
