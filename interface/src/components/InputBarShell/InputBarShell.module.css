@@ -452,11 +452,21 @@
   opacity: 1;
 }
 
+/* Wrapper element rendered by `ModelPicker` into a `document.body`
+   portal. Owns positioning (set inline from the trigger's
+   `getBoundingClientRect()`) and the stacking context that keeps the
+   menu above sibling lanes/panels so ancestor `overflow: hidden` on
+   the chat panel chain (`.lane`, `.laneContent`, `.mainContent`,
+   `.mainPanelHost`, `.chatView`) can never clip the dropdown. The
+   inner `.modelMenu` div carries only visual chrome. */
+.modelMenuPortal {
+  /* Inline `style` provides position/top/right/bottom/zIndex; this
+     rule exists so consumers can target it via `menuClassName` for
+     variant-specific size or padding overrides. */
+  pointer-events: auto;
+}
+
 .modelMenu {
-  position: absolute;
-  bottom: calc(100% + 4px);
-  right: 0;
-  z-index: 100;
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: 6px;

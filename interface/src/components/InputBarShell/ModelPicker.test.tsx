@@ -74,4 +74,49 @@ describe("ModelPicker", () => {
     await user.click(screen.getByRole("button", { name: /Only Model/ }));
     expect(screen.queryByText("should not render")).not.toBeInTheDocument();
   });
+
+  // Regression: the chat input sits inside several `overflow: hidden`
+  // ancestors (`.lane`, `.mainPanelHost`, `.chatView`, …), which used
+  // to clip the dropdown's left edge — visually reading as if the
+  // adjacent left sidebar lane were "cutting off" the model selector.
+  // The picker now portals the menu into `document.body` so no
+  // ancestor stacking context or overflow rule can clip it.
+  it("renders the open menu under document.body, escaping ancestor overflow", async () => {
+    const user = userEvent.setup();
+    render(
+      <div
+        data-testid="clip"
+        style={{ overflow: "hidden", width: 80, height: 32 }}
+      >
+        <ModelPicker
+          selectedLabel="Opus 4.6"
+          renderMenu={(close) => (
+            <div data-testid="menu-content">
+              <button
+                type="button"
+                onClick={() => {
+                  close();
+                }}
+              >
+                Sonnet 4.6
+              </button>
+            </div>
+          )}
+        />
+      </div>,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Opus 4\.6/ }));
+
+    const menu = screen.getByTestId("menu-content");
+    const clip = screen.getByTestId("clip");
+
+    // The menu must NOT be a descendant of the clipped wrapper —
+    // that is the regression: ancestor `overflow: hidden` would
+    // slice the dropdown wherever it extended past the wrapper.
+    expect(clip.contains(menu)).toBe(false);
+    // And it must live under `document.body` instead, where no
+    // sibling lane / panel can constrain it.
+    expect(document.body.contains(menu)).toBe(true);
+  });
 });
