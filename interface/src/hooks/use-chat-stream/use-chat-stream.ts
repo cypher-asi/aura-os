@@ -294,7 +294,16 @@ export function useChatStream({
 
       if (action === "generate_specs") {
         sidekickRef.current.clearGeneratedArtifacts();
-        sidekickRef.current.setActiveTab("specs");
+        // Auto-jump to Specs so the user can watch generation, BUT
+        // never yank them off Sessions. Picking Sessions is an explicit
+        // "I want to follow the chat" signal; flipping the sidekick on
+        // every Plan-mode send made the Sessions tab unusable in
+        // practice. Other tabs (terminal/browser/stats/log/files/run)
+        // aren't tied to the chat stream, so the discoverability jump
+        // to Specs is still the right call from there.
+        if (sidekickRef.current.activeTab !== "sessions") {
+          sidekickRef.current.setActiveTab("specs");
+        }
       }
 
       // Abort any prior in-flight controller on THIS partition. Cross-

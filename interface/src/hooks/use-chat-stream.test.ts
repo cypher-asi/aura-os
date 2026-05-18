@@ -17,6 +17,11 @@ const mockRemoveTask = vi.fn();
 const mockNotifyAgentInstanceUpdate = vi.fn();
 
 const mockSidekickState = {
+  // Default to "terminal" — the projects-app initial tab — so existing
+  // tests exercise the auto-switch branch in `generate_specs`. Tests
+  // that need to verify the Sessions-tab-respecting branch flip this
+  // to "sessions" before calling `sendMessage`.
+  activeTab: "terminal" as string,
   previewItem: null,
   streamingAgentInstanceIds: [] as string[],
   streamingAgentInstanceId: null as string | null,
@@ -83,6 +88,7 @@ describe("useChatStream", () => {
     vi.mocked(generateImageStream).mockReset().mockResolvedValue(undefined);
     vi.mocked(generate3dStream).mockReset().mockResolvedValue(undefined);
     vi.mocked(generateVideoStream).mockReset().mockResolvedValue(undefined);
+    mockSidekickState.activeTab = "terminal";
   });
 
   it("returns streamKey, sendMessage, stopStreaming, resetEvents", () => {
@@ -440,7 +446,8 @@ describe("useChatStream", () => {
     expect(mockSetAgentStreaming).toHaveBeenCalledWith("ai-1", true);
   });
 
-  it("handles generate_specs action", async () => {
+  it("handles generate_specs action: clears artifacts and auto-switches to Specs from a non-Sessions tab", async () => {
+    mockSidekickState.activeTab = "terminal";
     const { result } = renderHook(() =>
       useChatStream({ projectId: "p-1", agentInstanceId: "ai-1" }),
     );
@@ -451,6 +458,29 @@ describe("useChatStream", () => {
 
     expect(mockClearGeneratedArtifacts).toHaveBeenCalled();
     expect(mockSetActiveTab).toHaveBeenCalledWith("specs");
+  });
+
+  // Regression for "Plan mode in Projects app flips the sidekick off
+  // Sessions on every send". Picking the Sessions tab is an explicit
+  // "I want to follow the chat" signal — the auto-switch to Specs
+  // must respect that. The matching branch in `useChatStream`
+  // (`activeTab !== "sessions"`) guards this; if it ever regresses,
+  // this assertion fires.
+  it("generate_specs action does NOT switch tabs when the user is already on Sessions", async () => {
+    mockSidekickState.activeTab = "sessions";
+    const { result } = renderHook(() =>
+      useChatStream({ projectId: "p-1", agentInstanceId: "ai-1" }),
+    );
+
+    await act(async () => {
+      await result.current.sendMessage("", "generate_specs");
+    });
+
+    // Stale artifacts are still cleared so the next plan-mode pass
+    // doesn't mix new specs with leftovers from the previous turn —
+    // but the tab itself stays put.
+    expect(mockClearGeneratedArtifacts).toHaveBeenCalled();
+    expect(mockSetActiveTab).not.toHaveBeenCalled();
   });
 
   it("handles stream errors gracefully", async () => {
