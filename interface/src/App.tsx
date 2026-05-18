@@ -188,7 +188,7 @@ export function App() {
 
 function AppRoutes({ showShell }: { showShell: boolean }) {
   const location = useLocation();
-  const { isNativeApp } = useAuraCapabilities();
+  const { isNativeApp, hasDesktopBridge } = useAuraCapabilities();
 
   if (isCaptureLoginRoute(location)) {
     return (
@@ -204,7 +204,7 @@ function AppRoutes({ showShell }: { showShell: boolean }) {
   // by a full-page route. For native apps and the brief boot window
   // before auth resolves, `LoginView` keeps owning the entire
   // surface — there's no underlying public chat to overlay.
-  const useStandaloneLoginRoute = showShell || isNativeApp;
+  const useStandaloneLoginRoute = showShell || isNativeApp || hasDesktopBridge;
 
   return (
     <Routes>
@@ -240,7 +240,7 @@ function AppRoutes({ showShell }: { showShell: boolean }) {
             </Route>
           </Route>
         </Route>
-      ) : isNativeApp ? (
+      ) : isNativeApp || hasDesktopBridge ? (
         <Route path="*" element={<Navigate to="/login" replace />} />
       ) : (
         <>
