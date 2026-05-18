@@ -50,13 +50,34 @@ describe("model persistence", () => {
     expect(loadPersistedModel("default", null, "agent-a")).toBe("aura-gpt-5-4");
   });
 
-  it("loadPersistedModel does not leak another agent's choice to an untouched agent", () => {
-    // Another agent wrote the adapter-scoped key as a side effect of
-    // `persistModel`. A fresh agent with no per-agent key should NOT
-    // inherit that value; it should fall to the adapter default.
+  it("loadPersistedModel falls back to the user's most recent pick for an untouched agent", () => {
+    // `persistModel` writes the adapter-scoped key as a side effect of
+    // every selection, capturing "the last model the user picked
+    // anywhere". A brand-new agent with no per-agent key opens with
+    // that global pick rather than reverting to the adapter default,
+    // so users don't have to re-select their preferred model on every
+    // fresh chat.
     persistModel("aura-gpt-5-4", "default", "agent-a");
-    expect(loadPersistedModel("default", null, "new-agent")).not.toBe(
+    expect(loadPersistedModel("default", null, "new-agent")).toBe(
       "aura-gpt-5-4",
+    );
+  });
+
+  it("loadPersistedModel returns the adapter default when neither key is set", () => {
+    expect(loadPersistedModel("default", null, "new-agent")).toBe(
+      "aura-claude-sonnet-4-6",
+    );
+    expect(loadPersistedModel("default", null)).toBe("aura-claude-sonnet-4-6");
+  });
+
+  it("loadPersistedModel prefers the per-agent key over the global fallback", () => {
+    // Global pick is GPT-5.4 (from agent-a's last selection) but
+    // agent-b has its own remembered Sonnet pick — agent-b must get
+    // Sonnet, not the global GPT-5.4 fallback.
+    persistModel("aura-gpt-5-4", "default", "agent-a");
+    persistModel("aura-claude-sonnet-4-6", "default", "agent-b");
+    expect(loadPersistedModel("default", null, "agent-b")).toBe(
+      "aura-claude-sonnet-4-6",
     );
   });
 

@@ -303,7 +303,8 @@ export function loadPersistedModel(
       ...LEGACY_HIDDEN_CHAT_MODELS,
     ];
     // Agent-scoped key is authoritative so switching agents (or app
-    // restarts) restores each agent's last model independently.
+    // restarts) restores each agent's last model independently when the
+    // user has explicitly picked something for this agent.
     if (agentId) {
       const agentStored = normalizeManagedModelId(
         localStorage.getItem(agentStorageKey(agentId)),
@@ -311,16 +312,12 @@ export function loadPersistedModel(
       if (agentStored && models.some((m) => m.id === agentStored)) {
         return agentStored;
       }
-      // When the caller has an agentId but this agent has never been
-      // touched, don't leak another agent's choice via the adapter-scoped
-      // key. Fall straight through to the adapter default.
-      if (localStorage.getItem(agentStorageKey(agentId)) == null) {
-        return defaultModelForAdapter(adapterType, explicitDefault);
-      }
     }
-    // Legacy adapter-scoped fallback for callers without an agentId (or
-    // when an explicitly-stored agent value has become invalid for the
-    // current adapter).
+    // Adapter-scoped "last user pick" fallback. Used both for callers
+    // without an agentId and for untouched / brand-new agents — opening
+    // a fresh chat should land on whatever the user most recently chose
+    // anywhere in the app, rather than reverting to the adapter default
+    // and forcing them to re-pick.
     const stored = normalizeManagedModelId(
       localStorage.getItem(storageKey(adapterType)),
     );
