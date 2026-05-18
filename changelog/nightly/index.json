@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-05-18",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.538.1",
+    "title": "Quieter auth logs by relocating the signup credit grant",
+    "intro": "A small but focused server-side cleanup today: the signup credit grant no longer fires on every session restore, cutting noisy background work and log spam from the auth path. Desktop builds shipped for macOS (Apple Silicon and Intel), Windows, and Linux on the nightly channel.",
+    "entryCount": 1,
+    "highlights": [
+      "Signup credit grant removed from get_session hot path",
+      "Less log spam from repeated session restores",
+      "Nightly desktop artifacts shipped for Mac, Windows, and Linux"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-05-18T09:33:29.052Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.538.1",
+    "path": "history/2026-05-18.json"
+  },
+  {
     "date": "2026-05-17",
     "channel": "nightly",
     "version": "0.1.0-nightly.537.1",
