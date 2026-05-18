@@ -378,7 +378,9 @@ mod tests {
 
         publish_user_message_event(&tx, &ctx, "evt-2");
 
-        let value = rx.try_recv().expect("publish must enqueue exactly one event");
+        let value = rx
+            .try_recv()
+            .expect("publish must enqueue exactly one event");
         let obj = value.as_object().expect("payload must be a JSON object");
         assert_eq!(
             obj.get("from_agent_id").and_then(|v| v.as_str()),

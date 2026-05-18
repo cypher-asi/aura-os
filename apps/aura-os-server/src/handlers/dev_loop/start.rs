@@ -232,7 +232,11 @@ pub(super) async fn build_start_params(
 
     let params = AutomatonStartParams {
         project_id: ctx.project_id.to_string(),
-        agent_id: Some(harness_agent_id(&ctx.agent_id, Some(&agent_instance_id), None)),
+        agent_id: Some(harness_agent_id(
+            &ctx.agent_id,
+            Some(&agent_instance_id),
+            None,
+        )),
         aura_agent_id: Some(ctx.agent_id.to_string()),
         template_agent_id: Some(ctx.agent_id.to_string()),
         auth_token: jwt,
@@ -245,10 +249,7 @@ pub(super) async fn build_start_params(
         )),
         provider_overrides: session_model_overrides_with_cache(
             ctx.model.as_deref(),
-            Some(format!(
-                "devloop:{}:{}",
-                ctx.project_id, agent_instance_id
-            )),
+            Some(format!("devloop:{}:{}", ctx.project_id, agent_instance_id)),
             Some("24h"),
         ),
         user_id,

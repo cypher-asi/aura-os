@@ -199,31 +199,26 @@ impl HarnessLink for LocalHarness {
         // under the server-side 60s outer timeout in
         // apps/aura-os-server/src/handlers/agents/chat/streaming.rs so this
         // surfaces first with the more informative error string.
-        let session_id = tokio::time::timeout(
-            std::time::Duration::from_secs(30),
-            async {
-                loop {
-                    match rx.recv().await {
-                        Ok(OutboundMessage::SessionReady(ready)) => {
-                            break Ok::<String, anyhow::Error>(ready.session_id);
-                        }
-                        Ok(OutboundMessage::Error(err)) => {
-                            break Err(anyhow::anyhow!(
-                                "Harness error during init ({}): {}",
-                                err.code,
-                                err.message
-                            ));
-                        }
-                        Err(_) => {
-                            break Err(anyhow::anyhow!(
-                                "Connection closed before session_ready"
-                            ));
-                        }
-                        _ => continue,
+        let session_id = tokio::time::timeout(std::time::Duration::from_secs(30), async {
+            loop {
+                match rx.recv().await {
+                    Ok(OutboundMessage::SessionReady(ready)) => {
+                        break Ok::<String, anyhow::Error>(ready.session_id);
                     }
+                    Ok(OutboundMessage::Error(err)) => {
+                        break Err(anyhow::anyhow!(
+                            "Harness error during init ({}): {}",
+                            err.code,
+                            err.message
+                        ));
+                    }
+                    Err(_) => {
+                        break Err(anyhow::anyhow!("Connection closed before session_ready"));
+                    }
+                    _ => continue,
                 }
-            },
-        )
+            }
+        })
         .await
         .map_err(|_| {
             anyhow::anyhow!("Timed out waiting for SessionReady from local harness (30s)")

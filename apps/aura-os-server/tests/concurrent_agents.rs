@@ -534,12 +534,20 @@ async fn concurrent_sessions_on_same_instance() {
     assert_ne!(session_a, session_b);
 
     let cfg_a = SessionConfig {
-        agent_id: Some(harness_agent_id(&template, Some(&instance), Some(&session_a))),
+        agent_id: Some(harness_agent_id(
+            &template,
+            Some(&instance),
+            Some(&session_a),
+        )),
         template_agent_id: Some(template.to_string()),
         ..Default::default()
     };
     let cfg_b = SessionConfig {
-        agent_id: Some(harness_agent_id(&template, Some(&instance), Some(&session_b))),
+        agent_id: Some(harness_agent_id(
+            &template,
+            Some(&instance),
+            Some(&session_b),
+        )),
         template_agent_id: Some(template.to_string()),
         ..Default::default()
     };

@@ -648,8 +648,7 @@ async fn update_usage_cache(
         .get("cache_read_input_tokens")
         .and_then(|value| value.as_u64())
     {
-        entry.total_cache_read_input_tokens =
-            entry.total_cache_read_input_tokens.saturating_add(v);
+        entry.total_cache_read_input_tokens = entry.total_cache_read_input_tokens.saturating_add(v);
     }
 }
 

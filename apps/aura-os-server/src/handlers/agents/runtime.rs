@@ -249,6 +249,8 @@ mod tests {
     #[test]
     fn session_model_overrides_with_cache_returns_none_when_all_blank() {
         assert!(session_model_overrides_with_cache(None, None, None).is_none());
-        assert!(session_model_overrides_with_cache(Some(""), Some("  ".into()), Some("")).is_none());
+        assert!(
+            session_model_overrides_with_cache(Some(""), Some("  ".into()), Some("")).is_none()
+        );
     }
 }

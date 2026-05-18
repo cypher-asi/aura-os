@@ -158,7 +158,10 @@ pub(crate) fn wrap_user_content_for_plan_mode(user_content: &str) -> String {
 /// not want plan-mode wiring to silently fall off.
 pub(crate) fn is_plan_mode_action(action: Option<&str>) -> bool {
     matches!(
-        action.map(str::trim).map(str::to_ascii_lowercase).as_deref(),
+        action
+            .map(str::trim)
+            .map(str::to_ascii_lowercase)
+            .as_deref(),
         Some("generate_specs")
     )
 }
@@ -267,7 +270,10 @@ mod tests {
         let suffixed = append_plan_mode_suffix(base);
         assert!(suffixed.starts_with(base));
         assert!(suffixed.ends_with(PLAN_MODE_SYSTEM_PROMPT_SUFFIX));
-        assert_eq!(suffixed.len(), base.len() + PLAN_MODE_SYSTEM_PROMPT_SUFFIX.len());
+        assert_eq!(
+            suffixed.len(),
+            base.len() + PLAN_MODE_SYSTEM_PROMPT_SUFFIX.len()
+        );
     }
 
     #[test]

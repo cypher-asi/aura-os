@@ -388,10 +388,7 @@ pub(crate) fn build_generation_progress_heartbeat_event(mode: &str) -> Event {
 /// frontend's `handleStreamError` already understands the
 /// "PAYMENT_REQUIRED" / "RATE_LIMITED" / "UNAUTHORIZED" prefixes
 /// the auth'd path used to surface via HTTP status codes.
-fn upstream_status_to_error_payload(
-    status: ReqwestStatus,
-    body: &str,
-) -> (&'static str, String) {
+fn upstream_status_to_error_payload(status: ReqwestStatus, body: &str) -> (&'static str, String) {
     match status {
         ReqwestStatus::UNAUTHORIZED => (
             "UNAUTHORIZED",
@@ -753,7 +750,11 @@ mod streaming_tests {
             // escape, encoded as `\\n` in the debug string.
             if let Some(end) = search.find("\\n") {
                 let candidate = &search[..end];
-                if !candidate.is_empty() && candidate.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+                if !candidate.is_empty()
+                    && candidate
+                        .chars()
+                        .all(|c| c.is_ascii_alphanumeric() || c == '_')
+                {
                     return candidate.to_string();
                 }
             }

@@ -37,8 +37,7 @@ use super::persist::{
 };
 use super::request::slice_recent_agent_events;
 use super::setup::{
-    has_live_session, lazy_repair_home_project_binding,
-    setup_agent_chat_persistence_with_matched,
+    has_live_session, lazy_repair_home_project_binding, setup_agent_chat_persistence_with_matched,
 };
 use super::streaming::{open_harness_chat_stream, OpenChatStreamArgs};
 use super::tools::{build_session_installed_tools, InstalledToolsCtx};

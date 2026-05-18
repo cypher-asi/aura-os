@@ -14,7 +14,9 @@ use tokio::sync::broadcast;
 use tracing::info;
 
 use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, Spec};
-use aura_os_harness::{HarnessInbound, HarnessOutbound, HarnessSession, SessionConfig, UserMessage};
+use aura_os_harness::{
+    HarnessInbound, HarnessOutbound, HarnessSession, SessionConfig, UserMessage,
+};
 
 use crate::handlers::agents::chat::errors::map_harness_error_to_api;
 use crate::handlers::plan_mode::{

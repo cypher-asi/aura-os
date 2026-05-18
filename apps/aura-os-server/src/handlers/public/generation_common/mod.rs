@@ -109,8 +109,7 @@ pub(crate) async fn proxy_public_generation_stream(
         "public_generation: opening upstream proxy"
     );
 
-    let (tx, rx) =
-        mpsc::channel::<Result<Event, Infallible>>(PUBLIC_GENERATION_CHANNEL_CAPACITY);
+    let (tx, rx) = mpsc::channel::<Result<Event, Infallible>>(PUBLIC_GENERATION_CHANNEL_CAPACITY);
     tokio::spawn(run_public_generation_task(
         tx,
         bearer_token,

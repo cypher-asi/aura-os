@@ -1094,8 +1094,8 @@ mod tests {
         // (today only the plan-mode read/spec tools — no overlap
         // with the media commands, but the test pins the contract).
         let commands = vec!["generate_image".to_string()];
-        let hints = build_turn_tool_hints(Some(&commands), /* is_plan_mode */ true)
-            .expect("merged hints");
+        let hints =
+            build_turn_tool_hints(Some(&commands), /* is_plan_mode */ true).expect("merged hints");
         assert!(
             hints.iter().any(|h| h == "generate_image"),
             "merged hints must keep the command-derived entry, got {hints:?}",
@@ -1576,11 +1576,7 @@ mod tests {
         // never mark the unfold state `done`, so the terminal path
         // still runs unchanged.
         tx.send(end_event()).expect("seed terminal end");
-        let terminal = stream
-            .next()
-            .await
-            .expect("terminal end")
-            .expect("ok");
+        let terminal = stream.next().await.expect("terminal end").expect("ok");
         assert!(
             dump(&terminal).contains("assistant_message_end"),
             "terminal event must follow without being shadowed by a heartbeat",
@@ -1610,11 +1606,7 @@ mod tests {
         for i in 0..bursts {
             tx.send(text_delta(&format!("tick-{i}")))
                 .expect("seed delta");
-            let event = stream
-                .next()
-                .await
-                .expect("forwarded delta")
-                .expect("ok");
+            let event = stream.next().await.expect("forwarded delta").expect("ok");
             let body = dump(&event);
             assert!(
                 body.contains(&format!("tick-{i}")),
@@ -1628,11 +1620,7 @@ mod tests {
         }
 
         tx.send(end_event()).expect("seed terminal");
-        let terminal = stream
-            .next()
-            .await
-            .expect("terminal")
-            .expect("ok");
+        let terminal = stream.next().await.expect("terminal").expect("ok");
         assert!(
             dump(&terminal).contains("assistant_message_end"),
             "terminal event must close out the stream"
