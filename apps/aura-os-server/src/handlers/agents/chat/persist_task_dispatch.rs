@@ -4,7 +4,7 @@
 use aura_os_harness::HarnessOutbound;
 use serde_json::{json, Value};
 use tokio::sync::broadcast;
-use tracing::warn;
+use tracing::{error, warn};
 
 use super::event_bus::publish_assistant_message_end_event;
 use super::persist::ChatPersistCtx;
@@ -172,7 +172,8 @@ async fn handle_tool_call_snapshot(
     name: &str,
     input: &Value,
 ) {
-    update_or_append_tool_use_input(state, id, name, input);
+    let sanitized = coerce_tool_use_input_to_object(id, name, input);
+    update_or_append_tool_use_input(state, id, name, &sanitized);
     if persist_event(
         ctx,
         "tool_call_snapshot",
@@ -180,7 +181,7 @@ async fn handle_tool_call_snapshot(
             "message_id": &state.message_id,
             "id": id,
             "name": name,
-            "input": input,
+            "input": &sanitized,
             "seq": state.seq,
         }),
     )
@@ -211,6 +212,52 @@ fn update_or_append_tool_use_input(
     }
 }
 
+/// Guarantee the inbound tool_use input is a JSON object before we persist
+/// it, regardless of how the upstream harness serialized it.
+///
+/// The Anthropic Messages API rejects any persisted history whose
+/// `tool_use.input` is not an object with
+/// `messages.N.content.M.tool_use.input: Input should be an object`, so an
+/// upstream bug that hands us a `String`, `Array`, number, or bool would
+/// silently poison every subsequent turn for the same session.
+///
+/// `null` is silently coerced to `{}` to keep parity with the
+/// long-standing `backfill_null_tool_use_input` recovery for non-streaming
+/// tools. Any other non-object shape is logged at `error` (so the harness
+/// log surfacing in `infra/evals/external/bin/follow-harness-log.mjs`
+/// flags it loudly) and replaced with a structured marker that records
+/// what the original type was for forensics.
+fn coerce_tool_use_input_to_object(tool_use_id: &str, tool_name: &str, input: &Value) -> Value {
+    match input {
+        Value::Object(_) => input.clone(),
+        Value::Null => json!({}),
+        other => {
+            let original_type = match other {
+                Value::String(_) => "string",
+                Value::Array(_) => "array",
+                Value::Number(_) => "number",
+                Value::Bool(_) => "bool",
+                Value::Null | Value::Object(_) => unreachable!(),
+            };
+            let original_size_bytes = serde_json::to_string(other).map(|s| s.len()).unwrap_or(0);
+            error!(
+                tool_use_id,
+                tool_name,
+                original_type,
+                original_size_bytes,
+                "tool_use.input arrived as non-object; replacing with normalization marker so \
+                 replay does not 400 on Anthropic. Upstream is likely aura-harness compaction \
+                 or a tool snapshot regression."
+            );
+            json!({
+                "_normalized": "non_object_input",
+                "original_type": original_type,
+                "original_size_bytes": original_size_bytes,
+            })
+        }
+    }
+}
+
 async fn handle_tool_result(
     state: &mut PersistTaskState,
     ctx: &ChatPersistCtx,
@@ -218,7 +265,7 @@ async fn handle_tool_result(
     result: &str,
     is_error: bool,
 ) {
-    backfill_null_tool_use_input(state);
+    normalize_tool_use_input(state, name);
 
     state.content_blocks.push(json!({
         "type": "tool_result",
@@ -244,17 +291,21 @@ async fn handle_tool_result(
     }
 }
 
-/// Fill in any tool_use block that still has a null input. Non-streaming
-/// tools never emit a snapshot, so without this recovery the persisted
-/// tool_use block would round-trip with `input: null` and be rejected by
-/// the LLM on replay.
-fn backfill_null_tool_use_input(state: &mut PersistTaskState) {
+/// Ensure the trailing `tool_use` block has a JSON-object `input` before we
+/// persist the matching `tool_result`. Non-streaming tools never emit a
+/// snapshot, so without this recovery the persisted tool_use block would
+/// round-trip with `input: null` and be rejected by the LLM on replay; this
+/// also catches non-object inputs that survived from a buggy upstream
+/// snapshot (see `coerce_tool_use_input_to_object`).
+fn normalize_tool_use_input(state: &mut PersistTaskState, tool_name: &str) {
+    let tool_use_id = state.last_tool_use_id.clone();
     if let Some(block) = state.content_blocks.iter_mut().rev().find(|b| {
         b.get("type").and_then(|t| t.as_str()) == Some("tool_use")
-            && b.get("id").and_then(|i| i.as_str()) == Some(state.last_tool_use_id.as_str())
+            && b.get("id").and_then(|i| i.as_str()) == Some(tool_use_id.as_str())
     }) {
-        if block.get("input") == Some(&Value::Null) {
-            block["input"] = json!({});
+        let current = block.get("input").cloned().unwrap_or(Value::Null);
+        if !current.is_object() {
+            block["input"] = coerce_tool_use_input_to_object(&tool_use_id, tool_name, &current);
         }
     }
 }
@@ -375,5 +426,117 @@ async fn synthesize_error_message_end(
             error_code = %err.code,
             "Synthesized assistant_message_end after early harness error"
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn state_with_pending_tool_use(id: &str, name: &str, input: Value) -> PersistTaskState {
+        let mut state = PersistTaskState::new();
+        state.last_tool_use_id = id.to_string();
+        state.content_blocks.push(json!({
+            "type": "tool_use",
+            "id": id,
+            "name": name,
+            "input": input,
+        }));
+        state
+    }
+
+    #[test]
+    fn coerce_tool_use_input_object_passes_through() {
+        let input = json!({"title": "T", "markdown_contents": "ok"});
+        let coerced = coerce_tool_use_input_to_object("tu_1", "create_spec", &input);
+        assert_eq!(coerced, input);
+    }
+
+    #[test]
+    fn coerce_tool_use_input_null_becomes_empty_object() {
+        let coerced = coerce_tool_use_input_to_object("tu_1", "list_files", &Value::Null);
+        assert_eq!(coerced, json!({}));
+    }
+
+    #[test]
+    fn coerce_tool_use_input_string_becomes_normalization_marker() {
+        // Regression for the aura-harness aura-compaction bug that wrote a
+        // truncated JSON string back into tool_use.input. Anthropic rejects
+        // such a message with 400 `Input should be an object`; we coerce
+        // it to a structured object so replay can proceed.
+        let coerced = coerce_tool_use_input_to_object(
+            "tu_corrupt",
+            "create_spec",
+            &Value::String("\"truncated junk\"".repeat(100)),
+        );
+        assert!(coerced.is_object());
+        assert_eq!(coerced["_normalized"], "non_object_input");
+        assert_eq!(coerced["original_type"], "string");
+        assert!(coerced["original_size_bytes"].as_u64().unwrap() > 0);
+    }
+
+    #[test]
+    fn coerce_tool_use_input_array_becomes_normalization_marker() {
+        let coerced = coerce_tool_use_input_to_object(
+            "tu_array",
+            "list_files",
+            &json!(["not", "an", "object"]),
+        );
+        assert!(coerced.is_object());
+        assert_eq!(coerced["original_type"], "array");
+    }
+
+    #[test]
+    fn normalize_tool_use_input_backfills_null_to_empty_object() {
+        // Pre-existing behavior: non-streaming tools never emit a snapshot,
+        // so the persisted tool_use lands with `input: null`. We keep
+        // backfilling those to `{}` so they replay cleanly.
+        let mut state = state_with_pending_tool_use("tu_1", "list_files", Value::Null);
+        normalize_tool_use_input(&mut state, "list_files");
+        assert_eq!(state.content_blocks[0]["input"], json!({}));
+    }
+
+    #[test]
+    fn normalize_tool_use_input_leaves_objects_unchanged() {
+        let original = json!({"path": "src/lib.rs"});
+        let mut state = state_with_pending_tool_use("tu_1", "read_file", original.clone());
+        normalize_tool_use_input(&mut state, "read_file");
+        assert_eq!(state.content_blocks[0]["input"], original);
+    }
+
+    #[test]
+    fn normalize_tool_use_input_replaces_string_with_marker() {
+        let mut state = state_with_pending_tool_use(
+            "tu_1",
+            "create_spec",
+            Value::String("oops not an object".into()),
+        );
+        normalize_tool_use_input(&mut state, "create_spec");
+        let normalized = &state.content_blocks[0]["input"];
+        assert!(normalized.is_object());
+        assert_eq!(normalized["_normalized"], "non_object_input");
+        assert_eq!(normalized["original_type"], "string");
+    }
+
+    #[test]
+    fn update_or_append_tool_use_appends_when_id_missing() {
+        let mut state = PersistTaskState::new();
+        update_or_append_tool_use_input(&mut state, "tu_new", "list_files", &json!({}));
+        assert_eq!(state.content_blocks.len(), 1);
+        assert_eq!(state.content_blocks[0]["id"], "tu_new");
+        assert_eq!(state.content_blocks[0]["input"], json!({}));
+    }
+
+    #[test]
+    fn update_or_append_tool_use_updates_existing_block() {
+        let mut state = state_with_pending_tool_use("tu_1", "create_spec", Value::Null);
+        update_or_append_tool_use_input(
+            &mut state,
+            "tu_1",
+            "create_spec",
+            &json!({"title": "Phase 06", "markdown_contents": "..."}),
+        );
+        assert_eq!(state.content_blocks.len(), 1);
+        assert_eq!(state.content_blocks[0]["input"]["title"], "Phase 06");
     }
 }

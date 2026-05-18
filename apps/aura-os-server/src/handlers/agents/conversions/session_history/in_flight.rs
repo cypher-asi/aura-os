@@ -215,7 +215,7 @@ fn apply_tool_call_snapshot(parts: &mut AssistantParts, content: Option<&serde_j
         .and_then(|v| v.as_str())
         .unwrap_or_default()
         .to_string();
-    let snap_input = content
+    let raw_input = content
         .and_then(|c| c.get("input"))
         .cloned()
         .unwrap_or(serde_json::Value::Null);
@@ -224,6 +224,26 @@ fn apply_tool_call_snapshot(parts: &mut AssistantParts, content: Option<&serde_j
         .and_then(|v| v.as_str())
         .unwrap_or_default()
         .to_string();
+    // `tool_use.input` must be a JSON object on replay or Anthropic
+    // returns 400 `Input should be an object`. If a persisted snapshot
+    // somehow carried a non-object input (e.g. an older harness build
+    // that string-truncated tool_use inputs during storage compaction),
+    // coerce it to an object so refresh-recovery keeps producing valid
+    // history. `Null` stays `Null` here; it gets backfilled to `{}` by
+    // `apply_tool_result` when the matching result lands.
+    let snap_input = match raw_input {
+        serde_json::Value::Object(_) | serde_json::Value::Null => raw_input,
+        other => serde_json::json!({
+            "_normalized": "non_object_input",
+            "original_type": match &other {
+                serde_json::Value::String(_) => "string",
+                serde_json::Value::Array(_) => "array",
+                serde_json::Value::Number(_) => "number",
+                serde_json::Value::Bool(_) => "bool",
+                serde_json::Value::Null | serde_json::Value::Object(_) => "unknown",
+            },
+        }),
+    };
     let mut patched = false;
     for block in parts.blocks.iter_mut().rev() {
         if let ChatContentBlock::ToolUse { id, input, .. } = block {

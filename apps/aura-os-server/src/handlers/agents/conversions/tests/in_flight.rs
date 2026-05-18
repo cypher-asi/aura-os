@@ -309,3 +309,62 @@ fn events_to_session_history_reconstruction_only_uses_latest_message_id() {
     assert_eq!(history[1].in_flight, Some(true));
     assert_eq!(history[1].content, "second ");
 }
+
+#[test]
+fn events_to_session_history_normalizes_string_tool_use_input_on_replay() {
+    // Regression: an older aura-harness build (or an upstream snapshot bug)
+    // could persist a `tool_call_snapshot` whose `input` was a raw JSON
+    // string instead of an object. Anthropic rejects such a history with
+    // 400 `messages.N.content.M.tool_use.input: Input should be an object`,
+    // so in-flight reconstruction must coerce non-object inputs back into
+    // an object shape before the model ever sees them again.
+    let events = vec![
+        raw_event(
+            "evt-start",
+            "2026-01-01T00:00:01Z",
+            "assistant_message_start",
+            serde_json::json!({ "message_id": "m1", "seq": 1 }),
+        ),
+        raw_event(
+            "evt-tool-start",
+            "2026-01-01T00:00:02Z",
+            "tool_use_start",
+            serde_json::json!({ "message_id": "m1", "id": "tool-9", "name": "create_spec", "seq": 2 }),
+        ),
+        raw_event(
+            "evt-snap",
+            "2026-01-01T00:00:03Z",
+            "tool_call_snapshot",
+            serde_json::json!({
+                "message_id": "m1",
+                "id": "tool-9",
+                "name": "create_spec",
+                "input": "{\"title\":\"corrupted\"}... [truncated 12345 bytes]",
+            }),
+        ),
+    ];
+
+    let history = events_to_session_history(&events, "agent-1", "project-1");
+
+    assert_eq!(history.len(), 1);
+    let blocks = history[0].content_blocks.as_ref().expect("blocks");
+    assert_eq!(blocks.len(), 1);
+    match &blocks[0] {
+        ChatContentBlock::ToolUse { id, input, .. } => {
+            assert_eq!(id, "tool-9");
+            assert!(
+                input.is_object(),
+                "tool_use.input must be a JSON object after reconstruction, got {input}"
+            );
+            assert_eq!(
+                input.get("_normalized").and_then(|v| v.as_str()),
+                Some("non_object_input")
+            );
+            assert_eq!(
+                input.get("original_type").and_then(|v| v.as_str()),
+                Some("string")
+            );
+        }
+        other => panic!("expected ToolUse, got {other:?}"),
+    }
+}

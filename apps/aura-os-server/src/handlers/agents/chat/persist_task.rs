@@ -63,7 +63,7 @@ pub(super) struct PersistTaskState {
 }
 
 impl PersistTaskState {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         Self {
             full_text: String::new(),
             text_segment: String::new(),
