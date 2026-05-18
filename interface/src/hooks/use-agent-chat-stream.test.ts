@@ -1041,6 +1041,53 @@ describe("useAgentChatStream", () => {
     );
   });
 
+  // Regression for the "+ after sending in a freshly-created chat
+  // reverts to the previous chat" bug on the standalone-agent
+  // surface. Same shape as the project-chat sibling in
+  // `use-chat-stream.test.ts`: `useStandaloneAgentChat.handleNewChat`
+  // arms the pin BEFORE dropping `?session=`, so the rerender flips
+  // `sessionId` from `"s-old"` to `null` after the pin lands. The
+  // pin must survive that flip — it's keyed on the lane's
+  // fresh-canvas partition (`agentId:fresh`), not the about-to-be-
+  // stale real-session partition — so the post-rerender send POSTs
+  // `new_session=true` and the server mints a brand-new session
+  // (which is what makes `generate_session_title` fire for the new
+  // chat's first user message).
+  it("arms the new-session pin on the fresh-canvas partition when called before the URL drops the session", async () => {
+    const { result, rerender } = renderHook(
+      (props: { sessionId: string | null }) =>
+        useAgentChatStream({
+          agentId: "agent-1",
+          sessionId: props.sessionId,
+        }),
+      { initialProps: { sessionId: "s-old" as string | null } },
+    );
+
+    act(() => {
+      result.current.markNextSendAsNewSession();
+    });
+
+    rerender({ sessionId: null });
+
+    await act(async () => {
+      await result.current.sendMessage("start fresh please");
+    });
+
+    expect(api.agents.sendEventStream).toHaveBeenCalledWith(
+      "agent-1",
+      "start fresh please",
+      null,
+      undefined,
+      undefined,
+      expect.any(Object),
+      expect.any(AbortSignal),
+      undefined,
+      undefined,
+      true,
+      null,
+    );
+  });
+
   // Cross-agent variant: in the chat-app shell the same hook stays
   // mounted as `?agent=` swaps, so a "+" press armed against agent A
   // must not leak forward into the first send on agent B (which would

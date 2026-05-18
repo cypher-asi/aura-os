@@ -25,6 +25,7 @@ import {
   createSetters,
   getLastEventAt,
   FRESH_SESSION_PLACEHOLDER,
+  keyForProjectSession,
 } from "../stream/store";
 import { STUCK_THRESHOLD_MS } from "../stream/use-stream-health";
 import { useMessageQueueStore } from "../../stores/message-queue-store";
@@ -106,20 +107,16 @@ export function useChatStream({
   const sessionIdRef = useRef(sessionId ?? null);
   useEffect(() => {
     sessionIdRef.current = sessionId ?? null;
-    // The "+" affordance arms `nextSendStartsNewSession` and drops
-    // `?session=` from the URL via `useFreshCanvas`. If the user
-    // then clicks an existing session row before sending, the URL
-    // re-acquires `?session=` and `sessionId` flips back to a real
-    // value — that's an explicit "extend THIS session" intent, so
-    // the pin must drop or the next send would still POST
-    // `new_session=true` and the harness would mint a brand-new
-    // session id (the symptom: pressing "+", clicking a prior
-    // session, then sending lands the turn in a new chat instead
-    // of the clicked one).
-    if (sessionId) {
-      getPartitionSendControl(core.key).nextSendStartsNewSession = false;
-    }
-  }, [sessionId, core.key]);
+    // No explicit pin clear is needed here. `markNextSendAsNewSession`
+    // now writes the flag onto the lane's *fresh-canvas* partition
+    // (`keyForProjectSession(projectId, agentInstanceId, null)`), so
+    // when the user presses "+", clicks a prior session row before
+    // sending, and then sends — `core.key` is the real-session
+    // partition `…:s-old` whose `nextSendStartsNewSession` was never
+    // written to. The pin is naturally dropped without touching the
+    // fresh-canvas entry (which stays armed so a subsequent "+" press
+    // still works as expected).
+  }, [sessionId]);
   const onSessionReadyRef = useRef(onSessionReady);
   useEffect(() => { onSessionReadyRef.current = onSessionReady; }, [onSessionReady]);
 
@@ -715,8 +712,24 @@ export function useChatStream({
   // `useRef` mirror. The control state it mutates is partition-keyed,
   // so the closure can be reused across renders without churning props
   // on memoized children.
+  //
+  // Phase 3 wiring: always target the lane's *fresh-canvas* partition
+  // key (`sessionId === null`), not the panel's current `core.key`.
+  // `useFreshCanvas.newChat()` calls this synchronously BEFORE it
+  // drops `?session=` from the URL, so at this moment `core.key` still
+  // reflects the about-to-be-stale real-session partition. Writing the
+  // flag there would never be consumed because the next user send
+  // fires on the `…:fresh` partition (the URL flip flips `sessionId`
+  // to `null`, which flips `core.key` to the placeholder). Skipping
+  // straight to the fresh-canvas key guarantees the pin lands on the
+  // partition the very next send will actually read from — which is
+  // both how the user expects "+ New chat" to behave and what makes
+  // the server's `generate_session_title` task fire on the resulting
+  // first user message of a brand-new storage session.
   const markNextSendAsNewSession = useCallback(() => {
-    const ctrl = getPartitionSendControl(core.key);
+    if (!projectId || !agentInstanceId) return;
+    const freshKey = keyForProjectSession(projectId, agentInstanceId, null);
+    const ctrl = getPartitionSendControl(freshKey);
     ctrl.nextSendStartsNewSession = true;
     // New chat means a fresh auto-retry budget for any future
     // transient WS drop on the new session.
@@ -726,7 +739,7 @@ export function useChatStream({
       clearTimeout(ctrl.retryTimer);
       ctrl.retryTimer = null;
     }
-  }, [core.key]);
+  }, [projectId, agentInstanceId]);
 
   return {
     streamKey: core.key,

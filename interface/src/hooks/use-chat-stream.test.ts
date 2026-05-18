@@ -757,6 +757,60 @@ describe("useChatStream", () => {
     );
   });
 
+  // Regression for the "+ after sending in a freshly-created chat
+  // reverts to the previous chat" bug. Repro:
+  //   1. Mount on session B (sessionId="s-old").
+  //   2. User clicks "+": `useFreshCanvas.newChat()` calls
+  //      `markNextSendAsNewSession()` BEFORE dropping `?session=`,
+  //      then drops `?session=` (rerender flips sessionId to null).
+  //   3. User sends.
+  // With the partition-keyed bug, the pin was written to the
+  // about-to-be-stale `…:s-old` partition while the send fired on
+  // `…:fresh` — so the wire flag was `new_session=false`, the
+  // server reused session B (`existing_session_for_agent`), and
+  // `SessionReady` snapped the URL back to B. Pin the post-fix
+  // behaviour: the pin must land on the fresh-canvas partition so
+  // the post-rerender send POSTs `new_session=true`.
+  it("arms the new-session pin on the fresh-canvas partition when called before the URL drops the session", async () => {
+    const { result, rerender } = renderHook(
+      (props: { sessionId: string | null }) =>
+        useChatStream({
+          projectId: "p-1",
+          agentInstanceId: "ai-1",
+          sessionId: props.sessionId,
+        }),
+      { initialProps: { sessionId: "s-old" as string | null } },
+    );
+
+    act(() => {
+      result.current.markNextSendAsNewSession();
+    });
+
+    rerender({ sessionId: null });
+
+    await act(async () => {
+      await result.current.sendMessage("start fresh please");
+    });
+
+    expect(api.sendEventStream).toHaveBeenCalledWith(
+      "p-1",
+      "ai-1",
+      "start fresh please",
+      null,
+      undefined,
+      undefined,
+      expect.any(Object),
+      expect.any(AbortSignal),
+      undefined,
+      // The pin must survive the `sessionId="s-old"` → `null` rerender
+      // because it was armed against the fresh-canvas partition, not
+      // the about-to-be-stale real-session partition.
+      true,
+      null,
+      undefined,
+    );
+  });
+
   it("drops the pin across generation modes when sessionId becomes non-null", async () => {
     const { result, rerender } = renderHook(
       (props: { sessionId: string | null }) =>

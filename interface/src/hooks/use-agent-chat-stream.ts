@@ -146,26 +146,17 @@ export function useAgentChatStream({
   // inline `EventType.SessionReady` arm in the handler below).
   const core = useStreamCore([agentId, sessionId ?? FRESH_SESSION_PLACEHOLDER]);
   const { refs } = core;
-  const nextSendStartsNewSessionRef = useRef(false);
+  // Mirror `sessionId` into a ref so the in-flight send closure can
+  // read the latest pinned session id without re-binding on every
+  // URL flip. The new-session pin is NOT mirrored here — it lives on
+  // the per-key replay map (`PartitionAgentReplay.nextSendStartsNewSession`)
+  // so a "+" press on agent A's fresh canvas can't leak forward into
+  // agent B's first send and so the pin survives the URL flip from
+  // `?session=B` → empty that happens during `useStandaloneAgentChat.handleNewChat`.
   const sessionIdRef = useRef(sessionId ?? null);
   useEffect(() => {
     sessionIdRef.current = sessionId ?? null;
-    // Symmetric clear with `use-chat-stream.ts`: when the user
-    // presses "+" (sets the pin and drops `?session=`) and then
-    // navigates back to a real session row before sending, treat
-    // that as an explicit "extend THIS session" intent and drop the
-    // pin so the next send doesn't force a brand-new session id.
-    if (sessionId) nextSendStartsNewSessionRef.current = false;
   }, [sessionId]);
-  // Reset the pin whenever the underlying stream partition changes
-  // (agent swap inside the chat-app shell). The ref isn't keyed by
-  // `core.key` the way `partition-send-control` is in
-  // `use-chat-stream.ts`, so a "+" press on agent A would otherwise
-  // bleed forward into agent B's first send and force an unwanted
-  // new session there.
-  useEffect(() => {
-    nextSendStartsNewSessionRef.current = false;
-  }, [core.key]);
   const onSessionReadyRef = useRef(onSessionReady);
   useEffect(() => { onSessionReadyRef.current = onSessionReady; }, [onSessionReady]);
   // Track the last id we pushed to `onSessionReady` so a re-emission
@@ -568,8 +559,19 @@ export function useAgentChatStream({
       };
 
       try {
-        const shouldStartNewSession = nextSendStartsNewSessionRef.current;
-        nextSendStartsNewSessionRef.current = false;
+        // Read+clear the new-session pin from this partition's replay
+        // entry. The pin is written by `markNextSendAsNewSession` onto
+        // the lane's fresh-canvas key (`agentId:fresh`) — at send time
+        // `core.key` is the same fresh-canvas key (the panel must be
+        // on a fresh canvas to start a new session), so the read lands
+        // on the partition the pin was armed against. Clearing in
+        // place — before the SSE `SessionReady` migrates this entry to
+        // the real session id — ensures a subsequent send into the
+        // newly-created session doesn't accidentally force *another*
+        // new session.
+        const replayEntry = getOrCreatePartitionAgentReplay(getPartitionKey());
+        const shouldStartNewSession = replayEntry.nextSendStartsNewSession;
+        replayEntry.nextSendStartsNewSession = false;
         if (_generationMode === "image") {
           partitionSetters.setProgressText("Generating image...");
           // Stamp the generation lifecycle synchronously so the
@@ -761,10 +763,25 @@ export function useAgentChatStream({
   }, [core.key, sendMessage]);
 
   // Stable callback identity so callers do not need to wrap it in a
-  // `useRef` mirror. See the matching block in `useChatStream`.
+  // `useRef` mirror. See the matching block in `useChatStream` for
+  // the rationale on why this targets the lane's *fresh-canvas*
+  // partition key (`keyForAgentSession(agentId, null)`) rather than
+  // the panel's current `core.key`. The "+" affordance in
+  // `useStandaloneAgentChat.handleNewChat` calls this synchronously
+  // before dropping `?session=` from the URL, so at this moment
+  // `core.key` still reflects the about-to-be-stale real-session
+  // partition; writing the flag there would never be consumed
+  // because the next send fires on the `…:fresh` partition once the
+  // URL flips. Pinning straight to the fresh-canvas key fixes both
+  // the "+ reverts to the previous chat" symptom and the matching
+  // "no Haiku title for the new chat" symptom — server-side
+  // `generate_session_title` only fires for the *first* user
+  // message of a brand-new storage session.
   const markNextSendAsNewSession = useCallback(() => {
-    nextSendStartsNewSessionRef.current = true;
-  }, []);
+    if (!agentId) return;
+    const freshKey = keyForAgentSession(agentId, null);
+    getOrCreatePartitionAgentReplay(freshKey).nextSendStartsNewSession = true;
+  }, [agentId]);
 
   // Wrap `baseStopStreaming` so we clear `inFlightRef` in the same
   // synchronous tick the user (or a "Send now" force-send) cancels

@@ -145,10 +145,18 @@ export interface AgentChatLastSendArgs {
  * track different shapes (the standalone branch has no captured
  * `currentController` because each `sendMessage` call owns its own
  * controller via the inFlightRef closure).
+ *
+ * `nextSendStartsNewSession` mirrors the same-named field on
+ * `PartitionSendControl` so the standalone surface's "+" affordance
+ * can pin "the next send into this lane starts a new server-side
+ * storage session" against the lane's *fresh-canvas* partition key.
+ * Same rationale as the project-chat field — see the comment on
+ * `useAgentChatStream`'s `markNextSendAsNewSession`.
  */
 export interface PartitionAgentReplay {
   lastSendArgs: AgentChatLastSendArgs | null;
   sendFn: ((args: AgentChatLastSendArgs) => Promise<void>) | null;
+  nextSendStartsNewSession: boolean;
 }
 
 const partitionSendControlMap = new Map<string, PartitionSendControl>();
@@ -169,7 +177,7 @@ function defaultControl(): PartitionSendControl {
 }
 
 function defaultReplay(): PartitionAgentReplay {
-  return { lastSendArgs: null, sendFn: null };
+  return { lastSendArgs: null, sendFn: null, nextSendStartsNewSession: false };
 }
 
 /* ---------------- Project-chat partition send-control --------------- */
