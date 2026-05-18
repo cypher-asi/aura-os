@@ -137,8 +137,20 @@ pub(crate) type AutomatonRegistry = Arc<Mutex<HashMap<AutomatonRegistryKey, Acti
 /// entry the way the legacy single-key registry did.
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct ChatSessionKey {
-    /// Partitioned harness `agent_id` — `{template}::{instance}` or
-    /// `{template}::default` — built by `aura_os_core::harness_agent_id`.
+    /// Partitioned harness `agent_id` built by
+    /// `aura_os_core::harness_agent_id`. Takes one of three shapes:
+    ///   - `{template}::default` — bare-template partition (legacy
+    ///     bare-agent chat with no resolved storage session, plus
+    ///     loop / public chat / Swarm-tools paths that opt out of the
+    ///     session segment).
+    ///   - `{template}::{agent_instance_id}` — per-instance partition
+    ///     (legacy instance-bound chat with no resolved storage
+    ///     session).
+    ///   - `{template}::{instance|default}::{session_id}` — per-
+    ///     storage-session partition. Phase 1 of parallel-session-chats:
+    ///     chat routes fold the resolved storage `session_id` in so
+    ///     two POSTs against the same instance with different
+    ///     sessions take distinct turn slots and stream concurrently.
     pub session_key: String,
     /// Optional model selector. `None` when the request didn't pin a
     /// model; otherwise the exact model string sent with the chat

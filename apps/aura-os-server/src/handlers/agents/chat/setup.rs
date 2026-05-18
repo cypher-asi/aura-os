@@ -251,52 +251,32 @@ pub(super) async fn has_live_session(state: &AppState, key: &str) -> bool {
         .any(|entry| entry.key().session_key == key && entry.value().is_alive())
 }
 
-/// Drop EVERY chat-session entry that shares this `session_key`,
-/// regardless of model. After Phase 1 of parallel-session-chats the
-/// `session_key` is a three-segment `{template}::{instance|default}::{session_id}`
-/// string, so this helper sweeps every per-model entry for one
-/// specific storage session — and `reset_agent_session` uses it
-/// against the bare-template partition (no session segment) which is
-/// its own one-off entry.
-///
-/// For "evict every session on this instance" semantics (used by
-/// [`reset_instance_session`] below) callers want
-/// [`remove_live_sessions_for_instance`] instead.
-pub(super) async fn remove_live_session(state: &AppState, key: &str) {
-    let stale_keys: Vec<crate::state::ChatSessionKey> = state
-        .chat_sessions
-        .iter()
-        .filter(|entry| entry.key().session_key == key)
-        .map(|entry| entry.key().clone())
-        .collect();
-    for stale in stale_keys {
-        state.chat_sessions.remove(&stale);
-    }
-}
-
-/// Drop EVERY chat-session entry whose `session_key` starts with the
-/// given instance-partition prefix, regardless of model or storage
-/// session. Used by [`reset_instance_session`] to evict every
-/// per-session entry under one instance in a single sweep, since
+/// Drop EVERY chat-session entry whose `session_key` matches — or
+/// is a per-session extension of — the given partition prefix,
+/// regardless of model or storage session. Used by both
+/// [`reset_agent_session`] (bare-template partition) and
+/// [`reset_instance_session`] (instance partition) to evict every
+/// per-session entry under one partition in a single sweep, since
 /// after Phase 1 of parallel-session-chats the registry holds one
-/// entry per `(template, instance, storage_session)` triple instead
-/// of one per instance.
+/// entry per `(template, instance|default, storage_session)` triple
+/// instead of one per partition.
+///
+/// The helper is partition-shape-agnostic: callers pass whichever
+/// `harness_agent_id` they own (two-segment bare-template, two-segment
+/// instance, etc.) and the prefix sweep handles the three-segment
+/// children uniformly.
 ///
 /// The `==` branch covers the legacy two-segment form (callers that
 /// did not opt into a session segment, e.g. before
 /// `harness_agent_id` accepted a `SessionId`); the `starts_with`
 /// branch covers every three-segment per-session entry.
-pub(super) async fn remove_live_sessions_for_instance(
-    state: &AppState,
-    instance_partition: &str,
-) {
-    let prefix = format!("{instance_partition}::");
+pub(super) async fn remove_live_sessions_for_partition(state: &AppState, partition: &str) {
+    let prefix = format!("{partition}::");
     let stale_keys: Vec<crate::state::ChatSessionKey> = state
         .chat_sessions
         .iter()
         .filter(|entry| {
-            entry.key().session_key == instance_partition
-                || entry.key().session_key.starts_with(&prefix)
+            entry.key().session_key == partition || entry.key().session_key.starts_with(&prefix)
         })
         .map(|entry| entry.key().clone())
         .collect();
@@ -310,8 +290,14 @@ pub(crate) async fn reset_agent_session(
     AuthJwt(jwt): AuthJwt,
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<StatusCode> {
-    let session_key = aura_os_core::harness_agent_id(&agent_id, None, None);
-    remove_live_session(&state, &session_key).await;
+    // The bare-template partition string is exactly the prefix that
+    // sweeps `{template}::default` (legacy two-segment, == branch)
+    // plus every `{template}::default::{session_id}` entry that the
+    // Phase 1 chat route writes (three-segment, starts_with branch).
+    // Exact-match eviction would silently no-op on every modern
+    // bare-agent chat and leak the turn_slot mutex indefinitely.
+    let partition = aura_os_core::harness_agent_id(&agent_id, None, None);
+    remove_live_sessions_for_partition(&state, &partition).await;
     // `reset-session` is a destructive admin op, not a cross-agent
     // turn — there's no upstream sender to thread back into and the
     // chain depth resets to 0.
@@ -363,8 +349,8 @@ pub(crate) async fn reset_instance_session(
         // evicts every storage session under this instance in one
         // pass. The legacy two-segment form (callers that opted out
         // of the session segment) is covered by the `==` branch in
-        // `remove_live_sessions_for_instance`.
-        remove_live_sessions_for_instance(&state, &key).await;
+        // `remove_live_sessions_for_partition`.
+        remove_live_sessions_for_partition(&state, &key).await;
     }
     let _ = setup_project_chat_persistence(
         &state,

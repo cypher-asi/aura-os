@@ -268,7 +268,7 @@ fn harness_agent_id_three_segment_form_is_distinct_from_two_segment() {
     assert!(
         three_segment.starts_with(&format!("{two_segment}::")),
         "three-segment form must extend the two-segment instance prefix verbatim; \
-         this is what `remove_live_sessions_for_instance` relies on for its \
+         this is what `remove_live_sessions_for_partition` relies on for its \
          prefix sweep in setup.rs"
     );
 }
