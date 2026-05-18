@@ -266,12 +266,15 @@ async fn generate_rollover_summary_for_session(
     ctx: &ChatPersistCtx,
     extras: &ChatPersistTaskExtras,
 ) -> String {
+    // Stringify the typed session id once at this storage boundary;
+    // `generate_session_summary` keeps `&str` to match the REST shape.
+    let session_id_str = ctx.session_id.to_string();
     let result = crate::handlers::agents::sessions::generate_session_summary(
         &ctx.storage,
         &extras.http_client,
         &extras.router_url,
         &ctx.jwt,
-        &ctx.session_id,
+        &session_id_str,
         &ctx.project_id,
         &ctx.project_agent_id,
     )
@@ -321,7 +324,7 @@ async fn mark_storage_session_rolled_over(ctx: &ChatPersistCtx) {
         ended_at: Some(chrono::Utc::now().to_rfc3339()),
     };
     if let Err(error) =
-        update_session_with_storage(&ctx.storage, &ctx.session_id, &ctx.jwt, &req).await
+        update_session_with_storage(&ctx.storage, &ctx.session_id.to_string(), &ctx.jwt, &req).await
     {
         warn!(
             session_id = %ctx.session_id,
@@ -505,8 +508,13 @@ pub(super) fn log_stream_summary(
 }
 
 pub(crate) async fn persist_event(ctx: &ChatPersistCtx, event_type: &str, content: Value) -> bool {
+    // Stringify the typed `SessionId` once at this storage-write
+    // boundary: `CreateSessionEventRequest.session_id` is the
+    // `aura_os_storage` REST shape (still `Option<String>`), and the
+    // `create_event` URL segment is `&str`.
+    let session_id_str = ctx.session_id.to_string();
     let req = aura_os_storage::CreateSessionEventRequest {
-        session_id: Some(ctx.session_id.clone()),
+        session_id: Some(session_id_str.clone()),
         user_id: None,
         agent_id: Some(ctx.project_agent_id.clone()),
         sender: Some("agent".to_string()),
@@ -517,7 +525,7 @@ pub(crate) async fn persist_event(ctx: &ChatPersistCtx, event_type: &str, conten
     };
     match ctx
         .storage
-        .create_event(&ctx.session_id, &ctx.jwt, &req)
+        .create_event(&session_id_str, &ctx.jwt, &req)
         .await
     {
         Ok(_) => true,
@@ -566,7 +574,7 @@ mod tests {
             storage: Arc::new(aura_os_storage::StorageClient::with_base_url(
                 "http://localhost:9999",
             )),
-            session_id: "session-test".to_string(),
+            session_id: aura_os_core::SessionId::new(),
             project_id: "project-test".to_string(),
             project_agent_id: "00000000-0000-0000-0000-000000000aaa".to_string(),
             agent_id: None,
@@ -610,7 +618,7 @@ mod tests {
             storage: Arc::new(aura_os_storage::StorageClient::with_base_url(
                 "http://localhost:9999",
             )),
-            session_id: "session-test".to_string(),
+            session_id: aura_os_core::SessionId::new(),
             project_id: "project-test".to_string(),
             project_agent_id: "00000000-0000-0000-0000-000000000aaa".to_string(),
             agent_id: None,

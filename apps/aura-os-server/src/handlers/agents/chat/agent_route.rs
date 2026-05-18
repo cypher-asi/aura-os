@@ -2,7 +2,7 @@
 //! agent, prepares the harness `SessionConfig`, kicks off persistence,
 //! and hands off to the SSE driver.
 
-use aura_os_core::{AgentId, AgentPermissions, ChatRole, OrgId, ProjectId, SessionEvent};
+use aura_os_core::{AgentId, AgentPermissions, ChatRole, OrgId, ProjectId, SessionEvent, SessionId};
 use aura_os_harness::{ConversationMessage, SessionConfig};
 use axum::extract::{Path, State};
 use axum::Json;
@@ -102,6 +102,15 @@ pub(crate) async fn send_agent_event_stream(
 
     let force_new = body.new_session.unwrap_or(false);
 
+    // Parse the wire `session_id` once at ingress so every downstream
+    // consumer sees a typed [`SessionId`]. A non-UUID at this surface
+    // is a client bug (the chat UI mints UUIDs everywhere); surfacing
+    // the structured 400 here is friendlier than letting it tunnel
+    // through and 400 on mismatch a few layers deeper. Empty strings
+    // are normalised to "no pin" so a stale `?session=` placeholder
+    // doesn't trip the parser.
+    let requested_session_id = parse_wire_session_id(body.session_id.as_deref())?;
+
     // Validate the caller-supplied pin (`SendChatRequest.session_id`)
     // against the agent's project bindings before we wire anything
     // up. Mismatches surface as a structured 400 — see the instance
@@ -109,7 +118,7 @@ pub(crate) async fn send_agent_event_stream(
     let pinned_session_id = if force_new {
         None
     } else {
-        resolve_pinned_session_for_agent(&state, &agent_id, &jwt, body.session_id.as_deref())
+        resolve_pinned_session_for_agent(&state, &agent_id, &jwt, requested_session_id.as_ref())
             .await?
     };
 
@@ -137,7 +146,7 @@ pub(crate) async fn send_agent_event_stream(
         &agent_id,
         &jwt,
         force_new,
-        pinned_session_id.as_deref(),
+        pinned_session_id.as_ref(),
         // Phase 2 of the cross-agent reply plan: thread the harness's
         // `originating_agent_id` (set by `send_to_agent` in
         // aura-harness, commit 6a9b33d) onto the persist ctx so the
@@ -174,7 +183,7 @@ pub(crate) async fn send_agent_event_stream(
         &jwt,
         force_new,
         live_session,
-        pinned_session_id.as_deref(),
+        pinned_session_id.as_ref(),
         &matching,
     )
     .await;
@@ -274,7 +283,7 @@ pub(crate) async fn send_agent_event_stream(
         project_id: effective_project_id.clone(),
         project_path,
         aura_org_id: effective_org_id.as_ref().map(ToString::to_string),
-        aura_session_id: persist_ctx.as_ref().map(|c| c.session_id.clone()),
+        aura_session_id: persist_ctx.as_ref().map(|c| c.session_id.to_string()),
         provider_overrides: session_model_overrides_with_cache(
             model.as_deref(),
             Some(format!("agent:{agent_id}")),
@@ -350,8 +359,8 @@ async fn resolve_pinned_session_for_agent(
     state: &AppState,
     agent_id: &AgentId,
     jwt: &str,
-    requested_session_id: Option<&str>,
-) -> ApiResult<Option<String>> {
+    requested_session_id: Option<&SessionId>,
+) -> ApiResult<Option<SessionId>> {
     let Some(requested) = requested_session_id else {
         return Ok(None);
     };
@@ -373,6 +382,24 @@ async fn resolve_pinned_session_for_agent(
     )))
 }
 
+/// Parse the wire `session_id` (`Option<String>` on
+/// `SendChatRequest`) into the typed [`SessionId`] at the route
+/// boundary, normalising the empty string to `None` so a stale
+/// `?session=` placeholder doesn't surface as a parse error. A
+/// non-UUID string maps to a structured 400 rather than tunneling
+/// through the rest of the persist pipeline.
+pub(super) fn parse_wire_session_id(raw: Option<&str>) -> ApiResult<Option<SessionId>> {
+    let Some(trimmed) = raw.map(str::trim).filter(|s| !s.is_empty()) else {
+        return Ok(None);
+    };
+    match trimmed.parse::<SessionId>() {
+        Ok(id) => Ok(Some(id)),
+        Err(error) => Err(ApiError::bad_request(format!(
+            "session_id `{trimmed}` is not a valid UUID: {error}"
+        ))),
+    }
+}
+
 /// Resolve `ChatPersistCtx` and fork state without loading any
 /// conversation history. The returned `matching` list is the
 /// one-time-fetched `find_matching_project_agents` result that the
@@ -384,7 +411,7 @@ async fn load_persistence_only(
     agent_id: &AgentId,
     jwt: &str,
     force_new: bool,
-    pinned_session_id: Option<&str>,
+    pinned_session_id: Option<&SessionId>,
     originating_agent_id: Option<String>,
     cross_agent_depth: u32,
     from_agent_id: Option<String>,
@@ -453,7 +480,7 @@ async fn load_history_for_agent(
     jwt: &str,
     force_new: bool,
     live_session: bool,
-    pinned_session_id: Option<&str>,
+    pinned_session_id: Option<&SessionId>,
     matching: &[aura_os_storage::StorageProjectAgent],
 ) -> Option<Vec<ConversationMessage>> {
     if force_new || live_session {
@@ -487,17 +514,21 @@ async fn load_history_for_agent(
 async fn load_pinned_history_for_agent(
     storage: &aura_os_storage::StorageClient,
     jwt: &str,
-    session_id: &str,
+    session_id: &SessionId,
     matching: &[aura_os_storage::StorageProjectAgent],
 ) -> Result<Vec<SessionEvent>, aura_os_storage::StorageError> {
+    // Stringify once at this storage boundary; the loader call below
+    // ultimately reaches into `storage.list_events(&str, ...)` which
+    // keeps `&str` deliberately (the `aura_os_storage` REST shape).
+    let session_id_str = session_id.to_string();
     for binding in matching {
         let sessions = storage.list_sessions(&binding.id, jwt).await?;
-        if sessions.iter().any(|s| s.id == session_id) {
+        if sessions.iter().any(|s| s.id == session_id_str) {
             let project_id = binding.project_id.as_deref().unwrap_or_default();
             return load_pinned_session_events_for_agent(
                 storage,
                 jwt,
-                session_id,
+                &session_id_str,
                 &binding.id,
                 project_id,
             )

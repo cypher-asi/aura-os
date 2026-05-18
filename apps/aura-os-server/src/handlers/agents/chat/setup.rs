@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use aura_os_core::{AgentId, AgentInstanceId, ProjectId};
+use aura_os_core::{AgentId, AgentInstanceId, ProjectId, SessionId};
 use aura_os_storage::StorageClient;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -22,7 +22,7 @@ pub(crate) async fn setup_project_chat_persistence(
     agent_instance_id: &AgentInstanceId,
     jwt: &str,
     force_new: bool,
-    pinned_session_id: Option<&str>,
+    pinned_session_id: Option<&SessionId>,
     originating_agent_id: Option<String>,
     cross_agent_depth: u32,
     from_agent_id: Option<String>,
@@ -74,7 +74,7 @@ pub(crate) async fn setup_agent_chat_persistence(
     _agent_name: &str,
     jwt: &str,
     force_new: bool,
-    pinned_session_id: Option<&str>,
+    pinned_session_id: Option<&SessionId>,
     originating_agent_id: Option<String>,
     cross_agent_depth: u32,
     from_agent_id: Option<String>,
@@ -165,7 +165,7 @@ pub(crate) async fn setup_agent_chat_persistence_with_matched(
     jwt: &str,
     force_new: bool,
     matching: &[aura_os_storage::StorageProjectAgent],
-    pinned_session_id: Option<&str>,
+    pinned_session_id: Option<&SessionId>,
     session_service: &aura_os_sessions::SessionService,
     auto_fork_threshold: f64,
     originating_agent_id: Option<String>,
@@ -473,10 +473,11 @@ mod tests {
         assert_eq!(ctx.project_id, project_id);
         assert_eq!(ctx.project_agent_id, "pa-1");
         assert_eq!(ctx.agent_id.as_deref(), Some(agent_id.to_string().as_str()));
-        assert!(
-            !ctx.session_id.is_empty(),
-            "session_id must be populated so SessionConfig.aura_session_id passes \
-             the Tier-1 chat preflight"
+        assert_ne!(
+            ctx.session_id,
+            aura_os_core::SessionId::nil(),
+            "session_id must be populated (non-nil) so SessionConfig.aura_session_id \
+             passes the Tier-1 chat preflight"
         );
         assert!(
             fork.is_none(),

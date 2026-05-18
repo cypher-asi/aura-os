@@ -449,8 +449,11 @@ pub(super) async fn open_harness_chat_stream(
     // Snapshot the persistence identifiers so we can advertise them in
     // SSE response headers for callers (e.g. the CEO's `send_to_agent`)
     // that want to locate the saved turn without draining the stream.
+    // The wire shape is `(session_id, project_id)` strings — stringify
+    // the typed `SessionId` here so `sse_response_headers` keeps its
+    // `&str` interface unchanged.
     let persist_snapshot: Option<(String, String)> =
-        Some((ctx.session_id.clone(), ctx.project_id.clone()));
+        Some((ctx.session_id.to_string(), ctx.project_id.clone()));
 
     // Snapshot the user content for the on-send title generator before
     // it gets moved into `SessionBridgeTurn`. The title task only fires
@@ -594,8 +597,12 @@ fn require_persist_ctx(
 }
 
 fn persist_error_ctx(ctx: &ChatPersistCtx) -> crate::error::ChatPersistErrorCtx {
+    // Stringify the typed `SessionId` at this error-payload boundary
+    // — `ChatPersistErrorCtx` keeps `Option<String>` because it gets
+    // serialised straight into the JSON error body that the CEO's
+    // `send_to_agent` tool parses.
     crate::error::ChatPersistErrorCtx {
-        session_id: Some(ctx.session_id.clone()),
+        session_id: Some(ctx.session_id.to_string()),
         project_id: Some(ctx.project_id.clone()),
         project_agent_id: Some(ctx.project_agent_id.clone()),
     }
@@ -623,9 +630,12 @@ fn spawn_session_title_task(
 ) {
     tokio::spawn(async move {
         let storage = ctx.storage.clone();
+        // Stringify the typed session id once; every storage / router
+        // call inside this task wants `&str`.
+        let session_id_str = ctx.session_id.to_string();
 
         // Guard 1: respect rolled-over summary from session_service.
-        match storage.get_session(&ctx.session_id, &ctx.jwt).await {
+        match storage.get_session(&session_id_str, &ctx.jwt).await {
             Ok(ss) => {
                 if ss
                     .summary_of_previous_context
@@ -646,7 +656,7 @@ fn spawn_session_title_task(
         // We just persisted the inbound message above, so a count of
         // exactly 1 means this is a fresh chat. >1 ⇒ follow-up turn.
         let user_message_count = match storage
-            .list_events(&ctx.session_id, &ctx.jwt, None, None)
+            .list_events(&session_id_str, &ctx.jwt, None, None)
             .await
         {
             Ok(events) => events
@@ -667,7 +677,7 @@ fn spawn_session_title_task(
             &http,
             &router_url,
             &ctx.jwt,
-            &ctx.session_id,
+            &session_id_str,
             &ctx.project_id,
             // Mirror `generate_session_summary` / `summarize_session`:
             // attribute the title's tokens to the project-agent
@@ -736,13 +746,17 @@ fn build_sse_stream(
     // ignore the event (the progress dispatcher is a switch on
     // `stage` strings).
     if let Some(fork) = fork_info {
+        // SSE wire shape stays string-typed for both session ids
+        // (frontend matcher and `?session=` URL swap both expect raw
+        // strings); stringify the typed `SessionId` here at the emit
+        // boundary.
         if let Ok(forked_event) = Event::default()
             .event("progress")
             .json_data(serde_json::json!({
                 "type": "progress",
                 "stage": "forked_for_context",
-                "previous_session_id": fork.previous_session_id,
-                "new_session_id": fork.new_session_id,
+                "previous_session_id": fork.previous_session_id.to_string(),
+                "new_session_id": fork.new_session_id.to_string(),
                 "message": "Continued from previous chat — context was filling up",
             }))
         {
@@ -1180,8 +1194,12 @@ mod tests {
             /* is_new */ true,
             /* was_queued */ false,
             Some(ForkInfo {
-                previous_session_id: "00000000-0000-0000-0000-000000000aaa".to_string(),
-                new_session_id: "00000000-0000-0000-0000-000000000bbb".to_string(),
+                previous_session_id: "00000000-0000-0000-0000-000000000aaa"
+                    .parse()
+                    .expect("static UUID literal parses as SessionId"),
+                new_session_id: "00000000-0000-0000-0000-000000000bbb"
+                    .parse()
+                    .expect("static UUID literal parses as SessionId"),
             }),
             /* metrics */ None,
         );

@@ -16,7 +16,7 @@
 //! `generate_image` tool itself, so the existing `ImageBlock` renderer
 //! consumes either origin without UI changes.
 
-use aura_os_core::{AgentId, AgentInstanceId, ProjectId};
+use aura_os_core::{AgentId, AgentInstanceId, ProjectId, SessionId};
 use aura_os_harness::HarnessOutbound;
 use serde_json::{json, Value};
 use tokio::sync::broadcast;
@@ -66,6 +66,27 @@ pub(super) async fn resolve_persist_ctx(
     force_new: bool,
     pinned_session_id: Option<&str>,
 ) -> Option<ChatPersistCtx> {
+    // Parse the wire `session_id` into the typed `SessionId` once at
+    // this boundary; downstream `setup_*_chat_persistence` only
+    // accept `Option<&SessionId>`. A non-UUID at this surface is best-
+    // effort dropped (image-mode persistence is non-blocking — a
+    // mistyped `?session=` from a stale tab must never break the
+    // generation stream itself).
+    let parsed_pin: Option<SessionId> = pinned_session_id
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .and_then(|s| match s.parse::<SessionId>() {
+            Ok(id) => Some(id),
+            Err(error) => {
+                warn!(
+                    raw = %s,
+                    %error,
+                    "image-mode persist: pinned session_id is not a valid UUID; ignoring pin"
+                );
+                None
+            }
+        });
+    let parsed_pin_ref = parsed_pin.as_ref();
     if let (Some(project_id), Some(agent_instance_id)) = (project_id, agent_instance_id) {
         let parsed_project = project_id.parse::<ProjectId>().ok();
         let parsed_instance = agent_instance_id.parse::<AgentInstanceId>().ok();
@@ -76,7 +97,7 @@ pub(super) async fn resolve_persist_ctx(
                 &parsed_instance,
                 jwt,
                 force_new,
-                pinned_session_id,
+                parsed_pin_ref,
                 // Image / 3D generation isn't a cross-agent reply
                 // — no sender to thread through, and the chain
                 // depth is irrelevant for this synthetic turn.
@@ -118,7 +139,7 @@ pub(super) async fn resolve_persist_ctx(
                 "",
                 jwt,
                 force_new,
-                pinned_session_id,
+                parsed_pin_ref,
                 None,
                 0,
                 None,
@@ -412,10 +433,14 @@ mod tests {
             .await
             .expect("create_session");
 
+        let parsed_session_id: SessionId = session
+            .id
+            .parse()
+            .expect("mock storage returns valid UUID session ids");
         let ctx = ChatPersistCtx {
             storage: storage.clone(),
             jwt: "jwt".to_string(),
-            session_id: session.id.clone(),
+            session_id: parsed_session_id,
             project_agent_id: project_agent_id.clone(),
             project_id: project_id.clone(),
             agent_id: Some("agent-image-mode".to_string()),

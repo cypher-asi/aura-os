@@ -24,21 +24,26 @@ use super::discovery::storage_session_sort_key;
 /// `connecting` / `queued` prefix so the chat panel can swap
 /// `?session=<old>` → `?session=<new>` and show a one-shot soft
 /// banner without the user having to click `+`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+///
+/// Both ids are typed [`SessionId`]s in memory — the
+/// `progress: forked_for_context` SSE payload stringifies them at
+/// the emit site so the wire shape (`previous_session_id` /
+/// `new_session_id` strings) stays byte-identical.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct ForkInfo {
-    pub(crate) previous_session_id: String,
-    pub(crate) new_session_id: String,
+    pub(crate) previous_session_id: SessionId,
+    pub(crate) new_session_id: SessionId,
 }
 
 /// Output of `resolve_chat_session_with_pin`. The new shape carries
 /// the resolved `session_id` PLUS the optional [`ForkInfo`] that
 /// `build_sse_stream` needs to emit the `progress: forked_for_context`
-/// event. Returning a tuple instead of widening `Option<String>` keeps
-/// the migration mechanical at the call sites and avoids hiding the
-/// fork signal inside an unrelated wrapper.
-#[derive(Debug, Clone)]
+/// event. Returning a tuple instead of widening `Option<SessionId>`
+/// keeps the migration mechanical at the call sites and avoids hiding
+/// the fork signal inside an unrelated wrapper.
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct ResolvedChatSession {
-    pub(crate) session_id: String,
+    pub(crate) session_id: SessionId,
     pub(crate) fork: Option<ForkInfo>,
 }
 
@@ -46,7 +51,12 @@ pub(crate) struct ResolvedChatSession {
 pub(crate) struct ChatPersistCtx {
     pub(crate) storage: Arc<StorageClient>,
     pub(crate) jwt: String,
-    pub(crate) session_id: String,
+    /// Resolved storage session id this chat turn is being persisted
+    /// into. Strongly typed as [`SessionId`] in memory; the
+    /// `aura_os_storage` JSON layer still wants `String`, so callers
+    /// stringify at the boundary (see e.g.
+    /// [`persist_user_message`] / [`persist_task::persist_event`]).
+    pub(crate) session_id: SessionId,
     pub(crate) project_agent_id: String,
     pub(crate) project_id: String,
     /// Org-level agent id (the `agents.agent_id` from aura-network)
@@ -101,42 +111,40 @@ pub(crate) struct ChatPersistCtx {
     pub(crate) from_agent_id: Option<String>,
 }
 
-impl ChatPersistCtx {
-    /// Best-effort typed view of `session_id` for use as the third
-    /// segment in [`aura_os_core::harness_agent_id`]. Storage session
-    /// ids are UUIDs in production; a non-UUID falls back to `None`
-    /// and degrades to the legacy two-segment partition so the chat
-    /// path keeps working without the session-level lane split.
-    pub(super) fn parsed_session_id(&self) -> Option<SessionId> {
-        self.session_id.parse().ok()
-    }
-}
-
 /// Build the harness partition string for a chat route, folding in
-/// `persist.session_id` as the third segment when it parses as a
-/// `SessionId` so the registry, turn slot, and `SessionInit.agent_id`
-/// are all per-storage-session. See [`aura_os_core::harness_agent_id`]
-/// for the partition shape and `PARALLEL_SESSIONS.md` for why both
-/// chat routes share this builder.
+/// `persist.session_id` as the third segment so the registry, turn
+/// slot, and `SessionInit.agent_id` are all per-storage-session. See
+/// [`aura_os_core::harness_agent_id`] for the partition shape and
+/// `PARALLEL_SESSIONS.md` for why both chat routes share this builder.
+///
+/// Tier 3 cleanup: `ChatPersistCtx::session_id` is now a typed
+/// [`SessionId`], so the helper no longer parses a `String` back to
+/// `SessionId` on every call — the parse happened once at the
+/// resolver and the typed value has been carried through to here.
 pub(super) fn build_chat_partition(
     template: &AgentId,
     instance: Option<&AgentInstanceId>,
     persist: Option<&ChatPersistCtx>,
 ) -> String {
-    let session = persist.and_then(|c| c.parsed_session_id());
-    aura_os_core::harness_agent_id(template, instance, session.as_ref())
+    aura_os_core::harness_agent_id(template, instance, persist.map(|c| &c.session_id))
 }
 
 /// Outcome of attempting to validate a caller-supplied
 /// `pinned_session_id` against the agent's session list. The mismatch
 /// arm carries enough detail for the handler to return a structured
 /// 400 instead of a generic 500.
+///
+/// `Matched` carries a typed [`SessionId`] (Tier 3 cleanup); the
+/// `Mismatch.session_id` deliberately stays `String` because it is
+/// the caller-supplied stringified id we report back in the 400, and
+/// matches whatever wire shape the caller sent us regardless of
+/// whether it parses as a UUID.
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum PinnedSessionOutcome {
     /// No pin requested — fall through to the legacy resolution path.
     NotRequested,
     /// Pin matched a session that belongs to this agent — use as-is.
-    Matched(String),
+    Matched(SessionId),
     /// Pin pointed at a session that does not belong to this agent.
     Mismatch { session_id: String },
 }
@@ -150,18 +158,22 @@ pub(crate) async fn try_pin_session(
     storage: &StorageClient,
     jwt: &str,
     project_agent_id: &str,
-    pinned_session_id: Option<&str>,
+    pinned_session_id: Option<&SessionId>,
 ) -> PinnedSessionOutcome {
     let Some(pinned) = pinned_session_id else {
         return PinnedSessionOutcome::NotRequested;
     };
-    let pinned = pinned.to_string();
+    // Stringify once at the storage boundary; the in-memory id stays
+    // typed for downstream consumers.
+    let pinned_str = pinned.to_string();
     match storage.list_sessions(project_agent_id, jwt).await {
         Ok(sessions) => {
-            if sessions.iter().any(|s| s.id == pinned) {
-                PinnedSessionOutcome::Matched(pinned)
+            if sessions.iter().any(|s| s.id == pinned_str) {
+                PinnedSessionOutcome::Matched(*pinned)
             } else {
-                PinnedSessionOutcome::Mismatch { session_id: pinned }
+                PinnedSessionOutcome::Mismatch {
+                    session_id: pinned_str,
+                }
             }
         }
         Err(e) => {
@@ -170,7 +182,9 @@ pub(crate) async fn try_pin_session(
                 error = %e,
                 "Failed to list sessions while validating pinned session_id; treating as mismatch"
             );
-            PinnedSessionOutcome::Mismatch { session_id: pinned }
+            PinnedSessionOutcome::Mismatch {
+                session_id: pinned_str,
+            }
         }
     }
 }
@@ -182,7 +196,7 @@ pub(crate) async fn resolve_chat_session_with_pin(
     project_agent_id: &str,
     project_id: &str,
     force_new: bool,
-    pinned_session_id: Option<&str>,
+    pinned_session_id: Option<&SessionId>,
     session_service: &SessionService,
     auto_fork_threshold: f64,
 ) -> Option<ResolvedChatSession> {
@@ -216,7 +230,7 @@ pub(crate) async fn resolve_chat_session_with_pin(
     .await
     {
         Some(fork) => Some(ResolvedChatSession {
-            session_id: fork.new_session_id.clone(),
+            session_id: fork.new_session_id,
             fork: Some(fork),
         }),
         None => Some(ResolvedChatSession {
@@ -232,8 +246,8 @@ async fn pick_candidate_session(
     project_agent_id: &str,
     project_id: &str,
     force_new: bool,
-    pinned_session_id: Option<&str>,
-) -> Option<String> {
+    pinned_session_id: Option<&SessionId>,
+) -> Option<SessionId> {
     // `force_new` wins over `pinned_session_id`: callers that
     // explicitly want a brand-new session (the chat-input "+" button)
     // shouldn't accidentally land in an old session because their
@@ -244,7 +258,7 @@ async fn pick_candidate_session(
             // re-validating here would double the round-trip on
             // every turn. Callers (the chat handlers) validate up
             // front and 400 on mismatch before reaching here.
-            return Some(pinned.to_string());
+            return Some(*pinned);
         }
         if let Some(existing) = existing_session_for_agent(storage, jwt, project_agent_id).await {
             return Some(existing);
@@ -270,11 +284,14 @@ async fn maybe_auto_fork_chat_session(
     jwt: &str,
     project_agent_id: &str,
     project_id: &str,
-    candidate_session_id: &str,
+    candidate_session_id: &SessionId,
     session_service: &SessionService,
     auto_fork_threshold: f64,
 ) -> Option<ForkInfo> {
-    let candidate = match storage.get_session(candidate_session_id, jwt).await {
+    // Stringify once at the storage boundary; the rest of this
+    // function works with the typed id.
+    let candidate_id_str = candidate_session_id.to_string();
+    let candidate = match storage.get_session(&candidate_id_str, jwt).await {
         Ok(s) => s,
         Err(error) => {
             warn!(
@@ -306,19 +323,8 @@ async fn maybe_auto_fork_chat_session(
             return None;
         }
     };
-    let parsed_session_id = match candidate_session_id.parse::<SessionId>() {
-        Ok(s) => s,
-        Err(error) => {
-            warn!(
-                session_id = %candidate_session_id,
-                %error,
-                "auto-fork check: candidate session id is not a valid UUID; skipping fork"
-            );
-            return None;
-        }
-    };
 
-    let summary = lookup_rollover_summary(storage, jwt, candidate_session_id).await;
+    let summary = lookup_rollover_summary(storage, jwt, &candidate_id_str).await;
     let summary = if summary.trim().is_empty() {
         // Fallback path: the persist task failed to write the summary
         // event (or this is the `usage_over_threshold` branch where the
@@ -334,7 +340,7 @@ async fn maybe_auto_fork_chat_session(
         .create_chat_followup_session(
             &parsed_project_id,
             project_agent_id,
-            &parsed_session_id,
+            candidate_session_id,
             summary,
             candidate.model.clone(),
         )
@@ -349,8 +355,8 @@ async fn maybe_auto_fork_chat_session(
                 "Auto-forked chat session at context pressure"
             );
             Some(ForkInfo {
-                previous_session_id: candidate_session_id.to_string(),
-                new_session_id: new_session_id.to_string(),
+                previous_session_id: *candidate_session_id,
+                new_session_id,
             })
         }
         Err(error) => {
@@ -400,7 +406,7 @@ async fn existing_session_for_agent(
     storage: &StorageClient,
     jwt: &str,
     project_agent_id: &str,
-) -> Option<String> {
+) -> Option<SessionId> {
     match storage.list_sessions(project_agent_id, jwt).await {
         Ok(sessions) => {
             // Sort by the same recency key the reader uses so a writer
@@ -418,10 +424,10 @@ async fn existing_session_for_agent(
             // structurally unreadable the very next persist will
             // surface the error, and the UI loader applies the same
             // sort key so writer/reader can't diverge.
-            sessions
+            let latest = sessions
                 .iter()
-                .max_by_key(|s| storage_session_sort_key(s))
-                .map(|s| s.id.clone())
+                .max_by_key(|s| storage_session_sort_key(s))?;
+            parse_storage_session_id(&latest.id, project_agent_id)
         }
         Err(e) => {
             warn!(
@@ -439,7 +445,7 @@ async fn create_new_chat_session(
     jwt: &str,
     project_agent_id: &str,
     project_id: &str,
-) -> Option<String> {
+) -> Option<SessionId> {
     let req = aura_os_storage::CreateSessionRequest {
         project_id: project_id.to_string(),
         org_id: None,
@@ -449,9 +455,34 @@ async fn create_new_chat_session(
         summary_of_previous_context: None,
     };
     match storage.create_session(project_agent_id, jwt, &req).await {
-        Ok(session) => Some(session.id),
+        Ok(session) => parse_storage_session_id(&session.id, project_agent_id),
         Err(e) => {
             error!(error = %e, %project_agent_id, "Failed to create chat session in storage");
+            None
+        }
+    }
+}
+
+/// Parse a storage-returned session id into the typed [`SessionId`]
+/// at the producer side of the chat persist pipeline. Storage
+/// session ids are UUIDs in production; any non-UUID would have to
+/// have been written by a bug or an external tool, and we'd rather
+/// degrade to "no resolved session" (the chat path's existing
+/// soft-fail mode) than carry a poison value through every consumer
+/// downstream. The warn! makes the regression visible on the
+/// first turn rather than at some downstream point that no longer
+/// has the original id in scope.
+fn parse_storage_session_id(raw: &str, project_agent_id: &str) -> Option<SessionId> {
+    match raw.parse::<SessionId>() {
+        Ok(id) => Some(id),
+        Err(error) => {
+            warn!(
+                session_id = %raw,
+                %project_agent_id,
+                %error,
+                "storage returned a non-UUID session id; treating as unresolved \
+                 (chat will fall through to the unresolved-session error path)"
+            );
             None
         }
     }
@@ -513,8 +544,11 @@ pub(crate) async fn persist_user_message(
 ) -> Result<aura_os_storage::StorageSessionEvent, aura_os_storage::StorageError> {
     let payload =
         build_user_message_payload(content, attachments, ctx.from_agent_id.as_deref());
+    // Stringify the typed `SessionId` once at this storage boundary;
+    // `aura_os_storage` keeps `String` on the wire deliberately.
+    let session_id_str = ctx.session_id.to_string();
     let req = aura_os_storage::CreateSessionEventRequest {
-        session_id: Some(ctx.session_id.clone()),
+        session_id: Some(session_id_str.clone()),
         user_id: None,
         agent_id: Some(ctx.project_agent_id.clone()),
         sender: Some("user".to_string()),
@@ -525,7 +559,7 @@ pub(crate) async fn persist_user_message(
     };
     match ctx
         .storage
-        .create_event(&ctx.session_id, &ctx.jwt, &req)
+        .create_event(&session_id_str, &ctx.jwt, &req)
         .await
     {
         Ok(evt) => Ok(evt),
@@ -661,6 +695,7 @@ mod pin_tests {
 
     use std::sync::Arc;
 
+    use aura_os_core::SessionId;
     use aura_os_sessions::SessionService;
     use aura_os_storage::testutil::start_mock_storage;
     use aura_os_storage::{CreateSessionRequest, StorageClient};
@@ -685,8 +720,10 @@ mod pin_tests {
     }
 
     /// Helper: spin up the mock storage and create one session for
-    /// `agent_id` so the tests have a real session id to pin.
-    async fn fixture(agent_id: &str) -> (StorageClient, String) {
+    /// `agent_id` so the tests have a real session id to pin. Returns
+    /// the typed [`SessionId`] (the mock storage hands back a UUID by
+    /// construction, so the parse always succeeds in tests).
+    async fn fixture(agent_id: &str) -> (StorageClient, SessionId) {
         let (url, _db) = start_mock_storage().await;
         let storage = StorageClient::with_base_url(&url);
         let session = storage
@@ -709,7 +746,11 @@ mod pin_tests {
         // The mock handle going out of scope here is fine because the
         // server task holds the DB alive for the test process.
         std::mem::forget(_db);
-        (storage, session.id)
+        let sid: SessionId = session
+            .id
+            .parse()
+            .expect("mock storage must return a parseable UUID");
+        (storage, sid)
     }
 
     #[tokio::test]
@@ -729,17 +770,14 @@ mod pin_tests {
     #[tokio::test]
     async fn try_pin_session_mismatches_when_session_id_is_unknown() {
         let (storage, _sid) = fixture("agent-c").await;
-        let outcome = try_pin_session(
-            &storage,
-            "jwt",
-            "agent-c",
-            Some("session-from-another-agent"),
-        )
-        .await;
+        // Use a freshly-minted UUID that storage does not know about;
+        // the mock will list zero matches and return Mismatch.
+        let phantom = SessionId::new();
+        let outcome = try_pin_session(&storage, "jwt", "agent-c", Some(&phantom)).await;
         assert_eq!(
             outcome,
             PinnedSessionOutcome::Mismatch {
-                session_id: "session-from-another-agent".to_string()
+                session_id: phantom.to_string(),
             }
         );
     }

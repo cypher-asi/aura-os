@@ -3,7 +3,7 @@
 //! from the parent template, builds the project-aware system prompt,
 //! and hands off to the SSE driver.
 
-use aura_os_core::{AgentInstanceId, AgentPermissions, OrgId, ProjectId};
+use aura_os_core::{AgentInstanceId, AgentPermissions, OrgId, ProjectId, SessionId};
 use aura_os_harness::SessionConfig;
 use axum::extract::{Path, State};
 use axum::Json;
@@ -20,6 +20,7 @@ use crate::handlers::projects_helpers::{
 };
 use crate::state::{AppState, AuthJwt};
 
+use super::agent_route::parse_wire_session_id;
 use super::busy::{reject_if_partition_busy, BusyScope};
 use super::compaction::{
     append_project_state_to_system_prompt, load_project_state_snapshot,
@@ -103,19 +104,30 @@ pub(crate) async fn send_event_stream(
 
     let force_new = body.new_session.unwrap_or(false);
 
+    // Parse the wire `session_id` once at ingress so every downstream
+    // consumer sees a typed [`SessionId`]; see
+    // `agent_route::parse_wire_session_id` for the matching
+    // helper. Empty strings normalise to "no pin"; non-UUIDs surface
+    // a structured 400 immediately.
+    let requested_session_id = parse_wire_session_id(body.session_id.as_deref())?;
+
     // Validate the caller-supplied pin (`SendChatRequest.session_id`)
     // against storage *before* opening the harness session. Surfacing
     // a structured 400 here is far less surprising than letting the
     // upstream resolve to a different session and write the user's
     // message into the wrong thread. `force_new` always wins.
-    let pinned_session_id = match (force_new, body.session_id.as_deref(), &state.storage_client) {
+    let pinned_session_id: Option<SessionId> = match (
+        force_new,
+        requested_session_id.as_ref(),
+        &state.storage_client,
+    ) {
         (true, _, _) | (_, None, _) | (_, _, None) => None,
-        (false, Some(_), Some(storage)) => {
+        (false, Some(req), Some(storage)) => {
             match try_pin_session(
                 storage.as_ref(),
                 &jwt,
                 &agent_instance_id.to_string(),
-                body.session_id.as_deref(),
+                Some(req),
             )
             .await
             {
@@ -145,7 +157,7 @@ pub(crate) async fn send_event_stream(
         &agent_instance_id,
         &jwt,
         force_new,
-        pinned_session_id.as_deref(),
+        pinned_session_id.as_ref(),
         // Phase 2 of the cross-agent reply plan: thread the harness's
         // `originating_agent_id` (set by `send_to_agent` in
         // aura-harness, commit 6a9b33d) onto the persist ctx so the
@@ -198,7 +210,7 @@ pub(crate) async fn send_event_stream(
         &agent_instance_id,
         &jwt,
         force_new,
-        pinned_session_id.as_deref(),
+        pinned_session_id.as_ref(),
     )
     .await?;
 
@@ -288,7 +300,7 @@ pub(crate) async fn send_event_stream(
         project_id: Some(pid_str),
         project_path,
         aura_org_id: effective_org_id.as_ref().map(ToString::to_string),
-        aura_session_id: persist_ctx.as_ref().map(|c| c.session_id.clone()),
+        aura_session_id: persist_ctx.as_ref().map(|c| c.session_id.to_string()),
         provider_overrides: session_model_overrides_with_cache(
             model.as_deref(),
             Some(format!("instance:{agent_instance_id}")),
@@ -327,7 +339,7 @@ async fn load_history_and_project_state(
     agent_instance_id: &AgentInstanceId,
     jwt: &str,
     force_new: bool,
-    pinned_session_id: Option<&str>,
+    pinned_session_id: Option<&SessionId>,
 ) -> ApiResult<(
     Option<Vec<aura_os_harness::ConversationMessage>>,
     Option<String>,
@@ -349,15 +361,20 @@ async fn load_history_and_project_state(
     // session, not the full multi-session aggregate. See
     // `load_current_session_events_for_instance` doc-comment for rationale.
     let stored = match pinned_session_id {
-        Some(session_id) => load_pinned_session_events_for_instance(
-            state,
-            agent_instance_id,
-            jwt,
-            session_id,
-            &project_id.to_string(),
-        )
-        .await
-        .map_err(map_storage_error)?,
+        Some(session_id) => {
+            // Stringify once at this storage boundary; the loader
+            // keeps `&str` to match the REST shape.
+            let session_id_str = session_id.to_string();
+            load_pinned_session_events_for_instance(
+                state,
+                agent_instance_id,
+                jwt,
+                &session_id_str,
+                &project_id.to_string(),
+            )
+            .await
+            .map_err(map_storage_error)?
+        }
         None => load_current_session_events_for_instance(state, agent_instance_id, jwt)
             .await
             .map_err(map_storage_error)?,

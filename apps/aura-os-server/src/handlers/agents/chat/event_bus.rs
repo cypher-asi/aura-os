@@ -129,9 +129,13 @@ fn publish_chat_event(
         "publishing chat event"
     );
 
+    // Stringify the typed `SessionId` at this wire-payload boundary
+    // (`build_chat_event_payload` keeps `&str` to match the WS JSON
+    // contract — `session_id` is a raw UUID string on the frontend).
+    let session_id_str = ctx.session_id.to_string();
     let payload = build_chat_event_payload(
         event_type,
-        &ctx.session_id,
+        &session_id_str,
         project_id,
         project_agent_id,
         agent_id,
@@ -270,9 +274,11 @@ mod tests {
     /// Minimal `ChatPersistCtx` literal for the tests. Mirrors the
     /// shape used by `cross_agent_reply::tests::ctx_with_originator`
     /// but parameterized on the three id fields the wire payload
-    /// surfaces.
+    /// surfaces. `session_id` is taken as `SessionId` directly now
+    /// that `ChatPersistCtx.session_id` is typed; the wire payload
+    /// the publisher emits still stringifies through `Display`.
     fn test_ctx(
-        session_id: &str,
+        session_id: aura_os_core::SessionId,
         project_id: &str,
         project_agent_id: &str,
         agent_id: Option<&str>,
@@ -282,7 +288,7 @@ mod tests {
                 "http://localhost:9999",
             )),
             jwt: "jwt".to_string(),
-            session_id: session_id.to_string(),
+            session_id,
             project_agent_id: project_agent_id.to_string(),
             project_id: project_id.to_string(),
             agent_id: agent_id.map(str::to_string),
@@ -298,7 +304,8 @@ mod tests {
     #[tokio::test]
     async fn user_message_event_payload_shape_is_pinned() {
         let (tx, mut rx) = broadcast::channel::<serde_json::Value>(64);
-        let ctx = test_ctx("sess-1", "project-x", "instance-y", Some("agent-z"));
+        let session_id = aura_os_core::SessionId::new();
+        let ctx = test_ctx(session_id, "project-x", "instance-y", Some("agent-z"));
 
         publish_user_message_event(&tx, &ctx, "evt-1");
 
@@ -314,7 +321,7 @@ mod tests {
         );
         assert_eq!(
             obj.get("session_id").and_then(|v| v.as_str()),
-            Some("sess-1")
+            Some(session_id.to_string().as_str())
         );
         assert_eq!(
             obj.get("project_id").and_then(|v| v.as_str()),
@@ -361,7 +368,12 @@ mod tests {
     #[tokio::test]
     async fn user_message_event_payload_includes_from_agent_id_when_set() {
         let (tx, mut rx) = broadcast::channel::<serde_json::Value>(64);
-        let mut ctx = test_ctx("sess-2", "project-x", "instance-y", Some("agent-z"));
+        let mut ctx = test_ctx(
+            aura_os_core::SessionId::new(),
+            "project-x",
+            "instance-y",
+            Some("agent-z"),
+        );
         ctx.from_agent_id = Some("barret-uuid".to_string());
 
         publish_user_message_event(&tx, &ctx, "evt-2");
@@ -433,7 +445,12 @@ mod tests {
     #[tokio::test]
     async fn assistant_message_end_event_shape_matches_user_message_shape() {
         let (tx, mut rx) = broadcast::channel::<serde_json::Value>(64);
-        let ctx = test_ctx("sess-1", "project-x", "instance-y", Some("agent-z"));
+        let ctx = test_ctx(
+            aura_os_core::SessionId::new(),
+            "project-x",
+            "instance-y",
+            Some("agent-z"),
+        );
 
         publish_user_message_event(&tx, &ctx, "evt-1");
         publish_assistant_message_end_event(&tx, &ctx, "msg-1");
@@ -479,7 +496,12 @@ mod tests {
         let (tx, rx) = broadcast::channel::<serde_json::Value>(64);
         drop(rx);
 
-        let ctx = test_ctx("sess-1", "project-x", "instance-y", Some("agent-z"));
+        let ctx = test_ctx(
+            aura_os_core::SessionId::new(),
+            "project-x",
+            "instance-y",
+            Some("agent-z"),
+        );
         publish_user_message_event(&tx, &ctx, "evt-1");
         publish_assistant_message_end_event(&tx, &ctx, "msg-1");
         // Reaching this line proves both publishers ran to

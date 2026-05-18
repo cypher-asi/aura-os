@@ -182,7 +182,10 @@ pub(super) fn spawn_cross_agent_reply_callback(
 
     let truncated = truncate_for_cross_agent_reply(&reply_text);
     let bearer_jwt = ctx.jwt.clone();
-    let session_id = ctx.session_id.clone();
+    // Stringify the typed `SessionId` at this spawn boundary; the
+    // task only ever logs it, and keeping `String` avoids dragging
+    // the newtype into the cross-agent reply task signature.
+    let session_id = ctx.session_id.to_string();
     let project_agent_id = ctx.project_agent_id.clone();
     let next_depth = depth.saturating_add(1);
     // Display-side provenance: stamp Barret's *org-level* agent id
@@ -336,7 +339,7 @@ mod tests {
             storage: Arc::new(aura_os_storage::StorageClient::with_base_url(
                 "http://localhost:9999",
             )),
-            session_id: "session-test".to_string(),
+            session_id: aura_os_core::SessionId::new(),
             project_id: "project-test".to_string(),
             project_agent_id: "00000000-0000-0000-0000-000000000aaa".to_string(),
             agent_id: None,
