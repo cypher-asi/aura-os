@@ -50,17 +50,14 @@ const OnboardingChecklist = lazy(() =>
 function ProjectCreationModalHost() {
   const navigate = useNavigate();
   const closePreview = useSidekickStore((s) => s.closePreview);
-  const { setProjects, newProjectModalOpen, closeNewProjectModal } = useProjectsList();
+  const { prependProject, newProjectModalOpen, closeNewProjectModal } = useProjectsList();
 
   const handleProjectCreated = useCallback((project: import("../../shared/types").Project) => {
     closeNewProjectModal();
     closePreview();
-    setProjects((prev) => {
-      const next = prev.filter((existing) => existing.project_id !== project.project_id);
-      return [...next, project];
-    });
+    prependProject(project);
     navigate(`/projects/${project.project_id}`);
-  }, [closeNewProjectModal, navigate, setProjects, closePreview]);
+  }, [closeNewProjectModal, navigate, prependProject, closePreview]);
 
   if (!newProjectModalOpen) {
     return null;

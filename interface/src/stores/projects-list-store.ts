@@ -95,6 +95,14 @@ interface ProjectsListState {
 
   setProjects: (updater: Project[] | ((prev: Project[]) => Project[])) => void;
   saveProjectOrder: (orderedIds: string[]) => void;
+  /**
+   * Insert a freshly created project at the top of the list and persist
+   * the new ordering. Use this for the "I just created this project"
+   * path instead of `setProjects`, which otherwise runs the new id
+   * through `normalizeProjectOrderIds` and pushes it to the bottom
+   * because the id is missing from `aura-project-order:<org>`.
+   */
+  prependProject: (project: Project) => void;
   refreshProjects: () => Promise<void>;
   setAgentsByProject: (
     updater:
@@ -219,6 +227,20 @@ export const useProjectsListStore = create<ProjectsListState>()((set, get) => ({
       );
       const nextProjects = applyProjectOrder(state.projects, normalizedOrderedIds);
       setProjectOrder(orgId, normalizedOrderedIds);
+      syncProjectsQueryCache(nextProjects, orgId);
+      return { projects: nextProjects, projectsOrgId: orgId };
+    });
+  },
+
+  prependProject: (project) => {
+    set((state) => {
+      const orgId = state.projectsOrgId ?? getActiveOrgId() ?? null;
+      const filtered = state.projects.filter(
+        (existing) => existing.project_id !== project.project_id,
+      );
+      const nextProjects = [project, ...filtered];
+      const orderedIds = nextProjects.map((p) => p.project_id);
+      setProjectOrder(orgId, orderedIds);
       syncProjectsQueryCache(nextProjects, orgId);
       return { projects: nextProjects, projectsOrgId: orgId };
     });

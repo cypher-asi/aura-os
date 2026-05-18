@@ -234,6 +234,46 @@ describe("projects-list-store", () => {
     });
   });
 
+  describe("prependProject", () => {
+    it("inserts the new project at the top and persists the new order", () => {
+      const p1 = makeProject("p1", "2025-06-01T00:00:00Z");
+      const p2 = makeProject("p2", "2025-06-02T00:00:00Z");
+      useProjectsListStore.setState({
+        projects: [p1, p2],
+        projectsOrgId: "org-1",
+        loadingProjects: false,
+      });
+
+      const fresh = makeProject("p-new", "2025-06-03T00:00:00Z");
+      useProjectsListStore.getState().prependProject(fresh);
+
+      expect(
+        useProjectsListStore.getState().projects.map((project) => project.project_id),
+      ).toEqual(["p-new", "p1", "p2"]);
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        "aura-project-order:org-1",
+        JSON.stringify(["p-new", "p1", "p2"]),
+      );
+    });
+
+    it("dedupes if the project is already in the list", () => {
+      const p1 = makeProject("p1", "2025-06-01T00:00:00Z");
+      const p2 = makeProject("p2", "2025-06-02T00:00:00Z");
+      useProjectsListStore.setState({
+        projects: [p1, p2],
+        projectsOrgId: "org-1",
+        loadingProjects: false,
+      });
+
+      const updated = { ...p2, name: "Renamed" };
+      useProjectsListStore.getState().prependProject(updated);
+
+      const projects = useProjectsListStore.getState().projects;
+      expect(projects.map((project) => project.project_id)).toEqual(["p2", "p1"]);
+      expect(projects[0].name).toBe("Renamed");
+    });
+  });
+
   describe("refreshProjects", () => {
     it("loads and deduplicates projects", async () => {
       const p = makeProject("p1", "2025-06-01T00:00:00Z");
