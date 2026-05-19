@@ -8,7 +8,7 @@ use tracing::warn;
 
 use super::super::persist::ChatPersistCtx;
 use super::super::persist_task::{flush_text_segment, persist_event, PersistTaskState};
-use super::normalize::{coerce_tool_use_input_to_object, normalize_tool_use_input};
+use super::normalize::{coerce_tool_use_input_with_status, normalize_tool_use_input};
 
 pub(super) async fn handle_tool_use_start(
     state: &mut PersistTaskState,
@@ -41,6 +41,22 @@ pub(super) async fn handle_tool_use_start(
     }
 }
 
+/// Persist a tool_use snapshot (one event per `input_json_delta` cadence
+/// from upstream Anthropic streaming).
+///
+/// **Streaming skip-path.** `aura-protocol::ToolCallSnapshot` ships the
+/// `input_json_delta` accumulator as a `Value::String` whose contents
+/// grow byte-by-byte until the closing brace lands. Persisting and
+/// mutating shared state for every intermediate snapshot would:
+/// (1) bloat the SessionEvent stream with throwaway placeholders, and
+/// (2) — pre-fix — spam the error log with false "non-object" warnings.
+///
+/// When `coerce_tool_use_input_with_status` reports the snapshot is still
+/// mid-stream (partial JSON that doesn't parse), we return early without
+/// updating `content_blocks` or writing a SessionEvent. The next snapshot
+/// — or the final one, which arrives as a real `Value::Object` — lands
+/// the canonical state. Live UI consumers are unaffected because they
+/// read the harness broadcast directly, not via this persist task.
 pub(super) async fn handle_tool_call_snapshot(
     state: &mut PersistTaskState,
     ctx: &ChatPersistCtx,
@@ -48,7 +64,11 @@ pub(super) async fn handle_tool_call_snapshot(
     name: &str,
     input: &Value,
 ) {
-    let sanitized = coerce_tool_use_input_to_object(id, name, input);
+    let coerced = coerce_tool_use_input_with_status(id, name, input);
+    if coerced.is_streaming {
+        return;
+    }
+    let sanitized = coerced.value;
     update_or_append_tool_use_input(state, id, name, &sanitized);
     if persist_event(
         ctx,
@@ -343,5 +363,103 @@ mod tests {
         );
         assert_eq!(state.content_blocks.len(), 1);
         assert_eq!(state.content_blocks[0]["input"]["title"], "Phase 06");
+    }
+
+    #[tokio::test]
+    async fn handle_tool_call_snapshot_skips_mid_stream_partial_string() {
+        // Regression for the live-log spam ("tool_use.input arrived as
+        // non-object" ERROR repeated ~10× per tool_use). The harness
+        // emits one snapshot per Anthropic input_json_delta event with
+        // the accumulator as a Value::String. Persisting + mutating
+        // state on every partial snapshot is wasteful and was the
+        // source of the ERROR-log flood. We must skip those events; a
+        // later snapshot (final Value::Object) lands the canonical state.
+        let mut state = PersistTaskState::new();
+        state.message_id = "msg-stream".to_string();
+        let ctx = ChatPersistCtx {
+            storage: std::sync::Arc::new(aura_os_storage::StorageClient::with_base_url(
+                "http://127.0.0.1:1",
+            )),
+            session_id: aura_os_core::SessionId::new(),
+            project_id: "project-test".to_string(),
+            project_agent_id: "00000000-0000-0000-0000-000000000aaa".to_string(),
+            agent_id: None,
+            originating_agent_id: None,
+            cross_agent_depth: 0,
+            jwt: "jwt".to_string(),
+            from_agent_id: None,
+        };
+
+        for partial in [r#"""#, r#"{"path""#, r#"{"path":"s"#, r#"{"path":"src"#] {
+            handle_tool_call_snapshot(
+                &mut state,
+                &ctx,
+                "toolu_streaming",
+                "list_files",
+                &Value::String(partial.to_string()),
+            )
+            .await;
+        }
+
+        assert!(
+            state.content_blocks.is_empty(),
+            "mid-stream snapshots must not mutate content_blocks"
+        );
+        assert_eq!(
+            state.persisted_events, 0,
+            "mid-stream snapshots must not bump the persisted-events counter"
+        );
+
+        handle_tool_call_snapshot(
+            &mut state,
+            &ctx,
+            "toolu_streaming",
+            "list_files",
+            &json!({"path": "src/lib.rs"}),
+        )
+        .await;
+
+        assert_eq!(state.content_blocks.len(), 1, "final snapshot must land");
+        assert_eq!(
+            state.content_blocks[0]["input"],
+            json!({"path": "src/lib.rs"})
+        );
+    }
+
+    #[tokio::test]
+    async fn handle_tool_call_snapshot_accepts_complete_json_object_string() {
+        // The accumulator's final state is the closing brace landing,
+        // which makes the string a parseable JSON object. We accept
+        // that as the canonical input (not as streaming).
+        let mut state = PersistTaskState::new();
+        state.message_id = "msg-final".to_string();
+        let ctx = ChatPersistCtx {
+            storage: std::sync::Arc::new(aura_os_storage::StorageClient::with_base_url(
+                "http://127.0.0.1:1",
+            )),
+            session_id: aura_os_core::SessionId::new(),
+            project_id: "project-test".to_string(),
+            project_agent_id: "00000000-0000-0000-0000-000000000aaa".to_string(),
+            agent_id: None,
+            originating_agent_id: None,
+            cross_agent_depth: 0,
+            jwt: "jwt".to_string(),
+            from_agent_id: None,
+        };
+
+        handle_tool_call_snapshot(
+            &mut state,
+            &ctx,
+            "toolu_complete",
+            "read_file",
+            &Value::String(r#"{"path":"src/lib.rs"}"#.to_string()),
+        )
+        .await;
+
+        assert_eq!(state.content_blocks.len(), 1);
+        assert_eq!(
+            state.content_blocks[0]["input"],
+            json!({"path": "src/lib.rs"})
+        );
     }
 }

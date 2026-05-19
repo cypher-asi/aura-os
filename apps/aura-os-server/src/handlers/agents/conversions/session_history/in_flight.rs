@@ -225,22 +225,36 @@ fn apply_tool_call_snapshot(parts: &mut AssistantParts, content: Option<&serde_j
         .unwrap_or_default()
         .to_string();
     // `tool_use.input` must be a JSON object on replay or Anthropic
-    // returns 400 `Input should be an object`. If a persisted snapshot
-    // somehow carried a non-object input (e.g. an older harness build
-    // that string-truncated tool_use inputs during storage compaction),
-    // coerce it to an object so refresh-recovery keeps producing valid
-    // history. `Null` stays `Null` here; it gets backfilled to `{}` by
-    // `apply_tool_result` when the matching result lands.
+    // returns 400 `Input should be an object`. Four replay shapes:
+    //
+    // - `Object` — final snapshot or non-streaming tool. Used as-is.
+    // - `Null` — non-streaming tool that never emitted a snapshot.
+    //   Stays `Null` here; `apply_tool_result` backfills to `{}`.
+    // - `String` containing a complete JSON object — the final state of
+    //   Anthropic's `input_json_delta` accumulator (see
+    //   `persist_task_dispatch::normalize`). Parse it through.
+    // - `String` that doesn't parse, or `Array`/`Number`/`Bool` —
+    //   genuinely corrupt historical data (post-fix, mid-stream
+    //   strings are no longer persisted at all, so this only triggers
+    //   on legacy storage rows). Replace with the `_normalized` marker
+    //   so forensics are preserved and Anthropic still accepts the
+    //   shape on replay.
     let snap_input = match raw_input {
         serde_json::Value::Object(_) | serde_json::Value::Null => raw_input,
+        serde_json::Value::String(ref s) => match serde_json::from_str::<serde_json::Value>(s) {
+            Ok(parsed @ serde_json::Value::Object(_)) => parsed,
+            _ => serde_json::json!({
+                "_normalized": "non_object_input",
+                "original_type": "string",
+            }),
+        },
         other => serde_json::json!({
             "_normalized": "non_object_input",
             "original_type": match &other {
-                serde_json::Value::String(_) => "string",
                 serde_json::Value::Array(_) => "array",
                 serde_json::Value::Number(_) => "number",
                 serde_json::Value::Bool(_) => "bool",
-                serde_json::Value::Null | serde_json::Value::Object(_) => "unknown",
+                serde_json::Value::String(_) | serde_json::Value::Null | serde_json::Value::Object(_) => "unknown",
             },
         }),
     };
