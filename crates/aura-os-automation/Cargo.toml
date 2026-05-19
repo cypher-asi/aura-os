@@ -15,6 +15,11 @@ repository.workspace = true
 # applied by the App layer at the call site).
 aura-os-core = { path = "../aura-os-core", default-features = false }
 aura-os-events = { path = "../aura-os-events" }
+# Phase G4a / Section F2: `task_context::cache` uses `IndexMap` so the
+# bounded eviction order is FIFO by insertion. The workspace already
+# pulls in `indexmap` transitively (e.g. via `aura-protocol`); we
+# declare a direct dependency here so the Cargo.lock pin is explicit.
+indexmap = "2"
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

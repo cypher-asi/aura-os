@@ -447,6 +447,7 @@ dependencies = [
  "aura-os-events",
  "aura-os-harness",
  "chrono",
+ "indexmap",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
