@@ -5,6 +5,8 @@ import { useSidekickStore } from "../../stores/sidekick-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useProjectsList } from "../../apps/projects/useProjectsList";
 import { useProjectsListStore } from "../../stores/projects-list-store";
+import { useAttachCreatedAgent } from "../../hooks/use-attach-created-agent";
+import { api } from "../../api/client";
 import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useDesktopWindowStore } from "../../stores/desktop-window-store";
 import { useAppUIStore } from "../../stores/app-ui-store";
@@ -51,13 +53,32 @@ function ProjectCreationModalHost() {
   const navigate = useNavigate();
   const closePreview = useSidekickStore((s) => s.closePreview);
   const { prependProject, newProjectModalOpen, closeNewProjectModal } = useProjectsList();
+  const attachCreatedAgent = useAttachCreatedAgent();
 
-  const handleProjectCreated = useCallback((project: import("../../shared/types").Project) => {
-    closeNewProjectModal();
-    closePreview();
-    prependProject(project);
-    navigate(`/projects/${project.project_id}`);
-  }, [closeNewProjectModal, navigate, prependProject, closePreview]);
+  // Auto-create a Standard Agent on every new project and route the
+  // user straight into that agent's chat with a `create-agent` handoff
+  // state. `ChatPanel` keys off that state to focus the input bar on
+  // desktop, so the user lands ready to type instead of on
+  // `ProjectEmptyView` having to click "Add Agent" themselves. If the
+  // agent call fails we still want the project to exist, so we fall
+  // back to the empty-state route and let the user pick an agent
+  // manually.
+  const handleProjectCreated = useCallback(
+    async (project: import("../../shared/types").Project) => {
+      closePreview();
+      prependProject(project);
+      try {
+        const instance = await api.createGeneralAgentInstance(project.project_id);
+        attachCreatedAgent(instance);
+      } catch (err) {
+        console.error("Failed to auto-create Standard Agent for new project", err);
+        navigate(`/projects/${project.project_id}`);
+      } finally {
+        closeNewProjectModal();
+      }
+    },
+    [attachCreatedAgent, closeNewProjectModal, closePreview, navigate, prependProject],
+  );
 
   if (!newProjectModalOpen) {
     return null;

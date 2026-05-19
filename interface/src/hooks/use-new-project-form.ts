@@ -115,7 +115,7 @@ function buildOrbitFields(
 export function useNewProjectForm(
   isOpen: boolean,
   onClose: () => void,
-  onCreated: (project: import("../shared/types").Project) => void,
+  onCreated: (project: import("../shared/types").Project) => void | Promise<void>,
 ): NewProjectFormState {
   const activeOrg = useOrgStore((s) => s.activeOrg);
   const orgLoading = useOrgStore((s) => s.isLoading);
@@ -194,7 +194,13 @@ export function useNewProjectForm(
 
       const { track } = await import("../lib/analytics");
       track("project_created", { environment: orbitFields.orbit_repo ? "remote" : "local" });
-      reset(); onCreated(project);
+      // Await `onCreated` before `reset()` so the modal's `loading`
+      // state covers any follow-up work the host kicks off (notably
+      // auto-creating a Standard Agent for the new project). Without
+      // the await, the modal closes immediately and the user briefly
+      // sees `ProjectEmptyView` before being routed into the chat.
+      await onCreated(project);
+      reset();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create project");
     } finally { setLoading(false); }

@@ -6,11 +6,9 @@ import { mergeAgentIntoProjectAgents, projectQueryKeys } from "../queries/projec
 import { useChatHandoffStore } from "../stores/chat-handoff-store";
 import { clearLastAgentIf } from "../utils/storage";
 import { getApiErrorDetails, getApiErrorMessage } from "../shared/utils/api-errors";
-import {
-  createAgentChatHandoffState,
-  projectAgentHandoffTarget,
-} from "../utils/chat-handoff";
+import { projectAgentHandoffTarget } from "../utils/chat-handoff";
 import { useProjectsList } from "../apps/projects/useProjectsList";
+import { useAttachCreatedAgent } from "./use-attach-created-agent";
 import type { Project, AgentInstance } from "../shared/types";
 
 interface ContextMenuState {
@@ -31,7 +29,7 @@ export function useProjectListActions() {
     setProjects,
   } = useProjectsList();
   const pendingCreateAgentHandoff = useChatHandoffStore((state) => state.pendingCreateAgentHandoff);
-  const beginCreateAgentHandoff = useChatHandoffStore((state) => state.beginCreateAgentHandoff);
+  const attachCreatedAgent = useAttachCreatedAgent();
 
   const [ctxMenu, setCtxMenu] = useState<ContextMenuState | null>(null);
   const [renameTarget, setRenameTarget] = useState<Project | null>(null);
@@ -71,6 +69,12 @@ export function useProjectListActions() {
     };
   }, [ctxMenu]);
 
+  // Keep `pendingCreatedAgent` (and therefore the transition overlay inside
+  // `AgentSelectorModal`) alive only until the chat handoff finishes. The
+  // selector itself is closed immediately in `handleAgentCreated`, so this
+  // effect just drops the overlay once `AgentChatRoute` has called
+  // `completeCreateAgentHandoff` and `pendingCreateAgentHandoff` has gone
+  // back to `null` (or moved on to a different target).
   useEffect(() => {
     if (!pendingCreatedAgent) {
       return;
@@ -82,7 +86,6 @@ export function useProjectListActions() {
     if (pendingCreateAgentHandoff?.target === pendingTarget) {
       return;
     }
-    setAgentSelectorProjectId(null);
     setPendingCreatedAgent(null);
   }, [pendingCreateAgentHandoff, pendingCreatedAgent]);
 
@@ -93,26 +96,18 @@ export function useProjectListActions() {
 
   const handleAgentCreated = useCallback(
     (instance: AgentInstance) => {
-      const pid = instance.project_id;
-      setAgentsByProject((prev) => ({
-        ...prev,
-        [pid]: mergeAgentIntoProjectAgents(prev[pid], instance),
-      }));
-      queryClient.setQueryData(
-        projectQueryKeys.agentInstance(pid, instance.agent_instance_id),
-        instance,
-      );
+      // Close the selector immediately so a stray second click on the
+      // standard / fleet row can't slip through and create a duplicate
+      // instance once `creating` has been reset in the `finally` of
+      // `useAgentSelectorData`. The transition overlay is rendered
+      // outside the Modal element and stays mounted while
+      // `pendingCreatedAgent` is set, so the user still sees the
+      // "Opening chat..." affordance during the handoff.
+      setAgentSelectorProjectId(null);
       setPendingCreatedAgent(instance);
-      beginCreateAgentHandoff(
-        projectAgentHandoffTarget(pid, instance.agent_instance_id),
-        instance.name,
-      );
-      navigate(`/projects/${pid}/agents/${instance.agent_instance_id}`, {
-        state: createAgentChatHandoffState(),
-      });
-      void refreshProjectAgents(pid);
+      attachCreatedAgent(instance);
     },
-    [beginCreateAgentHandoff, navigate, refreshProjectAgents, setAgentsByProject],
+    [attachCreatedAgent],
   );
 
   // The project-row "+" used to call `api.createGeneralAgentInstance`

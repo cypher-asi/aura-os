@@ -173,7 +173,14 @@ describe("useProjectListActions", () => {
     expect(mockSetAgentsByProject).toHaveBeenCalled();
   });
 
-  it("keeps the selector open until the created agent handoff completes", () => {
+  it("closes the selector immediately on creation and clears pendingCreatedAgent when the handoff completes", () => {
+    // Phase 1 fix: the selector used to stay open until
+    // `pendingCreateAgentHandoff` cleared, which left the rows clickable
+    // (the transition overlay didn't reliably stack above the modal
+    // portal) and let a fast second click on "Standard Agent" create a
+    // duplicate instance. We now close the selector synchronously and
+    // only keep `pendingCreatedAgent` alive long enough to render the
+    // "Opening chat..." overlay during the handoff.
     const { result, rerender } = renderHook(() => useProjectListActions(), { wrapper });
 
     act(() => {
@@ -198,7 +205,7 @@ describe("useProjectListActions", () => {
       });
     });
 
-    expect(result.current.agentSelectorProjectId).toBe("p-1");
+    expect(result.current.agentSelectorProjectId).toBeNull();
     expect(result.current.pendingCreatedAgent?.agent_instance_id).toBe("ai-1");
 
     mockPendingCreateAgentHandoff = null;

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Drawer, Modal, Spinner, Text } from "@cypher-asi/zui";
-import type { Agent, AgentInstance } from "../../../../shared/types";
+import type { AgentInstance } from "../../../../shared/types";
 import { AgentSelectorList } from "./AgentSelectorList";
 import { useAgentSelectorData } from "./useAgentSelectorData";
 import { useAuraCapabilities } from "../../../../hooks/use-aura-capabilities";
@@ -40,23 +40,6 @@ export function AgentSelectorModal({
     [assignedProjectAgents],
   );
 
-  // Remember the agent the user just clicked so we can keep its row
-  // visible while the create+handoff transition runs. Without this,
-  // `handleAgentCreated` updates `agentsByProject` before the modal
-  // closes — `assignedAgentIds` grows, the row gets filtered out, and
-  // the modal visibly resizes / flashes "No agents match your search."
-  // when it was the only matching row.
-  const [recentlySelectedId, setRecentlySelectedId] = useState<string | null>(null);
-
-  const effectiveAssignedIds = useMemo(() => {
-    if (!recentlySelectedId || !assignedAgentIds.has(recentlySelectedId)) {
-      return assignedAgentIds;
-    }
-    const next = new Set(assignedAgentIds);
-    next.delete(recentlySelectedId);
-    return next;
-  }, [assignedAgentIds, recentlySelectedId]);
-
   // The picker hides agents that are already attached to the project so
   // every fleet row in the list is a real, additive choice. The mobile
   // layout further restricts to remote agents — local agents need a
@@ -65,32 +48,21 @@ export function AgentSelectorModal({
     const pool = isMobileLayout
       ? agents.filter((agent) => agent.machine_type === "remote")
       : agents;
-    return pool.filter((agent) => !effectiveAssignedIds.has(agent.agent_id));
-  }, [agents, effectiveAssignedIds, isMobileLayout]);
+    return pool.filter((agent) => !assignedAgentIds.has(agent.agent_id));
+  }, [agents, assignedAgentIds, isMobileLayout]);
 
   const isBusy = Boolean(creating) || isTransitioning;
   const [query, setQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Reset the search and remembered selection every time the modal
-  // closes so the next open starts from a clean slate. Without this,
-  // the previous query would persist across project rows and quietly
-  // hide the Standard row, and a stale `recentlySelectedId` could
-  // unhide an agent that really is already attached.
+  // Reset the search every time the modal closes so the next open
+  // starts from a clean slate. Without this, the previous query would
+  // persist across project rows and quietly hide the Standard row.
   useEffect(() => {
     if (!isOpen) {
       setQuery("");
-      setRecentlySelectedId(null);
     }
   }, [isOpen]);
-
-  const handleSelectAndRemember = useCallback(
-    (agent: Agent) => {
-      setRecentlySelectedId(agent.agent_id);
-      void handleSelect(agent);
-    },
-    [handleSelect],
-  );
 
   const list = (
     <AgentSelectorList
@@ -99,7 +71,7 @@ export function AgentSelectorModal({
       query={query}
       onQueryChange={setQuery}
       onSelectStandard={handleSelectStandard}
-      onSelectAgent={handleSelectAndRemember}
+      onSelectAgent={handleSelect}
       creating={creating}
       loading={loading}
       error={error}
