@@ -585,8 +585,7 @@ pub(crate) async fn persist_user_message(
     content: &str,
     attachments: &Option<Vec<ChatAttachmentDto>>,
 ) -> Result<aura_os_storage::StorageSessionEvent, aura_os_storage::StorageError> {
-    let payload =
-        build_user_message_payload(content, attachments, ctx.from_agent_id.as_deref());
+    let payload = build_user_message_payload(content, attachments, ctx.from_agent_id.as_deref());
     // Stringify the typed `SessionId` once at this storage boundary;
     // `aura_os_storage` keeps `String` on the wire deliberately.
     let session_id_str = ctx.session_id.to_string();
@@ -697,8 +696,7 @@ mod build_user_message_payload_tests {
 
     #[test]
     fn build_user_message_payload_emits_from_agent_id_when_set() {
-        let payload =
-            build_user_message_payload("hello back", &None, Some("barret-uuid"));
+        let payload = build_user_message_payload("hello back", &None, Some("barret-uuid"));
         assert_eq!(
             payload.get("from_agent_id").and_then(|v| v.as_str()),
             Some("barret-uuid"),
@@ -744,8 +742,8 @@ mod pin_tests {
     use aura_os_storage::{CreateSessionRequest, StorageClient};
 
     use super::{
-        resolve_chat_session_with_pin, try_pin_session, ChatPersistRequest,
-        ChatSessionResolveDeps, PinnedSessionOutcome,
+        resolve_chat_session_with_pin, try_pin_session, ChatPersistRequest, ChatSessionResolveDeps,
+        PinnedSessionOutcome,
     };
 
     /// Build a minimal `SessionService` wired to the same mock storage

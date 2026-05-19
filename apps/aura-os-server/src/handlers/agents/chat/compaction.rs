@@ -355,11 +355,65 @@ pub fn session_events_to_agent_history(events: &[SessionEvent]) -> Vec<serde_jso
     if !pending_tool_results.is_empty() {
         messages.push(serde_json::json!({
             "role": "user",
-            "content": pending_tool_results,
+            "content": dedupe_tool_results_by_id(std::mem::take(&mut pending_tool_results)),
         }));
     }
 
     messages
+}
+
+/// Collapse `tool_result` blocks that share a `tool_use_id` down to a single
+/// entry per id, last-write-wins.
+///
+/// The Anthropic Messages API rejects any user message that carries two
+/// `tool_result` blocks with the same `tool_use_id` with
+/// `messages.K.content.M: each tool_use must have a single result. Found
+/// multiple `tool_result` blocks with id: <toolu_…>`. The upstream cause is
+/// a server-side bug where parallel `tool_use_start`s were paired against
+/// `state.last_tool_use_id` instead of the wire id — see the doc-comment on
+/// `handle_tool_result` in `persist_task_dispatch.rs`. That bug is fixed for
+/// new sessions, but historical persisted events (and any
+/// not-yet-redeployed harness) can still hand us a duplicated set, so we
+/// dedupe here too: it costs one pass and keeps every previously-broken
+/// session loadable.
+///
+/// We preserve the relative order of the *kept* results, anchored on the
+/// first time each id was seen, so the model still observes results in the
+/// order the harness reported them. Last-write-wins on the body of each id
+/// matches what a retry would mean if it ever happened.
+fn dedupe_tool_results_by_id(results: Vec<serde_json::Value>) -> Vec<serde_json::Value> {
+    use std::collections::HashMap;
+
+    let mut order: Vec<String> = Vec::with_capacity(results.len());
+    let mut by_id: HashMap<String, serde_json::Value> = HashMap::with_capacity(results.len());
+    let mut passthrough: Vec<serde_json::Value> = Vec::new();
+
+    for block in results {
+        let id = block
+            .get("tool_use_id")
+            .and_then(|v| v.as_str())
+            .map(str::to_string);
+        match id {
+            Some(id) if !id.is_empty() => {
+                if !by_id.contains_key(&id) {
+                    order.push(id.clone());
+                }
+                by_id.insert(id, block);
+            }
+            // No `tool_use_id` at all — keep as-is so the API surfaces
+            // whatever validation error is appropriate. We deliberately
+            // do not silently drop these because the absence of an id is
+            // itself a bug we want loud, not papered over.
+            _ => passthrough.push(block),
+        }
+    }
+
+    let mut deduped: Vec<serde_json::Value> = order
+        .into_iter()
+        .filter_map(|id| by_id.remove(&id))
+        .collect();
+    deduped.extend(passthrough);
+    deduped
 }
 
 fn append_user_event(
@@ -370,7 +424,7 @@ fn append_user_event(
     if !pending_tool_results.is_empty() {
         messages.push(serde_json::json!({
             "role": "user",
-            "content": std::mem::take(pending_tool_results),
+            "content": dedupe_tool_results_by_id(std::mem::take(pending_tool_results)),
         }));
     }
     if let Some(ref blocks) = evt.content_blocks {

@@ -169,13 +169,9 @@ pub(crate) async fn send_event_stream(
         from_agent_id: body.from_agent_id.as_deref(),
     };
 
-    let persist_outcome = setup_project_chat_persistence(
-        &state,
-        &project_id,
-        &agent_instance_id,
-        &persist_request,
-    )
-    .await;
+    let persist_outcome =
+        setup_project_chat_persistence(&state, &project_id, &agent_instance_id, &persist_request)
+            .await;
     let (persist_ctx, fork_info) = match persist_outcome {
         Some((ctx, fork)) => (Some(ctx), fork),
         None => (None, None),
@@ -187,8 +183,11 @@ pub(crate) async fn send_event_stream(
     // slots). `build_chat_partition` folds `persist_ctx.session_id`
     // into the third partition segment for us; see
     // `persist::build_chat_partition` for the parse-failure fallback.
-    let partition_agent_id =
-        build_chat_partition(&instance.agent_id, Some(&agent_instance_id), persist_ctx.as_ref());
+    let partition_agent_id = build_chat_partition(
+        &instance.agent_id,
+        Some(&agent_instance_id),
+        persist_ctx.as_ref(),
+    );
     let session_key = partition_agent_id.clone();
 
     // Phase 3 auto-fork: with per-session keys the new fork session

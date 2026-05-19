@@ -2,7 +2,9 @@
 //! agent, prepares the harness `SessionConfig`, kicks off persistence,
 //! and hands off to the SSE driver.
 
-use aura_os_core::{AgentId, AgentPermissions, ChatRole, OrgId, ProjectId, SessionEvent, SessionId};
+use aura_os_core::{
+    AgentId, AgentPermissions, ChatRole, OrgId, ProjectId, SessionEvent, SessionId,
+};
 use aura_os_harness::{ConversationMessage, SessionConfig};
 use axum::extract::{Path, State};
 use axum::Json;
@@ -421,8 +423,7 @@ async fn load_persistence_only(
     // repair busts the discovery cache and returns the refreshed match
     // list, so persist + history below see the just-created binding.
     if matching.is_empty() {
-        matching =
-            lazy_repair_home_project_binding(state, storage, agent_id, request.jwt).await;
+        matching = lazy_repair_home_project_binding(state, storage, agent_id, request.jwt).await;
     }
 
     let deps = ChatSessionResolveDeps {
@@ -482,7 +483,10 @@ async fn load_history_for_agent(
         }
         None => {
             load_current_session_events_for_agent_with_matched(
-                storage, agent_id, ctx.jwt, ctx.matching,
+                storage,
+                agent_id,
+                ctx.jwt,
+                ctx.matching,
             )
             .await
         }
