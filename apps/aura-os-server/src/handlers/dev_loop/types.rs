@@ -4,6 +4,7 @@ use std::time::Duration;
 use serde::Deserialize;
 use tokio::sync::broadcast;
 
+use aura_os_automation::{TaskRetryTracker, ToolRetryTracker};
 use aura_os_core::{AgentId, AgentInstanceId, AgentPermissions, Project, ProjectId, SessionId};
 use aura_os_harness::{AutomatonClient, WsReaderHandle};
 use aura_os_loops::LoopHandle;
@@ -84,4 +85,43 @@ pub(super) struct ForwarderContext {
     /// stamp outgoing `LegacyJsonEvent.session_id` so subscribers can
     /// correlate live events with the persisted session.
     pub(super) session_id: Option<SessionId>,
+    /// Per-loop retry state (Sections D + E of the dev-loop progress
+    /// signal plan). Holds the tool-call and task-level retry
+    /// trackers so the forwarder's side-effects worker can decide,
+    /// per arriving `tool_result` / `task_failed` event, whether to
+    /// emit a `task_retrying` UI signal or to drive a
+    /// `safe_transition(Failed -> Ready)` retry hop.
+    ///
+    /// Defaulted on cold start; survives only as long as the loop
+    /// itself does — see the module-level rationale in
+    /// `aura_os_automation::resilience` for why the counters do not
+    /// need to be persisted yet.
+    pub(super) retry_state: Arc<LoopRetryState>,
+}
+
+/// Per-loop retry state owned by the dev-loop forwarder.
+///
+/// Bundles the two retry trackers from `aura_os_automation::resilience`
+/// so the forwarder can pass a single `Arc<LoopRetryState>` into the
+/// side-effects worker rather than two unrelated `Arc`s. Both fields
+/// stay `pub(super)` so callers in the `dev_loop` module can reach
+/// the underlying trackers without going through a wrapper API the
+/// trackers themselves already provide.
+#[derive(Debug, Default)]
+pub(super) struct LoopRetryState {
+    /// Tool-call infra-retry counter. Gates the
+    /// `task_retrying` signal emission and the harness restart.
+    pub(super) tool_retry: ToolRetryTracker,
+    /// Task-level auto-retry counter. Gates the
+    /// `safe_transition(Failed -> Ready)` hop in the `task_failed`
+    /// arm of the side-effects worker.
+    pub(super) task_retry: TaskRetryTracker,
+}
+
+impl LoopRetryState {
+    /// Construct a fresh retry-state bundle. Both trackers start
+    /// empty so the first failure for any task counts as attempt 1.
+    pub(super) fn new() -> Self {
+        Self::default()
+    }
 }

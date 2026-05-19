@@ -6,6 +6,10 @@ use std::str::FromStr;
 
 use tracing::{info, warn};
 
+use aura_os_automation::{
+    should_restart_on_error, synthesize_failure_reason, FailureContext, RetryDecision,
+    TASK_LEVEL_RETRY_BUDGET, TOOL_CALL_RETRY_BUDGET,
+};
 use aura_os_core::{AgentInstanceId, ProjectId, SessionId, TaskId, TaskStatus};
 use aura_os_events::{DomainEvent, LegacyJsonEvent};
 use aura_os_storage::{StorageTaskFileChangeSummary, UpdateTaskRequest};
@@ -20,6 +24,7 @@ use super::super::signals::{
     extract_task_failure_context, is_completion_contract_failure_for_tests,
     is_successful_test_run_event, recognized_test_runner_label,
 };
+use super::super::types::LoopRetryState;
 
 #[allow(clippy::too_many_arguments)]
 pub(super) async fn record_event_side_effects(
@@ -31,6 +36,7 @@ pub(super) async fn record_event_side_effects(
     event_type: &str,
     jwt: Option<&str>,
     session_id: Option<SessionId>,
+    retry_state: &LoopRetryState,
 ) {
     let task_id = event
         .get("task_id")
@@ -102,10 +108,12 @@ pub(super) async fn record_event_side_effects(
         &event,
         jwt,
         session_id,
+        retry_state,
     )
     .await;
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn apply_event_side_effect(
     state: &AppState,
     project_id: ProjectId,
@@ -115,6 +123,7 @@ async fn apply_event_side_effect(
     event: &serde_json::Value,
     jwt: Option<&str>,
     session_id: Option<SessionId>,
+    retry_state: &LoopRetryState,
 ) {
     match event_type {
         "task_started" => {
@@ -143,6 +152,14 @@ async fn apply_event_side_effect(
         }
         "task_completed" => {
             set_current_task(state, project_id, agent_instance_id, None).await;
+            // Clear the per-task retry counters now that the task has
+            // reached a clean terminal: a subsequent run of the same
+            // task (e.g. via the manual rerun path) starts from a
+            // fresh budget rather than inheriting stale failures.
+            if let Some(task_uuid) = task_id.and_then(|s| TaskId::from_str(s).ok()) {
+                retry_state.tool_retry.clear(task_uuid);
+                retry_state.task_retry.clear(task_uuid);
+            }
             // Drain the in-memory `task_output_cache` (tokens, files-
             // changed, live output, build/test/git steps) into the
             // persisted aura-storage task record + session events.
@@ -161,17 +178,61 @@ async fn apply_event_side_effect(
             // state resets to `null` on mount; without this write,
             // "Copy All Output" on a reloaded failed task has no
             // reason to render (the hook has nothing to seed from).
+            //
+            // Section B: when the harness emits `task_failed` without
+            // a usable reason field, the persistence helper falls
+            // back to `synthesize_failure_reason` so the row never
+            // shows the silent "Task failed without producing
+            // output" state on reload.
             if let (Some(task_id), Some(jwt)) = (task_id, jwt) {
                 persist_task_failure_reason(state, jwt, task_id, event).await;
                 // Same accumulator drain as task_completed: failed tasks
                 // also have token usage that should appear in stats.
                 persist_cached_task_output(state, project_id, jwt, task_id).await;
+                // Section E: task-level auto-retry. We only push the
+                // task back to `Ready` when the failure reason is
+                // retryable (transient classifier accepted it) and
+                // the per-task task-level budget has not been
+                // exhausted. On `GiveUp` the task stays `Failed` and
+                // the existing surfaces handle it.
+                maybe_apply_task_level_retry(
+                    state,
+                    jwt,
+                    task_id,
+                    event,
+                    retry_state,
+                    project_id,
+                    agent_instance_id,
+                    session_id,
+                )
+                .await;
             }
         }
         "tool_call_completed" => {
             if let Some(task_id) = task_id {
                 record_test_pass_evidence(state, project_id, task_id, event).await;
                 record_git_commit_push_timeout(state, project_id, task_id, event).await;
+            }
+        }
+        "tool_result" => {
+            // Section D: track tool-call failures against
+            // `TOOL_CALL_RETRY_BUDGET`. On `Retry`, emit a
+            // `task_retrying` UI signal carrying the current attempt
+            // count so the surface can render the recovery state.
+            // On `GiveUp`, fall through silently — the
+            // `task_failed` arm (above) will fire next and handle
+            // the terminal path.
+            if let Some(task_id) = task_id {
+                maybe_track_tool_call_failure(
+                    state,
+                    project_id,
+                    agent_instance_id,
+                    task_id,
+                    event,
+                    retry_state,
+                    session_id,
+                )
+                .await;
             }
         }
         "git_committed" | "commit_created" | "git_commit_failed" | "git_pushed"
@@ -499,6 +560,16 @@ pub(crate) fn extract_task_failure_reason(event: &serde_json::Value) -> Option<S
 /// after already forwarding the event to live subscribers, so the
 /// reload-visible state is strictly better-off than before regardless
 /// of outcome.
+///
+/// Section B: when the event lacks a usable reason
+/// ([`extract_task_failure_reason`] returns `None`), we synthesize a
+/// descriptive fallback via
+/// [`aura_os_automation::synthesize_failure_reason`] so the
+/// persisted `execution_notes` is always non-empty for a failed
+/// task. The fallback is built from whatever context the event
+/// itself carries (`terminal_state`, last tool name, error excerpt)
+/// — the live-output tail is not consulted here to keep this
+/// function lock-free.
 async fn persist_task_failure_reason(
     state: &AppState,
     jwt: &str,
@@ -508,9 +579,7 @@ async fn persist_task_failure_reason(
     let Some(storage) = state.storage_client.as_ref() else {
         return;
     };
-    let Some(reason) = extract_task_failure_reason(event) else {
-        return;
-    };
+    let reason = resolve_failure_reason_for_persistence(event);
     let update = UpdateTaskRequest {
         execution_notes: Some(reason),
         ..Default::default()
@@ -521,6 +590,49 @@ async fn persist_task_failure_reason(
             %error,
             "failed to persist task_failed reason to tasks.execution_notes"
         );
+    }
+}
+
+/// Resolve the string to persist into `tasks.execution_notes`.
+///
+/// Pure helper: returns the trimmed extracted reason when the event
+/// carries one, otherwise synthesizes a fallback via
+/// [`aura_os_automation::synthesize_failure_reason`]. Never returns
+/// an empty string — Section B regression: a silent `task_failed`
+/// must still leave actionable text on the row.
+pub(crate) fn resolve_failure_reason_for_persistence(event: &serde_json::Value) -> String {
+    if let Some(reason) = extract_task_failure_reason(event) {
+        return reason;
+    }
+    let ctx = build_failure_context_from_event(event);
+    synthesize_failure_reason(&ctx)
+}
+
+/// Build a [`FailureContext`] from whatever fields a `task_failed`
+/// event payload carries. The harness shape varies: some emits
+/// `terminal_state`, others `state`; some surface the last tool via
+/// `tool_name` while others use `last_tool` or fold it into the
+/// `reason` string. We try every observed key and degrade to `None`
+/// when nothing is available — the synthesizer treats every absent
+/// field as "skip this clause".
+fn build_failure_context_from_event(event: &serde_json::Value) -> FailureContext {
+    let read_str = |keys: &[&str]| -> Option<String> {
+        for key in keys {
+            if let Some(value) = event.get(*key).and_then(|v| v.as_str()) {
+                let trimmed = value.trim();
+                if !trimmed.is_empty() {
+                    return Some(trimmed.to_string());
+                }
+            }
+        }
+        None
+    };
+
+    FailureContext {
+        real_reason: None,
+        terminal_state: read_str(&["terminal_state", "state", "harness_state"]),
+        last_tool_name: read_str(&["last_tool", "last_tool_name", "tool_name", "tool"]),
+        last_error_excerpt: read_str(&["last_error", "last_error_excerpt", "error_tail"]),
     }
 }
 
@@ -831,6 +943,204 @@ fn parse_task_key(project_id: ProjectId, task_id: &str) -> Option<(ProjectId, Ta
     TaskId::from_str(task_id).ok().map(|tid| (project_id, tid))
 }
 
+/// Section D: when a `tool_result` arrives with `is_error: true`
+/// and the reason is classified as restartable, increment the
+/// per-task tool-call retry tracker and emit a `task_retrying`
+/// signal while we are still under
+/// [`TOOL_CALL_RETRY_BUDGET`].
+///
+/// Non-retryable reasons (terminal classifier verdicts like "agent
+/// is stuck") are deliberately not tracked here — they fall through
+/// to the existing `task_failed` flow without burning the budget.
+#[allow(clippy::too_many_arguments)]
+async fn maybe_track_tool_call_failure(
+    state: &AppState,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+    task_id: &str,
+    event: &serde_json::Value,
+    retry_state: &LoopRetryState,
+    session_id: Option<SessionId>,
+) {
+    if event.get("is_error").and_then(|v| v.as_bool()) != Some(true) {
+        return;
+    }
+    let Some(reason) = tool_result_error_reason(event) else {
+        return;
+    };
+    if !should_restart_on_error(&reason) {
+        // Terminal classifier verdict (agent-stuck signal, syntax
+        // error, ...): not a retryable infra failure. Leave the
+        // budget untouched and let the existing failure path take
+        // over.
+        return;
+    }
+    let Ok(task_uuid) = TaskId::from_str(task_id) else {
+        return;
+    };
+    let decision = retry_state.tool_retry.record_failure(task_uuid);
+    match decision {
+        RetryDecision::Retry { attempt } => {
+            emit_task_retrying_signal(
+                state,
+                project_id,
+                agent_instance_id,
+                task_id,
+                attempt,
+                TOOL_CALL_RETRY_BUDGET,
+                "tool_call",
+                &reason,
+                session_id,
+            );
+        }
+        RetryDecision::GiveUp => {
+            warn!(
+                %task_id,
+                budget = TOOL_CALL_RETRY_BUDGET,
+                "tool-call retry budget exhausted; falling through to task_failed path"
+            );
+        }
+    }
+}
+
+/// Section E: after persisting the failure reason, decide whether
+/// the task itself should be pushed back to `Ready` via
+/// `safe_transition` so the scheduler can pick it up again.
+///
+/// Gated by both:
+/// * the transient classifier ([`should_restart_on_error`]) accepting
+///   the reason — terminal failures (agent-stuck, syntax errors,
+///   non-transient provider errors) are not auto-retried; and
+/// * the tool-call budget already being exhausted on this task —
+///   otherwise the per-tool retry path is still the right recovery
+///   surface and a coarser task-level retry would just compound
+///   wasted work.
+#[allow(clippy::too_many_arguments)]
+async fn maybe_apply_task_level_retry(
+    state: &AppState,
+    jwt: &str,
+    task_id: &str,
+    event: &serde_json::Value,
+    retry_state: &LoopRetryState,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+    session_id: Option<SessionId>,
+) {
+    let Some(storage) = state.storage_client.as_ref() else {
+        return;
+    };
+    let reason = resolve_failure_reason_for_persistence(event);
+    if !should_restart_on_error(&reason) {
+        return;
+    }
+    let Ok(task_uuid) = TaskId::from_str(task_id) else {
+        return;
+    };
+    // Only escalate to a task-level retry once the tool-call budget
+    // has already exhausted itself. Otherwise the per-tool retry is
+    // the right surface and stacking another task-level hop on top
+    // just thrashes storage with `Failed -> Ready` cycles.
+    if retry_state.tool_retry.attempts(task_uuid) < TOOL_CALL_RETRY_BUDGET {
+        return;
+    }
+    let decision = retry_state.task_retry.record_failure(task_uuid);
+    let RetryDecision::Retry { attempt } = decision else {
+        return;
+    };
+    if let Err(error) =
+        aura_os_tasks::safe_transition(storage, jwt, task_id, TaskStatus::Ready).await
+    {
+        warn!(
+            %task_id,
+            %error,
+            "task-level retry: safe_transition(Failed -> Ready) failed; \
+             leaving task in Failed"
+        );
+        return;
+    }
+    info!(
+        %task_id,
+        attempt,
+        budget = TASK_LEVEL_RETRY_BUDGET,
+        "task-level retry: pushed task from Failed back to Ready"
+    );
+    emit_task_retrying_signal(
+        state,
+        project_id,
+        agent_instance_id,
+        task_id,
+        attempt,
+        TASK_LEVEL_RETRY_BUDGET,
+        "task_level",
+        &reason,
+        session_id,
+    );
+}
+
+/// Pull a usable error reason out of a `tool_result` payload.
+///
+/// Mirrors [`event_reason`] but checks the keys the harness most
+/// commonly puts on `tool_result` error blocks (`result`, `error`,
+/// `message`, `text`, ...). Returns `None` when no string-typed
+/// field is populated; the caller skips the retry path in that
+/// case because there is nothing to classify.
+fn tool_result_error_reason(event: &serde_json::Value) -> Option<String> {
+    for key in ["error", "message", "result", "result_preview", "text"] {
+        if let Some(value) = event.get(key).and_then(|v| v.as_str()) {
+            let trimmed = value.trim();
+            if !trimmed.is_empty() {
+                return Some(trimmed.to_string());
+            }
+        }
+    }
+    None
+}
+
+/// Emit a `task_retrying` event onto both the legacy
+/// `event_broadcast` firehose and the topic-scoped event hub so
+/// live subscribers (`useTaskStatus`, dev-loop UI) can render the
+/// retry banner without polling. Mirrors the JSON shape of
+/// `task_failed` / `task_completed` so existing front-end handlers
+/// can decode the same fields.
+#[allow(clippy::too_many_arguments)]
+fn emit_task_retrying_signal(
+    state: &AppState,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+    task_id: &str,
+    attempt: u32,
+    budget: u32,
+    scope: &'static str,
+    reason: &str,
+    session_id: Option<SessionId>,
+) {
+    let mut payload = serde_json::json!({
+        "type": "task_retrying",
+        "task_id": task_id,
+        "project_id": project_id.to_string(),
+        "agent_instance_id": agent_instance_id.to_string(),
+        "attempt": attempt,
+        "budget": budget,
+        "scope": scope,
+        "reason": reason,
+    });
+    if let Some(session_id) = session_id {
+        if let Some(object) = payload.as_object_mut() {
+            object.insert("session_id".to_string(), session_id.to_string().into());
+        }
+    }
+    let _ = state.event_broadcast.send(payload.clone());
+    state
+        .event_hub
+        .publish(DomainEvent::LegacyJson(LegacyJsonEvent {
+            project_id: Some(project_id),
+            agent_instance_id: Some(agent_instance_id),
+            session_id,
+            loop_id: None,
+            payload,
+        }));
+}
+
 /// Drain the in-memory accumulator for `task_id` and persist it to
 /// aura-storage via `persist_task_output`. Called once per task on
 /// `task_completed` or `task_failed`.
@@ -866,9 +1176,102 @@ async fn persist_cached_task_output(
 
 #[cfg(test)]
 mod tests {
-    use super::{build_files_changed_summary, collapse_op, merge_file_change};
+    use super::{
+        build_failure_context_from_event, build_files_changed_summary, collapse_op,
+        merge_file_change, resolve_failure_reason_for_persistence,
+    };
     use aura_os_storage::StorageTaskFileChangeSummary;
     use serde_json::json;
+
+    // ====================================================================
+    // Section B regression: silent `task_failed` events synthesise a
+    // descriptive `execution_notes` body even when no `reason` /
+    // `message` / `error` / `code` field is present on the event. The
+    // test pins `resolve_failure_reason_for_persistence` (the helper
+    // that the `task_failed` arm's persist call now feeds) — the
+    // synthesis itself is unit-tested in `aura_os_automation::failure`.
+    // ====================================================================
+
+    #[test]
+    fn silent_task_failed_synthesises_execution_notes() {
+        let event = json!({
+            "type": "task_failed",
+            "task_id": "00000000-0000-0000-0000-000000000000",
+            "terminal_state": "stream_closed",
+            "last_tool": "edit_file",
+            "last_error": "stream terminated mid tool_use",
+        });
+        let reason = resolve_failure_reason_for_persistence(&event);
+        assert!(
+            !reason.is_empty(),
+            "Section B regression: silent task_failed must persist a non-empty reason"
+        );
+        assert!(
+            reason.starts_with("task failed: stream_closed"),
+            "synthesised reason should lead with the harness terminal state, got {reason:?}",
+        );
+        assert!(
+            reason.contains("last tool edit_file"),
+            "synthesised reason should mention the last tool, got {reason:?}",
+        );
+        assert!(
+            reason.contains("stream terminated mid tool_use"),
+            "synthesised reason should include the error excerpt, got {reason:?}",
+        );
+    }
+
+    #[test]
+    fn task_failed_with_real_reason_does_not_synthesise() {
+        let event = json!({
+            "type": "task_failed",
+            "task_id": "00000000-0000-0000-0000-000000000000",
+            "reason": "real reason from harness",
+            // These extras must be ignored when a real reason exists.
+            "terminal_state": "stream_closed",
+            "last_tool": "edit_file",
+        });
+        let reason = resolve_failure_reason_for_persistence(&event);
+        assert_eq!(
+            reason, "real reason from harness",
+            "extracted reason must short-circuit synthesis",
+        );
+    }
+
+    #[test]
+    fn build_failure_context_picks_first_populated_alias() {
+        // The harness occasionally emits `state` instead of
+        // `terminal_state` and `tool_name` instead of `last_tool`;
+        // both must reach the synthesizer's slots.
+        let event = json!({
+            "type": "task_failed",
+            "state": "timeout",
+            "tool_name": "run_command",
+            "error_tail": "timeout after 60s",
+        });
+        let ctx = build_failure_context_from_event(&event);
+        assert_eq!(ctx.terminal_state.as_deref(), Some("timeout"));
+        assert_eq!(ctx.last_tool_name.as_deref(), Some("run_command"));
+        assert_eq!(ctx.last_error_excerpt.as_deref(), Some("timeout after 60s"));
+        assert!(ctx.real_reason.is_none());
+    }
+
+    #[test]
+    fn fully_silent_task_failed_yields_unknown_sentinel_not_empty_string() {
+        // The pathological case: harness drops the connection before
+        // populating any reason field. The persisted row must still
+        // carry actionable text instead of the pre-G3a empty
+        // `execution_notes`.
+        let event = json!({
+            "type": "task_failed",
+            "task_id": "00000000-0000-0000-0000-000000000000",
+        });
+        let reason = resolve_failure_reason_for_persistence(&event);
+        assert!(!reason.is_empty());
+        assert!(
+            reason.contains("unknown"),
+            "all-empty event must surface the unknown sentinel, got {reason:?}",
+        );
+    }
 
     fn s(path: &str, op: &str, added: u32, removed: u32) -> StorageTaskFileChangeSummary {
         StorageTaskFileChangeSummary {

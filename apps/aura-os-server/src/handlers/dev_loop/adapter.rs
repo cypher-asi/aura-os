@@ -5,7 +5,9 @@ use std::time::Duration;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
+use tracing::{info, warn};
 
+use aura_os_automation::{recover_orphans, OrphanRecoveryPlan};
 use aura_os_core::{AgentInstanceId, ProjectId, TaskId, UserId};
 use aura_os_events::{LoopId, LoopKind};
 use aura_os_harness::connect_with_retries;
@@ -17,11 +19,11 @@ use crate::state::{ActiveAutomaton, AppState, AuthJwt, AuthSession};
 
 use super::control::control_loop;
 use super::registry::{can_reuse_forwarder, replace_registry_entry, status_response};
-use super::session::{begin_session, existing_session_id};
+use super::session::{begin_session, existing_session_id, recover_orphan_tasks};
 use super::start::{build_start_params, map_start_error, resolve_start_context, start_or_adopt};
 pub(crate) use super::streaming::emit_domain_event;
 use super::streaming::{seed_task_output, spawn_event_forwarder};
-use super::types::{ControlAction, ForwarderContext, LoopQueryParams};
+use super::types::{ControlAction, ForwarderContext, LoopQueryParams, LoopRetryState};
 
 /// Resolve the `agent_instance_id` to use for an automation loop.
 ///
@@ -146,6 +148,22 @@ pub(crate) async fn start_loop(
     };
 
     replace_registry_entry(&state, project_id, agent_instance_id).await;
+    // Section E (orphan recovery): sweep tasks left in `InProgress`
+    // from a previous server invocation back to `Ready` BEFORE the
+    // forwarder + scheduler come online, so the next scheduler tick
+    // actually sees them as candidates. Best-effort: any storage
+    // failure is logged and we continue — the worst case is "stuck
+    // orphans stay stuck until the next start_loop", which is
+    // strictly no worse than today's behaviour.
+    let recovered = recover_orphan_tasks(&state, project_id, &forwarder_jwt).await;
+    if recovered > 0 {
+        tracing::info!(
+            %project_id,
+            recovered,
+            "orphan recovery: pushed {} task(s) back to Ready before scheduler start",
+            recovered,
+        );
+    }
     let (events_tx, ws_reader_handle) = connect_with_retries(
         &ctx.client,
         &started.automaton_id,
@@ -164,6 +182,16 @@ pub(crate) async fn start_loop(
             ApiError::bad_gateway(format!("connecting automaton stream: {err}"))
         })
     })?;
+
+    // Section E: orphan-recovery sweep before the loop's task
+    // scheduler picks the first task. Tasks left in `InProgress`
+    // after a previous loop was killed mid-run (server crash, deploy)
+    // are silently bridged back to `Ready` so the scheduler doesn't
+    // skip them on the assumption another runner already owns them.
+    // Best-effort: storage / JWT failures here are logged and the
+    // loop still starts — the worst case is the orphan stays
+    // `InProgress` until the next start_loop sweep retries.
+    apply_orphan_recovery(&state, project_id, &forwarder_jwt).await;
 
     let alive = Arc::new(AtomicBool::new(true));
     let loop_handle = state.loop_registry.open(LoopId::new(
@@ -190,6 +218,7 @@ pub(crate) async fn start_loop(
         loop_handle,
         jwt: Some(forwarder_jwt),
         session_id,
+        retry_state: Arc::new(LoopRetryState::new()),
     });
     state.automaton_registry.lock().await.insert(
         (project_id, agent_instance_id),
@@ -414,6 +443,7 @@ pub(crate) async fn run_single_task(
         loop_handle,
         jwt: Some(forwarder_jwt),
         session_id,
+        retry_state: Arc::new(LoopRetryState::new()),
     });
     // No `replace_registry_entry`: the ephemeral id is freshly minted,
     // there is nothing to displace, and concurrent task runs are
@@ -487,6 +517,65 @@ async fn resolve_run_template(
 /// drops the storage row. Failures are logged at `warn` and ignored —
 /// the row at worst becomes a stale catalogue entry that the next
 /// janitor pass can sweep.
+/// Orphan-recovery sweep at loop start.
+///
+/// Lists the project's tasks via the storage-backed `TaskService`,
+/// hands the snapshot to [`recover_orphans`] for the pure planning
+/// step, and applies each [`OrphanRecoveryPlan`] via
+/// [`aura_os_tasks::safe_transition`] so any task left
+/// `InProgress` by a previously-killed loop returns to `Ready` for
+/// the scheduler.
+///
+/// Best-effort by design:
+///
+/// * If the project list call fails (auth blip, storage down) we
+///   warn and return — the loop still starts; the next loop start
+///   will retry the sweep against the same orphans.
+/// * Per-plan transition failures are logged but do not abort the
+///   sweep: a single 4xx on one task should not block recovering
+///   the others.
+async fn apply_orphan_recovery(state: &AppState, project_id: ProjectId, jwt: &str) {
+    let Some(storage) = state.storage_client.as_ref() else {
+        return;
+    };
+    let tasks = match state.task_service.list_tasks(&project_id).await {
+        Ok(tasks) => tasks,
+        Err(error) => {
+            warn!(
+                %project_id,
+                %error,
+                "orphan recovery: failed to list tasks; skipping sweep for this loop start"
+            );
+            return;
+        }
+    };
+    let plans = recover_orphans(&tasks);
+    if plans.is_empty() {
+        return;
+    }
+    info!(
+        %project_id,
+        orphan_count = plans.len(),
+        "orphan recovery: bridging InProgress tasks back to Ready"
+    );
+    for OrphanRecoveryPlan {
+        task_id,
+        target_status,
+        ..
+    } in plans
+    {
+        if let Err(error) =
+            aura_os_tasks::safe_transition(storage, jwt, &task_id.to_string(), target_status).await
+        {
+            warn!(
+                %task_id,
+                %error,
+                "orphan recovery: safe_transition failed; leaving task in InProgress"
+            );
+        }
+    }
+}
+
 async fn spawn_ephemeral_executor_reaper(state: AppState, ephemeral_instance_id: AgentInstanceId) {
     const TTL: Duration = Duration::from_secs(8 * 60 * 60);
     const POLL: Duration = Duration::from_secs(15);
@@ -524,4 +613,84 @@ async fn spawn_ephemeral_executor_reaper(state: AppState, ephemeral_instance_id:
             );
         }
     });
+}
+
+#[cfg(test)]
+mod orphan_recovery_tests {
+    //! Section E regression: the loop-start orphan-recovery sweep must
+    //! plan a `safe_transition(InProgress -> Ready)` for every task
+    //! left mid-run by a previous loop. The pure planner is unit-tested
+    //! in `aura_os_automation::resilience::orphan`; here we just pin
+    //! the integration shape (the App-layer wrapper feeds the planner
+    //! a real `Vec<Task>` and walks the resulting plans).
+
+    use aura_os_automation::recover_orphans;
+    use aura_os_core::{ProjectId, SpecId, Task, TaskId, TaskStatus};
+    use chrono::Utc;
+
+    fn task_in(status: TaskStatus) -> Task {
+        let now = Utc::now();
+        Task {
+            task_id: TaskId::new(),
+            project_id: ProjectId::new(),
+            spec_id: SpecId::new(),
+            title: String::new(),
+            description: String::new(),
+            status,
+            order_index: 0,
+            dependency_ids: Vec::new(),
+            parent_task_id: None,
+            skip_auto_decompose: false,
+            assigned_agent_instance_id: None,
+            completed_by_agent_instance_id: None,
+            session_id: None,
+            execution_notes: String::new(),
+            files_changed: Vec::new(),
+            live_output: String::new(),
+            build_steps: Vec::new(),
+            test_steps: Vec::new(),
+            user_id: None,
+            model: None,
+            total_input_tokens: 0,
+            total_output_tokens: 0,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    #[test]
+    fn loop_start_sweep_targets_only_in_progress_tasks() {
+        let in_progress = task_in(TaskStatus::InProgress);
+        let tasks = vec![
+            task_in(TaskStatus::Ready),
+            in_progress.clone(),
+            task_in(TaskStatus::Done),
+            task_in(TaskStatus::Failed),
+        ];
+        let plans = recover_orphans(&tasks);
+        assert_eq!(
+            plans.len(),
+            1,
+            "exactly one InProgress task should be planned for recovery",
+        );
+        let plan = plans[0];
+        assert_eq!(plan.task_id, in_progress.task_id);
+        assert_eq!(plan.current_status, TaskStatus::InProgress);
+        assert_eq!(
+            plan.target_status,
+            TaskStatus::Ready,
+            "Section E target: orphans return to Ready so the scheduler picks them up",
+        );
+    }
+
+    #[test]
+    fn loop_start_sweep_no_orphans_returns_empty_plan() {
+        // No InProgress tasks → no plans, no transitions issued.
+        let tasks = vec![
+            task_in(TaskStatus::Ready),
+            task_in(TaskStatus::Done),
+            task_in(TaskStatus::Failed),
+        ];
+        assert!(recover_orphans(&tasks).is_empty());
+    }
 }

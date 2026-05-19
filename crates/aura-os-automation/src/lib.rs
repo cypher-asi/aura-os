@@ -7,13 +7,16 @@
 //! [`aura_os_storage`] dependency, and no [`anyhow`] in its library
 //! surface — failures travel through the [`AutomationError`] enum.
 //!
-//! The Phase G1 surface is intentionally small. Later phases will add:
+//! The current surface covers Phases G1 + G2 + G3a:
 //!
 //! * `progress/` — spinner/activity mapping (Section A, Phase G2).
-//! * `failure/` and `resilience/` — failure-reason synthesis, retry
-//!   trackers (Sections B / D / E, Phase G3).
-//! * `task_context/`, `permissions/`, `dispatch/`, `stream/` —
-//!   product-level resilience (Sections F2–F5, Phase G4).
+//! * `failure/` — fallback `task_failed` reason synthesis (Section B,
+//!   Phase G3a).
+//! * `resilience/` — tool-call + task-level retry trackers and the
+//!   loop-start orphan-recovery planner (Sections D / E, Phase G3a).
+//!
+//! Phase G4 will add `task_context/`, `permissions/`, `dispatch/`,
+//! `stream/` for the product-level resilience work (Sections F2–F5).
 //!
 //! See `c:\Users\n3o\.cursor\plans\fix_dev-loop_progress_signal_*.plan.md`
 //! Sections G.0–G.6 for the full migration plan.
@@ -24,7 +27,9 @@ pub mod budget;
 pub mod classify;
 pub mod error;
 pub mod event_kinds;
+pub mod failure;
 pub mod progress;
+pub mod resilience;
 
 pub use budget::{TASK_LEVEL_RETRY_BUDGET, TOOL_CALL_RETRY_BUDGET};
 pub use classify::{
@@ -33,7 +38,12 @@ pub use classify::{
     looks_like_unclassified_transient, should_restart_on_error, tool_call_failed_should_retry,
 };
 pub use error::AutomationError;
+pub use failure::{synthesize_failure_reason, FailureContext};
 pub use progress::{apply_loop_activity, LoopActivityTransition};
+pub use resilience::{
+    recover_orphans, OrphanRecoveryPlan, RetryDecision, TaskRetryTracker, ToolRetryTracker,
+    ORPHAN_RECOVERY_REASON,
+};
 
 #[cfg(test)]
 mod smoke {
@@ -65,5 +75,13 @@ mod smoke {
         ) -> Option<crate::LoopActivityTransition> {
             crate::apply_loop_activity(activity, crate::event_kinds::TEXT_DELTA)
         }
+        // Phase G3a: pin the failure + resilience public surface.
+        let _ = crate::synthesize_failure_reason(&crate::FailureContext::default());
+        let _tool_tracker = crate::ToolRetryTracker::new();
+        let _task_tracker = crate::TaskRetryTracker::new();
+        let _: Vec<crate::OrphanRecoveryPlan> = crate::recover_orphans(&[]);
+        // RetryDecision must be reachable through the crate root for
+        // the server's pattern matches.
+        let _retry = crate::RetryDecision::GiveUp;
     }
 }

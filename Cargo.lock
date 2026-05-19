@@ -443,6 +443,7 @@ dependencies = [
 name = "aura-os-automation"
 version = "0.1.0"
 dependencies = [
+ "aura-os-core",
  "aura-os-events",
  "aura-os-harness",
  "chrono",

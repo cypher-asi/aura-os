@@ -36,6 +36,10 @@ use crate::state::AppState;
 use super::session::end_session;
 use super::signals::is_insufficient_credits_failure_for_tests;
 use super::types::ForwarderContext;
+// `LoopRetryState` is constructed by the dev-loop adapter and only
+// referenced indirectly here through `ForwarderContext.retry_state`.
+// No direct import needed; the destructure above pulls the field
+// through and we hand it to the side-effects worker by reference.
 
 pub(crate) use side_effects::seed_task_output;
 
@@ -116,6 +120,7 @@ pub(crate) fn spawn_event_forwarder(ctx: ForwarderContext) -> tokio::task::Abort
             loop_handle,
             jwt,
             session_id,
+            retry_state,
         } = ctx;
         let loop_handle = Arc::new(loop_handle);
         let jwt = jwt.map(Arc::new);
@@ -148,6 +153,7 @@ pub(crate) fn spawn_event_forwarder(ctx: ForwarderContext) -> tokio::task::Abort
         let event_worker_loop_handle = loop_handle.clone();
         let event_worker_jwt = jwt.clone();
         let event_worker_fallback_task_id = fallback_task_id.clone();
+        let event_worker_retry_state = retry_state.clone();
         let event_worker = tokio::spawn(async move {
             let mut live_analyzer = LiveAnalyzer::new();
             while let Some((event, event_type)) = event_task_rx.recv().await {
@@ -182,6 +188,7 @@ pub(crate) fn spawn_event_forwarder(ctx: ForwarderContext) -> tokio::task::Abort
                     &event_type,
                     event_worker_jwt.as_ref().map(|j| j.as_str()),
                     session_id,
+                    &event_worker_retry_state,
                 )
                 .await;
             }

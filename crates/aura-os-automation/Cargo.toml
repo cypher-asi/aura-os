@@ -7,6 +7,13 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+# Phase G3a: domain types (`Task`, `TaskId`, `TaskStatus`) needed by
+# `resilience::orphan` and the per-task retry trackers. We deliberately
+# depend on `aura-os-core` directly rather than `aura-os-tasks` so the
+# Domain layer doesn't transitively pull in `aura-os-storage` (the
+# automation crate is a Domain peer; storage is a higher-level concern
+# applied by the App layer at the call site).
+aura-os-core = { path = "../aura-os-core", default-features = false }
 aura-os-events = { path = "../aura-os-events" }
 serde = { workspace = true }
 serde_json = { workspace = true }
