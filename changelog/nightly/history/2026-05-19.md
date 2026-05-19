@@ -1,70 +1,73 @@
-# Parallel chat sessions, dev-loop resilience, and sidekick controls
+# Parallel chat sessions, dev-loop resilience, and a redesigned run indicator
 
 - Date: `2026-05-19`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.540.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.540.1
+- Version: `0.1.0-nightly.541.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.541.1
 
-A heavy nightly: two storage sessions on the same agent can now stream concurrently end-to-end, the dev-loop gained synthesized failure reasons, retry budgets, and orphan/Failed task recovery, and the sidekick picked up a split-screen toggle, automation model picker, and a more honest "still running" Play affordance. Windows CI was also unblocked for community PRs.
+A heavy day across the stack: each storage session now gets its own end-to-end chat lane on both server and client, the dev-loop gained real retry budgets and orphan recovery via a new automation crate, and the automation Play button was rebuilt as a single concentric glyph so a running loop is unmistakable. Windows CI also stopped silently failing community PRs.
 
-## 11:47 AM — Parallel session chats land end-to-end
+## 11:47 AM — Per-session chat lanes across server and interface
 
-Two storage sessions on the same agent instance can now stream concurrently, with per-session partitions on the server, per-session stream lanes in the UI, and a unified PartitionRegistry for per-key state.
+Chat partitions are now keyed by storage session id end-to-end, so two sessions on the same agent instance can stream concurrently without sharing state.
 
-- Chat sessions are now partitioned by storage session_id on the server, giving each session its own ChatSession entry, turn slot, and concurrent stream; harness_agent_id grew an optional session segment and SessionId is now typed end-to-end through the persistence chain. (`d9fffcf`, `07d2f5b`, `40eb7f3`, `42b7205`)
-- The interface now keys chat stream lanes by sessionId for both project and standalone agent chat, with migration helpers that carry state across the fresh-canvas→real-session flip and mid-stream auto-fork, plus a per-session streaming indicator in SessionsList. (`91e4da2`, `d0dadf8`, `6d655fe`)
-- A new PartitionRegistry consolidates per-key client state (stream entries, send-control, agent-replay, chat-ui drafts) so every partition map migrates and prunes in lockstep, closing the asymmetry that caused earlier parallel-session bugs. (`4316abb`, `5eab453`, `d743011`)
-- Server-side chat helpers shed their too_many_arguments suppressions in favor of borrowed config structs, dedupe partition construction, restore the warm-session skip on the bare-agent route, and document shared-workspace caveats in a dedicated PARALLEL_SESSIONS.md. (`8e7df05`, `7b93d09`, `b4e937e`)
-- Two unrelated UI fixes ship alongside: newly created projects now appear at the top of the left menu, and the model picker menu is portalled to document.body so adjacent panels can no longer clip it. (`e260104`, `f50f007`)
-- Windows CI lanes that were failing with spawnSync npm.cmd EINVAL on every community PR now pass shell:true for npm/npx shims, unblocking the required Windows check. (`c84e220`)
+- Server-side chat sessions are now partitioned by a three-segment {template}::{instance}::{session_id} key, giving each storage session its own ChatSession entry, turn slot, and concurrent stream; reset sweeps were repaired to match the new shape and a typed SessionId is threaded through the persistence chain instead of a stringly-typed id. (`d9fffcf`, `07d2f5b`, `42b7205`, `40eb7f3`, `8e7df05`)
+- Project chat and standalone agent chat now key their stream lanes, send-control, and chat-UI state by session id, with a single migrateChatPartition orchestrator handling the fresh-canvas→real and auto-fork mid-stream flips; the sessions sidebar shows a per-session streaming indicator for turns in flight in other sessions. (`91e4da2`, `d0dadf8`, `6d655fe`, `4316abb`, `5eab453`)
+- Documented that parallel sessions share the project's working directory, terminal, and destructive tools, and replaced the chat handlers' too_many_arguments suppressions with config structs so the new session-keying parameters stay in lockstep. (`b4e937e`, `7b93d09`)
+- Newly created projects now appear at the top of the left menu via an atomic prependProject store action instead of being appended by the persisted-order normalizer. (`e260104`)
+- The model picker dropdown is now portalled to document.body with fixed positioning, so it can no longer be clipped by the chat lane's overflow rules or look like the sidebar is slicing it. (`f50f007`)
+- Windows CI no longer fails community PRs at the first npm ci: the parity helpers now pass shell:true for npm/npx shims so Node's CVE-2024-27980 hardening stops blocking spawnSync with EINVAL. (`c84e220`)
 
-## 11:47 AM — Guard against non-object tool_use.input poisoning chat history
+## 11:47 AM — Dev-loop resilience, Stop-button fixes, and the new aura-os-automation crate
 
-A defense-in-depth normalizer prevents a buggy upstream harness from persisting tool_use.input as anything but a JSON object, which previously caused Anthropic 400s that broke every subsequent turn until the user restarted the chat.
+A broad reliability pass: retries and orphan recovery move into a new automation crate, Stop actually cancels the harness, and a cluster of chat-history corruption bugs that wedged sessions are fixed.
 
-- tool_use.input snapshots are now coerced to a JSON object before persistence and again at replay reconstruction; null becomes {}, anything else is logged and replaced with a structured _normalized marker carrying the original type and size. (`6231280`)
+- Pressing Stop or refreshing a chat now forwards Cancel to the harness via new cancel-turn endpoints and an SSE drop guard, releasing the per-partition turn slot instead of leaving it held until the 90s idle timeout — fixing the silent wedge after long plan-mode turns. (`239ae9f`, `c2c61c3`)
+- Introduced the aura-os-automation crate to own classifiers, retry budgets, exploration budgets, and a task-context resolver, and migrated the dev-loop's progress mapping to canonical event-kind constants — unsticking the activity spinner that was matching against stale event names. (`3a435c3`, `19dfe8b`, `481f5c6`)
+- Dev-loop now synthesizes a failure reason when the harness omits one, gates tool retries at 8 and task retries at 3 via shared budgets, and sweeps orphaned InProgress tasks back to Ready at loop start; harness events are also persisted as SessionEvents so replays share chat's compaction pipeline. (`963aace`, `aec45f6`, `f57e51e`)
+- Hardened chat persistence against Anthropic 400s: non-object tool_use.input is coerced to a structured marker before persist, duplicate tool_result blocks sharing a tool_use_id are deduped at replay, and tool_use_id is now threaded through tool_result persistence. (`6231280`, `25bab2d`)
+- Fresh chats now correctly start a new session and get a generated title (the new-chat pin is armed on the fresh-canvas partition), Plan mode keeps you on Sessions when you picked it, the sidekick stops yanking off Sessions to Tasks on send, fresh agents restore the last-picked model, and Delete Spec stops surfacing a bare 'Bad Request' on stale optimistic rows. (`8d28e5e`, `477d5a3`, `19c2fb0`, `ac9acbc`, `d7f7e79`)
+- Plan mode now exposes create/update/delete/transition_task so the planner can structure work without starting it, and the + Add Agent flow closes the picker synchronously and lands users directly in the new agent's chat with the input focused. (`cc70320`, `ab57bd4`)
+- List blocks now match SpecBlock with a copy button so the hover affordance no longer overlaps the item count, and the pinned cooking indicator gets a full-width backdrop so streaming text fades under it instead of bleeding through. (`a6ea717`, `651e3af`, `8beb1f5`)
+- Behaviour-preserving split of oversized server and harness modules — chat persist/streaming, dev-loop signals/adapter/side-effects, and automaton_client — to bring files under the 500-line cap without changing public paths. (`be34513`, `5d6766d`, `bcbb274`)
 
-## 11:47 AM — Dev-loop progress signal: recovery, retries, and Stop that actually stops
+## 11:47 AM — Tool-call streaming snapshots no longer pollute persisted history
 
-A multi-part overhaul of the dev-loop spanning a new aura-os-automation crate, real Stop/refresh cancellation, history compaction fixes, and structural splits of the oversize chat and dev-loop server modules.
+Mid-stream tool_use input chunks are now recognized as the streaming protocol instead of being flagged as upstream corruption.
 
-- Pressing Stop or refreshing now POSTs a new cancel-turn endpoint and forwards HarnessInbound::Cancel via an SSE drop guard, so the per-partition turn slot is released and the warm ChatSession evicted — fixing the wedge where the next send blocked for 90s on an SSE idle timeout. (`239ae9f`, `c2c61c3`)
-- A new aura-os-automation crate now owns the dev-loop's pure logic: classifiers, retry budgets, synthesized task-failure reasons, ToolRetryTracker/TaskRetryTracker, orphan InProgress recovery, and a task_context resolver with a complexity-scaled exploration budget. (`3a435c3`, `963aace`, `481f5c6`)
-- The dev-loop spinner stall is repaired by moving loop-activity mapping into automation::progress against canonical event-kind constants, with a test-only invariant that pins the harness's event-kind names byte-for-byte. (`19dfe8b`)
-- Chat history replay is hardened: duplicate tool_result blocks for the same tool_use_id are deduped (last-write-wins) to stop Anthropic 400s, and dev-loop harness events are now persisted as SessionEvents through the same compaction pipeline as chat so replays share dangling-tool-use stripping and truncation. (`25bab2d`, `aec45f6`, `f57e51e`)
-- Sidekick stops yanking users off the Sessions tab: Plan-mode sends only auto-switch to Specs from non-Sessions tabs, a debug-gated trace was added for stray setActiveTab calls, and the new-chat pin is now armed on the fresh-canvas partition so "+ New chat" actually starts a new titled session. (`8d28e5e`, `19c2fb0`, `477d5a3`)
-- Several smaller chat polish fixes: untouched agents now restore the last-picked model instead of reverting to Sonnet, ListBlock's header was realigned with SpecBlock so the hover copy icon stops overlapping the count, the pinned cooking indicator gained a backdrop, Delete Spec / session summary no longer 400 on optimistic placeholders, and the agent picker dismisses on first click while auto-adding a Standard Agent to new projects. (`ac9acbc`, `a6ea717`, `651e3af`, `8beb1f5`, `d7f7e79`, `ab57bd4`)
-- Plan mode now exposes create/update/delete/transition_task so the planner can organize work without starting it, with the no-transition-to-in-progress rule pinned in the system-prompt suffix. (`cc70320`)
-- Behavior-preserving splits break the oversize chat (agent_route, instance_route, persist, persist_task, streaming, compaction_tests), dev-loop (side_effects, adapter, signals, start), and harness automaton_client modules into focused submodules under the 500-line cap, with public import paths preserved. (`be34513`, `5d6766d`, `bcbb274`)
+- Partial Value::String tool_use.input snapshots (Anthropic's input_json_delta accumulator) are now treated as streaming chunks: complete objects are parsed through, incomplete strings get a {} placeholder at trace level, and intermediate snapshots are no longer written as _normalized markers — ending the ERROR-per-chunk log spam and throwaway SessionEvent writes. (`321857f`)
 
-## 11:47 AM — Streaming tool_use.input is no longer logged as corruption
+## 11:47 AM — Automation model picker, split-screen sidekick, and live-run affordances
 
-The previous normalize logic flagged every intermediate tool_use snapshot as corruption, spamming ERRORs and writing throwaway _normalized placeholders for every partial chunk. The streaming protocol is now recognized.
+The Run pane and AutomationBar get a deliberate model picker, a new split-screen toggle balances the sidekick lane, and the Play button stays visible with a spinning ring while a loop runs.
 
-- Mid-stream Value::String tool_use inputs are now treated as Anthropic's input_json_delta accumulator: parsed when complete, otherwise returned as a {} placeholder at trace level, and the partial snapshot is skipped from persistence so the final snapshot is the only one written. (`321857f`)
+- Automation runs now use a deliberate per-project model selection persisted in automation-loop-store, surfaced in both the AutomationBar and the Run pane header and locked while a loop is starting/active/paused so users can't pretend to swap mid-run. (`d6f026a`, `dbd5a73`)
+- A new Columns2 titlebar button toggles a 50/50 split between the main panel and the sidekick lane, persisted across reloads and balanced via ResizeObserver, with toggle-off restoring the standard 320px sidekick width. (`115b4e7`, `f1b11d9`, `a698023`)
+- The AutomationBar's Play button and the Sidekick Run tab now keep their Play glyph visible during active runs and overlay a spinning progress ring on top, so a running loop is no longer mistaken for an idle one. (`01c9f8a`, `7163610`)
+- The dev-loop now publishes current_task_id onto LoopActivity so the per-task spinner in TaskList can bind to live work, and InvokeProcess capability is spliced in-memory into dev-loop agents so cargo check/test stop hitting permissions errors on non-admin agents. (`57e7daa`, `f99e94a`)
+- Cross-run Failed tasks are now re-readied at loop start under the shared TASK_LEVEL_RETRY_BUDGET, so a prior Anthropic-400 crash no longer leaves work permanently stuck waiting for a Ready scheduler pick. (`9a5f5b5`)
+- The pinned cooking indicator now aligns with the chat content edge and the same gradient backdrop was added to the sidekick Run and Tasks Live Output panes so trailing task output stops bleeding through the shimmer. (`569e866`)
 
-## 11:47 AM — Sidekick gains split-screen, automation model picker, and a live Play affordance
+## 11:47 AM — Harness Stop failures are now surfaced instead of silently swallowed
 
-The desktop shell picked up a 50/50 split toggle for the sidekick lane, the automation loop now has a deliberate per-project model selector surfaced in two places, and the Run/Play buttons keep their glyph with a progress ring overlay while a loop is running.
+When the harness rejects or ignores a stop request, the divergence is now visible to the UI.
 
-- A new titlebar button toggles the sidekick lane to 50/50 with the main area, tracking the target via ResizeObserver and persisting state to localStorage; toggling off restores the standard 320px width and dragging the handle exits split mode cleanly. (`115b4e7`, `f1b11d9`, `a698023`)
-- Automation runs now use a deliberately picked model: AutomationBar and the Run pane share a per-project model selector backed by automation-loop-store, restricted to AURA_MANAGED_CHAT_MODELS, and locked once the loop is starting/active/paused. (`d6f026a`, `dbd5a73`)
-- The Play buttons in AutomationBar and the Run tab now keep their glyph visible with an overlaid progress ring while the loop is starting/preparing/active, fixing the "is it actually running?" confusion when a bare Play icon used to reappear on a still-active loop. (`01c9f8a`, `7163610`)
-- The dev-loop now re-readies cross-run Failed tasks on loop start (gated by the task-retry budget) and publishes the current TaskId onto LoopActivity so the per-task spinner in TaskList finally lights up during a live run. (`9a5f5b5`, `57e7daa`)
-- InvokeProcess is now idempotently spliced into the in-memory capability bundle for dev-loop runs, so non-CEO agents stop burning turns retrying blocked `cargo check`/`cargo test` shell calls. (`f99e94a`)
-- The pinned cooking indicator now aligns with the chat content edge and the sidekick Run/Tasks panes got matching gradient backdrops so trailing rows of streaming output no longer bleed through the shimmer. (`569e866`)
+- Failed POSTs to the harness's /automaton/:id/stop are now logged at error and forwarded in the loop_stopped event payload as harness_error, making 'UI says stopped but harness is still running' visible while preserving the contract that the local registry still clears even when the harness is unreachable. (`8069198`)
 
-## 11:47 AM — Surface harness Stop failures instead of pretending it worked
+## 12:05 PM — Unified PlayLoopGlyph, task-spinner unification, and research-loop auto-retry
 
-When the harness Stop request failed, the UI optimistically returned to idle while the automaton kept running. The divergence is now visible.
+The Play-with-ring affordance is rebuilt as a single concentric SVG, the per-task spinner is consolidated onto one store, and the dev-loop now auto-retries research-loop aborts.
 
-- Failed harness Stop calls are now logged at error with the base URL and forwarded in the loop_stopped payload as harness_error, so the streaming debug log and any wired UI toast can show "UI says stopped, harness is still going"; the existing contract of clearing the local registry even when the harness is unreachable is preserved. (`8069198`)
+- The Play icon and its rotating progress ring are now drawn as a single shared PlayLoopGlyph SVG, with the ring centred on the play polygon's centroid and themed via --color-accent so it stays concentric, themed, and unmistakable on both the AutomationBar and the Sidekick Run tab. (`d395fec`, `fbf0f00`)
+- The per-task spinner regression is fixed at three layers: a backend throttle bypass so set_current_task always broadcasts, a shared getTaskDisplayStatus helper that can upgrade ready→in_progress, and a unification of live-task tracking onto useLoopActivityStore so the two parallel stores can no longer diverge. (`3baa3be`, `cb61e96`, `ce3648d`)
+- Tool markers with nested parentheses like [tool: search_code(pub fn (ack|len), context=1) -> ok] now hoist into Block cards instead of leaking as raw text, with three call sites updated to a marker-bounded capture and the unicode arrow accepted everywhere. (`1c61ae3`)
+- Dev-loop now auto-retries harness research-loop aborts: the completion-contract classifier recognises 'completed without any file operations' style failures, and the task-level gate falls through to the TASK_LEVEL_RETRY_BUDGET when no per-tool failures were recorded, giving task-shape failures a fresh-context retry. (`1943ec5`)
 
 ## Highlights
 
-- Parallel per-session chat lanes, client + server
-- Dev-loop now recovers orphan and Failed tasks across runs
-- Sidekick split-screen toggle and automation model picker
+- Parallel chat sessions per agent instance, server + UI
+- Dev-loop retries, orphan recovery, and synthesized failure reasons
+- Stop now actually cancels the harness turn
+- Per-task spinner and Play-loop glyph finally read as 'running'
 - Windows CI unblocked for community PRs
-- Stop button actually cancels the harness turn
 

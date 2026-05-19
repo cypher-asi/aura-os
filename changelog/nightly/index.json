@@ -2,20 +2,20 @@
   {
     "date": "2026-05-19",
     "channel": "nightly",
-    "version": "0.1.0-nightly.540.1",
-    "title": "Parallel chat sessions, dev-loop resilience, and sidekick controls",
-    "intro": "A heavy nightly: two storage sessions on the same agent can now stream concurrently end-to-end, the dev-loop gained synthesized failure reasons, retry budgets, and orphan/Failed task recovery, and the sidekick picked up a split-screen toggle, automation model picker, and a more honest \"still running\" Play affordance. Windows CI was also unblocked for community PRs.",
+    "version": "0.1.0-nightly.541.1",
+    "title": "Parallel chat sessions, dev-loop resilience, and a redesigned run indicator",
+    "intro": "A heavy day across the stack: each storage session now gets its own end-to-end chat lane on both server and client, the dev-loop gained real retry budgets and orphan recovery via a new automation crate, and the automation Play button was rebuilt as a single concentric glyph so a running loop is unmistakable. Windows CI also stopped silently failing community PRs.",
     "entryCount": 6,
     "highlights": [
-      "Parallel per-session chat lanes, client + server",
-      "Dev-loop now recovers orphan and Failed tasks across runs",
-      "Sidekick split-screen toggle and automation model picker",
-      "Windows CI unblocked for community PRs",
-      "Stop button actually cancels the harness turn"
+      "Parallel chat sessions per agent instance, server + UI",
+      "Dev-loop retries, orphan recovery, and synthesized failure reasons",
+      "Stop now actually cancels the harness turn",
+      "Per-task spinner and Play-loop glyph finally read as 'running'",
+      "Windows CI unblocked for community PRs"
     ],
-    "rawCommitCount": 53,
-    "generatedAt": "2026-05-19T19:01:43.502Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.540.1",
+    "rawCommitCount": 60,
+    "generatedAt": "2026-05-19T21:01:34.162Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.541.1",
     "path": "history/2026-05-19.json"
   },
   {
