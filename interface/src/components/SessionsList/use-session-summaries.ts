@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../api/client";
+import { isOptimisticSessionId } from "../../stores/sessions-list-store";
 import type { AnnotatedSession } from "./session-row-utils";
 
 const MAX_SUMMARY_ATTEMPTS = 3;
@@ -51,6 +52,13 @@ export function useSessionSummaries(
     };
 
     for (const session of sessions) {
+      // Optimistic placeholder rows ("optimistic:<uuid>") have no
+      // server-side identity yet, so `/sessions/<id>/summarize` would
+      // round-trip a 400 from axum's UUID-only path extractor and
+      // pollute the console. The `replaceSessionId` swap in
+      // `useOptimisticSessionRow` will re-render with the real id and
+      // re-enter this loop when SessionReady arrives.
+      if (isOptimisticSessionId(session.session_id)) continue;
       if (session.summary_of_previous_context) continue;
       if (fetchedSummaries[session.session_id]) continue;
       if (summarizingRef.current.has(session.session_id)) continue;

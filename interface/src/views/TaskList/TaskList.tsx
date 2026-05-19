@@ -32,7 +32,7 @@ import {
   useSidekickItemContextMenu,
 } from "../../components/SidekickItemContextMenu";
 import { DeleteSpecModal } from "../../components/DeleteSpecModal";
-import { useDeleteSpec } from "../../hooks/use-delete-spec";
+import { useDeleteSpec, isPendingSpecId } from "../../hooks/use-delete-spec";
 import { useRenameSpec } from "../../hooks/use-rename-spec";
 
 type TaskMenuTarget =
@@ -162,7 +162,11 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
       const task = taskMap.get(nodeId);
       if (task) return { kind: "task", task };
       const spec = specMap.get(nodeId);
-      if (spec) return { kind: "spec", spec };
+      // Suppress the context menu for optimistic `pending-*` spec rows
+      // -- they have no server-side identity yet, so Rename and Delete
+      // are both no-ops (Delete would round-trip a bare "Bad Request"
+      // from the backend's UUID-only path extractor).
+      if (spec && !isPendingSpecId(spec.spec_id)) return { kind: "spec", spec };
       return null;
     },
     [taskMap, specMap],

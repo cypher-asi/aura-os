@@ -158,3 +158,33 @@ async fn delete_spec_with_associated_tasks_returns_conflict() {
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 }
+
+// Regression: the Delete Spec modal used to show the literal text
+// "Bad Request" whenever the UI tried to DELETE a stale
+// `pending-<tool_use_id>` optimistic placeholder, because axum's
+// default `Path<SpecId>` rejection returned a plain-text body that
+// the JSON-only `apiFetch` couldn't parse and fell back to
+// `res.statusText`. The delete handler now takes the path segments
+// as raw strings and emits a structured `ApiError::bad_request`
+// JSON body so callers (browser modal, CLI, harness, etc.) get an
+// actionable error code + message.
+#[tokio::test]
+async fn delete_spec_with_invalid_uuid_returns_structured_400() {
+    let (app, _state, _storage, _db) = build_test_app_with_storage().await;
+    let project_id = ProjectId::new();
+
+    let req = json_request(
+        "DELETE",
+        &format!("/api/projects/{project_id}/specs/pending-toolu_01B9JRqSQxBL6grRn3icQNEC"),
+        None,
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    let body = response_json(resp).await;
+    assert_eq!(body["code"], "bad_request");
+    let msg = body["error"].as_str().unwrap_or_default();
+    assert!(
+        msg.contains("spec_id") && msg.to_lowercase().contains("uuid"),
+        "expected error to mention spec_id and UUID, got: {msg}"
+    );
+}

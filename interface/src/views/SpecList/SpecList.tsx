@@ -18,7 +18,7 @@ import {
   useSidekickItemContextMenu,
 } from "../../components/SidekickItemContextMenu";
 import { DeleteSpecModal } from "../../components/DeleteSpecModal";
-import { useDeleteSpec } from "../../hooks/use-delete-spec";
+import { useDeleteSpec, isPendingSpecId } from "../../hooks/use-delete-spec";
 import { useRenameSpec } from "../../hooks/use-rename-spec";
 
 export function SpecList({ searchQuery }: { searchQuery: string }) {
@@ -161,7 +161,15 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
   );
 
   const resolveMenuSpec = useCallback(
-    (nodeId: string) => specById.get(nodeId) ?? null,
+    (nodeId: string) => {
+      const spec = specById.get(nodeId);
+      // Suppress the context menu for optimistic `pending-*` rows. They
+      // have no server-side identity yet, so neither Rename nor Delete
+      // can do anything useful (a Delete would round-trip a bare "Bad
+      // Request" from the backend's UUID-only path extractor).
+      if (!spec || isPendingSpecId(spec.spec_id)) return null;
+      return spec;
+    },
     [specById],
   );
   const { menu, menuRef, handleContextMenu, closeMenu } = useSidekickItemContextMenu({

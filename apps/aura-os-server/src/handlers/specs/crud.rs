@@ -168,9 +168,22 @@ pub(crate) async fn update_spec(
 pub(crate) async fn delete_spec(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
-    Path((project_id, spec_id)): Path<(ProjectId, SpecId)>,
+    // Take the path segments as raw strings so we can emit a structured
+    // `ApiError::bad_request` body when the spec id isn't a UUID --
+    // axum's default `Path<(ProjectId, SpecId)>` rejection is plain
+    // text, which surfaces in the Delete Spec modal as the literal
+    // "Bad Request" without any actionable detail. The common trigger
+    // is the UI calling DELETE on a stale `pending-<tool_use_id>`
+    // optimistic placeholder.
+    Path((raw_project_id, raw_spec_id)): Path<(String, String)>,
     Query(params): Query<SpecQueryParams>,
 ) -> ApiResult<axum::http::StatusCode> {
+    let project_id = raw_project_id
+        .parse::<ProjectId>()
+        .map_err(|_| ApiError::bad_request("invalid project_id: must be a UUID"))?;
+    let spec_id = raw_spec_id
+        .parse::<SpecId>()
+        .map_err(|_| ApiError::bad_request("invalid spec_id: must be a UUID"))?;
     let storage = state.require_storage_client()?;
 
     let old_title = storage
@@ -291,14 +304,21 @@ pub(crate) async fn update_spec_flat(
 pub(crate) async fn delete_spec_flat(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
-    Path(spec_id): Path<SpecId>,
+    // Same structured-400 treatment as `delete_spec` so harness clients
+    // hitting the flat alias with a non-UUID id (e.g. a stale optimistic
+    // placeholder) get an actionable JSON body instead of axum's
+    // plain-text path rejection.
+    Path(raw_spec_id): Path<String>,
     Query(params): Query<SpecQueryParams>,
 ) -> ApiResult<axum::http::StatusCode> {
+    let spec_id = raw_spec_id
+        .parse::<SpecId>()
+        .map_err(|_| ApiError::bad_request("invalid spec_id: must be a UUID"))?;
     let project_id = lookup_spec_project_id(&state, &jwt, &spec_id).await?;
     delete_spec(
         State(state),
         AuthJwt(jwt),
-        Path((project_id, spec_id)),
+        Path((project_id.to_string(), spec_id.to_string())),
         Query(params),
     )
     .await

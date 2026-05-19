@@ -20,6 +20,24 @@ export interface UseDeleteSpecResult {
   closeDeleteModal: () => void;
 }
 
+/** Detect optimistic placeholders pushed by `pushPendingSpec` while a
+ *  `create_spec` tool call is still streaming. The id is intentionally
+ *  not a UUID (it's `pending-<tool_use_id>`) so it can never collide
+ *  with a real backend spec, but it also can't be DELETEd because the
+ *  backend `Path<SpecId>` extractor rejects non-UUID path segments. */
+export function isPendingSpecId(id: string): boolean {
+  return id.startsWith("pending-");
+}
+
+// RFC 4122 UUID (any version). Matches the backend `SpecId::from_str`
+// validation so we can short-circuit obviously-invalid deletes before
+// they hit the network and get back an opaque 400 "Bad Request".
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isUuid(id: string): boolean {
+  return UUID_RE.test(id);
+}
+
 /**
  * Shared state + handler for deleting a spec from a list view.
  *
@@ -42,6 +60,32 @@ export function useDeleteSpec(projectId: ProjectId | undefined): UseDeleteSpecRe
   const handleDelete = useCallback(async () => {
     if (!deleteTarget || !projectId) return;
     const spec = deleteTarget;
+
+    // Stale optimistic placeholder from a `create_spec` tool call whose
+    // promote/cleanup never landed (e.g. the agent issued create_spec
+    // twice with near-but-not-equal titles so the title-exact dedupe
+    // in `pushSpec` couldn't evict it). Nothing to delete server-side
+    // -- just drop the row locally so the user is unblocked.
+    if (isPendingSpecId(spec.spec_id)) {
+      useSidekickStore.getState().removeSpec(spec.spec_id);
+      queryClient.setQueryData<ProjectLayoutBundle | undefined>(
+        projectQueryKeys.layout(projectId),
+        (current) => removeSpecFromProjectLayout(current, spec.spec_id),
+      );
+      setDeleteTarget(null);
+      return;
+    }
+
+    // Defensive: anything else that isn't a UUID would round-trip a
+    // bare `Bad Request` from axum's path extractor with no useful
+    // body. Surface an actionable message instead of the raw status.
+    if (!isUuid(spec.spec_id)) {
+      setDeleteError(
+        "This spec has an invalid id and can't be deleted from the server. Refresh the page and try again.",
+      );
+      return;
+    }
+
     setDeleteLoading(true);
     setDeleteError(null);
     try {
