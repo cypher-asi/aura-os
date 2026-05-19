@@ -797,7 +797,9 @@ export function useAgentChatStream({
   // drop guard catches any case where this POST never lands.
   const stopStreaming = useCallback(() => {
     inFlightRef.current = false;
-    api.agents.cancelTurn(agentId).catch(() => {});
+    if (agentId) {
+      api.agents.cancelTurn(agentId).catch(() => {});
+    }
     core.baseStopStreaming();
   }, [agentId, core.baseStopStreaming]);
 
