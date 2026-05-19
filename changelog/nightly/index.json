@@ -1,5 +1,24 @@
 [
   {
+    "date": "2026-05-19",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.540.1",
+    "title": "Parallel chat sessions, dev-loop resilience, and sidekick controls",
+    "intro": "A heavy nightly: two storage sessions on the same agent can now stream concurrently end-to-end, the dev-loop gained synthesized failure reasons, retry budgets, and orphan/Failed task recovery, and the sidekick picked up a split-screen toggle, automation model picker, and a more honest \"still running\" Play affordance. Windows CI was also unblocked for community PRs.",
+    "entryCount": 6,
+    "highlights": [
+      "Parallel per-session chat lanes, client + server",
+      "Dev-loop now recovers orphan and Failed tasks across runs",
+      "Sidekick split-screen toggle and automation model picker",
+      "Windows CI unblocked for community PRs",
+      "Stop button actually cancels the harness turn"
+    ],
+    "rawCommitCount": 53,
+    "generatedAt": "2026-05-19T19:01:43.502Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.540.1",
+    "path": "history/2026-05-19.json"
+  },
+  {
     "date": "2026-05-18",
     "channel": "nightly",
     "version": "0.1.0-nightly.538.1",
