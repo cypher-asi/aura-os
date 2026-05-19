@@ -192,6 +192,19 @@ export const agentTemplatesApi = {
   sendEventStream: sendAgentEventStream,
   resetSession: (agentId: AgentId) =>
     apiFetch<void>(`/api/agents/${agentId}/reset-session`, { method: "POST" }),
+  /**
+   * Forward `HarnessInbound::Cancel` to every live chat session on the
+   * bare-template partition and evict the warm sessions so the next
+   * user message cold-starts cleanly. Used by `stopStreaming` to
+   * unstick the per-partition turn slot when the user clicks Stop —
+   * without this, a long-running turn (e.g. plan-mode `generate_specs`
+   * full of non-terminal `progress` heartbeats) keeps the slot held
+   * server-side, blocking the next send until the 90s SSE idle
+   * timeout. Idempotent: the server returns 204 even when no live
+   * session exists for the partition.
+   */
+  cancelTurn: (agentId: AgentId) =>
+    apiFetch<void>(`/api/agents/${agentId}/cancel-turn`, { method: "POST" }),
   getContextUsage: (agentId: AgentId, options?: ApiRequestOptions) =>
     apiFetch<ContextUsageResponse>(
       `/api/agents/${agentId}/context-usage`,
@@ -284,6 +297,19 @@ export const agentInstancesApi = {
   resetInstanceSession: (projectId: ProjectId, agentInstanceId: AgentInstanceId) =>
     apiFetch<void>(
       `/api/projects/${projectId}/agents/${agentInstanceId}/reset-session`,
+      { method: "POST" },
+    ),
+  /**
+   * Project-instance counterpart to {@link agentTemplatesApi.cancelTurn}.
+   * Forwards `HarnessInbound::Cancel` to every live chat session on
+   * the `{template}::{instance_id}::*` partition and evicts the warm
+   * sessions. Called fire-and-forget from `stopStreaming` so a Stop
+   * press unsticks the partition immediately rather than relying on
+   * the server-side SSE drop guard alone.
+   */
+  cancelInstanceTurn: (projectId: ProjectId, agentInstanceId: AgentInstanceId) =>
+    apiFetch<void>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/cancel-turn`,
       { method: "POST" },
     ),
   getContextUsage: (

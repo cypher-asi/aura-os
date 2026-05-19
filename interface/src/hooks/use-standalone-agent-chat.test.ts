@@ -70,6 +70,7 @@ vi.mock("../api/client", () => ({
       listSessionEvents: mockListSessionEvents,
       getContextUsage: vi.fn().mockResolvedValue({ context_utilization: 0 }),
       resetSession: vi.fn().mockResolvedValue(undefined),
+      cancelTurn: vi.fn().mockResolvedValue(undefined),
     },
   },
   STANDALONE_AGENT_HISTORY_LIMIT: 50,

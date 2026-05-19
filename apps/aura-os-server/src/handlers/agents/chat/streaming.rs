@@ -6,8 +6,10 @@
 //! See `PARALLEL_SESSIONS.md` for the parallel-session concurrency model and known caveats.
 
 use std::convert::Infallible;
+use std::pin::Pin;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
+use std::task::{Context, Poll};
 use std::time::{Duration, Instant};
 
 use aura_os_core::HarnessMode;
@@ -16,9 +18,10 @@ use aura_os_harness::{
     SessionBridgeStarted, SessionBridgeTurn, SessionConfig,
 };
 use axum::response::sse::{Event, KeepAlive, Sse};
+use futures_core::Stream;
 use futures_util::stream;
 use futures_util::StreamExt as FuturesStreamExt;
-use tokio::sync::{broadcast, Mutex};
+use tokio::sync::{broadcast, oneshot, Mutex};
 use tracing::{debug, error, info, warn};
 
 use crate::dto::ChatAttachmentDto;
@@ -487,6 +490,7 @@ pub(super) async fn open_harness_chat_stream(
         rx,
         events_tx,
         slot_guard,
+        commands_tx,
     } = get_or_create_delegated_chat_session(
         state,
         &session_key,
@@ -560,7 +564,20 @@ pub(super) async fn open_harness_chat_stream(
         state.turn_max_idle_timeout,
         Arc::clone(&state.stability_metrics),
     );
-    spawn_turn_slot_release(slot_guard, release_rx);
+
+    // Phase 7 Stop / refresh cleanup: pair the slot-release sentinel
+    // with a oneshot that the SSE drop guard fires when axum drops
+    // the response body (Stop's `AbortController.abort()` or a
+    // browser refresh both close the HTTP connection, which drops
+    // the boxed SSE stream). Without this hook the slot stays held
+    // until a terminal harness event arrives, which on a long-running
+    // plan-mode turn full of `Progress` heartbeats could be never —
+    // and the next user send blocks on `acquire_turn_slot` until the
+    // 90s SSE idle timeout fires `SSEIdleTimeoutError` on the client.
+    let (early_release_tx, early_release_rx) = oneshot::channel::<HarnessCommandSender>();
+    spawn_turn_slot_release(slot_guard, release_rx, early_release_rx);
+    let drop_guard_session_key = session_key.clone();
+    let drop_guard_commands_tx = commands_tx.clone();
 
     let stream = build_sse_stream(
         rx,
@@ -569,7 +586,39 @@ pub(super) async fn open_harness_chat_stream(
         fork_info,
         Some(Arc::clone(&state.stability_metrics)),
     );
-    let boxed: SseStream = Box::pin(stream);
+
+    // Wrap the SSE stream so that whenever axum drops the response
+    // (normal turn-end OR client disconnect), we surface the disconnect
+    // to the slot-release sentinel exactly once. The `biased` arm in
+    // `spawn_turn_slot_release` makes the terminal-event branch win
+    // for normal turn-ends, so the only behaviour change here is that
+    // a mid-turn drop now triggers `HarnessInbound::Cancel` + immediate
+    // slot release instead of leaking the guard.
+    //
+    // The closure is `FnOnce` and captures `early_release_tx` and
+    // `drop_guard_commands_tx` by move; `SseDropGuardStream` calls
+    // it at most once via `Option::take()` in its `Drop` impl, so the
+    // `oneshot::Sender::send` consume-by-value contract is honoured.
+    let stream_with_drop_guard = SseDropGuardStream::new(stream, move || {
+        // `oneshot::Sender::send` consumes the sender; on success the
+        // sentinel forwards Cancel and releases the slot. On failure
+        // (sentinel already returned because a terminal event arrived
+        // first) the receiver is gone and we don't need to do anything
+        // — the slot has already been released by the happy path.
+        if early_release_tx.send(drop_guard_commands_tx).is_err() {
+            debug!(
+                session_key = %drop_guard_session_key,
+                "SSE drop guard: slot-release sentinel already finished — happy-path completion, no cancel needed"
+            );
+        } else {
+            debug!(
+                session_key = %drop_guard_session_key,
+                "SSE drop guard: client disconnected before terminal event — forwarded Cancel and released slot"
+            );
+        }
+    });
+
+    let boxed: SseStream = Box::pin(stream_with_drop_guard);
 
     Ok((
         sse_response_headers(persist_snapshot.as_ref()),
@@ -729,6 +778,69 @@ pub(super) struct SessionForTurn {
     /// sentinel task that watches the broadcast for the terminal
     /// event and drops the guard there.
     pub(super) slot_guard: TurnSlotGuard,
+    /// Cloned harness inbound mpsc sender for the live session. The
+    /// SSE drop guard hands this to `spawn_turn_slot_release` via the
+    /// early-release oneshot so a client disconnect (Stop or refresh)
+    /// can forward `HarnessInbound::Cancel` and unstick the partition
+    /// instead of letting the turn slot stay held until the next
+    /// terminal event (which may never arrive on a cancelled
+    /// long-running plan-mode turn).
+    pub(super) commands_tx: HarnessCommandSender,
+}
+
+/// SSE stream wrapper that runs `on_drop` exactly once when the inner
+/// stream is dropped (either because it ended naturally or because
+/// axum dropped the response after the client disconnected). This is
+/// the server-side hook that catches both `Stop` and a browser
+/// refresh: in both cases axum drops the boxed `Sse` body, which
+/// drops this guard, which fires the early-release oneshot that
+/// `spawn_turn_slot_release` is selecting on.
+///
+/// Wraps the existing `Stream<Item = Result<Event, Infallible>>`
+/// produced by [`build_sse_stream`] without changing item types, so
+/// the type plumbing through `SseStream` / `Sse::new` stays
+/// transparent. Pinning safety: the inner stream is structurally
+/// pinned via the inherent `pin_project_lite`-style projection below
+/// (we rely on `inner: S` being the only `!Unpin` field).
+struct SseDropGuardStream<S, F: FnOnce()> {
+    inner: S,
+    on_drop: Option<F>,
+}
+
+impl<S, F: FnOnce()> SseDropGuardStream<S, F> {
+    fn new(inner: S, on_drop: F) -> Self {
+        Self {
+            inner,
+            on_drop: Some(on_drop),
+        }
+    }
+}
+
+impl<S, F: FnOnce()> Drop for SseDropGuardStream<S, F> {
+    fn drop(&mut self) {
+        if let Some(f) = self.on_drop.take() {
+            f();
+        }
+    }
+}
+
+impl<S, F> Stream for SseDropGuardStream<S, F>
+where
+    S: Stream<Item = Result<Event, Infallible>>,
+    F: FnOnce(),
+{
+    type Item = Result<Event, Infallible>;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        // SAFETY: `inner` is structurally pinned — the only `!Unpin`
+        // field — and `on_drop: Option<F>` is `Unpin` regardless of
+        // `F` because `Option` only holds `F` by value. We never move
+        // `inner` out of `self` (`Drop` only takes `on_drop`), so this
+        // projection is sound.
+        let this = unsafe { self.get_unchecked_mut() };
+        let inner = unsafe { Pin::new_unchecked(&mut this.inner) };
+        inner.poll_next(cx)
+    }
 }
 
 fn build_sse_stream(
@@ -884,6 +996,7 @@ async fn reuse_with_turn_slot(
         rx: reused.rx,
         events_tx: reused.events_tx,
         slot_guard: acquired.guard,
+        commands_tx: reused.commands_tx,
     })
 }
 
@@ -958,6 +1071,7 @@ async fn insert_delegated_chat_session(
 
     let rx = started.events_rx;
     let events_tx = started.session.events_tx.clone();
+    let commands_tx = started.session.commands_tx.clone();
     let composite_key = ChatSessionKey::new(key, requested_model.clone());
     state.chat_sessions.insert(
         composite_key,
@@ -978,6 +1092,7 @@ async fn insert_delegated_chat_session(
         rx,
         events_tx,
         slot_guard: acquired.guard,
+        commands_tx,
     })
 }
 

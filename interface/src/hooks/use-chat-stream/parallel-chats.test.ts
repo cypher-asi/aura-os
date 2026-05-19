@@ -55,6 +55,7 @@ vi.mock("../../api/client", () => ({
   api: {
     sendEventStream: vi.fn().mockResolvedValue(undefined),
     getAgentInstance: vi.fn().mockResolvedValue({}),
+    cancelInstanceTurn: vi.fn().mockResolvedValue(undefined),
   },
   isInsufficientCreditsError: vi.fn(() => false),
   isAgentBusyError: vi.fn(() => null),

@@ -41,8 +41,8 @@ pub(crate) use instance_route::{render_project_context, render_project_context_f
 pub(crate) use persist::{persist_user_message, ChatPersistCtx, ChatPersistRequest};
 pub(crate) use persist_task::persist_event;
 pub(crate) use setup::{
-    reset_agent_session, reset_instance_session, setup_agent_chat_persistence,
-    setup_project_chat_persistence,
+    cancel_agent_turn, cancel_instance_turn, reset_agent_session, reset_instance_session,
+    setup_agent_chat_persistence, setup_project_chat_persistence,
 };
 
 pub use busy::{evaluate_partition_busy, BusyMatch, BusyScope};

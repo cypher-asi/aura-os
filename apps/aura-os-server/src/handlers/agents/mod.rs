@@ -13,8 +13,9 @@ pub(crate) mod tool_dedupe;
 pub(crate) mod workspace_tools;
 
 pub(crate) use chat::{
-    list_agent_events, list_agent_events_paginated, list_agent_session_events, list_events,
-    reset_agent_session, reset_instance_session, send_agent_event_stream, send_event_stream,
+    cancel_agent_turn, cancel_instance_turn, list_agent_events, list_agent_events_paginated,
+    list_agent_session_events, list_events, reset_agent_session, reset_instance_session,
+    send_agent_event_stream, send_event_stream,
 };
 pub(crate) use control::{delegate_agent_task, get_agent_state_snapshot};
 pub(crate) use crud::{

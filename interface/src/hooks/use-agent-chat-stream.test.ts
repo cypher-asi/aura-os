@@ -12,6 +12,7 @@ vi.mock("../api/client", () => ({
   api: {
     agents: {
       sendEventStream: vi.fn().mockResolvedValue(undefined),
+      cancelTurn: vi.fn().mockResolvedValue(undefined),
     },
   },
   isInsufficientCreditsError: vi.fn(() => false),

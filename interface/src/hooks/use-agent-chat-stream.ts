@@ -790,10 +790,16 @@ export function useAgentChatStream({
   // and silently returns, swallowing the force-sent prompt. The
   // outer async `sendMessage` only resets the latch from its `finally`
   // block after the SSE close propagates, which is too late.
+  //
+  // Phase 7 Stop / refresh cleanup: also POST `cancel-turn` so the
+  // server forwards `HarnessInbound::Cancel` to the harness and
+  // evicts the warm session. Fire-and-forget — the server-side SSE
+  // drop guard catches any case where this POST never lands.
   const stopStreaming = useCallback(() => {
     inFlightRef.current = false;
+    api.agents.cancelTurn(agentId).catch(() => {});
     core.baseStopStreaming();
-  }, [core.baseStopStreaming]);
+  }, [agentId, core.baseStopStreaming]);
 
   return {
     streamKey: core.key,

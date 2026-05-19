@@ -684,6 +684,17 @@ export function useChatStream({
       ctrl.retryTimer = null;
     }
     ctrl.autoRetryCount = 0;
+    // Phase 7 Stop / refresh cleanup: explicitly tell the server to
+    // forward `HarnessInbound::Cancel` to the harness and evict the
+    // warm chat session so the per-partition turn slot is released
+    // immediately. Fire-and-forget — the server-side SSE drop guard
+    // is the safety net if this POST never lands (offline, dropped
+    // connection, etc.). Without this, a Stop on a long-running plan-
+    // mode turn leaves the slot held until the 90s SSE idle timeout
+    // and the next send appears to "time out" with no error surfaced.
+    if (projectId && agentInstanceId) {
+      api.cancelInstanceTurn(projectId, agentInstanceId).catch(() => {});
+    }
     // The per-partition send-control refactor moved the controller
     // actually wired into the fetch off `streamMetaMap[key].abort`
     // and onto `ctrl.currentController`. `baseStopStreaming` still

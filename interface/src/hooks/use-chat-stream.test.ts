@@ -52,6 +52,7 @@ vi.mock("../api/client", () => ({
   api: {
     sendEventStream: vi.fn().mockResolvedValue(undefined),
     getAgentInstance: vi.fn().mockResolvedValue({}),
+    cancelInstanceTurn: vi.fn().mockResolvedValue(undefined),
   },
   isInsufficientCreditsError: vi.fn(() => false),
   isAgentBusyError: vi.fn(() => null),
@@ -100,6 +101,47 @@ describe("useChatStream", () => {
     expect(typeof result.current.sendMessage).toBe("function");
     expect(typeof result.current.stopStreaming).toBe("function");
     expect(typeof result.current.resetEvents).toBe("function");
+  });
+
+  // Phase 7 Stop / refresh cleanup: pressing Stop must POST
+  // `cancel-turn` to the project / instance route so the server
+  // forwards `HarnessInbound::Cancel`, releases the per-partition
+  // turn slot, and evicts the warm chat session. Without this the
+  // turn slot stays held until the 90s SSE idle timeout and the
+  // user's next send appears to "time out" with no error surfaced —
+  // the bug this regression guard pins.
+  it("stopStreaming POSTs cancel-turn for the instance partition", () => {
+    const { result } = renderHook(() =>
+      useChatStream({ projectId: "p-1", agentInstanceId: "ai-1" }),
+    );
+
+    act(() => {
+      result.current.stopStreaming();
+    });
+
+    expect(api.cancelInstanceTurn).toHaveBeenCalledWith("p-1", "ai-1");
+    expect(api.cancelInstanceTurn).toHaveBeenCalledTimes(1);
+  });
+
+  // Companion to the test above: the cancel POST is fire-and-forget,
+  // so a failed network call (offline, server 500, etc.) MUST NOT
+  // throw out of `stopStreaming` — the abort + UI cleanup still
+  // need to run, and the server-side SSE drop guard is the safety
+  // net for the slot release.
+  it("stopStreaming swallows cancel-turn failures", () => {
+    vi.mocked(api.cancelInstanceTurn).mockRejectedValueOnce(
+      new Error("offline"),
+    );
+
+    const { result } = renderHook(() =>
+      useChatStream({ projectId: "p-1", agentInstanceId: "ai-1" }),
+    );
+
+    expect(() => {
+      act(() => {
+        result.current.stopStreaming();
+      });
+    }).not.toThrow();
   });
 
   it("does nothing when projectId is undefined", async () => {
