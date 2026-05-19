@@ -3,7 +3,6 @@ use aura_os_core::{HarnessMode, ProjectId};
 use crate::handlers::projects_helpers::validate_workspace_is_initialised;
 
 pub(crate) const CONSECUTIVE_PUSH_FAILURES_STUCK_THRESHOLD: u32 = 3;
-const TOOL_CALL_RETRY_BUDGET: u32 = 8;
 const MAX_DOD_RETRIES_PER_TASK: u32 = 0;
 
 pub(crate) fn auto_decompose_disabled() -> bool {
@@ -45,78 +44,40 @@ fn is_completion_contract_failure_reason(reason: &str) -> bool {
     mentions_task_done && (mentions_missing_edits || mentions_no_change_escape_hatch)
 }
 
+// Phase G1: the classifier family lives in `aura-os-automation`. These
+// thin wrappers preserve the server's `_for_tests` call sites
+// (adapter.rs, start.rs, side_effects.rs, credits.rs, preflight.rs,
+// the `phase7_test_support` re-exports, the dev-loop DoD regression
+// suite) without renaming any of them. They will be retired in a
+// later cleanup pass once every direct caller imports from
+// `aura_os_automation` directly.
+
 pub(crate) fn is_rate_limited_failure_for_tests(reason: &str) -> bool {
-    let reason = reason.to_ascii_lowercase();
-    reason.contains("rate limit")
-        || reason.contains("rate_limited")
-        || reason.contains("429")
-        || reason.contains("529")
-        || reason.contains("overloaded")
+    aura_os_automation::is_rate_limited(reason)
 }
 
 pub(crate) fn is_insufficient_credits_failure_for_tests(reason: &str) -> bool {
-    let reason = reason.to_ascii_lowercase();
-    reason.contains("insufficient credits")
-        || reason.contains("insufficient_credits")
-        || reason.contains("payment_required")
-        || reason.contains("402 payment required")
-        || (reason.contains("402") && reason.contains("payment required"))
+    aura_os_automation::is_insufficient_credits(reason)
 }
 
 pub(crate) fn is_git_push_timeout_failure_for_tests(reason: &str) -> bool {
-    let reason = reason.to_ascii_lowercase();
-    reason.contains("git")
-        && reason.contains("push")
-        && (reason.contains("timeout") || reason.contains("timed out"))
+    aura_os_automation::is_git_push_timeout(reason)
 }
 
 pub(crate) fn is_provider_internal_error_for_tests(reason: &str) -> bool {
-    let reason = reason.to_ascii_lowercase();
-    reason.contains("internal server error")
-        || reason.contains(" 500")
-        || reason.contains(" 502")
-        || reason.contains(" 503")
-        || reason.contains(" 504")
-        || reason.contains("stream terminated")
-        || reason.contains("connection reset by peer")
+    aura_os_automation::is_provider_internal(reason)
 }
 
 pub(crate) fn looks_like_unclassified_transient_for_tests(reason: &str) -> bool {
-    let reason = reason.to_ascii_lowercase();
-    [
-        "timeout",
-        "temporar",
-        "connection reset",
-        "econnreset",
-        "dns lookup failed",
-        "tls handshake",
-        "socket hang up",
-        "unavailable",
-        "try again",
-    ]
-    .iter()
-    .any(|needle| reason.contains(needle))
-        && !is_rate_limited_failure_for_tests(&reason)
-        && !is_provider_internal_error_for_tests(&reason)
+    aura_os_automation::looks_like_unclassified_transient(reason)
 }
 
 pub(crate) fn is_agent_stuck_terminal_signal_for_tests(reason: &str) -> bool {
-    let reason = reason.to_ascii_lowercase();
-    reason.contains("appears stuck")
-        || reason.contains("agent is stuck")
-        || reason.contains("consecutive error")
-        || reason.contains("consecutive failure")
-        || reason.contains("all tool calls have returned errors")
-        || reason.contains("prevent waste")
-        || reason.contains("conserve budget")
+    aura_os_automation::is_agent_stuck_terminal_signal(reason)
 }
 
 pub(crate) fn should_restart_on_error_event_for_tests(reason: &str) -> bool {
-    !is_agent_stuck_terminal_signal_for_tests(reason)
-        && (is_rate_limited_failure_for_tests(reason)
-            || is_provider_internal_error_for_tests(reason)
-            || is_git_push_timeout_failure_for_tests(reason)
-            || looks_like_unclassified_transient_for_tests(reason))
+    aura_os_automation::should_restart_on_error(reason)
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -285,11 +246,11 @@ pub(crate) fn completion_validation_failure_reason_with_tool_call_failures_for_t
 }
 
 pub(crate) fn tool_call_failed_should_retry_for_tests(reason: &str, prior_count: u32) -> bool {
-    prior_count < TOOL_CALL_RETRY_BUDGET && should_restart_on_error_event_for_tests(reason)
+    aura_os_automation::tool_call_failed_should_retry(reason, prior_count)
 }
 
 pub(crate) const fn tool_call_retry_budget_for_tests() -> u32 {
-    TOOL_CALL_RETRY_BUDGET
+    aura_os_automation::TOOL_CALL_RETRY_BUDGET
 }
 
 pub(crate) fn is_empty_path_write_event_for_tests(
@@ -590,18 +551,7 @@ pub(crate) fn should_task_complete_despite_push_failure_for_tests(
 }
 
 pub(crate) fn classify_push_failure_for_tests(reason: &str) -> Option<&'static str> {
-    let reason = reason.to_ascii_lowercase();
-    if !(reason.contains("push") || reason.contains("remote")) {
-        return None;
-    }
-    if reason.contains("timeout") || reason.contains("timed out") {
-        Some("push_timeout")
-    } else if reason.contains("no space") || reason.contains("storage") || reason.contains("quota")
-    {
-        Some("remote_storage_exhausted")
-    } else {
-        Some("push_failed")
-    }
+    aura_os_automation::classify_push_failure(reason)
 }
 
 pub(crate) fn classify_dod_remediation_kind_for_tests(reason: &str) -> Option<&'static str> {

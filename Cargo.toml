@@ -2,6 +2,7 @@
 members = [
     "crates/aura-os-agents",
     "crates/aura-os-auth",
+    "crates/aura-os-automation",
     "crates/aura-os-billing",
     "crates/aura-os-browser",
     "crates/aura-os-core",

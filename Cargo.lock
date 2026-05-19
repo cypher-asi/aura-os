@@ -440,6 +440,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "aura-os-automation"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tracing",
+]
+
+[[package]]
 name = "aura-os-billing"
 version = "0.1.0"
 dependencies = [
@@ -657,6 +667,7 @@ dependencies = [
  "aura-loop-log-schema",
  "aura-os-agents",
  "aura-os-auth",
+ "aura-os-automation",
  "aura-os-billing",
  "aura-os-browser",
  "aura-os-core",

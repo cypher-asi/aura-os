@@ -22,6 +22,7 @@ aura-os-orgs = { path = "../../crates/aura-os-orgs" }
 aura-os-projects = { path = "../../crates/aura-os-projects" }
 aura-os-agents = { path = "../../crates/aura-os-agents" }
 aura-os-auth = { path = "../../crates/aura-os-auth" }
+aura-os-automation = { path = "../../crates/aura-os-automation" }
 aura-os-tasks = { path = "../../crates/aura-os-tasks" }
 aura-os-sessions = { path = "../../crates/aura-os-sessions" }
 aura-os-harness = { path = "../../crates/aura-os-harness" }
