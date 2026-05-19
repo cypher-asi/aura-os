@@ -261,8 +261,19 @@
   z-index: 11;
   display: flex;
   justify-content: center;
-  padding: 0 calc(var(--space-3) * 2);
+  padding: var(--space-4) calc(var(--space-3) * 2) 0;
   pointer-events: none;
+  /* Full-width backdrop fade so chat content scrolling above the
+     pinned indicator dissolves into the chat background instead of
+     visibly overlapping the shimmering phase label. Applied to the
+     outer (not the centered max-width inner) so text that sits on
+     either side of the narrow indicator label is also covered. */
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--color-bg) 60%,
+    var(--color-bg) 100%
+  );
 }
 
 .pinnedStreamingIndicatorInner {
@@ -273,18 +284,7 @@
   /* Match `.bubble` horizontal padding so the shimmering phase label
      left-aligns with the message text inside assistant bubbles, not
      with the bubble's outer edge. */
-  padding: var(--space-4) 0 var(--space-2) var(--space-3);
-  /* Backdrop fade so chat content scrolling above the pinned indicator
-     dissolves into the chat background instead of visibly overlapping
-     the shimmering phase label. Top is transparent (seamless fade),
-     bottom is solid `--color-bg` so the label text never reads on top
-     of stray glyphs. */
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    var(--color-bg) 60%,
-    var(--color-bg) 100%
-  );
+  padding-left: var(--space-3);
 }
 
 .pinnedStreamingIndicator > * {
