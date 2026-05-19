@@ -25,8 +25,10 @@ use std::sync::{
 use aura_os_core::{AgentInstanceId, ProjectId, SessionId, SessionStatus, TaskId};
 use aura_os_events::{DomainEvent, LegacyJsonEvent};
 use aura_os_harness::collect_automaton_events;
+use tokio::sync::broadcast;
 use tracing::warn;
 
+use crate::handlers::agents::chat::{spawn_dev_loop_persist_task, ChatPersistCtx};
 use crate::handlers::live_heuristics::{emit_live_heuristic, LiveAnalyzer};
 use crate::loop_log::RunStatus;
 use crate::state::AppState;
@@ -117,6 +119,27 @@ pub(crate) fn spawn_event_forwarder(ctx: ForwarderContext) -> tokio::task::Abort
         } = ctx;
         let loop_handle = Arc::new(loop_handle);
         let jwt = jwt.map(Arc::new);
+        // Phase G0b (plan F1): subscribe the chat persist pipeline to
+        // this same harness broadcast so every dev-loop harness event
+        // lands as a `SessionEvent` row. Any future replay through
+        // `session_events_to_agent_history` then goes through the
+        // same dangling-`tool_use` strip, recent-window cap, tool-blob
+        // truncation, and parallel-`tool_result` dedupe chat already
+        // gets. Purely additive: the side-effects worker / loop_log
+        // writer / LoopHandle updates below are unchanged. We only
+        // attach when we have everything the chat persist contract
+        // needs (storage client + JWT + minted session id); on any
+        // missing piece we skip silently — the dev-loop runs to
+        // completion either way and the worst case is "no
+        // SessionEvent rows for this run", not a hard failure.
+        let _persist_handle = maybe_spawn_dev_loop_persist(DevLoopPersistInputs {
+            state: &state,
+            events_tx: &events_tx,
+            project_id,
+            agent_instance_id,
+            jwt: jwt.as_deref().map(|s| s.as_str()),
+            session_id,
+        });
         let rx = events_tx.subscribe();
         let fallback_task_id = task_id.clone();
         let (event_task_tx, mut event_task_rx) =
@@ -273,6 +296,49 @@ pub(crate) fn spawn_event_forwarder(ctx: ForwarderContext) -> tokio::task::Abort
         );
     });
     handle.abort_handle()
+}
+
+/// Inputs for [`maybe_spawn_dev_loop_persist`]. Bundled so the helper
+/// signature stays inside the 5-parameter limit while still pulling
+/// every field the [`ChatPersistCtx`] needs.
+struct DevLoopPersistInputs<'a> {
+    state: &'a AppState,
+    events_tx: &'a broadcast::Sender<serde_json::Value>,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+    jwt: Option<&'a str>,
+    session_id: Option<SessionId>,
+}
+
+/// Spawn the chat-pipeline persist task subscribed to the dev-loop's
+/// harness event broadcast. Returns `None` when any precondition for
+/// chat persistence is missing (storage client unset, no JWT
+/// captured, or no `SessionId` minted) — the dev-loop runs to
+/// completion either way; we just won't write `SessionEvent` rows
+/// for this run. See module-level doc on
+/// [`crate::handlers::agents::chat::spawn_dev_loop_persist_task`]
+/// for the contract and rationale.
+fn maybe_spawn_dev_loop_persist(
+    inputs: DevLoopPersistInputs<'_>,
+) -> Option<tokio::task::JoinHandle<()>> {
+    let storage = inputs.state.storage_client.as_ref()?.clone();
+    let jwt = inputs.jwt?.to_string();
+    let session_id = inputs.session_id?;
+    let ctx = ChatPersistCtx {
+        storage,
+        jwt,
+        session_id,
+        project_id: inputs.project_id.to_string(),
+        project_agent_id: inputs.agent_instance_id.to_string(),
+        agent_id: None,
+        originating_agent_id: None,
+        cross_agent_depth: 0,
+        from_agent_id: None,
+    };
+    Some(spawn_dev_loop_persist_task(
+        inputs.events_tx.subscribe(),
+        ctx,
+    ))
 }
 
 async fn maybe_emit_live_heuristics(

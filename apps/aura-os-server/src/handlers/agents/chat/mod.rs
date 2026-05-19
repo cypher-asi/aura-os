@@ -9,6 +9,7 @@ mod busy;
 mod compaction;
 mod constants;
 mod cross_agent_reply;
+mod dev_loop_persist;
 mod discovery;
 pub(crate) mod errors;
 mod event_bus;
@@ -30,6 +31,7 @@ mod types;
 mod tests;
 
 pub(crate) use agent_route::send_agent_event_stream;
+pub(crate) use dev_loop_persist::spawn_dev_loop_persist_task;
 pub(crate) use discovery::{find_matching_project_agents, storage_session_sort_key};
 pub(crate) use event_bus::{publish_assistant_message_end_event, publish_user_message_event};
 pub(crate) use events::{
