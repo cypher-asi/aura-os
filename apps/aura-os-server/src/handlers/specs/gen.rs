@@ -324,8 +324,15 @@ mod tests {
 
         assert!(hints.contains(&"read_file".to_string()));
         assert!(hints.contains(&"create_spec".to_string()));
-        assert!(!hints.contains(&"create_task".to_string()));
+        assert!(
+            hints.contains(&"create_task".to_string()),
+            "plan mode now advertises task organization; spec-gen must inherit it",
+        );
+        assert!(hints.contains(&"update_task".to_string()));
+        assert!(hints.contains(&"delete_task".to_string()));
+        assert!(hints.contains(&"transition_task".to_string()));
         assert!(!hints.contains(&"run_command".to_string()));
+        assert!(!hints.contains(&"run_task".to_string()));
     }
 
     #[test]

@@ -47,11 +47,13 @@ What you may do in this mode:\n\
 - Inspect the project with read-only tools: `read_file`, `list_files`, `find_files`, `search_code`, `stat_file`.\n\
 - Inspect existing specs/tasks/project metadata: `list_specs`, `get_spec`, `list_tasks`, `get_task_context`, `get_project`.\n\
 - Author spec content using the spec tools: `create_spec`, `update_spec`. All spec body content lives there \u{2014} do NOT write specs to disk via `write_file`.\n\
+- Organize tasks under existing specs using `create_task`, `update_task`, `delete_task`, and `transition_task`. Use these to break specs into actionable work, edit titles/descriptions, remove obsolete tasks, and move tasks between organizational statuses.\n\
 \n\
 What you MUST NOT do in this mode:\n\
 - Do not modify source code in any way. `write_file`, `edit_file`, and `delete_file` are disabled.\n\
 - Do not execute shell commands, run tasks, commit, push, or touch the dev loop. `run_command`, `run_task`, `retry_task`, `git_commit`, `git_push`, `start_dev_loop`, `pause_dev_loop`, and `stop_dev_loop` are disabled.\n\
 - Do not mark tasks done or submit plans on the user's behalf. `task_done` and `submit_plan` are disabled.\n\
+- Do not start or finish work via task status. You may NOT transition a task to `in_progress` or `done`, and you may NOT use `update_task` to set `status` to `in_progress` or `done`. Organizational moves (`ready`, `blocked`) are allowed; execution moves are not.\n\
 \n\
 Every spec you create or update MUST end with a `## Definition of Done` section that lists the exact build, test, format, and lint commands that must pass before any task derived from the spec can be marked done, plus 3\u{2013}7 observable acceptance criteria.\n\
 \n\
@@ -60,7 +62,7 @@ If you implement a type that is defined by an external spec or RFC, cite the aut
 /// Per-turn preamble prepended to every plan-mode user message on the
 /// wire. Kept deliberately short so it does not eat into the model's
 /// turn budget on top of the system-prompt suffix above.
-pub(crate) const PLAN_MODE_USER_PREAMBLE: &str = "[plan-mode] You are in plan mode for this turn. Inspect with read-only tools and capture work in specs via `create_spec` / `update_spec`. Do not write or edit source files, do not run commands, do not mark tasks done. Every spec must end with a `## Definition of Done` section.";
+pub(crate) const PLAN_MODE_USER_PREAMBLE: &str = "[plan-mode] You are in plan mode for this turn. Inspect with read-only tools, capture work in specs via `create_spec` / `update_spec`, and organize tasks via `create_task` / `update_task` / `delete_task` / `transition_task`. Do not write or edit source files, do not run commands, do not mark tasks done, and do not transition tasks to `in_progress` or `done`. Every spec must end with a `## Definition of Done` section.";
 
 /// Tool name list used both as `tool_hints` on the outbound
 /// `UserMessage` (which steers `tool_choice` on the first iteration of
@@ -81,6 +83,10 @@ pub(crate) const PLAN_MODE_TOOL_HINT_NAMES: &[&str] = &[
     "list_tasks",
     "get_task_context",
     "get_project",
+    "create_task",
+    "update_task",
+    "delete_task",
+    "transition_task",
 ];
 
 /// Code-mutating / side-effecting tools that plan mode turns off
@@ -208,6 +214,10 @@ mod tests {
             "get_spec",
             "create_spec",
             "update_spec",
+            "create_task",
+            "update_task",
+            "delete_task",
+            "transition_task",
         ] {
             assert!(
                 !perms.per_tool.contains_key(name),
@@ -227,18 +237,49 @@ mod tests {
             "get_spec",
             "create_spec",
             "update_spec",
+            "create_task",
+            "update_task",
+            "delete_task",
+            "transition_task",
         ] {
             assert!(
                 hints.iter().any(|h| h == required),
                 "plan-mode hints must include `{required}`, got {hints:?}",
             );
         }
-        for forbidden in ["write_file", "edit_file", "run_command", "task_done"] {
+        for forbidden in [
+            "write_file",
+            "edit_file",
+            "run_command",
+            "task_done",
+            "run_task",
+            "retry_task",
+            "submit_plan",
+        ] {
             assert!(
                 hints.iter().all(|h| h != forbidden),
                 "plan-mode hints must NOT include `{forbidden}`, got {hints:?}",
             );
         }
+    }
+
+    #[test]
+    fn system_prompt_suffix_calls_out_status_restriction() {
+        // Plan mode allows organizing tasks but forbids transitioning
+        // them into execution states. Tool permissions are binary
+        // on/off so this rule is prompt-enforced; if the wording
+        // drifts, the steering quietly disappears. Pin it.
+        assert!(
+            PLAN_MODE_SYSTEM_PROMPT_SUFFIX.contains("transition a task to `in_progress` or `done`"),
+            "plan-mode prompt must forbid transitioning tasks to in_progress or done, got: {PLAN_MODE_SYSTEM_PROMPT_SUFFIX}",
+        );
+        assert!(
+            PLAN_MODE_SYSTEM_PROMPT_SUFFIX.contains("`create_task`")
+                && PLAN_MODE_SYSTEM_PROMPT_SUFFIX.contains("`update_task`")
+                && PLAN_MODE_SYSTEM_PROMPT_SUFFIX.contains("`delete_task`")
+                && PLAN_MODE_SYSTEM_PROMPT_SUFFIX.contains("`transition_task`"),
+            "plan-mode prompt must advertise the task-organization tool surface, got: {PLAN_MODE_SYSTEM_PROMPT_SUFFIX}",
+        );
     }
 
     #[test]

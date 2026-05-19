@@ -1078,10 +1078,22 @@ mod tests {
             hints.iter().any(|h| h == "read_file"),
             "plan-mode hints must include `read_file`, got {hints:?}",
         );
+        for task_tool in ["create_task", "update_task", "delete_task", "transition_task"] {
+            assert!(
+                hints.iter().any(|h| h == task_tool),
+                "plan-mode hints must include `{task_tool}` so the planner can organize tasks, got {hints:?}",
+            );
+        }
         assert!(
             hints.iter().all(|h| h != "write_file"),
             "plan-mode hints must NEVER list a code-writing tool, got {hints:?}",
         );
+        for code_tool in ["run_task", "retry_task", "task_done", "submit_plan"] {
+            assert!(
+                hints.iter().all(|h| h != code_tool),
+                "plan-mode hints must NEVER list `{code_tool}` (execution surface), got {hints:?}",
+            );
+        }
     }
 
     #[test]
