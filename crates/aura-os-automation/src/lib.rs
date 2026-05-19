@@ -23,6 +23,8 @@
 pub mod budget;
 pub mod classify;
 pub mod error;
+pub mod event_kinds;
+pub mod progress;
 
 pub use budget::{TASK_LEVEL_RETRY_BUDGET, TOOL_CALL_RETRY_BUDGET};
 pub use classify::{
@@ -31,6 +33,7 @@ pub use classify::{
     looks_like_unclassified_transient, should_restart_on_error, tool_call_failed_should_retry,
 };
 pub use error::AutomationError;
+pub use progress::{apply_loop_activity, LoopActivityTransition};
 
 #[cfg(test)]
 mod smoke {
@@ -52,5 +55,15 @@ mod smoke {
         let _ = crate::tool_call_failed_should_retry("rate limit", 0);
         let _ = crate::classify_restart_reason("rate limit");
         let _ = crate::classify_push_failure("git push timed out");
+        let _: &str = crate::event_kinds::TEXT_DELTA;
+        // Compile-time check that `apply_loop_activity` is reachable
+        // through the crate root. The progress module's own table
+        // tests cover behaviour; here we just want a `let _ = ...`
+        // that pins the public name.
+        fn _assert_callable(
+            activity: &aura_os_events::LoopActivity,
+        ) -> Option<crate::LoopActivityTransition> {
+            crate::apply_loop_activity(activity, crate::event_kinds::TEXT_DELTA)
+        }
     }
 }

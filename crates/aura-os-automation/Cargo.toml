@@ -7,10 +7,23 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+aura-os-events = { path = "../aura-os-events" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
+
+[dev-dependencies]
+# The automation crate mirrors a handful of harness wire-event-type
+# strings in `event_kinds.rs`. The `event_kinds_match_harness_constants`
+# invariant test compares them byte-for-byte against the harness module
+# so the duplication stays honest. Production code MUST NOT depend on
+# the harness — the Domain layer is below the harness-client crate. See
+# Phase G2 / G6 in the dev-loop progress plan for the long-term move.
+aura-os-harness = { path = "../aura-os-harness" }
+# Test-only: progress tests construct `aura_os_events::LoopActivity`
+# fixtures, whose constructors take `chrono::DateTime<Utc>`.
+chrono = { workspace = true }
 
 [lints]
 workspace = true

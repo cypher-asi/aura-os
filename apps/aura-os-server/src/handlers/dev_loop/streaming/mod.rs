@@ -171,7 +171,8 @@ pub(crate) fn spawn_event_forwarder(ctx: ForwarderContext) -> tokio::task::Abort
                     &event_type,
                 )
                 .await;
-                activity::apply_loop_activity(&event_worker_loop_handle, &event_type, &event).await;
+                activity::apply_loop_activity_event(&event_worker_loop_handle, &event_type, &event)
+                    .await;
                 side_effects::record_event_side_effects(
                     &event_worker_state,
                     project_id,

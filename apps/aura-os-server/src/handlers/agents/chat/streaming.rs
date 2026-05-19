@@ -1193,7 +1193,12 @@ mod tests {
             hints.iter().any(|h| h == "read_file"),
             "plan-mode hints must include `read_file`, got {hints:?}",
         );
-        for task_tool in ["create_task", "update_task", "delete_task", "transition_task"] {
+        for task_tool in [
+            "create_task",
+            "update_task",
+            "delete_task",
+            "transition_task",
+        ] {
             assert!(
                 hints.iter().any(|h| h == task_tool),
                 "plan-mode hints must include `{task_tool}` so the planner can organize tasks, got {hints:?}",

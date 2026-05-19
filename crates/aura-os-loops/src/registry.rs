@@ -174,6 +174,22 @@ impl LoopHandle {
         &self.loop_id
     }
 
+    /// Snapshot of this loop's current activity.
+    ///
+    /// Returns `None` once the loop has been removed from the
+    /// registry (terminal `mark_*` call already fired, or the handle
+    /// was force-cancelled on drop). Used by callers that need to
+    /// feed the activity into a pure transition function before
+    /// applying it back through [`Self::transition`].
+    #[must_use]
+    pub fn snapshot(&self) -> Option<LoopActivity> {
+        self.registry
+            .inner
+            .entries
+            .get(&self.loop_id)
+            .map(|entry| entry.value().activity.clone())
+    }
+
     /// Apply a transition closure to this loop's activity.
     ///
     /// Publishes a [`DomainEvent::LoopActivityChanged`] event after the

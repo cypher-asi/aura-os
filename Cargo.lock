@@ -443,6 +443,9 @@ dependencies = [
 name = "aura-os-automation"
 version = "0.1.0"
 dependencies = [
+ "aura-os-events",
+ "aura-os-harness",
+ "chrono",
  "serde",
  "serde_json",
  "thiserror 1.0.69",

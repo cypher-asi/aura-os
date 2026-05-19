@@ -1,73 +1,66 @@
-//! Translate harness events into [`LoopHandle`] activity transitions.
+//! Thin shim that drives [`LoopHandle`] activity transitions from
+//! harness wire events.
+//!
+//! The pure mapping lives in
+//! [`aura_os_automation::progress::apply_loop_activity`]. This module
+//! is the App-layer adapter: it snapshots the live `LoopHandle`,
+//! delegates to the pure mapper, and forwards the resulting
+//! [`LoopActivityTransition`] into `LoopHandle::transition` so the
+//! registry's 4 Hz publish throttle and terminal-status bypass rules
+//! still apply (see `crates/aura-os-loops/src/registry.rs`).
+//!
+//! Section A regression: the previous shim hard-coded match arms
+//! against stale event-type strings (`tool_call_start`,
+//! `tool_invocation`, ...) so the harness's real `tool_use_start` /
+//! `tool_call_started` events fired no transition and the UI spinner
+//! got stuck on the initial `Starting / "connecting"` snapshot. The
+//! pure mapper matches against
+//! [`aura_os_automation::event_kinds`] constants which mirror the
+//! harness module byte-for-byte (pinned by an invariant test in the
+//! automation crate).
 
-use std::str::FromStr;
-
-use aura_os_core::TaskId;
-use aura_os_events::LoopStatus;
+use aura_os_automation::progress::{apply_loop_activity, LoopActivityTransition};
 use aura_os_loops::LoopHandle;
 
-/// Translate a harness event type into a [`LoopActivity`] transition.
+#[cfg(test)]
+mod tests;
+
+/// Apply the activity transition implied by `event_type` to `handle`.
 ///
-/// Only a subset of harness events are strong signals for progress
-/// (status changes like `Running`/`WaitingTool`/`Compacting`).
-/// Non-status-bearing events (token deltas, tool snapshots, usage
-/// updates, etc.) fall through to the catch-all arm and intentionally
-/// do nothing — they used to call `transition(|_| {})` just to poke
-/// `last_event_at`, but that flooded the legacy `event_broadcast`
-/// with `LoopActivityChanged` frames and caused `/ws/events` clients
-/// to lag, dropping `task_started` / `task_completed` / `task_failed`
-/// events that the stats dashboard depends on.
-pub(super) async fn apply_loop_activity(
+/// No-op when the loop has already terminated (the `LoopHandle`
+/// snapshot returns `None`) or when the pure mapper decides the event
+/// is non-status-bearing / would not change the observable activity.
+pub(super) async fn apply_loop_activity_event(
     handle: &LoopHandle,
     event_type: &str,
     event: &serde_json::Value,
 ) {
-    match event_type {
-        "task_started" | "run_started" | "session_started" => {
-            let task_id = event
-                .get("task_id")
-                .and_then(|v| v.as_str())
-                .and_then(|s| TaskId::from_str(s).ok());
-            handle
-                .transition(|activity| {
-                    activity.status = LoopStatus::Running;
-                    activity.percent = Some(0.05);
-                    activity.current_step = Some("running".into());
-                    if task_id.is_some() {
-                        activity.current_task_id = task_id;
-                    }
-                })
-                .await;
+    let Some(current) = handle.snapshot() else {
+        return;
+    };
+    let Some(transition) = apply_loop_activity(&current, event_type) else {
+        return;
+    };
+    match transition {
+        LoopActivityTransition::Running { step } => {
+            handle.mark_running(None, Some(step.to_string())).await;
         }
-        "text_delta" | "assistant_message_start" | "assistant_message_delta" => {
-            handle.mark_running(None, Some("thinking".into())).await;
-        }
-        "tool_call_start" | "tool_invocation" => {
-            let tool = event.get("tool").and_then(|v| v.as_str()).unwrap_or("tool");
+        LoopActivityTransition::WaitingTool => {
+            let tool = event_tool_name(event);
             handle.mark_waiting_tool(tool).await;
         }
-        "tool_call_end" | "tool_result" => {
-            handle.mark_running(None, Some("processing".into())).await;
-        }
-        "compaction_started" | "context_compaction_started" => {
-            handle
-                .transition(|activity| {
-                    activity.status = LoopStatus::Compacting;
-                    activity.current_step = Some("compacting".into());
-                })
-                .await;
-        }
-        _ => {
-            // Intentionally no-op: non-status-bearing harness events
-            // (text_delta, token_usage, tool_call_snapshot, etc.) fire at
-            // very high rates during streaming. Publishing a
-            // `LoopActivityChanged` for each would flood the legacy
-            // `event_broadcast` via `loop_events_bridge` and lag the
-            // `/ws/events` client into skipping frames — including the
-            // `task_started` / `task_completed` / `task_failed` the
-            // stats dashboard depends on. The watchdog in the frontend
-            // `loop-activity-store` still gets a `last_event_at` pulse
-            // on every real status transition, which is enough.
-        }
     }
+}
+
+/// Pull the tool name from a harness `tool_use_start` /
+/// `tool_call_started` payload, falling back to a generic label when
+/// the field is missing or non-string. The harness has at least two
+/// shapes (`tool` and `name`) depending on the event family; we read
+/// both before giving up.
+fn event_tool_name(event: &serde_json::Value) -> &str {
+    event
+        .get("tool")
+        .and_then(|v| v.as_str())
+        .or_else(|| event.get("name").and_then(|v| v.as_str()))
+        .unwrap_or("tool")
 }

@@ -836,7 +836,9 @@ mod tests {
         );
 
         assert!(
-            registry.get(&ChatSessionKey::new(partition, None)).is_none(),
+            registry
+                .get(&ChatSessionKey::new(partition, None))
+                .is_none(),
             "cancel-turn must evict the partition entry so the next user message cold-starts",
         );
     }
@@ -863,7 +865,10 @@ mod tests {
         cancel_live_sessions_in_registry(&registry, instance_partition).await;
 
         // Both three-segment children must observe a forwarded Cancel.
-        for (label, rx) in [("session-a", &mut commands_rx_a), ("session-b", &mut commands_rx_b)] {
+        for (label, rx) in [
+            ("session-a", &mut commands_rx_a),
+            ("session-b", &mut commands_rx_b),
+        ] {
             let observed = tokio::time::timeout(Duration::from_millis(100), rx.recv())
                 .await
                 .unwrap_or_else(|_| panic!("{label} must observe forwarded Cancel"))
@@ -877,10 +882,16 @@ mod tests {
         // ...and the eviction sweep must drop both children but leave
         // the unrelated sibling instance alone (sharing only a template
         // prefix is not enough to belong to this partition).
-        assert!(registry.get(&ChatSessionKey::new(session_a, None)).is_none());
-        assert!(registry.get(&ChatSessionKey::new(session_b, None)).is_none());
+        assert!(registry
+            .get(&ChatSessionKey::new(session_a, None))
+            .is_none());
+        assert!(registry
+            .get(&ChatSessionKey::new(session_b, None))
+            .is_none());
         assert!(
-            registry.get(&ChatSessionKey::new(unrelated, None)).is_some(),
+            registry
+                .get(&ChatSessionKey::new(unrelated, None))
+                .is_some(),
             "cancel-turn for ai-1 must NOT touch sibling instance ai-2 — partition prefix is exact",
         );
     }
@@ -900,7 +911,9 @@ mod tests {
         cancel_live_sessions_in_registry(&registry, "missing-template::ai-x").await;
 
         assert!(
-            registry.get(&ChatSessionKey::new(unrelated, None)).is_some(),
+            registry
+                .get(&ChatSessionKey::new(unrelated, None))
+                .is_some(),
             "cancel-turn for an empty partition must not evict unrelated entries",
         );
     }
