@@ -1,16 +1,13 @@
-//! `POST /v1/projects/:project_id/agents/:instance_id/chat/stream`
-//! route. Runs an agent instance chat turn — refreshes permissions
-//! from the parent template, builds the project-aware system prompt,
-//! and hands off to the SSE driver.
+//! Axum handler for `POST /v1/projects/:project_id/agents/:instance_id/chat/stream`.
 
-use aura_os_core::{AgentInstanceId, AgentPermissions, OrgId, ProjectId, SessionId};
+use aura_os_core::{AgentInstanceId, ProjectId, SessionId};
 use aura_os_harness::SessionConfig;
 use axum::extract::{Path, State};
 use axum::Json;
 use tracing::info;
 
 use crate::dto::SendChatRequest;
-use crate::error::{map_storage_error, ApiError, ApiResult};
+use crate::error::{ApiError, ApiResult};
 use crate::handlers::billing::require_credits_for_auth_source;
 use crate::handlers::plan_mode::{
     append_plan_mode_suffix, is_plan_mode_action, plan_mode_tool_permissions,
@@ -20,50 +17,27 @@ use crate::handlers::projects_helpers::{
 };
 use crate::state::{AppState, AuthJwt};
 
-use super::agent_route::parse_wire_session_id;
-use super::busy::{reject_if_partition_busy, BusyScope};
-use super::compaction::{
-    append_project_state_to_system_prompt, load_project_state_snapshot,
-    session_events_to_conversation_history,
-};
-use super::cross_agent_reply::read_cross_agent_depth;
-use super::identity_preamble::build_identity_preamble;
-use super::loaders::{
-    load_current_session_events_for_instance, load_pinned_session_events_for_instance,
-};
-use super::persist::{
+use super::super::agent_route::parse_wire_session_id;
+use super::super::busy::{reject_if_partition_busy, BusyScope};
+use super::super::compaction::append_project_state_to_system_prompt;
+use super::super::cross_agent_reply::read_cross_agent_depth;
+use super::super::identity_preamble::build_identity_preamble;
+use super::super::persist::{
     build_chat_partition, try_pin_session, ChatPersistRequest, PinnedSessionOutcome,
 };
-use super::setup::{has_live_session, setup_project_chat_persistence};
-use super::streaming::{open_harness_chat_stream, OpenChatStreamArgs};
-use super::tools::{build_session_installed_tools, InstalledToolsCtx};
-use super::types::SseResponse;
+use super::super::setup::setup_project_chat_persistence;
+use super::super::streaming::{open_harness_chat_stream, OpenChatStreamArgs};
+use super::super::tools::{build_session_installed_tools, InstalledToolsCtx};
+use super::super::types::SseResponse;
 
-use super::super::runtime::session_model_overrides_with_cache;
+use super::super::super::runtime::session_model_overrides_with_cache;
 
-/// Inbound header the chat client sets on every Phase 2 auto-retry
-/// POST. Holds the retry attempt number as ASCII digits (1, 2, 3,
-/// …); the server only checks for *presence* of a parseable
-/// non-zero value to bump `client_auto_retry_streamdropped`. The
-/// actual retry semantics (whether to retry, how long to back off)
-/// stay client-side — this header is purely observability.
-pub(super) const CLIENT_RETRY_HEADER: &str = "x-aura-client-retry";
-
-/// Returns `true` if the request carries a parseable
-/// `X-Aura-Client-Retry: <n>` header with `n >= 1`. Anything else —
-/// missing header, blank string, non-ASCII bytes, non-numeric
-/// payload, or `0` — is treated as "not a retry" and silently
-/// ignored. Header parse failures must NEVER reject the request:
-/// the counter is best-effort observability.
-pub(super) fn header_indicates_client_retry(headers: &axum::http::HeaderMap) -> bool {
-    let Some(value) = headers.get(CLIENT_RETRY_HEADER) else {
-        return false;
-    };
-    let Ok(text) = value.to_str() else {
-        return false;
-    };
-    text.trim().parse::<u64>().map(|n| n >= 1).unwrap_or(false)
-}
+use super::client_retry::header_indicates_client_retry;
+use super::helpers::{
+    fetch_org_integrations, installed_workspace_integrations, load_history_and_project_state,
+    normalize_instance_perms, pick_instance_model, resolve_effective_org_id,
+};
+use super::project_prompt::build_project_system_prompt;
 
 pub(crate) async fn send_event_stream(
     State(state): State<AppState>,
@@ -329,243 +303,4 @@ pub(crate) async fn send_event_stream(
         },
     )
     .await
-}
-
-async fn load_history_and_project_state(
-    state: &AppState,
-    session_key: &str,
-    project_id: &ProjectId,
-    agent_instance_id: &AgentInstanceId,
-    jwt: &str,
-    force_new: bool,
-    pinned_session_id: Option<&SessionId>,
-) -> ApiResult<(
-    Option<Vec<aura_os_harness::ConversationMessage>>,
-    Option<String>,
-)> {
-    if force_new {
-        return Ok((None, None));
-    }
-    // After Phase 1 of parallel-session-chats the `session_key` itself
-    // embeds the resolved storage session id, so "the partition has a
-    // live harness session" is the same statement as "this storage
-    // session has a warm harness session" — skipping the history
-    // rebuild on a hit is safe by construction; we no longer need to
-    // pre-evict on pin disagreement because a different storage
-    // session resolves to a different `session_key` entirely.
-    if has_live_session(state, session_key).await {
-        return Ok((None, None));
-    }
-    // LLM context rebuild on cold start: load only the current storage
-    // session, not the full multi-session aggregate. See
-    // `load_current_session_events_for_instance` doc-comment for rationale.
-    let stored = match pinned_session_id {
-        Some(session_id) => {
-            // Stringify once at this storage boundary; the loader
-            // keeps `&str` to match the REST shape.
-            let session_id_str = session_id.to_string();
-            load_pinned_session_events_for_instance(
-                state,
-                agent_instance_id,
-                jwt,
-                &session_id_str,
-                &project_id.to_string(),
-            )
-            .await
-            .map_err(map_storage_error)?
-        }
-        None => load_current_session_events_for_instance(state, agent_instance_id, jwt)
-            .await
-            .map_err(map_storage_error)?,
-    };
-    let conversation_messages = if stored.is_empty() {
-        None
-    } else {
-        Some(session_events_to_conversation_history(&stored))
-    };
-    let project_state_snapshot =
-        load_project_state_snapshot(state, &project_id.to_string(), jwt).await;
-    Ok((conversation_messages, project_state_snapshot))
-}
-
-fn pick_instance_model(
-    body: &SendChatRequest,
-    instance: &aura_os_core::AgentInstance,
-) -> Option<String> {
-    body.model
-        .clone()
-        .filter(|value| !value.trim().is_empty())
-        .or_else(|| {
-            instance
-                .default_model
-                .clone()
-                .filter(|value| !value.trim().is_empty())
-        })
-}
-
-fn resolve_effective_org_id(
-    state: &AppState,
-    preferred_org_id: Option<&OrgId>,
-    project_id: &ProjectId,
-) -> Option<OrgId> {
-    preferred_org_id.cloned().or_else(|| {
-        state
-            .project_service
-            .get_project(project_id)
-            .ok()
-            .map(|p| p.org_id)
-    })
-}
-
-async fn fetch_org_integrations(
-    state: &AppState,
-    org_id: Option<&OrgId>,
-    jwt: &str,
-) -> Option<Vec<aura_os_core::OrgIntegration>> {
-    match org_id {
-        Some(org_id) => Some(
-            crate::handlers::agents::workspace_tools::integrations_for_org_with_token(
-                state,
-                org_id,
-                Some(jwt),
-            )
-            .await,
-        ),
-        None => None,
-    }
-}
-
-/// Prefer the parent agent's *current* permissions bundle over the
-/// instance-time snapshot so a toggle flip on the agent template's
-/// `PermissionsTab` takes effect on the very next turn of every
-/// project-bound chat. The snapshot in `instance.permissions` was
-/// always documented as a "parent-lookup-failed" fallback — without
-/// this lookup the instance session was the only place that silently
-/// kept serving stale capabilities.
-async fn normalize_instance_perms(
-    state: &AppState,
-    instance: &aura_os_core::AgentInstance,
-    pid_str: &str,
-) -> AgentPermissions {
-    let fresh_parent_permissions = state
-        .agent_service
-        .get_agent_async("", &instance.agent_id)
-        .await
-        .or_else(|_| state.agent_service.get_agent_local(&instance.agent_id))
-        .ok()
-        .map(|parent| parent.permissions);
-    let effective = fresh_parent_permissions.unwrap_or_else(|| instance.permissions.clone());
-    effective
-        .normalized_for_identity(&instance.name, Some(instance.role.as_str()))
-        .with_project_self_caps(pid_str)
-}
-
-fn installed_workspace_integrations(
-    org_id: Option<&OrgId>,
-    org_integrations: Option<&[aura_os_core::OrgIntegration]>,
-) -> Option<Vec<aura_os_harness::InstalledIntegration>> {
-    match (org_id, org_integrations) {
-        (Some(_), Some(ints)) => {
-            let installed =
-                crate::handlers::agents::workspace_tools::installed_workspace_integrations_with_integrations(
-                    ints,
-                );
-            (!installed.is_empty()).then_some(installed)
-        }
-        _ => None,
-    }
-}
-
-pub(crate) fn build_project_system_prompt(
-    state: &AppState,
-    project_id: &ProjectId,
-    agent_prompt: &str,
-    workspace_path: Option<&str>,
-) -> String {
-    let project_ctx = match state.project_service.get_project(project_id) {
-        Ok(p) => render_project_context(project_id, &p.name, &p.description, workspace_path),
-        Err(_) => render_project_context_fallback(project_id),
-    };
-    format!("{}{}", project_ctx, agent_prompt)
-}
-
-pub(crate) fn render_project_context(
-    project_id: &ProjectId,
-    name: &str,
-    description: &str,
-    workspace_path: Option<&str>,
-) -> String {
-    let mut ctx = format!(
-        "<project_context>\nproject_id: {}\nproject_name: {}\n",
-        project_id, name,
-    );
-    if !description.is_empty() {
-        ctx.push_str(&format!("description: {}\n", description));
-    }
-    if let Some(workspace_path) = workspace_path.filter(|path| !path.is_empty()) {
-        ctx.push_str(&format!("workspace: {}\n", workspace_path));
-    }
-    ctx.push_str("</project_context>\n\n");
-    ctx.push_str("IMPORTANT: When calling tools that accept a project_id parameter, always use the project_id from the project_context above.\n\n");
-    ctx.push_str(
-        "IMPORTANT: For filesystem and command tools, treat the project root as `.` and always use paths relative to that root. \
-         Never pass `/` or any other absolute host path to list_files, find_files, read_file, write_file, or run_command.\n\n",
-    );
-    ctx.push_str(
-        "IMPORTANT: When creating or updating specs, put the markdown only in the `markdown_contents` tool argument and keep visible assistant text to a short preview. \
-         Create large or multi-phase plans as multiple focused specs, one `create_spec` call at a time, instead of one huge markdown payload.\n\n",
-    );
-    ctx
-}
-
-#[cfg(test)]
-mod client_retry_header_tests {
-    use super::header_indicates_client_retry;
-    use axum::http::HeaderMap;
-
-    /// Pin the parsing rules for `X-Aura-Client-Retry`: any positive
-    /// integer counts as a retry, blank / zero / non-numeric /
-    /// missing values do not. The chat client always sends the
-    /// attempt number (1+) on retries, so the threshold is "any
-    /// positive integer". Header parse failures must never reject
-    /// the request — the counter is best-effort observability.
-    #[test]
-    fn header_indicates_client_retry_only_for_positive_integers() {
-        let mut headers = HeaderMap::new();
-        assert!(
-            !header_indicates_client_retry(&headers),
-            "missing header must not bump the counter"
-        );
-
-        headers.insert("x-aura-client-retry", "1".parse().unwrap());
-        assert!(header_indicates_client_retry(&headers));
-
-        headers.insert("x-aura-client-retry", "  3  ".parse().unwrap());
-        assert!(
-            header_indicates_client_retry(&headers),
-            "leading/trailing whitespace must be tolerated"
-        );
-
-        headers.insert("x-aura-client-retry", "0".parse().unwrap());
-        assert!(
-            !header_indicates_client_retry(&headers),
-            "explicit 0 must not bump - only retries (>=1) count"
-        );
-
-        headers.insert("x-aura-client-retry", "abc".parse().unwrap());
-        assert!(
-            !header_indicates_client_retry(&headers),
-            "non-numeric values must be silently ignored"
-        );
-    }
-}
-
-pub(crate) fn render_project_context_fallback(project_id: &ProjectId) -> String {
-    format!(
-        "<project_context>\nproject_id: {}\n</project_context>\n\n\
-         IMPORTANT: When calling tools that accept a project_id parameter, always use the project_id above.\n\n\
-         IMPORTANT: For filesystem and command tools, treat the project root as `.` and always use relative paths. Never pass `/` or any other absolute host path.\n\n\
-         IMPORTANT: When creating or updating specs, put the markdown only in the `markdown_contents` tool argument and keep visible assistant text to a short preview. Create large or multi-phase plans as multiple focused specs, one `create_spec` call at a time, instead of one huge markdown payload.\n\n",
-        project_id,
-    )
 }
