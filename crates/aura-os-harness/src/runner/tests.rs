@@ -197,3 +197,99 @@ async fn collect_automaton_events_exposes_error_message() {
 
     assert_eq!(completion.failure_message(), Some("INSUFFICIENT_CREDITS"));
 }
+
+#[tokio::test]
+async fn collect_automaton_events_done_has_no_failure_message() {
+    let (tx, rx) = broadcast::channel(16);
+    tx.send(serde_json::json!({
+        "type": "text_delta",
+        "text": "all good",
+    }))
+    .unwrap();
+    tx.send(serde_json::json!({ "type": "done" })).unwrap();
+
+    let completion = collect_automaton_events(rx, Duration::from_secs(1), |_evt, _ty| {}).await;
+
+    assert!(completion.is_success(), "done run must report success");
+    assert_eq!(
+        completion.failure_message(),
+        None,
+        "clean done must not synthesize a failure reason"
+    );
+    assert!(matches!(completion, RunCompletion::Done(_)));
+}
+
+#[tokio::test]
+async fn collect_automaton_events_timeout_synthesizes_failure_message() {
+    let (tx, rx) = broadcast::channel(16);
+    tx.send(serde_json::json!({
+        "type": "text_delta",
+        "text": "partial output",
+    }))
+    .unwrap();
+
+    let completion = collect_automaton_events(rx, Duration::from_millis(50), |_evt, _ty| {}).await;
+    drop(tx);
+
+    assert!(
+        !completion.is_success(),
+        "timeout must not be reported as success"
+    );
+    let message = completion
+        .failure_message()
+        .expect("Timeout must carry a synthetic failure message");
+    assert!(
+        !message.is_empty(),
+        "Timeout failure message must be non-empty"
+    );
+    assert!(matches!(completion, RunCompletion::Timeout(_)));
+}
+
+#[tokio::test]
+async fn collect_automaton_events_stream_close_without_failure_is_not_done() {
+    let (tx, rx) = broadcast::channel(16);
+    tx.send(serde_json::json!({
+        "type": "text_delta",
+        "text": "started but never finished",
+    }))
+    .unwrap();
+    drop(tx);
+
+    let completion = collect_automaton_events(rx, Duration::from_secs(1), |_evt, _ty| {}).await;
+
+    assert!(
+        !completion.is_success(),
+        "stream close without `done` must not be classified as success"
+    );
+    let message = completion
+        .failure_message()
+        .expect("StreamClosed must carry a synthetic failure message");
+    assert!(
+        !message.is_empty(),
+        "StreamClosed failure message must be non-empty"
+    );
+    assert!(
+        matches!(completion, RunCompletion::StreamClosed(_)),
+        "stream close without prior task_failed must surface as StreamClosed, not Done/Failed"
+    );
+}
+
+#[tokio::test]
+async fn collect_automaton_events_stream_close_after_task_failed_keeps_reason() {
+    let (tx, rx) = broadcast::channel(16);
+    tx.send(serde_json::json!({
+        "type": "task_failed",
+        "reason": "explicit harness failure reason",
+    }))
+    .unwrap();
+    drop(tx);
+
+    let completion = collect_automaton_events(rx, Duration::from_secs(1), |_evt, _ty| {}).await;
+
+    assert_eq!(
+        completion.failure_message(),
+        Some("explicit harness failure reason"),
+        "explicit task_failed reason must win over any synthetic StreamClosed text"
+    );
+    assert!(matches!(completion, RunCompletion::Failed { .. }));
+}
