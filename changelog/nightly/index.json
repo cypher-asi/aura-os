@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-05-20",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.544.1",
+    "title": "Signup credit grants self-heal on session refresh",
+    "intro": "A small but high-impact server fix shipped today: users whose signup credit grant silently failed at login — leaving them stranded at zero credits — will now have it automatically retried as their session refreshes.",
+    "entryCount": 1,
+    "highlights": [
+      "Stuck-at-zero-credits accounts recover automatically",
+      "Idempotent retry deduped per server process to spare z-billing"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-05-20T22:32:15.746Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.544.1",
+    "path": "history/2026-05-20.json"
+  },
+  {
     "date": "2026-05-19",
     "channel": "nightly",
     "version": "0.1.0-nightly.543.1",
