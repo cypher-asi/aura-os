@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-19T21:52:35.972Z",
+  "generatedAt": "2026-05-20T00:27:45.142Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.542.1",
+  "version": "0.1.0-nightly.543.1",
   "date": "2026-05-19",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.542.1",
-  "lastIncludedSha": "d0f6e455f7b59a697501d27eae7a93c6e7ce50c3",
-  "previousProcessedSha": "ce3648de21b7b3627e0234c908831ab4ab748700",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.543.1",
+  "lastIncludedSha": "56e386d53464147467b71f96b5fa1698385c2306",
+  "previousProcessedSha": "d0f6e455f7b59a697501d27eae7a93c6e7ce50c3",
   "commitShas": [
     "c84e220165d8e21c1e9def9f3d584816badeb1e1",
     "d9fffcfb7e8cc5f79c8530abad69abbb4528d337",
@@ -71,10 +71,17 @@
     "cb61e96acbbc6407f2daa7df1bf8240f4637fb8b",
     "1943ec5b4b71c7a0ebd6f8be1b989d831728dc83",
     "ce3648de21b7b3627e0234c908831ab4ab748700",
-    "d0f6e455f7b59a697501d27eae7a93c6e7ce50c3"
+    "d0f6e455f7b59a697501d27eae7a93c6e7ce50c3",
+    "ec8af667f656d9f57f6211c42470f69b1ad3230a",
+    "504fd193888328567efaa6a40d4d4e5ba6ef25dd",
+    "7c52b2b2bdc411f51f52af59d35dc3646db4596b",
+    "085aa8f936cd4b27777613c41bf6c4c00d60b9d9",
+    "94762478b86aa8233509845da9c3aaacc9f58d87",
+    "fd95845064fd9b65bd74b072cb2eba681f909102",
+    "56e386d53464147467b71f96b5fa1698385c2306"
   ],
-  "rawCommitCount": 61,
-  "filteredCommitCount": 60,
+  "rawCommitCount": 68,
+  "filteredCommitCount": 67,
   "rawCommits": [
     {
       "sha": "c84e220165d8e21c1e9def9f3d584816badeb1e1",
@@ -2924,6 +2931,323 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "ec8af667f656d9f57f6211c42470f69b1ad3230a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-19T15:09:11-07:00",
+      "subject": "fix(chat): persist last-picked model per mode across app restarts",
+      "body": "Picking a model in the chat input bar now survives a desktop close/\nreopen for every mode (code/plan, image, video, 3D), and an untouched\nproject's automation-loop model picker fills with the user's most\nrecent main-LLM pick instead of always reverting to Sonnet.\n\nEach generation mode now owns its own localStorage namespace\n(aura-selected-model:{video,3d,image,...}:{agent:<id>,default}) so a\nvideo pick (e.g. Seedance) no longer clobbers the chat key, and\nre-entering video / 3D mode restores that mode's last pick instead of\nsnapping back to a hard-coded provider default. syncAvailableModels\nalso drops its hasAgentScopedModel gate for chat mode so the global\n\"last user pick\" key takes effect on agents the user has never picked\non directly, fixing the original cold-boot regression where the input\nbar always reverted to the adapter default after a relaunch.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "d0f6e455f7b59a697501d27eae7a93c6e7ce50c3"
+      ],
+      "files": [
+        "interface/src/components/AutomationBar/AutomationModelPicker.test.tsx",
+        "interface/src/components/AutomationBar/AutomationModelPicker.tsx",
+        "interface/src/constants/models.test.ts",
+        "interface/src/constants/models.ts",
+        "interface/src/features/chat-ui/ChatPanel/ChatPanel.test.tsx",
+        "interface/src/stores/chat-ui-store.test.ts",
+        "interface/src/stores/chat-ui-store.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 487,
+        "deletions": 36
+      },
+      "committedAtMs": 1779228551000,
+      "cleanSubject": "persist last-picked model per mode across app restarts",
+      "keywords": [
+        "persist",
+        "last",
+        "picked",
+        "model",
+        "mode",
+        "across",
+        "restarts"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/constants",
+        "interface/src/features",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "504fd193888328567efaa6a40d4d4e5ba6ef25dd",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-19T15:56:54-07:00",
+      "subject": "fix(dev-loop): thread session_id into task output cache and storage row",
+      "body": "Stops the `Cannot persist task output: session_id missing from both cache\nand task document` warnings firing on every automation / single-task run\ncompletion.\n\nIn production the harness owns task transitions, so `assign_task` (the\nonly writer of `tasks.session_id`) is never reached. The forwarder owns\nthe canonical `session_id` but never propagated it: `seed_task_output`\nleft `CachedTaskOutput.session_id` at `None`, and storage was never\npatched either. Both halves of the lookup in `persist_task_output` came\nup empty, dropping the `task_output` / `task_steps` / `task_git_steps`\nsession events on every terminal task event.\n\nThe forwarder now stamps the session_id in two places when `task_started`\nfires (and in `run_single_task`'s up-front seed):\n\n- in-memory cache via `seed_task_output` (warm completion path)\n- storage `tasks.session_id` via `update_task` (cold-read fallback)\n\nBoth writes are idempotent; first writer wins on the cache, and storage\nfailures only warn.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "ec8af667f656d9f57f6211c42470f69b1ad3230a"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop/adapter/run_single.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/streaming/side_effects/mod.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/streaming/side_effects/task_output.rs",
+        "apps/aura-os-server/src/state/mod.rs"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 248,
+        "deletions": 22
+      },
+      "committedAtMs": 1779231414000,
+      "cleanSubject": "thread session_id into task output cache and storage row",
+      "keywords": [
+        "thread",
+        "session",
+        "into",
+        "task",
+        "output",
+        "cache",
+        "storage"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "7c52b2b2bdc411f51f52af59d35dc3646db4596b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-19T16:04:41-07:00",
+      "subject": "fix(interface): spin LoopProgress arc around its own center",
+      "body": "The Sidekick task row was the only LoopProgress consumer relying purely on\nthe component's internal arc animation, and that animation never visibly\nrotated because the spinning circle lacked `transform-box: fill-box`.\nWithout it the CSS `transform-origin` resolved to the parent SVG's (0, 0)\ncorner, swinging the arc out of view instead of around the ring center, so\nusers only saw the faint background ring -- the \"dim circle, no spinner\"\nreport.\n\nOther consumers (SidekickTaskbar, ProjectList, LeftMenuTree, ...) masked\nthe bug by also rotating the outer SVG via an `automationSpinner`\nclassName. The task row did not, exposing the underlying issue.\n\nMove the keyframes and transform setup into a `LoopProgress.module.css`,\nadd `transform-box: fill-box; transform-origin: center` (the same fix\nalready documented in `PlayLoopGlyph.module.css`), and drop the inline\n`<style>{@keyframes ...}</style>` block. LoopProgress now spins\ncorrectly on its own at every call site.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "504fd193888328567efaa6a40d4d4e5ba6ef25dd"
+      ],
+      "files": [
+        "interface/src/components/LoopProgress/LoopProgress.module.css",
+        "interface/src/components/LoopProgress/LoopProgress.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 22,
+        "deletions": 10
+      },
+      "committedAtMs": 1779231881000,
+      "cleanSubject": "spin LoopProgress arc around its own center",
+      "keywords": [
+        "spin",
+        "loopprogress",
+        "around",
+        "center"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "085aa8f936cd4b27777613c41bf6c4c00d60b9d9",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-19T16:08:59-07:00",
+      "subject": "feat(dev-loop): emit log_line at tool, turn, and forwarder lifecycle",
+      "body": "The SidekickLog panel only renders events in ALL_ENGINE_EVENT_TYPES\n(loop/task/spec/files/build/test/git/log_line/error), so per-turn\nchatter (tool calls, message deltas, the forwarder spinning up)\nleft the panel idle between coarse engine milestones during active\ndev-loop runs. Add an emit_log_line helper next to\nemit_domain_event_with_session and call it from:\n\n* the dev-loop forwarder on spawn (\"Listening for harness events\n  (task ...)\") and at terminal (\"Loop ending (completed | failed |\n  insufficient credits)\")\n* the side-effects pipeline for tool_call_started / tool_use_start,\n  tool_call_completed (including the is_error suffix), text_delta\n  (rate-limited via a new log_throttle module), and\n  assistant_message_end (with token totals when present)\n\nA new log_throttle module guards high-frequency channels (text_delta)\nwith a 1.5s window keyed on (project_id, agent_instance_id, channel)\nso a single fast turn cannot flood the panel. Tool-call lifecycle\nevents fire once per call, so they pass through every time.\n\nLogLine is already in LOG_WORTHY_TYPES and the SidekickLog\nsubscription set, so every new line shows up live AND on history\nreload without any further wiring; the persistence allowlist and the\nfrontend subscription remain unchanged per the user-requested fix\ndirection.\n\nUnit tests cover the log_line_for_event mapping (one per event type\nplus the uncovered-fallthrough case) and the throttle's first-emit /\nwithin-window-blocks / after-window-passes / distinct-channel and\ndistinct-key independence guarantees.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "7c52b2b2bdc411f51f52af59d35dc3646db4596b"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop/streaming/forwarder.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/streaming/mod.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/streaming/side_effects/mod.rs",
+        "apps/aura-os-server/src/lib.rs",
+        "apps/aura-os-server/src/log_throttle.rs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 432,
+        "deletions": 11
+      },
+      "committedAtMs": 1779232139000,
+      "cleanSubject": "emit log_line at tool, turn, and forwarder lifecycle",
+      "keywords": [
+        "emit",
+        "line",
+        "tool",
+        "turn",
+        "forwarder",
+        "lifecycle"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "94762478b86aa8233509845da9c3aaacc9f58d87",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-19T16:19:07-07:00",
+      "subject": "perf(chat): make Chat-app cold open paint immediately",
+      "body": "Stop serial-gating /chat on the superAgent.setup() round-trip, lean on\nalready-resolved data (warm useAgentStore, persisted last-agent id,\nchat-history-store.previewLastMessages), and let the panel chrome\nmount on the first frame so the user sees the familiar surface\ninstantly while history hydrates.\n\n* useChatAppAgent now seeds its module-scope cache from\n  useAgentStore.agents (CEO match) + a persisted\n  aura-chat-app:last-agent-id key, runs setup() as a background heal,\n  and only surfaces an error state when both the warm seed and\n  setup() strike out.\n* ChatAppRoute renders ChatPanel chrome unconditionally; the\n  \"Starting chat...\" hint moves into the empty-state slot so the\n  input bar / sidekick stay mounted instead of being swapped out for\n  a centered PageEmptyState during the cold round-trip.\n* useConversationSnapshot returns a single-message bridge frame from\n  previewLastMessages when real history is empty; ChatPanel skips the\n  cold-load reveal (visibility:hidden + overlay) when bridged so a\n  recently-visited session paints a real bubble immediately.\n* ChatAppLeftPanel hover prefetch was a dead key: it wrote to\n  session:<projectId>:<instanceId>:<sessionId> via the project-scoped\n  endpoint, but useStandaloneAgentChat reads\n  agent:<agentId>:session:<sessionId> via the agent-scoped endpoint.\n  Re-key + re-fetch through the destination panel's exact shape and\n  briefly pin the warmed key so the LRU can't evict it pre-click.\n* chat-history-store.fetchHistory + message-store.setThread used\n  JSON.stringify per event to detect \"snapshot unchanged\"; on cold\n  open of an 80-event session with multi-100KB tool-output blocks\n  this dominated the main thread. Replace with a length +\n  lastMessageAt + tail-event-id/content shallow check (history is\n  append-only, so equal tail + equal length means equal snapshot).\n* ChatMessageList sets content-visibility: auto +\n  contain-intrinsic-size on each bubble wrapper so the browser skips\n  layout/paint of off-screen bubbles natively.\n* useHighlightedHtml runs hljs against a useDeferredValue copy of the\n  input so high-priority renders commit without blocking on syntax\n  highlighting.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "085aa8f936cd4b27777613c41bf6c4c00d60b9d9"
+      ],
+      "files": [
+        "interface/src/apps/chat-app/components/ChatAppLeftPanel/ChatAppLeftPanel.tsx",
+        "interface/src/apps/chat-app/components/ChatAppRoute/ChatAppRoute.tsx",
+        "interface/src/apps/chat-app/hooks/use-chat-app-agent.ts",
+        "interface/src/features/chat-ui/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/features/chat-ui/ChatPanel/ChatPanel.tsx",
+        "interface/src/features/chat-ui/ChatPanel/useChatPanelState.ts",
+        "interface/src/hooks/use-conversation-snapshot.ts",
+        "interface/src/shared/hooks/use-highlighted-html.ts",
+        "interface/src/stores/chat-history-store.ts",
+        "interface/src/stores/message-store.ts"
+      ],
+      "stats": {
+        "fileCount": 10,
+        "insertions": 350,
+        "deletions": 93
+      },
+      "committedAtMs": 1779232747000,
+      "cleanSubject": "perf(chat): make Chat-app cold open paint immediately",
+      "keywords": [
+        "perf",
+        "chat",
+        "make",
+        "cold",
+        "open",
+        "paint",
+        "immediately"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/features",
+        "interface/src/hooks",
+        "interface/src/shared",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "fd95845064fd9b65bd74b072cb2eba681f909102",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-19T16:39:46-07:00",
+      "subject": "feat(dev-loop): build-as-truth gate + cache-aware exploration budget",
+      "body": "Demote task_completed -> task_failed in the server-side side-effects\npipeline when AURA_BUILD_GATE is set and `cargo check` against the\nresolved workspace exits non-zero. The gate lives in\nhandlers::dev_loop::signals::build_preflight: it shells out with a\n90s timeout, pulls the first error[Exxxx] code out of cargo's\nshort-format output, and renders a `build_preflight_failed:` reason\nthe existing failure path picks up. Inserted BEFORE event broadcast so\nthe dashboard never briefly shows a successful verdict the server is\nabout to overwrite; mirrors the existing tests-as-truth override\npattern but for the inverse direction.\n\naura-os-automation::budget gains cache-aware classification:\nExplorationBudget::classify_with_cache routes the soft/hard verdict\nthrough the unique-read count rather than the raw tool-call count so\na tight loop re-reading the same files (now stamped with content_hash\nby the harness) doesn't burn the budget. advisory_text_with_cache\nmentions both numbers in the operator-facing message so wasted-read\nchurn is visible without changing the threshold.\n\nBoth changes are opt-in / non-breaking; existing dev-loop runs behave\nidentically until AURA_BUILD_GATE is set and / or the orchestrator\nstarts passing unique counts into classify_with_cache.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "94762478b86aa8233509845da9c3aaacc9f58d87"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop/signals/build_preflight.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/signals/mod.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/streaming/side_effects/mod.rs",
+        "crates/aura-os-automation/src/budget/exploration.rs",
+        "crates/aura-os-automation/src/budget/tests.rs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 653,
+        "deletions": 2
+      },
+      "committedAtMs": 1779233986000,
+      "cleanSubject": "build-as-truth gate + cache-aware exploration budget",
+      "keywords": [
+        "build",
+        "truth",
+        "gate",
+        "cache",
+        "aware",
+        "exploration",
+        "budget"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-automation/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "56e386d53464147467b71f96b5fa1698385c2306",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-19T17:14:26-07:00",
+      "subject": "fix(chat): heal cancel-mid-tool-call so retries no longer 400 Anthropic",
+      "body": "Pressing Stop during a streaming tool call left `tool_use.input: null`\nin the persisted assistant turn, so the very next user send replayed\nthat history through `session_events_to_agent_history` and 400'd\nAnthropic with `messages.N.content.M.tool_use.input: Input should be an\nobject`. Three layers fix it without a storage migration: prevent new\ncorruption at write time (handle_tool_use_start now seeds `{}`, the\ncancel-finalize sweep coerces all pending tool_use blocks and emits\nsynthetic tool_results so each orphaned tool_use is paired), heal old\npoisoned sessions on read (sanitize_assistant_content_blocks now\ncoerces any non-object input across all tool names, not just write_file),\nand harden the API edge (assistant_blocks_to_api coerces and warns\nbefore emitting). The same null-seed fix lands in the harness collector\nso warm in-memory state stays valid too. New compaction_tests cover the\ncancelled-tool-use replay shape and assert_anthropic_messages_valid now\nchecks that every tool_use.input is a JSON object.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "fd95845064fd9b65bd74b072cb2eba681f909102"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/compaction.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/dev_loop_persist.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/persist_task/run_loop.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/persist_task_dispatch/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/persist_task_dispatch/normalize.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/persist_task_dispatch/tool.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/tests/compaction_tests/cancelled_tool_use.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/tests/compaction_tests/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/conversions/session_history/blocks.rs",
+        "apps/aura-os-server/src/handlers/agents/conversions/session_history/in_flight.rs",
+        "crates/aura-os-harness/src/runner/collector.rs"
+      ],
+      "stats": {
+        "fileCount": 11,
+        "insertions": 748,
+        "deletions": 32
+      },
+      "committedAtMs": 1779236066000,
+      "cleanSubject": "heal cancel-mid-tool-call so retries no longer 400 Anthropic",
+      "keywords": [
+        "heal",
+        "cancel",
+        "tool",
+        "call",
+        "retries",
+        "longer",
+        "anthropic"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-harness/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
     }
   ],
   "batchCount": 6,
@@ -2935,36 +3259,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 17725420
+          "sizeBytes": 17726260
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.542.1",
+      "version": "0.1.0-nightly.543.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.542.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.543.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 43591734
+          "sizeBytes": 43780942
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.542.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.543.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.542.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.543.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 110991864
+          "sizeBytes": 111196664
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.542.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.543.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -2974,29 +3298,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.542.1",
+      "version": "0.1.0-nightly.543.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.542.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.543.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 40685626
+          "sizeBytes": 40914923
         },
         {
-          "name": "AURA_0.1.0-nightly.542.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.543.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.542.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.543.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 39794965
+          "sizeBytes": 39995213
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.542.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.543.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -3006,29 +3330,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.542.1",
+      "version": "0.1.0-nightly.543.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.542.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.543.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 42391119
+          "sizeBytes": 42568992
         },
         {
-          "name": "AURA_0.1.0-nightly.542.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.543.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.542.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.543.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 41542770
+          "sizeBytes": 41708241
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.542.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.543.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -3038,17 +3362,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.542.1",
+      "version": "0.1.0-nightly.543.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.542.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.543.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 30032184
+          "sizeBytes": 30072461
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.542.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.543.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -3057,58 +3381,51 @@
     }
   ],
   "rendered": {
-    "title": "Parallel chat sessions, a resilient automation loop, and a clearer Run affordance",
-    "intro": "Today's nightly lands the long-running parallel-session-chats work end-to-end, hardens the dev-loop with shared retry budgets and orphan recovery, and sharpens the sidekick's automation UI — including a redesigned play-with-progress-ring indicator and a per-task spinner that finally stays in sync with what the harness is actually doing.",
+    "title": "Parallel chat sessions land alongside a sturdier dev-loop",
+    "intro": "A heavy day across desktop and server: agents can now run truly concurrent chat sessions on the same instance, the automation dev-loop got a new resilience crate with retries and orphan recovery, and a long tail of UI polish fixes — from the Play button spinner to per-task indicators and cold-open chat paint — landed together.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "11:47 AM",
         "started_at": "2026-05-19T18:47:24.000Z",
-        "ended_at": "2026-05-19T18:47:25.000Z",
-        "title": "Parallel chat sessions on the same agent instance",
-        "summary": "Per-session partitioning lands across server harness keys and client stream lanes so two sessions of the same agent can stream simultaneously without sharing state.",
+        "ended_at": "2026-05-19T18:47:28.000Z",
+        "title": "Parallel chat sessions per agent instance",
+        "summary": "Chats on the same agent instance can now stream concurrently, with server-side partitioning by session id and matching per-session client lanes.",
         "items": [
           {
-            "text": "Chat sessions are now partitioned by storage session id end-to-end: the harness session key carries an optional third segment, the server opens distinct ChatSession entries and turn slots per session, and reset sweeps target the full per-session prefix so old sessions and mutexes no longer leak.",
+            "text": "Server now keys chat sessions by storage session_id, so two POSTs to the same agent instance with different sessions open distinct ChatSession entries, take separate turn-slot mutexes, and stream end-to-end concurrently; harness_agent_id gained an optional session segment and reset endpoints sweep every per-session entry under an instance.",
             "commit_shas": [
               "d9fffcfb7e8cc5f79c8530abad69abbb4528d337",
               "07d2f5bc89004a7af0f0d0ba2ef8a465ead2fbc5",
-              "42b720557e2b77b1344ef734d0bf67d3598e0eb6"
+              "42b720557e2b77b1344ef734d0bf67d3598e0eb6",
+              "b4e937e596fe929c857190f3ff81b1516d43967c"
             ],
             "confidence": "high"
           },
           {
-            "text": "The interface keys every chat stream lane by session id for both project and standalone agent chat, with a migration helper that carries state across the fresh-canvas→real and auto-fork session flips, plus a per-session streaming indicator in the SessionsList sidebar.",
+            "text": "Frontend stream lanes are now keyed by session id across both project chat and standalone agent chat, with a migration orchestrator that carries state through the fresh-canvas→real flip and mid-stream auto-fork, plus a per-session streaming dot in the sessions sidebar.",
             "commit_shas": [
               "91e4da293d6b727c19c99ebc13cbab6cb00150d1",
               "d0dadf8d276e56dc71e18a3e92fd6e9a6d8674ca",
-              "6d655febf5f7f7a61783baa8c073b2ce88b0463d"
+              "6d655febf5f7f7a61783baa8c073b2ce88b0463d",
+              "4316abb3e4c5f3743a81517f973080699104f33c"
             ],
             "confidence": "high"
           },
           {
-            "text": "Followup cleanup consolidates per-partition state into a single PartitionRegistry, unifies auto-retry state across chat surfaces, and tightens the server's session_id chain to a typed SessionId from ingress to persistence — closing the parse-back hole the new partitioning had exposed.",
+            "text": "A PartitionRegistry abstraction replaces the four ad-hoc per-partition maps so every per-key surface (stream entries, send-control, agent replay, chat UI) migrates and prunes in lockstep — closing the structural footgun that caused earlier asymmetries.",
             "commit_shas": [
-              "4316abb3e4c5f3743a81517f973080699104f33c",
               "5eab4533c607e89012d16670ccb45b512d29dda1",
+              "d743011a1c0fb15b5a88a1f799459a4bb48690f5"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Server-side chat session ids are now typed as SessionId end-to-end and chat helpers were converted to borrowed config structs, removing the clippy too_many_arguments suppressions accumulated during the partitioning work.",
+            "commit_shas": [
               "40eb7f3f32cfaafdca74476b8c7ece49c231474e",
-              "7b93d09976627af623519be855ef3989a80fd5ff",
-              "8e7df058900236c33bbb63f599ee7d20949a0096"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "New projects now appear at the top of the left menu instead of the bottom, and the model picker menu renders through a body portal so adjacent panels can no longer clip it.",
-            "commit_shas": [
-              "e260104d621808c47115dbec7b28ab4026ea3004",
-              "f50f007fe8fcbc9bf907c294ffa724ce6c869ea5"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "A Windows CI fix passes shell:true through the parity helpers so npm.cmd no longer aborts every Windows lane with EINVAL, unblocking community PRs against the required Desktop check.",
-            "commit_shas": [
-              "c84e220165d8e21c1e9def9f3d584816badeb1e1"
+              "8e7df058900236c33bbb63f599ee7d20949a0096",
+              "7b93d09976627af623519be855ef3989a80fd5ff"
             ],
             "confidence": "high"
           }
@@ -3117,168 +3434,13 @@
       {
         "batch_id": "entry-2",
         "time_label": "11:47 AM",
-        "started_at": "2026-05-19T18:47:25.000Z",
-        "ended_at": "2026-05-19T18:47:27.000Z",
-        "title": "Dev-loop resilience, Stop semantics, and the new aura-os-automation crate",
-        "summary": "A coordinated push hardens the automation loop with shared retry budgets and orphan recovery, fixes a wedged-after-Stop chat, and absorbs corrupt tool history so Anthropic 400s stop poisoning sessions.",
-        "items": [
-          {
-            "text": "A new aura-os-automation crate now owns transient/restart/push classifiers, retry budgets, task-failure synthesis, tool- and task-level retry trackers, and an InProgress orphan sweep at loop start; the dev-loop wires these in so silent task failures get a reason, retries respect a shared budget, mid-run crashes resume cleanly, and the stalled spinner from stale event-kind matching is gone.",
-            "commit_shas": [
-              "3a435c34f34e072cb3d94e41e6f1dc6f4838c926",
-              "19dfe8b4645de9625363bc2506d617360d08fe9a",
-              "963aacef5c8bfd9b2c09335dccb33f34eafa0a41",
-              "481f5c627493c380a56d2f21858ecb70d6f55835"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Pressing Stop (or refreshing) now POSTs a new cancel-turn endpoint and a server-side drop guard forwards Cancel to the harness and releases the per-partition turn slot — fixing the case where the next message hung for 90s on a wedged warm session after plan-mode → code-mode.",
-            "commit_shas": [
-              "239ae9f35e94a8d87ace05ae4c886ea00cc2c5ce",
-              "c2c61c39495e8c4e3aba6d81e541866822dd5374"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Chat history is now defended against malformed tool blocks: tool_use.input is coerced to an object before persist, duplicate tool_result blocks are deduped at replay with the wire-level tool_use_id, and the harness distinguishes Timeout/StreamClosed from a clean Done so early disconnects surface as real failures.",
-            "commit_shas": [
-              "623128063b6366b75d3b519334c9e3c09892cc59",
-              "25bab2ddd47c5fd6e10216f04dc1cc74a61f4517",
-              "f57e51e537f656928f7fc2dedd6f03ab32980a9c"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Dev-loop harness events now persist through the same SessionEvent pipeline as chat, so replays inherit dangling-tool-use stripping, recent-window caps, blob truncation, and the new parallel-result dedupe.",
-            "commit_shas": [
-              "aec45f67576efd363f77f812cdf7e6a12e029344"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Several chat UX papercuts are fixed: '+ New chat' now actually starts a new session and gets a Haiku-style title, Plan mode no longer yanks the sidekick off the Sessions tab, untouched agents restore the last-picked model, deleting a stale pending Spec stops showing 'Bad Request', and the project's Add Agent flow dismisses cleanly without creating duplicates.",
-            "commit_shas": [
-              "8d28e5e06dc1265aea44a1fdee2b05dd4e46e097",
-              "477d5a3b920640ffebe0de29f250261682d4a529",
-              "ac9acbc4c1449c20f16fa30076b8c114be6c634c",
-              "d7f7e79b902728ea2c1cbbd3178735904345eee1",
-              "ab57bd4c046c4baada2e4b9bc694fbf1cde4a6a2",
-              "19c2fb0755478cf63f0250e01caa0ebc7927a75e"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Plan mode regains the planner toolkit — create/update/delete/transition_task are now surfaced so the planner can organize work without starting it — while execution tools (run_task, task_done, submit_plan) stay structurally off.",
-            "commit_shas": [
-              "cc70320d8a808d345dd2ccd323a7299c5b652fb4"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "The pinned 'cooking' indicator gets a proper backdrop and ListBlock's header is aligned with SpecBlock so the hover copy affordance no longer overlaps the item count.",
-            "commit_shas": [
-              "a6ea71770d25e26f0a1864918c487ad5f26510a4",
-              "651e3af4e4aea219c62fbc624e7c81136a6e85f6",
-              "8beb1f536379ba15444ecde214045e4d3034ab40"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Several oversized server and harness modules are split along responsibility boundaries (agent/chat, dev_loop adapter/streaming/signals, harness automaton_client) to land under the 500-line cap without changing public paths or runtime behavior.",
-            "commit_shas": [
-              "be3451354a4a4b6f8b28130e579386f46b164bed",
-              "5d6766dc6a0d6219f9d2565400255853ef19092b",
-              "bcbb2740ed0176b0811bae6a03f43e08785dc8d5"
-            ],
-            "confidence": "high"
-          }
-        ]
-      },
-      {
-        "batch_id": "entry-3",
-        "time_label": "11:47 AM",
-        "started_at": "2026-05-19T18:47:27.000Z",
-        "ended_at": "2026-05-19T18:47:27.000Z",
-        "title": "Streaming tool-call snapshots stop being treated as corruption",
-        "summary": "The persistence layer now recognizes Anthropic's input_json_delta accumulator as a streaming protocol rather than logging every partial chunk as upstream corruption.",
-        "items": [
-          {
-            "text": "Mid-stream string tool_use.input values are parsed when complete and skipped at trace level when partial, eliminating the per-chunk ERROR spam and the throwaway _normalized placeholders that previously littered the session event stream. The final object snapshot still lands and persists normally.",
-            "commit_shas": [
-              "321857f1f65b4e2c352c542f4b2f755136685fde"
-            ],
-            "confidence": "high"
-          }
-        ]
-      },
-      {
-        "batch_id": "entry-4",
-        "time_label": "11:47 AM",
-        "started_at": "2026-05-19T18:47:27.000Z",
-        "ended_at": "2026-05-19T18:47:28.000Z",
-        "title": "Automation model picker, split-screen sidekick, and per-task spinner binding",
-        "summary": "The sidekick gains a deliberate model selector and a 50/50 split toggle, while a backend fix finally binds the per-task spinner to the live task during automation runs.",
-        "items": [
-          {
-            "text": "An AutomationBar model picker — also surfaced in the Run pane header — lets each project pick a deliberate chat model for loop runs, persisted per project and locked once the loop is starting/active/paused so no one can pretend to swap mid-run.",
-            "commit_shas": [
-              "d6f026a520baa15e9e1b930b97e0073e514d6440",
-              "dbd5a73ceaeefd936be45fef429ee04a5dc70e4a"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "A new titlebar Columns2 button toggles a 50/50 split between the main panel and the sidekick lane, persisted across reloads, with ResizeObserver-driven rebalancing, auto-expand when the sidekick is collapsed, and a deterministic restore to the standard 320px width when toggled off.",
-            "commit_shas": [
-              "115b4e7b0d5e9fc1703cdceb3f067e120a55ed40",
-              "f1b11d96af1ae0f3d1e8f1fd4dd4a3261b8677e8",
-              "a698023353194343ccb001aa740bd0aedb84b84d"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "The dev-loop forwarder now publishes the typed current_task_id onto LoopActivity so per-task spinners in TaskList can bind, fixing the case where the run looked idle even while the harness was actively working.",
-            "commit_shas": [
-              "57e7daa48ecee4b668881fe55fc87e219a25b8dd"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "The Play button on the AutomationBar and the Run tab in SidekickTaskbar keep the play glyph visible at all times and overlay a rotating progress ring while the loop is active, so users can still find the control during a live run.",
-            "commit_shas": [
-              "01c9f8a04b1f6cd3b52b352c5a3f3c392a0ec7f4",
-              "7163610250c1306884c037a88bc396455003824c"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "The dev-loop's automation crate now also re-readies cross-run Failed tasks at loop start (gated by the shared task-level retry budget), and dev-loop agents are spliced with the InvokeProcess capability so cargo check/test no longer burn turns on permission errors.",
-            "commit_shas": [
-              "9a5f5b5cf9284735054f8309417cfb09b2b21273",
-              "f99e94a8ba790648c481134599776ebafc8d518c"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "The pinned cooking indicator is realigned with the chat content edge and the same gradient backdrop is applied to the sidekick Run pane and Tasks-tab Live Output so trailing rows stop bleeding through the shimmer.",
-            "commit_shas": [
-              "569e8669e0ddf7c58c1c3bced4e9729c7c925769"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "batch_id": "entry-5",
-        "time_label": "11:47 AM",
         "started_at": "2026-05-19T18:47:28.000Z",
         "ended_at": "2026-05-19T18:47:28.000Z",
-        "title": "Stop failures no longer lie about loop state",
-        "summary": "When the harness rejects or drops a stop request, the dev-loop now logs it at error and forwards the failure in the loop_stopped payload instead of optimistically reporting idle.",
+        "title": "Loop Stop surfaces harness failures",
+        "summary": "Stop now reports when the harness side actually fails to halt instead of silently lying to the UI.",
         "items": [
           {
-            "text": "POST /automaton/:id/stop failures are emitted as harness_error on the loop_stopped event with the harness base URL, so the UI can surface 'UI says stopped but harness is still going' instead of hiding it in a warn log — while preserving the contract that the local registry still clears when the harness is genuinely unreachable.",
+            "text": "Failed harness POST /automaton/:id/stop calls are now logged at error and forwarded as a harness_error field on the loop_stopped event, so the UI can see when the local registry cleared but the harness automaton is still running.",
             "commit_shas": [
               "8069198288af1a16a63eefbcac52430bf650d7da"
             ],
@@ -3287,23 +3449,24 @@
         ]
       },
       {
-        "batch_id": "entry-6",
+        "batch_id": "entry-3",
         "time_label": "12:05 PM",
         "started_at": "2026-05-19T19:05:10.000Z",
-        "ended_at": "2026-05-19T21:40:02.000Z",
-        "title": "Unified Play/loop indicator and a per-task spinner that finally tracks reality",
-        "summary": "An afternoon polish pass replaces the drifting overlay icons with a single shared glyph, then fixes the remaining races that left the actively-running task rendered as a hollow circle.",
+        "ended_at": "2026-05-19T23:04:41.000Z",
+        "title": "Loop indicator and per-task spinner finally line up",
+        "summary": "A coordinated frontend and backend pass made the running-task and Play indicators reliably reflect live automation state.",
         "items": [
           {
-            "text": "A new shared PlayLoopGlyph component draws the play polygon and the optional spinning progress ring inside one SVG centred on the triangle's centroid, replacing the previous fragile absolute-overlay approach across both AutomationBar and SidekickTaskbar; the ring now also takes its colour from the active theme accent instead of a fixed blue.",
+            "text": "Play button and Run tab now share a single SVG PlayLoopGlyph that draws the play polygon and rotating progress ring in one coordinate system, themed by the accent color so the ring stops drifting and stops clashing with non-blue themes.",
             "commit_shas": [
               "d395fec27067d562ff66938bca9700fe40254781",
-              "fbf0f0037b4df711d6590ff3b33b1eaf60442370"
+              "fbf0f0037b4df711d6590ff3b33b1eaf60442370",
+              "7c52b2b2bdc411f51f52af59d35dc3646db4596b"
             ],
             "confidence": "high"
           },
           {
-            "text": "A backend throttle bypass ensures the very first set_current_task always broadcasts, a shared getTaskDisplayStatus helper now upgrades ready→in_progress when the server reports the task as live, and the live-task signal is unified onto the loop-activity store so TaskList, TaskFeed, ProjectWorkView, and mobile views all stay in lockstep.",
+            "text": "Per-task spinner now lights up during active dev-loop runs: the LoopHandle throttle no longer swallows the first set_current_task, and the frontend unions live-task ids with the loop-activity store before deciding whether to upgrade a row to in_progress.",
             "commit_shas": [
               "3baa3bea5d014fdaf9e3ef677f5ef69ddf2e55f4",
               "cb61e96acbbc6407f2daa7df1bf8240f4637fb8b",
@@ -3312,23 +3475,84 @@
             "confidence": "high"
           },
           {
-            "text": "Tool markers with nested parentheses like search_code(pub fn (ack|len), context=1) now hoist into Block cards across LLMOutput, derive-activity, and FormattedRawOutput instead of leaking through as raw text.",
+            "text": "Dev-loop now auto-retries harness research-loop and completion-contract aborts via a relaxed task-budget gate, and stamps session_id onto task output so completion no longer drops task_output / task_steps events with a missing-session warning.",
             "commit_shas": [
-              "1c61ae3183e166a9e7d632014e85153616d916b3"
+              "1943ec5b4b71c7a0ebd6f8be1b989d831728dc83",
+              "504fd193888328567efaa6a40d4d4e5ba6ef25dd"
             ],
             "confidence": "high"
           },
           {
-            "text": "The dev-loop classifier now recognises harness research-loop aborts and 'task completed without any file operations' shape failures, and the task-level retry gate falls through to its own budget when there's no tool-call history — letting these task-shape failures retry up to three times instead of getting stuck on the first crash.",
+            "text": "Sidekick Run/Tasks panes and chat got several layout fixes: tool markers with nested parens now hoist into Block cards, the cooking indicator sits above the ModeSelector row, and the last-picked model is now persisted per generation mode across desktop restarts.",
             "commit_shas": [
-              "1943ec5b4b71c7a0ebd6f8be1b989d831728dc83"
+              "1c61ae3183e166a9e7d632014e85153616d916b3",
+              "d0f6e455f7b59a697501d27eae7a93c6e7ce50c3",
+              "ec8af667f656d9f57f6211c42470f69b1ad3230a"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-4",
+        "time_label": "4:08 PM",
+        "started_at": "2026-05-19T23:08:59.000Z",
+        "ended_at": "2026-05-19T23:08:59.000Z",
+        "title": "Sidekick Log fills in between engine milestones",
+        "summary": "Dev-loop runs now emit log lines at tool, turn, and forwarder lifecycle so the Log panel stops looking idle.",
+        "items": [
+          {
+            "text": "The forwarder, tool-call lifecycle, and assistant message boundaries now emit log_line events (token totals included where available), with a new log_throttle module rate-limiting high-frequency channels like text_delta so a fast turn cannot flood the panel.",
+            "commit_shas": [
+              "085aa8f936cd4b27777613c41bf6c4c00d60b9d9"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-5",
+        "time_label": "4:19 PM",
+        "started_at": "2026-05-19T23:19:07.000Z",
+        "ended_at": "2026-05-19T23:19:07.000Z",
+        "title": "Chat app cold open paints instantly",
+        "summary": "Opening the Chat app no longer waits on the setup round-trip before showing the familiar surface.",
+        "items": [
+          {
+            "text": "useChatAppAgent now seeds from the warm agent store and a persisted last-agent id and runs setup as a background heal, ChatPanel chrome mounts on the first frame, and hover prefetch re-keys to the agent-scoped endpoint so a click lands on already-warm data.",
+            "commit_shas": [
+              "94762478b86aa8233509845da9c3aaacc9f58d87"
             ],
             "confidence": "high"
           },
           {
-            "text": "The pinned cooking indicator is lifted above the input bar's ModeSelector row on both desktop and mobile so the Code/Plan/Image/3D pills are no longer covered by its backdrop.",
+            "text": "Cold open also stops blocking on heavyweight work: snapshot equality switched from full JSON.stringify to a tail-event check, off-screen bubbles use content-visibility: auto, and syntax highlighting runs against a deferred value so high-priority renders commit first.",
             "commit_shas": [
-              "d0f6e455f7b59a697501d27eae7a93c6e7ce50c3"
+              "94762478b86aa8233509845da9c3aaacc9f58d87"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-6",
+        "time_label": "4:39 PM",
+        "started_at": "2026-05-19T23:39:46.000Z",
+        "ended_at": "2026-05-20T00:14:26.000Z",
+        "title": "Build-as-truth gate and cancel-mid-tool-call healing",
+        "summary": "Two server-side reliability fixes: an opt-in cargo-check gate for dev-loop task completion, and a multi-layer fix for the Anthropic 400 caused by stopping a tool call mid-stream.",
+        "items": [
+          {
+            "text": "AURA_BUILD_GATE now demotes task_completed to task_failed when cargo check fails against the resolved workspace, and the exploration budget gained a cache-aware classifier so re-reads of the same file no longer burn through the soft/hard ceilings.",
+            "commit_shas": [
+              "fd95845064fd9b65bd74b072cb2eba681f909102"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Stopping during a streaming tool call no longer poisons the next turn: write-time seeding, a cancel-finalize sweep that synthesizes tool_results for orphaned tool_use blocks, read-time sanitization across all tool names, and an API-edge coercion together prevent the Anthropic 400 on replay without requiring a storage migration.",
+            "commit_shas": [
+              "56e386d53464147467b71f96b5fa1698385c2306"
             ],
             "confidence": "high"
           }
@@ -3336,12 +3560,12 @@
       }
     ],
     "highlights": [
-      "Two sessions on the same agent now stream concurrently end-to-end",
-      "Dev-loop retries, recovers orphans, and re-readies failed tasks across runs",
-      "Stop reliably cancels the harness and releases the turn slot",
-      "New split-screen sidekick toggle and a per-project automation model picker",
-      "Play button keeps a concentric progress ring while the loop runs"
+      "Parallel chat sessions per agent instance, end-to-end",
+      "New aura-os-automation crate with retries, orphan recovery, and build-gate",
+      "Per-task spinner and Play loop indicator finally read correctly",
+      "Cancel-mid-tool-call no longer poisons future turns with 400s",
+      "Chat-app cold open paints instantly instead of waiting on setup"
     ],
-    "raw_commit_count": 60
+    "raw_commit_count": 67
   }
 }
