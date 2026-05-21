@@ -2,20 +2,19 @@
   {
     "date": "2026-05-21",
     "channel": "nightly",
-    "version": "0.1.0-nightly.547.1",
-    "title": "Public chat opens up with a simpler shell and richer media",
-    "intro": "Today's nightly is a big step for Aura's logged-out and simplified surfaces. Guests can now stream conversations without a service key, generate 3D models from an uploaded image, and watch videos and models render inline. Authenticated web users get a new ChatGPT-style SimpleShell with a persisted simple/advanced toggle that also reaches the desktop app, and a round of mobile, error-handling, and rate-limit fixes brings the whole experience closer to feature-complete.",
+    "version": "0.1.0-nightly.548.1",
+    "title": "Public chat goes live with a new Simple shell",
+    "intro": "Today's nightly opens Aura's chat surface to logged-out visitors and reshapes the authenticated experience around a new lightweight Simple shell. The day's work spans guest streaming with cost guardrails, inline image/video/3D rendering on the public surface, mobile-friendly layouts, and a round of fixes that tightened deep links, token recovery, and rate-limit safety.",
     "entryCount": 6,
     "highlights": [
-      "Guest SSE streaming with no service key required",
-      "New SimpleShell for web with desktop parity",
-      "3D image attachments in public chat",
-      "Global daily ceiling protects public mode cost",
-      "Mobile drawer layout for logged-out and simple shells"
+      "Public guest chat with daily cost ceiling",
+      "New SimpleShell with persisted Simple/Advanced toggle",
+      "Inline image, video, and 3D rendering in public mode",
+      "Mobile-responsive logged-out and Simple shells"
     ],
-    "rawCommitCount": 19,
-    "generatedAt": "2026-05-21T15:54:01.790Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.547.1",
+    "rawCommitCount": 20,
+    "generatedAt": "2026-05-21T16:37:18.748Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.548.1",
     "path": "history/2026-05-21.json"
   },
   {
