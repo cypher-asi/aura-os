@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-21T16:37:18.748Z",
+  "generatedAt": "2026-05-21T17:23:53.942Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.548.1",
+  "version": "0.1.0-nightly.549.1",
   "date": "2026-05-21",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.548.1",
-  "lastIncludedSha": "81fe5af39785b7d38e918918e0b6611aee905e84",
-  "previousProcessedSha": "dc938bdd893019992d93c436814e10214137370a",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.549.1",
+  "lastIncludedSha": "ed90d5ffbe88a2979dafbc2855a00db2272ec117",
+  "previousProcessedSha": "81fe5af39785b7d38e918918e0b6611aee905e84",
   "commitShas": [
     "637465c51f2fa1dc4d1c8f16ae319742de738cba",
     "35fe55f015c982ed54eba57c99eaf2113298a99d",
@@ -31,10 +31,11 @@
     "65feaf7ca0611dbc0e090b1ce8ecf76e989a6b36",
     "fd4c0b0336d115182804cb40274d4bd8241ce30b",
     "dc938bdd893019992d93c436814e10214137370a",
-    "81fe5af39785b7d38e918918e0b6611aee905e84"
+    "81fe5af39785b7d38e918918e0b6611aee905e84",
+    "ed90d5ffbe88a2979dafbc2855a00db2272ec117"
   ],
-  "rawCommitCount": 20,
-  "filteredCommitCount": 20,
+  "rawCommitCount": 21,
+  "filteredCommitCount": 21,
   "rawCommits": [
     {
       "sha": "637465c51f2fa1dc4d1c8f16ae319742de738cba",
@@ -844,6 +845,44 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "ed90d5ffbe88a2979dafbc2855a00db2272ec117",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-21T18:00:19+01:00",
+      "subject": "fix(test): set advanced mode in smoke test for project routes",
+      "body": "",
+      "parents": [
+        "81fe5af39785b7d38e918918e0b6611aee905e84"
+      ],
+      "files": [
+        "interface/tests/e2e/evals/core-feature-smoke.spec.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 7,
+        "deletions": 0
+      },
+      "committedAtMs": 1779382819000,
+      "cleanSubject": "set advanced mode in smoke test for project routes",
+      "keywords": [
+        "advanced",
+        "mode",
+        "smoke",
+        "test",
+        "project",
+        "routes"
+      ],
+      "fileGroups": [
+        "interface/tests/e2e"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 6,
@@ -855,36 +894,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 17730312
+          "sizeBytes": 17730388
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.548.1",
+      "version": "0.1.0-nightly.549.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.548.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.549.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 43786880
+          "sizeBytes": 43782246
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.548.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.549.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.548.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.549.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 111192568
+          "sizeBytes": 111184376
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.548.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.549.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -894,29 +933,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.548.1",
+      "version": "0.1.0-nightly.549.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.548.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.549.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 40859106
+          "sizeBytes": 40859865
         },
         {
-          "name": "AURA_0.1.0-nightly.548.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.549.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.548.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.549.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 39955991
+          "sizeBytes": 39958269
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.548.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.549.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -926,29 +965,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.548.1",
+      "version": "0.1.0-nightly.549.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.548.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.549.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 42585468
+          "sizeBytes": 42584170
         },
         {
-          "name": "AURA_0.1.0-nightly.548.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.549.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.548.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.549.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 41732139
+          "sizeBytes": 41731713
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.548.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.549.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -958,17 +997,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.548.1",
+      "version": "0.1.0-nightly.549.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.548.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.549.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 30062317
+          "sizeBytes": 30055081
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.548.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.549.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -977,19 +1016,19 @@
     }
   ],
   "rendered": {
-    "title": "Public chat goes live with a new Simple shell",
-    "intro": "Today's nightly opens Aura's chat surface to logged-out visitors and reshapes the authenticated experience around a new lightweight Simple shell. The day's work spans guest streaming with cost guardrails, inline image/video/3D rendering on the public surface, mobile-friendly layouts, and a round of fixes that tightened deep links, token recovery, and rate-limit safety.",
+    "title": "Public chat goes live with a Simple shell and full media support",
+    "intro": "Today's nightly turns the logged-out experience into a real product surface: guests can stream chats without an account, generate images, video, and 3D models inline, and a new ChatGPT-style Simple shell gives signed-in users a lighter layout across web and desktop. The rest of the day went into hardening the public mode — mobile layout, error states, rate-limit accounting, and a server-side auth safety net.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "3:10 PM",
         "started_at": "2026-05-20T22:10:06.000Z",
         "ended_at": "2026-05-20T22:10:06.000Z",
-        "title": "Public guest chat and the Simple shell land together",
-        "summary": "Aura's chat surface opens to unauthenticated visitors, and authenticated users get a streamlined Simple shell with a persisted toggle across web and desktop.",
+        "title": "Public guest chat and the Simple shell launch",
+        "summary": "The logged-out surface becomes a first-class product: guests can stream chats without credentials, a new SimpleShell offers a ChatGPT-style layout, and public mode picks up 3D image attachments plus a global cost cap.",
         "items": [
           {
-            "text": "Public chat now streams over SSE for guests: the initial service-key approach was replaced with a clean unauthenticated router path that assigns a public-guest identity with IP-based rate limiting, removing the need for any shared secret.",
+            "text": "Guests can now stream public chats end-to-end over SSE: the interim login redirect is gone, and after a brief service-key approach the router was switched to an unauthenticated public-guest identity with IP-based rate limiting so no keys or env vars are needed.",
             "commit_shas": [
               "637465c51f2fa1dc4d1c8f16ae319742de738cba",
               "b3727691c6a299f4e41104237eda91562e992159"
@@ -997,28 +1036,34 @@
             "confidence": "high"
           },
           {
-            "text": "Introduced SimpleShell, a ChatGPT-style sidebar-plus-chat layout for authenticated users, with a persisted simple/advanced preference in localStorage and Welcome/Onboarding modals suppressed in simple mode. Desktop gets parity via a Simple toggle in the titlebar, and the hasDesktopBridge gates were removed so web and desktop share the same shell logic.",
+            "text": "New SimpleShell gives authenticated web users a sidebar-plus-chat layout, with a persisted simple/advanced preference in localStorage, an Advanced toggle in its titlebar and a matching Simple toggle in DesktopShell — and the hasDesktopBridge gates were removed so Desktop, web, and future mobile share the same shells.",
             "commit_shas": [
               "35fe55f015c982ed54eba57c99eaf2113298a99d",
-              "240ff8294bbb9bb019c7f424265d52003c21ecf9",
-              "cea4e2918ff4b018f5264e9b9457c0c72defd56b"
+              "cea4e2918ff4b018f5264e9b9457c0c72defd56b",
+              "240ff8294bbb9bb019c7f424265d52003c21ecf9"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a hard global daily ceiling (500 turns) on top of per-guest and per-IP limits, so public mode can't accidentally run up costs even under abuse.",
+            "text": "Public mode picks up 3D generation from a source image: a file picker on the logged-out shell uploads an image, auto-fills a default prompt so send enables, and routes the request to Tripo without changing the shared input bar.",
+            "commit_shas": [
+              "a8c06ddbd66fbc63b3f65b7216dd323355bcb342"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "An atomic global daily ceiling (500 turns / 24h) now caps total public usage across all guests and IPs before per-guest or per-IP limits, protecting cost exposure for the open surface.",
             "commit_shas": [
               "d49a8e3a066b9f779ef4cf0d14b62c3c82e31961"
             ],
             "confidence": "high"
           },
           {
-            "text": "Logged-out chat now supports 3D generation from an attached source image — users can upload an image, optionally add a prompt, and send it through Tripo, with the input auto-filled so the send button stays enabled. A small CSS tweak also gives the chat scroller proper clearance above the input bar.",
+            "text": "Minor polish on the public chat scroller adds bottom padding so messages clear the input bar.",
             "commit_shas": [
-              "a8c06ddbd66fbc63b3f65b7216dd323355bcb342",
               "d91e85406183c59739cb1cd906a5f0afe4dd28f8"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           }
         ]
       },
@@ -1027,11 +1072,11 @@
         "time_label": "3:10 PM",
         "started_at": "2026-05-20T22:10:06.000Z",
         "ended_at": "2026-05-20T22:10:06.000Z",
-        "title": "Desktop-grade image rendering for assistant messages",
-        "summary": "Assistant-generated images in public mode now render with the same polish as the desktop ImageBlock.",
+        "title": "Desktop-quality assistant images in chat",
+        "summary": "Assistant-generated images now render with the same framing as desktop ImageBlock, giving public mode a polished media surface.",
         "items": [
           {
-            "text": "MessageBubble gained a dedicated render path for assistant-side image contentBlocks: 520px max width, rounded border frame, and click-to-open in the gallery with download — while user attachment thumbnails stay at their existing 96px size.",
+            "text": "MessageBubble gained a dedicated assistant-image render path: generated images display at up to 520px with a rounded border frame and click-to-gallery with download, while 96px user attachment thumbnails are unchanged.",
             "commit_shas": [
               "ac0524c929b2b1a2a073573b84d9ed05b5b39d16"
             ],
@@ -1044,43 +1089,43 @@
         "time_label": "1:45 AM",
         "started_at": "2026-05-21T08:45:49.000Z",
         "ended_at": "2026-05-21T10:56:06.000Z",
-        "title": "Public mode gets streaming feedback, inline media, and mobile layouts",
-        "summary": "A focused morning pass made the logged-out experience feel production-ready, with inline video and 3D playback, streaming indicators, mobile responsiveness, and recovery from invalid tokens or rate limits.",
+        "title": "Public chat hardening: inline media, mobile layout, and error UX",
+        "summary": "Through the morning the logged-out shell got the missing pieces to feel real — inline video and 3D playback, streaming indicators, mobile layout, and proper handling of expired tokens and rate-limit responses.",
         "items": [
           {
-            "text": "Video and 3D generations now render inline in public chat (video player and WebGLViewer) instead of degrading to markdown links. The Tripo glbUrl field is now recognized by both the backend alias normalizer and the frontend SSE extractor, fixing 3D results that previously never appeared.",
+            "text": "Video and 3D outputs now render inline in public mode using the same player and WebGLViewer as the rest of the app, after fixing a missing glbUrl field in both the backend payload normalizer and the frontend SSE extractor that had been hiding Tripo results.",
             "commit_shas": [
               "eb707712bb7c78fd2da68dcc1fab59b527d391b6"
             ],
             "confidence": "high"
           },
           {
-            "text": "Public mode now mirrors the desktop streaming feel: the ChatStreamingIndicator (cooking shimmer, progress text, stuck-stream pill) is wired in, and stream errors render as inline 'stream interrupted' banners instead of failing silently.",
+            "text": "Logged-out users now see the same ChatStreamingIndicator (cooking shimmer, progress text, stuck-stream pill) as the rest of the app, and stream failures surface as inline \"stream interrupted\" banners instead of failing silently.",
             "commit_shas": [
               "230565ace04078e41467a7548cdce02c630dec68"
             ],
             "confidence": "high"
           },
           {
-            "text": "Logged-out and Simple shells become mobile-friendly below 640px with a single-column layout and a slide-in sidebar drawer triggered from a hamburger in the titlebar. Media-only assistant messages no longer show an empty bubble, and the mode pill handles narrow widths more gracefully.",
+            "text": "Logged-out and Simple shells become mobile-friendly below 640px: single-column layout, a slide-in sidebar drawer with hamburger and backdrop, scrollable mode pills, and suppression of empty assistant bubbles on media-only messages.",
             "commit_shas": [
               "30dc4c6f7437acca620ea3548b1747542eb3a360"
             ],
             "confidence": "high"
           },
           {
-            "text": "Reverted the footer to external marketing links opening in the system browser after React Router navigation proved broken inside the desktop shell — restoring parity between web and desktop.",
-            "commit_shas": [
-              "3271830f2e52c8e88d4ff0f3f9eb31458acfa606"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Public chat now self-heals from auth and rate-limit failures: an 'invalid guest token' response clears the cached token so the next send mints a fresh one, and limit_reached responses surface the KeepChattingModal instead of a generic error banner.",
+            "text": "Public chat now recovers from server-side auth and rate failures: invalid guest tokens are auto-invalidated so the next send mints a fresh one, and limit_reached responses open the KeepChattingModal instead of a generic error banner.",
             "commit_shas": [
               "36fbb532e64967a22ec079379538c56e6dccca83"
             ],
             "confidence": "high"
+          },
+          {
+            "text": "Marketing footer links were briefly switched to React Router and then reverted to external target=_blank URLs so they work in the Desktop shell as well as on the web.",
+            "commit_shas": [
+              "3271830f2e52c8e88d4ff0f3f9eb31458acfa606"
+            ],
+            "confidence": "medium"
           }
         ]
       },
@@ -1089,11 +1134,11 @@
         "time_label": "7:57 AM",
         "started_at": "2026-05-21T14:57:08.000Z",
         "ended_at": "2026-05-21T14:57:08.000Z",
-        "title": "Global rate limiter stops leaking budget on rejected retries",
-        "summary": "Reordered the public rate-limiter checks so the global daily counter isn't drained by requests that were going to be rejected anyway.",
+        "title": "Rate limiter no longer leaks global budget on rejected retries",
+        "summary": "A reordering fix in the public rate limiter stops blocked requests from quietly consuming the global daily ceiling.",
         "items": [
           {
-            "text": "try_reserve now increments the global ceiling only after per-guest and per-IP checks pass, so a guest already at their cap can no longer silently consume global budget on every retry.",
+            "text": "The public rate limiter now increments the global daily counter only after per-guest and per-IP checks pass, so a guest already at their cap can no longer drain the shared 500-turn budget on retry attempts.",
             "commit_shas": [
               "8f90fcff0d458e84381362a8253bd10eedd32e40"
             ],
@@ -1106,11 +1151,11 @@
         "time_label": "8:00 AM",
         "started_at": "2026-05-21T15:00:48.000Z",
         "ended_at": "2026-05-21T15:00:48.000Z",
-        "title": "Auth token check restored for non-public harness sessions",
-        "summary": "Tightened a regression in the harness preflight that had broadened too far when public mode was added.",
+        "title": "Auth token check restored for non-public sessions",
+        "summary": "A harness regression that weakened auth on authenticated sessions was closed.",
         "items": [
           {
-            "text": "The harness now skips the auth token check only when aura_org_id is 'public', restoring the safety net for authenticated sessions and re-greening the validate_rejects_missing_auth_token test.",
+            "text": "The aura-os harness once again validates the auth token for all sessions and only skips the check when aura_org_id is public, restoring the safety net for authenticated traffic and unblocking the validate_rejects_missing_auth_token test.",
             "commit_shas": [
               "09b0d76c1127907c3fd39191db8a70f925f8dc4a"
             ],
@@ -1122,12 +1167,12 @@
         "batch_id": "entry-6",
         "time_label": "8:08 AM",
         "started_at": "2026-05-21T15:08:38.000Z",
-        "ended_at": "2026-05-21T16:24:02.000Z",
-        "title": "Simple shell deep links and toggle behavior fixed",
-        "summary": "An afternoon cleanup made the Simple/Advanced toggle predictable for deep links, bookmarks, and CI.",
+        "ended_at": "2026-05-21T17:00:19.000Z",
+        "title": "Simple mode deep links, dead code, and CI fixes",
+        "summary": "Late-day polish made the simple/advanced toggle behave correctly on deep links and got the e2e suites green again.",
         "items": [
           {
-            "text": "SimpleShell no longer redirects every non-chat URL to /chat — it now auto-switches to advanced mode so project deep links, bookmarks, and e2e tests render the full DesktopShell as expected. Toggling back to Simple from a non-chat route correctly routes to /chat, and the workflow e2e test seeds advanced mode in localStorage before navigating.",
+            "text": "SimpleShell no longer hijacks non-chat URLs: project deep links, bookmarks, and CI routes now auto-switch to advanced mode so DesktopShell renders, while toggling Simple from a non-chat URL cleanly redirects to /chat instead of bouncing back.",
             "commit_shas": [
               "dc938bdd893019992d93c436814e10214137370a",
               "81fe5af39785b7d38e918918e0b6611aee905e84"
@@ -1135,7 +1180,15 @@
             "confidence": "high"
           },
           {
-            "text": "Tightened the public chat hook by fixing stale-closure dependency arrays around file uploads, limit, and token invalidation, and dropping a dead requiresLogin/useAuth path so the new flows behave consistently.",
+            "text": "E2E workflow and core-feature smoke tests now seed advanced mode in localStorage before visiting project routes, matching the new SimpleShell routing behavior.",
+            "commit_shas": [
+              "81fe5af39785b7d38e918918e0b6611aee905e84",
+              "ed90d5ffbe88a2979dafbc2855a00db2272ec117"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Cleaned up the public chat hook by fixing stale closures (handleFileChange, dispatchChatTurn, dispatchMedia dep arrays) and removing the unused requiresLogin path and DisplayContentBlockUnion import.",
             "commit_shas": [
               "65feaf7ca0611dbc0e090b1ce8ecf76e989a6b36",
               "fd4c0b0336d115182804cb40274d4bd8241ce30b"
@@ -1146,11 +1199,11 @@
       }
     ],
     "highlights": [
-      "Public guest chat with daily cost ceiling",
-      "New SimpleShell with persisted Simple/Advanced toggle",
-      "Inline image, video, and 3D rendering in public mode",
-      "Mobile-responsive logged-out and Simple shells"
+      "Guest SSE chat with global daily cost ceiling",
+      "New SimpleShell with simple/advanced toggle on web and Desktop",
+      "Inline image, video, and 3D rendering in public chat",
+      "Mobile-friendly logged-out and Simple shells"
     ],
-    "raw_commit_count": 20
+    "raw_commit_count": 21
   }
 }

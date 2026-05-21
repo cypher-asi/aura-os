@@ -1,60 +1,62 @@
-# Public chat goes live with a new Simple shell
+# Public chat goes live with a Simple shell and full media support
 
 - Date: `2026-05-21`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.548.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.548.1
+- Version: `0.1.0-nightly.549.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.549.1
 
-Today's nightly opens Aura's chat surface to logged-out visitors and reshapes the authenticated experience around a new lightweight Simple shell. The day's work spans guest streaming with cost guardrails, inline image/video/3D rendering on the public surface, mobile-friendly layouts, and a round of fixes that tightened deep links, token recovery, and rate-limit safety.
+Today's nightly turns the logged-out experience into a real product surface: guests can stream chats without an account, generate images, video, and 3D models inline, and a new ChatGPT-style Simple shell gives signed-in users a lighter layout across web and desktop. The rest of the day went into hardening the public mode — mobile layout, error states, rate-limit accounting, and a server-side auth safety net.
 
-## 3:10 PM — Public guest chat and the Simple shell land together
+## 3:10 PM — Public guest chat and the Simple shell launch
 
-Aura's chat surface opens to unauthenticated visitors, and authenticated users get a streamlined Simple shell with a persisted toggle across web and desktop.
+The logged-out surface becomes a first-class product: guests can stream chats without credentials, a new SimpleShell offers a ChatGPT-style layout, and public mode picks up 3D image attachments plus a global cost cap.
 
-- Public chat now streams over SSE for guests: the initial service-key approach was replaced with a clean unauthenticated router path that assigns a public-guest identity with IP-based rate limiting, removing the need for any shared secret. (`637465c`, `b372769`)
-- Introduced SimpleShell, a ChatGPT-style sidebar-plus-chat layout for authenticated users, with a persisted simple/advanced preference in localStorage and Welcome/Onboarding modals suppressed in simple mode. Desktop gets parity via a Simple toggle in the titlebar, and the hasDesktopBridge gates were removed so web and desktop share the same shell logic. (`35fe55f`, `240ff82`, `cea4e29`)
-- Added a hard global daily ceiling (500 turns) on top of per-guest and per-IP limits, so public mode can't accidentally run up costs even under abuse. (`d49a8e3`)
-- Logged-out chat now supports 3D generation from an attached source image — users can upload an image, optionally add a prompt, and send it through Tripo, with the input auto-filled so the send button stays enabled. A small CSS tweak also gives the chat scroller proper clearance above the input bar. (`a8c06dd`, `d91e854`)
+- Guests can now stream public chats end-to-end over SSE: the interim login redirect is gone, and after a brief service-key approach the router was switched to an unauthenticated public-guest identity with IP-based rate limiting so no keys or env vars are needed. (`637465c`, `b372769`)
+- New SimpleShell gives authenticated web users a sidebar-plus-chat layout, with a persisted simple/advanced preference in localStorage, an Advanced toggle in its titlebar and a matching Simple toggle in DesktopShell — and the hasDesktopBridge gates were removed so Desktop, web, and future mobile share the same shells. (`35fe55f`, `cea4e29`, `240ff82`)
+- Public mode picks up 3D generation from a source image: a file picker on the logged-out shell uploads an image, auto-fills a default prompt so send enables, and routes the request to Tripo without changing the shared input bar. (`a8c06dd`)
+- An atomic global daily ceiling (500 turns / 24h) now caps total public usage across all guests and IPs before per-guest or per-IP limits, protecting cost exposure for the open surface. (`d49a8e3`)
+- Minor polish on the public chat scroller adds bottom padding so messages clear the input bar. (`d91e854`)
 
-## 3:10 PM — Desktop-grade image rendering for assistant messages
+## 3:10 PM — Desktop-quality assistant images in chat
 
-Assistant-generated images in public mode now render with the same polish as the desktop ImageBlock.
+Assistant-generated images now render with the same framing as desktop ImageBlock, giving public mode a polished media surface.
 
-- MessageBubble gained a dedicated render path for assistant-side image contentBlocks: 520px max width, rounded border frame, and click-to-open in the gallery with download — while user attachment thumbnails stay at their existing 96px size. (`ac0524c`)
+- MessageBubble gained a dedicated assistant-image render path: generated images display at up to 520px with a rounded border frame and click-to-gallery with download, while 96px user attachment thumbnails are unchanged. (`ac0524c`)
 
-## 1:45 AM — Public mode gets streaming feedback, inline media, and mobile layouts
+## 1:45 AM — Public chat hardening: inline media, mobile layout, and error UX
 
-A focused morning pass made the logged-out experience feel production-ready, with inline video and 3D playback, streaming indicators, mobile responsiveness, and recovery from invalid tokens or rate limits.
+Through the morning the logged-out shell got the missing pieces to feel real — inline video and 3D playback, streaming indicators, mobile layout, and proper handling of expired tokens and rate-limit responses.
 
-- Video and 3D generations now render inline in public chat (video player and WebGLViewer) instead of degrading to markdown links. The Tripo glbUrl field is now recognized by both the backend alias normalizer and the frontend SSE extractor, fixing 3D results that previously never appeared. (`eb70771`)
-- Public mode now mirrors the desktop streaming feel: the ChatStreamingIndicator (cooking shimmer, progress text, stuck-stream pill) is wired in, and stream errors render as inline 'stream interrupted' banners instead of failing silently. (`230565a`)
-- Logged-out and Simple shells become mobile-friendly below 640px with a single-column layout and a slide-in sidebar drawer triggered from a hamburger in the titlebar. Media-only assistant messages no longer show an empty bubble, and the mode pill handles narrow widths more gracefully. (`30dc4c6`)
-- Reverted the footer to external marketing links opening in the system browser after React Router navigation proved broken inside the desktop shell — restoring parity between web and desktop. (`3271830`)
-- Public chat now self-heals from auth and rate-limit failures: an 'invalid guest token' response clears the cached token so the next send mints a fresh one, and limit_reached responses surface the KeepChattingModal instead of a generic error banner. (`36fbb53`)
+- Video and 3D outputs now render inline in public mode using the same player and WebGLViewer as the rest of the app, after fixing a missing glbUrl field in both the backend payload normalizer and the frontend SSE extractor that had been hiding Tripo results. (`eb70771`)
+- Logged-out users now see the same ChatStreamingIndicator (cooking shimmer, progress text, stuck-stream pill) as the rest of the app, and stream failures surface as inline "stream interrupted" banners instead of failing silently. (`230565a`)
+- Logged-out and Simple shells become mobile-friendly below 640px: single-column layout, a slide-in sidebar drawer with hamburger and backdrop, scrollable mode pills, and suppression of empty assistant bubbles on media-only messages. (`30dc4c6`)
+- Public chat now recovers from server-side auth and rate failures: invalid guest tokens are auto-invalidated so the next send mints a fresh one, and limit_reached responses open the KeepChattingModal instead of a generic error banner. (`36fbb53`)
+- Marketing footer links were briefly switched to React Router and then reverted to external target=_blank URLs so they work in the Desktop shell as well as on the web. (`3271830`)
 
-## 7:57 AM — Global rate limiter stops leaking budget on rejected retries
+## 7:57 AM — Rate limiter no longer leaks global budget on rejected retries
 
-Reordered the public rate-limiter checks so the global daily counter isn't drained by requests that were going to be rejected anyway.
+A reordering fix in the public rate limiter stops blocked requests from quietly consuming the global daily ceiling.
 
-- try_reserve now increments the global ceiling only after per-guest and per-IP checks pass, so a guest already at their cap can no longer silently consume global budget on every retry. (`8f90fcf`)
+- The public rate limiter now increments the global daily counter only after per-guest and per-IP checks pass, so a guest already at their cap can no longer drain the shared 500-turn budget on retry attempts. (`8f90fcf`)
 
-## 8:00 AM — Auth token check restored for non-public harness sessions
+## 8:00 AM — Auth token check restored for non-public sessions
 
-Tightened a regression in the harness preflight that had broadened too far when public mode was added.
+A harness regression that weakened auth on authenticated sessions was closed.
 
-- The harness now skips the auth token check only when aura_org_id is 'public', restoring the safety net for authenticated sessions and re-greening the validate_rejects_missing_auth_token test. (`09b0d76`)
+- The aura-os harness once again validates the auth token for all sessions and only skips the check when aura_org_id is public, restoring the safety net for authenticated traffic and unblocking the validate_rejects_missing_auth_token test. (`09b0d76`)
 
-## 8:08 AM — Simple shell deep links and toggle behavior fixed
+## 8:08 AM — Simple mode deep links, dead code, and CI fixes
 
-An afternoon cleanup made the Simple/Advanced toggle predictable for deep links, bookmarks, and CI.
+Late-day polish made the simple/advanced toggle behave correctly on deep links and got the e2e suites green again.
 
-- SimpleShell no longer redirects every non-chat URL to /chat — it now auto-switches to advanced mode so project deep links, bookmarks, and e2e tests render the full DesktopShell as expected. Toggling back to Simple from a non-chat route correctly routes to /chat, and the workflow e2e test seeds advanced mode in localStorage before navigating. (`dc938bd`, `81fe5af`)
-- Tightened the public chat hook by fixing stale-closure dependency arrays around file uploads, limit, and token invalidation, and dropping a dead requiresLogin/useAuth path so the new flows behave consistently. (`65feaf7`, `fd4c0b0`)
+- SimpleShell no longer hijacks non-chat URLs: project deep links, bookmarks, and CI routes now auto-switch to advanced mode so DesktopShell renders, while toggling Simple from a non-chat URL cleanly redirects to /chat instead of bouncing back. (`dc938bd`, `81fe5af`)
+- E2E workflow and core-feature smoke tests now seed advanced mode in localStorage before visiting project routes, matching the new SimpleShell routing behavior. (`81fe5af`, `ed90d5f`)
+- Cleaned up the public chat hook by fixing stale closures (handleFileChange, dispatchChatTurn, dispatchMedia dep arrays) and removing the unused requiresLogin path and DisplayContentBlockUnion import. (`65feaf7`, `fd4c0b0`)
 
 ## Highlights
 
-- Public guest chat with daily cost ceiling
-- New SimpleShell with persisted Simple/Advanced toggle
-- Inline image, video, and 3D rendering in public mode
-- Mobile-responsive logged-out and Simple shells
+- Guest SSE chat with global daily cost ceiling
+- New SimpleShell with simple/advanced toggle on web and Desktop
+- Inline image, video, and 3D rendering in public chat
+- Mobile-friendly logged-out and Simple shells
 
