@@ -2,18 +2,18 @@
   {
     "date": "2026-05-22",
     "channel": "nightly",
-    "version": "0.1.0-nightly.552.1",
-    "title": "Analytics instrumentation for the public funnel and app modes",
-    "intro": "Today's nightly focuses entirely on analytics depth: Aura now distinguishes authenticated from logged-out usage, captures the full public visitor funnel from page view to signup click, and tags every event with which app shell the user is in.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.554.1",
+    "title": "Public funnel analytics and a theme toggle for logged-out shells",
+    "intro": "Today's nightly focuses on two threads in the Interface: a richer analytics layer that separates public from authenticated usage and tracks the logged-out funnel end to end, followed by a user-facing sun/moon theme toggle wired into the logged-out and simple shells.",
+    "entryCount": 2,
     "highlights": [
-      "Authenticated vs. public traffic is now separable in Mixpanel",
-      "Full logged-out funnel instrumented end to end",
-      "Every event tagged with simple, advanced, or mobile shell"
+      "Public funnel events and is_authenticated/app_mode super properties in Mixpanel",
+      "Sun/moon theme toggle on logged-out and Simple shells",
+      "Hardcoded backdrop colors swapped for theme variables for correct light mode"
     ],
-    "rawCommitCount": 3,
-    "generatedAt": "2026-05-22T11:29:26.883Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.552.1",
+    "rawCommitCount": 5,
+    "generatedAt": "2026-05-22T12:47:47.672Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.554.1",
     "path": "history/2026-05-22.json"
   },
   {

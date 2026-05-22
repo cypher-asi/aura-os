@@ -3,21 +3,23 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-22T11:29:26.883Z",
+  "generatedAt": "2026-05-22T12:47:47.672Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.552.1",
+  "version": "0.1.0-nightly.554.1",
   "date": "2026-05-22",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.552.1",
-  "lastIncludedSha": "22b42a006d60175210b2c12b816b374bc681cd9c",
-  "previousProcessedSha": "c775eb79df547abdeb3bc16e45b455ca72c0e9c6",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.554.1",
+  "lastIncludedSha": "e2775fb4357435882f5b4ad6abedefdaf45d9dc6",
+  "previousProcessedSha": "22b42a006d60175210b2c12b816b374bc681cd9c",
   "commitShas": [
     "8e2db7e53466629704cb5893b302bfafbf35dffe",
     "c775eb79df547abdeb3bc16e45b455ca72c0e9c6",
-    "22b42a006d60175210b2c12b816b374bc681cd9c"
+    "22b42a006d60175210b2c12b816b374bc681cd9c",
+    "f1b498cac9d6a1576c0ffa9fd14e69fc0a88548d",
+    "e2775fb4357435882f5b4ad6abedefdaf45d9dc6"
   ],
-  "rawCommitCount": 3,
-  "filteredCommitCount": 3,
+  "rawCommitCount": 5,
+  "filteredCommitCount": 5,
   "rawCommits": [
     {
       "sha": "8e2db7e53466629704cb5893b302bfafbf35dffe",
@@ -141,9 +143,87 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "f1b498cac9d6a1576c0ffa9fd14e69fc0a88548d",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-22T13:25:49+01:00",
+      "subject": "feat(shell): add dark/light theme toggle to logged-out and simple shells",
+      "body": "Adds sun/moon toggle button to both shell titlebars using the existing\nZUI theme system. Fixes hardcoded backdrop colors to use CSS variables\nfor correct light mode rendering. System preference detection already\nworks via index.html bootstrap.",
+      "parents": [
+        "22b42a006d60175210b2c12b816b374bc681cd9c"
+      ],
+      "files": [
+        "interface/src/views/LoggedOutShell/LoggedOutShell.module.css",
+        "interface/src/views/LoggedOutShell/LoggedOutTitlebar.tsx",
+        "interface/src/views/SimpleShell/SimpleShell.module.css",
+        "interface/src/views/SimpleShell/SimpleShell.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 71,
+        "deletions": 5
+      },
+      "committedAtMs": 1779452749000,
+      "cleanSubject": "add dark/light theme toggle to logged-out and simple shells",
+      "keywords": [
+        "dark",
+        "light",
+        "theme",
+        "toggle",
+        "logged",
+        "simple",
+        "shells"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "e2775fb4357435882f5b4ad6abedefdaf45d9dc6",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-22T13:30:16+01:00",
+      "subject": "fix: remove unused getThemeToggleIconKind import",
+      "body": "",
+      "parents": [
+        "f1b498cac9d6a1576c0ffa9fd14e69fc0a88548d"
+      ],
+      "files": [
+        "interface/src/views/SimpleShell/SimpleShell.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1779453016000,
+      "cleanSubject": "remove unused getThemeToggleIconKind import",
+      "keywords": [
+        "remove",
+        "unused",
+        "getthemetoggleiconkind",
+        "import"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 2,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -152,36 +232,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 17730524
+          "sizeBytes": 17730764
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.552.1",
+      "version": "0.1.0-nightly.554.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.552.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.554.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 43788428
+          "sizeBytes": 43792490
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.552.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.554.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.552.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.554.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 111188472
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.552.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.554.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -191,29 +271,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.552.1",
+      "version": "0.1.0-nightly.554.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.552.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.554.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 40854592
+          "sizeBytes": 40859783
         },
         {
-          "name": "AURA_0.1.0-nightly.552.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.554.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.552.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.554.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 39957421
+          "sizeBytes": 39959337
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.552.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.554.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -223,29 +303,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.552.1",
+      "version": "0.1.0-nightly.554.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.552.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.554.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 42586281
+          "sizeBytes": 42585197
         },
         {
-          "name": "AURA_0.1.0-nightly.552.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.554.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.552.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.554.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 41730632
+          "sizeBytes": 41727789
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.552.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.554.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -255,17 +335,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.552.1",
+      "version": "0.1.0-nightly.554.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.552.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.554.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 30060650
+          "sizeBytes": 30059338
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.552.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.554.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -274,47 +354,77 @@
     }
   ],
   "rendered": {
-    "title": "Analytics instrumentation for the public funnel and app modes",
-    "intro": "Today's nightly focuses entirely on analytics depth: Aura now distinguishes authenticated from logged-out usage, captures the full public visitor funnel from page view to signup click, and tags every event with which app shell the user is in.",
+    "title": "Public funnel analytics and a theme toggle for logged-out shells",
+    "intro": "Today's nightly focuses on two threads in the Interface: a richer analytics layer that separates public from authenticated usage and tracks the logged-out funnel end to end, followed by a user-facing sun/moon theme toggle wired into the logged-out and simple shells.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:11 AM",
         "started_at": "2026-05-22T09:11:34.000Z",
         "ended_at": "2026-05-22T11:16:22.000Z",
-        "title": "Public visitor funnel and app-mode segmentation in Mixpanel",
-        "summary": "Analytics gained an authentication flag, a complete logged-out funnel, and an app-mode super property so public and authenticated usage can finally be measured side by side.",
+        "title": "Public funnel instrumentation and authenticated-vs-public segmentation",
+        "summary": "Analytics now distinguishes public from signed-in usage and captures the full logged-out conversion funnel, plus a Simple-vs-Advanced app mode dimension.",
         "items": [
           {
-            "text": "Every Mixpanel event now carries an is_authenticated super property, set to false at init, flipped to true on identify, and reset on logout, so authenticated and public metrics can be filtered independently.",
+            "text": "Added an is_authenticated super property to every Mixpanel event and emitted the public funnel — public_session_started, public_message_sent, public_gate_shown, public_login_clicked and public_signup_clicked — across the logged-out shell, KeepChatting gate and public chat store, so signed-in and anonymous metrics can finally be filtered apart.",
             "commit_shas": [
               "8e2db7e53466629704cb5893b302bfafbf35dffe"
             ],
             "confidence": "high"
           },
           {
-            "text": "Instrumented the full logged-out funnel with public_page_viewed on shell mount, public_session_started when a guest session is created, public_message_sent (tagged with the selected mode), public_gate_shown on the KeepChattingModal, and public_login_clicked / public_signup_clicked from both the modal and the titlebar (with a source property).",
+            "text": "Fired a public_page_viewed event when the logged-out shell mounts to anchor the top of the funnel.",
             "commit_shas": [
-              "8e2db7e53466629704cb5893b302bfafbf35dffe",
               "c775eb79df547abdeb3bc16e45b455ca72c0e9c6"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added an app_mode super property registered from the AppShell that stamps every event as mobile, simple, or advanced, via a new registerProperty helper in the analytics library.",
+            "text": "Introduced an app_mode super property (mobile, simple or advanced) registered from the responsive AppShell, giving every downstream event a layout/mode dimension via a new registerProperty helper.",
             "commit_shas": [
               "22b42a006d60175210b2c12b816b374bc681cd9c"
             ],
             "confidence": "high"
           }
         ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "5:25 AM",
+        "started_at": "2026-05-22T12:25:49.000Z",
+        "ended_at": "2026-05-22T12:30:16.000Z",
+        "title": "Sun/moon theme toggle for the logged-out and Simple shells",
+        "summary": "Both public-facing shells now expose a theme toggle in the titlebar and render correctly in light mode.",
+        "items": [
+          {
+            "text": "Added a sun/moon theme toggle button to the LoggedOutShell and SimpleShell titlebars, wired to ZUI's useTheme with proper ARIA labels and cycling between light/dark/system.",
+            "commit_shas": [
+              "f1b498cac9d6a1576c0ffa9fd14e69fc0a88548d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Replaced hardcoded rgba backdrop colors with the --color-backdrop-medium CSS variable so overlays in both shells render correctly under light mode.",
+            "commit_shas": [
+              "f1b498cac9d6a1576c0ffa9fd14e69fc0a88548d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Cleaned up a leftover getThemeToggleIconKind import in SimpleShell left over from the toggle work.",
+            "commit_shas": [
+              "e2775fb4357435882f5b4ad6abedefdaf45d9dc6"
+            ],
+            "confidence": "medium"
+          }
+        ]
       }
     ],
     "highlights": [
-      "Authenticated vs. public traffic is now separable in Mixpanel",
-      "Full logged-out funnel instrumented end to end",
-      "Every event tagged with simple, advanced, or mobile shell"
+      "Public funnel events and is_authenticated/app_mode super properties in Mixpanel",
+      "Sun/moon theme toggle on logged-out and Simple shells",
+      "Hardcoded backdrop colors swapped for theme variables for correct light mode"
     ],
-    "raw_commit_count": 3
+    "raw_commit_count": 5
   }
 }
