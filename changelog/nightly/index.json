@@ -2,18 +2,18 @@
   {
     "date": "2026-05-22",
     "channel": "nightly",
-    "version": "0.1.0-nightly.551.1",
-    "title": "Public funnel analytics for the logged-out experience",
-    "intro": "A focused nightly that instruments Aura's logged-out shell end to end, giving the team a clean way to separate public visitors from signed-in users and measure how they move from landing to sign-up.",
+    "version": "0.1.0-nightly.552.1",
+    "title": "Analytics instrumentation for the public funnel and app modes",
+    "intro": "Today's nightly focuses entirely on analytics depth: Aura now distinguishes authenticated from logged-out usage, captures the full public visitor funnel from page view to signup click, and tags every event with which app shell the user is in.",
     "entryCount": 1,
     "highlights": [
-      "is_authenticated flag now splits public vs. signed-in metrics",
-      "Full public funnel from page view to login click is tracked",
-      "Logged-out shell, titlebar, and gate modal all emit events"
+      "Authenticated vs. public traffic is now separable in Mixpanel",
+      "Full logged-out funnel instrumented end to end",
+      "Every event tagged with simple, advanced, or mobile shell"
     ],
-    "rawCommitCount": 2,
-    "generatedAt": "2026-05-22T09:53:26.239Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.551.1",
+    "rawCommitCount": 3,
+    "generatedAt": "2026-05-22T11:29:26.883Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.552.1",
     "path": "history/2026-05-22.json"
   },
   {
