@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-05-22",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.550.1",
+    "title": "Public funnel analytics for logged-out chat",
+    "intro": "A focused nightly that instruments the logged-out experience. Aura can now cleanly separate authenticated and anonymous usage in Mixpanel and follow the public visitor journey from first message through the login gate.",
+    "entryCount": 1,
+    "highlights": [
+      "is_authenticated super property on every Mixpanel event",
+      "New public funnel: session, message, gate, login, signup"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-05-22T09:25:23.451Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.550.1",
+    "path": "history/2026-05-22.json"
+  },
+  {
     "date": "2026-05-21",
     "channel": "nightly",
     "version": "0.1.0-nightly.549.1",
