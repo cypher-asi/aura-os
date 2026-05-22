@@ -3,19 +3,20 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-22T09:25:23.451Z",
+  "generatedAt": "2026-05-22T09:53:26.239Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.550.1",
+  "version": "0.1.0-nightly.551.1",
   "date": "2026-05-22",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.550.1",
-  "lastIncludedSha": "8e2db7e53466629704cb5893b302bfafbf35dffe",
-  "previousProcessedSha": "ed90d5ffbe88a2979dafbc2855a00db2272ec117",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.551.1",
+  "lastIncludedSha": "c775eb79df547abdeb3bc16e45b455ca72c0e9c6",
+  "previousProcessedSha": "8e2db7e53466629704cb5893b302bfafbf35dffe",
   "commitShas": [
-    "8e2db7e53466629704cb5893b302bfafbf35dffe"
+    "8e2db7e53466629704cb5893b302bfafbf35dffe",
+    "c775eb79df547abdeb3bc16e45b455ca72c0e9c6"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 2,
+  "filteredCommitCount": 2,
   "rawCommits": [
     {
       "sha": "8e2db7e53466629704cb5893b302bfafbf35dffe",
@@ -60,6 +61,45 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "c775eb79df547abdeb3bc16e45b455ca72c0e9c6",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-22T10:39:55+01:00",
+      "subject": "feat(analytics): add public_page_viewed event on logged-out shell mount",
+      "body": "",
+      "parents": [
+        "8e2db7e53466629704cb5893b302bfafbf35dffe"
+      ],
+      "files": [
+        "interface/src/views/LoggedOutShell/LoggedOutShell.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 3,
+        "deletions": 1
+      },
+      "committedAtMs": 1779442795000,
+      "cleanSubject": "add public_page_viewed event on logged-out shell mount",
+      "keywords": [
+        "public",
+        "page",
+        "viewed",
+        "event",
+        "logged",
+        "shell",
+        "mount"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 1,
@@ -71,36 +111,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 17730452
+          "sizeBytes": 17730424
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.550.1",
+      "version": "0.1.0-nightly.551.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.550.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.551.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 43788600
+          "sizeBytes": 43785112
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.550.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.551.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.550.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.551.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 111184376
+          "sizeBytes": 111188472
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.550.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.551.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -110,29 +150,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.550.1",
+      "version": "0.1.0-nightly.551.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.550.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.551.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 40861372
+          "sizeBytes": 40859350
         },
         {
-          "name": "AURA_0.1.0-nightly.550.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.551.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.550.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.551.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 39958529
+          "sizeBytes": 39956561
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.550.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.551.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -142,29 +182,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.550.1",
+      "version": "0.1.0-nightly.551.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.550.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.551.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 42583149
+          "sizeBytes": 42578811
         },
         {
-          "name": "AURA_0.1.0-nightly.550.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.551.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.550.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.551.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 41731617
+          "sizeBytes": 41728778
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.550.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.551.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -174,17 +214,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.550.1",
+      "version": "0.1.0-nightly.551.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.550.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.551.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 30061277
+          "sizeBytes": 30059466
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.550.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.551.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -193,35 +233,35 @@
     }
   ],
   "rendered": {
-    "title": "Public funnel analytics for logged-out chat",
-    "intro": "A focused nightly that instruments the logged-out experience. Aura can now cleanly separate authenticated and anonymous usage in Mixpanel and follow the public visitor journey from first message through the login gate.",
+    "title": "Public funnel analytics for the logged-out experience",
+    "intro": "A focused nightly that instruments Aura's logged-out shell end to end, giving the team a clean way to separate public visitors from signed-in users and measure how they move from landing to sign-up.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:11 AM",
         "started_at": "2026-05-22T09:11:34.000Z",
-        "ended_at": "2026-05-22T09:11:34.000Z",
-        "title": "Public visitor funnel and auth-state tagging in Mixpanel",
-        "summary": "Analytics now distinguish authenticated vs. public traffic and capture the key conversion steps in the logged-out shell.",
+        "ended_at": "2026-05-22T09:39:55.000Z",
+        "title": "Public visitor funnel instrumented on the logged-out shell",
+        "summary": "Aura's analytics layer now distinguishes authenticated users from public visitors and captures the key steps of the logged-out journey, from first page view through gate prompts to login and signup clicks.",
         "items": [
           {
-            "text": "Every Mixpanel event carries a new is_authenticated super property, registered as false at init, flipped to true on identify, and reset on sign-out so authenticated and public metrics can be sliced independently.",
+            "text": "Every Mixpanel event now carries an is_authenticated super property, registered as false on init, flipped to true on identifyUser, and reset on logout so public and signed-in metrics can be filtered cleanly.",
             "commit_shas": [
               "8e2db7e53466629704cb5893b302bfafbf35dffe"
             ],
             "confidence": "high"
           },
           {
-            "text": "Instrumented the public funnel end-to-end with public_session_started when an anonymous session is provisioned and public_message_sent (tagged with the selected agent mode) when a visitor sends their first messages.",
+            "text": "Added a public funnel of events covering session start, message sent (with selected mode), the keep-chatting gate being shown, and login/signup clicks from both the gate modal and the logged-out titlebar (the latter tagged with a titlebar source).",
             "commit_shas": [
               "8e2db7e53466629704cb5893b302bfafbf35dffe"
             ],
             "confidence": "high"
           },
           {
-            "text": "The Keep Chatting gate and logged-out titlebar now emit public_gate_shown, public_login_clicked, and public_signup_clicked (with a source tag for titlebar entries), making it possible to measure gate-to-signup conversion.",
+            "text": "The logged-out shell now fires a public_page_viewed event on mount, closing the loop so the funnel starts from the very first render of the public experience.",
             "commit_shas": [
-              "8e2db7e53466629704cb5893b302bfafbf35dffe"
+              "c775eb79df547abdeb3bc16e45b455ca72c0e9c6"
             ],
             "confidence": "high"
           }
@@ -229,9 +269,10 @@
       }
     ],
     "highlights": [
-      "is_authenticated super property on every Mixpanel event",
-      "New public funnel: session, message, gate, login, signup"
+      "is_authenticated flag now splits public vs. signed-in metrics",
+      "Full public funnel from page view to login click is tracked",
+      "Logged-out shell, titlebar, and gate modal all emit events"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 2
   }
 }
