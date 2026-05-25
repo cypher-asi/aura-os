@@ -2,18 +2,19 @@
   {
     "date": "2026-05-25",
     "channel": "nightly",
-    "version": "0.1.0-nightly.557.1",
-    "title": "A dedicated download page lands on the marketing site",
-    "intro": "Today's nightly brings the marketing site a proper home for downloads. A new /download route ports the platform picker from aura-web, with direct links to the latest macOS, Windows, and Linux builds, plus navigation and footer entry points to find it. A handful of small fixes clean up scrolling and a misrouted footer link along the way.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.558.1",
+    "title": "Marketing download hub lands and DAU analytics get more honest",
+    "intro": "Today's nightly brings a dedicated in-app download page for the marketing site with per-platform install links, plus the navigation surfaces to find it. Later in the day, a focused analytics fix tightens how Aura counts active users across long-running sessions.",
+    "entryCount": 2,
     "highlights": [
       "New /download page with macOS, Windows, and Linux cards",
       "Download entry points added to navbar and logged-out footer",
-      "Marketing scroll and footer link fixes"
+      "Marketing pages scroll reliably again",
+      "True DAU now tracks long-running sessions accurately"
     ],
-    "rawCommitCount": 4,
-    "generatedAt": "2026-05-25T12:32:43.383Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.557.1",
+    "rawCommitCount": 5,
+    "generatedAt": "2026-05-25T17:38:14.177Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.558.1",
     "path": "history/2026-05-25.json"
   },
   {

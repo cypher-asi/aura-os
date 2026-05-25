@@ -3,22 +3,23 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-25T12:32:43.383Z",
+  "generatedAt": "2026-05-25T17:38:14.177Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.557.1",
+  "version": "0.1.0-nightly.558.1",
   "date": "2026-05-25",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.557.1",
-  "lastIncludedSha": "ca9831932e73cd6f3581a9818a37ffd09c929b79",
-  "previousProcessedSha": "91158891300fb79072d86a913234785c77f0c2ca",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.558.1",
+  "lastIncludedSha": "1fd8e0b3c5640c8718eb17c9ab1c85dba85f185c",
+  "previousProcessedSha": "ca9831932e73cd6f3581a9818a37ffd09c929b79",
   "commitShas": [
     "91158891300fb79072d86a913234785c77f0c2ca",
     "ca28122301d8e6f8ee7875c0637463fe34440566",
     "9171026b4dfeb2d1af2a20ba7f310064072e4a89",
-    "ca9831932e73cd6f3581a9818a37ffd09c929b79"
+    "ca9831932e73cd6f3581a9818a37ffd09c929b79",
+    "1fd8e0b3c5640c8718eb17c9ab1c85dba85f185c"
   ],
-  "rawCommitCount": 4,
-  "filteredCommitCount": 4,
+  "rawCommitCount": 5,
+  "filteredCommitCount": 5,
   "rawCommits": [
     {
       "sha": "91158891300fb79072d86a913234785c77f0c2ca",
@@ -177,9 +178,49 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "1fd8e0b3c5640c8718eb17c9ab1c85dba85f185c",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-25T18:16:41+01:00",
+      "subject": "fix(analytics): re-fire session_active on app focus to align True DAU with Engaged DAU",
+      "body": "session_active only fired once on mount, so users who left the app\nopen across days were counted in Engaged DAU but not True DAU. Now\nre-fires on visibilitychange (web tabs) and window focus (desktop).",
+      "parents": [
+        "ca9831932e73cd6f3581a9818a37ffd09c929b79"
+      ],
+      "files": [
+        "interface/src/components/AppShell/AppShell.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 23,
+        "deletions": 0
+      },
+      "committedAtMs": 1779729401000,
+      "cleanSubject": "re-fire session_active on app focus to align True DAU with Engaged DAU",
+      "keywords": [
+        "fire",
+        "session",
+        "active",
+        "focus",
+        "align",
+        "true",
+        "with",
+        "engaged"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 2,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -188,36 +229,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 17733263
+          "sizeBytes": 17733375
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.557.1",
+      "version": "0.1.0-nightly.558.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.557.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.558.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 43792750
+          "sizeBytes": 43787704
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.557.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.558.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.557.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.558.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 111192568
+          "sizeBytes": 111200760
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.557.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.558.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -227,29 +268,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.557.1",
+      "version": "0.1.0-nightly.558.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.557.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.558.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 40866032
+          "sizeBytes": 40867505
         },
         {
-          "name": "AURA_0.1.0-nightly.557.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.558.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.557.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.558.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 39957870
+          "sizeBytes": 39961526
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.557.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.558.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -259,29 +300,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.557.1",
+      "version": "0.1.0-nightly.558.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.557.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.558.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 42595195
+          "sizeBytes": 42588513
         },
         {
-          "name": "AURA_0.1.0-nightly.557.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.558.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.557.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.558.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 41736541
+          "sizeBytes": 41736260
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.557.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.558.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -291,17 +332,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.557.1",
+      "version": "0.1.0-nightly.558.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.557.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.558.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 30059718
+          "sizeBytes": 30054445
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.557.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.558.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -310,42 +351,59 @@
     }
   ],
   "rendered": {
-    "title": "A dedicated download page lands on the marketing site",
-    "intro": "Today's nightly brings the marketing site a proper home for downloads. A new /download route ports the platform picker from aura-web, with direct links to the latest macOS, Windows, and Linux builds, plus navigation and footer entry points to find it. A handful of small fixes clean up scrolling and a misrouted footer link along the way.",
+    "title": "Marketing download hub lands and DAU analytics get more honest",
+    "intro": "Today's nightly brings a dedicated in-app download page for the marketing site with per-platform install links, plus the navigation surfaces to find it. Later in the day, a focused analytics fix tightens how Aura counts active users across long-running sessions.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "3:22 AM",
         "started_at": "2026-05-25T10:22:27.000Z",
         "ended_at": "2026-05-25T12:12:43.000Z",
-        "title": "New /download page with per-platform install cards",
-        "summary": "The marketing site gains a dedicated download experience that reads the live nightly manifest and surfaces the right build for each platform, with supporting navigation and small polish fixes.",
+        "title": "New /download page wires up nightly installers across platforms",
+        "summary": "A dedicated download experience ships in the marketing shell, with platform-aware cards and discovery links from the navbar and logged-out footer. A couple of small marketing-shell fixes land alongside it.",
         "items": [
           {
-            "text": "Added a /download route under the marketing shell that pulls the nightly manifest from GitHub Pages and renders platform cards for macOS Apple Silicon, macOS Intel, Windows, and Linux, including a recommended-card treatment and direct download links.",
+            "text": "Added a new /download route under the marketing shell that pulls the nightly manifest from GitHub Pages and renders platform-specific cards for macOS Apple Silicon, macOS Intel, Windows, and Linux, including a recommended-card treatment with direct download links.",
             "commit_shas": [
               "ca28122301d8e6f8ee7875c0637463fe34440566"
             ],
             "confidence": "high"
           },
           {
-            "text": "Surfaced the new download destination from both the marketing navbar and the logged-out shell footer so visitors can reach builds from anywhere on the site.",
+            "text": "Surfaced the new page through a Download link in the marketing navbar and in the logged-out shell footer so visitors can reach installers from anywhere on the site.",
             "commit_shas": [
               "9171026b4dfeb2d1af2a20ba7f310064072e4a89"
             ],
             "confidence": "high"
           },
           {
-            "text": "Fixed marketing pages getting stuck without scroll by forcing overflow visible and auto height with !important on the marketing shell root.",
+            "text": "Fixed marketing pages getting stuck unable to scroll by forcing overflow visible and auto height with !important on the marketing-shell root.",
             "commit_shas": [
               "91158891300fb79072d86a913234785c77f0c2ca"
             ],
             "confidence": "high"
           },
           {
-            "text": "Corrected the logged-out footer's Feedback link, which was pointing at /roadmap, to send users to /feedback instead.",
+            "text": "Corrected the logged-out footer's Feedback link, which was incorrectly pointing at /roadmap and now goes to /feedback.",
             "commit_shas": [
               "ca9831932e73cd6f3581a9818a37ffd09c929b79"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "10:16 AM",
+        "started_at": "2026-05-25T17:16:41.000Z",
+        "ended_at": "2026-05-25T17:16:41.000Z",
+        "title": "session_active re-fires on focus to fix True DAU undercount",
+        "summary": "Analytics now re-emits session_active when the app regains focus, so users who leave Aura open across days are no longer missing from True DAU while still showing up in Engaged DAU.",
+        "items": [
+          {
+            "text": "session_active previously fired only once at mount, leaving long-running web tabs and desktop windows uncounted in True DAU; AppShell now re-fires the event on visibilitychange and window focus, relying on Mixpanel's per-day dedupe to keep uniques accurate.",
+            "commit_shas": [
+              "1fd8e0b3c5640c8718eb17c9ab1c85dba85f185c"
             ],
             "confidence": "high"
           }
@@ -355,8 +413,9 @@
     "highlights": [
       "New /download page with macOS, Windows, and Linux cards",
       "Download entry points added to navbar and logged-out footer",
-      "Marketing scroll and footer link fixes"
+      "Marketing pages scroll reliably again",
+      "True DAU now tracks long-running sessions accurately"
     ],
-    "raw_commit_count": 4
+    "raw_commit_count": 5
   }
 }
