@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-05-25",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.555.1",
+    "title": "Marketing pages scroll fix",
+    "intro": "A small but targeted nightly focused on restoring scroll behavior on Aura's marketing pages, with desktop builds shipped across Mac, Windows, and Linux.",
+    "entryCount": 1,
+    "highlights": [
+      "Marketing shell pages scroll correctly again",
+      "Nightly desktop builds shipped for Mac, Windows, and Linux"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-05-25T10:42:18.261Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.555.1",
+    "path": "history/2026-05-25.json"
+  },
+  {
     "date": "2026-05-22",
     "channel": "nightly",
     "version": "0.1.0-nightly.554.1",
