@@ -3,19 +3,22 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-25T10:42:18.261Z",
+  "generatedAt": "2026-05-25T12:32:43.383Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.555.1",
+  "version": "0.1.0-nightly.557.1",
   "date": "2026-05-25",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.555.1",
-  "lastIncludedSha": "91158891300fb79072d86a913234785c77f0c2ca",
-  "previousProcessedSha": "e2775fb4357435882f5b4ad6abedefdaf45d9dc6",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.557.1",
+  "lastIncludedSha": "ca9831932e73cd6f3581a9818a37ffd09c929b79",
+  "previousProcessedSha": "91158891300fb79072d86a913234785c77f0c2ca",
   "commitShas": [
-    "91158891300fb79072d86a913234785c77f0c2ca"
+    "91158891300fb79072d86a913234785c77f0c2ca",
+    "ca28122301d8e6f8ee7875c0637463fe34440566",
+    "9171026b4dfeb2d1af2a20ba7f310064072e4a89",
+    "ca9831932e73cd6f3581a9818a37ffd09c929b79"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 4,
+  "filteredCommitCount": 4,
   "rawCommits": [
     {
       "sha": "91158891300fb79072d86a913234785c77f0c2ca",
@@ -56,6 +59,124 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "ca28122301d8e6f8ee7875c0637463fe34440566",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-25T12:32:48+01:00",
+      "subject": "feat(marketing): add download page with platform-specific cards",
+      "body": "Ports the download page from aura-web. Fetches the nightly manifest\nfrom GitHub Pages and renders platform cards (macOS Apple Silicon,\nIntel, Windows, Linux) with direct download links. Adds /download\nroute under MarketingShell.",
+      "parents": [
+        "91158891300fb79072d86a913234785c77f0c2ca"
+      ],
+      "files": [
+        "interface/src/App.tsx",
+        "interface/src/views/marketing/DownloadView/DownloadView.css",
+        "interface/src/views/marketing/DownloadView/DownloadView.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 395,
+        "deletions": 0
+      },
+      "committedAtMs": 1779708768000,
+      "cleanSubject": "add download page with platform-specific cards",
+      "keywords": [
+        "download",
+        "page",
+        "with",
+        "platform",
+        "specific",
+        "cards"
+      ],
+      "fileGroups": [
+        "interface/src/App.tsx",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "9171026b4dfeb2d1af2a20ba7f310064072e4a89",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-25T13:05:44+01:00",
+      "subject": "feat(marketing): add download link to navbar and logged-out shell footer",
+      "body": "",
+      "parents": [
+        "ca28122301d8e6f8ee7875c0637463fe34440566"
+      ],
+      "files": [
+        "interface/src/views/LoggedOutShell/LoggedOutPanelFooter.tsx",
+        "interface/src/views/marketing/MarketingNavbar/MarketingNavbar.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 4,
+        "deletions": 0
+      },
+      "committedAtMs": 1779710744000,
+      "cleanSubject": "add download link to navbar and logged-out shell footer",
+      "keywords": [
+        "download",
+        "link",
+        "navbar",
+        "logged",
+        "shell",
+        "footer"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "ca9831932e73cd6f3581a9818a37ffd09c929b79",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-25T13:12:43+01:00",
+      "subject": "fix: correct feedback footer link from /roadmap to /feedback",
+      "body": "",
+      "parents": [
+        "9171026b4dfeb2d1af2a20ba7f310064072e4a89"
+      ],
+      "files": [
+        "interface/src/views/LoggedOutShell/LoggedOutPanelFooter.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1779711163000,
+      "cleanSubject": "correct feedback footer link from /roadmap to /feedback",
+      "keywords": [
+        "correct",
+        "feedback",
+        "footer",
+        "link",
+        "from",
+        "roadmap"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 1,
@@ -67,36 +188,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 17730756
+          "sizeBytes": 17733263
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.555.1",
+      "version": "0.1.0-nightly.557.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.555.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.557.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 43786972
+          "sizeBytes": 43792750
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.555.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.557.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.555.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.557.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 111192568
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.555.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.557.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -106,29 +227,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.555.1",
+      "version": "0.1.0-nightly.557.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.555.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.557.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 40860964
+          "sizeBytes": 40866032
         },
         {
-          "name": "AURA_0.1.0-nightly.555.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.557.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.555.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.557.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 39956538
+          "sizeBytes": 39957870
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.555.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.557.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -138,29 +259,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.555.1",
+      "version": "0.1.0-nightly.557.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.555.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.557.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 42582114
+          "sizeBytes": 42595195
         },
         {
-          "name": "AURA_0.1.0-nightly.555.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.557.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.555.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.557.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 41734680
+          "sizeBytes": 41736541
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.555.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.557.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -170,17 +291,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.555.1",
+      "version": "0.1.0-nightly.557.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.555.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.557.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 30062044
+          "sizeBytes": 30059718
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.555.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.557.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -189,21 +310,42 @@
     }
   ],
   "rendered": {
-    "title": "Marketing pages scroll fix",
-    "intro": "A small but targeted nightly focused on restoring scroll behavior on Aura's marketing pages, with desktop builds shipped across Mac, Windows, and Linux.",
+    "title": "A dedicated download page lands on the marketing site",
+    "intro": "Today's nightly brings the marketing site a proper home for downloads. A new /download route ports the platform picker from aura-web, with direct links to the latest macOS, Windows, and Linux builds, plus navigation and footer entry points to find it. A handful of small fixes clean up scrolling and a misrouted footer link along the way.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "3:22 AM",
         "started_at": "2026-05-25T10:22:27.000Z",
-        "ended_at": "2026-05-25T10:22:27.000Z",
-        "title": "Marketing shell pages scroll correctly again",
-        "summary": "A CSS specificity fix restores scrolling on marketing pages where competing styles were clamping the layout.",
+        "ended_at": "2026-05-25T12:12:43.000Z",
+        "title": "New /download page with per-platform install cards",
+        "summary": "The marketing site gains a dedicated download experience that reads the live nightly manifest and surfaces the right build for each platform, with supporting navigation and small polish fixes.",
         "items": [
           {
-            "text": "Forced overflow visible and auto height with !important on the marketing shell, html, body, and root elements so marketing pages scroll reliably instead of being trapped by overriding styles.",
+            "text": "Added a /download route under the marketing shell that pulls the nightly manifest from GitHub Pages and renders platform cards for macOS Apple Silicon, macOS Intel, Windows, and Linux, including a recommended-card treatment and direct download links.",
+            "commit_shas": [
+              "ca28122301d8e6f8ee7875c0637463fe34440566"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Surfaced the new download destination from both the marketing navbar and the logged-out shell footer so visitors can reach builds from anywhere on the site.",
+            "commit_shas": [
+              "9171026b4dfeb2d1af2a20ba7f310064072e4a89"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Fixed marketing pages getting stuck without scroll by forcing overflow visible and auto height with !important on the marketing shell root.",
             "commit_shas": [
               "91158891300fb79072d86a913234785c77f0c2ca"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Corrected the logged-out footer's Feedback link, which was pointing at /roadmap, to send users to /feedback instead.",
+            "commit_shas": [
+              "ca9831932e73cd6f3581a9818a37ffd09c929b79"
             ],
             "confidence": "high"
           }
@@ -211,9 +353,10 @@
       }
     ],
     "highlights": [
-      "Marketing shell pages scroll correctly again",
-      "Nightly desktop builds shipped for Mac, Windows, and Linux"
+      "New /download page with macOS, Windows, and Linux cards",
+      "Download entry points added to navbar and logged-out footer",
+      "Marketing scroll and footer link fixes"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 4
   }
 }

@@ -2,17 +2,18 @@
   {
     "date": "2026-05-25",
     "channel": "nightly",
-    "version": "0.1.0-nightly.555.1",
-    "title": "Marketing pages scroll fix",
-    "intro": "A small but targeted nightly focused on restoring scroll behavior on Aura's marketing pages, with desktop builds shipped across Mac, Windows, and Linux.",
+    "version": "0.1.0-nightly.557.1",
+    "title": "A dedicated download page lands on the marketing site",
+    "intro": "Today's nightly brings the marketing site a proper home for downloads. A new /download route ports the platform picker from aura-web, with direct links to the latest macOS, Windows, and Linux builds, plus navigation and footer entry points to find it. A handful of small fixes clean up scrolling and a misrouted footer link along the way.",
     "entryCount": 1,
     "highlights": [
-      "Marketing shell pages scroll correctly again",
-      "Nightly desktop builds shipped for Mac, Windows, and Linux"
+      "New /download page with macOS, Windows, and Linux cards",
+      "Download entry points added to navbar and logged-out footer",
+      "Marketing scroll and footer link fixes"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-05-25T10:42:18.261Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.555.1",
+    "rawCommitCount": 4,
+    "generatedAt": "2026-05-25T12:32:43.383Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.557.1",
     "path": "history/2026-05-25.json"
   },
   {
