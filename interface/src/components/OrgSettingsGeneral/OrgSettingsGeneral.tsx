@@ -224,6 +224,15 @@ export function OrgSettingsGeneral({
                 </span>
               </>
             ) : null}
+            <a
+              href="https://aura.ai/changelog"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.rowDescription}
+              style={{ color: "var(--color-brand-primary)", textDecoration: "none" }}
+            >
+              Change Log
+            </a>
           </div>
           <div className={`${styles.rowControl} ${styles.rowControlWide}`}>
             <UpdateControl layout="inline" showLastChecked={false} />
