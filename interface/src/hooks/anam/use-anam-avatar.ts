@@ -47,14 +47,16 @@ export interface TurnStream {
   isActive: () => boolean;
 }
 
-export interface FetchSessionTokenOptions {
+export interface AnamAvatarOptions {
   /** When true, uses CUSTOMER_CLIENT_V1 so text is piped manually. */
   disableBuiltInLlm?: boolean;
+  /** Called with the final transcript when the user finishes speaking. */
+  onUserSpeech?: (transcript: string) => void;
 }
 
 export async function fetchSessionToken(
   config: AnamAvatarConfig,
-  options?: FetchSessionTokenOptions,
+  options?: Pick<AnamAvatarOptions, "disableBuiltInLlm">,
 ): Promise<string> {
   const useCustomLlm = options?.disableBuiltInLlm;
   const res = await fetch(ANAM_SESSION_TOKEN_URL, {
@@ -85,11 +87,13 @@ export async function fetchSessionToken(
 
 export function useAnamAvatar(
   config: AnamAvatarConfig | null,
-  options?: FetchSessionTokenOptions,
+  options?: AnamAvatarOptions,
 ): AnamAvatarHandle {
   const [status, setStatus] = useState<AnamAvatarStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const clientRef = useRef<AnamClient | null>(null);
+  const onUserSpeechRef = useRef(options?.onUserSpeech);
+  onUserSpeechRef.current = options?.onUserSpeech;
 
   useEffect(() => {
     return () => {
@@ -127,6 +131,13 @@ export function useAnamAvatar(
         client.addListener(AnamEvent.CONNECTION_CLOSED, () => {
           setStatus("stopped");
           clientRef.current = null;
+        });
+
+        // Forward completed user speech transcripts to the consumer.
+        client.addListener(AnamEvent.MESSAGE_STREAM_EVENT_RECEIVED, (evt) => {
+          if (evt.role === "user" && evt.endOfSpeech && evt.content) {
+            onUserSpeechRef.current?.(evt.content);
+          }
         });
 
         await client.streamToVideoElement(videoElementId);

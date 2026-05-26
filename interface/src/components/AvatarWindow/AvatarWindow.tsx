@@ -10,7 +10,7 @@
  * this component and passing `isOpen` / `onClose`.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Settings, X } from "lucide-react";
 import { useAgentAvatarStore } from "../../stores/agent-avatar-store";
 import { useAnamAvatar, useAnamStreamBridge } from "../../hooks/anam";
@@ -35,11 +35,11 @@ interface AvatarWindowProps {
   onClose: () => void;
   agentId: string;
   streamKey: string;
+  /** Called with the user's speech transcript to send as a chat message. */
+  onSend?: (text: string) => void;
 }
 
-const ANAM_AVATAR_OPTIONS = { disableBuiltInLlm: true } as const;
-
-export function AvatarWindow({ isOpen, onClose, agentId, streamKey }: AvatarWindowProps) {
+export function AvatarWindow({ isOpen, onClose, agentId, streamKey, onSend }: AvatarWindowProps) {
   const [showSettings, setShowSettings] = useState(false);
   const [userStarted, setUserStarted] = useState(false);
   const [position, setPosition] = useState({ x: -1, y: 60 });
@@ -55,7 +55,11 @@ export function AvatarWindow({ isOpen, onClose, agentId, streamKey }: AvatarWind
     (s) => s.configs[agentId] ?? null,
   );
 
-  const avatar = useAnamAvatar(config, ANAM_AVATAR_OPTIONS);
+  const avatarOptions = useMemo(
+    () => ({ disableBuiltInLlm: true, onUserSpeech: onSend }),
+    [onSend],
+  );
+  const avatar = useAnamAvatar(config, avatarOptions);
   useAnamStreamBridge(streamKey, avatar);
 
   const videoId = "anam-avatar-window-video";

@@ -280,6 +280,13 @@ export function AgentChatPanel({
     closeAvatarWindow();
   }, [projectId, agentInstanceId, closeAvatarWindow]);
 
+  const handleAvatarSpeech = useCallback(
+    (transcript: string) => {
+      wrappedSend(transcript, null, null);
+    },
+    [wrappedSend],
+  );
+
   const [agentPickerOpen, setAgentPickerOpen] = useState(false);
   const showAgentSwitcher = projectAgents.length > 1;
   const mobileHeaderSummaryHint = agentName
@@ -367,6 +374,7 @@ export function AgentChatPanel({
           onClose={closeAvatarWindow}
           agentId={orgAgentId}
           streamKey={streamKey}
+          onSend={handleAvatarSpeech}
         />
       )}
     </>
