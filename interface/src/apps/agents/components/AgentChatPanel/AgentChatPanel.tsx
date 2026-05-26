@@ -25,6 +25,8 @@ import { useOptimisticSessionRow } from "../../hooks/use-optimistic-session-row"
 import { useAutoRenameFromPrompt } from "../../hooks/use-auto-rename-from-prompt";
 import { useNewSessionUrlSync } from "../../hooks/use-new-session-url-sync";
 import { ProjectAgentSwitcher } from "../ProjectAgentSwitcher";
+import { AvatarWindow } from "../../../../components/AvatarWindow";
+import { useAgentAvatarStore } from "../../../../stores/agent-avatar-store";
 
 const EMPTY_PROJECTS: Project[] = [];
 const EMPTY_AGENT_INSTANCES: AgentInstance[] = [];
@@ -269,6 +271,15 @@ export function AgentChatPanel({
       : agentInstanceId;
   const shouldUseCreateHandoff = initialCreateHandoff && !sessionId;
 
+  const avatarWindowOpen = useAgentAvatarStore((s) => s.windowOpen);
+  const closeAvatarWindow = useAgentAvatarStore((s) => s.closeWindow);
+
+  // Close the avatar window when the conversation context changes so it
+  // doesn't stay open with a stale/disconnected session.
+  useEffect(() => {
+    closeAvatarWindow();
+  }, [projectId, agentInstanceId, closeAvatarWindow]);
+
   const [agentPickerOpen, setAgentPickerOpen] = useState(false);
   const showAgentSwitcher = projectAgents.length > 1;
   const mobileHeaderSummaryHint = agentName
@@ -350,6 +361,13 @@ export function AgentChatPanel({
         onClose={closeAgentPicker}
         onSwitchAgent={switchProjectAgent}
       />
+      {orgAgentId && (
+        <AvatarWindow
+          isOpen={avatarWindowOpen}
+          onClose={closeAvatarWindow}
+          agentId={orgAgentId}
+        />
+      )}
     </>
   );
 }

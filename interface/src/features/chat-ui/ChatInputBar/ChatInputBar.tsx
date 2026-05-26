@@ -14,6 +14,7 @@ import {
   FileText,
   ChevronDown,
   FolderOpen,
+  Video,
 } from "lucide-react";
 import { track } from "../../../lib/analytics";
 import { ContextUsageIndicator } from "./ContextUsageIndicator";
@@ -49,6 +50,7 @@ import { CommandChips } from "./CommandChips";
 import { useChatUI } from "../../../stores/chat-ui-store";
 import type { SlashCommand } from "../../../constants/commands";
 import type { Project } from "../../../shared/types";
+import { useAgentAvatarStore } from "../../../stores/agent-avatar-store";
 import styles from "./ChatInputBar.module.css";
 
 export interface ChatInputBarHandle {
@@ -295,6 +297,8 @@ export const DesktopChatInputBar = memo(
     });
     const projectMenuRef = useRef<HTMLDivElement>(null);
     const shellRef = useRef<InputBarShellHandle>(null);
+    const avatarWindowOpen = useAgentAvatarStore((s) => s.windowOpen);
+    const toggleAvatarWindow = useAgentAvatarStore((s) => s.toggleWindow);
     const fileInputRef = useRef<HTMLInputElement>(null);
     useImperativeHandle(ref, () => ({
       focus: () => shellRef.current?.focus(),
@@ -918,6 +922,16 @@ export const DesktopChatInputBar = memo(
 
     const infoBarEnd = (
       <>
+        <button
+          type="button"
+          className={styles.avatarToggle}
+          onClick={toggleAvatarWindow}
+          aria-label="Toggle avatar"
+          aria-pressed={avatarWindowOpen}
+        >
+          <Video size={10} />
+          Avatar
+        </button>
         <div className={styles.projectMenuWrap} ref={projectMenuRef}>
           <button
             type="button"

@@ -752,6 +752,30 @@
   opacity: 1;
 }
 
+.avatarToggle {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  white-space: nowrap;
+}
+
+.avatarToggle:hover {
+  color: var(--color-text-primary);
+}
+
+.avatarToggle[aria-pressed="true"] {
+  color: var(--color-accent, #7c3aed);
+}
+
 .projectMenu {
   position: absolute;
   bottom: calc(100% + 4px);
