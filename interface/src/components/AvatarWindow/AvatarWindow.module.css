@@ -1,0 +1,208 @@
+/* ── Avatar floating window ─────────────────────────────────── */
+
+.window {
+  position: fixed;
+  top: 60px;
+  right: 16px;
+  z-index: 50;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+  background: var(--color-bg, #0a0a0a);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+.titleBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px 6px 12px;
+  background: var(--color-sidebar-bg, rgba(0, 0, 0, 0.3));
+  cursor: grab;
+  user-select: none;
+}
+
+.titleBar:active {
+  cursor: grabbing;
+}
+
+.titleLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary, #c9c9cf);
+}
+
+.titleActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.titleButton {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-muted, #8a8a8e);
+  cursor: pointer;
+  padding: 0;
+}
+
+.titleButton:hover {
+  background: var(--color-surface-hover, rgba(255, 255, 255, 0.06));
+  color: var(--color-text-primary, inherit);
+}
+
+.videoContainer {
+  position: relative;
+  background: #111;
+}
+
+.video {
+  width: 100%;
+  display: block;
+  min-height: 200px;
+  background: #111;
+}
+
+.startButton {
+  width: 100%;
+  min-height: 200px;
+  border: none;
+  background: #111;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--color-text-secondary, #c9c9cf);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.startButton:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.statusBar {
+  padding: 4px 12px;
+  font-size: 11px;
+  color: var(--color-text-muted, #8a8a8e);
+  text-align: center;
+  background: var(--color-sidebar-bg, rgba(0, 0, 0, 0.3));
+}
+
+/* ── Settings panel inside the window ─────────────────────── */
+
+.settings {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.settingsLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-primary, #f5f5f7);
+}
+
+.settingsHint {
+  font-size: 11px;
+  color: var(--color-text-muted, #8a8a8e);
+}
+
+.avatarGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.avatarOption {
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.avatarOption:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.avatarOptionSelected {
+  border-color: var(--color-accent, #7c3aed);
+}
+
+.avatarThumb {
+  width: 100%;
+  height: 48px;
+  object-fit: cover;
+  display: block;
+}
+
+.avatarName {
+  font-size: 9px;
+  padding: 2px;
+  color: var(--color-text-secondary, #c9c9cf);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.voiceSelect {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.12));
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-primary, #f5f5f7);
+  font-size: 12px;
+  width: 100%;
+}
+
+.saveButton {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: none;
+  background: var(--color-accent, #7c3aed);
+  color: #fff;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.saveButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.activeConfig {
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  font-size: 11px;
+  color: var(--color-text-secondary, #c9c9cf);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.removeButton {
+  background: none;
+  border: none;
+  color: var(--color-text-muted, #8a8a8e);
+  cursor: pointer;
+  font-size: 10px;
+  text-decoration: underline;
+}
