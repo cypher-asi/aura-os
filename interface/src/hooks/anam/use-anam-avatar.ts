@@ -7,7 +7,7 @@
  * AURA's own chat responses through the avatar instead.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient, AnamEvent } from "@anam-ai/js-sdk";
 import type { AnamClient } from "@anam-ai/js-sdk";
 
@@ -47,9 +47,16 @@ export interface TurnStream {
   isActive: () => boolean;
 }
 
+export interface FetchSessionTokenOptions {
+  /** When true, uses CUSTOMER_CLIENT_V1 so text is piped manually. */
+  disableBuiltInLlm?: boolean;
+}
+
 export async function fetchSessionToken(
   config: AnamAvatarConfig,
+  options?: FetchSessionTokenOptions,
 ): Promise<string> {
+  const useCustomLlm = options?.disableBuiltInLlm;
   const res = await fetch(ANAM_SESSION_TOKEN_URL, {
     method: "POST",
     headers: {
@@ -61,8 +68,8 @@ export async function fetchSessionToken(
         name: config.name ?? "AURA Agent",
         avatarId: config.avatarId,
         voiceId: config.voiceId,
-        llmId: DEFAULT_LLM_ID,
-        systemPrompt: DEFAULT_SYSTEM_PROMPT,
+        llmId: useCustomLlm ? "CUSTOMER_CLIENT_V1" : DEFAULT_LLM_ID,
+        ...(useCustomLlm ? {} : { systemPrompt: DEFAULT_SYSTEM_PROMPT }),
       },
     }),
   });
@@ -78,6 +85,7 @@ export async function fetchSessionToken(
 
 export function useAnamAvatar(
   config: AnamAvatarConfig | null,
+  options?: FetchSessionTokenOptions,
 ): AnamAvatarHandle {
   const [status, setStatus] = useState<AnamAvatarStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +114,7 @@ export function useAnamAvatar(
         setStatus("connecting");
         setError(null);
 
-        const sessionToken = await fetchSessionToken(config);
+        const sessionToken = await fetchSessionToken(config, options);
         const client = createClient(sessionToken);
         clientRef.current = client;
 
@@ -129,7 +137,7 @@ export function useAnamAvatar(
         setStatus("error");
       }
     },
-    [config],
+    [config, options],
   );
 
   const stop = useCallback(() => {
@@ -166,5 +174,8 @@ export function useAnamAvatar(
     }
   }, []);
 
-  return { status, start, stop, speak, beginTurn, error };
+  return useMemo(
+    () => ({ status, start, stop, speak, beginTurn, error }),
+    [status, start, stop, speak, beginTurn, error],
+  );
 }
