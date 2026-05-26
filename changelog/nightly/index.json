@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-05-26",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.559.1",
+    "title": "True DAU instrumentation tightened across long-lived sessions",
+    "intro": "A focused analytics change today reshapes how Aura counts active users, ensuring True DAU reliably captures both quick interactions and long-running sessions that span days without input.",
+    "entryCount": 1,
+    "highlights": [
+      "session_active now co-fires with any tracked event for signed-in users",
+      "Hourly heartbeat captures apps left focused overnight"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-05-26T16:56:09.367Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.559.1",
+    "path": "history/2026-05-26.json"
+  },
+  {
     "date": "2026-05-25",
     "channel": "nightly",
     "version": "0.1.0-nightly.558.1",
