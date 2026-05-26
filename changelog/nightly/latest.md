@@ -1,22 +1,24 @@
-# True DAU instrumentation tightened across long-lived sessions
+# Hardening True DAU measurement across clients and server
 
 - Date: `2026-05-26`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.559.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.559.1
+- Version: `0.1.0-nightly.560.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.560.1
 
-A focused analytics change today reshapes how Aura counts active users, ensuring True DAU reliably captures both quick interactions and long-running sessions that span days without input.
+Today's nightly is a focused analytics-accuracy release: Aura now guarantees that True DAU reflects every authenticated user, whether they actively interact with the app, leave a session open across days, or simply hit an authenticated endpoint from any client.
 
-## 9:42 AM — session_active co-fires on every tracked event for identified users
+## 9:42 AM — Closing the True DAU gap with client co-firing and a server-side heartbeat
 
-Analytics now structurally guarantees True DAU is at least as large as Engaged DAU by piggybacking a once-per-day session_active on any tracked event, with an added hourly heartbeat for long-lived windows.
+Aura now emits session_active reliably from both the client and the auth middleware, so daily active counts no longer depend on client version or active user interaction.
 
-- Any tracked event from an identified user now co-fires session_active once per calendar day inside track(), so engaged users are always counted as active without inflating uniques thanks to Mixpanel's per-day deduplication. (`11319e6`)
-- Added an hourly session_active interval alongside the existing visibilitychange and window-focus triggers, closing the gap for desktop apps that stay focused overnight without user interaction. (`11319e6`)
-- Identification state is now tracked explicitly in the analytics module and cleared on resetUser, so the co-fire only runs for authenticated sessions and resets cleanly on sign-out. (`11319e6`)
+- Any tracked event from an identified user now co-fires session_active once per calendar day inside the client's analytics track() helper, structurally guaranteeing True DAU ≥ Engaged DAU without inflating uniques. (`11319e6`)
+- Added an hourly session_active interval in AppShell alongside the existing visibilitychange and focus triggers, so desktop and web apps left open overnight still count their users the next day. (`11319e6`)
+- Introduced a server-side Mixpanel tracker in aura-os-server that fires session_active from the auth middleware once per user per day, using a DashMap for in-memory dedup and a non-blocking tokio spawn so request latency is unaffected. (`bcbcd4e`)
+- Because tracking now runs from require_verified_session, a single backend deploy covers desktop, web, and mobile clients regardless of installed version; the tracker also inspects Mixpanel response bodies to surface silent rejections and requires MIXPANEL_TOKEN on the aura-api Render service. (`bcbcd4e`)
 
 ## Highlights
 
-- session_active now co-fires with any tracked event for signed-in users
-- Hourly heartbeat captures apps left focused overnight
+- True DAU now structurally ≥ Engaged DAU
+- Server-side session tracking covers desktop, web, and mobile in one deploy
+- Long-lived sessions counted via hourly heartbeat
 
