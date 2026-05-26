@@ -12,10 +12,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Settings, X } from "lucide-react";
-import { createClient, AnamEvent } from "@anam-ai/js-sdk";
-import type { AnamClient } from "@anam-ai/js-sdk";
 import { useAgentAvatarStore } from "../../stores/agent-avatar-store";
-import { fetchSessionToken } from "../../hooks/anam";
+import { useAnamAvatar, useAnamStreamBridge } from "../../hooks/anam";
 import styles from "./AvatarWindow.module.css";
 
 const ANAM_API_KEY = import.meta.env.VITE_ANAM_API_KEY ?? "";
@@ -36,15 +34,15 @@ interface AvatarWindowProps {
   isOpen: boolean;
   onClose: () => void;
   agentId: string;
+  streamKey: string;
 }
 
-export function AvatarWindow({ isOpen, onClose, agentId }: AvatarWindowProps) {
-  const [status, setStatus] = useState("idle");
+const ANAM_AVATAR_OPTIONS = { disableBuiltInLlm: true } as const;
+
+export function AvatarWindow({ isOpen, onClose, agentId, streamKey }: AvatarWindowProps) {
   const [showSettings, setShowSettings] = useState(false);
   const [userStarted, setUserStarted] = useState(false);
   const [position, setPosition] = useState({ x: -1, y: 60 });
-  const clientRef = useRef<AnamClient | null>(null);
-  const initRef = useRef(false);
   const dragRef = useRef<{
     startX: number;
     startY: number;
@@ -57,51 +55,18 @@ export function AvatarWindow({ isOpen, onClose, agentId }: AvatarWindowProps) {
     (s) => s.configs[agentId] ?? null,
   );
 
+  const avatar = useAnamAvatar(config, ANAM_AVATAR_OPTIONS);
+  useAnamStreamBridge(streamKey, avatar);
+
   const videoId = "anam-avatar-window-video";
 
-  // Connect to Anam when user clicks Start
+  // Start the avatar session once the video element is rendered
   useEffect(() => {
-    if (!isOpen || !userStarted || !config || !ANAM_API_KEY || initRef.current)
-      return;
-    initRef.current = true;
-
-    const connect = async () => {
-      try {
-        setStatus("connecting");
-
-        const sessionToken = await fetchSessionToken(config);
-        const client = createClient(sessionToken);
-        clientRef.current = client;
-
-        client.addListener(AnamEvent.VIDEO_PLAY_STARTED, () =>
-          setStatus("streaming"),
-        );
-        client.addListener(AnamEvent.CONNECTION_CLOSED, () => {
-          setStatus("stopped");
-          clientRef.current = null;
-          initRef.current = false;
-        });
-
-        // Brief delay to ensure video element is painted
-        await new Promise((r) => setTimeout(r, 200));
-
-        await client.streamToVideoElement(videoId);
-        setStatus("ready");
-      } catch (err) {
-        console.error("[anam] connect failed:", err);
-        setStatus("error");
-        initRef.current = false;
-      }
-    };
-
-    void connect();
-
-    return () => {
-      clientRef.current?.stopStreaming();
-      clientRef.current = null;
-      initRef.current = false;
-    };
-  }, [isOpen, userStarted, config]);
+    if (!isOpen || !userStarted || !config || avatar.status !== "idle") return;
+    // Brief delay to ensure the video element is painted
+    const timer = setTimeout(() => avatar.start(videoId), 200);
+    return () => clearTimeout(timer);
+  }, [isOpen, userStarted, config, avatar.status, avatar.start]);
 
   // ── Drag handlers ──────────────────────────────────────────
   const handleDragMove = useCallback((e: PointerEvent) => {
@@ -151,13 +116,10 @@ export function AvatarWindow({ isOpen, onClose, agentId }: AvatarWindowProps) {
   }, [handleDragMove, handleDragEnd]);
 
   const handleClose = useCallback(() => {
-    clientRef.current?.stopStreaming();
-    clientRef.current = null;
-    initRef.current = false;
+    avatar.stop();
     setUserStarted(false);
-    setStatus("idle");
     onClose();
-  }, [onClose]);
+  }, [avatar.stop, onClose]);
 
   const handleStart = useCallback(() => {
     setUserStarted(true);
@@ -218,7 +180,9 @@ export function AvatarWindow({ isOpen, onClose, agentId }: AvatarWindowProps) {
         )}
       </div>
 
-      <div className={styles.statusBar}>{status}</div>
+      <div className={styles.statusBar}>
+        {avatar.error ?? avatar.status}
+      </div>
 
       {showSettings && (
         <AvatarSettings

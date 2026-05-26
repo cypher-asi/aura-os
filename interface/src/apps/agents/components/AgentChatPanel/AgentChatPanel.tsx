@@ -366,6 +366,7 @@ export function AgentChatPanel({
           isOpen={avatarWindowOpen}
           onClose={closeAvatarWindow}
           agentId={orgAgentId}
+          streamKey={streamKey}
         />
       )}
     </>
