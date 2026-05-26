@@ -45,6 +45,7 @@
     "codegen:protocol": "cd .. && cargo test -p aura-protocol --features typescript export_typescript_bindings -- --nocapture && node interface/scripts/sync-protocol-bindings.mjs"
   },
   "dependencies": {
+    "@anam-ai/js-sdk": "^4.13.1",
     "@capacitor/android": "^8.0.0",
     "@capacitor/core": "^8.0.0",
     "@capacitor/ios": "^8.0.0",
