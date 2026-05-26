@@ -13,8 +13,11 @@ const STORAGE_KEY = "aura-agent-avatars";
 
 interface AgentAvatarState {
   configs: Record<string, AnamAvatarConfig>;
+  windowOpen: boolean;
   setAvatar: (agentId: string, config: AnamAvatarConfig | null) => void;
   getAvatar: (agentId: string) => AnamAvatarConfig | null;
+  toggleWindow: () => void;
+  closeWindow: () => void;
 }
 
 function loadPersistedConfigs(): Record<string, AnamAvatarConfig> {
@@ -37,6 +40,7 @@ function persistConfigs(configs: Record<string, AnamAvatarConfig>): void {
 
 export const useAgentAvatarStore = create<AgentAvatarState>((set, get) => ({
   configs: loadPersistedConfigs(),
+  windowOpen: false,
 
   setAvatar: (agentId, config) => {
     set((state) => {
@@ -53,5 +57,13 @@ export const useAgentAvatarStore = create<AgentAvatarState>((set, get) => ({
 
   getAvatar: (agentId) => {
     return get().configs[agentId] ?? null;
+  },
+
+  toggleWindow: () => {
+    set((state) => ({ windowOpen: !state.windowOpen }));
+  },
+
+  closeWindow: () => {
+    set({ windowOpen: false });
   },
 }));

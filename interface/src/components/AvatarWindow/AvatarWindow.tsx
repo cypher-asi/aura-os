@@ -16,11 +16,9 @@ import { createClient, AnamEvent } from "@anam-ai/js-sdk";
 import type { AnamClient } from "@anam-ai/js-sdk";
 import { useAgentAvatarStore } from "../../stores/agent-avatar-store";
 import { fetchSessionToken } from "../../hooks/anam";
-import type { AnamAvatarConfig } from "../../hooks/anam";
 import styles from "./AvatarWindow.module.css";
 
 const ANAM_API_KEY = import.meta.env.VITE_ANAM_API_KEY ?? "";
-const DEFAULT_CONFIG_KEY = "__avatar_window_default";
 
 interface AnamApiAvatar {
   id: string;
@@ -37,17 +35,26 @@ interface AnamApiVoice {
 interface AvatarWindowProps {
   isOpen: boolean;
   onClose: () => void;
+  agentId: string;
 }
 
-export function AvatarWindow({ isOpen, onClose }: AvatarWindowProps) {
+export function AvatarWindow({ isOpen, onClose, agentId }: AvatarWindowProps) {
   const [status, setStatus] = useState("idle");
   const [showSettings, setShowSettings] = useState(false);
   const [userStarted, setUserStarted] = useState(false);
+  const [position, setPosition] = useState({ x: -1, y: 60 });
   const clientRef = useRef<AnamClient | null>(null);
   const initRef = useRef(false);
+  const dragRef = useRef<{
+    startX: number;
+    startY: number;
+    winX: number;
+    winY: number;
+  } | null>(null);
+  const dragListenersRef = useRef(false);
 
   const config = useAgentAvatarStore(
-    (s) => s.configs[DEFAULT_CONFIG_KEY] ?? null,
+    (s) => s.configs[agentId] ?? null,
   );
 
   const videoId = "anam-avatar-window-video";
@@ -96,6 +103,53 @@ export function AvatarWindow({ isOpen, onClose }: AvatarWindowProps) {
     };
   }, [isOpen, userStarted, config]);
 
+  // ── Drag handlers ──────────────────────────────────────────
+  const handleDragMove = useCallback((e: PointerEvent) => {
+    const d = dragRef.current;
+    if (!d) return;
+    const dx = e.clientX - d.startX;
+    const dy = e.clientY - d.startY;
+    setPosition({ x: d.winX + dx, y: Math.max(0, d.winY + dy) });
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    dragRef.current = null;
+    if (dragListenersRef.current) {
+      window.removeEventListener("pointermove", handleDragMove);
+      window.removeEventListener("pointerup", handleDragEnd);
+      dragListenersRef.current = false;
+    }
+  }, [handleDragMove]);
+
+  const handleTitleBarPointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      if ((e.target as HTMLElement).closest("button")) return;
+      e.preventDefault();
+      dragRef.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        winX: position.x === -1 ? window.innerWidth - 320 - 16 : position.x,
+        winY: position.y,
+      };
+      if (!dragListenersRef.current) {
+        window.addEventListener("pointermove", handleDragMove);
+        window.addEventListener("pointerup", handleDragEnd);
+        dragListenersRef.current = true;
+      }
+    },
+    [position, handleDragMove, handleDragEnd],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (dragListenersRef.current) {
+        window.removeEventListener("pointermove", handleDragMove);
+        window.removeEventListener("pointerup", handleDragEnd);
+        dragListenersRef.current = false;
+      }
+    };
+  }, [handleDragMove, handleDragEnd]);
+
   const handleClose = useCallback(() => {
     clientRef.current?.stopStreaming();
     clientRef.current = null;
@@ -114,9 +168,15 @@ export function AvatarWindow({ isOpen, onClose }: AvatarWindowProps) {
   const hasConfig = !!config;
   const needsSetup = !hasConfig && !showSettings;
 
+  // x === -1 means "use the default CSS position (right: 16px)"
+  const windowStyle: React.CSSProperties =
+    position.x === -1
+      ? { top: position.y }
+      : { top: position.y, left: position.x, right: "auto" };
+
   return (
-    <div className={styles.window}>
-      <div className={styles.titleBar}>
+    <div className={styles.window} style={windowStyle}>
+      <div className={styles.titleBar} onPointerDown={handleTitleBarPointerDown}>
         <span className={styles.titleLabel}>Avatar</span>
         <div className={styles.titleActions}>
           <button
@@ -162,7 +222,7 @@ export function AvatarWindow({ isOpen, onClose }: AvatarWindowProps) {
 
       {showSettings && (
         <AvatarSettings
-          configKey={DEFAULT_CONFIG_KEY}
+          configKey={agentId}
           onDone={() => setShowSettings(false)}
         />
       )}
