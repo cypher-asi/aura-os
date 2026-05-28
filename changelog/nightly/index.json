@@ -2,17 +2,18 @@
   {
     "date": "2026-05-28",
     "channel": "nightly",
-    "version": "0.1.0-nightly.561.1",
-    "title": "AURA orb replaces placeholder icon to clear App Store review",
-    "intro": "A focused iOS fix today: the temporary placeholder app icon has been swapped for the real AURA orb artwork, unblocking App Store review. Desktop builds for macOS, Windows, and Linux were also produced for this nightly.",
+    "version": "0.1.0-nightly.562.1",
+    "title": "iOS App Store unblockers and a mobile chat input fix",
+    "intro": "A tight, focused day aimed squarely at getting AURA through App Store review and fixing a quiet but painful mobile regression. The team replaced the placeholder iOS icon with the real AURA orb, reworked it to meet Apple's no-transparency rule, and restored chat input for local agents on mobile.",
     "entryCount": 1,
     "highlights": [
-      "iOS app icon now uses the real AURA orb",
-      "Resolves App Store rejection under guideline 2.3.8"
+      "Real AURA orb ships as the iOS app icon",
+      "App Store guideline 2.3.8 rejection resolved",
+      "Mobile chat input restored for local agents"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-05-28T09:27:31.340Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.561.1",
+    "rawCommitCount": 2,
+    "generatedAt": "2026-05-28T10:22:01.477Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.562.1",
     "path": "history/2026-05-28.json"
   },
   {

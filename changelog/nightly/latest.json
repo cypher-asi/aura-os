@@ -3,19 +3,20 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-28T09:27:31.340Z",
+  "generatedAt": "2026-05-28T10:22:01.477Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.561.1",
+  "version": "0.1.0-nightly.562.1",
   "date": "2026-05-28",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.561.1",
-  "lastIncludedSha": "57b131a108d6cbc20d3bfb2c99a9d890cbf72d18",
-  "previousProcessedSha": "bcbcd4ed6d998430823ad0f5dee5488c9fba9875",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.562.1",
+  "lastIncludedSha": "b40c9065681a1f233510a265839b8e477407de57",
+  "previousProcessedSha": "57b131a108d6cbc20d3bfb2c99a9d890cbf72d18",
   "commitShas": [
-    "57b131a108d6cbc20d3bfb2c99a9d890cbf72d18"
+    "57b131a108d6cbc20d3bfb2c99a9d890cbf72d18",
+    "b40c9065681a1f233510a265839b8e477407de57"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 2,
+  "filteredCommitCount": 2,
   "rawCommits": [
     {
       "sha": "57b131a108d6cbc20d3bfb2c99a9d890cbf72d18",
@@ -53,6 +54,50 @@
       "areas": [
         "iOS"
       ]
+    },
+    {
+      "sha": "b40c9065681a1f233510a265839b8e477407de57",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-28T11:05:22+01:00",
+      "subject": "fix(ios): remove alpha channel from app icon and unblock mobile chat input",
+      "body": "Apple requires app icons without transparency. Flattened the AURA\norb onto a solid black background.\n\nAlso removed the isLocalAgent gate on MobileChatInputBar that was\nincorrectly blocking chat input for machine_type=local agents.\nOn mobile all agents go through the server harness regardless.",
+      "parents": [
+        "57b131a108d6cbc20d3bfb2c99a9d890cbf72d18"
+      ],
+      "files": [
+        "interface/ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 3,
+        "deletions": 1
+      },
+      "committedAtMs": 1779962722000,
+      "cleanSubject": "remove alpha channel from app icon and unblock mobile chat input",
+      "keywords": [
+        "remove",
+        "alpha",
+        "channel",
+        "from",
+        "icon",
+        "unblock",
+        "mobile",
+        "chat",
+        "input"
+      ],
+      "fileGroups": [
+        "interface/ios/App",
+        "interface/src/mobile"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "iOS"
+      ]
     }
   ],
   "batchCount": 1,
@@ -64,36 +109,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 17733435
+          "sizeBytes": 17733411
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.561.1",
+      "version": "0.1.0-nightly.562.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.561.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.562.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 43808106
+          "sizeBytes": 43810326
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.561.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.562.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.561.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.562.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 111225336
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.561.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.562.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -103,29 +148,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.561.1",
+      "version": "0.1.0-nightly.562.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.561.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.562.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 40860987
+          "sizeBytes": 40864155
         },
         {
-          "name": "AURA_0.1.0-nightly.561.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.562.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.561.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.562.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 39960819
+          "sizeBytes": 39962064
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.561.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.562.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -135,29 +180,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.561.1",
+      "version": "0.1.0-nightly.562.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.561.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.562.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 42580148
+          "sizeBytes": 42579868
         },
         {
-          "name": "AURA_0.1.0-nightly.561.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.562.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.561.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.562.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 41720070
+          "sizeBytes": 41725413
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.561.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.562.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -167,17 +212,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.561.1",
+      "version": "0.1.0-nightly.562.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.561.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.562.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 30110678
+          "sizeBytes": 30113570
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.561.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.562.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -186,21 +231,35 @@
     }
   ],
   "rendered": {
-    "title": "AURA orb replaces placeholder icon to clear App Store review",
-    "intro": "A focused iOS fix today: the temporary placeholder app icon has been swapped for the real AURA orb artwork, unblocking App Store review. Desktop builds for macOS, Windows, and Linux were also produced for this nightly.",
+    "title": "iOS App Store unblockers and a mobile chat input fix",
+    "intro": "A tight, focused day aimed squarely at getting AURA through App Store review and fixing a quiet but painful mobile regression. The team replaced the placeholder iOS icon with the real AURA orb, reworked it to meet Apple's no-transparency rule, and restored chat input for local agents on mobile.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:13 AM",
         "started_at": "2026-05-28T09:13:10.000Z",
-        "ended_at": "2026-05-28T09:13:10.000Z",
-        "title": "iOS app icon swapped to the real AURA orb",
-        "summary": "The placeholder iOS app icon was replaced with the final AURA orb artwork to clear an App Store review rejection.",
+        "ended_at": "2026-05-28T10:05:22.000Z",
+        "title": "iOS icon meets App Store rules and mobile chat input returns for local agents",
+        "summary": "Two quick iOS fixes clear an App Store review block and restore chat input on mobile for local agents.",
         "items": [
           {
-            "text": "Replaced the blue X placeholder in the iOS AppIcon asset set with the full-resolution 1024x1024 AURA orb, resolving the App Store review rejection cited under guideline 2.3.8 (accurate metadata).",
+            "text": "Replaced the blue X placeholder with the real 1024x1024 AURA orb as the iOS app icon, resolving the App Store review rejection under guideline 2.3.8.",
             "commit_shas": [
               "57b131a108d6cbc20d3bfb2c99a9d890cbf72d18"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Flattened the AURA orb onto a solid black background to strip the alpha channel, satisfying Apple's requirement that app icons contain no transparency.",
+            "commit_shas": [
+              "b40c9065681a1f233510a265839b8e477407de57"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Unblocked the MobileChatInputBar for agents with machine_type=local, which were incorrectly gated out; on mobile every agent routes through the server harness, so the local-agent check has been removed.",
+            "commit_shas": [
+              "b40c9065681a1f233510a265839b8e477407de57"
             ],
             "confidence": "high"
           }
@@ -208,9 +267,10 @@
       }
     ],
     "highlights": [
-      "iOS app icon now uses the real AURA orb",
-      "Resolves App Store rejection under guideline 2.3.8"
+      "Real AURA orb ships as the iOS app icon",
+      "App Store guideline 2.3.8 rejection resolved",
+      "Mobile chat input restored for local agents"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 2
   }
 }
