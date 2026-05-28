@@ -2,18 +2,18 @@
   {
     "date": "2026-05-28",
     "channel": "nightly",
-    "version": "0.1.0-nightly.562.1",
-    "title": "iOS App Store unblockers and a mobile chat input fix",
-    "intro": "A tight, focused day aimed squarely at getting AURA through App Store review and fixing a quiet but painful mobile regression. The team replaced the placeholder iOS icon with the real AURA orb, reworked it to meet Apple's no-transparency rule, and restored chat input for local agents on mobile.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.563.1",
+    "title": "iOS App Store unblock and Opus 4.8 lands",
+    "intro": "A short but consequential day: the iOS build cleared its App Store review blockers with a real app icon and a fix that restores chat input for mobile users, and Claude Opus 4.8 joined the managed model lineup.",
+    "entryCount": 2,
     "highlights": [
-      "Real AURA orb ships as the iOS app icon",
-      "App Store guideline 2.3.8 rejection resolved",
-      "Mobile chat input restored for local agents"
+      "Real AURA orb icon ships on iOS",
+      "Mobile chat input unblocked for local agents",
+      "Claude Opus 4.8 available in model picker"
     ],
-    "rawCommitCount": 2,
-    "generatedAt": "2026-05-28T10:22:01.477Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.562.1",
+    "rawCommitCount": 3,
+    "generatedAt": "2026-05-28T18:04:39.382Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.563.1",
     "path": "history/2026-05-28.json"
   },
   {
