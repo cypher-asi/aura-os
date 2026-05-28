@@ -3,21 +3,22 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-28T18:04:39.382Z",
+  "generatedAt": "2026-05-28T18:34:03.672Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.563.1",
+  "version": "0.1.0-nightly.564.1",
   "date": "2026-05-28",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.563.1",
-  "lastIncludedSha": "2649f8baa97a289f47fb98650c65cadea073df2b",
-  "previousProcessedSha": "b40c9065681a1f233510a265839b8e477407de57",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.564.1",
+  "lastIncludedSha": "0026c40ee6d8d39501f53e263af83bf7440ac6cc",
+  "previousProcessedSha": "2649f8baa97a289f47fb98650c65cadea073df2b",
   "commitShas": [
     "57b131a108d6cbc20d3bfb2c99a9d890cbf72d18",
     "b40c9065681a1f233510a265839b8e477407de57",
-    "2649f8baa97a289f47fb98650c65cadea073df2b"
+    "2649f8baa97a289f47fb98650c65cadea073df2b",
+    "0026c40ee6d8d39501f53e263af83bf7440ac6cc"
   ],
-  "rawCommitCount": 3,
-  "filteredCommitCount": 3,
+  "rawCommitCount": 4,
+  "filteredCommitCount": 4,
   "rawCommits": [
     {
       "sha": "57b131a108d6cbc20d3bfb2c99a9d890cbf72d18",
@@ -134,6 +135,43 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "0026c40ee6d8d39501f53e263af83bf7440ac6cc",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-05-28T19:20:44+01:00",
+      "subject": "feat: add Opus 4.8 to featured models in chat input",
+      "body": "",
+      "parents": [
+        "2649f8baa97a289f47fb98650c65cadea073df2b"
+      ],
+      "files": [
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 0
+      },
+      "committedAtMs": 1779992444000,
+      "cleanSubject": "add Opus 4.8 to featured models in chat input",
+      "keywords": [
+        "opus",
+        "featured",
+        "models",
+        "chat",
+        "input"
+      ],
+      "fileGroups": [
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 2,
@@ -145,36 +183,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 17733399
+          "sizeBytes": 17733515
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.563.1",
+      "version": "0.1.0-nightly.564.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.563.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.564.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 43807608
+          "sizeBytes": 43800972
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.563.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.564.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.563.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.564.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 111221240
+          "sizeBytes": 111229432
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.563.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.564.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -184,29 +222,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.563.1",
+      "version": "0.1.0-nightly.564.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.563.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.564.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 40860789
+          "sizeBytes": 40863210
         },
         {
-          "name": "AURA_0.1.0-nightly.563.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.564.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.563.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.564.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 39955776
+          "sizeBytes": 39959176
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.563.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.564.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -216,29 +254,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.563.1",
+      "version": "0.1.0-nightly.564.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.563.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.564.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 42580633
+          "sizeBytes": 42579108
         },
         {
-          "name": "AURA_0.1.0-nightly.563.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.564.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.563.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.564.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 41720297
+          "sizeBytes": 41722477
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.563.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.564.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -248,17 +286,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.563.1",
+      "version": "0.1.0-nightly.564.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.563.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.564.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 30107483
+          "sizeBytes": 30113124
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.563.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.564.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -267,19 +305,19 @@
     }
   ],
   "rendered": {
-    "title": "iOS App Store unblock and Opus 4.8 lands",
-    "intro": "A short but consequential day: the iOS build cleared its App Store review blockers with a real app icon and a fix that restores chat input for mobile users, and Claude Opus 4.8 joined the managed model lineup.",
+    "title": "iOS App Store unblockers and Claude Opus 4.8 rollout",
+    "intro": "Today's nightly clears the path for the iOS build with a proper AURA app icon and a fix for mobile chat input, then brings Claude Opus 4.8 into the model lineup and surfaces it directly in the chat composer.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:13 AM",
         "started_at": "2026-05-28T09:13:10.000Z",
         "ended_at": "2026-05-28T10:05:22.000Z",
-        "title": "iOS App Store review fixes and mobile chat input restored",
-        "summary": "Two iOS fixes clear an App Store rejection and restore chat input that had been silently disabled for some mobile users.",
+        "title": "iOS App Store rejection cleared and mobile chat input restored",
+        "summary": "Two iOS-focused fixes ship the real AURA app icon in a format Apple accepts and remove a gate that was silently blocking chat input on mobile.",
         "items": [
           {
-            "text": "Replaced the blue X placeholder with the real 1024x1024 AURA orb icon and flattened it onto a solid black background to remove the alpha channel, resolving the App Store review rejection under guideline 2.3.8.",
+            "text": "Replaced the blue X placeholder with the 1024x1024 AURA orb and flattened it onto a solid black background to remove the alpha channel, resolving the App Store review rejection under guideline 2.3.8.",
             "commit_shas": [
               "57b131a108d6cbc20d3bfb2c99a9d890cbf72d18",
               "b40c9065681a1f233510a265839b8e477407de57"
@@ -287,7 +325,7 @@
             "confidence": "high"
           },
           {
-            "text": "Removed the isLocalAgent gate on MobileChatInputBar so chat input is no longer blocked for machine_type=local agents — on mobile every agent routes through the server harness anyway.",
+            "text": "Removed an incorrect isLocalAgent gate in MobileChatInputBar so agents with machine_type=local no longer have their input blocked on mobile, where everything routes through the server harness anyway.",
             "commit_shas": [
               "b40c9065681a1f233510a265839b8e477407de57"
             ],
@@ -299,14 +337,21 @@
         "batch_id": "entry-2",
         "time_label": "10:51 AM",
         "started_at": "2026-05-28T17:51:42.000Z",
-        "ended_at": "2026-05-28T17:51:42.000Z",
-        "title": "Claude Opus 4.8 added to the managed model list",
-        "summary": "Opus 4.8 is now selectable in the AURA-managed chat models, with legacy id aliases mapped so existing references keep working.",
+        "ended_at": "2026-05-28T18:20:44.000Z",
+        "title": "Claude Opus 4.8 added and pinned in the chat composer",
+        "summary": "Opus 4.8 is now a selectable AURA-managed model and appears alongside the other featured options in the desktop chat input.",
         "items": [
           {
-            "text": "Added the aura-claude-opus-4-8 option (labeled \"Opus 4.8\", opus tier) to the managed chat model list and mapped both claude-opus-4-8 and aura-claude-opus-4-8 through the legacy id resolver for backward compatibility.",
+            "text": "Added Claude Opus 4.8 (aura-claude-opus-4-8) to the managed chat model list, including legacy ID mappings so existing claude-opus-4-8 references resolve cleanly.",
             "commit_shas": [
               "2649f8baa97a289f47fb98650c65cadea073df2b"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Promoted Opus 4.8 into the featured model row of the desktop chat input bar so it shows up next to GPT-5.4 and Opus 4.7 without needing to dig through the full model picker.",
+            "commit_shas": [
+              "0026c40ee6d8d39501f53e263af83bf7440ac6cc"
             ],
             "confidence": "high"
           }
@@ -314,10 +359,10 @@
       }
     ],
     "highlights": [
-      "Real AURA orb icon ships on iOS",
+      "AURA orb replaces placeholder iOS app icon",
       "Mobile chat input unblocked for local agents",
-      "Claude Opus 4.8 available in model picker"
+      "Claude Opus 4.8 available and featured in chat"
     ],
-    "raw_commit_count": 3
+    "raw_commit_count": 4
   }
 }
