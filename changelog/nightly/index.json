@@ -2,18 +2,21 @@
   {
     "date": "2026-05-28",
     "channel": "nightly",
-    "version": "0.1.0-nightly.564.1",
-    "title": "iOS App Store unblockers and Claude Opus 4.8 rollout",
-    "intro": "Today's nightly clears the path for the iOS build with a proper AURA app icon and a fix for mobile chat input, then brings Claude Opus 4.8 into the model lineup and surfaces it directly in the chat composer.",
-    "entryCount": 2,
+    "version": "0.1.0-nightly.565.1",
+    "title": "AuraShell unification, public landing rebuild, and dev-loop reliability overhaul",
+    "intro": "A very large nightly that consolidates the desktop and logged-out shells into a single AuraShell, rebuilds the public landing around persona-themed mock desktops and a refreshed marketing surface, and lands a deep simplification of the dev-loop, harness transport, and task streaming pipeline. Reliability work covers Start/Stop wedges, reattachable chat and task streams, IndexedDB-backed task storage, and a long string of UI fixes for the sidekick Run pane and activity timeline.",
+    "entryCount": 6,
     "highlights": [
-      "AURA orb replaces placeholder iOS app icon",
-      "Mobile chat input unblocked for local agents",
-      "Claude Opus 4.8 available and featured in chat"
+      "One unified AuraShell across Simple, Advanced, and Public modes",
+      "Rebuilt public landing with persona theming, mock Aura desktop, and marketing pages",
+      "Dev-loop simplified: one health gate, persisted attempts, unified HarnessLink transport",
+      "Reattachable chat and task streams survive reloads and SSE drops",
+      "Sidekick Run pane and activity timeline finally show live task progress reliably",
+      "Task storage moved off localStorage to IndexedDB to end quota wedges"
     ],
-    "rawCommitCount": 4,
-    "generatedAt": "2026-05-28T18:34:03.672Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.564.1",
+    "rawCommitCount": 407,
+    "generatedAt": "2026-05-29T04:12:29.606Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.565.1",
     "path": "history/2026-05-28.json"
   },
   {
