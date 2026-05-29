@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-05-29",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.567.1",
+    "title": "A quiet nightly: zOS avatar backfill script added, then reverted",
+    "intro": "Today's nightly is effectively a no-op in terms of shipped behavior. A one-time operator script for migrating zOS/Matrix profile pictures into AURA was committed and then reverted minutes later, leaving the tree unchanged. Desktop installers for Mac, Windows, and Linux were still produced and signed on this build.",
+    "entryCount": 1,
+    "highlights": [
+      "zOS avatar backfill script added and immediately reverted",
+      "Net code change for the day: zero",
+      "Signed Mac, Windows, and Linux nightly artifacts still produced"
+    ],
+    "rawCommitCount": 2,
+    "generatedAt": "2026-05-29T07:07:02.272Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.567.1",
+    "path": "history/2026-05-29.json"
+  },
+  {
     "date": "2026-05-28",
     "channel": "nightly",
     "version": "0.1.0-nightly.565.1",
