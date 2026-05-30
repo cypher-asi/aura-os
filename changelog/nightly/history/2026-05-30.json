@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-30T18:38:04.495Z",
+  "generatedAt": "2026-05-30T19:12:44.597Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.570.1",
+  "version": "0.1.0-nightly.571.1",
   "date": "2026-05-30",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.570.1",
-  "lastIncludedSha": "36fc5ac0552a737aa60dca6e372ac175d8c42ea0",
-  "previousProcessedSha": "c5187380832534b56a8d62d2a12a61938e71a479",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.571.1",
+  "lastIncludedSha": "d1dcf90d75c271f0f5fdaefcaa32b756b991954c",
+  "previousProcessedSha": "36fc5ac0552a737aa60dca6e372ac175d8c42ea0",
   "commitShas": [
     "05a35547d38bee99b6cccc944418b1f4f7a71bbb",
     "5ad826b4aac68d80dc2ac2d61e31feda70711131",
@@ -24,10 +24,15 @@
     "c5b501760b090653f0f9c9dc3839f8b3b6ce9bb6",
     "64a35d84028c64c82392488f0f807d8ba020c814",
     "4e4d177079e2a663b4e1aac47e8470a79d36db24",
-    "36fc5ac0552a737aa60dca6e372ac175d8c42ea0"
+    "36fc5ac0552a737aa60dca6e372ac175d8c42ea0",
+    "38e526d37e634a43073a5a2de809b3c1513ef274",
+    "1d7d864ce973f8e59af34a732bfb5cb5149a6e51",
+    "f697368efda720690f9eb8bc3fd8bc2e2ef15e5a",
+    "e54c97eec3145aa3e5e931673977a364932a5240",
+    "e60b3dc561190577ca186e01a1c830d4397b1254"
   ],
-  "rawCommitCount": 14,
-  "filteredCommitCount": 13,
+  "rawCommitCount": 20,
+  "filteredCommitCount": 18,
   "rawCommits": [
     {
       "sha": "05a35547d38bee99b6cccc944418b1f4f7a71bbb",
@@ -635,9 +640,313 @@
       "areas": [
         "Release Infrastructure"
       ]
+    },
+    {
+      "sha": "38e526d37e634a43073a5a2de809b3c1513ef274",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T11:24:52-07:00",
+      "subject": "fix(changelog): count all summary stats up to their real values",
+      "body": "The two release stats never animated and the commit stats snapped in on cached revisits (initial state was seeded to the target) and ramped to a fake 1000 placeholder on cold load. Simplify useCountUp to always start at 0 and ease directly to the real target, and wire it into both release stats so all four numbers count up on every visit.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "36fc5ac0552a737aa60dca6e372ac175d8c42ea0"
+      ],
+      "files": [
+        "interface/src/hooks/use-count-up.test.ts",
+        "interface/src/hooks/use-count-up.ts",
+        "interface/src/views/marketing/ChangelogView/ChangelogView.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 78,
+        "deletions": 124
+      },
+      "committedAtMs": 1780165492000,
+      "cleanSubject": "count all summary stats up to their real values",
+      "keywords": [
+        "count",
+        "summary",
+        "stats",
+        "their",
+        "real",
+        "values"
+      ],
+      "fileGroups": [
+        "interface/src/hooks",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "1d7d864ce973f8e59af34a732bfb5cb5149a6e51",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T11:34:39-07:00",
+      "subject": "feat(image): add selectable image quality for GPT Image models",
+      "body": "Expose a quality dropdown (low/medium/high/auto) in Image mode for GPT\nImage models and thread the choice from the chat UI through\naura-os-server to aura-router so OpenAI receives it. Defaults to medium\nso generations are faster than the previous always-high behavior; the\npick persists per agent and globally. DALL-E/Gemini hide the control and\nkeep provider defaults.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "38e526d37e634a43073a5a2de809b3c1513ef274"
+      ],
+      "files": [
+        "apps/aura-os-server/src/dto.rs",
+        "apps/aura-os-server/src/handlers/generation/image.rs",
+        "interface/src/api/streams.ts",
+        "interface/src/constants/models.ts",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/features/chat-ui/ChatPanel/ChatPanel.test.tsx",
+        "interface/src/hooks/use-agent-chat-stream.test.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream.test.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.tsx",
+        "interface/src/stores/chat-ui-store.test.ts",
+        "interface/src/stores/chat-ui-store.ts"
+      ],
+      "stats": {
+        "fileCount": 14,
+        "insertions": 468,
+        "deletions": 31
+      },
+      "committedAtMs": 1780166079000,
+      "cleanSubject": "add selectable image quality for GPT Image models",
+      "keywords": [
+        "selectable",
+        "image",
+        "quality",
+        "models"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/api",
+        "interface/src/constants",
+        "interface/src/features",
+        "interface/src/hooks",
+        "interface/src/mobile",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "f697368efda720690f9eb8bc3fd8bc2e2ef15e5a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T11:50:11-07:00",
+      "subject": "feat(chat): add Session Cost section to context popover",
+      "body": "Add a \"Session Cost\" section beneath the (now-labeled) \"Context\nComposition\" breakdown in the bottom-bar Context popover. It shows the\nmodel, cumulative input/output/total tokens, a weighted \"Avg. Cost per\nToken\" with a per-type rate overlay (input/output/cached), and the total\nbilled token cost in dollars (1 Z = $0.01).\n\nPricing uses base provider rates plus the 20% markup that aura-router\napplies, so figures match what is actually debited. The backend\ncontext-usage endpoint now surfaces cumulative tokens, cache totals,\nmodel, and provider (extracted into a shared context_usage submodule\nwith one parser reused by the agent and task variants) so the section\nsurvives a page reload instead of waiting for the next assistant turn.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "1d7d864ce973f8e59af34a732bfb5cb5149a6e51"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/context_usage.rs",
+        "apps/aura-os-server/src/handlers/agents/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/sessions.rs",
+        "apps/aura-os-server/src/handlers/tasks/context_usage.rs",
+        "apps/aura-os-server/tests/agent_context_usage_test.rs",
+        "interface/src/components/TaskOutputPanel/TaskHeaderContextUsage.tsx",
+        "interface/src/constants/model-pricing.test.ts",
+        "interface/src/constants/model-pricing.ts",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ContextUsageIndicator.tsx",
+        "interface/src/features/chat-ui/SessionCostSection/CostPerTokenOverlay.tsx",
+        "interface/src/features/chat-ui/SessionCostSection/SessionCostSection.module.css",
+        "interface/src/features/chat-ui/SessionCostSection/SessionCostSection.test.tsx",
+        "interface/src/features/chat-ui/SessionCostSection/SessionCostSection.tsx",
+        "interface/src/features/chat-ui/SessionCostSection/index.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream/build-stream-handler.ts",
+        "interface/src/hooks/use-hydrate-context-utilization.ts",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.tsx",
+        "interface/src/shared/api/agents.ts",
+        "interface/src/shared/types/harness-protocol.ts",
+        "interface/src/stores/context-usage-store.ts"
+      ],
+      "stats": {
+        "fileCount": 22,
+        "insertions": 1383,
+        "deletions": 469
+      },
+      "committedAtMs": 1780167011000,
+      "cleanSubject": "add Session Cost section to context popover",
+      "keywords": [
+        "session",
+        "cost",
+        "section",
+        "context",
+        "popover"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "interface/src/components",
+        "interface/src/constants",
+        "interface/src/features",
+        "interface/src/hooks",
+        "interface/src/mobile",
+        "interface/src/shared",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "e54c97eec3145aa3e5e931673977a364932a5240",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T11:52:00-07:00",
+      "subject": "feat(chat): group model picker by provider with collapsible sections",
+      "body": "Reorganize the chat model picker into collapsible Anthropic / OpenAI /\nOpen Source sections (Google omitted until a chat model exists),\nreplacing the prior \"featured + Show all models\" view. All sections\nstart expanded and collapse independently. Surfaces Kimi K2.6 and adds\nAnthropic Haiku 4.5 to the visible list. Extracts a shared, accessible\nModelMenuGroup component reused by the desktop and mobile input bars.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "f697368efda720690f9eb8bc3fd8bc2e2ef15e5a"
+      ],
+      "files": [
+        "interface/src/components/InputBarShell/InputBarShell.module.css",
+        "interface/src/components/InputBarShell/ModelMenuGroup.test.tsx",
+        "interface/src/components/InputBarShell/ModelMenuGroup.tsx",
+        "interface/src/components/InputBarShell/index.ts",
+        "interface/src/constants/models.ts",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.module.css",
+        "interface/tests/e2e/pwa-mobile.spec.ts"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 201,
+        "deletions": 43
+      },
+      "committedAtMs": 1780167120000,
+      "cleanSubject": "group model picker by provider with collapsible sections",
+      "keywords": [
+        "group",
+        "model",
+        "picker",
+        "provider",
+        "with",
+        "collapsible",
+        "sections"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/constants",
+        "interface/src/features",
+        "interface/src/mobile",
+        "interface/tests/e2e"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "e60b3dc561190577ca186e01a1c830d4397b1254",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T11:58:50-07:00",
+      "subject": "feat(feedback): add animated summary banner to feedback page",
+      "body": "Show submitted/resolved/participant totals computed from an unfiltered fetch so the banner stays stable as list filters change.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "e54c97eec3145aa3e5e931673977a364932a5240"
+      ],
+      "files": [
+        "interface/src/views/marketing/FeedbackView/FeedbackView.css",
+        "interface/src/views/marketing/FeedbackView/FeedbackView.test.tsx",
+        "interface/src/views/marketing/FeedbackView/FeedbackView.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 177,
+        "deletions": 1
+      },
+      "committedAtMs": 1780167530000,
+      "cleanSubject": "add animated summary banner to feedback page",
+      "keywords": [
+        "animated",
+        "summary",
+        "banner",
+        "feedback",
+        "page"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "d1dcf90d75c271f0f5fdaefcaa32b756b991954c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T11:58:55-07:00",
+      "subject": "style(server): apply rustfmt formatting cleanups",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "e60b3dc561190577ca186e01a1c830d4397b1254"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat/streaming/orchestrator.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/start/start_or_adopt.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/streaming/credits.rs",
+        "apps/aura-os-server/src/handlers/dev_loop/streaming/tool_summary.rs",
+        "apps/aura-os-server/src/handlers/specs/crud.rs",
+        "apps/aura-os-server/src/handlers/specs/gen.rs",
+        "apps/aura-os-server/src/handlers/specs/markdown.rs",
+        "apps/aura-os-server/src/handlers/streams.rs",
+        "apps/aura-os-server/src/lib.rs",
+        "apps/aura-os-server/src/live_streams.rs",
+        "apps/aura-os-server/src/mixpanel.rs",
+        "apps/aura-os-server/src/router/public.rs",
+        "apps/aura-os-server/tests/executor_janitor_test.rs"
+      ],
+      "stats": {
+        "fileCount": 13,
+        "insertions": 47,
+        "deletions": 53
+      },
+      "committedAtMs": 1780167535000,
+      "cleanSubject": "style(server): apply rustfmt formatting cleanups",
+      "keywords": [
+        "style",
+        "server",
+        "apply",
+        "rustfmt",
+        "formatting",
+        "cleanups"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
     }
   ],
-  "batchCount": 4,
+  "batchCount": 5,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -646,36 +955,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 18734664
+          "sizeBytes": 18739399
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.570.1",
+      "version": "0.1.0-nightly.571.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.570.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.571.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 46250366
+          "sizeBytes": 46296036
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.570.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.571.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.570.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.571.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 113474040
+          "sizeBytes": 113527288
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.570.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.571.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -685,29 +994,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.570.1",
+      "version": "0.1.0-nightly.571.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.570.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.571.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 43264261
+          "sizeBytes": 43255122
         },
         {
-          "name": "AURA_0.1.0-nightly.570.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.571.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.570.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.571.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 42373965
+          "sizeBytes": 42386387
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.570.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.571.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -717,29 +1026,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.570.1",
+      "version": "0.1.0-nightly.571.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.570.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.571.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 45094817
+          "sizeBytes": 45069021
         },
         {
-          "name": "AURA_0.1.0-nightly.570.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.571.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.570.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.571.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 44215019
+          "sizeBytes": 44222973
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.570.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.571.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -749,17 +1058,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.570.1",
+      "version": "0.1.0-nightly.571.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.570.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.571.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 31826699
+          "sizeBytes": 31835095
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.570.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.571.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -768,51 +1077,45 @@
     }
   ],
   "rendered": {
-    "title": "Self-healing public chat, model effort controls, and steadier CI",
-    "intro": "Today's nightly tightens a stack of chat and marketing surfaces, ships per-model reasoning effort in the picker, fixes a long-standing dev-run agent pileup in the Rust core, and hardens release pipelines against transient runner DNS hiccups.",
+    "title": "Smarter model picker, session cost visibility, and self-healing public chat",
+    "intro": "Today's nightly leans heavily into chat control surfaces: a redesigned model picker with credit multipliers and per-model reasoning effort, a new Session Cost breakdown in the Context popover, and selectable GPT Image quality. Public chat now recovers automatically from stale guest tokens, generated images settle in cleanly, and the marketing site's product page gains live mobile chat mockups. A pair of CI fixes also hardens release builds against transient DNS failures.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "9:27 PM",
         "started_at": "2026-05-29T04:27:55.000Z",
         "ended_at": "2026-05-29T05:30:49.000Z",
-        "title": "Public chat self-heals, model picker gains effort controls",
-        "summary": "A dense late-evening batch reshaped the chat input, recovered public chat from stale guest tokens, and polished several marketing and layout surfaces.",
+        "title": "Public chat recovery, model picker controls, and product page mockups",
+        "summary": "A dense late-night batch reshaped the public chat experience, the model picker, and the marketing product page.",
         "items": [
           {
-            "text": "Public chat now silently recovers from server-side guest-token secret rotations: a new isGuestAuthError predicate detects 401s, drops the stale cached token, re-mints a fresh one, and transparently retries the turn across PublicChatView, MobilePublicChatView, and the dispatch-media boundary.",
+            "text": "Public chat now self-heals after a server-side guest-secret rotation: a new isGuestAuthError predicate catches 401s and \"guest token\" rejections, discards the stale cached token, mints a fresh one, and silently retries the turn across desktop, mobile, and the dispatch-media boundary.",
             "commit_shas": [
               "72f8ed3ed389a1c688e28413cd7260f680d88bdc"
             ],
             "confidence": "high"
           },
           {
-            "text": "The model picker now shows a credit-multiplier badge per chat model and a hover flyout to pick a reasoning effort (Low/Medium/High/XHigh/Max); the selection is persisted per model and forwarded as reasoning_effort on the chat stream request from both desktop and mobile input bars.",
+            "text": "The chat model picker gained a credit-multiplier badge per model and a hover flyout to pick reasoning effort (Low through Max) for supported models, with the choice persisted per model and forwarded as reasoning_effort on every chat stream request.",
             "commit_shas": [
               "b135e7a13192e9d501166ab2af1ea1673ceed02f"
             ],
             "confidence": "high"
           },
           {
-            "text": "The /product page's agent section replaces empty PhoneShell placeholders with three looping mobile chat mockups, each showing a visitor texting a different AURA agent using the landing hero's typewriter and streamed tool-card primitives.",
-            "commit_shas": [
-              "4f9d48d18a664133766a77fb70d610bd32fb0b2b"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Project task checkmarks now update live during dev runs — useProjectLayoutData subscribes to task_updated edges so the Tasks tab reflects completed work even when the user is watching the Run tab, no manual refresh required.",
+            "text": "Task checkmarks now update live during dev runs — useProjectLayoutData subscribes to task_updated edges and patches the layout cache, so completions appear immediately whether the user is on the Tasks tab or the Run tab.",
             "commit_shas": [
               "567338eb9665ccb2d18c466d4c0c888a0150da29"
             ],
             "confidence": "high"
           },
           {
-            "text": "Smaller layout polish across chat and marketing: the public-chat transcript now fills full height and scrolls under the floating input bar, the public sidebar nav slides between center and bottom on side-area toggle, the marketing product hero video fades cleanly into the page, and the overlay scrollbar thumb is now a properly rounded pill that widens on hover and drag.",
+            "text": "Marketing /product page replaced empty PhoneShell placeholders with three looping mobile chat mockups driven by the landing hero's typewriter and terminal-stream primitives, and the public chat transcript, sidebar nav, hero video fade, and overlay scrollbar all got targeted visual fixes.",
             "commit_shas": [
-              "91af4337b078813d1e46027b90377003d5f82c77",
-              "5ad826b4aac68d80dc2ac2d61e31feda70711131",
+              "4f9d48d18a664133766a77fb70d610bd32fb0b2b",
               "05a35547d38bee99b6cccc944418b1f4f7a71bbb",
+              "5ad826b4aac68d80dc2ac2d61e31feda70711131",
+              "91af4337b078813d1e46027b90377003d5f82c77",
               "0a51c5b496510ccfd2597f8b1cb0faf04603f3bd"
             ],
             "confidence": "high"
@@ -824,11 +1127,11 @@
         "time_label": "10:32 PM",
         "started_at": "2026-05-29T05:32:56.000Z",
         "ended_at": "2026-05-29T05:32:56.000Z",
-        "title": "Ephemeral executor agents stop piling up in the projects sidebar",
-        "summary": "A Core Rust fix prevents ad-hoc dev/automation runs from leaving permanent duplicate Executor rows in the projects sidebar.",
+        "title": "Executor agent ledger stops dev-run sidebar pileup",
+        "summary": "A persistent local ledger now tracks system-minted Executor instances so they can be reclaimed even when storage drops their role metadata.",
         "items": [
           {
-            "text": "System-minted Loop/Executor instance IDs are now tracked in a storage-independent SettingsStore ledger, so the janitor can reclaim ephemeral executor rows and the sidebar can hide them even when aura-storage strips the instance_role/source columns and they come back masquerading as plain Chat rows.",
+            "text": "Ephemeral Executor agents spawned by dev/automation runs no longer pile up as duplicate \"Summarize This Me\" rows in the projects sidebar: a SettingsStore-backed ledger records every system-minted instance ID on creation, drives the purge by ID so orphans are reclaimed even when aura-storage strips instance_role, and hides ledger-tracked rows from list_agent_instances regardless of what storage returns.",
             "commit_shas": [
               "c89506433e9b8bb98b7b575efe31570d275d97fa"
             ],
@@ -841,18 +1144,18 @@
         "time_label": "10:32 AM",
         "started_at": "2026-05-30T17:32:53.000Z",
         "ended_at": "2026-05-30T17:46:07.000Z",
-        "title": "Media generation feels alive, generated images land cleanly",
-        "summary": "Two morning changes made image generation in chat feel less janky end-to-end, from the loading placeholder to the final reveal.",
+        "title": "Calmer media generation: ripple loader and decoded image fade-in",
+        "summary": "The image generation experience now feels deliberate from placeholder to final frame.",
         "items": [
           {
-            "text": "The image/video generation placeholder swaps its static CSS dot grid for a canvas where dots pulse in radius and brightness in flowing ripple waves, so the wait reads as actively working; prefers-reduced-motion still renders a single static frame.",
+            "text": "The image and video generation placeholder swapped its static CSS dot grid for a canvas where dots pulse in flowing ripple waves, so the wait reads as actively working; prefers-reduced-motion still draws a single static frame.",
             "commit_shas": [
               "c5b501760b090653f0f9c9dc3839f8b3b6ce9bb6"
             ],
             "confidence": "high"
           },
           {
-            "text": "Generated chat images no longer paint in progressively or grow the frame downward as the bitmap arrives: a new GeneratedImageFrame reserves a square box with a loader and FadeInImage now gates its reveal on img.decode(), so the picture appears in one fully-decoded fade.",
+            "text": "Generated chat images no longer paint in progressively or grow their frame downward — a new GeneratedImageFrame reserves a square box with a loader, gates the reveal on img.decode(), and fades the finished image in.",
             "commit_shas": [
               "64a35d84028c64c82392488f0f807d8ba020c814"
             ],
@@ -865,20 +1168,59 @@
         "time_label": "11:05 AM",
         "started_at": "2026-05-30T18:05:15.000Z",
         "ended_at": "2026-05-30T18:23:15.000Z",
-        "title": "setup-node hardened against self-hosted runner DNS blips",
-        "summary": "Release Infrastructure wraps setup-node in a reachability gate to absorb transient DNS failures, with a quick follow-up to keep subdirectory-checkout jobs working.",
+        "title": "Hardened setup-node against runner DNS blips",
+        "summary": "A local composite action now polls the Node and GitHub registries with backoff before installing, with a targeted carve-out for jobs that check out into subdirectories.",
         "items": [
           {
-            "text": "A new local ./.github/actions/setup-node composite polls api.github.com and nodejs.org with backoff before installing Node, so a transient 'getaddrinfo ENOTFOUND' on the self-hosted runners no longer kills the build-sidecar job on the first attempt; all first-party workflows now share this wrapper and a centrally pinned Node version.",
+            "text": "All first-party workflows now use a local ./.github/actions/setup-node composite that polls api.github.com and nodejs.org with backoff before invoking actions/setup-node, so a transient getaddrinfo ENOTFOUND on self-hosted runners no longer kills build-sidecar on the first attempt; the pinned Node version is centralized in one place.",
             "commit_shas": [
               "4e4d177079e2a663b4e1aac47e8470a79d36db24"
             ],
             "confidence": "high"
           },
           {
-            "text": "Five publish-manifest and changelog jobs that check the repo out into subdirectories — where the local composite action can't be resolved — were reverted to upstream actions/setup-node@v5; those run on GitHub-hosted runners that never had the DNS issue in the first place.",
+            "text": "The publish-manifests and changelog jobs, which check the repo out into subdirectories on GitHub-hosted runners, were reverted to upstream actions/setup-node@v5 so the composite's path resolution doesn't break them.",
             "commit_shas": [
               "36fc5ac0552a737aa60dca6e372ac175d8c42ea0"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-5",
+        "time_label": "11:24 AM",
+        "started_at": "2026-05-30T18:24:52.000Z",
+        "ended_at": "2026-05-30T18:58:50.000Z",
+        "title": "Session Cost popover, image quality picker, and provider-grouped models",
+        "summary": "A morning of chat-surface work added cost visibility, image quality control, a restructured model picker, and supporting polish on the marketing site.",
+        "items": [
+          {
+            "text": "The bottom-bar Context popover now includes a Session Cost section showing the active model, cumulative input/output/cached tokens, a weighted average cost per token with a per-type rate overlay, and the total billed cost in dollars — using aura-router's 20% markup so figures match what's actually debited, and hydrating from the backend on reload.",
+            "commit_shas": [
+              "f697368efda720690f9eb8bc3fd8bc2e2ef15e5a"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "GPT Image models gained a quality dropdown (low/medium/high/auto) wired from the chat UI through aura-os-server to aura-router, now defaulting to medium for faster generations and persisting per agent; DALL·E and Gemini keep provider defaults and hide the control.",
+            "commit_shas": [
+              "1d7d864ce973f8e59af34a732bfb5cb5149a6e51"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The chat model picker was reorganized into collapsible Anthropic / OpenAI / Open Source sections via a shared ModelMenuGroup component reused by desktop and mobile, surfacing Kimi K2.6 and adding Anthropic Haiku 4.5 to the visible list.",
+            "commit_shas": [
+              "e54c97eec3145aa3e5e931673977a364932a5240"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Marketing polish: the Changelog page's four summary stats now always animate from zero to their real values on every visit, and the Feedback page gained an animated submitted/resolved/participant banner computed from an unfiltered fetch so it stays stable as list filters change.",
+            "commit_shas": [
+              "38e526d37e634a43073a5a2de809b3c1513ef274",
+              "e60b3dc561190577ca186e01a1c830d4397b1254"
             ],
             "confidence": "high"
           }
@@ -886,11 +1228,12 @@
       }
     ],
     "highlights": [
-      "Public chat now self-heals after guest-token rotations",
-      "Per-model reasoning effort and credit multipliers in the model picker",
-      "Live mobile chat mockups land on the /product page",
-      "CI setup-node survives transient DNS failures on self-hosted runners"
+      "Model picker grouped by provider with credit multipliers and reasoning-effort control",
+      "New Session Cost section breaks down tokens and dollars per chat",
+      "Public chat self-heals after guest-token secret rotations",
+      "GPT Image gains a low/medium/high/auto quality selector",
+      "Self-hosted CI runners ride out DNS blips on setup-node"
     ],
-    "raw_commit_count": 13
+    "raw_commit_count": 18
   }
 }
