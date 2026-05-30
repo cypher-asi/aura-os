@@ -2,20 +2,19 @@
   {
     "date": "2026-05-30",
     "channel": "nightly",
-    "version": "0.1.0-nightly.571.1",
-    "title": "Smarter model picker, session cost visibility, and self-healing public chat",
-    "intro": "Today's nightly leans heavily into chat control surfaces: a redesigned model picker with credit multipliers and per-model reasoning effort, a new Session Cost breakdown in the Context popover, and selectable GPT Image quality. Public chat now recovers automatically from stale guest tokens, generated images settle in cleanly, and the marketing site's product page gains live mobile chat mockups. A pair of CI fixes also hardens release builds against transient DNS failures.",
+    "version": "0.1.0-nightly.572.1",
+    "title": "Model picker depth, session cost insight, and chat self-healing",
+    "intro": "Today's nightly puts richer controls and visibility into the chat surface — a reworked model picker with credit multipliers, per-model thinking levels, and provider grouping, plus a new Session Cost panel that shows exactly what each turn is billing. On the reliability side, public chat now silently recovers from expired guest tokens, dev runs stop leaving behind ghost executor agents in the sidebar, and CI rides out transient DNS blips on self-hosted runners.",
     "entryCount": 5,
     "highlights": [
-      "Model picker grouped by provider with credit multipliers and reasoning-effort control",
-      "New Session Cost section breaks down tokens and dollars per chat",
-      "Public chat self-heals after guest-token secret rotations",
-      "GPT Image gains a low/medium/high/auto quality selector",
-      "Self-hosted CI runners ride out DNS blips on setup-node"
+      "Model picker gains credit multipliers and per-model thinking levels",
+      "New Session Cost panel breaks down tokens and billed dollars",
+      "Public chat self-heals after guest token rotation",
+      "Self-hosted CI rides out transient DNS failures"
     ],
-    "rawCommitCount": 20,
-    "generatedAt": "2026-05-30T19:12:44.597Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.571.1",
+    "rawCommitCount": 22,
+    "generatedAt": "2026-05-30T19:51:12.923Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.572.1",
     "path": "history/2026-05-30.json"
   },
   {

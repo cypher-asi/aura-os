@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-30T19:12:44.597Z",
+  "generatedAt": "2026-05-30T19:51:12.923Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.571.1",
+  "version": "0.1.0-nightly.572.1",
   "date": "2026-05-30",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.571.1",
-  "lastIncludedSha": "d1dcf90d75c271f0f5fdaefcaa32b756b991954c",
-  "previousProcessedSha": "36fc5ac0552a737aa60dca6e372ac175d8c42ea0",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.572.1",
+  "lastIncludedSha": "cfb232ae03bc8516a260588e95bced51fbc126d0",
+  "previousProcessedSha": "d1dcf90d75c271f0f5fdaefcaa32b756b991954c",
   "commitShas": [
     "05a35547d38bee99b6cccc944418b1f4f7a71bbb",
     "5ad826b4aac68d80dc2ac2d61e31feda70711131",
@@ -29,10 +29,12 @@
     "1d7d864ce973f8e59af34a732bfb5cb5149a6e51",
     "f697368efda720690f9eb8bc3fd8bc2e2ef15e5a",
     "e54c97eec3145aa3e5e931673977a364932a5240",
-    "e60b3dc561190577ca186e01a1c830d4397b1254"
+    "e60b3dc561190577ca186e01a1c830d4397b1254",
+    "22d102c899a6d9083f9294759f0f74685f3399c3",
+    "cfb232ae03bc8516a260588e95bced51fbc126d0"
   ],
-  "rawCommitCount": 20,
-  "filteredCommitCount": 18,
+  "rawCommitCount": 22,
+  "filteredCommitCount": 20,
   "rawCommits": [
     {
       "sha": "05a35547d38bee99b6cccc944418b1f4f7a71bbb",
@@ -944,6 +946,109 @@
       "areas": [
         "Other"
       ]
+    },
+    {
+      "sha": "22d102c899a6d9083f9294759f0f74685f3399c3",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T12:23:21-07:00",
+      "subject": "feat(chat): route thinking level to harness and show it in the picker",
+      "body": "Add a custom-scrollbar model menu and wire the reasoning-effort\nselection end-to-end.\n\nUI:\n- New `ModelMenuScroll` wraps the chat model menu with the shared\n  `OverlayScrollbar` and locks the menu's natural width so collapsing\n  a vendor section no longer shrinks it.\n- `modelLabelWithEffort` shows the selected tier in the trigger label\n  (e.g. \"Opus 4.8 XHigh\") on both desktop and mobile bars.\n\nServer/wire:\n- Add `reasoning_effort` to `SendChatRequest`, `SessionConfig`, and\n  `ModelSelection` so the picker's selection reaches the harness\n  instead of being silently dropped.\n- Fold the effort into `ChatSessionKey` so changing the thinking level\n  (like changing the model) cold-opens a session that rebuilds its\n  loop config with the new effort rather than reusing the prior one.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "d1dcf90d75c271f0f5fdaefcaa32b756b991954c"
+      ],
+      "files": [
+        "apps/aura-os-server/src/dto.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/agent_route/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route/route.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/streaming/session.rs",
+        "apps/aura-os-server/src/state/mod.rs",
+        "crates/aura-os-harness/src/automaton_client/start_params.rs",
+        "crates/aura-os-harness/src/harness.rs",
+        "crates/aura-protocol/src/runtime_request.rs",
+        "interface/src/components/InputBarShell/InputBarShell.module.css",
+        "interface/src/components/InputBarShell/ModelMenuScroll.tsx",
+        "interface/src/components/InputBarShell/index.ts",
+        "interface/src/constants/models.ts",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.tsx"
+      ],
+      "stats": {
+        "fileCount": 14,
+        "insertions": 239,
+        "deletions": 16
+      },
+      "committedAtMs": 1780169001000,
+      "cleanSubject": "route thinking level to harness and show it in the picker",
+      "keywords": [
+        "route",
+        "thinking",
+        "level",
+        "harness",
+        "show",
+        "picker"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-harness/src",
+        "crates/aura-protocol/src",
+        "interface/src/components",
+        "interface/src/constants",
+        "interface/src/features",
+        "interface/src/mobile"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "cfb232ae03bc8516a260588e95bced51fbc126d0",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T12:27:35-07:00",
+      "subject": "fix(chat): reconcile session cost tokens and fix context popover layering",
+      "body": "Make the Session Cost \"Tokens Consumed / Total\" include cache read/write\ntokens so it matches the basis of Total Token Cost and Avg. Cost per Token.\nPreviously the total showed input+output only, making the cost look detached\nfrom the token count. Add a cache sub-row for attribution.\n\nVertically center the Avg. Cost per Token info icon and add a small gap\nbefore the rate text. Lower the streaming (\"cooking\") indicator below the\ninput bar so its full-width gradient backdrop no longer paints over the\ncontext popover during an active session.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "22d102c899a6d9083f9294759f0f74685f3399c3"
+      ],
+      "files": [
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/features/chat-ui/ChatInputBar/ContextUsageIndicator.tsx",
+        "interface/src/features/chat-ui/ChatPanel/ChatPanel.module.css",
+        "interface/src/features/chat-ui/SessionCostSection/SessionCostSection.module.css",
+        "interface/src/features/chat-ui/SessionCostSection/SessionCostSection.test.tsx",
+        "interface/src/features/chat-ui/SessionCostSection/SessionCostSection.tsx"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 71,
+        "deletions": 35
+      },
+      "committedAtMs": 1780169255000,
+      "cleanSubject": "reconcile session cost tokens and fix context popover layering",
+      "keywords": [
+        "reconcile",
+        "session",
+        "cost",
+        "tokens",
+        "context",
+        "popover",
+        "layering"
+      ],
+      "fileGroups": [
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 5,
@@ -955,36 +1060,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 18739399
+          "sizeBytes": 18739595
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.571.1",
+      "version": "0.1.0-nightly.572.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.571.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.572.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 46296036
+          "sizeBytes": 46307564
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.571.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.572.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.571.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.572.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 113527288
+          "sizeBytes": 113539576
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.571.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.572.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -994,29 +1099,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.571.1",
+      "version": "0.1.0-nightly.572.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.571.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.572.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 43255122
+          "sizeBytes": 43284335
         },
         {
-          "name": "AURA_0.1.0-nightly.571.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.572.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.571.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.572.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 42386387
+          "sizeBytes": 42402044
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.571.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.572.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1026,29 +1131,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.571.1",
+      "version": "0.1.0-nightly.572.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.571.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.572.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 45069021
+          "sizeBytes": 45108743
         },
         {
-          "name": "AURA_0.1.0-nightly.571.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.572.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.571.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.572.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 44222973
+          "sizeBytes": 44235347
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.571.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.572.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1058,17 +1163,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.571.1",
+      "version": "0.1.0-nightly.572.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.571.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.572.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 31835095
+          "sizeBytes": 31837645
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.571.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.572.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -1077,42 +1182,48 @@
     }
   ],
   "rendered": {
-    "title": "Smarter model picker, session cost visibility, and self-healing public chat",
-    "intro": "Today's nightly leans heavily into chat control surfaces: a redesigned model picker with credit multipliers and per-model reasoning effort, a new Session Cost breakdown in the Context popover, and selectable GPT Image quality. Public chat now recovers automatically from stale guest tokens, generated images settle in cleanly, and the marketing site's product page gains live mobile chat mockups. A pair of CI fixes also hardens release builds against transient DNS failures.",
+    "title": "Model picker depth, session cost insight, and chat self-healing",
+    "intro": "Today's nightly puts richer controls and visibility into the chat surface — a reworked model picker with credit multipliers, per-model thinking levels, and provider grouping, plus a new Session Cost panel that shows exactly what each turn is billing. On the reliability side, public chat now silently recovers from expired guest tokens, dev runs stop leaving behind ghost executor agents in the sidebar, and CI rides out transient DNS blips on self-hosted runners.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "9:27 PM",
         "started_at": "2026-05-29T04:27:55.000Z",
         "ended_at": "2026-05-29T05:30:49.000Z",
-        "title": "Public chat recovery, model picker controls, and product page mockups",
-        "summary": "A dense late-night batch reshaped the public chat experience, the model picker, and the marketing product page.",
+        "title": "Model picker upgrades, marketing polish, and resilient public chat",
+        "summary": "Late-evening work expanded the chat model picker with credit and effort controls, fleshed out the /product marketing page with live mobile mockups, and made public chat recover automatically from stale guest tokens.",
         "items": [
           {
-            "text": "Public chat now self-heals after a server-side guest-secret rotation: a new isGuestAuthError predicate catches 401s and \"guest token\" rejections, discards the stale cached token, mints a fresh one, and silently retries the turn across desktop, mobile, and the dispatch-media boundary.",
-            "commit_shas": [
-              "72f8ed3ed389a1c688e28413cd7260f680d88bdc"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "The chat model picker gained a credit-multiplier badge per model and a hover flyout to pick reasoning effort (Low through Max) for supported models, with the choice persisted per model and forwarded as reasoning_effort on every chat stream request.",
+            "text": "The chat model picker now shows a credit-multiplier badge next to each model and a hover flyout for picking a reasoning effort (Low/Medium/High/XHigh/Max); the choice persists per model and is forwarded as reasoning_effort on the stream request.",
             "commit_shas": [
               "b135e7a13192e9d501166ab2af1ea1673ceed02f"
             ],
             "confidence": "high"
           },
           {
-            "text": "Task checkmarks now update live during dev runs — useProjectLayoutData subscribes to task_updated edges and patches the layout cache, so completions appear immediately whether the user is on the Tasks tab or the Run tab.",
+            "text": "Public chat now self-heals after a guest-token secret rotation: a new isGuestAuthError predicate catches 401 / \"guest token\" failures across PublicChatView, MobilePublicChatView, and the dispatch-media boundary, discards the stale token, re-mints a fresh one, and silently retries the turn once.",
+            "commit_shas": [
+              "72f8ed3ed389a1c688e28413cd7260f680d88bdc"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The /product agent section gained three live looping mobile chat mockups inside the PhoneShells, each texting a different AURA agent and reusing the landing hero's typewriter and tool-stream primitives so the marketing page stays consistent with the desktop demo.",
+            "commit_shas": [
+              "4f9d48d18a664133766a77fb70d610bd32fb0b2b"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Project task checkmarks now update in real time during dev runs: useProjectLayoutData subscribes to task_updated edges and patches the layout cache, so completed tasks reflect immediately even when the user is watching the Run tab instead of the Tasks tab.",
             "commit_shas": [
               "567338eb9665ccb2d18c466d4c0c888a0150da29"
             ],
             "confidence": "high"
           },
           {
-            "text": "Marketing /product page replaced empty PhoneShell placeholders with three looping mobile chat mockups driven by the landing hero's typewriter and terminal-stream primitives, and the public chat transcript, sidebar nav, hero video fade, and overlay scrollbar all got targeted visual fixes.",
+            "text": "A cluster of smaller polish landed across the marketing hero fade, public-chat transcript height, public-nav slide behavior, and the overlay scrollbar — the scrollbar thumb is now a rounded pill that grows on hover/drag instead of a flat clipped rectangle.",
             "commit_shas": [
-              "4f9d48d18a664133766a77fb70d610bd32fb0b2b",
               "05a35547d38bee99b6cccc944418b1f4f7a71bbb",
               "5ad826b4aac68d80dc2ac2d61e31feda70711131",
               "91af4337b078813d1e46027b90377003d5f82c77",
@@ -1127,11 +1238,11 @@
         "time_label": "10:32 PM",
         "started_at": "2026-05-29T05:32:56.000Z",
         "ended_at": "2026-05-29T05:32:56.000Z",
-        "title": "Executor agent ledger stops dev-run sidebar pileup",
-        "summary": "A persistent local ledger now tracks system-minted Executor instances so they can be reclaimed even when storage drops their role metadata.",
+        "title": "Ghost executor agents in the projects sidebar",
+        "summary": "A storage-independent ledger now tracks system-minted Loop and Executor instances so ephemeral dev-run rows can't leak into the projects sidebar.",
         "items": [
           {
-            "text": "Ephemeral Executor agents spawned by dev/automation runs no longer pile up as duplicate \"Summarize This Me\" rows in the projects sidebar: a SettingsStore-backed ledger records every system-minted instance ID on creation, drives the purge by ID so orphans are reclaimed even when aura-storage strips instance_role, and hides ledger-tracked rows from list_agent_instances regardless of what storage returns.",
+            "text": "Each dev/automation task run was leaving a permanent duplicate \"Summarize This Me\" row in the sidebar when aura-storage stripped the instance_role/source columns; a new SettingsStore-backed ledger of system-minted instance IDs now drives both the list filter and the executor purge, so infrastructure rows are reclaimed and hidden regardless of what storage echoes back.",
             "commit_shas": [
               "c89506433e9b8bb98b7b575efe31570d275d97fa"
             ],
@@ -1144,18 +1255,18 @@
         "time_label": "10:32 AM",
         "started_at": "2026-05-30T17:32:53.000Z",
         "ended_at": "2026-05-30T17:46:07.000Z",
-        "title": "Calmer media generation: ripple loader and decoded image fade-in",
-        "summary": "The image generation experience now feels deliberate from placeholder to final frame.",
+        "title": "Lively loading state and smoother image reveals in chat",
+        "summary": "Media generation now feels actively working while it loads, and finished images mount cleanly instead of painting in progressively.",
         "items": [
           {
-            "text": "The image and video generation placeholder swapped its static CSS dot grid for a canvas where dots pulse in flowing ripple waves, so the wait reads as actively working; prefers-reduced-motion still draws a single static frame.",
+            "text": "The image/video generation placeholder swapped its static CSS dot grid for a canvas that pulses dots in flowing ripple waves, with a single static frame under prefers-reduced-motion and a getContext guard for jsdom tests.",
             "commit_shas": [
               "c5b501760b090653f0f9c9dc3839f8b3b6ce9bb6"
             ],
             "confidence": "high"
           },
           {
-            "text": "Generated chat images no longer paint in progressively or grow their frame downward — a new GeneratedImageFrame reserves a square box with a loader, gates the reveal on img.decode(), and fades the finished image in.",
+            "text": "Generated chat images no longer paint in line-by-line: a new GeneratedImageFrame reserves a square box with a loader and gates the FadeInImage reveal on img.decode(), so the bitmap fades in fully decoded instead of growing the frame downward as it downloads.",
             "commit_shas": [
               "64a35d84028c64c82392488f0f807d8ba020c814"
             ],
@@ -1168,18 +1279,18 @@
         "time_label": "11:05 AM",
         "started_at": "2026-05-30T18:05:15.000Z",
         "ended_at": "2026-05-30T18:23:15.000Z",
-        "title": "Hardened setup-node against runner DNS blips",
-        "summary": "A local composite action now polls the Node and GitHub registries with backoff before installing, with a targeted carve-out for jobs that check out into subdirectories.",
+        "title": "CI setup-node hardened against transient DNS failures",
+        "summary": "A new composite action retries reachability to api.github.com and nodejs.org before installing Node, keeping self-hosted runner builds alive through brief egress blips.",
         "items": [
           {
-            "text": "All first-party workflows now use a local ./.github/actions/setup-node composite that polls api.github.com and nodejs.org with backoff before invoking actions/setup-node, so a transient getaddrinfo ENOTFOUND on self-hosted runners no longer kills build-sidecar on the first attempt; the pinned Node version is centralized in one place.",
+            "text": "A local ./.github/actions/setup-node composite now polls api.github.com and nodejs.org with backoff before invoking actions/setup-node, so a transient getaddrinfo ENOTFOUND on self-hosted runners no longer kills build-sidecar on the first attempt; the pinned Node version is centralized and all first-party workflows were migrated.",
             "commit_shas": [
               "4e4d177079e2a663b4e1aac47e8470a79d36db24"
             ],
             "confidence": "high"
           },
           {
-            "text": "The publish-manifests and changelog jobs, which check the repo out into subdirectories on GitHub-hosted runners, were reverted to upstream actions/setup-node@v5 so the composite's path resolution doesn't break them.",
+            "text": "Five publish-manifests and changelog jobs that check out the repo into subdirectories were reverted to upstream actions/setup-node@v5, since the local composite can't be resolved from those paths and those jobs run on GitHub-hosted runners that never had the DNS issue.",
             "commit_shas": [
               "36fc5ac0552a737aa60dca6e372ac175d8c42ea0"
             ],
@@ -1191,33 +1302,48 @@
         "batch_id": "entry-5",
         "time_label": "11:24 AM",
         "started_at": "2026-05-30T18:24:52.000Z",
-        "ended_at": "2026-05-30T18:58:50.000Z",
-        "title": "Session Cost popover, image quality picker, and provider-grouped models",
-        "summary": "A morning of chat-surface work added cost visibility, image quality control, a restructured model picker, and supporting polish on the marketing site.",
+        "ended_at": "2026-05-30T19:27:35.000Z",
+        "title": "Session Cost panel, GPT Image quality control, and end-to-end thinking levels",
+        "summary": "Late-morning work delivered the day's biggest chat-surface push: a new Session Cost section under the Context popover, a quality picker for GPT Image generations, provider-grouped model picker sections, and full wiring of reasoning effort from the UI through to the harness.",
         "items": [
           {
-            "text": "The bottom-bar Context popover now includes a Session Cost section showing the active model, cumulative input/output/cached tokens, a weighted average cost per token with a per-type rate overlay, and the total billed cost in dollars — using aura-router's 20% markup so figures match what's actually debited, and hydrating from the backend on reload.",
+            "text": "A new Session Cost section sits under the Context popover showing the active model, cumulative input/output/total tokens, a weighted Avg. Cost per Token with a per-type rate overlay, and the total billed cost in dollars — pricing uses base provider rates plus aura-router's 20% markup so figures match what is actually debited, and the backend context-usage endpoint hydrates the panel on reload.",
             "commit_shas": [
               "f697368efda720690f9eb8bc3fd8bc2e2ef15e5a"
             ],
             "confidence": "high"
           },
           {
-            "text": "GPT Image models gained a quality dropdown (low/medium/high/auto) wired from the chat UI through aura-os-server to aura-router, now defaulting to medium for faster generations and persisting per agent; DALL·E and Gemini keep provider defaults and hide the control.",
+            "text": "Follow-up tweaks fold cache read/write tokens into the Session Cost \"Tokens Consumed / Total\" so it matches the basis of Total Token Cost, add a cache sub-row for attribution, and lower the streaming \"cooking\" indicator so its gradient backdrop stops painting over the context popover.",
+            "commit_shas": [
+              "cfb232ae03bc8516a260588e95bced51fbc126d0"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Image mode for GPT Image models now exposes a quality dropdown (low/medium/high/auto) threaded from the chat UI through aura-os-server to aura-router; the default drops from always-high to medium for faster generations, the pick persists per agent and globally, and DALL-E/Gemini keep their provider defaults.",
             "commit_shas": [
               "1d7d864ce973f8e59af34a732bfb5cb5149a6e51"
             ],
             "confidence": "high"
           },
           {
-            "text": "The chat model picker was reorganized into collapsible Anthropic / OpenAI / Open Source sections via a shared ModelMenuGroup component reused by desktop and mobile, surfacing Kimi K2.6 and adding Anthropic Haiku 4.5 to the visible list.",
+            "text": "The chat model picker reorganized into collapsible Anthropic / OpenAI / Open Source sections (surfacing Kimi K2.6 and Anthropic Haiku 4.5), and a new ModelMenuScroll wraps the menu with the shared overlay scrollbar while locking its natural width so collapsing a section no longer shrinks it.",
             "commit_shas": [
-              "e54c97eec3145aa3e5e931673977a364932a5240"
+              "e54c97eec3145aa3e5e931673977a364932a5240",
+              "22d102c899a6d9083f9294759f0f74685f3399c3"
             ],
             "confidence": "high"
           },
           {
-            "text": "Marketing polish: the Changelog page's four summary stats now always animate from zero to their real values on every visit, and the Feedback page gained an animated submitted/resolved/participant banner computed from an unfiltered fetch so it stays stable as list filters change.",
+            "text": "Reasoning effort is now wired end-to-end: reasoning_effort joins SendChatRequest, SessionConfig, and ModelSelection, the chosen tier appears in the trigger label (e.g. \"Opus 4.8 XHigh\"), and the effort is folded into ChatSessionKey so changing thinking level cold-opens a session with the new effort instead of reusing the prior one.",
+            "commit_shas": [
+              "22d102c899a6d9083f9294759f0f74685f3399c3"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Smaller marketing-side polish: the public changelog's four summary stats now consistently animate from 0 to their real targets on every visit instead of snapping in or ramping to a fake 1000 placeholder, and the feedback page gained an animated submitted/resolved/participant summary banner driven by an unfiltered fetch.",
             "commit_shas": [
               "38e526d37e634a43073a5a2de809b3c1513ef274",
               "e60b3dc561190577ca186e01a1c830d4397b1254"
@@ -1228,12 +1354,11 @@
       }
     ],
     "highlights": [
-      "Model picker grouped by provider with credit multipliers and reasoning-effort control",
-      "New Session Cost section breaks down tokens and dollars per chat",
-      "Public chat self-heals after guest-token secret rotations",
-      "GPT Image gains a low/medium/high/auto quality selector",
-      "Self-hosted CI runners ride out DNS blips on setup-node"
+      "Model picker gains credit multipliers and per-model thinking levels",
+      "New Session Cost panel breaks down tokens and billed dollars",
+      "Public chat self-heals after guest token rotation",
+      "Self-hosted CI rides out transient DNS failures"
     ],
-    "raw_commit_count": 18
+    "raw_commit_count": 20
   }
 }
