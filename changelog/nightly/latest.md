@@ -1,57 +1,64 @@
-# Model picker depth, session cost insight, and chat self-healing
+# Model picker gets a thinking dial, Session Cost lands in chat
 
 - Date: `2026-05-30`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.572.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.572.1
+- Version: `0.1.0-nightly.573.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.573.1
 
-Today's nightly puts richer controls and visibility into the chat surface — a reworked model picker with credit multipliers, per-model thinking levels, and provider grouping, plus a new Session Cost panel that shows exactly what each turn is billing. On the reliability side, public chat now silently recovers from expired guest tokens, dev runs stop leaving behind ghost executor agents in the sidebar, and CI rides out transient DNS blips on self-hosted runners.
+A heavy day for the chat surface: the model picker grew vendor-grouped sections, per-model reasoning effort tiers wired end-to-end into the harness, and a new Session Cost readout that shows exactly what each turn is billing. Marketing pages picked up live mobile chat mockups and animated summary banners, public chat self-heals after token rotations, and CI shrugs off transient DNS flakes on the self-hosted runners.
 
-## 9:27 PM — Model picker upgrades, marketing polish, and resilient public chat
+## 9:27 PM — Public chat resilience, model picker effort tiers, and /product mobile mockups
 
-Late-evening work expanded the chat model picker with credit and effort controls, fleshed out the /product marketing page with live mobile mockups, and made public chat recover automatically from stale guest tokens.
+A late-night batch shipped guest-token self-healing on public chat, the first cut of per-model reasoning effort in the picker, and live mobile chat mockups on the marketing product page, alongside scrollbar and transcript polish.
 
-- The chat model picker now shows a credit-multiplier badge next to each model and a hover flyout for picking a reasoning effort (Low/Medium/High/XHigh/Max); the choice persists per model and is forwarded as reasoning_effort on the stream request. (`b135e7a`)
-- Public chat now self-heals after a guest-token secret rotation: a new isGuestAuthError predicate catches 401 / "guest token" failures across PublicChatView, MobilePublicChatView, and the dispatch-media boundary, discards the stale token, re-mints a fresh one, and silently retries the turn once. (`72f8ed3`)
-- The /product agent section gained three live looping mobile chat mockups inside the PhoneShells, each texting a different AURA agent and reusing the landing hero's typewriter and tool-stream primitives so the marketing page stays consistent with the desktop demo. (`4f9d48d`)
-- Project task checkmarks now update in real time during dev runs: useProjectLayoutData subscribes to task_updated edges and patches the layout cache, so completed tasks reflect immediately even when the user is watching the Run tab instead of the Tasks tab. (`567338e`)
-- A cluster of smaller polish landed across the marketing hero fade, public-chat transcript height, public-nav slide behavior, and the overlay scrollbar — the scrollbar thumb is now a rounded pill that grows on hover/drag instead of a flat clipped rectangle. (`05a3554`, `5ad826b`, `91af433`, `0a51c5b`)
+- Public chat now self-heals after a guest-token rotation: a 401 or "guest token" error triggers a silent re-mint and one retry across PublicChatView, MobilePublicChatView, and the dispatch-media boundary, unsticking visitors whose cached tokens were signed against an old GUEST_JWT_SECRET. (`72f8ed3`)
+- Model picker gained credit-multiplier badges and a hover flyout for picking reasoning effort (Low/Medium/High/XHigh/Max) per supported model, with the choice persisted and forwarded as reasoning_effort on the chat stream. (`b135e7a`)
+- The /product Agent section now hosts three looping mobile chat mockups inside its PhoneShells, reusing the landing hero's typewriter and tool-card primitives so each phone reads as a distinct AURA agent. (`4f9d48d`)
+- Public chat and surrounding UI got tighter: the transcript fills full height and scrolls beneath the floating input, the public-nav slides between center and bottom on sidebar toggle, the marketing hero video fade no longer clips mid-page, the overlay scrollbar renders a properly rounded pill that grows on hover, and Tasks-tab checkmarks update live during dev runs. (`91af433`, `5ad826b`, `05a3554`, `0a51c5b`, `567338e`)
 
-## 10:32 PM — Ghost executor agents in the projects sidebar
+## 10:32 PM — Executor agent pileup fixed via local instance ledger
 
-A storage-independent ledger now tracks system-minted Loop and Executor instances so ephemeral dev-run rows can't leak into the projects sidebar.
+A storage-independent ledger keeps system-minted Loop/Executor instances out of the projects sidebar even when aura-storage drops their role columns.
 
-- Each dev/automation task run was leaving a permanent duplicate "Summarize This Me" row in the sidebar when aura-storage stripped the instance_role/source columns; a new SettingsStore-backed ledger of system-minted instance IDs now drives both the list filter and the executor purge, so infrastructure rows are reclaimed and hidden regardless of what storage echoes back. (`c895064`)
+- Dev/automation runs no longer leave permanent duplicate "Summarize This Me" rows in the projects sidebar: aura-os-server now tracks system-minted Loop/Executor instance IDs in SettingsStore and uses that ledger to filter the sidebar list and drive the executor janitor, so ephemeral rows are reclaimed even when storage strips instance_role/source on read. (`c895064`)
 
-## 10:32 AM — Lively loading state and smoother image reveals in chat
+## 10:32 AM — Smoother waits and reveals for generated media
 
-Media generation now feels actively working while it loads, and finished images mount cleanly instead of painting in progressively.
+The image/video generation placeholder now animates as a ripple, and finished images fade in only after they have fully decoded.
 
-- The image/video generation placeholder swapped its static CSS dot grid for a canvas that pulses dots in flowing ripple waves, with a single static frame under prefers-reduced-motion and a getContext guard for jsdom tests. (`c5b5017`)
-- Generated chat images no longer paint in line-by-line: a new GeneratedImageFrame reserves a square box with a loader and gates the FadeInImage reveal on img.decode(), so the bitmap fades in fully decoded instead of growing the frame downward as it downloads. (`64a35d8`)
+- The media generation placeholder swapped its static CSS dot grid for a canvas where dots pulse in ripple waves, reading as actively working while respecting prefers-reduced-motion. (`c5b5017`)
+- Generated chat images now mount inside a reserved square GeneratedImageFrame and only fade in after img.decode() resolves, eliminating the progressive top-down paint as the bitmap downloads. (`64a35d8`)
 
-## 11:05 AM — CI setup-node hardened against transient DNS failures
+## 11:05 AM — setup-node hardened against self-hosted DNS blips
 
-A new composite action retries reachability to api.github.com and nodejs.org before installing Node, keeping self-hosted runner builds alive through brief egress blips.
+A local composite action retries reachability to api.github.com and nodejs.org before installing Node, with hosted-runner jobs reverted to the upstream action where the composite cannot resolve.
 
-- A local ./.github/actions/setup-node composite now polls api.github.com and nodejs.org with backoff before invoking actions/setup-node, so a transient getaddrinfo ENOTFOUND on self-hosted runners no longer kills build-sidecar on the first attempt; the pinned Node version is centralized and all first-party workflows were migrated. (`4e4d177`)
-- Five publish-manifests and changelog jobs that check out the repo into subdirectories were reverted to upstream actions/setup-node@v5, since the local composite can't be resolved from those paths and those jobs run on GitHub-hosted runners that never had the DNS issue. (`36fc5ac`)
+- Introduced a local ./.github/actions/setup-node composite that polls api.github.com and nodejs.org with backoff before running actions/setup-node, so transient 'getaddrinfo ENOTFOUND' on the self-hosted runners no longer fails build-sidecar on the first attempt; the pinned Node version is now centralized across every first-party workflow. (`4e4d177`)
+- Reverted the five publish-manifests and changelog jobs back to actions/setup-node@v5, since they check out into subdirectories where the local composite cannot be resolved and run on hosted ubuntu-latest runners that never had the DNS issue. (`36fc5ac`)
 
-## 11:24 AM — Session Cost panel, GPT Image quality control, and end-to-end thinking levels
+## 11:24 AM — Session Cost, vendor-grouped models, and end-to-end thinking-level control
 
-Late-morning work delivered the day's biggest chat-surface push: a new Session Cost section under the Context popover, a quality picker for GPT Image generations, provider-grouped model picker sections, and full wiring of reasoning effort from the UI through to the harness.
+The chat input bar got a full economics pass: a Session Cost panel, vendor-grouped model picker, effort tiers wired into the harness, GPT Image quality control, and refreshed Anthropic pricing.
 
-- A new Session Cost section sits under the Context popover showing the active model, cumulative input/output/total tokens, a weighted Avg. Cost per Token with a per-type rate overlay, and the total billed cost in dollars — pricing uses base provider rates plus aura-router's 20% markup so figures match what is actually debited, and the backend context-usage endpoint hydrates the panel on reload. (`f697368`)
-- Follow-up tweaks fold cache read/write tokens into the Session Cost "Tokens Consumed / Total" so it matches the basis of Total Token Cost, add a cache sub-row for attribution, and lower the streaming "cooking" indicator so its gradient backdrop stops painting over the context popover. (`cfb232a`)
-- Image mode for GPT Image models now exposes a quality dropdown (low/medium/high/auto) threaded from the chat UI through aura-os-server to aura-router; the default drops from always-high to medium for faster generations, the pick persists per agent and globally, and DALL-E/Gemini keep their provider defaults. (`1d7d864`)
-- The chat model picker reorganized into collapsible Anthropic / OpenAI / Open Source sections (surfacing Kimi K2.6 and Anthropic Haiku 4.5), and a new ModelMenuScroll wraps the menu with the shared overlay scrollbar while locking its natural width so collapsing a section no longer shrinks it. (`e54c97e`, `22d102c`)
-- Reasoning effort is now wired end-to-end: reasoning_effort joins SendChatRequest, SessionConfig, and ModelSelection, the chosen tier appears in the trigger label (e.g. "Opus 4.8 XHigh"), and the effort is folded into ChatSessionKey so changing thinking level cold-opens a session with the new effort instead of reusing the prior one. (`22d102c`)
-- Smaller marketing-side polish: the public changelog's four summary stats now consistently animate from 0 to their real targets on every visit instead of snapping in or ramping to a fake 1000 placeholder, and the feedback page gained an animated submitted/resolved/participant summary banner driven by an unfiltered fetch. (`38e526d`, `e60b3dc`)
+- Added a Session Cost section to the Context popover showing model, cumulative input/output/cache tokens, a weighted average cost per token with an input/output/cached rate overlay, and the total billed cost in dollars; pricing includes the aura-router 20% markup and the backend now surfaces cumulative tokens/model/provider so the panel hydrates after reload. (`f697368`, `cfb232a`)
+- Reorganized the chat model picker into collapsible Anthropic / OpenAI / Open Source sections, surfaced Kimi K2.6 and Haiku 4.5, and wrapped the menu in a custom overlay scrollbar that locks its natural width so collapsing a vendor section no longer shrinks it. (`e54c97e`, `22d102c`)
+- Reasoning effort is now a first-class wire field: ChatInputBar shows the selected tier in the trigger label, the picker displays effort-scaled credit costs, and reasoning_effort flows through SendChatRequest, SessionConfig, and the typed ReasoningEffort enum into the harness — with the effort folded into ChatSessionKey so changing tiers cold-opens a new session instead of reusing one pinned to the old level. (`22d102c`, `8b535cc`, `d0aa429`)
+- GPT Image models gained a low/medium/high/auto quality dropdown that persists per agent and globally, defaulting to medium for faster generations; the model and quality pickers are now mutually exclusive in image mode, and Anthropic per-token rates were synced (Opus 4.7 to $5/$25, Haiku 4.5 to $1/$5) with every chat model's credit multiplier rebased against Haiku 4.5 = 1x. (`1d7d864`, `db26a43`, `a0f8c6a`)
+- Marketing summary banners and small-count animations were tightened: the changelog stats now ease from zero to real values on every visit, small integer counts pace across the full animation window instead of snapping, the Feedback page gained an animated submitted/resolved/participants banner, and /models picked up a matching hot-pink banner with five catalog metrics. (`38e526d`, `456c843`, `e60b3dc`, `688cc66`)
+- Public demo chat no longer fails with "model name must not be empty": the harness session is now opened with a pinned PUBLIC_DEMO_MODEL since the public surface has no client-side picker, and the cold-start ChatAppRoute drops its 'Starting chat...' hint for a cleaner spinner. (`cb59c9f`, `93e7761`, `2e446c4`)
+
+## 1:43 PM — Model details flyout and a sharper /product headline
+
+The model picker flyout now opens for every row with model details, and the /product hero takes on a sharper headline.
+
+- The model picker flyout now opens for every row with a header listing model name, cost multiplier, and context window (new contextWindow field plus a formatContextWindow helper), keeping the reasoning-effort selector underneath. (`0c1fe62`)
+- The /product hero headline now reads "Your Private Agent.", with the typewriter test assertion updated to match. (`1fdc7dc`)
 
 ## Highlights
 
-- Model picker gains credit multipliers and per-model thinking levels
-- New Session Cost panel breaks down tokens and billed dollars
-- Public chat self-heals after guest token rotation
-- Self-hosted CI rides out transient DNS failures
+- Per-model reasoning effort tiers, wired through to the harness
+- Session Cost panel with real token + dollar billing
+- Public chat self-heals after guest-token rotations
+- Live mobile chat mockups on the /product page
+- CI rides out transient DNS failures on self-hosted runners
 

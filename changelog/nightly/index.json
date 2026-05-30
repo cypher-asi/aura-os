@@ -2,19 +2,20 @@
   {
     "date": "2026-05-30",
     "channel": "nightly",
-    "version": "0.1.0-nightly.572.1",
-    "title": "Model picker depth, session cost insight, and chat self-healing",
-    "intro": "Today's nightly puts richer controls and visibility into the chat surface — a reworked model picker with credit multipliers, per-model thinking levels, and provider grouping, plus a new Session Cost panel that shows exactly what each turn is billing. On the reliability side, public chat now silently recovers from expired guest tokens, dev runs stop leaving behind ghost executor agents in the sidebar, and CI rides out transient DNS blips on self-hosted runners.",
-    "entryCount": 5,
+    "version": "0.1.0-nightly.573.1",
+    "title": "Model picker gets a thinking dial, Session Cost lands in chat",
+    "intro": "A heavy day for the chat surface: the model picker grew vendor-grouped sections, per-model reasoning effort tiers wired end-to-end into the harness, and a new Session Cost readout that shows exactly what each turn is billing. Marketing pages picked up live mobile chat mockups and animated summary banners, public chat self-heals after token rotations, and CI shrugs off transient DNS flakes on the self-hosted runners.",
+    "entryCount": 6,
     "highlights": [
-      "Model picker gains credit multipliers and per-model thinking levels",
-      "New Session Cost panel breaks down tokens and billed dollars",
-      "Public chat self-heals after guest token rotation",
-      "Self-hosted CI rides out transient DNS failures"
+      "Per-model reasoning effort tiers, wired through to the harness",
+      "Session Cost panel with real token + dollar billing",
+      "Public chat self-heals after guest-token rotations",
+      "Live mobile chat mockups on the /product page",
+      "CI rides out transient DNS failures on self-hosted runners"
     ],
-    "rawCommitCount": 22,
-    "generatedAt": "2026-05-30T19:51:12.923Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.572.1",
+    "rawCommitCount": 35,
+    "generatedAt": "2026-05-30T20:58:04.632Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.573.1",
     "path": "history/2026-05-30.json"
   },
   {
