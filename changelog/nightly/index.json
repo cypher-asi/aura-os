@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-05-30",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.570.1",
+    "title": "Self-healing public chat, model effort controls, and steadier CI",
+    "intro": "Today's nightly tightens a stack of chat and marketing surfaces, ships per-model reasoning effort in the picker, fixes a long-standing dev-run agent pileup in the Rust core, and hardens release pipelines against transient runner DNS hiccups.",
+    "entryCount": 4,
+    "highlights": [
+      "Public chat now self-heals after guest-token rotations",
+      "Per-model reasoning effort and credit multipliers in the model picker",
+      "Live mobile chat mockups land on the /product page",
+      "CI setup-node survives transient DNS failures on self-hosted runners"
+    ],
+    "rawCommitCount": 14,
+    "generatedAt": "2026-05-30T18:38:04.495Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.570.1",
+    "path": "history/2026-05-30.json"
+  },
+  {
     "date": "2026-05-29",
     "channel": "nightly",
     "version": "0.1.0-nightly.567.1",
