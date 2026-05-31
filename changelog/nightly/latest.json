@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-31T04:03:27.611Z",
+  "generatedAt": "2026-05-31T06:46:41.497Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.576.1",
+  "version": "0.1.0-nightly.577.1",
   "date": "2026-05-30",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.576.1",
-  "lastIncludedSha": "2d78b37a0c8b6d98c1502eb9287d97ba6b4da1b5",
-  "previousProcessedSha": "87a308b3537f03405404fcdbea071cfc7e135ca4",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.577.1",
+  "lastIncludedSha": "be1636f9356a8d20315e3d22e0ed9fb75fa66d7f",
+  "previousProcessedSha": "2d78b37a0c8b6d98c1502eb9287d97ba6b4da1b5",
   "commitShas": [
     "05a35547d38bee99b6cccc944418b1f4f7a71bbb",
     "5ad826b4aac68d80dc2ac2d61e31feda70711131",
@@ -92,10 +92,47 @@
     "68ece90789058a639f4f07605e26f0c64151e541",
     "a1fc5f43037632a672aa180e2a20443edeebef2a",
     "37757393238b4ef2a866cb65cd40d276f19fbcac",
-    "2d78b37a0c8b6d98c1502eb9287d97ba6b4da1b5"
+    "2d78b37a0c8b6d98c1502eb9287d97ba6b4da1b5",
+    "f1f182f0650deee58399b5d5d49b9d65f8366395",
+    "3771e4403b0582cf1c027257c1d5a2049a5b780b",
+    "2a260781774e053281d317c1eaf8311134680638",
+    "d8a360a5d34450116366f970cd915fca8d5d6396",
+    "baa2f044c50bfb3d361fa6f21eab85026355dcab",
+    "165382fc72c6686947f4374dd8fb778e84f8fdee",
+    "472ee9fe4ccbab6cadcc3ee3e044e05249f93913",
+    "405233644fc2e9707a2766f71bba3455b794773b",
+    "5e74c374db6adf71429bd02858cb590d2b94b221",
+    "bb51dba4a9ee646ab318eb0fe67e351e8c24e065",
+    "8757672d456d6c92353cc260c5caa817d9bff53d",
+    "de3e6820a233d6856d2526f5a48dee28145d5e65",
+    "e2e1549e675bd932959c0465936e9362fb03a7e5",
+    "70545470808e633d25ce0dfe17c82e954401385a",
+    "f13074ce461ee18c101971e123f2adc785c94288",
+    "1b13787fdd398f973e9ee46673bde3e1973355e1",
+    "da81f8c095b742cd249b930cae0f2e4b672d6df1",
+    "1b68efd47b0567070e186640e993348e3d8695e8",
+    "182e2c13bfd5bb46451b1a1830ae0067ec660582",
+    "a7efa62a67aee2b15f6d62bcfdb8ed2a85b4824c",
+    "9756b2f3d413e887a15fabd22b838776cbf50560",
+    "bfb8435eb03cb4a79726497602d3f93eeb113770",
+    "9b854660a9df075109c55d7602e96c9339135139",
+    "3bce1d27015cb59e284162ed0059aa1f40fb0be9",
+    "709a477221a818b9a559190bd223958951be545e",
+    "16c370c7943583a87aa9e8b827fc37d787df842c",
+    "276f61d05ca54d255826d65bc6d74b3fd964e25f",
+    "b7486107f787f19ab05d1b20dc5d2b682f5d6c09",
+    "0f3ce799d031b3f907c0d1860fe7fed45583d10c",
+    "f05cf028ef54bcc56511c5f3347016f5291c2472",
+    "fd4f8ec459a81e639606cbf1da322b199c104533",
+    "7c972418ec228862f8d7e3511f471bf44a5d0732",
+    "dd97f66be484c2c30c180c9ef6e23160ea0c2282",
+    "f1557918d691a14473e75d7c301acda9eb291753",
+    "81513498997fffc379a07ad70cd63c79b243f535",
+    "411e0b7be50a33b7eadab2a8fa50b6bc48ef08e6",
+    "be1636f9356a8d20315e3d22e0ed9fb75fa66d7f"
   ],
-  "rawCommitCount": 84,
-  "filteredCommitCount": 81,
+  "rawCommitCount": 121,
+  "filteredCommitCount": 118,
   "rawCommits": [
     {
       "sha": "05a35547d38bee99b6cccc944418b1f4f7a71bbb",
@@ -3763,6 +3800,1496 @@
         "Core Rust",
         "Other"
       ]
+    },
+    {
+      "sha": "f1f182f0650deee58399b5d5d49b9d65f8366395",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T20:53:05-07:00",
+      "subject": "fix(models): set DeepSeek V4 context window to 1M",
+      "body": "The Fireworks-hosted DeepSeek V4 Pro/Flash models expose ~1M-token context; update the picker metadata to match actual capacity.",
+      "parents": [
+        "2d78b37a0c8b6d98c1502eb9287d97ba6b4da1b5"
+      ],
+      "files": [
+        "interface/src/constants/models.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 2,
+        "deletions": 2
+      },
+      "committedAtMs": 1780199585000,
+      "cleanSubject": "set DeepSeek V4 context window to 1M",
+      "keywords": [
+        "deepseek",
+        "context",
+        "window"
+      ],
+      "fileGroups": [
+        "interface/src/constants"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "3771e4403b0582cf1c027257c1d5a2049a5b780b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T21:13:51-07:00",
+      "subject": "fix(models): clamp prompt_cache_key to OpenAI's 64-char limit",
+      "body": "OpenAI rejects requests whose prompt_cache_key exceeds 64 chars, which\nbroke gpt 5.5 sessions when the key was derived from composite identity\nstrings (agent/instance/devloop/tool). Clamp at the single chokepoint by\nkeeping the namespace prefix and appending a stable blake3 digest so\nprompt caching stays deterministic per identity across all models.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "f1f182f0650deee58399b5d5d49b9d65f8366395"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/runtime.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 70,
+        "deletions": 1
+      },
+      "committedAtMs": 1780200831000,
+      "cleanSubject": "clamp prompt_cache_key to OpenAI's 64-char limit",
+      "keywords": [
+        "clamp",
+        "prompt",
+        "cache",
+        "openai",
+        "char",
+        "limit"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "2a260781774e053281d317c1eaf8311134680638",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T21:20:03-07:00",
+      "subject": "fix(feedback): only animate banner metrics on page visit",
+      "body": "Freeze the count-up reset key at mount so switching the left-hand filters (which navigate via replace and mint a new location.key) no longer replays the banner count-up. The metrics now animate only when navigating to the page.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "3771e4403b0582cf1c027257c1d5a2049a5b780b"
+      ],
+      "files": [
+        "interface/src/views/marketing/FeedbackView/FeedbackView.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 8,
+        "deletions": 2
+      },
+      "committedAtMs": 1780201203000,
+      "cleanSubject": "only animate banner metrics on page visit",
+      "keywords": [
+        "only",
+        "animate",
+        "banner",
+        "metrics",
+        "page",
+        "visit"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "d8a360a5d34450116366f970cd915fca8d5d6396",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T21:25:26-07:00",
+      "subject": "fix(chat): stop transcript flicker when SessionReady flips the session id",
+      "body": "The cold-load reveal gate was re-armed mid-turn whenever scrollResetKey\nflipped (fresh-canvas first send -> SessionReady, or auto_fork), which\ncleared the reveal latch and flashed .messageContentHidden over the live\ntranscript for ~2 frames. Skip re-arming the gate while a turn is actively\nstreaming, since the content is owned by the panel and must stay visible.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "2a260781774e053281d317c1eaf8311134680638"
+      ],
+      "files": [
+        "interface/src/features/chat-ui/ChatPanel/ChatPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 18,
+        "deletions": 1
+      },
+      "committedAtMs": 1780201526000,
+      "cleanSubject": "stop transcript flicker when SessionReady flips the session id",
+      "keywords": [
+        "stop",
+        "transcript",
+        "flicker",
+        "when",
+        "sessionready",
+        "flips",
+        "session"
+      ],
+      "fileGroups": [
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "baa2f044c50bfb3d361fa6f21eab85026355dcab",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T21:33:13-07:00",
+      "subject": "fix(sidebar): reserve footer clearance so lists scroll clear of referral pill",
+      "body": "The \"Refer member, earn $50.\" pill floats absolutely over the bottom of\nthe authed sidebar, covering the last row of agents and other lists.\nReserve padding-bottom on .sidebarBodyFadeAboveFooter so every authed\nlist's scroll viewport ends above the pill while keeping the existing\nsoft fade.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "d8a360a5d34450116366f970cd915fca8d5d6396"
+      ],
+      "files": [
+        "interface/src/components/AuraShell/AuraSidebar.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 9,
+        "deletions": 0
+      },
+      "committedAtMs": 1780201993000,
+      "cleanSubject": "reserve footer clearance so lists scroll clear of referral pill",
+      "keywords": [
+        "reserve",
+        "footer",
+        "clearance",
+        "lists",
+        "scroll",
+        "clear",
+        "referral",
+        "pill"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "165382fc72c6686947f4374dd8fb778e84f8fdee",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T21:46:20-07:00",
+      "subject": "feat(taskbar): split public bottom bar left/right",
+      "body": "Move the day/night theme toggle and the rotating tagline (Decentralized.) pills to the far left of the public-mode bottom taskbar, leaving the by THE GRID attribution chip anchored on the right.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "baa2f044c50bfb3d361fa6f21eab85026355dcab"
+      ],
+      "files": [
+        "interface/src/components/BottomTaskbar/BottomTaskbar.module.css",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.test.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 42,
+        "deletions": 14
+      },
+      "committedAtMs": 1780202780000,
+      "cleanSubject": "split public bottom bar left/right",
+      "keywords": [
+        "split",
+        "public",
+        "bottom",
+        "left",
+        "right"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "472ee9fe4ccbab6cadcc3ee3e044e05249f93913",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T21:54:03-07:00",
+      "subject": "fix(changelog): publish commit-count snapshot from CI instead of live proxy",
+      "body": "The commit-stats card relied on unauthenticated GitHub requests (browser\nfan-out, then a Render server proxy). Both ran from shared egress IPs and\nreliably tripped GitHub's 60 req/hr/IP limit, so the card degraded to a\nstale cached \"0 this month\".\n\nGenerate the totals during the release/changelog CI run instead, where\nthe workflow's built-in GITHUB_TOKEN provides an authenticated budget,\nand publish commit-stats.json to gh-pages. The committed file is durable:\na per-repo fetch failure keeps that repo's prior count rather than\nzeroing it, and a fully failed run leaves the existing snapshot untouched\nuntil the next successful run. The SPA now reads the static file (with a\nmonthKey so a rollover never shows last month's count as \"this month\").\n\nRetires the /api/public/commit-stats endpoint and its GITHUB_API_TOKEN.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "165382fc72c6686947f4374dd8fb778e84f8fdee"
+      ],
+      "files": [
+        ".github/workflows/publish-release-changelog.yml",
+        "apps/aura-os-server/src/handlers/public/commit_stats.rs",
+        "apps/aura-os-server/src/handlers/public/mod.rs",
+        "apps/aura-os-server/src/router/public.rs",
+        "infra/scripts/release/generate-commit-stats.mjs",
+        "infra/scripts/release/generate-commit-stats.test.mjs",
+        "interface/src/api/marketing/github-commits.test.ts",
+        "interface/src/api/marketing/github-commits.ts",
+        "interface/src/views/marketing/ChangelogView/ChangelogView.test.tsx",
+        "interface/src/views/marketing/ChangelogView/ChangelogView.tsx"
+      ],
+      "stats": {
+        "fileCount": 10,
+        "insertions": 647,
+        "deletions": 489
+      },
+      "committedAtMs": 1780203243000,
+      "cleanSubject": "publish commit-count snapshot from CI instead of live proxy",
+      "keywords": [
+        "publish",
+        "commit",
+        "count",
+        "snapshot",
+        "from",
+        "instead",
+        "live",
+        "proxy"
+      ],
+      "fileGroups": [
+        ".github/workflows/publish-release-changelog.yml",
+        "apps/aura-os-server/src",
+        "infra/scripts/release",
+        "interface/src/api",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other",
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "405233644fc2e9707a2766f71bba3455b794773b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T22:01:05-07:00",
+      "subject": "feat(titlebar): show AURA wordmark next to public nav toggle",
+      "body": "Render the theme-aware AURA wordmark beside the left-nav (PanelLeft) toggle in the public-mode titlebar leading slot. Reuses the global data-aura-wordmark hook so the mark inverts correctly in light theme.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "472ee9fe4ccbab6cadcc3ee3e044e05249f93913"
+      ],
+      "files": [
+        "interface/src/components/AuraShell/AuraTitlebar.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 7,
+        "deletions": 0
+      },
+      "committedAtMs": 1780203665000,
+      "cleanSubject": "show AURA wordmark next to public nav toggle",
+      "keywords": [
+        "show",
+        "aura",
+        "wordmark",
+        "next",
+        "public",
+        "toggle"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "5e74c374db6adf71429bd02858cb590d2b94b221",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T22:06:02-07:00",
+      "subject": "refactor(models): centralize prompt_cache_key clamp in the harness",
+      "body": "Stop clamping prompt_cache_key on the aura-os side. The harness now owns the single length-clamp chokepoint (OpenAI's 64-char limit) before the key reaches aura-router/OpenAI, so aura-os forwards the raw semantic key (instance/agent/tool/devloop) verbatim. Removes the per-call clamp added in 3771e4403 in favor of one enforcement point.",
+      "parents": [
+        "405233644fc2e9707a2766f71bba3455b794773b"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/runtime.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 9,
+        "deletions": 64
+      },
+      "committedAtMs": 1780203962000,
+      "cleanSubject": "centralize prompt_cache_key clamp in the harness",
+      "keywords": [
+        "centralize",
+        "prompt",
+        "cache",
+        "clamp",
+        "harness"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "bb51dba4a9ee646ab318eb0fe67e351e8c24e065",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T22:10:43-07:00",
+      "subject": "feat(models): add Fireworks open-weight models and per-provider picker headers",
+      "body": "Add MiniMax M2.7, GLM 5.1, Qwen3.6 Plus, and Gemma 4 (31B, 26B-A4B) to the\nchat model catalog with display pricing, and split the single \"Open Source\"\npicker header into per-provider sections (DeepSeek, Moonshot AI, MiniMax,\nz.ai, Qwen, Google). GPT-OSS 120B now groups under the OpenAI section.",
+      "parents": [
+        "5e74c374db6adf71429bd02858cb590d2b94b221"
+      ],
+      "files": [
+        "interface/scripts/lib/benchmark-pricing.mjs",
+        "interface/src/constants/model-pricing.ts",
+        "interface/src/constants/models.ts",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/lib/benchmark-pricing.test.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 220,
+        "deletions": 38
+      },
+      "committedAtMs": 1780204243000,
+      "cleanSubject": "add Fireworks open-weight models and per-provider picker headers",
+      "keywords": [
+        "fireworks",
+        "open",
+        "weight",
+        "models",
+        "provider",
+        "picker",
+        "headers"
+      ],
+      "fileGroups": [
+        "interface/scripts/lib",
+        "interface/src/constants",
+        "interface/src/features",
+        "interface/src/lib"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "8757672d456d6c92353cc260c5caa817d9bff53d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T22:15:40-07:00",
+      "subject": "fix(splash): use theme-aware AURA logo on boot/startup-error screen",
+      "body": "Replace the plain 'AURA' text on the inline boot splash with the canonical AURA_logo_text_mark.png, inverted in light mode to match the wordmark treatment used across the rest of the app.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "bb51dba4a9ee646ab318eb0fe67e351e8c24e065"
+      ],
+      "files": [
+        "interface/index.html"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 14,
+        "deletions": 1
+      },
+      "committedAtMs": 1780204540000,
+      "cleanSubject": "use theme-aware AURA logo on boot/startup-error screen",
+      "keywords": [
+        "theme",
+        "aware",
+        "aura",
+        "logo",
+        "boot",
+        "startup",
+        "error",
+        "screen"
+      ],
+      "fileGroups": [
+        "interface/index.html"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "de3e6820a233d6856d2526f5a48dee28145d5e65",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T22:17:18-07:00",
+      "subject": "Add traveling border pulse to THE GRID zap icon",
+      "body": "Wrap the bolt glyph in a box and sweep a 0.75px conic-gradient ring around its perimeter, running at 2.6s linear so it stays out of phase with the existing 1.8s glow pulse.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "8757672d456d6c92353cc260c5caa817d9bff53d"
+      ],
+      "files": [
+        "interface/src/components/BottomTaskbar/BottomTaskbar.module.css",
+        "interface/src/components/BottomTaskbar/PoweredByGridButton.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 94,
+        "deletions": 5
+      },
+      "committedAtMs": 1780204638000,
+      "cleanSubject": "Add traveling border pulse to THE GRID zap icon",
+      "keywords": [
+        "traveling",
+        "border",
+        "pulse",
+        "grid",
+        "icon"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "e2e1549e675bd932959c0465936e9362fb03a7e5",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T22:18:52-07:00",
+      "subject": "fix(auth): land on public page after logout instead of login overlay",
+      "body": "Logout only cleared session state, so RequireAuth redirected to /login\nand the LoginOverlay popped over the public surface. Add a shared\nuseLogout() hook that navigates to the public home after logout, and\nroute the Org Settings, Menu Bar, and Profile logout flows through it.\nDeep-link login prompts on protected routes are unchanged.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "de3e6820a233d6856d2526f5a48dee28145d5e65"
+      ],
+      "files": [
+        "interface/src/apps/profile/shared/profileShared.ts",
+        "interface/src/components/MenuBar/use-menu-actions.ts",
+        "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.tsx",
+        "interface/src/stores/use-logout.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 36,
+        "deletions": 4
+      },
+      "committedAtMs": 1780204732000,
+      "cleanSubject": "land on public page after logout instead of login overlay",
+      "keywords": [
+        "land",
+        "public",
+        "page",
+        "after",
+        "logout",
+        "instead",
+        "login",
+        "overlay"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "70545470808e633d25ce0dfe17c82e954401385a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T22:22:23-07:00",
+      "subject": "feat(public-nav): move marketing nav to centered top bar",
+      "body": "Replace the left-sidebar PublicSidebarFooter with a centered top-bar\nPublicTopNav (Agents / Code / Pricing + Resources dropdown for\nChangelog / Feedback / Models). The top-left AURA logo is now the\nhome link, and Chat moved to a bottom-left taskbar icon next to the\ntheme toggle.\n\nRename /product to /agents (with a redirect) and split the four\nproduct-screen sections (secure OS / swarm / autonomous shipping /\nper-workflow process) into a new /code page; both pages keep the\nshared Changelog + Download footer. Mobile public nav updated to\nmatch.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "e2e1549e675bd932959c0465936e9362fb03a7e5"
+      ],
+      "files": [
+        "interface/src/App.tsx",
+        "interface/src/components/AuraShell/AuraShell.module.css",
+        "interface/src/components/AuraShell/AuraShell.test.tsx",
+        "interface/src/components/AuraShell/AuraSidebar.tsx",
+        "interface/src/components/AuraShell/AuraTitlebar.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.tsx",
+        "interface/src/mobile/shell/MobilePublicShell.tsx",
+        "interface/src/views/marketing/CodeView/CodeView.module.css",
+        "interface/src/views/marketing/CodeView/CodeView.test.tsx",
+        "interface/src/views/marketing/CodeView/CodeView.tsx",
+        "interface/src/views/marketing/CodeView/index.ts",
+        "interface/src/views/marketing/ProductView/ProductView.test.tsx",
+        "interface/src/views/marketing/ProductView/ProductView.tsx",
+        "interface/src/views/public-chat/PublicSidebarFooter/PublicSidebarFooter.module.css",
+        "interface/src/views/public-chat/PublicSidebarFooter/PublicSidebarFooter.test.tsx",
+        "interface/src/views/public-chat/PublicSidebarFooter/PublicSidebarFooter.tsx",
+        "interface/src/views/public-chat/PublicSidebarFooter/index.ts",
+        "interface/src/views/public-chat/PublicTopNav/PublicTopNav.module.css",
+        "interface/src/views/public-chat/PublicTopNav/PublicTopNav.test.tsx",
+        "interface/src/views/public-chat/PublicTopNav/PublicTopNav.tsx",
+        "interface/src/views/public-chat/PublicTopNav/index.ts"
+      ],
+      "stats": {
+        "fileCount": 21,
+        "insertions": 623,
+        "deletions": 700
+      },
+      "committedAtMs": 1780204943000,
+      "cleanSubject": "move marketing nav to centered top bar",
+      "keywords": [
+        "move",
+        "marketing",
+        "centered"
+      ],
+      "fileGroups": [
+        "interface/src/App.tsx",
+        "interface/src/components",
+        "interface/src/mobile",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f13074ce461ee18c101971e123f2adc785c94288",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T22:22:44-07:00",
+      "subject": "Trace zap spark along the bolt outline in white",
+      "body": "Replace the box-ring pulse with an inline SVG: a filled green bolt plus a white 0.75px dash that chases the glyph's own path (normalized via pathLength=100) at 2.4s, out of phase with the 1.8s glow.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "70545470808e633d25ce0dfe17c82e954401385a"
+      ],
+      "files": [
+        "interface/src/components/BottomTaskbar/BottomTaskbar.module.css",
+        "interface/src/components/BottomTaskbar/PoweredByGridButton.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 53,
+        "deletions": 55
+      },
+      "committedAtMs": 1780204964000,
+      "cleanSubject": "Trace zap spark along the bolt outline in white",
+      "keywords": [
+        "trace",
+        "spark",
+        "along",
+        "bolt",
+        "outline",
+        "white"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "1b13787fdd398f973e9ee46673bde3e1973355e1",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T22:23:36-07:00",
+      "subject": "fix(desktop): start in public mode when launching logged out",
+      "body": "The desktop boot stitched the persisted last route (often a protected\npath like /projects/...) onto the initial URL regardless of auth. When\nlaunched logged out, RequireAuth then bounced the webview to /login and\nthe login overlay covered the public page. Skip route restore when no\nbaked session exists on disk, at both initial launch and the Vite\ndev-server attach, so a logged-out launch lands on the public surface.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "f13074ce461ee18c101971e123f2adc785c94288"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/main.rs",
+        "apps/aura-os-desktop/src/ui/runtime.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 21,
+        "deletions": 8
+      },
+      "committedAtMs": 1780205016000,
+      "cleanSubject": "start in public mode when launching logged out",
+      "keywords": [
+        "start",
+        "public",
+        "mode",
+        "when",
+        "launching",
+        "logged"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/src"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop"
+      ]
+    },
+    {
+      "sha": "da81f8c095b742cd249b930cae0f2e4b672d6df1",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T22:27:37-07:00",
+      "subject": "Boost zap spark visibility: thicker white stroke and stronger glow",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "1b13787fdd398f973e9ee46673bde3e1973355e1"
+      ],
+      "files": [
+        "interface/src/components/BottomTaskbar/BottomTaskbar.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 9,
+        "deletions": 26
+      },
+      "committedAtMs": 1780205257000,
+      "cleanSubject": "Boost zap spark visibility: thicker white stroke and stronger glow",
+      "keywords": [
+        "boost",
+        "spark",
+        "visibility",
+        "thicker",
+        "white",
+        "stroke",
+        "stronger",
+        "glow"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "1b68efd47b0567070e186640e993348e3d8695e8",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T22:27:45-07:00",
+      "subject": "feat(public): wire minimize/maximize/close on mock desktop agent windows",
+      "body": "The DM \"agent\" windows on the public-mode mock desktop had decorative,\ninert min/max/close controls. Track per-thread hidden/maximized state in\nthe DMWindowManager reducer and convert the controls to real buttons:\nminimize and close hide the window until the demo loop resets (no taskbar\nto restore from), and maximize toggles a full-frame pose. Controls stay\ntabIndex=-1 so the aria-hidden demo never leaks into the focus order.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "da81f8c095b742cd249b930cae0f2e4b672d6df1"
+      ],
+      "files": [
+        "interface/src/views/public-chat/MockAuraApp/DMWindow.module.css",
+        "interface/src/views/public-chat/MockAuraApp/DMWindow.tsx",
+        "interface/src/views/public-chat/MockAuraApp/DMWindowManager.tsx",
+        "interface/src/views/public-chat/MockAuraApp/MockAuraApp.test.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 300,
+        "deletions": 34
+      },
+      "committedAtMs": 1780205265000,
+      "cleanSubject": "wire minimize/maximize/close on mock desktop agent windows",
+      "keywords": [
+        "wire",
+        "minimize",
+        "maximize",
+        "close",
+        "mock",
+        "desktop",
+        "agent",
+        "windows"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "182e2c13bfd5bb46451b1a1830ae0067ec660582",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T22:27:55-07:00",
+      "subject": "fix(public): paint marketing scroll column with destination bg to kill black flash",
+      "body": "Marketing pages are lazy-loaded under Suspense fallback=null, so the first visit to a page showed the host column's #000 background before the page painted its own (often lighter) color. Key the column background off the destination pathname so the lazy gap blends into the incoming page.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "1b68efd47b0567070e186640e993348e3d8695e8"
+      ],
+      "files": [
+        "interface/src/views/public-chat/PublicMarketingPanel/PublicMarketingPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 38,
+        "deletions": 1
+      },
+      "committedAtMs": 1780205275000,
+      "cleanSubject": "paint marketing scroll column with destination bg to kill black flash",
+      "keywords": [
+        "paint",
+        "marketing",
+        "scroll",
+        "column",
+        "with",
+        "destination",
+        "kill",
+        "black",
+        "flash"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "a7efa62a67aee2b15f6d62bcfdb8ed2a85b4824c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T22:30:19-07:00",
+      "subject": "Tune zap spark stroke width to 1.2",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "182e2c13bfd5bb46451b1a1830ae0067ec660582"
+      ],
+      "files": [
+        "interface/src/components/BottomTaskbar/BottomTaskbar.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1780205419000,
+      "cleanSubject": "Tune zap spark stroke width to 1.2",
+      "keywords": [
+        "tune",
+        "spark",
+        "stroke",
+        "width"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "9756b2f3d413e887a15fabd22b838776cbf50560",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T22:30:32-07:00",
+      "subject": "feat(public-nav): make bottom-left Chat icon a chat <-> back toggle",
+      "body": "While on /chat, clicking the bottom-left Chat icon now returns the\nvisitor to the last non-chat public page they were on (falling back\nto / on a direct deep-link). The previous location is tracked in a\nref that only updates on non-chat paths, mirroring the authed Desktop\nbutton's previous-path toggle. Extracted into a dedicated\nPublicChatTaskbarButton (TaskbarIconButton) so the public bottom bar\nstays declarative.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "a7efa62a67aee2b15f6d62bcfdb8ed2a85b4824c"
+      ],
+      "files": [
+        "interface/src/components/AuraShell/AuraShell.test.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.test.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.tsx",
+        "interface/src/components/BottomTaskbar/PublicChatTaskbarButton.test.tsx",
+        "interface/src/components/BottomTaskbar/PublicChatTaskbarButton.tsx"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 150,
+        "deletions": 21
+      },
+      "committedAtMs": 1780205432000,
+      "cleanSubject": "make bottom-left Chat icon a chat <-> back toggle",
+      "keywords": [
+        "make",
+        "bottom",
+        "left",
+        "chat",
+        "icon",
+        "back",
+        "toggle"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "bfb8435eb03cb4a79726497602d3f93eeb113770",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T22:30:55-07:00",
+      "subject": "Set base bolt outline width to 1.5",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "9756b2f3d413e887a15fabd22b838776cbf50560"
+      ],
+      "files": [
+        "interface/src/components/BottomTaskbar/BottomTaskbar.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1780205455000,
+      "cleanSubject": "Set base bolt outline width to 1.5",
+      "keywords": [
+        "base",
+        "bolt",
+        "outline",
+        "width"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "9b854660a9df075109c55d7602e96c9339135139",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T22:35:06-07:00",
+      "subject": "fix(public-nav): pin top-bar nav to a fixed color",
+      "body": "The centered top-bar nav now lives on the dark titlebar chrome, so it\nshould not re-tint as the persona background rotates or the landing\nsurface scrolls. Replace the persona-driven --public-nav-fg-color*\ntokens with a fixed light pair (matching MARKETING_NAV_FG_COLOR) so the\nlinks read identically across /, the marketing pages, and every\npersona.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "bfb8435eb03cb4a79726497602d3f93eeb113770"
+      ],
+      "files": [
+        "interface/src/views/public-chat/PublicTopNav/PublicTopNav.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 16,
+        "deletions": 12
+      },
+      "committedAtMs": 1780205706000,
+      "cleanSubject": "pin top-bar nav to a fixed color",
+      "keywords": [
+        "fixed",
+        "color"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "3bce1d27015cb59e284162ed0059aa1f40fb0be9",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T22:37:34-07:00",
+      "subject": "feat(public-nav): open Resources dropdown on hover",
+      "body": "Mousing over the Resources trigger now opens the dropdown (previously\nclick-only). A short close grace period lets the pointer cross the gap\ninto the portal menu without it collapsing, and re-entering either the\ntrigger or the menu cancels the pending close. Click/focus still open\nit, and hover-out / Escape / outside-click / selecting an item close\nit.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "9b854660a9df075109c55d7602e96c9339135139"
+      ],
+      "files": [
+        "interface/src/views/public-chat/PublicTopNav/PublicTopNav.test.tsx",
+        "interface/src/views/public-chat/PublicTopNav/PublicTopNav.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 61,
+        "deletions": 2
+      },
+      "committedAtMs": 1780205854000,
+      "cleanSubject": "open Resources dropdown on hover",
+      "keywords": [
+        "open",
+        "resources",
+        "dropdown",
+        "hover"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "709a477221a818b9a559190bd223958951be545e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T22:38:42-07:00",
+      "subject": "fix(web): stop boot titlebar controls flashing on browser refresh",
+      "body": "The static #aura-fallback-titlebar (min/maximize/close) defaulted to\ndisplay:flex and was only hidden once React set html.aura-app-ready.\nOn web this had no purpose (no window.ipc bridge, browser owns chrome)\nand flashed in on every refresh until the bundle mounted. Gate it\nbehind html.aura-desktop-shell, added by the inline boot script only\nwhen the native window.ipc bridge exists, so the browser build never\npaints it while desktop boot behavior is preserved.",
+      "parents": [
+        "3bce1d27015cb59e284162ed0059aa1f40fb0be9"
+      ],
+      "files": [
+        "interface/index.html"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 35,
+        "deletions": 3
+      },
+      "committedAtMs": 1780205922000,
+      "cleanSubject": "stop boot titlebar controls flashing on browser refresh",
+      "keywords": [
+        "stop",
+        "boot",
+        "titlebar",
+        "controls",
+        "flashing",
+        "browser",
+        "refresh"
+      ],
+      "fileGroups": [
+        "interface/index.html"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "16c370c7943583a87aa9e8b827fc37d787df842c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T22:42:25-07:00",
+      "subject": "fix(public): inset maximized mock window below top chrome bar",
+      "body": "A maximized DM window pinned to top:0 painted over the mock desktop's\ntop titlebar (its z-index sits above the chrome). Offset the maximized\npose's top by --shell-chrome-outer-height and shrink its height to match\nso the window tucks under the bar and its own titlebar (with the restore\ncontrol) stays visible.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "709a477221a818b9a559190bd223958951be545e"
+      ],
+      "files": [
+        "interface/src/views/public-chat/MockAuraApp/DMWindow.tsx",
+        "interface/src/views/public-chat/MockAuraApp/MockAuraApp.test.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 16,
+        "deletions": 7
+      },
+      "committedAtMs": 1780206145000,
+      "cleanSubject": "inset maximized mock window below top chrome bar",
+      "keywords": [
+        "inset",
+        "maximized",
+        "mock",
+        "window",
+        "below",
+        "chrome"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "276f61d05ca54d255826d65bc6d74b3fd964e25f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T22:47:09-07:00",
+      "subject": "feat(public): move sidebar toggle to bottom-left taskbar, center tagline",
+      "body": "Relocate the public-mode sidebar drawer toggle out of the titlebar leading slot into the bottom-left taskbar cluster, and move the rotating tagline to a horizontally centered cluster in the bottom bar. Extract SidebarDrawerToggle into its own module so the taskbar can reuse it without pulling in the titlebar dependency chain.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "16c370c7943583a87aa9e8b827fc37d787df842c"
+      ],
+      "files": [
+        "interface/src/components/AuraShell/AuraTitlebar.tsx",
+        "interface/src/components/AuraShell/SidebarDrawerToggle.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.module.css",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.test.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.tsx"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 90,
+        "deletions": 60
+      },
+      "committedAtMs": 1780206429000,
+      "cleanSubject": "move sidebar toggle to bottom-left taskbar, center tagline",
+      "keywords": [
+        "move",
+        "sidebar",
+        "toggle",
+        "bottom",
+        "left",
+        "taskbar",
+        "center",
+        "tagline"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "b7486107f787f19ab05d1b20dc5d2b682f5d6c09",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T22:51:49-07:00",
+      "subject": "fix(public-nav): darken centered nav text in light mode",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "276f61d05ca54d255826d65bc6d74b3fd964e25f"
+      ],
+      "files": [
+        "interface/src/views/public-chat/PublicTopNav/PublicTopNav.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 23,
+        "deletions": 0
+      },
+      "committedAtMs": 1780206709000,
+      "cleanSubject": "darken centered nav text in light mode",
+      "keywords": [
+        "darken",
+        "centered",
+        "text",
+        "light",
+        "mode"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "0f3ce799d031b3f907c0d1860fe7fed45583d10c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T23:01:52-07:00",
+      "subject": "fix(model-picker): render only one effort flyout at a time",
+      "body": "Opening a row's hover flyout now synchronously closes any other open\nflyout via a shared module-level closer, so switching models no longer\nshows a brief ghost of the previous submenu during the close delay.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "b7486107f787f19ab05d1b20dc5d2b682f5d6c09"
+      ],
+      "files": [
+        "interface/src/components/InputBarShell/ModelMenuRow.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 31,
+        "deletions": 2
+      },
+      "committedAtMs": 1780207312000,
+      "cleanSubject": "render only one effort flyout at a time",
+      "keywords": [
+        "render",
+        "only",
+        "effort",
+        "flyout",
+        "time"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f05cf028ef54bcc56511c5f3347016f5291c2472",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T23:03:37-07:00",
+      "subject": "fix(auth): destroy public mode surfaces on login",
+      "body": "Gate the public marketing routes and the login->PublicChatView route\nbehind !isAuthenticated so they leave the route table once logged in.\nThis tears down the public SSE stream and persona animations for\nefficiency, and stops the marketing /agents route from shadowing the\nauthenticated Agents app index - letting AgentIndexRedirect select the\nlast-used agent (or first in the list) again. Also drop the stashed\nlogin background-location once authenticated so the public surface under\nthe overlay unmounts immediately.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "0f3ce799d031b3f907c0d1860fe7fed45583d10c"
+      ],
+      "files": [
+        "interface/src/App.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 95,
+        "deletions": 72
+      },
+      "committedAtMs": 1780207417000,
+      "cleanSubject": "destroy public mode surfaces on login",
+      "keywords": [
+        "destroy",
+        "public",
+        "mode",
+        "surfaces",
+        "login"
+      ],
+      "fileGroups": [
+        "interface/src/App.tsx"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "fd4f8ec459a81e639606cbf1da322b199c104533",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T23:11:27-07:00",
+      "subject": "fix: hide profile shortcut when bottom taskbar right cluster is collapsed",
+      "body": "Gate the profile AppNavRail on the same collapse state as the secondary cluster so a collapsed right cluster surfaces only the always-on Settings button (plus chevron and clock), matching the intended minimal collapsed state.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "f05cf028ef54bcc56511c5f3347016f5291c2472"
+      ],
+      "files": [
+        "interface/src/components/BottomTaskbar/BottomTaskbar.render-churn.test.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.test.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 29,
+        "deletions": 14
+      },
+      "committedAtMs": 1780207887000,
+      "cleanSubject": "hide profile shortcut when bottom taskbar right cluster is collapsed",
+      "keywords": [
+        "hide",
+        "profile",
+        "shortcut",
+        "when",
+        "bottom",
+        "taskbar",
+        "right",
+        "cluster",
+        "collapsed"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "7c972418ec228862f8d7e3511f471bf44a5d0732",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T23:12:27-07:00",
+      "subject": "fix(chat): stop streamed-turn flicker on already-loaded bubbles",
+      "body": "Drop the `content-visibility: auto` / `contain-intrinsic-size` paint hint\nre-added to ChatMessageList's per-message wrappers in the cold-open perf\ncommit. While a turn streams, the list reflows and force-scrolls on every\ntoken, so the browser repeatedly re-evaluates which off-screen bubbles to\nskip and repaints them at the placeholder size for a frame -- visible as\nthe already-rendered content above the live turn flickering.\n\nThis is the same regression a prior fix (stop end-of-turn message blink)\nhad already removed for being not worth the modest perf gain (history is\ncapped per thread). The other cold-open optimizations are unaffected.",
+      "parents": [
+        "fd4f8ec459a81e639606cbf1da322b199c104533"
+      ],
+      "files": [
+        "interface/src/features/chat-ui/ChatMessageList/ChatMessageList.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 14
+      },
+      "committedAtMs": 1780207947000,
+      "cleanSubject": "stop streamed-turn flicker on already-loaded bubbles",
+      "keywords": [
+        "stop",
+        "streamed",
+        "turn",
+        "flicker",
+        "already",
+        "loaded",
+        "bubbles"
+      ],
+      "fileGroups": [
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "dd97f66be484c2c30c180c9ef6e23160ea0c2282",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T23:13:06-07:00",
+      "subject": "fix(profile): sync profile pill with auth user on login",
+      "body": "ProfilePill reads profile.name from profile-store, which seeds from the auth user only once at store creation. Signing in via LoginOverlay (no reload) flips the auth user from null to populated after the store was already created empty, so the pill stayed on 'Sign in' until a refresh. Subscribe to auth-store and mirror the new session into the profile identity fields immediately.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "7c972418ec228862f8d7e3511f471bf44a5d0732"
+      ],
+      "files": [
+        "interface/src/stores/profile-store.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 37,
+        "deletions": 0
+      },
+      "committedAtMs": 1780207986000,
+      "cleanSubject": "sync profile pill with auth user on login",
+      "keywords": [
+        "sync",
+        "profile",
+        "pill",
+        "with",
+        "auth",
+        "user",
+        "login"
+      ],
+      "fileGroups": [
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f1557918d691a14473e75d7c301acda9eb291753",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T23:17:34-07:00",
+      "subject": "fix(chat): keep cooking indicator gradient off custom scrollbar",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "dd97f66be484c2c30c180c9ef6e23160ea0c2282"
+      ],
+      "files": [
+        "interface/src/features/chat-ui/ChatPanel/ChatPanel.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 6,
+        "deletions": 4
+      },
+      "committedAtMs": 1780208254000,
+      "cleanSubject": "keep cooking indicator gradient off custom scrollbar",
+      "keywords": [
+        "keep",
+        "cooking",
+        "indicator",
+        "gradient",
+        "custom",
+        "scrollbar"
+      ],
+      "fileGroups": [
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "81513498997fffc379a07ad70cd63c79b243f535",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T23:19:07-07:00",
+      "subject": "feat(models): add Google Gemini chat models to picker and pricing",
+      "body": "Surface the Gemini 3 (3.1 Pro, 3.5 Flash, 3 Flash, 3.1 Flash-Lite) and\nGemini 2.5 (Pro, Flash, Flash-Lite) chat models in the model picker and on\nthe marketing models page, with matching client-side pricing.\n\n- models.ts: add 7 aura-gemini-* chat models (vendor google, thinking\n  effort ladders, 1M context) and legacy id aliases for raw + preview names\n- model-pricing.ts: add google pricing table + provider inference; treat\n  Gemini cached prompt tokens as already counted in input (like DeepSeek)\n- benchmark-pricing.mjs: mirror the google pricing/inference rules\n- tests: cover Gemini key normalization, resolution, and cache-aware cost\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "f1557918d691a14473e75d7c301acda9eb291753"
+      ],
+      "files": [
+        "interface/scripts/lib/benchmark-pricing.mjs",
+        "interface/src/constants/model-pricing.test.ts",
+        "interface/src/constants/model-pricing.ts",
+        "interface/src/constants/models.ts",
+        "interface/src/lib/benchmark-pricing.test.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 334,
+        "deletions": 2
+      },
+      "committedAtMs": 1780208347000,
+      "cleanSubject": "add Google Gemini chat models to picker and pricing",
+      "keywords": [
+        "google",
+        "gemini",
+        "chat",
+        "models",
+        "picker",
+        "pricing"
+      ],
+      "fileGroups": [
+        "interface/scripts/lib",
+        "interface/src/constants",
+        "interface/src/lib"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "411e0b7be50a33b7eadab2a8fa50b6bc48ef08e6",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T23:29:11-07:00",
+      "subject": "fix(pricing): size page to scroll panel to drop spurious scrollbar",
+      "body": "The pricing page used min-height: 100vh, but it renders inside the shorter PublicMarketingPanel scroll column (titlebar/taskbar/body margins consume vertical space), so it overflowed and forced the overlay scrollbar despite short content. Use 100% to fill the panel exactly.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "81513498997fffc379a07ad70cd63c79b243f535"
+      ],
+      "files": [
+        "interface/src/views/marketing/PricingView/PricingView.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 2
+      },
+      "committedAtMs": 1780208951000,
+      "cleanSubject": "size page to scroll panel to drop spurious scrollbar",
+      "keywords": [
+        "size",
+        "page",
+        "scroll",
+        "panel",
+        "drop",
+        "spurious",
+        "scrollbar"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "be1636f9356a8d20315e3d22e0ed9fb75fa66d7f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T23:33:24-07:00",
+      "subject": "style(login-overlay): darken backdrop and add fade-in animation",
+      "body": "Strengthen the login overlay backdrop with a darker, blurrier scrim and a fade-in entrance, while respecting prefers-reduced-motion.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "411e0b7be50a33b7eadab2a8fa50b6bc48ef08e6"
+      ],
+      "files": [
+        "interface/src/views/public-chat/LoginOverlay/LoginOverlay.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 19,
+        "deletions": 3
+      },
+      "committedAtMs": 1780209204000,
+      "cleanSubject": "style(login-overlay): darken backdrop and add fade-in animation",
+      "keywords": [
+        "style",
+        "login",
+        "overlay",
+        "darken",
+        "backdrop",
+        "fade",
+        "animation"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 6,
@@ -3774,36 +5301,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 18753875
+          "sizeBytes": 18759687
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.576.1",
+      "version": "0.1.0-nightly.577.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.576.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.577.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 46426228
+          "sizeBytes": 46423666
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.576.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.577.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.576.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.577.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 113641976
+          "sizeBytes": 113629688
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.576.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.577.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -3813,29 +5340,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.576.1",
+      "version": "0.1.0-nightly.577.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.576.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.577.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 43480041
+          "sizeBytes": 43424522
         },
         {
-          "name": "AURA_0.1.0-nightly.576.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.577.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.576.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.577.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 42550494
+          "sizeBytes": 42532248
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.576.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.577.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -3845,29 +5372,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.576.1",
+      "version": "0.1.0-nightly.577.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.576.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.577.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 45263243
+          "sizeBytes": 45244180
         },
         {
-          "name": "AURA_0.1.0-nightly.576.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.577.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.576.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.577.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 44423183
+          "sizeBytes": 44409412
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.576.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.577.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -3877,17 +5404,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.576.1",
+      "version": "0.1.0-nightly.577.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.576.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.577.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 31955161
+          "sizeBytes": 31959687
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.576.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.577.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -3896,51 +5423,42 @@
     }
   ],
   "rendered": {
-    "title": "Model picker controls, session cost visibility, and a private bug report pipeline",
-    "intro": "A heavy interface day for Aura: the chat model picker grew credit multipliers, reasoning-effort tiers, and per-provider grouping; a new Session Cost panel exposes what each conversation is actually billing; and an end-to-end private bug-report flow shipped with consent gating, an admin viewer, and a fix-task workflow. Public chat moved off the harness so aura.ai works without a sidecar, CI was hardened against flaky DNS on self-hosted runners, and WebSocket auth switched to short-lived tickets so JWTs stop landing in URLs.",
+    "title": "Model picker overhaul, private bug reports, and a new public marketing shell",
+    "intro": "A heavy day across the chat experience and the public-facing surface. The model picker grew per-model reasoning effort, credit multipliers, provider grouping, and Gemini support; a new Session Cost view shows what each conversation actually costs; an end-to-end private Bug Reports flow shipped with consent gating and an admin viewer; and the marketing site moved to a centered top nav with a new /code page. Reliability work hardened guest auth, public chat, CI Node setup, and how the changelog stats are produced.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "9:27 PM",
         "started_at": "2026-05-29T04:27:55.000Z",
         "ended_at": "2026-05-29T05:30:49.000Z",
-        "title": "Model picker gains effort tiers and the public demo chat gets polish",
-        "summary": "Late-night work introduced per-model reasoning-effort selection, self-healing guest auth, and a richer marketing demo on /product.",
+        "title": "Public chat polish and the first model-picker effort selector",
+        "summary": "Late-evening fixes tighten the public chat layout and marketing hero, repair stuck guest sessions, and introduce per-model reasoning effort with credit multipliers in the chat input bar.",
         "items": [
           {
-            "text": "The chat model picker now shows a credit-multiplier badge per model and a hover flyout to pick a reasoning effort (Low/Medium/High/XHigh/Max), persisted per model and forwarded as reasoning_effort on the chat stream.",
-            "commit_shas": [
-              "b135e7a13192e9d501166ab2af1ea1673ceed02f"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Public chat self-heals when a guest JWT secret rotates: a 401 or 'guest token' rejection now discards the stale token, re-mints a fresh one, and silently retries the same turn across desktop, mobile, and the dispatch-media boundary.",
+            "text": "Public chat self-heals when a server-side guest secret rotation invalidates cached tokens: a 401 now triggers a silent re-mint and retry across desktop, mobile, and the dispatch-media boundary instead of leaving visitors permanently stuck.",
             "commit_shas": [
               "72f8ed3ed389a1c688e28413cd7260f680d88bdc"
             ],
             "confidence": "high"
           },
           {
-            "text": "The /product Agent section replaces empty phone shells with three looping mobile chat mockups that reuse the landing hero's typewriter and tool-stream primitives so the page reads consistently with the desktop demo.",
-            "commit_shas": [
-              "4f9d48d18a664133766a77fb70d610bd32fb0b2b"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Run-tab task checkmarks now update live: useProjectLayoutData subscribes to task_updated edges so completed tasks render without a manual refresh, with a shared isTaskStatus guard across hooks.",
+            "text": "Project Tasks tab checkmarks now update in real time during dev runs by subscribing the always-mounted project layout to task_updated edges, so completed tasks no longer wait for a manual refresh.",
             "commit_shas": [
               "567338eb9665ccb2d18c466d4c0c888a0150da29"
             ],
             "confidence": "high"
           },
           {
-            "text": "Several polish fixes landed for the public chat surface and overlay scrollbar — transcripts now fill height and scroll under the floating input bar, the overlay scrollbar thumb is a properly rounded pill that widens on hover, the public nav slides between center and bottom, and the marketing hero video fade no longer clips.",
+            "text": "Introduced a credit-multiplier badge per chat model and a hover flyout for picking a reasoning effort (Low through Max), persisted per model and forwarded as reasoning_effort on the chat stream.",
             "commit_shas": [
-              "91af4337b078813d1e46027b90377003d5f82c77",
-              "0a51c5b496510ccfd2597f8b1cb0faf04603f3bd",
-              "5ad826b4aac68d80dc2ac2d61e31feda70711131",
+              "b135e7a13192e9d501166ab2af1ea1673ceed02f"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Marketing got a tangible upgrade: three looping mobile chat mockups now animate inside the /product agent section, and the product hero video fades cleanly into the page instead of being clipped mid-fade.",
+            "commit_shas": [
+              "4f9d48d18a664133766a77fb70d610bd32fb0b2b",
               "05a35547d38bee99b6cccc944418b1f4f7a71bbb"
             ],
             "confidence": "high"
@@ -3951,77 +5469,12 @@
         "batch_id": "entry-2",
         "time_label": "10:32 PM",
         "started_at": "2026-05-29T05:32:56.000Z",
-        "ended_at": "2026-05-29T05:32:56.000Z",
-        "title": "Executor agent leak fixed with a system-minted instance ledger",
-        "summary": "Dev-run executor agents no longer pile up in the projects sidebar after server restarts.",
+        "ended_at": "2026-05-31T05:22:44.000Z",
+        "title": "Session Cost, private Bug Reports, and a centered public top nav",
+        "summary": "The day's largest batch wires reasoning effort end-to-end, ships a Session Cost view, lands a full private bug-report pipeline with admin tooling, and rebuilds the public marketing chrome around a centered top nav and new /code page. Several reliability fixes around CI, public chat, auth, and the changelog stats card also land here.",
         "items": [
           {
-            "text": "Each ephemeral Executor instance is now tracked in a SettingsStore-backed ledger so the sidebar filter and janitor can purge orphans by ID even when storage strips instance_role/source columns, eliminating the duplicate 'Summarize This Me' rows that survived a dev-server restart mid-run.",
-            "commit_shas": [
-              "c89506433e9b8bb98b7b575efe31570d275d97fa"
-            ],
-            "confidence": "high"
-          }
-        ]
-      },
-      {
-        "batch_id": "entry-3",
-        "time_label": "10:32 AM",
-        "started_at": "2026-05-30T17:32:53.000Z",
-        "ended_at": "2026-05-30T17:46:07.000Z",
-        "title": "Smoother media generation: animated waiting state and faded reveals",
-        "summary": "Image and video generation feels more responsive while assets load.",
-        "items": [
-          {
-            "text": "The image/video generation placeholder swaps its static dot grid for a canvas where dots pulse in flowing ripple waves so the wait reads as active work; reduced-motion users get a single static frame.",
-            "commit_shas": [
-              "c5b501760b090653f0f9c9dc3839f8b3b6ce9bb6"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Generated chat images now wait for img.decode() inside a reserved square frame and fade in once fully decoded, so message bubbles stop growing downward as the bitmap progressively paints.",
-            "commit_shas": [
-              "64a35d84028c64c82392488f0f807d8ba020c814"
-            ],
-            "confidence": "high"
-          }
-        ]
-      },
-      {
-        "batch_id": "entry-4",
-        "time_label": "11:05 AM",
-        "started_at": "2026-05-30T18:05:15.000Z",
-        "ended_at": "2026-05-30T18:23:15.000Z",
-        "title": "CI hardened against transient DNS failures on self-hosted runners",
-        "summary": "A targeted setup-node wrapper rolls out across release workflows to absorb getaddrinfo blips.",
-        "items": [
-          {
-            "text": "A local setup-node composite action now polls api.github.com and nodejs.org with backoff before installing Node, so a transient ENOTFOUND on the self-hosted runners no longer fails build-sidecar; the pinned Node version is centralized across Android, iOS, desktop, evals, and the nightly/stable release workflows.",
-            "commit_shas": [
-              "4e4d177079e2a663b4e1aac47e8470a79d36db24"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Five publish/changelog jobs that check out the repo into subdirectories reverted to the upstream actions/setup-node since the local composite can't be resolved from non-root checkouts and those jobs run on GitHub-hosted runners that never had the DNS issue.",
-            "commit_shas": [
-              "36fc5ac0552a737aa60dca6e372ac175d8c42ea0"
-            ],
-            "confidence": "high"
-          }
-        ]
-      },
-      {
-        "batch_id": "entry-5",
-        "time_label": "11:24 AM",
-        "started_at": "2026-05-30T18:24:52.000Z",
-        "ended_at": "2026-05-30T23:33:46.000Z",
-        "title": "Session Cost panel, picker overhaul, and a private bug-report pipeline",
-        "summary": "The afternoon shipped the day's biggest feature set: visible billing in chat, a reorganized model picker wired end-to-end through harness types, a full private bug-report capture/admin flow, and a fix for public chat in the Render deployment.",
-        "items": [
-          {
-            "text": "A new Session Cost section in the Context popover surfaces the active model, cumulative input/output/cache tokens, a weighted avg cost per token with per-type rate overlay, and the total billed cost in dollars — pricing uses base provider rates plus the 20% router markup so figures match what is actually debited and survive a page reload via a refactored shared context_usage backend module. A follow-up fix folds cache read/write tokens into the displayed total so it reconciles with avg cost per token.",
+            "text": "Chat gained a Session Cost section in the context popover showing cumulative input/output/cached tokens, a weighted cost-per-token with per-type rate overlay, and a dollar total that matches what aura-router actually bills; backend now exposes cumulative tokens, model, and provider so the panel survives reloads.",
             "commit_shas": [
               "f697368efda720690f9eb8bc3fd8bc2e2ef15e5a",
               "cfb232ae03bc8516a260588e95bced51fbc126d0"
@@ -4029,25 +5482,18 @@
             "confidence": "high"
           },
           {
-            "text": "The chat model picker is reorganized into collapsible Anthropic / OpenAI / Open Source sections with a model-details hover submenu (name, cost multiple, context window), a width-stable scroll wrapper, and effort-scaled credit multipliers shown next to each thinking tier; the selected tier appears on the trigger label (e.g. 'Opus 4.8 XHigh').",
+            "text": "Model picker reorganized into collapsible Anthropic / OpenAI / Open Source sections with hover submenus showing cost multiple, context window, and a thinking-effort selector whose effort-scaled credit cost is surfaced before selection; reasoning_effort is now a typed enum threaded through the harness wire contract.",
             "commit_shas": [
               "e54c97eec3145aa3e5e931673977a364932a5240",
-              "0c1fe626f99fba82ac038e2735ee76346e33b11a",
               "22d102c899a6d9083f9294759f0f74685f3399c3",
-              "8b535ccf5ad20f21e92e9ea1bc85a1341e49135b"
+              "8b535ccf5ad20f21e92e9ea1bc85a1341e49135b",
+              "0c1fe626f99fba82ac038e2735ee76346e33b11a",
+              "d0aa429d2f03edc72936a5dd63bf6f059ec8d908"
             ],
             "confidence": "high"
           },
           {
-            "text": "reasoning_effort is now a typed ReasoningEffort enum across the aura-os <-> harness wire and is folded into the ChatSessionKey, so changing thinking level cold-opens a session that rebuilds its loop config rather than reusing the prior one; Anthropic rates were synced (Opus 4.7 $5/$25, Haiku 4.5 $1/$5) and every model's credit multiplier rebased against Haiku 4.5 = 1x.",
-            "commit_shas": [
-              "d0aa429d2f03edc72936a5dd63bf6f059ec8d908",
-              "a0f8c6a9ac6970b413c456bb5727682beda07c70"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Image-mode adds a selectable quality dropdown (low/medium/high/auto) for GPT Image models, threaded from chat UI through aura-os-server to aura-router, defaulting to medium for faster generations; the model and quality pickers are now mutually exclusive.",
+            "text": "Image mode now exposes a per-model quality selector (low/medium/high/auto) for GPT Image with a saner medium default, with model and quality dropdowns made mutually exclusive in the input bar.",
             "commit_shas": [
               "1d7d864ce973f8e59af34a732bfb5cb5149a6e51",
               "db26a435df91b32ea1adfa5b56acab8c7facb1e5"
@@ -4055,17 +5501,35 @@
             "confidence": "high"
           },
           {
-            "text": "Private bug reports shipped end to end: a server-side store with Opus 4.8 triage summary and is_sys_admin gating, an in-browser diagnostics bundle (prompt, transcript, model, ids, breadcrumbs, env) submitted via a required consent modal, and an admin-only Bug Reports app with a sys-admin Resolve button on feedback. A follow-up adds a fix-task workflow that spins a spec+task from a report and auto-resolves the feedback on completion.",
+            "text": "Anthropic per-token rates were resynced (Opus 4.7 to $5/$25, Haiku 4.5 to $1/$5), every model's credit multiplier was rebased against Haiku 4.5 = 1x, and the catalog grew Fireworks open-weight models (MiniMax M2.7, GLM 5.1, Qwen3.6 Plus, Gemma 4) plus per-provider picker headers.",
             "commit_shas": [
-              "a0d3a16ad21b67829a5f0258e2ad861b6682e63a",
-              "0abe66c16e31cdb1c8119af0a6b3cd43d9946438",
-              "a81296aa4969166196d2646ac1fd16a6b8950cc3",
-              "a1cfda1cdd6b233e78915d5e54db19b5a48fd870"
+              "a0f8c6a9ac6970b413c456bb5727682beda07c70",
+              "bb51dba4a9ee646ab318eb0fe67e351e8c24e065"
             ],
             "confidence": "high"
           },
           {
-            "text": "Public chat no longer requires a bundled harness: the demo endpoint now streams via aura-router's /v1/messages (translating Anthropic deltas into the SSE events the frontend already consumes), and pins PUBLIC_DEMO_MODEL on the session config so the demo works on the single-process Render deployment behind aura.ai. The /models marketing page is also fed from bundled AVAILABLE_MODELS instead of a network call that quietly returned empty.",
+            "text": "End-to-end private Bug Reports shipped: client collects a full diagnostic bundle (prompt, transcript, model, breadcrumbs, env) behind a required consent modal, the server stores it privately and generates an Opus 4.8 triage summary asynchronously, and an admin-only Bug Reports app lets sys admins view reports, resolve linked feedback in one click, and spin up fix tasks; reports are also mirrored as public Bug posts in Feedback.",
+            "commit_shas": [
+              "a0d3a16ad21b67829a5f0258e2ad861b6682e63a",
+              "0abe66c16e31cdb1c8119af0a6b3cd43d9946438",
+              "a81296aa4969166196d2646ac1fd16a6b8950cc3",
+              "a1cfda1cdd6b233e78915d5e54db19b5a48fd870",
+              "db00a3ce28bcbafaa80829bc81dfa21534fcb0f3",
+              "f3496c513fb617815f80d0b67e64520f262c9b90"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Public marketing navigation was rebuilt around a centered PublicTopNav (Agents / Code / Pricing + Resources dropdown) with the AURA wordmark as the home link, /product renamed to /agents with a redirect, a new /code page splitting out the product-screen sections, and a Chat <-> back toggle on the bottom-left taskbar.",
+            "commit_shas": [
+              "70545470808e633d25ce0dfe17c82e954401385a",
+              "405233644fc2e9707a2766f71bba3455b794773b"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Public chat now proxies turns straight to aura-router's /v1/messages instead of a non-existent local harness, fixing 'public demo agent failed to start a session' on the aura.ai Render deployment; the public /models page is also populated from bundled model constants so it no longer renders empty.",
             "commit_shas": [
               "56878506b9917352c9a69cb98292269776910c3e",
               "cb59c9ff41c5a517535675b52c3bcbdeead095ea",
@@ -4074,152 +5538,228 @@
             "confidence": "high"
           },
           {
-            "text": "Out-of-org chat sessions now open against their true owner agent id (the server-stamped _agentId) instead of falling back to the CEO chat agent, ending 'session not found' 404s for sessions returned by GET /api/me/sessions after the storage migration.",
+            "text": "Hardened auth and session handling: a sys_admin allowlist (SYS_ADMIN_EMAILS) was introduced and made robust across email sources, logout now closes lingering modals and lands users on the public page, and out-of-org sessions in the chat-app sidebar now open by their true owner agent id instead of 404ing.",
             "commit_shas": [
+              "7b5e6a681f88dfd4dcec557d24645d9eff4ccdb0",
+              "2d78b37a0c8b6d98c1502eb9287d97ba6b4da1b5",
+              "a04314362614948b9bd6cd4c1a3c0e996cfc5494",
+              "e2e1549e675bd932959c0465936e9362fb03a7e5",
               "59d528ac7854f5efaecec8bd3f0458a2d208c795"
             ],
             "confidence": "high"
           },
           {
-            "text": "Settings gained a personal 'You' section (avatar, name, bio, website, location, profile link) as the default first entry on both the modal and the routed page, with the Team group reordered above App and 'Appearance' renamed 'Theme'.",
-            "commit_shas": [
-              "a04314362614948b9bd6cd4c1a3c0e996cfc5494"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Marketing banner stats now actually animate: useCountUp was reworked to always start at 0 and ease to the real target with magnitude-paced timing, a /models gradient banner with five animated catalog metrics was added, and stale 'Loading…' fallbacks were removed from public pages.",
-            "commit_shas": [
-              "38e526d37e634a43073a5a2de809b3c1513ef274",
-              "688cc66f7fa9d470321b1c7a75047f264f28dc3f",
-              "8ae820ca52c221adc6324e0ea1be76b3949566fc",
-              "ce86b379d9ff729c95c889c77fcdd47f990dbbeb",
-              "456c843b28cf55b9066922c993f2f4697a93da35",
-              "e60b3dc561190577ca186e01a1c830d4397b1254",
-              "ad102cacb4ea32dd89a48cbdc3804433729a04a6"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Smaller polish: logout now closes lingering modals, the boot splash is gone on normal startup, autofill 'Saved info' popups are disabled on chat inputs, Simple/Advanced toggle no longer flashes, the public nav pill slides on press, and the invite modal swaps its gift icon for a full-bleed AURA video banner with a hover-only close.",
-            "commit_shas": [
-              "a857b60a7cd31d589722d4bc5769b4f016f01d88",
-              "dfc17dedc22a003a0ce764ab933fd94c8452f00f",
-              "d3adb7de9c3b1f6ef20bf98699e8102ea644f83d",
-              "e771cd83dfbd8274fe59e8c6c22ee17388ec7654",
-              "5aad71022d40d55e57fcc9241c93e2441e145c82",
-              "a0a29b3afe2cbe5df9023885adfd59f7f3776e38",
-              "8518f9b8a928d21de3864782666f1f8a1a6ba1a0",
-              "7eee15e1af79894402139e3220f470a2c8ee90ba"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "SwarmHarness was migrated to the new two-step POST /v1/agents/:id/run + WS stream contract, replacing the removed POST /sessions handshake that had been failing with 'did not emit session_ready within 20s'.",
-            "commit_shas": [
-              "1d36c7d89e92cb15fa2ff76f632e47efa2026c4b"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "The public landing gained a centered 'Your Private Agent.' typewriter tagline above the desktop widget, a rotating Private/Secure/Decentralized/Open Source ticker in the public taskbar, and themed accent coloring for open menu triggers; profile avatar size was aligned to neighboring taskbar pills.",
-            "commit_shas": [
-              "8eae17d84cddb54e424d4d97df9a646f712065e5",
-              "1fdc7dcee4edf3ff80bdc8c4435a1cc8d4d80ce0",
-              "be10fb05d4e64d1816121a315dcf95dbd6bd698f",
-              "8210fdc9aeb8ee0b909ca38d7019e298a20e0fb2"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "batch_id": "entry-6",
-        "time_label": "4:34 PM",
-        "started_at": "2026-05-30T23:34:13.000Z",
-        "ended_at": "2026-05-31T03:41:27.000Z",
-        "title": "WebSocket connect tickets, faster bug-report send, and cached changelog stats",
-        "summary": "Evening work focused on auth-surface hardening, the bug-report send path, and a same-origin proxy for the changelog stats card, plus landing-page tagline polish.",
-        "items": [
-          {
-            "text": "WebSocket auth no longer puts JWTs in URLs: clients now POST /api/auth/ws-ticket with a bearer header to mint a single-use ~30s ticket, then connect with ?ticket=, which the guard redeems and burns. The /ws/events, /ws/terminal, /ws/browser, and remote-agent terminal paths all switched over and the raw ?token= JWT fallback is removed.",
+            "text": "Short-lived WebSocket connect tickets replace ?token= JWTs in URLs for events, terminal, browser, and remote-agent terminal connections, keeping long-lived JWTs out of Render access logs.",
             "commit_shas": [
               "37757393238b4ef2a866cb65cd40d276f19fbcac"
             ],
             "confidence": "high"
           },
           {
-            "text": "Bug-report Send stops hanging: the handler persists the report and returns 201 immediately, the Opus triage summary runs in a spawned task that backfills llm_summary, every report is mirrored into the public Feedback app as a 'bug' post (description only — diagnostics stay private), and apiFetch gained an opt-in AbortController timeout so stalled requests surface an error instead of spinning.",
+            "text": "Stop dev-run executor agents from piling up in the projects sidebar by tracking system-minted instance IDs in a storage-independent SettingsStore ledger that the janitor can drain even when storage strips role columns.",
             "commit_shas": [
-              "db00a3ce28bcbafaa80829bc81dfa21534fcb0f3"
+              "c89506433e9b8bb98b7b575efe31570d275d97fa"
             ],
             "confidence": "high"
           },
           {
-            "text": "The /changelog commit-count card now hits a same-origin GET /api/public/commit-stats endpoint that fans out to GitHub with an optional GITHUB_API_TOKEN and caches the aggregate for 30 minutes, replacing 14 unauthenticated requests per cold load that reliably tripped GitHub's 60 req/hr/IP limit and rendered 0.",
+            "text": "CI setup-node was made resilient to transient DNS failures on self-hosted runners via a new composite action that polls api.github.com and nodejs.org with backoff, with subdirectory-checkout jobs reverted to the upstream action.",
             "commit_shas": [
-              "a889c2523005b21cce86162c2f4e288e82f6def2"
+              "4e4d177079e2a663b4e1aac47e8470a79d36db24",
+              "36fc5ac0552a737aa60dca6e372ac175d8c42ea0"
             ],
             "confidence": "high"
           },
           {
-            "text": "Sys-admin grants now flow from a SYS_ADMIN_EMAILS allowlist at session-build time, resolving the admin email from the typed login/register input, then JWT claims, then the zOS user response, with startup and per-session diagnostics so a missed match is visible in logs.",
+            "text": "Changelog commit counts moved off live unauthenticated GitHub fan-out: first behind a cached server proxy, then a published commit-stats.json snapshot generated by CI with the workflow token, retiring the /api/public/commit-stats endpoint and ending the recurring '0 this month' degradation.",
             "commit_shas": [
-              "7b5e6a681f88dfd4dcec557d24645d9eff4ccdb0",
-              "2d78b37a0c8b6d98c1502eb9287d97ba6b4da1b5"
+              "a889c2523005b21cce86162c2f4e288e82f6def2",
+              "472ee9fe4ccbab6cadcc3ee3e044e05249f93913"
             ],
             "confidence": "high"
           },
           {
-            "text": "The standard consent-gated Report bug affordance now appears on swarm agent VM errors and connection-loss surfaces (ConnectionTaskbar and the AgentStatusBar Disconnected badge), matching the inline button already used for chat session issues.",
+            "text": "Quality-of-life polish: generated chat images fade in after img.decode rather than painting in progressively, the media generation placeholder uses a canvas ripple loop, autofill popups are suppressed on chat composers, the streaming indicator paints above the input gradient, and the boot splash drops in favor of a direct reveal.",
             "commit_shas": [
-              "f3496c513fb617815f80d0b67e64520f262c9b90"
+              "64a35d84028c64c82392488f0f807d8ba020c814",
+              "c5b501760b090653f0f9c9dc3839f8b3b6ce9bb6",
+              "d3adb7de9c3b1f6ef20bf98699e8102ea644f83d",
+              "ab5623d2937b4b3189b18bd9fc7512afe8eb511f",
+              "dfc17dedc22a003a0ce764ab933fd94c8452f00f"
             ],
             "confidence": "high"
           },
           {
-            "text": "The landing 'Your Private Agent.' tagline was iterated to track persona nav polarity (pure white on dark personas, dark on light), shrink 25% on responsive scales, and remain centered in the gap above the desktop widget at any aspect ratio via a measured CSS variable. The taskbar ticker also became a true vertical slide and split into separate floating pills next to the theme toggle.",
-            "commit_shas": [
-              "67922199325ca91a6dfd38bd46c0a9d9163b789a",
-              "b892373ae490ce3bad162eb12e963811b9d1d4f5",
-              "35acb3abde95186f1367485d85a0b5d8803eedaa",
-              "68cd7a79453185b23c23c1c87adfa523e604e0c8",
-              "d7c224c1cdc23858b8cd1892826274a828cf4bfd",
-              "2ab74287bf3bdb150d9f36d75f16e6b44215b49c",
-              "8d5b5f054a187420fbb9f6e1c55ea3b6f4fe800d",
-              "652569fd31a1fb5cbeabca4979e8d8273b95fd67",
-              "a1fc5f43037632a672aa180e2a20443edeebef2a",
-              "f38a15a8d482191d07962cba22c6d315df7a1f15"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Pricing page cleanup: removed the Crusader plan, renamed Mortal to Free at $0/mo, and flattened horizontal padding to match /feedback and /models so the 960px content column lines up across marketing pages.",
+            "text": "Pricing page lost the Crusader plan and Mortal was renamed to Free at $0/mo, and a new personal 'You' section is now the default first entry in Settings with Appearance renamed to Theme.",
             "commit_shas": [
               "108ef6ef15d9ca2924805f264e1f5b2b74924c7f",
-              "b9c13b1003f3ff11748f2b932280858b14ea26e4",
-              "b53c20811c9d87c0d8b72a3aa2e61474a8144a7d"
+              "a0f8c6a9ac6970b413c456bb5727682beda07c70",
+              "a04314362614948b9bd6cd4c1a3c0e996cfc5494"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Marketing banner count-ups were reworked to always animate from 0 to the real value on every visit, with a small-magnitude pacing fix so few-step counts no longer snap.",
+            "commit_shas": [
+              "38e526d37e634a43073a5a2de809b3c1513ef274",
+              "456c843b28cf55b9066922c993f2f4697a93da35",
+              "8ae820ca52c221adc6324e0ea1be76b3949566fc",
+              "ce86b379d9ff729c95c889c77fcdd47f990dbbeb"
             ],
             "confidence": "high"
           },
           {
-            "text": "The streaming 'Cooking' shimmer and stuck-stream pill now render above the input bar's top-fade gradient and accept clicks, so the Stop / Retry / Report controls are reachable mid-stream.",
+            "text": "SwarmHarness was migrated to the new two-step POST /v1/agents/:id/run + WS stream contract, resolving the 'did not emit session_ready within 20s' failures left behind by the removed POST /sessions handshake.",
             "commit_shas": [
-              "ab5623d2937b4b3189b18bd9fc7512afe8eb511f"
+              "1d36c7d89e92cb15fa2ff76f632e47efa2026c4b"
             ],
             "confidence": "high"
+          },
+          {
+            "text": "OpenAI rejections from oversized prompt_cache_key strings on gpt 5.5 were unblocked by clamping to the 64-char limit, then centralized in the harness so aura-os forwards the raw semantic key.",
+            "commit_shas": [
+              "3771e4403b0582cf1c027257c1d5a2049a5b780b",
+              "5e74c374db6adf71429bd02858cb590d2b94b221"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "10:23 PM",
+        "started_at": "2026-05-31T05:23:36.000Z",
+        "ended_at": "2026-05-31T05:23:36.000Z",
+        "title": "Desktop launch lands on the public surface when logged out",
+        "summary": "A small but visible desktop fix so a logged-out launch no longer flashes a login overlay over the public page.",
+        "items": [
+          {
+            "text": "Desktop now skips restoring the last route at launch when no baked session exists on disk, so logged-out users land directly on the public surface instead of being bounced to /login by RequireAuth.",
+            "commit_shas": [
+              "1b13787fdd398f973e9ee46673bde3e1973355e1"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-4",
+        "time_label": "10:27 PM",
+        "started_at": "2026-05-31T05:27:37.000Z",
+        "ended_at": "2026-05-31T05:37:34.000Z",
+        "title": "Mock desktop windows become interactive and the public top nav settles",
+        "summary": "Late-night tuning of the public landing surface: the mock desktop's DM windows gained working window controls, the marketing scroll column stopped flashing black under Suspense, and the new top-bar Resources menu opens on hover.",
+        "items": [
+          {
+            "text": "DM windows on the public mock desktop now have working minimize, maximize, and close controls backed by per-thread state in the DMWindowManager reducer, with focus-order kept out of the aria-hidden demo.",
+            "commit_shas": [
+              "1b68efd47b0567070e186640e993348e3d8695e8"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Marketing scroll column now paints with the destination page's background while lazy chunks load, killing the black flash on first visit to /agents, /code, or /pricing.",
+            "commit_shas": [
+              "182e2c13bfd5bb46451b1a1830ae0067ec660582"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Public top-bar nav was pinned to a fixed light color so it no longer re-tints with persona changes, with the Resources dropdown now opening on hover (with a grace period for crossing into the menu) in addition to click and focus.",
+            "commit_shas": [
+              "9b854660a9df075109c55d7602e96c9339135139",
+              "3bce1d27015cb59e284162ed0059aa1f40fb0be9"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Bottom-left Chat icon in public mode toggles between /chat and the last non-chat public page, mirroring the authed Desktop button's previous-path behavior.",
+            "commit_shas": [
+              "9756b2f3d413e887a15fabd22b838776cbf50560"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-5",
+        "time_label": "10:38 PM",
+        "started_at": "2026-05-31T05:38:42.000Z",
+        "ended_at": "2026-05-31T05:38:42.000Z",
+        "title": "Fallback titlebar no longer flashes on web refreshes",
+        "summary": "A targeted boot fix for the browser build's perceived startup polish.",
+        "items": [
+          {
+            "text": "The static boot-fallback titlebar (min/maximize/close) is now gated behind html.aura-desktop-shell, which the inline boot script only sets when the native window.ipc bridge exists, so the browser build no longer flashes the controls on every refresh.",
+            "commit_shas": [
+              "709a477221a818b9a559190bd223958951be545e"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-6",
+        "time_label": "10:42 PM",
+        "started_at": "2026-05-31T05:42:25.000Z",
+        "ended_at": "2026-05-31T06:33:24.000Z",
+        "title": "Gemini chat models, login-flow polish, and final landing tweaks",
+        "summary": "Closing batch of the day adds the Google Gemini family to the chat picker, removes lingering public surfaces after login, fixes the profile pill not updating after sign-in, and tightens the login overlay's entrance.",
+        "items": [
+          {
+            "text": "Seven Google Gemini chat models (Gemini 3.1 Pro, 3.5 Flash, 3 Flash, 3.1 Flash-Lite, 2.5 Pro/Flash/Flash-Lite) joined the picker and the marketing /models page with matching client pricing, including cache-aware cost handling consistent with DeepSeek.",
+            "commit_shas": [
+              "81513498997fffc379a07ad70cd63c79b243f535"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Login now fully tears down the public marketing routes and the underlying PublicChatView so the public SSE stream and persona animations stop, and the marketing /agents route no longer shadows the authenticated Agents app index.",
+            "commit_shas": [
+              "f05cf028ef54bcc56511c5f3347016f5291c2472"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Profile pill now syncs to the authenticated user immediately on LoginOverlay sign-in by subscribing the profile store to auth-store updates, instead of staying on 'Sign in' until a refresh.",
+            "commit_shas": [
+              "dd97f66be484c2c30c180c9ef6e23160ea0c2282"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Chat streaming flicker was eliminated by removing a content-visibility paint hint on per-message wrappers that re-evaluated on every token, and the login overlay now uses a darker, blurrier backdrop with a reduced-motion-friendly fade-in.",
+            "commit_shas": [
+              "7c972418ec228862f8d7e3511f471bf44a5d0732",
+              "be1636f9356a8d20315e3d22e0ed9fb75fa66d7f"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Model picker now closes any open effort flyout synchronously when another row's flyout opens, so switching models no longer briefly shows a ghost of the previous submenu.",
+            "commit_shas": [
+              "0f3ce799d031b3f907c0d1860fe7fed45583d10c"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Public mode chrome was reshuffled again: the sidebar drawer toggle moved into the bottom-left taskbar cluster, with the rotating tagline centered in the bottom bar.",
+            "commit_shas": [
+              "276f61d05ca54d255826d65bc6d74b3fd964e25f"
+            ],
+            "confidence": "medium"
           }
         ]
       }
     ],
     "highlights": [
-      "Reasoning effort and credit multipliers in the model picker",
-      "New Session Cost panel with cache-accurate token math",
-      "Private bug reports: capture, consent, admin viewer, fix-task workflow",
-      "Public chat now streams via aura-router with no harness required",
-      "WS auth moved to single-use connect tickets, JWTs out of URLs",
-      "CI resilient to DNS blips on self-hosted runners"
+      "Per-model reasoning effort with credit multipliers in the picker",
+      "Session Cost section shows real token spend in chat",
+      "Private bug reports with consent gate and admin viewer",
+      "Public marketing nav moved to a centered top bar with new /code page",
+      "Guest token self-heal and public chat now proxies via aura-router",
+      "WebSocket connect tickets keep JWTs out of URLs"
     ],
-    "raw_commit_count": 81
+    "raw_commit_count": 118
   }
 }

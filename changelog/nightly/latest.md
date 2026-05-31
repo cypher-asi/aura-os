@@ -1,78 +1,81 @@
-# Model picker controls, session cost visibility, and a private bug report pipeline
+# Model picker overhaul, private bug reports, and a new public marketing shell
 
 - Date: `2026-05-30`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.576.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.576.1
+- Version: `0.1.0-nightly.577.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.577.1
 
-A heavy interface day for Aura: the chat model picker grew credit multipliers, reasoning-effort tiers, and per-provider grouping; a new Session Cost panel exposes what each conversation is actually billing; and an end-to-end private bug-report flow shipped with consent gating, an admin viewer, and a fix-task workflow. Public chat moved off the harness so aura.ai works without a sidecar, CI was hardened against flaky DNS on self-hosted runners, and WebSocket auth switched to short-lived tickets so JWTs stop landing in URLs.
+A heavy day across the chat experience and the public-facing surface. The model picker grew per-model reasoning effort, credit multipliers, provider grouping, and Gemini support; a new Session Cost view shows what each conversation actually costs; an end-to-end private Bug Reports flow shipped with consent gating and an admin viewer; and the marketing site moved to a centered top nav with a new /code page. Reliability work hardened guest auth, public chat, CI Node setup, and how the changelog stats are produced.
 
-## 9:27 PM — Model picker gains effort tiers and the public demo chat gets polish
+## 9:27 PM — Public chat polish and the first model-picker effort selector
 
-Late-night work introduced per-model reasoning-effort selection, self-healing guest auth, and a richer marketing demo on /product.
+Late-evening fixes tighten the public chat layout and marketing hero, repair stuck guest sessions, and introduce per-model reasoning effort with credit multipliers in the chat input bar.
 
-- The chat model picker now shows a credit-multiplier badge per model and a hover flyout to pick a reasoning effort (Low/Medium/High/XHigh/Max), persisted per model and forwarded as reasoning_effort on the chat stream. (`b135e7a`)
-- Public chat self-heals when a guest JWT secret rotates: a 401 or 'guest token' rejection now discards the stale token, re-mints a fresh one, and silently retries the same turn across desktop, mobile, and the dispatch-media boundary. (`72f8ed3`)
-- The /product Agent section replaces empty phone shells with three looping mobile chat mockups that reuse the landing hero's typewriter and tool-stream primitives so the page reads consistently with the desktop demo. (`4f9d48d`)
-- Run-tab task checkmarks now update live: useProjectLayoutData subscribes to task_updated edges so completed tasks render without a manual refresh, with a shared isTaskStatus guard across hooks. (`567338e`)
-- Several polish fixes landed for the public chat surface and overlay scrollbar — transcripts now fill height and scroll under the floating input bar, the overlay scrollbar thumb is a properly rounded pill that widens on hover, the public nav slides between center and bottom, and the marketing hero video fade no longer clips. (`91af433`, `0a51c5b`, `5ad826b`, `05a3554`)
+- Public chat self-heals when a server-side guest secret rotation invalidates cached tokens: a 401 now triggers a silent re-mint and retry across desktop, mobile, and the dispatch-media boundary instead of leaving visitors permanently stuck. (`72f8ed3`)
+- Project Tasks tab checkmarks now update in real time during dev runs by subscribing the always-mounted project layout to task_updated edges, so completed tasks no longer wait for a manual refresh. (`567338e`)
+- Introduced a credit-multiplier badge per chat model and a hover flyout for picking a reasoning effort (Low through Max), persisted per model and forwarded as reasoning_effort on the chat stream. (`b135e7a`)
+- Marketing got a tangible upgrade: three looping mobile chat mockups now animate inside the /product agent section, and the product hero video fades cleanly into the page instead of being clipped mid-fade. (`4f9d48d`, `05a3554`)
 
-## 10:32 PM — Executor agent leak fixed with a system-minted instance ledger
+## 10:32 PM — Session Cost, private Bug Reports, and a centered public top nav
 
-Dev-run executor agents no longer pile up in the projects sidebar after server restarts.
+The day's largest batch wires reasoning effort end-to-end, ships a Session Cost view, lands a full private bug-report pipeline with admin tooling, and rebuilds the public marketing chrome around a centered top nav and new /code page. Several reliability fixes around CI, public chat, auth, and the changelog stats card also land here.
 
-- Each ephemeral Executor instance is now tracked in a SettingsStore-backed ledger so the sidebar filter and janitor can purge orphans by ID even when storage strips instance_role/source columns, eliminating the duplicate 'Summarize This Me' rows that survived a dev-server restart mid-run. (`c895064`)
+- Chat gained a Session Cost section in the context popover showing cumulative input/output/cached tokens, a weighted cost-per-token with per-type rate overlay, and a dollar total that matches what aura-router actually bills; backend now exposes cumulative tokens, model, and provider so the panel survives reloads. (`f697368`, `cfb232a`)
+- Model picker reorganized into collapsible Anthropic / OpenAI / Open Source sections with hover submenus showing cost multiple, context window, and a thinking-effort selector whose effort-scaled credit cost is surfaced before selection; reasoning_effort is now a typed enum threaded through the harness wire contract. (`e54c97e`, `22d102c`, `8b535cc`, `0c1fe62`, `d0aa429`)
+- Image mode now exposes a per-model quality selector (low/medium/high/auto) for GPT Image with a saner medium default, with model and quality dropdowns made mutually exclusive in the input bar. (`1d7d864`, `db26a43`)
+- Anthropic per-token rates were resynced (Opus 4.7 to $5/$25, Haiku 4.5 to $1/$5), every model's credit multiplier was rebased against Haiku 4.5 = 1x, and the catalog grew Fireworks open-weight models (MiniMax M2.7, GLM 5.1, Qwen3.6 Plus, Gemma 4) plus per-provider picker headers. (`a0f8c6a`, `bb51dba`)
+- End-to-end private Bug Reports shipped: client collects a full diagnostic bundle (prompt, transcript, model, breadcrumbs, env) behind a required consent modal, the server stores it privately and generates an Opus 4.8 triage summary asynchronously, and an admin-only Bug Reports app lets sys admins view reports, resolve linked feedback in one click, and spin up fix tasks; reports are also mirrored as public Bug posts in Feedback. (`a0d3a16`, `0abe66c`, `a81296a`, `a1cfda1`, `db00a3c`, `f3496c5`)
+- Public marketing navigation was rebuilt around a centered PublicTopNav (Agents / Code / Pricing + Resources dropdown) with the AURA wordmark as the home link, /product renamed to /agents with a redirect, a new /code page splitting out the product-screen sections, and a Chat <-> back toggle on the bottom-left taskbar. (`7054547`, `4052336`)
+- Public chat now proxies turns straight to aura-router's /v1/messages instead of a non-existent local harness, fixing 'public demo agent failed to start a session' on the aura.ai Render deployment; the public /models page is also populated from bundled model constants so it no longer renders empty. (`5687850`, `cb59c9f`, `cdcc01f`)
+- Hardened auth and session handling: a sys_admin allowlist (SYS_ADMIN_EMAILS) was introduced and made robust across email sources, logout now closes lingering modals and lands users on the public page, and out-of-org sessions in the chat-app sidebar now open by their true owner agent id instead of 404ing. (`7b5e6a6`, `2d78b37`, `a043143`, `e2e1549`, `59d528a`)
+- Short-lived WebSocket connect tickets replace ?token= JWTs in URLs for events, terminal, browser, and remote-agent terminal connections, keeping long-lived JWTs out of Render access logs. (`3775739`)
+- Stop dev-run executor agents from piling up in the projects sidebar by tracking system-minted instance IDs in a storage-independent SettingsStore ledger that the janitor can drain even when storage strips role columns. (`c895064`)
+- CI setup-node was made resilient to transient DNS failures on self-hosted runners via a new composite action that polls api.github.com and nodejs.org with backoff, with subdirectory-checkout jobs reverted to the upstream action. (`4e4d177`, `36fc5ac`)
+- Changelog commit counts moved off live unauthenticated GitHub fan-out: first behind a cached server proxy, then a published commit-stats.json snapshot generated by CI with the workflow token, retiring the /api/public/commit-stats endpoint and ending the recurring '0 this month' degradation. (`a889c25`, `472ee9f`)
+- Quality-of-life polish: generated chat images fade in after img.decode rather than painting in progressively, the media generation placeholder uses a canvas ripple loop, autofill popups are suppressed on chat composers, the streaming indicator paints above the input gradient, and the boot splash drops in favor of a direct reveal. (`64a35d8`, `c5b5017`, `d3adb7d`, `ab5623d`, `dfc17de`)
+- Pricing page lost the Crusader plan and Mortal was renamed to Free at $0/mo, and a new personal 'You' section is now the default first entry in Settings with Appearance renamed to Theme. (`108ef6e`, `a0f8c6a`, `a043143`)
+- Marketing banner count-ups were reworked to always animate from 0 to the real value on every visit, with a small-magnitude pacing fix so few-step counts no longer snap. (`38e526d`, `456c843`, `8ae820c`, `ce86b37`)
+- SwarmHarness was migrated to the new two-step POST /v1/agents/:id/run + WS stream contract, resolving the 'did not emit session_ready within 20s' failures left behind by the removed POST /sessions handshake. (`1d36c7d`)
+- OpenAI rejections from oversized prompt_cache_key strings on gpt 5.5 were unblocked by clamping to the 64-char limit, then centralized in the harness so aura-os forwards the raw semantic key. (`3771e44`, `5e74c37`)
 
-## 10:32 AM — Smoother media generation: animated waiting state and faded reveals
+## 10:23 PM — Desktop launch lands on the public surface when logged out
 
-Image and video generation feels more responsive while assets load.
+A small but visible desktop fix so a logged-out launch no longer flashes a login overlay over the public page.
 
-- The image/video generation placeholder swaps its static dot grid for a canvas where dots pulse in flowing ripple waves so the wait reads as active work; reduced-motion users get a single static frame. (`c5b5017`)
-- Generated chat images now wait for img.decode() inside a reserved square frame and fade in once fully decoded, so message bubbles stop growing downward as the bitmap progressively paints. (`64a35d8`)
+- Desktop now skips restoring the last route at launch when no baked session exists on disk, so logged-out users land directly on the public surface instead of being bounced to /login by RequireAuth. (`1b13787`)
 
-## 11:05 AM — CI hardened against transient DNS failures on self-hosted runners
+## 10:27 PM — Mock desktop windows become interactive and the public top nav settles
 
-A targeted setup-node wrapper rolls out across release workflows to absorb getaddrinfo blips.
+Late-night tuning of the public landing surface: the mock desktop's DM windows gained working window controls, the marketing scroll column stopped flashing black under Suspense, and the new top-bar Resources menu opens on hover.
 
-- A local setup-node composite action now polls api.github.com and nodejs.org with backoff before installing Node, so a transient ENOTFOUND on the self-hosted runners no longer fails build-sidecar; the pinned Node version is centralized across Android, iOS, desktop, evals, and the nightly/stable release workflows. (`4e4d177`)
-- Five publish/changelog jobs that check out the repo into subdirectories reverted to the upstream actions/setup-node since the local composite can't be resolved from non-root checkouts and those jobs run on GitHub-hosted runners that never had the DNS issue. (`36fc5ac`)
+- DM windows on the public mock desktop now have working minimize, maximize, and close controls backed by per-thread state in the DMWindowManager reducer, with focus-order kept out of the aria-hidden demo. (`1b68efd`)
+- Marketing scroll column now paints with the destination page's background while lazy chunks load, killing the black flash on first visit to /agents, /code, or /pricing. (`182e2c1`)
+- Public top-bar nav was pinned to a fixed light color so it no longer re-tints with persona changes, with the Resources dropdown now opening on hover (with a grace period for crossing into the menu) in addition to click and focus. (`9b85466`, `3bce1d2`)
+- Bottom-left Chat icon in public mode toggles between /chat and the last non-chat public page, mirroring the authed Desktop button's previous-path behavior. (`9756b2f`)
 
-## 11:24 AM — Session Cost panel, picker overhaul, and a private bug-report pipeline
+## 10:38 PM — Fallback titlebar no longer flashes on web refreshes
 
-The afternoon shipped the day's biggest feature set: visible billing in chat, a reorganized model picker wired end-to-end through harness types, a full private bug-report capture/admin flow, and a fix for public chat in the Render deployment.
+A targeted boot fix for the browser build's perceived startup polish.
 
-- A new Session Cost section in the Context popover surfaces the active model, cumulative input/output/cache tokens, a weighted avg cost per token with per-type rate overlay, and the total billed cost in dollars — pricing uses base provider rates plus the 20% router markup so figures match what is actually debited and survive a page reload via a refactored shared context_usage backend module. A follow-up fix folds cache read/write tokens into the displayed total so it reconciles with avg cost per token. (`f697368`, `cfb232a`)
-- The chat model picker is reorganized into collapsible Anthropic / OpenAI / Open Source sections with a model-details hover submenu (name, cost multiple, context window), a width-stable scroll wrapper, and effort-scaled credit multipliers shown next to each thinking tier; the selected tier appears on the trigger label (e.g. 'Opus 4.8 XHigh'). (`e54c97e`, `0c1fe62`, `22d102c`, `8b535cc`)
-- reasoning_effort is now a typed ReasoningEffort enum across the aura-os <-> harness wire and is folded into the ChatSessionKey, so changing thinking level cold-opens a session that rebuilds its loop config rather than reusing the prior one; Anthropic rates were synced (Opus 4.7 $5/$25, Haiku 4.5 $1/$5) and every model's credit multiplier rebased against Haiku 4.5 = 1x. (`d0aa429`, `a0f8c6a`)
-- Image-mode adds a selectable quality dropdown (low/medium/high/auto) for GPT Image models, threaded from chat UI through aura-os-server to aura-router, defaulting to medium for faster generations; the model and quality pickers are now mutually exclusive. (`1d7d864`, `db26a43`)
-- Private bug reports shipped end to end: a server-side store with Opus 4.8 triage summary and is_sys_admin gating, an in-browser diagnostics bundle (prompt, transcript, model, ids, breadcrumbs, env) submitted via a required consent modal, and an admin-only Bug Reports app with a sys-admin Resolve button on feedback. A follow-up adds a fix-task workflow that spins a spec+task from a report and auto-resolves the feedback on completion. (`a0d3a16`, `0abe66c`, `a81296a`, `a1cfda1`)
-- Public chat no longer requires a bundled harness: the demo endpoint now streams via aura-router's /v1/messages (translating Anthropic deltas into the SSE events the frontend already consumes), and pins PUBLIC_DEMO_MODEL on the session config so the demo works on the single-process Render deployment behind aura.ai. The /models marketing page is also fed from bundled AVAILABLE_MODELS instead of a network call that quietly returned empty. (`5687850`, `cb59c9f`, `cdcc01f`)
-- Out-of-org chat sessions now open against their true owner agent id (the server-stamped _agentId) instead of falling back to the CEO chat agent, ending 'session not found' 404s for sessions returned by GET /api/me/sessions after the storage migration. (`59d528a`)
-- Settings gained a personal 'You' section (avatar, name, bio, website, location, profile link) as the default first entry on both the modal and the routed page, with the Team group reordered above App and 'Appearance' renamed 'Theme'. (`a043143`)
-- Marketing banner stats now actually animate: useCountUp was reworked to always start at 0 and ease to the real target with magnitude-paced timing, a /models gradient banner with five animated catalog metrics was added, and stale 'Loading…' fallbacks were removed from public pages. (`38e526d`, `688cc66`, `8ae820c`, `ce86b37`, `456c843`, `e60b3dc`, `ad102ca`)
-- Smaller polish: logout now closes lingering modals, the boot splash is gone on normal startup, autofill 'Saved info' popups are disabled on chat inputs, Simple/Advanced toggle no longer flashes, the public nav pill slides on press, and the invite modal swaps its gift icon for a full-bleed AURA video banner with a hover-only close. (`a857b60`, `dfc17de`, `d3adb7d`, `e771cd8`, `5aad710`, `a0a29b3`, `8518f9b`, `7eee15e`)
-- SwarmHarness was migrated to the new two-step POST /v1/agents/:id/run + WS stream contract, replacing the removed POST /sessions handshake that had been failing with 'did not emit session_ready within 20s'. (`1d36c7d`)
-- The public landing gained a centered 'Your Private Agent.' typewriter tagline above the desktop widget, a rotating Private/Secure/Decentralized/Open Source ticker in the public taskbar, and themed accent coloring for open menu triggers; profile avatar size was aligned to neighboring taskbar pills. (`8eae17d`, `1fdc7dc`, `be10fb0`, `8210fdc`)
+- The static boot-fallback titlebar (min/maximize/close) is now gated behind html.aura-desktop-shell, which the inline boot script only sets when the native window.ipc bridge exists, so the browser build no longer flashes the controls on every refresh. (`709a477`)
 
-## 4:34 PM — WebSocket connect tickets, faster bug-report send, and cached changelog stats
+## 10:42 PM — Gemini chat models, login-flow polish, and final landing tweaks
 
-Evening work focused on auth-surface hardening, the bug-report send path, and a same-origin proxy for the changelog stats card, plus landing-page tagline polish.
+Closing batch of the day adds the Google Gemini family to the chat picker, removes lingering public surfaces after login, fixes the profile pill not updating after sign-in, and tightens the login overlay's entrance.
 
-- WebSocket auth no longer puts JWTs in URLs: clients now POST /api/auth/ws-ticket with a bearer header to mint a single-use ~30s ticket, then connect with ?ticket=, which the guard redeems and burns. The /ws/events, /ws/terminal, /ws/browser, and remote-agent terminal paths all switched over and the raw ?token= JWT fallback is removed. (`3775739`)
-- Bug-report Send stops hanging: the handler persists the report and returns 201 immediately, the Opus triage summary runs in a spawned task that backfills llm_summary, every report is mirrored into the public Feedback app as a 'bug' post (description only — diagnostics stay private), and apiFetch gained an opt-in AbortController timeout so stalled requests surface an error instead of spinning. (`db00a3c`)
-- The /changelog commit-count card now hits a same-origin GET /api/public/commit-stats endpoint that fans out to GitHub with an optional GITHUB_API_TOKEN and caches the aggregate for 30 minutes, replacing 14 unauthenticated requests per cold load that reliably tripped GitHub's 60 req/hr/IP limit and rendered 0. (`a889c25`)
-- Sys-admin grants now flow from a SYS_ADMIN_EMAILS allowlist at session-build time, resolving the admin email from the typed login/register input, then JWT claims, then the zOS user response, with startup and per-session diagnostics so a missed match is visible in logs. (`7b5e6a6`, `2d78b37`)
-- The standard consent-gated Report bug affordance now appears on swarm agent VM errors and connection-loss surfaces (ConnectionTaskbar and the AgentStatusBar Disconnected badge), matching the inline button already used for chat session issues. (`f3496c5`)
-- The landing 'Your Private Agent.' tagline was iterated to track persona nav polarity (pure white on dark personas, dark on light), shrink 25% on responsive scales, and remain centered in the gap above the desktop widget at any aspect ratio via a measured CSS variable. The taskbar ticker also became a true vertical slide and split into separate floating pills next to the theme toggle. (`6792219`, `b892373`, `35acb3a`, `68cd7a7`, `d7c224c`, `2ab7428`, `8d5b5f0`, `652569f`, `a1fc5f4`, `f38a15a`)
-- Pricing page cleanup: removed the Crusader plan, renamed Mortal to Free at $0/mo, and flattened horizontal padding to match /feedback and /models so the 960px content column lines up across marketing pages. (`108ef6e`, `b9c13b1`, `b53c208`)
-- The streaming 'Cooking' shimmer and stuck-stream pill now render above the input bar's top-fade gradient and accept clicks, so the Stop / Retry / Report controls are reachable mid-stream. (`ab5623d`)
+- Seven Google Gemini chat models (Gemini 3.1 Pro, 3.5 Flash, 3 Flash, 3.1 Flash-Lite, 2.5 Pro/Flash/Flash-Lite) joined the picker and the marketing /models page with matching client pricing, including cache-aware cost handling consistent with DeepSeek. (`8151349`)
+- Login now fully tears down the public marketing routes and the underlying PublicChatView so the public SSE stream and persona animations stop, and the marketing /agents route no longer shadows the authenticated Agents app index. (`f05cf02`)
+- Profile pill now syncs to the authenticated user immediately on LoginOverlay sign-in by subscribing the profile store to auth-store updates, instead of staying on 'Sign in' until a refresh. (`dd97f66`)
+- Chat streaming flicker was eliminated by removing a content-visibility paint hint on per-message wrappers that re-evaluated on every token, and the login overlay now uses a darker, blurrier backdrop with a reduced-motion-friendly fade-in. (`7c97241`, `be1636f`)
+- Model picker now closes any open effort flyout synchronously when another row's flyout opens, so switching models no longer briefly shows a ghost of the previous submenu. (`0f3ce79`)
+- Public mode chrome was reshuffled again: the sidebar drawer toggle moved into the bottom-left taskbar cluster, with the rotating tagline centered in the bottom bar. (`276f61d`)
 
 ## Highlights
 
-- Reasoning effort and credit multipliers in the model picker
-- New Session Cost panel with cache-accurate token math
-- Private bug reports: capture, consent, admin viewer, fix-task workflow
-- Public chat now streams via aura-router with no harness required
-- WS auth moved to single-use connect tickets, JWTs out of URLs
-- CI resilient to DNS blips on self-hosted runners
+- Per-model reasoning effort with credit multipliers in the picker
+- Session Cost section shows real token spend in chat
+- Private bug reports with consent gate and admin viewer
+- Public marketing nav moved to a centered top bar with new /code page
+- Guest token self-heal and public chat now proxies via aura-router
+- WebSocket connect tickets keep JWTs out of URLs
 
