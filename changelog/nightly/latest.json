@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-05-31T00:49:16.500Z",
+  "generatedAt": "2026-05-31T04:03:27.611Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.575.1",
+  "version": "0.1.0-nightly.576.1",
   "date": "2026-05-30",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.575.1",
-  "lastIncludedSha": "87a308b3537f03405404fcdbea071cfc7e135ca4",
-  "previousProcessedSha": "cdcc01fe5a36d8aa53b61123324120e40609e292",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.576.1",
+  "lastIncludedSha": "2d78b37a0c8b6d98c1502eb9287d97ba6b4da1b5",
+  "previousProcessedSha": "87a308b3537f03405404fcdbea071cfc7e135ca4",
   "commitShas": [
     "05a35547d38bee99b6cccc944418b1f4f7a71bbb",
     "5ad826b4aac68d80dc2ac2d61e31feda70711131",
@@ -86,10 +86,16 @@
     "b892373ae490ce3bad162eb12e963811b9d1d4f5",
     "db00a3ce28bcbafaa80829bc81dfa21534fcb0f3",
     "a889c2523005b21cce86162c2f4e288e82f6def2",
-    "87a308b3537f03405404fcdbea071cfc7e135ca4"
+    "87a308b3537f03405404fcdbea071cfc7e135ca4",
+    "7b5e6a681f88dfd4dcec557d24645d9eff4ccdb0",
+    "ab5623d2937b4b3189b18bd9fc7512afe8eb511f",
+    "68ece90789058a639f4f07605e26f0c64151e541",
+    "a1fc5f43037632a672aa180e2a20443edeebef2a",
+    "37757393238b4ef2a866cb65cd40d276f19fbcac",
+    "2d78b37a0c8b6d98c1502eb9287d97ba6b4da1b5"
   ],
-  "rawCommitCount": 78,
-  "filteredCommitCount": 75,
+  "rawCommitCount": 84,
+  "filteredCommitCount": 81,
   "rawCommits": [
     {
       "sha": "05a35547d38bee99b6cccc944418b1f4f7a71bbb",
@@ -3474,6 +3480,289 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "7b5e6a681f88dfd4dcec557d24645d9eff4ccdb0",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T17:39:48-07:00",
+      "subject": "feat(auth): grant sys_admin via SYS_ADMIN_EMAILS allowlist",
+      "body": "Add a comma-separated SYS_ADMIN_EMAILS env var so listed zOS/aura emails are always granted is_sys_admin at session-build time, independent of aura-network. Captures email from the zOS user response, applies the allowlist in AuthService::build_session_from_token, and OR-s the grant through the aura-network sync so it is not clobbered.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "87a308b3537f03405404fcdbea071cfc7e135ca4"
+      ],
+      "files": [
+        ".env.example",
+        "apps/aura-os-server/src/app_builder/services.rs",
+        "apps/aura-os-server/src/handlers/users.rs",
+        "crates/aura-os-auth/src/lib.rs"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 81,
+        "deletions": 4
+      },
+      "committedAtMs": 1780187988000,
+      "cleanSubject": "grant sys_admin via SYS_ADMIN_EMAILS allowlist",
+      "keywords": [
+        "grant",
+        "admin",
+        "emails",
+        "allowlist"
+      ],
+      "fileGroups": [
+        ".env.example",
+        "apps/aura-os-server/src",
+        "crates/aura-os-auth/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "ab5623d2937b4b3189b18bd9fc7512afe8eb511f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T19:51:41-07:00",
+      "subject": "fix(chat): render streaming-phase indicator above input bar gradient",
+      "body": "Raise .pinnedStreamingIndicator z-index from 9 to 11 so the Cooking shimmer and the stuck-stream pill paint above the input bar's top-fade gradient instead of being covered by it. Also enable pointer-events on the stuck-stream pill so its Stop / Retry / Report buttons are clickable through the otherwise click-through strip.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "7b5e6a681f88dfd4dcec557d24645d9eff4ccdb0"
+      ],
+      "files": [
+        "interface/src/components/StuckStreamPill/StuckStreamPill.module.css",
+        "interface/src/features/chat-ui/ChatPanel/ChatPanel.module.css"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 14,
+        "deletions": 7
+      },
+      "committedAtMs": 1780195901000,
+      "cleanSubject": "render streaming-phase indicator above input bar gradient",
+      "keywords": [
+        "render",
+        "streaming",
+        "phase",
+        "indicator",
+        "above",
+        "input",
+        "gradient"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "68ece90789058a639f4f07605e26f0c64151e541",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T19:58:57-07:00",
+      "subject": "style(logs): format Option fields without Some() wrapper",
+      "body": "Replace Debug formatting of Option fields in the user-sync and ws-upgrade\nlog lines with display formatting, unwrapping to the inner value with a\nfallback so logs read cleanly (e.g. profile_id=... instead of Some(\" ...\\)).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "ab5623d2937b4b3189b18bd9fc7512afe8eb511f"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/users.rs",
+        "apps/aura-os-server/src/handlers/ws.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 3,
+        "deletions": 3
+      },
+      "committedAtMs": 1780196337000,
+      "cleanSubject": "style(logs): format Option fields without Some() wrapper",
+      "keywords": [
+        "style",
+        "logs",
+        "format",
+        "option",
+        "fields",
+        "without",
+        "some",
+        "wrapper"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "a1fc5f43037632a672aa180e2a20443edeebef2a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T20:08:10-07:00",
+      "subject": "style(taskbar): split public theme toggle and tagline into separate floating pills",
+      "body": "In public mode the bottom-right cluster now renders the light/dark theme\ntoggle in its own standalone floating pill, with the rotating tagline in a\nseparate bubble pill next to it (alongside the THE GRID chip), instead of\nsharing a single pill.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "68ece90789058a639f4f07605e26f0c64151e541"
+      ],
+      "files": [
+        "interface/src/components/BottomTaskbar/BottomTaskbar.module.css",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.test.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 79,
+        "deletions": 16
+      },
+      "committedAtMs": 1780196890000,
+      "cleanSubject": "style(taskbar): split public theme toggle and tagline into separate floating pills",
+      "keywords": [
+        "style",
+        "taskbar",
+        "split",
+        "public",
+        "theme",
+        "toggle",
+        "tagline",
+        "into",
+        "separate",
+        "floating",
+        "pills"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "37757393238b4ef2a866cb65cd40d276f19fbcac",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T20:16:47-07:00",
+      "subject": "feat(auth): use short-lived WS connect tickets to keep JWTs out of URLs",
+      "body": "Native WebSocket handshakes (and other header-less browser GETs) forced\nthe long-lived JWT into the URL as ?token=, which Render's access log\nrecords verbatim and is replayable until expiry. Add a single-use, ~30s\nconnect-ticket flow: clients POST /api/auth/ws-ticket (bearer header,\nnever a URL) to mint an opaque ticket, then connect with ?ticket=; the\nguard redeems and burns it for the bound JWT. The raw ?token= JWT\nfallback is removed.\n\n- Server: ws_ticket_store on AppState with TTL eviction, mint_ws_ticket\n  handler, ticket redemption in require_verified_session, token.rs is\n  now header-only.\n- Client: mintWsTicket helper, async URL support in ws-reconnect, and\n  /ws/events, /ws/terminal, /ws/browser, and the remote-agent terminal\n  all switched to ?ticket=.\n- Server-to-server WS (aura-network, z-billing) and the artifact\n  thumbnail img path keep ?token= for now; both are documented as\n  follow-ups (the ticket model does not fit cached img or remotes that\n  do not yet accept header/ticket auth).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "a1fc5f43037632a672aa180e2a20443edeebef2a"
+      ],
+      "files": [
+        "apps/aura-os-server/src/app_builder/mod.rs",
+        "apps/aura-os-server/src/auth_guard/mod.rs",
+        "apps/aura-os-server/src/auth_guard/tests.rs",
+        "apps/aura-os-server/src/auth_guard/token.rs",
+        "apps/aura-os-server/src/billing_bridge.rs",
+        "apps/aura-os-server/src/handlers/auth.rs",
+        "apps/aura-os-server/src/handlers/billing.rs",
+        "apps/aura-os-server/src/router/auth.rs",
+        "apps/aura-os-server/src/state/caches.rs",
+        "apps/aura-os-server/src/state/mod.rs",
+        "apps/aura-os-server/tests/common/mod.rs",
+        "crates/aura-os-network/src/client/mod.rs",
+        "interface/src/hooks/use-browser.ts",
+        "interface/src/hooks/use-terminal.ts",
+        "interface/src/shared/api/browser.ts",
+        "interface/src/shared/api/terminal.test.ts",
+        "interface/src/shared/api/terminal.ts",
+        "interface/src/shared/hooks/ws-reconnect.test.ts",
+        "interface/src/shared/hooks/ws-reconnect.ts",
+        "interface/src/shared/lib/ws-ticket.ts",
+        "interface/src/stores/aura3d-store.ts",
+        "interface/src/stores/event-store/event-store.ts"
+      ],
+      "stats": {
+        "fileCount": 22,
+        "insertions": 364,
+        "deletions": 68
+      },
+      "committedAtMs": 1780197407000,
+      "cleanSubject": "use short-lived WS connect tickets to keep JWTs out of URLs",
+      "keywords": [
+        "short",
+        "lived",
+        "connect",
+        "tickets",
+        "keep",
+        "jwts",
+        "urls"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-network/src",
+        "interface/src/hooks",
+        "interface/src/shared",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "2d78b37a0c8b6d98c1502eb9287d97ba6b4da1b5",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-05-30T20:41:27-07:00",
+      "subject": "fix(auth): make SYS_ADMIN_EMAILS grant robust across email sources",
+      "body": "The sys-admin allowlist only matched against the email returned by zOS\n/api/users/current, which does not reliably carry an email field, so\nis_sys_admin stayed false in prod even with the env var set. Resolve the\nadmin email from the typed login/register input first, then JWT claims,\nthen the zOS user response. Add startup and per-session diagnostics\n(allowlist size, masked email, source, match) to surface failures.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "37757393238b4ef2a866cb65cd40d276f19fbcac"
+      ],
+      "files": [
+        "Cargo.lock",
+        "apps/aura-os-server/src/app_builder/services.rs",
+        "crates/aura-os-auth/Cargo.toml",
+        "crates/aura-os-auth/src/lib.rs"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 132,
+        "deletions": 9
+      },
+      "committedAtMs": 1780198887000,
+      "cleanSubject": "make SYS_ADMIN_EMAILS grant robust across email sources",
+      "keywords": [
+        "make",
+        "admin",
+        "emails",
+        "grant",
+        "robust",
+        "across",
+        "email",
+        "sources"
+      ],
+      "fileGroups": [
+        "Cargo.lock",
+        "apps/aura-os-server/src",
+        "crates/aura-os-auth/Cargo.toml",
+        "crates/aura-os-auth/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Other"
+      ]
     }
   ],
   "batchCount": 6,
@@ -3485,36 +3774,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 18752903
+          "sizeBytes": 18753875
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.575.1",
+      "version": "0.1.0-nightly.576.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.575.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.576.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 46434332
+          "sizeBytes": 46426228
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.575.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.576.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.575.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.576.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 113633784
+          "sizeBytes": 113641976
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.575.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.576.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -3524,29 +3813,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.575.1",
+      "version": "0.1.0-nightly.576.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.575.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.576.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 43468745
+          "sizeBytes": 43480041
         },
         {
-          "name": "AURA_0.1.0-nightly.575.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.576.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.575.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.576.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 42549477
+          "sizeBytes": 42550494
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.575.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.576.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -3556,29 +3845,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.575.1",
+      "version": "0.1.0-nightly.576.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.575.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.576.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 45250100
+          "sizeBytes": 45263243
         },
         {
-          "name": "AURA_0.1.0-nightly.575.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.576.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.575.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.576.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 44400362
+          "sizeBytes": 44423183
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.575.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.576.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -3588,17 +3877,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.575.1",
+      "version": "0.1.0-nightly.576.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.575.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.576.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 31916699
+          "sizeBytes": 31955161
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.575.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.576.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -3607,46 +3896,52 @@
     }
   ],
   "rendered": {
-    "title": "Model picker overhaul, session cost, and a private bug-report pipeline",
-    "intro": "A heavy day across the chat surface and marketing site: the model picker gained credit multipliers, reasoning-effort tiers, and provider grouping; the Context popover now shows real session cost; and a new consent-gated bug-report flow ships end-to-end from the user's Report button into an admin viewer that can spawn fix-it tasks. Public chat was also rescued from a router-versus-harness mismatch that was breaking the demo on aura.ai.",
+    "title": "Model picker controls, session cost visibility, and a private bug report pipeline",
+    "intro": "A heavy interface day for Aura: the chat model picker grew credit multipliers, reasoning-effort tiers, and per-provider grouping; a new Session Cost panel exposes what each conversation is actually billing; and an end-to-end private bug-report flow shipped with consent gating, an admin viewer, and a fix-task workflow. Public chat moved off the harness so aura.ai works without a sidecar, CI was hardened against flaky DNS on self-hosted runners, and WebSocket auth switched to short-lived tickets so JWTs stop landing in URLs.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "9:27 PM",
         "started_at": "2026-05-29T04:27:55.000Z",
         "ended_at": "2026-05-29T05:30:49.000Z",
-        "title": "Reasoning-effort model picker and self-healing public chat",
-        "summary": "Late-night work introduced per-model credit multipliers and a reasoning-effort flyout, while fixing a class of stuck-guest sessions and polishing the marketing surface.",
+        "title": "Model picker gains effort tiers and the public demo chat gets polish",
+        "summary": "Late-night work introduced per-model reasoning-effort selection, self-healing guest auth, and a richer marketing demo on /product.",
         "items": [
           {
-            "text": "The chat model picker now shows a credit-multiplier badge per model and a hover flyout to choose a Low/Medium/High/XHigh/Max reasoning effort, persisted per model and forwarded as reasoning_effort on every send.",
+            "text": "The chat model picker now shows a credit-multiplier badge per model and a hover flyout to pick a reasoning effort (Low/Medium/High/XHigh/Max), persisted per model and forwarded as reasoning_effort on the chat stream.",
             "commit_shas": [
               "b135e7a13192e9d501166ab2af1ea1673ceed02f"
             ],
             "confidence": "high"
           },
           {
-            "text": "Public chat now self-heals when a stale guest token gets rejected: a 401 or 'guest token' error triggers a silent re-mint and one retry across desktop, mobile, and the dispatch-media boundary, ending the permanent stuck state caused by GUEST_JWT_SECRET rotations.",
+            "text": "Public chat self-heals when a guest JWT secret rotates: a 401 or 'guest token' rejection now discards the stale token, re-mints a fresh one, and silently retries the same turn across desktop, mobile, and the dispatch-media boundary.",
             "commit_shas": [
               "72f8ed3ed389a1c688e28413cd7260f680d88bdc"
             ],
             "confidence": "high"
           },
           {
-            "text": "Project task checkmarks now update in real time during dev runs by also patching the layout cache on task_updated events, so users no longer need to refresh the Tasks tab after watching a Run.",
+            "text": "The /product Agent section replaces empty phone shells with three looping mobile chat mockups that reuse the landing hero's typewriter and tool-stream primitives so the page reads consistently with the desktop demo.",
+            "commit_shas": [
+              "4f9d48d18a664133766a77fb70d610bd32fb0b2b"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Run-tab task checkmarks now update live: useProjectLayoutData subscribes to task_updated edges so completed tasks render without a manual refresh, with a shared isTaskStatus guard across hooks.",
             "commit_shas": [
               "567338eb9665ccb2d18c466d4c0c888a0150da29"
             ],
             "confidence": "high"
           },
           {
-            "text": "Marketing polish: the /product agent section gained three looping mobile chat mockups, the orb hero video fades cleanly into the page, public sidebar nav slides between center and bottom, the transcript fills full height under a floating input bar, and the overlay scrollbar thumb is rounded and grows on hover.",
+            "text": "Several polish fixes landed for the public chat surface and overlay scrollbar — transcripts now fill height and scroll under the floating input bar, the overlay scrollbar thumb is a properly rounded pill that widens on hover, the public nav slides between center and bottom, and the marketing hero video fade no longer clips.",
             "commit_shas": [
-              "4f9d48d18a664133766a77fb70d610bd32fb0b2b",
-              "05a35547d38bee99b6cccc944418b1f4f7a71bbb",
-              "5ad826b4aac68d80dc2ac2d61e31feda70711131",
               "91af4337b078813d1e46027b90377003d5f82c77",
-              "0a51c5b496510ccfd2597f8b1cb0faf04603f3bd"
+              "0a51c5b496510ccfd2597f8b1cb0faf04603f3bd",
+              "5ad826b4aac68d80dc2ac2d61e31feda70711131",
+              "05a35547d38bee99b6cccc944418b1f4f7a71bbb"
             ],
             "confidence": "high"
           }
@@ -3657,11 +3952,11 @@
         "time_label": "10:32 PM",
         "started_at": "2026-05-29T05:32:56.000Z",
         "ended_at": "2026-05-29T05:32:56.000Z",
-        "title": "Executor agent ledger stops dev-run orphans",
-        "summary": "A persistent ledger in SettingsStore keeps ephemeral Executor agents from accumulating in the projects sidebar when storage strips role columns.",
+        "title": "Executor agent leak fixed with a system-minted instance ledger",
+        "summary": "Dev-run executor agents no longer pile up in the projects sidebar after server restarts.",
         "items": [
           {
-            "text": "System-minted Loop/Executor instance IDs are now tracked in a storage-independent ledger so the sidebar filter and janitor can reliably purge dev-run executors even when aura-storage drops instance_role and source columns, ending the duplicate 'Summarize This Me' rows that survived server restarts.",
+            "text": "Each ephemeral Executor instance is now tracked in a SettingsStore-backed ledger so the sidebar filter and janitor can purge orphans by ID even when storage strips instance_role/source columns, eliminating the duplicate 'Summarize This Me' rows that survived a dev-server restart mid-run.",
             "commit_shas": [
               "c89506433e9b8bb98b7b575efe31570d275d97fa"
             ],
@@ -3674,18 +3969,18 @@
         "time_label": "10:32 AM",
         "started_at": "2026-05-30T17:32:53.000Z",
         "ended_at": "2026-05-30T17:46:07.000Z",
-        "title": "Smoother media generation and decoded image reveals",
-        "summary": "The wait state and the moment images appear in chat both got tangibly nicer.",
+        "title": "Smoother media generation: animated waiting state and faded reveals",
+        "summary": "Image and video generation feels more responsive while assets load.",
         "items": [
           {
-            "text": "The image/video generation placeholder now animates a canvas-based ripple of pulsing dots instead of a static panning grid, so the wait reads as active work (with a single static frame under prefers-reduced-motion).",
+            "text": "The image/video generation placeholder swaps its static dot grid for a canvas where dots pulse in flowing ripple waves so the wait reads as active work; reduced-motion users get a single static frame.",
             "commit_shas": [
               "c5b501760b090653f0f9c9dc3839f8b3b6ce9bb6"
             ],
             "confidence": "high"
           },
           {
-            "text": "Generated chat images now reserve a square frame and fade in only after img.decode() resolves, eliminating the progressive top-down paint that grew the message bubble downward.",
+            "text": "Generated chat images now wait for img.decode() inside a reserved square frame and fade in once fully decoded, so message bubbles stop growing downward as the bitmap progressively paints.",
             "commit_shas": [
               "64a35d84028c64c82392488f0f807d8ba020c814"
             ],
@@ -3698,18 +3993,18 @@
         "time_label": "11:05 AM",
         "started_at": "2026-05-30T18:05:15.000Z",
         "ended_at": "2026-05-30T18:23:15.000Z",
-        "title": "Self-hosted runner DNS resilience for setup-node",
-        "summary": "Release Infrastructure gained a retrying setup-node wrapper to tolerate transient DNS blips, with a targeted carve-out for subdirectory checkouts.",
+        "title": "CI hardened against transient DNS failures on self-hosted runners",
+        "summary": "A targeted setup-node wrapper rolls out across release workflows to absorb getaddrinfo blips.",
         "items": [
           {
-            "text": "A new local setup-node composite action polls api.github.com and nodejs.org with backoff before installing, so transient ENOTFOUND errors on self-hosted runners no longer fail build-sidecar on the first attempt; all first-party workflows were migrated and the Node version is now centrally pinned.",
+            "text": "A local setup-node composite action now polls api.github.com and nodejs.org with backoff before installing Node, so a transient ENOTFOUND on the self-hosted runners no longer fails build-sidecar; the pinned Node version is centralized across Android, iOS, desktop, evals, and the nightly/stable release workflows.",
             "commit_shas": [
               "4e4d177079e2a663b4e1aac47e8470a79d36db24"
             ],
             "confidence": "high"
           },
           {
-            "text": "Five publish/changelog jobs that check the repo out into subdirectories were reverted to upstream actions/setup-node@v5, since the local composite cannot resolve from those paths and those jobs run on GitHub-hosted runners that never had the DNS issue.",
+            "text": "Five publish/changelog jobs that check out the repo into subdirectories reverted to the upstream actions/setup-node since the local composite can't be resolved from non-root checkouts and those jobs run on GitHub-hosted runners that never had the DNS issue.",
             "commit_shas": [
               "36fc5ac0552a737aa60dca6e372ac175d8c42ea0"
             ],
@@ -3722,39 +4017,37 @@
         "time_label": "11:24 AM",
         "started_at": "2026-05-30T18:24:52.000Z",
         "ended_at": "2026-05-30T23:33:46.000Z",
-        "title": "Session Cost, grouped model picker, and the private bug-report pipeline",
-        "summary": "The day's largest batch shipped a Session Cost section in the Context popover, restructured the model picker around providers and effort tiers, fixed several deployment-blocking public-chat bugs, and stood up an end-to-end private bug-report flow with an admin viewer and fix-task workflow.",
+        "title": "Session Cost panel, picker overhaul, and a private bug-report pipeline",
+        "summary": "The afternoon shipped the day's biggest feature set: visible billing in chat, a reorganized model picker wired end-to-end through harness types, a full private bug-report capture/admin flow, and a fix for public chat in the Render deployment.",
         "items": [
           {
-            "text": "The Context popover gained a Session Cost section showing the model, cumulative input/output/cache tokens, a weighted Avg. Cost per Token with input/output/cached rate overlay, and a dollar total computed from base provider rates plus aura-router's 20% markup; the backend context-usage endpoint now surfaces cumulative tokens and provider so the section hydrates on reload.",
+            "text": "A new Session Cost section in the Context popover surfaces the active model, cumulative input/output/cache tokens, a weighted avg cost per token with per-type rate overlay, and the total billed cost in dollars — pricing uses base provider rates plus the 20% router markup so figures match what is actually debited and survive a page reload via a refactored shared context_usage backend module. A follow-up fix folds cache read/write tokens into the displayed total so it reconciles with avg cost per token.",
             "commit_shas": [
               "f697368efda720690f9eb8bc3fd8bc2e2ef15e5a",
-              "cfb232ae03bc8516a260588e95bced51fbc126d0",
-              "2e446c4a957f44b0164fc7627fa3c168e9159d51"
+              "cfb232ae03bc8516a260588e95bced51fbc126d0"
             ],
             "confidence": "high"
           },
           {
-            "text": "The model picker was reorganized into collapsible Anthropic / OpenAI / Open Source sections with a custom-scrollbar menu, hover submenus showing each model's cost multiple and context window, effort-scaled credit costs per tier, and an Anthropic pricing refresh (Opus 4.7 to $5/$25, Haiku 4.5 to $1/$5) with credit multipliers rebased on output $/MTok anchored at Haiku 4.5 = 1x.",
+            "text": "The chat model picker is reorganized into collapsible Anthropic / OpenAI / Open Source sections with a model-details hover submenu (name, cost multiple, context window), a width-stable scroll wrapper, and effort-scaled credit multipliers shown next to each thinking tier; the selected tier appears on the trigger label (e.g. 'Opus 4.8 XHigh').",
             "commit_shas": [
               "e54c97eec3145aa3e5e931673977a364932a5240",
-              "22d102c899a6d9083f9294759f0f74685f3399c3",
               "0c1fe626f99fba82ac038e2735ee76346e33b11a",
-              "8b535ccf5ad20f21e92e9ea1bc85a1341e49135b",
+              "22d102c899a6d9083f9294759f0f74685f3399c3",
+              "8b535ccf5ad20f21e92e9ea1bc85a1341e49135b"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "reasoning_effort is now a typed ReasoningEffort enum across the aura-os <-> harness wire and is folded into the ChatSessionKey, so changing thinking level cold-opens a session that rebuilds its loop config rather than reusing the prior one; Anthropic rates were synced (Opus 4.7 $5/$25, Haiku 4.5 $1/$5) and every model's credit multiplier rebased against Haiku 4.5 = 1x.",
+            "commit_shas": [
+              "d0aa429d2f03edc72936a5dd63bf6f059ec8d908",
               "a0f8c6a9ac6970b413c456bb5727682beda07c70"
             ],
             "confidence": "high"
           },
           {
-            "text": "Reasoning effort is now a typed ReasoningEffort enum on the aura-os <-> harness wire and is folded into the chat session key, so changing thinking level cold-opens a session that rebuilds its loop config; the selected tier also appears in the trigger label (e.g. 'Opus 4.8 XHigh') on desktop and mobile.",
-            "commit_shas": [
-              "d0aa429d2f03edc72936a5dd63bf6f059ec8d908",
-              "170487f28c181f6f38ca4298b88b05876228f4d1"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Image mode gained a quality dropdown (low/medium/high/auto) for GPT Image models — defaulting to medium for faster generations, persisted per agent and globally, threaded through to OpenAI via aura-router — and is now mutually exclusive with the model picker so only one menu opens at a time.",
+            "text": "Image-mode adds a selectable quality dropdown (low/medium/high/auto) for GPT Image models, threaded from chat UI through aura-os-server to aura-router, defaulting to medium for faster generations; the model and quality pickers are now mutually exclusive.",
             "commit_shas": [
               "1d7d864ce973f8e59af34a732bfb5cb5149a6e51",
               "db26a435df91b32ea1adfa5b56acab8c7facb1e5"
@@ -3762,15 +4055,7 @@
             "confidence": "high"
           },
           {
-            "text": "Two production-only public-chat failures were fixed: the public surface now pins PUBLIC_DEMO_MODEL on its session config and streams replies by proxying directly to aura-router's /v1/messages, replacing the local-harness handshake that had no harness in the single-process Render deployment.",
-            "commit_shas": [
-              "cb59c9ff41c5a517535675b52c3bcbdeead095ea",
-              "56878506b9917352c9a69cb98292269776910c3e"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "A private bug-reports pipeline shipped end to end: a consent-gated Report bug modal assembles prompt/transcript/model/ids/breadcrumbs/env diagnostics and posts to a new /api/bug-reports endpoint with Opus 4.8 triage summarization, an admin-only Bug Reports app renders the list and details (gated via is_sys_admin threaded through AuthSessionResponse), and a fix-task workflow can spec, run, and auto-resolve the linked feedback on completion.",
+            "text": "Private bug reports shipped end to end: a server-side store with Opus 4.8 triage summary and is_sys_admin gating, an in-browser diagnostics bundle (prompt, transcript, model, ids, breadcrumbs, env) submitted via a required consent modal, and an admin-only Bug Reports app with a sys-admin Resolve button on feedback. A follow-up adds a fix-task workflow that spins a spec+task from a report and auto-resolves the feedback on completion.",
             "commit_shas": [
               "a0d3a16ad21b67829a5f0258e2ad861b6682e63a",
               "0abe66c16e31cdb1c8119af0a6b3cd43d9946438",
@@ -3780,43 +4065,71 @@
             "confidence": "high"
           },
           {
-            "text": "Settings gained a personal 'You' section with inline avatar/name/bio/website/location editing as the new default tab, the modal nav reordered Team above App, and 'Appearance' was renamed to 'Theme'.",
+            "text": "Public chat no longer requires a bundled harness: the demo endpoint now streams via aura-router's /v1/messages (translating Anthropic deltas into the SSE events the frontend already consumes), and pins PUBLIC_DEMO_MODEL on the session config so the demo works on the single-process Render deployment behind aura.ai. The /models marketing page is also fed from bundled AVAILABLE_MODELS instead of a network call that quietly returned empty.",
             "commit_shas": [
-              "a04314362614948b9bd6cd4c1a3c0e996cfc5494"
+              "56878506b9917352c9a69cb98292269776910c3e",
+              "cb59c9ff41c5a517535675b52c3bcbdeead095ea",
+              "cdcc01fe5a36d8aa53b61123324120e40609e292"
             ],
             "confidence": "high"
           },
           {
-            "text": "Cross-org chat sessions now open by their true owner agent: the chat-app left panel navigates and fetches using each session row's server-stamped _agentId instead of falling back to the CEO chat agent, fixing 'session not found' 404s after the storage 0015 migration.",
+            "text": "Out-of-org chat sessions now open against their true owner agent id (the server-stamped _agentId) instead of falling back to the CEO chat agent, ending 'session not found' 404s for sessions returned by GET /api/me/sessions after the storage migration.",
             "commit_shas": [
               "59d528ac7854f5efaecec8bd3f0458a2d208c795"
             ],
             "confidence": "high"
           },
           {
-            "text": "Reliability and polish across the app: logout now also clears open modals so the settings panel no longer lingers, the boot splash is gone for normal startup (kept only as a boot-error fallback), the Simple/Advanced mode flip is committed in a single flushSync to remove the app flash, and the swarm harness was migrated to the new POST /v1/run plus WS stream contract to fix 'session_ready within 20s' errors.",
+            "text": "Settings gained a personal 'You' section (avatar, name, bio, website, location, profile link) as the default first entry on both the modal and the routed page, with the Team group reordered above App and 'Appearance' renamed 'Theme'.",
+            "commit_shas": [
+              "a04314362614948b9bd6cd4c1a3c0e996cfc5494"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Marketing banner stats now actually animate: useCountUp was reworked to always start at 0 and ease to the real target with magnitude-paced timing, a /models gradient banner with five animated catalog metrics was added, and stale 'Loading…' fallbacks were removed from public pages.",
+            "commit_shas": [
+              "38e526d37e634a43073a5a2de809b3c1513ef274",
+              "688cc66f7fa9d470321b1c7a75047f264f28dc3f",
+              "8ae820ca52c221adc6324e0ea1be76b3949566fc",
+              "ce86b379d9ff729c95c889c77fcdd47f990dbbeb",
+              "456c843b28cf55b9066922c993f2f4697a93da35",
+              "e60b3dc561190577ca186e01a1c830d4397b1254",
+              "ad102cacb4ea32dd89a48cbdc3804433729a04a6"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Smaller polish: logout now closes lingering modals, the boot splash is gone on normal startup, autofill 'Saved info' popups are disabled on chat inputs, Simple/Advanced toggle no longer flashes, the public nav pill slides on press, and the invite modal swaps its gift icon for a full-bleed AURA video banner with a hover-only close.",
             "commit_shas": [
               "a857b60a7cd31d589722d4bc5769b4f016f01d88",
               "dfc17dedc22a003a0ce764ab933fd94c8452f00f",
+              "d3adb7de9c3b1f6ef20bf98699e8102ea644f83d",
               "e771cd83dfbd8274fe59e8c6c22ee17388ec7654",
+              "5aad71022d40d55e57fcc9241c93e2441e145c82",
+              "a0a29b3afe2cbe5df9023885adfd59f7f3776e38",
+              "8518f9b8a928d21de3864782666f1f8a1a6ba1a0",
+              "7eee15e1af79894402139e3220f470a2c8ee90ba"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "SwarmHarness was migrated to the new two-step POST /v1/agents/:id/run + WS stream contract, replacing the removed POST /sessions handshake that had been failing with 'did not emit session_ready within 20s'.",
+            "commit_shas": [
               "1d36c7d89e92cb15fa2ff76f632e47efa2026c4b"
             ],
             "confidence": "high"
           },
           {
-            "text": "Marketing site: the /models page now renders from bundled AVAILABLE_MODELS constants instead of an empty public API, the Changelog/Feedback/Models banners count from 0 with a visible loading ramp on every visit, the public nav pill slides on pointerdown rather than waiting for route commit, and a gradient summary banner with five animated metrics landed on /models.",
+            "text": "The public landing gained a centered 'Your Private Agent.' typewriter tagline above the desktop widget, a rotating Private/Secure/Decentralized/Open Source ticker in the public taskbar, and themed accent coloring for open menu triggers; profile avatar size was aligned to neighboring taskbar pills.",
             "commit_shas": [
-              "cdcc01fe5a36d8aa53b61123324120e40609e292",
-              "38e526d37e634a43073a5a2de809b3c1513ef274",
-              "456c843b28cf55b9066922c993f2f4697a93da35",
-              "8ae820ca52c221adc6324e0ea1be76b3949566fc",
-              "ce86b379d9ff729c95c889c77fcdd47f990dbbeb",
-              "5aad71022d40d55e57fcc9241c93e2441e145c82",
-              "688cc66f7fa9d470321b1c7a75047f264f28dc3f",
-              "e60b3dc561190577ca186e01a1c830d4397b1254",
-              "1fdc7dcee4edf3ff80bdc8c4435a1cc8d4d80ce0"
+              "8eae17d84cddb54e424d4d97df9a646f712065e5",
+              "1fdc7dcee4edf3ff80bdc8c4435a1cc8d4d80ce0",
+              "be10fb05d4e64d1816121a315dcf95dbd6bd698f",
+              "8210fdc9aeb8ee0b909ca38d7019e298a20e0fb2"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           }
         ]
       },
@@ -3824,54 +4137,64 @@
         "batch_id": "entry-6",
         "time_label": "4:34 PM",
         "started_at": "2026-05-30T23:34:13.000Z",
-        "ended_at": "2026-05-31T00:36:21.000Z",
-        "title": "Landing tagline, asynchronous bug-report send, and cached commit stats",
-        "summary": "Evening polish centered the new landing tagline across viewports, made the bug-report Send action non-blocking with Feedback mirroring, and rescued the changelog stats card from GitHub's unauthenticated rate limit.",
+        "ended_at": "2026-05-31T03:41:27.000Z",
+        "title": "WebSocket connect tickets, faster bug-report send, and cached changelog stats",
+        "summary": "Evening work focused on auth-surface hardening, the bug-report send path, and a same-origin proxy for the changelog stats card, plus landing-page tagline polish.",
         "items": [
           {
-            "text": "A 'Your Private Agent.' tagline now sits in the public landing hero, type-styled to match /product, vertically centered in the live gap above the mock desktop widget on any viewport, color-matched to the active persona's nav polarity, and scaled 25% smaller than the product header.",
+            "text": "WebSocket auth no longer puts JWTs in URLs: clients now POST /api/auth/ws-ticket with a bearer header to mint a single-use ~30s ticket, then connect with ?ticket=, which the guard redeems and burns. The /ws/events, /ws/terminal, /ws/browser, and remote-agent terminal paths all switched over and the raw ?token= JWT fallback is removed.",
             "commit_shas": [
-              "67922199325ca91a6dfd38bd46c0a9d9163b789a",
-              "d7c224c1cdc23858b8cd1892826274a828cf4bfd",
-              "68cd7a79453185b23c23c1c87adfa523e604e0c8",
-              "35acb3abde95186f1367485d85a0b5d8803eedaa",
-              "f38a15a8d482191d07962cba22c6d315df7a1f15",
-              "b892373ae490ce3bad162eb12e963811b9d1d4f5"
+              "37757393238b4ef2a866cb65cd40d276f19fbcac"
             ],
             "confidence": "high"
           },
           {
-            "text": "The public bottom-left taskbar now cycles 'Private. / Secure. / Decentralized. / Open Source.' as a vertical ticker (outgoing word slides up, incoming slides in from the bottom) and runs even when OS animations are off, after a sequence of fixes to layer sizing and gating.",
-            "commit_shas": [
-              "2ab74287bf3bdb150d9f36d75f16e6b44215b49c",
-              "8d5b5f054a187420fbb9f6e1c55ea3b6f4fe800d",
-              "652569fd31a1fb5cbeabca4979e8d8273b95fd67"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "The bug-report Send action no longer blocks on Opus triage: reports are persisted and 201'd immediately while the LLM summary backfills in a spawned task, every report is mirrored into the Feedback app as a public Bug post (description only — diagnostics stay private), apiFetch gained an opt-in AbortController timeout, and the modal now shows an inline 'Report sent' confirmation.",
+            "text": "Bug-report Send stops hanging: the handler persists the report and returns 201 immediately, the Opus triage summary runs in a spawned task that backfills llm_summary, every report is mirrored into the public Feedback app as a 'bug' post (description only — diagnostics stay private), and apiFetch gained an opt-in AbortController timeout so stalled requests surface an error instead of spinning.",
             "commit_shas": [
               "db00a3ce28bcbafaa80829bc81dfa21534fcb0f3"
             ],
             "confidence": "high"
           },
           {
-            "text": "The standard consent-gated Report bug affordance now appears on the swarm agent VM error card and on connection-loss surfaces (ConnectionTaskbar and the AgentStatusBar Disconnected badge), matching the inline option already used for chat session issues.",
-            "commit_shas": [
-              "f3496c513fb617815f80d0b67e64520f262c9b90"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Changelog commit counts now load via a cached same-origin /api/public/commit-stats proxy that attaches an optional GITHUB_API_TOKEN (5000 req/hr) and caches aggregates for 30 minutes, replacing 14 unauthenticated browser requests per load that reliably hit GitHub's 60 req/hr cap and rendered 0.",
+            "text": "The /changelog commit-count card now hits a same-origin GET /api/public/commit-stats endpoint that fans out to GitHub with an optional GITHUB_API_TOKEN and caches the aggregate for 30 minutes, replacing 14 unauthenticated requests per cold load that reliably tripped GitHub's 60 req/hr/IP limit and rendered 0.",
             "commit_shas": [
               "a889c2523005b21cce86162c2f4e288e82f6def2"
             ],
             "confidence": "high"
           },
           {
-            "text": "Pricing page cleanup removed the Crusader plan and renamed Mortal to Free at $0/mo, with horizontal padding aligned to sibling marketing pages so the column width matches /feedback at every breakpoint.",
+            "text": "Sys-admin grants now flow from a SYS_ADMIN_EMAILS allowlist at session-build time, resolving the admin email from the typed login/register input, then JWT claims, then the zOS user response, with startup and per-session diagnostics so a missed match is visible in logs.",
+            "commit_shas": [
+              "7b5e6a681f88dfd4dcec557d24645d9eff4ccdb0",
+              "2d78b37a0c8b6d98c1502eb9287d97ba6b4da1b5"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The standard consent-gated Report bug affordance now appears on swarm agent VM errors and connection-loss surfaces (ConnectionTaskbar and the AgentStatusBar Disconnected badge), matching the inline button already used for chat session issues.",
+            "commit_shas": [
+              "f3496c513fb617815f80d0b67e64520f262c9b90"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The landing 'Your Private Agent.' tagline was iterated to track persona nav polarity (pure white on dark personas, dark on light), shrink 25% on responsive scales, and remain centered in the gap above the desktop widget at any aspect ratio via a measured CSS variable. The taskbar ticker also became a true vertical slide and split into separate floating pills next to the theme toggle.",
+            "commit_shas": [
+              "67922199325ca91a6dfd38bd46c0a9d9163b789a",
+              "b892373ae490ce3bad162eb12e963811b9d1d4f5",
+              "35acb3abde95186f1367485d85a0b5d8803eedaa",
+              "68cd7a79453185b23c23c1c87adfa523e604e0c8",
+              "d7c224c1cdc23858b8cd1892826274a828cf4bfd",
+              "2ab74287bf3bdb150d9f36d75f16e6b44215b49c",
+              "8d5b5f054a187420fbb9f6e1c55ea3b6f4fe800d",
+              "652569fd31a1fb5cbeabca4979e8d8273b95fd67",
+              "a1fc5f43037632a672aa180e2a20443edeebef2a",
+              "f38a15a8d482191d07962cba22c6d315df7a1f15"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Pricing page cleanup: removed the Crusader plan, renamed Mortal to Free at $0/mo, and flattened horizontal padding to match /feedback and /models so the 960px content column lines up across marketing pages.",
             "commit_shas": [
               "108ef6ef15d9ca2924805f264e1f5b2b74924c7f",
               "b9c13b1003f3ff11748f2b932280858b14ea26e4",
@@ -3880,10 +4203,9 @@
             "confidence": "high"
           },
           {
-            "text": "Selected taskbar and sidekick tab buttons now render in the theme accent color (including the drag overlay and the 'more' menu's selected items), and the THE GRID bolt icon gained a pulsing halo.",
+            "text": "The streaming 'Cooking' shimmer and stuck-stream pill now render above the input bar's top-fade gradient and accept clicks, so the Stop / Retry / Report controls are reachable mid-stream.",
             "commit_shas": [
-              "87a308b3537f03405404fcdbea071cfc7e135ca4",
-              "97a4c687c354f1f191176a894e306fc905fff190"
+              "ab5623d2937b4b3189b18bd9fc7512afe8eb511f"
             ],
             "confidence": "high"
           }
@@ -3891,12 +4213,13 @@
       }
     ],
     "highlights": [
-      "Per-model reasoning effort with credit multipliers in the picker",
-      "Session Cost panel with real provider rates",
-      "Private, consent-gated bug reports with admin triage and fix tasks",
-      "Public demo chat fixed to stream via aura-router",
-      "CI hardened against transient DNS flakes on self-hosted runners"
+      "Reasoning effort and credit multipliers in the model picker",
+      "New Session Cost panel with cache-accurate token math",
+      "Private bug reports: capture, consent, admin viewer, fix-task workflow",
+      "Public chat now streams via aura-router with no harness required",
+      "WS auth moved to single-use connect tickets, JWTs out of URLs",
+      "CI resilient to DNS blips on self-hosted runners"
     ],
-    "raw_commit_count": 75
+    "raw_commit_count": 81
   }
 }

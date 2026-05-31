@@ -2,20 +2,21 @@
   {
     "date": "2026-05-30",
     "channel": "nightly",
-    "version": "0.1.0-nightly.575.1",
-    "title": "Model picker overhaul, session cost, and a private bug-report pipeline",
-    "intro": "A heavy day across the chat surface and marketing site: the model picker gained credit multipliers, reasoning-effort tiers, and provider grouping; the Context popover now shows real session cost; and a new consent-gated bug-report flow ships end-to-end from the user's Report button into an admin viewer that can spawn fix-it tasks. Public chat was also rescued from a router-versus-harness mismatch that was breaking the demo on aura.ai.",
+    "version": "0.1.0-nightly.576.1",
+    "title": "Model picker controls, session cost visibility, and a private bug report pipeline",
+    "intro": "A heavy interface day for Aura: the chat model picker grew credit multipliers, reasoning-effort tiers, and per-provider grouping; a new Session Cost panel exposes what each conversation is actually billing; and an end-to-end private bug-report flow shipped with consent gating, an admin viewer, and a fix-task workflow. Public chat moved off the harness so aura.ai works without a sidecar, CI was hardened against flaky DNS on self-hosted runners, and WebSocket auth switched to short-lived tickets so JWTs stop landing in URLs.",
     "entryCount": 6,
     "highlights": [
-      "Per-model reasoning effort with credit multipliers in the picker",
-      "Session Cost panel with real provider rates",
-      "Private, consent-gated bug reports with admin triage and fix tasks",
-      "Public demo chat fixed to stream via aura-router",
-      "CI hardened against transient DNS flakes on self-hosted runners"
+      "Reasoning effort and credit multipliers in the model picker",
+      "New Session Cost panel with cache-accurate token math",
+      "Private bug reports: capture, consent, admin viewer, fix-task workflow",
+      "Public chat now streams via aura-router with no harness required",
+      "WS auth moved to single-use connect tickets, JWTs out of URLs",
+      "CI resilient to DNS blips on self-hosted runners"
     ],
-    "rawCommitCount": 78,
-    "generatedAt": "2026-05-31T00:49:16.500Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.575.1",
+    "rawCommitCount": 84,
+    "generatedAt": "2026-05-31T04:03:27.611Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.576.1",
     "path": "history/2026-05-30.json"
   },
   {
