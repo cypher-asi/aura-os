@@ -24,6 +24,7 @@ pub(crate) mod org_tools;
 pub(crate) mod orgs;
 pub(crate) mod permissions;
 pub(crate) mod plan_mode;
+pub(crate) mod preferences;
 pub(crate) mod process;
 pub(crate) mod project_artifacts;
 pub(crate) mod project_stats;
