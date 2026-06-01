@@ -35,15 +35,15 @@ export function syncPulseKeyframes(p: PulseConfig): void {
   100%    { background-color: var(--logo-pulse-from, white); }
 }
 @keyframes aura-logo-sweep {
-  0%      { clip-path: inset(0 100% 0 0); }
-  ${fi}%  { clip-path: inset(0 0% 0 0); }
-  ${pe}%  { clip-path: inset(0 0% 0 0); }
-  100%    { clip-path: inset(0 0 0 100%); }
+  0%      { background-position: 100% 0; }
+  ${fi}%  { background-position: 50% 0; }
+  ${pe}%  { background-position: 50% 0; }
+  100%    { background-position: 0% 0; }
 }
 @keyframes aura-logo-sweep-rev {
-  0%      { clip-path: inset(0 100% 0 0); }
-  ${fi}%  { clip-path: inset(0 0% 0 0); }
-  ${pe}%  { clip-path: inset(0 0% 0 0); }
-  100%    { clip-path: inset(0 100% 0 0); }
+  0%      { background-position: 0% 0; }
+  ${fi}%  { background-position: 50% 0; }
+  ${pe}%  { background-position: 50% 0; }
+  100%    { background-position: 100% 0; }
 }`;
 }
