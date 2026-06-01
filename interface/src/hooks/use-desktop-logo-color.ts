@@ -8,16 +8,6 @@ import { syncPulseKeyframes } from "./logo-pulse-keyframes";
 // so they're per-device and reset on a storage clear. Server-backed
 // cross-install persistence is intentionally out of scope here and can
 // be layered on later as a separate change.
-//
-// TODO(aura-logo titlebar integration): the wordmark render target,
-// DesktopShell/DesktopTitlebar.tsx, was deleted by the AuraShell
-// unification refactor. The wordmark now lives in
-// components/AuraShell/AuraTitlebar.tsx as a PNG `<img ... data-aura-wordmark>`.
-// Re-integration is a design decision (a PNG `<img>` can't be recolored
-// via the --desktop-logo-color CSS var the inline-SVG path relied on;
-// either swap to the inline SVG in public/AURA_logo_text_mark.svg, or
-// apply color via an SVG mask / CSS filter). Until then this feature is
-// settable + persisted locally but not yet visually applied.
 
 const STORAGE_KEY = "aura-desktop-preferences";
 const LEGACY_COLOR_KEY = "aura-desktop-logo-color";
@@ -50,7 +40,9 @@ function parseStored(): DesktopPrefsLocal {
     if (raw) return { ...DEFAULTS, ...JSON.parse(raw) };
     const legacy = localStorage.getItem(LEGACY_COLOR_KEY);
     if (legacy) return { ...DEFAULTS, color: legacy };
-  } catch {}
+  } catch {
+    // Unreadable storage (blocked or corrupt JSON) — fall through to defaults.
+  }
   return DEFAULTS;
 }
 
@@ -67,7 +59,9 @@ function writeLocal(next: DesktopPrefsLocal): void {
   syncPulseKeyframes(next);
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  } catch {}
+  } catch {
+    // Storage write blocked (private mode / quota) — prefs stay in-memory.
+  }
 }
 
 const listeners = new Set<() => void>();
