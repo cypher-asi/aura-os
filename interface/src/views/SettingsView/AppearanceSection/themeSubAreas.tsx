@@ -7,6 +7,7 @@ import {
   Sparkles,
   Zap,
   Image,
+  Signature,
   Bookmark,
   type LucideIcon,
 } from "lucide-react";
@@ -17,6 +18,7 @@ import { ColorsPane } from "./panes/ColorsPane";
 import { EffectsPane } from "./panes/EffectsPane";
 import { MotionPane } from "./panes/MotionPane";
 import { BackgroundPane } from "./panes/BackgroundPane";
+import { LogoPane } from "./panes/LogoPane";
 import { PresetsPane } from "./panes/PresetsPane";
 
 export type ThemeSubAreaId =
@@ -27,6 +29,7 @@ export type ThemeSubAreaId =
   | "effects"
   | "motion"
   | "background"
+  | "logo"
   | "presets";
 
 export type ThemeSubArea = {
@@ -59,6 +62,7 @@ export const THEME_SUB_AREAS: readonly ThemeSubArea[] = [
   { id: "effects", label: "Effects", group: "Customization", icon: Sparkles, Component: EffectsPane },
   { id: "motion", label: "Motion", group: "Customization", icon: Zap, Component: MotionPane },
   { id: "background", label: "Background", group: "Desktop", icon: Image, Component: BackgroundPane },
+  { id: "logo", label: "Aura logo", group: "Desktop", icon: Signature, Component: LogoPane },
   { id: "presets", label: "Presets", group: "Library", icon: Bookmark, Component: PresetsPane },
 ];
 
