@@ -31,6 +31,8 @@ export interface LeftMenuGroupEntry {
   toggleMode?: "activate" | "secondary";
   children: LeftMenuEntry[];
   emptyState?: LeftMenuEmptyEntry | null;
+  /** When set, children become drag-sortable and this callback fires with the new ordered child IDs. */
+  childReorder?: { onReorder: (orderedChildIds: string[]) => void };
   onActivate: () => void;
   onToggle?: () => void;
 }

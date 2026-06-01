@@ -8,6 +8,8 @@ import { buildLeftMenuEntries, useLeftMenuExpandedGroups } from "../../../../fea
 import type { ProjectExplorerNodeStyles } from "../../../../components/ProjectList/project-list-explorer-node";
 import { buildTasksExplorerNode } from "./tasks-project-list-explorer-node";
 import { useTasksProjectListEffects } from "./use-tasks-project-list-effects";
+import { useAgentStore } from "../../../../apps/agents/stores/agent-store";
+import { normalizeAgentOrder } from "../../../../apps/agents/stores";
 
 function useTaskAgentRegistration(
   agentsByProject: ReturnType<typeof useProjectListData>["agentsByProject"],
@@ -44,6 +46,28 @@ function useTaskExplorerData(
 ): ExplorerNode[] {
   const statusMap = useProfileStatusStore((s) => s.statuses);
   const machineTypesMap = useProfileStatusStore((s) => s.machineTypes);
+  const agentsAppOrder = useAgentStore((s) => s.agentOrderIds);
+  const projectsOrderMap = useAgentStore((s) => s.projectsAgentOrderIds);
+  const setProjectsAgentOrder = useAgentStore((s) => s.setProjectsAgentOrder);
+
+  const getAgentOrder = useCallback(
+    (projectId: string): string[] => projectsOrderMap?.[projectId] ?? agentsAppOrder,
+    [agentsAppOrder, projectsOrderMap],
+  );
+
+  const onTasksAgentReorder = useCallback(
+    (projectId: string, newProjectAgentIds: string[]) => {
+      const { projectsAgentOrderIds, agentOrderIds, agents } = useAgentStore.getState();
+      const currentOrder = projectsAgentOrderIds?.[projectId] ?? agentOrderIds;
+      const allAgentIds = agents.map((a) => a.agent_id);
+      const partialSet = new Set(newProjectAgentIds);
+      const remaining = normalizeAgentOrder(allAgentIds, currentOrder).filter(
+        (id) => !partialSet.has(id),
+      );
+      setProjectsAgentOrder(projectId, [...newProjectAgentIds, ...remaining]);
+    },
+    [setProjectsAgentOrder],
+  );
 
   return useMemo(
     () =>
@@ -56,9 +80,11 @@ function useTaskExplorerData(
             statusMap,
             machineTypesMap,
             explorerStyles,
+            getAgentOrder,
+            onTasksAgentReorder,
           ),
         ),
-    [data, explorerStyles, machineTypesMap, statusMap],
+    [data, explorerStyles, machineTypesMap, statusMap, getAgentOrder, onTasksAgentReorder],
   );
 }
 

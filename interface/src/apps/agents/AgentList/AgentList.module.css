@@ -87,6 +87,22 @@
   overflow-y: auto;
 }
 
+.sortableRow {
+  cursor: grab;
+  touch-action: none;
+}
+
+.sortableRow:active {
+  cursor: grabbing;
+}
+
+.sortableRowOverlay {
+  opacity: 0.85;
+  border-radius: 4px;
+  background: var(--color-overlay-subtle);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
 .contextMenuOverlay {
   position: fixed;
   z-index: 9999;

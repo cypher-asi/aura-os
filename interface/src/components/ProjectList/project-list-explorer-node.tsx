@@ -38,6 +38,10 @@ export interface ProjectExplorerBuildContext {
    */
   streamingAgentInstanceIds: string[];
   archivingAgentInstanceIds: string[];
+  /** Returns the resolved agent_id order for a specific project. */
+  getAgentOrder: (projectId: string) => string[];
+  /** Called when the user drags to reorder agents within a project. */
+  onProjectAgentReorder?: (projectId: string, orderedAgentIds: string[]) => void;
   handleQuickAddAgent: (projectId: string) => void;
   handleArchiveAgent: (agent: ProjectAgentNode) => void;
 }
@@ -208,9 +212,19 @@ function buildProjectChildren(
   // `crates/aura-os-agents/src/instance.rs`); without this filter
   // each click stacked another duplicate row in the project sidebar
   // because the ephemeral row clones the template's name verbatim.
-  const activeAgents = projectAgents.filter(
+  const rawActiveAgents = projectAgents.filter(
     (agent) => agent.status !== "archived" && isUserFacingAgentInstance(agent),
   );
+  // Then apply the user's per-project drag-order (unranked agents sort
+  // to the end, preserving their original relative order).
+  const orderIds = context.getAgentOrder(projectId);
+  const activeAgents = orderIds.length > 0
+    ? [...rawActiveAgents].sort((a, b) => {
+        const aIdx = orderIds.indexOf(a.agent_id);
+        const bIdx = orderIds.indexOf(b.agent_id);
+        return (aIdx === -1 ? Infinity : aIdx) - (bIdx === -1 ? Infinity : bIdx);
+      })
+    : rawActiveAgents;
 
   const children: ExplorerNode[] = [
     ...mobileChildren,
@@ -248,6 +262,17 @@ export function buildProjectExplorerNode(
   machineTypesMap: Record<string, string>,
   explorerStyles: ProjectExplorerNodeStyles,
 ): ExplorerNodeWithSuffix {
+  const projectAgents = context.agentsByProject[project.project_id] ?? [];
+  const instanceToAgentId = new Map(projectAgents.map((a) => [a.agent_instance_id, a.agent_id]));
+  const onChildReorder = context.onProjectAgentReorder
+    ? (orderedInstanceIds: string[]) => {
+        const orderedAgentIds = orderedInstanceIds
+          .map((id) => instanceToAgentId.get(id))
+          .filter((id): id is string => Boolean(id));
+        context.onProjectAgentReorder!(project.project_id, orderedAgentIds);
+      }
+    : undefined;
+
   return {
     id: project.project_id,
     label: project.name,
@@ -256,7 +281,7 @@ export function buildProjectExplorerNode(
       context,
       explorerStyles,
     ),
-    metadata: { type: "project" },
+    metadata: { type: "project", childDraggable: Boolean(onChildReorder), onChildReorder },
     children: buildProjectChildren(
       project.project_id,
       context,

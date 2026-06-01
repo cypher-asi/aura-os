@@ -98,6 +98,11 @@ function buildGroupEntry(
           ),
     );
 
+  const childReorderFn =
+    node.metadata?.childDraggable && typeof node.metadata?.onChildReorder === "function"
+      ? (node.metadata.onChildReorder as (orderedIds: string[]) => void)
+      : undefined;
+
   return {
     kind: "group",
     id: node.id,
@@ -110,6 +115,7 @@ function buildGroupEntry(
     toggleMode: options.groupToggleMode ?? "activate",
     children: childEntries,
     emptyState: buildEmptyEntry(emptyNode, options.emptyTestIdPrefix, node.id),
+    childReorder: childReorderFn ? { onReorder: childReorderFn } : undefined,
     onActivate: () => options.onGroupActivate(node.id),
     onToggle: options.onGroupToggle
       ? () => options.onGroupToggle?.(node.id)

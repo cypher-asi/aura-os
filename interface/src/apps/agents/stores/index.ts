@@ -8,5 +8,6 @@ export {
   useIsAgentPinned,
   useIsAgentFavorite,
   useFavoriteAgents,
+  normalizeAgentOrder,
 } from "./agent-selectors";
 export { LAST_AGENT_ID_KEY, getLastSelectedAgentId } from "./last-selected-agent";

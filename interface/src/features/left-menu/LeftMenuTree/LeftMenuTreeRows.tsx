@@ -2,8 +2,27 @@ import {
   type KeyboardEvent,
   type MouseEvent,
   type PointerEvent as ReactPointerEvent,
+  useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { ChevronRight } from "lucide-react";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import type {
   LeftMenuEmptyEntry,
   LeftMenuEntry,
@@ -66,6 +85,28 @@ function LeftMenuLeafRow({
   );
 }
 
+function SortableChildRow({ entry, depth }: { entry: LeftMenuEntry; depth: number }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: entry.id,
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0 : 1,
+        cursor: "grab",
+        touchAction: "none",
+      }}
+      {...attributes}
+      {...listeners}
+    >
+      <LeftMenuEntryRow entry={entry} depth={depth} />
+    </div>
+  );
+}
+
 function LeftMenuGroup({
   entry,
   depth,
@@ -75,6 +116,8 @@ function LeftMenuGroup({
   depth: number;
   rootReorderState?: RootReorderState;
 }) {
+  const [activeChildId, setActiveChildId] = useState<string | null>(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const isSection = entry.variant === "section";
   const isRootDraggable =
     depth === 0 && !isSection && rootReorderState?.draggableIds.has(entry.id);
@@ -165,6 +208,48 @@ function LeftMenuGroup({
         <div className={styles.childrenList} role="group">
           {entry.emptyState ? (
             <LeftMenuEmptyStateRow entry={entry.emptyState} />
+          ) : entry.childReorder && entry.children.length > 1 ? (
+            (() => {
+              const childIds = entry.children.map((c) => c.id);
+              const activeEntry = activeChildId
+                ? entry.children.find((c) => c.id === activeChildId) ?? null
+                : null;
+              const handleDragEnd = (event: DragEndEvent) => {
+                const { active, over } = event;
+                setActiveChildId(null);
+                if (!over || active.id === over.id) return;
+                const oldIndex = childIds.indexOf(String(active.id));
+                const newIndex = childIds.indexOf(String(over.id));
+                if (oldIndex === -1 || newIndex === -1) return;
+                entry.childReorder!.onReorder(arrayMove(childIds, oldIndex, newIndex));
+              };
+              return (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  modifiers={[restrictToVerticalAxis]}
+                  onDragStart={(e) => setActiveChildId(String(e.active.id))}
+                  onDragEnd={handleDragEnd}
+                  onDragCancel={() => setActiveChildId(null)}
+                >
+                  <SortableContext items={childIds} strategy={verticalListSortingStrategy}>
+                    {entry.children.map((childEntry) => (
+                      <SortableChildRow key={childEntry.id} entry={childEntry} depth={depth + 1} />
+                    ))}
+                  </SortableContext>
+                  {createPortal(
+                    <DragOverlay>
+                      {activeEntry ? (
+                        <div style={{ opacity: 0.85, background: "var(--color-overlay-subtle)", borderRadius: 4, boxShadow: "0 4px 16px rgba(0,0,0,0.3)" }}>
+                          <LeftMenuEntryRow entry={activeEntry} depth={depth + 1} />
+                        </div>
+                      ) : null}
+                    </DragOverlay>,
+                    document.body,
+                  )}
+                </DndContext>
+              );
+            })()
           ) : (
             entry.children.map((childEntry) => (
               <LeftMenuEntryRow key={childEntry.id} entry={childEntry} depth={depth + 1} />

@@ -25,6 +25,9 @@ type PersistedAgentState = {
   selectedAgentId: string | null;
   pinnedAgentIds: string[];
   favoriteAgentIds: string[];
+  agentOrderIds: string[];
+  /** project_id → ordered agent_id list. Shared by Projects and Tasks surfaces. null = no overrides. */
+  projectsAgentOrderIds: Record<string, string[]> | null;
 };
 
 const PINNED_KEY = "aura:pinnedAgentIds";
@@ -54,6 +57,11 @@ type AgentState = {
   pinnedAgentIds: Set<string>;
   favoriteAgentIds: Set<string>;
 
+  /** Explicit display order for the Agents app sidebar (agent IDs in order). */
+  agentOrderIds: string[];
+  /** Per-project overrides shared by both Projects and Tasks surfaces. null = no customisation. */
+  projectsAgentOrderIds: Record<string, string[]> | null;
+
   createAgentModalOpen: boolean;
   openCreateAgentModal: () => void;
   closeCreateAgentModal: () => void;
@@ -67,6 +75,8 @@ type AgentState = {
   setSelectedAgent: (agentId: string | null) => void;
   togglePin: (agentId: string) => void;
   toggleFavorite: (agentId: string) => void;
+  setAgentOrder: (ids: string[]) => void;
+  setProjectsAgentOrder: (projectId: string, ids: string[]) => void;
 };
 
 const HISTORY_TTL_MS = 30_000;
@@ -124,6 +134,9 @@ async function hydratePersistedAgentState(userId: string): Promise<void> {
     selectedAgentId: cached.selectedAgentId,
     pinnedAgentIds: new Set(cached.pinnedAgentIds),
     favoriteAgentIds: new Set(cached.favoriteAgentIds),
+    agentOrderIds: cached.agentOrderIds ?? [],
+    // Discard old flat-array format from before the per-project migration.
+    projectsAgentOrderIds: Array.isArray(cached.projectsAgentOrderIds) ? null : (cached.projectsAgentOrderIds ?? null),
   });
 }
 
@@ -141,6 +154,8 @@ export const useAgentStore = create<AgentState>()(
       selectedAgentId: null,
       pinnedAgentIds: readIdSet(PINNED_KEY),
       favoriteAgentIds: readIdSet(FAVORITE_KEY),
+      agentOrderIds: [],
+      projectsAgentOrderIds: null,
 
       createAgentModalOpen: false,
       openCreateAgentModal: () => set({ createAgentModalOpen: true }),
@@ -380,6 +395,17 @@ export const useAgentStore = create<AgentState>()(
           return { favoriteAgentIds: next };
         });
       },
+
+      setAgentOrder: (ids): void => {
+        // Persisted locally via the IndexedDB subscription below.
+        set({ agentOrderIds: ids });
+      },
+
+      setProjectsAgentOrder: (projectId, ids): void => {
+        set((s) => ({
+          projectsAgentOrderIds: { ...(s.projectsAgentOrderIds ?? {}), [projectId]: ids },
+        }));
+      },
     };
   }),
 );
@@ -400,6 +426,8 @@ useAuthStore.subscribe((state) => {
       selectedAgentId: null,
       pinnedAgentIds: new Set(),
       favoriteAgentIds: new Set(),
+      agentOrderIds: [],
+      projectsAgentOrderIds: null,
     });
     return;
   }
@@ -419,5 +447,7 @@ useAgentStore.subscribe((state) => {
     selectedAgentId: state.selectedAgentId,
     pinnedAgentIds: [...state.pinnedAgentIds],
     favoriteAgentIds: [...state.favoriteAgentIds],
+    agentOrderIds: state.agentOrderIds,
+    projectsAgentOrderIds: state.projectsAgentOrderIds,
   });
 });

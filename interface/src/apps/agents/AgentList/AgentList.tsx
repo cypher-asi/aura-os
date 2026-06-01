@@ -1,18 +1,32 @@
 import { useMemo, useCallback, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import {
+  SortableContext,
+  arrayMove,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Menu } from "@cypher-asi/zui";
-import type { MenuItem } from "@cypher-asi/zui";
-import { Pencil, Pin, PinOff, Star, StarOff, Trash2 } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import { AgentEditorModal } from "../components/AgentEditorModal";
 import { ProjectsPlusButton } from "../../../components/ProjectsPlusButton";
 import { AgentConversationRow } from "../AgentConversationRow";
+import { AgentConversationRowWithHistory, SortableAgentConversationRow } from "./SortableAgentRow";
+import { useAgentPrefetch } from "./useAgentPrefetch";
+import { useAgentContextMenu } from "./useAgentContextMenu";
+import { buildAgentMenuItems, pickReplacementAgentId } from "./agent-list-menu-items";
 import { useProfileStatusStore } from "../../../stores/profile-status-store";
-import {
-  api,
-  STANDALONE_AGENT_HISTORY_LIMIT,
-} from "../../../api/client";
 import {
   useAgents,
   useSelectedAgent,
@@ -21,112 +35,19 @@ import {
 } from "../stores";
 import { useAuth } from "../../../stores/auth-store";
 import { useChatHandoffStore } from "../../../stores/chat-handoff-store";
-import { useChatHistoryStore, agentHistoryKey, sessionHistoryKey } from "../../../stores/chat-history-store";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
-import {
-  agentSessionsSurfaceKey,
-  findMostRecentRealSession,
-  useSessionsListStore,
-} from "../../../stores/sessions-list-store";
 import { useSidebarSearch } from "../../../hooks/use-sidebar-search";
 import { useOverlayScrollbar } from "../../../shared/hooks/use-overlay-scrollbar";
 import { createAgentChatHandoffState } from "../../../utils/chat-handoff";
 import { standaloneAgentHandoffTarget } from "../../../utils/chat-handoff";
-import { useCascadeDeleteAgent } from "../hooks/use-cascade-delete-agent";
 import { DeleteAgentConfirmModal } from "../hooks/DeleteAgentConfirmModal";
-import { useDeferredModalOpen } from "../../../shared/hooks/use-deferred-modal-open";
 import { agentDisplayName } from "../../../lib/derive-project-agent-title";
 
 import type { Agent } from "../../../shared/types";
-import { isSuperAgent as isSuperAgentByPerms } from "../../../shared/types/permissions";
 import styles from "./AgentList.module.css";
-
-function buildAgentMenuItems(
-  agent: Agent,
-  pinnedIds: Set<string>,
-  favoriteIds: Set<string>,
-  isOwnAgent: boolean,
-): MenuItem[] {
-  const isSuperAgent = isSuperAgentByPerms(agent);
-  const isPinned = agent.is_pinned || pinnedIds.has(agent.agent_id);
-  const isFavorite = favoriteIds.has(agent.agent_id);
-  const items: MenuItem[] = [];
-
-  if (isOwnAgent) {
-    items.push({ id: "edit", label: "Edit", icon: <Pencil size={14} /> });
-  }
-
-  if (!isSuperAgent) {
-    items.push(
-      isPinned
-        ? { id: "unpin", label: "Unpin", icon: <PinOff size={14} /> }
-        : { id: "pin", label: "Pin to top", icon: <Pin size={14} /> },
-    );
-  }
-
-  items.push(
-    isFavorite
-      ? { id: "unfavorite", label: "Remove from taskbar", icon: <StarOff size={14} /> }
-      : { id: "favorite", label: "Add to taskbar", icon: <Star size={14} /> },
-  );
-
-  if (!isSuperAgent) {
-    items.push({ id: "delete", label: "Delete", icon: <Trash2 size={14} /> });
-  }
-
-  return items;
-}
-
-function pickReplacementAgentId(agents: Agent[], deletedAgentId: string): string | null {
-  const index = agents.findIndex((agent) => agent.agent_id === deletedAgentId);
-  if (index === -1) {
-    return agents[0]?.agent_id ?? null;
-  }
-
-  return agents[index + 1]?.agent_id ?? agents[index - 1]?.agent_id ?? null;
-}
-
-interface CtxMenuState {
-  x: number;
-  y: number;
-  agent: Agent;
-}
 
 interface AgentListProps {
   mode?: "default" | "responsive-controls" | "mobile-library";
-}
-
-function AgentConversationRowWithHistory({
-  agent,
-  isMobileLibrary,
-  isSelected,
-  onClick,
-  onContextMenu,
-  onMouseEnter,
-}: {
-  agent: Agent;
-  isMobileLibrary: boolean;
-  isSelected: boolean;
-  onClick: () => void;
-  onContextMenu: (e: React.MouseEvent) => void;
-  onMouseEnter: () => void;
-}) {
-  const lastMessage = useChatHistoryStore((state) => {
-    if (isMobileLibrary) return undefined;
-    return state.previewLastMessages[agentHistoryKey(agent.agent_id)];
-  });
-
-  return (
-    <AgentConversationRow
-      agent={agent}
-      lastMessage={lastMessage}
-      showMetadataOnly={isMobileLibrary}
-      isSelected={isSelected}
-      onClick={onClick}
-      onContextMenu={onContextMenu}
-      onMouseEnter={onMouseEnter}
-    />
-  );
 }
 
 export function AgentList({ mode = "default" }: AgentListProps) {
@@ -153,8 +74,6 @@ export function AgentList({ mode = "default" }: AgentListProps) {
   const pendingCreateAgentHandoff = useChatHandoffStore((state) => state.pendingCreateAgentHandoff);
   const beginCreateAgentHandoff = useChatHandoffStore((state) => state.beginCreateAgentHandoff);
 
-  // Desktop/tablet: `AgentMainPanel` loads the agent list. Mobile standalone library (`/agents`)
-  // renders this list without the main panel — fetch here only in that mode.
   useEffect(() => {
     if (!isMobileLibrary) return;
     void fetchAgents().catch(() => {});
@@ -177,20 +96,8 @@ export function AgentList({ mode = "default" }: AgentListProps) {
     setPendingCreatedAgentId(null);
   }, [pendingCreateAgentHandoff, pendingCreatedAgentId]);
 
-  const [ctxMenu, setCtxMenu] = useState<CtxMenuState | null>(null);
-  const ctxMenuRef = useRef<HTMLDivElement>(null);
-  const [editTarget, setEditTarget] = useState<Agent | null>(null);
   const { user } = useAuth();
-  const [deleteTarget, setDeleteTarget] = useState<Agent | null>(null);
   const [optimisticDeletedAgentId, setOptimisticDeletedAgentId] = useState<string | null>(null);
-  const cascade = useCascadeDeleteAgent(deleteTarget);
-  // Defer opening the confirm modal until bindings have loaded so the
-  // modal opens once at its final size (footer button label depends on
-  // bindings.length; without this it widens mid-render).
-  const { isOpen: deleteModalOpen } = useDeferredModalOpen({
-    requestedOpen: !!deleteTarget,
-    prepare: () => cascade.refresh(),
-  });
   const scrollRef = useRef<HTMLDivElement>(null);
   const { thumbStyle, visible, onThumbPointerDown } = useOverlayScrollbar(scrollRef);
 
@@ -207,23 +114,20 @@ export function AgentList({ mode = "default" }: AgentListProps) {
     [agents],
   );
 
-  useEffect(() => {
-    if (!ctxMenu) return;
-    const handleMouseDown = (e: MouseEvent) => {
-      if (ctxMenuRef.current && !ctxMenuRef.current.contains(e.target as Node)) {
-        setCtxMenu(null);
-      }
-    };
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setCtxMenu(null);
-    };
-    document.addEventListener("mousedown", handleMouseDown);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleMouseDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [ctxMenu]);
+  const {
+    ctxMenu,
+    ctxMenuRef,
+    editTarget,
+    setEditTarget,
+    deleteTarget,
+    setDeleteTarget,
+    deleteModalOpen,
+    cascade,
+    pinnedIds,
+    favoriteIds,
+    handleContextMenu,
+    handleMenuAction,
+  } = useAgentContextMenu(agentMap);
 
   const handleAgentSaved = useCallback(
     (agent: Agent) => {
@@ -249,188 +153,18 @@ export function AgentList({ mode = "default" }: AgentListProps) {
     navigate(`/agents/${selectedAgentId}`);
   }, [agentId, navigate]);
 
-  // Pre-warm the chat-history-store entry for the most-recent session
-  // of `selectedAgentId`, which is the slot `AgentChatPanel`
-  // mounts on top of after `useDefaultStandaloneSessionRedirect` rewrites
-  // the URL with `?project=&instance=&session=`. Without this, the
-  // destination historyKey is `idle` at click time, `historyResolved`
-  // flips false on the first render, and `ChatPanel`'s cold-load gate
-  // re-arms — `.messageContentHidden` (`visibility: hidden`) is then
-  // applied across the message area for ~2 frames + a 120ms overlay
-  // fade, the user-visible "messages flicker on agent switch".
-  //
-  // Calls `loadAgentSessions` (idempotent — guarded by per-surface
-  // request ids) to discover the agent's bindings + sessions, then
-  // resolves the most-recent session synchronously off the store and
-  // calls `fetchHistory` (not `prefetchHistory`) so the entry lands in
-  // `useChatHistoryStore.entries` with `status: "ready"` — that is the
-  // store the panel reads, not the React Query cache `prefetchHistory`
-  // populates.
-  const warmDestinationSessionForAgent = useCallback((selectedAgentId: string) => {
-    const sessionsStore = useSessionsListStore.getState();
-    const surfaceKey = agentSessionsSurfaceKey(selectedAgentId);
-    const tryWarmFromCurrentSnapshot = () => {
-      const list = useSessionsListStore.getState().sessionsBySurface[surfaceKey];
-      if (!list || list.length === 0) return;
-      const mostRecent = findMostRecentRealSession(list);
-      if (!mostRecent) return;
-      const key = sessionHistoryKey(
-        mostRecent._projectId,
-        mostRecent._agentInstanceId,
-        mostRecent.session_id,
-      );
-      void useChatHistoryStore.getState().fetchHistory(
-        key,
-        () =>
-          api.listSessionEvents(
-            mostRecent._projectId,
-            mostRecent._agentInstanceId,
-            mostRecent.session_id,
-          ),
-      );
-    };
-    // If sessions are already loaded for this surface, warm immediately.
-    if (sessionsStore.sessionsBySurface[surfaceKey] !== undefined) {
-      tryWarmFromCurrentSnapshot();
-      return;
-    }
-    // Otherwise kick off the load and warm once it lands. The store
-    // dedupes concurrent loaders via per-surface request ids so the
-    // hover-then-mount-worker overlap stays cheap.
-    void sessionsStore.loadAgentSessions(selectedAgentId).then(() => {
-      tryWarmFromCurrentSnapshot();
-    });
-  }, []);
-
-  const handleHoverPrefetch = useCallback((selectedAgentId: string) => {
-    if (isMobileLibrary) return;
-    useChatHistoryStore.getState().prefetchHistory(
-      agentHistoryKey(selectedAgentId),
-      () =>
-        api.agents.listEvents(selectedAgentId, {
-          limit: STANDALONE_AGENT_HISTORY_LIMIT,
-        }),
-    );
-    warmDestinationSessionForAgent(selectedAgentId);
-  }, [isMobileLibrary, warmDestinationSessionForAgent]);
-
-  // Prefetch last-message previews for the OTHER agents in the sidebar so
-  // each row can render a recent-message snippet. Excludes the currently
-  // selected agent because `AgentChatRoute` is already fetching that one —
-  // queuing it here would just put the foreground request at the back of
-  // the line on cold boot. The currently-selected fetch also gates our
-  // start so the active chat's history round-trip doesn't contend with
-  // preview prefetches for every other agent.
-  const prefetchAgentIds = useMemo(() => {
-    if (!isDesktopSidebar) return [];
-    return agents.map((a) => a.agent_id).filter((id) => id !== agentId);
-  }, [agents, isDesktopSidebar, agentId]);
-
-  const activeHistoryResolved = useChatHistoryStore((s) => {
-    if (!isDesktopSidebar || !agentId) return true;
-    const entry = s.entries[agentHistoryKey(agentId)];
-    return entry?.status === "ready" || entry?.status === "error";
+  const { handleHoverPrefetch } = useAgentPrefetch({
+    agents,
+    agentId,
+    isMobileLibrary,
+    isDesktopSidebar,
   });
 
-  useEffect(() => {
-    if (prefetchAgentIds.length === 0) return;
-    if (!activeHistoryResolved) return;
-    // Small concurrency gate + idle scheduling so the foreground chat has
-    // finished loading before we spray the storage backend with preview
-    // fetches for every other agent. The chat-history store TTL-caches,
-    // so repeats are cheap.
-    const CONCURRENCY = 2;
-    let cancelled = false;
-    const queue = [...prefetchAgentIds];
-    const runWhenIdle = (cb: () => void) => {
-      const ric = (
-        window as unknown as {
-          requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-        }
-      ).requestIdleCallback;
-      if (typeof ric === "function") {
-        ric(cb, { timeout: 500 });
-      } else {
-        setTimeout(cb, 0);
-      }
-    };
-    const worker = async () => {
-      while (!cancelled && queue.length > 0) {
-        const id = queue.shift();
-        if (!id) break;
-        try {
-          await useChatHistoryStore.getState().fetchHistory(
-            agentHistoryKey(id),
-            () =>
-              api.agents.listEvents(id, {
-                limit: STANDALONE_AGENT_HISTORY_LIMIT,
-              }),
-          );
-        } catch {
-          // errors are stored on the history entry; keep draining the queue
-        }
-        if (cancelled) break;
-        // Also warm the most-recent project session for this agent so
-        // clicking it lands on a `historyResolved=true` first render and
-        // skips the cold-load reveal cycle. Best-effort; failures are
-        // already absorbed by the loader and `fetchHistory`.
-        warmDestinationSessionForAgent(id);
-      }
-    };
-    runWhenIdle(() => {
-      if (cancelled) return;
-      const workers = Array.from(
-        { length: Math.min(CONCURRENCY, prefetchAgentIds.length) },
-        () => worker(),
-      );
-      void Promise.all(workers);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [prefetchAgentIds, activeHistoryResolved, warmDestinationSessionForAgent]);
+  const setAgentOrder = useAgentStore((s) => s.setAgentOrder);
+  const [activeAgentId, setActiveAgentId] = useState<string | null>(null);
 
-  const handleContextMenu = useCallback(
-    (e: React.MouseEvent) => {
-      const target = (e.target as HTMLElement).closest("button[id]");
-      if (!target) return;
-      const agent = agentMap.get(target.id);
-      if (agent) {
-        e.preventDefault();
-        setCtxMenu({ x: e.clientX, y: e.clientY, agent });
-      }
-    },
-    [agentMap],
-  );
-
-  const togglePin = useAgentStore((s) => s.togglePin);
-  const toggleFavorite = useAgentStore((s) => s.toggleFavorite);
-  const pinnedIds = useAgentStore((s) => s.pinnedAgentIds);
-  const favoriteIds = useAgentStore((s) => s.favoriteAgentIds);
-
-  const handleMenuAction = useCallback(
-    (actionId: string) => {
-      if (!ctxMenu) return;
-      switch (actionId) {
-        case "edit":
-          setEditTarget(ctxMenu.agent);
-          break;
-        case "pin":
-        case "unpin":
-          togglePin(ctxMenu.agent.agent_id);
-          break;
-        case "favorite":
-        case "unfavorite":
-          toggleFavorite(ctxMenu.agent.agent_id);
-          break;
-        case "delete":
-          setDeleteTarget(ctxMenu.agent);
-          cascade.reset();
-          break;
-      }
-      setCtxMenu(null);
-    },
-    [cascade, ctxMenu, togglePin, toggleFavorite],
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
 
   const sortedAgents = useSortedAgents();
@@ -458,6 +192,24 @@ export function AgentList({ mode = "default" }: AgentListProps) {
     });
   }, [visibleSortedAgents, searchQuery]);
 
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveAgentId(String(event.active.id));
+  }, []);
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      setActiveAgentId(null);
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      const currentIds = visibleSortedAgents.map((a) => a.agent_id);
+      const fromIndex = currentIds.indexOf(String(active.id));
+      const toIndex = currentIds.indexOf(String(over.id));
+      if (fromIndex === -1 || toIndex === -1) return;
+      setAgentOrder(arrayMove(currentIds, fromIndex, toIndex));
+    },
+    [visibleSortedAgents, setAgentOrder],
+  );
+
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
     const target = deleteTarget;
@@ -479,13 +231,11 @@ export function AgentList({ mode = "default" }: AgentListProps) {
       setOptimisticDeletedAgentId(null);
       setDeleteTarget(null);
     } catch {
-      // Restore the row in the sidebar so the user can retry.
       setOptimisticDeletedAgentId(null);
       if (deletingSelectedAgent) {
         setSelectedAgent(target.agent_id);
         navigate(`/agents/${target.agent_id}`);
       }
-      // Keep `deleteTarget` set so the modal stays open with `cascade.error` rendered.
     }
   }, [agentId, cascade, deleteTarget, filteredAgents, navigate, setSelectedAgent, sortedAgents]);
 
@@ -504,17 +254,35 @@ export function AgentList({ mode = "default" }: AgentListProps) {
     );
   }
 
-  const entries = filteredAgents.map((agent) => (
-    <AgentConversationRowWithHistory
-      key={agent.agent_id}
-      agent={agent}
-      isMobileLibrary={isMobileLibrary}
-      isSelected={agent.agent_id === agentId}
-      onClick={() => handleAgentRowClick(agent.agent_id)}
-      onContextMenu={handleContextMenu}
-      onMouseEnter={() => handleHoverPrefetch(agent.agent_id)}
-    />
-  ));
+  const isDraggable = isDesktopSidebar && !searchQuery;
+  const activeAgent = activeAgentId ? agentMap.get(activeAgentId) ?? null : null;
+  const rowAgents = isDraggable ? visibleSortedAgents : filteredAgents;
+
+  const entries = rowAgents.map((agent) =>
+    isDraggable ? (
+      <SortableAgentConversationRow
+        key={agent.agent_id}
+        agent={agent}
+        isMobileLibrary={isMobileLibrary}
+        isSelected={agent.agent_id === agentId}
+        onClick={() => handleAgentRowClick(agent.agent_id)}
+        onContextMenu={handleContextMenu}
+        onMouseEnter={() => handleHoverPrefetch(agent.agent_id)}
+      />
+    ) : (
+      <AgentConversationRowWithHistory
+        key={agent.agent_id}
+        agent={agent}
+        isMobileLibrary={isMobileLibrary}
+        isSelected={agent.agent_id === agentId}
+        onClick={() => handleAgentRowClick(agent.agent_id)}
+        onContextMenu={handleContextMenu}
+        onMouseEnter={() => handleHoverPrefetch(agent.agent_id)}
+      />
+    ),
+  );
+
+  const sortableIds = rowAgents.map((a) => a.agent_id);
 
   return (
     <>
@@ -524,20 +292,47 @@ export function AgentList({ mode = "default" }: AgentListProps) {
           data-agent-surface="agent-list"
           data-agent-mode={mode}
         >
-          <div
-            ref={scrollRef}
-            className={styles.sidebarScrollArea}
-            onContextMenu={handleContextMenu}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            modifiers={[restrictToVerticalAxis]}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            onDragCancel={() => setActiveAgentId(null)}
           >
-            <div className={styles.sidebarEntries}>{entries}</div>
-          </div>
-          <div className={styles.scrollTrack}>
             <div
-              className={`${styles.scrollThumb} ${visible ? styles.scrollThumbVisible : ""}`}
-              style={thumbStyle}
-              onPointerDown={onThumbPointerDown}
-            />
-          </div>
+              ref={scrollRef}
+              className={styles.sidebarScrollArea}
+              onContextMenu={handleContextMenu}
+            >
+              <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+                <div className={styles.sidebarEntries}>{entries}</div>
+              </SortableContext>
+            </div>
+            <div className={styles.scrollTrack}>
+              <div
+                className={`${styles.scrollThumb} ${visible ? styles.scrollThumbVisible : ""}`}
+                style={thumbStyle}
+                onPointerDown={onThumbPointerDown}
+              />
+            </div>
+            {activeAgent &&
+              createPortal(
+                <DragOverlay dropAnimation={null} style={{ zIndex: 9998 }}>
+                  <div className={styles.sortableRowOverlay}>
+                    <AgentConversationRow
+                      agent={activeAgent}
+                      lastMessage={undefined}
+                      isSelected={activeAgent.agent_id === agentId}
+                      onClick={() => {}}
+                      onContextMenu={() => {}}
+                      onMouseEnter={() => {}}
+                    />
+                  </div>
+                </DragOverlay>,
+                document.body,
+              )}
+          </DndContext>
         </div>
       ) : (
         <div
@@ -606,11 +401,6 @@ export function AgentList({ mode = "default" }: AgentListProps) {
           const projectsStore = useProjectsListStore.getState();
           useAgentStore.getState().patchAgent(updated);
           projectsStore.patchAgentTemplateFields(updated);
-          // The agent template's `local_workspace_path` flows into every
-          // project instance's `workspace_path` via `resolve_workspace_path`
-          // on the server. Refresh the agent caches for each project
-          // hosting an instance so the env-overlay's "Workspace Folder"
-          // row picks up the new path without requiring a manual reload.
           projectsStore.refreshAgentInstancesForTemplate(updated.agent_id);
           void fetchAgents({ force: true });
           setEditTarget(null);

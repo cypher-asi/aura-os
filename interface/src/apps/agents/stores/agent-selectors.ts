@@ -63,19 +63,50 @@ export function useSelectedAgent(): SelectedAgentSlice {
   );
 }
 
-/** Agents sorted by pinned first, then most-recent updates. */
+/**
+ * Returns agents in the order defined by normalizeAgentOrder:
+ * - When a custom drag order exists, agents appear in that order (unordered
+ *   ones appended at the end).
+ * - When no custom order is set, falls back to pinned-first then updated_at.
+ */
 export function useSortedAgents(): Agent[] {
   const agents = useAgentStore((s) => s.agents);
   const pinnedIds = useAgentStore((s) => s.pinnedAgentIds);
+  const orderIds = useAgentStore((s) => s.agentOrderIds);
   return useMemo(() => {
+    if (orderIds.length > 0) {
+      const agentById = new Map(agents.map((a) => [a.agent_id, a]));
+      const ordered = normalizeAgentOrder(
+        agents.map((a) => a.agent_id),
+        orderIds,
+      );
+      return ordered.map((id) => agentById.get(id)).filter((a): a is Agent => !!a);
+    }
     return [...agents].sort((a, b) => {
       const aPinned = a.is_pinned || pinnedIds.has(a.agent_id);
       const bPinned = b.is_pinned || pinnedIds.has(b.agent_id);
       if (aPinned !== bPinned) return aPinned ? -1 : 1;
       return b.updated_at.localeCompare(a.updated_at);
     });
-  }, [agents, pinnedIds]);
+  }, [agents, pinnedIds, orderIds]);
 }
+
+/**
+ * Filters the ordered IDs to only include known agents, then appends any
+ * agents not yet in the order at the end. Equivalent to normalizeProjectOrderIds.
+ */
+export function normalizeAgentOrder(
+  allAgentIds: string[],
+  orderedIds: string[],
+): string[] {
+  const available = new Set(allAgentIds);
+  const filtered = orderedIds.filter((id) => available.has(id));
+  const filteredSet = new Set(filtered);
+  const remaining = allAgentIds.filter((id) => !filteredSet.has(id));
+  return [...filtered, ...remaining];
+}
+
+
 
 export function useSuperAgent(): Agent | null {
   return useAgentStore((s) => s.agents.find((a) => isSuperAgent(a)) ?? null);
