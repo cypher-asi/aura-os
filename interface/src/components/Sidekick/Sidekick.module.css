@@ -53,7 +53,7 @@
 }
 
 .sidekickTabBar button:not(:disabled)[aria-pressed="true"] {
-  color: var(--color-accent);
+  color: var(--color-icon-selected, var(--color-accent));
 }
 
 .sidekickTabBar button:focus-visible {

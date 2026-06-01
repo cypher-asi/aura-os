@@ -77,6 +77,10 @@ describe("theme-overrides", () => {
     it("includes --color-modal-bg so the dual-mode editor can target it", () => {
       expect(EDITABLE_TOKENS).toContain("--color-modal-bg");
     });
+
+    it("includes --color-icon-selected so the selected-icon accent is editable", () => {
+      expect(EDITABLE_TOKENS).toContain("--color-icon-selected");
+    });
   });
 
   describe("applyOverridesToDocument", () => {

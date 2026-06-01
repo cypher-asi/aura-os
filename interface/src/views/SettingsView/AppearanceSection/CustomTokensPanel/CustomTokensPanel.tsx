@@ -19,6 +19,7 @@ const TOKEN_LABELS: Record<EditableToken, string> = {
   "--color-titlebar-bg": "Titlebar background",
   "--color-accent": "Accent",
   "--color-modal-bg": "Modal background",
+  "--color-icon-selected": "Selected icon",
 };
 
 /**
