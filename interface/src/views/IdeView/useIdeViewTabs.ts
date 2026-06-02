@@ -105,9 +105,16 @@ export function useIdeViewTabs(initialFile: string, remoteAgentId?: string) {
 
   const lineCount = activeTab?.content ? activeTab.content.split("\n").length : 0;
 
+  const createFile = useCallback(async (filePath: string) => {
+    const res = await api.createFile(filePath);
+    if (!res.ok) return res.error ?? "Failed to create file";
+    openTab(filePath);
+    return null;
+  }, [openTab]);
+
   return {
     tabs, activeTab, activeTabPath, setActiveTabPath,
-    openTab, closeTab,
+    openTab, closeTab, createFile,
     saving, saveError, dirty, language,
     handleContentChange, handleSave,
     textareaRef, gutterRef, highlightRef,

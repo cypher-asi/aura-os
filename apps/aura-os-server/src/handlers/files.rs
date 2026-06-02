@@ -177,6 +177,41 @@ pub(crate) async fn read_file(Json(req): Json<ReadFileRequest>) -> Json<serde_js
     }
 }
 
+#[derive(serde::Deserialize)]
+pub(crate) struct CreateFileRequest {
+    path: String,
+    #[serde(default)]
+    content: String,
+}
+
+pub(crate) async fn create_file(Json(req): Json<CreateFileRequest>) -> Json<serde_json::Value> {
+    if !is_path_safe(&req.path) {
+        warn!(path = %req.path, "create_file: blocked unsafe path");
+        return Json(serde_json::json!({ "ok": false, "error": "access denied" }));
+    }
+    let target = std::path::Path::new(&req.path);
+    if tokio::fs::try_exists(target).await.unwrap_or(false) {
+        warn!(path = %req.path, "create_file: file already exists");
+        return Json(serde_json::json!({ "ok": false, "error": "file already exists" }));
+    }
+    if let Some(parent) = target.parent() {
+        if let Err(e) = tokio::fs::create_dir_all(parent).await {
+            warn!(path = %req.path, error = %e, "create_file: failed to create parent directories");
+            return Json(serde_json::json!({ "ok": false, "error": e.to_string() }));
+        }
+    }
+    match tokio::fs::write(&req.path, &req.content).await {
+        Ok(_) => {
+            debug!(path = %req.path, "created file");
+            Json(serde_json::json!({ "ok": true, "path": req.path }))
+        }
+        Err(e) => {
+            warn!(path = %req.path, error = %e, "failed to create file");
+            Json(serde_json::json!({ "ok": false, "error": e.to_string() }))
+        }
+    }
+}
+
 pub(crate) async fn preview_file(Query(query): Query<FilePreviewQuery>) -> Response {
     if !is_path_safe(&query.path) {
         warn!(path = %query.path, "preview_file: blocked unsafe path");

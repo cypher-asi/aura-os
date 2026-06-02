@@ -12,6 +12,8 @@ interface FileExplorerProps {
   remoteAgentId?: string;
   /** Increment externally to trigger a refresh (e.g. from a button in PanelSearch). */
   refreshTrigger?: number;
+  /** Called when the user wants to create a new file in the given directory. */
+  onCreateFile?: (dirPath: string) => void;
 }
 
 export function FileExplorer({
@@ -20,6 +22,7 @@ export function FileExplorer({
   onFileSelect,
   remoteAgentId,
   refreshTrigger,
+  onCreateFile,
 }: FileExplorerProps) {
   const s = useFileExplorerState({
     rootPath,
@@ -27,6 +30,7 @@ export function FileExplorer({
     remoteAgentId,
     onFileSelect,
     refreshTrigger,
+    onCreateFile,
   });
 
   if (!s.canBrowseWorkspace) {

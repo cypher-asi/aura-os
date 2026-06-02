@@ -2,22 +2,42 @@ import { useEffect, useState, useMemo, useCallback, useRef, createElement } from
 import { api, type DirEntry } from "../../api/client";
 import { filterExplorerNodes } from "../../shared/utils/filterExplorerNodes";
 import type { ExplorerNode } from "@cypher-asi/zui";
-import { Folder, File, FolderOpen, FolderOutput } from "lucide-react";
+import { Folder, File, FilePlus, FolderOpen, FolderOutput } from "lucide-react";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useEventStore } from "../../stores/event-store/index";
 import { EventType } from "../../shared/types/aura-events";
 import styles from "./FileExplorer.module.css";
 import type { ExplorerNodeWithSuffix } from "../../lib/zui-compat";
 
-function toExplorerNodes(entries: DirEntry[]): ExplorerNode[] {
+function toExplorerNodes(
+  entries: DirEntry[],
+  onCreateFile?: (dirPath: string) => void,
+): ExplorerNodeWithSuffix[] {
   return entries.map((entry) => ({
     id: entry.path,
     label: entry.name,
     icon: entry.is_dir
       ? createElement(Folder, { size: 14 })
       : createElement(File, { size: 14 }),
-    children: entry.children ? toExplorerNodes(entry.children) : undefined,
+    children: entry.children ? toExplorerNodes(entry.children, onCreateFile) : undefined,
     metadata: { is_dir: entry.is_dir },
+    suffix:
+      entry.is_dir && onCreateFile
+        ? createElement(
+            "button",
+            {
+              type: "button",
+              className: styles.openFolderButton,
+              onClick: (e: React.MouseEvent) => {
+                e.stopPropagation();
+                onCreateFile(entry.path);
+              },
+              title: "New file",
+              "aria-label": `Create new file in ${entry.name}`,
+            },
+            createElement(FilePlus, { size: 13 }),
+          )
+        : undefined,
   }));
 }
 
@@ -27,12 +47,14 @@ export function useFileExplorerState({
   remoteAgentId,
   onFileSelect,
   refreshTrigger,
+  onCreateFile,
 }: {
   rootPath?: string;
   searchQuery?: string;
   remoteAgentId?: string;
   onFileSelect?: (path: string) => void;
   refreshTrigger?: number;
+  onCreateFile?: (dirPath: string) => void;
 }) {
   const [directoryState, setDirectoryState] = useState<{
     key: string | null;
@@ -168,31 +190,63 @@ export function useFileExplorerState({
     [rootPath],
   );
 
+  const handleCreateFileInRoot = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (rootPath && onCreateFile) onCreateFile(rootPath);
+    },
+    [rootPath, onCreateFile],
+  );
+
   const explorerData: ExplorerNodeWithSuffix[] = useMemo(() => {
     if (!rootPath) return [];
     const rootName = rootPath.split(/[\\/]/).pop() ?? rootPath;
+    const suffixChildren: React.ReactNode[] = [];
+    if (onCreateFile) {
+      suffixChildren.push(
+        createElement(
+          "button",
+          {
+            key: "new-file",
+            type: "button",
+            className: styles.openFolderButton,
+            onClick: handleCreateFileInRoot,
+            title: "New file",
+            "aria-label": "Create new file in root",
+          },
+          createElement(FilePlus, { size: 13 }),
+        ),
+      );
+    }
+    if (showOpenFolder) {
+      suffixChildren.push(
+        createElement(
+          "button",
+          {
+            key: "open-folder",
+            type: "button",
+            className: styles.openFolderButton,
+            onClick: handleOpenInExplorer,
+            title: "Open in file explorer",
+            "aria-label": "Open in file explorer",
+          },
+          createElement(FolderOutput, { size: 13 }),
+        ),
+      );
+    }
     return [
       {
         id: "__files_root__",
         label: rootName,
         icon: createElement(FolderOpen, { size: 14 }),
-        children: toExplorerNodes(entries),
-        suffix: showOpenFolder
-          ? createElement(
-              "button",
-              {
-                type: "button",
-                className: styles.openFolderButton,
-                onClick: handleOpenInExplorer,
-                title: "Open in file explorer",
-                "aria-label": "Open in file explorer",
-              },
-              createElement(FolderOutput, { size: 13 }),
-            )
-          : undefined,
+        children: toExplorerNodes(entries, onCreateFile),
+        suffix:
+          suffixChildren.length > 0
+            ? createElement("span", { style: { display: "inline-flex", gap: 2 } }, ...suffixChildren)
+            : undefined,
       },
     ];
-  }, [entries, rootPath, showOpenFolder, handleOpenInExplorer]);
+  }, [entries, rootPath, showOpenFolder, handleOpenInExplorer, onCreateFile, handleCreateFileInRoot]);
 
   const filteredData = useMemo(
     () => filterExplorerNodes(explorerData, searchQuery ?? ""),

@@ -127,6 +127,11 @@ export const desktopApi = {
       method: "POST",
       body: JSON.stringify({ path, content }),
     }),
+  createFile: (path: string, content = "") =>
+    apiFetch<{ ok: boolean; path?: string; error?: string }>("/api/create-file", {
+      method: "POST",
+      body: JSON.stringify({ path, content }),
+    }),
   getUpdateStatus: () =>
     apiFetch<DesktopUpdateStatusResponse>(
       "/api/update-status",

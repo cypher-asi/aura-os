@@ -13,6 +13,7 @@ interface/dist
 
 # IDE / editor
 .cursor
+.claude/commands/
 *.swp
 *.swo
 

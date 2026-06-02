@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PageEmptyState, Topbar } from "@cypher-asi/zui";
 import { FileExplorer } from "../../components/FileExplorer";
@@ -9,6 +9,7 @@ import { windowCommand } from "../../lib/windowCommand";
 import { useIdeViewTabs } from "./useIdeViewTabs";
 import { EditorTabBar } from "./EditorTabBar";
 import { EditorBody } from "./EditorBody";
+import { NewFileDialog } from "./NewFileDialog";
 import styles from "./IdeView.module.css";
 
 export function IdeView() {
@@ -19,8 +20,22 @@ export function IdeView() {
   const remoteAgentId = params.get("remoteAgentId") ?? undefined;
 
   const ide = useIdeViewTabs(initialFile, remoteAgentId);
+  const [showNewFileDialog, setShowNewFileDialog] = useState(false);
+  const [createFileDir, setCreateFileDir] = useState(rootPath);
 
   const handleFileSelect = useCallback((path: string) => ide.openTab(path), [ide.openTab]);
+  const handleCreateFile = useCallback((dirPath: string) => {
+    setCreateFileDir(dirPath);
+    setShowNewFileDialog(true);
+  }, []);
+  const handleNewFileConfirm = useCallback(async (fileName: string) => {
+    const sep = createFileDir.includes("\\") ? "\\" : "/";
+    const fullPath = createFileDir + sep + fileName;
+    const error = await ide.createFile(fullPath);
+    if (error) return error;
+    setShowNewFileDialog(false);
+    return null;
+  }, [createFileDir, ide.createFile]);
 
   if (!features.ideIntegration && !remoteAgentId) {
     return <PageEmptyState title="IDE stays on desktop" description="This device does not expose local file editing or IDE workflows." />;
@@ -39,7 +54,7 @@ export function IdeView() {
       <div className={styles.body}>
         {rootPath && (
           <Lane resizable resizePosition="right" defaultWidth={220} minWidth={120} maxWidth={480} storageKey="ide-sidebar-width" className={styles.sidebar}>
-            <FileExplorer rootPath={rootPath} onFileSelect={handleFileSelect} remoteAgentId={remoteAgentId} />
+            <FileExplorer rootPath={rootPath} onFileSelect={handleFileSelect} remoteAgentId={remoteAgentId} onCreateFile={!remoteAgentId ? handleCreateFile : undefined} />
           </Lane>
         )}
 
@@ -75,6 +90,13 @@ export function IdeView() {
         <span style={{ flex: 1 }} />
         {ide.activeTab && <span className={styles.statusItem}>{ide.activeTab.path}</span>}
       </div>
+
+      {showNewFileDialog && (
+        <NewFileDialog
+          onConfirm={handleNewFileConfirm}
+          onCancel={() => setShowNewFileDialog(false)}
+        />
+      )}
     </div>
   );
 }
