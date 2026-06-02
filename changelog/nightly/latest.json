@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-02T15:54:00.715Z",
+  "generatedAt": "2026-06-02T16:52:18.876Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.582.1",
+  "version": "0.1.0-nightly.583.1",
   "date": "2026-06-02",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.582.1",
-  "lastIncludedSha": "bd3dd4ec9b88292133c158ca165de60012a7624c",
-  "previousProcessedSha": "a30c08da4b1c816602eb0cefd6651f4aa7bd1268",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.583.1",
+  "lastIncludedSha": "cd1a3793328304521648b168e0d4b929430f656d",
+  "previousProcessedSha": "bd3dd4ec9b88292133c158ca165de60012a7624c",
   "commitShas": [
     "5bef97fc4bda72ca2d035ce97314536f36b0617b",
     "d851c7da34bcbe7ba34d35768acb0d9c539f81e2",
@@ -18,10 +18,12 @@
     "3d8656b176d0336c50cbd47dd7289966dc716017",
     "ec4c31c2d16ba7fef5b3c040fd975286f85c4e07",
     "a30c08da4b1c816602eb0cefd6651f4aa7bd1268",
-    "bd3dd4ec9b88292133c158ca165de60012a7624c"
+    "bd3dd4ec9b88292133c158ca165de60012a7624c",
+    "0d63c19d4e5ca4d24832b4d7d01be9b5d71174ce",
+    "cd1a3793328304521648b168e0d4b929430f656d"
   ],
-  "rawCommitCount": 7,
-  "filteredCommitCount": 7,
+  "rawCommitCount": 9,
+  "filteredCommitCount": 9,
   "rawCommits": [
     {
       "sha": "5bef97fc4bda72ca2d035ce97314536f36b0617b",
@@ -301,6 +303,82 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "0d63c19d4e5ca4d24832b4d7d01be9b5d71174ce",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-06-02T17:14:53+01:00",
+      "subject": "feat(settings): add native-only Log Out button to You pane",
+      "body": "Mobile lacked an accessible logout (desktop/web have it via OrgSettingsPanel\nand the profile, which aren't reachable in the mobile shell). Add a Log Out\nrow above Delete Account in the same isNativeApp-gated Account section, routed\nthrough the canonical useLogout() hook (logout + navigate home).\n\nGated to native, so desktop and web are unchanged. Unit tests cover gating\nand that Log Out invokes useLogout.",
+      "parents": [
+        "bd3dd4ec9b88292133c158ca165de60012a7624c"
+      ],
+      "files": [
+        "interface/src/components/SettingsProfile/SettingsProfile.test.tsx",
+        "interface/src/components/SettingsProfile/SettingsProfile.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 39,
+        "deletions": 5
+      },
+      "committedAtMs": 1780416893000,
+      "cleanSubject": "add native-only Log Out button to You pane",
+      "keywords": [
+        "native",
+        "only",
+        "button",
+        "pane"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "cd1a3793328304521648b168e0d4b929430f656d",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-06-02T17:36:51+01:00",
+      "subject": "feat(mobile): clearer prompt when a local agent is selected",
+      "body": "When a local agent is active the mobile chat input is disabled and showed\n\"Remote agent required\". Expand it to \"Remote agent required. Please switch\nagent\" so users (and App Review) know to go back and pick a remote agent, and\nshrink just that placeholder so the longer text fits the narrow input (safe\nbelow 16px since the field is disabled in this state).\n\nMobile-only: MobileChatInputBar and its scoped CSS class; desktop uses the\nseparate ChatInputBar.",
+      "parents": [
+        "0d63c19d4e5ca4d24832b4d7d01be9b5d71174ce"
+      ],
+      "files": [
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.module.css",
+        "interface/src/mobile/chat/MobileChatInputBar/MobileChatInputBar.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 12,
+        "deletions": 2
+      },
+      "committedAtMs": 1780418211000,
+      "cleanSubject": "clearer prompt when a local agent is selected",
+      "keywords": [
+        "clearer",
+        "prompt",
+        "when",
+        "local",
+        "agent",
+        "selected"
+      ],
+      "fileGroups": [
+        "interface/src/mobile"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 5,
@@ -312,36 +390,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 18786775
+          "sizeBytes": 18786935
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.582.1",
+      "version": "0.1.0-nightly.583.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.582.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.583.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 46751518
+          "sizeBytes": 46747262
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.582.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.583.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.582.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.583.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 113908216
+          "sizeBytes": 113916408
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.582.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.583.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -351,29 +429,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.582.1",
+      "version": "0.1.0-nightly.583.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.582.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.583.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 43805657
+          "sizeBytes": 43800467
         },
         {
-          "name": "AURA_0.1.0-nightly.582.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.583.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.582.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.583.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 42898218
+          "sizeBytes": 42895707
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.582.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.583.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -383,29 +461,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.582.1",
+      "version": "0.1.0-nightly.583.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.582.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.583.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 45586230
+          "sizeBytes": 45587034
         },
         {
-          "name": "AURA_0.1.0-nightly.582.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.583.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.582.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.583.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 44740707
+          "sizeBytes": 44737968
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.582.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.583.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -415,17 +493,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.582.1",
+      "version": "0.1.0-nightly.583.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.582.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.583.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 32157242
+          "sizeBytes": 32156075
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.582.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.583.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -434,26 +512,26 @@
     }
   ],
   "rendered": {
-    "title": "Clearing App Review: account deletion, support page, and iOS permissions",
-    "intro": "Today's nightly is focused on unblocking the iOS App Store submission that was rejected on build 4231. Three separate App Review issues — missing camera permissions, a missing Support URL, and the lack of in-app account deletion — were each addressed end to end, alongside a mobile settings scroll fix and an evals update to keep CI green against the new sidekick tab layout.",
+    "title": "Clearing the path to App Store approval",
+    "intro": "Today's work is almost entirely focused on unblocking the iOS App Store submission for build 4231. The team shipped the missing pieces App Review flagged — camera and photo permissions, a public support page, in-app account deletion — alongside mobile polish (scrollable settings, a Log Out button, clearer chat guidance) and a fix to keep evals green as the sidekick UI evolves.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:39 AM",
         "started_at": "2026-06-02T09:39:41.000Z",
         "ended_at": "2026-06-02T09:39:41.000Z",
-        "title": "Evals adapt to the new sidekick tab overflow",
-        "summary": "End-to-end evals were updated to match the recent sidekick tab layout and to stop tripping over the first-run welcome modal.",
+        "title": "Evals adapt to the new sidekick tab layout",
+        "summary": "End-to-end evals were updated to match the new Stats overflow behavior and to dismiss the first-run welcome modal that was silently intercepting clicks.",
         "items": [
           {
-            "text": "Smoke and workflow evals now reach Stats via the More overflow menu, reflecting the new Sessions/Terminal/Browser tabs that push Stats off the top row at default panel widths.",
+            "text": "Smoke and workflow evals now open the More menu to assert the Stats menuitem, reflecting that new Sessions/Terminal/Browser sidekick tabs push Stats into the overflow at default panel width.",
             "commit_shas": [
               "5bef97fc4bda72ca2d035ce97314536f36b0617b"
             ],
             "confidence": "high"
           },
           {
-            "text": "Both eval bootstraps seed onboarding as completed and dismissed so the first-run welcome modal no longer overlays the app and silently intercepts clicks during runs.",
+            "text": "Both eval bootstraps now seed onboarding as skipped so the welcome modal no longer overlays the app and swallows clicks during runs.",
             "commit_shas": [
               "5bef97fc4bda72ca2d035ce97314536f36b0617b"
             ],
@@ -466,11 +544,11 @@
         "time_label": "4:16 AM",
         "started_at": "2026-06-02T11:16:36.000Z",
         "ended_at": "2026-06-02T11:16:36.000Z",
-        "title": "iOS camera and photo library permission prompts",
-        "summary": "Fixes the App Review 2.1a rejection where tapping Take Photo crashed the iOS build with a TCC abort.",
+        "title": "iOS camera and photo library permissions",
+        "summary": "Adds the Info.plist usage descriptions whose absence was crashing Take Photo on iOS and triggered an App Review rejection under Guideline 2.1a.",
         "items": [
           {
-            "text": "Added NSCameraUsageDescription and NSPhotoLibraryUsageDescription to the iOS Info.plist so agent image selection and message attachments now prompt for permission instead of crashing on launch of the native picker.",
+            "text": "NSCameraUsageDescription and NSPhotoLibraryUsageDescription are now declared, so agent image selection and message attachments prompt for permission instead of hitting a TCC abort.",
             "commit_shas": [
               "d851c7da34bcbe7ba34d35768acb0d9c539f81e2"
             ],
@@ -483,18 +561,18 @@
         "time_label": "5:01 AM",
         "started_at": "2026-06-02T12:01:27.000Z",
         "ended_at": "2026-06-02T12:01:27.000Z",
-        "title": "Public /support page for the App Store Support URL",
-        "summary": "Addresses the App Review 1.5 rejection by giving reviewers and users a real support landing page regardless of auth state.",
+        "title": "Public /support page for App Store reviewers",
+        "summary": "A standalone, ungated support page now lives at aura.ai/support to satisfy Guideline 1.5, accessible to reviewers and users regardless of auth state.",
         "items": [
           {
-            "text": "Added a standalone, ungated /support route on the aura.ai static site, mounted outside AppShell and the marketing gate so a logged-out reviewer can deep-link straight to a support contact.",
+            "text": "New SupportView is mounted as a top-level route outside AppShell and RequireAuth so the deep link resolves for logged-out visitors via the static site's SPA rewrite.",
             "commit_shas": [
               "7b0499a6c9a5e5f4c1510f1e3a2c5d956229ca0b"
             ],
             "confidence": "high"
           },
           {
-            "text": "Shipped a dedicated SupportView with its own wordmark, headline, contact email button, and styling, plus a render test asserting the Support heading is present.",
+            "text": "The page presents the Aura wordmark, a Support headline, and a contact email so App Store Connect's Support URL can point at it once support@aura.ai is live.",
             "commit_shas": [
               "7b0499a6c9a5e5f4c1510f1e3a2c5d956229ca0b"
             ],
@@ -507,18 +585,11 @@
         "time_label": "6:26 AM",
         "started_at": "2026-06-02T13:26:12.000Z",
         "ended_at": "2026-06-02T13:26:12.000Z",
-        "title": "Backend delete-account proxy to zOS",
-        "summary": "Lays the server-side foundation for Apple Guideline 5.1.1(v) in-app account deletion, with strict failure semantics.",
+        "title": "Delete-account backend proxy to zOS",
+        "summary": "A new protected server endpoint forwards account-deletion requests upstream to zOS, laying the groundwork for the in-app deletion flow required by Apple 5.1.1(v).",
         "items": [
           {
-            "text": "Added a protected POST /api/auth/delete-account endpoint on the aura-os-server that forwards the caller's JWT to zOS's /api/v2/accounts/delete, then tears down the local session — but only after the upstream soft delete succeeds, so a failure surfaces the error instead of lying about the account being gone.",
-            "commit_shas": [
-              "3d8656b176d0336c50cbd47dd7289966dc716017"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Verified via a new integration test that the route is registered and auth-guarded, returning 401 without a bearer token so the destructive upstream call is never reached unauthenticated.",
+            "text": "POST /api/auth/delete-account is registered and auth-guarded, proxying the caller's JWT to zOS's accounts/delete and tearing down the local session only after the upstream delete succeeds so failures surface instead of silently orphaning state.",
             "commit_shas": [
               "3d8656b176d0336c50cbd47dd7289966dc716017"
             ],
@@ -530,28 +601,42 @@
         "batch_id": "entry-5",
         "time_label": "6:49 AM",
         "started_at": "2026-06-02T13:49:19.000Z",
-        "ended_at": "2026-06-02T15:37:21.000Z",
-        "title": "In-app Delete Account flow for iOS and mobile scroll fix",
-        "summary": "Completes the App Store 5.1.1(v) requirement with a native-only Delete Account flow in settings, and unblocks scrolling on tall mobile settings panes.",
+        "ended_at": "2026-06-02T16:36:51.000Z",
+        "title": "Mobile account management lands in the You pane",
+        "summary": "The client side of the iOS-submission push: Delete Account and Log Out now live in the mobile You settings, the settings screen finally scrolls, and the local-agent chat prompt is clearer.",
         "items": [
           {
-            "text": "Wired authApi.deleteAccount() and a deleteAccount store action that calls the upstream delete first and, unlike logout, propagates failures so the local session stays intact on error — with unit tests covering both the success and failure paths.",
+            "text": "The auth store gained a deleteAccount action that calls the new backend, propagates errors so the UI can surface them, and only runs the logout teardown after a successful upstream delete.",
             "commit_shas": [
               "ec4c31c2d16ba7fef5b3c040fd975286f85c4e07"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a Delete Account section to the You settings pane, gated to the native app via isNativeApp, opening a confirmation modal with explicit irreversibility copy before invoking the delete action and signing the user out on success.",
+            "text": "A native-only Delete Account section with a permanent-deletion confirmation modal now sits at the bottom of the You pane, completing the in-app deletion requirement for iOS submission.",
             "commit_shas": [
               "a30c08da4b1c816602eb0cefd6651f4aa7bd1268"
             ],
             "confidence": "high"
           },
           {
-            "text": "Fixed mobile settings panes (notably You) being clipped below the fold by making .settingsRoot its own scroll viewport with flex:1, min-height:0, and overflow-y:auto, since the native shell disables body scrolling via Capacitor.",
+            "text": "A native-only Log Out row sits above Delete Account, giving mobile users an accessible sign-out that desktop already had via OrgSettingsPanel.",
+            "commit_shas": [
+              "0d63c19d4e5ca4d24832b4d7d01be9b5d71174ce"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Mobile settings screens are now their own scroll viewport, so tall panes like You are reachable below the fold instead of being clipped by the bounded native shell.",
             "commit_shas": [
               "bd3dd4ec9b88292133c158ca165de60012a7624c"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The disabled mobile chat input now reads \"Remote agent required. Please switch agent\" — with a smaller placeholder so the longer guidance fits — making the next step explicit for users and App Review when a local agent is selected.",
+            "commit_shas": [
+              "cd1a3793328304521648b168e0d4b929430f656d"
             ],
             "confidence": "high"
           }
@@ -559,11 +644,11 @@
       }
     ],
     "highlights": [
-      "iOS camera and photo library permissions wired up",
-      "Public /support page shipped for App Store reviewers",
-      "Full in-app account deletion flow built end to end",
-      "Mobile settings panes are scrollable again"
+      "iOS in-app account deletion shipped end-to-end (Apple 5.1.1v)",
+      "Camera and photo library permissions added to unblock Take Photo",
+      "Public /support page live for App Store Guideline 1.5",
+      "Mobile settings now scroll and expose Log Out"
     ],
-    "raw_commit_count": 7
+    "raw_commit_count": 9
   }
 }
