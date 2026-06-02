@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-06-02",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.579.1",
+    "title": "Eval suite catches up to the new sidekick tab layout",
+    "intro": "A quiet nightly focused on keeping the end-to-end eval suite green after the sidekick tab redesign pushed Stats into the overflow menu and the first-run welcome modal started intercepting clicks.",
+    "entryCount": 1,
+    "highlights": [
+      "Evals now drive Stats through the More overflow menu",
+      "First-run onboarding is pre-dismissed in eval bootstraps"
+    ],
+    "rawCommitCount": 1,
+    "generatedAt": "2026-06-02T09:55:26.199Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.579.1",
+    "path": "history/2026-06-02.json"
+  },
+  {
     "date": "2026-06-01",
     "channel": "nightly",
     "version": "0.1.0-nightly.578.1",
