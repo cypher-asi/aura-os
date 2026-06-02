@@ -17,6 +17,37 @@ vi.mock("../../lib/analytics", () => ({
   track: vi.fn(),
 }));
 
+vi.hoisted(() => {
+  const storage = new Map<string, string>();
+  const stub = {
+    getItem: vi.fn((key: string) => storage.get(key) ?? null),
+    setItem: vi.fn((key: string, value: string) => {
+      storage.set(key, value);
+    }),
+    removeItem: vi.fn((key: string) => {
+      storage.delete(key);
+    }),
+    clear: vi.fn(() => {
+      storage.clear();
+    }),
+    key: vi.fn((index: number) => Array.from(storage.keys())[index] ?? null),
+    get length() {
+      return storage.size;
+    },
+  };
+
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: stub,
+  });
+  if (typeof window !== "undefined") {
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: stub,
+    });
+  }
+});
+
 import { MobilePublicShell } from "./MobilePublicShell";
 import { usePublicChatStore } from "../../stores/public-chat-store";
 
@@ -46,23 +77,27 @@ function renderShell(initialPath: string) {
 
 beforeEach(() => {
   window.localStorage.clear();
-  usePublicChatStore.setState({
-    sessions: {},
-    sessionOrder: [],
-    turnCount: 0,
-    guestToken: "guest-token",
-    setupInFlight: false,
+  act(() => {
+    usePublicChatStore.setState({
+      sessions: {},
+      sessionOrder: [],
+      turnCount: 0,
+      guestToken: "guest-token",
+      setupInFlight: false,
+    });
   });
 });
 
 afterEach(() => {
   window.localStorage.clear();
-  usePublicChatStore.setState({
-    sessions: {},
-    sessionOrder: [],
-    turnCount: 0,
-    guestToken: null,
-    setupInFlight: false,
+  act(() => {
+    usePublicChatStore.setState({
+      sessions: {},
+      sessionOrder: [],
+      turnCount: 0,
+      guestToken: null,
+      setupInFlight: false,
+    });
   });
 });
 
