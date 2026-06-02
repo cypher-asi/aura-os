@@ -101,6 +101,29 @@ describe("MobileChatInputBar", () => {
     expect(screen.getByTestId("agent-environment")).toHaveTextContent("Remote");
   });
 
+  it("submits exactly once when the mobile send button is tapped", async () => {
+    const user = userEvent.setup();
+    const onSend = vi.fn();
+    renderInputBar({ input: "Hello agent", onSend });
+
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    expect(onSend).toHaveBeenCalledTimes(1);
+    expect(onSend).toHaveBeenCalledWith("Hello agent", undefined, undefined);
+  });
+
+  it("submits from the keyboard when Enter is pressed", async () => {
+    const user = userEvent.setup();
+    const onSend = vi.fn();
+    renderInputBar({ input: "Keyboard send", onSend });
+
+    await user.click(screen.getByPlaceholderText("Message agent"));
+    await user.keyboard("{Enter}");
+
+    expect(onSend).toHaveBeenCalledTimes(1);
+    expect(onSend).toHaveBeenCalledWith("Keyboard send", undefined, undefined);
+  });
+
   it("updates the footer label after choosing a model from the mobile sheet", async () => {
     const user = userEvent.setup();
     renderInputBar({ agentId: "agent-instance-1", adapterType: "aura_harness" });

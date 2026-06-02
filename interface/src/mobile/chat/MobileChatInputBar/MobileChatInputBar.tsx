@@ -124,6 +124,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
     const [slashQuery, setSlashQuery] = useState("");
     const [isDragOver, setIsDragOver] = useState(false);
     const [isTextInputFocused, setIsTextInputFocused] = useState(false);
+    const sendPointerSubmittedRef = useRef(false);
 
     useImperativeHandle(ref, () => ({
       focus: () => textareaRef.current?.focus(),
@@ -366,6 +367,28 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       // when constructing the resolved send.
       onSend(input, undefined, undefined);
     }, [canSend, input, onSend]);
+
+    const handleSendPointerDown = useCallback(
+      (event: React.PointerEvent<HTMLButtonElement>) => {
+        if (!canSend) return;
+        event.preventDefault();
+        sendPointerSubmittedRef.current = true;
+        submitMessage();
+      },
+      [canSend, submitMessage],
+    );
+
+    const handleSendClick = useCallback(
+      (event: React.MouseEvent<HTMLButtonElement>) => {
+        if (sendPointerSubmittedRef.current || event.detail > 0) {
+          sendPointerSubmittedRef.current = false;
+          event.preventDefault();
+          return;
+        }
+        submitMessage();
+      },
+      [submitMessage],
+    );
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (slashMenuOpen && ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(event.key)) {
@@ -703,7 +726,8 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
               <button
                 type="button"
                 className={styles.sendButton}
-                onClick={submitMessage}
+                onPointerDown={handleSendPointerDown}
+                onClick={handleSendClick}
                 disabled={!canSend}
                 aria-label="Send"
               >
