@@ -80,17 +80,16 @@ export function MobileShell() {
       refreshProjects: s.refreshProjects,
     })),
   );
-  const mobileNavActiveId: MobileNavId | null =
-    state.mobileDestination === "agent"
+  const isMoreDestination = state.mobileDestination === "process" || state.mobileDestination === "stats";
+  const showMoreNavMenu = moreNavOpen && !isMoreDestination;
+  const mobileNavActiveId: MobileNavId | null = moreNavOpen
+    ? "more"
+    : state.mobileDestination === "agent"
     || state.mobileDestination === "execution"
     || state.mobileDestination === "tasks"
     || state.mobileDestination === "files"
       ? state.mobileDestination
-      : state.mobileDestination === "process" || state.mobileDestination === "stats"
-        ? "more"
-        : null;
-  const isMoreDestination = state.mobileDestination === "process" || state.mobileDestination === "stats";
-  const showMoreNavMenu = moreNavOpen || isMoreDestination;
+      : null;
 
   useMobileDrawerEffects(Boolean(PreviewPanel));
 
@@ -109,13 +108,23 @@ export function MobileShell() {
   const handleMobileMoreNavigate = useCallback((id: MobileMoreNavId) => {
     if (!state.mobileTargetProjectId) return;
     setMoreNavOpen(false);
-    if (id === "process") { navigate(projectProcessRoute(state.mobileTargetProjectId)); return; }
-    navigate(projectStatsRoute(state.mobileTargetProjectId));
-  }, [navigate, state.mobileTargetProjectId]);
+    const moreState = { moreReturnTo: state.location.pathname };
+    if (id === "process") {
+      navigate(projectProcessRoute(state.mobileTargetProjectId), { state: moreState });
+      return;
+    }
+    navigate(projectStatsRoute(state.mobileTargetProjectId), { state: moreState });
+  }, [navigate, state.location.pathname, state.mobileTargetProjectId]);
 
   useEffect(() => {
-    setMoreNavOpen(false);
-  }, [state.location.pathname]);
+    const locationState = state.location.state;
+    const shouldOpenMoreNav =
+      Boolean(locationState)
+      && typeof locationState === "object"
+      && "openMoreNav" in locationState
+      && (locationState as { openMoreNav?: unknown }).openMoreNav === true;
+    setMoreNavOpen(shouldOpenMoreNav);
+  }, [state.location.pathname, state.location.state]);
 
   useEffect(() => {
     if (!navOpen && !moreNavOpen && !accountOpen && !previewOpen) return;
@@ -179,7 +188,7 @@ export function MobileShell() {
               </div>
             </div>
           ) : null}
-          {!drawerOpen && state.showProjectTitle && !state.isProjectAgentManagementRoute && (
+          {!drawerOpen && state.showProjectTitle && !state.isProjectAgentManagementRoute && !isMoreDestination && (
             <div className={styles.mobileProjectTabs}>
               <MobileBottomNav activeId={mobileNavActiveId} onNavigate={handleMobilePrimaryNavigate} />
               {showMoreNavMenu ? (

@@ -508,13 +508,24 @@ describe("MobileShell", () => {
     expect(await screen.findByText("Project agents roster")).toBeInTheDocument();
   });
 
-  it("keeps the More destinations visible from the stats route", () => {
-    renderMobile("/projects/proj-1/stats");
+  it("treats More destinations as pushed detail screens with a top-bar back action", async () => {
+    const user = userEvent.setup();
+    renderMobile("/projects/proj-1/work");
 
+    await user.click(screen.getByRole("button", { name: /More/i }));
+    await user.click(screen.getByRole("menuitem", { name: "Stats" }));
+
+    expect(screen.getByRole("button", { name: "Back to More" })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Project sections" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menu", { name: "More project sections" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Back to More" }));
+
+    expect(await screen.findByText("Project work")).toBeInTheDocument();
     expect(screen.getByRole("button", { pressed: true, name: /More/i })).toBeInTheDocument();
     expect(screen.getByRole("menu", { name: "More project sections" })).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "Process" })).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: "Stats" })).toHaveAttribute("data-active", "true");
+    expect(screen.getByRole("menuitem", { name: "Stats" })).toBeInTheDocument();
   });
 
   it("hides project tabs when a drawer is open", () => {

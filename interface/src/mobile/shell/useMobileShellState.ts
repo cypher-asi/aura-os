@@ -52,9 +52,8 @@ export function useMobileShellState() {
     mobileDestination === "agent"
     || mobileDestination === "execution"
     || mobileDestination === "tasks"
-    || mobileDestination === "files"
-    || mobileDestination === "process"
-    || mobileDestination === "stats";
+    || mobileDestination === "files";
+  const isMoreDetailRoute = mobileDestination === "process" || mobileDestination === "stats";
   const showProjectTitle = mobileShellMode === "project" && hasResolvedCurrentProject && Boolean(currentProjectId) && isProjectRoute;
   const showProjectBack =
     hasResolvedCurrentProject
@@ -83,7 +82,7 @@ export function useMobileShellState() {
     showProjectTitle, showProjectBack, showProjectResponsiveControls,
     isStandaloneAgentLibraryRoot, isStandaloneAgentDetailRoute,
     isMobileOrganizationRoute,
-    isProjectAgentChatRoute, isProjectAgentManagementRoute,
+    isProjectAgentChatRoute, isProjectAgentManagementRoute, isMoreDetailRoute,
     showGlobalTitle, globalTitle,
   };
 }

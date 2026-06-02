@@ -51,6 +51,22 @@
   background: color-mix(in srgb, var(--color-text-secondary) 10%, transparent);
 }
 
+.mobileTopbarIconButton {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 999px;
+  color: var(--color-text-secondary);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobileTopbarIconButton:hover,
+.mobileTopbarIconButton:focus-visible {
+  background: color-mix(in srgb, var(--color-text-secondary) 10%, transparent);
+}
+
 .mobileTopbarTitle {
   position: absolute;
   inset-inline: 56px;

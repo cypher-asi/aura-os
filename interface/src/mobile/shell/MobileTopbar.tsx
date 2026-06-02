@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Topbar, Button } from "@cypher-asi/zui";
 import { ArrowLeft, CircleUserRound, Menu, Plus, Settings } from "lucide-react";
 import { useMobileDrawerStore } from "../../stores/mobile-drawer-store";
-import { projectAgentsRoute, projectRootPath } from "../../utils/mobileNavigation";
+import { projectAgentsRoute, projectRootPath, projectWorkRoute } from "../../utils/mobileNavigation";
 import { MobileThemeToggleButton } from "../components/MobileThemeToggleButton";
 import type { MobileShellState } from "./useMobileShellState";
 import {
@@ -18,6 +18,21 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
   const navOpen = useMobileDrawerStore((s) => s.navOpen);
   const setNavOpen = useMobileDrawerStore((s) => s.setNavOpen);
   const showStandaloneAgentLibraryCreate = state.isMobileClient && state.isStandaloneAgentLibraryRoot;
+  const moreReturnTo = (() => {
+    const locationState = state.location.state;
+    if (
+      state.currentProjectId
+      && locationState
+      && typeof locationState === "object"
+      && "moreReturnTo" in locationState
+    ) {
+      const candidate = (locationState as { moreReturnTo?: unknown }).moreReturnTo;
+      if (typeof candidate === "string" && candidate.startsWith(`/projects/${state.currentProjectId}/`)) {
+        return candidate;
+      }
+    }
+    return state.currentProjectId ? projectWorkRoute(state.currentProjectId) : "/projects";
+  })();
 
   return (
       <Topbar
@@ -26,6 +41,7 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
           <div className={styles.mobileTopbarSlot}>
             {state.isProjectAgentChatRoute && state.currentProjectId ? (
               <Button
+                className={styles.mobileTopbarIconButton}
                 variant="ghost"
                 size="sm"
                 iconOnly
@@ -33,8 +49,19 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
                 aria-label="Back to agents"
                 onClick={() => navigate(projectAgentsRoute(state.currentProjectId!))}
               />
+            ) : state.isMoreDetailRoute && state.currentProjectId ? (
+              <Button
+                className={styles.mobileTopbarIconButton}
+                variant="ghost"
+                size="sm"
+                iconOnly
+                icon={<ArrowLeft size={20} />}
+                aria-label="Back to More"
+                onClick={() => navigate(moreReturnTo, { state: { openMoreNav: true } })}
+              />
             ) : state.isStandaloneAgentDetailRoute ? (
               <Button
+                className={styles.mobileTopbarIconButton}
                 variant="ghost"
                 size="sm"
                 iconOnly
@@ -44,6 +71,7 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
               />
             ) : state.isMobileOrganizationRoute && state.mobileTargetProjectId ? (
               <Button
+                className={styles.mobileTopbarIconButton}
                 variant="ghost"
                 size="sm"
                 iconOnly
@@ -53,6 +81,7 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
               />
             ) : state.location.pathname.startsWith("/projects/settings/") ? (
               <Button
+                className={styles.mobileTopbarIconButton}
                 variant="ghost"
                 size="sm"
                 iconOnly
@@ -62,6 +91,7 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
               />
             ) : state.location.pathname === "/projects/settings" ? (
               <Button
+                className={styles.mobileTopbarIconButton}
                 variant="ghost"
                 size="sm"
                 iconOnly
@@ -71,6 +101,7 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
               />
             ) : state.location.pathname === "/profile" || state.location.pathname.startsWith("/profile/") ? (
               <Button
+                className={styles.mobileTopbarIconButton}
                 variant="ghost"
                 size="sm"
                 iconOnly
@@ -80,6 +111,7 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
               />
             ) : state.showProjectBack && state.currentProjectId ? (
               <Button
+                className={styles.mobileTopbarIconButton}
                 variant="ghost"
                 size="sm"
                 iconOnly
@@ -133,6 +165,7 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
           <div className={styles.mobileTopbarActions}>
             {showStandaloneAgentLibraryCreate ? (
               <Button
+                className={styles.mobileTopbarIconButton}
                 variant="ghost"
                 size="sm"
                 iconOnly
@@ -143,6 +176,7 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
             ) : null}
             <MobileThemeToggleButton />
             <Button
+              className={styles.mobileTopbarIconButton}
               variant="ghost"
               size="sm"
               iconOnly
@@ -151,6 +185,7 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
               onClick={() => navigate("/profile", { state: buildMobileReturnState(state.location.pathname) })}
             />
             <Button
+              className={styles.mobileTopbarIconButton}
               variant="ghost"
               size="sm"
               iconOnly
