@@ -78,7 +78,7 @@ type ProjectAgentSetupViewMode = "create" | "existing";
 export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgentSetupViewMode }) {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { isMobileClient } = useAuraCapabilities();
+  const { isMobileLayout } = useAuraCapabilities();
   const { setAgentsByProject } = useProjectsList();
   const { activeOrg, orgsError, orgsLoading } = useOrgStore(
     useShallow((state) => ({
@@ -198,7 +198,7 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
     return null;
   }
 
-  if (!isMobileClient) {
+  if (!isMobileLayout) {
     return <Navigate to={projectRootPath(projectId)} replace />;
   }
 

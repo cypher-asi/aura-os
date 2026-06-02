@@ -118,8 +118,8 @@ vi.mock("../../stores/ui-modal-store", () => ({
   },
 }));
 
-vi.mock("../../stores/org-store", () => ({
-  useOrgStore: (selector: (state: {
+vi.mock("../../stores/org-store", () => {
+  const useOrgStore = (selector: (state: {
     orgs: typeof orgFixtures;
     activeOrg: typeof orgFixtures[number];
     orgsError: string | null;
@@ -137,8 +137,10 @@ vi.mock("../../stores/org-store", () => ({
     switchOrg,
     createOrg,
     refreshOrgs: async () => undefined,
-  }),
-}));
+  });
+  useOrgStore.subscribe = vi.fn(() => vi.fn());
+  return { useOrgStore };
+});
 
 vi.mock("../../stores/project-action-store", () => ({
   useProjectActions: () => null,
@@ -254,7 +256,7 @@ vi.mock("../../components/PanelSearch", () => ({
 vi.mock("../../components/HostSettingsModal", () => ({
   HostSettingsModal: () => null,
 }));
-vi.mock("../../components/MobileThemeToggleButton", () => ({
+vi.mock("../components/MobileThemeToggleButton", () => ({
   MobileThemeToggleButton: () => <button aria-label="Switch theme (currently dark)" data-testid="mobile-theme-toggle" />,
 }));
 vi.mock("../../shared/lib/host-config", () => ({

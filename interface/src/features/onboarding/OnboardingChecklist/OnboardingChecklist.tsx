@@ -14,10 +14,12 @@ import { ChecklistTaskRow } from "./ChecklistTaskRow";
 import { useProjectsList } from "../../../apps/projects/useProjectsList";
 import { useUIModalStore } from "../../../stores/ui-modal-store";
 import { useAgentStore } from "../../../apps/agents/stores/agent-store";
+import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import { track } from "../../../lib/analytics";
 import styles from "./OnboardingChecklist.module.css";
 
 export function OnboardingChecklist() {
+  const { isMobileLayout } = useAuraCapabilities();
   const isVisible = useOnboardingStore(selectIsChecklistVisible);
   const tasks = useOnboardingStore((s) => s.checklistTasks);
   const collapsed = useOnboardingStore((s) => s.checklistCollapsed);
@@ -53,7 +55,7 @@ export function OnboardingChecklist() {
     track("onboarding_checklist_dismissed", { tasks_completed: completedCount });
   }, [dismissChecklist, completedCount]);
 
-  if (!isVisible) return null;
+  if (isMobileLayout || !isVisible) return null;
 
   const widget = (
     <div className={styles.container}>

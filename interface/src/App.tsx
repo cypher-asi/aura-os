@@ -15,7 +15,7 @@ import { AppShell } from "./components/AppShell";
 import { NativeContextMenuOverride } from "./components/NativeContextMenuOverride";
 import { LoginView } from "./views/LoginView";
 import { PublicChatView } from "./views/public-chat/PublicChatView";
-import { MobilePublicChatView } from "./views/public-chat/MobilePublicChatView";
+import { MobilePublicChatView } from "./mobile/public-chat/MobilePublicChatView";
 import { PublicMarketingPanel } from "./views/public-chat/PublicMarketingPanel";
 import { LoginOverlay } from "./views/public-chat/LoginOverlay";
 import { CaptureLoginView } from "./views/CaptureLoginView";
@@ -507,4 +507,3 @@ function AppRoutes(): React.ReactElement {
     </>
   );
 }
-

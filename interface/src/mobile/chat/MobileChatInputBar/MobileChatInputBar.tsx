@@ -145,7 +145,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
           : modeBehavior.kind === "generate_video"
             ? "video"
             : "chat";
-    const isLocalAgent = sendDisabled;
+    const remoteAgentRequired = sendDisabled;
     const isThreeDMode = generationMode === "3d";
     const pinnedSourceImage = chatUI.pinnedSourceImage;
     const has3DSource = isThreeDMode && pinnedSourceImage != null;
@@ -159,7 +159,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
     //  - thumb pinned (model step): Send is enabled regardless of
     //    text (refinement is optional).
     const canSend =
-      !isLocalAgent &&
+      !remoteAgentRequired &&
       !isStreaming &&
       (isThreeDMode
         ? has3DSource ||
@@ -678,8 +678,8 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
               onPaste={handlePaste}
               disabled={sendDisabled}
               placeholder={
-                isLocalAgent
-                  ? "Remote agent required. Please switch agent"
+                remoteAgentRequired
+                  ? "Remote agent required"
                   : isThreeDMode
                     ? has3DSource
                       ? "Refine your 3D model (optional)"
@@ -713,11 +713,18 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
           </div>
           <div className={styles.metaRow}>
             <span className={styles.environmentWrap}>
-              <AgentEnvironment
-                machineType={machineType}
-                agentId={templateAgentId ?? agentId}
-                workspacePath={workspacePath}
-              />
+              {remoteAgentRequired ? (
+                <span className={styles.remoteRequiredStatus} aria-label="Remote agent required">
+                  <span className={styles.remoteRequiredDot} aria-hidden="true" />
+                  Remote required
+                </span>
+              ) : (
+                <AgentEnvironment
+                  machineType={machineType}
+                  agentId={templateAgentId ?? agentId}
+                  workspacePath={workspacePath}
+                />
+              )}
             </span>
             <span className={styles.metaSpacer} />
             {contextUsage != null && contextUsage.utilization > 0 ? (

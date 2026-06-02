@@ -343,8 +343,8 @@ describe("ProjectAgentSetupView", () => {
     expect(mockListAgents).not.toHaveBeenCalled();
   });
 
-  it("redirects desktop users back to the project root", () => {
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isMobileClient: false });
+  it("redirects non-mobile-layout users back to the project root", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false, isMobileClient: false });
 
     render(
       <Routes>

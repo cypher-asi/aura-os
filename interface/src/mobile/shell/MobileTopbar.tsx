@@ -3,7 +3,7 @@ import { Topbar, Button } from "@cypher-asi/zui";
 import { ArrowLeft, CircleUserRound, Menu, Plus, Settings } from "lucide-react";
 import { useMobileDrawerStore } from "../../stores/mobile-drawer-store";
 import { projectAgentsRoute, projectRootPath } from "../../utils/mobileNavigation";
-import { MobileThemeToggleButton } from "../../components/MobileThemeToggleButton";
+import { MobileThemeToggleButton } from "../components/MobileThemeToggleButton";
 import type { MobileShellState } from "./useMobileShellState";
 import {
   buildMobileReturnState,
@@ -50,6 +50,15 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
                 icon={<ArrowLeft size={20} />}
                 aria-label="Back to project"
                 onClick={() => navigate(resolveWorkspaceReturnPath(state.mobileTargetProjectId, state.location.state))}
+              />
+            ) : state.location.pathname.startsWith("/projects/settings/") ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                iconOnly
+                icon={<ArrowLeft size={20} />}
+                aria-label="Back to settings"
+                onClick={() => navigate("/projects/settings", { state: state.location.state })}
               />
             ) : state.location.pathname === "/projects/settings" ? (
               <Button
@@ -148,7 +157,7 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
               icon={<Settings size={19} />}
               aria-label="Open settings"
               onClick={() => {
-                const returnTo = state.location.pathname === "/projects/settings"
+                const returnTo = state.location.pathname.startsWith("/projects/settings")
                   ? resolveSettingsReturnPath(state.mobileTargetProjectId, state.location.state)
                   : state.location.pathname;
                 navigate("/projects/settings", { state: { returnTo } });

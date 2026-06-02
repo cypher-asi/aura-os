@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components -- route modules mix lazy components and route tables by design */
 import { lazy } from "react";
-import { Navigate, type RouteObject } from "react-router-dom";
+import { Navigate, useParams, type RouteObject } from "react-router-dom";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { AgentChatRoute } from "../agents/components/AgentChatRoute";
 import { MobileOrganizationView } from "../../mobile/screens/MobileOrganizationView";
@@ -20,7 +20,10 @@ import { MobileProjectAgentsScreen } from "../../mobile/screens/ProjectAgentsScr
 import { MobileProjectFilesScreen } from "../../mobile/screens/ProjectFilesScreen/ProjectFilesScreen";
 import { MobileProjectProcessScreen } from "../../mobile/screens/ProjectProcessScreen/ProjectProcessScreen";
 import { MobileProjectStatsScreen } from "../../mobile/screens/ProjectStatsScreen/ProjectStatsScreen";
+import { MobileProjectTasksScreen } from "../../mobile/screens/ProjectTasksScreen/ProjectTasksScreen";
+import { MobileProjectWorkScreen } from "../../mobile/screens/ProjectWorkScreen/ProjectWorkScreen";
 import { MobileSettingsView } from "../../mobile/screens/MobileSettingsView";
+import { projectWorkRoute } from "../../utils/mobileNavigation";
 
 const HomeView = lazy(() => import("../../views/HomeView").then((m) => ({ default: m.HomeView })));
 const SettingsView = lazy(() => import("../../views/SettingsView").then((m) => ({ default: m.SettingsView })));
@@ -50,6 +53,22 @@ function ProjectStatsRoute() {
   return isMobileLayout ? <MobileProjectStatsScreen /> : <ProjectStatsView />;
 }
 
+function ProjectTasksRoute() {
+  const { isMobileLayout } = useAuraCapabilities();
+  return isMobileLayout ? <MobileProjectTasksScreen /> : <ProjectTasksView />;
+}
+
+function ProjectWorkRoute() {
+  const { isMobileLayout } = useAuraCapabilities();
+  return isMobileLayout ? <MobileProjectWorkScreen /> : <ProjectWorkView />;
+}
+
+function ProjectExecutionRoute() {
+  const { projectId } = useParams<{ projectId: string }>();
+  const { isMobileLayout } = useAuraCapabilities();
+  return isMobileLayout && projectId ? <Navigate to={projectWorkRoute(projectId)} replace /> : <ExecutionView />;
+}
+
 function SettingsRoute() {
   const { isMobileLayout } = useAuraCapabilities();
   return isMobileLayout ? <MobileSettingsView /> : <SettingsView />;
@@ -77,9 +96,9 @@ export const projectsRoutes: RouteObject[] = [
       { path: "agents/attach", element: <ProjectAgentSetupView mode="existing" /> },
       { path: "agents/:agentInstanceId/details", element: <ProjectAgentDetailsView /> },
       { path: "agents/:agentInstanceId", element: <AgentChatRoute /> },
-      { path: "execution", element: <ExecutionView /> },
-      { path: "work", element: <ProjectWorkView /> },
-      { path: "tasks", element: <ProjectTasksView /> },
+      { path: "execution", element: <ProjectExecutionRoute /> },
+      { path: "work", element: <ProjectWorkRoute /> },
+      { path: "tasks", element: <ProjectTasksRoute /> },
       { path: "files", element: <ProjectFilesRoute /> },
       { path: "process", element: <ProjectProcessRoute /> },
       { path: "stats", element: <ProjectStatsRoute /> },

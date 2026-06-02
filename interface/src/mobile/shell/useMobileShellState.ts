@@ -70,7 +70,7 @@ export function useMobileShellState() {
   const showGlobalTitle = mobileShellMode === "global";
   const globalTitle = isMobileOrganizationRoute
     ? "Workspace"
-    : location.pathname === "/projects/settings"
+    : location.pathname.startsWith("/projects/settings")
       ? "Settings"
     : location.pathname === "/projects"
       ? "Projects"

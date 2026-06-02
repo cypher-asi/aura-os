@@ -4,6 +4,37 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ThemeProvider } from "@cypher-asi/zui";
 import { MobileThemeToggleButton } from "./MobileThemeToggleButton";
 
+vi.hoisted(() => {
+  const storage = new Map<string, string>();
+  const stub = {
+    getItem: vi.fn((key: string) => storage.get(key) ?? null),
+    setItem: vi.fn((key: string, value: string) => {
+      storage.set(key, value);
+    }),
+    removeItem: vi.fn((key: string) => {
+      storage.delete(key);
+    }),
+    clear: vi.fn(() => {
+      storage.clear();
+    }),
+    key: vi.fn((index: number) => Array.from(storage.keys())[index] ?? null),
+    get length() {
+      return storage.size;
+    },
+  };
+
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: stub,
+  });
+  if (typeof window !== "undefined") {
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: stub,
+    });
+  }
+});
+
 const TEST_STORAGE_KEY = "test-mobile-theme-toggle";
 
 function mockMatchMedia(prefersDark: boolean) {

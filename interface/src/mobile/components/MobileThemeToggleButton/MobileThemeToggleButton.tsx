@@ -4,7 +4,7 @@ import {
   cycleTheme,
   getThemeToggleAriaLabel,
   getThemeToggleIconKind,
-} from "../../lib/theme-toggle";
+} from "../../../lib/theme-toggle";
 import styles from "./MobileThemeToggleButton.module.css";
 
 const TOUCH_TARGET_PX = 44;
