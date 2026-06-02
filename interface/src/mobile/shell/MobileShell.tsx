@@ -188,7 +188,7 @@ export function MobileShell() {
               </div>
             </div>
           ) : null}
-          {!drawerOpen && state.showProjectTitle && !state.isProjectAgentManagementRoute && !isMoreDestination && (
+          {!drawerOpen && state.showProjectTitle && !state.isProjectAgentManagementRoute && !state.isProjectAgentChatRoute && !isMoreDestination && (
             <div className={styles.mobileProjectTabs}>
               <MobileBottomNav activeId={mobileNavActiveId} onNavigate={handleMobilePrimaryNavigate} />
               {showMoreNavMenu ? (

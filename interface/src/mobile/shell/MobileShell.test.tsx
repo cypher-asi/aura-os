@@ -488,6 +488,13 @@ describe("MobileShell", () => {
     expect(screen.queryByRole("button", { name: "Add project agent" })).not.toBeInTheDocument();
   });
 
+  it("hides project tabs on project agent chat detail routes", () => {
+    renderMobile("/projects/proj-1/agents/agent-inst-1");
+
+    expect(screen.getByRole("button", { name: "Back to agents" })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Project sections" })).not.toBeInTheDocument();
+  });
+
   it("surfaces a mobile warning when live workspace data failed to load", () => {
     mockOrgErrors.orgsError = "Unexpected token '<'";
 
