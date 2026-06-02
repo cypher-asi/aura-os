@@ -2,18 +2,19 @@
   {
     "date": "2026-06-02",
     "channel": "nightly",
-    "version": "0.1.0-nightly.580.1",
-    "title": "Clearing App Review blockers and steadying the eval suite",
-    "intro": "Today's nightly is focused on unblocking the iOS App Store submission and keeping the end-to-end eval suite green after the recent sidekick tab redesign. Two App Review rejections from build 4231 were addressed directly — missing camera permissions and a missing Support URL — alongside test fixes that adapt to the new sidebar layout.",
-    "entryCount": 3,
+    "version": "0.1.0-nightly.581.1",
+    "title": "Clearing the runway for iOS App Review",
+    "intro": "Today's nightly is dominated by the work needed to get Aura past Apple's App Review rejection of build 4231. A public support page, camera and photo library permissions, and an end-to-end in-app account deletion flow all landed, alongside an eval fix that adapts to the new sidekick tab layout.",
+    "entryCount": 5,
     "highlights": [
-      "iOS camera and photo library permissions added to unblock App Review",
-      "New public /support page satisfies App Store Guideline 1.5",
-      "E2E evals adapted to the new sidekick tab overflow"
+      "Public /support page for the App Store Support URL",
+      "iOS camera and photo library permission prompts",
+      "Full in-app Delete Account flow for native builds",
+      "E2E evals adapted to the new sidekick tabs"
     ],
-    "rawCommitCount": 3,
-    "generatedAt": "2026-06-02T12:22:02.852Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.580.1",
+    "rawCommitCount": 6,
+    "generatedAt": "2026-06-02T15:22:39.772Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.581.1",
     "path": "history/2026-06-02.json"
   },
   {
