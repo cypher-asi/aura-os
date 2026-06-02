@@ -2,19 +2,19 @@
   {
     "date": "2026-06-02",
     "channel": "nightly",
-    "version": "0.1.0-nightly.581.1",
-    "title": "Clearing the runway for iOS App Review",
-    "intro": "Today's nightly is dominated by the work needed to get Aura past Apple's App Review rejection of build 4231. A public support page, camera and photo library permissions, and an end-to-end in-app account deletion flow all landed, alongside an eval fix that adapts to the new sidekick tab layout.",
+    "version": "0.1.0-nightly.582.1",
+    "title": "Clearing App Review: account deletion, support page, and iOS permissions",
+    "intro": "Today's nightly is focused on unblocking the iOS App Store submission that was rejected on build 4231. Three separate App Review issues — missing camera permissions, a missing Support URL, and the lack of in-app account deletion — were each addressed end to end, alongside a mobile settings scroll fix and an evals update to keep CI green against the new sidekick tab layout.",
     "entryCount": 5,
     "highlights": [
-      "Public /support page for the App Store Support URL",
-      "iOS camera and photo library permission prompts",
-      "Full in-app Delete Account flow for native builds",
-      "E2E evals adapted to the new sidekick tabs"
+      "iOS camera and photo library permissions wired up",
+      "Public /support page shipped for App Store reviewers",
+      "Full in-app account deletion flow built end to end",
+      "Mobile settings panes are scrollable again"
     ],
-    "rawCommitCount": 6,
-    "generatedAt": "2026-06-02T15:22:39.772Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.581.1",
+    "rawCommitCount": 7,
+    "generatedAt": "2026-06-02T15:54:00.715Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.582.1",
     "path": "history/2026-06-02.json"
   },
   {

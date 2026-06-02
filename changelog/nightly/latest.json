@@ -3,24 +3,25 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-02T15:22:39.772Z",
+  "generatedAt": "2026-06-02T15:54:00.715Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.581.1",
+  "version": "0.1.0-nightly.582.1",
   "date": "2026-06-02",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.581.1",
-  "lastIncludedSha": "a30c08da4b1c816602eb0cefd6651f4aa7bd1268",
-  "previousProcessedSha": "7b0499a6c9a5e5f4c1510f1e3a2c5d956229ca0b",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.582.1",
+  "lastIncludedSha": "bd3dd4ec9b88292133c158ca165de60012a7624c",
+  "previousProcessedSha": "a30c08da4b1c816602eb0cefd6651f4aa7bd1268",
   "commitShas": [
     "5bef97fc4bda72ca2d035ce97314536f36b0617b",
     "d851c7da34bcbe7ba34d35768acb0d9c539f81e2",
     "7b0499a6c9a5e5f4c1510f1e3a2c5d956229ca0b",
     "3d8656b176d0336c50cbd47dd7289966dc716017",
     "ec4c31c2d16ba7fef5b3c040fd975286f85c4e07",
-    "a30c08da4b1c816602eb0cefd6651f4aa7bd1268"
+    "a30c08da4b1c816602eb0cefd6651f4aa7bd1268",
+    "bd3dd4ec9b88292133c158ca165de60012a7624c"
   ],
-  "rawCommitCount": 6,
-  "filteredCommitCount": 6,
+  "rawCommitCount": 7,
+  "filteredCommitCount": 7,
   "rawCommits": [
     {
       "sha": "5bef97fc4bda72ca2d035ce97314536f36b0617b",
@@ -264,6 +265,42 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "bd3dd4ec9b88292133c158ca165de60012a7624c",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-06-02T16:37:21+01:00",
+      "subject": "fix(mobile): make settings screens scrollable",
+      "body": "The mobile settings route root (.settingsRoot) had min-height:100% but no\noverflow, so it was never a scroll viewport. Its parent .mobileMainPanel is\na bounded flex container with overflow:hidden, and the native shell sets\nCapacitor scrollEnabled:false, so tall settings panes (e.g. You) were clipped\nwith no way to reach content below the fold.\n\nMake .settingsRoot the scroll container (flex:1; min-height:0; overflow-y:auto),\nmirroring the working ProjectStatsScreen/ProjectAgentsScreen route roots.\n\nScoped to the mobile-only CSS module (imported only by SettingsDetailScreen\nand SettingsList); desktop renders settings via the separate SettingsView\ncomponent, so desktop and normal-width web are unaffected.",
+      "parents": [
+        "a30c08da4b1c816602eb0cefd6651f4aa7bd1268"
+      ],
+      "files": [
+        "interface/src/mobile/screens/MobileSettingsView/MobileSettingsView.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 14,
+        "deletions": 1
+      },
+      "committedAtMs": 1780414641000,
+      "cleanSubject": "make settings screens scrollable",
+      "keywords": [
+        "make",
+        "settings",
+        "screens",
+        "scrollable"
+      ],
+      "fileGroups": [
+        "interface/src/mobile"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 5,
@@ -275,36 +312,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 18786879
+          "sizeBytes": 18786775
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.581.1",
+      "version": "0.1.0-nightly.582.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.581.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.582.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 46747382
+          "sizeBytes": 46751518
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.581.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.582.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.581.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.582.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 113920504
+          "sizeBytes": 113908216
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.581.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.582.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -314,29 +351,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.581.1",
+      "version": "0.1.0-nightly.582.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.581.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.582.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 43798840
+          "sizeBytes": 43805657
         },
         {
-          "name": "AURA_0.1.0-nightly.581.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.582.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.581.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.582.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 42892420
+          "sizeBytes": 42898218
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.581.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.582.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -346,29 +383,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.581.1",
+      "version": "0.1.0-nightly.582.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.581.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.582.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 45589441
+          "sizeBytes": 45586230
         },
         {
-          "name": "AURA_0.1.0-nightly.581.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.582.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.581.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.582.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 44739091
+          "sizeBytes": 44740707
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.581.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.582.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -378,17 +415,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.581.1",
+      "version": "0.1.0-nightly.582.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.581.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.582.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 32161085
+          "sizeBytes": 32157242
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.581.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.582.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -397,26 +434,26 @@
     }
   ],
   "rendered": {
-    "title": "Clearing the runway for iOS App Review",
-    "intro": "Today's nightly is dominated by the work needed to get Aura past Apple's App Review rejection of build 4231. A public support page, camera and photo library permissions, and an end-to-end in-app account deletion flow all landed, alongside an eval fix that adapts to the new sidekick tab layout.",
+    "title": "Clearing App Review: account deletion, support page, and iOS permissions",
+    "intro": "Today's nightly is focused on unblocking the iOS App Store submission that was rejected on build 4231. Three separate App Review issues — missing camera permissions, a missing Support URL, and the lack of in-app account deletion — were each addressed end to end, alongside a mobile settings scroll fix and an evals update to keep CI green against the new sidekick tab layout.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:39 AM",
         "started_at": "2026-06-02T09:39:41.000Z",
         "ended_at": "2026-06-02T09:39:41.000Z",
-        "title": "Evals adapt to the new sidekick tab layout",
-        "summary": "End-to-end evals were updated after the new Sessions/Terminal/Browser tabs pushed Stats into the overflow menu and the first-run welcome modal began intercepting clicks.",
+        "title": "Evals adapt to the new sidekick tab overflow",
+        "summary": "End-to-end evals were updated to match the recent sidekick tab layout and to stop tripping over the first-run welcome modal.",
         "items": [
           {
-            "text": "Smoke and workflow evals now open the More menu to assert the Stats menuitem, reflecting that Stats overflows at default panel width once the Sessions, Terminal, and Browser sidekick tabs are present.",
+            "text": "Smoke and workflow evals now reach Stats via the More overflow menu, reflecting the new Sessions/Terminal/Browser tabs that push Stats off the top row at default panel widths.",
             "commit_shas": [
               "5bef97fc4bda72ca2d035ce97314536f36b0617b"
             ],
             "confidence": "high"
           },
           {
-            "text": "Both eval bootstraps now seed onboarding as completed and dismissed in localStorage so the first-run welcome modal stops overlaying the app and silently swallowing clicks.",
+            "text": "Both eval bootstraps seed onboarding as completed and dismissed so the first-run welcome modal no longer overlays the app and silently intercepts clicks during runs.",
             "commit_shas": [
               "5bef97fc4bda72ca2d035ce97314536f36b0617b"
             ],
@@ -430,10 +467,10 @@
         "started_at": "2026-06-02T11:16:36.000Z",
         "ended_at": "2026-06-02T11:16:36.000Z",
         "title": "iOS camera and photo library permission prompts",
-        "summary": "Adds the Info.plist usage descriptions Apple flagged in build 4231, so picking or capturing an image no longer trips a TCC crash.",
+        "summary": "Fixes the App Review 2.1a rejection where tapping Take Photo crashed the iOS build with a TCC abort.",
         "items": [
           {
-            "text": "Info.plist now ships NSCameraUsageDescription and NSPhotoLibraryUsageDescription, so agent image selection and message attachments prompt for permission instead of crashing on Take Photo (the Guideline 2.1a rejection).",
+            "text": "Added NSCameraUsageDescription and NSPhotoLibraryUsageDescription to the iOS Info.plist so agent image selection and message attachments now prompt for permission instead of crashing on launch of the native picker.",
             "commit_shas": [
               "d851c7da34bcbe7ba34d35768acb0d9c539f81e2"
             ],
@@ -447,17 +484,17 @@
         "started_at": "2026-06-02T12:01:27.000Z",
         "ended_at": "2026-06-02T12:01:27.000Z",
         "title": "Public /support page for the App Store Support URL",
-        "summary": "A standalone, ungated support route on aura.ai gives reviewers and signed-out users a real destination for the App Store Support URL.",
+        "summary": "Addresses the App Review 1.5 rejection by giving reviewers and users a real support landing page regardless of auth state.",
         "items": [
           {
-            "text": "Adds a top-level /support route, mounted outside AppShell, RequireAuth, and the marketing gate, so aura.ai/support resolves for any visitor — fixing the Guideline 1.5 rejection that flagged https://aura.ai/ as having no support information.",
+            "text": "Added a standalone, ungated /support route on the aura.ai static site, mounted outside AppShell and the marketing gate so a logged-out reviewer can deep-link straight to a support contact.",
             "commit_shas": [
               "7b0499a6c9a5e5f4c1510f1e3a2c5d956229ca0b"
             ],
             "confidence": "high"
           },
           {
-            "text": "The page is a lightweight marketing view with headline, support email, and footer note, lazy-loaded and served via the static site's SPA rewrite so the deep link works regardless of auth state.",
+            "text": "Shipped a dedicated SupportView with its own wordmark, headline, contact email button, and styling, plus a render test asserting the Support heading is present.",
             "commit_shas": [
               "7b0499a6c9a5e5f4c1510f1e3a2c5d956229ca0b"
             ],
@@ -470,18 +507,18 @@
         "time_label": "6:26 AM",
         "started_at": "2026-06-02T13:26:12.000Z",
         "ended_at": "2026-06-02T13:26:12.000Z",
-        "title": "Server-side delete-account proxy to zOS",
-        "summary": "A new protected backend endpoint forwards account deletion to zOS, laying the groundwork for the in-app delete flow Apple now requires.",
+        "title": "Backend delete-account proxy to zOS",
+        "summary": "Lays the server-side foundation for Apple Guideline 5.1.1(v) in-app account deletion, with strict failure semantics.",
         "items": [
           {
-            "text": "Adds POST /api/auth/delete-account, which forwards the caller's JWT to zOS POST /api/v2/accounts/delete (the ZERO mobile app's endpoint) and only tears down the local session if the upstream soft-delete actually succeeds — so a failure surfaces an error instead of falsely claiming the account is gone.",
+            "text": "Added a protected POST /api/auth/delete-account endpoint on the aura-os-server that forwards the caller's JWT to zOS's /api/v2/accounts/delete, then tears down the local session — but only after the upstream soft delete succeeds, so a failure surfaces the error instead of lying about the account being gone.",
             "commit_shas": [
               "3d8656b176d0336c50cbd47dd7289966dc716017"
             ],
             "confidence": "high"
           },
           {
-            "text": "The route is registered behind the auth middleware and verified to reject unauthenticated callers with 401, ensuring the destructive upstream call is never reachable without a valid token.",
+            "text": "Verified via a new integration test that the route is registered and auth-guarded, returning 401 without a bearer token so the destructive upstream call is never reached unauthenticated.",
             "commit_shas": [
               "3d8656b176d0336c50cbd47dd7289966dc716017"
             ],
@@ -493,29 +530,28 @@
         "batch_id": "entry-5",
         "time_label": "6:49 AM",
         "started_at": "2026-06-02T13:49:19.000Z",
-        "ended_at": "2026-06-02T14:41:31.000Z",
-        "title": "In-app Delete Account flow for native builds",
-        "summary": "The Delete Account capability now reaches users: the interface auth store gained a deleteAccount action, and a native-only Delete Account section landed in the You settings pane, completing the Apple 5.1.1(v) requirement.",
+        "ended_at": "2026-06-02T15:37:21.000Z",
+        "title": "In-app Delete Account flow for iOS and mobile scroll fix",
+        "summary": "Completes the App Store 5.1.1(v) requirement with a native-only Delete Account flow in settings, and unblocks scrolling on tall mobile settings panes.",
         "items": [
           {
-            "text": "The auth store now exposes a deleteAccount action backed by authApi.deleteAccount(); it deletes upstream first and, unlike logout, propagates errors so the local session stays intact on failure and only runs the logout teardown on success.",
+            "text": "Wired authApi.deleteAccount() and a deleteAccount store action that calls the upstream delete first and, unlike logout, propagates failures so the local session stays intact on error — with unit tests covering both the success and failure paths.",
             "commit_shas": [
               "ec4c31c2d16ba7fef5b3c040fd975286f85c4e07"
             ],
             "confidence": "high"
           },
           {
-            "text": "Settings gains a Delete Account section gated to native builds via isNativeApp (mirroring credit purchases), with a confirmation modal whose copy makes the deletion explicitly permanent before invoking the store action.",
+            "text": "Added a Delete Account section to the You settings pane, gated to the native app via isNativeApp, opening a confirmation modal with explicit irreversibility copy before invoking the delete action and signing the user out on success.",
             "commit_shas": [
               "a30c08da4b1c816602eb0cefd6651f4aa7bd1268"
             ],
             "confidence": "high"
           },
           {
-            "text": "Unit tests cover both store paths (success teardown and error propagation) and the settings flow's native gating, confirm interaction, and error display, with the real zui Modal exercised on the TestFlight build.",
+            "text": "Fixed mobile settings panes (notably You) being clipped below the fold by making .settingsRoot its own scroll viewport with flex:1, min-height:0, and overflow-y:auto, since the native shell disables body scrolling via Capacitor.",
             "commit_shas": [
-              "ec4c31c2d16ba7fef5b3c040fd975286f85c4e07",
-              "a30c08da4b1c816602eb0cefd6651f4aa7bd1268"
+              "bd3dd4ec9b88292133c158ca165de60012a7624c"
             ],
             "confidence": "high"
           }
@@ -523,11 +559,11 @@
       }
     ],
     "highlights": [
-      "Public /support page for the App Store Support URL",
-      "iOS camera and photo library permission prompts",
-      "Full in-app Delete Account flow for native builds",
-      "E2E evals adapted to the new sidekick tabs"
+      "iOS camera and photo library permissions wired up",
+      "Public /support page shipped for App Store reviewers",
+      "Full in-app account deletion flow built end to end",
+      "Mobile settings panes are scrollable again"
     ],
-    "raw_commit_count": 6
+    "raw_commit_count": 7
   }
 }
