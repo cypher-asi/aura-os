@@ -1,10 +1,10 @@
 {
-  "commitsThisMonth": 115,
-  "commitsAllTime": 6373,
+  "commitsThisMonth": 126,
+  "commitsAllTime": 6384,
   "perRepo": {
     "aura-os": {
-      "thisMonth": 112,
-      "allTime": 5210
+      "thisMonth": 123,
+      "allTime": 5221
     },
     "aura-harness": {
       "thisMonth": 0,
@@ -32,6 +32,8 @@
     }
   },
   "monthKey": "2026-06",
-  "fetchedAt": "2026-06-02T16:53:30.339Z",
-  "partial": false
+  "fetchedAt": "2026-06-02T17:03:44.696Z",
+  "partial": false,
+  "releasesThisMonth": 6,
+  "releasesAllTime": 204
 }
