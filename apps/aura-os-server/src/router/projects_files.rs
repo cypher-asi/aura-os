@@ -53,5 +53,9 @@ pub(super) fn project_routes() -> Router<AppState> {
         )
         .route("/api/list-directory", post(files::list_directory))
         .route("/api/read-file", post(files::read_file))
+        .route("/api/create-file", post(files::create_file))
+        .route("/api/create-directory", post(files::create_directory))
+        .route("/api/rename-path", post(files::rename_path))
+        .route("/api/delete-path", post(files::delete_path))
         .route("/api/file-preview", get(files::preview_file))
 }

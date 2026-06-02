@@ -127,6 +127,26 @@ export const desktopApi = {
       method: "POST",
       body: JSON.stringify({ path, content }),
     }),
+  createFile: (path: string, content = "") =>
+    apiFetch<{ ok: boolean; path?: string; error?: string }>("/api/create-file", {
+      method: "POST",
+      body: JSON.stringify({ path, content }),
+    }),
+  createDirectory: (path: string) =>
+    apiFetch<{ ok: boolean; path?: string; error?: string }>("/api/create-directory", {
+      method: "POST",
+      body: JSON.stringify({ path }),
+    }),
+  renamePath: (oldPath: string, newPath: string) =>
+    apiFetch<{ ok: boolean; old_path?: string; new_path?: string; error?: string }>("/api/rename-path", {
+      method: "POST",
+      body: JSON.stringify({ old_path: oldPath, new_path: newPath }),
+    }),
+  deletePath: (path: string) =>
+    apiFetch<{ ok: boolean; path?: string; error?: string }>("/api/delete-path", {
+      method: "POST",
+      body: JSON.stringify({ path }),
+    }),
   getUpdateStatus: () =>
     apiFetch<DesktopUpdateStatusResponse>(
       "/api/update-status",

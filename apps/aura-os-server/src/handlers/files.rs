@@ -177,6 +177,138 @@ pub(crate) async fn read_file(Json(req): Json<ReadFileRequest>) -> Json<serde_js
     }
 }
 
+#[derive(serde::Deserialize)]
+pub(crate) struct CreateFileRequest {
+    path: String,
+    #[serde(default)]
+    content: String,
+}
+
+pub(crate) async fn create_file(Json(req): Json<CreateFileRequest>) -> Json<serde_json::Value> {
+    if !is_path_safe(&req.path) {
+        warn!(path = %req.path, "create_file: blocked unsafe path");
+        return Json(serde_json::json!({ "ok": false, "error": "access denied" }));
+    }
+    let target = std::path::Path::new(&req.path);
+    if tokio::fs::try_exists(target).await.unwrap_or(false) {
+        warn!(path = %req.path, "create_file: file already exists");
+        return Json(serde_json::json!({ "ok": false, "error": "file already exists" }));
+    }
+    if let Some(parent) = target.parent() {
+        if let Err(e) = tokio::fs::create_dir_all(parent).await {
+            warn!(path = %req.path, error = %e, "create_file: failed to create parent directories");
+            return Json(serde_json::json!({ "ok": false, "error": e.to_string() }));
+        }
+    }
+    match tokio::fs::write(&req.path, &req.content).await {
+        Ok(_) => {
+            debug!(path = %req.path, "created file");
+            Json(serde_json::json!({ "ok": true, "path": req.path }))
+        }
+        Err(e) => {
+            warn!(path = %req.path, error = %e, "failed to create file");
+            Json(serde_json::json!({ "ok": false, "error": e.to_string() }))
+        }
+    }
+}
+
+#[derive(serde::Deserialize)]
+pub(crate) struct CreateDirectoryRequest {
+    path: String,
+}
+
+pub(crate) async fn create_directory(
+    Json(req): Json<CreateDirectoryRequest>,
+) -> Json<serde_json::Value> {
+    if !is_path_safe(&req.path) {
+        warn!(path = %req.path, "create_directory: blocked unsafe path");
+        return Json(serde_json::json!({ "ok": false, "error": "access denied" }));
+    }
+    let target = std::path::Path::new(&req.path);
+    if tokio::fs::try_exists(target).await.unwrap_or(false) {
+        warn!(path = %req.path, "create_directory: path already exists");
+        return Json(serde_json::json!({ "ok": false, "error": "path already exists" }));
+    }
+    match tokio::fs::create_dir_all(&req.path).await {
+        Ok(_) => {
+            debug!(path = %req.path, "created directory");
+            Json(serde_json::json!({ "ok": true, "path": req.path }))
+        }
+        Err(e) => {
+            warn!(path = %req.path, error = %e, "failed to create directory");
+            Json(serde_json::json!({ "ok": false, "error": e.to_string() }))
+        }
+    }
+}
+
+#[derive(serde::Deserialize)]
+pub(crate) struct RenameRequest {
+    old_path: String,
+    new_path: String,
+}
+
+pub(crate) async fn rename_path(Json(req): Json<RenameRequest>) -> Json<serde_json::Value> {
+    if !is_path_safe(&req.old_path) || !is_path_safe(&req.new_path) {
+        warn!(old = %req.old_path, new = %req.new_path, "rename_path: blocked unsafe path");
+        return Json(serde_json::json!({ "ok": false, "error": "access denied" }));
+    }
+    let old = std::path::Path::new(&req.old_path);
+    if !tokio::fs::try_exists(old).await.unwrap_or(false) {
+        warn!(path = %req.old_path, "rename_path: source does not exist");
+        return Json(serde_json::json!({ "ok": false, "error": "source not found" }));
+    }
+    let new_target = std::path::Path::new(&req.new_path);
+    if tokio::fs::try_exists(new_target).await.unwrap_or(false) {
+        warn!(path = %req.new_path, "rename_path: destination already exists");
+        return Json(serde_json::json!({ "ok": false, "error": "destination already exists" }));
+    }
+    match tokio::fs::rename(&req.old_path, &req.new_path).await {
+        Ok(_) => {
+            debug!(old = %req.old_path, new = %req.new_path, "renamed path");
+            Json(serde_json::json!({ "ok": true, "old_path": req.old_path, "new_path": req.new_path }))
+        }
+        Err(e) => {
+            warn!(old = %req.old_path, new = %req.new_path, error = %e, "failed to rename");
+            Json(serde_json::json!({ "ok": false, "error": e.to_string() }))
+        }
+    }
+}
+
+#[derive(serde::Deserialize)]
+pub(crate) struct DeleteRequest {
+    path: String,
+}
+
+pub(crate) async fn delete_path(Json(req): Json<DeleteRequest>) -> Json<serde_json::Value> {
+    if !is_path_safe(&req.path) {
+        warn!(path = %req.path, "delete_path: blocked unsafe path");
+        return Json(serde_json::json!({ "ok": false, "error": "access denied" }));
+    }
+    let target = std::path::Path::new(&req.path);
+    let meta = match tokio::fs::metadata(target).await {
+        Ok(m) => m,
+        Err(_) => {
+            warn!(path = %req.path, "delete_path: path does not exist");
+            return Json(serde_json::json!({ "ok": false, "error": "path not found" }));
+        }
+    };
+    let result = if meta.is_dir() {
+        tokio::fs::remove_dir_all(&req.path).await
+    } else {
+        tokio::fs::remove_file(&req.path).await
+    };
+    match result {
+        Ok(_) => {
+            debug!(path = %req.path, "deleted path");
+            Json(serde_json::json!({ "ok": true, "path": req.path }))
+        }
+        Err(e) => {
+            warn!(path = %req.path, error = %e, "failed to delete");
+            Json(serde_json::json!({ "ok": false, "error": e.to_string() }))
+        }
+    }
+}
+
 pub(crate) async fn preview_file(Query(query): Query<FilePreviewQuery>) -> Response {
     if !is_path_safe(&query.path) {
         warn!(path = %query.path, "preview_file: blocked unsafe path");
