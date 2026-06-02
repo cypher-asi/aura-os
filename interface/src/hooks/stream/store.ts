@@ -193,9 +193,13 @@ export function ensureEntry(key: string): StreamMeta {
   if (!meta) {
     meta = { key, refs: makeRefs(), abort: null, lastAccessedAt: Date.now() };
     streamMetaMap.set(key, meta);
-    useStreamStore.setState((s) => ({
-      entries: { ...s.entries, [key]: { ...INITIAL_ENTRY } },
-    }));
+    // Empty entry creation is a lazy cache fill. Broadcasting it can
+    // notify already-mounted subscribers while a sibling chat route is
+    // still rendering, which React correctly flags as a render-time
+    // update. The initial entry mirrors selector defaults, so mutating
+    // the backing map is enough; real stream setters still publish via
+    // `setState` once user-visible data changes.
+    useStreamStore.getState().entries[key] = { ...INITIAL_ENTRY };
   }
   meta.lastAccessedAt = Date.now();
   return meta;

@@ -226,7 +226,11 @@ export function MobileShell() {
         </div>
         <button
           type="button"
-          className={`${styles.mobileDrawerBackdrop} ${overlayDrawerOpen ? styles.mobileDrawerBackdropOpen : ""}`}
+          className={[
+            styles.mobileDrawerBackdrop,
+            overlayDrawerOpen ? styles.mobileDrawerBackdropOpen : "",
+            navOpen ? styles.mobileDrawerBackdropNavOpen : "",
+          ].filter(Boolean).join(" ")}
           aria-label="Close drawer"
           aria-hidden={!overlayDrawerOpen}
           tabIndex={overlayDrawerOpen ? 0 : -1}

@@ -60,6 +60,16 @@ describe("stream/store", () => {
       expect(meta1).toBe(meta2);
     });
 
+    it("does not notify subscribers when seeding an empty entry", () => {
+      const listener = vi.fn();
+      const unsubscribe = useStreamStore.subscribe(listener);
+
+      ensureEntry("k1");
+
+      expect(listener).not.toHaveBeenCalled();
+      unsubscribe();
+    });
+
     it("updates lastAccessedAt on each call", () => {
       const meta = ensureEntry("k1");
       const firstAccess = meta.lastAccessedAt;

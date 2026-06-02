@@ -33,7 +33,6 @@ export function MobileSettingsView() {
   return (
     <SettingsDetailScreen
       entry={entry}
-      onBack={() => navigate("/projects/settings")}
     />
   );
 }

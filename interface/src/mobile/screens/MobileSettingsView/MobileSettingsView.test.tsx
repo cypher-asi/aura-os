@@ -225,14 +225,10 @@ describe("MobileSettingsView", () => {
     expect(screen.getByTestId("mobile-settings-list")).toBeInTheDocument();
   });
 
-  it("the back button returns to the list view", async () => {
+  it("renders detail routes without duplicating shell-owned back navigation", async () => {
     renderAt("/projects/settings/keyboard");
 
     expect(screen.getByTestId("mobile-settings-detail-keyboard")).toBeInTheDocument();
-
-    await userEvent.click(screen.getByTestId("mobile-settings-back"));
-
-    expect(screen.getByTestId("mobile-settings-list")).toBeInTheDocument();
-    expect(screen.queryByTestId("mobile-settings-detail-keyboard")).toBeNull();
+    expect(screen.queryByTestId("mobile-settings-back")).toBeNull();
   });
 });

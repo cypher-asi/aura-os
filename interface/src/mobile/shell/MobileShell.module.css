@@ -500,6 +500,10 @@
   pointer-events: auto;
 }
 
+.mobileDrawerBackdropNavOpen {
+  left: min(86vw, 360px);
+}
+
 :global([role="dialog"][aria-modal="true"]) {
   z-index: 120;
 }
@@ -1478,6 +1482,10 @@
     max-width: 75vw;
     width: 75vw !important;
     border-radius: 0 20px 20px 0;
+  }
+
+  .mobileDrawerBackdropNavOpen {
+    left: 75vw;
   }
 
   .mobileSideSheet {
