@@ -1,5 +1,25 @@
 [
   {
+    "date": "2026-06-01",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.578.1",
+    "title": "AURA Council, live subagent threads, and shareable chats",
+    "intro": "A heavy day centered on multi-agent chat: live subagent threads grew from a clickable card into a fully promptable, persisted slide-over, AURA Council landed end-to-end with N model fan-out and a synthesizer, and assistant messages picked up a Copy/Share/Reload action row backed by a new public share link. Smaller but meaningful work tightened the Sidekick Run pane, added a forced-upgrade gate for stale desktop builds, fixed long-standing sys-admin auth gaps, and shipped an in-app screen-recorded demo command on Desktop.",
+    "entryCount": 6,
+    "highlights": [
+      "AURA Council: N model fan-out with a synthesizer and live member columns",
+      "Subagent threads became promptable, persistent slide-overs with shareable history",
+      "Public session share links + assistant Copy/Share/Reload action row",
+      "Desktop force-upgrade gate when 3+ releases behind",
+      "Sys-admin allowlist finally works across login, restart, and Auth0 tokens",
+      "In-app /record_demo screen capture on Desktop"
+    ],
+    "rawCommitCount": 109,
+    "generatedAt": "2026-06-02T06:58:31.077Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.578.1",
+    "path": "history/2026-06-01.json"
+  },
+  {
     "date": "2026-05-30",
     "channel": "nightly",
     "version": "0.1.0-nightly.577.1",
