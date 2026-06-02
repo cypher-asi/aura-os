@@ -11,13 +11,16 @@ import {
   Clock3,
   Activity,
   AlertTriangle,
+  Fingerprint,
 } from "lucide-react";
 import { Avatar } from "../../../components/Avatar";
+import { CopyButton } from "../../../components/CopyButton";
 import { FollowEditButton } from "../../../components/FollowEditButton";
 import { api } from "../../../api/client";
 import { useRemoteAgentState } from "../../../hooks/use-remote-agent-state";
 import {
   formatAdapterLabel,
+  formatAgentIdShort,
   formatAuthSourceLabel,
   formatRunsOnLabel,
 } from "./agent-info-utils";
@@ -274,6 +277,22 @@ function ProfileMetaGrid({ agent }: { agent: Agent }) {
           <span className={styles.metaLabel}>Birthed</span>
           <span className={styles.metaValue}>
             {new Date(agent.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+          </span>
+        </div>
+      </div>
+      <div className={styles.metaRow}>
+        <Fingerprint size={13} className={styles.metaIcon} />
+        <div className={styles.metaText}>
+          <span className={styles.metaLabel}>Agent ID</span>
+          <span className={styles.metaValueWithAction}>
+            <span className={styles.metaIdValue} title={agent.agent_id}>
+              {formatAgentIdShort(agent.agent_id)}
+            </span>
+            <CopyButton
+              getText={() => agent.agent_id}
+              ariaLabel="Copy agent ID"
+              iconOnly
+            />
           </span>
         </div>
       </div>

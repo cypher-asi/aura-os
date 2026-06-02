@@ -24,6 +24,11 @@ export function formatAuthSourceLabel(
   }
 }
 
+export function formatAgentIdShort(agentId: string): string {
+  if (agentId.length <= 14) return agentId;
+  return `${agentId.slice(0, 8)}…${agentId.slice(-4)}`;
+}
+
 export function formatRunsOnLabel(
   environment?: string | null,
   machineType?: string | null,

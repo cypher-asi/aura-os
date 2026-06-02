@@ -152,6 +152,19 @@
   text-overflow: ellipsis;
 }
 
+.metaValueWithAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.metaIdValue {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: var(--font-size-xs, 11px);
+  color: var(--color-text-secondary);
+}
+
 /* ── Profile skill tags ── */
 
 .skillTagsSection {
