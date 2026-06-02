@@ -2,17 +2,18 @@
   {
     "date": "2026-06-02",
     "channel": "nightly",
-    "version": "0.1.0-nightly.579.1",
-    "title": "Eval suite catches up to the new sidekick tab layout",
-    "intro": "A quiet nightly focused on keeping the end-to-end eval suite green after the sidekick tab redesign pushed Stats into the overflow menu and the first-run welcome modal started intercepting clicks.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.580.1",
+    "title": "Clearing App Review blockers and steadying the eval suite",
+    "intro": "Today's nightly is focused on unblocking the iOS App Store submission and keeping the end-to-end eval suite green after the recent sidekick tab redesign. Two App Review rejections from build 4231 were addressed directly — missing camera permissions and a missing Support URL — alongside test fixes that adapt to the new sidebar layout.",
+    "entryCount": 3,
     "highlights": [
-      "Evals now drive Stats through the More overflow menu",
-      "First-run onboarding is pre-dismissed in eval bootstraps"
+      "iOS camera and photo library permissions added to unblock App Review",
+      "New public /support page satisfies App Store Guideline 1.5",
+      "E2E evals adapted to the new sidekick tab overflow"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-06-02T09:55:26.199Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.579.1",
+    "rawCommitCount": 3,
+    "generatedAt": "2026-06-02T12:22:02.852Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.580.1",
     "path": "history/2026-06-02.json"
   },
   {

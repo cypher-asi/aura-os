@@ -3,19 +3,21 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-02T09:55:26.199Z",
+  "generatedAt": "2026-06-02T12:22:02.852Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.579.1",
+  "version": "0.1.0-nightly.580.1",
   "date": "2026-06-02",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.579.1",
-  "lastIncludedSha": "5bef97fc4bda72ca2d035ce97314536f36b0617b",
-  "previousProcessedSha": "61b389dd7b6bdd388516bfc7df40c1e47314db2c",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.580.1",
+  "lastIncludedSha": "7b0499a6c9a5e5f4c1510f1e3a2c5d956229ca0b",
+  "previousProcessedSha": "5bef97fc4bda72ca2d035ce97314536f36b0617b",
   "commitShas": [
-    "5bef97fc4bda72ca2d035ce97314536f36b0617b"
+    "5bef97fc4bda72ca2d035ce97314536f36b0617b",
+    "d851c7da34bcbe7ba34d35768acb0d9c539f81e2",
+    "7b0499a6c9a5e5f4c1510f1e3a2c5d956229ca0b"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 3,
+  "filteredCommitCount": 3,
   "rawCommits": [
     {
       "sha": "5bef97fc4bda72ca2d035ce97314536f36b0617b",
@@ -58,9 +60,87 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "d851c7da34bcbe7ba34d35768acb0d9c539f81e2",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-06-02T12:16:36+01:00",
+      "subject": "fix(ios): add camera and photo library usage descriptions",
+      "body": "App Review rejected build 4231 (Guideline 2.1a) — tapping Take Photo\ncrashed with a TCC abort because Info.plist had no NSCameraUsageDescription.\nThe native image picker is reached from agent image selection\n(accept=image/*) and message attachments (accept=*/*), both of which can\nlaunch the camera and the photo library. Add NSCameraUsageDescription and\nNSPhotoLibraryUsageDescription so these flows prompt for permission instead\nof crashing.",
+      "parents": [
+        "5bef97fc4bda72ca2d035ce97314536f36b0617b"
+      ],
+      "files": [
+        "interface/ios/App/App/Info.plist"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 4,
+        "deletions": 0
+      },
+      "committedAtMs": 1780398996000,
+      "cleanSubject": "add camera and photo library usage descriptions",
+      "keywords": [
+        "camera",
+        "photo",
+        "library",
+        "usage",
+        "descriptions"
+      ],
+      "fileGroups": [
+        "interface/ios/App"
+      ],
+      "primaryArea": "iOS",
+      "areas": [
+        "iOS"
+      ]
+    },
+    {
+      "sha": "7b0499a6c9a5e5f4c1510f1e3a2c5d956229ca0b",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-06-02T13:01:27+01:00",
+      "subject": "feat(support): add public /support page for App Store Support URL",
+      "body": "App Review rejected build 4231 (Guideline 1.5) because the Support URL\n(https://aura.ai/) had no support information. Add a standalone, ungated\n/support route served by the aura.ai static site (the /* -> /index.html\nrewrite resolves the deep link) so reviewers and users reach a page with a\nsupport contact regardless of auth state. Set the App Store Connect Support\nURL to https://aura.ai/support once support@aura.ai is live.",
+      "parents": [
+        "d851c7da34bcbe7ba34d35768acb0d9c539f81e2"
+      ],
+      "files": [
+        "interface/src/App.tsx",
+        "interface/src/views/marketing/SupportView/SupportView.css",
+        "interface/src/views/marketing/SupportView/SupportView.test.tsx",
+        "interface/src/views/marketing/SupportView/SupportView.tsx",
+        "interface/src/views/marketing/SupportView/index.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 143,
+        "deletions": 0
+      },
+      "committedAtMs": 1780401687000,
+      "cleanSubject": "add public /support page for App Store Support URL",
+      "keywords": [
+        "public",
+        "support",
+        "page",
+        "store"
+      ],
+      "fileGroups": [
+        "interface/src/App.tsx",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 3,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -69,36 +149,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 18785070
+          "sizeBytes": 18786271
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.579.1",
+      "version": "0.1.0-nightly.580.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.579.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.580.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 46746176
+          "sizeBytes": 46746786
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.579.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.580.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.579.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.580.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 113916408
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.579.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.580.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -108,29 +188,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.579.1",
+      "version": "0.1.0-nightly.580.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.579.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.580.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 43769838
+          "sizeBytes": 43765204
         },
         {
-          "name": "AURA_0.1.0-nightly.579.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.580.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.579.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.580.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 42870987
+          "sizeBytes": 42875418
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.579.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.580.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -140,29 +220,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.579.1",
+      "version": "0.1.0-nightly.580.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.579.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.580.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 45584428
+          "sizeBytes": 45580400
         },
         {
-          "name": "AURA_0.1.0-nightly.579.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.580.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.579.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.580.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 44733126
+          "sizeBytes": 44731570
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.579.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.580.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -172,17 +252,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.579.1",
+      "version": "0.1.0-nightly.580.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.579.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.580.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 32153338
+          "sizeBytes": 32150378
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.579.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.580.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -191,28 +271,69 @@
     }
   ],
   "rendered": {
-    "title": "Eval suite catches up to the new sidekick tab layout",
-    "intro": "A quiet nightly focused on keeping the end-to-end eval suite green after the sidekick tab redesign pushed Stats into the overflow menu and the first-run welcome modal started intercepting clicks.",
+    "title": "Clearing App Review blockers and steadying the eval suite",
+    "intro": "Today's nightly is focused on unblocking the iOS App Store submission and keeping the end-to-end eval suite green after the recent sidekick tab redesign. Two App Review rejections from build 4231 were addressed directly — missing camera permissions and a missing Support URL — alongside test fixes that adapt to the new sidebar layout.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:39 AM",
         "started_at": "2026-06-02T09:39:41.000Z",
         "ended_at": "2026-06-02T09:39:41.000Z",
-        "title": "Evals adapt to overflowed Stats tab and welcome modal",
-        "summary": "End-to-end smoke and workflow evals were updated to match the new Sessions/Terminal/Browser sidekick layout and to stop being blocked by the first-run welcome overlay.",
+        "title": "Evals adapt to sidekick overflow and onboarding overlay",
+        "summary": "Smoke and workflow evals were updated to match the new sidekick layout and to stop tripping over the first-run welcome modal.",
         "items": [
           {
-            "text": "Smoke and workflow evals now open the More overflow menu to assert the Stats menuitem, since the new Sessions/Terminal/Browser sidekick tabs push Stats out of the top-level tab row at the default panel width.",
+            "text": "Smoke and workflow evals now locate Stats inside the new More overflow menu, reflecting how the Sessions/Terminal/Browser sidekick tabs push Stats out of the top-level row at default panel width.",
             "commit_shas": [
               "5bef97fc4bda72ca2d035ce97314536f36b0617b"
             ],
             "confidence": "high"
           },
           {
-            "text": "Both eval bootstraps now seed onboarding state as welcomed, skipped, and checklist-dismissed (keyed by user_id to match AppShell hydration) so the first-run welcome modal no longer overlays the app and silently intercepts clicks during runs.",
+            "text": "Eval bootstraps now seed onboarding as completed and dismissed so the first-run welcome modal no longer overlays the app and silently intercepts clicks during automated runs.",
             "commit_shas": [
               "5bef97fc4bda72ca2d035ce97314536f36b0617b"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-2",
+        "time_label": "4:16 AM",
+        "started_at": "2026-06-02T11:16:36.000Z",
+        "ended_at": "2026-06-02T11:16:36.000Z",
+        "title": "iOS camera and photo library permissions for App Review",
+        "summary": "Added the Info.plist usage strings required when the in-app image picker reaches the camera or photo library, fixing the TCC crash that got build 4231 rejected under Guideline 2.1a.",
+        "items": [
+          {
+            "text": "Info.plist now declares NSCameraUsageDescription and NSPhotoLibraryUsageDescription so agent image selection and message attachments prompt for permission instead of crashing when Take Photo is tapped on iOS.",
+            "commit_shas": [
+              "d851c7da34bcbe7ba34d35768acb0d9c539f81e2"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-3",
+        "time_label": "5:01 AM",
+        "started_at": "2026-06-02T12:01:27.000Z",
+        "ended_at": "2026-06-02T12:01:27.000Z",
+        "title": "Public /support page for App Store Guideline 1.5",
+        "summary": "Shipped a standalone, ungated support page on aura.ai so the App Store Connect Support URL points to real contact information regardless of auth state.",
+        "items": [
+          {
+            "text": "Added a new /support route mounted outside AppShell and RequireAuth, so reviewers and logged-out users can reach a support contact directly at aura.ai/support via the static site's SPA rewrite.",
+            "commit_shas": [
+              "7b0499a6c9a5e5f4c1510f1e3a2c5d956229ca0b"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Introduced a dedicated SupportView with its own marketing styling and a tested Support heading, giving the page a polished standalone presentation rather than reusing the gated app shell.",
+            "commit_shas": [
+              "7b0499a6c9a5e5f4c1510f1e3a2c5d956229ca0b"
             ],
             "confidence": "high"
           }
@@ -220,9 +341,10 @@
       }
     ],
     "highlights": [
-      "Evals now drive Stats through the More overflow menu",
-      "First-run onboarding is pre-dismissed in eval bootstraps"
+      "iOS camera and photo library permissions added to unblock App Review",
+      "New public /support page satisfies App Store Guideline 1.5",
+      "E2E evals adapted to the new sidekick tab overflow"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 3
   }
 }
