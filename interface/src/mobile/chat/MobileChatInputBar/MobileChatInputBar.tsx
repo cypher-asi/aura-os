@@ -100,6 +100,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
       contextUsage,
       onNewChat,
       sendDisabled = false,
+      sendDisabledReason,
     },
     ref,
   ) {
@@ -647,6 +648,19 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
               className={styles.modeSelector}
             />
           )}
+          {remoteAgentRequired ? (
+            <div
+              className={styles.disabledNotice}
+              role="status"
+              aria-live="polite"
+              data-agent-surface="mobile-chat-input-disabled-hint"
+            >
+              <span className={styles.disabledNoticeTitle}>Remote agent required</span>
+              <span className={styles.disabledNoticeCopy}>
+                {sendDisabledReason ?? "Choose or create a remote agent to chat from mobile."}
+              </span>
+            </div>
+          ) : null}
           <AttachmentPreviews attachments={attachments} onRemove={handleRemove} />
           <CommandChips commands={selectedCommands} onRemove={handleCommandRemove} />
           <div className={styles.inputRow}>

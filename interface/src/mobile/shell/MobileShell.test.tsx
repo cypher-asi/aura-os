@@ -79,6 +79,7 @@ const mockProjectsError = {
   value: null as string | null,
 };
 const mockSetLastProject = vi.fn();
+const mockListProjects = vi.hoisted(() => vi.fn(async () => []));
 
 vi.mock("../../stores/app-store", () => ({
   useAppStore: (sel: (s: { activeApp: typeof mockActiveApp }) => unknown) =>
@@ -148,7 +149,7 @@ vi.mock("../../stores/project-action-store", () => ({
 
 vi.mock("../../api/client", () => ({
   api: {
-    listProjects: vi.fn(async () => [demoProject]),
+    listProjects: mockListProjects,
   },
 }));
 
@@ -325,6 +326,7 @@ function renderMobile(path: InitialEntry | InitialEntry[] = "/projects") {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockListProjects.mockClear();
   drawers.navOpen = false;
   drawers.appOpen = false;
   drawers.previewOpen = false;
@@ -564,6 +566,14 @@ describe("MobileShell", () => {
     expect(screen.queryByRole("button", { name: "Execution" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Process" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Stats" })).not.toBeInTheDocument();
+  });
+
+  it("uses cached projects in the drawer instead of fetching each organization", () => {
+    drawers.navOpen = true;
+    renderMobile("/projects/proj-1/work");
+
+    expect(screen.getByRole("button", { name: /Open Demo Project/ })).toBeInTheDocument();
+    expect(mockListProjects).not.toHaveBeenCalled();
   });
 
   it("omits the project agent switcher when only one agent is attached", () => {

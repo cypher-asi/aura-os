@@ -107,30 +107,22 @@ export function ProfileMainPanel() {
             />
             <ProfileActionGroup summary={summary} variant="stacked" />
             {projects.length > 0 ? (
-              <div className={styles.mobileFilterBar} aria-label="Profile activity filter">
-                <button
-                  type="button"
-                  className={`${styles.mobileFilterChip} ${selectedProject === null ? styles.mobileFilterChipActive : ""}`}
-                  aria-pressed={selectedProject === null}
-                  onClick={() => setSelectedProject(null)}
+              <label className={styles.mobileFilterField}>
+                <span className={styles.mobileFilterLabel}>Activity</span>
+                <select
+                  className={styles.mobileFilterSelect}
+                  aria-label="Filter profile activity"
+                  value={selectedProject ?? ""}
+                  onChange={(event) => setSelectedProject(event.target.value || null)}
                 >
-                  All activity
-                </button>
-                {projects.map((project) => {
-                  const isSelected = selectedProject === project.id;
-                  return (
-                    <button
-                      key={project.id}
-                      type="button"
-                      className={`${styles.mobileFilterChip} ${isSelected ? styles.mobileFilterChipActive : ""}`}
-                      aria-pressed={isSelected}
-                      onClick={() => setSelectedProject(project.id)}
-                    >
+                  <option value="">All activity</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
                       {project.name}
-                    </button>
-                  );
-                })}
-              </div>
+                    </option>
+                  ))}
+                </select>
+              </label>
             ) : null}
             <div className={styles.mobileActivitySection}>
               {activityContent}

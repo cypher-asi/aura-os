@@ -85,10 +85,16 @@ describe("MobileChatInputBar", () => {
     mockChatUI.setSelectedMode.mockClear();
   });
 
-  it("shows a remote-required footer instead of Local when mobile chat is disabled", () => {
-    renderInputBar({ machineType: "local", sendDisabled: true });
+  it("shows a remote-required notice instead of Local when mobile chat is disabled", () => {
+    renderInputBar({
+      machineType: "local",
+      sendDisabled: true,
+      sendDisabledReason: "This local agent needs the desktop app.",
+    });
 
     expect(screen.getByPlaceholderText("Remote agent required")).toBeDisabled();
+    expect(screen.getByRole("status")).toHaveTextContent("Remote agent required");
+    expect(screen.getByRole("status")).toHaveTextContent("This local agent needs the desktop app.");
     expect(screen.getByLabelText("Remote agent required")).toHaveTextContent("Remote required");
     expect(screen.queryByTestId("agent-environment")).not.toBeInTheDocument();
     expect(screen.queryByText("Local")).not.toBeInTheDocument();

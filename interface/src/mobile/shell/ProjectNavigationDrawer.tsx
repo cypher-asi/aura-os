@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Text } from "@cypher-asi/zui";
-import { ChevronDown, ChevronRight, Loader2, Search, X } from "lucide-react";
-import { api } from "../../api/client";
+import { ChevronDown, ChevronRight, Search, X } from "lucide-react";
 import { PanelSearch } from "../../components/PanelSearch";
 import { useSidebarSearch } from "../../hooks/use-sidebar-search";
 import { useProjectsListStore } from "../../stores/projects-list-store";
@@ -43,19 +42,6 @@ function sortProjects(projects: Project[]): Project[] {
   });
 }
 
-function areSameProjects(left: Project[] | undefined, right: Project[]): boolean {
-  if (!left || left.length !== right.length) {
-    return false;
-  }
-
-  return left.every((project, index) => {
-    const nextProject = right[index];
-    return project.project_id === nextProject.project_id
-      && project.name === nextProject.name
-      && project.updated_at === nextProject.updated_at;
-  });
-}
-
 function ProjectRow({
   project,
   isActive,
@@ -93,13 +79,8 @@ export function ProjectNavigationDrawerContent() {
   const closeDrawers = useMobileDrawerStore((s) => s.closeDrawers);
   const currentProjectId = getProjectIdFromPathname(location.pathname);
   const mobileDestination = getMobileProjectDestination(location.pathname);
-  const [projectsByOrgId, setProjectsByOrgId] = useState<Record<string, Project[]>>({});
-  const [loadingOrgIds, setLoadingOrgIds] = useState<Record<string, boolean>>({});
-  const [failedOrgIds, setFailedOrgIds] = useState<Record<string, boolean>>({});
   const [collapsedOrgIds, setCollapsedOrgIds] = useState<Set<string>>(() => new Set());
   const [searchOpen, setSearchOpen] = useState(false);
-  const requestedOrgIdsRef = useRef<Set<string>>(new Set());
-  const mountedRef = useRef(true);
   const drawerBodyRef = useRef<HTMLDivElement | null>(null);
 
   const orgSummaries = useMemo<DrawerOrg[]>(() => {
@@ -122,33 +103,6 @@ export function ProjectNavigationDrawerContent() {
   }, [activeOrg?.name, activeOrg?.org_id, orgs, projects]);
 
   useEffect(() => {
-    if (projects.length === 0) return;
-    const grouped = projects.reduce<Record<string, Project[]>>((acc, project) => {
-      acc[project.org_id] = [...(acc[project.org_id] ?? []), project];
-      return acc;
-    }, {});
-
-    setProjectsByOrgId((previous) => {
-      let changed = false;
-      const next = { ...previous };
-      for (const [orgId, orgProjects] of Object.entries(grouped)) {
-        const sortedProjects = sortProjects(orgProjects);
-        if (!areSameProjects(previous[orgId], sortedProjects)) {
-          next[orgId] = sortedProjects;
-          changed = true;
-        }
-      }
-      return changed ? next : previous;
-    });
-  }, [projects]);
-
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  useEffect(() => {
     if (!navOpen) return;
     const drawerBody = drawerBodyRef.current;
     if (!drawerBody) return;
@@ -162,41 +116,13 @@ export function ProjectNavigationDrawerContent() {
     drawerBody.scrollLeft = 0;
   }, [navOpen]);
 
-  useEffect(() => {
-    for (const org of orgSummaries) {
-      if (projectsByOrgId[org.org_id] || failedOrgIds[org.org_id] || requestedOrgIdsRef.current.has(org.org_id)) {
-        continue;
-      }
-
-      requestedOrgIdsRef.current.add(org.org_id);
-      setLoadingOrgIds((previous) => ({ ...previous, [org.org_id]: true }));
-      void api.listProjects(org.org_id)
-        .then((orgProjects) => {
-          if (!mountedRef.current) return;
-          setProjectsByOrgId((previous) => ({
-            ...previous,
-            [org.org_id]: sortProjects(orgProjects),
-          }));
-          setFailedOrgIds((previous) => {
-            if (!previous[org.org_id]) return previous;
-            const next = { ...previous };
-            delete next[org.org_id];
-            return next;
-          });
-        })
-        .catch((error) => {
-          if (!mountedRef.current) return;
-          console.error(`Failed to load projects for org ${org.org_id}`, error);
-          setFailedOrgIds((previous) => ({ ...previous, [org.org_id]: true }));
-        })
-        .finally(() => {
-          if (!mountedRef.current) return;
-          setLoadingOrgIds((previous) => ({ ...previous, [org.org_id]: false }));
-        });
-    }
-  }, [failedOrgIds, orgSummaries, projectsByOrgId]);
-
   const normalizedQuery = query.trim().toLowerCase();
+  const projectsByOrgId = useMemo(() => {
+    return projects.reduce<Record<string, Project[]>>((acc, project) => {
+      acc[project.org_id] = [...(acc[project.org_id] ?? []), project];
+      return acc;
+    }, {});
+  }, [projects]);
   const knownProjects = useMemo(
     () => Object.values(projectsByOrgId).flat(),
     [projectsByOrgId],
@@ -208,7 +134,7 @@ export function ProjectNavigationDrawerContent() {
   const sections = useMemo(() => {
     return orgSummaries
       .map((org) => {
-        const orgProjects = projectsByOrgId[org.org_id] ?? [];
+        const orgProjects = sortProjects(projectsByOrgId[org.org_id] ?? []);
         const orgMatches = normalizedQuery.length > 0 && org.name.toLowerCase().includes(normalizedQuery);
         const visibleProjects = normalizedQuery.length === 0 || orgMatches
           ? orgProjects
@@ -218,13 +144,11 @@ export function ProjectNavigationDrawerContent() {
           org,
           projects: visibleProjects,
           totalProjects: orgProjects.length,
-          isLoading: loadingOrgIds[org.org_id] === true,
-          didFail: failedOrgIds[org.org_id] === true,
           shouldShow: normalizedQuery.length === 0 || orgMatches || visibleProjects.length > 0,
         };
       })
       .filter((section) => section.shouldShow);
-  }, [failedOrgIds, loadingOrgIds, normalizedQuery, orgSummaries, projectsByOrgId]);
+  }, [normalizedQuery, orgSummaries, projectsByOrgId]);
   const cypherSection = useMemo(
     () => sections.find((section) => /cypher/i.test(section.org.name)) ?? null,
     [sections],
@@ -326,18 +250,7 @@ export function ProjectNavigationDrawerContent() {
                 onOpen={openProjectLanding}
               />
             ))}
-            {section.isLoading && section.projects.length === 0 ? (
-              <div className={styles.mobileDrawerOrgStatus}>
-                <Loader2 size={14} className="spin" />
-                <Text size="sm" variant="muted">Loading projects…</Text>
-              </div>
-            ) : null}
-            {section.didFail ? (
-              <div className={styles.mobileDrawerOrgStatus}>
-                <Text size="sm" variant="muted">Could not load this organization.</Text>
-              </div>
-            ) : null}
-            {!section.isLoading && !section.didFail && section.projects.length === 0 ? (
+            {section.projects.length === 0 ? (
               <div className={styles.mobileDrawerOrgStatus}>
                 <Text size="sm" variant="muted">
                   {activeQuery ? "No matching projects." : "No projects yet."}
