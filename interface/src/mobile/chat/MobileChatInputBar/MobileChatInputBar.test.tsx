@@ -134,9 +134,9 @@ describe("MobileChatInputBar", () => {
     const user = userEvent.setup();
     renderInputBar({ agentId: "agent-instance-1", adapterType: "aura_harness" });
 
-    expect(screen.getByRole("button", { name: /Opus 4\.6 Medium/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Opus 4\.6 M/i })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Opus 4\.6 Medium/i }));
+    await user.click(screen.getByRole("button", { name: /Opus 4\.6 M/i }));
     await user.click(screen.getByRole("button", { name: /^Sonnet 4\.6/i }));
 
     expect(mockChatUI.setSelectedModel).toHaveBeenCalledWith(
@@ -145,6 +145,6 @@ describe("MobileChatInputBar", () => {
       "aura_harness",
       "agent-instance-1",
     );
-    expect(screen.getByRole("button", { name: /Sonnet 4\.6 Medium/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Sonnet 4\.6 M/i })).toBeInTheDocument();
   });
 });

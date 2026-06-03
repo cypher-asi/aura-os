@@ -63,6 +63,24 @@ vi.mock("@cypher-asi/zui", () => ({
       {children}
     </button>
   ),
+  Toggle: ({
+    label,
+    checked,
+    onCheckedChange,
+  }: {
+    label?: string;
+    checked?: boolean;
+    onCheckedChange?: (checked: boolean) => void;
+  }) => (
+    <label>
+      {label}
+      <input
+        type="checkbox"
+        checked={Boolean(checked)}
+        onChange={(event) => onCheckedChange?.(event.target.checked)}
+      />
+    </label>
+  ),
   Spinner: () => <span data-testid="spinner" />,
   Select: ({
     children,

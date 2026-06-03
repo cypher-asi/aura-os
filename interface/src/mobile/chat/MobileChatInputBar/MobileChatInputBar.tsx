@@ -231,6 +231,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
 
     const restoreViewportScroll = useCallback(() => {
       const reset = () => {
+        if (typeof window === "undefined" || typeof document === "undefined") return;
         window.scrollTo(0, 0);
         document.documentElement.scrollTop = 0;
         document.body.scrollTop = 0;
@@ -702,7 +703,7 @@ export const MobileChatInputBar = forwardRef<ChatInputBarHandle, ChatInputBarPro
             )}
             <textarea
               ref={textareaRef}
-              className={`${styles.textarea}${isLocalAgent ? ` ${styles.textareaAwaitingRemote}` : ""}`}
+              className={`${styles.textarea}${remoteAgentRequired ? ` ${styles.textareaAwaitingRemote}` : ""}`}
               value={input}
               onChange={(event) => handleInputChange(event.target.value)}
               onFocus={() => {
