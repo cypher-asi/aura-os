@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-03T08:55:08.908Z",
+  "generatedAt": "2026-06-03T16:25:57.518Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.589.1",
+  "version": "0.1.0-nightly.590.1",
   "date": "2026-06-03",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.589.1",
-  "lastIncludedSha": "77ad55dde922359b058bc2ec548ac82f398f16df",
-  "previousProcessedSha": "021c9cfec458c77ad556267e4c4418f2ff1a18ff",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.590.1",
+  "lastIncludedSha": "9fe00d18dc1dc72873ee53a8e01583f32dd1f281",
+  "previousProcessedSha": "77ad55dde922359b058bc2ec548ac82f398f16df",
   "commitShas": [
     "9db2746c28a9d591a963f6d838a93ea22f79747e",
     "5771e069bb783dc0a3fe59cab865a51c5ea3d79c",
@@ -246,10 +246,11 @@
     "e4561939dd52dae53b40fa78c094948236aa8aa1",
     "e3f70068f378663c62238527fd6254d463965bb8",
     "0c7264fbe36aac84b7de3c103495b0149e029ab9",
-    "77ad55dde922359b058bc2ec548ac82f398f16df"
+    "77ad55dde922359b058bc2ec548ac82f398f16df",
+    "9fe00d18dc1dc72873ee53a8e01583f32dd1f281"
   ],
-  "rawCommitCount": 235,
-  "filteredCommitCount": 235,
+  "rawCommitCount": 236,
+  "filteredCommitCount": 236,
   "rawCommits": [
     {
       "sha": "9db2746c28a9d591a963f6d838a93ea22f79747e",
@@ -10006,6 +10007,48 @@
         "Interface",
         "Core Rust"
       ]
+    },
+    {
+      "sha": "9fe00d18dc1dc72873ee53a8e01583f32dd1f281",
+      "author": {
+        "name": "dominic",
+        "email": "domw30@gmail.com"
+      },
+      "committedAt": "2026-06-03T17:09:54+01:00",
+      "subject": "fix(analytics): restore public_page_viewed and public_gate_shown",
+      "body": "Both public-funnel events stopped firing during public-chat refactors:\npublic_page_viewed (LoggedOutShell, deleted in c1f2b3951) and\npublic_gate_shown (KeepChattingModal, deleted in 83c98a2e0). The metrics\ncliffed to ~0 when those deployed.\n\nRestore via two small hooks:\n- usePublicPageViewed fires public_page_viewed on mount of EVERY public web\n  surface (PublicChatView, MobilePublicChatView, PublicMarketingPanel), so it\n  counts all anonymous visitors incl. marketing landings, not just chat. The\n  old event was chat-shell-only; broadening it here per product decision.\n  Uniques-per-day means multi-surface browsing still counts once.\n- usePublicGateShown fires public_gate_shown when selectShouldShowGate\n  (turnCount >= limit) trips — the same condition the old gate modal used.\n  Chat-only, since the gate exists only there.\n\nCovered by unit tests for both triggers.",
+      "parents": [
+        "77ad55dde922359b058bc2ec548ac82f398f16df"
+      ],
+      "files": [
+        "interface/src/views/public-chat/MobilePublicChatView/MobilePublicChatView.tsx",
+        "interface/src/views/public-chat/PublicChatView/PublicChatView.tsx",
+        "interface/src/views/public-chat/PublicMarketingPanel/PublicMarketingPanel.tsx",
+        "interface/src/views/public-chat/use-public-shell-analytics.test.ts",
+        "interface/src/views/public-chat/use-public-shell-analytics.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 101,
+        "deletions": 0
+      },
+      "committedAtMs": 1780502994000,
+      "cleanSubject": "restore public_page_viewed and public_gate_shown",
+      "keywords": [
+        "restore",
+        "public",
+        "page",
+        "viewed",
+        "gate",
+        "shown"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 6,
@@ -10017,36 +10060,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 18828100
+          "sizeBytes": 18828204
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.589.1",
+      "version": "0.1.0-nightly.590.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.589.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.590.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 49923278
+          "sizeBytes": 49917076
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.589.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.590.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.589.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.590.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 116812280
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.589.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.590.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -10056,29 +10099,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.589.1",
+      "version": "0.1.0-nightly.590.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.589.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.590.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 45866473
+          "sizeBytes": 45865888
         },
         {
-          "name": "AURA_0.1.0-nightly.589.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.590.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.589.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.590.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 44937892
+          "sizeBytes": 44940190
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.589.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.590.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -10088,29 +10131,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.589.1",
+      "version": "0.1.0-nightly.590.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.589.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.590.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 47831685
+          "sizeBytes": 47830235
         },
         {
-          "name": "AURA_0.1.0-nightly.589.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.590.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.589.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.590.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 46958061
+          "sizeBytes": 46955112
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.589.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.590.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -10120,17 +10163,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.589.1",
+      "version": "0.1.0-nightly.590.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.589.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.590.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 33618379
+          "sizeBytes": 33622156
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.589.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.590.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -10139,29 +10182,37 @@
     }
   ],
   "rendered": {
-    "title": "Computer-use demos, a 3D agent card, and a top-to-bottom shell refresh",
-    "intro": "A heavy day across Desktop and Interface: /record_demo grew into a real presentation pipeline with computer-use, agents got a tactile WebGL profile card with a flippable persona screen, the authed shell was reframed as a rounded screen on a gradient backdrop, and Telegram channels began wiring through a new aura-os-channels crate. Reliability work tightened long remote chat sessions and unblocked Linux CI builds.",
+    "title": "Computer-use demos, a 3D agent card, and a redesigned authed shell",
+    "intro": "A massive nightly: the desktop app gains a real computer-use executor and a window-on-background /record_demo pipeline, the authed shell gets a top-to-bottom visual overhaul (rounded screen frame, gradient backdrop, beveled taskbar pills, glass panels), and the Agent profile becomes a full WebGL metal card with a worn backplate and clickable section links. Telegram messaging lands behind a new channels crate, agents default to a frontier model and full permissions, and long remote chat sessions get keepalive + reconnect hardening. Two short CI fixes unblock Linux builds for the new screen-capture stack.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "10:03 AM",
         "started_at": "2026-06-02T17:03:00.000Z",
-        "ended_at": "2026-06-03T05:19:41.000Z",
-        "title": "Record-demo pipeline, computer-use, and a major shell rebuild",
-        "summary": "A sweeping batch that shipped a real demo-recording pipeline with optional agent control, introduced the WebGL agent profile card, recolored and reframed the authed shell, and scaffolded the Telegram channels stack.",
+        "ended_at": "2026-06-03T05:49:40.000Z",
+        "title": "/record_demo gains a framed window-on-background pipeline and computer-use executor",
+        "summary": "The desktop demo recorder is rebuilt as a two-stage capture-and-composite pipeline with per-recording options, macOS parity, WGC capture on Windows, and a new local executor that lets agents drive the real machine.",
         "items": [
           {
-            "text": "Rebuilt /record_demo as a two-stage pipeline that captures the demo window and composites it onto a 1920x1080 background with rounded corners and an X-ready H.264 encode, with a typed DemoOptions panel in chat for resolution, target (X/Raw), background, and window-on-background toggle, plus macOS parity via avfoundation cropping and a Screen Recording permission preflight.",
+            "text": "Reworked /record_demo into a two-stage pipeline: stage 1 captures the demo window's region, stage 2 composites it onto a 1920x1080 background with rounded corners and a drop shadow, encoded H.264/yuv420p for X-ready upload, with a DemoOptions config (resolution, target X/Raw, background, max duration, window-on-background toggle) threaded through the HTTP boundary and an in-chat settings panel.",
             "commit_shas": [
               "00b0f29f996b93accb29d3485339c433deec701e",
               "6af20f4b4ce467257d5e6d3b97aa197ec12b704c",
-              "996f7136f902cc9d3166f6c9b771ff4fd28f4deb",
-              "3bbc69b385c4e478b61905bfd26deca1c3ee8975"
+              "996f7136f902cc9d3166f6c9b771ff4fd28f4deb"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added an end-to-end computer-use capability: a local HTTP executor performs real mouse, keyboard, and screenshot actions via enigo and xcap, the server round-trips image tool-results through Anthropic-compatible history, and /record_demo can opt into it with a Windows global Ctrl+Alt+Q abort hotkey and an on-screen control warning.",
+            "text": "Brought macOS to parity using avfoundation + crop with a detected screen-capture device and a CGPreflightScreenCaptureAccess permission check, and replaced native error dialogs with an in-app RecordDemoSetupModal that can locate ffmpeg or open Screen Recording settings and retry; the demo window now boots with the cached auth snapshot so it no longer flashes the public site.",
+            "commit_shas": [
+              "3bbc69b385c4e478b61905bfd26deca1c3ee8975",
+              "34a68aed730094f471e140a13d1d4cb8a38bccd0",
+              "914fb411e8e819ffd777908d6f598a48e3614a81"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added a local computer-use HTTP executor that performs real mouse/keyboard input via enigo and full-desktop screenshots via xcap, plus the server-side tool-result protocol for round-tripping image content; /record_demo can now opt into computer-use mode (full-monitor capture, executor URL gated by env vars, Ctrl+Alt+Q abort hotkey on Windows).",
             "commit_shas": [
               "e4b1151d426965f31fa8df0e23f61df1ac8fe791",
               "3374255522c8ee716fca08a014af233c3ad97a68",
@@ -10170,89 +10221,10 @@
             "confidence": "high"
           },
           {
-            "text": "Hardened demo recording on Windows: stage-2 composites now terminate cleanly with shortest=1, gdigrab uses DwmGetWindowAttribute for the true visible rect, the new Windows Graphics Capture backend records the window by handle so the clip follows it and survives overlapping windows, and the demo window opens straight into the authed shell with a self-service setup modal for missing ffmpeg or macOS permissions.",
+            "text": "Fixed several Windows-only capture bugs: stage-2 composite now actually terminates with shortest=1 overlays, gdigrab uses DwmGetWindowAttribute for the true visible rect, the window-appear animation is suppressed, and framed mode switches to a Windows Graphics Capture backend so recordings follow the window and include GPU-rendered WebView2 content.",
             "commit_shas": [
               "c1e4093ec20c1cbaacbe3a62fae917ca43de971c",
-              "702652982e11cf7fc9c567424505343254832649",
-              "34a68aed730094f471e140a13d1d4cb8a38bccd0"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Introduced a Three.js metal agent profile card with a beveled AURA silhouette, recessed LCD screen, edge-anchored CRT scan lines, worn-metal edgewear, and a theme-blended backdrop, replacing the earlier DOM/CSS card with a portrait-only WebGL component capped to a fixed width.",
-            "commit_shas": [
-              "321ce2124f804fcf89b0306860ae289bde070b81",
-              "0e4e38c32df74849f6f0008165bb08bd0c4b9aaf",
-              "22d66836a1eba85fe59edcbb5ccd1adbe4cfa6b7",
-              "5f6167ad05ed0c4ee9384b6f052f645e0cd4a8cc",
-              "45074fcbac3b9a5f10a749b843dfb9bfaaf49e38",
-              "9b90fc4b4656edd2a1485510330523ca3989bb3b",
-              "a2b250d0baa1494aa5392754543735b68ec65625",
-              "ebc2c2c884b5a83da6b485448790039ff5140b4d",
-              "780f18f6d8a3914342ae6b73356de72b1c76851a"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Collapsed the UIMode trichotomy down to standard/public so authenticated users always get the full shell, deleted the Simple/Advanced ModeToggle and chat-only pin, and migrated persisted values onto the new mode.",
-            "commit_shas": [
-              "ab9099b5931e667291bc454801151088ed357854"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Rebuilt the bottom taskbar as framed pills on a gradient TaskbarShell: a beveled charcoal-to-near-black pill with a gradient inner stroke, a nested-ring gold-then-circular plate for the active app, group dividers, an icon-shadow detail, and a standalone far-left Desktop bubble.",
-            "commit_shas": [
-              "467287ec879216ade9ecc51d3f637e4fc4ea7f7e",
-              "95b0f36c1b91b583d247c91ac60eb906cbd93fc7",
-              "2198dfadbb72455280c2774f8ded92f80e9b084a",
-              "a979a955c472f0050725fe0031bbaa9d08516fce",
-              "0bb8d29c0f7a9cfebb1e8138b67a11463216baed",
-              "3957409d08799ba6f803a4fde032ade9a0f63e65",
-              "41d9dc118e7917c72be87e074d8546b5c2ba90de",
-              "6f6e28e0fbf0024c47f8e834a8825d7abde3442f",
-              "01f57c2e02555bb97fd08e3cf9de2558c6c890de"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Scaffolded the channels stack: a new aura-os-channels crate with ChannelKind, ChatConnector, and ChannelService, a Telegram transport connector and bridge runtime, and server routes to link, list, and disconnect Telegram alongside an on-behalf agent dispatcher.",
-            "commit_shas": [
-              "905e55c9fad8863dd1fdf6b2ebd38499e6319f31",
-              "75561ad8c51f7e1847ce86d3bc57fbe0329456db",
-              "4231e59ddf8816d46b96d335b98a52aa546d4563",
-              "53e4da9f0af824e933d7e006e9221cf4d1bd03a6"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Reworked agent permissions so a renamed CEO defaults to full access via the bootstrap prompt prefix, a per-agent customized sentinel lets explicit user edits (including clear-all) win over defaults, and the CEO Permissions tab unlocked its capability switches.",
-            "commit_shas": [
-              "fcbe16ad4d1ae818c670f9349c95e39fe5794c0c",
-              "c61d954b7b40d129ee3a964039eb1255009fea0b",
-              "e2bb0a893fe336cf156e252d94562e0084950f02",
-              "c027dc704619595ac7e949b6dfbf6c5e542fa0cf"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Fixed several long-standing chat and sidekick papercuts: Stats stayed in the visible sidekick row so evals can find it, subagent transcripts no longer rendered a false dropped-stream banner on clean re-attach, empty cached history is now revalidated on click, and the boot overlay stopped flashing a startup error on benign avatar load failures.",
-            "commit_shas": [
-              "9db2746c28a9d591a963f6d838a93ea22f79747e",
-              "ff32fdb1236ec776d3336d1bc69fb37dcb176490",
-              "5faae68868dafd8e7c3c03fc6dab1908ea5a692d",
-              "2a02a3c951a6200158c8907765401fd3092e00e5"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Added per-panel Glass toggles for left, middle, and sidekick (left default-on, others off), pre-stamped at boot to avoid a first-paint flash, and surfaced the agent smart-wallet address in the Profile tab plus app_version/platform tagging on server-emitted analytics.",
-            "commit_shas": [
-              "2eff6dc7dc1b98a69984341d9feeefc2620cccf4",
-              "361106061b7e2eb581543b087029d2997dc8483e",
-              "209a7cdf0d9b1d63470b380434b4de051780182f",
-              "519858ae00f93c40cd103c1448b47f59590156af",
-              "29ad2357f58dde5100ff47319aaa2f81a05c8e04"
+              "702652982e11cf7fc9c567424505343254832649"
             ],
             "confidence": "high"
           }
@@ -10260,107 +10232,14 @@
       },
       {
         "batch_id": "entry-2",
-        "time_label": "10:19 PM",
-        "started_at": "2026-06-03T05:19:41.000Z",
-        "ended_at": "2026-06-03T05:49:40.000Z",
-        "title": "Rounded screen shell, pill chat input, and SidekickList consolidation",
-        "summary": "The authed desktop became a rounded screen floating on a continuous gradient backdrop, the chat input was rebuilt as a tall gradient pill, and sidekick lists collapsed onto one shared component while remote chat reliability was significantly tightened.",
-        "items": [
-          {
-            "text": "Reframed the authed desktop as a rounded screen: a gradient screen-frame on .body with the wallpaper clipped to it, the bottom-taskbar gradient promoted to a continuous shell backdrop running behind chrome and panels, and panel corners + perimeter border moved onto the body so nothing gets shaved at the curves.",
-            "commit_shas": [
-              "de32b5e86198776e9892b7bc81d6539620735c36",
-              "33688eb400e948d5e7535e85bde7a7e85478a77e",
-              "f2715b4460519b95f73a8e80e3f1f2deb58079cc",
-              "9dea1a95247a481a14ae5b8aa0a3a6af6a371f70",
-              "343ee83d10d75678dd5da1951e84364cd42ed34d",
-              "0997ba72e92481bf1480e76bd59059a18a3f2252",
-              "821904835313e020e8ff0d97031ad397d6afa916"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Rebuilt the LLM input as a 50px rounded gradient pill with a detached mode-selector tab above it, a ringed attach disc with an accent pulsing glow, a left collapse chevron, abbreviated effort labels on the model picker, and a softening-corners rule when stacked chrome expands the container.",
-            "commit_shas": [
-              "a21b8fb77ebdb3c76128f5b7dcaf5f983363fd12",
-              "b1ce331678c15bebdd067b76dff2aaa1bacc3d00",
-              "a7f18d016fb097d87f857b13c1320dc46c414594",
-              "f038d33a4fc76b8395876ef4d4706a30b48f2b86",
-              "0a583967fa3824d6026d6a91cfc0407b67dcdf34",
-              "8cd300a87ae012b7c63bed2a2b5f318279a1469c",
-              "a512693add235e11e889543079e7b4047f3562b1",
-              "cce0c06fd4bf708a376181fabda87f6a58d2d268",
-              "45b2dff9f36af25e6d97789dc4f37c7a8b3cb263",
-              "07414f5ce1519b6fae9e7421bcea715356dc7fe9"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Built a shared SidekickList component on the zui Item primitive and migrated Memory, Skills, project-binding, capability, Log, and Sessions lists onto it, with a single parent-controlled selection, optional context menu, and trailingAction slots for per-row controls.",
-            "commit_shas": [
-              "395cc1390da571d067095cb98c2c462be0c3efa3",
-              "74f0aa07f1d92104f62a050ecc83c1fcd51fed28",
-              "1b23132f8cf0649f59d9b3af9d5a37283b813ff7",
-              "7d7061e06aaf948fb815993878beff71d14093da",
-              "467475ff07da5510b5eaf07f602231f3d4e60437",
-              "dc667425c372d67d1998108916f27909acb4bd6a"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Hardened long remote chat sessions: a supervisor task in ws_bridge now keepalives the upstream socket and can reconnect mid-turn behind AURA_HARNESS_WS_RECONNECT, the cold-start watchdog moves from 90s to 180s, and the client doubles its consecutive auto-retry budget, surfaced via a new harness_ws_reconnect counter.",
-            "commit_shas": [
-              "4961377650dfe9e195da9583cd39aba8241bf6e3"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Routed core in-app colors through semantic theme tokens (status, log, diff, credit, surfaces) and added a light-gray light-theme variant for shell pills, AppNavRail plates, and the new chat input pill so every surface flips cleanly between themes.",
-            "commit_shas": [
-              "609671c1851dc0bfba46fe439af3ea868990997c",
-              "7259b1a0cf2a73972ce8e5211e8c320fdb41e9bc",
-              "df3a60cc173b1eb867a10d5d5c6ddfdc51832dd2"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Added a Messaging sidekick area for agents with a Telegram connect button + QR flow, documented TELEGRAM_BOT_TOKEN / USERNAME in .env.example, and fixed a re-render storm caused by duplicate channel polling between MessagingTab and TelegramConnect.",
-            "commit_shas": [
-              "0cb4f83f01763842e1811acb8ac85327433b079a",
-              "2135fab5ec5973d61545a47923af3c5fa4ab878e",
-              "101a32b9d0927c6a1ec21e200a941a154ab4503b"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "New agents now default to the latest frontier model (aura-claude-opus-4-8) and the default_new_agent permission preset (full access minus billing), so headless and remote agents can run commands and build out of the box.",
-            "commit_shas": [
-              "d436382c5caeacf328928e047e7a59e88c9aa72c"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Hid sidebar, sidekick, and menu-bar chrome in standard desktop mode for a clean top bar, gated the demo recording window's reveal on the shared shell-ready signal so clips no longer open on a blank frame, and registered the MiniMax M3 chat model with full pricing entries.",
-            "commit_shas": [
-              "96a522f667427633673afbcc4ecf9fb18643f9ba",
-              "0f32a982e9e8438d62e1d9753666acdaa318b356",
-              "914fb411e8e819ffd777908d6f598a48e3614a81",
-              "c130c582755de18c8a0a19d9722d007e3a19edf3"
-            ],
-            "confidence": "high"
-          }
-        ]
-      },
-      {
-        "batch_id": "entry-3",
         "time_label": "10:57 PM",
         "started_at": "2026-06-03T05:57:23.000Z",
         "ended_at": "2026-06-03T05:57:23.000Z",
-        "title": "Linux CI: libpipewire-0.3-dev for libspa-sys builds",
-        "summary": "Unblocked Linux desktop and sidecar builds after the xcap screen-capture dependency pulled in pipewire/libspa-sys.",
+        "title": "Linux CI: pipewire dev headers for the new screen-capture stack",
+        "summary": "Unblocks Linux desktop and sidecar builds after the xcap dependency landed.",
         "items": [
           {
-            "text": "Added libpipewire-0.3-dev to desktop-validate, release-nightly, and release-stable so libspa-sys' build script can find libpipewire-0.3.pc via pkg-config.",
+            "text": "Added libpipewire-0.3-dev to the desktop validate, nightly, and stable workflows so the libspa-sys build script can find pkg-config metadata.",
             "commit_shas": [
               "9760c47fcc7c48f773edde376f76e0ae03fbe032"
             ],
@@ -10369,31 +10248,29 @@
         ]
       },
       {
-        "batch_id": "entry-4",
+        "batch_id": "entry-3",
         "time_label": "11:03 PM",
         "started_at": "2026-06-03T06:03:26.000Z",
         "ended_at": "2026-06-03T07:17:35.000Z",
-        "title": "Worn-metal agent backplate, flippable persona, and glass invite card",
-        "summary": "Extended the 3D agent card with a worn-metal info backplate, clickable section links, a click-to-flip persona screen, and a new reusable GlassCard powering a redesigned Invite Friends modal.",
+        "title": "Agent card grows a worn-metal info backplate with clickable section links",
+        "summary": "The 3D agent profile card gets a stamped info strip below it, live status, navigation links, and a click-to-flip animation revealing a back face with personality and system prompt.",
         "items": [
           {
-            "text": "Added a worn-metal backplate behind the agent card with an engraved info readout (name, role pill, status, organization, IP, wallet) using accent-colored Online text that survives ACES tone mapping, plus clickable Skills, Connectors, and Permissions rows that hit-test via raycast and switch sidekick tabs.",
+            "text": "Added a worn-metal backplate that pokes out below the agent card and renders the agent's name, role pill, live status, organization, IP, and wallet as embossed text on engraved metal, sourced from the org store, remote VM state, and the agent record.",
             "commit_shas": [
               "e1294ba48f47f4bf38a22d0d3fcb251a5c5cdcd0",
               "7ca03b0c7a487b035113fc8c34165c4a15ed3530",
               "80b883a22c1c22ed9fc494477ce1de4efb5a3a30",
               "46b2b6f3f251f3cf90d079d87d5aa75f752c6f8c",
-              "d8128a705c28f6b74b93bd4caf0501685b227acf",
-              "3a8d3e26e6c026f12e221a5635671a887d978b96",
-              "f4911024294e1bffc7b3e2bcdb71fa0e101775f1",
-              "b458d69e44ba33cbdfaf771cb4ebd3a518c8273d",
-              "3b5360f74d100ab7a7ba130119d100b30d80bb70"
+              "d8128a705c28f6b74b93bd4caf0501685b227acf"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           },
           {
-            "text": "Made the card flip horizontally on click to reveal a back-face LCD that renders the agent's Personality and System Prompt, factoring face construction into a reusable buildFace() and clipping scan lines to the window outline on both mirrored sides.",
+            "text": "Extended the backplate with clickable Skills/Connectors/Permissions rows (counts on the right, hover-glow text, raycast hit-test to switch sidekick tabs) and a flip-on-click animation that swaps to a mirrored back face showing the agent's personality and system prompt on the LCD.",
             "commit_shas": [
+              "b458d69e44ba33cbdfaf771cb4ebd3a518c8273d",
+              "3b5360f74d100ab7a7ba130119d100b30d80bb70",
               "74b7c8e3f4a56b9e4a8fd8c497ab8130767fc316",
               "47a64f4b09633113e5e3a7a74f2cf94eee1e96af",
               "86f1d0c1a0f6e29a4b65f3f33e98456f5cb56ac7"
@@ -10401,20 +10278,24 @@
             "confidence": "high"
           },
           {
-            "text": "Extracted a reusable GlassCard component (rounded, see-through blurred glass, gradient rim, configurable glow color) and rebuilt the Invite Friends modal around it with an AURA wordmark pill, a single code-display button, and a theme-purple aurora glow.",
+            "text": "Redesigned the Invite Friends modal into a reusable GlassCard: black smoked-glass body, gradient rim, AURA wordmark pill, single code-to-Copied button, and a purple theme glow, with a fix to keep corners rounded under backdrop-filter.",
             "commit_shas": [
-              "3550638aca8f1aca84deb1457f72a0202f3a9aeb",
-              "91886c4f7a95bf849e13a5a0669ec84c89dce6d9",
-              "15d60c2c189bb2d3d5742257790df5000ba3aa74",
-              "111969dc330add2494a230b7553eebb20bb0bdbe",
               "aaa47b9ee25750afc3ba743e8b2f8f2e717b71f0",
-              "98d68882aac4c8f0c31c83cf38143e3f5595615f"
+              "d004e575ee157812a444ef61da2cec0e89b45f0b",
+              "3550638aca8f1aca84deb1457f72a0202f3a9aeb",
+              "98d68882aac4c8f0c31c83cf38143e3f5595615f",
+              "91886c4f7a95bf849e13a5a0669ec84c89dce6d9",
+              "111969dc330add2494a230b7553eebb20bb0bdbe",
+              "15d60c2c189bb2d3d5742257790df5000ba3aa74"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           },
           {
-            "text": "Renamed the agent sidekick Profile tab to \"Agent\" while keeping the underlying tab id stable so routing and state continue to work.",
+            "text": "Added a black-glass PersonaCard for personality and system prompt with overflow-aware Show more/less, and renamed the agent sidekick Profile tab to Agent.",
             "commit_shas": [
+              "079270ebfbf7ab21b38283e116e611fd49f90460",
+              "fda70428616eb3ab931414f8dfe17f02d2d908c3",
+              "6db8c43dbcbf6e982cad61244ab99d815bd4c1dc",
               "6cc212a4f10d2c7cb74952e088200e00b738a495"
             ],
             "confidence": "high"
@@ -10422,15 +10303,15 @@
         ]
       },
       {
-        "batch_id": "entry-5",
+        "batch_id": "entry-4",
         "time_label": "12:22 AM",
         "started_at": "2026-06-03T07:22:23.000Z",
         "ended_at": "2026-06-03T07:22:23.000Z",
-        "title": "Linux CI: libgbm-dev and libxdo-dev for desktop builds",
-        "summary": "Followed up the earlier pipewire fix with two more Linux native dependencies needed by the desktop and sidecar builds.",
+        "title": "Linux CI: gbm and xdo headers for the input + capture stack",
+        "summary": "Second small CI fix needed for the computer-use executor's native dependencies on Linux runners.",
         "items": [
           {
-            "text": "Added libgbm-dev and libxdo-dev to desktop-validate, release-nightly, and release-stable Linux dependency steps.",
+            "text": "Added libgbm-dev and libxdo-dev to the Linux dependency steps in desktop validate, nightly, and stable workflows.",
             "commit_shas": [
               "1eddffcdae6afec0d0c535d04d7fcd1a816bc99a"
             ],
@@ -10439,33 +10320,44 @@
         ]
       },
       {
-        "batch_id": "entry-6",
+        "batch_id": "entry-5",
         "time_label": "12:22 AM",
         "started_at": "2026-06-03T07:22:28.000Z",
         "ended_at": "2026-06-03T08:39:45.000Z",
-        "title": "Remote agent card: real IP, org, and live status",
-        "summary": "Tied up loose ends from the 3D card work by sequencing the flip animation with the backplate, capping the card size, and fixing wiped poll-only fields on remote agents.",
+        "title": "Remote agent card shows real IP, org, and VM status",
+        "summary": "Late-night fixes around the new 3D card: drop the standalone PersonaCard, size and sequence the flip animation, and surface real remote-agent metadata.",
         "items": [
           {
-            "text": "Restored the worn-metal info backplate's slide-out before the card flips and slide-back after it returns, with a snappier lerp so the swap no longer feels sluggish.",
-            "commit_shas": [
-              "e3f70068f378663c62238527fd6254d463965bb8",
-              "0c7264fbe36aac84b7de3c103495b0149e029ab9"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Fixed remote agent cards that showed blank IP and Organization or a misleading \"Online\": the RemoteAgentStateChanged WS handler now preserves poll-only fields like endpoint, persist_vm_id re-asserts org_id, and the card derives the real VM state so only running counts as online.",
+            "text": "Preserved the remote VM's endpoint and other poll-only fields across RemoteAgentStateChanged WS events, propagated org_id through the post-provision vm_id update, and derived the real VM state on the card so remote idle/hibernating agents no longer all read as Online.",
             "commit_shas": [
               "77ad55dde922359b058bc2ec548ac82f398f16df"
             ],
             "confidence": "high"
           },
           {
-            "text": "Capped the agent card at 265px so it no longer grows with the sidekick width and removed the obsolete PersonaCard component now that the persona surface lives on the flipped card.",
+            "text": "Removed the now-redundant PersonaCard, capped the 3D card at 265px so it stays consistent in narrow and widened sidekicks, and sequenced the info backplate to slide clear before the card flips so it no longer intersects mid-rotation.",
             "commit_shas": [
+              "021c9cfec458c77ad556267e4c4418f2ff1a18ff",
               "e4561939dd52dae53b40fa78c094948236aa8aa1",
-              "021c9cfec458c77ad556267e4c4418f2ff1a18ff"
+              "e3f70068f378663c62238527fd6254d463965bb8",
+              "0c7264fbe36aac84b7de3c103495b0149e029ab9"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "batch_id": "entry-6",
+        "time_label": "9:09 AM",
+        "started_at": "2026-06-03T16:09:54.000Z",
+        "ended_at": "2026-06-03T16:09:54.000Z",
+        "title": "Public funnel analytics restored after chat refactors",
+        "summary": "Brings back two web-only product metrics that quietly went to zero after the public-chat rebuild.",
+        "items": [
+          {
+            "text": "Reintroduced public_page_viewed across every public web surface (chat, mobile chat, marketing panel) and public_gate_shown when the turn-count gate trips, via two small reusable hooks with unit-test coverage.",
+            "commit_shas": [
+              "9fe00d18dc1dc72873ee53a8e01583f32dd1f281"
             ],
             "confidence": "high"
           }
@@ -10473,12 +10365,13 @@
       }
     ],
     "highlights": [
-      "/record_demo composites window-on-background and gains computer-use control",
-      "New WebGL agent profile card with worn-metal backplate and flip-to-persona",
-      "Authed desktop reframed as a rounded screen with new taskbar chrome",
-      "Telegram channels scaffolded end-to-end (crate, server routes, sidekick UI)",
-      "Hardened remote chat against long-session WebSocket drops"
+      "Computer-use executor + /record_demo with framed window-on-background pipeline",
+      "WebGL 3D agent profile card with worn-metal backplate and flip-to-persona",
+      "Authed shell redesign: rounded screen frame, beveled taskbar pills, glass panels",
+      "Telegram channel connector and Messaging sidekick tab",
+      "Long-session WebSocket keepalive + reconnect for remote agents",
+      "Simple/Advanced modes collapsed into a single Standard shell"
     ],
-    "raw_commit_count": 235
+    "raw_commit_count": 236
   }
 }
