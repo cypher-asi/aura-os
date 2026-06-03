@@ -1,72 +1,74 @@
-# Computer-use demos, a 3D agent card, and a reframed desktop shell
+# Computer-use demos, a 3D agent card, and a top-to-bottom shell refresh
 
 - Date: `2026-06-03`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.588.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.588.1
+- Version: `0.1.0-nightly.589.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.589.1
 
-A heavy nightly: /record_demo grew into a full window-on-background pipeline with a real computer-use executor, the agent profile became a flippable 3D metal card with a worn-metal info backplate, the desktop shell was reframed as a rounded screen with new taskbar chrome, and Telegram landed as the first messaging channel. Reliability work hardened long remote chat sessions, and Linux CI picked up the system libraries the new capture stack needs.
+A heavy day across Desktop and Interface: /record_demo grew into a real presentation pipeline with computer-use, agents got a tactile WebGL profile card with a flippable persona screen, the authed shell was reframed as a rounded screen on a gradient backdrop, and Telegram channels began wiring through a new aura-os-channels crate. Reliability work tightened long remote chat sessions and unblocked Linux CI builds.
 
-## 10:03 AM — /record_demo grows a framed pipeline, computer-use executor, and CEO permissions polish
+## 10:03 AM — Record-demo pipeline, computer-use, and a major shell rebuild
 
-A large morning batch built the demo-recording pipeline end to end, shipped a local computer-use executor, reworked CEO permission defaults, and started restyling the shell chrome around a rounded screen and beveled taskbar pills.
+A sweeping batch that shipped a real demo-recording pipeline with optional agent control, introduced the WebGL agent profile card, recolored and reframed the authed shell, and scaffolded the Telegram channels stack.
 
-- /record_demo became a two-stage pipeline that captures the demo window region and composites it onto a 1920x1080 background with rounded corners and shadow, then gained a validated DemoOptions config (resolution, X/Raw target, background, window-on-background, max duration) surfaced as a chat settings panel pre-filled with X-ready defaults. (`00b0f29`, `6af20f4`, `996f713`)
-- macOS parity for /record_demo: avfoundation captures the screen device and crops to the window rect via DPI-aware coordinates, with a Screen Recording (TCC) preflight; Windows fixes ensure the stage-2 composite actually terminates, uses the true visible frame bounds, and skips the OS appear animation. Preflight failures now surface as an in-app setup modal that can locate ffmpeg or open macOS settings instead of a silent failure. (`3bbc69b`, `c1e4093`, `34a68ae`)
-- Shipped a local computer-use executor: a desktop HTTP service performs real mouse/keyboard input via enigo and full-desktop screenshots via xcap, with an abort latch, macOS Accessibility preflight, and Ctrl+Alt+Q kill switch. The server round-trips image tool-results end to end and only enables the capability when an executor URL is published; /record_demo gained a computer-use toggle that forces full-monitor capture for agent-driven sessions. (`e4b1151`, `3374255`, `9acbcce`)
-- CEO agent permissions are now editable and survive user edits: the read-time reconciler defaults a fresh CEO to full access via the shared bootstrap prompt prefix, but a per-agent customized sentinel keeps explicit edits (including intentional clear-all) from being re-defaulted. Agents also surface their EIP-7702 smart-wallet address in the Profile tab. (`c027dc7`, `e2bb0a8`, `c61d954`, `fcbe16a`, `519858a`)
-- Built the first iteration of the WebGL agent profile card: a beveled metal shell with an inset LCD, AURA silhouette with chamfers and LED clusters, CRT scan lines clipped to the window outline, and a worn-metal edgewear texture. The card is portrait-only with capped width, blends with the themed sidekick backdrop in dark and light modes, and falls back to the DOM card when WebGL is unavailable. (`321ce21`, `0e4e38c`, `5f93cf4`, `45074fc`, `9b90fc4`, `780f18f`, `ebc2c2c`, `a2b250d`)
-- Bottom taskbar was rebuilt as charcoal gradient pills with a deep bevel, gradient inner stroke, theme-aware frame ring, and a circular gradient plate for the selected icon. The Desktop affordance was pulled into its own far-left bubble, and a TaskbarShell paints a continuous diagonal gradient behind the whole bar. (`467287e`, `95b0f36`, `1c0cbaf`, `a979a95`, `0bb8d29`, `01f57c2`, `6f6e28e`, `3957409`)
-- Collapsed the UIMode union by removing Simple mode: authenticated users always get the full standard shell, persisted simple/advanced/normie values migrate to standard, and the ChatRedirectGuard and ModeToggle were deleted. The menu bar gained a persisted collapse chevron and a Downloads link that routes signed-in users to the in-app /download view. (`ab9099b`, `6bf73b7`, `9032ac4`, `89c67d6`, `c0d8ce4`, `edd991e`)
-- Scaffolded a new aura-os-channels crate with ChannelKind, ChatConnector, and a Telegram transport, plus a server-side dispatcher with on-behalf auth and SSE accumulation and link/list/disconnect routes booted into the messaging bridge. Settings gained per-panel glass toggles (left default-on, middle and sidekick opt-in) that are pre-stamped at boot to avoid first-paint flash. (`905e55c`, `75561ad`, `4231e59`, `53e4da9`, `2eff6dc`, `3611060`, `209a7cd`)
-- Reliability and analytics polish: subagent transcripts no longer flash a fake "stream interrupted" banner on clean reattach, empty cached histories revalidate on session click so subagent chats render inline, the boot overlay stops blaming avatar load failures, and every API request now tags session_active with the client's app version and platform. (`ff32fdb`, `5faae68`, `2a02a3c`, `29ad235`, `1134bd8`)
+- Rebuilt /record_demo as a two-stage pipeline that captures the demo window and composites it onto a 1920x1080 background with rounded corners and an X-ready H.264 encode, with a typed DemoOptions panel in chat for resolution, target (X/Raw), background, and window-on-background toggle, plus macOS parity via avfoundation cropping and a Screen Recording permission preflight. (`00b0f29`, `6af20f4`, `996f713`, `3bbc69b`)
+- Added an end-to-end computer-use capability: a local HTTP executor performs real mouse, keyboard, and screenshot actions via enigo and xcap, the server round-trips image tool-results through Anthropic-compatible history, and /record_demo can opt into it with a Windows global Ctrl+Alt+Q abort hotkey and an on-screen control warning. (`e4b1151`, `3374255`, `9acbcce`)
+- Hardened demo recording on Windows: stage-2 composites now terminate cleanly with shortest=1, gdigrab uses DwmGetWindowAttribute for the true visible rect, the new Windows Graphics Capture backend records the window by handle so the clip follows it and survives overlapping windows, and the demo window opens straight into the authed shell with a self-service setup modal for missing ffmpeg or macOS permissions. (`c1e4093`, `7026529`, `34a68ae`)
+- Introduced a Three.js metal agent profile card with a beveled AURA silhouette, recessed LCD screen, edge-anchored CRT scan lines, worn-metal edgewear, and a theme-blended backdrop, replacing the earlier DOM/CSS card with a portrait-only WebGL component capped to a fixed width. (`321ce21`, `0e4e38c`, `22d6683`, `5f6167a`, `45074fc`, `9b90fc4`, `a2b250d`, `ebc2c2c`, `780f18f`)
+- Collapsed the UIMode trichotomy down to standard/public so authenticated users always get the full shell, deleted the Simple/Advanced ModeToggle and chat-only pin, and migrated persisted values onto the new mode. (`ab9099b`)
+- Rebuilt the bottom taskbar as framed pills on a gradient TaskbarShell: a beveled charcoal-to-near-black pill with a gradient inner stroke, a nested-ring gold-then-circular plate for the active app, group dividers, an icon-shadow detail, and a standalone far-left Desktop bubble. (`467287e`, `95b0f36`, `2198dfa`, `a979a95`, `0bb8d29`, `3957409`, `41d9dc1`, `6f6e28e`, `01f57c2`)
+- Scaffolded the channels stack: a new aura-os-channels crate with ChannelKind, ChatConnector, and ChannelService, a Telegram transport connector and bridge runtime, and server routes to link, list, and disconnect Telegram alongside an on-behalf agent dispatcher. (`905e55c`, `75561ad`, `4231e59`, `53e4da9`)
+- Reworked agent permissions so a renamed CEO defaults to full access via the bootstrap prompt prefix, a per-agent customized sentinel lets explicit user edits (including clear-all) win over defaults, and the CEO Permissions tab unlocked its capability switches. (`fcbe16a`, `c61d954`, `e2bb0a8`, `c027dc7`)
+- Fixed several long-standing chat and sidekick papercuts: Stats stayed in the visible sidekick row so evals can find it, subagent transcripts no longer rendered a false dropped-stream banner on clean re-attach, empty cached history is now revalidated on click, and the boot overlay stopped flashing a startup error on benign avatar load failures. (`9db2746`, `ff32fdb`, `5faae68`, `2a02a3c`)
+- Added per-panel Glass toggles for left, middle, and sidekick (left default-on, others off), pre-stamped at boot to avoid a first-paint flash, and surfaced the agent smart-wallet address in the Profile tab plus app_version/platform tagging on server-emitted analytics. (`2eff6dc`, `3611060`, `209a7cd`, `519858a`, `29ad235`)
 
-## 10:19 PM — Rounded screen shell, pill chat input, and long-session WS resilience
+## 10:19 PM — Rounded screen shell, pill chat input, and SidekickList consolidation
 
-The late-night batch reframed the authed desktop as a rounded screen floating on a gradient backdrop, restyled the chat input as a tall gradient pill with an accent-pulse attach ring, shipped Telegram in the Messaging sidekick, and hardened remote chat sessions against WS drops.
+The authed desktop became a rounded screen floating on a continuous gradient backdrop, the chat input was rebuilt as a tall gradient pill, and sidekick lists collapsed onto one shared component while remote chat reliability was significantly tightened.
 
-- The authed desktop is now a rounded screen: the body region between top bar and bottom taskbar is clipped to --shell-chrome-radius with a gradient screen frame painted on the body itself, the wallpaper is isolated so it sits inside the frame, and the previous taskbar-only gradient was promoted to the whole shell backdrop running diagonally behind chrome, panels, and pills. (`de32b5e`, `33688eb`, `f2715b4`, `9dea1a9`, `343ee83`, `0997ba7`, `8219048`)
-- Restyled the chat input as a fully-rounded 50px gradient pill with a detached mode-selector tab, an enlarged ringed + attach button with a pulsing accent halo, and a matching send disc; the bottom info bar (environment, orbit, project, model, context) was brightened to the primary text color. A WebGL prism ring was prototyped and then replaced with the simpler CSS accent pulse. (`a21b8fb`, `b1ce331`, `a7f18d0`, `f038d33`, `a512693`, `cce0c06`, `4e70671`, `0a58396`, `8cd300a`)
-- Telegram landed in the agent sidekick: a Messaging tab with a TelegramConnect button + QR flow connects through the channels API and is documented in .env.example. The tab and TelegramConnect share a single polling observer with retry:false and a 15s error backoff to stop double-polling and re-render jank. (`0cb4f83`, `2135fab`, `101a32b`)
-- Hardened long remote (SwarmHarness) chat sessions: a supervisor task originates a tunable WS keepalive ping, optionally re-establishes a dropped socket mid-turn behind a feature flag (emitting progress:reconnecting), raises the first-event cold-start budget from 90s to 180s, and bumps the client retry budget from 2 to 4. A harness_ws_reconnect counter is exposed on /api/admin/health. (`4961377`)
-- Introduced a shared SidekickList component and migrated Memory, Skills, Sessions, project bindings, capability rows, and the sidekick Log onto it for consistent collapsible sections, single-selection, and a shared context menu. New agents now default to the latest frontier model and the default_new_agent permission preset (full access minus billing) so they can run commands out of the box. (`395cc13`, `74f0aa0`, `1b23132`, `7d7061e`, `dc66742`, `d436382`)
-- Theme tokens were unified: core app surfaces route through semantic CSS variables, the shell flips to light gray chrome under data-theme=light (taskbar, input pill, attach disc, selected plate), and the chat input softens its corners when stacked chrome (slash menu, attachments, /record_demo settings) grows the container. (`609671c`, `7259b1a`, `df3a60c`, `07414f5`)
-- Desktop /record_video windows now wait for the initial shell-app readiness promise before signaling demo-ready, so recordings start on painted content instead of a blank loading frame. Standard-mode /desktop hides the entire menu bar plus the sidebar/sidekick toggles for a clean top bar while keeping keyboard shortcuts wired up. (`914fb41`, `96a522f`, `0f32a98`)
-- Registered the aura-minimax-m3 chat model (256K context, 0.2x credits) in the catalog and pricing tables, and redesigned the Invite Friends modal as a glassmorphic aurora card with a focal invite-code button. (`c130c58`, `2636601`)
+- Reframed the authed desktop as a rounded screen: a gradient screen-frame on .body with the wallpaper clipped to it, the bottom-taskbar gradient promoted to a continuous shell backdrop running behind chrome and panels, and panel corners + perimeter border moved onto the body so nothing gets shaved at the curves. (`de32b5e`, `33688eb`, `f2715b4`, `9dea1a9`, `343ee83`, `0997ba7`, `8219048`)
+- Rebuilt the LLM input as a 50px rounded gradient pill with a detached mode-selector tab above it, a ringed attach disc with an accent pulsing glow, a left collapse chevron, abbreviated effort labels on the model picker, and a softening-corners rule when stacked chrome expands the container. (`a21b8fb`, `b1ce331`, `a7f18d0`, `f038d33`, `0a58396`, `8cd300a`, `a512693`, `cce0c06`, `45b2dff`, `07414f5`)
+- Built a shared SidekickList component on the zui Item primitive and migrated Memory, Skills, project-binding, capability, Log, and Sessions lists onto it, with a single parent-controlled selection, optional context menu, and trailingAction slots for per-row controls. (`395cc13`, `74f0aa0`, `1b23132`, `7d7061e`, `467475f`, `dc66742`)
+- Hardened long remote chat sessions: a supervisor task in ws_bridge now keepalives the upstream socket and can reconnect mid-turn behind AURA_HARNESS_WS_RECONNECT, the cold-start watchdog moves from 90s to 180s, and the client doubles its consecutive auto-retry budget, surfaced via a new harness_ws_reconnect counter. (`4961377`)
+- Routed core in-app colors through semantic theme tokens (status, log, diff, credit, surfaces) and added a light-gray light-theme variant for shell pills, AppNavRail plates, and the new chat input pill so every surface flips cleanly between themes. (`609671c`, `7259b1a`, `df3a60c`)
+- Added a Messaging sidekick area for agents with a Telegram connect button + QR flow, documented TELEGRAM_BOT_TOKEN / USERNAME in .env.example, and fixed a re-render storm caused by duplicate channel polling between MessagingTab and TelegramConnect. (`0cb4f83`, `2135fab`, `101a32b`)
+- New agents now default to the latest frontier model (aura-claude-opus-4-8) and the default_new_agent permission preset (full access minus billing), so headless and remote agents can run commands and build out of the box. (`d436382`)
+- Hid sidebar, sidekick, and menu-bar chrome in standard desktop mode for a clean top bar, gated the demo recording window's reveal on the shared shell-ready signal so clips no longer open on a blank frame, and registered the MiniMax M3 chat model with full pricing entries. (`96a522f`, `0f32a98`, `914fb41`, `c130c58`)
 
-## 10:57 PM — Linux CI picks up libpipewire for xcap screen capture
+## 10:57 PM — Linux CI: libpipewire-0.3-dev for libspa-sys builds
 
-Unblock the desktop and sidecar Linux builds after pulling in xcap.
+Unblocked Linux desktop and sidecar builds after the xcap screen-capture dependency pulled in pipewire/libspa-sys.
 
-- Added libpipewire-0.3-dev to the desktop-validate, release-nightly, and release-stable Linux dependency steps so libspa-sys (transitively required by the new xcap screen-capture crate) can find libpipewire-0.3.pc via pkg-config. (`9760c47`)
+- Added libpipewire-0.3-dev to desktop-validate, release-nightly, and release-stable so libspa-sys' build script can find libpipewire-0.3.pc via pkg-config. (`9760c47`)
 
-## 11:03 PM — Worn-metal backplate, persona flip, and a reusable GlassCard
+## 11:03 PM — Worn-metal agent backplate, flippable persona, and glass invite card
 
-The 3D agent card grew a worn-metal info strip behind it that reads as a physical ID card, gained clickable navigation rows, and now flips on click to reveal a back face with the agent's personality and system prompt. The invite modal was rebuilt on a shared GlassCard.
+Extended the 3D agent card with a worn-metal info backplate, clickable section links, a click-to-flip persona screen, and a new reusable GlassCard powering a redesigned Invite Friends modal.
 
-- Added a gray worn-metal backplate that pokes out below the 3D card as an info strip showing the agent's name, role pill, status, organization, IP, and wallet, drawn at high resolution with embossed text. The Online status pulses in a deep accent hue that survives the card's tone mapping. (`e1294ba`, `7ca03b0`, `80b883a`, `46b2b6f`, `d8128a7`, `fe58ee3`, `3a8d3e2`, `f491102`)
-- Extended the backplate with a clickable Skills / Connectors / Permissions navigation list (with live counts and hover glow) that raycasts to switch the agent sidekick tab, and made clicking the card itself flip it horizontally to a back face whose LCD renders the agent's Personality and System Prompt text. (`b458d69`, `3b5360f`, `74b7c8e`, `47a64f4`, `86f1d0c`)
-- Introduced a reusable GlassCard component (rounded, blurred black glass with a gradient rim and configurable glow) and rebuilt the Invite Friends modal on top of it, with an AURA wordmark pill, a single code-and-copy button, purple theme glow, and prose tweaks. A separate PersonaCard prototype shipped briefly before being removed in favor of the back-face flip. (`3550638`, `91886c4`, `15d60c2`, `111969d`, `079270e`, `6158601`, `fda7042`)
-- Polished the new-chat hero block and tab labels: the hero heading is lighter and its gap above the mode selector grew to 48px, the agent sidekick Profile tab is now labeled "Agent", and the projects sidekick "Sessions" tab is now "Chats" (internal IDs unchanged). (`6cc212a`, `7a0f39f`, `1aaee02`, `c3d60d4`)
+- Added a worn-metal backplate behind the agent card with an engraved info readout (name, role pill, status, organization, IP, wallet) using accent-colored Online text that survives ACES tone mapping, plus clickable Skills, Connectors, and Permissions rows that hit-test via raycast and switch sidekick tabs. (`e1294ba`, `7ca03b0`, `80b883a`, `46b2b6f`, `d8128a7`, `3a8d3e2`, `f491102`, `b458d69`, `3b5360f`)
+- Made the card flip horizontally on click to reveal a back-face LCD that renders the agent's Personality and System Prompt, factoring face construction into a reusable buildFace() and clipping scan lines to the window outline on both mirrored sides. (`74b7c8e`, `47a64f4`, `86f1d0c`)
+- Extracted a reusable GlassCard component (rounded, see-through blurred glass, gradient rim, configurable glow color) and rebuilt the Invite Friends modal around it with an AURA wordmark pill, a single code-display button, and a theme-purple aurora glow. (`3550638`, `91886c4`, `15d60c2`, `111969d`, `aaa47b9`, `98d6888`)
+- Renamed the agent sidekick Profile tab to "Agent" while keeping the underlying tab id stable so routing and state continue to work. (`6cc212a`)
 
-## 12:22 AM — libgbm and libxdo added to Linux build deps
+## 12:22 AM — Linux CI: libgbm-dev and libxdo-dev for desktop builds
 
-Pull in the remaining system libraries the new desktop capture and input crates need on Linux.
+Followed up the earlier pipewire fix with two more Linux native dependencies needed by the desktop and sidecar builds.
 
-- Added libgbm-dev and libxdo-dev to the desktop-validate, release-nightly, and release-stable Linux dependency steps so the desktop bundle and sidecars link cleanly with the new computer-use and capture stack. (`1eddffc`)
+- Added libgbm-dev and libxdo-dev to desktop-validate, release-nightly, and release-stable Linux dependency steps. (`1eddffc`)
 
-## 12:22 AM — PersonaCard retired, Zero channel icon added
+## 12:22 AM — Remote agent card: real IP, org, and live status
 
-Final cleanup of the unused PersonaCard prototype and a small channel-icon addition.
+Tied up loose ends from the 3D card work by sequencing the flip animation with the backplate, capping the card size, and fixing wiped poll-only fields on remote agents.
 
-- Removed the standalone PersonaCard component and its styles now that the agent's personality and system prompt live on the flippable 3D card's back face, and added a Zero channel icon for the messaging surface. (`021c9cf`)
+- Restored the worn-metal info backplate's slide-out before the card flips and slide-back after it returns, with a snappier lerp so the swap no longer feels sluggish. (`e3f7006`, `0c7264f`)
+- Fixed remote agent cards that showed blank IP and Organization or a misleading "Online": the RemoteAgentStateChanged WS handler now preserves poll-only fields like endpoint, persist_vm_id re-asserts org_id, and the card derives the real VM state so only running counts as online. (`77ad55d`)
+- Capped the agent card at 265px so it no longer grows with the sidekick width and removed the obsolete PersonaCard component now that the persona surface lives on the flipped card. (`e456193`, `021c9cf`)
 
 ## Highlights
 
-- /record_demo is now a framed, window-on-background pipeline with WGC capture on Windows and macOS parity
-- Agents get a WebGL metal profile card that flips to reveal persona text, backed by a worn-metal info plate
-- Computer-use executor lets agents drive real mouse/keyboard and see the screen during demos
-- Telegram messaging channel scaffolded end-to-end via a new aura-os-channels crate and Messaging sidekick
-- Authed desktop reframed as a rounded screen with gradient backdrop, beveled taskbar pills, and per-panel glass
-- Long remote chat sessions survive WS drops via keepalive pings, mid-turn reconnect, and a 180s cold-start budget
+- /record_demo composites window-on-background and gains computer-use control
+- New WebGL agent profile card with worn-metal backplate and flip-to-persona
+- Authed desktop reframed as a rounded screen with new taskbar chrome
+- Telegram channels scaffolded end-to-end (crate, server routes, sidekick UI)
+- Hardened remote chat against long-session WebSocket drops
 
