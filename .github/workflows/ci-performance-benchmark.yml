@@ -41,6 +41,7 @@ on:
         type: boolean
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -420,3 +421,27 @@ jobs:
         with:
           name: ci-perf-sidecar-${{ matrix.platform }}
           path: ci-perf
+
+  summarize-run:
+    if: always()
+    needs: [preflight, interface, desktop-build, sidecar]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Summarize GitHub run timings
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/ci/gh-run-timing-summary.mjs \
+            --repo "${{ github.repository }}" \
+            --run-id "${{ github.run_id }}" \
+            --out-dir ci-run-timings \
+            --top-steps 25
+
+      - name: Upload run timing summary
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: ci-run-timing-summary
+          path: ci-run-timings
