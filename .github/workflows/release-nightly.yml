@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - codex/release-build-system
+      - codex/ci-perf-measurement
   workflow_dispatch:
     inputs:
       publish_live:
