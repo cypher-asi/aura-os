@@ -56,6 +56,28 @@ function readCargoMetadata(harnessManifest, harnessDir) {
   }
 }
 
+export function cargoBuildArgs({ sidecarPackage, binName, harnessManifest, env }) {
+  const args = [
+    "build",
+    "--release",
+    "-p",
+    sidecarPackage,
+    "--bin",
+    binName,
+    "--manifest-path",
+    harnessManifest,
+  ];
+
+  if (env.CARGO_BUILD_RUSTC_WRAPPER) {
+    args.push(
+      "--config",
+      `build.rustc-wrapper=${JSON.stringify(env.CARGO_BUILD_RUSTC_WRAPPER)}`,
+    );
+  }
+
+  return args;
+}
+
 function resolveCargoMetadataTargetDir(metadata) {
   if (typeof metadata?.target_directory === "string" && metadata.target_directory.trim()) {
     return metadata.target_directory.trim();
@@ -130,6 +152,9 @@ function printBuildEnv(env) {
       cargoBuildRustcWrapper: env.CARGO_BUILD_RUSTC_WRAPPER ?? null,
       sccachePath: env.SCCACHE_PATH ?? null,
       cargoTargetDir: env.CARGO_TARGET_DIR ?? null,
+      cargoBuildConfig: env.CARGO_BUILD_RUSTC_WRAPPER
+        ? `build.rustc-wrapper=${JSON.stringify(env.CARGO_BUILD_RUSTC_WRAPPER)}`
+        : null,
       sccacheGhaEnabled: env.SCCACHE_GHA_ENABLED ?? null,
       sccacheWebdavEndpoint: env.SCCACHE_WEBDAV_ENDPOINT ?? null,
     },
@@ -171,19 +196,16 @@ function main() {
 
   const buildEnv = sidecarBuildEnv();
   printBuildEnv(buildEnv);
+  const cargoCommand = buildEnv.CARGO ?? "cargo";
 
   run(
-    "cargo",
-    [
-      "build",
-      "--release",
-      "-p",
+    cargoCommand,
+    cargoBuildArgs({
       sidecarPackage,
-      "--bin",
       binName,
-      "--manifest-path",
       harnessManifest,
-    ],
+      env: buildEnv,
+    }),
     {
       cwd: harnessDir,
       env: buildEnv,

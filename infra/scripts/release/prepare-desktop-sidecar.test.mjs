@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  cargoBuildArgs,
   normalizeSccacheWrapperPath,
   resolveSidecarPackage,
 } from "./prepare-desktop-sidecar.mjs";
@@ -61,5 +62,23 @@ test("leaves non-Windows sccache wrapper path unchanged", () => {
   assert.equal(
     normalizeSccacheWrapperPath("/opt/sccache/sccache", "linux"),
     "/opt/sccache/sccache",
+  );
+});
+
+test("passes rustc wrapper as explicit cargo config when present", () => {
+  assert.deepEqual(
+    cargoBuildArgs({
+      sidecarPackage: "aura-runtime",
+      binName: "aura-node",
+      harnessManifest: "C:\\a\\aura-os\\aura-harness\\Cargo.toml",
+      env: {
+        CARGO_BUILD_RUSTC_WRAPPER:
+          "C:\\hostedtoolcache\\windows\\sccache\\0.15.0\\x64\\sccache.exe",
+      },
+    }).slice(-2),
+    [
+      "--config",
+      'build.rustc-wrapper="C:\\\\hostedtoolcache\\\\windows\\\\sccache\\\\0.15.0\\\\x64\\\\sccache.exe"',
+    ],
   );
 });
