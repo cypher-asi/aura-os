@@ -98,12 +98,42 @@ function run(command, args, options = {}) {
   }
 }
 
+export function normalizeSccacheWrapperPath(wrapperPath, platform = process.platform) {
+  if (!wrapperPath || platform !== "win32") {
+    return wrapperPath;
+  }
+
+  let normalized = wrapperPath.replaceAll("/", "\\");
+  if (!normalized.toLowerCase().endsWith(".exe")) {
+    normalized = `${normalized}.exe`;
+  }
+  return path.win32.normalize(normalized);
+}
+
 function sidecarBuildEnv() {
   const env = { ...process.env };
   if (env.SCCACHE_PATH && env.RUSTC_WRAPPER === "sccache") {
-    env.RUSTC_WRAPPER = env.SCCACHE_PATH;
+    env.RUSTC_WRAPPER = normalizeSccacheWrapperPath(env.SCCACHE_PATH);
+  }
+  if (env.RUSTC_WRAPPER && !env.CARGO_BUILD_RUSTC_WRAPPER) {
+    env.CARGO_BUILD_RUSTC_WRAPPER = env.RUSTC_WRAPPER;
   }
   return env;
+}
+
+function printBuildEnv(env) {
+  console.log(JSON.stringify({
+    sidecarBuildEnv: {
+      rustc: env.RUSTC ?? null,
+      cargo: env.CARGO ?? null,
+      rustcWrapper: env.RUSTC_WRAPPER ?? null,
+      cargoBuildRustcWrapper: env.CARGO_BUILD_RUSTC_WRAPPER ?? null,
+      sccachePath: env.SCCACHE_PATH ?? null,
+      cargoTargetDir: env.CARGO_TARGET_DIR ?? null,
+      sccacheGhaEnabled: env.SCCACHE_GHA_ENABLED ?? null,
+      sccacheWebdavEndpoint: env.SCCACHE_WEBDAV_ENDPOINT ?? null,
+    },
+  }, null, 2));
 }
 
 function parseArgs(argv) {
@@ -139,6 +169,9 @@ function main() {
     return;
   }
 
+  const buildEnv = sidecarBuildEnv();
+  printBuildEnv(buildEnv);
+
   run(
     "cargo",
     [
@@ -153,7 +186,7 @@ function main() {
     ],
     {
       cwd: harnessDir,
-      env: sidecarBuildEnv(),
+      env: buildEnv,
     },
   );
 

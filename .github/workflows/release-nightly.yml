@@ -14,6 +14,7 @@ on:
         type: boolean
 
 permissions:
+  actions: read
   contents: write
 
 concurrency:
@@ -444,7 +445,7 @@ jobs:
           compression-level: 0
 
   package:
-    needs: [resolve-version, build-sidecar, build-app]
+    needs: [resolve-version, release-preflight, build-interface]
     env:
       CARGO_TARGET_DIR: ../.aura-shared-target
       AURA_RELEASE_DIR: ../.aura-shared-target/release
@@ -514,6 +515,16 @@ jobs:
         with:
           crate: cargo-packager
           version: 0.11.8
+
+      - name: Wait for platform build artifacts
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/ci/wait-gh-artifacts.mjs \
+            --artifact "sidecar-${{ matrix.target }}-${{ matrix.arch }}" \
+            --artifact "build-inputs-${{ matrix.target }}-${{ matrix.arch }}" \
+            --fail-job "build-sidecar (${{ matrix.os }}, ${{ matrix.target }}, ${{ matrix.arch }})" \
+            --fail-job "build-app (${{ matrix.os }}, ${{ matrix.target }}, ${{ matrix.arch }})"
 
       - name: Download sidecar artifact
         uses: actions/download-artifact@v5
