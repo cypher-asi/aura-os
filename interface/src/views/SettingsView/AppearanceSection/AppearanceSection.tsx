@@ -131,13 +131,19 @@ export function AppearanceSection() {
         </Text>
       </div>
 
-      <CustomTokensPanel />
+      <div className={styles.advancedThemeTools}>
+        <CustomTokensPanel />
 
-      <Text variant="muted" size="xs">
-        Custom colors persist per dark/light mode in this browser.
+        <Text variant="muted" size="xs">
+          Custom colors persist per dark/light mode in this browser.
+        </Text>
+
+        <PresetsPanel />
+      </div>
+
+      <Text variant="muted" size="xs" className={styles.mobileThemeNote}>
+        Advanced color tools are available on desktop.
       </Text>
-
-      <PresetsPanel />
     </Panel>
   );
 }

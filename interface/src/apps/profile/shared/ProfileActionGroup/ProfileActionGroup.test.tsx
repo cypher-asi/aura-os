@@ -64,6 +64,15 @@ describe("ProfileActionGroup", () => {
     expect(summary.logout).toHaveBeenCalledOnce();
   });
 
+  it("can hide the stacked edit action when another mobile CTA already owns it", () => {
+    const summary = makeSummary();
+
+    render(<ProfileActionGroup summary={summary} variant="stacked" showEdit={false} />);
+
+    expect(screen.queryByRole("button", { name: "Edit profile" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Log out" })).toBeInTheDocument();
+  });
+
   it("renders a touch-sized follow action for non-owners", () => {
     render(
       <ProfileActionGroup

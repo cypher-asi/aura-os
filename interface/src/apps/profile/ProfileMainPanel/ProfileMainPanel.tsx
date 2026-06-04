@@ -105,7 +105,7 @@ export function ProfileMainPanel() {
               variant="mobile"
               showInlineFollowAction={false}
             />
-            <ProfileActionGroup summary={summary} variant="stacked" />
+            <ProfileActionGroup summary={summary} variant="stacked" showEdit={false} />
             {projects.length > 0 ? (
               <label className={styles.mobileFilterField}>
                 <span className={styles.mobileFilterLabel}>Activity</span>

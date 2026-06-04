@@ -6,9 +6,14 @@ import styles from "./ProfileActionGroup.module.css";
 interface ProfileActionGroupProps {
   summary: ProfileSummaryModel;
   variant: "floating" | "stacked";
+  showEdit?: boolean;
 }
 
-export function ProfileActionGroup({ summary, variant }: ProfileActionGroupProps) {
+export function ProfileActionGroup({
+  summary,
+  variant,
+  showEdit = true,
+}: ProfileActionGroupProps) {
   if (!summary.isOwnProfile) {
     if (variant === "floating" || !summary.followTargetId) return null;
 
@@ -50,14 +55,16 @@ export function ProfileActionGroup({ summary, variant }: ProfileActionGroupProps
   return (
     <div className={styles.stackedWrap}>
       <div className={styles.stackedRow}>
-        <button
-          type="button"
-          className={`${styles.stackedButton} ${styles.primaryButton}`}
-          onClick={summary.openEditor}
-        >
-          <Pencil size={16} />
-          Edit profile
-        </button>
+        {showEdit ? (
+          <button
+            type="button"
+            className={`${styles.stackedButton} ${styles.primaryButton}`}
+            onClick={summary.openEditor}
+          >
+            <Pencil size={16} />
+            Edit profile
+          </button>
+        ) : null}
         <button
           type="button"
           className={`${styles.stackedButton} ${styles.secondaryButton}`}

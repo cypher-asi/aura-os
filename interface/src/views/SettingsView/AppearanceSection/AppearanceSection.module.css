@@ -80,3 +80,49 @@
 .swatchRose {
   background: #f43f5e;
 }
+
+.advancedThemeTools {
+  display: contents;
+}
+
+.mobileThemeNote {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .appearancePanel {
+    max-width: none;
+    padding: 16px;
+    gap: 16px;
+    border-radius: 18px;
+  }
+
+  .section {
+    gap: 10px;
+  }
+
+  .themeButtons {
+    gap: 8px;
+  }
+
+  .themeButtons button {
+    min-height: 44px;
+  }
+
+  .accentSwatches {
+    gap: 10px;
+  }
+
+  .swatch {
+    width: 32px;
+    height: 32px;
+  }
+
+  .advancedThemeTools {
+    display: none;
+  }
+
+  .mobileThemeNote {
+    display: block;
+  }
+}
