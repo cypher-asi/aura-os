@@ -17,7 +17,112 @@ env:
   AURA_UPDATE_BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
 
 jobs:
+  release-preflight:
+    runs-on: aura-os-linux-x64-large
+    env:
+      CARGO_TARGET_DIR: ../.aura-preflight-target
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: ./.github/actions/setup-rust-toolchain
+
+      - name: Restore preflight Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: desktop-preflight-v1-${{ runner.os }}-${{ runner.arch }}
+          workspaces: |
+            . -> ../.aura-preflight-target
+          cache-on-failure: true
+
+      - name: Set up sccache
+        id: sccache-preflight
+        uses: mozilla-actions/sccache-action@v0.0.9
+        continue-on-error: true
+
+      - name: Configure sccache backend
+        if: steps.sccache-preflight.outcome == 'success'
+        shell: bash
+        env:
+          DEPOT_CACHE_TOKEN: ${{ secrets.DEPOT_CACHE_TOKEN }}
+        run: |
+          echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+          if [ -n "$DEPOT_CACHE_TOKEN" ]; then
+            echo "SCCACHE_WEBDAV_ENDPOINT=https://cache.depot.dev" >> "$GITHUB_ENV"
+            echo "SCCACHE_WEBDAV_TOKEN=$DEPOT_CACHE_TOKEN" >> "$GITHUB_ENV"
+          else
+            echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang pkg-config libatomic1 libssl-dev libdbus-1-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev libpipewire-0.3-dev libgbm-dev libxdo-dev
+
+      - name: Install Node.js
+        uses: ./.github/actions/setup-node
+
+      - name: Run release preflight
+        run: node scripts/ci/verify-release-preflight.mjs --cargo-check
+
+      - name: Show sccache stats
+        if: always() && steps.sccache-preflight.outcome == 'success'
+        shell: bash
+        run: |
+          mkdir -p ci-cache
+          "${SCCACHE_PATH}" --show-stats --stats-format=json > ci-cache/sccache-preflight.json || true
+          "${SCCACHE_PATH}" --show-stats || sccache --show-stats || true
+
+      - name: Upload preflight cache telemetry
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: ci-cache-stable-preflight
+          path: ci-cache
+          if-no-files-found: ignore
+
+  build-interface:
+    needs: release-preflight
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Node.js
+        uses: ./.github/actions/setup-node
+        with:
+          cache: npm
+          cache-dependency-path: interface/package-lock.json
+
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build interface
+        working-directory: interface
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+          APP_COMMIT: ${{ github.sha }}
+          APP_CHANNEL: stable
+        run: |
+          npm ci
+          npm run build
+          node ../infra/scripts/release/desktop-frontend-assets-validate.mjs --dist dist
+
+      - name: Upload interface dist
+        uses: actions/upload-artifact@v5
+        with:
+          name: interface-dist-stable
+          path: interface/dist
+          compression-level: 0
+
   build-sidecar:
+    needs: release-preflight
     strategy:
       fail-fast: false
       matrix:
@@ -55,6 +160,7 @@ jobs:
           shared-key: desktop-sidecar-v2-${{ runner.os }}-${{ runner.arch }}
           workspaces: |
             ../aura-harness -> target
+          cache-on-failure: true
 
       - name: Set up sccache
         id: sccache-sidecar
@@ -110,7 +216,17 @@ jobs:
         if: always() && steps.sccache-sidecar.outcome == 'success'
         shell: bash
         run: |
+          mkdir -p ci-cache
+          "${SCCACHE_PATH}" --show-stats --stats-format=json > "ci-cache/sccache-sidecar-${{ matrix.target }}-${{ matrix.arch }}.json" || true
           "${SCCACHE_PATH}" --show-stats || sccache --show-stats || true
+
+      - name: Upload sidecar cache telemetry
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: ci-cache-stable-sidecar-${{ matrix.target }}-${{ matrix.arch }}
+          path: ci-cache
+          if-no-files-found: ignore
 
       - name: Archive bundled sidecar
         shell: bash
@@ -125,6 +241,7 @@ jobs:
           compression-level: 0
 
   build-app:
+    needs: [release-preflight, build-interface]
     env:
       CARGO_TARGET_DIR: ../.aura-shared-target
       AURA_RELEASE_DIR: ../.aura-shared-target/release
@@ -169,6 +286,7 @@ jobs:
           shared-key: desktop-app-v2-${{ runner.os }}-${{ runner.arch }}
           workspaces: |
             . -> target
+          cache-on-failure: true
 
       - name: Set up sccache
         id: sccache-app
@@ -197,9 +315,6 @@ jobs:
 
       - name: Install Node.js
         uses: ./.github/actions/setup-node
-        with:
-          cache: npm
-          cache-dependency-path: interface/package-lock.json
 
       - name: Verify runner architecture
         if: matrix.target == 'linux'
@@ -232,16 +347,14 @@ jobs:
           sed -i.bak "s/^version = \".*\"/version = \"${VERSION}\"/" apps/aura-os-desktop/Cargo.toml
           rm -f apps/aura-os-desktop/Cargo.toml.bak
 
-      - name: Build interface
-        working-directory: interface
-        env:
-          APP_VERSION: ${{ steps.version.outputs.version }}
-          APP_COMMIT: ${{ github.sha }}
-          APP_CHANNEL: stable
-        run: |
-          npm ci
-          npm run build
-          node ../infra/scripts/release/desktop-frontend-assets-validate.mjs --dist dist
+      - name: Download interface dist
+        uses: actions/download-artifact@v5
+        with:
+          name: interface-dist-stable
+          path: interface/dist
+
+      - name: Validate interface dist
+        run: node infra/scripts/release/desktop-frontend-assets-validate.mjs --dist interface/dist
 
       - name: Build release binary
         env:
@@ -277,7 +390,17 @@ jobs:
         if: always() && steps.sccache-app.outcome == 'success'
         shell: bash
         run: |
+          mkdir -p ci-cache
+          "${SCCACHE_PATH}" --show-stats --stats-format=json > "ci-cache/sccache-app-${{ matrix.target }}-${{ matrix.arch }}.json" || true
           "${SCCACHE_PATH}" --show-stats || sccache --show-stats || true
+
+      - name: Upload app cache telemetry
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: ci-cache-stable-app-${{ matrix.target }}-${{ matrix.arch }}
+          path: ci-cache
+          if-no-files-found: ignore
 
       - name: Stage Cargo timings
         if: always() && (matrix.target == 'windows' || (matrix.target == 'macos' && matrix.arch == 'x86_64'))
