@@ -157,9 +157,9 @@ jobs:
       - name: Restore sidecar Rust cache
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: desktop-sidecar-v2-${{ runner.os }}-${{ runner.arch }}
+          shared-key: desktop-sidecar-v3-${{ runner.os }}-${{ runner.arch }}
           workspaces: |
-            ../aura-harness -> target
+            ../aura-harness -> ../.aura-shared-target
           cache-on-failure: true
 
       - name: Set up sccache

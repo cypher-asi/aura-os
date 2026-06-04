@@ -98,6 +98,14 @@ function run(command, args, options = {}) {
   }
 }
 
+function sidecarBuildEnv() {
+  const env = { ...process.env };
+  if (env.SCCACHE_PATH && env.RUSTC_WRAPPER === "sccache") {
+    env.RUSTC_WRAPPER = env.SCCACHE_PATH;
+  }
+  return env;
+}
+
 function parseArgs(argv) {
   return {
     checkOnly: argv.includes("--check"),
@@ -145,7 +153,7 @@ function main() {
     ],
     {
       cwd: harnessDir,
-      env: process.env,
+      env: sidecarBuildEnv(),
     },
   );
 

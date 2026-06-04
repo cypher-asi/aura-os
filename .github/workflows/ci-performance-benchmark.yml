@@ -358,9 +358,9 @@ jobs:
         if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && inputs.cache_mode != 'no-target-cache'
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: ${{ inputs.cache_mode == 'cold-key' && format('ci-perf-sidecar-cold-{0}-{1}-{2}', github.run_id, runner.os, runner.arch) || format('desktop-sidecar-v2-{0}-{1}', runner.os, runner.arch) }}
+          shared-key: ${{ inputs.cache_mode == 'cold-key' && format('ci-perf-sidecar-cold-{0}-{1}-{2}', github.run_id, runner.os, runner.arch) || format('desktop-sidecar-v3-{0}-{1}', runner.os, runner.arch) }}
           workspaces: |
-            ../aura-harness -> target
+            ../aura-harness -> ../.aura-shared-target
           cache-on-failure: true
 
       - name: Set up sccache
