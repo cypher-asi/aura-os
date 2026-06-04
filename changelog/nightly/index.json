@@ -2,21 +2,20 @@
   {
     "date": "2026-06-03",
     "channel": "nightly",
-    "version": "0.1.0-nightly.590.1",
-    "title": "Computer-use demos, a 3D agent card, and a redesigned authed shell",
-    "intro": "A massive nightly: the desktop app gains a real computer-use executor and a window-on-background /record_demo pipeline, the authed shell gets a top-to-bottom visual overhaul (rounded screen frame, gradient backdrop, beveled taskbar pills, glass panels), and the Agent profile becomes a full WebGL metal card with a worn backplate and clickable section links. Telegram messaging lands behind a new channels crate, agents default to a frontier model and full permissions, and long remote chat sessions get keepalive + reconnect hardening. Two short CI fixes unblock Linux builds for the new screen-capture stack.",
+    "version": "0.1.0-nightly.591.1",
+    "title": "Computer-use demos, a 3D agent card, and a reshaped desktop shell",
+    "intro": "A heavy build day on nightly: the /record_demo pipeline grew from a window capture into a framed, agent-driven screen recording with a self-service setup flow; the agent profile became a real WebGL \"AURA card\" with a flippable persona screen; the authed desktop shell was rebuilt around a rounded screen, a beveled taskbar, and a new chat input pill; and Telegram messaging arrived as a first-class agent channel. Release infra also needed two follow-up fixes to keep Linux builds green.",
     "entryCount": 6,
     "highlights": [
-      "Computer-use executor + /record_demo with framed window-on-background pipeline",
-      "WebGL 3D agent profile card with worn-metal backplate and flip-to-persona",
-      "Authed shell redesign: rounded screen frame, beveled taskbar pills, glass panels",
-      "Telegram channel connector and Messaging sidekick tab",
-      "Long-session WebSocket keepalive + reconnect for remote agents",
-      "Simple/Advanced modes collapsed into a single Standard shell"
+      "/record_demo grows a window-on-background pipeline with computer-use",
+      "WebGL agent card with flip-to-persona back face",
+      "Telegram channels and agent smart-wallet wired end-to-end",
+      "Authed shell redesigned: rounded screen, beveled taskbar, pill chat input",
+      "Long remote chat sessions survive idle WS drops via keepalive + reconnect"
     ],
-    "rawCommitCount": 236,
-    "generatedAt": "2026-06-03T16:25:57.518Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.590.1",
+    "rawCommitCount": 253,
+    "generatedAt": "2026-06-04T02:55:13.884Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.591.1",
     "path": "history/2026-06-03.json"
   },
   {

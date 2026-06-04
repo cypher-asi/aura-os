@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-03T16:25:57.518Z",
+  "generatedAt": "2026-06-04T02:55:13.884Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.590.1",
+  "version": "0.1.0-nightly.591.1",
   "date": "2026-06-03",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.590.1",
-  "lastIncludedSha": "9fe00d18dc1dc72873ee53a8e01583f32dd1f281",
-  "previousProcessedSha": "77ad55dde922359b058bc2ec548ac82f398f16df",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.591.1",
+  "lastIncludedSha": "e9d56de653256325c2d4a816db5d70ec3f8855ac",
+  "previousProcessedSha": "9fe00d18dc1dc72873ee53a8e01583f32dd1f281",
   "commitShas": [
     "9db2746c28a9d591a963f6d838a93ea22f79747e",
     "5771e069bb783dc0a3fe59cab865a51c5ea3d79c",
@@ -247,10 +247,25 @@
     "e3f70068f378663c62238527fd6254d463965bb8",
     "0c7264fbe36aac84b7de3c103495b0149e029ab9",
     "77ad55dde922359b058bc2ec548ac82f398f16df",
-    "9fe00d18dc1dc72873ee53a8e01583f32dd1f281"
+    "9fe00d18dc1dc72873ee53a8e01583f32dd1f281",
+    "bb116e4e32cef8f1d03dcc62bace3e077520cee8",
+    "e384cf4ceebc76dbed69c66627494d5d693cc933",
+    "2b27cfcb11ade5dd607923562ec230f9ee5a479c",
+    "2048256af77558844d051ca7228b72f6f93e6db8",
+    "e919b89bd2428e66fd887d005173ee5685121167",
+    "0951dff6c2b62b4140e66c6f4096785893a83357",
+    "79a061a235466ccc9425aff86f13e7fb8895c4a8",
+    "525adc2c9d142298a839dc7fc46eb7dc29ff9934",
+    "bb92efc6f137df4868a013b2d1cdad0ac9ca0e5b",
+    "c376d28c6ffde16e92dd8d523c7e7f3730cffb33",
+    "0de5c909ce504ff5fff786a741af2e936317ee9a",
+    "dba4a0b9436a1d61a07280b9422dee5f8dc584df",
+    "d4ccc0fa2e0b65898cf499cf3b9b9114750b9490",
+    "a744c19ef903afbb45cd051ba1c2b61e718f1055",
+    "2430b52b0bcb29c3e3ab7499ea3342b5253812f4"
   ],
-  "rawCommitCount": 236,
-  "filteredCommitCount": 236,
+  "rawCommitCount": 253,
+  "filteredCommitCount": 251,
   "rawCommits": [
     {
       "sha": "9db2746c28a9d591a963f6d838a93ea22f79747e",
@@ -10049,6 +10064,678 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "bb116e4e32cef8f1d03dcc62bace3e077520cee8",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-03T14:51:04-07:00",
+      "subject": "fix(chat): keep input focused after file upload",
+      "body": "Defer the post-upload refocus with requestAnimationFrame so the textarea reliably regains focus after the native file picker releases focus and React commits the new attachment chips. Covers the + button, drag/drop, and paste across all modes since they share addFiles in useFileAttachments.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "77ad55dde922359b058bc2ec548ac82f398f16df"
+      ],
+      "files": [
+        "interface/src/features/chat-ui/ChatInputBar/useFileAttachments.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 5,
+        "deletions": 1
+      },
+      "committedAtMs": 1780523464000,
+      "cleanSubject": "keep input focused after file upload",
+      "keywords": [
+        "keep",
+        "input",
+        "focused",
+        "after",
+        "file",
+        "upload"
+      ],
+      "fileGroups": [
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "e384cf4ceebc76dbed69c66627494d5d693cc933",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-03T14:52:12-07:00",
+      "subject": "fix(agents): remove skill tag pills from desktop profile card",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "bb116e4e32cef8f1d03dcc62bace3e077520cee8"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentInfoPanel/AgentInfoPanel.module.css",
+        "interface/src/apps/agents/AgentInfoPanel/ProfileTab.test.tsx",
+        "interface/src/apps/agents/AgentInfoPanel/ProfileTab.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 3,
+        "deletions": 40
+      },
+      "committedAtMs": 1780523532000,
+      "cleanSubject": "remove skill tag pills from desktop profile card",
+      "keywords": [
+        "remove",
+        "skill",
+        "pills",
+        "from",
+        "desktop",
+        "profile",
+        "card"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "2b27cfcb11ade5dd607923562ec230f9ee5a479c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-03T14:54:10-07:00",
+      "subject": "feat(video): accept source images in generateVideoStream",
+      "body": "Add an images field to GenerateVideoOptions and serialize it into the video generation request body, mirroring the image-mode pipeline. This is the client-API layer of wiring image-to-video; the stream hooks and server still forward the uploaded image in later commits.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "e384cf4ceebc76dbed69c66627494d5d693cc933"
+      ],
+      "files": [
+        "interface/src/api/streams.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 7,
+        "deletions": 0
+      },
+      "committedAtMs": 1780523650000,
+      "cleanSubject": "accept source images in generateVideoStream",
+      "keywords": [
+        "accept",
+        "source",
+        "images",
+        "generatevideostream"
+      ],
+      "fileGroups": [
+        "interface/src/api"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "2048256af77558844d051ca7228b72f6f93e6db8",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-03T14:54:53-07:00",
+      "subject": "feat(video): forward uploaded images from chat hooks to video stream",
+      "body": "Both video-mode stream-hook branches now map in-scope image attachments to data URLs (same as image mode) and pass them as generateVideoStream's images, so an uploaded character image reaches the request body instead of being dropped.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "2b27cfcb11ade5dd607923562ec230f9ee5a479c"
+      ],
+      "files": [
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 8,
+        "deletions": 0
+      },
+      "committedAtMs": 1780523693000,
+      "cleanSubject": "forward uploaded images from chat hooks to video stream",
+      "keywords": [
+        "forward",
+        "uploaded",
+        "images",
+        "from",
+        "chat",
+        "hooks",
+        "video",
+        "stream"
+      ],
+      "fileGroups": [
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "e919b89bd2428e66fd887d005173ee5685121167",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-03T14:55:02-07:00",
+      "subject": "feat(council): add CouncilMechanism to aura-protocol",
+      "body": "Mirror the harness wire contract: CouncilMechanism enum (synthesize/contrast/side_by_side, default synthesize) and a serde-defaulted mechanism field on RuntimeRequestType::Council. Regenerate the affected TS bindings.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "2048256af77558844d051ca7228b72f6f93e6db8"
+      ],
+      "files": [
+        "crates/aura-protocol/bindings/CouncilMechanism.ts",
+        "crates/aura-protocol/bindings/RuntimeRequestType.ts",
+        "crates/aura-protocol/src/lib.rs",
+        "crates/aura-protocol/src/runtime_request.rs"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 134,
+        "deletions": 5
+      },
+      "committedAtMs": 1780523702000,
+      "cleanSubject": "add CouncilMechanism to aura-protocol",
+      "keywords": [
+        "councilmechanism",
+        "aura",
+        "protocol"
+      ],
+      "fileGroups": [
+        "crates/aura-protocol/bindings",
+        "crates/aura-protocol/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "0951dff6c2b62b4140e66c6f4096785893a83357",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-03T14:55:53-07:00",
+      "subject": "feat(video): forward source images through the video generation handler",
+      "body": "Add an images field to GenerateVideoRequest, populate GenerationRequest.images from it (was hardcoded None), and persist the source images on the user turn. This completes the image-to-video plumbing on the auth'd server path.\n\nVerified with cargo check -p aura-os-server.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "e919b89bd2428e66fd887d005173ee5685121167"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/generation/video.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 6,
+        "deletions": 2
+      },
+      "committedAtMs": 1780523753000,
+      "cleanSubject": "forward source images through the video generation handler",
+      "keywords": [
+        "forward",
+        "source",
+        "images",
+        "through",
+        "video",
+        "generation",
+        "handler"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "79a061a235466ccc9425aff86f13e7fb8895c4a8",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-03T14:56:22-07:00",
+      "subject": "feat(council): thread council_mechanism through SessionConfig",
+      "body": "Add council_mechanism to SessionConfig and set it on the Council runtime request in build_runtime_request, defaulting to Synthesize. Single-member configs still fall through to the Chat path.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "0951dff6c2b62b4140e66c6f4096785893a83357"
+      ],
+      "files": [
+        "crates/aura-os-harness/src/harness.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 70,
+        "deletions": 3
+      },
+      "committedAtMs": 1780523782000,
+      "cleanSubject": "thread council_mechanism through SessionConfig",
+      "keywords": [
+        "thread",
+        "council",
+        "mechanism",
+        "through",
+        "sessionconfig"
+      ],
+      "fileGroups": [
+        "crates/aura-os-harness/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "525adc2c9d142298a839dc7fc46eb7dc29ff9934",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-03T14:57:24-07:00",
+      "subject": "feat(3d): use uploaded image as the 3D source instead of dropping it",
+      "body": "The generate_3d branch previously discarded manual attachments and only honored a pinned image. It now resolves the source by priority (pinned URL > uploaded/pasted image as a data URL > text image step) and carries an uploaded image through sourceImageUrl so it actually drives the 3D model.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "79a061a235466ccc9425aff86f13e7fb8895c4a8"
+      ],
+      "files": [
+        "interface/src/features/chat-ui/ChatPanel/resolve-send.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 26,
+        "deletions": 4
+      },
+      "committedAtMs": 1780523844000,
+      "cleanSubject": "use uploaded image as the 3D source instead of dropping it",
+      "keywords": [
+        "uploaded",
+        "image",
+        "source",
+        "instead",
+        "dropping"
+      ],
+      "fileGroups": [
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "bb92efc6f137df4868a013b2d1cdad0ac9ca0e5b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-03T14:58:47-07:00",
+      "subject": "feat(3d): send uploaded 3D source images via the image_data path",
+      "body": "The 3D model-step in both stream hooks now branches on the sourceImageUrl prefix: a data: URL (uploaded/pasted image) is sent as generate3dStream's image_data, while an http URL (pinned artifact) keeps the image_url path. No server change needed - model3d.rs already accepts image_data.\n\nVerified with tsc -b across the interface project.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "525adc2c9d142298a839dc7fc46eb7dc29ff9934"
+      ],
+      "files": [
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 6,
+        "deletions": 2
+      },
+      "committedAtMs": 1780523927000,
+      "cleanSubject": "send uploaded 3D source images via the image_data path",
+      "keywords": [
+        "send",
+        "uploaded",
+        "source",
+        "images",
+        "image",
+        "data",
+        "path"
+      ],
+      "fileGroups": [
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "c376d28c6ffde16e92dd8d523c7e7f3730cffb33",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-03T15:00:21-07:00",
+      "subject": "feat(video): support source image on the public guest video path",
+      "body": "Mirror the public image path: PublicVideoRequest now accepts an optional source_url and forwards it to the upstream router as images, and the public-chat client/dispatch thread the guest's source image into streamPublicVideo. Adds a test covering source-image forwarding.\n\nVerified with cargo test -p aura-os-server handlers::public::video.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "bb92efc6f137df4868a013b2d1cdad0ac9ca0e5b"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/public/video.rs",
+        "interface/src/api/public-chat.ts",
+        "interface/src/views/public-chat/dispatch-media.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 37,
+        "deletions": 6
+      },
+      "committedAtMs": 1780524021000,
+      "cleanSubject": "support source image on the public guest video path",
+      "keywords": [
+        "support",
+        "source",
+        "image",
+        "public",
+        "guest",
+        "video",
+        "path"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/api",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "0de5c909ce504ff5fff786a741af2e936317ee9a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-03T15:00:37-07:00",
+      "subject": "feat(council): accept and forward combine mechanism in chat routes",
+      "body": "Add an optional mechanism to CouncilRequestBody, resolve it via CouncilMechanism::from_wire (defaulting to synthesize), and set council_mechanism on the SessionConfig in both the agent and instance chat routes when a council is active. Re-export CouncilMechanism from aura-os-harness.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "c376d28c6ffde16e92dd8d523c7e7f3730cffb33"
+      ],
+      "files": [
+        "apps/aura-os-server/src/dto.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/agent_route/mod.rs",
+        "apps/aura-os-server/src/handlers/agents/chat/instance_route/route.rs",
+        "apps/aura-os-server/src/handlers/agents/runtime.rs",
+        "crates/aura-os-harness/src/lib.rs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 99,
+        "deletions": 14
+      },
+      "committedAtMs": 1780524037000,
+      "cleanSubject": "accept and forward combine mechanism in chat routes",
+      "keywords": [
+        "accept",
+        "forward",
+        "combine",
+        "mechanism",
+        "chat",
+        "routes"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-harness/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "dba4a0b9436a1d61a07280b9422dee5f8dc584df",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-03T15:03:06-07:00",
+      "subject": "fix(share): open public share viewer scrolled to latest message",
+      "body": "The /s/:shareToken transcript rendered at the top on load; pin the scroll container to the bottom once the transcript commits so visitors land on the most recent message.",
+      "parents": [
+        "0de5c909ce504ff5fff786a741af2e936317ee9a"
+      ],
+      "files": [
+        "interface/src/views/public-chat/SharedSessionView/SharedSessionView.test.tsx",
+        "interface/src/views/public-chat/SharedSessionView/SharedSessionView.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 48,
+        "deletions": 4
+      },
+      "committedAtMs": 1780524186000,
+      "cleanSubject": "open public share viewer scrolled to latest message",
+      "keywords": [
+        "open",
+        "public",
+        "share",
+        "viewer",
+        "scrolled",
+        "latest",
+        "message"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "d4ccc0fa2e0b65898cf499cf3b9b9114750b9490",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-03T15:04:04-07:00",
+      "subject": "feat(council): add councilMechanism state to chat-ui-store",
+      "body": "Add a per-stream councilMechanism (synthesize default / contrast / side_by_side) with localStorage persistence, rehydration on init, reset in resetCouncil, and setCouncilMechanism/getCouncilMechanism plus the useChatUI selector exposure. Covered by store tests.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "dba4a0b9436a1d61a07280b9422dee5f8dc584df"
+      ],
+      "files": [
+        "interface/src/stores/chat-ui-store.test.ts",
+        "interface/src/stores/chat-ui-store.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 123,
+        "deletions": 1
+      },
+      "committedAtMs": 1780524244000,
+      "cleanSubject": "add councilMechanism state to chat-ui-store",
+      "keywords": [
+        "councilmechanism",
+        "state",
+        "chat",
+        "store"
+      ],
+      "fileGroups": [
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "a744c19ef903afbb45cd051ba1c2b61e718f1055",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-03T15:08:58-07:00",
+      "subject": "feat(council): send selected mechanism in the council request body",
+      "body": "Extend the council POST body type with an optional mechanism and include it (resolved from the store at send time) in both the agent and project chat send paths. Single-model sends remain unchanged.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "d4ccc0fa2e0b65898cf499cf3b9b9114750b9490"
+      ],
+      "files": [
+        "interface/src/api/streams.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 30,
+        "deletions": 8
+      },
+      "committedAtMs": 1780524538000,
+      "cleanSubject": "send selected mechanism in the council request body",
+      "keywords": [
+        "send",
+        "selected",
+        "mechanism",
+        "council",
+        "request",
+        "body"
+      ],
+      "fileGroups": [
+        "interface/src/api",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "2430b52b0bcb29c3e3ab7499ea3342b5253812f4",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-03T15:11:23-07:00",
+      "subject": "feat(council): add combine mechanism selector to the council flyout",
+      "body": "Surface a Synthesize/Contrast/Side-by-side picker in the AURA Council flyout (shown when the council is active) and wire it to setCouncilMechanism via the model menu rows.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "a744c19ef903afbb45cd051ba1c2b61e718f1055"
+      ],
+      "files": [
+        "interface/src/components/InputBarShell/CouncilCountRow.tsx",
+        "interface/src/features/chat-ui/ChatInputBar/ChatInputBar.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 58,
+        "deletions": 1
+      },
+      "committedAtMs": 1780524683000,
+      "cleanSubject": "add combine mechanism selector to the council flyout",
+      "keywords": [
+        "combine",
+        "mechanism",
+        "selector",
+        "council",
+        "flyout"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "870395c6870959fcd9e5cfcd0cf56199f9e68104",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-03T19:39:15-07:00",
+      "subject": "style: apply rustfmt formatting",
+      "body": "Pure rustfmt line-wrapping plus an alphabetized module declaration order in aura-os-server/src/lib.rs. No functional changes.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "2430b52b0bcb29c3e3ab7499ea3342b5253812f4"
+      ],
+      "files": [
+        "apps/aura-os-server/src/channels/dispatcher.rs",
+        "apps/aura-os-server/src/handlers/agents/conversions/tests/agent.rs",
+        "apps/aura-os-server/src/handlers/billing.rs",
+        "apps/aura-os-server/src/handlers/channels/mod.rs",
+        "apps/aura-os-server/src/lib.rs",
+        "apps/aura-os-server/src/router/channels.rs",
+        "crates/aura-os-harness/src/swarm_harness.rs",
+        "crates/aura-os-harness/src/ws_bridge.rs"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 45,
+        "deletions": 23
+      },
+      "committedAtMs": 1780540755000,
+      "cleanSubject": "style: apply rustfmt formatting",
+      "keywords": [
+        "style",
+        "apply",
+        "rustfmt",
+        "formatting"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-harness/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "e9d56de653256325c2d4a816db5d70ec3f8855ac",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-03T19:40:41-07:00",
+      "subject": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
+      "body": "",
+      "parents": [
+        "870395c6870959fcd9e5cfcd0cf56199f9e68104",
+        "9fe00d18dc1dc72873ee53a8e01583f32dd1f281"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 101,
+        "deletions": 0
+      },
+      "committedAtMs": 1780540841000,
+      "cleanSubject": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
+      "keywords": [
+        "merge",
+        "branch",
+        "main",
+        "https",
+        "github",
+        "cypher",
+        "aura"
+      ],
+      "fileGroups": [],
+      "primaryArea": "Other",
+      "areas": []
     }
   ],
   "batchCount": 6,
@@ -10060,36 +10747,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 18828204
+          "sizeBytes": 18828712
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.590.1",
+      "version": "0.1.0-nightly.591.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.590.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.591.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 49917076
+          "sizeBytes": 49924466
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.590.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.591.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.590.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.591.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 116812280
+          "sizeBytes": 116816376
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.590.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.591.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -10099,29 +10786,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.590.1",
+      "version": "0.1.0-nightly.591.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.590.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.591.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 45865888
+          "sizeBytes": 45851914
         },
         {
-          "name": "AURA_0.1.0-nightly.590.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.591.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.590.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.591.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 44940190
+          "sizeBytes": 44939530
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.590.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.591.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -10131,29 +10818,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.590.1",
+      "version": "0.1.0-nightly.591.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.590.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.591.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 47830235
+          "sizeBytes": 47830046
         },
         {
-          "name": "AURA_0.1.0-nightly.590.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.591.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.590.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.591.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 46955112
+          "sizeBytes": 46956498
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.590.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.591.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -10163,17 +10850,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.590.1",
+      "version": "0.1.0-nightly.591.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.590.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.591.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 33622156
+          "sizeBytes": 33602900
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.590.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.591.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -10182,37 +10869,35 @@
     }
   ],
   "rendered": {
-    "title": "Computer-use demos, a 3D agent card, and a redesigned authed shell",
-    "intro": "A massive nightly: the desktop app gains a real computer-use executor and a window-on-background /record_demo pipeline, the authed shell gets a top-to-bottom visual overhaul (rounded screen frame, gradient backdrop, beveled taskbar pills, glass panels), and the Agent profile becomes a full WebGL metal card with a worn backplate and clickable section links. Telegram messaging lands behind a new channels crate, agents default to a frontier model and full permissions, and long remote chat sessions get keepalive + reconnect hardening. Two short CI fixes unblock Linux builds for the new screen-capture stack.",
+    "title": "Computer-use demos, a 3D agent card, and a reshaped desktop shell",
+    "intro": "A heavy build day on nightly: the /record_demo pipeline grew from a window capture into a framed, agent-driven screen recording with a self-service setup flow; the agent profile became a real WebGL \"AURA card\" with a flippable persona screen; the authed desktop shell was rebuilt around a rounded screen, a beveled taskbar, and a new chat input pill; and Telegram messaging arrived as a first-class agent channel. Release infra also needed two follow-up fixes to keep Linux builds green.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "10:03 AM",
         "started_at": "2026-06-02T17:03:00.000Z",
         "ended_at": "2026-06-03T05:49:40.000Z",
-        "title": "/record_demo gains a framed window-on-background pipeline and computer-use executor",
-        "summary": "The desktop demo recorder is rebuilt as a two-stage capture-and-composite pipeline with per-recording options, macOS parity, WGC capture on Windows, and a new local executor that lets agents drive the real machine.",
+        "title": "/record_demo gains framed output, computer-use, and a setup flow",
+        "summary": "The desktop demo recorder evolved from a raw window capture into a configurable, agent-drivable pipeline with in-app setup and Windows-native capture.",
         "items": [
           {
-            "text": "Reworked /record_demo into a two-stage pipeline: stage 1 captures the demo window's region, stage 2 composites it onto a 1920x1080 background with rounded corners and a drop shadow, encoded H.264/yuv420p for X-ready upload, with a DemoOptions config (resolution, target X/Raw, background, max duration, window-on-background toggle) threaded through the HTTP boundary and an in-chat settings panel.",
+            "text": "Recordings now ship through a two-stage pipeline: stage 1 captures the demo window's region and stage 2 composites it onto a 1920x1080 background with rounded corners and an X-ready H.264 encode, with raw passthrough still available.",
             "commit_shas": [
               "00b0f29f996b93accb29d3485339c433deec701e",
-              "6af20f4b4ce467257d5e6d3b97aa197ec12b704c",
-              "996f7136f902cc9d3166f6c9b771ff4fd28f4deb"
+              "6af20f4b4ce467257d5e6d3b97aa197ec12b704c"
             ],
             "confidence": "high"
           },
           {
-            "text": "Brought macOS to parity using avfoundation + crop with a detected screen-capture device and a CGPreflightScreenCaptureAccess permission check, and replaced native error dialogs with an in-app RecordDemoSetupModal that can locate ffmpeg or open Screen Recording settings and retry; the demo window now boots with the cached auth snapshot so it no longer flashes the public site.",
+            "text": "A new DemoRecordSettings panel in the chat input lets users pick resolution, output target, background, and window-on-background framing, with macOS parity that crops the screen-capture device to the window rect and preflights Screen Recording permission.",
             "commit_shas": [
-              "3bbc69b385c4e478b61905bfd26deca1c3ee8975",
-              "34a68aed730094f471e140a13d1d4cb8a38bccd0",
-              "914fb411e8e819ffd777908d6f598a48e3614a81"
+              "996f7136f902cc9d3166f6c9b771ff4fd28f4deb",
+              "3bbc69b385c4e478b61905bfd26deca1c3ee8975"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a local computer-use HTTP executor that performs real mouse/keyboard input via enigo and full-desktop screenshots via xcap, plus the server-side tool-result protocol for round-tripping image content; /record_demo can now opt into computer-use mode (full-monitor capture, executor URL gated by env vars, Ctrl+Alt+Q abort hotkey on Windows).",
+            "text": "A local computer-use executor (real mouse/keyboard via enigo, screenshots via xcap) plus an image-capable tool-result wire format lets a computer-use agent perceive and drive the desktop during a recording, gated by an env flag and a Windows Ctrl+Alt+Q global abort hotkey.",
             "commit_shas": [
               "e4b1151d426965f31fa8df0e23f61df1ac8fe791",
               "3374255522c8ee716fca08a014af233c3ad97a68",
@@ -10221,10 +10906,119 @@
             "confidence": "high"
           },
           {
-            "text": "Fixed several Windows-only capture bugs: stage-2 composite now actually terminates with shortest=1 overlays, gdigrab uses DwmGetWindowAttribute for the true visible rect, the window-appear animation is suppressed, and framed mode switches to a Windows Graphics Capture backend so recordings follow the window and include GPU-rendered WebView2 content.",
+            "text": "Demo windows no longer flash the logged-out site on boot, missing ffmpeg or Screen Recording permission now surface as an in-app RecordDemoSetupModal that can locate ffmpeg and retry, and on Windows the recorder uses Windows Graphics Capture so the clip follows the window and includes WebView2 content.",
             "commit_shas": [
+              "34a68aed730094f471e140a13d1d4cb8a38bccd0",
               "c1e4093ec20c1cbaacbe3a62fae917ca43de971c",
-              "702652982e11cf7fc9c567424505343254832649"
+              "702652982e11cf7fc9c567424505343254832649",
+              "914fb411e8e819ffd777908d6f598a48e3614a81"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Telegram messaging lands as a first-class agent channel: a new aura-os-channels crate with a connector and bridge runtime, server-side dispatcher with on-behalf auth and SSE accumulation, link/list/disconnect routes, and a Messaging sidekick area with QR-based connect.",
+            "commit_shas": [
+              "905e55c9fad8863dd1fdf6b2ebd38499e6319f31",
+              "75561ad8c51f7e1847ce86d3bc57fbe0329456db",
+              "4231e59ddf8816d46b96d335b98a52aa546d4563",
+              "53e4da9f0af824e933d7e006e9221cf4d1bd03a6",
+              "0cb4f83f01763842e1811acb8ac85327433b079a",
+              "101a32b9d0927c6a1ec21e200a941a154ab4503b",
+              "2135fab5ec5973d61545a47923af3c5fa4ab878e"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Agents now surface their EIP-7702 smart-wallet address (owner-only) and new agents default to the latest frontier model with a full-access permission preset, while CEO permission toggles become editable and respect user edits instead of being re-defaulted.",
+            "commit_shas": [
+              "519858ae00f93c40cd103c1448b47f59590156af",
+              "d436382c5caeacf328928e047e7a59e88c9aa72c",
+              "c027dc704619595ac7e949b6dfbf6c5e542fa0cf",
+              "c61d954b7b40d129ee3a964039eb1255009fea0b",
+              "e2bb0a893fe336cf156e252d94562e0084950f02",
+              "fcbe16ad4d1ae818c670f9349c95e39fe5794c0c"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Long remote chat sessions stop dying on idle: the harness WS bridge now owns the upstream socket with a configurable keepalive ping and optional mid-turn reconnect, the first-event watchdog is raised to 180s, and the client auto-retry budget doubles to 4.",
+            "commit_shas": [
+              "4961377650dfe9e195da9583cd39aba8241bf6e3"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The authed shell is rebuilt as a rounded framed screen: simple/advanced modes collapse to a single 'standard' shell, the bottom taskbar gets a beveled gradient pill rim with a circular selected plate, and the chat input becomes a tall rounded gradient pill with an accent ring around the attach button and a collapsible mode-selector tab.",
+            "commit_shas": [
+              "ab9099b5931e667291bc454801151088ed357854",
+              "de32b5e86198776e9892b7bc81d6539620735c36",
+              "33688eb400e948d5e7535e85bde7a7e85478a77e",
+              "9dea1a95247a481a14ae5b8aa0a3a6af6a371f70",
+              "a21b8fb77ebdb3c76128f5b7dcaf5f983363fd12",
+              "0997ba72e92481bf1480e76bd59059a18a3f2252",
+              "467287ec879216ade9ecc51d3f637e4fc4ea7f7e",
+              "1c0cbaf57e2fb4a42a55bafe8e48f30299f517b3",
+              "3942f8d7ed012c64ae894ad0189bf09c661599f8",
+              "a512693add235e11e889543079e7b4047f3562b1",
+              "8cd300a87ae012b7c63bed2a2b5f318279a1469c"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The agent profile becomes a Three.js 'AURA card': a beveled metal shell with an LCD photo, CRT scan lines, worn-edge texture, and an accent-colored backdrop that blends with the sidekick theme, with a DOM fallback when WebGL is unavailable.",
+            "commit_shas": [
+              "321ce2124f804fcf89b0306860ae289bde070b81",
+              "0e4e38c32df74849f6f0008165bb08bd0c4b9aaf",
+              "5f6167ad05ed0c4ee9384b6f052f645e0cd4a8cc",
+              "45074fcbac3b9a5f10a749b843dfb9bfaaf49e38",
+              "a2b250d0baa1494aa5392754543735b68ec65625",
+              "ca356947d4a4865fb3962fd5cd97609afe8ffae9",
+              "9b90fc4b4656edd2a1485510330523ca3989bb3b",
+              "ebc2c2c884b5a83da6b485448790039ff5140b4d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Theme work routes core app colors through semantic tokens for clean dark/light flipping, adds per-panel glass toggles for the left/middle/sidekick panels (default-on for the sidebar), and ships a Downloads link in the Help menu and authed titlebar that opens in-app when signed in.",
+            "commit_shas": [
+              "609671c1851dc0bfba46fe439af3ea868990997c",
+              "361106061b7e2eb581543b087029d2997dc8483e",
+              "2eff6dc7dc1b98a69984341d9feeefc2620cccf4",
+              "7259b1a0cf2a73972ce8e5211e8c320fdb41e9bc",
+              "9032ac4de2cdaf15f1ddcf1c5fa84919f7dbdac2",
+              "89c67d6555b4ac30d170a8871f24e1d602f37af2",
+              "c0d8ce421d40edf388396fd80abfa2c02d2a57b4",
+              "edd991e61c853993c77245ce4c3bcdf7b628fa15"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "A new shared SidekickList primitive replaces hand-rolled collapsible-section lists across Memory, Skills, Sessions, Projects, Permissions, and Sidekick Log, unifying selection, context menus, and row affordances.",
+            "commit_shas": [
+              "395cc1390da571d067095cb98c2c462be0c3efa3",
+              "74f0aa07f1d92104f62a050ecc83c1fcd51fed28",
+              "1b23132f8cf0649f59d9b3af9d5a37283b813ff7",
+              "7d7061e06aaf948fb815993878beff71d14093da",
+              "467475ff07da5510b5eaf07f602231f3d4e60437",
+              "dc667425c372d67d1998108916f27909acb4bd6a"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Smaller reliability and analytics fixes: subagent stream interruptions no longer surface as broken-banner errors, empty cached chat history is now revalidated on click, server-emitted session_active events get tagged with app version/platform, and the boot overlay stops flashing 'AURA hit a startup error' on missing avatar images.",
+            "commit_shas": [
+              "ff32fdb1236ec776d3336d1bc69fb37dcb176490",
+              "5faae68868dafd8e7c3c03fc6dab1908ea5a692d",
+              "29ad2357f58dde5100ff47319aaa2f81a05c8e04",
+              "2a02a3c951a6200158c8907765401fd3092e00e5",
+              "1134bd89f0926ab8a81de9ed2256f41fbb114f77"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "A new MiniMax M3 chat model is registered in the picker and pricing tables alongside M2.7.",
+            "commit_shas": [
+              "c130c582755de18c8a0a19d9722d007e3a19edf3"
             ],
             "confidence": "high"
           }
@@ -10235,11 +11029,11 @@
         "time_label": "10:57 PM",
         "started_at": "2026-06-03T05:57:23.000Z",
         "ended_at": "2026-06-03T05:57:23.000Z",
-        "title": "Linux CI: pipewire dev headers for the new screen-capture stack",
-        "summary": "Unblocks Linux desktop and sidecar builds after the xcap dependency landed.",
+        "title": "Linux build unblocked for pipewire-backed screen capture",
+        "summary": "Adds the missing libpipewire dev package across desktop validate and release workflows so xcap-driven screen capture compiles on Linux.",
         "items": [
           {
-            "text": "Added libpipewire-0.3-dev to the desktop validate, nightly, and stable workflows so the libspa-sys build script can find pkg-config metadata.",
+            "text": "Install libpipewire-0.3-dev in the Linux dependency steps of desktop-validate, release-nightly, and release-stable so libspa-sys (pulled in by the new xcap screen-capture crate) can build.",
             "commit_shas": [
               "9760c47fcc7c48f773edde376f76e0ae03fbe032"
             ],
@@ -10252,25 +11046,24 @@
         "time_label": "11:03 PM",
         "started_at": "2026-06-03T06:03:26.000Z",
         "ended_at": "2026-06-03T07:17:35.000Z",
-        "title": "Agent card grows a worn-metal info backplate with clickable section links",
-        "summary": "The 3D agent profile card gets a stamped info strip below it, live status, navigation links, and a click-to-flip animation revealing a back face with personality and system prompt.",
+        "title": "AURA card grows a worn-metal backplate, navigation links, and a flip-to-persona back",
+        "summary": "The 3D agent profile gains an info readout with live status, clickable section links, and a horizontal flip that reveals the personality and system prompt on the back face.",
         "items": [
           {
-            "text": "Added a worn-metal backplate that pokes out below the agent card and renders the agent's name, role pill, live status, organization, IP, and wallet as embossed text on engraved metal, sourced from the org store, remote VM state, and the agent record.",
+            "text": "A worn-metal backplate now extends below the card showing the agent's name, role, live status, organization, IP, and wallet, with status text glowing in the theme accent and Online/Idle/Hibernating derived from real VM state.",
             "commit_shas": [
               "e1294ba48f47f4bf38a22d0d3fcb251a5c5cdcd0",
-              "7ca03b0c7a487b035113fc8c34165c4a15ed3530",
               "80b883a22c1c22ed9fc494477ce1de4efb5a3a30",
               "46b2b6f3f251f3cf90d079d87d5aa75f752c6f8c",
-              "d8128a705c28f6b74b93bd4caf0501685b227acf"
+              "d8128a705c28f6b74b93bd4caf0501685b227acf",
+              "fe58ee3c9dfd57e24dfe4c910548dd39c58281ed",
+              "f4911024294e1bffc7b3e2bcdb71fa0e101775f1"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           },
           {
-            "text": "Extended the backplate with clickable Skills/Connectors/Permissions rows (counts on the right, hover-glow text, raycast hit-test to switch sidekick tabs) and a flip-on-click animation that swaps to a mirrored back face showing the agent's personality and system prompt on the LCD.",
+            "text": "Clicking the card flips it horizontally to a back face that mirrors the front frame and renders the agent's Personality and System Prompt on its LCD, with the screen-face geometry shared between sides and scan lines clipped to the real window silhouette.",
             "commit_shas": [
-              "b458d69e44ba33cbdfaf771cb4ebd3a518c8273d",
-              "3b5360f74d100ab7a7ba130119d100b30d80bb70",
               "74b7c8e3f4a56b9e4a8fd8c497ab8130767fc316",
               "47a64f4b09633113e5e3a7a74f2cf94eee1e96af",
               "86f1d0c1a0f6e29a4b65f3f33e98456f5cb56ac7"
@@ -10278,25 +11071,34 @@
             "confidence": "high"
           },
           {
-            "text": "Redesigned the Invite Friends modal into a reusable GlassCard: black smoked-glass body, gradient rim, AURA wordmark pill, single code-to-Copied button, and a purple theme glow, with a fix to keep corners rounded under backdrop-filter.",
+            "text": "The backplate adds clickable Skills, Connectors, and Permissions rows with live counts that switch the sidekick tab on click and glow on hover.",
             "commit_shas": [
-              "aaa47b9ee25750afc3ba743e8b2f8f2e717b71f0",
-              "d004e575ee157812a444ef61da2cec0e89b45f0b",
-              "3550638aca8f1aca84deb1457f72a0202f3a9aeb",
-              "98d68882aac4c8f0c31c83cf38143e3f5595615f",
-              "91886c4f7a95bf849e13a5a0669ec84c89dce6d9",
-              "111969dc330add2494a230b7553eebb20bb0bdbe",
-              "15d60c2c189bb2d3d5742257790df5000ba3aa74"
+              "b458d69e44ba33cbdfaf771cb4ebd3a518c8273d",
+              "3b5360f74d100ab7a7ba130119d100b30d80bb70"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a black-glass PersonaCard for personality and system prompt with overflow-aware Show more/less, and renamed the agent sidekick Profile tab to Agent.",
+            "text": "The Invite Friends modal is rebuilt on a reusable GlassCard with an AURA wordmark pill, purple aurora glow, and a single button that toggles to the copied invite code, with corner-rounding fixes for backdrop-filter clipping.",
+            "commit_shas": [
+              "aaa47b9ee25750afc3ba743e8b2f8f2e717b71f0",
+              "3550638aca8f1aca84deb1457f72a0202f3a9aeb",
+              "98d68882aac4c8f0c31c83cf38143e3f5595615f",
+              "91886c4f7a95bf849e13a5a0669ec84c89dce6d9",
+              "111969dc330add2494a230b7553eebb20bb0bdbe",
+              "15d60c2c189bb2d3d5742257790df5000ba3aa74",
+              "491663cd1b8daa003bce3377fdd63dd5919421f1"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "A short-lived black-glass PersonaCard with backdrop blur was introduced for Personality and System Prompt and tuned for legibility, scrolling, and theme contrast before being retired the next morning.",
             "commit_shas": [
               "079270ebfbf7ab21b38283e116e611fd49f90460",
               "fda70428616eb3ab931414f8dfe17f02d2d908c3",
+              "61586018d5bd6839c2a339d4a4e2357a477b0b87",
               "6db8c43dbcbf6e982cad61244ab99d815bd4c1dc",
-              "6cc212a4f10d2c7cb74952e088200e00b738a495"
+              "5690f66473b3d18f128a2dcd5084bc507587c660"
             ],
             "confidence": "high"
           }
@@ -10307,11 +11109,11 @@
         "time_label": "12:22 AM",
         "started_at": "2026-06-03T07:22:23.000Z",
         "ended_at": "2026-06-03T07:22:23.000Z",
-        "title": "Linux CI: gbm and xdo headers for the input + capture stack",
-        "summary": "Second small CI fix needed for the computer-use executor's native dependencies on Linux runners.",
+        "title": "Linux capture stack gains missing GBM and xdo headers",
+        "summary": "Follow-up CI fix adding two more dev packages so the desktop and sidecar builds link against the input/capture crates on Linux.",
         "items": [
           {
-            "text": "Added libgbm-dev and libxdo-dev to the Linux dependency steps in desktop validate, nightly, and stable workflows.",
+            "text": "Add libgbm-dev and libxdo-dev to the Linux build dependencies in desktop-validate, release-nightly, and release-stable workflows.",
             "commit_shas": [
               "1eddffcdae6afec0d0c535d04d7fcd1a816bc99a"
             ],
@@ -10323,19 +11125,12 @@
         "batch_id": "entry-5",
         "time_label": "12:22 AM",
         "started_at": "2026-06-03T07:22:28.000Z",
-        "ended_at": "2026-06-03T08:39:45.000Z",
-        "title": "Remote agent card shows real IP, org, and VM status",
-        "summary": "Late-night fixes around the new 3D card: drop the standalone PersonaCard, size and sequence the flip animation, and surface real remote-agent metadata.",
+        "ended_at": "2026-06-03T21:54:53.000Z",
+        "title": "Image-to-video, remote agent card fixes, and public funnel analytics restored",
+        "summary": "Trims the agent card after the previous night's experiments, fixes blank fields on remote agents, threads uploaded images through the video pipeline, and restores two public-funnel analytics events.",
         "items": [
           {
-            "text": "Preserved the remote VM's endpoint and other poll-only fields across RemoteAgentStateChanged WS events, propagated org_id through the post-provision vm_id update, and derived the real VM state on the card so remote idle/hibernating agents no longer all read as Online.",
-            "commit_shas": [
-              "77ad55dde922359b058bc2ec548ac82f398f16df"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Removed the now-redundant PersonaCard, capped the 3D card at 265px so it stays consistent in narrow and widened sidekicks, and sequenced the info backplate to slide clear before the card flips so it no longer intersects mid-rotation.",
+            "text": "Removes the now-unused PersonaCard component and tunes the 3D card: it shrinks to a 265px cap so widening the sidekick no longer enlarges it, and the worn-metal info strip slides out of the way before the card flips and snaps back when it returns.",
             "commit_shas": [
               "021c9cfec458c77ad556267e4c4418f2ff1a18ff",
               "e4561939dd52dae53b40fa78c094948236aa8aa1",
@@ -10343,21 +11138,79 @@
               "0c7264fbe36aac84b7de3c103495b0149e029ab9"
             ],
             "confidence": "high"
+          },
+          {
+            "text": "Remote agent profile cards now populate IP, organization, and a truthful live status: the RemoteAgentStateChanged handler preserves poll-only fields, vm_id provisioning carries the org through, and the card derives real VM state instead of collapsing everything to 'Online'.",
+            "commit_shas": [
+              "77ad55dde922359b058bc2ec548ac82f398f16df"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Image-to-video plumbing comes online end to end: generateVideoStream accepts source images, the chat hooks forward uploaded attachments as data URLs, and the chat input keeps focus after a file upload across the + button, drag/drop, and paste.",
+            "commit_shas": [
+              "2b27cfcb11ade5dd607923562ec230f9ee5a479c",
+              "2048256af77558844d051ca7228b72f6f93e6db8",
+              "bb116e4e32cef8f1d03dcc62bace3e077520cee8"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Restores the public_page_viewed and public_gate_shown analytics events that dropped to zero after recent public-chat refactors, via shared hooks now mounted across PublicChatView, MobilePublicChatView, and PublicMarketingPanel.",
+            "commit_shas": [
+              "9fe00d18dc1dc72873ee53a8e01583f32dd1f281"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Removes the skill tag pills from the desktop profile card to declutter it.",
+            "commit_shas": [
+              "e384cf4ceebc76dbed69c66627494d5d693cc933"
+            ],
+            "confidence": "high"
           }
         ]
       },
       {
         "batch_id": "entry-6",
-        "time_label": "9:09 AM",
-        "started_at": "2026-06-03T16:09:54.000Z",
-        "ended_at": "2026-06-03T16:09:54.000Z",
-        "title": "Public funnel analytics restored after chat refactors",
-        "summary": "Brings back two web-only product metrics that quietly went to zero after the public-chat rebuild.",
+        "time_label": "2:55 PM",
+        "started_at": "2026-06-03T21:55:02.000Z",
+        "ended_at": "2026-06-03T22:11:23.000Z",
+        "title": "AURA Council gains a combine-mechanism picker and image-to-3D",
+        "summary": "Council requests gain a configurable synthesize/contrast/side-by-side combine mechanism wired from protocol through UI, video and 3D generation accept uploaded source images, and the public share viewer opens at the latest message.",
         "items": [
           {
-            "text": "Reintroduced public_page_viewed across every public web surface (chat, mobile chat, marketing panel) and public_gate_shown when the turn-count gate trips, via two small reusable hooks with unit-test coverage.",
+            "text": "A new CouncilMechanism (synthesize/contrast/side_by_side, defaulting to synthesize) is added to the protocol and threaded through SessionConfig, the harness, and both agent and instance chat routes so council combine behavior is configurable end to end.",
             "commit_shas": [
-              "9fe00d18dc1dc72873ee53a8e01583f32dd1f281"
+              "e919b89bd2428e66fd887d005173ee5685121167",
+              "79a061a235466ccc9425aff86f13e7fb8895c4a8",
+              "0de5c909ce504ff5fff786a741af2e936317ee9a"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The chat input's council flyout surfaces a Synthesize / Contrast / Side-by-side picker backed by a persisted chat-ui-store field that is sent on every council request from both agent and project send paths.",
+            "commit_shas": [
+              "d4ccc0fa2e0b65898cf499cf3b9b9114750b9490",
+              "a744c19ef903afbb45cd051ba1c2b61e718f1055",
+              "2430b52b0bcb29c3e3ab7499ea3342b5253812f4"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Generate-3D and the public guest video path now use the uploaded image instead of dropping it: data URLs go via image_data, pinned http URLs keep image_url, and PublicVideoRequest forwards an optional source_url upstream.",
+            "commit_shas": [
+              "525adc2c9d142298a839dc7fc46eb7dc29ff9934",
+              "bb92efc6f137df4868a013b2d1cdad0ac9ca0e5b",
+              "c376d28c6ffde16e92dd8d523c7e7f3730cffb33",
+              "0951dff6c2b62b4140e66c6f4096785893a83357"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The /s/:shareToken public share viewer now lands scrolled to the most recent message instead of opening at the top of the transcript.",
+            "commit_shas": [
+              "dba4a0b9436a1d61a07280b9422dee5f8dc584df"
             ],
             "confidence": "high"
           }
@@ -10365,13 +11218,12 @@
       }
     ],
     "highlights": [
-      "Computer-use executor + /record_demo with framed window-on-background pipeline",
-      "WebGL 3D agent profile card with worn-metal backplate and flip-to-persona",
-      "Authed shell redesign: rounded screen frame, beveled taskbar pills, glass panels",
-      "Telegram channel connector and Messaging sidekick tab",
-      "Long-session WebSocket keepalive + reconnect for remote agents",
-      "Simple/Advanced modes collapsed into a single Standard shell"
+      "/record_demo grows a window-on-background pipeline with computer-use",
+      "WebGL agent card with flip-to-persona back face",
+      "Telegram channels and agent smart-wallet wired end-to-end",
+      "Authed shell redesigned: rounded screen, beveled taskbar, pill chat input",
+      "Long remote chat sessions survive idle WS drops via keepalive + reconnect"
     ],
-    "raw_commit_count": 236
+    "raw_commit_count": 251
   }
 }
