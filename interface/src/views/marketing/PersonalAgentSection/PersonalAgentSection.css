@@ -106,6 +106,27 @@
   padding-bottom: 80px;
 }
 
+/*
+ * Full-bleed band, contained content: the grid now spans 100vw, but the
+ * content (mini-UIs + copy) is pulled back into the pre-full-bleed
+ * centered column (~79.7vw = 1.25 x the 63.75% inner column) so each
+ * element keeps its previous size and position. The bottom cells hug the
+ * center seam exactly as before.
+ *   10.16vw = (1 - 0.796875) / 2  -> half the width the cell gained.
+ *   + 75px  = the section gutter (~25.5px) plus the cell's own 50px inset.
+ */
+.personalAgentQuadrantWide {
+  padding-inline: calc(10.16vw + 75px);
+}
+
+.personalAgentQuadrantSkills {
+  padding-left: calc(10.16vw + 75px);
+}
+
+.personalAgentQuadrantServices {
+  padding-right: calc(10.16vw + 75px);
+}
+
 .personalAgentQuadrantSkills .personalAgentCopy,
 .personalAgentQuadrantServices .personalAgentCopy {
   align-items: center;
