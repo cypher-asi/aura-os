@@ -12,6 +12,7 @@ import {
 import { CreateAgentButton } from "../../public-chat/CreateAgentButton";
 import { TypewriterText } from "../../public-chat/TypewriterText";
 import { MarketingFirstScreen } from "../MarketingFirstScreen";
+import { MarketingFooter } from "../MarketingFooter";
 import { OneComputerOneAgentSection } from "../OneComputerOneAgentSection";
 import { PersonalAgentSection } from "../PersonalAgentSection";
 import { PageHero } from "../PageHero";
@@ -119,6 +120,7 @@ export function ProductView(): ReactNode {
       />
       <ChangelogPreview />
       <ProductCallToAction />
+      <MarketingFooter />
     </div>
   );
 }

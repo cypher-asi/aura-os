@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect } from "react";
 import { ChangelogPreview } from "../ChangelogPreview";
 import { MarketingFirstScreen } from "../MarketingFirstScreen";
+import { MarketingFooter } from "../MarketingFooter";
 import { MockProjectsWorkspace } from "../MockProjectsWorkspace";
 import { PageHero } from "../PageHero";
 import { ProductCallToAction } from "../ProductCallToAction";
@@ -55,6 +56,7 @@ export function CodeView(): ReactNode {
       />
       <ChangelogPreview />
       <ProductCallToAction />
+      <MarketingFooter />
     </div>
   );
 }

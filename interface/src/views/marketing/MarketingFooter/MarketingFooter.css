@@ -1,0 +1,87 @@
+.marketingFooter {
+  background: var(--marketing-section-bg, #000);
+  display: flex;
+  justify-content: center;
+  padding: 0 32px 96px;
+}
+
+.marketingFooterCard {
+  width: 100%;
+  max-width: 960px;
+  padding: 48px 56px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.marketingFooterColumns {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 40px 32px;
+}
+
+.marketingFooterColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.marketingFooterHeading {
+  margin: 0;
+  color: var(--public-nav-fg-color, #e6e8eb);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.marketingFooterList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.marketingFooterLink {
+  color: var(--public-nav-fg-color-muted, #c9c9cf);
+  font-size: 14px;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+
+.marketingFooterLink:hover {
+  color: var(--public-nav-fg-color, #fff);
+}
+
+@media (max-width: 768px) {
+  .marketingFooter {
+    padding: 0 24px 72px;
+  }
+
+  .marketingFooterCard {
+    padding: 40px 32px;
+  }
+
+  .marketingFooterColumns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .marketingFooter {
+    padding: 0 16px 56px;
+  }
+
+  .marketingFooterCard {
+    padding: 32px 24px;
+  }
+
+  .marketingFooterColumns {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+}

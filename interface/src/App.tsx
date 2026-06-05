@@ -57,6 +57,15 @@ const BlogView = lazy(() =>
 const DownloadView = lazy(() =>
   import("./views/marketing/DownloadView").then((m) => ({ default: m.DownloadView })),
 );
+const DocsView = lazy(() =>
+  import("./views/marketing/DocsView").then((m) => ({ default: m.DocsView })),
+);
+const TermsView = lazy(() =>
+  import("./views/marketing/TermsView").then((m) => ({ default: m.TermsView })),
+);
+const PrivacyView = lazy(() =>
+  import("./views/marketing/PrivacyView").then((m) => ({ default: m.PrivacyView })),
+);
 const SupportView = lazy(() =>
   import("./views/marketing/SupportView").then((m) => ({ default: m.SupportView })),
 );
@@ -456,6 +465,30 @@ function AppRoutes(): React.ReactElement {
                 element={
                   <Suspense fallback={null}>
                     <DownloadView />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="docs"
+                element={
+                  <Suspense fallback={null}>
+                    <DocsView />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="terms"
+                element={
+                  <Suspense fallback={null}>
+                    <TermsView />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="privacy"
+                element={
+                  <Suspense fallback={null}>
+                    <PrivacyView />
                   </Suspense>
                 }
               />

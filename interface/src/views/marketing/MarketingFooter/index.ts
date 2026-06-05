@@ -1,0 +1,1 @@
+export { MarketingFooter } from "./MarketingFooter";
