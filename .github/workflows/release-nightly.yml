@@ -430,6 +430,17 @@ jobs:
       IOS_APP_STORE_CONNECT_KEY_ID: ${{ secrets.IOS_APP_STORE_CONNECT_KEY_ID }}
       IOS_APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.IOS_APP_STORE_CONNECT_ISSUER_ID }}
       IOS_APP_STORE_CONNECT_KEY_BASE64: ${{ secrets.IOS_APP_STORE_CONNECT_KEY_BASE64 }}
+      AURA_NETWORK_URL: ${{ vars.AURA_NETWORK_URL }}
+      AURA_STORAGE_URL: ${{ vars.AURA_STORAGE_URL }}
+      AURA_INTEGRATIONS_URL: ${{ vars.AURA_INTEGRATIONS_URL }}
+      AURA_ROUTER_URL: ${{ vars.AURA_ROUTER_URL }}
+      Z_BILLING_URL: ${{ vars.Z_BILLING_URL }}
+      ORBIT_BASE_URL: ${{ vars.ORBIT_BASE_URL }}
+      SWARM_BASE_URL: ${{ vars.SWARM_BASE_URL }}
+      REQUIRE_ZERO_PRO: ${{ vars.REQUIRE_ZERO_PRO }}
+      AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN: ${{ vars.AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN }}
+      VITE_MIXPANEL_TOKEN: ${{ vars.VITE_MIXPANEL_TOKEN }}
+      Z_BILLING_API_KEY: ${{ secrets.Z_BILLING_API_KEY }}
     strategy:
       fail-fast: false
       matrix:
@@ -454,6 +465,33 @@ jobs:
 
       - name: Install Rust toolchain
         uses: ./.github/actions/setup-rust-toolchain
+
+      - name: Restore desktop Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: desktop-app-v3-${{ runner.os }}-${{ runner.arch }}
+          workspaces: |
+            . -> ../.aura-shared-target
+          cache-on-failure: true
+
+      - name: Set up sccache
+        id: sccache-package
+        uses: mozilla-actions/sccache-action@v0.0.9
+        continue-on-error: true
+
+      - name: Configure sccache backend
+        if: steps.sccache-package.outcome == 'success'
+        shell: bash
+        env:
+          DEPOT_CACHE_TOKEN: ${{ secrets.DEPOT_CACHE_TOKEN }}
+        run: |
+          echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+          if [ -n "$DEPOT_CACHE_TOKEN" ]; then
+            echo "SCCACHE_WEBDAV_ENDPOINT=https://cache.depot.dev" >> "$GITHUB_ENV"
+            echo "SCCACHE_WEBDAV_TOKEN=$DEPOT_CACHE_TOKEN" >> "$GITHUB_ENV"
+          else
+            echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-latest'
@@ -495,7 +533,7 @@ jobs:
         shell: bash
         run: |
           node scripts/ci/patch-desktop-packager-config.mjs \
-            --binaries-dir "../../prebuilt-binaries" \
+            --binaries-dir "../../../.aura-shared-target/release" \
             --strip-before-packaging
 
       - name: Disable Spotlight indexing for DMG packaging
@@ -610,10 +648,10 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           node scripts/ci/wait-gh-artifacts.mjs \
+            --artifact "interface-dist-nightly" \
             --artifact "sidecar-${{ matrix.target }}-${{ matrix.arch }}" \
-            --artifact "build-inputs-${{ matrix.target }}-${{ matrix.arch }}" \
-            --fail-job "build-sidecar (${{ matrix.os }}, ${{ matrix.target }}, ${{ matrix.arch }})" \
-            --fail-job "build-app (${{ matrix.os }}, ${{ matrix.target }}, ${{ matrix.arch }})"
+            --fail-job "build-interface" \
+            --fail-job "build-sidecar (${{ matrix.os }}, ${{ matrix.target }}, ${{ matrix.arch }})"
 
       - name: Download sidecar artifact
         uses: actions/download-artifact@v5
@@ -621,31 +659,72 @@ jobs:
           name: sidecar-${{ matrix.target }}-${{ matrix.arch }}
           path: downloaded-sidecar
 
-      - name: Download desktop build inputs
+      - name: Download interface dist
         uses: actions/download-artifact@v5
         with:
-          name: build-inputs-${{ matrix.target }}-${{ matrix.arch }}
-          path: downloaded-build-inputs
+          name: interface-dist-nightly
+          path: interface/dist
 
-      - name: Restore packaged resources and prebuilt binary
+      - name: Restore packaged resources
         shell: bash
         run: |
-          rm -rf apps/aura-os-desktop/resources/sidecar interface/dist prebuilt-binaries
+          rm -rf apps/aura-os-desktop/resources/sidecar
           mkdir -p apps/aura-os-desktop/resources
           tar -xf downloaded-sidecar/desktop-sidecar.tar -C apps/aura-os-desktop/resources
-          tar -xf downloaded-build-inputs/desktop-build-inputs.tar
           test -d apps/aura-os-desktop/resources/sidecar
           test -d interface/dist
           node infra/scripts/release/desktop-frontend-assets-validate.mjs --dist interface/dist
-          binary_name="aura-os-desktop"
-          if [ "${{ matrix.target }}" = "windows" ]; then
-            binary_name="${binary_name}.exe"
-          fi
-          test -f "prebuilt-binaries/${binary_name}"
           if [ "${{ matrix.target }}" != "windows" ]; then
-            chmod 755 "prebuilt-binaries/${binary_name}"
             chmod 755 apps/aura-os-desktop/resources/sidecar/aura-node
           fi
+
+      - name: Build release binary
+        env:
+          AURA_DESKTOP_USE_PREBUILT_FRONTEND: "1"
+          AURA_UPDATE_BASE_URL: ${{ env.AURA_UPDATE_BASE_URL }}
+          UPDATER_PUBLIC_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PUBLIC_KEY }}
+          AURA_CARGO_TIMINGS: ${{ (matrix.target == 'windows' || (matrix.target == 'macos' && matrix.arch == 'x86_64')) && '1' || '' }}
+        shell: bash
+        run: |
+          args=(build --release --no-default-features --features stable-channel --package aura-os-desktop)
+          if [ -n "$AURA_CARGO_TIMINGS" ]; then
+            args+=(--timings)
+          fi
+          cargo "${args[@]}"
+
+      - name: Show sccache stats
+        if: always() && steps.sccache-package.outcome == 'success'
+        shell: bash
+        run: |
+          mkdir -p ci-cache
+          "${SCCACHE_PATH}" --show-stats --stats-format=json > "ci-cache/sccache-package-${{ matrix.target }}-${{ matrix.arch }}.json" || true
+          "${SCCACHE_PATH}" --show-stats || sccache --show-stats || true
+
+      - name: Upload package cache telemetry
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: ci-cache-nightly-package-${{ matrix.target }}-${{ matrix.arch }}
+          path: ci-cache
+          if-no-files-found: ignore
+
+      - name: Stage Cargo timings
+        if: always() && (matrix.target == 'windows' || (matrix.target == 'macos' && matrix.arch == 'x86_64'))
+        shell: bash
+        run: |
+          rm -rf cargo-timings-upload
+          if [ -d ../.aura-shared-target/cargo-timings ]; then
+            mkdir -p cargo-timings-upload
+            cp -R ../.aura-shared-target/cargo-timings/. cargo-timings-upload/
+          fi
+
+      - name: Upload Cargo timings
+        if: always() && (matrix.target == 'windows' || (matrix.target == 'macos' && matrix.arch == 'x86_64'))
+        uses: actions/upload-artifact@v5
+        with:
+          name: cargo-timings-nightly-package-${{ matrix.target }}-${{ matrix.arch }}
+          path: cargo-timings-upload
+          if-no-files-found: warn
 
       - name: Package installer
         env:
@@ -658,10 +737,9 @@ jobs:
           package_once() {
             # cargo-packager 0.11.8 does not accept cargo build flags
             # (--no-default-features / --features) directly. The stable-channel
-            # binary is produced by the `build-app` job (which passes those
-            # flags to cargo build), uploaded as `desktop-build-inputs.tar`,
-            # and consumed here via the `binaries-dir = "../../prebuilt-binaries"`
-            # entry that the previous step injects into Cargo.toml. The
+            # binary is produced earlier in this package job, then consumed via
+            # the `binaries-dir = "../../../.aura-shared-target/release"` entry
+            # that the prepare-packager step injects into Cargo.toml. The
             # `before-packaging-command` line is stripped above so cargo-packager
             # does not redundantly rebuild on top of the prebuilt binary.
             cargo packager --release --packages aura-os-desktop 2>&1 | tee packager.log
@@ -992,7 +1070,7 @@ jobs:
           done
 
   preview-manifests:
-    needs: [resolve-version, package]
+    needs: [resolve-version]
     if: github.ref_name != 'main' || (github.event_name == 'workflow_dispatch' && !inputs.publish_live)
     runs-on: ubuntu-latest
     steps:
@@ -1002,6 +1080,21 @@ jobs:
 
       - name: Install Node.js
         uses: ./.github/actions/setup-node
+
+      - name: Wait for installer artifacts
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/ci/wait-gh-artifacts.mjs \
+            --artifact "installers-windows-x86_64" \
+            --artifact "installers-macos-aarch64" \
+            --artifact "installers-macos-x86_64" \
+            --artifact "installers-linux-x86_64" \
+            --fail-job "package (windows-latest, windows, x86_64)" \
+            --fail-job "package (macos-latest, macos, aarch64)" \
+            --fail-job "package (macos-15-intel, macos, x86_64)" \
+            --fail-job "package (ubuntu-latest, linux, x86_64)"
 
       - name: Download all artifacts
         uses: actions/download-artifact@v5
