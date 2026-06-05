@@ -101,6 +101,20 @@
   border-radius: 0 0 110px 0;
 }
 
+/* Both bottom cells now have a rounded outer corner, so give the content
+   extra bottom room to clear the curve and center the copy so it reads
+   balanced within the symmetric corners. */
+.personalAgentQuadrantSkills,
+.personalAgentQuadrantServices {
+  padding-bottom: 80px;
+}
+
+.personalAgentQuadrantSkills .personalAgentCopy,
+.personalAgentQuadrantServices .personalAgentCopy {
+  align-items: center;
+  text-align: center;
+}
+
 /*
  * Media well — holds each quadrant's mini-UI. Flex-grows so the copy
  * block always lands at the bottom of the cell, keeping the three
