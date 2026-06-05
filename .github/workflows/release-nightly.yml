@@ -463,6 +463,7 @@ jobs:
           node scripts/ci/wait-gh-artifacts.mjs \
             --artifact "interface-dist-nightly" \
             --artifact "sidecar-${{ matrix.target }}-${{ matrix.arch }}" \
+            --interval-seconds 5 \
             --fail-job "build-interface" \
             --fail-job "build-sidecar (${{ matrix.os }}, ${{ matrix.target }}, ${{ matrix.arch }})"
 
@@ -504,6 +505,14 @@ jobs:
             args+=(--timings)
           fi
           cargo "${args[@]}"
+
+      - name: Verify release binary channel
+        shell: bash
+        run: |
+          node scripts/ci/verify-desktop-release-binary.mjs \
+            --release-dir "$AURA_RELEASE_DIR" \
+            --target "${{ matrix.target }}" \
+            --expected-channel Stable
 
       - name: Show sccache stats
         if: always() && steps.sccache-package.outcome == 'success'
@@ -666,6 +675,15 @@ jobs:
           mv dist/release-summary.md "dist/release-summary-${{ matrix.target }}-${{ matrix.arch }}.md"
           mv dist/checksums.txt "dist/checksums-${{ matrix.target }}-${{ matrix.arch }}.txt"
           cat "dist/release-summary-${{ matrix.target }}-${{ matrix.arch }}.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate signed release artifacts
+        run: |
+          node infra/scripts/release/desktop-release-artifacts-validate.mjs \
+            --dist dist \
+            --channel nightly \
+            --version "${{ needs.resolve-version.outputs.version }}" \
+            --target "${{ matrix.target }}" \
+            --arch "${{ matrix.arch }}"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v5
@@ -897,7 +915,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Install Node.js
         uses: ./.github/actions/setup-node
@@ -912,6 +930,7 @@ jobs:
             --artifact "installers-macos-aarch64" \
             --artifact "installers-macos-x86_64" \
             --artifact "installers-linux-x86_64" \
+            --interval-seconds 5 \
             --fail-job "package (windows-latest, windows, x86_64)" \
             --fail-job "package (macos-latest, macos, aarch64)" \
             --fail-job "package (macos-15-intel, macos, x86_64)" \
@@ -931,6 +950,26 @@ jobs:
             --channel nightly \
             --version "${{ needs.resolve-version.outputs.version }}" \
             --output-dir manifest-validation
+
+      - name: Dry-run release asset reconciliation
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          bash infra/scripts/release/upload-release-assets-with-retry.sh \
+            --dry-run \
+            "${{ github.repository }}" \
+            "${{ needs.resolve-version.outputs.tag }}" \
+            all-artifacts
+          bash infra/scripts/release/prune-release-assets-with-retry.sh \
+            --dry-run \
+            "${{ github.repository }}" \
+            nightly
+          bash infra/scripts/release/upload-release-assets-with-retry.sh \
+            --dry-run \
+            "${{ github.repository }}" \
+            nightly \
+            all-artifacts
 
       - name: Generate preview update manifests
         shell: bash

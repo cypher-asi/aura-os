@@ -456,6 +456,7 @@ jobs:
           node scripts/ci/wait-gh-artifacts.mjs \
             --artifact "interface-dist-stable" \
             --artifact "sidecar-${{ matrix.target }}-${{ matrix.arch }}" \
+            --interval-seconds 5 \
             --fail-job "build-interface" \
             --fail-job "build-sidecar (${{ matrix.os }}, ${{ matrix.target }}, ${{ matrix.arch }})"
 
@@ -497,6 +498,14 @@ jobs:
             args+=(--timings)
           fi
           cargo "${args[@]}"
+
+      - name: Verify release binary channel
+        shell: bash
+        run: |
+          node scripts/ci/verify-desktop-release-binary.mjs \
+            --release-dir "$AURA_RELEASE_DIR" \
+            --target "${{ matrix.target }}" \
+            --expected-channel Stable
 
       - name: Show sccache stats
         if: always() && steps.sccache-package.outcome == 'success'
@@ -659,6 +668,15 @@ jobs:
           mv dist/release-summary.md "dist/release-summary-${{ matrix.target }}-${{ matrix.arch }}.md"
           mv dist/checksums.txt "dist/checksums-${{ matrix.target }}-${{ matrix.arch }}.txt"
           cat "dist/release-summary-${{ matrix.target }}-${{ matrix.arch }}.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate signed release artifacts
+        run: |
+          node infra/scripts/release/desktop-release-artifacts-validate.mjs \
+            --dist dist \
+            --channel stable \
+            --version "${{ steps.version.outputs.version }}" \
+            --target "${{ matrix.target }}" \
+            --arch "${{ matrix.arch }}"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v5

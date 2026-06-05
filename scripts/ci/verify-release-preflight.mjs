@@ -19,6 +19,14 @@ run("node", ["--check", "infra/scripts/release/desktop-local-auto-update-smoke.m
   cwd: repoRoot,
   label: "preflight:desktop-auto-update-smoke-syntax",
 });
+run("node", ["--check", "infra/scripts/release/desktop-release-artifacts-validate.mjs"], {
+  cwd: repoRoot,
+  label: "preflight:desktop-artifact-validator-syntax",
+});
+run("node", ["--check", "scripts/ci/verify-desktop-release-binary.mjs"], {
+  cwd: repoRoot,
+  label: "preflight:desktop-release-binary-validator-syntax",
+});
 run("node", ["--test", "infra/scripts/release/desktop-frontend-assets-validate.test.mjs"], {
   cwd: repoRoot,
   label: "preflight:frontend-assets-test",

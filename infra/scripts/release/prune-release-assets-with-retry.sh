@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+dry_run=0
+if [[ "${1:-}" == "--dry-run" ]]; then
+  dry_run=1
+  shift
+fi
+
 if [[ $# -ne 2 ]]; then
-  echo "Usage: $0 <repo> <tag>" >&2
+  echo "Usage: $0 [--dry-run] <repo> <tag>" >&2
   exit 2
 fi
 
@@ -68,6 +74,12 @@ if [[ -z "$release_id" ]]; then
 fi
 
 asset_ids="$(gh_api_with_retry --paginate "repos/${repo}/releases/${release_id}/assets" --jq '.[].id')"
+if (( dry_run == 1 )); then
+  count="$(grep -cve '^[[:space:]]*$' <<<"$asset_ids" || true)"
+  echo "Dry run: would prune ${count} asset(s) from release ${tag} in ${repo}."
+  exit 0
+fi
+
 while read -r asset_id; do
   [[ -n "$asset_id" ]] || continue
   delete_release_asset "$asset_id"
