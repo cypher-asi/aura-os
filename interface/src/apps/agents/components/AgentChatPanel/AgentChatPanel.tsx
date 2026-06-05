@@ -13,6 +13,11 @@ import {
   projectChatHistoryKey,
   sessionHistoryKey,
 } from "../../../../stores/chat-history-store";
+import {
+  projectSessionsSurfaceKey,
+  useSessionsListStore,
+} from "../../../../stores/sessions-list-store";
+import { usePriorSessions } from "../../../../hooks/use-prior-sessions";
 import { useProjectsListStore } from "../../../../stores/projects-list-store";
 import { useContextUsage } from "../../../../stores/context-usage-store";
 import { useHydrateContextUtilization } from "../../../../hooks/use-hydrate-context-utilization";
@@ -238,6 +243,26 @@ export function AgentChatPanel({
     });
 
   const hasHistory = historyMessages.length > 0;
+
+  const loadProjectSessions = useSessionsListStore((s) => s.loadProjectSessions);
+  const ensurePriorSessionsLoaded = useCallback(() => {
+    void loadProjectSessions(projectId, projectName);
+  }, [loadProjectSessions, projectId, projectName]);
+  const prior = usePriorSessions({
+    surfaceKey: projectSessionsSurfaceKey(projectId),
+    agentInstanceId,
+    currentSessionId: sessionId,
+    historyFirstEventId: historyMessages[0]?.id,
+    ensureLoaded: ensurePriorSessionsLoaded,
+  });
+  const combinedHistory = useMemo(
+    () =>
+      prior.priorEvents.length > 0
+        ? [...prior.priorEvents, ...historyMessages]
+        : historyMessages,
+    [prior.priorEvents, historyMessages],
+  );
+
   const renameFromPrompt = useAutoRenameFromPrompt({
     projectId,
     agentInstanceId,
@@ -323,7 +348,11 @@ export function AgentChatPanel({
     initialHandoff: shouldUseCreateHandoff ? "create-agent" : undefined,
     onInitialHandoffReady,
     scrollResetKey: panelKey,
-    historyMessages,
+    historyMessages: combinedHistory,
+    onLoadPriorSession: prior.loadPriorSession,
+    hasPriorSession: prior.hasPriorSession,
+    isLoadingPriorSession: prior.isLoadingPriorSession,
+    sessionBoundaries: prior.sessionBoundaries,
     projects: currentProject,
     selectedProjectId: projectId,
     // The projects-app pins the wire `project_id` to the route

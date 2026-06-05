@@ -37,6 +37,7 @@ import type { Project } from "../../../shared/types";
 import type { GenerationMode } from "../../../constants/models";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";
 import type { ContextUsageEntry } from "../../../stores/context-usage-store";
+import type { SessionBoundary } from "../../../hooks/use-prior-sessions";
 import styles from "./ChatPanel.module.css";
 
 const LOADING_OVERLAY_FADE_MS = 120;
@@ -120,6 +121,12 @@ export interface ChatSurfaceProps {
   className?: string;
   /** Forwarded to the surface root so the coordinator can sequence slide-out unmounts. */
   onAnimationEnd?: AnimationEventHandler<HTMLDivElement>;
+  /** Loads the chronologically previous session above the current chat. */
+  onLoadPriorSession?: () => void;
+  hasPriorSession?: boolean;
+  isLoadingPriorSession?: boolean;
+  /** Per-session dividers for the prepended prior sessions. */
+  sessionBoundaries?: SessionBoundary[];
 }
 
 /**
@@ -170,6 +177,10 @@ export function ChatSurface({
   centerInputWhenEmpty = true,
   className,
   onAnimationEnd,
+  onLoadPriorSession,
+  hasPriorSession,
+  isLoadingPriorSession,
+  sessionBoundaries,
 }: ChatSurfaceProps) {
   const {
     input,
@@ -637,6 +648,10 @@ export function ChatSurface({
                 onLoadOlder={loadOlder}
                 isLoadingOlder={isLoadingOlder}
                 hasOlderMessages={hasOlderMessages}
+                onLoadPriorSession={onLoadPriorSession}
+                hasPriorSession={hasPriorSession}
+                isLoadingPriorSession={isLoadingPriorSession}
+                sessionBoundaries={sessionBoundaries}
                 onInitialAnchorReady={handleInitialAnchorReady}
                 onRetry={handleRetryLastSend}
                 isAutoFollowing={isAutoFollowing}

@@ -26,6 +26,7 @@ import type { Project } from "../../../shared/types";
 import type { GenerationMode } from "../../../constants/models";
 import type { DisplaySessionEvent } from "../../../shared/types/stream";
 import type { ContextUsageEntry } from "../../../stores/context-usage-store";
+import type { SessionBoundary } from "../../../hooks/use-prior-sessions";
 import styles from "./ChatPanel.module.css";
 
 type ChatPanelHandoffMode = "create-agent";
@@ -112,6 +113,13 @@ export interface ChatPanelProps {
   compact?: boolean;
   sendDisabled?: boolean;
   sendDisabledReason?: string;
+  /** Loads the chronologically previous session above the current chat. */
+  onLoadPriorSession?: () => void;
+  /** Whether an older session exists to load above the current chat. */
+  hasPriorSession?: boolean;
+  isLoadingPriorSession?: boolean;
+  /** Per-session dividers for the prepended prior sessions. */
+  sessionBoundaries?: SessionBoundary[];
 }
 
 /**
@@ -160,6 +168,10 @@ export function ChatPanel({
   compact = false,
   sendDisabled = false,
   sendDisabledReason,
+  onLoadPriorSession,
+  hasPriorSession,
+  isLoadingPriorSession,
+  sessionBoundaries,
 }: ChatPanelProps) {
   const subagentPane = useSubAgentPane(parentStreamKey);
   const { closePane } = useSubAgentPaneActions();
@@ -263,6 +275,10 @@ export function ChatPanel({
           compact={compact}
           sendDisabled={sendDisabled}
           sendDisabledReason={sendDisabledReason}
+          onLoadPriorSession={onLoadPriorSession}
+          hasPriorSession={hasPriorSession}
+          isLoadingPriorSession={isLoadingPriorSession}
+          sessionBoundaries={sessionBoundaries}
         />
         {paneToRender && (
           <SubAgentSurface

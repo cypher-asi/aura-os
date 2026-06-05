@@ -24,6 +24,7 @@ import type { AnnotatedSession } from "../components/SessionsList";
 import { useContextUsage, useContextUsageStore } from "../stores/context-usage-store";
 import { useMessageQueueStore } from "../stores/message-queue-store";
 import { useHydrateContextUtilization } from "./use-hydrate-context-utilization";
+import { usePriorSessions } from "./use-prior-sessions";
 import { useAuraCapabilities } from "./use-aura-capabilities";
 import type { ChatPanelProps } from "../apps/chat/components/ChatPanel";
 import type { AgentInstance, Project } from "../shared/types";
@@ -470,6 +471,24 @@ export function useStandaloneAgentChat(
       watchAgentId: agentId,
     });
 
+  const loadAgentSessions = useSessionsListStore((s) => s.loadAgentSessions);
+  const ensurePriorSessionsLoaded = useCallback(() => {
+    if (agentId) void loadAgentSessions(agentId);
+  }, [loadAgentSessions, agentId]);
+  const prior = usePriorSessions({
+    surfaceKey: agentId ? agentSessionsSurfaceKey(agentId) : undefined,
+    currentSessionId: pinnedSessionId,
+    historyFirstEventId: historyMessages[0]?.id,
+    ensureLoaded: ensurePriorSessionsLoaded,
+  });
+  const combinedHistory = useMemo(
+    () =>
+      prior.priorEvents.length > 0
+        ? [...prior.priorEvents, ...historyMessages]
+        : historyMessages,
+    [prior.priorEvents, historyMessages],
+  );
+
   const wrappedSendBase = useMemo(
     () => wrapSend(sendMessage),
     [wrapSend, sendMessage],
@@ -570,7 +589,11 @@ export function useStandaloneAgentChat(
     historyResolved,
     errorMessage: historyError ?? null,
     scrollResetKey,
-    historyMessages,
+    historyMessages: combinedHistory,
+    onLoadPriorSession: prior.loadPriorSession,
+    hasPriorSession: prior.hasPriorSession,
+    isLoadingPriorSession: prior.isLoadingPriorSession,
+    sessionBoundaries: prior.sessionBoundaries,
     projects: displayProjects,
     selectedProjectId: effectiveProjectId,
     llmProjectId,

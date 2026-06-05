@@ -14,6 +14,8 @@ import { useStreamStore } from "../../../hooks/stream/store";
 import { useImageScrollPin } from "../../../shared/hooks/use-image-scroll-pin";
 import { SessionGalleryContext } from "../../../components/Gallery";
 import { collectSessionImages } from "./collect-session-images";
+import { PriorSessionDivider } from "./PriorSessionDivider";
+import type { SessionBoundary } from "../../../hooks/use-prior-sessions";
 
 interface ChatMessageListProps {
   messages: DisplaySessionEvent[];
@@ -23,6 +25,12 @@ interface ChatMessageListProps {
   onLoadOlder?: () => void;
   isLoadingOlder?: boolean;
   hasOlderMessages?: boolean;
+  /** Loads the chronologically previous session above the current chat. */
+  onLoadPriorSession?: () => void;
+  hasPriorSession?: boolean;
+  isLoadingPriorSession?: boolean;
+  /** Labeled dividers inserted before the first message of each session block. */
+  sessionBoundaries?: SessionBoundary[];
   onInitialAnchorReady?: () => void;
   /**
    * Resend the most-recent prompt for this stream. Forwarded to each
@@ -70,6 +78,10 @@ export function ChatMessageList({
   onLoadOlder,
   isLoadingOlder,
   hasOlderMessages,
+  onLoadPriorSession,
+  hasPriorSession,
+  isLoadingPriorSession,
+  sessionBoundaries,
   onInitialAnchorReady,
   onRetry,
   isAutoFollowing = true,
@@ -125,6 +137,13 @@ export function ChatMessageList({
     () => collectSessionImages(visibleMessages),
     [visibleMessages],
   );
+  const boundaryByEventId = useMemo(() => {
+    const map = new Map<string, SessionBoundary>();
+    for (const boundary of sessionBoundaries ?? []) {
+      map.set(boundary.firstEventId, boundary);
+    }
+    return map;
+  }, [sessionBoundaries]);
   const prevStreamingRef = useRef(nowStreaming);
   const justFinalizedIdRef = useRef<string | null>(null);
 
@@ -202,6 +221,29 @@ export function ChatMessageList({
 
   return (
     <>
+      {hasPriorSession && (
+        <div style={{ display: "flex", justifyContent: "center", padding: "12px 0" }}>
+          {isLoadingPriorSession ? (
+            <span style={{ color: "var(--color-text-muted)", fontSize: 13 }}>Loading...</span>
+          ) : (
+            <button
+              type="button"
+              onClick={onLoadPriorSession}
+              style={{
+                background: "none",
+                border: "1px solid var(--color-border)",
+                borderRadius: 6,
+                padding: "6px 16px",
+                color: "var(--color-text-secondary)",
+                fontSize: 13,
+                cursor: "pointer",
+              }}
+            >
+              Load prior session
+            </button>
+          )}
+        </div>
+      )}
       {hasOlderMessages && (
         <div style={{ display: "flex", justifyContent: "center", padding: "12px 0" }}>
           {isLoadingOlder ? (
@@ -236,22 +278,32 @@ export function ChatMessageList({
             }}
           >
             {/* eslint-disable-next-line react-hooks/refs -- reading justFinalizedIdRef.current here is part of the intentional render-phase pattern documented above the transition detection */}
-            {visibleMessages.map((msg) => (
-              <div
-                key={msg.clientId ?? msg.id}
-                data-message-id={msg.id}
-                style={{ display: "flex", width: "100%" }}
-              >
-                <MessageBubble
-                  message={msg}
-                  isStreaming={isStreaming && msg.id.startsWith("stream-")}
-                  initialThinkingExpanded={msg.id === justFinalizedIdRef.current}
-                  initialActivitiesExpanded={msg.id === justFinalizedIdRef.current}
-                  streamKey={streamKey}
-                  onRetry={onRetry}
-                />
-              </div>
-            ))}
+            {visibleMessages.map((msg) => {
+              const boundary = boundaryByEventId.get(msg.id);
+              return (
+                <div key={msg.clientId ?? msg.id} style={{ display: "contents" }}>
+                  {boundary && (
+                    <PriorSessionDivider
+                      label={boundary.label}
+                      startedAt={boundary.startedAt}
+                    />
+                  )}
+                  <div
+                    data-message-id={msg.id}
+                    style={{ display: "flex", width: "100%" }}
+                  >
+                    <MessageBubble
+                      message={msg}
+                      isStreaming={isStreaming && msg.id.startsWith("stream-")}
+                      initialThinkingExpanded={msg.id === justFinalizedIdRef.current}
+                      initialActivitiesExpanded={msg.id === justFinalizedIdRef.current}
+                      streamKey={streamKey}
+                      onRetry={onRetry}
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </SessionGalleryContext.Provider>
       )}
