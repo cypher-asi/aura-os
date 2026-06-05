@@ -102,7 +102,7 @@ markBootPhase("rendering React root");
 applyHighlightTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark");
 createRoot(rootEl).render(
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="dark" defaultAccent="purple" disableTransitionOnChange>
+    <ThemeProvider defaultTheme="dark" defaultAccent="cyan" disableTransitionOnChange>
       <HighlightThemeBridge />
       <ThemeOverridesBridge />
       <PanelGlassBridge />
