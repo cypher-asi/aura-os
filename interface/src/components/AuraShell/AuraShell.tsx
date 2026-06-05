@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useOutlet } from "react-router-dom";
+import { useLocation, useOutlet } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import { BackgroundLayer } from "../DesktopShell/BackgroundLayer";
 import { PersistentSidekickLane } from "../DesktopShell/PersistentSidekickLane";
@@ -98,6 +98,13 @@ export function AuraShell(): React.ReactElement {
   // right sidekick lane, titlebar split/sidekick toggles, and the
   // host settings entry. Public mode strips all of it.
   const isStandard = mode === "standard";
+
+  // The public marketing /agents and /code routes paint a dark-mode
+  // diagonal gradient on the shell frame (see `.shell::before` in
+  // AuraShell.module.css). Flag them so the CSS can fade it in/out.
+  const { pathname } = useLocation();
+  const publicGradientSurface =
+    isPublic && (pathname === "/agents" || pathname === "/code");
 
   // Authed-side state. We call these hooks unconditionally because
   // their subscriptions are cheap store reads — `useAppUIStore`,
@@ -262,6 +269,7 @@ export function AuraShell(): React.ReactElement {
         className={styles.shell}
         data-ui-mode={mode}
         data-desktop-mode={desktopModeActive || undefined}
+        data-public-surface={publicGradientSurface ? "agents-code" : undefined}
         data-testid="aura-shell"
         data-agent-context={isPublic ? "logged-out-shell" : "desktop-shell"}
       >

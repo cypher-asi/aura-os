@@ -36,6 +36,38 @@
   background: var(--desktop-shell-backdrop);
 }
 
+/*
+ * Dark-mode diagonal gradient for the public `/agents` and `/code`
+ * marketing routes. CSS `transition` can't interpolate a gradient
+ * `background-image`, so the shell keeps its solid `var(--color-bg)`
+ * base and this pseudo layers the gradient on top, fading its
+ * OPACITY as the route changes. `.shell` sets `isolation: isolate`,
+ * so the `z-index: -1` layer is contained: it paints above the
+ * shell's own background fill but below the (transparent in public
+ * mode) chrome children, reading as the frame around the opaque
+ * `#090909` page surface.
+ */
+.shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(to bottom right, #1d1d1f 0%, #171718 100%);
+  opacity: 0;
+  transition: opacity 320ms ease;
+}
+
+:global([data-theme="dark"]) .shell[data-public-surface="agents-code"]::before {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell::before {
+    transition-duration: 1ms;
+  }
+}
+
 .body {
   position: relative;
   flex: 1;

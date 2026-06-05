@@ -32,6 +32,18 @@
   background: #000;
   color: var(--color-text-primary);
   scrollbar-width: none;
+  /* Crossfade the per-route background color (set inline from
+     `MARKETING_PATH_BG`) so navigating between marketing pages fades
+     instead of snapping, in step with the shell-frame gradient fade
+     on `/agents` and `/code` (`AuraShell.module.css`). The values are
+     all solid colors, so a plain transition interpolates cleanly. */
+  transition: background-color 320ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrollColumn {
+    transition-duration: 1ms;
+  }
 }
 
 .scrollColumn::-webkit-scrollbar {

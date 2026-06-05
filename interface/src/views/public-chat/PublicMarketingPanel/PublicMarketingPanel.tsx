@@ -40,15 +40,20 @@ const MARKETING_NAV_FG_COLOR_MUTED = "#c9c9cf";
  *
  * These values mirror each view's first painted surface and must stay
  * in sync with their CSS:
- *   /agents, /code, /changelog, /feedback -> `--marketing-section-bg`
- *     (`#0f0f12`)
+ *   /agents, /code -> `--marketing-section-bg` (`#090909`)
+ *   /changelog, /feedback -> `--marketing-section-bg` (`#0f0f12`)
  *   /pricing -> `.pricingPage` (`#22272e`)
  *   /models  -> `.modelsPage` (`#16191d`)
  *   /download is transparent, so it keeps the `#000` default.
+ *
+ * `.scrollColumn` carries a `background-color` transition (see
+ * `PublicMarketingPanel.module.css`) so these per-route colors
+ * crossfade as the visitor navigates, in step with the shell-frame
+ * gradient fade on `/agents` and `/code` (`AuraShell.module.css`).
  */
 const MARKETING_PATH_BG: Readonly<Record<string, string>> = {
-  "/agents": "#0f0f12",
-  "/code": "#0f0f12",
+  "/agents": "#090909",
+  "/code": "#090909",
   "/changelog": "#0f0f12",
   "/feedback": "#0f0f12",
   "/blog": "#0f0f12",
