@@ -98,14 +98,26 @@ jobs:
     name: Analyze Swift
     needs: detect-mobile
     if: needs.detect-mobile.outputs.ios == 'true'
-    runs-on: macos-latest
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v5
+
+      - name: Install Node.js
+        uses: ./.github/actions/setup-node
+        with:
+          cache: npm
+          cache-dependency-path: interface/package-lock.json
+
+      - name: Select Xcode 26
+        run: sudo xcode-select -s /Applications/Xcode_26.4.app
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
           languages: swift
+
+      - name: Build iOS app for Swift extraction
+        run: node scripts/ci/verify-ios.mjs
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
