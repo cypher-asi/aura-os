@@ -12,7 +12,13 @@ on:
       - .github/workflows/release-stable.yml
       - apps/aura-os-desktop/**
       - apps/aura-os-server/**
-      - interface/**
+      - interface/index.html
+      - interface/package.json
+      - interface/package-lock.json
+      - interface/public/**
+      - interface/src/**
+      - interface/tsconfig*.json
+      - interface/vite.config.*
       - infra/scripts/release/desktop-ci-smoke.mjs
       - infra/scripts/release/desktop-frontend-assets-validate.mjs
       - infra/scripts/release/desktop-frontend-assets-validate.test.mjs
@@ -52,8 +58,104 @@ jobs:
       - name: Skip duplicate push validation
         run: echo "Desktop Validation is PR-only. Desktop Nightly Release covers push-to-main desktop validation."
 
+  desktop-matrix:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      mode: ${{ steps.matrix.outputs.mode }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Resolve desktop validation matrix
+        id: matrix
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          node <<'NODE'
+          const { execSync } = require("node:child_process");
+          const fs = require("node:fs");
+
+          const primary = [
+            {
+              os: "ubuntu-latest",
+              target: "linux",
+              binary: "../.aura-shared-target/release/aura-os-desktop",
+              package: "false",
+            },
+            {
+              os: "macos-latest",
+              target: "macos-arm64",
+              binary: "../.aura-shared-target/release/aura-os-desktop",
+              package: "false",
+            },
+          ];
+          const extended = [
+            {
+              os: "ubuntu-latest",
+              target: "linux",
+              binary: "../.aura-shared-target/release/aura-os-desktop",
+              package: "true",
+            },
+            {
+              os: "macos-latest",
+              target: "macos-arm64",
+              binary: "../.aura-shared-target/release/aura-os-desktop",
+              package: "true",
+            },
+            {
+              os: "macos-15-intel",
+              target: "macos-x64",
+              binary: "../.aura-shared-target/release/aura-os-desktop",
+              package: "true",
+            },
+            {
+              os: "windows-latest",
+              target: "windows-x64",
+              binary: "../.aura-shared-target/release/aura-os-desktop.exe",
+              package: "true",
+            },
+          ];
+
+          const eventName = process.env.GITHUB_EVENT_NAME;
+          const forceExtended = eventName === "workflow_dispatch";
+          let changedFiles = [];
+
+          if (eventName === "pull_request" && process.env.PR_BASE_SHA && process.env.PR_HEAD_SHA) {
+            changedFiles = execSync(
+              `git diff --name-only ${process.env.PR_BASE_SHA} ${process.env.PR_HEAD_SHA}`,
+              { encoding: "utf8" },
+            ).split(/\r?\n/).filter(Boolean);
+          }
+
+          const extendedPatterns = [
+            /^apps\/aura-os-desktop\//,
+            /^apps\/aura-os-server\//,
+            /^crates\//,
+            /^Cargo\.(toml|lock)$/,
+            /^rust-toolchain\.toml$/,
+            /^infra\/scripts\/release\/(desktop-ci-smoke|desktop-local-auto-update-smoke|prepare-desktop-sidecar|macos-dmg-notarize-validate|desktop-sign-artifacts|install-patched-create-dmg|cleanup-stale-macos-dmg)\.(mjs|sh|py)$/,
+          ];
+
+          const useExtended = forceExtended || changedFiles.some((file) => (
+            extendedPatterns.some((pattern) => pattern.test(file))
+          ));
+          const mode = useExtended ? "extended" : "primary";
+          const matrix = { include: useExtended ? extended : primary };
+
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `mode=${mode}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `matrix=${JSON.stringify(matrix)}\n`);
+          console.log(`Desktop validation mode: ${mode}`);
+          console.log(changedFiles.join("\n"));
+          NODE
+
   desktop-smoke:
     if: github.event_name != 'push'
+    needs: desktop-matrix
     env:
       CARGO_TARGET_DIR: ../.aura-shared-target
       AURA_RELEASE_DIR: ../.aura-shared-target/release
@@ -68,20 +170,7 @@ jobs:
       AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN: ${{ vars.AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: linux
-            binary: ../.aura-shared-target/release/aura-os-desktop
-          - os: macos-latest
-            target: macos-arm64
-            binary: ../.aura-shared-target/release/aura-os-desktop
-          - os: macos-15-intel
-            target: macos-x64
-            binary: ../.aura-shared-target/release/aura-os-desktop
-          - os: windows-latest
-            target: windows-x64
-            binary: ../.aura-shared-target/release/aura-os-desktop.exe
+      matrix: ${{ fromJson(needs.desktop-matrix.outputs.matrix) }}
 
     runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
 
@@ -194,14 +283,14 @@ jobs:
           if-no-files-found: warn
 
       - name: Install cargo-packager
-        if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
+        if: matrix.package == 'true' && env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
         uses: baptiste0928/cargo-install@v3
         with:
           crate: cargo-packager
           version: 0.11.8
 
       - name: Disable Spotlight indexing for DMG packaging
-        if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != '' && startsWith(matrix.target, 'macos-')
+        if: matrix.package == 'true' && env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != '' && startsWith(matrix.target, 'macos-')
         shell: bash
         # Spotlight (mds / mdworker_shared) holds open file handles on freshly
         # mounted DMGs, which makes `hdiutil detach` fail with `Resource busy`
@@ -212,12 +301,12 @@ jobs:
           sudo mdutil -i off /Volumes || true
 
       - name: Clean stale macOS DMG mounts
-        if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != '' && startsWith(matrix.target, 'macos-')
+        if: matrix.package == 'true' && env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != '' && startsWith(matrix.target, 'macos-')
         shell: bash
         run: python3 infra/scripts/release/cleanup-stale-macos-dmg.py
 
       - name: Install patched create-dmg script
-        if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != '' && startsWith(matrix.target, 'macos-')
+        if: matrix.package == 'true' && env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != '' && startsWith(matrix.target, 'macos-')
         shell: bash
         # cargo-packager 0.11.8 only downloads upstream create-dmg v1.1.1 if the
         # cache file does not exist. Pre-seeding the cache with our patched copy
@@ -227,7 +316,7 @@ jobs:
         run: bash infra/scripts/release/install-patched-create-dmg.sh
 
       - name: Prepare macOS signing inputs
-        if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != '' && startsWith(matrix.target, 'macos-')
+        if: matrix.package == 'true' && env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != '' && startsWith(matrix.target, 'macos-')
         shell: bash
         run: |
           python3 <<'PY'
@@ -296,7 +385,7 @@ jobs:
           PY
 
       - name: Inject macOS signing identity into packager config
-        if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != '' && startsWith(matrix.target, 'macos-')
+        if: matrix.package == 'true' && env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != '' && startsWith(matrix.target, 'macos-')
         shell: bash
         run: |
           python3 <<'PY'
@@ -325,11 +414,11 @@ jobs:
           PY
 
       - name: Validate macOS packager manifest
-        if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != '' && startsWith(matrix.target, 'macos-')
+        if: matrix.package == 'true' && env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != '' && startsWith(matrix.target, 'macos-')
         run: cargo metadata --no-deps --manifest-path apps/aura-os-desktop/Cargo.toml > /dev/null
 
       - name: Skip duplicate packager prebuild in CI
-        if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
+        if: matrix.package == 'true' && env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
         shell: bash
         run: |
           python3 <<'PY'
@@ -342,7 +431,7 @@ jobs:
           PY
 
       - name: Package desktop artifact
-        if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
+        if: matrix.package == 'true' && env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
         env:
           AURA_DESKTOP_USE_PREBUILT_FRONTEND: "1"
           AURA_UPDATE_BASE_URL: ${{ env.AURA_UPDATE_BASE_URL }}
@@ -406,12 +495,12 @@ jobs:
           done
 
       - name: Notarize and validate macOS DMG
-        if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != '' && startsWith(matrix.target, 'macos-')
+        if: matrix.package == 'true' && env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != '' && startsWith(matrix.target, 'macos-')
         shell: bash
         run: bash infra/scripts/release/macos-dmg-notarize-validate.sh --notarize "$AURA_RELEASE_DIR"
 
       - name: Collect packaged artifacts
-        if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
+        if: matrix.package == 'true' && env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
         shell: bash
         run: |
           mkdir -p packaged/${{ matrix.target }}
@@ -442,7 +531,7 @@ jobs:
           ls -la packaged/${{ matrix.target }}/
 
       - name: Normalize signing key
-        if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
+        if: matrix.package == 'true' && env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
         shell: bash
         run: |
           normalized="$(python3 infra/scripts/release/normalize-packager-key.py)"
@@ -451,17 +540,21 @@ jobs:
           fi
 
       - name: Sign packaged updater artifacts
-        if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
+        if: matrix.package == 'true' && env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
         env:
           CARGO_PACKAGER_SIGN_PRIVATE_KEY: ${{ env.CARGO_PACKAGER_SIGN_PRIVATE_KEY }}
           CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD: ${{ env.CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD }}
         run: node infra/scripts/release/desktop-sign-artifacts.mjs --dir packaged/${{ matrix.target }} --prune-app-bundles
 
       - name: Note when packaging is skipped
-        if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY == ''
+        if: matrix.package != 'true' || env.CARGO_PACKAGER_SIGN_PRIVATE_KEY == ''
         shell: bash
         run: |
-          echo "Desktop packaging skipped on this run because signing secrets are unavailable." >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ matrix.package }}" != "true" ]; then
+            echo "Desktop packaging skipped for primary PR validation; release packaging runs for native/release changes and manual full validation." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Desktop packaging skipped on this run because signing secrets are unavailable." >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload desktop smoke logs
         if: always()
@@ -471,7 +564,7 @@ jobs:
           path: desktop-smoke-logs/${{ matrix.target }}
 
       - name: Upload packaged desktop artifacts
-        if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
+        if: matrix.package == 'true' && env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
         uses: actions/upload-artifact@v5
         with:
           name: desktop-package-${{ matrix.target }}
