@@ -41,11 +41,10 @@ export function PersonalAgentSection(): ReactNode {
               <MockChatInputCard />
             </div>
             <div className="personalAgentCopy">
-              <h3 className="personalAgentQuadrantTitle">Always ready.</h3>
+              <h3 className="personalAgentQuadrantTitle">Always on.</h3>
               <p className="personalAgentQuadrantDesc">
-                Your agent is available for any task. Simply message it
-                from any of your favorite messaging apps and it starts
-                working for you.
+                Ask or direct your agent to do almost anything. It will
+                get to work and report back when necessary.
               </p>
             </div>
           </article>
