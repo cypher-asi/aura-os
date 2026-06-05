@@ -1,8 +1,9 @@
 /**
- * Monochrome brand marks for the "Designed for you" quadrant's service
- * grid. Each logo is a single-path 24x24 glyph (rendered in
- * `currentColor` by `ServiceGridCard`), so the grid tile controls the
- * grayscale tint via CSS. Path data is the CC0-licensed simple-icons
+ * Monochrome brand marks for the "Connected to everything" quadrant's
+ * service device. Each logo is a single-path 24x24 glyph (rendered in
+ * `currentColor` by `ServiceDeviceCard`), so the on-screen widget
+ * controls the glow/tint via CSS. Path data is the CC0-licensed
+ * simple-icons
  * set, kept inline so the marketing page pulls in no extra icon
  * dependency or network request for the logos.
  */

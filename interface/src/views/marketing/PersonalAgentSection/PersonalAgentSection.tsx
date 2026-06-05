@@ -1,7 +1,7 @@
 import { type ReactNode } from "react";
 import { Section } from "../Section";
 import { MockChatInputCard } from "./MockChatInputCard";
-import { ServiceGridCard } from "./ServiceGridCard";
+import { ServiceDeviceCard } from "./ServiceDeviceCard";
 import { SkillSeaCard } from "./SkillSeaCard";
 import "./PersonalAgentSection.css";
 
@@ -27,12 +27,11 @@ export function PersonalAgentSection(): ReactNode {
       <div className="personalAgentInner">
         <header className="personalAgentHead">
           <h2 id={HEADLINE_ID} className="personalAgentHeadline">
-            An agent for work, love, play.
+            An agent designed for you.
           </h2>
           <p className="personalAgentSubhead">
             AURA is your own personal agent that supports you with
-            everything from light tasks to deep work. It&rsquo;s designed
-            for you, available and in service.
+            everything from light tasks to deep work.
           </p>
         </header>
 
@@ -51,7 +50,7 @@ export function PersonalAgentSection(): ReactNode {
             </div>
           </article>
 
-          <article className="personalAgentQuadrant">
+          <article className="personalAgentQuadrant personalAgentQuadrantSkills">
             <div className="personalAgentMedia">
               <SkillSeaCard />
             </div>
@@ -67,12 +66,12 @@ export function PersonalAgentSection(): ReactNode {
             </div>
           </article>
 
-          <article className="personalAgentQuadrant">
+          <article className="personalAgentQuadrant personalAgentQuadrantServices">
             <div className="personalAgentMedia">
-              <ServiceGridCard />
+              <ServiceDeviceCard />
             </div>
             <div className="personalAgentCopy">
-              <h3 className="personalAgentQuadrantTitle">Designed for you.</h3>
+              <h3 className="personalAgentQuadrantTitle">Connected to everything.</h3>
               <p className="personalAgentQuadrantDesc">
                 AURA securely connects to your services so it knows
                 everything about you. Your data never leaves your own

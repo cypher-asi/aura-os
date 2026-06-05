@@ -9,7 +9,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 56px;
+  gap: 125px;
   width: 100%;
 }
 
@@ -54,23 +54,45 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 1px;
-  width: 100%;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
-  overflow: hidden;
+  /* Outer frame runs 25% wider than the section column; the negative
+     side margin keeps it centered so it bleeds symmetrically past the
+     inner column on both edges. */
+  width: 125%;
+  margin: 0 -12.5%;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
 }
 
 .personalAgentQuadrant {
   display: flex;
   flex-direction: column;
-  gap: 28px;
-  padding: 40px;
+  gap: 35px;
+  padding: 50px;
   background: var(--marketing-section-bg, #000);
 }
 
 .personalAgentQuadrantWide {
   grid-column: 1 / -1;
+  /* Diagonal gradient using the chat capsule plate's surface greys so
+     the cell behind the shell reads from the same palette. */
+  background: linear-gradient(135deg, #242424 0%, #181818 55%, #0d0d0d 100%);
+  /* Rounded top corners with square bottom corners. */
+  border-radius: 110px 110px 0 0;
+}
+
+/* "Intelligent in all domains" cell: a variation on the top panel's
+   radial — warmer, off-center origin so it doesn't mirror the wide cell. */
+.personalAgentQuadrantSkills {
+  background: radial-gradient(circle at 30% 25%, #20222a 0%, #16171c 100%);
+}
+
+/* "Connected to everything" cell: reuse the wide top panel's diagonal
+   surface gradient so the service device reads as part of the same
+   hardware family. */
+.personalAgentQuadrantServices {
+  background: linear-gradient(135deg, #242424 0%, #181818 55%, #0d0d0d 100%);
 }
 
 /*
@@ -84,12 +106,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 220px;
+  min-height: 275px;
   overflow: hidden;
 }
 
 .personalAgentMediaChat {
-  min-height: 200px;
+  min-height: 250px;
 }
 
 .personalAgentCopy {
@@ -122,11 +144,62 @@
  * marketing surface, and cap its width so the pill reads centered in
  * the wide cell. The bar publishes its own internal layout/tokens.
  */
+/*
+ * Three concentric rings built from nested elements instead of
+ * `mask-composite` pseudos. Each gradient ring is a real 1px transparent
+ * border filled via the `border-box` gradient technique, and the black
+ * ring is a parent's solid fill revealed through 2px of padding. Real
+ * borders are anti-aliased crisply by the browser on rounded corners,
+ * which the masked-ring approach was not. Layered outside-in:
+ *   outer gradient ring (dark TL -> light BR)
+ *     -> black ring
+ *       -> inner gradient ring (light TL -> dark BR) + radial surface
+ */
 .personalAgentChatMock {
+  position: relative;
   width: 100%;
-  max-width: 680px;
+  max-width: 884px;
   pointer-events: none;
   user-select: none;
+  border-radius: 999px;
+  /* Outer gradient ring: 1px transparent border showing the border-box
+     gradient; the child covers the center so only the border reads. */
+  border: 1px solid transparent;
+  background: linear-gradient(
+      135deg,
+      rgba(12, 13, 16, 0.65) 0%,
+      rgba(90, 94, 102, 0.65) 100%
+    )
+    border-box;
+}
+
+/* Black ring: solid fill revealed as a 2px band around its child. */
+.personalAgentChatMockBlack {
+  border-radius: 999px;
+  background: #000;
+  padding: 2px;
+}
+
+/* Inner gradient ring + the plate's radial surface, then the content
+   padding for the chat bar. */
+.personalAgentChatMockInner {
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background:
+    radial-gradient(
+        ellipse 90% 120% at 50% 40%,
+        #242424 0%,
+        #181818 55%,
+        #0d0d0d 100%
+      )
+      padding-box,
+    linear-gradient(
+        135deg,
+        rgba(90, 94, 102, 0.65) 0%,
+        rgba(12, 13, 16, 0.65) 100%
+      )
+      border-box;
+  padding: 61px 39px;
 }
 
 /* ----- Quadrant 2: sea of skills ------------------------------- */
@@ -181,40 +254,152 @@
   opacity: 0.85;
 }
 
-/* ----- Quadrant 3: service grid -------------------------------- */
+/* ----- Quadrant 3: service device ------------------------------ */
 
-.personalAgentServiceGrid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+/*
+ * Recreation of the reference sampler/composer device. Outer body is a
+ * dark charcoal slab with a faint left-edge highlight seam; it stacks
+ * an inset glossy screen, a label strip, and a dot-matrix grille.
+ */
+.personalAgentDevice {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  max-width: 340px;
+  max-width: 380px;
+  padding: 14px;
+  border-radius: 22px;
+  background: linear-gradient(150deg, #1c1c1c 0%, #121212 60%, #0a0a0a 100%);
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 22px 50px rgba(0, 0, 0, 0.55);
 }
 
-.personalAgentServiceTile {
+/* Inset screen: recessed glossy black panel. */
+.personalAgentDeviceScreen {
+  position: relative;
+  border-radius: 14px;
+  padding: 26px 22px 30px;
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 0%,
+    #0a0a0a 0%,
+    #050505 60%,
+    #000 100%
+  );
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 -10px 24px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+}
+
+/* Top gloss reflection across the screen glass. */
+.personalAgentDeviceGloss {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 42%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  pointer-events: none;
+}
+
+/* Emissive on-screen logo widgets: glowing monochrome glyphs, no tiles. */
+.personalAgentDeviceLogoGrid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 22px 18px;
+  place-items: center;
+}
+
+.personalAgentDeviceLogo {
   display: flex;
   align-items: center;
   justify-content: center;
-  aspect-ratio: 1 / 1;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--color-text-secondary);
-  transition: color 160ms ease, background 160ms ease;
+  color: rgba(232, 236, 245, 0.85);
+  filter: drop-shadow(0 0 6px rgba(150, 190, 255, 0.35));
+  transition: color 160ms ease, filter 160ms ease;
 }
 
-.personalAgentServiceTile:hover {
-  color: var(--color-text-primary);
-  background: rgba(255, 255, 255, 0.06);
+.personalAgentDeviceLogo:hover {
+  color: #fff;
+  filter: drop-shadow(0 0 9px rgba(170, 205, 255, 0.6));
+}
+
+/* Red status glyph row, bottom-left of the screen. */
+.personalAgentDeviceStatus {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 24px;
+  color: #e5484d;
+  filter: drop-shadow(0 0 5px rgba(229, 72, 77, 0.5));
+}
+
+/* Label strip: hairline divider, asterisk markers + monospace label. */
+.personalAgentDeviceLabelStrip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 6px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  margin-top: 12px;
+}
+
+.personalAgentDeviceMarks {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.personalAgentDeviceAsterisk {
+  font-size: 12px;
+  line-height: 1;
+  color: rgba(180, 184, 190, 0.7);
+}
+
+.personalAgentDeviceAsteriskAccent {
+  color: #e5484d;
+}
+
+.personalAgentDeviceLabel {
+  flex: 1 1 auto;
+  text-align: right;
+  font-family: var(--font-mono, ui-monospace, "SFMono-Regular", Menlo, monospace);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: rgba(200, 204, 210, 0.75);
+  white-space: nowrap;
+}
+
+/* Dot-matrix speaker grille tiled from a single radial-gradient dot. */
+.personalAgentDeviceGrille {
+  height: 92px;
+  border-radius: 10px;
+  background-image: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.07) 1px,
+    transparent 1.4px
+  );
+  background-size: 9px 9px;
+  background-position: center;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
 @media (max-width: 768px) {
   .personalAgentInner {
-    gap: 40px;
+    gap: 83px;
   }
 
   .personalAgentGrid {
     grid-template-columns: 1fr;
+    width: 100%;
+    margin: 0;
   }
 
   .personalAgentQuadrantWide {
@@ -223,5 +408,17 @@
 
   .personalAgentQuadrant {
     padding: 28px;
+  }
+
+  .personalAgentDeviceScreen {
+    padding: 20px 16px 24px;
+  }
+
+  .personalAgentDeviceLogoGrid {
+    gap: 18px 14px;
+  }
+
+  .personalAgentDeviceGrille {
+    height: 72px;
   }
 }
