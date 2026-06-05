@@ -181,11 +181,20 @@
   --color-accent-contrast: #ffffff;
 }
 
-/* Blue - Professional, trust */
+/* Plasma Blue - Electric, vibrant */
 [data-accent='blue'] {
-  --color-accent: #3b82f6;
-  --color-accent-hover: #2563eb;
-  --color-accent-muted: rgba(59, 130, 246, 0.15);
+  --color-accent: #33ccff;
+  --color-accent-hover: #2aa7d1;
+  --color-accent-muted: rgba(51, 204, 255, 0.15);
+  --color-accent-contrast: #0a0a0a;
+}
+
+/* Light mode Plasma Blue adjustments for better contrast */
+[data-theme='light'][data-accent='blue'],
+[data-theme='light'] [data-accent='blue'] {
+  --color-accent: #0e9fd4;
+  --color-accent-hover: #0b7fa8;
+  --color-accent-muted: rgba(14, 159, 212, 0.15);
   --color-accent-contrast: #ffffff;
 }
 
@@ -206,45 +215,54 @@
   --color-accent-text: #a855f7;
 }
 
-/* Green - Growth, success */
+/* Cyber Green - Growth, success */
 [data-accent='green'] {
-  --color-accent: #00e676;
-  --color-accent-hover: #00c853;
-  --color-accent-muted: rgba(0, 230, 118, 0.15);
+  --color-accent: #00ff88;
+  --color-accent-hover: #00d170;
+  --color-accent-muted: rgba(0, 255, 136, 0.15);
   --color-accent-contrast: #0a0a0a;
 }
 
-/* Light mode green adjustments for better contrast */
+/* Light mode Cyber Green adjustments for better contrast */
 [data-theme='light'][data-accent='green'],
 [data-theme='light'] [data-accent='green'] {
-  --color-accent: #059669;
-  --color-accent-hover: #047857;
-  --color-accent-muted: rgba(5, 150, 105, 0.15);
+  --color-accent: #00b35f;
+  --color-accent-hover: #008f4c;
+  --color-accent-muted: rgba(0, 179, 95, 0.15);
   --color-accent-contrast: #ffffff;
 }
 
-/* Orange - Energy, attention */
+/* Extreme Orange - Energy, attention */
 [data-accent='orange'] {
-  --color-accent: #f97316;
-  --color-accent-hover: #ea580c;
-  --color-accent-muted: rgba(249, 115, 22, 0.15);
+  --color-accent: #ff5e00;
+  --color-accent-hover: #d14d00;
+  --color-accent-muted: rgba(255, 94, 0, 0.15);
   --color-accent-contrast: #0a0a0a;
 }
 
-/* Light mode orange adjustments for better contrast */
+/* Light mode Extreme Orange adjustments for better contrast */
 [data-theme='light'][data-accent='orange'],
 [data-theme='light'] [data-accent='orange'] {
-  --color-accent: #ea580c;
-  --color-accent-hover: #c2410c;
-  --color-accent-muted: rgba(234, 88, 12, 0.15);
+  --color-accent: #cc4b00;
+  --color-accent-hover: #a33c00;
+  --color-accent-muted: rgba(204, 75, 0, 0.15);
   --color-accent-contrast: #ffffff;
 }
 
-/* Rose - Bold, distinctive */
+/* Magenta - Bold, distinctive */
 [data-accent='rose'] {
-  --color-accent: #f43f5e;
-  --color-accent-hover: #e11d48;
-  --color-accent-muted: rgba(244, 63, 94, 0.15);
+  --color-accent: #ff00ad;
+  --color-accent-hover: #d1008e;
+  --color-accent-muted: rgba(255, 0, 173, 0.15);
+  --color-accent-contrast: #ffffff;
+}
+
+/* Light mode Magenta adjustments for better contrast */
+[data-theme='light'][data-accent='rose'],
+[data-theme='light'] [data-accent='rose'] {
+  --color-accent: #cc008a;
+  --color-accent-hover: #a3006e;
+  --color-accent-muted: rgba(204, 0, 138, 0.15);
   --color-accent-contrast: #ffffff;
 }
 

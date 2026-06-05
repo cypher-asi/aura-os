@@ -15,11 +15,11 @@ const THEME_LABELS: Record<Theme, string> = {
 
 const ACCENT_LABELS: Record<AccentColor, string> = {
   cyan: 'Cyan',
-  blue: 'Blue',
+  blue: 'Plasma Blue',
   purple: 'Purple',
-  green: 'Green',
-  orange: 'Orange',
-  rose: 'Rose',
+  green: 'Cyber Green',
+  orange: 'Extreme Orange',
+  rose: 'Magenta',
 };
 
 export interface ThemePanelProps {

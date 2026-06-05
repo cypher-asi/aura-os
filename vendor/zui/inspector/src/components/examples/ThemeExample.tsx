@@ -14,11 +14,11 @@ import styles from './Example.module.css';
 
 const ACCENT_LABELS: Record<AccentColor, string> = {
   cyan: 'Cyan',
-  blue: 'Blue',
+  blue: 'Plasma Blue',
   purple: 'Purple',
-  green: 'Green',
-  orange: 'Orange',
-  rose: 'Rose',
+  green: 'Cyber Green',
+  orange: 'Extreme Orange',
+  rose: 'Magenta',
 };
 
 const THEME_LABELS: Record<Theme, string> = {
@@ -187,20 +187,20 @@ function MyComponent() {
 function getAccentPreviewColor(color: AccentColor, resolvedTheme: 'dark' | 'light'): string {
   const darkColors: Record<AccentColor, string> = {
     cyan: '#01f4cb',
-    blue: '#3b82f6',
+    blue: '#33ccff',
     purple: '#a855f7',
-    green: '#22c55e',
-    orange: '#f97316',
-    rose: '#f43f5e',
+    green: '#00ff88',
+    orange: '#ff5e00',
+    rose: '#ff00ad',
   };
   
   const lightColors: Record<AccentColor, string> = {
     cyan: '#0d9488',
-    blue: '#3b82f6',
+    blue: '#0e9fd4',
     purple: '#a855f7',
-    green: '#16a34a',
-    orange: '#ea580c',
-    rose: '#f43f5e',
+    green: '#00b35f',
+    orange: '#cc4b00',
+    rose: '#cc008a',
   };
   
   return resolvedTheme === 'dark' ? darkColors[color] : lightColors[color];

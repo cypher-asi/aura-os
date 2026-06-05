@@ -88,7 +88,7 @@
 }
 
 .swatchBlue {
-  background: #3b82f6;
+  background: #33ccff;
 }
 
 .swatchPurple {
@@ -96,15 +96,15 @@
 }
 
 .swatchGreen {
-  background: #22c55e;
+  background: #00ff88;
 }
 
 .swatchOrange {
-  background: #f97316;
+  background: #ff5e00;
 }
 
 .swatchRose {
-  background: #f43f5e;
+  background: #ff00ad;
 }
 
 /* Light mode swatch colors */
@@ -112,10 +112,18 @@
   background: #0d9488;
 }
 
+:root[data-theme="light"] .swatchBlue {
+  background: #0e9fd4;
+}
+
 :root[data-theme="light"] .swatchGreen {
-  background: #16a34a;
+  background: #00b35f;
 }
 
 :root[data-theme="light"] .swatchOrange {
-  background: #ea580c;
+  background: #cc4b00;
+}
+
+:root[data-theme="light"] .swatchRose {
+  background: #cc008a;
 }

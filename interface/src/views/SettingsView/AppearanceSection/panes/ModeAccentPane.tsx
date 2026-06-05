@@ -28,11 +28,11 @@ const THEME_ICONS: Record<Theme, typeof Sun> = {
 
 const ACCENT_LABELS: Record<AccentColor, string> = {
   cyan: "Cyan",
-  blue: "Blue",
+  blue: "Plasma Blue",
   purple: "Purple",
-  green: "Green",
-  orange: "Orange",
-  rose: "Rose",
+  green: "Cyber Green",
+  orange: "Extreme Orange",
+  rose: "Magenta",
 };
 
 const SWATCH_CLASSES: Record<AccentColor, string> = {

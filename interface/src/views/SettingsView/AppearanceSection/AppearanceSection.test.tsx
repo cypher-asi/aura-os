@@ -57,7 +57,14 @@ describe("AppearanceSection", () => {
     expect(screen.getByRole("button", { name: "Light" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "System" })).toBeInTheDocument();
 
-    for (const label of ["Cyan", "Blue", "Purple", "Green", "Orange", "Rose"]) {
+    for (const label of [
+      "Cyan",
+      "Plasma Blue",
+      "Purple",
+      "Cyber Green",
+      "Extreme Orange",
+      "Magenta",
+    ]) {
       expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }
   });
@@ -95,11 +102,11 @@ describe("AppearanceSection", () => {
     expect(document.documentElement.dataset.theme).toBe("dark");
   });
 
-  it("clicking the rose accent swatch sets data-accent='rose' on <html>", async () => {
+  it("clicking the Magenta accent swatch sets data-accent='rose' on <html>", async () => {
     const user = userEvent.setup();
     renderWithTheme(<AppearanceSection />);
 
-    await user.click(screen.getByRole("button", { name: "Rose" }));
+    await user.click(screen.getByRole("button", { name: "Magenta" }));
 
     expect(document.documentElement.dataset.accent).toBe("rose");
   });

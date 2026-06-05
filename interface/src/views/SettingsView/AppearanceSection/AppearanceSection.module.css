@@ -133,7 +133,7 @@
 }
 
 .swatchBlue {
-  background: #3b82f6;
+  background: #33ccff;
 }
 
 .swatchPurple {
@@ -141,15 +141,15 @@
 }
 
 .swatchGreen {
-  background: #00e676;
+  background: #00ff88;
 }
 
 .swatchOrange {
-  background: #f97316;
+  background: #ff5e00;
 }
 
 .swatchRose {
-  background: #f43f5e;
+  background: #ff00ad;
 }
 
 /* ── Segmented option rows (radius / density / fonts) ── */
