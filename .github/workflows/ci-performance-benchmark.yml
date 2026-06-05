@@ -355,8 +355,26 @@ jobs:
         if: inputs.platform == 'all' || inputs.platform == matrix.platform
         uses: ./.github/actions/setup-node
 
-      - name: Build bundled aura-node sidecar
+      - name: Restore bundled sidecar binary cache
         if: inputs.platform == 'all' || inputs.platform == matrix.platform
+        id: sidecar-binary-cache
+        uses: actions/cache@v4
+        with:
+          path: apps/aura-os-desktop/resources/sidecar
+          key: ${{ inputs.cache_mode == 'cold-key' && format('desktop-sidecar-bin-cold-{0}-{1}-{2}', github.run_id, matrix.target, matrix.arch) || format('desktop-sidecar-bin-v1-{0}-{1}-{2}', matrix.target, matrix.arch, hashFiles('aura-harness/Cargo.lock', 'aura-harness/Cargo.toml', 'aura-harness/crates/**/Cargo.toml', 'aura-harness/crates/**/*.rs')) }}
+
+      - name: Validate cached sidecar binary
+        if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && steps.sidecar-binary-cache.outputs.cache-hit == 'true'
+        shell: bash
+        run: |
+          binary="apps/aura-os-desktop/resources/sidecar/aura-node"
+          if [ "${{ matrix.target }}" = "windows" ]; then
+            binary="${binary}.exe"
+          fi
+          test -s "$binary"
+
+      - name: Build bundled aura-node sidecar
+        if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && steps.sidecar-binary-cache.outputs.cache-hit != 'true'
         run: |
           node scripts/ci/perf-timer.mjs \
             --label "sidecar-build-${{ matrix.platform }}" \

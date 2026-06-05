@@ -160,7 +160,25 @@ jobs:
           node --test infra/scripts/release/prepare-desktop-sidecar.test.mjs
           node infra/scripts/release/prepare-desktop-sidecar.mjs --check
 
+      - name: Restore bundled sidecar binary cache
+        id: sidecar-binary-cache
+        uses: actions/cache@v4
+        with:
+          path: apps/aura-os-desktop/resources/sidecar
+          key: desktop-sidecar-bin-v1-${{ matrix.target }}-${{ matrix.arch }}-${{ hashFiles('aura-harness/Cargo.lock', 'aura-harness/Cargo.toml', 'aura-harness/crates/**/Cargo.toml', 'aura-harness/crates/**/*.rs') }}
+
+      - name: Validate cached sidecar binary
+        if: steps.sidecar-binary-cache.outputs.cache-hit == 'true'
+        shell: bash
+        run: |
+          binary="apps/aura-os-desktop/resources/sidecar/aura-node"
+          if [ "${{ matrix.target }}" = "windows" ]; then
+            binary="${binary}.exe"
+          fi
+          test -s "$binary"
+
       - name: Build bundled aura-node sidecar
+        if: steps.sidecar-binary-cache.outputs.cache-hit != 'true'
         run: node infra/scripts/release/prepare-desktop-sidecar.mjs
 
       - name: Show sccache stats
