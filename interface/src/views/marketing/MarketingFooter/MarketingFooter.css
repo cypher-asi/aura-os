@@ -4,8 +4,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 80px;
-  padding: 40px 32px 140px;
+  gap: 110px;
+  padding: 40px 32px 110px;
 }
 
 /* AURA wordmark, centered between the footer card and the bottom of
@@ -15,7 +15,7 @@
    on this always-dark surface). */
 .marketingFooterWordmark {
   display: block;
-  height: 26px;
+  height: 18px;
   width: auto;
   opacity: 0.55;
   user-select: none;
@@ -76,12 +76,12 @@
 
 @media (max-width: 768px) {
   .marketingFooter {
-    gap: 64px;
-    padding: 32px 24px 104px;
+    gap: 84px;
+    padding: 32px 24px 84px;
   }
 
   .marketingFooterWordmark {
-    height: 22px;
+    height: 15px;
   }
 
   .marketingFooterCard {
@@ -96,12 +96,12 @@
 
 @media (max-width: 480px) {
   .marketingFooter {
-    gap: 52px;
-    padding: 24px 16px 80px;
+    gap: 66px;
+    padding: 24px 16px 66px;
   }
 
   .marketingFooterWordmark {
-    height: 20px;
+    height: 14px;
   }
 
   .marketingFooterCard {
