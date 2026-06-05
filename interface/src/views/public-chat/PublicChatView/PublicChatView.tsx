@@ -23,6 +23,7 @@ import {
   type PublicSession,
 } from "../../../stores/public-chat-store";
 import { usePublicGateShown, usePublicPageViewed } from "../use-public-shell-analytics";
+import { track } from "../../../lib/analytics";
 import { ComposePanel } from "../ComposePanel";
 import { FlowFieldBackground } from "./FlowFieldBackground";
 import { CreateAgentButton } from "../CreateAgentButton";
@@ -258,6 +259,8 @@ export function PublicChatView(): React.ReactElement {
       event.preventDefault();
       const message = draft.trim();
       if (!message || isSending) return;
+
+      track("public_message_sent", { mode: "code" });
 
       const state = usePublicChatStore.getState();
       const targetSessionId =

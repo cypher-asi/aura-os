@@ -19,6 +19,7 @@ import {
   type PublicSession,
 } from "../../../stores/public-chat-store";
 import { usePublicGateShown, usePublicPageViewed } from "../use-public-shell-analytics";
+import { track } from "../../../lib/analytics";
 import { PublicChatBubble } from "../PublicChatBubble";
 import styles from "./MobilePublicChatView.module.css";
 
@@ -128,6 +129,8 @@ export function MobilePublicChatView(): React.ReactElement {
       event.preventDefault();
       const message = draft.trim();
       if (!message || isSending) return;
+
+      track("public_message_sent", { mode: "code" });
 
       const state = usePublicChatStore.getState();
       const targetSessionId =
