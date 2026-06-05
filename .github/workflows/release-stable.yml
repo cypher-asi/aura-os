@@ -670,6 +670,7 @@ jobs:
           cat "dist/release-summary-${{ matrix.target }}-${{ matrix.arch }}.md" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Validate signed release artifacts
+        shell: bash
         run: |
           node infra/scripts/release/desktop-release-artifacts-validate.mjs \
             --dist dist \
