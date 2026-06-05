@@ -2,19 +2,19 @@
   {
     "date": "2026-06-05",
     "channel": "nightly",
-    "version": "0.1.0-nightly.625.1",
-    "title": "Marketing first-screen rebuild, Telegram fixes, and a faster nightly release pipeline",
-    "intro": "A heavy day on two fronts: the marketing site got a new shared first-screen layout — a mock Projects desktop on /code and a redesigned orb stage on /agents — while the backend tightened Telegram channel handling (including an IDOR fix) and the desktop release pipeline got materially faster and more resilient on hosted runners.",
+    "version": "0.1.0-nightly.626.1",
+    "title": "/code marketing page lands, Telegram fixes, and a faster desktop release pipeline",
+    "intro": "A heavy day of marketing-site work rebuilt the /code page around a full mock of the Projects workspace and unified its first-screen layout with /agents. Alongside the visual push, Telegram-linked agents got real error surfacing and a security fix, dark-mode purple text became legible across the app, and the desktop release pipeline picked up retries, caching, and a cleaner version-stamping path.",
     "entryCount": 6,
     "highlights": [
-      "New /code mock desktop and shared first-screen layout with /agents",
-      "Telegram channel linking fixed on desktop, IDOR closed",
-      "Purple accent text now legible across the app",
-      "Nightly desktop release path cached, retried, and meaningfully faster"
+      "New /code mock desktop showcasing the Projects workspace",
+      "Telegram channel fixes: model pinning, real error messages, IDOR closed",
+      "Purple accent text now legible in dark mode",
+      "Nightly desktop CI is faster and far more retry-tolerant"
     ],
     "rawCommitCount": 20,
-    "generatedAt": "2026-06-05T19:19:46.424Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.625.1",
+    "generatedAt": "2026-06-05T19:30:37.731Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.626.1",
     "path": "history/2026-06-05.json"
   },
   {
