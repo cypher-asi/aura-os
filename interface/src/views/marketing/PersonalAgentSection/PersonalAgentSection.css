@@ -82,19 +82,19 @@
   border-radius: 110px 110px 0 0;
 }
 
-/* "Intelligent in all domains" cell: reuse the wide top panel's diagonal
-   surface gradient so the skill plate reads as part of the same hardware
-   family as the chat capsule and service device. */
+/* "Intelligent in all domains" cell (bottom-left): the diagonal is
+   mirrored (225deg) so the light end sits at the inner-center corner
+   (top-right) and fades to dark at the outer bottom-left corner. */
 .personalAgentQuadrantSkills {
-  background: linear-gradient(135deg, #242424 0%, #181818 55%, #0d0d0d 100%);
+  background: linear-gradient(225deg, #242424 0%, #181818 55%, #0d0d0d 100%);
   /* Mirror the wide cell's top radius on the bottom-left corner so the
      grid reads as one rounded container. */
   border-radius: 0 0 0 110px;
 }
 
-/* "Connected to everything" cell: reuse the wide top panel's diagonal
-   surface gradient so the service device reads as part of the same
-   hardware family. */
+/* "Connected to everything" cell (bottom-right): the diagonal runs from
+   the inner-center corner (top-left, 135deg) out to the dark outer
+   bottom-right, mirroring the skills cell across the vertical center. */
 .personalAgentQuadrantServices {
   background: linear-gradient(135deg, #242424 0%, #181818 55%, #0d0d0d 100%);
   /* Rounded bottom-right corner mirroring the wide cell's top radius. */
