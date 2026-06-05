@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTheme } from "@cypher-asi/zui";
 import { FollowEditButton } from "../../../components/FollowEditButton";
 import type { Agent } from "../../../shared/types";
 import { useAvatarState } from "../../../hooks/use-avatar-state";
@@ -81,6 +82,13 @@ export function ProfileCard3D({ agent, isOwnAgent }: ProfileCard3DProps) {
   const [ready, setReady] = useState(false);
   const [avatar, setAvatar] = useState<HTMLImageElement | null>(null);
 
+  // Drive the metal-frame palette: blue in dark mode, brushed silver in light.
+  const { resolvedTheme } = useTheme();
+  // Seeds the mount-only scene effect with the active mode (captured at mount)
+  // so first paint matches without re-creating the WebGL scene; later changes
+  // are applied via setFrameTheme below.
+  const frameThemeRef = useRef(resolvedTheme);
+
   // Live agent status for the blinking dot (registers the agent so the central
   // status store polls/streams it even if no list view mounted it).
   useEffect(() => {
@@ -117,6 +125,7 @@ export function ProfileCard3D({ agent, isOwnAgent }: ProfileCard3DProps) {
         accent: readAccent(host),
         lineColor: readLineColor(host),
         reducedMotion: prefersReducedMotion(),
+        frameTheme: frameThemeRef.current,
       });
     } catch {
       sceneRef.current = null;
@@ -130,6 +139,13 @@ export function ProfileCard3D({ agent, isOwnAgent }: ProfileCard3DProps) {
       sceneRef.current = null;
     };
   }, []);
+
+  // Re-skin the metal frame live when the user toggles light/dark (the scene
+  // itself is not rebuilt).
+  useEffect(() => {
+    if (!ready) return;
+    sceneRef.current?.setFrameTheme(resolvedTheme);
+  }, [ready, resolvedTheme]);
 
   // Resolve the avatar (CORS-clean) for the LCD.
   useEffect(() => {

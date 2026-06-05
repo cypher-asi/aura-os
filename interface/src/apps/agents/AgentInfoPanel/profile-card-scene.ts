@@ -10,7 +10,16 @@ export interface ProfileCardSceneOptions {
   /** CSS color for the LCD scan lines (read from `--color-card-line`). */
   lineColor?: string;
   reducedMotion: boolean;
+  /**
+   * Which metal-frame palette to render. Dark mode keeps the blue/teal metal;
+   * light mode switches the frame to a brushed-silver finish. Defaults to
+   * `"dark"`.
+   */
+  frameTheme?: FrameTheme;
 }
+
+/** The two metal-frame palettes the card can render. */
+export type FrameTheme = "light" | "dark";
 
 export interface ProfileCardScene {
   /** Offscreen canvas the LCD texture is drawn into by the caller. */
@@ -27,6 +36,8 @@ export interface ProfileCardScene {
   setAccent(accent: string): void;
   /** Update the LCD scan-line color (independent of the accent). */
   setLineColor(color: string): void;
+  /** Swap the metal-frame palette between the dark (blue) and light (silver) looks. */
+  setFrameTheme(mode: FrameTheme): void;
   /** Mark the LCD texture dirty after redrawing into `screenCanvas`. */
   refreshTexture(): void;
   /** Mark the back LCD texture dirty after redrawing into `backScreenCanvas`. */
@@ -451,6 +462,57 @@ const WORDMARK_ASPECT = 3322 / 421;
 /** Fallback LCD scan-line color (matches the `--color-card-line` token default). */
 const CARD_LINE_COLOR = "#cfe8ff";
 
+/**
+ * Per-mode metal-frame palettes. The brushed `base`/`streak` colors are baked
+ * into canvas textures (and `material.color` only multiplies the map), so a
+ * mode switch regenerates these textures rather than just recoloring. The dark
+ * values are the card's original blue/teal metal; the light values are a
+ * cohesive brushed-silver finish.
+ */
+interface FramePalette {
+  frame: {
+    base: string;
+    streak: string;
+    color: number;
+    metalness: number;
+    roughness: number;
+    envMapIntensity: number;
+  };
+  matte: { base: string; streak: string; color: number };
+  plate: { base: string; streak: string; color: number };
+  /** Tint for the AURA wordmark decal so it stays legible on the frame. */
+  wordmark: number;
+}
+
+const FRAME_PALETTES: Record<FrameTheme, FramePalette> = {
+  dark: {
+    frame: {
+      base: "#16263f",
+      streak: "#5a86c4",
+      color: 0x2a4a78,
+      metalness: 0.85,
+      roughness: 0.52,
+      envMapIntensity: 0.9,
+    },
+    matte: { base: "#0a0c11", streak: "#222a3a", color: 0x0b0e13 },
+    plate: { base: "#3c3f45", streak: "#7c8088", color: 0x4a4d52 },
+    wordmark: 0xeaf3ff,
+  },
+  light: {
+    frame: {
+      base: "#c5c9d0",
+      streak: "#f2f4f8",
+      color: 0xdfe3ea,
+      metalness: 0.9,
+      roughness: 0.42,
+      envMapIntensity: 1.1,
+    },
+    matte: { base: "#8a8f98", streak: "#b8bdc6", color: 0x9aa0aa },
+    plate: { base: "#b9bdc4", streak: "#e6e9ee", color: 0xc4c8cf },
+    wordmark: 0x2a2f37,
+  },
+};
+
 export function createProfileCardScene(
   host: HTMLElement,
   options: ProfileCardSceneOptions,
@@ -617,27 +679,38 @@ export function createProfileCardScene(
   const wearTexture = createWearTexture();
   wearTexture.anisotropy = maxAniso;
   wearTexture.repeat.set(3, 3);
-  // Layer 1 — blue brushed metal frame (the structural part of the card).
-  const blueMetalTexture = createBrushedMetalTexture("#16263f", "#5a86c4");
+  // Active metal-frame palette (blue in dark mode, brushed silver in light).
+  let frameTheme: FrameTheme = options.frameTheme ?? "dark";
+  let palette = FRAME_PALETTES[frameTheme];
+  // Layer 1 — brushed metal frame (the structural part of the card). The brushed
+  // texture's base/streak colors are baked in, so a palette swap regenerates it
+  // (see `applyFrameTheme`); the material's `map` is reassigned in place.
+  let blueMetalTexture = createBrushedMetalTexture(
+    palette.frame.base,
+    palette.frame.streak,
+  );
   blueMetalTexture.anisotropy = maxAniso;
   blueMetalTexture.repeat.set(2, 2);
   const blueMetalMaterial = new THREE.MeshStandardMaterial({
-    color: 0x2a4a78,
+    color: palette.frame.color,
     map: blueMetalTexture,
     bumpMap: wearTexture,
     bumpScale: 0.018,
     roughnessMap: wearTexture,
-    metalness: 0.85,
-    roughness: 0.52,
-    envMapIntensity: 0.9,
+    metalness: palette.frame.metalness,
+    roughness: palette.frame.roughness,
+    envMapIntensity: palette.frame.envMapIntensity,
     vertexColors: true,
   });
-  // Layer 2 — softer matte black metal underlayer behind the frame.
-  const matteTexture = createBrushedMetalTexture("#0a0c11", "#222a3a");
+  // Layer 2 — softer metal underlayer behind the frame.
+  let matteTexture = createBrushedMetalTexture(
+    palette.matte.base,
+    palette.matte.streak,
+  );
   matteTexture.anisotropy = maxAniso;
   matteTexture.repeat.set(2, 2);
   const matteMaterial = new THREE.MeshStandardMaterial({
-    color: 0x0b0e13,
+    color: palette.matte.color,
     map: matteTexture,
     bumpMap: wearTexture,
     bumpScale: 0.012,
@@ -645,17 +718,20 @@ export function createProfileCardScene(
     roughness: 0.85,
     envMapIntensity: 0.4,
   });
-  // Info backplate — gray brushed metal with a heavier worn finish. Its own wear
+  // Info backplate — brushed metal with a heavier worn finish. Its own wear
   // texture (coarser repeat) + a stronger bump make it read as more rubbed/scuffed
   // than the card frame.
-  const plateMetalTexture = createBrushedMetalTexture("#3c3f45", "#7c8088");
+  let plateMetalTexture = createBrushedMetalTexture(
+    palette.plate.base,
+    palette.plate.streak,
+  );
   plateMetalTexture.anisotropy = maxAniso;
   plateMetalTexture.repeat.set(2, 2);
   const plateWearTexture = createWearTexture();
   plateWearTexture.anisotropy = maxAniso;
   plateWearTexture.repeat.set(2.5, 2.5);
   const plateMaterial = new THREE.MeshStandardMaterial({
-    color: 0x4a4d52,
+    color: palette.plate.color,
     map: plateMetalTexture,
     bumpMap: plateWearTexture,
     bumpScale: 0.03,
@@ -665,7 +741,7 @@ export function createProfileCardScene(
     envMapIntensity: 0.7,
     vertexColors: true,
   });
-  // AURA wordmark decal — the app's actual wordmark PNG, tinted cool white.
+  // AURA wordmark decal — the app's actual wordmark PNG, tinted per palette.
   let wordmarkWidth = 0;
   let wordmarkAspect = WORDMARK_ASPECT;
   const wordmarkTexture = new THREE.TextureLoader().load(WORDMARK_SRC, (tex) => {
@@ -688,10 +764,64 @@ export function createProfileCardScene(
   wordmarkTexture.colorSpace = THREE.SRGBColorSpace;
   const wordmarkMaterial = new THREE.MeshBasicMaterial({
     map: wordmarkTexture,
-    color: 0xeaf3ff,
+    color: palette.wordmark,
     transparent: true,
     depthWrite: false,
   });
+
+  /**
+   * Swap the metal-frame palette in place. Regenerates the brushed-metal
+   * textures (their base/streak colors are baked in) and reassigns each
+   * material's `map`, color, and PBR params; updates the wordmark tint. No
+   * geometry is rebuilt, so this is cheap enough to run on live theme toggles.
+   */
+  function applyFrameTheme(mode: FrameTheme): void {
+    frameTheme = mode;
+    palette = FRAME_PALETTES[mode];
+
+    const nextFrame = createBrushedMetalTexture(
+      palette.frame.base,
+      palette.frame.streak,
+    );
+    nextFrame.anisotropy = maxAniso;
+    nextFrame.repeat.set(2, 2);
+    blueMetalTexture.dispose();
+    blueMetalTexture = nextFrame;
+    blueMetalMaterial.map = nextFrame;
+    blueMetalMaterial.color.setHex(palette.frame.color);
+    blueMetalMaterial.metalness = palette.frame.metalness;
+    blueMetalMaterial.roughness = palette.frame.roughness;
+    blueMetalMaterial.envMapIntensity = palette.frame.envMapIntensity;
+    blueMetalMaterial.needsUpdate = true;
+
+    const nextMatte = createBrushedMetalTexture(
+      palette.matte.base,
+      palette.matte.streak,
+    );
+    nextMatte.anisotropy = maxAniso;
+    nextMatte.repeat.set(2, 2);
+    matteTexture.dispose();
+    matteTexture = nextMatte;
+    matteMaterial.map = nextMatte;
+    matteMaterial.color.setHex(palette.matte.color);
+    matteMaterial.needsUpdate = true;
+
+    const nextPlate = createBrushedMetalTexture(
+      palette.plate.base,
+      palette.plate.streak,
+    );
+    nextPlate.anisotropy = maxAniso;
+    nextPlate.repeat.set(2, 2);
+    plateMetalTexture.dispose();
+    plateMetalTexture = nextPlate;
+    plateMaterial.map = nextPlate;
+    plateMaterial.color.setHex(palette.plate.color);
+    plateMaterial.needsUpdate = true;
+
+    wordmarkMaterial.color.setHex(palette.wordmark);
+
+    if (reducedMotion) renderFrame();
+  }
   // Horizontal scan-line overlay floating in front of the LCD (additive accent).
   // Each line spans the full width but its per-vertex intensity ramps from bright
   // at the outer edges down to ~0 in the center, so the lines fade to transparent
@@ -1338,6 +1468,10 @@ export function createProfileCardScene(
       lineMaterial.color.copy(lineColor);
       lineHaloMaterial.color.copy(lineColor);
       if (reducedMotion) renderFrame();
+    },
+    setFrameTheme(mode: FrameTheme): void {
+      if (mode === frameTheme) return;
+      applyFrameTheme(mode);
     },
     refreshTexture(): void {
       screenTexture.needsUpdate = true;
