@@ -43,6 +43,19 @@
           }
           if (theme !== 'dark' && theme !== 'light') theme = 'dark';
           document.documentElement.setAttribute('data-theme', theme);
+          // Stamp <html lang/dir> before first paint so RTL locales (e.g.
+          // Arabic) mirror immediately and non-Latin scripts get correct
+          // font selection. The full resolver in src/i18n corrects this
+          // once React boots; here we only need the primary subtag + RTL.
+          var langRaw = localStorage.getItem('aura-language');
+          if (langRaw) {
+            try { langRaw = langRaw.charAt(0) === '"' ? JSON.parse(langRaw) : langRaw; } catch (_) {}
+          }
+          if (typeof langRaw === 'string' && langRaw) {
+            document.documentElement.setAttribute('lang', langRaw);
+            var rtl = /^(ar|he|fa|ur)(-|$)/i.test(langRaw);
+            document.documentElement.setAttribute('dir', rtl ? 'rtl' : 'ltr');
+          }
           var color = theme === 'light' ? '#ffffff' : '#05070d';
           var manifestHref = theme === 'light' ? '/manifest-light.webmanifest' : '/manifest.webmanifest';
           var meta = document.getElementById('aura-theme-color');

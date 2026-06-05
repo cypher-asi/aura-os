@@ -1,0 +1,18 @@
+{
+  "title": "Impostazioni",
+  "sections": {
+    "you": "Tu",
+    "about": "Informazioni",
+    "appearance": "Tema",
+    "notifications": "Notifiche",
+    "keyboard": "Tastiera",
+    "advanced": "Avanzate",
+    "language": "Lingua"
+  },
+  "language": {
+    "title": "Lingua",
+    "description": "Scegli la lingua usata in AURA. Le traduzioni ripiegano sull'inglese quando non disponibili.",
+    "searchPlaceholder": "Cerca lingue",
+    "noResults": "Nessuna lingua corrisponde alla ricerca."
+  }
+}

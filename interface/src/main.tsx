@@ -1,6 +1,9 @@
+import { Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { I18nextProvider } from "react-i18next";
 import { ThemeProvider } from "@cypher-asi/zui";
+import i18n from "./i18n";
 import "@fontsource-variable/inter";
 import "@cypher-asi/zui/styles";
 // App-specific tokens layer on top of ZUI's themes; must come before
@@ -102,16 +105,20 @@ markBootPhase("rendering React root");
 applyHighlightTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark");
 createRoot(rootEl).render(
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="dark" defaultAccent="cyan" disableTransitionOnChange>
-      <HighlightThemeBridge />
-      <ThemeOverridesBridge />
-      <PanelGlassBridge />
-      <ThemeExtrasBridge />
-      <BrowserChromeThemeBridge />
-      <GalleryProvider>
-        <App />
-      </GalleryProvider>
-    </ThemeProvider>
+    <I18nextProvider i18n={i18n}>
+      <ThemeProvider defaultTheme="dark" defaultAccent="cyan" disableTransitionOnChange>
+        <HighlightThemeBridge />
+        <ThemeOverridesBridge />
+        <PanelGlassBridge />
+        <ThemeExtrasBridge />
+        <BrowserChromeThemeBridge />
+        <GalleryProvider>
+          <Suspense fallback={null}>
+            <App />
+          </Suspense>
+        </GalleryProvider>
+      </ThemeProvider>
+    </I18nextProvider>
   </QueryClientProvider>,
 );
 markReactRootRenderScheduled();

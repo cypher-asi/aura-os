@@ -1,0 +1,18 @@
+{
+  "title": "Configuración",
+  "sections": {
+    "you": "Tú",
+    "about": "Acerca de",
+    "appearance": "Tema",
+    "notifications": "Notificaciones",
+    "keyboard": "Teclado",
+    "advanced": "Avanzado",
+    "language": "Idioma"
+  },
+  "language": {
+    "title": "Idioma",
+    "description": "Elige el idioma utilizado en AURA. Las traducciones recurren al inglés cuando no están disponibles.",
+    "searchPlaceholder": "Buscar idiomas",
+    "noResults": "Ningún idioma coincide con tu búsqueda."
+  }
+}

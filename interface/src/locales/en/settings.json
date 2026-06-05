@@ -1,0 +1,18 @@
+{
+  "title": "Settings",
+  "sections": {
+    "you": "You",
+    "about": "About",
+    "appearance": "Theme",
+    "notifications": "Notifications",
+    "keyboard": "Keyboard",
+    "advanced": "Advanced",
+    "language": "Language"
+  },
+  "language": {
+    "title": "Language",
+    "description": "Choose the language used across AURA. Translations fall back to English where unavailable.",
+    "searchPlaceholder": "Search languages",
+    "noResults": "No languages match your search."
+  }
+}
