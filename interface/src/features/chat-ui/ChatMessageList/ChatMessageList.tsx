@@ -189,6 +189,10 @@ export function ChatMessageList({
     onInitialAnchorReady?.();
   }, [hasMessages, onInitialAnchorReady, streamKey]);
 
+  // Scroll-preservation bookkeeping for prepends (see the effect below).
+  const prevScrollMetricsRef = useRef({ scrollHeight: 0, distanceFromBottom: 0 });
+  const prevTopMessageIdRef = useRef<string | undefined>(undefined);
+
   // Pin to bottom when the tail grows. CSS scroll anchoring handles content
   // growth *above* the in-view anchor; it does not compensate for growth
   // *at* the anchor itself, so we explicitly push scrollTop to scrollHeight
@@ -214,6 +218,34 @@ export function ChatMessageList({
     activeToolCalls.length,
     progressText,
   ]);
+
+  // Keep the viewport stable when older content is prepended (e.g.
+  // "Load prior session"). Prepending above the viewport leaves the
+  // distance from the bottom unchanged, so we hold that distance
+  // constant. Setting `scrollTop` to an absolute computed value (rather
+  // than nudging by a delta) is idempotent: even if the browser's native
+  // scroll anchoring already shifted the position this frame, the final
+  // value lands exactly where the previously-visible messages were, so
+  // nothing jumps. Detected via the top message id changing to an older
+  // message that is still present further down the list.
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const topId = messages[0]?.id;
+    const prevTopId = prevTopMessageIdRef.current;
+    if (
+      prevTopId !== undefined &&
+      topId !== prevTopId &&
+      messages.some((m) => m.id === prevTopId)
+    ) {
+      el.scrollTop = el.scrollHeight - prevScrollMetricsRef.current.distanceFromBottom;
+    }
+    prevScrollMetricsRef.current = {
+      scrollHeight: el.scrollHeight,
+      distanceFromBottom: el.scrollHeight - el.scrollTop,
+    };
+    prevTopMessageIdRef.current = topId;
+  }, [messages, scrollRef]);
 
   if (!hasMessages) {
     return <>{emptyState}</>;
