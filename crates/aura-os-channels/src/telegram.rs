@@ -85,6 +85,35 @@ impl TelegramConnector {
             .map(|s| s.to_string())
             .ok_or(ChannelError::NotFound)
     }
+
+    /// POST a single `sendMessage` chunk, optionally with a `parse_mode`.
+    async fn post_message(
+        &self,
+        url: &str,
+        chat_ref: &str,
+        text: &str,
+        parse_mode: Option<&str>,
+    ) -> Result<(), ChannelError> {
+        let mut body = json!({ "chat_id": chat_ref, "text": text });
+        if let Some(mode) = parse_mode {
+            body["parse_mode"] = json!(mode);
+        }
+        let resp = self
+            .http
+            .post(url)
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| ChannelError::Transport(e.to_string()))?;
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(ChannelError::Transport(format!(
+                "sendMessage failed ({status}): {body}"
+            )));
+        }
+        Ok(())
+    }
 }
 
 /// Split `text` into chunks no longer than `limit` characters.
@@ -137,6 +166,471 @@ pub fn split_message(text: &str, limit: usize) -> Vec<String> {
     chunks
 }
 
+/// Convert lightweight Markdown into clean plain text for a chat client.
+///
+/// Agent replies are authored in Markdown, but the Telegram bot sends messages
+/// without a `parse_mode`, so markers like `**bold**`, `*italic*`, `# Heading`,
+/// `` `code` `` and `[label](url)` would otherwise show up verbatim. This strips
+/// the formatting markers while preserving the underlying content so the text
+/// reads naturally in a regular chat bubble. Pure and side-effect free so the
+/// rules stay unit-testable.
+pub fn strip_markdown(text: &str) -> String {
+    let mut out_lines = Vec::new();
+    let mut in_fence = false;
+
+    for raw_line in text.split('\n') {
+        let trimmed = raw_line.trim_start();
+
+        // Fenced code blocks: drop the ``` / ~~~ fence lines, keep the body
+        // verbatim (no inline stripping inside code).
+        if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
+            in_fence = !in_fence;
+            continue;
+        }
+        if in_fence {
+            out_lines.push(raw_line.to_string());
+            continue;
+        }
+
+        // Horizontal rules (---, ***, ___) collapse to a blank line.
+        let t = raw_line.trim();
+        if t.len() >= 3
+            && (t.chars().all(|c| c == '-')
+                || t.chars().all(|c| c == '*')
+                || t.chars().all(|c| c == '_'))
+        {
+            out_lines.push(String::new());
+            continue;
+        }
+
+        let line = strip_block_prefix(raw_line);
+        out_lines.push(strip_inline(&line));
+    }
+
+    out_lines.join("\n")
+}
+
+/// Strip line-level markers: headings, blockquotes, and bullet markers.
+fn strip_block_prefix(line: &str) -> String {
+    let indent_len = line
+        .char_indices()
+        .find(|(_, c)| *c != ' ' && *c != '\t')
+        .map(|(i, _)| i)
+        .unwrap_or(line.len());
+    let (indent, mut rest) = line.split_at(indent_len);
+
+    // Blockquote markers (one level).
+    if let Some(after) = rest.strip_prefix("> ") {
+        rest = after;
+    } else if let Some(after) = rest.strip_prefix('>') {
+        rest = after;
+    }
+
+    // ATX headings: 1-6 leading '#', followed by a space (or end of line).
+    if rest.starts_with('#') {
+        let hashes = rest.chars().take_while(|&c| c == '#').count();
+        if hashes <= 6 {
+            let after = &rest[hashes..];
+            if after.is_empty() || after.starts_with(' ') {
+                return format!("{indent}{}", after.trim_start());
+            }
+        }
+    }
+
+    // Unordered list markers become a bullet glyph.
+    for marker in ["- ", "* ", "+ "] {
+        if let Some(after) = rest.strip_prefix(marker) {
+            return format!("{indent}\u{2022} {after}");
+        }
+    }
+
+    format!("{indent}{rest}")
+}
+
+/// Strip inline markers (emphasis, code spans, links) from a single line.
+fn strip_inline(line: &str) -> String {
+    let chars: Vec<char> = line.chars().collect();
+    let mut out = String::with_capacity(line.len());
+    let mut i = 0;
+
+    while i < chars.len() {
+        let c = chars[i];
+        match c {
+            // Backslash escape: emit the escaped char literally.
+            '\\' if i + 1 < chars.len() => {
+                out.push(chars[i + 1]);
+                i += 2;
+            }
+            // Inline code span: keep the contents, drop the backticks.
+            '`' => {
+                if let Some(rel) = chars[i + 1..].iter().position(|&x| x == '`') {
+                    let end = i + 1 + rel;
+                    out.extend(&chars[i + 1..end]);
+                    i = end + 1;
+                } else {
+                    i += 1;
+                }
+            }
+            // Image: ![alt](url) -> alt (url).
+            '!' if chars.get(i + 1) == Some(&'[') => {
+                if let Some((text, url, end)) = parse_link(&chars, i + 1) {
+                    push_link(&mut out, &text, &url);
+                    i = end;
+                } else {
+                    out.push('!');
+                    i += 1;
+                }
+            }
+            // Link: [text](url) -> text (url).
+            '[' => {
+                if let Some((text, url, end)) = parse_link(&chars, i) {
+                    push_link(&mut out, &text, &url);
+                    i = end;
+                } else {
+                    out.push('[');
+                    i += 1;
+                }
+            }
+            // Bold/italic with asterisks: drop the run of '*'.
+            '*' => {
+                while i < chars.len() && chars[i] == '*' {
+                    i += 1;
+                }
+            }
+            // Strikethrough.
+            '~' if chars.get(i + 1) == Some(&'~') => {
+                i += 2;
+            }
+            // Bold with double underscore. Single '_' is left intact so
+            // snake_case identifiers survive.
+            '_' if chars.get(i + 1) == Some(&'_') => {
+                i += 2;
+            }
+            _ => {
+                out.push(c);
+                i += 1;
+            }
+        }
+    }
+
+    out
+}
+
+/// Parse a Markdown link starting at the `[` located at `open`.
+///
+/// Returns `(text, url, end)` where `end` is the index just past the closing
+/// `)`. Returns `None` when the text isn't a well-formed `[..](..)` link.
+fn parse_link(chars: &[char], open: usize) -> Option<(String, String, usize)> {
+    let text_end = chars[open + 1..].iter().position(|&c| c == ']')? + open + 1;
+    if chars.get(text_end + 1) != Some(&'(') {
+        return None;
+    }
+    let url_start = text_end + 2;
+    let url_end = chars[url_start..].iter().position(|&c| c == ')')? + url_start;
+    let text: String = chars[open + 1..text_end].iter().collect();
+    let url: String = chars[url_start..url_end].iter().collect();
+    Some((text, url, url_end + 1))
+}
+
+/// Render a parsed link as plain text, dropping the URL when it adds nothing.
+fn push_link(out: &mut String, text: &str, url: &str) {
+    let text = strip_inline(text.trim());
+    let url = url.trim();
+    if text.is_empty() {
+        out.push_str(url);
+    } else if url.is_empty() || text == url {
+        out.push_str(&text);
+    } else {
+        out.push_str(&text);
+        out.push_str(" (");
+        out.push_str(url);
+        out.push(')');
+    }
+}
+
+/// Convert the agent's CommonMark into Telegram's MarkdownV2 dialect.
+///
+/// The agent authors standard CommonMark (`**bold**`, `*italic*`, `# Heading`,
+/// `[label](url)`, fenced code), but Telegram's MarkdownV2 uses a different
+/// dialect (`*bold*`, `_italic_`, no headings) and requires every literal
+/// special character to be backslash-escaped. This translates the markers and
+/// escapes everything else so styling renders natively. Pure and side-effect
+/// free so the rules stay unit-testable.
+pub fn to_markdown_v2(text: &str) -> String {
+    let lines: Vec<&str> = text.split('\n').collect();
+    let mut out_lines = Vec::new();
+    let mut i = 0;
+
+    while i < lines.len() {
+        let trimmed = lines[i].trim_start();
+
+        // Fenced code blocks are emitted as a single MarkdownV2 pre-block, with
+        // the body escaped for `` ` `` and `\` only.
+        if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
+            let fence = &trimmed[..3];
+            let lang: String = trimmed[3..]
+                .chars()
+                .take_while(|c| c.is_alphanumeric())
+                .collect();
+            let mut body = Vec::new();
+            i += 1;
+            while i < lines.len() {
+                if lines[i].trim_start().starts_with(fence) {
+                    i += 1;
+                    break;
+                }
+                body.push(lines[i]);
+                i += 1;
+            }
+            let mut block = String::from("```");
+            block.push_str(&lang);
+            block.push('\n');
+            block.push_str(&escape_code(&body.join("\n")));
+            block.push_str("\n```");
+            out_lines.push(block);
+            continue;
+        }
+
+        out_lines.push(convert_block_line(lines[i]));
+        i += 1;
+    }
+
+    out_lines.join("\n")
+}
+
+/// Convert one line's block-level markers (headings, blockquotes, bullets) and
+/// then its inline content into MarkdownV2.
+fn convert_block_line(line: &str) -> String {
+    let t = line.trim();
+    if t.len() >= 3
+        && (t.chars().all(|c| c == '-')
+            || t.chars().all(|c| c == '*')
+            || t.chars().all(|c| c == '_'))
+    {
+        return String::new();
+    }
+
+    let indent_len = line
+        .char_indices()
+        .find(|(_, c)| *c != ' ' && *c != '\t')
+        .map(|(i, _)| i)
+        .unwrap_or(line.len());
+    let (indent, mut rest) = line.split_at(indent_len);
+
+    if let Some(after) = rest.strip_prefix("> ") {
+        rest = after;
+    } else if let Some(after) = rest.strip_prefix('>') {
+        rest = after;
+    }
+
+    // Headings have no MarkdownV2 equivalent, so render them bold.
+    if rest.starts_with('#') {
+        let hashes = rest.chars().take_while(|&c| c == '#').count();
+        if hashes <= 6 {
+            let after = &rest[hashes..];
+            if after.is_empty() || after.starts_with(' ') {
+                let content = after.trim_start();
+                if content.is_empty() {
+                    return String::new();
+                }
+                let chars: Vec<char> = content.chars().collect();
+                return format!("{indent}*{}*", convert_inline(&chars));
+            }
+        }
+    }
+
+    for marker in ["- ", "* ", "+ "] {
+        if let Some(after) = rest.strip_prefix(marker) {
+            let chars: Vec<char> = after.chars().collect();
+            return format!("{indent}\u{2022} {}", convert_inline(&chars));
+        }
+    }
+
+    let chars: Vec<char> = rest.chars().collect();
+    format!("{indent}{}", convert_inline(&chars))
+}
+
+/// Convert inline CommonMark markers to MarkdownV2, escaping literal text.
+fn convert_inline(chars: &[char]) -> String {
+    let mut out = String::new();
+    let mut i = 0;
+    let n = chars.len();
+
+    while i < n {
+        let c = chars[i];
+        match c {
+            '\\' if i + 1 < n => {
+                push_escaped(&mut out, chars[i + 1]);
+                i += 2;
+            }
+            '`' => {
+                if let Some(rel) = chars[i + 1..].iter().position(|&x| x == '`') {
+                    let end = i + 1 + rel;
+                    let inner: String = chars[i + 1..end].iter().collect();
+                    out.push('`');
+                    out.push_str(&escape_code(&inner));
+                    out.push('`');
+                    i = end + 1;
+                } else {
+                    push_escaped(&mut out, '`');
+                    i += 1;
+                }
+            }
+            '!' if chars.get(i + 1) == Some(&'[') => {
+                if let Some((text, url, end)) = parse_link(chars, i + 1) {
+                    push_v2_link(&mut out, &text, &url);
+                    i = end;
+                } else {
+                    push_escaped(&mut out, '!');
+                    i += 1;
+                }
+            }
+            '[' => {
+                if let Some((text, url, end)) = parse_link(chars, i) {
+                    push_v2_link(&mut out, &text, &url);
+                    i = end;
+                } else {
+                    push_escaped(&mut out, '[');
+                    i += 1;
+                }
+            }
+            '*' => {
+                if chars.get(i + 1) == Some(&'*') {
+                    // **bold** -> *bold*
+                    if let Some(end) = find_double(chars, i + 2, '*') {
+                        let inner = convert_inline(&chars[i + 2..end]);
+                        out.push('*');
+                        out.push_str(&inner);
+                        out.push('*');
+                        i = end + 2;
+                    } else {
+                        push_escaped(&mut out, '*');
+                        i += 1;
+                    }
+                } else if let Some(rel) = chars[i + 1..].iter().position(|&x| x == '*') {
+                    // *italic* -> _italic_
+                    let end = i + 1 + rel;
+                    let inner = convert_inline(&chars[i + 1..end]);
+                    out.push('_');
+                    out.push_str(&inner);
+                    out.push('_');
+                    i = end + 1;
+                } else {
+                    push_escaped(&mut out, '*');
+                    i += 1;
+                }
+            }
+            '~' if chars.get(i + 1) == Some(&'~') => {
+                // ~~strike~~ -> ~strike~
+                if let Some(end) = find_double(chars, i + 2, '~') {
+                    let inner = convert_inline(&chars[i + 2..end]);
+                    out.push('~');
+                    out.push_str(&inner);
+                    out.push('~');
+                    i = end + 2;
+                } else {
+                    push_escaped(&mut out, '~');
+                    i += 1;
+                }
+            }
+            _ => {
+                push_escaped(&mut out, c);
+                i += 1;
+            }
+        }
+    }
+
+    out
+}
+
+/// Find the next doubled `ch` (e.g. `**` or `~~`) at or after `start`.
+fn find_double(chars: &[char], start: usize, ch: char) -> Option<usize> {
+    let mut k = start;
+    while k + 1 < chars.len() {
+        if chars[k] == ch && chars[k + 1] == ch {
+            return Some(k);
+        }
+        k += 1;
+    }
+    None
+}
+
+/// Push a MarkdownV2 link, escaping the label as text and the URL for `)`/`\`.
+fn push_v2_link(out: &mut String, text: &str, url: &str) {
+    let label = if text.trim().is_empty() {
+        escape_text(url)
+    } else {
+        convert_inline(&text.chars().collect::<Vec<_>>())
+    };
+    out.push('[');
+    out.push_str(&label);
+    out.push(']');
+    out.push('(');
+    out.push_str(&escape_url(url.trim()));
+    out.push(')');
+}
+
+/// Append `c`, prefixing a backslash when it is a MarkdownV2 special char.
+fn push_escaped(out: &mut String, c: char) {
+    if matches!(
+        c,
+        '_' | '*'
+            | '['
+            | ']'
+            | '('
+            | ')'
+            | '~'
+            | '`'
+            | '>'
+            | '#'
+            | '+'
+            | '-'
+            | '='
+            | '|'
+            | '{'
+            | '}'
+            | '.'
+            | '!'
+            | '\\'
+    ) {
+        out.push('\\');
+    }
+    out.push(c);
+}
+
+/// Escape an entire string as MarkdownV2 body text.
+fn escape_text(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        push_escaped(&mut out, c);
+    }
+    out
+}
+
+/// Escape a string for use inside a MarkdownV2 code span / pre-block.
+fn escape_code(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        if c == '`' || c == '\\' {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out
+}
+
+/// Escape a URL for use inside a MarkdownV2 link target.
+fn escape_url(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        if c == ')' || c == '\\' {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out
+}
+
 #[async_trait]
 impl ChatConnector for TelegramConnector {
     fn kind(&self) -> ChannelKind {
@@ -145,20 +639,30 @@ impl ChatConnector for TelegramConnector {
 
     async fn send_text(&self, chat_ref: &str, text: &str) -> Result<(), ChannelError> {
         let url = self.method_url("sendMessage");
-        for chunk in split_message(text, TELEGRAM_MESSAGE_LIMIT) {
-            let resp = self
-                .http
-                .post(&url)
-                .json(&json!({ "chat_id": chat_ref, "text": chunk }))
-                .send()
+
+        // Render to MarkdownV2 so bold/italic/code style natively. If Telegram
+        // rejects the very first chunk (e.g. a malformed entity yields HTTP
+        // 400), fall back to plain stripped text so the message still lands.
+        let formatted = to_markdown_v2(text);
+        let mut sent_any = false;
+        for chunk in split_message(&formatted, TELEGRAM_MESSAGE_LIMIT) {
+            match self
+                .post_message(&url, chat_ref, &chunk, Some("MarkdownV2"))
                 .await
-                .map_err(|e| ChannelError::Transport(e.to_string()))?;
-            if !resp.status().is_success() {
-                let status = resp.status();
-                let body = resp.text().await.unwrap_or_default();
-                return Err(ChannelError::Transport(format!(
-                    "sendMessage failed ({status}): {body}"
-                )));
+            {
+                Ok(()) => sent_any = true,
+                Err(e) if !sent_any => {
+                    tracing::warn!(
+                        error = %e,
+                        "telegram MarkdownV2 send failed; falling back to plain text"
+                    );
+                    let plain = strip_markdown(text);
+                    for chunk in split_message(&plain, TELEGRAM_MESSAGE_LIMIT) {
+                        self.post_message(&url, chat_ref, &chunk, None).await?;
+                    }
+                    return Ok(());
+                }
+                Err(e) => return Err(e),
             }
         }
         Ok(())
@@ -308,5 +812,140 @@ mod tests {
         for chunk in split_message(&text, 4096) {
             assert!(chunk.chars().count() <= 4096);
         }
+    }
+
+    #[test]
+    fn strip_removes_bold_and_italic() {
+        assert_eq!(
+            strip_markdown("**Philosophical takes:** you *create* meaning"),
+            "Philosophical takes: you create meaning"
+        );
+    }
+
+    #[test]
+    fn strip_headings_and_bullets() {
+        let input = "# Title\n## Subtitle\n- first\n* second\n+ third";
+        let expected = "Title\nSubtitle\n\u{2022} first\n\u{2022} second\n\u{2022} third";
+        assert_eq!(strip_markdown(input), expected);
+    }
+
+    #[test]
+    fn strip_inline_code_and_strikethrough() {
+        assert_eq!(
+            strip_markdown("run `cargo test` and ~~skip~~ this"),
+            "run cargo test and skip this"
+        );
+    }
+
+    #[test]
+    fn strip_links_keep_url() {
+        assert_eq!(
+            strip_markdown("see [the docs](https://example.com)"),
+            "see the docs (https://example.com)"
+        );
+    }
+
+    #[test]
+    fn strip_link_with_matching_text_and_url() {
+        assert_eq!(
+            strip_markdown("[https://example.com](https://example.com)"),
+            "https://example.com"
+        );
+    }
+
+    #[test]
+    fn strip_image_becomes_alt_and_url() {
+        assert_eq!(
+            strip_markdown("![diagram](https://img/d.png)"),
+            "diagram (https://img/d.png)"
+        );
+    }
+
+    #[test]
+    fn strip_preserves_snake_case_identifiers() {
+        assert_eq!(
+            strip_markdown("call my_function with __bold__ here"),
+            "call my_function with bold here"
+        );
+    }
+
+    #[test]
+    fn strip_keeps_code_fence_body_verbatim() {
+        let input = "before\n```rust\nlet x = *ptr;\n```\nafter";
+        assert_eq!(strip_markdown(input), "before\nlet x = *ptr;\nafter");
+    }
+
+    #[test]
+    fn strip_handles_escaped_markers() {
+        assert_eq!(strip_markdown("literal \\*stars\\*"), "literal *stars*");
+    }
+
+    #[test]
+    fn v2_bold_becomes_single_asterisk() {
+        assert_eq!(to_markdown_v2("**bold** text"), "*bold* text");
+    }
+
+    #[test]
+    fn v2_italic_becomes_underscore() {
+        assert_eq!(to_markdown_v2("you *create* meaning"), "you _create_ meaning");
+    }
+
+    #[test]
+    fn v2_strikethrough_single_tilde() {
+        assert_eq!(to_markdown_v2("~~old~~ new"), "~old~ new");
+    }
+
+    #[test]
+    fn v2_escapes_literal_special_chars() {
+        // Periods, parens, hyphens, etc. must be escaped in body text.
+        assert_eq!(
+            to_markdown_v2("ship it (now) - really."),
+            "ship it \\(now\\) \\- really\\."
+        );
+    }
+
+    #[test]
+    fn v2_heading_becomes_bold() {
+        assert_eq!(to_markdown_v2("# Title"), "*Title*");
+        assert_eq!(to_markdown_v2("## Subtitle"), "*Subtitle*");
+    }
+
+    #[test]
+    fn v2_bullets_use_bullet_glyph() {
+        assert_eq!(
+            to_markdown_v2("- first\n* second"),
+            "\u{2022} first\n\u{2022} second"
+        );
+    }
+
+    #[test]
+    fn v2_link_label_and_url_escaped() {
+        assert_eq!(
+            to_markdown_v2("see [the docs](https://example.com/a.b)"),
+            "see [the docs](https://example.com/a.b)"
+        );
+    }
+
+    #[test]
+    fn v2_inline_code_preserved_and_escaped() {
+        // Backtick stays a code entity; the period inside is NOT escaped.
+        assert_eq!(to_markdown_v2("run `a.b()` now"), "run `a.b()` now");
+    }
+
+    #[test]
+    fn v2_code_fence_becomes_pre_block() {
+        let input = "```rust\nlet x = 1.0;\n```";
+        assert_eq!(to_markdown_v2(input), "```rust\nlet x = 1.0;\n```");
+    }
+
+    #[test]
+    fn v2_preserves_snake_case() {
+        // Single underscores in identifiers are escaped, not treated as italic.
+        assert_eq!(to_markdown_v2("call my_func now"), "call my\\_func now");
+    }
+
+    #[test]
+    fn v2_nested_bold_italic() {
+        assert_eq!(to_markdown_v2("**big *small* end**"), "*big _small_ end*");
     }
 }
