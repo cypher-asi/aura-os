@@ -13,7 +13,8 @@
      list rows that now scroll behind it. Was `transparent`, which
      let the masked list contents bleed through the pill body. */
   background: var(--color-sidebar-bg);
-  color: var(--color-accent-text);
+  color: var(--color-text-glow);
+  text-shadow: var(--text-glow-shadow);
   cursor: pointer;
 }
 
@@ -25,12 +26,12 @@
 }
 
 .label {
-  /* Match the chat input's `ModeSelector` segment typography
-     (11px / 500 / 0.02em) so the referral pill reads as part of the
-     same control family as the mode pills. */
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  /* Shared label typography (11px / 500 / 0.06em / uppercase) so the
+     referral pill matches the sidekick section title and the
+     Agents/Projects switch. */
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
   white-space: nowrap;
   color: inherit;
   line-height: 1;

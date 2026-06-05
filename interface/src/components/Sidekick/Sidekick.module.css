@@ -78,9 +78,10 @@
      (11px / 500 / 0.02em) so the active-section name reads as part
      of the same control family as the mode pills. */
   font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  font-weight: 400;
+  letter-spacing: 0.06em;
   line-height: 1;
+  text-transform: uppercase;
 }
 
 .sidekickTabBar button:not(:disabled):hover {
@@ -88,7 +89,8 @@
 }
 
 .sidekickTabBar button:not(:disabled)[aria-pressed="true"] {
-  color: var(--color-accent-text);
+  color: var(--color-text-glow);
+  text-shadow: var(--text-glow-shadow);
 }
 
 .sidekickTabBar button:focus-visible {
@@ -114,13 +116,14 @@
 }
 
 .moreButtonWrap > button[class*="selected"] {
-  color: var(--color-accent-text);
-  text-shadow: none;
+  color: var(--color-text-glow);
+  text-shadow: var(--text-glow-shadow);
 }
 
 .moreMenu [class*="menuItem"][class*="selected"],
 .moreMenu [class*="menuItem"][class*="selected"]:hover {
-  color: var(--color-accent-text);
+  color: var(--color-text-glow);
+  text-shadow: var(--text-glow-shadow);
 }
 
 .sidekickBody {

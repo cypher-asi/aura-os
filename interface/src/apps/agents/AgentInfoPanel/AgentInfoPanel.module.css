@@ -181,7 +181,7 @@
 
 .specValue {
   min-width: 0;
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--color-text-primary);
   text-align: right;
@@ -194,7 +194,7 @@
 .specValueMono {
   font-family: var(--font-mono, "SFMono-Regular", "Menlo", monospace);
   font-weight: 500;
-  font-size: 13px;
+  font-size: 11px;
 }
 
 /* Right-aligned cluster holding the value (or link) and its copy button so the
@@ -277,14 +277,14 @@
 }
 
 .specLinkLabel {
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--color-text-primary);
   text-shadow: var(--spec-engrave);
 }
 
 .specLinkCount {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--color-text-muted);
   text-shadow: var(--spec-engrave);

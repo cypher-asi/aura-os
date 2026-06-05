@@ -35,6 +35,15 @@
      the app layer so the vendored ZUI base (#e6e8eb) stays untouched. */
   --color-text-primary: rgba(255, 255, 255, 0.88);
 
+  /* Glowing selected-text treatment shared by the sidekick nav rail, the
+     "Refer member" pill, and the Agents/Projects switch. Dark mode: a pure
+     white label with a soft white halo. The light-mode counterpart (a black
+     label + black halo) is rebound under [data-theme='light']. */
+  --color-text-glow: #ffffff;
+  --text-glow-shadow:
+    0 0 4px rgba(255, 255, 255, 0.6),
+    0 0 10px rgba(255, 255, 255, 0.35);
+
   /* ----------------------------------------------------------------------
      Typography scale.
 
@@ -338,6 +347,13 @@
      (this file loads after ZUI, equal specificity to [data-theme='light']),
      leaving primary text near-invisible on the white page. */
   --color-text-primary: rgba(0, 0, 0, 0.88);
+
+  /* Light counterpart to the dark glow tokens: a black label with a soft
+     black halo (see the :root block for usage). */
+  --color-text-glow: #000000;
+  --text-glow-shadow:
+    0 0 4px rgba(0, 0, 0, 0.5),
+    0 0 10px rgba(0, 0, 0, 0.28);
 
   --color-border: #e5e7eb;
 
