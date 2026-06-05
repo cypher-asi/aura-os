@@ -1,0 +1,118 @@
+/*
+ * AgentOrbSection — the orb + agent marquee band, relocated out of the
+ * `/agents` hero stage to sit on its own below the agent-chat section.
+ * The placement rules below are ported from the former
+ * `ProductView.module.css` orb-stage rules; the only structural change
+ * is that this component owns its own stage container (height +
+ * positioning context) since it no longer nests inside
+ * `MarketingFirstScreen`'s shared `.stage`.
+ */
+.orbSection {
+  /* Match the surrounding off-black marketing surface. Reads the same
+     token cascaded by `.productView`, falling back to `#000` for any
+     consumer mounted outside that wrapper. */
+  background: var(--marketing-section-bg, #000);
+  width: 100%;
+}
+
+/*
+ * Stage container that re-establishes what the orb rules below depend
+ * on: a positioning context with a DEFINITE height. The height clamp is
+ * lifted from `MarketingFirstScreen.module.css` `.stage` so the band
+ * keeps the same vertical footprint the orb had in the hero. Hovered
+ * marquee cards are allowed to overflow (`overflow: visible`); the orb
+ * keeps its own clip box (`.orbVideoClip`).
+ */
+.orbStage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: clamp(452px, 71vh, 826px);
+  overflow: visible;
+}
+
+.orb {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/*
+ * Clip box for the orb. Pinned to the stage rectangle, but clipped only
+ * on the LEFT and RIGHT (via `clip-path`'s negative top/bottom insets)
+ * so the scaled orb never causes horizontal page overflow — while both
+ * its gradient-faded TOP and BOTTOM edges stay fully visible, giving a
+ * symmetric vertical fade. Leaving the top and bottom open lets the orb
+ * glow extend toward the neighbouring sections; both ends are
+ * mask-faded to transparent so the bleed reads as a soft glow on the
+ * shared off-black bg. Kept separate from `.orb` so the marquee sibling
+ * can still overflow on hover.
+ */
+.orbVideoClip {
+  position: absolute;
+  inset: 0;
+  clip-path: inset(-100vh 0 -100vh 0);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/*
+ * The WebGL orb (`<AuraOrb />` wrapper), centered horizontally and
+ * anchored so its bright center sits on the agent card row. The orb's
+ * `<canvas>` fills this box at 100% width/height. `top` matches the card
+ * row's vertical center (the marquee row is pulled up to ~12px below
+ * the stage top — see `.orbMarquee` — and the cards are 385px tall, so
+ * their center lands ~204px down). `transform: scale(1.44)` enlarges
+ * the orb; the clip box trims the overflow. The two-layer mask (linear
+ * top/bottom fade + radial corner vignette, composited via `intersect`)
+ * makes the orb melt into the page bg instead of reading as a hard
+ * rectangle.
+ */
+.orbVideo {
+  position: absolute;
+  left: 50%;
+  top: 204px;
+  width: 100%;
+  aspect-ratio: 1280 / 720;
+  height: auto;
+  transform: translate(-50%, -50%) scale(1.44);
+  transform-origin: center;
+  pointer-events: none;
+  mask-image:
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      #000 48%,
+      #000 52%,
+      transparent 100%
+    ),
+    radial-gradient(ellipse at center, #000 50%, transparent 100%);
+  mask-composite: intersect;
+  -webkit-mask-image:
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      #000 48%,
+      #000 52%,
+      transparent 100%
+    ),
+    radial-gradient(ellipse at center, #000 50%, transparent 100%);
+  -webkit-mask-composite: source-in;
+}
+
+/*
+ * Agent card row overlaid on the orb. `<AgentMarquee />` carries an
+ * internal 64px top/bottom buffer band (so hovered cards don't clip
+ * against its own mask). `translateY(-52px)` pulls that buffer mostly
+ * above the stage so the VISIBLE card row starts ~12px below the stage
+ * top. `z-index: 1` keeps the cards above the orb.
+ */
+.orbMarquee {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  transform: translateY(-52px);
+}

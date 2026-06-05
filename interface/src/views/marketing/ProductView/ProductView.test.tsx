@@ -119,10 +119,11 @@ describe("ProductView", () => {
     ).toBeTruthy();
   });
 
-  it("mounts the agent marquee over the hero video with one card per persona", () => {
-    // The hero passes `<AgentMarquee />` as `videoOverlay`, so the
-    // strip should be present on the rendered ProductView. The
-    // marquee duplicates the persona list for the seamless wrap, so
+  it("mounts the agent marquee in the orb section with one card per persona", () => {
+    // The orb + agent marquee moved out of the hero into the
+    // standalone `<AgentOrbSection />` (below the agent-chat section),
+    // so the strip should still be present on the rendered ProductView.
+    // The marquee duplicates the persona list for the seamless wrap, so
     // we assert at least one card per persona renders (the duplicate
     // count is covered explicitly in `AgentMarquee.test.tsx` —
     // duplicating the assertion here would make a future loop-strategy

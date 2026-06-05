@@ -1,7 +1,6 @@
 import { type ReactNode, useEffect } from "react";
 import { AgentChatSection } from "../AgentChatSection";
-import { AgentMarquee } from "../AgentMarquee";
-import { AuraOrb } from "../AuraOrb";
+import { AgentOrbSection } from "../AgentOrbSection";
 import { ChangelogPreview } from "../ChangelogPreview";
 import {
   CodeIcon,
@@ -10,6 +9,7 @@ import {
   ShieldIcon,
 } from "../FeaturePanel/FeaturePanel";
 import { CreateAgentButton } from "../../public-chat/CreateAgentButton";
+import { MockAuraApp } from "../../public-chat/MockAuraApp";
 import { TypewriterText } from "../../public-chat/TypewriterText";
 import { MarketingFirstScreen } from "../MarketingFirstScreen";
 import { MarketingFooter } from "../MarketingFooter";
@@ -79,21 +79,19 @@ export function ProductView(): ReactNode {
             headlineCta={<CreateAgentButton source="product_hero" />}
           />
         }
-        stageClassName={styles.orbStage}
+        stageClassName={styles.desktopStage}
+        stageHidden
         stage={
-          <div className={styles.orb}>
-            <div className={styles.orbVideoClip} aria-hidden="true">
-              <AuraOrb className={styles.orbVideo} />
-            </div>
-            <div className={styles.orbMarquee}>
-              <AgentMarquee />
-            </div>
-          </div>
+          <MockAuraApp
+            desktopBackgroundUrl="/personas/vibecoder/desktop.png"
+            centerContent={<></>}
+          />
         }
       />
       <PersonalAgentSection />
       <OneComputerOneAgentSection />
       <AgentChatSection />
+      <AgentOrbSection />
       <FeaturePanel
         label="SOVEREIGN"
         headline="Private by Design."
