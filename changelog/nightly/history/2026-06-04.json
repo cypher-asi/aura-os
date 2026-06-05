@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-05T04:37:54.922Z",
+  "generatedAt": "2026-06-05T05:15:02.148Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.613.1",
+  "version": "0.1.0-nightly.614.1",
   "date": "2026-06-04",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.613.1",
-  "lastIncludedSha": "1bc8486a0037495eff185ddb783c8c70ab1c3c22",
-  "previousProcessedSha": "92acd4fbe4bca4868b2d27441249185b37defdcb",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.614.1",
+  "lastIncludedSha": "e6d54c9a019a4a5726a20a0880d4c25cd6a32897",
+  "previousProcessedSha": "1bc8486a0037495eff185ddb783c8c70ab1c3c22",
   "commitShas": [
     "1bb3c667cdeded10e90d9a62b8dbbd33ddb72b96",
     "7df535d94a9f3809624b4b7ae79b5bb5aa7d02e6",
@@ -125,10 +125,11 @@
     "0e2a18c3ad73748c11fb9320c4991dd3946c8005",
     "a314d2e035d103c3393a3dea9b706c9b31bf04c8",
     "cdd0a6728d1b887a8ea725bb80ef519330e4d27b",
-    "1bc8486a0037495eff185ddb783c8c70ab1c3c22"
+    "1bc8486a0037495eff185ddb783c8c70ab1c3c22",
+    "e6d54c9a019a4a5726a20a0880d4c25cd6a32897"
   ],
-  "rawCommitCount": 114,
-  "filteredCommitCount": 114,
+  "rawCommitCount": 115,
+  "filteredCommitCount": 115,
   "rawCommits": [
     {
       "sha": "1bb3c667cdeded10e90d9a62b8dbbd33ddb72b96",
@@ -4988,6 +4989,47 @@
       "areas": [
         "Other"
       ]
+    },
+    {
+      "sha": "e6d54c9a019a4a5726a20a0880d4c25cd6a32897",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-04T21:59:17-07:00",
+      "subject": "feat(analytics): tag public create-agent CTA with entry-point source",
+      "body": "Split the landing-to-signup funnel by where the pill was clicked (public_chat vs product_hero vs public_landing).\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "1bc8486a0037495eff185ddb783c8c70ab1c3c22"
+      ],
+      "files": [
+        "interface/src/views/marketing/ProductView/ProductView.tsx",
+        "interface/src/views/public-chat/CreateAgentButton/CreateAgentButton.tsx",
+        "interface/src/views/public-chat/PublicChatView/PublicChatView.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 15,
+        "deletions": 5
+      },
+      "committedAtMs": 1780635557000,
+      "cleanSubject": "tag public create-agent CTA with entry-point source",
+      "keywords": [
+        "public",
+        "create",
+        "agent",
+        "with",
+        "entry",
+        "point",
+        "source"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 6,
@@ -4999,36 +5041,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 18858180
+          "sizeBytes": 18858204
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.613.1",
+      "version": "0.1.0-nightly.614.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.613.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.614.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 49976344
+          "sizeBytes": 49978848
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.613.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.614.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.613.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.614.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 116869624
+          "sizeBytes": 116877816
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.613.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.614.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -5038,29 +5080,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.613.1",
+      "version": "0.1.0-nightly.614.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.613.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.614.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 45925831
+          "sizeBytes": 45928823
         },
         {
-          "name": "AURA_0.1.0-nightly.613.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.614.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.613.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.614.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 45000468
+          "sizeBytes": 45003518
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.613.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.614.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -5070,29 +5112,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.613.1",
+      "version": "0.1.0-nightly.614.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.613.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.614.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 47922630
+          "sizeBytes": 47922953
         },
         {
-          "name": "AURA_0.1.0-nightly.613.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.614.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.613.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.614.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 47051150
+          "sizeBytes": 47050370
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.613.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.614.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -5102,17 +5144,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.613.1",
+      "version": "0.1.0-nightly.614.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.613.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.614.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 33670013
+          "sizeBytes": 33665508
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.613.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.614.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -5121,28 +5163,34 @@
     }
   ],
   "rendered": {
-    "title": "Agent cards, a public blog, and a sidebar that stays put",
-    "intro": "A heavy interface day: the agent profile got a hybrid 3D nameplate + glass spec card, Notes was rebuilt onto a storage-backed ID model that also powers a brand-new public /blog site, and the sidebar gained an Agents/Projects rocker plus a persistent chat surface so switching apps no longer remounts your conversation. Settings grew real theme sub-areas, and several reliability fixes landed for remote agents, geo analytics, and production CSS.",
+    "title": "Council mechanics, a public blog, and a smoother Agents↔Projects switch",
+    "intro": "A big nightly: the council picker and panel grew real mechanism awareness, the agent profile card was split into a 3D nameplate plus a glass spec card, Notes moved to a storage-backed ID model that now powers a brand-new public blog at /blog, and the sidebar gained an Agents/Projects rocker switch that triggered a long performance and animation thread to make it feel instant. Settings also picked up a drill-down Theme section with typography, density, motion, and wallpaper.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "7:56 PM",
         "started_at": "2026-06-04T02:56:33.000Z",
         "ended_at": "2026-06-04T16:53:39.000Z",
-        "title": "Council mechanism picker and a redesigned agent profile card",
-        "summary": "The council UI got a clearer mechanism picker that persists across reloads, and the agent profile was split into a slim 3D nameplate plus a separate spec card.",
+        "title": "Council mechanism picker and agent profile card overhaul",
+        "summary": "The council combine mechanism became a first-class, persisted concept, and the agent profile card was split into a 3D metal nameplate plus a separate DOM spec card.",
         "items": [
           {
-            "text": "Replaced the finicky hover flyout on the council count with an always-visible Synthesize / Contrast / Side-by-side menu row, and persisted the chosen mechanism on the parent tool_use block so a reloaded turn shows the correct label on the council panel header.",
+            "text": "Replaced the fiddly hover flyout for Synthesize/Contrast/Side-by-side with an always-visible CouncilMechanismRow under the count, and surfaced the active mechanism as a chip on the council panel header with an accurate subtitle for each mode.",
             "commit_shas": [
               "1bb3c667cdeded10e90d9a62b8dbbd33ddb72b96",
-              "7df535d94a9f3809624b4b7ae79b5bb5aa7d02e6",
               "ed30264898bfa0190747921f560fcb95db9833cc"
             ],
             "confidence": "high"
           },
           {
-            "text": "Split the agent profile into a shortened WebGL worn-metal nameplate (name, role, engraved status on the frame) and a new DOM ProfileSpecCard carrying Organization, IP, Wallet, channel logos, and Skills/Connectors/Permissions links, with a black-glass treatment and trimmed nameplate sizing.",
+            "text": "Persisted the council mechanism on the parent tool_use block and SubagentSpawned event so a reloaded council turn rehydrates with the correct mechanism label instead of falling back to a guess.",
+            "commit_shas": [
+              "7df535d94a9f3809624b4b7ae79b5bb5aa7d02e6"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Split the agent profile card: the WebGL worn-metal plate now carries only name, role, and an engraved status indicator, while Organization, IP, Wallet, channel logos, and nav links moved into a new DOM ProfileSpecCard with a black-glass look.",
             "commit_shas": [
               "ffbd03c58f8bb31e87558a0a45913f1ed9cf2d1a",
               "913047d0cc42532a5d0cb1d4748ce121b3b5d7f5",
@@ -5151,7 +5199,7 @@
             "confidence": "high"
           },
           {
-            "text": "Remote-agent status card now offers a Recovery action when the VM state fetch fails recoverably (e.g. 404 'machine gone'), instead of stranding the user with only a Report bug button; 401 session-expired still surfaces report-only.",
+            "text": "Remote agent status cards now offer a Recovery action when the machine state fetch fails recoverably (e.g. 404 'machine gone'), instead of leaving Report bug as the only option; auth-expired errors still gate to Report bug.",
             "commit_shas": [
               "d3cddc6dddebfb629da47e87c9ee9586cec9de84"
             ],
@@ -5164,11 +5212,11 @@
         "time_label": "10:36 AM",
         "started_at": "2026-06-04T17:36:51.000Z",
         "ended_at": "2026-06-04T17:36:51.000Z",
-        "title": "Frosted glass panels restored in production desktop builds",
-        "summary": "Pinned the Vite CSS minifier so backdrop-filter and color-mix declarations survive into release bundles.",
+        "title": "Frosted glass restored in production desktop builds",
+        "summary": "Pinned the Vite CSS minifier so backdrop-filter and color-mix survive into release builds.",
         "items": [
           {
-            "text": "Vite 8's default Lightning CSS minifier was stripping the glass panel recipe (backdrop-filter / color-mix) from production CSS, so release desktop builds lost their frosted blur. Pinned cssMinify to esbuild so prod renders the same glass as the dev server.",
+            "text": "Vite 8's new Lightning CSS minifier was stripping backdrop-filter and color-mix from production bundles, so desktop release builds lost the glass-panel blur that the dev server rendered correctly. Pinned cssMinify to esbuild so prod CSS matches dev.",
             "commit_shas": [
               "e9ff281b1d3ef8aed5821038a28277a78aa61c1d"
             ],
@@ -5181,11 +5229,11 @@
         "time_label": "10:38 AM",
         "started_at": "2026-06-04T17:38:22.000Z",
         "ended_at": "2026-06-04T18:08:19.000Z",
-        "title": "In-app Changelog/Downloads modals, LOCAL agent badge, and tunable glass",
-        "summary": "Help menu entries now stay inside the app, local agents are visually distinct on the 3D card, and glass blur/opacity became user-tunable.",
+        "title": "Help-menu modals, geolocation analytics, and tunable glass",
+        "summary": "Help shortcuts opened in-app, Mixpanel learned where signups come from, and the glass effect became user-adjustable.",
         "items": [
           {
-            "text": "Help → Changelog and Help → Downloads now open inside zui modals (with a 20% wider layout) rather than navigating away, keeping users in the app shell when logged in.",
+            "text": "Help > Changelog and Help > Downloads now open inside zui modals (widened ~20%) when signed in, keeping users in the app shell instead of navigating away. Logged-out Downloads still opens aura.ai/download in a new tab.",
             "commit_shas": [
               "ca46b055032c19e7d62827f25c656dda99ff5aab",
               "e1c050bbadcbf011f796e9779fb4d1aef062cdd6"
@@ -5193,23 +5241,23 @@
             "confidence": "high"
           },
           {
-            "text": "Local agents now render a purple LOCAL badge on the 3D card frame while remote agents keep their live green/red VM status, and the channel bar picks up the LLM input pill gradient.",
+            "text": "Enabled Mixpanel IP-based geolocation so events like user_signed_up can be broken down by country, region, and city; opt-out / DNT / GPC handling is unchanged.",
             "commit_shas": [
-              "8cf913a7df59cb9476125b478044a3ba30fb968f"
+              "3b7c7ec663ad09a7f4abf68de750b338372566de"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a tunable glass blur/opacity level exposed through Appearance settings, with a panel glass bridge wiring the new variables into existing surfaces.",
+            "text": "Added a tunable glass blur/opacity level wired through PanelGlassBridge and a new control in Appearance settings, so users can dial the frosted-panel intensity.",
             "commit_shas": [
               "3dc16ec8c352ff7277cc508484ff5e41fe4345d0"
             ],
             "confidence": "high"
           },
           {
-            "text": "Mixpanel client init now opts into IP geolocation so events like user_signed_up can be broken down by country, region, and city; DNT/GPC opt-out behavior is unchanged.",
+            "text": "Local agents now show a purple LOCAL badge on the 3D card frame (while remote agents keep live green/red VM state), and the channel bar picked up the LLM input pill gradient.",
             "commit_shas": [
-              "3b7c7ec663ad09a7f4abf68de750b338372566de"
+              "8cf913a7df59cb9476125b478044a3ba30fb968f"
             ],
             "confidence": "high"
           }
@@ -5221,10 +5269,10 @@
         "started_at": "2026-06-04T18:26:35.000Z",
         "ended_at": "2026-06-04T18:26:35.000Z",
         "title": "Typed notes/folders/comments client in aura-os-storage",
-        "summary": "Added a typed Rust client surface for the storage service's notes entity, unblocking the storage-backed notes rewrite.",
+        "summary": "Laid the Rust groundwork for the storage-backed notes refactor that lands later in the day.",
         "items": [
           {
-            "text": "Mirrored the aura-storage notes entity with StorageNote, StorageNoteFolder, and StorageNoteComment models, request types, and a StorageClient method set covering both public and internal note routes, plus in-memory mock coverage for integration tests.",
+            "text": "Added typed StorageNote, StorageNoteFolder, and StorageNoteComment models plus a StorageClient method set covering public and internal note routes, with in-memory mock coverage so server handlers can be built against it.",
             "commit_shas": [
               "db4070292ec1a707713bead70f0c7924781f01a5"
             ],
@@ -5237,38 +5285,42 @@
         "time_label": "11:30 AM",
         "started_at": "2026-06-04T18:30:16.000Z",
         "ended_at": "2026-06-04T19:26:07.000Z",
-        "title": "Storage-backed Notes, aura-blog CMS, and a public /blog site",
-        "summary": "Notes moved off the filesystem onto a storage-backed ID model with markdown bodies on S3, and that same backend powers a new public blog with a sidebar rocker to flip between Agents and Projects.",
+        "title": "Storage-backed notes, the public /blog site, and the Agents/Projects rocker",
+        "summary": "Notes moved off the filesystem onto an ID-based, S3-backed API; that backend powers a new public blog; and a neumorphic Agents/Projects toggle landed in the sidebar.",
         "items": [
           {
-            "text": "Replaced the filesystem notes layer end-to-end: the server now serves storage-backed, ID-based notes with markdown bodies on S3, the frontend store/UI was rewritten off relPath onto stable UUIDs with autosave via uploadMarkdown, and a sys-admin importer ports legacy filesystem notes over.",
+            "text": "Rewrote both the server notes handlers and the frontend notes layer onto storage-backed, ID-based models with markdown bodies stored on S3 (fetched from bodyUrl, re-uploaded via a new uploadMarkdown helper on autosave), dropping all relPath/title-rename logic. Blog posts are notes under a reserved AURA_BLOG_PROJECT_ID with sys-admin writes.",
             "commit_shas": [
-              "73e86a8731a242774ca02c59409724bcffbfcddc",
               "4e69b982796be2c619973fa8d7b93674cee80413",
               "56187a9f19a4e32c505af4503859c28b8b818490",
-              "ff7640a2f67cee8962be52a7e01704ca9555f9e1"
+              "73e86a8731a242774ca02c59409724bcffbfcddc"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added an aura-blog CMS surface inside Notes (sys-admin gated blog fields, publish, status badges) plus a new public /blog index and /blog/:slug post page styled after cursor.com/blog, fed by anonymous /api/public/blog endpoints and S3 markdown bodies, with a Blog entry in the public top nav and mobile drawer.",
+            "text": "Shipped a public, unauthenticated /blog index and /blog/:slug post page styled after cursor.com/blog — centered reading column, previous-posts rail, hero image, markdown TOC, and a 'more posts' section — backed by /api/public/blog endpoints, plus a Blog entry in the public top nav and mobile drawer.",
             "commit_shas": [
-              "f1849e194be56bdd7b4a48afaffb870172a185a0",
               "09b1f3fa6160946759286579d1dae4327a9361c2"
             ],
             "confidence": "high"
           },
           {
-            "text": "Introduced a neumorphic Agents/Projects rocker switch at the top of the shared sidebar, iterated through several physical models (rigid plate → center-folding rocker → flat plate-mounted toggle), and tuned the shared bright-to-dark border gradient and motion so the selected side reads as raised and the click feels instant.",
+            "text": "Added an aura-blog CMS surface in Notes (sys-admin gated) with blog fields, publish controls, and status badges, plus a sys-admin importer for legacy filesystem notes.",
+            "commit_shas": [
+              "f1849e194be56bdd7b4a48afaffb870172a185a0",
+              "ff7640a2f67cee8962be52a7e01704ca9555f9e1"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added a theme-aware Agents/Projects rocker switch to the sidebar and iterated it from a tilting 3D plate into a flat plate-mounted toggle with a continuous diagonal border, optimistic flip, and deferred route swap so clicks feel snappy.",
             "commit_shas": [
               "7f6a78855a00f89de235b959e635f98c616feb2d",
-              "6f4cf35f6a99359fd60eaaa10032afee64e19218",
-              "6c4d5f4eb1525ef2a2f4d31fbc9534ab2e4bd115",
+              "c061993ed30d3e6b584d82b7854db75519b60f37",
               "2b28b7b1f6482c014fd6ad908409e7679f86b416",
               "9ba2a15b994ec18a2da46333118b651f8fb5f1c4",
               "ed54694f93c60ffe79220fb6600dbb4f7a211519",
-              "39fee1d4b40670094eae41806fe6315e6c51bdfa",
-              "1bbc91e63accc96343cde88663eba34ad6ccedc4"
+              "39fee1d4b40670094eae41806fe6315e6c51bdfa"
             ],
             "confidence": "high"
           }
@@ -5278,30 +5330,30 @@
         "batch_id": "entry-6",
         "time_label": "12:29 PM",
         "started_at": "2026-06-04T19:29:29.000Z",
-        "ended_at": "2026-06-05T04:21:21.000Z",
-        "title": "Persistent chat surface, Theme drill-down, and remote-agent recovery",
-        "summary": "A long afternoon of polish around the new sidebar rocker landed a shell-level conversation host, a real Theme settings section, performance work on the agent list, and reliability fixes for stalled remote-agent turns and geo analytics.",
+        "ended_at": "2026-06-05T04:59:17.000Z",
+        "title": "Persistent chat across app switches, expanded Theme settings, and remote-agent stall recovery",
+        "summary": "A long thread made the Agents/Projects switch feel instant, Settings grew a drill-down Theme section, and stalled remote chats now auto-recover.",
         "items": [
           {
-            "text": "Mounted a shell-level ConversationSurfaceHost keyed by projectId + agentInstanceId so the agent chat survives every Agents ⇄ Projects switch with no remount or refetch, and made AppSwitchToggle resolve the equivalent lane in the target app so the toggle lands on the same mounted chat.",
+            "text": "Mounted a single conversation-target-keyed ConversationSurfaceHost above the per-app MainPanel so the agent chat survives every Agents↔Projects flip — switching apps onto the same lane keeps the identical AgentChatPanel mounted with no remount or refetch. AppSwitchToggle resolves the equivalent lane in the target app so the toggle lands on the same chat.",
             "commit_shas": [
               "e2db6de3776a4b75cf1719a6e59a33cb52cd63aa"
             ],
             "confidence": "high"
           },
           {
-            "text": "Made app-switching feel instant: keep both panes mounted via memoized keep-alive wrappers, virtualize the agents list with an O(1) busy index, centralize per-row store reads behind useAgentRowModels so rows are pure props, lazy-load avatars after first paint, and hydrate the agent IndexedDB cache on warm loads so the sidebar paints before the network responds.",
+            "text": "Made the Agents sidebar list keep-alive, virtualized, and pure: rows now consume a batched AgentRowModel from a single list-level hook instead of mounting ~9 store subscriptions each, avatars lazy-load after first paint, and panes are memoized so the switch frame is no longer blocked. Warm loads also paint agents from the IndexedDB cache before the network and any CEO setup.",
             "commit_shas": [
               "bfb191be9f9a4ad086478fa42c9070eb441dd648",
               "ca6e92ae40b43be04515576d7ee825ab9c52e850",
               "dd3e812d28d5e7a0a7528756f004bee2e9ebe1da",
-              "8ae8c9134522bd273e115ef91f630dd8c31b7069",
-              "8399a4f21c8ccc2caecdccd04256a1682f20a076"
+              "8399a4f21c8ccc2caecdccd04256a1682f20a076",
+              "8ae8c9134522bd273e115ef91f630dd8c31b7069"
             ],
             "confidence": "high"
           },
           {
-            "text": "Rebuilt the sidebar list reveal animation: rows now own their own cascade-in via a useSidebarListReveal hook (Web Animations API, reduced-motion aware) and AgentList rides on the shared LeftMenuTree, so the entrance animation fires reliably on first load and on every Agents ⇄ Projects switch even with virtualization and async hydration.",
+            "text": "Rebuilt the sidebar list reveal animation from first principles: row-level SidebarRevealRow with a useSidebarListReveal hook that respects reduced motion, survives virtualization and async hydration, and replays the cascade when a pane goes inactive→active. Agents and Projects now share the same LeftMenuTree shell.",
             "commit_shas": [
               "1ea05f2e798e49b4da0be3442926dfd8a3374a7e",
               "c40d4aa888d10474f85ba27e00026c3d92bfefda",
@@ -5311,7 +5363,7 @@
             "confidence": "high"
           },
           {
-            "text": "Expanded desktop Settings with a generic drill-down: clicking Theme swaps the left nav for a breadcrumb and sub-areas (Mode & accent with custom hex, Typography, Layout & density, Custom colors, Effects, Motion, Presets), backed by persisted CSS-variable controls pre-stamped in index.html to avoid flash. Desktop right-click now has Theme and Background entries that deep-link straight into the relevant sub-area.",
+            "text": "Expanded the desktop Settings modal with a drill-down Theme section covering Mode & accent (with custom hex), Typography, Layout & density, Custom colors, Effects, Motion, Presets, and Background, with values pre-stamped at boot so customizations don't flash. The desktop right-click menu got Theme and Background deep-links, and the standalone wallpaper modal was retired.",
             "commit_shas": [
               "d82ab049b1d739d57a40f7354aa66b007a35f526",
               "2fd8558257786e5e70818963d9cfa1b5005af397",
@@ -5321,65 +5373,38 @@
             "confidence": "high"
           },
           {
-            "text": "Polished the agent spec card: theme-aware smoked-black glass that flips with light/dark mode, taskbar-matched 90% glass for both the spec and Telegram panels, one-click copy on IP/Wallet rows with a zscan.live wallet link, a centered nameplate in the metal strip, and an 'Org' label trim.",
-            "commit_shas": [
-              "28d1658787fa6244114ace792a666290143e4bda",
-              "cb9bf60ce0b2c9bc5fc7862ed618dde1a4a6d3f7",
-              "10ef33c1f6d7422b7b8cceb1554ba583adbdd802",
-              "d8fa7931690048b3a7b4214a3ccf3e600dee385a",
-              "e44448f891517a2df179f3241f334e05a536032b",
-              "e2685cc7c0d657a3b691a9155ce23323d4b913de"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Reworked the floating chat input: removed the painted backdrop band and instead hard-clip the transcript at the input pill's live-measured midline, align the input to the 680px transcript column, and make the mode selector opaque so chat content no longer bleeds through.",
-            "commit_shas": [
-              "14b0e5b68b42adad69532baff785c4fdbd570757",
-              "2755738f71807b42b0999bab757ab3988a0b3117"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Restyled the public marketing surface: Changelog/Feedback/Models banners picked up frosted pricing-style glass, the /blog single-post and index pages were reworked after cursor.com/blog with a featured post, 2-up grid, archive table, drop cap, and real author avatar via an updated aura-blog seed action; Vibecoder persona gained a WebGL flow-field background that drifts under reduced motion.",
-            "commit_shas": [
-              "ca2a99a30a422aec4bf4c6b65a365a0e8794d7a3",
-              "0baa2ae5b4d7daf3390c5d9d8820be9f52343459",
-              "c74ecd9066cebffb96a2c217f3bc0f2b409218f0",
-              "f1a2f30ac9575403fe7b51a7704e9ccc1803fef5",
-              "cdd0a6728d1b887a8ea725bb80ef519330e4d27b",
-              "b861cf40e63b909d5e6fc0a94d1a66cd0b2c5faf",
-              "066337eae9f7509da2e5a352118c70bff51a5bd9"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Fixed stalled remote/CEO chat turns: the server now evicts warm chat sessions tied to a recycled VM after recover/restart/start/wake/hibernate, and the standalone-agent chat hook forwards the full error payload so stream_stalled and turn_timeout classify as recoverable and auto-retry instead of surfacing a hard 'Chat stream interrupted' bubble.",
+            "text": "Fixed stalled CEO/remote agent chat turns end-to-end: the server now evicts cached chat_sessions for an agent on recover/stop/restart so the next turn gets a fresh harness WS, and the client classifies stream_stalled/turn_timeout as recoverable and auto-retries with reconnect+replay instead of bubbling 'Chat stream interrupted'.",
             "commit_shas": [
               "a314d2e035d103c3393a3dea9b706c9b31bf04c8"
             ],
             "confidence": "high"
           },
           {
-            "text": "Made server-emitted session_active forward the caller's X-Forwarded-For / X-Real-IP to Mixpanel so the authoritative True DAU events geolocate to the user rather than the server; loopback/missing IPs are dropped so no misleading geo is emitted.",
+            "text": "Polished the chat surface and agent card: clipped the transcript at the floating input pill's midline (no painted backdrop band), added one-click copy + zscan link on the agent card's IP/Wallet rows, themed the spec and Telegram panels to match the taskbar glass, and centered the 3D nameplate in its metal strip.",
             "commit_shas": [
-              "1bc8486a0037495eff185ddb783c8c70ab1c3c22"
+              "14b0e5b68b42adad69532baff785c4fdbd570757",
+              "e44448f891517a2df179f3241f334e05a536032b",
+              "10ef33c1f6d7422b7b8cceb1554ba583adbdd802",
+              "d8fa7931690048b3a7b4214a3ccf3e600dee385a"
             ],
             "confidence": "high"
           },
           {
-            "text": "Fixed several sidebar layout issues that surfaced with the rocker: list rows now scroll cleanly under the floating Refer member pill across Agents/Projects/Tasks/Process/Debug/Notes, sidebar items can no longer be text-selected, and the switch plate sits vertically centered between the search pill and the first agent row.",
+            "text": "Restyled the public /blog after cursor.com/blog with a featured post, 2-up recent grid, full archive table, and real author avatar; added a sys-admin 'Seed weekly blog posts' action in Notes; moved Blog into the Resources dropdown; and gave the Vibecoder persona an animated WebGL flow-field background that keeps drifting even under reduced motion.",
             "commit_shas": [
-              "9757f13d8921f8eb165c7750ae1981fffb808741",
-              "0eb072a392ba76a624d041c9f6e6e1934558e1df",
-              "e7290fbcb3c942c857ded1ffa40d950bdd5b9152"
+              "cdd0a6728d1b887a8ea725bb80ef519330e4d27b",
+              "b861cf40e63b909d5e6fc0a94d1a66cd0b2c5faf",
+              "066337eae9f7509da2e5a352118c70bff51a5bd9",
+              "0baa2ae5b4d7daf3390c5d9d8820be9f52343459",
+              "f1a2f30ac9575403fe7b51a7704e9ccc1803fef5"
             ],
             "confidence": "high"
           },
           {
-            "text": "Hardened the model picker: unified two type styles across the menu, normalized header padding, and extracted a shared useFlyoutAnchor hook so the effort/council hover flyouts recompute position on scroll/resize and stay anchored to their row instead of floating away after layout shifts on Edge.",
+            "text": "Tightened server-side analytics geo: session_active now forwards X-Forwarded-For / X-Real-IP to Mixpanel so True DAU events geolocate to the user instead of the server, and the public create-agent CTA is tagged with its entry-point source (public_chat / product_hero / public_landing).",
             "commit_shas": [
-              "0e2a18c3ad73748c11fb9320c4991dd3946c8005"
+              "1bc8486a0037495eff185ddb783c8c70ab1c3c22",
+              "e6d54c9a019a4a5726a20a0880d4c25cd6a32897"
             ],
             "confidence": "high"
           }
@@ -5387,12 +5412,13 @@
       }
     ],
     "highlights": [
-      "New ProfileSpecCard + 3D nameplate for agents",
-      "Public /blog site backed by storage-backed Notes",
-      "Agents ⇄ Projects rocker with a persistent chat surface",
-      "Settings → Theme drill-down with typography, layout, and motion",
-      "Stalled remote agent turns now auto-recover"
+      "Council combine mechanism is now persistent, visible, and labeled on the panel",
+      "Agent profile card split into a 3D nameplate and a frosted glass spec card",
+      "New public /blog site backed by ID-based, S3-hosted notes",
+      "Agents/Projects sidebar rocker with persistent chat across switches",
+      "Expanded Theme settings with typography, density, motion, and wallpaper",
+      "Recovery and auto-retry fixes for stalled remote agent chats"
     ],
-    "raw_commit_count": 114
+    "raw_commit_count": 115
   }
 }

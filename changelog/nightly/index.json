@@ -2,20 +2,21 @@
   {
     "date": "2026-06-04",
     "channel": "nightly",
-    "version": "0.1.0-nightly.613.1",
-    "title": "Agent cards, a public blog, and a sidebar that stays put",
-    "intro": "A heavy interface day: the agent profile got a hybrid 3D nameplate + glass spec card, Notes was rebuilt onto a storage-backed ID model that also powers a brand-new public /blog site, and the sidebar gained an Agents/Projects rocker plus a persistent chat surface so switching apps no longer remounts your conversation. Settings grew real theme sub-areas, and several reliability fixes landed for remote agents, geo analytics, and production CSS.",
+    "version": "0.1.0-nightly.614.1",
+    "title": "Council mechanics, a public blog, and a smoother Agents↔Projects switch",
+    "intro": "A big nightly: the council picker and panel grew real mechanism awareness, the agent profile card was split into a 3D nameplate plus a glass spec card, Notes moved to a storage-backed ID model that now powers a brand-new public blog at /blog, and the sidebar gained an Agents/Projects rocker switch that triggered a long performance and animation thread to make it feel instant. Settings also picked up a drill-down Theme section with typography, density, motion, and wallpaper.",
     "entryCount": 6,
     "highlights": [
-      "New ProfileSpecCard + 3D nameplate for agents",
-      "Public /blog site backed by storage-backed Notes",
-      "Agents ⇄ Projects rocker with a persistent chat surface",
-      "Settings → Theme drill-down with typography, layout, and motion",
-      "Stalled remote agent turns now auto-recover"
+      "Council combine mechanism is now persistent, visible, and labeled on the panel",
+      "Agent profile card split into a 3D nameplate and a frosted glass spec card",
+      "New public /blog site backed by ID-based, S3-hosted notes",
+      "Agents/Projects sidebar rocker with persistent chat across switches",
+      "Expanded Theme settings with typography, density, motion, and wallpaper",
+      "Recovery and auto-retry fixes for stalled remote agent chats"
     ],
-    "rawCommitCount": 114,
-    "generatedAt": "2026-06-05T04:37:54.922Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.613.1",
+    "rawCommitCount": 115,
+    "generatedAt": "2026-06-05T05:15:02.148Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.614.1",
     "path": "history/2026-06-04.json"
   },
   {
