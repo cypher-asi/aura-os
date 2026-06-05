@@ -312,49 +312,6 @@ jobs:
           repository-owner: ${{ github.repository_owner }}
           include-harness: "true"
 
-      - name: Install Rust toolchain
-        if: inputs.platform == 'all' || inputs.platform == matrix.platform
-        uses: ./.github/actions/setup-rust-toolchain
-
-      - name: Restore sidecar Rust cache
-        if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && inputs.cache_mode != 'no-target-cache'
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: ${{ inputs.cache_mode == 'cold-key' && format('ci-perf-sidecar-cold-{0}-{1}-{2}', github.run_id, runner.os, runner.arch) || format('desktop-sidecar-v4-{0}-{1}', runner.os, runner.arch) }}
-          workspaces: |
-            ../aura-harness -> ../.aura-shared-target
-          cache-on-failure: true
-
-      - name: Set up sccache
-        if: inputs.platform == 'all' || inputs.platform == matrix.platform
-        id: sccache
-        uses: mozilla-actions/sccache-action@v0.0.9
-        continue-on-error: true
-
-      - name: Configure sccache backend
-        if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && steps.sccache.outcome == 'success'
-        shell: bash
-        env:
-          DEPOT_CACHE_TOKEN: ${{ secrets.DEPOT_CACHE_TOKEN }}
-        run: |
-          echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
-          if [ -n "$DEPOT_CACHE_TOKEN" ]; then
-            echo "SCCACHE_WEBDAV_ENDPOINT=https://cache.depot.dev" >> "$GITHUB_ENV"
-            echo "SCCACHE_WEBDAV_TOKEN=$DEPOT_CACHE_TOKEN" >> "$GITHUB_ENV"
-          else
-            echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
-          fi
-
-      - name: Install Linux runner dependencies
-        if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential clang pkg-config libatomic1 libssl-dev libdbus-1-dev libpipewire-0.3-dev
-
-      - name: Install Node.js
-        if: inputs.platform == 'all' || inputs.platform == matrix.platform
-        uses: ./.github/actions/setup-node
-
       - name: Restore bundled sidecar binary cache
         if: inputs.platform == 'all' || inputs.platform == matrix.platform
         id: sidecar-binary-cache
@@ -373,6 +330,49 @@ jobs:
           fi
           test -s "$binary"
 
+      - name: Install Rust toolchain
+        if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && steps.sidecar-binary-cache.outputs.cache-hit != 'true'
+        uses: ./.github/actions/setup-rust-toolchain
+
+      - name: Restore sidecar Rust cache
+        if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && steps.sidecar-binary-cache.outputs.cache-hit != 'true' && inputs.cache_mode != 'no-target-cache'
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ inputs.cache_mode == 'cold-key' && format('ci-perf-sidecar-cold-{0}-{1}-{2}', github.run_id, runner.os, runner.arch) || format('desktop-sidecar-v4-{0}-{1}', runner.os, runner.arch) }}
+          workspaces: |
+            ../aura-harness -> ../.aura-shared-target
+          cache-on-failure: true
+
+      - name: Set up sccache
+        if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && steps.sidecar-binary-cache.outputs.cache-hit != 'true'
+        id: sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+        continue-on-error: true
+
+      - name: Configure sccache backend
+        if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && steps.sidecar-binary-cache.outputs.cache-hit != 'true' && steps.sccache.outcome == 'success'
+        shell: bash
+        env:
+          DEPOT_CACHE_TOKEN: ${{ secrets.DEPOT_CACHE_TOKEN }}
+        run: |
+          echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+          if [ -n "$DEPOT_CACHE_TOKEN" ]; then
+            echo "SCCACHE_WEBDAV_ENDPOINT=https://cache.depot.dev" >> "$GITHUB_ENV"
+            echo "SCCACHE_WEBDAV_TOKEN=$DEPOT_CACHE_TOKEN" >> "$GITHUB_ENV"
+          else
+            echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Install Linux runner dependencies
+        if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && steps.sidecar-binary-cache.outputs.cache-hit != 'true' && matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang pkg-config libatomic1 libssl-dev libdbus-1-dev libpipewire-0.3-dev
+
+      - name: Install Node.js
+        if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && steps.sidecar-binary-cache.outputs.cache-hit != 'true'
+        uses: ./.github/actions/setup-node
+
       - name: Build bundled aura-node sidecar
         if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && steps.sidecar-binary-cache.outputs.cache-hit != 'true'
         run: |
@@ -382,7 +382,7 @@ jobs:
             -- node infra/scripts/release/prepare-desktop-sidecar.mjs
 
       - name: Collect sccache stats
-        if: always() && (inputs.platform == 'all' || inputs.platform == matrix.platform) && steps.sccache.outcome == 'success'
+        if: always() && (inputs.platform == 'all' || inputs.platform == matrix.platform) && steps.sidecar-binary-cache.outputs.cache-hit != 'true' && steps.sccache.outcome == 'success'
         shell: bash
         run: |
           mkdir -p ci-perf
