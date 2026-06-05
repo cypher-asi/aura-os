@@ -191,17 +191,35 @@
 }
 
 /*
- * Content layer inside the Plate: holds the skills as raised neomorphic
- * keys, split into sections by hairline divider lines like the reference
- * hardware controller. The Plate behind it provides the recessed surface,
- * so this is just padding + layout.
+ * Content padding layer inside the Plate — the margin between the Plate
+ * rim and the recessed black well (mirrors `.personalAgentDeviceContent`).
  */
 .personalAgentSkillPanel {
   --skill-accent: #e5613a;
+  padding: 16px;
+}
+
+/*
+ * Recessed black "well" the keys sit inside: a near-black surface sunk
+ * into the Plate via top-heavy inset shadows + a hairline rim, matching
+ * the service device's inset screen so the pads read as set into the page.
+ */
+.personalAgentSkillWell {
   display: flex;
   align-items: stretch;
   gap: 0;
-  padding: 18px;
+  padding: 16px;
+  border-radius: 8px;
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 0%,
+    #0a0a0a 0%,
+    #050505 60%,
+    #000 100%
+  );
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 -10px 24px rgba(0, 0, 0, 0.8);
 }
 
 .personalAgentSkillSectionWrap {
@@ -233,8 +251,9 @@
 }
 
 /*
- * Raised neomorphic key: top light highlight + bottom dark edge + an
- * outer drop shadow so it extrudes off the recessed panel.
+ * Neomorphic key sitting inside the black well: squared 4px corners and
+ * a very light top bevel + soft cast shadow so it reads as a subtly
+ * raised pad set into the recessed black area.
  */
 .personalAgentSkillBtn {
   position: relative;
@@ -243,17 +262,16 @@
   gap: 8px;
   padding: 9px 12px;
   border: none;
-  border-radius: 11px;
-  background: linear-gradient(180deg, #2c2f36 0%, #1c1e23 100%);
+  border-radius: 4px;
+  background: linear-gradient(180deg, #2c2f36 0%, #20232a 100%);
   color: var(--color-text-secondary);
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
   cursor: default;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.09),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.5),
-    0 2px 4px rgba(0, 0, 0, 0.55);
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 1px 2px rgba(0, 0, 0, 0.55);
   transition:
     transform 140ms ease,
     box-shadow 140ms ease,
@@ -275,9 +293,8 @@
   color: var(--color-text-primary);
   transform: translateY(-1px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.5),
-    0 4px 8px rgba(0, 0, 0, 0.6);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 3px 6px rgba(0, 0, 0, 0.6);
 }
 
 /* Lit / active key: warm accent fill + soft glow, matching the
@@ -290,9 +307,8 @@
   );
   color: #1a0e08;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.3),
-    0 2px 5px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 1px 3px rgba(0, 0, 0, 0.5),
     0 0 12px color-mix(in srgb, var(--skill-accent) 45%, transparent);
 }
 
@@ -331,7 +347,7 @@
 .personalAgentDeviceContent {
   display: flex;
   flex-direction: column;
-  padding: 14px;
+  padding: 7px;
 }
 
 /* Inset screen: recessed glossy black panel. */
@@ -345,10 +361,16 @@
     #050505 60%,
     #000 100%
   );
+  /* Deeper recess: a strong dark top inset + secondary blur read as the
+     screen sinking below the bezel, with a faint bottom-edge highlight
+     catching light on the lip. */
   box-shadow:
-    inset 0 2px 6px rgba(0, 0, 0, 0.9),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
-    inset 0 -10px 24px rgba(0, 0, 0, 0.8);
+    inset 0 6px 14px rgba(0, 0, 0, 0.95),
+    inset 0 3px 5px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(0, 0, 0, 0.9),
+    inset 0 -14px 30px rgba(0, 0, 0, 0.85),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.06);
   overflow: hidden;
 }
 
@@ -485,7 +507,7 @@
     max-width: 340px;
   }
 
-  .personalAgentSkillPanel {
+  .personalAgentSkillWell {
     flex-direction: column;
   }
 
