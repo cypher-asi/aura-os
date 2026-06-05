@@ -27,10 +27,43 @@
   -webkit-user-select: none;
 }
 
+/*
+ * Two-tier inset capsule. The outer capsule sits 2px outside the inner
+ * one on every edge (≈4px larger overall) and stacks two rings to read
+ * as a recessed bezel: a dark→light vertical gradient ring on the
+ * outside (rendered with the double-background border-box technique)
+ * and a hard black ring just inside it (the inset box-shadow). The
+ * inner `.pills` capsule then carries its own black border plus a
+ * top-heavy inner shadow so the controls look pressed into the bezel.
+ */
+.outerCapsule {
+  --capsule-bg: #1b1d22;
+  --capsule-bevel-dark: #050608;
+  --capsule-bevel-light: #4a4f5a;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--capsule-bg), var(--capsule-bg)) padding-box,
+    linear-gradient(
+        to bottom,
+        var(--capsule-bevel-dark),
+        var(--capsule-bevel-light)
+      )
+      border-box;
+  box-shadow: inset 0 0 0 1px #000;
+}
+
 .pills {
   background: color-mix(in srgb, var(--color-overlay-light) 60%, transparent);
   padding: 2px;
   gap: 2px;
+  border: 1px solid #000;
+  box-shadow:
+    inset 0 2px 3px rgba(0, 0, 0, 0.55),
+    inset 0 1px 1.5px rgba(0, 0, 0, 0.35);
 }
 
 /*

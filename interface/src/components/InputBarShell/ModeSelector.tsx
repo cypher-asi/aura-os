@@ -47,15 +47,17 @@ export const ModeSelector = memo(function ModeSelector({
       data-agent-surface="mode-selector"
       data-agent-mode={selectedMode}
     >
-      <SlidingPills
-        items={items}
-        value={selectedMode}
-        onChange={onChange}
-        ariaLabel="Agent mode"
-        className={styles.pills}
-        segmentClassName={styles.modeSegment}
-        indicatorClassName={styles.modeIndicator}
-      />
+      <div className={styles.outerCapsule}>
+        <SlidingPills
+          items={items}
+          value={selectedMode}
+          onChange={onChange}
+          ariaLabel="Agent mode"
+          className={styles.pills}
+          segmentClassName={styles.modeSegment}
+          indicatorClassName={styles.modeIndicator}
+        />
+      </div>
     </div>
   );
 });
