@@ -130,8 +130,9 @@
 
 /*
  * Orb stage — the `/agents` page's content for the shared
- * `MarketingFirstScreen` stage. It hosts the looping orb video
- * (`AURA_visual_loop.mp4`) with the `<AgentMarquee />` agent cards
+ * `MarketingFirstScreen` stage. It hosts the procedural WebGL orb
+ * (`<AuraOrb />`, a fragment-shader recreation of the legacy
+ * `AURA_visual_loop.mp4`) with the `<AgentMarquee />` agent cards
  * overlaid on top. The stage's shared height/start (see
  * `MarketingFirstScreen.module.css`) is what makes the cards begin at
  * the same vertical position as the `/code` page's mock desktop; the
@@ -145,10 +146,10 @@
  */
 .productView .orbStage {
   /* Let the lifted/hovered marquee cards overflow the stage box
-     without being clipped — the orb video has its own clip box
+     without being clipped — the orb has its own clip box
      (`.orbVideoClip`) so the decorative loop is still contained. */
   overflow: visible;
-  /* Full-bleed the orb video + agent marquee out to the shell edges by
+  /* Full-bleed the orb + agent marquee out to the shell edges by
      cancelling the shared `.firstScreen` horizontal gutter
      (`var(--space-4, 16px)` left/right). Only the `/agents` stage breaks
      out — the hero band keeps the gutter, and `/code` (same shared
@@ -166,7 +167,7 @@
 }
 
 /*
- * Clip box for the orb video. Pinned to the stage rectangle, but
+ * Clip box for the orb. Pinned to the stage rectangle, but
  * clipped only on the LEFT and RIGHT (via `clip-path`'s negative
  * top/bottom insets) so the scaled video never causes horizontal page
  * overflow — while both its gradient-faded TOP and BOTTOM edges stay
@@ -188,8 +189,9 @@
 }
 
 /*
- * The looping orb video, centered horizontally and anchored so its
- * bright center sits on the agent card row. `top` matches the card
+ * The WebGL orb (`<AuraOrb />` wrapper), centered horizontally and
+ * anchored so its bright center sits on the agent card row. The orb's
+ * `<canvas>` fills this box at 100% width/height. `top` matches the card
  * row's vertical center (the marquee row is pulled up to ~12px below
  * the stage top — see `.orbMarquee` — and the cards are 385px tall, so
  * their center lands ~204px down). `transform: scale(1.44)` enlarges

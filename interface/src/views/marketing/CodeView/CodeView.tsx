@@ -54,7 +54,7 @@ export function CodeView(): ReactNode {
         }
       />
       <ChangelogPreview />
-      <ProductCallToAction href="/download" label="DOWNLOAD" />
+      <ProductCallToAction />
     </div>
   );
 }

@@ -1,0 +1,49 @@
+/*
+ * Internal layout for the "1 COMPUTER = 1 AGENT" section. The outer
+ * chrome (background tint, padding, viewport-height reservation,
+ * column cap) is owned by the shared `<Section />` shell — this file
+ * only controls how the headline and artwork stack inside it.
+ */
+.oneComputerOneAgentInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 48px;
+  text-align: center;
+}
+
+/*
+ * Headline type ramp matches `.agentChatSectionHeadline` in
+ * `interface/src/views/marketing/AgentChatSection/AgentChatSection.css`
+ * so the marketing rows on `/agents` stay typographically aligned.
+ * The wider letter-spacing leans into the all-caps "1 COMPUTER = 1
+ * AGENT" badge framing.
+ */
+.oneComputerOneAgentHeadline {
+  margin: 0;
+  font-size: clamp(30px, 4vw, 44px);
+  font-weight: 300;
+  line-height: 1.08;
+  letter-spacing: 0.04em;
+  color: var(--color-text-primary);
+  max-width: 720px;
+}
+
+/*
+ * Neon terminal artwork sits directly under the headline. The PNG is
+ * a black-background line drawing, so it blends into the section's
+ * `#000` surface with no visible frame. Cap the width so it never
+ * outgrows the inner column and let height track the 4:3 aspect.
+ */
+.oneComputerOneAgentImage {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+}
+
+@media (max-width: 768px) {
+  .oneComputerOneAgentInner {
+    gap: 32px;
+  }
+}
