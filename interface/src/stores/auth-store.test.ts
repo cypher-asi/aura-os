@@ -316,6 +316,27 @@ describe("auth-store", () => {
       warn.mockRestore();
     });
 
+    it("clears the user even when local storage teardown throws", async () => {
+      useAuthStore.setState({ user: expectedUser(mockSession) });
+      mockApi.logout.mockResolvedValue(undefined);
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      // Simulate web localStorage blocked / quota-exhausted: arming the
+      // force-logged-out sentinel throws. Logout must still clear the
+      // in-memory session so the UI flips to logged-out.
+      const setItemSpy = vi
+        .spyOn(window.localStorage, "setItem")
+        .mockImplementation(() => {
+          throw new DOMException("quota", "QuotaExceededError");
+        });
+
+      await expect(useAuthStore.getState().logout()).resolves.toBeUndefined();
+
+      expect(useAuthStore.getState().user).toBeNull();
+      expect(useAuthStore.getState().hasResolvedInitialSession).toBe(true);
+      setItemSpy.mockRestore();
+      warn.mockRestore();
+    });
+
     it("arms the force-logged-out sentinel so stale boot literals cannot revive the session", async () => {
       useAuthStore.setState({ user: expectedUser(mockSession) });
       mockApi.logout.mockResolvedValue(undefined);

@@ -379,7 +379,17 @@ export async function clearStoredAuth(): Promise<void> {
  */
 export async function endLocalSession(): Promise<void> {
   await clearStoredAuth();
-  getLocalStorage()?.setItem(FORCE_LOGGED_OUT_KEY, "1");
+  // Arm the sentinel best-effort: `setItem` can throw on web when the
+  // localStorage quota is exhausted or storage is blocked/partitioned. The
+  // in-memory session is already cleared by `clearStoredAuth()` above, so a
+  // failure here must not abort logout — the worst case is that a desktop
+  // reload with stale baked init-script literals could revive the session,
+  // which does not apply to web where there is no init script.
+  try {
+    getLocalStorage()?.setItem(FORCE_LOGGED_OUT_KEY, "1");
+  } catch {
+    // no-op; logout must still succeed without the sentinel
+  }
 }
 
 /**

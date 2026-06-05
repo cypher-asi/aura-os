@@ -16,13 +16,21 @@ import { useAuthStore } from "./auth-store";
  *
  * All logout buttons should funnel through this hook so the post-logout
  * destination stays consistent.
+ *
+ * The navigate runs in a `finally` so the user is always moved off the
+ * (now inaccessible) authed route even if `logout()` rejects partway
+ * through its best-effort local teardown — otherwise a thrown storage
+ * error on web would leave them stuck on the authed surface.
  */
 export function useLogout(): () => Promise<void> {
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
 
   return useCallback(async () => {
-    await logout();
-    navigate("/", { replace: true });
+    try {
+      await logout();
+    } finally {
+      navigate("/", { replace: true });
+    }
   }, [logout, navigate]);
 }

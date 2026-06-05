@@ -258,8 +258,25 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         console.warn("authApi.logout() failed; clearing local session anyway", err);
       }
     }
-    await endLocalSession();
-    disconnectEventSocket();
+    // Local teardown is strictly best-effort: NOTHING here may throw past
+    // this point, or the final `set({ user: null })` below would be skipped
+    // and the user would stay looking logged in. `endLocalSession()` writes
+    // to localStorage (the force-logged-out sentinel), which can throw on
+    // web when storage is full or blocked/partitioned — that exact throw is
+    // what made "Logout" appear to do nothing in the browser while working
+    // on the desktop webview, where storage is reliable.
+    try {
+      await endLocalSession();
+    } catch (err) {
+      if (typeof console !== "undefined") {
+        console.warn("endLocalSession() failed during logout; continuing", err);
+      }
+    }
+    try {
+      disconnectEventSocket();
+    } catch {
+      // best-effort; a socket teardown error must not block logout
+    }
     // Drop any per-user caches that hang off the previous session so a
     // different user logging into the same browser does not see stale data.
     try {
@@ -271,21 +288,29 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     try {
       const { resetProfileStore } = await import("./profile-store");
       resetProfileStore();
-    } catch {}
+    } catch {
+      // best-effort; store reset must not block logout
+    }
     try {
       const { resetFeedStore } = await import("./feed-store");
       resetFeedStore();
-    } catch {}
+    } catch {
+      // best-effort; store reset must not block logout
+    }
     try {
       const { useBillingStore } = await import("./billing-store");
       useBillingStore.getState().reset();
-    } catch {}
+    } catch {
+      // best-effort; store reset must not block logout
+    }
     // Close any open modal (e.g. the settings panel the user clicked Logout
     // from) so it doesn't linger over the public page after the redirect.
     try {
       const { useUIModalStore } = await import("./ui-modal-store");
       useUIModalStore.getState().reset();
-    } catch {}
+    } catch {
+      // best-effort; modal reset must not block logout
+    }
     // Setting `hasResolvedInitialSession: true` flips the App.tsx gate so
     // `showShell` immediately follows the live (`user === null`) state
     // instead of the sticky `initiallyLoggedIn` boot snapshot. React Router
