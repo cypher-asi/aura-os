@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Plate } from "../../../components/Plate";
 import { DesktopChatInputBar } from "../../../features/chat-ui/ChatInputBar";
 
 /**
@@ -86,17 +87,19 @@ export function MockChatInputCard(): ReactNode {
   }, []);
 
   return (
-    <div className="personalAgentChatMock">
-      <DesktopChatInputBar
-        input={text}
-        onInputChange={() => {}}
-        onSend={() => {}}
-        onStop={() => {}}
-        streamKey="marketing-personal-agent"
-        machineType="local"
-        agentName="AURA"
-        isStatic
-      />
-    </div>
+    <Plate radius="999px" className="personalAgentChatMock">
+      <div className="personalAgentChatMockContent">
+        <DesktopChatInputBar
+          input={text}
+          onInputChange={() => {}}
+          onSend={() => {}}
+          onStop={() => {}}
+          streamKey="marketing-personal-agent"
+          machineType="local"
+          agentName="AURA"
+          isStatic
+        />
+      </div>
+    </Plate>
   );
 }

@@ -143,17 +143,10 @@
  * pointer interaction so nothing in the bar is clickable on the
  * marketing surface, and cap its width so the pill reads centered in
  * the wide cell. The bar publishes its own internal layout/tokens.
- */
-/*
- * Three concentric rings built from nested elements instead of
- * `mask-composite` pseudos. Each gradient ring is a real 1px transparent
- * border filled via the `border-box` gradient technique, and the black
- * ring is a parent's solid fill revealed through 2px of padding. Real
- * borders are anti-aliased crisply by the browser on rounded corners,
- * which the masked-ring approach was not. Layered outside-in:
- *   outer gradient ring (dark TL -> light BR)
- *     -> black ring
- *       -> inner gradient ring (light TL -> dark BR) + radial surface
+ *
+ * The pill rim + surface come from the shared `<Plate />` panel (pill
+ * radius); this class only sizes/positions it, and the content wrapper
+ * supplies the chat bar's inset.
  */
 .personalAgentChatMock {
   position: relative;
@@ -161,44 +154,9 @@
   max-width: 884px;
   pointer-events: none;
   user-select: none;
-  border-radius: 999px;
-  /* Outer gradient ring: 1px transparent border showing the border-box
-     gradient; the child covers the center so only the border reads. */
-  border: 1px solid transparent;
-  background: linear-gradient(
-      135deg,
-      rgba(12, 13, 16, 0.65) 0%,
-      rgba(90, 94, 102, 0.65) 100%
-    )
-    border-box;
 }
 
-/* Black ring: solid fill revealed as a 2px band around its child. */
-.personalAgentChatMockBlack {
-  border-radius: 999px;
-  background: #000;
-  padding: 2px;
-}
-
-/* Inner gradient ring + the plate's radial surface, then the content
-   padding for the chat bar. */
-.personalAgentChatMockInner {
-  border-radius: 999px;
-  border: 1px solid transparent;
-  background:
-    radial-gradient(
-        ellipse 90% 120% at 50% 40%,
-        #242424 0%,
-        #181818 55%,
-        #0d0d0d 100%
-      )
-      padding-box,
-    linear-gradient(
-        135deg,
-        rgba(90, 94, 102, 0.65) 0%,
-        rgba(12, 13, 16, 0.65) 100%
-      )
-      border-box;
+.personalAgentChatMockContent {
   padding: 61px 39px;
 }
 
@@ -257,23 +215,20 @@
 /* ----- Quadrant 3: service device ------------------------------ */
 
 /*
- * Recreation of the reference sampler/composer device. Outer body is a
- * dark charcoal slab with a faint left-edge highlight seam; it stacks
- * an inset glossy screen, a label strip, and a dot-matrix grille.
+ * Recreation of the reference sampler/composer device. The outer body is
+ * the shared three-ringed `<Plate />` panel (same rim treatment as the
+ * chat capsule above) — this class only sizes it. The content wrapper
+ * stacks an inset glossy screen, a label strip, and a dot-matrix grille.
  */
 .personalAgentDevice {
-  position: relative;
-  display: flex;
-  flex-direction: column;
   width: 100%;
   max-width: 380px;
+}
+
+.personalAgentDeviceContent {
+  display: flex;
+  flex-direction: column;
   padding: 14px;
-  border-radius: 22px;
-  background: linear-gradient(150deg, #1c1c1c 0%, #121212 60%, #0a0a0a 100%);
-  box-shadow:
-    inset 1px 0 0 rgba(255, 255, 255, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 22px 50px rgba(0, 0, 0, 0.55);
 }
 
 /* Inset screen: recessed glossy black panel. */
