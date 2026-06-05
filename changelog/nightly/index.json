@@ -2,19 +2,19 @@
   {
     "date": "2026-06-05",
     "channel": "nightly",
-    "version": "0.1.0-nightly.620.1",
-    "title": "A new /code marketing page, Telegram fixes, and faster desktop CI",
-    "intro": "Today's nightly is anchored by a substantial rebuild of the marketing site's /code and /agents first screens around a shared layout and a mock Projects desktop, alongside meaningful fixes to Telegram-linked agents and a large overhaul of the desktop release pipeline.",
-    "entryCount": 5,
+    "version": "0.1.0-nightly.625.1",
+    "title": "Marketing first-screen rebuild, Telegram fixes, and a faster nightly release pipeline",
+    "intro": "A heavy day on two fronts: the marketing site got a new shared first-screen layout — a mock Projects desktop on /code and a redesigned orb stage on /agents — while the backend tightened Telegram channel handling (including an IDOR fix) and the desktop release pipeline got materially faster and more resilient on hosted runners.",
+    "entryCount": 6,
     "highlights": [
-      "New mock Projects desktop on the /code marketing page",
-      "Telegram-linked agents work from the desktop app and no longer leak across users",
-      "Purple accent text is finally readable in dark mode",
-      "Desktop release CI is faster and survives flaky Node setups"
+      "New /code mock desktop and shared first-screen layout with /agents",
+      "Telegram channel linking fixed on desktop, IDOR closed",
+      "Purple accent text now legible across the app",
+      "Nightly desktop release path cached, retried, and meaningfully faster"
     ],
-    "rawCommitCount": 19,
-    "generatedAt": "2026-06-05T17:02:25.097Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.620.1",
+    "rawCommitCount": 20,
+    "generatedAt": "2026-06-05T19:19:46.424Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.625.1",
     "path": "history/2026-06-05.json"
   },
   {
