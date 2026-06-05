@@ -97,7 +97,7 @@ jobs:
   analyze-swift:
     name: Analyze Swift
     needs: detect-mobile
-    if: needs.detect-mobile.outputs.ios == 'true'
+    if: needs.detect-mobile.outputs.ios == 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v5

@@ -3,7 +3,6 @@ name: CodeQL Rust
 on:
   pull_request:
     paths:
-      - .github/workflows/codeql-rust.yml
       - Cargo.lock
       - Cargo.toml
       - rust-toolchain.toml
@@ -14,7 +13,6 @@ on:
   push:
     branches: [main]
     paths:
-      - .github/workflows/codeql-rust.yml
       - Cargo.lock
       - Cargo.toml
       - rust-toolchain.toml
