@@ -810,6 +810,9 @@ jobs:
           cp -R "$AURA_RELEASE_DIR"/bundle/*/*.app dist/ 2>/dev/null || true
           cp "$AURA_RELEASE_DIR"/bundle/*/*-setup*.exe dist/ 2>/dev/null || true
           cp "$AURA_RELEASE_DIR"/bundle/*/*.sig dist/ 2>/dev/null || true
+          if [ "${{ matrix.target }}" = "windows" ]; then
+            rm -f dist/aura-os-desktop.exe dist/aura-os-desktop.exe.sig
+          fi
           if [ "${{ matrix.target }}" = "macos" ]; then
             for bundle in dist/*.app.tar.gz; do
               [ -e "$bundle" ] || continue
