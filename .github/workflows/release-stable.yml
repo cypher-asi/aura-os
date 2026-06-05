@@ -757,10 +757,44 @@ jobs:
           generate_manifest "macos" "x86_64" "aura-os-desktop_${VERSION}_x86_64.app.tar.gz" "app"
           generate_manifest "linux" "x86_64" "aura-os-desktop_${VERSION}_x86_64.AppImage" "appimage"
 
+          mkdir -p downloads
+          cat > downloads/stable.json <<MANIFEST
+          {
+            "channel": "stable",
+            "version": "${VERSION}",
+            "release_url": "https://github.com/${{ github.repository }}/releases/tag/${TAG}",
+            "generated_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "desktop": {
+              "windows": {
+                "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/aura-os-desktop_${VERSION}_x64-setup.exe"
+              },
+              "mac": {
+                "apple-silicon": {
+                  "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/AURA_${VERSION}_aarch64.dmg"
+                },
+                "intel": {
+                  "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/AURA_${VERSION}_x64.dmg"
+                }
+              },
+              "linux": {
+                "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/aura-os-desktop_${VERSION}_x86_64.AppImage"
+              }
+            }
+          }
+          MANIFEST
+
       - name: Validate preview manifests
         run: |
           node infra/scripts/release/desktop-manifest-validate.mjs \
             --root-dir . \
+            --channel stable \
+            --output-dir validation
+
+      - name: Validate preview download manifest
+        run: |
+          node infra/scripts/release/desktop-downloads-validate.mjs \
+            --manifest downloads/stable.json \
+            --artifacts-dir all-artifacts \
             --channel stable \
             --output-dir validation
 
@@ -775,6 +809,8 @@ jobs:
             cat validation/artifact-versions-stable.md
             echo ""
             cat validation/desktop-manifests-stable.md
+            echo ""
+            cat validation/desktop-downloads-stable.md
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload validation manifests
@@ -784,6 +820,7 @@ jobs:
           name: stable-validation-manifests
           path: |
             stable/**
+            downloads/**
             validation/**
 
   release:
