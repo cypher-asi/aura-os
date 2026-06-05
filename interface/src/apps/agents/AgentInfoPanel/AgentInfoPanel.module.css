@@ -59,8 +59,10 @@
      variant and only this themed backdrop changes between light/dark, blending
      with the surrounding sidekick panel. */
   background: var(--color-sidekick-bg);
-  /* Let pointer events drive the tilt without scrolling on touch. */
-  touch-action: none;
+  /* Allow vertical scroll gestures to pass through to the panel scroller so the
+     sidekick still scrolls when the card overflows; horizontal/pointer gestures
+     remain available to drive the tilt and click-to-flip. */
+  touch-action: pan-y;
 }
 
 /* When the sidekick glass option is on, drop this themed backdrop so the
