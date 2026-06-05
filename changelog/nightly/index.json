@@ -2,19 +2,20 @@
   {
     "date": "2026-06-05",
     "channel": "nightly",
-    "version": "0.1.0-nightly.626.1",
-    "title": "/code marketing page lands, Telegram fixes, and a faster desktop release pipeline",
-    "intro": "A heavy day of marketing-site work rebuilt the /code page around a full mock of the Projects workspace and unified its first-screen layout with /agents. Alongside the visual push, Telegram-linked agents got real error surfacing and a security fix, dark-mode purple text became legible across the app, and the desktop release pipeline picked up retries, caching, and a cleaner version-stamping path.",
+    "version": "0.1.0-nightly.627.1",
+    "title": "Marketing site rebuild, Telegram hardening, and a faster notarized release pipeline",
+    "intro": "Today's nightly is dominated by a ground-up rework of the marketing first screen on /code and /agents, paired with a security and reliability pass on Telegram-linked agents and a substantial speedup and hardening of the desktop release pipeline — now with macOS notarization gated before publish.",
     "entryCount": 6,
     "highlights": [
-      "New /code mock desktop showcasing the Projects workspace",
-      "Telegram channel fixes: model pinning, real error messages, IDOR closed",
-      "Purple accent text now legible in dark mode",
-      "Nightly desktop CI is faster and far more retry-tolerant"
+      "New mock Projects desktop on /code",
+      "Shared first-screen layout across /code and /agents",
+      "Telegram agent turns no longer fail silently",
+      "Desktop channel IDOR closed",
+      "Nightly desktop builds cache binaries and validate DMG notarization"
     ],
-    "rawCommitCount": 20,
-    "generatedAt": "2026-06-05T19:30:37.731Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.626.1",
+    "rawCommitCount": 21,
+    "generatedAt": "2026-06-05T20:36:13.689Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.627.1",
     "path": "history/2026-06-05.json"
   },
   {
