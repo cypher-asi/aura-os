@@ -87,6 +87,9 @@
    family as the chat capsule and service device. */
 .personalAgentQuadrantSkills {
   background: linear-gradient(135deg, #242424 0%, #181818 55%, #0d0d0d 100%);
+  /* Mirror the wide cell's top radius on the bottom-left corner so the
+     grid reads as one rounded container. */
+  border-radius: 0 0 0 110px;
 }
 
 /* "Connected to everything" cell: reuse the wide top panel's diagonal
@@ -94,6 +97,8 @@
    hardware family. */
 .personalAgentQuadrantServices {
   background: linear-gradient(135deg, #242424 0%, #181818 55%, #0d0d0d 100%);
+  /* Rounded bottom-right corner mirroring the wide cell's top radius. */
+  border-radius: 0 0 110px 0;
 }
 
 /*
