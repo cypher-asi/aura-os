@@ -59,19 +59,20 @@ export function SkillSeaCard(): ReactNode {
               )}
               <div className="personalAgentSkillSection">
                 {group.map((skill) => (
-                  <button
-                    key={skill.id}
-                    type="button"
-                    tabIndex={-1}
-                    className="personalAgentSkillBtn"
-                    data-lit={skill.lit ? "true" : undefined}
-                  >
-                    {skill.lit && <span className="personalAgentSkillLed" />}
-                    <SkillIcon name={skill.id} size={16} />
-                    <span className="personalAgentSkillBtnLabel">
-                      {skill.label}
-                    </span>
-                  </button>
+                  <div key={skill.id} className="personalAgentSkillSocket">
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      className="personalAgentSkillBtn"
+                      data-lit={skill.lit ? "true" : undefined}
+                    >
+                      {skill.lit && <span className="personalAgentSkillLed" />}
+                      <SkillIcon name={skill.id} size={16} />
+                      <span className="personalAgentSkillBtnLabel">
+                        {skill.label}
+                      </span>
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
