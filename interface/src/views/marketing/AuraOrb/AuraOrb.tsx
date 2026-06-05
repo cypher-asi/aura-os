@@ -83,11 +83,6 @@ export function AuraOrb({ className }: AuraOrbProps): ReactNode {
     const resolutionLoc = gl.getUniformLocation(program, "u_resolution");
     const timeLoc = gl.getUniformLocation(program, "u_time");
 
-    const reduceMotion =
-      typeof window !== "undefined" &&
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
     let width = 0;
     let height = 0;
     const resize = () => {
@@ -103,12 +98,9 @@ export function AuraOrb({ className }: AuraOrbProps): ReactNode {
     };
     resize();
 
-    const observer = new ResizeObserver(() => {
-      resize();
-      // Repaint immediately so a resize while motion is reduced (no RAF
-      // loop) does not leave a stale / stretched frame.
-      if (reduceMotion) draw(0);
-    });
+    // The RAF loop repaints every frame, so a resize is picked up on the
+    // next tick; no explicit redraw needed here.
+    const observer = new ResizeObserver(resize);
     observer.observe(canvas);
 
     const start = performance.now();
@@ -127,12 +119,11 @@ export function AuraOrb({ className }: AuraOrbProps): ReactNode {
       rafId = requestAnimationFrame(renderLoop);
     };
 
-    if (reduceMotion) {
-      // Static single frame at a representative point in the loop.
-      draw(2.0);
-    } else {
-      rafId = requestAnimationFrame(renderLoop);
-    }
+    // Always animate: the orb is a slow, ambient gradient loop that
+    // replaces an `autoPlay loop` <video>, which never honored
+    // `prefers-reduced-motion`, so we match that behavior rather than
+    // freezing to a single static frame.
+    rafId = requestAnimationFrame(renderLoop);
 
     return () => {
       if (rafId !== null) cancelAnimationFrame(rafId);
