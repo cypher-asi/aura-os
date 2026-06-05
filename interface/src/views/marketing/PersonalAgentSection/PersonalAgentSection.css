@@ -54,11 +54,13 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 1px;
-  /* Outer frame runs 25% wider than the section column; the negative
-     side margin keeps it centered so it bleeds symmetrically past the
-     inner column on both edges. */
-  width: 125%;
-  margin: 0 -12.5%;
+  /* Full-bleed left to right: span the entire viewport width edge to
+     edge, regardless of the section's horizontal padding or the capped
+     inner column. `50%` resolves to half the inner column width, so
+     `50% - 50vw` pulls each side out to the viewport edge while keeping
+     the grid centered. */
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
   background: transparent;
   border: none;
   border-radius: 0;
@@ -78,8 +80,7 @@
   /* Diagonal gradient using the chat capsule plate's surface greys so
      the cell behind the shell reads from the same palette. */
   background: linear-gradient(135deg, #242424 0%, #181818 55%, #0d0d0d 100%);
-  /* Rounded top corners with square bottom corners. */
-  border-radius: 110px 110px 0 0;
+  border-radius: 0;
 }
 
 /* "Intelligent in all domains" cell (bottom-left): the diagonal is
@@ -87,9 +88,7 @@
    (top-right) and fades to dark at the outer bottom-left corner. */
 .personalAgentQuadrantSkills {
   background: linear-gradient(225deg, #242424 0%, #181818 55%, #0d0d0d 100%);
-  /* Mirror the wide cell's top radius on the bottom-left corner so the
-     grid reads as one rounded container. */
-  border-radius: 0 0 0 110px;
+  border-radius: 0;
 }
 
 /* "Connected to everything" cell (bottom-right): the diagonal runs from
@@ -97,13 +96,11 @@
    bottom-right, mirroring the skills cell across the vertical center. */
 .personalAgentQuadrantServices {
   background: linear-gradient(135deg, #242424 0%, #181818 55%, #0d0d0d 100%);
-  /* Rounded bottom-right corner mirroring the wide cell's top radius. */
-  border-radius: 0 0 110px 0;
+  border-radius: 0;
 }
 
-/* Both bottom cells now have a rounded outer corner, so give the content
-   extra bottom room to clear the curve and center the copy so it reads
-   balanced within the symmetric corners. */
+/* Give the two bottom cells extra bottom room and center their copy so
+   the pair reads balanced beneath their mini-UIs. */
 .personalAgentQuadrantSkills,
 .personalAgentQuadrantServices {
   padding-bottom: 80px;
