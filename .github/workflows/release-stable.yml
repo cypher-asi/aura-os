@@ -8,8 +8,14 @@ on:
       version:
         description: "Version to release (e.g. 1.0.0)"
         required: true
+      publish_live:
+        description: "Publish the GitHub stable release and gh-pages manifests"
+        required: true
+        default: false
+        type: boolean
 
 permissions:
+  actions: read
   contents: write
 
 env:
@@ -17,7 +23,62 @@ env:
   AURA_UPDATE_BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
 
 jobs:
+  release-preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: ./.github/actions/setup-rust-toolchain
+
+      - name: Install Node.js
+        uses: ./.github/actions/setup-node
+
+      - name: Run release preflight
+        run: node scripts/ci/verify-release-preflight.mjs
+
+  build-interface:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Node.js
+        uses: ./.github/actions/setup-node
+        with:
+          cache: npm
+          cache-dependency-path: interface/package-lock.json
+
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build interface
+        working-directory: interface
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+          APP_COMMIT: ${{ github.sha }}
+          APP_CHANNEL: stable
+        run: |
+          npm ci
+          npm run build
+          node ../infra/scripts/release/desktop-frontend-assets-validate.mjs --dist dist
+
+      - name: Upload interface dist
+        uses: actions/upload-artifact@v5
+        with:
+          name: interface-dist-stable
+          path: interface/dist
+          compression-level: 0
+
   build-sidecar:
+    env:
+      CARGO_TARGET_DIR: ../.aura-shared-target
     strategy:
       fail-fast: false
       matrix:
@@ -35,7 +96,7 @@ jobs:
             target: windows
             arch: x86_64
 
-    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
+    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os == 'macos-latest' && 'macos-15-xlarge' || matrix.os }}
 
     steps:
       - uses: actions/checkout@v5
@@ -46,23 +107,44 @@ jobs:
           repository-owner: ${{ github.repository_owner }}
           include-harness: "true"
 
+      - name: Restore bundled sidecar binary cache
+        id: sidecar-binary-cache
+        uses: actions/cache@v4
+        with:
+          path: apps/aura-os-desktop/resources/sidecar
+          key: desktop-sidecar-bin-v1-${{ matrix.target }}-${{ matrix.arch }}-${{ hashFiles('aura-harness/Cargo.lock', 'aura-harness/Cargo.toml', 'aura-harness/crates/**/Cargo.toml', 'aura-harness/crates/**/*.rs') }}
+
+      - name: Validate cached sidecar binary
+        if: steps.sidecar-binary-cache.outputs.cache-hit == 'true'
+        shell: bash
+        run: |
+          binary="apps/aura-os-desktop/resources/sidecar/aura-node"
+          if [ "${{ matrix.target }}" = "windows" ]; then
+            binary="${binary}.exe"
+          fi
+          test -s "$binary"
+
       - name: Install Rust toolchain
+        if: steps.sidecar-binary-cache.outputs.cache-hit != 'true'
         uses: ./.github/actions/setup-rust-toolchain
 
       - name: Restore sidecar Rust cache
+        if: steps.sidecar-binary-cache.outputs.cache-hit != 'true'
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: desktop-sidecar-v2-${{ runner.os }}-${{ runner.arch }}
+          shared-key: desktop-sidecar-v4-${{ runner.os }}-${{ runner.arch }}
           workspaces: |
-            ../aura-harness -> target
+            ../aura-harness -> ../.aura-shared-target
+          cache-on-failure: true
 
       - name: Set up sccache
+        if: steps.sidecar-binary-cache.outputs.cache-hit != 'true'
         id: sccache-sidecar
         uses: mozilla-actions/sccache-action@v0.0.9
         continue-on-error: true
 
       - name: Configure sccache backend
-        if: steps.sccache-sidecar.outcome == 'success'
+        if: steps.sidecar-binary-cache.outputs.cache-hit != 'true' && steps.sccache-sidecar.outcome == 'success'
         shell: bash
         env:
           DEPOT_CACHE_TOKEN: ${{ secrets.DEPOT_CACHE_TOKEN }}
@@ -76,16 +158,17 @@ jobs:
           fi
 
       - name: Install Linux runner dependencies
-        if: matrix.os == 'ubuntu-latest'
+        if: steps.sidecar-binary-cache.outputs.cache-hit != 'true' && matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential clang pkg-config libatomic1 libssl-dev libdbus-1-dev libpipewire-0.3-dev
 
       - name: Install Node.js
+        if: steps.sidecar-binary-cache.outputs.cache-hit != 'true'
         uses: ./.github/actions/setup-node
 
       - name: Verify runner architecture
-        if: matrix.target == 'linux'
+        if: steps.sidecar-binary-cache.outputs.cache-hit != 'true' && matrix.target == 'linux'
         shell: bash
         run: |
           actual_arch="$(uname -m)"
@@ -96,21 +179,18 @@ jobs:
           fi
 
       - name: Check desktop runtime parity
+        if: steps.sidecar-binary-cache.outputs.cache-hit != 'true'
         run: node scripts/ci/check-runtime.mjs desktop --require-harness
 
       - name: Validate desktop auto-update sidecar contract
+        if: steps.sidecar-binary-cache.outputs.cache-hit != 'true'
         run: |
           node --test infra/scripts/release/prepare-desktop-sidecar.test.mjs
           node infra/scripts/release/prepare-desktop-sidecar.mjs --check
 
       - name: Build bundled aura-node sidecar
+        if: steps.sidecar-binary-cache.outputs.cache-hit != 'true'
         run: node infra/scripts/release/prepare-desktop-sidecar.mjs
-
-      - name: Show sccache stats
-        if: always() && steps.sccache-sidecar.outcome == 'success'
-        shell: bash
-        run: |
-          "${SCCACHE_PATH}" --show-stats || sccache --show-stats || true
 
       - name: Archive bundled sidecar
         shell: bash
@@ -124,20 +204,28 @@ jobs:
           path: desktop-sidecar.tar
           compression-level: 0
 
-  build-app:
+  package:
+    needs: release-preflight
     env:
       CARGO_TARGET_DIR: ../.aura-shared-target
       AURA_RELEASE_DIR: ../.aura-shared-target/release
+      MACOS_DEVELOPER_ID_P12_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_P12_BASE64 }}
+      MACOS_DEVELOPER_ID_P12_PASSWORD: ${{ secrets.MACOS_DEVELOPER_ID_P12_PASSWORD }}
+      MACOS_DEVELOPER_TEAM_ID: ${{ secrets.MACOS_DEVELOPER_TEAM_ID }}
+      IOS_APP_STORE_CONNECT_KEY_ID: ${{ secrets.IOS_APP_STORE_CONNECT_KEY_ID }}
+      IOS_APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.IOS_APP_STORE_CONNECT_ISSUER_ID }}
+      IOS_APP_STORE_CONNECT_KEY_BASE64: ${{ secrets.IOS_APP_STORE_CONNECT_KEY_BASE64 }}
       AURA_NETWORK_URL: ${{ vars.AURA_NETWORK_URL }}
       AURA_STORAGE_URL: ${{ vars.AURA_STORAGE_URL }}
       AURA_INTEGRATIONS_URL: ${{ vars.AURA_INTEGRATIONS_URL }}
       AURA_ROUTER_URL: ${{ vars.AURA_ROUTER_URL }}
       Z_BILLING_URL: ${{ vars.Z_BILLING_URL }}
-      Z_BILLING_API_KEY: ${{ secrets.Z_BILLING_API_KEY }}
       ORBIT_BASE_URL: ${{ vars.ORBIT_BASE_URL }}
       SWARM_BASE_URL: ${{ vars.SWARM_BASE_URL }}
       REQUIRE_ZERO_PRO: ${{ vars.REQUIRE_ZERO_PRO }}
       AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN: ${{ vars.AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN }}
+      VITE_MIXPANEL_TOKEN: ${{ vars.VITE_MIXPANEL_TOKEN }}
+      Z_BILLING_API_KEY: ${{ secrets.Z_BILLING_API_KEY }}
     strategy:
       fail-fast: false
       matrix:
@@ -155,7 +243,7 @@ jobs:
             target: windows
             arch: x86_64
 
-    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
+    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os == 'macos-latest' && 'macos-15-xlarge' || matrix.os }}
 
     steps:
       - uses: actions/checkout@v5
@@ -166,17 +254,18 @@ jobs:
       - name: Restore desktop Rust cache
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: desktop-app-v2-${{ runner.os }}-${{ runner.arch }}
+          shared-key: desktop-app-v3-${{ runner.os }}-${{ runner.arch }}
           workspaces: |
-            . -> target
+            . -> ../.aura-shared-target
+          cache-on-failure: true
 
       - name: Set up sccache
-        id: sccache-app
+        id: sccache-package
         uses: mozilla-actions/sccache-action@v0.0.9
         continue-on-error: true
 
       - name: Configure sccache backend
-        if: steps.sccache-app.outcome == 'success'
+        if: steps.sccache-package.outcome == 'success'
         shell: bash
         env:
           DEPOT_CACHE_TOKEN: ${{ secrets.DEPOT_CACHE_TOKEN }}
@@ -188,174 +277,6 @@ jobs:
           else
             echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
           fi
-
-      - name: Install Linux dependencies
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential clang pkg-config libatomic1 libssl-dev libdbus-1-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev libpipewire-0.3-dev libgbm-dev libxdo-dev
-
-      - name: Install Node.js
-        uses: ./.github/actions/setup-node
-        with:
-          cache: npm
-          cache-dependency-path: interface/package-lock.json
-
-      - name: Verify runner architecture
-        if: matrix.target == 'linux'
-        shell: bash
-        run: |
-          actual_arch="$(uname -m)"
-          expected_arch="${{ matrix.arch }}"
-          if [ "$actual_arch" != "$expected_arch" ]; then
-            echo "Expected Linux runner architecture $expected_arch but got $actual_arch" >&2
-            exit 1
-          fi
-
-      - name: Check desktop runtime parity
-        run: node scripts/ci/check-runtime.mjs desktop
-
-      - name: Determine version
-        id: version
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Patch Cargo.toml version
-        shell: bash
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          sed -i.bak "s/^version = \".*\"/version = \"${VERSION}\"/" apps/aura-os-desktop/Cargo.toml
-          rm -f apps/aura-os-desktop/Cargo.toml.bak
-
-      - name: Build interface
-        working-directory: interface
-        env:
-          APP_VERSION: ${{ steps.version.outputs.version }}
-          APP_COMMIT: ${{ github.sha }}
-          APP_CHANNEL: stable
-          # Cloud control-plane origin baked into the desktop bundle. The
-          # desktop talks to its bundled local server for everything except
-          # endpoints that must hit the single prod authority (Telegram channel
-          # link/list/disconnect), which `resolveControlPlaneUrl` routes here.
-          VITE_NATIVE_DEFAULT_HOST: ${{ vars.VITE_DESKTOP_CONTROL_PLANE_HOST || 'https://api.aura.ai' }}
-        run: |
-          npm ci
-          npm run build
-          node ../infra/scripts/release/desktop-frontend-assets-validate.mjs --dist dist
-
-      - name: Build release binary
-        env:
-          AURA_DESKTOP_USE_PREBUILT_FRONTEND: "1"
-          AURA_UPDATE_BASE_URL: ${{ env.AURA_UPDATE_BASE_URL }}
-          UPDATER_PUBLIC_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PUBLIC_KEY }}
-          AURA_CARGO_TIMINGS: ${{ (matrix.target == 'windows' || (matrix.target == 'macos' && matrix.arch == 'x86_64')) && '1' || '' }}
-        shell: bash
-        # `--no-default-features --features stable-channel` is required: the
-        # default features on aura-os-desktop are `dev-channel`, so plain
-        # `cargo build` would produce a Dev binary (window title "AURA Dev",
-        # `aura-dev` data dir, dev ports, in-app updater disabled). The
-        # packaged installer ships the binary built here verbatim via the
-        # `binaries-dir` injection in the package job.
-        #
-        # The flag alone is not sufficient: every library crate must also
-        # depend on `aura-os-core` with `default-features = false`, and
-        # `aura-os-core` itself must have no default channel. Otherwise
-        # Cargo feature unification re-activates `dev-channel` through a
-        # transitive dep and produces a Dev-in-disguise stable binary.
-        # `scripts/ci/verify-desktop.mjs` invokes the just-built binary
-        # with `--print-channel` and fails the lane if it doesn't report
-        # `channel=Stable`, so a regression here turns the release red
-        # instead of shipping silently.
-        run: |
-          args=(build --release --no-default-features --features stable-channel --package aura-os-desktop)
-          if [ -n "$AURA_CARGO_TIMINGS" ]; then
-            args+=(--timings)
-          fi
-          cargo "${args[@]}"
-
-      - name: Show sccache stats
-        if: always() && steps.sccache-app.outcome == 'success'
-        shell: bash
-        run: |
-          "${SCCACHE_PATH}" --show-stats || sccache --show-stats || true
-
-      - name: Stage Cargo timings
-        if: always() && (matrix.target == 'windows' || (matrix.target == 'macos' && matrix.arch == 'x86_64'))
-        shell: bash
-        run: |
-          rm -rf cargo-timings-upload
-          if [ -d ../.aura-shared-target/cargo-timings ]; then
-            mkdir -p cargo-timings-upload
-            cp -R ../.aura-shared-target/cargo-timings/. cargo-timings-upload/
-          fi
-
-      - name: Upload Cargo timings
-        if: always() && (matrix.target == 'windows' || (matrix.target == 'macos' && matrix.arch == 'x86_64'))
-        uses: actions/upload-artifact@v5
-        with:
-          name: cargo-timings-stable-build-app-${{ matrix.target }}-${{ matrix.arch }}
-          path: cargo-timings-upload
-          if-no-files-found: warn
-
-      - name: Archive desktop build inputs
-        shell: bash
-        run: |
-          mkdir -p build-inputs/prebuilt-binaries build-inputs/interface
-          binary_name="aura-os-desktop"
-          if [ "${{ matrix.target }}" = "windows" ]; then
-            binary_name="${binary_name}.exe"
-          fi
-          cp "$AURA_RELEASE_DIR/${binary_name}" "build-inputs/prebuilt-binaries/${binary_name}"
-          cp -R interface/dist build-inputs/interface/dist
-          tar -cf desktop-build-inputs.tar -C build-inputs .
-
-      - name: Upload desktop build inputs
-        uses: actions/upload-artifact@v5
-        with:
-          name: build-inputs-${{ matrix.target }}-${{ matrix.arch }}
-          path: desktop-build-inputs.tar
-          compression-level: 0
-
-  package:
-    needs: [build-sidecar, build-app]
-    env:
-      CARGO_TARGET_DIR: ../.aura-shared-target
-      AURA_RELEASE_DIR: ../.aura-shared-target/release
-      MACOS_DEVELOPER_ID_P12_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_P12_BASE64 }}
-      MACOS_DEVELOPER_ID_P12_PASSWORD: ${{ secrets.MACOS_DEVELOPER_ID_P12_PASSWORD }}
-      MACOS_DEVELOPER_TEAM_ID: ${{ secrets.MACOS_DEVELOPER_TEAM_ID }}
-      IOS_APP_STORE_CONNECT_KEY_ID: ${{ secrets.IOS_APP_STORE_CONNECT_KEY_ID }}
-      IOS_APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.IOS_APP_STORE_CONNECT_ISSUER_ID }}
-      IOS_APP_STORE_CONNECT_KEY_BASE64: ${{ secrets.IOS_APP_STORE_CONNECT_KEY_BASE64 }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: linux
-            arch: x86_64
-          - os: macos-latest
-            target: macos
-            arch: aarch64
-          - os: macos-15-intel
-            target: macos
-            arch: x86_64
-          - os: windows-latest
-            target: windows
-            arch: x86_64
-
-    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Install Rust toolchain
-        uses: ./.github/actions/setup-rust-toolchain
 
       - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-latest'
@@ -403,59 +324,12 @@ jobs:
           crate: cargo-packager
           version: 0.11.8
 
-      - name: Download sidecar artifact
-        uses: actions/download-artifact@v5
-        with:
-          name: sidecar-${{ matrix.target }}-${{ matrix.arch }}
-          path: downloaded-sidecar
-
-      - name: Download desktop build inputs
-        uses: actions/download-artifact@v5
-        with:
-          name: build-inputs-${{ matrix.target }}-${{ matrix.arch }}
-          path: downloaded-build-inputs
-
-      - name: Restore packaged resources and prebuilt binary
+      - name: Prepare packager config
         shell: bash
         run: |
-          rm -rf apps/aura-os-desktop/resources/sidecar interface/dist prebuilt-binaries
-          mkdir -p apps/aura-os-desktop/resources
-          tar -xf downloaded-sidecar/desktop-sidecar.tar -C apps/aura-os-desktop/resources
-          tar -xf downloaded-build-inputs/desktop-build-inputs.tar
-          test -d apps/aura-os-desktop/resources/sidecar
-          test -d interface/dist
-          node infra/scripts/release/desktop-frontend-assets-validate.mjs --dist interface/dist
-          binary_name="aura-os-desktop"
-          if [ "${{ matrix.target }}" = "windows" ]; then
-            binary_name="${binary_name}.exe"
-          fi
-          test -f "prebuilt-binaries/${binary_name}"
-          if [ "${{ matrix.target }}" != "windows" ]; then
-            chmod 755 "prebuilt-binaries/${binary_name}"
-            chmod 755 apps/aura-os-desktop/resources/sidecar/aura-node
-          fi
-
-      - name: Inject prebuilt binaries dir into packager config
-        shell: bash
-        run: |
-          python3 <<'PY'
-          import re
-          from pathlib import Path
-
-          cargo_toml = Path("apps/aura-os-desktop/Cargo.toml")
-          text = cargo_toml.read_text(encoding="utf-8")
-          binaries_line = 'binaries-dir = "../../prebuilt-binaries"'
-
-          if "binaries-dir =" in text:
-              text = re.sub(r'^binaries-dir = ".*"$', binaries_line, text, flags=re.MULTILINE)
-          else:
-              marker = "[package.metadata.packager]\n"
-              if marker not in text:
-                  raise SystemExit("Missing [package.metadata.packager] section in Cargo.toml")
-              text = text.replace(marker, marker + binaries_line + "\n", 1)
-
-          cargo_toml.write_text(text, encoding="utf-8")
-          PY
+          node scripts/ci/patch-desktop-packager-config.mjs \
+            --binaries-dir "../../../.aura-shared-target/release" \
+            --strip-before-packaging
 
       - name: Disable Spotlight indexing for DMG packaging
         if: matrix.target == 'macos'
@@ -556,46 +430,66 @@ jobs:
         if: matrix.target == 'macos'
         shell: bash
         run: |
-          python3 <<'PY'
-          import os
-          import re
-          from pathlib import Path
-
-          cargo_toml = Path("apps/aura-os-desktop/Cargo.toml")
-          text = cargo_toml.read_text(encoding="utf-8")
-          escaped_identity = (
-              os.environ["MACOS_SIGNING_IDENTITY"]
-              .replace("\\", "\\\\")
-              .replace('"', '\\"')
-          )
-          identity_line = f'signing-identity = "{escaped_identity}"'
-
-          if "signing-identity =" in text:
-              text = re.sub(r'^signing-identity = ".*"$', identity_line, text, flags=re.MULTILINE)
-          else:
-              marker = "[package.metadata.packager.macos]\n"
-              if marker not in text:
-                  raise SystemExit("Missing [package.metadata.packager.macos] section in Cargo.toml")
-              text = text.replace(marker, marker + identity_line + "\n", 1)
-
-          cargo_toml.write_text(text, encoding="utf-8")
-          PY
+          node scripts/ci/patch-desktop-packager-config.mjs \
+            --macos-signing-identity-env MACOS_SIGNING_IDENTITY
 
       - name: Validate macOS packager manifest
         if: matrix.target == 'macos'
         run: cargo metadata --no-deps --manifest-path apps/aura-os-desktop/Cargo.toml > /dev/null
 
-      - name: Skip duplicate packager prebuild in CI
+      - name: Wait for platform build artifacts
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/ci/wait-gh-artifacts.mjs \
+            --artifact "interface-dist-stable" \
+            --artifact "sidecar-${{ matrix.target }}-${{ matrix.arch }}" \
+            --interval-seconds 5 \
+            --fail-job "build-interface" \
+            --fail-job "build-sidecar (${{ matrix.os }}, ${{ matrix.target }}, ${{ matrix.arch }})"
+
+      - name: Download sidecar artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: sidecar-${{ matrix.target }}-${{ matrix.arch }}
+          path: downloaded-sidecar
+
+      - name: Download interface dist
+        uses: actions/download-artifact@v5
+        with:
+          name: interface-dist-stable
+          path: interface/dist
+
+      - name: Restore packaged resources
         shell: bash
         run: |
-          python3 <<'PY'
-          from pathlib import Path
+          rm -rf apps/aura-os-desktop/resources/sidecar
+          mkdir -p apps/aura-os-desktop/resources
+          tar -xf downloaded-sidecar/desktop-sidecar.tar -C apps/aura-os-desktop/resources
+          test -d apps/aura-os-desktop/resources/sidecar
+          test -d interface/dist
+          node infra/scripts/release/desktop-frontend-assets-validate.mjs --dist interface/dist
+          if [ "${{ matrix.target }}" != "windows" ]; then
+            chmod 755 apps/aura-os-desktop/resources/sidecar/aura-node
+          fi
 
-          cargo_toml = Path("apps/aura-os-desktop/Cargo.toml")
-          lines = cargo_toml.read_text(encoding="utf-8").splitlines()
-          filtered = [line for line in lines if not line.strip().startswith("before-packaging-command = ")]
-          cargo_toml.write_text("\n".join(filtered) + "\n", encoding="utf-8")
-          PY
+      - name: Build release binary
+        env:
+          AURA_DESKTOP_USE_PREBUILT_FRONTEND: "1"
+          AURA_UPDATE_BASE_URL: ${{ env.AURA_UPDATE_BASE_URL }}
+          UPDATER_PUBLIC_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PUBLIC_KEY }}
+        shell: bash
+        run: |
+          cargo build --release --no-default-features --features stable-channel --package aura-os-desktop
+
+      - name: Verify release binary channel
+        shell: bash
+        run: |
+          node scripts/ci/verify-desktop-release-binary.mjs \
+            --release-dir "$AURA_RELEASE_DIR" \
+            --target "${{ matrix.target }}" \
+            --expected-channel Stable
 
       - name: Package installer
         env:
@@ -608,10 +502,9 @@ jobs:
           package_once() {
             # cargo-packager 0.11.8 does not accept cargo build flags
             # (--no-default-features / --features) directly. The stable-channel
-            # binary is produced by the `build-app` job (which passes those
-            # flags to cargo build), uploaded as `desktop-build-inputs.tar`,
-            # and consumed here via the `binaries-dir = "../../prebuilt-binaries"`
-            # entry that the previous step injects into Cargo.toml. The
+            # binary is produced earlier in this package job, then consumed via
+            # the `binaries-dir = "../../../.aura-shared-target/release"` entry
+            # that the prepare-packager step injects into Cargo.toml. The
             # `before-packaging-command` line is stripped above so cargo-packager
             # does not redundantly rebuild on top of the prebuilt binary.
             cargo packager --release --packages aura-os-desktop 2>&1 | tee packager.log
@@ -627,6 +520,11 @@ jobs:
             fi
 
             if [ "${{ matrix.target }}" = "linux" ] \
+              && grep -Eq "ERROR .*: status code (429|5[0-9][0-9])" packager.log; then
+              return 0
+            fi
+
+            if [ "${{ matrix.target }}" = "windows" ] \
               && grep -Eq "ERROR .*: status code (429|5[0-9][0-9])" packager.log; then
               return 0
             fi
@@ -672,6 +570,9 @@ jobs:
           cp -R "$AURA_RELEASE_DIR"/bundle/*/*.app dist/ 2>/dev/null || true
           cp "$AURA_RELEASE_DIR"/bundle/*/*-setup*.exe dist/ 2>/dev/null || true
           cp "$AURA_RELEASE_DIR"/bundle/*/*.sig dist/ 2>/dev/null || true
+          if [ "${{ matrix.target }}" = "windows" ]; then
+            rm -f dist/aura-os-desktop.exe dist/aura-os-desktop.exe.sig
+          fi
           if [ "${{ matrix.target }}" = "macos" ]; then
             for bundle in dist/*.app.tar.gz; do
               [ -e "$bundle" ] || continue
@@ -718,14 +619,158 @@ jobs:
           mv dist/checksums.txt "dist/checksums-${{ matrix.target }}-${{ matrix.arch }}.txt"
           cat "dist/release-summary-${{ matrix.target }}-${{ matrix.arch }}.md" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Validate signed release artifacts
+        shell: bash
+        run: |
+          node infra/scripts/release/desktop-release-artifacts-validate.mjs \
+            --dist dist \
+            --channel stable \
+            --version "${{ steps.version.outputs.version }}" \
+            --target "${{ matrix.target }}" \
+            --arch "${{ matrix.arch }}"
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v5
         with:
           name: installers-${{ matrix.target }}-${{ matrix.arch }}
           path: dist/
 
+  validate-artifacts:
+    needs: package
+    if: github.event_name == 'workflow_dispatch' && !inputs.publish_live
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Install Node.js
+        uses: ./.github/actions/setup-node
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v5
+        with:
+          pattern: installers-*
+          path: all-artifacts
+          merge-multiple: true
+
+      - name: Validate artifact versions
+        run: |
+          node infra/scripts/release/validate-release-artifact-versions.mjs \
+            --artifacts-dir all-artifacts \
+            --channel stable \
+            --version "${{ github.event.inputs.version }}" \
+            --output-dir validation
+
+      - name: Dry-run release asset reconciliation
+        shell: bash
+        run: |
+          bash infra/scripts/release/upload-release-assets-with-retry.sh \
+            --dry-run \
+            "${{ github.repository }}" \
+            "v${{ github.event.inputs.version }}" \
+            all-artifacts
+
+      - name: Generate preview update manifests
+        shell: bash
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          TAG="v${VERSION}"
+          BASE_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}"
+
+          generate_manifest() {
+            local target=$1 arch=$2 filename=$3 format=$4
+            local sig_file="all-artifacts/${filename}.sig"
+            local signature='""'
+            if [ -f "$sig_file" ]; then
+              signature=$(jq -Rs . < "$sig_file")
+            fi
+
+            mkdir -p "stable/${target}"
+            cat > "stable/${target}/${arch}.json" <<MANIFEST
+          {
+            "version": "${VERSION}",
+            "url": "${BASE_URL}/${filename}",
+            "signature": ${signature},
+            "format": "${format}"
+          }
+          MANIFEST
+          }
+
+          generate_manifest "windows" "x86_64" "aura-os-desktop_${VERSION}_x64-setup.exe" "nsis"
+          generate_manifest "macos" "aarch64" "aura-os-desktop_${VERSION}_aarch64.app.tar.gz" "app"
+          generate_manifest "macos" "x86_64" "aura-os-desktop_${VERSION}_x86_64.app.tar.gz" "app"
+          generate_manifest "linux" "x86_64" "aura-os-desktop_${VERSION}_x86_64.AppImage" "appimage"
+
+          mkdir -p downloads
+          cat > downloads/stable.json <<MANIFEST
+          {
+            "channel": "stable",
+            "version": "${VERSION}",
+            "release_url": "https://github.com/${{ github.repository }}/releases/tag/${TAG}",
+            "generated_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "desktop": {
+              "windows": {
+                "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/aura-os-desktop_${VERSION}_x64-setup.exe"
+              },
+              "mac": {
+                "apple-silicon": {
+                  "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/AURA_${VERSION}_aarch64.dmg"
+                },
+                "intel": {
+                  "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/AURA_${VERSION}_x64.dmg"
+                }
+              },
+              "linux": {
+                "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/aura-os-desktop_${VERSION}_x86_64.AppImage"
+              }
+            }
+          }
+          MANIFEST
+
+      - name: Validate preview manifests
+        run: |
+          node infra/scripts/release/desktop-manifest-validate.mjs \
+            --root-dir . \
+            --channel stable \
+            --output-dir validation
+
+      - name: Validate preview download manifest
+        run: |
+          node infra/scripts/release/desktop-downloads-validate.mjs \
+            --manifest downloads/stable.json \
+            --artifacts-dir all-artifacts \
+            --channel stable \
+            --output-dir validation
+
+      - name: Attach validation summary
+        shell: bash
+        run: |
+          {
+            echo "## Stable Validation Mode"
+            echo ""
+            echo "- Publish skipped because this manual run used publish_live=false."
+            echo ""
+            cat validation/artifact-versions-stable.md
+            echo ""
+            cat validation/desktop-manifests-stable.md
+            echo ""
+            cat validation/desktop-downloads-stable.md
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload validation manifests
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: stable-validation-manifests
+          path: |
+            stable/**
+            downloads/**
+            validation/**
+
   release:
     needs: package
+    if: github.event_name != 'workflow_dispatch' || inputs.publish_live
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -804,6 +849,7 @@ jobs:
 
   publish-manifests:
     needs: [package, release]
+    if: github.event_name != 'workflow_dispatch' || inputs.publish_live
     runs-on: ubuntu-latest
     permissions:
       contents: write

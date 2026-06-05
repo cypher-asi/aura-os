@@ -8,13 +8,16 @@ description: |
   back to a direct download from nodejs.org. On a transient DNS / egress blip
   both lookups fail fast with `getaddrinfo ENOTFOUND` and the whole job dies on
   the very first attempt -- this is what took down the `build-sidecar` job on
-  the self-hosted Windows runner. The gate below polls both hosts with backoff
-  so a short-lived network hiccup is ridden out before setup-node runs.
+  the self-hosted Windows runner. The Windows-only gate below polls both hosts
+  with backoff so a short-lived network hiccup is ridden out before setup-node
+  runs.
 
   The gate is intentionally non-fatal: if the hosts are still unreachable after
   all attempts it emits a warning and lets setup-node run anyway, so the real
   underlying error is still surfaced in the logs (which also makes a genuine
-  runner network/egress misconfiguration obvious).
+  runner network/egress misconfiguration obvious). Linux/macOS skip it to avoid
+  adding retry latency for a runner-specific failure mode we have only seen on
+  Windows.
 
   This wraps (rather than replaces) actions/setup-node so its native npm cache
   restore and `post` cache-save step keep working unchanged.
@@ -37,6 +40,7 @@ runs:
   using: composite
   steps:
     - name: Wait for Node/GitHub registries
+      if: runner.os == 'Windows'
       shell: bash
       run: |
         set -uo pipefail

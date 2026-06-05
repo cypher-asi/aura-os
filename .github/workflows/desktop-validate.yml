@@ -104,6 +104,7 @@ jobs:
           workspaces: |
             . -> ../.aura-shared-target
             ../aura-harness -> ../.aura-shared-target
+          cache-on-failure: true
 
       - name: Set up sccache
         id: sccache
@@ -161,7 +162,17 @@ jobs:
         if: always() && steps.sccache.outcome == 'success'
         shell: bash
         run: |
+          mkdir -p ci-cache
+          "${SCCACHE_PATH}" --show-stats --stats-format=json > "ci-cache/sccache-desktop-validate-${{ matrix.target }}.json" || true
           "${SCCACHE_PATH}" --show-stats || sccache --show-stats || true
+
+      - name: Upload cache telemetry
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: ci-cache-desktop-validate-${{ matrix.target }}
+          path: ci-cache
+          if-no-files-found: ignore
 
       - name: Stage Cargo timings
         if: always() && (matrix.target == 'windows-x64' || matrix.target == 'macos-x64')

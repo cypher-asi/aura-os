@@ -8,8 +8,14 @@ set -euo pipefail
 # missing or whose remote size does not match the local file, using
 # `gh release upload --clobber`.
 
+dry_run=0
+if [[ "${1:-}" == "--dry-run" ]]; then
+  dry_run=1
+  shift
+fi
+
 if [[ $# -ne 3 ]]; then
-  echo "Usage: $0 <repo> <tag> <source-dir>" >&2
+  echo "Usage: $0 [--dry-run] <repo> <tag> <source-dir>" >&2
   exit 2
 fi
 
@@ -81,10 +87,36 @@ upload_asset_with_retry() {
   done
 }
 
-release_id="$(gh api "repos/${repo}/releases/tags/${tag}" --jq '.id' 2>/dev/null || true)"
-if [[ -z "$release_id" ]]; then
-  echo "No release found for tag ${tag}; cannot reconcile assets." >&2
-  exit 1
+if (( dry_run == 1 )); then
+  manifest="$(mktemp)"
+  trap 'rm -f "$manifest"' EXIT
+  count=0
+  while IFS= read -r -d '' file; do
+    name="$(basename "$file")"
+    printf '%s\t%s\t%s\n' "$name" "$(local_size "$file")" "$file" >> "$manifest"
+    count=$(( count + 1 ))
+  done < <(find "$source_dir" -type f -print0)
+
+  if (( count == 0 )); then
+    echo "No local files under ${source_dir}; nothing to reconcile."
+    exit 0
+  fi
+
+  duplicates="$(cut -f1 "$manifest" | sort | uniq -d || true)"
+  if [[ -n "$duplicates" ]]; then
+    echo "Refusing to reconcile: duplicate asset basenames detected under ${source_dir}:" >&2
+    while read -r name; do
+      [[ -n "$name" ]] || continue
+      printf '  %s\n' "$name" >&2
+    done <<<"$duplicates"
+    exit 2
+  fi
+
+  echo "Dry run: would reconcile ${count} asset(s) on release ${tag} in ${repo}."
+  sort "$manifest" | while IFS=$'\t' read -r name size _file; do
+    printf '  %s (%s bytes)\n' "$name" "$size"
+  done
+  exit 0
 fi
 
 declare -A local_files=()
@@ -108,6 +140,12 @@ fi
 if (( ${#local_files[@]} == 0 )); then
   echo "No local files under ${source_dir}; nothing to reconcile."
   exit 0
+fi
+
+release_id="$(gh api "repos/${repo}/releases/tags/${tag}" --jq '.id' 2>/dev/null || true)"
+if [[ -z "$release_id" ]]; then
+  echo "No release found for tag ${tag}; cannot reconcile assets." >&2
+  exit 1
 fi
 
 declare -A remote_sizes=()

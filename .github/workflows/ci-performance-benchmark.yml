@@ -1,0 +1,426 @@
+name: CI Performance Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Benchmark scope"
+        required: true
+        default: desktop-build
+        type: choice
+        options:
+          - preflight
+          - interface
+          - desktop-build
+          - sidecar
+          - full-dry-run
+      platform:
+        description: "Desktop platform to run"
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - linux
+          - macos-aarch64
+          - macos-x86_64
+          - windows
+      cache_mode:
+        description: "Cache behavior"
+        required: true
+        default: warm
+        type: choice
+        options:
+          - warm
+          - cold-key
+          - no-target-cache
+      cargo_timings:
+        description: "Collect Cargo timings"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: ci-performance-benchmark-${{ github.ref }}-${{ inputs.mode }}-${{ inputs.platform }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  AURA_UPDATE_BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+
+jobs:
+  preflight:
+    if: inputs.mode == 'preflight' || inputs.mode == 'full-dry-run'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Node.js
+        uses: ./.github/actions/setup-node
+
+      - name: Install Rust toolchain
+        uses: ./.github/actions/setup-rust-toolchain
+
+      - name: Run release preflight
+        run: node scripts/ci/perf-timer.mjs --label release-preflight --out ci-perf/steps.jsonl -- node scripts/ci/verify-release-preflight.mjs
+
+      - name: Summarize benchmark
+        if: always()
+        run: |
+          node scripts/ci/ci-perf-summary.mjs --dir ci-perf --out-dir ci-perf --title "CI Performance Benchmark: preflight"
+
+      - name: Upload benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: ci-perf-preflight
+          path: ci-perf
+
+  interface:
+    if: inputs.mode == 'interface' || inputs.mode == 'desktop-build' || inputs.mode == 'full-dry-run'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Node.js
+        uses: ./.github/actions/setup-node
+        with:
+          cache: npm
+          cache-dependency-path: interface/package-lock.json
+
+      - name: Build interface
+        working-directory: interface
+        env:
+          APP_VERSION: ci-perf.${{ github.run_number }}
+          APP_COMMIT: ${{ github.sha }}
+          APP_CHANNEL: nightly
+        run: |
+          node ../scripts/ci/perf-timer.mjs --label interface-npm-ci --out ../ci-perf/steps.jsonl -- npm ci
+          node ../scripts/ci/perf-timer.mjs --label interface-build --out ../ci-perf/steps.jsonl -- npm run build
+          node ../scripts/ci/perf-timer.mjs --label interface-assets-validate --out ../ci-perf/steps.jsonl -- node ../infra/scripts/release/desktop-frontend-assets-validate.mjs --dist dist
+
+      - name: Summarize benchmark
+        if: always()
+        run: |
+          node scripts/ci/ci-perf-summary.mjs --dir ci-perf --out-dir ci-perf --title "CI Performance Benchmark: interface"
+
+      - name: Upload interface dist
+        if: inputs.mode == 'desktop-build' || inputs.mode == 'full-dry-run'
+        uses: actions/upload-artifact@v5
+        with:
+          name: ci-perf-interface-dist
+          path: interface/dist
+          compression-level: 0
+
+      - name: Upload benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: ci-perf-interface
+          path: ci-perf
+
+  desktop-build:
+    if: inputs.mode == 'desktop-build' || inputs.mode == 'full-dry-run'
+    needs: interface
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            target: linux
+            arch: x86_64
+          - os: macos-latest
+            platform: macos-aarch64
+            target: macos
+            arch: aarch64
+          - os: macos-15-intel
+            platform: macos-x86_64
+            target: macos
+            arch: x86_64
+          - os: windows-latest
+            platform: windows
+            target: windows
+            arch: x86_64
+    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os == 'macos-latest' && 'macos-15-xlarge' || matrix.os }}
+    env:
+      CARGO_TARGET_DIR: ../.aura-shared-target
+      AURA_RELEASE_DIR: ../.aura-shared-target/release
+      AURA_NETWORK_URL: ${{ vars.AURA_NETWORK_URL }}
+      AURA_STORAGE_URL: ${{ vars.AURA_STORAGE_URL }}
+      AURA_INTEGRATIONS_URL: ${{ vars.AURA_INTEGRATIONS_URL }}
+      AURA_ROUTER_URL: ${{ vars.AURA_ROUTER_URL }}
+      Z_BILLING_URL: ${{ vars.Z_BILLING_URL }}
+      ORBIT_BASE_URL: ${{ vars.ORBIT_BASE_URL }}
+      SWARM_BASE_URL: ${{ vars.SWARM_BASE_URL }}
+      REQUIRE_ZERO_PRO: ${{ vars.REQUIRE_ZERO_PRO }}
+      AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN: ${{ vars.AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN }}
+      VITE_MIXPANEL_TOKEN: ${{ vars.VITE_MIXPANEL_TOKEN }}
+      Z_BILLING_API_KEY: ${{ secrets.Z_BILLING_API_KEY }}
+    steps:
+      - name: Skip non-selected platform
+        if: inputs.platform != 'all' && inputs.platform != matrix.platform
+        run: echo "Skipping ${{ matrix.platform }} because platform=${{ inputs.platform }}"
+
+      - uses: actions/checkout@v5
+        if: inputs.platform == 'all' || inputs.platform == matrix.platform
+
+      - name: Install Rust toolchain
+        if: inputs.platform == 'all' || inputs.platform == matrix.platform
+        uses: ./.github/actions/setup-rust-toolchain
+
+      - name: Restore desktop Rust cache
+        if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && inputs.cache_mode != 'no-target-cache'
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ inputs.cache_mode == 'cold-key' && format('ci-perf-desktop-cold-{0}-{1}-{2}', github.run_id, runner.os, runner.arch) || format('desktop-app-v3-{0}-{1}', runner.os, runner.arch) }}
+          workspaces: |
+            . -> ../.aura-shared-target
+          cache-on-failure: true
+
+      - name: Set up sccache
+        if: inputs.platform == 'all' || inputs.platform == matrix.platform
+        id: sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+        continue-on-error: true
+
+      - name: Configure sccache backend
+        if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && steps.sccache.outcome == 'success'
+        shell: bash
+        env:
+          DEPOT_CACHE_TOKEN: ${{ secrets.DEPOT_CACHE_TOKEN }}
+        run: |
+          echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+          if [ -n "$DEPOT_CACHE_TOKEN" ]; then
+            echo "SCCACHE_WEBDAV_ENDPOINT=https://cache.depot.dev" >> "$GITHUB_ENV"
+            echo "SCCACHE_WEBDAV_TOKEN=$DEPOT_CACHE_TOKEN" >> "$GITHUB_ENV"
+          else
+            echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Install Linux dependencies
+        if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang pkg-config libatomic1 libssl-dev libdbus-1-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev libpipewire-0.3-dev libgbm-dev libxdo-dev
+
+      - name: Install Node.js
+        if: inputs.platform == 'all' || inputs.platform == matrix.platform
+        uses: ./.github/actions/setup-node
+
+      - name: Download interface dist
+        if: inputs.platform == 'all' || inputs.platform == matrix.platform
+        uses: actions/download-artifact@v5
+        with:
+          name: ci-perf-interface-dist
+          path: interface/dist
+
+      - name: Patch Cargo.toml version
+        if: inputs.platform == 'all' || inputs.platform == matrix.platform
+        shell: bash
+        run: |
+          sed -i.bak 's/^version = ".*"/version = "0.1.0-ci-perf.${{ github.run_number }}.1"/' apps/aura-os-desktop/Cargo.toml
+          rm -f apps/aura-os-desktop/Cargo.toml.bak
+
+      - name: Build release binary
+        if: inputs.platform == 'all' || inputs.platform == matrix.platform
+        env:
+          AURA_DESKTOP_USE_PREBUILT_FRONTEND: "1"
+          AURA_UPDATE_BASE_URL: ${{ env.AURA_UPDATE_BASE_URL }}
+          UPDATER_PUBLIC_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PUBLIC_KEY }}
+        shell: bash
+        run: |
+          args=(build --release --no-default-features --features stable-channel --package aura-os-desktop)
+          if [ "${{ inputs.cargo_timings }}" = "true" ]; then
+            args+=(--timings)
+          fi
+          node scripts/ci/perf-timer.mjs \
+            --label "desktop-build-${{ matrix.platform }}" \
+            --out "ci-perf/steps-${{ matrix.platform }}.jsonl" \
+            -- cargo "${args[@]}"
+
+      - name: Collect sccache stats
+        if: always() && (inputs.platform == 'all' || inputs.platform == matrix.platform) && steps.sccache.outcome == 'success'
+        shell: bash
+        run: |
+          mkdir -p ci-perf
+          "${SCCACHE_PATH}" --show-stats --stats-format=json > "ci-perf/sccache-${{ matrix.platform }}.json" || true
+          "${SCCACHE_PATH}" --show-stats || true
+
+      - name: Stage Cargo timings
+        if: always() && (inputs.platform == 'all' || inputs.platform == matrix.platform)
+        shell: bash
+        run: |
+          if [ -d ../.aura-shared-target/cargo-timings ]; then
+            mkdir -p "ci-perf/cargo-timings-${{ matrix.platform }}"
+            cp -R ../.aura-shared-target/cargo-timings/. "ci-perf/cargo-timings-${{ matrix.platform }}/"
+          fi
+
+      - name: Summarize benchmark
+        if: always() && (inputs.platform == 'all' || inputs.platform == matrix.platform)
+        run: |
+          node scripts/ci/ci-perf-summary.mjs --dir ci-perf --out-dir ci-perf --title "CI Performance Benchmark: desktop-build ${{ matrix.platform }}"
+
+      - name: Upload benchmark artifacts
+        if: always() && (inputs.platform == 'all' || inputs.platform == matrix.platform)
+        uses: actions/upload-artifact@v5
+        with:
+          name: ci-perf-desktop-build-${{ matrix.platform }}
+          path: ci-perf
+
+  sidecar:
+    if: inputs.mode == 'sidecar' || inputs.mode == 'full-dry-run'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            target: linux
+            arch: x86_64
+          - os: macos-latest
+            platform: macos-aarch64
+            target: macos
+            arch: aarch64
+          - os: macos-15-intel
+            platform: macos-x86_64
+            target: macos
+            arch: x86_64
+          - os: windows-latest
+            platform: windows
+            target: windows
+            arch: x86_64
+    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os == 'macos-latest' && 'macos-15-xlarge' || matrix.os }}
+    env:
+      CARGO_TARGET_DIR: ../.aura-shared-target
+    steps:
+      - name: Skip non-selected platform
+        if: inputs.platform != 'all' && inputs.platform != matrix.platform
+        run: echo "Skipping ${{ matrix.platform }} because platform=${{ inputs.platform }}"
+
+      - uses: actions/checkout@v5
+        if: inputs.platform == 'all' || inputs.platform == matrix.platform
+
+      - name: Prepare harness sibling workspace
+        if: inputs.platform == 'all' || inputs.platform == matrix.platform
+        uses: ./.github/actions/setup-harness-sibling
+        with:
+          repository-owner: ${{ github.repository_owner }}
+          include-harness: "true"
+
+      - name: Restore bundled sidecar binary cache
+        if: inputs.platform == 'all' || inputs.platform == matrix.platform
+        id: sidecar-binary-cache
+        uses: actions/cache@v4
+        with:
+          path: apps/aura-os-desktop/resources/sidecar
+          key: ${{ inputs.cache_mode == 'cold-key' && format('desktop-sidecar-bin-cold-{0}-{1}-{2}', github.run_id, matrix.target, matrix.arch) || format('desktop-sidecar-bin-v1-{0}-{1}-{2}', matrix.target, matrix.arch, hashFiles('aura-harness/Cargo.lock', 'aura-harness/Cargo.toml', 'aura-harness/crates/**/Cargo.toml', 'aura-harness/crates/**/*.rs')) }}
+
+      - name: Validate cached sidecar binary
+        if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && steps.sidecar-binary-cache.outputs.cache-hit == 'true'
+        shell: bash
+        run: |
+          binary="apps/aura-os-desktop/resources/sidecar/aura-node"
+          if [ "${{ matrix.target }}" = "windows" ]; then
+            binary="${binary}.exe"
+          fi
+          test -s "$binary"
+
+      - name: Install Rust toolchain
+        if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && steps.sidecar-binary-cache.outputs.cache-hit != 'true'
+        uses: ./.github/actions/setup-rust-toolchain
+
+      - name: Restore sidecar Rust cache
+        if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && steps.sidecar-binary-cache.outputs.cache-hit != 'true' && inputs.cache_mode != 'no-target-cache'
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ inputs.cache_mode == 'cold-key' && format('ci-perf-sidecar-cold-{0}-{1}-{2}', github.run_id, runner.os, runner.arch) || format('desktop-sidecar-v4-{0}-{1}', runner.os, runner.arch) }}
+          workspaces: |
+            ../aura-harness -> ../.aura-shared-target
+          cache-on-failure: true
+
+      - name: Set up sccache
+        if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && steps.sidecar-binary-cache.outputs.cache-hit != 'true'
+        id: sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+        continue-on-error: true
+
+      - name: Configure sccache backend
+        if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && steps.sidecar-binary-cache.outputs.cache-hit != 'true' && steps.sccache.outcome == 'success'
+        shell: bash
+        env:
+          DEPOT_CACHE_TOKEN: ${{ secrets.DEPOT_CACHE_TOKEN }}
+        run: |
+          echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+          if [ -n "$DEPOT_CACHE_TOKEN" ]; then
+            echo "SCCACHE_WEBDAV_ENDPOINT=https://cache.depot.dev" >> "$GITHUB_ENV"
+            echo "SCCACHE_WEBDAV_TOKEN=$DEPOT_CACHE_TOKEN" >> "$GITHUB_ENV"
+          else
+            echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Install Linux runner dependencies
+        if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && steps.sidecar-binary-cache.outputs.cache-hit != 'true' && matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang pkg-config libatomic1 libssl-dev libdbus-1-dev libpipewire-0.3-dev
+
+      - name: Install Node.js
+        if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && steps.sidecar-binary-cache.outputs.cache-hit != 'true'
+        uses: ./.github/actions/setup-node
+
+      - name: Build bundled aura-node sidecar
+        if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && steps.sidecar-binary-cache.outputs.cache-hit != 'true'
+        run: |
+          node scripts/ci/perf-timer.mjs \
+            --label "sidecar-build-${{ matrix.platform }}" \
+            --out "ci-perf/steps-${{ matrix.platform }}.jsonl" \
+            -- node infra/scripts/release/prepare-desktop-sidecar.mjs
+
+      - name: Collect sccache stats
+        if: always() && (inputs.platform == 'all' || inputs.platform == matrix.platform) && steps.sidecar-binary-cache.outputs.cache-hit != 'true' && steps.sccache.outcome == 'success'
+        shell: bash
+        run: |
+          mkdir -p ci-perf
+          "${SCCACHE_PATH}" --show-stats --stats-format=json > "ci-perf/sccache-${{ matrix.platform }}.json" || true
+          "${SCCACHE_PATH}" --show-stats || true
+
+      - name: Summarize benchmark
+        if: always() && (inputs.platform == 'all' || inputs.platform == matrix.platform)
+        run: |
+          node scripts/ci/ci-perf-summary.mjs --dir ci-perf --out-dir ci-perf --title "CI Performance Benchmark: sidecar ${{ matrix.platform }}"
+
+      - name: Upload benchmark artifacts
+        if: always() && (inputs.platform == 'all' || inputs.platform == matrix.platform)
+        uses: actions/upload-artifact@v5
+        with:
+          name: ci-perf-sidecar-${{ matrix.platform }}
+          path: ci-perf
+
+  summarize-run:
+    if: always()
+    needs: [preflight, interface, desktop-build, sidecar]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Summarize GitHub run timings
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/ci/gh-run-timing-summary.mjs \
+            --repo "${{ github.repository }}" \
+            --run-id "${{ github.run_id }}" \
+            --out-dir ci-run-timings \
+            --top-steps 25
+
+      - name: Upload run timing summary
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: ci-run-timing-summary
+          path: ci-run-timings
