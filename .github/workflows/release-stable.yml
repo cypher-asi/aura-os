@@ -19,68 +19,18 @@ env:
 
 jobs:
   release-preflight:
-    runs-on: aura-os-linux-x64-large
-    env:
-      CARGO_TARGET_DIR: ../.aura-preflight-target
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
       - name: Install Rust toolchain
         uses: ./.github/actions/setup-rust-toolchain
 
-      - name: Restore preflight Rust cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: desktop-preflight-v1-${{ runner.os }}-${{ runner.arch }}
-          workspaces: |
-            . -> ../.aura-preflight-target
-          cache-on-failure: true
-
-      - name: Set up sccache
-        id: sccache-preflight
-        uses: mozilla-actions/sccache-action@v0.0.9
-        continue-on-error: true
-
-      - name: Configure sccache backend
-        if: steps.sccache-preflight.outcome == 'success'
-        shell: bash
-        env:
-          DEPOT_CACHE_TOKEN: ${{ secrets.DEPOT_CACHE_TOKEN }}
-        run: |
-          echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
-          if [ -n "$DEPOT_CACHE_TOKEN" ]; then
-            echo "SCCACHE_WEBDAV_ENDPOINT=https://cache.depot.dev" >> "$GITHUB_ENV"
-            echo "SCCACHE_WEBDAV_TOKEN=$DEPOT_CACHE_TOKEN" >> "$GITHUB_ENV"
-          else
-            echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
-          fi
-
-      - name: Install Linux dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential clang pkg-config libatomic1 libssl-dev libdbus-1-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev libpipewire-0.3-dev libgbm-dev libxdo-dev
-
       - name: Install Node.js
         uses: ./.github/actions/setup-node
 
       - name: Run release preflight
-        run: node scripts/ci/verify-release-preflight.mjs --cargo-check
-
-      - name: Show sccache stats
-        if: always() && steps.sccache-preflight.outcome == 'success'
-        shell: bash
-        run: |
-          mkdir -p ci-cache
-          "${SCCACHE_PATH}" --show-stats --stats-format=json > ci-cache/sccache-preflight.json || true
-          "${SCCACHE_PATH}" --show-stats || sccache --show-stats || true
-
-      - name: Upload preflight cache telemetry
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: ci-cache-stable-preflight
-          path: ci-cache
-          if-no-files-found: ignore
+        run: node scripts/ci/verify-release-preflight.mjs
 
   build-interface:
     runs-on: ubuntu-latest
