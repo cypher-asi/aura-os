@@ -404,6 +404,11 @@ jobs:
             cleanup_retryable_packaging_failure
           done
 
+      - name: Notarize and validate macOS DMG
+        if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != '' && startsWith(matrix.target, 'macos-')
+        shell: bash
+        run: bash infra/scripts/release/macos-dmg-notarize-validate.sh --notarize "$AURA_RELEASE_DIR"
+
       - name: Collect packaged artifacts
         if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
         shell: bash

@@ -555,6 +555,11 @@ jobs:
             cleanup_retryable_packaging_failure
           done
 
+      - name: Notarize and validate macOS DMG
+        if: matrix.target == 'macos'
+        shell: bash
+        run: bash infra/scripts/release/macos-dmg-notarize-validate.sh --notarize "$AURA_RELEASE_DIR"
+
       - name: Collect artifacts
         id: artifacts
         shell: bash
