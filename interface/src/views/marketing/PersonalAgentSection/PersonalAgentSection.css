@@ -354,7 +354,9 @@
  */
 .personalAgentDevice {
   width: 100%;
-  max-width: 380px;
+  /* Matches `.personalAgentSkillPlate` so the two bottom inset
+     components share the same footprint. */
+  max-width: 400px;
 }
 
 .personalAgentDeviceContent {
@@ -513,6 +515,11 @@
 
   .personalAgentDeviceGrille {
     height: 72px;
+  }
+
+  /* Keep both bottom inset components the same width on mobile too. */
+  .personalAgentDevice {
+    max-width: 340px;
   }
 
   /* Skill panel: stack sections vertically, dividers run horizontal. */
