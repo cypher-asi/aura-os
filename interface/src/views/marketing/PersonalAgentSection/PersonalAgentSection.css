@@ -200,26 +200,15 @@
 }
 
 /*
- * Recessed black "well" the keys sit inside: a near-black surface sunk
- * into the Plate via top-heavy inset shadows + a hairline rim, matching
- * the service device's inset screen so the pads read as set into the page.
+ * Layout-only row for the key sections. The recessed black treatment
+ * lives on each individual key (see `.personalAgentSkillBtn`) rather than
+ * one big well wrapping all of them, so the Plate surface shows between
+ * the keys.
  */
 .personalAgentSkillWell {
   display: flex;
   align-items: stretch;
   gap: 0;
-  padding: 16px;
-  border-radius: 8px;
-  background: radial-gradient(
-    ellipse 120% 90% at 50% 0%,
-    #0a0a0a 0%,
-    #050505 60%,
-    #000 100%
-  );
-  box-shadow:
-    inset 0 2px 6px rgba(0, 0, 0, 0.9),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
-    inset 0 -10px 24px rgba(0, 0, 0, 0.8);
 }
 
 .personalAgentSkillSectionWrap {
@@ -251,9 +240,9 @@
 }
 
 /*
- * Neomorphic key sitting inside the black well: squared 4px corners and
- * a very light top bevel + soft cast shadow so it reads as a subtly
- * raised pad set into the recessed black area.
+ * Each key is its own recessed black socket sunk into the Plate via
+ * top-heavy inset shadows + a hairline rim, matching the service device's
+ * inset screen so every pad reads as individually set into the page.
  */
 .personalAgentSkillBtn {
   position: relative;
@@ -262,18 +251,23 @@
   gap: 8px;
   padding: 9px 12px;
   border: none;
-  border-radius: 4px;
-  background: linear-gradient(180deg, #2c2f36 0%, #20232a 100%);
+  border-radius: 6px;
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 0%,
+    #0a0a0a 0%,
+    #050505 60%,
+    #000 100%
+  );
   color: var(--color-text-secondary);
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
   cursor: default;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 1px 2px rgba(0, 0, 0, 0.55);
+    inset 0 2px 6px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 -6px 14px rgba(0, 0, 0, 0.8);
   transition:
-    transform 140ms ease,
     box-shadow 140ms ease,
     color 140ms ease;
 }
@@ -291,10 +285,14 @@
 
 .personalAgentSkillBtn:hover {
   color: var(--color-text-primary);
-  transform: translateY(-1px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 3px 6px rgba(0, 0, 0, 0.6);
+    inset 0 2px 6px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 -6px 14px rgba(0, 0, 0, 0.8);
+}
+
+.personalAgentSkillBtn:hover svg {
+  opacity: 1;
 }
 
 /* Lit / active key: warm accent fill + soft glow, matching the
