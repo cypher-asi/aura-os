@@ -44,6 +44,8 @@ export {
   handleToolCallSnapshot,
   handleToolCall,
   handleToolResult,
+  handleToolCallRetrying,
+  handleToolCallFailed,
   handleEventSaved,
   handleAssistantTurnBoundary,
   handleStreamError,

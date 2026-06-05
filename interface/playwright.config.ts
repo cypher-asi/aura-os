@@ -89,6 +89,21 @@ export default defineConfig({
       },
     },
     {
+      name: "eval-chat-core-desktop",
+      testMatch: ["**/evals/chat-core.spec.ts"],
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1440, height: 900 },
+      },
+    },
+    {
+      name: "eval-chat-core-mobile",
+      testMatch: ["**/evals/chat-core.spec.ts"],
+      use: {
+        ...devices["Pixel 7"],
+      },
+    },
+    {
       name: "eval-workflow-desktop",
       testMatch: ["**/evals/workflow-e2e.spec.ts"],
       use: {

@@ -58,6 +58,9 @@ stack:
   [local-stack README](../infra/evals/local-stack/README.md)
 - Playwright evals:
   [`interface/tests/e2e/evals/`](../interface/tests/e2e/evals/)
+  - `core-browser-smoke`: browser/routing shell health
+  - `chat-core`: deterministic project-agent chat turn, SSE stream, history persistence, and request contract
+  - `workflow-e2e`: deterministic org -> agent -> project -> spec -> task -> loop lifecycle
 
 For the current operational workflow map, see:
 

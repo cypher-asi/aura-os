@@ -2,14 +2,14 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
-const VALID_LANES = new Set(["smoke", "workflow"]);
+import { loadEvalLane, listEvalLaneIds } from "../../scripts/ci/lib/eval-lanes.mjs";
 
 function usage(message) {
   if (message) {
     process.stderr.write(`${message}\n`);
   }
   process.stderr.write(
-    "Usage: node ./scripts/refresh-evals-baseline.mjs <smoke|workflow> [summaryPath]\n",
+    `Usage: node ./scripts/refresh-evals-baseline.mjs <${listEvalLaneIds().join("|")}> [summaryPath]\n`,
   );
   process.exit(1);
 }
@@ -20,21 +20,19 @@ function scenarioKey(entry) {
 
 async function main() {
   const [lane, summaryArg] = process.argv.slice(2);
-  if (!lane || !VALID_LANES.has(lane)) {
+  let laneConfig;
+  try {
+    laneConfig = lane ? loadEvalLane(lane) : null;
+  } catch {
     usage(`Unknown lane "${lane ?? ""}".`);
+  }
+  if (!lane || !laneConfig?.baseline) {
+    usage(`Lane "${lane ?? ""}" does not have a refreshable baseline.`);
   }
 
   const cwd = process.cwd();
   const summaryPath = path.resolve(cwd, summaryArg ?? "test-results/aura-evals-summary.json");
-  const baselinePath = path.resolve(
-    cwd,
-    "..",
-    "infra",
-    "evals",
-    "reports",
-    "baselines",
-    `${lane}-summary.json`,
-  );
+  const baselinePath = path.resolve(cwd, "..", laneConfig.baseline);
 
   let raw;
   try {

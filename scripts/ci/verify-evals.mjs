@@ -1,97 +1,67 @@
 import process from "node:process";
 
+import { loadEvalLane, listEvalLaneIds, laneWorkingDirectory } from "./lib/eval-lanes.mjs";
 import {
   assertEvalsRuntime,
-  interfaceDir,
   playwrightInstallArgs,
-  promptfooDir,
   run,
 } from "./lib/utils.mjs";
 
 const [lane] = process.argv.slice(2);
 
 if (!lane) {
-  console.error("Usage: node scripts/ci/verify-evals.mjs <smoke|workflow|behavior|live-benchmark>");
+  console.error(`Usage: node scripts/ci/verify-evals.mjs <${listEvalLaneIds().join("|")}>`);
   process.exit(1);
 }
 
-switch (lane) {
-  case "smoke":
-    assertEvalsRuntime();
-    run("npm", ["ci"], { cwd: interfaceDir, label: "evals:npm-ci", retries: 1 });
-    run("npx", playwrightInstallArgs(["chromium", "webkit"]), {
-      cwd: interfaceDir,
-      label: "evals:playwright-install",
-      retries: 1,
-    });
-    run("npm", ["run", "test:evals:smoke", "--", "--retries=1"], {
-      cwd: interfaceDir,
-      label: "evals:smoke",
-    });
-    run("npm", ["run", "test:evals:report"], { cwd: interfaceDir, label: "evals:report" });
-    run(
-      "npm",
-      [
-        "run",
-        "test:evals:compare",
-        "--",
-        "test-results/aura-evals-summary.json",
-        "../infra/evals/reports/baselines/smoke-summary.json",
-        "smoke-compare",
-      ],
-      { cwd: interfaceDir, label: "evals:compare" },
-    );
-    break;
-  case "workflow":
-    assertEvalsRuntime();
-    run("npm", ["ci"], { cwd: interfaceDir, label: "evals:npm-ci", retries: 1 });
-    run("npx", playwrightInstallArgs(["chromium"]), {
-      cwd: interfaceDir,
-      label: "evals:playwright-install",
-      retries: 1,
-    });
-    run("npm", ["run", "test:evals:workflow", "--", "--retries=1"], {
-      cwd: interfaceDir,
-      label: "evals:workflow",
-    });
-    run("npm", ["run", "test:evals:report"], { cwd: interfaceDir, label: "evals:report" });
-    run(
-      "npm",
-      [
-        "run",
-        "test:evals:compare",
-        "--",
-        "test-results/aura-evals-summary.json",
-        "../infra/evals/reports/baselines/workflow-summary.json",
-        "workflow-compare",
-      ],
-      { cwd: interfaceDir, label: "evals:compare" },
-    );
-    break;
-  case "behavior":
-    assertEvalsRuntime();
-    run("npm", ["ci"], { cwd: promptfooDir, label: "evals:npm-ci", retries: 1 });
-    run("npm", ["run", "eval:ci"], { cwd: promptfooDir, label: "evals:behavior" });
-    break;
-  case "live-benchmark":
-    assertEvalsRuntime();
-    run("npm", ["ci"], { cwd: interfaceDir, label: "evals:npm-ci", retries: 1 });
-    run("npx", playwrightInstallArgs(["chromium"]), {
-      cwd: interfaceDir,
-      label: "evals:playwright-install",
-      retries: 1,
-    });
-    run("npm", ["run", "test:evals:benchmark"], {
-      cwd: interfaceDir,
-      label: "evals:live-benchmark",
-      env: {
-        ...process.env,
-        AURA_EVAL_LIVE: "1",
-      },
-    });
-    run("npm", ["run", "test:evals:report"], { cwd: interfaceDir, label: "evals:report" });
-    break;
-  default:
-    console.error(`Unknown eval lane "${lane}".`);
-    process.exit(1);
+let config;
+try {
+  config = loadEvalLane(lane);
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+}
+
+assertEvalsRuntime();
+
+const cwd = laneWorkingDirectory(config);
+
+if (config.install === "npm-ci") {
+  run("npm", ["ci"], { cwd, label: "evals:npm-ci", retries: 1 });
+}
+
+if (Array.isArray(config.playwrightBrowsers) && config.playwrightBrowsers.length > 0) {
+  run("npx", playwrightInstallArgs(config.playwrightBrowsers), {
+    cwd,
+    label: "evals:playwright-install",
+    retries: 1,
+  });
+}
+
+run(config.testCommand[0], config.testCommand.slice(1), {
+  cwd,
+  label: `evals:${lane}`,
+  env: {
+    ...process.env,
+    ...(config.env ?? {}),
+  },
+});
+
+if (config.report) {
+  run("npm", ["run", "test:evals:report"], { cwd, label: "evals:report" });
+}
+
+if (config.baseline) {
+  run(
+    "npm",
+    [
+      "run",
+      "test:evals:compare",
+      "--",
+      "test-results/aura-evals-summary.json",
+      `../${config.baseline}`,
+      config.compareOutput ?? `${lane}-compare`,
+    ],
+    { cwd, label: "evals:compare" },
+  );
 }
