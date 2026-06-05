@@ -110,7 +110,7 @@ jobs:
           if-no-files-found: ignore
 
   build-interface:
-    needs: [resolve-version, release-preflight]
+    needs: resolve-version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -140,7 +140,6 @@ jobs:
           compression-level: 0
 
   build-sidecar:
-    needs: [resolve-version, release-preflight]
     strategy:
       fail-fast: false
       matrix:
@@ -259,7 +258,7 @@ jobs:
           compression-level: 0
 
   build-app:
-    needs: [resolve-version, release-preflight, build-interface]
+    needs: [resolve-version, build-interface]
     env:
       CARGO_TARGET_DIR: ../.aura-shared-target
       AURA_RELEASE_DIR: ../.aura-shared-target/release
@@ -445,7 +444,7 @@ jobs:
           compression-level: 0
 
   package:
-    needs: [resolve-version, release-preflight, build-interface]
+    needs: [resolve-version, release-preflight]
     env:
       CARGO_TARGET_DIR: ../.aura-shared-target
       AURA_RELEASE_DIR: ../.aura-shared-target/release
