@@ -490,8 +490,8 @@
 
   .personalAgentGrid {
     grid-template-columns: 1fr;
-    width: 100%;
-    margin: 0;
+    /* Keep the full-bleed band on mobile too (inherits width: 100vw +
+       margin-inline from the base rule); just stack the cells. */
   }
 
   .personalAgentQuadrantWide {
