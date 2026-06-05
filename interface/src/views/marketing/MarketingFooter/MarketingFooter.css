@@ -5,6 +5,9 @@
   align-items: center;
   justify-content: center;
   gap: 110px;
+  /* Extra top space pushes the floating footer card ~20% lower down the
+     page than its previous flush position. */
+  margin-top: 16vh;
   padding: 40px 32px 110px;
 }
 
@@ -28,9 +31,13 @@
   max-width: 960px;
   padding: 48px 56px;
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(10, 10, 12, 0.45);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
 }
 
 .marketingFooterColumns {
@@ -77,6 +84,7 @@
 @media (max-width: 768px) {
   .marketingFooter {
     gap: 84px;
+    margin-top: 12vh;
     padding: 32px 24px 84px;
   }
 
@@ -97,6 +105,7 @@
 @media (max-width: 480px) {
   .marketingFooter {
     gap: 66px;
+    margin-top: 9vh;
     padding: 24px 16px 66px;
   }
 
