@@ -1,0 +1,227 @@
+/*
+ * Internal layout for the "An agent for work, love, play." section.
+ * The outer chrome (background tint, padding, viewport-height
+ * reservation, column cap) is owned by the shared `<Section />` shell;
+ * this file only controls the centered head + the three-quadrant bento
+ * grid and its three mini-UIs.
+ */
+.personalAgentInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 56px;
+  width: 100%;
+}
+
+.personalAgentHead {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+}
+
+/*
+ * Headline type ramp matches `.agentChatSectionHeadline` /
+ * `.oneComputerOneAgentHeadline` so the marketing rows on `/agents`
+ * stay typographically aligned.
+ */
+.personalAgentHeadline {
+  margin: 0;
+  font-size: clamp(30px, 4vw, 44px);
+  font-weight: 300;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  color: var(--color-text-primary);
+  max-width: 720px;
+}
+
+.personalAgentSubhead {
+  margin: 0;
+  font-size: clamp(16px, 1.6vw, 20px);
+  line-height: var(--leading-relaxed, 1.6);
+  color: var(--color-text-secondary);
+  max-width: 640px;
+  text-wrap: balance;
+}
+
+/*
+ * Bento grid: the first quadrant ("Always ready") spans both columns
+ * on top; the remaining two sit side by side below. Hairline borders
+ * between cells echo the dark bordered-tile marketing reference.
+ */
+.personalAgentGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.personalAgentQuadrant {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 40px;
+  background: var(--marketing-section-bg, #000);
+}
+
+.personalAgentQuadrantWide {
+  grid-column: 1 / -1;
+}
+
+/*
+ * Media well — holds each quadrant's mini-UI. Flex-grows so the copy
+ * block always lands at the bottom of the cell, keeping the three
+ * titles visually aligned to their cell floors like the reference.
+ */
+.personalAgentMedia {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  overflow: hidden;
+}
+
+.personalAgentMediaChat {
+  min-height: 200px;
+}
+
+.personalAgentCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.personalAgentQuadrantTitle {
+  margin: 0;
+  font-size: clamp(18px, 1.6vw, 21px);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--color-text-primary);
+}
+
+.personalAgentQuadrantDesc {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  max-width: 46ch;
+}
+
+/* ----- Quadrant 1: chat input mock ----------------------------- */
+
+/*
+ * Reuse the real `DesktopChatInputBar` purely as a display: kill all
+ * pointer interaction so nothing in the bar is clickable on the
+ * marketing surface, and cap its width so the pill reads centered in
+ * the wide cell. The bar publishes its own internal layout/tokens.
+ */
+.personalAgentChatMock {
+  width: 100%;
+  max-width: 680px;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ----- Quadrant 2: sea of skills ------------------------------- */
+
+/*
+ * Dense, center-justified flow of skill chips that fades out at every
+ * edge via a radial mask so it reads as an endless field rather than a
+ * bounded list.
+ */
+.personalAgentSkillSea {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-mask-image: radial-gradient(
+    ellipse 80% 80% at 50% 50%,
+    #000 45%,
+    transparent 92%
+  );
+  mask-image: radial-gradient(
+    ellipse 80% 80% at 50% 50%,
+    #000 45%,
+    transparent 92%
+  );
+}
+
+.personalAgentSkillSeaInner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-content: center;
+  justify-content: center;
+  padding: 12px;
+}
+
+.personalAgentSkillChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.personalAgentSkillChip svg {
+  color: var(--color-text-primary);
+  opacity: 0.85;
+}
+
+/* ----- Quadrant 3: service grid -------------------------------- */
+
+.personalAgentServiceGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  width: 100%;
+  max-width: 340px;
+}
+
+.personalAgentServiceTile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1 / 1;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--color-text-secondary);
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.personalAgentServiceTile:hover {
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+@media (max-width: 768px) {
+  .personalAgentInner {
+    gap: 40px;
+  }
+
+  .personalAgentGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .personalAgentQuadrantWide {
+    grid-column: auto;
+  }
+
+  .personalAgentQuadrant {
+    padding: 28px;
+  }
+}

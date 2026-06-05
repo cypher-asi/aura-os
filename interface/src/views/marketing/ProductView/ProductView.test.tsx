@@ -86,6 +86,39 @@ describe("ProductView", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("renders the '1 COMPUTER = 1 AGENT' section with its artwork", () => {
+    // The section sits between the agents hero and the agent-chat
+    // section. It is a single headline with the neon terminal artwork
+    // stacked underneath.
+    renderProductView();
+    expect(
+      screen.getByRole("heading", { name: /1 COMPUTER = 1 AGENT/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", {
+        name: /A neon outline of a personal computer/i,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders the personal-agent section between the agents hero and the '1 COMPUTER = 1 AGENT' section", () => {
+    // The "An agent for work, love, play." section is inserted after
+    // the agents hero/card row and before the neon-terminal section, so
+    // its headline must precede the "1 COMPUTER = 1 AGENT" headline in
+    // DOM order.
+    renderProductView();
+    const personalAgent = screen.getByRole("heading", {
+      name: /An agent for work, love, play\./i,
+    });
+    const oneComputer = screen.getByRole("heading", {
+      name: /1 COMPUTER = 1 AGENT/i,
+    });
+    expect(
+      personalAgent.compareDocumentPosition(oneComputer) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it("mounts the agent marquee over the hero video with one card per persona", () => {
     // The hero passes `<AgentMarquee />` as `videoOverlay`, so the
     // strip should be present on the rendered ProductView. The

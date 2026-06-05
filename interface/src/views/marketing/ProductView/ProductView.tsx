@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect } from "react";
 import { AgentChatSection } from "../AgentChatSection";
 import { AgentMarquee } from "../AgentMarquee";
+import { AuraOrb } from "../AuraOrb";
 import { ChangelogPreview } from "../ChangelogPreview";
 import {
   CodeIcon,
@@ -11,6 +12,8 @@ import {
 import { CreateAgentButton } from "../../public-chat/CreateAgentButton";
 import { TypewriterText } from "../../public-chat/TypewriterText";
 import { MarketingFirstScreen } from "../MarketingFirstScreen";
+import { OneComputerOneAgentSection } from "../OneComputerOneAgentSection";
+import { PersonalAgentSection } from "../PersonalAgentSection";
 import { PageHero } from "../PageHero";
 import { ProductCallToAction } from "../ProductCallToAction";
 import styles from "./ProductView.module.css";
@@ -79,17 +82,7 @@ export function ProductView(): ReactNode {
         stage={
           <div className={styles.orb}>
             <div className={styles.orbVideoClip} aria-hidden="true">
-              <video
-                className={styles.orbVideo}
-                src="/AURA_visual_loop.mp4"
-                width={1280}
-                height={720}
-                autoPlay
-                loop
-                muted
-                playsInline
-                aria-hidden="true"
-              />
+              <AuraOrb className={styles.orbVideo} />
             </div>
             <div className={styles.orbMarquee}>
               <AgentMarquee />
@@ -97,6 +90,8 @@ export function ProductView(): ReactNode {
           </div>
         }
       />
+      <PersonalAgentSection />
+      <OneComputerOneAgentSection />
       <AgentChatSection />
       <FeaturePanel
         label="SOVEREIGN"
@@ -123,7 +118,7 @@ export function ProductView(): ReactNode {
         ]}
       />
       <ChangelogPreview />
-      <ProductCallToAction href="/download" label="DOWNLOAD" />
+      <ProductCallToAction />
     </div>
   );
 }
