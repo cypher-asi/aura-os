@@ -160,56 +160,141 @@
   padding: 61px 39px;
 }
 
-/* ----- Quadrant 2: sea of skills ------------------------------- */
+/* ----- Quadrant 2: neomorphic skill control panel -------------- */
 
 /*
- * Dense, center-justified flow of skill chips that fades out at every
- * edge via a radial mask so it reads as an endless field rather than a
- * bounded list.
+ * Recessed control-panel well holding the skills as raised neomorphic
+ * keys, split into sections by hairline divider lines like the
+ * reference hardware controller. The panel is a sunken slab (top-heavy
+ * inset shadows + hard black ring) so the buttons read as sitting on a
+ * recessed surface.
  */
-.personalAgentSkillSea {
-  position: absolute;
-  inset: 0;
+.personalAgentSkillPanel {
+  --skill-accent: #e5613a;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  -webkit-mask-image: radial-gradient(
-    ellipse 80% 80% at 50% 50%,
-    #000 45%,
-    transparent 92%
-  );
-  mask-image: radial-gradient(
-    ellipse 80% 80% at 50% 50%,
-    #000 45%,
-    transparent 92%
+  align-items: stretch;
+  gap: 0;
+  width: 100%;
+  max-width: 420px;
+  padding: 18px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #16181c 0%, #202229 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.55),
+    inset 0 2px 5px rgba(0, 0, 0, 0.45),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+    0 22px 50px rgba(0, 0, 0, 0.5);
+}
+
+.personalAgentSkillSectionWrap {
+  display: flex;
+  align-items: stretch;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Hairline section divider — vertical on desktop, between groups. */
+.personalAgentSkillDivider {
+  flex: 0 0 1px;
+  align-self: stretch;
+  margin: 4px 14px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.07) 18%,
+    rgba(255, 255, 255, 0.07) 82%,
+    transparent 100%
   );
 }
 
-.personalAgentSkillSeaInner {
+.personalAgentSkillSection {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 10px;
-  align-content: center;
-  justify-content: center;
-  padding: 12px;
+  flex: 1 1 auto;
 }
 
-.personalAgentSkillChip {
+/*
+ * Raised neomorphic key: top light highlight + bottom dark edge + an
+ * outer drop shadow so it extrudes off the recessed panel.
+ */
+.personalAgentSkillBtn {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 7px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.04);
+  gap: 8px;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 11px;
+  background: linear-gradient(180deg, #2c2f36 0%, #1c1e23 100%);
   color: var(--color-text-secondary);
   font-size: 13px;
+  font-weight: 500;
   white-space: nowrap;
+  cursor: default;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.55);
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    color 140ms ease;
 }
 
-.personalAgentSkillChip svg {
+.personalAgentSkillBtn svg {
+  flex: 0 0 auto;
   color: var(--color-text-primary);
-  opacity: 0.85;
+  opacity: 0.8;
+}
+
+.personalAgentSkillBtnLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.personalAgentSkillBtn:hover {
+  color: var(--color-text-primary);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.5),
+    0 4px 8px rgba(0, 0, 0, 0.6);
+}
+
+/* Lit / active key: warm accent fill + soft glow, matching the
+   reference's orange SAMPLE/RECORD keys. */
+.personalAgentSkillBtn[data-lit="true"] {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--skill-accent) 92%, #fff 8%) 0%,
+    var(--skill-accent) 100%
+  );
+  color: #1a0e08;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.3),
+    0 2px 5px rgba(0, 0, 0, 0.5),
+    0 0 12px color-mix(in srgb, var(--skill-accent) 45%, transparent);
+}
+
+.personalAgentSkillBtn[data-lit="true"] svg {
+  color: #1a0e08;
+  opacity: 0.95;
+}
+
+/* LED indicator dot, pinned to the top-right of a lit key. */
+.personalAgentSkillLed {
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #ffd9c7;
+  box-shadow:
+    0 0 4px rgba(255, 255, 255, 0.8),
+    0 0 7px var(--skill-accent);
 }
 
 /* ----- Quadrant 3: service device ------------------------------ */
@@ -375,5 +460,35 @@
 
   .personalAgentDeviceGrille {
     height: 72px;
+  }
+
+  /* Skill panel: stack sections vertically, dividers run horizontal. */
+  .personalAgentSkillPanel {
+    flex-direction: column;
+    max-width: 340px;
+  }
+
+  .personalAgentSkillSectionWrap {
+    flex-direction: column;
+  }
+
+  .personalAgentSkillDivider {
+    flex: 0 0 1px;
+    width: 100%;
+    height: 1px;
+    margin: 12px 4px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.07) 18%,
+      rgba(255, 255, 255, 0.07) 82%,
+      transparent 100%
+    );
+  }
+
+  .personalAgentSkillSection {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
   }
 }
