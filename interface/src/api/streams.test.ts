@@ -178,6 +178,43 @@ describe("sendAgentEventStream", () => {
     expect(body.attachments).toBeUndefined();
   });
 
+  it("keeps standalone agent chat request body bounded and explicit", async () => {
+    const handler: StreamEventHandler = {
+      onEvent: vi.fn(),
+      onError: vi.fn(),
+    };
+    const attachments = [{ type: "text" as const, media_type: "text/plain", data: "content", name: "notes.txt" }];
+
+    await sendAgentEventStream(
+      "a1",
+      "ship this",
+      "chat",
+      "aura-gpt-5-4",
+      attachments,
+      handler,
+      undefined,
+      ["run_tests"],
+      "p1",
+      true,
+    );
+
+    const body = JSON.parse((streamSSE.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(body).toEqual({
+      content: "ship this",
+      action: "chat",
+      model: "aura-gpt-5-4",
+      attachments,
+      commands: ["run_tests"],
+      project_id: "p1",
+      new_session: true,
+      reasoning_effort: "medium",
+    });
+    expect(body.history).toBeUndefined();
+    expect(body.messages).toBeUndefined();
+    expect(body.system_prompt).toBeUndefined();
+    expect(body.context).toBeUndefined();
+  });
+
   it("routes chat stream events via parseAuraEvent to handler", async () => {
     const handler: StreamEventHandler = {
       onEvent: vi.fn(),
@@ -302,6 +339,41 @@ describe("sendEventStream", () => {
 
     const body = JSON.parse((streamSSE.mock.calls[0] as [string, RequestInit])[1].body as string);
     expect(body.attachments).toEqual(attachments);
+  });
+
+  it("keeps project chat request body bounded and explicit", async () => {
+    const handler: StreamEventHandler = {
+      onEvent: vi.fn(),
+      onError: vi.fn(),
+    };
+    const attachments = [{ type: "text" as const, media_type: "text/plain", data: "content", name: "notes.txt" }];
+
+    await sendEventStream(
+      "p1" as string,
+      "ai1",
+      "continue",
+      "chat",
+      "claude-sonnet-4-5-20250929",
+      attachments,
+      handler,
+      undefined,
+      ["inspect_repo"],
+      true,
+    );
+
+    const body = JSON.parse((streamSSE.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(body).toEqual({
+      content: "continue",
+      action: "chat",
+      model: "claude-sonnet-4-5-20250929",
+      attachments,
+      commands: ["inspect_repo"],
+      new_session: true,
+    });
+    expect(body.history).toBeUndefined();
+    expect(body.messages).toBeUndefined();
+    expect(body.system_prompt).toBeUndefined();
+    expect(body.context).toBeUndefined();
   });
 
   it("passes signal through", async () => {

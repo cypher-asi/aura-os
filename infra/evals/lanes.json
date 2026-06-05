@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "lanes": {
+    "smoke": {
+      "label": "Core browser smoke",
+      "riskAreas": ["routing", "desktop shell", "mobile shell"],
+      "cwd": "interface",
+      "install": "npm-ci",
+      "playwrightBrowsers": ["chromium", "webkit"],
+      "testCommand": ["npm", "run", "test:evals:smoke", "--", "--retries=1"],
+      "report": true,
+      "baseline": "infra/evals/reports/baselines/smoke-summary.json",
+      "compareOutput": "smoke-compare",
+      "artifacts": ["interface/playwright-report", "interface/test-results"]
+    },
+    "chat-core": {
+      "label": "Agent chat core loop",
+      "riskAreas": [
+        "project-agent setup",
+        "model forwarding",
+        "SSE stream handling",
+        "tool event rendering",
+        "history persistence"
+      ],
+      "cwd": "interface",
+      "install": "npm-ci",
+      "playwrightBrowsers": ["chromium"],
+      "testCommand": ["npm", "run", "test:evals:chat-core", "--", "--retries=1"],
+      "report": true,
+      "baseline": "infra/evals/reports/baselines/chat-core-summary.json",
+      "compareOutput": "chat-core-compare",
+      "artifacts": ["interface/playwright-report", "interface/test-results"]
+    },
+    "workflow": {
+      "label": "Deterministic product workflow",
+      "riskAreas": ["org setup", "agent setup", "project import", "specs", "tasks", "loop lifecycle"],
+      "cwd": "interface",
+      "install": "npm-ci",
+      "playwrightBrowsers": ["chromium"],
+      "testCommand": ["npm", "run", "test:evals:workflow", "--", "--retries=1"],
+      "report": true,
+      "baseline": "infra/evals/reports/baselines/workflow-summary.json",
+      "compareOutput": "workflow-compare",
+      "artifacts": ["interface/playwright-report", "interface/test-results"]
+    },
+    "behavior": {
+      "label": "Promptfoo behavior evals",
+      "riskAreas": ["prompt policy", "planning behavior", "governance behavior"],
+      "cwd": "promptfoo",
+      "install": "npm-ci",
+      "testCommand": ["npm", "run", "eval:ci"],
+      "artifacts": ["infra/evals/reports/promptfoo-results.json"]
+    },
+    "bench-smoke": {
+      "label": "Benchmark runner smoke",
+      "riskAreas": ["benchmark runner", "metrics schema", "artifact checks"],
+      "cwd": "interface",
+      "install": "npm-ci",
+      "testCommand": ["npm", "run", "test:bench-lib"],
+      "artifacts": ["interface/test-results"]
+    },
+    "live-benchmark": {
+      "label": "Live autonomous-build benchmark",
+      "riskAreas": ["live model behavior", "real tool execution", "token usage", "artifact quality"],
+      "cwd": "interface",
+      "install": "npm-ci",
+      "playwrightBrowsers": ["chromium"],
+      "testCommand": ["npm", "run", "test:evals:benchmark"],
+      "env": { "AURA_EVAL_LIVE": "1" },
+      "report": true,
+      "artifacts": ["interface/playwright-report", "interface/test-results"],
+      "manualOnly": true
+    }
+  }
+}

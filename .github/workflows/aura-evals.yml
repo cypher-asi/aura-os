@@ -12,7 +12,24 @@ on:
         default: false
         type: boolean
 
+permissions:
+  contents: read
+
 jobs:
+  evals-registry:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 25.9.0
+
+      - name: Validate eval lane registry
+        run: node scripts/ci/validate-evals-registry.mjs
+
   smoke:
     runs-on: ubuntu-latest
 
@@ -71,6 +88,36 @@ jobs:
             interface/playwright-report
             interface/test-results
 
+  chat-core:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: interface
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 25.9.0
+          cache: npm
+          cache-dependency-path: interface/package-lock.json
+
+      - name: Run chat core evals entrypoint
+        if: always()
+        run: node ../scripts/ci/verify-evals.mjs chat-core
+
+      - name: Upload chat core artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: aura-evals-chat-core
+          path: |
+            interface/playwright-report
+            interface/test-results
+
   behavior-evals:
     runs-on: ubuntu-latest
 
@@ -97,6 +144,26 @@ jobs:
           name: aura-evals-behavior
           path: |
             infra/evals/reports/promptfoo-results.json
+
+  bench-smoke:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: interface
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 25.9.0
+          cache: npm
+          cache-dependency-path: interface/package-lock.json
+
+      - name: Run benchmark smoke entrypoint
+        run: node ../scripts/ci/verify-evals.mjs bench-smoke
 
   live-benchmark:
     if: github.event_name == 'workflow_dispatch' && inputs.run_live_benchmark
@@ -132,3 +199,47 @@ jobs:
           path: |
             interface/playwright-report
             interface/test-results
+
+  eval-results:
+    name: Eval results (required)
+    if: always()
+    runs-on: ubuntu-latest
+    needs:
+      - evals-registry
+      - smoke
+      - workflow-e2e
+      - chat-core
+      - behavior-evals
+      - bench-smoke
+      - live-benchmark
+
+    steps:
+      - name: Check required eval jobs
+        env:
+          NEEDS_JSON: ${{ toJson(needs) }}
+        run: |
+          node <<'NODE'
+          const needs = JSON.parse(process.env.NEEDS_JSON);
+          const optional = new Set(["live-benchmark"]);
+          const failures = [];
+
+          for (const [job, result] of Object.entries(needs)) {
+            if (optional.has(job)) {
+              if (!["success", "skipped"].includes(result.result)) {
+                failures.push(`${job}: ${result.result}`);
+              }
+              continue;
+            }
+
+            if (result.result !== "success") {
+              failures.push(`${job}: ${result.result}`);
+            }
+          }
+
+          if (failures.length > 0) {
+            console.error(`Eval failures: ${failures.join(", ")}`);
+            process.exit(1);
+          }
+
+          console.log("All required eval jobs passed.");
+          NODE

@@ -57,7 +57,11 @@ Use the shared parity scripts from the repo root before pushing changes:
 ```bash
 node scripts/ci/check-runtime.mjs desktop
 node scripts/ci/verify-desktop.mjs --smoke
+npm run evals:validate
 node scripts/ci/verify-evals.mjs smoke
+node scripts/ci/verify-evals.mjs chat-core
+node scripts/ci/verify-evals.mjs behavior
+node scripts/ci/verify-evals.mjs bench-smoke
 ```
 
 For native mobile validation:
