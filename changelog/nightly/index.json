@@ -2,20 +2,20 @@
   {
     "date": "2026-06-04",
     "channel": "nightly",
-    "version": "0.1.0-nightly.598.1",
-    "title": "Council clarity, a new agent ID card, and a public blog",
-    "intro": "A heavy day across the desktop interface: the council picker and panel learned to clearly show which combine mechanism is in flight, the agent profile got a redesigned 3D nameplate paired with a new spec card, notes moved off the filesystem onto storage-backed S3 bodies (unlocking a public /blog site), and the Agents/Projects sidebar gained a hand-tuned rocker switch with a persistent chat surface behind it. Settings also grew real theme drill-downs with typography, layout, motion, and wallpaper controls.",
+    "version": "0.1.0-nightly.613.1",
+    "title": "Agent cards, a public blog, and a sidebar that stays put",
+    "intro": "A heavy interface day: the agent profile got a hybrid 3D nameplate + glass spec card, Notes was rebuilt onto a storage-backed ID model that also powers a brand-new public /blog site, and the sidebar gained an Agents/Projects rocker plus a persistent chat surface so switching apps no longer remounts your conversation. Settings grew real theme sub-areas, and several reliability fixes landed for remote agents, geo analytics, and production CSS.",
     "entryCount": 6,
     "highlights": [
-      "Council mechanism is now visible end-to-end",
-      "Agent profile redesign: 3D nameplate + spec card",
-      "Notes moved to storage + S3, public /blog ships",
-      "Agents/Projects rocker with persistent chat lane",
-      "Settings gains Theme drill-down with typography, layout, motion"
+      "New ProfileSpecCard + 3D nameplate for agents",
+      "Public /blog site backed by storage-backed Notes",
+      "Agents ⇄ Projects rocker with a persistent chat surface",
+      "Settings → Theme drill-down with typography, layout, and motion",
+      "Stalled remote agent turns now auto-recover"
     ],
-    "rawCommitCount": 99,
-    "generatedAt": "2026-06-05T00:32:20.620Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.598.1",
+    "rawCommitCount": 114,
+    "generatedAt": "2026-06-05T04:37:54.922Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.613.1",
     "path": "history/2026-06-04.json"
   },
   {

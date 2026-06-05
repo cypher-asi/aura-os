@@ -1,64 +1,70 @@
-# Council clarity, a new agent ID card, and a public blog
+# Agent cards, a public blog, and a sidebar that stays put
 
 - Date: `2026-06-04`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.598.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.598.1
+- Version: `0.1.0-nightly.613.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.613.1
 
-A heavy day across the desktop interface: the council picker and panel learned to clearly show which combine mechanism is in flight, the agent profile got a redesigned 3D nameplate paired with a new spec card, notes moved off the filesystem onto storage-backed S3 bodies (unlocking a public /blog site), and the Agents/Projects sidebar gained a hand-tuned rocker switch with a persistent chat surface behind it. Settings also grew real theme drill-downs with typography, layout, motion, and wallpaper controls.
+A heavy interface day: the agent profile got a hybrid 3D nameplate + glass spec card, Notes was rebuilt onto a storage-backed ID model that also powers a brand-new public /blog site, and the sidebar gained an Agents/Projects rocker plus a persistent chat surface so switching apps no longer remounts your conversation. Settings grew real theme sub-areas, and several reliability fixes landed for remote agents, geo analytics, and production CSS.
 
-## 7:56 PM — Council mechanism is visible end-to-end
+## 7:56 PM — Council mechanism picker and a redesigned agent profile card
 
-The Synthesize/Contrast/Side-by-side picker becomes a real menu row, the chosen mechanism is persisted on the parent block, and the council panel header now labels itself accurately on reload.
+The council UI got a clearer mechanism picker that persists across reloads, and the agent profile was split into a slim 3D nameplate plus a separate spec card.
 
-- Replaced the finicky hover flyout with an always-visible CouncilMechanismRow that shows a checkmark on the active option and updates in place when clicked. (`1bb3c66`)
-- Persisted the council-wide mechanism on the parent tool_use block and SubagentSpawned linkage so a reloaded turn can label the council panel with the mechanism that produced it, and surfaced it as a neutral chip on the panel header with a corrected subtitle (no more 'slot 0 synthesizes' on contrast/side-by-side runs). (`7df535d`, `ed30264`)
-- Redesigned the agent profile: shortened the WebGL worn-metal backplate to just name/role/status, moved org/IP/wallet/channels/nav into a new DOM ProfileSpecCard with a black-glass treatment, and engraved the live online/offline status onto the card frame in place of the old barcode. (`ffbd03c`, `913047d`, `aa3e2d4`)
-- Gave operators a real escape hatch on broken remote agents: when the VM state fetch fails recoverably (e.g. 404 machine gone), the status card now surfaces a Recovery button that re-provisions the machine, while 401 session-expired still only offers Report bug. (`d3cddc6`)
+- Replaced the finicky hover flyout on the council count with an always-visible Synthesize / Contrast / Side-by-side menu row, and persisted the chosen mechanism on the parent tool_use block so a reloaded turn shows the correct label on the council panel header. (`1bb3c66`, `7df535d`, `ed30264`)
+- Split the agent profile into a shortened WebGL worn-metal nameplate (name, role, engraved status on the frame) and a new DOM ProfileSpecCard carrying Organization, IP, Wallet, channel logos, and Skills/Connectors/Permissions links, with a black-glass treatment and trimmed nameplate sizing. (`ffbd03c`, `913047d`, `aa3e2d4`)
+- Remote-agent status card now offers a Recovery action when the VM state fetch fails recoverably (e.g. 404 'machine gone'), instead of stranding the user with only a Report bug button; 401 session-expired still surfaces report-only. (`d3cddc6`)
 
 ## 10:36 AM — Frosted glass panels restored in production desktop builds
 
-A Vite 8 minifier regression that quietly stripped the glass recipe from release bundles is fixed by pinning cssMinify.
+Pinned the Vite CSS minifier so backdrop-filter and color-mix declarations survive into release bundles.
 
-- Vite 8's switch to Lightning CSS was downleveling modern CSS and dropping the glass panel's backdrop-filter and color-mix declarations from production bundles, so release desktop builds lost the frosted blur the dev server rendered. Pinned cssMinify to esbuild so prod matches dev. (`e9ff281`)
+- Vite 8's default Lightning CSS minifier was stripping the glass panel recipe (backdrop-filter / color-mix) from production CSS, so release desktop builds lost their frosted blur. Pinned cssMinify to esbuild so prod renders the same glass as the dev server. (`e9ff281`)
 
-## 10:38 AM — Help menu modals, tunable glass, and local-agent badge
+## 10:38 AM — In-app Changelog/Downloads modals, LOCAL agent badge, and tunable glass
 
-Help > Changelog and Downloads now open in-shell modals, the glass panel effect gains a user-tunable level in Appearance settings, and local agents get a distinct LOCAL badge on the 3D card.
+Help menu entries now stay inside the app, local agents are visually distinct on the 3D card, and glass blur/opacity became user-tunable.
 
-- Help > Changelog and Help > Downloads now open ChangelogView and DownloadView inside a zui Modal (sized 20% wider) instead of navigating away, keeping users in the app shell; signed-out Downloads still opens aura.ai/download in a new tab. (`ca46b05`, `e1c050b`)
-- Added a tunable glass blur/opacity level in Appearance settings, wired through a glass-level lib/hook and a PanelGlassBridge so panel translucency is now a user preference. (`3dc16ec`)
-- Local agents now render a purple LOCAL badge on the 3D card frame instead of a misleading green/red VM dot, while remote agents keep their live online/offline state. (`8cf913a`)
-- Enabled Mixpanel IP geolocation so events like user_signed_up can now be broken down by country, region, and city; opt-out, DNT, and GPC handling continues to suppress tracking entirely for those users. (`3b7c7ec`)
+- Help → Changelog and Help → Downloads now open inside zui modals (with a 20% wider layout) rather than navigating away, keeping users in the app shell when logged in. (`ca46b05`, `e1c050b`)
+- Local agents now render a purple LOCAL badge on the 3D card frame while remote agents keep their live green/red VM status, and the channel bar picks up the LLM input pill gradient. (`8cf913a`)
+- Added a tunable glass blur/opacity level exposed through Appearance settings, with a panel glass bridge wiring the new variables into existing surfaces. (`3dc16ec`)
+- Mixpanel client init now opts into IP geolocation so events like user_signed_up can be broken down by country, region, and city; DNT/GPC opt-out behavior is unchanged. (`3b7c7ec`)
 
-## 11:26 AM — Typed storage client for notes, folders, and comments
+## 11:26 AM — Typed notes/folders/comments client in aura-os-storage
 
-aura-os-storage gains a first-class Rust client surface for the notes entity, paving the way for the day's notes/blog rewrite.
+Added a typed Rust client surface for the storage service's notes entity, unblocking the storage-backed notes rewrite.
 
-- Added typed StorageNote, StorageNoteFolder, and StorageNoteComment models with request types, a StorageClient method set covering the public and internal note routes, and in-memory mock coverage for integration tests. (`db40702`)
+- Mirrored the aura-storage notes entity with StorageNote, StorageNoteFolder, and StorageNoteComment models, request types, and a StorageClient method set covering both public and internal note routes, plus in-memory mock coverage for integration tests. (`db40702`)
 
-## 11:30 AM — Notes move to storage + S3 and the public /blog site ships
+## 11:30 AM — Storage-backed Notes, aura-blog CMS, and a public /blog site
 
-The filesystem notes stack is replaced with storage-backed, ID-keyed notes whose markdown bodies live on S3, and a new public Blog site is published off that same data, alongside a hand-built Agents/Projects rocker in the sidebar.
+Notes moved off the filesystem onto a storage-backed ID model with markdown bodies on S3, and that same backend powers a new public blog with a sidebar rocker to flip between Agents and Projects.
 
-- Replaced the filesystem notes handlers and frontend store with storage-backed, ID-based notes: metadata persists via the typed storage client, markdown bodies live on S3 (fetched from bodyUrl, re-uploaded via uploadMarkdown on autosave), and the explorer tree rebuilds from flat folders+notes arrays. A sys-admin importer migrates legacy on-disk .md files (with frontmatter and comment sidecars) into the new model. (`73e86a8`, `4e69b98`, `56187a9`, `ff7640a`)
-- Shipped a public, unauthenticated /blog index and /blog/:slug post page styled after cursor.com/blog, with a previous-posts rail, markdown TOC, hero image, and grouped 'more posts' footer; posts are notes under the reserved AURA_BLOG_PROJECT_ID and served via new /api/public/blog endpoints. Added an aura-blog CMS surface in the notes app (sys-admin gated, blog fields, publish status badges) and a 'Blog' entry in the public top nav and mobile drawer. (`f1849e1`, `09b1f3f`)
-- Added a neumorphic Agents/Projects rocker switch at the top of the sidebar, then iterated through tilt, hinge, and plate models to land on a flat plate-mounted toggle with a continuous diagonal gradient border, snappy transitions, and an optimistic flip that paints before the route swap. (`7f6a788`, `6f4cf35`, `3479615`, `a6385e3`, `c061993`, `2b28b7b`, `cc70464`, `2e1e7d7`, `81bc1ed`, `9cca93e`, `c6b9afc`, `52db982`, `a0cb378`, `18fc1d6`, `9ba2a15`, `ed54694`, `9f9c3e7`, `77e2edf`, `6c4d5f4`, `8ca3f21`, `39fee1d`, `17309df`, `40e9e63`, `1bbc91e`, `f8f6992`)
+- Replaced the filesystem notes layer end-to-end: the server now serves storage-backed, ID-based notes with markdown bodies on S3, the frontend store/UI was rewritten off relPath onto stable UUIDs with autosave via uploadMarkdown, and a sys-admin importer ports legacy filesystem notes over. (`73e86a8`, `4e69b98`, `56187a9`, `ff7640a`)
+- Added an aura-blog CMS surface inside Notes (sys-admin gated blog fields, publish, status badges) plus a new public /blog index and /blog/:slug post page styled after cursor.com/blog, fed by anonymous /api/public/blog endpoints and S3 markdown bodies, with a Blog entry in the public top nav and mobile drawer. (`f1849e1`, `09b1f3f`)
+- Introduced a neumorphic Agents/Projects rocker switch at the top of the shared sidebar, iterated through several physical models (rigid plate → center-folding rocker → flat plate-mounted toggle), and tuned the shared bright-to-dark border gradient and motion so the selected side reads as raised and the click feels instant. (`7f6a788`, `6f4cf35`, `6c4d5f4`, `2b28b7b`, `9ba2a15`, `ed54694`, `39fee1d`, `1bbc91e`)
 
-## 12:29 PM — Persistent agent chat, list virtualization, and a Theme settings drill-down
+## 12:29 PM — Persistent chat surface, Theme drill-down, and remote-agent recovery
 
-The agent chat now survives every Agents/Projects switch, the sidebar list is virtualized with a row-level cascade reveal, and Settings grows real Theme sub-areas with typography, layout, motion, and a relocated desktop background editor.
+A long afternoon of polish around the new sidebar rocker landed a shell-level conversation host, a real Theme settings section, performance work on the agent list, and reliability fixes for stalled remote-agent turns and geo analytics.
 
-- Mounted a single conversation-target-keyed ConversationSurfaceHost as a stable sibling of each app's MainPanel so the agent chat (keyed by projectId + agentInstanceId) is no longer remounted or refetched when flipping between Agents and Projects; the rocker now resolves the equivalent lane in the target app so it lands on the same mounted chat. (`e2db6de`)
-- Made Agents/Projects switching feel instant: kept the agents list mounted across switches with LeftMenu keep-alive, memoized panes so a flip only toggles wrapper visibility, virtualized the agent list with an O(1) busy-state index, restored the eager fetch on app open with a proper loading state, and ensured the cascade row-reveal animation actually runs by moving it to a row-level component with the Web Animations API. (`bfb191b`, `37b5360`, `5e89bf1`, `9611374`, `0eb072a`, `1ea05f2`, `246b6b1`, `c40d4aa`, `92acd4f`, `ca6e92a`, `93e6b2b`, `dd3e812`, `9851109`)
-- Expanded desktop Settings with a generic drill-down: clicking Theme swaps the left nav for a breadcrumb and sub-area list covering Mode & accent (with custom hex accent), Typography, Layout & density, Custom colors (grouped under Borders/Surfaces/Accent), Effects, Motion, and Presets, all backed by persisted CSS variables pre-stamped at boot to avoid flash. The desktop wallpaper editor moved out of its standalone modal into a Theme > Background sub-area, with right-click Theme/Background entries deep-linking into it. (`d82ab04`, `2fd8558`, `812fac6`, `afd46c4`, `a32cca5`, `d876b8f`, `b6afbcf`)
-- Polished the chat surface and agent profile: the floating chat input drops its painted backdrop in favor of a live-measured mask that clips the transcript at the input pill's midline, the input column aligns to the transcript's 680px content width, and the agent spec/Telegram panels are now theme-aware glass that picks up the bottom taskbar's blur with one-click copy for IP/wallet plus a zscan.live link on wallet addresses. (`14b0e5b`, `2755738`, `28d1658`, `cb9bf60`, `10ef33c`, `e44448f`, `d8fa793`, `4e98343`, `97d5daf`, `5e89bf1`, `027b9e5`, `ceb2741`, `265d1f4`, `cc9074e`, `a666eaa`)
+- Mounted a shell-level ConversationSurfaceHost keyed by projectId + agentInstanceId so the agent chat survives every Agents ⇄ Projects switch with no remount or refetch, and made AppSwitchToggle resolve the equivalent lane in the target app so the toggle lands on the same mounted chat. (`e2db6de`)
+- Made app-switching feel instant: keep both panes mounted via memoized keep-alive wrappers, virtualize the agents list with an O(1) busy index, centralize per-row store reads behind useAgentRowModels so rows are pure props, lazy-load avatars after first paint, and hydrate the agent IndexedDB cache on warm loads so the sidebar paints before the network responds. (`bfb191b`, `ca6e92a`, `dd3e812`, `8ae8c91`, `8399a4f`)
+- Rebuilt the sidebar list reveal animation: rows now own their own cascade-in via a useSidebarListReveal hook (Web Animations API, reduced-motion aware) and AgentList rides on the shared LeftMenuTree, so the entrance animation fires reliably on first load and on every Agents ⇄ Projects switch even with virtualization and async hydration. (`1ea05f2`, `c40d4aa`, `92acd4f`, `7e7e2a1`)
+- Expanded desktop Settings with a generic drill-down: clicking Theme swaps the left nav for a breadcrumb and sub-areas (Mode & accent with custom hex, Typography, Layout & density, Custom colors, Effects, Motion, Presets), backed by persisted CSS-variable controls pre-stamped in index.html to avoid flash. Desktop right-click now has Theme and Background entries that deep-link straight into the relevant sub-area. (`d82ab04`, `2fd8558`, `812fac6`, `afd46c4`)
+- Polished the agent spec card: theme-aware smoked-black glass that flips with light/dark mode, taskbar-matched 90% glass for both the spec and Telegram panels, one-click copy on IP/Wallet rows with a zscan.live wallet link, a centered nameplate in the metal strip, and an 'Org' label trim. (`28d1658`, `cb9bf60`, `10ef33c`, `d8fa793`, `e44448f`, `e2685cc`)
+- Reworked the floating chat input: removed the painted backdrop band and instead hard-clip the transcript at the input pill's live-measured midline, align the input to the 680px transcript column, and make the mode selector opaque so chat content no longer bleeds through. (`14b0e5b`, `2755738`)
+- Restyled the public marketing surface: Changelog/Feedback/Models banners picked up frosted pricing-style glass, the /blog single-post and index pages were reworked after cursor.com/blog with a featured post, 2-up grid, archive table, drop cap, and real author avatar via an updated aura-blog seed action; Vibecoder persona gained a WebGL flow-field background that drifts under reduced motion. (`ca2a99a`, `0baa2ae`, `c74ecd9`, `f1a2f30`, `cdd0a67`, `b861cf4`, `066337e`)
+- Fixed stalled remote/CEO chat turns: the server now evicts warm chat sessions tied to a recycled VM after recover/restart/start/wake/hibernate, and the standalone-agent chat hook forwards the full error payload so stream_stalled and turn_timeout classify as recoverable and auto-retry instead of surfacing a hard 'Chat stream interrupted' bubble. (`a314d2e`)
+- Made server-emitted session_active forward the caller's X-Forwarded-For / X-Real-IP to Mixpanel so the authoritative True DAU events geolocate to the user rather than the server; loopback/missing IPs are dropped so no misleading geo is emitted. (`1bc8486`)
+- Fixed several sidebar layout issues that surfaced with the rocker: list rows now scroll cleanly under the floating Refer member pill across Agents/Projects/Tasks/Process/Debug/Notes, sidebar items can no longer be text-selected, and the switch plate sits vertically centered between the search pill and the first agent row. (`9757f13`, `0eb072a`, `e7290fb`)
+- Hardened the model picker: unified two type styles across the menu, normalized header padding, and extracted a shared useFlyoutAnchor hook so the effort/council hover flyouts recompute position on scroll/resize and stay anchored to their row instead of floating away after layout shifts on Edge. (`0e2a18c`)
 
 ## Highlights
 
-- Council mechanism is now visible end-to-end
-- Agent profile redesign: 3D nameplate + spec card
-- Notes moved to storage + S3, public /blog ships
-- Agents/Projects rocker with persistent chat lane
-- Settings gains Theme drill-down with typography, layout, motion
+- New ProfileSpecCard + 3D nameplate for agents
+- Public /blog site backed by storage-backed Notes
+- Agents ⇄ Projects rocker with a persistent chat surface
+- Settings → Theme drill-down with typography, layout, and motion
+- Stalled remote agent turns now auto-recover
 

@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-06-05T00:32:20.620Z",
+  "generatedAt": "2026-06-05T04:37:54.922Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.598.1",
+  "version": "0.1.0-nightly.613.1",
   "date": "2026-06-04",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.598.1",
-  "lastIncludedSha": "92acd4fbe4bca4868b2d27441249185b37defdcb",
-  "previousProcessedSha": "e9d56de653256325c2d4a816db5d70ec3f8855ac",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.613.1",
+  "lastIncludedSha": "1bc8486a0037495eff185ddb783c8c70ab1c3c22",
+  "previousProcessedSha": "92acd4fbe4bca4868b2d27441249185b37defdcb",
   "commitShas": [
     "1bb3c667cdeded10e90d9a62b8dbbd33ddb72b96",
     "7df535d94a9f3809624b4b7ae79b5bb5aa7d02e6",
@@ -110,10 +110,25 @@
     "a32cca5e018b723b7be65ca6a178da1cdde0c021",
     "e2685cc7c0d657a3b691a9155ce23323d4b913de",
     "d876b8fa7a051435cf6c6d97ec96142bf439a5da",
-    "92acd4fbe4bca4868b2d27441249185b37defdcb"
+    "92acd4fbe4bca4868b2d27441249185b37defdcb",
+    "e7290fbcb3c942c857ded1ffa40d950bdd5b9152",
+    "066337eae9f7509da2e5a352118c70bff51a5bd9",
+    "0baa2ae5b4d7daf3390c5d9d8820be9f52343459",
+    "ca2a99a30a422aec4bf4c6b65a365a0e8794d7a3",
+    "7e7e2a1511b37aa47cb9fd75ea180321b5c23472",
+    "c74ecd9066cebffb96a2c217f3bc0f2b409218f0",
+    "f1a2f30ac9575403fe7b51a7704e9ccc1803fef5",
+    "8ae8c9134522bd273e115ef91f630dd8c31b7069",
+    "b861cf40e63b909d5e6fc0a94d1a66cd0b2c5faf",
+    "153817ddb4dd0c65ccd8ab1c5d1b043a03035108",
+    "8399a4f21c8ccc2caecdccd04256a1682f20a076",
+    "0e2a18c3ad73748c11fb9320c4991dd3946c8005",
+    "a314d2e035d103c3393a3dea9b706c9b31bf04c8",
+    "cdd0a6728d1b887a8ea725bb80ef519330e4d27b",
+    "1bc8486a0037495eff185ddb783c8c70ab1c3c22"
   ],
-  "rawCommitCount": 99,
-  "filteredCommitCount": 99,
+  "rawCommitCount": 114,
+  "filteredCommitCount": 114,
   "rawCommits": [
     {
       "sha": "1bb3c667cdeded10e90d9a62b8dbbd33ddb72b96",
@@ -4324,6 +4339,655 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "e7290fbcb3c942c857ded1ffa40d950bdd5b9152",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-04T19:06:09-07:00",
+      "subject": "fix(sidebar): vertically center Agents/Projects switch plate",
+      "body": "Balance AppSwitchToggle wrapper padding (8px top / 12px bottom) so the\nplate sits centered between the search pill bottom and the first agent\nrow, accounting for the 5px search inset above and 1px row margin below.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "92acd4fbe4bca4868b2d27441249185b37defdcb"
+      ],
+      "files": [
+        "interface/src/components/AppSwitchToggle/AppSwitchToggle.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 5,
+        "deletions": 2
+      },
+      "committedAtMs": 1780625169000,
+      "cleanSubject": "vertically center Agents/Projects switch plate",
+      "keywords": [
+        "vertically",
+        "center",
+        "agents",
+        "projects",
+        "switch",
+        "plate"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "066337eae9f7509da2e5a352118c70bff51a5bd9",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-04T19:09:28-07:00",
+      "subject": "feat(blog): move Blog into Resources dropdown above Changelog",
+      "body": "Co-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "e7290fbcb3c942c857ded1ffa40d950bdd5b9152"
+      ],
+      "files": [
+        "interface/src/views/public-chat/PublicTopNav/PublicTopNav.test.tsx",
+        "interface/src/views/public-chat/PublicTopNav/PublicTopNav.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 7,
+        "deletions": 5
+      },
+      "committedAtMs": 1780625368000,
+      "cleanSubject": "move Blog into Resources dropdown above Changelog",
+      "keywords": [
+        "move",
+        "blog",
+        "into",
+        "resources",
+        "dropdown",
+        "above",
+        "changelog"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "0baa2ae5b4d7daf3390c5d9d8820be9f52343459",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-04T19:14:14-07:00",
+      "subject": "feat(public-chat): animated WebGL flow-field bg for Vibecoder persona",
+      "body": "Replace the Vibecoder persona's static site.png page background with a\nsubtle, slowly-drifting domain-warped noise field rendered via a single\nfullscreen three.js fragment shader, tinted by the persona's base color.\n\nPerformance: one fullscreen quad, DPR capped at 1.5, rAF pauses on hidden\ntabs, a single static frame under prefers-reduced-motion, and a graceful\nfallback to the existing color/image when WebGL is unavailable. Gated by a\nnew optional siteBackgroundFlow persona theme flag so all other personas\nare untouched.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "066337eae9f7509da2e5a352118c70bff51a5bd9"
+      ],
+      "files": [
+        "interface/src/views/public-chat/PublicChatView/FlowFieldBackground.tsx",
+        "interface/src/views/public-chat/PublicChatView/PublicChatView.module.css",
+        "interface/src/views/public-chat/PublicChatView/PublicChatView.tsx",
+        "interface/src/views/public-chat/personas.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 317,
+        "deletions": 1
+      },
+      "committedAtMs": 1780625654000,
+      "cleanSubject": "animated WebGL flow-field bg for Vibecoder persona",
+      "keywords": [
+        "animated",
+        "webgl",
+        "flow",
+        "field",
+        "vibecoder",
+        "persona"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "ca2a99a30a422aec4bf4c6b65a365a0e8794d7a3",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-04T19:15:23-07:00",
+      "subject": "style(marketing): give Changelog/Feedback/Models banners pricing-style glass",
+      "body": "Match the frosted-glass pricing plan grid: BannerCard now has rounded\ncorners, a hairline border, soft shadow, and a 20px backdrop blur, and\neach page renders a translucent accent tint over a top-anchored colored\npage glow so the glass effect reads while content below stays on the\nreadable dark surface.",
+      "parents": [
+        "0baa2ae5b4d7daf3390c5d9d8820be9f52343459"
+      ],
+      "files": [
+        "interface/src/views/marketing/BannerCard/BannerCard.css",
+        "interface/src/views/marketing/ChangelogView/ChangelogView.css",
+        "interface/src/views/marketing/FeedbackView/FeedbackView.css",
+        "interface/src/views/marketing/ModelsView/ModelsView.css"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 67,
+        "deletions": 35
+      },
+      "committedAtMs": 1780625723000,
+      "cleanSubject": "style(marketing): give Changelog/Feedback/Models banners pricing-style glass",
+      "keywords": [
+        "style",
+        "marketing",
+        "give",
+        "changelog",
+        "feedback",
+        "models",
+        "banners",
+        "pricing",
+        "glass"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "7e7e2a1511b37aa47cb9fd75ea180321b5c23472",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-04T19:19:36-07:00",
+      "subject": "refactor(left-menu): unify agents list onto LeftMenuTree and fix switch cascade",
+      "body": "Route AgentList through the shared LeftMenuTree via a generic custom-content\nrow variant (kind: \"custom\"), so Agents and Projects share one virtualized\nscroll shell, overlay scrollbar, and reveal cascade. The rich\nAgentConversationRow is injected as content, keeping features/left-menu free\nof app-component imports. Removes AgentList's bespoke VirtualizedAgentRows\nshell and now-dead styles.\n\nFix the cascade not firing on the Agents <-> Projects switch: it depended on\nResizeObserver catching the keep-alive display:none -> visible flip, which is\nrace-prone. LeftMenu now provides a deterministic active-state signal via\nLeftMenuPaneActiveContext, and useSidebarListReveal replays the reveal when a\npane goes inactive -> active. Fixes both lists since both reveal through\nLeftMenuTree.",
+      "parents": [
+        "ca2a99a30a422aec4bf4c6b65a365a0e8794d7a3"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentList/AgentList.module.css",
+        "interface/src/apps/agents/AgentList/AgentList.tsx",
+        "interface/src/features/left-menu/LeftMenu/LeftMenu.tsx",
+        "interface/src/features/left-menu/LeftMenuTree/LeftMenuTree.test.tsx",
+        "interface/src/features/left-menu/LeftMenuTree/LeftMenuTree.tsx",
+        "interface/src/features/left-menu/LeftMenuTree/LeftMenuTreeRows.tsx",
+        "interface/src/features/left-menu/index.ts",
+        "interface/src/features/left-menu/pane-active-context.ts",
+        "interface/src/features/left-menu/types.ts",
+        "interface/src/features/left-menu/use-sidebar-list-reveal.ts"
+      ],
+      "stats": {
+        "fileCount": 10,
+        "insertions": 147,
+        "deletions": 326
+      },
+      "committedAtMs": 1780625976000,
+      "cleanSubject": "unify agents list onto LeftMenuTree and fix switch cascade",
+      "keywords": [
+        "unify",
+        "agents",
+        "list",
+        "onto",
+        "leftmenutree",
+        "switch",
+        "cascade"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "c74ecd9066cebffb96a2c217f3bc0f2b409218f0",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-04T19:22:58-07:00",
+      "subject": "fix(public-chat): make Vibecoder flow-field bg visibly drift, larger and softer",
+      "body": "The animation was technically running but the time scale (0.06) made the\ndrift imperceptible. Bump it to a clearly visible (still slow) drift, drop\nthe fbm to 3 octaves and lower the spatial frequency for larger, gentler\nblobs, and reduce the trough/ridge contrast so the pattern reads as a\nsubtle moving wash rather than busy high-contrast noise.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "7e7e2a1511b37aa47cb9fd75ea180321b5c23472"
+      ],
+      "files": [
+        "interface/src/views/public-chat/PublicChatView/FlowFieldBackground.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 21,
+        "deletions": 22
+      },
+      "committedAtMs": 1780626178000,
+      "cleanSubject": "make Vibecoder flow-field bg visibly drift, larger and softer",
+      "keywords": [
+        "make",
+        "vibecoder",
+        "flow",
+        "field",
+        "visibly",
+        "drift",
+        "larger",
+        "softer"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f1a2f30ac9575403fe7b51a7704e9ccc1803fef5",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-04T19:24:35-07:00",
+      "subject": "fix(public-chat): keep Vibecoder flow-field bg animating under reduced motion",
+      "body": "The desktop webview reports prefers-reduced-motion: reduce, which made the\ncomponent paint a single static frame, so the bg never moved in-app (it did\nanimate in a plain browser). Always run the rAF loop and instead just slow\nthe drift to 0.4x when reduce is set, so the decorative wash keeps moving\neverywhere while still easing motion for that preference.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "c74ecd9066cebffb96a2c217f3bc0f2b409218f0"
+      ],
+      "files": [
+        "interface/src/views/public-chat/PublicChatView/FlowFieldBackground.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 11,
+        "deletions": 13
+      },
+      "committedAtMs": 1780626275000,
+      "cleanSubject": "keep Vibecoder flow-field bg animating under reduced motion",
+      "keywords": [
+        "keep",
+        "vibecoder",
+        "flow",
+        "field",
+        "animating",
+        "under",
+        "reduced",
+        "motion"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "8ae8c9134522bd273e115ef91f630dd8c31b7069",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-04T19:29:03-07:00",
+      "subject": "perf(agents): paint sidebar from cache on warm load and commit list before CEO setup",
+      "body": "Agents took a long time to appear on a warm load while Projects were instant.\nTwo data-path fixes bring Agents to parity:\n\n- Hydrate the IndexedDB agent cache on module init when a user is already\n  authenticated, and re-fetch the org-scoped fleet when the active org settles.\n  The auth-change subscription only fired on a userId transition, which the\n  lazily-imported store missed on warm loads, so cached agents never painted and\n  the list waited for the network. Mirrors the projects store, which hydrates on\n  both org- and auth-settle. Cache hydration now also no-ops if a fresh network\n  result already landed, so the async read can't clobber it.\n\n- Commit the agent list immediately after `agents.list` resolves, then run the\n  idempotent `superAgent.setup()` (CEO + Home ensure) as a follow-up that\n  patches in any newly-created agent. Previously the first render was gated\n  behind that extra round-trip (and an occasional cleanup + relist). Empty lists\n  still wait for setup since there is nothing to show yet.",
+      "parents": [
+        "f1a2f30ac9575403fe7b51a7704e9ccc1803fef5"
+      ],
+      "files": [
+        "interface/src/apps/agents/stores/agent-store.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 94,
+        "deletions": 33
+      },
+      "committedAtMs": 1780626543000,
+      "cleanSubject": "perf(agents): paint sidebar from cache on warm load and commit list before CEO setup",
+      "keywords": [
+        "perf",
+        "agents",
+        "paint",
+        "sidebar",
+        "from",
+        "cache",
+        "warm",
+        "load",
+        "commit",
+        "list",
+        "before",
+        "setup"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "b861cf40e63b909d5e6fc0a94d1a66cd0b2c5faf",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-04T19:33:31-07:00",
+      "subject": "feat(blog): add one-time aura-blog weekly seed action in Notes",
+      "body": "Adds a sys-admin-only 'Seed weekly blog posts' button to the Notes nav that creates and publishes seven release-recap posts (authored by n3o) under the aura-blog project. Runs in the authenticated session so the JWT is threaded automatically: create note, upload markdown body to S3 via presign, set blog metadata + byline + sortOrder, then publish. Idempotent by slug; all posts publish today with ordering controlled via sortOrder (backdated dates deferred to a follow-up).",
+      "parents": [
+        "8ae8c9134522bd273e115ef91f630dd8c31b7069"
+      ],
+      "files": [
+        "interface/public/blog-media/video-placeholder.svg",
+        "interface/src/apps/notes/NotesNav/NotesNav.module.css",
+        "interface/src/apps/notes/NotesNav/NotesNav.tsx",
+        "interface/src/apps/notes/seed-aura-blog/posts.ts",
+        "interface/src/apps/notes/seed-aura-blog/run.ts",
+        "interface/src/shared/api/notes.ts"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 685,
+        "deletions": 2
+      },
+      "committedAtMs": 1780626811000,
+      "cleanSubject": "add one-time aura-blog weekly seed action in Notes",
+      "keywords": [
+        "time",
+        "aura",
+        "blog",
+        "weekly",
+        "seed",
+        "action",
+        "notes"
+      ],
+      "fileGroups": [
+        "interface/public/blog-media",
+        "interface/src/apps",
+        "interface/src/shared"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "153817ddb4dd0c65ccd8ab1c5d1b043a03035108",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-04T19:36:12-07:00",
+      "subject": "style(marketplace): round selected and hover rows in sidebar",
+      "body": "",
+      "parents": [
+        "b861cf40e63b909d5e6fc0a94d1a66cd0b2c5faf"
+      ],
+      "files": [
+        "interface/src/apps/marketplace/MarketplaceSidebar/MarketplaceSidebar.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 8,
+        "deletions": 0
+      },
+      "committedAtMs": 1780626972000,
+      "cleanSubject": "style(marketplace): round selected and hover rows in sidebar",
+      "keywords": [
+        "style",
+        "marketplace",
+        "round",
+        "selected",
+        "hover",
+        "rows",
+        "sidebar"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "8399a4f21c8ccc2caecdccd04256a1682f20a076",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-04T19:55:16-07:00",
+      "subject": "perf(agents): make sidebar rows pure + lazy-load avatars so switches are instant",
+      "body": "Agents rendered slower than Projects on every Agents <-> Projects switch. Both\npanes are kept alive, but the virtualizer drops its row window while a pane is\ndisplay:none and re-mounts it on reveal. Each AgentConversationRow re-mounted\n~9 store subscriptions (useAvatarState x2, useIsAgentBusy x4, pinned, LoopProgress,\npreview) plus an image decode, while project rows are pure and carry none.\n\nDecouple the per-row work from the render loop:\n\n- Centralize the reads in a batched, list-level zustand hook (useAgentRowModels)\n  that resolves status / busy / loop activity / pinned / preview for every agent\n  once and hands each row a plain AgentRowModel. Rows are now pure and props-driven\n  like project rows, so re-mounting on a switch carries no subscriptions. Extracts\n  a pure LoopProgressView and a shared resolveAvatarState; exports aggregateRows.\n\n- Lazy-load the avatar image after first paint (useAfterPaint) so the decode never\n  blocks the switch frame; a seen-set skips the defer on warm re-mounts to avoid\n  flicker. Adds decoding=\"async\" to the avatar img.\n\nTests: AgentConversationRow becomes a props-rendering suite; the busy-aggregation\ncoverage moves to a new use-agent-row-models suite; adds a use-after-paint test;\nAgentList stubs the model hook (covered separately) but still sources preview from\nthe mocked cache.",
+      "parents": [
+        "153817ddb4dd0c65ccd8ab1c5d1b043a03035108"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentConversationRow/AgentConversationRow.test.tsx",
+        "interface/src/apps/agents/AgentConversationRow/AgentConversationRow.tsx",
+        "interface/src/apps/agents/AgentList/AgentList.test.tsx",
+        "interface/src/apps/agents/AgentList/AgentList.tsx",
+        "interface/src/apps/agents/AgentList/use-agent-row-models.test.tsx",
+        "interface/src/apps/agents/AgentList/use-agent-row-models.ts",
+        "interface/src/components/Avatar/Avatar.tsx",
+        "interface/src/components/LoopProgress/LoopProgress.tsx",
+        "interface/src/components/LoopProgress/index.ts",
+        "interface/src/hooks/use-avatar-state.ts",
+        "interface/src/shared/hooks/use-after-paint.test.ts",
+        "interface/src/shared/hooks/use-after-paint.ts",
+        "interface/src/stores/loop-activity-store.ts"
+      ],
+      "stats": {
+        "fileCount": 13,
+        "insertions": 460,
+        "deletions": 270
+      },
+      "committedAtMs": 1780628116000,
+      "cleanSubject": "perf(agents): make sidebar rows pure + lazy-load avatars so switches are instant",
+      "keywords": [
+        "perf",
+        "agents",
+        "make",
+        "sidebar",
+        "rows",
+        "pure",
+        "lazy",
+        "load",
+        "avatars",
+        "switches",
+        "instant"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/hooks",
+        "interface/src/shared",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "0e2a18c3ad73748c11fb9320c4991dd3946c8005",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-04T21:05:12-07:00",
+      "subject": "fix(model-picker): unify type styles and keep hover flyouts anchored",
+      "body": "Collapse the model selector to two type styles (13px body + 12px muted\nmeta) and normalize the header paddings/gaps so the menu reads\nconsistently. Vendor and council section headers now share one uppercase\ntreatment, and stray 600/700 weights drop to 500.\n\nAlso hardens the effort/council hover flyouts: they previously captured\ntheir fixed position once on hover, so any post-open layout shift (inner\nscroll, the combine-mechanism section toggling, sub-pixel/scrollbar\ndifferences on Edge) left them floating away from their row. Extract a\nshared useFlyoutAnchor hook that recomputes position on scroll/resize and\non menu-container resize, with a viewport clamp so the flyout can never\nrender detached.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "8399a4f21c8ccc2caecdccd04256a1682f20a076"
+      ],
+      "files": [
+        "interface/src/components/InputBarShell/CouncilCountRow.tsx",
+        "interface/src/components/InputBarShell/InputBarShell.module.css",
+        "interface/src/components/InputBarShell/ModelMenuRow.tsx",
+        "interface/src/components/InputBarShell/use-flyout-anchor.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 263,
+        "deletions": 152
+      },
+      "committedAtMs": 1780632312000,
+      "cleanSubject": "unify type styles and keep hover flyouts anchored",
+      "keywords": [
+        "unify",
+        "type",
+        "styles",
+        "keep",
+        "hover",
+        "flyouts",
+        "anchored"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "a314d2e035d103c3393a3dea9b706c9b31bf04c8",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-04T21:12:12-07:00",
+      "subject": "fix(remote-agents): recover stalled CEO/remote chat turns",
+      "body": "Two independent defects made a restored remote (CEO) agent unusable, surfacing as 'Remote agent did not emit any stream events within 180s', a local timeout, and a hard 'Chat stream interrupted' bubble.\n\nServer: recovering or running a lifecycle action (stop/restart/start/wake/hibernate) on a remote VM recycles the harness run but left the warm chat_session in the registry pointing at the dead WS. ChatSession::is_alive only checks the command channel, so the next turn reused it and stalled until the 180s first-event watchdog fired. Add AppState::evict_chat_sessions_for_agent (backed by a registry-level free fn) and call it from recover_remote_agent_pipeline and remote_agent_lifecycle; the existing update sweep now delegates to it.\n\nClient: the standalone-agent chat hook passed only event.content.message to handleStreamError, dropping the error code so stream_stalled/turn_timeout never classified as a recoverable streamDropped, and it had no auto-retry. Pass the full payload and add a tryAutoRetry mirroring project chat (reconnect-first, then replay the last send, bounded by MAX_AUTO_RETRIES) on both the Error frame and transport-level onError.\n\nTests: unit-test the registry eviction (target-only + no-op cases) and add a hook test asserting a stream_stalled error auto-reconnects without a hard error bubble or a duplicated user message.\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "0e2a18c3ad73748c11fb9320c4991dd3946c8005"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/crud/swarm/recovery.rs",
+        "apps/aura-os-server/src/handlers/agents/crud/update.rs",
+        "apps/aura-os-server/src/handlers/swarm.rs",
+        "apps/aura-os-server/src/state/mod.rs",
+        "apps/aura-os-server/src/state/tests.rs",
+        "interface/src/hooks/use-agent-chat-stream.test.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 291,
+        "deletions": 24
+      },
+      "committedAtMs": 1780632732000,
+      "cleanSubject": "recover stalled CEO/remote chat turns",
+      "keywords": [
+        "recover",
+        "stalled",
+        "remote",
+        "chat",
+        "turns"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "cdd0a6728d1b887a8ea725bb80ef519330e4d27b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-04T21:15:10-07:00",
+      "subject": "feat(blog): restyle public blog and use real author avatar",
+      "body": "Rework the public /blog views after cursor.com/blog: the single-post page centers the reading column on the page with the previous-posts list in the left margin, tightens typography/spacing, adds a drop cap, and strips the duplicated leading title/meta from the body. The index now leads with a featured post, a 2-up grid of recent posts with thumbnails, and a full Title/Type/Date archive table of all posts.\n\nThe aura-blog seed action now sets the post byline to the logged-in user's real profile image + id (n3o), and backfills the byline on already-published posts when re-run.",
+      "parents": [
+        "a314d2e035d103c3393a3dea9b706c9b31bf04c8"
+      ],
+      "files": [
+        "interface/src/apps/notes/NotesNav/NotesNav.tsx",
+        "interface/src/apps/notes/seed-aura-blog/run.ts",
+        "interface/src/views/marketing/BlogView/BlogView.module.css",
+        "interface/src/views/marketing/BlogView/BlogView.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 547,
+        "deletions": 98
+      },
+      "committedAtMs": 1780632910000,
+      "cleanSubject": "restyle public blog and use real author avatar",
+      "keywords": [
+        "restyle",
+        "public",
+        "blog",
+        "real",
+        "author",
+        "avatar"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "1bc8486a0037495eff185ddb783c8c70ab1c3c22",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-06-04T21:21:21-07:00",
+      "subject": "feat(analytics): forward user IP on server session_active for geo",
+      "body": "Server-emitted session_active (the authoritative True DAU source) posted\ndirectly to Mixpanel with no ip property, so events geolocated to the\nserver's IP instead of the user's, leaving country breakdowns useless.\nForward the caller's IP (X-Forwarded-For / X-Real-IP) as the ip property\nso Mixpanel resolves $country_code/$region/$city from the user, matching\nthe browser SDK's ip:true behavior. Loopback/missing IPs are dropped so\nwe never emit misleading geo.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+      "parents": [
+        "cdd0a6728d1b887a8ea725bb80ef519330e4d27b"
+      ],
+      "files": [
+        "apps/aura-os-server/src/auth_guard/mod.rs",
+        "apps/aura-os-server/src/auth_guard/tests.rs",
+        "apps/aura-os-server/src/mixpanel.rs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 101,
+        "deletions": 2
+      },
+      "committedAtMs": 1780633281000,
+      "cleanSubject": "forward user IP on server session_active for geo",
+      "keywords": [
+        "forward",
+        "user",
+        "server",
+        "session",
+        "active"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
     }
   ],
   "batchCount": 6,
@@ -4335,36 +4999,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 18846600
+          "sizeBytes": 18858180
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.598.1",
+      "version": "0.1.0-nightly.613.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.598.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.613.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 49959186
+          "sizeBytes": 49976344
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.598.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.613.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.598.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.613.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 116861432
+          "sizeBytes": 116869624
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.598.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.613.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -4374,29 +5038,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.598.1",
+      "version": "0.1.0-nightly.613.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.598.1_aarch64.dmg",
+          "name": "AURA_0.1.0-nightly.613.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 45917605
+          "sizeBytes": 45925831
         },
         {
-          "name": "AURA_0.1.0-nightly.598.1_aarch64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.613.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.598.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.613.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 44979222
+          "sizeBytes": 45000468
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.598.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.613.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -4406,29 +5070,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.598.1",
+      "version": "0.1.0-nightly.613.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "AURA_0.1.0-nightly.598.1_x64.dmg",
+          "name": "AURA_0.1.0-nightly.613.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 47880894
+          "sizeBytes": 47922630
         },
         {
-          "name": "AURA_0.1.0-nightly.598.1_x64.dmg.sig",
+          "name": "AURA_0.1.0-nightly.613.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.598.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.613.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 47036139
+          "sizeBytes": 47051150
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.598.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.613.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -4438,17 +5102,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.598.1",
+      "version": "0.1.0-nightly.613.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.598.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.613.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 33677106
+          "sizeBytes": 33670013
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.598.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.613.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -4457,34 +5121,28 @@
     }
   ],
   "rendered": {
-    "title": "Council clarity, a new agent ID card, and a public blog",
-    "intro": "A heavy day across the desktop interface: the council picker and panel learned to clearly show which combine mechanism is in flight, the agent profile got a redesigned 3D nameplate paired with a new spec card, notes moved off the filesystem onto storage-backed S3 bodies (unlocking a public /blog site), and the Agents/Projects sidebar gained a hand-tuned rocker switch with a persistent chat surface behind it. Settings also grew real theme drill-downs with typography, layout, motion, and wallpaper controls.",
+    "title": "Agent cards, a public blog, and a sidebar that stays put",
+    "intro": "A heavy interface day: the agent profile got a hybrid 3D nameplate + glass spec card, Notes was rebuilt onto a storage-backed ID model that also powers a brand-new public /blog site, and the sidebar gained an Agents/Projects rocker plus a persistent chat surface so switching apps no longer remounts your conversation. Settings grew real theme sub-areas, and several reliability fixes landed for remote agents, geo analytics, and production CSS.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "7:56 PM",
         "started_at": "2026-06-04T02:56:33.000Z",
         "ended_at": "2026-06-04T16:53:39.000Z",
-        "title": "Council mechanism is visible end-to-end",
-        "summary": "The Synthesize/Contrast/Side-by-side picker becomes a real menu row, the chosen mechanism is persisted on the parent block, and the council panel header now labels itself accurately on reload.",
+        "title": "Council mechanism picker and a redesigned agent profile card",
+        "summary": "The council UI got a clearer mechanism picker that persists across reloads, and the agent profile was split into a slim 3D nameplate plus a separate spec card.",
         "items": [
           {
-            "text": "Replaced the finicky hover flyout with an always-visible CouncilMechanismRow that shows a checkmark on the active option and updates in place when clicked.",
+            "text": "Replaced the finicky hover flyout on the council count with an always-visible Synthesize / Contrast / Side-by-side menu row, and persisted the chosen mechanism on the parent tool_use block so a reloaded turn shows the correct label on the council panel header.",
             "commit_shas": [
-              "1bb3c667cdeded10e90d9a62b8dbbd33ddb72b96"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Persisted the council-wide mechanism on the parent tool_use block and SubagentSpawned linkage so a reloaded turn can label the council panel with the mechanism that produced it, and surfaced it as a neutral chip on the panel header with a corrected subtitle (no more 'slot 0 synthesizes' on contrast/side-by-side runs).",
-            "commit_shas": [
+              "1bb3c667cdeded10e90d9a62b8dbbd33ddb72b96",
               "7df535d94a9f3809624b4b7ae79b5bb5aa7d02e6",
               "ed30264898bfa0190747921f560fcb95db9833cc"
             ],
             "confidence": "high"
           },
           {
-            "text": "Redesigned the agent profile: shortened the WebGL worn-metal backplate to just name/role/status, moved org/IP/wallet/channels/nav into a new DOM ProfileSpecCard with a black-glass treatment, and engraved the live online/offline status onto the card frame in place of the old barcode.",
+            "text": "Split the agent profile into a shortened WebGL worn-metal nameplate (name, role, engraved status on the frame) and a new DOM ProfileSpecCard carrying Organization, IP, Wallet, channel logos, and Skills/Connectors/Permissions links, with a black-glass treatment and trimmed nameplate sizing.",
             "commit_shas": [
               "ffbd03c58f8bb31e87558a0a45913f1ed9cf2d1a",
               "913047d0cc42532a5d0cb1d4748ce121b3b5d7f5",
@@ -4493,7 +5151,7 @@
             "confidence": "high"
           },
           {
-            "text": "Gave operators a real escape hatch on broken remote agents: when the VM state fetch fails recoverably (e.g. 404 machine gone), the status card now surfaces a Recovery button that re-provisions the machine, while 401 session-expired still only offers Report bug.",
+            "text": "Remote-agent status card now offers a Recovery action when the VM state fetch fails recoverably (e.g. 404 'machine gone'), instead of stranding the user with only a Report bug button; 401 session-expired still surfaces report-only.",
             "commit_shas": [
               "d3cddc6dddebfb629da47e87c9ee9586cec9de84"
             ],
@@ -4507,10 +5165,10 @@
         "started_at": "2026-06-04T17:36:51.000Z",
         "ended_at": "2026-06-04T17:36:51.000Z",
         "title": "Frosted glass panels restored in production desktop builds",
-        "summary": "A Vite 8 minifier regression that quietly stripped the glass recipe from release bundles is fixed by pinning cssMinify.",
+        "summary": "Pinned the Vite CSS minifier so backdrop-filter and color-mix declarations survive into release bundles.",
         "items": [
           {
-            "text": "Vite 8's switch to Lightning CSS was downleveling modern CSS and dropping the glass panel's backdrop-filter and color-mix declarations from production bundles, so release desktop builds lost the frosted blur the dev server rendered. Pinned cssMinify to esbuild so prod matches dev.",
+            "text": "Vite 8's default Lightning CSS minifier was stripping the glass panel recipe (backdrop-filter / color-mix) from production CSS, so release desktop builds lost their frosted blur. Pinned cssMinify to esbuild so prod renders the same glass as the dev server.",
             "commit_shas": [
               "e9ff281b1d3ef8aed5821038a28277a78aa61c1d"
             ],
@@ -4523,11 +5181,11 @@
         "time_label": "10:38 AM",
         "started_at": "2026-06-04T17:38:22.000Z",
         "ended_at": "2026-06-04T18:08:19.000Z",
-        "title": "Help menu modals, tunable glass, and local-agent badge",
-        "summary": "Help > Changelog and Downloads now open in-shell modals, the glass panel effect gains a user-tunable level in Appearance settings, and local agents get a distinct LOCAL badge on the 3D card.",
+        "title": "In-app Changelog/Downloads modals, LOCAL agent badge, and tunable glass",
+        "summary": "Help menu entries now stay inside the app, local agents are visually distinct on the 3D card, and glass blur/opacity became user-tunable.",
         "items": [
           {
-            "text": "Help > Changelog and Help > Downloads now open ChangelogView and DownloadView inside a zui Modal (sized 20% wider) instead of navigating away, keeping users in the app shell; signed-out Downloads still opens aura.ai/download in a new tab.",
+            "text": "Help → Changelog and Help → Downloads now open inside zui modals (with a 20% wider layout) rather than navigating away, keeping users in the app shell when logged in.",
             "commit_shas": [
               "ca46b055032c19e7d62827f25c656dda99ff5aab",
               "e1c050bbadcbf011f796e9779fb4d1aef062cdd6"
@@ -4535,21 +5193,21 @@
             "confidence": "high"
           },
           {
-            "text": "Added a tunable glass blur/opacity level in Appearance settings, wired through a glass-level lib/hook and a PanelGlassBridge so panel translucency is now a user preference.",
-            "commit_shas": [
-              "3dc16ec8c352ff7277cc508484ff5e41fe4345d0"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Local agents now render a purple LOCAL badge on the 3D card frame instead of a misleading green/red VM dot, while remote agents keep their live online/offline state.",
+            "text": "Local agents now render a purple LOCAL badge on the 3D card frame while remote agents keep their live green/red VM status, and the channel bar picks up the LLM input pill gradient.",
             "commit_shas": [
               "8cf913a7df59cb9476125b478044a3ba30fb968f"
             ],
             "confidence": "high"
           },
           {
-            "text": "Enabled Mixpanel IP geolocation so events like user_signed_up can now be broken down by country, region, and city; opt-out, DNT, and GPC handling continues to suppress tracking entirely for those users.",
+            "text": "Added a tunable glass blur/opacity level exposed through Appearance settings, with a panel glass bridge wiring the new variables into existing surfaces.",
+            "commit_shas": [
+              "3dc16ec8c352ff7277cc508484ff5e41fe4345d0"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Mixpanel client init now opts into IP geolocation so events like user_signed_up can be broken down by country, region, and city; DNT/GPC opt-out behavior is unchanged.",
             "commit_shas": [
               "3b7c7ec663ad09a7f4abf68de750b338372566de"
             ],
@@ -4562,11 +5220,11 @@
         "time_label": "11:26 AM",
         "started_at": "2026-06-04T18:26:35.000Z",
         "ended_at": "2026-06-04T18:26:35.000Z",
-        "title": "Typed storage client for notes, folders, and comments",
-        "summary": "aura-os-storage gains a first-class Rust client surface for the notes entity, paving the way for the day's notes/blog rewrite.",
+        "title": "Typed notes/folders/comments client in aura-os-storage",
+        "summary": "Added a typed Rust client surface for the storage service's notes entity, unblocking the storage-backed notes rewrite.",
         "items": [
           {
-            "text": "Added typed StorageNote, StorageNoteFolder, and StorageNoteComment models with request types, a StorageClient method set covering the public and internal note routes, and in-memory mock coverage for integration tests.",
+            "text": "Mirrored the aura-storage notes entity with StorageNote, StorageNoteFolder, and StorageNoteComment models, request types, and a StorageClient method set covering both public and internal note routes, plus in-memory mock coverage for integration tests.",
             "commit_shas": [
               "db4070292ec1a707713bead70f0c7924781f01a5"
             ],
@@ -4579,11 +5237,11 @@
         "time_label": "11:30 AM",
         "started_at": "2026-06-04T18:30:16.000Z",
         "ended_at": "2026-06-04T19:26:07.000Z",
-        "title": "Notes move to storage + S3 and the public /blog site ships",
-        "summary": "The filesystem notes stack is replaced with storage-backed, ID-keyed notes whose markdown bodies live on S3, and a new public Blog site is published off that same data, alongside a hand-built Agents/Projects rocker in the sidebar.",
+        "title": "Storage-backed Notes, aura-blog CMS, and a public /blog site",
+        "summary": "Notes moved off the filesystem onto a storage-backed ID model with markdown bodies on S3, and that same backend powers a new public blog with a sidebar rocker to flip between Agents and Projects.",
         "items": [
           {
-            "text": "Replaced the filesystem notes handlers and frontend store with storage-backed, ID-based notes: metadata persists via the typed storage client, markdown bodies live on S3 (fetched from bodyUrl, re-uploaded via uploadMarkdown on autosave), and the explorer tree rebuilds from flat folders+notes arrays. A sys-admin importer migrates legacy on-disk .md files (with frontmatter and comment sidecars) into the new model.",
+            "text": "Replaced the filesystem notes layer end-to-end: the server now serves storage-backed, ID-based notes with markdown bodies on S3, the frontend store/UI was rewritten off relPath onto stable UUIDs with autosave via uploadMarkdown, and a sys-admin importer ports legacy filesystem notes over.",
             "commit_shas": [
               "73e86a8731a242774ca02c59409724bcffbfcddc",
               "4e69b982796be2c619973fa8d7b93674cee80413",
@@ -4593,7 +5251,7 @@
             "confidence": "high"
           },
           {
-            "text": "Shipped a public, unauthenticated /blog index and /blog/:slug post page styled after cursor.com/blog, with a previous-posts rail, markdown TOC, hero image, and grouped 'more posts' footer; posts are notes under the reserved AURA_BLOG_PROJECT_ID and served via new /api/public/blog endpoints. Added an aura-blog CMS surface in the notes app (sys-admin gated, blog fields, publish status badges) and a 'Blog' entry in the public top nav and mobile drawer.",
+            "text": "Added an aura-blog CMS surface inside Notes (sys-admin gated blog fields, publish, status badges) plus a new public /blog index and /blog/:slug post page styled after cursor.com/blog, fed by anonymous /api/public/blog endpoints and S3 markdown bodies, with a Blog entry in the public top nav and mobile drawer.",
             "commit_shas": [
               "f1849e194be56bdd7b4a48afaffb870172a185a0",
               "09b1f3fa6160946759286579d1dae4327a9361c2"
@@ -4601,33 +5259,16 @@
             "confidence": "high"
           },
           {
-            "text": "Added a neumorphic Agents/Projects rocker switch at the top of the sidebar, then iterated through tilt, hinge, and plate models to land on a flat plate-mounted toggle with a continuous diagonal gradient border, snappy transitions, and an optimistic flip that paints before the route swap.",
+            "text": "Introduced a neumorphic Agents/Projects rocker switch at the top of the shared sidebar, iterated through several physical models (rigid plate → center-folding rocker → flat plate-mounted toggle), and tuned the shared bright-to-dark border gradient and motion so the selected side reads as raised and the click feels instant.",
             "commit_shas": [
               "7f6a78855a00f89de235b959e635f98c616feb2d",
               "6f4cf35f6a99359fd60eaaa10032afee64e19218",
-              "3479615bdb17c0df61cfaa8dd03338333ad6a09c",
-              "a6385e3e6b9e1c109222dc364fcbffc3e35994e0",
-              "c061993ed30d3e6b584d82b7854db75519b60f37",
+              "6c4d5f4eb1525ef2a2f4d31fbc9534ab2e4bd115",
               "2b28b7b1f6482c014fd6ad908409e7679f86b416",
-              "cc70464a1696c6cd09bf334e5da2e43463908a84",
-              "2e1e7d77c8557bf8bbecf07257f70e6947596b48",
-              "81bc1edeb9ecef0dae5f97960bb1a45f3775c41f",
-              "9cca93e827946a21e96875b62bfa6ee0c8ff03e9",
-              "c6b9afcba8f32a50da8b4ca5209fcd2e61a45577",
-              "52db9827c14773bd3f3bb091f49fae3e8bec1b17",
-              "a0cb378abbab39664af404e7b961beaa962bca05",
-              "18fc1d6ee8b84a6098781bb05b3d5c1af821ab8c",
               "9ba2a15b994ec18a2da46333118b651f8fb5f1c4",
               "ed54694f93c60ffe79220fb6600dbb4f7a211519",
-              "9f9c3e7ffb74ca46d7a5d34a182f6d314538af6b",
-              "77e2edf0a693ed3f26bb57a06662315049946a01",
-              "6c4d5f4eb1525ef2a2f4d31fbc9534ab2e4bd115",
-              "8ca3f21e72429375c2386a01a303dc007645a1ce",
               "39fee1d4b40670094eae41806fe6315e6c51bdfa",
-              "17309df4a8ff24f4a6c38bb7dd6d795632a39807",
-              "40e9e63cdfb5e67b1699fc7f12798b89aff0cd76",
-              "1bbc91e63accc96343cde88663eba34ad6ccedc4",
-              "f8f6992101aabfce1b0a09d2a4bbfb17e9088f4a"
+              "1bbc91e63accc96343cde88663eba34ad6ccedc4"
             ],
             "confidence": "high"
           }
@@ -4637,67 +5278,108 @@
         "batch_id": "entry-6",
         "time_label": "12:29 PM",
         "started_at": "2026-06-04T19:29:29.000Z",
-        "ended_at": "2026-06-05T00:16:41.000Z",
-        "title": "Persistent agent chat, list virtualization, and a Theme settings drill-down",
-        "summary": "The agent chat now survives every Agents/Projects switch, the sidebar list is virtualized with a row-level cascade reveal, and Settings grows real Theme sub-areas with typography, layout, motion, and a relocated desktop background editor.",
+        "ended_at": "2026-06-05T04:21:21.000Z",
+        "title": "Persistent chat surface, Theme drill-down, and remote-agent recovery",
+        "summary": "A long afternoon of polish around the new sidebar rocker landed a shell-level conversation host, a real Theme settings section, performance work on the agent list, and reliability fixes for stalled remote-agent turns and geo analytics.",
         "items": [
           {
-            "text": "Mounted a single conversation-target-keyed ConversationSurfaceHost as a stable sibling of each app's MainPanel so the agent chat (keyed by projectId + agentInstanceId) is no longer remounted or refetched when flipping between Agents and Projects; the rocker now resolves the equivalent lane in the target app so it lands on the same mounted chat.",
+            "text": "Mounted a shell-level ConversationSurfaceHost keyed by projectId + agentInstanceId so the agent chat survives every Agents ⇄ Projects switch with no remount or refetch, and made AppSwitchToggle resolve the equivalent lane in the target app so the toggle lands on the same mounted chat.",
             "commit_shas": [
               "e2db6de3776a4b75cf1719a6e59a33cb52cd63aa"
             ],
             "confidence": "high"
           },
           {
-            "text": "Made Agents/Projects switching feel instant: kept the agents list mounted across switches with LeftMenu keep-alive, memoized panes so a flip only toggles wrapper visibility, virtualized the agent list with an O(1) busy-state index, restored the eager fetch on app open with a proper loading state, and ensured the cascade row-reveal animation actually runs by moving it to a row-level component with the Web Animations API.",
+            "text": "Made app-switching feel instant: keep both panes mounted via memoized keep-alive wrappers, virtualize the agents list with an O(1) busy index, centralize per-row store reads behind useAgentRowModels so rows are pure props, lazy-load avatars after first paint, and hydrate the agent IndexedDB cache on warm loads so the sidebar paints before the network responds.",
             "commit_shas": [
               "bfb191be9f9a4ad086478fa42c9070eb441dd648",
-              "37b53609552d091f2f516003c8b55d38adc41215",
-              "5e89bf1d9d3829ea9fd4d9cf3c5afec9328e7d7b",
-              "9611374aea9a5bb00e3c6b2bec5be684767494a7",
-              "0eb072a392ba76a624d041c9f6e6e1934558e1df",
-              "1ea05f2e798e49b4da0be3442926dfd8a3374a7e",
-              "246b6b1e32775f5fbb77f8cdf275b38df1dddc1d",
-              "c40d4aa888d10474f85ba27e00026c3d92bfefda",
-              "92acd4fbe4bca4868b2d27441249185b37defdcb",
               "ca6e92ae40b43be04515576d7ee825ab9c52e850",
-              "93e6b2b836e4612f0983cf8ffbf0cd1b624075b9",
               "dd3e812d28d5e7a0a7528756f004bee2e9ebe1da",
-              "9851109fd1430883273e6b3027d7c4d7d96a7da6"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Expanded desktop Settings with a generic drill-down: clicking Theme swaps the left nav for a breadcrumb and sub-area list covering Mode & accent (with custom hex accent), Typography, Layout & density, Custom colors (grouped under Borders/Surfaces/Accent), Effects, Motion, and Presets, all backed by persisted CSS variables pre-stamped at boot to avoid flash. The desktop wallpaper editor moved out of its standalone modal into a Theme > Background sub-area, with right-click Theme/Background entries deep-linking into it.",
-            "commit_shas": [
-              "d82ab049b1d739d57a40f7354aa66b007a35f526",
-              "2fd8558257786e5e70818963d9cfa1b5005af397",
-              "812fac64c1e5972c19f13bcb45dae65468dde3e0",
-              "afd46c4b89367f83c848b63436f3d4b184dae14f",
-              "a32cca5e018b723b7be65ca6a178da1cdde0c021",
-              "d876b8fa7a051435cf6c6d97ec96142bf439a5da",
-              "b6afbcf001d50cf013887da193896a6b73d39f48"
+              "8ae8c9134522bd273e115ef91f630dd8c31b7069",
+              "8399a4f21c8ccc2caecdccd04256a1682f20a076"
             ],
             "confidence": "high"
           },
           {
-            "text": "Polished the chat surface and agent profile: the floating chat input drops its painted backdrop in favor of a live-measured mask that clips the transcript at the input pill's midline, the input column aligns to the transcript's 680px content width, and the agent spec/Telegram panels are now theme-aware glass that picks up the bottom taskbar's blur with one-click copy for IP/wallet plus a zscan.live link on wallet addresses.",
+            "text": "Rebuilt the sidebar list reveal animation: rows now own their own cascade-in via a useSidebarListReveal hook (Web Animations API, reduced-motion aware) and AgentList rides on the shared LeftMenuTree, so the entrance animation fires reliably on first load and on every Agents ⇄ Projects switch even with virtualization and async hydration.",
             "commit_shas": [
-              "14b0e5b68b42adad69532baff785c4fdbd570757",
-              "2755738f71807b42b0999bab757ab3988a0b3117",
+              "1ea05f2e798e49b4da0be3442926dfd8a3374a7e",
+              "c40d4aa888d10474f85ba27e00026c3d92bfefda",
+              "92acd4fbe4bca4868b2d27441249185b37defdcb",
+              "7e7e2a1511b37aa47cb9fd75ea180321b5c23472"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Expanded desktop Settings with a generic drill-down: clicking Theme swaps the left nav for a breadcrumb and sub-areas (Mode & accent with custom hex, Typography, Layout & density, Custom colors, Effects, Motion, Presets), backed by persisted CSS-variable controls pre-stamped in index.html to avoid flash. Desktop right-click now has Theme and Background entries that deep-link straight into the relevant sub-area.",
+            "commit_shas": [
+              "d82ab049b1d739d57a40f7354aa66b007a35f526",
+              "2fd8558257786e5e70818963d9cfa1b5005af397",
+              "812fac64c1e5972c19f13bcb45dae65468dde3e0",
+              "afd46c4b89367f83c848b63436f3d4b184dae14f"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Polished the agent spec card: theme-aware smoked-black glass that flips with light/dark mode, taskbar-matched 90% glass for both the spec and Telegram panels, one-click copy on IP/Wallet rows with a zscan.live wallet link, a centered nameplate in the metal strip, and an 'Org' label trim.",
+            "commit_shas": [
               "28d1658787fa6244114ace792a666290143e4bda",
               "cb9bf60ce0b2c9bc5fc7862ed618dde1a4a6d3f7",
               "10ef33c1f6d7422b7b8cceb1554ba583adbdd802",
-              "e44448f891517a2df179f3241f334e05a536032b",
               "d8fa7931690048b3a7b4214a3ccf3e600dee385a",
-              "4e9834390679a8f12970e185d8c53e4d6829245f",
-              "97d5daff58df5f680e7285246ededfe58c28d0c1",
-              "5e89bf1d9d3829ea9fd4d9cf3c5afec9328e7d7b",
-              "027b9e5f28aa6b001b330cbe09eda9ffd7559269",
-              "ceb27412ed5c2507f59df22938cd9520c59185f9",
-              "265d1f470be617f0d81753266abaf0d97e768352",
-              "cc9074e2016f28107b062a3ee97612364e91f2fd",
-              "a666eaa71c548b8c6dbc50c246e7ea5747fd9826"
+              "e44448f891517a2df179f3241f334e05a536032b",
+              "e2685cc7c0d657a3b691a9155ce23323d4b913de"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Reworked the floating chat input: removed the painted backdrop band and instead hard-clip the transcript at the input pill's live-measured midline, align the input to the 680px transcript column, and make the mode selector opaque so chat content no longer bleeds through.",
+            "commit_shas": [
+              "14b0e5b68b42adad69532baff785c4fdbd570757",
+              "2755738f71807b42b0999bab757ab3988a0b3117"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Restyled the public marketing surface: Changelog/Feedback/Models banners picked up frosted pricing-style glass, the /blog single-post and index pages were reworked after cursor.com/blog with a featured post, 2-up grid, archive table, drop cap, and real author avatar via an updated aura-blog seed action; Vibecoder persona gained a WebGL flow-field background that drifts under reduced motion.",
+            "commit_shas": [
+              "ca2a99a30a422aec4bf4c6b65a365a0e8794d7a3",
+              "0baa2ae5b4d7daf3390c5d9d8820be9f52343459",
+              "c74ecd9066cebffb96a2c217f3bc0f2b409218f0",
+              "f1a2f30ac9575403fe7b51a7704e9ccc1803fef5",
+              "cdd0a6728d1b887a8ea725bb80ef519330e4d27b",
+              "b861cf40e63b909d5e6fc0a94d1a66cd0b2c5faf",
+              "066337eae9f7509da2e5a352118c70bff51a5bd9"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Fixed stalled remote/CEO chat turns: the server now evicts warm chat sessions tied to a recycled VM after recover/restart/start/wake/hibernate, and the standalone-agent chat hook forwards the full error payload so stream_stalled and turn_timeout classify as recoverable and auto-retry instead of surfacing a hard 'Chat stream interrupted' bubble.",
+            "commit_shas": [
+              "a314d2e035d103c3393a3dea9b706c9b31bf04c8"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Made server-emitted session_active forward the caller's X-Forwarded-For / X-Real-IP to Mixpanel so the authoritative True DAU events geolocate to the user rather than the server; loopback/missing IPs are dropped so no misleading geo is emitted.",
+            "commit_shas": [
+              "1bc8486a0037495eff185ddb783c8c70ab1c3c22"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Fixed several sidebar layout issues that surfaced with the rocker: list rows now scroll cleanly under the floating Refer member pill across Agents/Projects/Tasks/Process/Debug/Notes, sidebar items can no longer be text-selected, and the switch plate sits vertically centered between the search pill and the first agent row.",
+            "commit_shas": [
+              "9757f13d8921f8eb165c7750ae1981fffb808741",
+              "0eb072a392ba76a624d041c9f6e6e1934558e1df",
+              "e7290fbcb3c942c857ded1ffa40d950bdd5b9152"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Hardened the model picker: unified two type styles across the menu, normalized header padding, and extracted a shared useFlyoutAnchor hook so the effort/council hover flyouts recompute position on scroll/resize and stay anchored to their row instead of floating away after layout shifts on Edge.",
+            "commit_shas": [
+              "0e2a18c3ad73748c11fb9320c4991dd3946c8005"
             ],
             "confidence": "high"
           }
@@ -4705,12 +5387,12 @@
       }
     ],
     "highlights": [
-      "Council mechanism is now visible end-to-end",
-      "Agent profile redesign: 3D nameplate + spec card",
-      "Notes moved to storage + S3, public /blog ships",
-      "Agents/Projects rocker with persistent chat lane",
-      "Settings gains Theme drill-down with typography, layout, motion"
+      "New ProfileSpecCard + 3D nameplate for agents",
+      "Public /blog site backed by storage-backed Notes",
+      "Agents ⇄ Projects rocker with a persistent chat surface",
+      "Settings → Theme drill-down with typography, layout, and motion",
+      "Stalled remote agent turns now auto-recover"
     ],
-    "raw_commit_count": 99
+    "raw_commit_count": 114
   }
 }
