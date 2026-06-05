@@ -211,13 +211,6 @@
   gap: 0;
 }
 
-.personalAgentSkillSectionWrap {
-  display: flex;
-  align-items: stretch;
-  flex: 1 1 0;
-  min-width: 0;
-}
-
 /* Hairline section divider — vertical on desktop, between groups. */
 .personalAgentSkillDivider {
   flex: 0 0 1px;
@@ -232,11 +225,14 @@
   );
 }
 
+/* Equal-width columns (flex-basis 0) so the dividers sit centered in
+   even gaps between same-width button stacks. */
 .personalAgentSkillSection {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  flex: 1 1 auto;
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 /*
@@ -528,10 +524,6 @@
     flex-direction: column;
   }
 
-  .personalAgentSkillSectionWrap {
-    flex-direction: column;
-  }
-
   .personalAgentSkillDivider {
     flex: 0 0 1px;
     width: 100%;
@@ -550,5 +542,6 @@
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
+    flex: 0 0 auto;
   }
 }

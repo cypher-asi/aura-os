@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { Plate } from "../../../components/Plate";
 import { SkillIcon } from "../../../components/SkillShopModal/SkillIcon";
 
@@ -53,7 +53,7 @@ export function SkillSeaCard(): ReactNode {
       <div className="personalAgentSkillPanel">
         <div className="personalAgentSkillWell">
           {SKILL_GROUPS.map((group, groupIndex) => (
-            <div key={groupIndex} className="personalAgentSkillSectionWrap">
+            <Fragment key={groupIndex}>
               {groupIndex > 0 && (
                 <span className="personalAgentSkillDivider" />
               )}
@@ -75,7 +75,7 @@ export function SkillSeaCard(): ReactNode {
                   </div>
                 ))}
               </div>
-            </div>
+            </Fragment>
           ))}
         </div>
       </div>
