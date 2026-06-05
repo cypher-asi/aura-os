@@ -759,6 +759,11 @@ jobs:
               return 0
             fi
 
+            if [ "${{ matrix.target }}" = "windows" ] \
+              && grep -Eq "ERROR .*: status code (429|5[0-9][0-9])" packager.log; then
+              return 0
+            fi
+
             return 1
           }
 
