@@ -1,0 +1,18 @@
+{
+  "title": "設定",
+  "sections": {
+    "you": "你",
+    "about": "關於",
+    "appearance": "主題",
+    "notifications": "通知",
+    "keyboard": "鍵盤",
+    "advanced": "進階",
+    "language": "語言"
+  },
+  "language": {
+    "title": "語言",
+    "description": "選擇 AURA 使用的語言。若無可用翻譯，將回退為英文。",
+    "searchPlaceholder": "搜尋語言",
+    "noResults": "沒有符合搜尋的語言。"
+  }
+}

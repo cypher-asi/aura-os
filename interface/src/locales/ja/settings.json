@@ -1,0 +1,18 @@
+{
+  "title": "設定",
+  "sections": {
+    "you": "あなた",
+    "about": "情報",
+    "appearance": "テーマ",
+    "notifications": "通知",
+    "keyboard": "キーボード",
+    "advanced": "詳細",
+    "language": "言語"
+  },
+  "language": {
+    "title": "言語",
+    "description": "AURA で使用する言語を選択します。翻訳がない場合は英語が使われます。",
+    "searchPlaceholder": "言語を検索",
+    "noResults": "検索に一致する言語がありません。"
+  }
+}
