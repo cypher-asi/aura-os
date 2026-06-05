@@ -350,6 +350,12 @@ export function drawPersonalityScreen(
 export interface DrawInfoStripOptions {
   name: string;
   role: string;
+  /**
+   * Active theme. In light mode the backplate is near-white, so the name and
+   * role tag are drawn in dark ink for legibility; dark mode keeps the bright
+   * engraved text. Defaults to `"dark"`.
+   */
+  theme?: "light" | "dark";
 }
 
 const STRIP_SANS = '"Inter", "Helvetica Neue", Arial, sans-serif';
@@ -372,15 +378,20 @@ function roundRectPath(
   ctx.closePath();
 }
 
-/** Embossed light text: a dark drop shadow under bright glyphs for contrast on the dark metal. */
+/**
+ * Embossed text: a drop shadow under the glyphs for contrast on metal. The
+ * shadow defaults to dark (for bright text on dark metal); pass a light shadow
+ * for dark text on the near-white light-mode plate.
+ */
 function engrave(
   ctx: CanvasRenderingContext2D,
   text: string,
   x: number,
   y: number,
   color: string,
+  shadowColor = "rgba(0,0,0,0.6)",
 ): void {
-  ctx.fillStyle = "rgba(0,0,0,0.6)";
+  ctx.fillStyle = shadowColor;
   ctx.fillText(text, x, y + 3);
   ctx.fillStyle = color;
   ctx.fillText(text, x, y);
@@ -412,13 +423,24 @@ export function drawInfoStrip(
   // plate height changes.
   const cy = h / 2;
 
-  // Name (stamped) on the left, 20% smaller than before (154 -> 123).
+  const light = opts.theme === "light";
+
+  // Name (stamped) on the left, 20% smaller than before (154 -> 123). Dark ink
+  // with a light highlight in light mode; bright engraved text in dark mode.
   ctx.textBaseline = "alphabetic";
   ctx.textAlign = "left";
   ctx.font = `700 123px ${STRIP_SANS}`;
-  engrave(ctx, opts.name || "Unnamed", padL, cy + 42, "#f4f6f9");
+  engrave(
+    ctx,
+    opts.name || "Unnamed",
+    padL,
+    cy + 42,
+    light ? "#15181c" : "#f4f6f9",
+    light ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.6)",
+  );
 
-  // Role pill, right-aligned, vertically centered on the name.
+  // Role pill, right-aligned, vertically centered on the name. Light mode uses a
+  // pale fill with dark text so the tag stays readable on the near-white plate.
   const role = (opts.role || "").trim();
   if (role) {
     ctx.font = `600 60px ${STRIP_SANS}`;
@@ -430,12 +452,12 @@ export function drawInfoStrip(
     const pillX = valueX - pillW;
     const pillY = cy - pillH / 2;
     roundRectPath(ctx, pillX, pillY, pillW, pillH, 24);
-    ctx.fillStyle = "rgba(8,10,13,0.7)";
+    ctx.fillStyle = light ? "rgba(240,242,246,0.85)" : "rgba(8,10,13,0.7)";
     ctx.fill();
     ctx.lineWidth = 2;
-    ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    ctx.strokeStyle = light ? "rgba(0,0,0,0.28)" : "rgba(255,255,255,0.18)";
     ctx.stroke();
-    ctx.fillStyle = "#eef1f5";
+    ctx.fillStyle = light ? "#15181c" : "#eef1f5";
     ctx.fillText(label, pillX + pillPad, pillY + pillH / 2 + 22);
   }
 
@@ -454,6 +476,11 @@ export interface DrawStatusBadgeOptions {
    * agents render "LOCAL" in purple regardless of `isOnline`).
    */
   color?: string;
+  /**
+   * Active theme. In light mode the drop shadow flips to a light highlight so
+   * dark labels read as engraved on the silver frame. Defaults to `"dark"`.
+   */
+  theme?: "light" | "dark";
 }
 
 /**
@@ -485,7 +512,8 @@ export function drawStatusBadge(
   // engrave() draws at an alphabetic-ish baseline via fillText; here we want a
   // middle baseline, so inline the drop-shadow + glyph rather than reuse it.
   const label = (opts.statusLabel || "").toUpperCase();
-  ctx.fillStyle = "rgba(0,0,0,0.6)";
+  ctx.fillStyle =
+    opts.theme === "light" ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.6)";
   ctx.fillText(label, w / 2, h / 2 + 3);
   ctx.fillStyle = color;
   ctx.fillText(label, w / 2, h / 2);

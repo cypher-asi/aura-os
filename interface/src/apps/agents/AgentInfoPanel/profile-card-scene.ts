@@ -508,7 +508,7 @@ const FRAME_PALETTES: Record<FrameTheme, FramePalette> = {
       envMapIntensity: 1.1,
     },
     matte: { base: "#8a8f98", streak: "#b8bdc6", color: 0x9aa0aa },
-    plate: { base: "#b9bdc4", streak: "#e6e9ee", color: 0xc4c8cf },
+    plate: { base: "#e7e9ed", streak: "#fbfcfe", color: 0xf1f2f5 },
     wordmark: 0x2a2f37,
   },
 };

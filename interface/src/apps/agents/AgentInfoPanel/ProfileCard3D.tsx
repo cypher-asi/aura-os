@@ -196,9 +196,10 @@ export function ProfileCard3D({ agent, isOwnAgent }: ProfileCard3DProps) {
       drawInfoStrip(scene.infoCanvas, {
         name: agent.name,
         role: agent.role,
+        theme: resolvedTheme,
       });
     });
-  }, [ready, agent.name, agent.role]);
+  }, [ready, agent.name, agent.role, resolvedTheme]);
 
   // Draw the status label on the card's metal frame (where the barcode was).
   // Local agents read "LOCAL" in purple; remote agents show their live VM state
@@ -209,16 +210,23 @@ export function ProfileCard3D({ agent, isOwnAgent }: ProfileCard3DProps) {
     if (!ready || !scene || !host) return;
     const accent = readAccent(host);
     const badgeLabel = isRemote ? statusLabel : "LOCAL";
-    const badgeColor = isRemote ? undefined : "#a78bfa";
+    // Local agents read "LOCAL" in purple on the dark frame; on the silver
+    // light-mode frame that washes out, so render it near-black for legibility.
+    const badgeColor = isRemote
+      ? undefined
+      : resolvedTheme === "light"
+        ? "#15181c"
+        : "#a78bfa";
     scene.setStatusRenderer(() => {
       drawStatusBadge(scene.statusCanvas, {
         statusLabel: badgeLabel,
         isOnline,
         accent,
         color: badgeColor,
+        theme: resolvedTheme,
       });
     });
-  }, [ready, isRemote, statusLabel, isOnline]);
+  }, [ready, isRemote, statusLabel, isOnline, resolvedTheme]);
 
   return (
     <div className={styles.card3dContainer}>
