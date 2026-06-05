@@ -95,11 +95,10 @@
 .bubbleUser {
   background: var(--color-accent);
   color: var(--color-accent-contrast);
-  /* Three rounded corners + a sharp bottom-right that reads as a
-     "tail" pointing toward the user side. The radius matches the
-     mobile bubble's 12px so the curvature stays consistent across
-     breakpoints. */
-  border-radius: 12px 12px 0 12px;
+  /* Generously rounded on all four corners for a soft, iMessage-style
+     pill. The radius matches the mobile bubble's 18px so the curvature
+     stays consistent across breakpoints. */
+  border-radius: 18px;
   /* Bubble height is driven by vertical padding + line-box; min-height
      is mostly a floor for short content. Both are scaled to 83% of
      their default so the user turn reads ~17% shorter than the
@@ -492,7 +491,7 @@
 
   .bubbleUser {
     min-height: 0;
-    border-radius: 12px;
+    border-radius: 18px;
     background: var(--color-accent);
     color: var(--color-accent-contrast);
     padding: calc(8px * 0.83) 8px;
