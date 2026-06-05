@@ -187,7 +187,7 @@ jobs:
             platform: windows
             target: windows
             arch: x86_64
-    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
+    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os == 'macos-latest' && 'macos-15-xlarge' || matrix.os }}
     env:
       CARGO_TARGET_DIR: ../.aura-shared-target
       AURA_RELEASE_DIR: ../.aura-shared-target/release
@@ -218,9 +218,9 @@ jobs:
         if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && inputs.cache_mode != 'no-target-cache'
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: ${{ inputs.cache_mode == 'cold-key' && format('ci-perf-desktop-cold-{0}-{1}-{2}', github.run_id, runner.os, runner.arch) || format('desktop-app-v2-{0}-{1}', runner.os, runner.arch) }}
+          shared-key: ${{ inputs.cache_mode == 'cold-key' && format('ci-perf-desktop-cold-{0}-{1}-{2}', github.run_id, runner.os, runner.arch) || format('desktop-app-v3-{0}-{1}', runner.os, runner.arch) }}
           workspaces: |
-            . -> target
+            . -> ../.aura-shared-target
           cache-on-failure: true
 
       - name: Set up sccache
@@ -335,7 +335,9 @@ jobs:
             platform: windows
             target: windows
             arch: x86_64
-    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
+    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os == 'macos-latest' && 'macos-15-xlarge' || matrix.os }}
+    env:
+      CARGO_TARGET_DIR: ../.aura-shared-target
     steps:
       - name: Skip non-selected platform
         if: inputs.platform != 'all' && inputs.platform != matrix.platform
@@ -359,7 +361,7 @@ jobs:
         if: (inputs.platform == 'all' || inputs.platform == matrix.platform) && inputs.cache_mode != 'no-target-cache'
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: ${{ inputs.cache_mode == 'cold-key' && format('ci-perf-sidecar-cold-{0}-{1}-{2}', github.run_id, runner.os, runner.arch) || format('desktop-sidecar-v3-{0}-{1}', runner.os, runner.arch) }}
+          shared-key: ${{ inputs.cache_mode == 'cold-key' && format('ci-perf-sidecar-cold-{0}-{1}-{2}', github.run_id, runner.os, runner.arch) || format('desktop-sidecar-v4-{0}-{1}', runner.os, runner.arch) }}
           workspaces: |
             ../aura-harness -> ../.aura-shared-target
           cache-on-failure: true

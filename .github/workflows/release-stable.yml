@@ -122,6 +122,8 @@ jobs:
           compression-level: 0
 
   build-sidecar:
+    env:
+      CARGO_TARGET_DIR: ../.aura-shared-target
     strategy:
       fail-fast: false
       matrix:
@@ -139,7 +141,7 @@ jobs:
             target: windows
             arch: x86_64
 
-    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
+    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os == 'macos-latest' && 'macos-15-xlarge' || matrix.os }}
 
     steps:
       - uses: actions/checkout@v5
@@ -156,7 +158,7 @@ jobs:
       - name: Restore sidecar Rust cache
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: desktop-sidecar-v3-${{ runner.os }}-${{ runner.arch }}
+          shared-key: desktop-sidecar-v4-${{ runner.os }}-${{ runner.arch }}
           workspaces: |
             ../aura-harness -> ../.aura-shared-target
           cache-on-failure: true
@@ -271,7 +273,7 @@ jobs:
             target: windows
             arch: x86_64
 
-    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
+    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os == 'macos-latest' && 'macos-15-xlarge' || matrix.os }}
 
     steps:
       - uses: actions/checkout@v5
@@ -282,9 +284,9 @@ jobs:
       - name: Restore desktop Rust cache
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: desktop-app-v2-${{ runner.os }}-${{ runner.arch }}
+          shared-key: desktop-app-v3-${{ runner.os }}-${{ runner.arch }}
           workspaces: |
-            . -> target
+            . -> ../.aura-shared-target
           cache-on-failure: true
 
       - name: Set up sccache
@@ -466,7 +468,7 @@ jobs:
             target: windows
             arch: x86_64
 
-    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
+    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os == 'macos-latest' && 'macos-15-xlarge' || matrix.os }}
 
     steps:
       - uses: actions/checkout@v5
