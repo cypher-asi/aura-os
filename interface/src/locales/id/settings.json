@@ -1,0 +1,18 @@
+{
+  "title": "Pengaturan",
+  "sections": {
+    "you": "Anda",
+    "about": "Tentang",
+    "appearance": "Tema",
+    "notifications": "Notifikasi",
+    "keyboard": "Keyboard",
+    "advanced": "Lanjutan",
+    "language": "Bahasa"
+  },
+  "language": {
+    "title": "Bahasa",
+    "description": "Pilih bahasa yang digunakan di AURA. Terjemahan kembali ke bahasa Inggris jika tidak tersedia.",
+    "searchPlaceholder": "Cari bahasa",
+    "noResults": "Tidak ada bahasa yang cocok dengan pencarian Anda."
+  }
+}

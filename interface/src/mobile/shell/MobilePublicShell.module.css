@@ -235,6 +235,41 @@
 }
 
 /*
+ * Language picker in the public drawer. A native <select> gives the
+ * platform's own scrollable language list (good for long option sets)
+ * and inherits OS-level input affordances on mobile.
+ */
+.languageRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.languageLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.languageSelect {
+  flex: 0 1 auto;
+  max-width: 60%;
+  height: 40px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--color-text-primary) 22%, transparent);
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+/*
  * Auth pills — same visual language as desktop's `PublicActions`
  * in `AuraTitlebar.tsx` (Log In secondary, Sign Up primary), sized
  * for tap-friendly mobile targets.

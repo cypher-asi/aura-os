@@ -73,6 +73,7 @@ vi.mock("lucide-react", () => ({
   Bot: () => <svg />,
   Sparkles: () => <svg />,
   Check: () => <svg />,
+  Globe: () => <svg data-testid="icon-globe" />,
   ChevronDown: () => <svg />,
   ChevronUp: () => <svg />,
   Image: () => <svg />,

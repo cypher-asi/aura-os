@@ -279,6 +279,7 @@
 .chatPill,
 .themePill,
 .taglineBubble,
+.langPill,
 .poweredPill {
   display: inline-flex;
   align-items: center;
@@ -313,6 +314,7 @@
 .chatPill::after,
 .themePill::after,
 .taglineBubble::after,
+.langPill::after,
 .poweredPill::after {
   content: "";
   position: absolute;
@@ -340,6 +342,7 @@
 .bar[data-ui-mode="public"] .chatPill,
 .bar[data-ui-mode="public"] .themePill,
 .bar[data-ui-mode="public"] .taglineBubble,
+.bar[data-ui-mode="public"] .langPill,
 .bar[data-ui-mode="public"] .poweredPill {
   --taskbar-item-size: var(--public-pill-item-size, 22px);
 }

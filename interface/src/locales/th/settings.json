@@ -1,0 +1,18 @@
+{
+  "title": "การตั้งค่า",
+  "sections": {
+    "you": "คุณ",
+    "about": "เกี่ยวกับ",
+    "appearance": "ธีม",
+    "notifications": "การแจ้งเตือน",
+    "keyboard": "แป้นพิมพ์",
+    "advanced": "ขั้นสูง",
+    "language": "ภาษา"
+  },
+  "language": {
+    "title": "ภาษา",
+    "description": "เลือกภาษาที่ใช้ใน AURA หากไม่มีคำแปลจะกลับไปใช้ภาษาอังกฤษ",
+    "searchPlaceholder": "ค้นหาภาษา",
+    "noResults": "ไม่มีภาษาที่ตรงกับการค้นหา"
+  }
+}

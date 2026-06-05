@@ -2,6 +2,7 @@ import { useMemo, useRef } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { Navigator } from "@cypher-asi/zui";
 import type { NavigatorItemProps } from "@cypher-asi/zui";
+import { useTranslation } from "react-i18next";
 import { OverlayScrollbar } from "../../components/OverlayScrollbar";
 import {
   DEFAULT_SETTINGS_SECTION,
@@ -14,15 +15,16 @@ import styles from "./SettingsView.module.css";
 export function SettingsView() {
   const { section } = useParams<{ section?: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation("settings");
   const navScrollRef = useRef<HTMLDivElement>(null);
 
   const navItems = useMemo<NavigatorItemProps[]>(
     () =>
       SETTINGS_SECTIONS.map((s) => {
         const Icon = s.icon;
-        return { id: s.id, label: s.label, icon: <Icon size={14} /> };
+        return { id: s.id, label: t(s.labelKey, { defaultValue: s.label }), icon: <Icon size={14} /> };
       }),
-    [],
+    [t],
   );
 
   if (!section || !isSettingsSectionId(section)) {
@@ -34,7 +36,7 @@ export function SettingsView() {
   return (
     <div className={styles.root}>
       <header className={styles.titleBar}>
-        <span className={styles.title}>Settings</span>
+        <span className={styles.title}>{t("title", { defaultValue: "Settings" })}</span>
       </header>
       <div className={styles.layout}>
         <aside className={styles.nav}>

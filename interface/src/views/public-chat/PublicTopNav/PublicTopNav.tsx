@@ -8,9 +8,13 @@ import {
 import { createPortal } from "react-dom";
 import { NavLink, useLocation } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import styles from "./PublicTopNav.module.css";
 
 interface TopNavLink {
+  /** i18n key in the `nav` namespace. */
+  tKey: string;
+  /** English fallback label. */
   label: string;
   to: string;
 }
@@ -21,17 +25,17 @@ interface TopNavLink {
  * below instead of navigating to a single route.
  */
 const PRIMARY_LINKS: ReadonlyArray<TopNavLink> = [
-  { label: "Agents", to: "/agents" },
-  { label: "Code", to: "/code" },
-  { label: "Pricing", to: "/pricing" },
+  { tKey: "agents", label: "Agents", to: "/agents" },
+  { tKey: "code", label: "Code", to: "/code" },
+  { tKey: "pricing", label: "Pricing", to: "/pricing" },
 ];
 
 /** Routes grouped under the `Resources` dropdown. */
 const RESOURCE_LINKS: ReadonlyArray<TopNavLink> = [
-  { label: "Blog", to: "/blog" },
-  { label: "Changelog", to: "/changelog" },
-  { label: "Feedback", to: "/feedback" },
-  { label: "Models", to: "/models" },
+  { tKey: "blog", label: "Blog", to: "/blog" },
+  { tKey: "changelog", label: "Changelog", to: "/changelog" },
+  { tKey: "feedback", label: "Feedback", to: "/feedback" },
+  { tKey: "models", label: "Models", to: "/models" },
 ];
 
 /**
@@ -48,6 +52,7 @@ const RESOURCE_LINKS: ReadonlyArray<TopNavLink> = [
  */
 export function PublicTopNav(): React.ReactElement {
   const { pathname } = useLocation();
+  const { t } = useTranslation("nav");
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -133,8 +138,8 @@ export function PublicTopNav(): React.ReactElement {
       onDoubleClick={(event) => event.stopPropagation()}
     >
       {PRIMARY_LINKS.map((link) => (
-        <NavLink key={link.label} to={link.to} className={linkClassName}>
-          {link.label}
+        <NavLink key={link.tKey} to={link.to} className={linkClassName}>
+          {t(link.tKey, { defaultValue: link.label })}
         </NavLink>
       ))}
       <button
@@ -155,7 +160,7 @@ export function PublicTopNav(): React.ReactElement {
         onMouseLeave={scheduleClose}
         onFocus={openMenu}
       >
-        Resources
+        {t("resources", { defaultValue: "Resources" })}
         <ChevronDown size={13} strokeWidth={2} aria-hidden="true" />
       </button>
       {menuOpen &&
@@ -171,7 +176,7 @@ export function PublicTopNav(): React.ReactElement {
           >
             {RESOURCE_LINKS.map((link) => (
               <NavLink
-                key={link.label}
+                key={link.tKey}
                 to={link.to}
                 role="menuitem"
                 onClick={closeMenu}
@@ -179,7 +184,7 @@ export function PublicTopNav(): React.ReactElement {
                   `${styles.menuItem} ${isActive ? styles.menuItemActive : ""}`
                 }
               >
-                {link.label}
+                {t(link.tKey, { defaultValue: link.label })}
               </NavLink>
             ))}
           </div>,

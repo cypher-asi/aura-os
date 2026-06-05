@@ -1,4 +1,5 @@
 import { ArrowLeft } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { SettingsSection } from "../../../views/SettingsView/sections";
 import styles from "./MobileSettingsView.module.css";
 
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export function SettingsDetailScreen({ entry, onBack }: Props) {
+  const { t } = useTranslation("settings");
   const { Pane } = entry;
   const detailTestId = `mobile-settings-detail-${entry.id}`;
   const aboutCompatTestId =
@@ -27,9 +29,9 @@ export function SettingsDetailScreen({ entry, onBack }: Props) {
           data-testid="mobile-settings-back"
         >
           <ArrowLeft size={18} />
-          <span>Settings</span>
+          <span>{t("title", { defaultValue: "Settings" })}</span>
         </button>
-        <h1 className={styles.detailTitle}>{entry.label}</h1>
+        <h1 className={styles.detailTitle}>{t(entry.labelKey, { defaultValue: entry.label })}</h1>
       </header>
 
       <section

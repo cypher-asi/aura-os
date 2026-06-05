@@ -7,9 +7,12 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
-import { Menu, Trash2, X } from "lucide-react";
+import { Globe, Menu, Trash2, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { track } from "../../lib/analytics";
 import { usePublicChatStore } from "../../stores/public-chat-store";
+import { useLanguageStore } from "../../stores/language-store";
+import { LANGUAGES } from "../../i18n/languages";
 import styles from "./MobilePublicShell.module.css";
 
 /**
@@ -36,20 +39,23 @@ import styles from "./MobilePublicShell.module.css";
  */
 
 interface NavRow {
+  /** i18n key in the `nav` namespace. */
+  readonly tKey: string;
+  /** English fallback label. */
   readonly label: string;
   readonly to: string;
   readonly end?: boolean;
 }
 
 const NAV_ROWS: ReadonlyArray<NavRow> = [
-  { label: "Chat", to: "/chat" },
-  { label: "Agents", to: "/agents" },
-  { label: "Code", to: "/code" },
-  { label: "Pricing", to: "/pricing" },
-  { label: "Blog", to: "/blog" },
-  { label: "Changelog", to: "/changelog" },
-  { label: "Feedback", to: "/feedback" },
-  { label: "Models", to: "/models" },
+  { tKey: "chat", label: "Chat", to: "/chat" },
+  { tKey: "agents", label: "Agents", to: "/agents" },
+  { tKey: "code", label: "Code", to: "/code" },
+  { tKey: "pricing", label: "Pricing", to: "/pricing" },
+  { tKey: "blog", label: "Blog", to: "/blog" },
+  { tKey: "changelog", label: "Changelog", to: "/changelog" },
+  { tKey: "feedback", label: "Feedback", to: "/feedback" },
+  { tKey: "models", label: "Models", to: "/models" },
 ];
 
 const PUBLIC_CHAT_PATH = "/chat";
@@ -57,6 +63,9 @@ const PUBLIC_CHAT_PATH = "/chat";
 export function MobilePublicShell(): React.ReactElement {
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useTranslation(["nav", "auth", "common"]);
+  const language = useLanguageStore((s) => s.language);
+  const setLanguage = useLanguageStore((s) => s.setLanguage);
   const [searchParams] = useSearchParams();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -198,7 +207,7 @@ export function MobilePublicShell(): React.ReactElement {
         <nav className={styles.drawerNav} aria-label="Public sections">
           {NAV_ROWS.map((row) => (
             <NavLink
-              key={row.label}
+              key={row.tKey}
               to={row.to}
               end={row.end}
               onClick={closeDrawer}
@@ -206,10 +215,29 @@ export function MobilePublicShell(): React.ReactElement {
                 `${styles.drawerLink} ${isActive ? styles.drawerLinkActive : ""}`
               }
             >
-              {row.label}
+              {t(`nav:${row.tKey}`, { defaultValue: row.label })}
             </NavLink>
           ))}
         </nav>
+        <div className={styles.drawerDivider} aria-hidden="true" />
+        <label className={styles.languageRow}>
+          <span className={styles.languageLabel}>
+            <Globe size={16} aria-hidden="true" />
+            {t("common:language", { defaultValue: "Language" })}
+          </span>
+          <select
+            className={styles.languageSelect}
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+            aria-label={t("common:language", { defaultValue: "Language" })}
+          >
+            {LANGUAGES.map((lang) => (
+              <option key={lang.code} value={lang.code}>
+                {lang.nativeName}
+              </option>
+            ))}
+          </select>
+        </label>
         <div className={styles.drawerDivider} aria-hidden="true" />
         <div className={styles.drawerAuth}>
           <Link
@@ -221,7 +249,7 @@ export function MobilePublicShell(): React.ReactElement {
               track("public_login_clicked", { source: "mobile_drawer" });
             }}
           >
-            Log In
+            {t("auth:logIn", { defaultValue: "Log In" })}
           </Link>
           <Link
             to={{ pathname: "/login", search: signupSearch }}
@@ -232,7 +260,7 @@ export function MobilePublicShell(): React.ReactElement {
               track("public_signup_clicked", { source: "mobile_drawer" });
             }}
           >
-            Sign Up
+            {t("auth:signUp", { defaultValue: "Sign Up" })}
           </Link>
         </div>
       </aside>

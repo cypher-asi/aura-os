@@ -1,4 +1,5 @@
 import { ChevronRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { SETTINGS_SECTIONS, type SettingsSectionId } from "../../../views/SettingsView/sections";
 import styles from "./MobileSettingsView.module.css";
 
@@ -7,10 +8,11 @@ interface Props {
 }
 
 export function SettingsList({ onSelect }: Props) {
+  const { t } = useTranslation("settings");
   return (
     <main className={styles.settingsRoot} data-testid="mobile-settings-list">
       <header className={styles.settingsHeader}>
-        <h1>Settings</h1>
+        <h1>{t("title", { defaultValue: "Settings" })}</h1>
         <p>Configure AURA</p>
       </header>
 
@@ -28,7 +30,7 @@ export function SettingsList({ onSelect }: Props) {
               <span className={styles.rowIcon}>
                 <Icon size={18} />
               </span>
-              <span className={styles.rowLabel}>{section.label}</span>
+              <span className={styles.rowLabel}>{t(section.labelKey, { defaultValue: section.label })}</span>
               <span className={styles.rowChevron}>
                 <ChevronRight size={16} />
               </span>

@@ -30,6 +30,7 @@ import { HelpButton } from "../../features/onboarding/HelpButton/HelpButton";
 import { ThemeToggleButton } from "./ThemeToggleButton";
 import { PublicChatTaskbarButton } from "./PublicChatTaskbarButton";
 import { PoweredByGridButton } from "./PoweredByGridButton";
+import { LanguageDropdownButton } from "./LanguageDropdownButton";
 import { RotatingTagline } from "./RotatingTagline";
 import { SidebarDrawerToggle } from "../AuraShell/SidebarDrawerToggle";
 import { TaskbarShell } from "../TaskbarShell";
@@ -125,6 +126,9 @@ function PublicBottomTaskbar(): React.ReactElement {
         </div>
       </div>
       <div className={styles.publicRight}>
+        <div className={styles.langPill}>
+          <LanguageDropdownButton />
+        </div>
         <div className={styles.poweredPill}>
           <PoweredByGridButton />
         </div>

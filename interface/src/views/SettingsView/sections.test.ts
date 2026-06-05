@@ -13,6 +13,7 @@ describe("settings sections", () => {
       "appearance",
       "notifications",
       "keyboard",
+      "language",
       "advanced",
     ]);
   });

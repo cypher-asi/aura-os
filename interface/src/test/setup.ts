@@ -1,9 +1,32 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
-import { afterEach } from "vitest";
+import { afterEach, vi } from "vitest";
 
 afterEach(() => {
   cleanup();
+});
+
+// Global i18n stub. The real i18next instance loads locale JSON via async
+// dynamic imports, which would force every translated component to suspend in
+// jsdom. Tests only care about copy, so resolve `t(key, { defaultValue })`
+// to the English default (or the key) synchronously. Applied from a setup
+// file, this mock is shared by every test file.
+vi.mock("react-i18next", () => {
+  const t = (key: string, options?: Record<string, unknown>): string => {
+    if (options && typeof options.defaultValue === "string") {
+      return options.defaultValue;
+    }
+    return key;
+  };
+  return {
+    useTranslation: () => ({
+      t,
+      i18n: { language: "en", changeLanguage: () => Promise.resolve() },
+    }),
+    Trans: ({ children }: { children?: unknown }) => children ?? null,
+    I18nextProvider: ({ children }: { children?: unknown }) => children ?? null,
+    initReactI18next: { type: "3rdParty", init: () => {} },
+  };
 });
 
 // JSDOM lacks ResizeObserver. Several layout-driven components (ModeSelector,

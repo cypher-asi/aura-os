@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Server } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@cypher-asi/zui";
 import { SidebarDrawerToggle } from "./SidebarDrawerToggle";
 import { ShellTitlebar } from "../ShellTitlebar";
@@ -279,6 +280,7 @@ function AuthedActions({
 
 function PublicActions(): React.ReactElement {
   const location = useLocation();
+  const { t } = useTranslation("auth");
   const { search } = location;
   // Preserve any existing query (notably `?session=...`) across the
   // trip into the login modal so the public chat surface stays
@@ -304,7 +306,7 @@ function PublicActions(): React.ReactElement {
         className={`${styles.authPill} ${styles.authPillGhost}`}
         onClick={() => track("public_login_clicked", { source: "titlebar" })}
       >
-        Log In
+        {t("logIn", { defaultValue: "Log In" })}
       </Link>
       <Link
         to={{ pathname: "/login", search: signupSearch }}
@@ -312,14 +314,14 @@ function PublicActions(): React.ReactElement {
         className={`${styles.authPill} ${styles.authPillPrimary}`}
         onClick={() => track("public_signup_clicked", { source: "titlebar" })}
       >
-        Sign Up
+        {t("signUp", { defaultValue: "Sign Up" })}
       </Link>
       <Link
         to="/download"
         className={`${styles.authPill} ${styles.authPillSecondary}`}
         onClick={() => track("public_download_clicked", { source: "titlebar" })}
       >
-        Download
+        {t("download", { defaultValue: "Download" })}
       </Link>
       <WindowControls />
     </div>

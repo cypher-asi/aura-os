@@ -66,6 +66,19 @@ vi.mock("@cypher-asi/zui", () => ({
     </button>
   ),
   Spinner: () => <span data-testid="spinner" />,
+  Toggle: ({
+    label,
+    checked,
+    onChange,
+  }: {
+    label?: React.ReactNode;
+    checked?: boolean;
+    onChange?: (next: boolean) => void;
+  }) => (
+    <button type="button" role="switch" aria-checked={checked} onClick={() => onChange?.(!checked)}>
+      {label}
+    </button>
+  ),
   Select: ({
     children,
     ...rest
@@ -144,27 +157,9 @@ vi.mock("./AdvancedSection/AdvancedSection.module.css", () => ({
   default: new Proxy({}, { get: (_target, prop) => String(prop) }),
 }));
 
-vi.mock("lucide-react", () => {
-  const Stub = ({ "data-testid": testId }: { "data-testid"?: string }) => (
-    <span data-testid={testId} />
-  );
-  return {
-    Check: Stub,
-    Download: Stub,
-    RefreshCw: Stub,
-    Sun: Stub,
-    Moon: Stub,
-    MonitorSmartphone: Stub,
-    Info: Stub,
-    Paintbrush: Stub,
-    Bell: Stub,
-    Keyboard: Stub,
-    Settings: Stub,
-    User: Stub,
-    ChevronRight: Stub,
-    ArrowLeft: Stub,
-  };
-});
+// lucide-react is intentionally not mocked: the real icon components render
+// as inert SVGs in jsdom and the settings panes pull in a large, growing set
+// of icons that a hand-maintained mock kept falling out of sync with.
 
 vi.mock("../../components/SettingsProfile", () => ({
   SettingsProfile: () => <div data-testid="settings-you-panel">You</div>,
