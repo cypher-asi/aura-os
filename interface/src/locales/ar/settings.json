@@ -1,0 +1,18 @@
+{
+  "title": "الإعدادات",
+  "sections": {
+    "you": "أنت",
+    "about": "حول",
+    "appearance": "المظهر",
+    "notifications": "الإشعارات",
+    "keyboard": "لوحة المفاتيح",
+    "advanced": "متقدم",
+    "language": "اللغة"
+  },
+  "language": {
+    "title": "اللغة",
+    "description": "اختر اللغة المستخدمة في AURA. تعود الترجمات إلى الإنجليزية عند عدم توفرها.",
+    "searchPlaceholder": "ابحث عن اللغات",
+    "noResults": "لا توجد لغات تطابق بحثك."
+  }
+}

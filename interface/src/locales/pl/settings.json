@@ -1,0 +1,18 @@
+{
+  "title": "Ustawienia",
+  "sections": {
+    "you": "Ty",
+    "about": "O programie",
+    "appearance": "Motyw",
+    "notifications": "Powiadomienia",
+    "keyboard": "Klawiatura",
+    "advanced": "Zaawansowane",
+    "language": "Język"
+  },
+  "language": {
+    "title": "Język",
+    "description": "Wybierz język używany w AURA. W razie braku tłumaczenia używany jest angielski.",
+    "searchPlaceholder": "Szukaj języków",
+    "noResults": "Żaden język nie pasuje do wyszukiwania."
+  }
+}

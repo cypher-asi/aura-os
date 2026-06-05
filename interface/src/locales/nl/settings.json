@@ -1,0 +1,18 @@
+{
+  "title": "Instellingen",
+  "sections": {
+    "you": "Jij",
+    "about": "Over",
+    "appearance": "Thema",
+    "notifications": "Meldingen",
+    "keyboard": "Toetsenbord",
+    "advanced": "Geavanceerd",
+    "language": "Taal"
+  },
+  "language": {
+    "title": "Taal",
+    "description": "Kies de taal die in AURA wordt gebruikt. Vertalingen vallen terug op het Engels indien niet beschikbaar.",
+    "searchPlaceholder": "Talen zoeken",
+    "noResults": "Geen taal komt overeen met je zoekopdracht."
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "title": "सेटिंग्स",
+  "sections": {
+    "you": "आप",
+    "about": "परिचय",
+    "appearance": "थीम",
+    "notifications": "सूचनाएँ",
+    "keyboard": "कीबोर्ड",
+    "advanced": "उन्नत",
+    "language": "भाषा"
+  },
+  "language": {
+    "title": "भाषा",
+    "description": "AURA में उपयोग की जाने वाली भाषा चुनें। अनुवाद उपलब्ध न होने पर अंग्रेज़ी का उपयोग होता है।",
+    "searchPlaceholder": "भाषाएँ खोजें",
+    "noResults": "आपकी खोज से मेल खाती कोई भाषा नहीं।"
+  }
+}

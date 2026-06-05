@@ -1,0 +1,18 @@
+{
+  "title": "Cài đặt",
+  "sections": {
+    "you": "Bạn",
+    "about": "Giới thiệu",
+    "appearance": "Giao diện",
+    "notifications": "Thông báo",
+    "keyboard": "Bàn phím",
+    "advanced": "Nâng cao",
+    "language": "Ngôn ngữ"
+  },
+  "language": {
+    "title": "Ngôn ngữ",
+    "description": "Chọn ngôn ngữ dùng trong AURA. Bản dịch sẽ dùng tiếng Anh khi không có sẵn.",
+    "searchPlaceholder": "Tìm ngôn ngữ",
+    "noResults": "Không có ngôn ngữ nào khớp với tìm kiếm."
+  }
+}

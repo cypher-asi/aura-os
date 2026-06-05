@@ -1,0 +1,18 @@
+{
+  "title": "Ayarlar",
+  "sections": {
+    "you": "Sen",
+    "about": "Hakkında",
+    "appearance": "Tema",
+    "notifications": "Bildirimler",
+    "keyboard": "Klavye",
+    "advanced": "Gelişmiş",
+    "language": "Dil"
+  },
+  "language": {
+    "title": "Dil",
+    "description": "AURA'da kullanılan dili seçin. Çeviri yoksa İngilizce kullanılır.",
+    "searchPlaceholder": "Dil ara",
+    "noResults": "Aramanızla eşleşen dil yok."
+  }
+}
