@@ -178,7 +178,7 @@ impl UpdateState {
             data_dir: Arc::new(data_dir.to_path_buf()),
             shutdown_hook: Arc::new(RwLock::new(None)),
         };
-        reconcile::reconcile_persisted_state(&state, env!("CARGO_PKG_VERSION"));
+        reconcile::reconcile_persisted_state(&state, crate::release_version::current_version());
         state
     }
 

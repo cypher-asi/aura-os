@@ -27,6 +27,10 @@ run("node", ["--check", "scripts/ci/verify-desktop-release-binary.mjs"], {
   cwd: repoRoot,
   label: "preflight:desktop-release-binary-validator-syntax",
 });
+run("node", ["--check", "scripts/ci/write-desktop-release-metadata.mjs"], {
+  cwd: repoRoot,
+  label: "preflight:desktop-release-metadata-writer-syntax",
+});
 run("node", ["--test", "infra/scripts/release/desktop-frontend-assets-validate.test.mjs"], {
   cwd: repoRoot,
   label: "preflight:frontend-assets-test",

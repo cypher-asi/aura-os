@@ -9,6 +9,7 @@ function parseArgs(argv) {
     releaseDir: process.env.AURA_RELEASE_DIR || "",
     target: "",
     expectedChannel: "Stable",
+    expectedVersion: "",
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -29,9 +30,14 @@ function parseArgs(argv) {
       index += 1;
       continue;
     }
+    if (arg === "--expected-version") {
+      options.expectedVersion = next || "";
+      index += 1;
+      continue;
+    }
     if (arg === "--help") {
       console.log(
-        "Usage: node scripts/ci/verify-desktop-release-binary.mjs --release-dir DIR --target linux|macos|windows [--expected-channel Stable]",
+        "Usage: node scripts/ci/verify-desktop-release-binary.mjs --release-dir DIR --target linux|macos|windows [--expected-channel Stable] [--expected-version VERSION]",
       );
       process.exit(0);
     }
@@ -95,6 +101,9 @@ if (!report.startsWith(expectedPrefix)) {
 assertContains(report, "updater_enabled=true");
 assertContains(report, "data_dir=aura");
 assertContains(report, 'window_title="AURA"');
+if (options.expectedVersion) {
+  assertContains(report, `version=${options.expectedVersion}`);
+}
 
 console.log(
   JSON.stringify(

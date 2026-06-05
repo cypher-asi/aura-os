@@ -79,7 +79,7 @@ fn staged_harness_binary_name(source: &Path) -> String {
         .unwrap_or("aura-node");
     let suffix = format!(
         "{stem}-{}-{byte_len}-{modified_secs}",
-        env!("CARGO_PKG_VERSION")
+        crate::release_version::current_version()
     );
     match source.extension().and_then(|value| value.to_str()) {
         Some(ext) if !ext.is_empty() => format!("{suffix}.{ext}"),

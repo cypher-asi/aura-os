@@ -260,10 +260,65 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Compute desktop binary cache inputs
+        id: desktop-binary-cache-inputs
+        shell: bash
+        env:
+          CACHE_UPDATER_PUBLIC_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PUBLIC_KEY }}
+          CACHE_AURA_UPDATE_BASE_URL: ${{ env.AURA_UPDATE_BASE_URL }}
+          CACHE_AURA_NETWORK_URL: ${{ vars.AURA_NETWORK_URL }}
+          CACHE_AURA_STORAGE_URL: ${{ vars.AURA_STORAGE_URL }}
+          CACHE_AURA_INTEGRATIONS_URL: ${{ vars.AURA_INTEGRATIONS_URL }}
+          CACHE_AURA_ROUTER_URL: ${{ vars.AURA_ROUTER_URL }}
+          CACHE_Z_BILLING_URL: ${{ vars.Z_BILLING_URL }}
+          CACHE_ORBIT_BASE_URL: ${{ vars.ORBIT_BASE_URL }}
+          CACHE_SWARM_BASE_URL: ${{ vars.SWARM_BASE_URL }}
+          CACHE_REQUIRE_ZERO_PRO: ${{ vars.REQUIRE_ZERO_PRO }}
+          CACHE_AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN: ${{ vars.AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN }}
+          CACHE_VITE_MIXPANEL_TOKEN: ${{ vars.VITE_MIXPANEL_TOKEN }}
+          CACHE_Z_BILLING_API_KEY: ${{ secrets.Z_BILLING_API_KEY }}
+        run: |
+          node <<'NODE' >> "$GITHUB_OUTPUT"
+          const crypto = require("node:crypto");
+          const names = [
+            "CACHE_UPDATER_PUBLIC_KEY",
+            "CACHE_AURA_UPDATE_BASE_URL",
+            "CACHE_AURA_NETWORK_URL",
+            "CACHE_AURA_STORAGE_URL",
+            "CACHE_AURA_INTEGRATIONS_URL",
+            "CACHE_AURA_ROUTER_URL",
+            "CACHE_Z_BILLING_URL",
+            "CACHE_ORBIT_BASE_URL",
+            "CACHE_SWARM_BASE_URL",
+            "CACHE_REQUIRE_ZERO_PRO",
+            "CACHE_AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN",
+            "CACHE_VITE_MIXPANEL_TOKEN",
+            "CACHE_Z_BILLING_API_KEY",
+          ];
+          const hash = crypto.createHash("sha256");
+          for (const name of names) {
+            hash.update(name);
+            hash.update("\0");
+            hash.update(process.env[name] || "");
+            hash.update("\0");
+          }
+          console.log(`fingerprint=${hash.digest("hex")}`);
+          NODE
+
+      - name: Restore desktop release binary cache
+        id: desktop-release-binary-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ../.aura-shared-target/release/aura-os-desktop
+            ../.aura-shared-target/release/aura-os-desktop.exe
+          key: desktop-release-bin-v1-${{ matrix.target }}-${{ matrix.arch }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'rust-toolchain.toml', '.github/actions/setup-rust-toolchain/**', 'apps/aura-os-desktop/Cargo.toml', 'apps/aura-os-desktop/build.rs', 'apps/aura-os-desktop/src/**/*.rs', 'apps/aura-os-desktop/assets/**', 'apps/aura-os-server/Cargo.toml', 'apps/aura-os-server/src/**/*.rs', 'apps/aura-os-ide/Cargo.toml', 'apps/aura-os-ide/src/**/*.rs', 'crates/**/Cargo.toml', 'crates/**/*.rs') }}-${{ steps.desktop-binary-cache-inputs.outputs.fingerprint }}
+
       - name: Install Rust toolchain
         uses: ./.github/actions/setup-rust-toolchain
 
       - name: Restore desktop Rust cache
+        if: steps.desktop-release-binary-cache.outputs.cache-hit != 'true'
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: desktop-app-v3-${{ runner.os }}-${{ runner.arch }}
@@ -272,12 +327,13 @@ jobs:
           cache-on-failure: true
 
       - name: Set up sccache
+        if: steps.desktop-release-binary-cache.outputs.cache-hit != 'true'
         id: sccache-package
         uses: mozilla-actions/sccache-action@v0.0.9
         continue-on-error: true
 
       - name: Configure sccache backend
-        if: steps.sccache-package.outcome == 'success'
+        if: steps.desktop-release-binary-cache.outputs.cache-hit != 'true' && steps.sccache-package.outcome == 'success'
         shell: bash
         env:
           DEPOT_CACHE_TOKEN: ${{ secrets.DEPOT_CACHE_TOKEN }}
@@ -313,25 +369,17 @@ jobs:
       - name: Check desktop runtime parity
         run: node scripts/ci/check-runtime.mjs desktop
 
-      - name: Patch Cargo.toml version
+      - name: Write desktop release metadata
         shell: bash
         run: |
-          VERSION="${{ needs.resolve-version.outputs.version }}"
-          sed -i.bak "s/^version = \".*\"/version = \"${VERSION}\"/" apps/aura-os-desktop/Cargo.toml
-          rm -f apps/aura-os-desktop/Cargo.toml.bak
+          node scripts/ci/write-desktop-release-metadata.mjs \
+            --version "${{ needs.resolve-version.outputs.version }}"
 
       - name: Install cargo-packager
         uses: baptiste0928/cargo-install@v3
         with:
           crate: cargo-packager
           version: 0.11.8
-
-      - name: Prepare packager config
-        shell: bash
-        run: |
-          node scripts/ci/patch-desktop-packager-config.mjs \
-            --binaries-dir "../../../.aura-shared-target/release" \
-            --strip-before-packaging
 
       - name: Disable Spotlight indexing for DMG packaging
         if: matrix.target == 'macos'
@@ -428,6 +476,73 @@ jobs:
               fh.write(f"MACOS_SIGNING_IDENTITY={signing_identity}\n")
           PY
 
+      - name: Wait for interface build artifact
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/ci/wait-gh-artifacts.mjs \
+            --artifact "interface-dist-nightly" \
+            --interval-seconds 5 \
+            --fail-job "build-interface"
+
+      - name: Download interface dist
+        uses: actions/download-artifact@v5
+        with:
+          name: interface-dist-nightly
+          path: interface/dist
+
+      - name: Validate interface resources
+        shell: bash
+        run: |
+          test -d interface/dist
+          node infra/scripts/release/desktop-frontend-assets-validate.mjs --dist interface/dist
+
+      - name: Build release binary
+        if: steps.desktop-release-binary-cache.outputs.cache-hit != 'true'
+        env:
+          AURA_DESKTOP_USE_PREBUILT_FRONTEND: "1"
+          AURA_UPDATE_BASE_URL: ${{ env.AURA_UPDATE_BASE_URL }}
+          UPDATER_PUBLIC_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PUBLIC_KEY }}
+        shell: bash
+        run: |
+          cargo build --release --no-default-features --features stable-channel --package aura-os-desktop
+
+      - name: Validate cached release binary
+        if: steps.desktop-release-binary-cache.outputs.cache-hit == 'true'
+        shell: bash
+        run: |
+          binary="$AURA_RELEASE_DIR/aura-os-desktop"
+          if [ "${{ matrix.target }}" = "windows" ]; then
+            binary="${binary}.exe"
+          else
+            chmod 755 "$binary"
+          fi
+          test -s "$binary"
+
+      - name: Verify release binary channel
+        shell: bash
+        run: |
+          node scripts/ci/verify-desktop-release-binary.mjs \
+            --release-dir "$AURA_RELEASE_DIR" \
+            --target "${{ matrix.target }}" \
+            --expected-channel Stable \
+            --expected-version "${{ needs.resolve-version.outputs.version }}"
+
+      - name: Patch Cargo.toml version
+        shell: bash
+        run: |
+          VERSION="${{ needs.resolve-version.outputs.version }}"
+          sed -i.bak "s/^version = \".*\"/version = \"${VERSION}\"/" apps/aura-os-desktop/Cargo.toml
+          rm -f apps/aura-os-desktop/Cargo.toml.bak
+
+      - name: Prepare packager config
+        shell: bash
+        run: |
+          node scripts/ci/patch-desktop-packager-config.mjs \
+            --binaries-dir "../../../.aura-shared-target/release" \
+            --strip-before-packaging
+
       - name: Inject macOS signing identity into packager config
         if: matrix.target == 'macos'
         shell: bash
@@ -439,16 +554,14 @@ jobs:
         if: matrix.target == 'macos'
         run: cargo metadata --no-deps --manifest-path apps/aura-os-desktop/Cargo.toml > /dev/null
 
-      - name: Wait for platform build artifacts
+      - name: Wait for sidecar artifact
         shell: bash
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           node scripts/ci/wait-gh-artifacts.mjs \
-            --artifact "interface-dist-nightly" \
             --artifact "sidecar-${{ matrix.target }}-${{ matrix.arch }}" \
             --interval-seconds 5 \
-            --fail-job "build-interface" \
             --fail-job "build-sidecar (${{ matrix.os }}, ${{ matrix.target }}, ${{ matrix.arch }})"
 
       - name: Download sidecar artifact
@@ -457,12 +570,6 @@ jobs:
           name: sidecar-${{ matrix.target }}-${{ matrix.arch }}
           path: downloaded-sidecar
 
-      - name: Download interface dist
-        uses: actions/download-artifact@v5
-        with:
-          name: interface-dist-nightly
-          path: interface/dist
-
       - name: Restore packaged resources
         shell: bash
         run: |
@@ -470,28 +577,12 @@ jobs:
           mkdir -p apps/aura-os-desktop/resources
           tar -xf downloaded-sidecar/desktop-sidecar.tar -C apps/aura-os-desktop/resources
           test -d apps/aura-os-desktop/resources/sidecar
+          test -f apps/aura-os-desktop/resources/release.json
           test -d interface/dist
           node infra/scripts/release/desktop-frontend-assets-validate.mjs --dist interface/dist
           if [ "${{ matrix.target }}" != "windows" ]; then
             chmod 755 apps/aura-os-desktop/resources/sidecar/aura-node
           fi
-
-      - name: Build release binary
-        env:
-          AURA_DESKTOP_USE_PREBUILT_FRONTEND: "1"
-          AURA_UPDATE_BASE_URL: ${{ env.AURA_UPDATE_BASE_URL }}
-          UPDATER_PUBLIC_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PUBLIC_KEY }}
-        shell: bash
-        run: |
-          cargo build --release --no-default-features --features stable-channel --package aura-os-desktop
-
-      - name: Verify release binary channel
-        shell: bash
-        run: |
-          node scripts/ci/verify-desktop-release-binary.mjs \
-            --release-dir "$AURA_RELEASE_DIR" \
-            --target "${{ matrix.target }}" \
-            --expected-channel Stable
 
       - name: Package installer
         env:

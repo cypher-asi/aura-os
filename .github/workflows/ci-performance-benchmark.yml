@@ -219,12 +219,12 @@ jobs:
           name: ci-perf-interface-dist
           path: interface/dist
 
-      - name: Patch Cargo.toml version
+      - name: Write desktop release metadata
         if: inputs.platform == 'all' || inputs.platform == matrix.platform
         shell: bash
         run: |
-          sed -i.bak 's/^version = ".*"/version = "0.1.0-ci-perf.${{ github.run_number }}.1"/' apps/aura-os-desktop/Cargo.toml
-          rm -f apps/aura-os-desktop/Cargo.toml.bak
+          node scripts/ci/write-desktop-release-metadata.mjs \
+            --version "0.1.0-ci-perf.${{ github.run_number }}.1"
 
       - name: Build release binary
         if: inputs.platform == 'all' || inputs.platform == matrix.platform
