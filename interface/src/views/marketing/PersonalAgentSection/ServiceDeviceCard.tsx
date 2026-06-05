@@ -54,7 +54,7 @@ export function ServiceDeviceCard(): ReactNode {
             </span>
             <span className="personalAgentDeviceAsterisk">&#10033;</span>
           </div>
-          <span className="personalAgentDeviceLabel">64MB SAMPLER COMPOSER</span>
+          <span className="personalAgentDeviceLabel">100+ Integrations</span>
           <span className="personalAgentDeviceAsterisk">&#10033;</span>
         </div>
 
