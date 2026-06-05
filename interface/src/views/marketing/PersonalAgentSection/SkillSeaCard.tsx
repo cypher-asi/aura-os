@@ -51,30 +51,32 @@ export function SkillSeaCard(): ReactNode {
   return (
     <Plate className="personalAgentSkillPlate" aria-hidden="true">
       <div className="personalAgentSkillPanel">
-        {SKILL_GROUPS.map((group, groupIndex) => (
-          <div key={groupIndex} className="personalAgentSkillSectionWrap">
-            {groupIndex > 0 && (
-              <span className="personalAgentSkillDivider" />
-            )}
-            <div className="personalAgentSkillSection">
-              {group.map((skill) => (
-                <button
-                  key={skill.id}
-                  type="button"
-                  tabIndex={-1}
-                  className="personalAgentSkillBtn"
-                  data-lit={skill.lit ? "true" : undefined}
-                >
-                  {skill.lit && <span className="personalAgentSkillLed" />}
-                  <SkillIcon name={skill.id} size={16} />
-                  <span className="personalAgentSkillBtnLabel">
-                    {skill.label}
-                  </span>
-                </button>
-              ))}
+        <div className="personalAgentSkillWell">
+          {SKILL_GROUPS.map((group, groupIndex) => (
+            <div key={groupIndex} className="personalAgentSkillSectionWrap">
+              {groupIndex > 0 && (
+                <span className="personalAgentSkillDivider" />
+              )}
+              <div className="personalAgentSkillSection">
+                {group.map((skill) => (
+                  <button
+                    key={skill.id}
+                    type="button"
+                    tabIndex={-1}
+                    className="personalAgentSkillBtn"
+                    data-lit={skill.lit ? "true" : undefined}
+                  >
+                    {skill.lit && <span className="personalAgentSkillLed" />}
+                    <SkillIcon name={skill.id} size={16} />
+                    <span className="personalAgentSkillBtnLabel">
+                      {skill.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </Plate>
   );
