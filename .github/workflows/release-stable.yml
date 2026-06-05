@@ -192,22 +192,6 @@ jobs:
         if: steps.sidecar-binary-cache.outputs.cache-hit != 'true'
         run: node infra/scripts/release/prepare-desktop-sidecar.mjs
 
-      - name: Show sccache stats
-        if: always() && steps.sidecar-binary-cache.outputs.cache-hit != 'true' && steps.sccache-sidecar.outcome == 'success'
-        shell: bash
-        run: |
-          mkdir -p ci-cache
-          "${SCCACHE_PATH}" --show-stats --stats-format=json > "ci-cache/sccache-sidecar-${{ matrix.target }}-${{ matrix.arch }}.json" || true
-          "${SCCACHE_PATH}" --show-stats || sccache --show-stats || true
-
-      - name: Upload sidecar cache telemetry
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: ci-cache-stable-sidecar-${{ matrix.target }}-${{ matrix.arch }}
-          path: ci-cache
-          if-no-files-found: ignore
-
       - name: Archive bundled sidecar
         shell: bash
         run: |
@@ -495,14 +479,9 @@ jobs:
           AURA_DESKTOP_USE_PREBUILT_FRONTEND: "1"
           AURA_UPDATE_BASE_URL: ${{ env.AURA_UPDATE_BASE_URL }}
           UPDATER_PUBLIC_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PUBLIC_KEY }}
-          AURA_CARGO_TIMINGS: ${{ (matrix.target == 'windows' || (matrix.target == 'macos' && matrix.arch == 'x86_64')) && '1' || '' }}
         shell: bash
         run: |
-          args=(build --release --no-default-features --features stable-channel --package aura-os-desktop)
-          if [ -n "$AURA_CARGO_TIMINGS" ]; then
-            args+=(--timings)
-          fi
-          cargo "${args[@]}"
+          cargo build --release --no-default-features --features stable-channel --package aura-os-desktop
 
       - name: Verify release binary channel
         shell: bash
@@ -511,40 +490,6 @@ jobs:
             --release-dir "$AURA_RELEASE_DIR" \
             --target "${{ matrix.target }}" \
             --expected-channel Stable
-
-      - name: Show sccache stats
-        if: always() && steps.sccache-package.outcome == 'success'
-        shell: bash
-        run: |
-          mkdir -p ci-cache
-          "${SCCACHE_PATH}" --show-stats --stats-format=json > "ci-cache/sccache-package-${{ matrix.target }}-${{ matrix.arch }}.json" || true
-          "${SCCACHE_PATH}" --show-stats || sccache --show-stats || true
-
-      - name: Upload package cache telemetry
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: ci-cache-stable-package-${{ matrix.target }}-${{ matrix.arch }}
-          path: ci-cache
-          if-no-files-found: ignore
-
-      - name: Stage Cargo timings
-        if: always() && (matrix.target == 'windows' || (matrix.target == 'macos' && matrix.arch == 'x86_64'))
-        shell: bash
-        run: |
-          rm -rf cargo-timings-upload
-          if [ -d ../.aura-shared-target/cargo-timings ]; then
-            mkdir -p cargo-timings-upload
-            cp -R ../.aura-shared-target/cargo-timings/. cargo-timings-upload/
-          fi
-
-      - name: Upload Cargo timings
-        if: always() && (matrix.target == 'windows' || (matrix.target == 'macos' && matrix.arch == 'x86_64'))
-        uses: actions/upload-artifact@v5
-        with:
-          name: cargo-timings-stable-package-${{ matrix.target }}-${{ matrix.arch }}
-          path: cargo-timings-upload
-          if-no-files-found: warn
 
       - name: Package installer
         env:
