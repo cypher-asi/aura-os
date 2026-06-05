@@ -98,6 +98,46 @@ function run(command, args, options = {}) {
   }
 }
 
+export function cargoCacheWrapperEnabled(env = process.env) {
+  return Boolean(env.RUSTC_WRAPPER || env.CARGO_BUILD_RUSTC_WRAPPER);
+}
+
+export function cargoCacheFallbackEnv(env = process.env) {
+  const fallback = { ...env };
+  delete fallback.RUSTC_WRAPPER;
+  delete fallback.CARGO_BUILD_RUSTC_WRAPPER;
+  return fallback;
+}
+
+function runCargoWithCacheFallback(args, options = {}) {
+  const result = spawnSync("cargo", args, {
+    stdio: "inherit",
+    ...options,
+  });
+  if (result.status === 0) {
+    return;
+  }
+
+  const env = options.env ?? process.env;
+  if (!cargoCacheWrapperEnabled(env)) {
+    throw new Error(`cargo ${args.join(" ")} failed with status ${result.status}`);
+  }
+
+  console.warn(
+    "\n[prepare-desktop-sidecar] cargo failed with a compiler cache wrapper enabled; " +
+      "retrying once without RUSTC_WRAPPER so cache backend issues do not fail the build.",
+  );
+
+  const fallback = spawnSync("cargo", args, {
+    stdio: "inherit",
+    ...options,
+    env: cargoCacheFallbackEnv(env),
+  });
+  if (fallback.status !== 0) {
+    throw new Error(`cargo ${args.join(" ")} failed with status ${fallback.status}`);
+  }
+}
+
 export function normalizeSccacheWrapperPath(wrapperPath, platform = process.platform) {
   if (!wrapperPath || platform !== "win32") {
     return wrapperPath;
@@ -172,8 +212,7 @@ function main() {
   const buildEnv = sidecarBuildEnv();
   printBuildEnv(buildEnv);
 
-  run(
-    "cargo",
+  runCargoWithCacheFallback(
     [
       "build",
       "--release",

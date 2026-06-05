@@ -195,6 +195,7 @@ jobs:
           DEPOT_CACHE_TOKEN: ${{ secrets.DEPOT_CACHE_TOKEN }}
         run: |
           echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+          echo "SCCACHE_IGNORE_SERVER_IO_ERROR=1" >> "$GITHUB_ENV"
           if [ -n "$DEPOT_CACHE_TOKEN" ]; then
             echo "SCCACHE_WEBDAV_ENDPOINT=https://cache.depot.dev" >> "$GITHUB_ENV"
             echo "SCCACHE_WEBDAV_TOKEN=$DEPOT_CACHE_TOKEN" >> "$GITHUB_ENV"
@@ -356,6 +357,7 @@ jobs:
           DEPOT_CACHE_TOKEN: ${{ secrets.DEPOT_CACHE_TOKEN }}
         run: |
           echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+          echo "SCCACHE_IGNORE_SERVER_IO_ERROR=1" >> "$GITHUB_ENV"
           if [ -n "$DEPOT_CACHE_TOKEN" ]; then
             echo "SCCACHE_WEBDAV_ENDPOINT=https://cache.depot.dev" >> "$GITHUB_ENV"
             echo "SCCACHE_WEBDAV_TOKEN=$DEPOT_CACHE_TOKEN" >> "$GITHUB_ENV"
