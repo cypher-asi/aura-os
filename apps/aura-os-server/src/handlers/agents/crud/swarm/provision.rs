@@ -16,6 +16,7 @@ pub(in crate::handlers::agents::crud) async fn provision_remote_agent(
     client: &NetworkClient,
     jwt: &str,
     net_agent: &NetworkAgent,
+    intended_org: Option<&str>,
 ) -> ApiResult<ReprovisionedRemoteAgent> {
     let previous_vm_id = net_agent.vm_id.clone();
     let swarm_base_url = state.swarm_base_url.as_deref().ok_or_else(|| {
@@ -33,7 +34,15 @@ pub(in crate::handlers::agents::crud) async fn provision_remote_agent(
     )
     .await?;
 
-    let agent = persist_vm_id(state, client, jwt, net_agent, &provisioned.vm_id).await?;
+    let agent = persist_vm_id(
+        state,
+        client,
+        jwt,
+        net_agent,
+        &provisioned.vm_id,
+        intended_org,
+    )
+    .await?;
 
     info!(
         agent_id = %net_agent.id,
@@ -71,7 +80,19 @@ pub(super) async fn persist_vm_id(
     jwt: &str,
     net_agent: &NetworkAgent,
     vm_id: &str,
+    intended_org: Option<&str>,
 ) -> ApiResult<Agent> {
+    // Re-assert the org the agent should belong to so the provisioning PUT
+    // can't drop it (remote agents are the only path that PUTs post-create;
+    // without this their Organization reads blank). Prefer the org the
+    // caller submitted on create over `net_agent.org_id`, because
+    // aura-network's create response doesn't always echo `org_id` back —
+    // in which case `net_agent.org_id` is `None` and the re-assertion would
+    // silently persist a NULL org.
+    let resolved_org = intended_org
+        .map(str::to_owned)
+        .or_else(|| net_agent.org_id.clone());
+
     let update_req = aura_os_network::UpdateAgentRequest {
         name: None,
         role: None,
@@ -81,10 +102,7 @@ pub(super) async fn persist_vm_id(
         icon: None,
         harness: None,
         machine_type: None,
-        // Re-assert the org the agent was created with so the provisioning
-        // PUT can't drop it (remote agents are the only path that PUTs
-        // post-create; without this their Organization reads blank).
-        org_id: net_agent.org_id.clone(),
+        org_id: resolved_org.clone(),
         vm_id: Some(vm_id.to_string()),
         tags: None,
         listing_status: None,
@@ -108,6 +126,14 @@ pub(super) async fn persist_vm_id(
         })?;
 
     let mut agent = agent_from_network(&updated_net_agent);
+    // Defensive projection: if the PUT response omitted `org_id` (same
+    // class of bug the permissions reconciliation guards against on
+    // update), fall back to the org we just asserted so the freshly
+    // returned agent — and the store patch the client makes from it — still
+    // carries the org instead of going blank until the next list refresh.
+    if agent.org_id.is_none() {
+        agent.org_id = resolved_org.as_deref().and_then(|s| s.parse().ok());
+    }
     state
         .agent_service
         .apply_runtime_config(&mut agent)

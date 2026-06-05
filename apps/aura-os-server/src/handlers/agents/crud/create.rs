@@ -75,7 +75,18 @@ pub(crate) async fn create_and_provision_remote_agent(
         .await
         .map_err(map_network_error)?;
     hydrate_local_state(state, &net_agent, prepared)?;
-    let reprovisioned = provision_remote_agent(state, client, jwt, &net_agent).await?;
+    // Pass the org the user submitted on create so provisioning re-asserts
+    // it even when aura-network's create response doesn't echo `org_id`
+    // back — otherwise the post-provision PUT could persist a NULL org and
+    // the remote agent's card would render a blank Organization.
+    let reprovisioned = provision_remote_agent(
+        state,
+        client,
+        jwt,
+        &net_agent,
+        prepared.net_req.org_id.as_deref(),
+    )
+    .await?;
     let mut agent = reprovisioned.agent;
     // Preserve the user-supplied local override even though it doesn't
     // apply to remote agents today — keeps the value stable if the user

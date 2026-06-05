@@ -37,9 +37,17 @@ export interface ProfileSpecCardProps {
  * the lower part of the WebGL backplate.
  */
 export function ProfileSpecCard({ agent, sections }: ProfileSpecCardProps) {
-  const orgName = useOrgStore((s) =>
-    agent.org_id ? s.orgs.find((o) => o.org_id === agent.org_id)?.name ?? null : null,
-  );
+  // Resolve the org name from the agent's `org_id`. When the agent record
+  // carries no org (legacy / not-yet-healed remote agents), fall back to the
+  // active org's name so the card doesn't render a blank Organization for the
+  // common single-org case. The server-side heal on the list read path makes
+  // this permanent on the next refresh; this is just the immediate stand-in.
+  const orgName = useOrgStore((s) => {
+    if (agent.org_id) {
+      return s.orgs.find((o) => o.org_id === agent.org_id)?.name ?? null;
+    }
+    return s.activeOrg?.name ?? null;
+  });
 
   // IP: remote agents expose a VM endpoint; local agents fall back to the host
   // machine IP. Both hooks are called unconditionally (rules of hooks).

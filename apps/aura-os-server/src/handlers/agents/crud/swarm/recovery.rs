@@ -40,7 +40,10 @@ pub(crate) async fn recover_remote_agent_pipeline(
     )
     .await?;
 
-    let agent = persist_vm_id(state, client, jwt, net_agent, &provisioned.vm_id).await?;
+    // Recovery has no separate "intended org" signal — the agent already
+    // exists — so fall back to whatever org `net_agent` carries (now healed
+    // on the list read path for legacy NULL-org records).
+    let agent = persist_vm_id(state, client, jwt, net_agent, &provisioned.vm_id, None).await?;
 
     info!(
         agent_id = %net_agent.id,

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::extract::{Path, Query, State};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
@@ -105,13 +107,27 @@ pub(crate) async fn list_agents(
     }
 
     if let Some(ref client) = state.network_client {
-        let net_agents = fetch_list_for_caller(client, &jwt, query.org_id.as_deref()).await?;
+        let mut net_agents = fetch_list_for_caller(client, &jwt, query.org_id.as_deref()).await?;
         return Ok(match view {
             AgentListView::Slim => {
                 let summaries = project_listed_agents_slim(&net_agents);
                 Json(summaries).into_response()
             }
             AgentListView::Full => {
+                // Heal remote agents whose aura-network record lost its org
+                // (legacy rows, or a create/PUT response that dropped the
+                // column). They surface here only via the user-scoped
+                // backstop in `fetch_list_for_caller` with `org_id = None`,
+                // so the agent card would otherwise render a blank
+                // Organization forever. Backfill the queried org into the
+                // projection so the card shows it immediately, and persist
+                // it upstream so org-scoped queries and teammates see it too.
+                if let Some(org_id) = normalized_org_id(query.org_id.as_deref()) {
+                    let healed = heal_missing_remote_org(&mut net_agents, &org_id);
+                    if !healed.is_empty() {
+                        spawn_org_backfill(client.clone(), jwt.clone(), healed, org_id);
+                    }
+                }
                 let agents = project_listed_agents(&state, &net_agents);
                 spawn_shadow_flush(&state, &agents);
                 Json(agents).into_response()
@@ -142,11 +158,7 @@ async fn fetch_list_for_caller(
     jwt: &str,
     org_id: Option<&str>,
 ) -> ApiResult<Vec<NetworkAgent>> {
-    let scoped_org = org_id
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .map(str::to_owned);
-    let Some(org_id) = scoped_org else {
+    let Some(org_id) = normalized_org_id(org_id) else {
         return client.list_agents(jwt).await.map_err(map_network_error);
     };
 
@@ -176,6 +188,71 @@ async fn fetch_list_for_caller(
         }
     }
     Ok(merged)
+}
+
+/// Trim + empty-filter a caller-supplied `org_id` query into a canonical
+/// `Some(non_empty)` / `None`. Shared by the org-scoped fetch path and the
+/// NULL-org heal so they agree on what counts as "scoped to an org".
+fn normalized_org_id(org_id: Option<&str>) -> Option<String> {
+    org_id
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_owned)
+}
+
+/// Backfill the queried `org_id` onto remote agents whose aura-network
+/// record has no org, mutating the in-memory projection so the card shows
+/// the org on this very response. Returns the ids that were changed so the
+/// caller can persist the heal upstream.
+///
+/// Scoped to `machine_type == "remote"` because remote agents are the only
+/// ones that run the post-provision `vm_id` PUT that can drop the org;
+/// local / legacy agents may be intentionally unscoped, so we don't touch
+/// them here.
+fn heal_missing_remote_org(net_agents: &mut [NetworkAgent], org_id: &str) -> Vec<String> {
+    let mut healed = Vec::new();
+    for na in net_agents.iter_mut() {
+        let is_remote = na.machine_type.as_deref() == Some("remote");
+        let missing_org = na
+            .org_id
+            .as_deref()
+            .map(str::trim)
+            .unwrap_or("")
+            .is_empty();
+        if is_remote && missing_org {
+            na.org_id = Some(org_id.to_string());
+            healed.push(na.id.clone());
+        }
+    }
+    healed
+}
+
+/// Persist an org backfill for `agent_ids` to aura-network as a best-effort,
+/// fire-and-forget PUT (one per agent). Mirrors [`spawn_shadow_flush`]:
+/// failures are logged and never fail the list request. Only `org_id` is
+/// sent; every other field defaults to `None` so the PUT leaves the rest of
+/// the record untouched.
+fn spawn_org_backfill(
+    client: Arc<NetworkClient>,
+    jwt: String,
+    agent_ids: Vec<String>,
+    org_id: String,
+) {
+    tokio::spawn(async move {
+        for agent_id in agent_ids {
+            let req = aura_os_network::UpdateAgentRequest {
+                org_id: Some(org_id.clone()),
+                ..Default::default()
+            };
+            if let Err(e) = client.update_agent(&agent_id, &jwt, &req).await {
+                warn!(
+                    agent_id = %agent_id,
+                    error = %e,
+                    "list_agents: best-effort org backfill PUT failed"
+                );
+            }
+        }
+    });
 }
 
 /// Slim projection used only when `view=slim`. Skips the icon shadow
@@ -395,5 +472,67 @@ mod tests {
             .expect("parse view=slim&org_id=org-1");
         assert_eq!(parsed.view, Some(AgentListView::Slim));
         assert_eq!(parsed.org_id.as_deref(), Some("org-1"));
+    }
+
+    fn net_agent(machine_type: &str, org_id: Option<&str>) -> NetworkAgent {
+        let mut v = serde_json::json!({
+            "id": "agent-1",
+            "name": "A",
+            "userId": "u1",
+            "machineType": machine_type,
+        });
+        if let Some(o) = org_id {
+            v["orgId"] = Value::String(o.to_string());
+        }
+        serde_json::from_value(v).expect("deserialize NetworkAgent")
+    }
+
+    #[test]
+    fn normalized_org_id_trims_and_filters_empty() {
+        assert_eq!(normalized_org_id(None), None);
+        assert_eq!(normalized_org_id(Some("")), None);
+        assert_eq!(normalized_org_id(Some("   ")), None);
+        assert_eq!(normalized_org_id(Some("  org-1 ")).as_deref(), Some("org-1"));
+    }
+
+    #[test]
+    fn heal_backfills_only_remote_agents_missing_org() {
+        let mut agents = vec![
+            net_agent("remote", None),
+            net_agent("remote", Some("org-x")),
+            net_agent("local", None),
+        ];
+        agents[0].id = "remote-missing".into();
+        agents[1].id = "remote-set".into();
+        agents[2].id = "local-missing".into();
+
+        let healed = heal_missing_remote_org(&mut agents, "org-active");
+
+        assert_eq!(
+            healed,
+            vec!["remote-missing".to_string()],
+            "only the remote agent with no org should be healed"
+        );
+        assert_eq!(agents[0].org_id.as_deref(), Some("org-active"));
+        assert_eq!(
+            agents[1].org_id.as_deref(),
+            Some("org-x"),
+            "an agent that already has an org must be left untouched"
+        );
+        assert_eq!(
+            agents[2].org_id, None,
+            "local agents must not be backfilled (their NULL org may be intentional)"
+        );
+    }
+
+    #[test]
+    fn heal_treats_blank_org_as_missing() {
+        let mut agents = vec![net_agent("remote", Some("   "))];
+        agents[0].id = "remote-blank".into();
+
+        let healed = heal_missing_remote_org(&mut agents, "org-active");
+
+        assert_eq!(healed, vec!["remote-blank".to_string()]);
+        assert_eq!(agents[0].org_id.as_deref(), Some("org-active"));
     }
 }

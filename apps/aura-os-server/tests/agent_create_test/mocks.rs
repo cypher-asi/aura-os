@@ -17,6 +17,7 @@ use aura_os_store::SettingsStore;
 use super::common::*;
 
 pub(crate) const AGENT_UUID: &str = "00000000-1111-2222-3333-444444444444";
+pub(crate) const ORG_UUID: &str = "11111111-2222-3333-4444-555555555555";
 pub(crate) const NOW: &str = "2024-01-01T00:00:00Z";
 
 pub(crate) fn network_agent_json(machine_type: &str, vm_id: Option<&str>) -> Value {

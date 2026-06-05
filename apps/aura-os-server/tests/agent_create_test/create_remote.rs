@@ -67,6 +67,59 @@ async fn create_remote_agent_provisions_swarm_and_sets_vm_id() {
 }
 
 #[tokio::test]
+async fn create_remote_agent_reasserts_submitted_org_on_provision_put() {
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
+    store_zero_auth_session(&store);
+
+    let update_capture: Arc<tokio::sync::Mutex<Option<Value>>> =
+        Arc::new(tokio::sync::Mutex::new(None));
+
+    // The network create response intentionally omits `org_id` (mirrors a
+    // deployment that doesn't echo it back). The provision PUT must source
+    // the org from the original create request, not the create response, or
+    // the record persists a NULL org and the agent card reads blank.
+    let network_url = start_mock_network_with_update(
+        network_agent_json("remote", None),
+        "pod-abc-123".to_string(),
+        update_capture.clone(),
+    )
+    .await;
+
+    let swarm_url = start_mock_swarm(
+        StatusCode::OK,
+        serde_json::json!({
+            "agent_id": AGENT_UUID,
+            "status": "running",
+            "pod_id": "pod-abc-123"
+        }),
+    )
+    .await;
+
+    let app = build_app_with_swarm(
+        store,
+        store_dir.path().to_path_buf(),
+        &network_url,
+        Some(swarm_url),
+    );
+
+    let mut body = create_agent_body("remote");
+    body["org_id"] = Value::String(ORG_UUID.to_string());
+    let req = json_request("POST", "/api/agents", Some(body));
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let captured = update_capture.lock().await;
+    let update_body = captured
+        .as_ref()
+        .expect("network update should have been called");
+    assert_eq!(
+        update_body["orgId"], ORG_UUID,
+        "provision PUT must re-assert the submitted org even when the create response omits it"
+    );
+}
+
+#[tokio::test]
 async fn create_remote_agent_falls_back_to_swarm_agent_id_when_no_pod_id() {
     let store_dir = tempfile::tempdir().unwrap();
     let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
