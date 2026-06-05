@@ -1,13 +1,15 @@
 import { type ReactNode } from "react";
+import { Plate } from "../../../components/Plate";
 import { SkillIcon } from "../../../components/SkillShopModal/SkillIcon";
 
 /**
- * Mini-UI for the "Intelligent in all domains" quadrant: a recessed
- * control panel of neomorphic skill buttons, grouped into sections by
- * hairline divider lines like a hardware controller. Each button pairs
- * a real `SkillIcon` glyph (resolved from the skill id) with a short
- * label; a few featured skills are "lit" with an accent fill and an LED
- * dot, echoing the active keys on the reference device.
+ * Mini-UI for the "Intelligent in all domains" quadrant: the shared
+ * three-ringed `Plate` panel (matching the chat capsule and service
+ * device) holding the skills as raised neomorphic buttons, grouped into
+ * sections by hairline divider lines like a hardware controller. Each
+ * button pairs a real `SkillIcon` glyph (resolved from the skill id)
+ * with a short label; a few featured skills are "lit" with an accent
+ * fill and an LED dot, echoing the active keys on the reference device.
  *
  * Everything here is decorative (`aria-hidden`) — it sells the breadth
  * of skills visually rather than acting as a real control surface.
@@ -47,31 +49,33 @@ const SKILL_GROUPS: readonly (readonly SkillButton[])[] = [
 
 export function SkillSeaCard(): ReactNode {
   return (
-    <div className="personalAgentSkillPanel" aria-hidden="true">
-      {SKILL_GROUPS.map((group, groupIndex) => (
-        <div key={groupIndex} className="personalAgentSkillSectionWrap">
-          {groupIndex > 0 && (
-            <span className="personalAgentSkillDivider" />
-          )}
-          <div className="personalAgentSkillSection">
-            {group.map((skill) => (
-              <button
-                key={skill.id}
-                type="button"
-                tabIndex={-1}
-                className="personalAgentSkillBtn"
-                data-lit={skill.lit ? "true" : undefined}
-              >
-                {skill.lit && <span className="personalAgentSkillLed" />}
-                <SkillIcon name={skill.id} size={16} />
-                <span className="personalAgentSkillBtnLabel">
-                  {skill.label}
-                </span>
-              </button>
-            ))}
+    <Plate className="personalAgentSkillPlate" aria-hidden="true">
+      <div className="personalAgentSkillPanel">
+        {SKILL_GROUPS.map((group, groupIndex) => (
+          <div key={groupIndex} className="personalAgentSkillSectionWrap">
+            {groupIndex > 0 && (
+              <span className="personalAgentSkillDivider" />
+            )}
+            <div className="personalAgentSkillSection">
+              {group.map((skill) => (
+                <button
+                  key={skill.id}
+                  type="button"
+                  tabIndex={-1}
+                  className="personalAgentSkillBtn"
+                  data-lit={skill.lit ? "true" : undefined}
+                >
+                  {skill.lit && <span className="personalAgentSkillLed" />}
+                  <SkillIcon name={skill.id} size={16} />
+                  <span className="personalAgentSkillBtnLabel">
+                    {skill.label}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </Plate>
   );
 }

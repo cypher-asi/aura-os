@@ -82,10 +82,11 @@
   border-radius: 110px 110px 0 0;
 }
 
-/* "Intelligent in all domains" cell: a variation on the top panel's
-   radial — warmer, off-center origin so it doesn't mirror the wide cell. */
+/* "Intelligent in all domains" cell: reuse the wide top panel's diagonal
+   surface gradient so the skill plate reads as part of the same hardware
+   family as the chat capsule and service device. */
 .personalAgentQuadrantSkills {
-  background: radial-gradient(circle at 30% 25%, #20222a 0%, #16171c 100%);
+  background: linear-gradient(135deg, #242424 0%, #181818 55%, #0d0d0d 100%);
 }
 
 /* "Connected to everything" cell: reuse the wide top panel's diagonal
@@ -162,28 +163,26 @@
 
 /* ----- Quadrant 2: neomorphic skill control panel -------------- */
 
+/* Plate wrapper sizing — matches the service device width so the two
+   bottom quadrants read as the same hardware family. The Plate itself
+   supplies the rim + radial surface; this only caps its width. */
+.personalAgentSkillPlate {
+  width: 100%;
+  max-width: 400px;
+}
+
 /*
- * Recessed control-panel well holding the skills as raised neomorphic
- * keys, split into sections by hairline divider lines like the
- * reference hardware controller. The panel is a sunken slab (top-heavy
- * inset shadows + hard black ring) so the buttons read as sitting on a
- * recessed surface.
+ * Content layer inside the Plate: holds the skills as raised neomorphic
+ * keys, split into sections by hairline divider lines like the reference
+ * hardware controller. The Plate behind it provides the recessed surface,
+ * so this is just padding + layout.
  */
 .personalAgentSkillPanel {
   --skill-accent: #e5613a;
   display: flex;
   align-items: stretch;
   gap: 0;
-  width: 100%;
-  max-width: 420px;
   padding: 18px;
-  border-radius: 20px;
-  background: linear-gradient(180deg, #16181c 0%, #202229 100%);
-  box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.55),
-    inset 0 2px 5px rgba(0, 0, 0, 0.45),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.04),
-    0 22px 50px rgba(0, 0, 0, 0.5);
 }
 
 .personalAgentSkillSectionWrap {
@@ -463,9 +462,12 @@
   }
 
   /* Skill panel: stack sections vertically, dividers run horizontal. */
+  .personalAgentSkillPlate {
+    max-width: 340px;
+  }
+
   .personalAgentSkillPanel {
     flex-direction: column;
-    max-width: 340px;
   }
 
   .personalAgentSkillSectionWrap {
