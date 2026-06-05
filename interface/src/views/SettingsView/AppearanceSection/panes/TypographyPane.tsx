@@ -1,4 +1,5 @@
-import { Panel, Select, Text } from "@cypher-asi/zui";
+import { Panel, Text } from "@cypher-asi/zui";
+import { Select } from "../../../../components/Select/Select";
 import { useTypography } from "../../../../hooks/use-theme-typography";
 import {
   SANS_FONTS,
@@ -29,16 +30,12 @@ export function TypographyPane() {
         </Text>
         <Select
           value={typography.sans}
-          onChange={(e) => setSans(e.target.value)}
-          aria-label="Interface font"
-          size="sm"
-        >
-          {SANS_FONTS.map((font) => (
-            <option key={font.id} value={font.id}>
-              {font.label}
-            </option>
-          ))}
-        </Select>
+          onChange={setSans}
+          options={SANS_FONTS.map((font) => ({
+            value: font.id,
+            label: font.label,
+          }))}
+        />
       </div>
 
       <div className={styles.section}>
@@ -47,16 +44,12 @@ export function TypographyPane() {
         </Text>
         <Select
           value={typography.mono}
-          onChange={(e) => setMono(e.target.value)}
-          aria-label="Monospace font"
-          size="sm"
-        >
-          {MONO_FONTS.map((font) => (
-            <option key={font.id} value={font.id}>
-              {font.label}
-            </option>
-          ))}
-        </Select>
+          onChange={setMono}
+          options={MONO_FONTS.map((font) => ({
+            value: font.id,
+            label: font.label,
+          }))}
+        />
       </div>
 
       <div className={styles.section}>

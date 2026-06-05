@@ -1,13 +1,20 @@
 import {
   useCallback,
+  useMemo,
   useRef,
   useState,
   type ChangeEvent,
   type RefObject,
 } from "react";
-import { Button, Select, Text } from "@cypher-asi/zui";
+import { Button, Text, useTheme } from "@cypher-asi/zui";
+import { Check, Copy } from "lucide-react";
+import { Select } from "../../../../components/Select/Select";
 import { useThemeOverrides } from "../../../../hooks/use-theme-overrides";
 import type { ThemePreset } from "../../../../lib/theme-presets";
+import {
+  readResolvedTokens,
+  serializeThemeDocument,
+} from "../../../../lib/theme-export";
 import styles from "./PresetsPanel.module.css";
 
 type PanelMode =
@@ -82,7 +89,6 @@ function ActionRow({
   onImport,
 }: ActionRowProps) {
   const editable = activePreset !== null && !activePreset.readOnly;
-  const hasActive = activePreset !== null;
   return (
     <div className={styles.actions}>
       <Button size="sm" variant="ghost" onClick={onSave}>
@@ -94,12 +100,7 @@ function ActionRow({
       <Button size="sm" variant="ghost" onClick={onDelete} disabled={!editable}>
         Delete
       </Button>
-      <Button
-        size="sm"
-        variant="ghost"
-        onClick={onExport}
-        disabled={!hasActive}
-      >
+      <Button size="sm" variant="ghost" onClick={onExport}>
         Export
       </Button>
       <Button size="sm" variant="ghost" onClick={onImport}>
@@ -154,26 +155,47 @@ export function PresetsPanel() {
   const {
     presets,
     activePresetId,
+    overrides,
     selectPreset,
     createPresetFromCurrent,
     renamePreset,
     deletePreset,
-    exportPreset,
     importPreset,
   } = useThemeOverrides();
+  const { resolvedTheme } = useTheme();
 
   const [mode, setMode] = useState<PanelMode>({ kind: "idle" });
   const [importStatus, setImportStatus] = useState<ImportStatus>({
     kind: "none",
   });
+  const [copied, setCopied] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const activePreset =
     presets.find((p) => p.id === activePresetId) ?? null;
 
-  const onSelectChange = useCallback(
-    (e: ChangeEvent<HTMLSelectElement>) => {
-      const value = e.target.value;
+  const themeName = activePreset?.name ?? "Custom";
+  const themeJson = useMemo(() => {
+    // Resolved defaults come from the live document; the active layer's
+    // `overrides` are merged on top so the latest edited values win even if the
+    // apply-effect that writes them to the DOM hasn't flushed for this render.
+    const tokens = { ...readResolvedTokens(), ...overrides };
+    return serializeThemeDocument(themeName, resolvedTheme, tokens);
+  }, [themeName, resolvedTheme, overrides]);
+
+  const presetOptions = useMemo(
+    () => [
+      { value: "", label: "(working set)" },
+      ...presets.map((p) => ({
+        value: p.id,
+        label: `${p.name}${p.readOnly ? " (built-in)" : ""}`,
+      })),
+    ],
+    [presets],
+  );
+
+  const onSelectValue = useCallback(
+    (value: string) => {
       selectPreset(value === "" ? null : value);
       setMode({ kind: "idle" });
       setImportStatus({ kind: "none" });
@@ -199,13 +221,16 @@ export function PresetsPanel() {
   }, [activePreset, deletePreset]);
 
   const onExport = useCallback(() => {
-    if (!activePresetId) return;
-    const preset = presets.find((p) => p.id === activePresetId);
-    if (!preset) return;
-    const json = exportPreset(activePresetId);
-    if (json.length === 0) return;
-    downloadJson(preset.name, json);
-  }, [activePresetId, exportPreset, presets]);
+    downloadJson(themeName, themeJson);
+  }, [themeName, themeJson]);
+
+  const onCopyJson = useCallback(() => {
+    if (typeof navigator === "undefined" || !navigator.clipboard) return;
+    void navigator.clipboard.writeText(themeJson).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [themeJson]);
 
   const { triggerImport, handleFileChange } = useImportFile(
     fileInputRef,
@@ -257,20 +282,10 @@ export function PresetsPanel() {
         <div className={styles.row}>
           <Select
             value={activePresetId ?? ""}
-            onChange={onSelectChange}
-            aria-label="Active preset"
+            onChange={onSelectValue}
+            options={presetOptions}
             className={styles.select}
-            size="sm"
-            data-testid="preset-select"
-          >
-            <option value="">(working set)</option>
-            {presets.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-                {p.readOnly ? " (built-in)" : ""}
-              </option>
-            ))}
-          </Select>
+          />
         </div>
 
         {mode.kind === "saving" && (
@@ -320,6 +335,24 @@ export function PresetsPanel() {
             Imported &ldquo;{importStatus.name}&rdquo;.
           </Text>
         )}
+      </div>
+
+      <div className={styles.jsonSection} data-testid="theme-json">
+        <div className={styles.jsonHeader}>
+          <Text variant="muted" size="xs">
+            Current theme JSON
+          </Text>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onCopyJson}
+            title="Copy theme JSON"
+          >
+            {copied ? <Check size={12} /> : <Copy size={12} />}
+            {copied ? "Copied" : "Copy"}
+          </Button>
+        </div>
+        <pre className={styles.jsonBlock}>{themeJson}</pre>
       </div>
     </div>
   );

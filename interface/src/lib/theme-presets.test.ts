@@ -230,6 +230,24 @@ describe("theme-presets", () => {
       }
     });
 
+    it("imports the standard full theme document (format: aura-theme)", () => {
+      const json = JSON.stringify({
+        format: "aura-theme",
+        version: 1,
+        name: "Shared",
+        mode: "light",
+        tokens: { "--color-accent": "#123456", "--unknown": "x" },
+      });
+      const result = parsePresetFromImport(json);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.preset.base).toBe("light");
+      expect(result.preset.overrides["--color-accent"]).toBe("#123456");
+      expect(
+        (result.preset.overrides as Record<string, string>)["--unknown"],
+      ).toBeUndefined();
+    });
+
     it("rejects malformed JSON with ok: false and a reason", () => {
       const result = parsePresetFromImport("{not json");
       expect(result.ok).toBe(false);

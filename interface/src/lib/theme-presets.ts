@@ -4,6 +4,7 @@ import {
   type EditableToken,
   type ThemeOverrides,
 } from "./theme-overrides";
+import { parseThemeDocument } from "./theme-export";
 
 /**
  * A named theme preset. Built-ins have stable ids (`aura-dark`, `aura-light`)
@@ -213,9 +214,12 @@ export type ImportResult =
   | { ok: false; reason: string };
 
 /**
- * Parse + validate a JSON string produced by {@link serializePresetForExport}
- * (or any compatible payload). Always assigns a fresh id so re-importing the
- * same JSON produces a new preset rather than colliding with an existing one.
+ * Parse + validate a JSON string. Accepts BOTH the standard full theme
+ * document (`format: "aura-theme"` with a `tokens` map — see
+ * {@link parseThemeDocument}) and the legacy sparse preset payload
+ * (`{ base, overrides }` produced by {@link serializePresetForExport}). Always
+ * assigns a fresh id so re-importing the same JSON produces a new preset
+ * rather than colliding with an existing one.
  */
 export function parsePresetFromImport(raw: string): ImportResult {
   let parsed: unknown;
@@ -227,6 +231,25 @@ export function parsePresetFromImport(raw: string): ImportResult {
   if (!isRecord(parsed)) {
     return { ok: false, reason: "Expected a JSON object." };
   }
+
+  // Standard full theme document (`format: "aura-theme"`).
+  const document = parseThemeDocument(parsed);
+  if (document) {
+    return {
+      ok: true,
+      preset: {
+        id: createPresetId(),
+        name: document.name,
+        base: document.mode,
+        overrides: document.tokens,
+        version: 1,
+      },
+    };
+  }
+  if (parsed.format === "aura-theme") {
+    return { ok: false, reason: "Invalid theme document." };
+  }
+
   if (typeof parsed.name !== "string" || parsed.name.trim().length === 0) {
     return { ok: false, reason: "Preset is missing a name." };
   }

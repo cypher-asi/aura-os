@@ -20,6 +20,22 @@ function renderWithTheme(ui: ReactNode) {
   );
 }
 
+function presetTrigger(): HTMLElement {
+  const trigger = screen
+    .getAllByRole("button")
+    .find((b) => b.getAttribute("aria-haspopup") === "listbox");
+  if (!trigger) throw new Error("preset select trigger not found");
+  return trigger;
+}
+
+async function selectPreset(
+  user: ReturnType<typeof userEvent.setup>,
+  optionName: RegExp | string,
+) {
+  await user.click(presetTrigger());
+  await user.click(await screen.findByRole("option", { name: optionName }));
+}
+
 function mockMatchMedia(prefersDark: boolean) {
   vi.stubGlobal(
     "matchMedia",
@@ -52,13 +68,16 @@ describe("PresetsPanel", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders the working set option and the matching built-in preset", () => {
+  it("renders the working set option and the matching built-in preset", async () => {
+    const user = userEvent.setup();
     renderWithTheme(<PresetsPanel />);
-    const select = screen.getByTestId("preset-select") as HTMLSelectElement;
-    const labels = Array.from(select.options).map((o) => o.textContent ?? "");
-    expect(labels).toContain("(working set)");
-    expect(labels.some((l) => l.includes("Aura Dark"))).toBe(true);
-    expect(select.value).toBe("");
+    expect(presetTrigger()).toHaveTextContent("(working set)");
+
+    await user.click(presetTrigger());
+    expect(
+      screen.getByRole("option", { name: "(working set)" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /Aura Dark/ })).toBeInTheDocument();
   });
 
   it("Save as preset flow snapshots the working set and selects the new preset", async () => {
@@ -72,8 +91,7 @@ describe("PresetsPanel", () => {
     await user.type(input, "My Theme");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
-    const select = screen.getByTestId("preset-select") as HTMLSelectElement;
-    expect(select.value).toBe(userId);
+    expect(presetTrigger()).toHaveTextContent("My Theme");
     const stored = JSON.parse(localStorage.getItem(PRESETS_KEY) ?? "{}");
     expect(stored.active.dark).toBe(userId);
   });
@@ -82,10 +100,9 @@ describe("PresetsPanel", () => {
     const user = userEvent.setup();
     renderWithTheme(<PresetsPanel />);
 
-    const select = screen.getByTestId("preset-select") as HTMLSelectElement;
-    await user.selectOptions(select, "aura-dark");
+    await selectPreset(user, /Aura Dark/);
 
-    expect(select.value).toBe("aura-dark");
+    expect(presetTrigger()).toHaveTextContent("Aura Dark (built-in)");
     const stored = JSON.parse(localStorage.getItem(PRESETS_KEY) ?? "{}");
     expect(stored.active.dark).toBe("aura-dark");
   });
@@ -97,8 +114,7 @@ describe("PresetsPanel", () => {
     expect(screen.getByRole("button", { name: "Rename" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
 
-    const select = screen.getByTestId("preset-select") as HTMLSelectElement;
-    await user.selectOptions(select, "aura-dark");
+    await selectPreset(user, /Aura Dark/);
 
     expect(screen.getByRole("button", { name: "Rename" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
@@ -204,9 +220,53 @@ describe("PresetsPanel", () => {
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:fake");
   });
 
-  it("Export is disabled when no preset is active", () => {
+  it("Export is enabled for the working set and downloads the current theme JSON", async () => {
+    const createObjectURL = vi.fn().mockReturnValue("blob:fake");
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal(
+      "URL",
+      Object.assign(URL, { createObjectURL, revokeObjectURL }),
+    );
+    const clickSpy = vi.fn();
+    const originalCreate = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation(
+      (tag: string, options?: ElementCreationOptions) => {
+        const el = originalCreate(tag, options);
+        if (tag === "a") el.click = clickSpy;
+        return el;
+      },
+    );
+
+    const user = userEvent.setup();
     renderWithTheme(<PresetsPanel />);
-    expect(screen.getByRole("button", { name: "Export" })).toBeDisabled();
+
+    const exportBtn = screen.getByRole("button", { name: "Export" });
+    expect(exportBtn).toBeEnabled();
+    await user.click(exportBtn);
+
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders the current theme as a standard JSON document", () => {
+    renderWithTheme(<PresetsPanel />);
+    const json = screen.getByTestId("theme-json");
+    expect(json.textContent).toContain("aura-theme");
+    expect(json.textContent).toContain("dark");
+  });
+
+  it("Copy theme JSON writes the JSON document to the clipboard", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    renderWithTheme(<PresetsPanel />);
+
+    fireEvent.click(screen.getByRole("button", { name: /copy/i }));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    expect(writeText.mock.calls[0]?.[0]).toContain("aura-theme");
   });
 
   it("Import success adds the preset and shows a success indicator", async () => {
