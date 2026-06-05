@@ -221,6 +221,7 @@ jobs:
     env:
       CARGO_TARGET_DIR: ../.aura-shared-target
       AURA_RELEASE_DIR: ../.aura-shared-target/release
+      AURA_RELEASE_BINARY_CACHE_DIR: .ci-cache/desktop-release-bin
       MACOS_DEVELOPER_ID_P12_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_P12_BASE64 }}
       MACOS_DEVELOPER_ID_P12_PASSWORD: ${{ secrets.MACOS_DEVELOPER_ID_P12_PASSWORD }}
       MACOS_DEVELOPER_TEAM_ID: ${{ secrets.MACOS_DEVELOPER_TEAM_ID }}
@@ -309,9 +310,7 @@ jobs:
         id: desktop-release-binary-cache
         uses: actions/cache@v4
         with:
-          path: |
-            ../.aura-shared-target/release/aura-os-desktop
-            ../.aura-shared-target/release/aura-os-desktop.exe
+          path: .ci-cache/desktop-release-bin
           key: desktop-release-bin-v1-${{ matrix.target }}-${{ matrix.arch }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'rust-toolchain.toml', '.github/actions/setup-rust-toolchain/**', 'apps/aura-os-desktop/Cargo.toml', 'apps/aura-os-desktop/build.rs', 'apps/aura-os-desktop/src/**/*.rs', 'apps/aura-os-desktop/assets/**', 'apps/aura-os-server/Cargo.toml', 'apps/aura-os-server/src/**/*.rs', 'apps/aura-os-ide/Cargo.toml', 'apps/aura-os-ide/src/**/*.rs', 'crates/**/Cargo.toml', 'crates/**/*.rs') }}-${{ steps.desktop-binary-cache-inputs.outputs.fingerprint }}
 
       - name: Install Rust toolchain
@@ -508,14 +507,32 @@ jobs:
         run: |
           cargo build --release --no-default-features --features stable-channel --package aura-os-desktop
 
-      - name: Validate cached release binary
+      - name: Store release binary for cache
+        if: steps.desktop-release-binary-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          binary_name="aura-os-desktop"
+          if [ "${{ matrix.target }}" = "windows" ]; then
+            binary_name="${binary_name}.exe"
+          fi
+          mkdir -p "$AURA_RELEASE_BINARY_CACHE_DIR"
+          cp "$AURA_RELEASE_DIR/$binary_name" "$AURA_RELEASE_BINARY_CACHE_DIR/$binary_name"
+          test -s "$AURA_RELEASE_BINARY_CACHE_DIR/$binary_name"
+
+      - name: Restore cached release binary
         if: steps.desktop-release-binary-cache.outputs.cache-hit == 'true'
         shell: bash
         run: |
-          binary="$AURA_RELEASE_DIR/aura-os-desktop"
+          binary_name="aura-os-desktop"
           if [ "${{ matrix.target }}" = "windows" ]; then
-            binary="${binary}.exe"
-          else
+            binary_name="${binary_name}.exe"
+          fi
+          cached_binary="$AURA_RELEASE_BINARY_CACHE_DIR/$binary_name"
+          binary="$AURA_RELEASE_DIR/$binary_name"
+          test -s "$cached_binary"
+          mkdir -p "$AURA_RELEASE_DIR"
+          cp "$cached_binary" "$binary"
+          if [ "${{ matrix.target }}" != "windows" ]; then
             chmod 755 "$binary"
           fi
           test -s "$binary"
