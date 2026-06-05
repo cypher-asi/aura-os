@@ -124,14 +124,14 @@ function sidecarBuildEnv() {
 function printBuildEnv(env) {
   console.log(JSON.stringify({
     sidecarBuildEnv: {
-      rustc: env.RUSTC ?? null,
-      cargo: env.CARGO ?? null,
-      rustcWrapper: env.RUSTC_WRAPPER ?? null,
-      cargoBuildRustcWrapper: env.CARGO_BUILD_RUSTC_WRAPPER ?? null,
-      sccachePath: env.SCCACHE_PATH ?? null,
-      cargoTargetDir: env.CARGO_TARGET_DIR ?? null,
-      sccacheGhaEnabled: env.SCCACHE_GHA_ENABLED ?? null,
-      sccacheWebdavEndpoint: env.SCCACHE_WEBDAV_ENDPOINT ?? null,
+      rustcSet: Boolean(env.RUSTC),
+      cargoSet: Boolean(env.CARGO),
+      rustcWrapperSet: Boolean(env.RUSTC_WRAPPER),
+      cargoBuildRustcWrapperSet: Boolean(env.CARGO_BUILD_RUSTC_WRAPPER),
+      sccachePathSet: Boolean(env.SCCACHE_PATH),
+      cargoTargetDirSet: Boolean(env.CARGO_TARGET_DIR),
+      sccacheGhaEnabledSet: Boolean(env.SCCACHE_GHA_ENABLED),
+      sccacheWebdavEndpointSet: Boolean(env.SCCACHE_WEBDAV_ENDPOINT),
     },
   }, null, 2));
 }
