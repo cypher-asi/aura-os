@@ -108,6 +108,12 @@ export function MarketingFooter(): React.ReactNode {
           ))}
         </nav>
       </div>
+      <img
+        className="marketingFooterWordmark"
+        src="/AURA_logo_text_mark.png"
+        alt="AURA"
+        draggable={false}
+      />
     </footer>
   );
 }

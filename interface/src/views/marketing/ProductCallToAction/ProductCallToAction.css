@@ -7,7 +7,7 @@
   align-items: center;
   justify-content: center;
   gap: 36px;
-  padding: 160px 32px;
+  padding: 208px 32px;
   text-align: center;
 }
 
@@ -72,14 +72,14 @@
 @media (max-width: 768px) {
   .productCtaSection {
     gap: 28px;
-    padding: 112px 24px;
+    padding: 146px 24px;
   }
 }
 
 @media (max-width: 480px) {
   .productCtaSection {
     gap: 24px;
-    padding: 88px 20px;
+    padding: 114px 20px;
   }
 
   .productCtaButton {

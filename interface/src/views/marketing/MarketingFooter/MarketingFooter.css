@@ -1,8 +1,26 @@
 .marketingFooter {
   background: var(--marketing-section-bg, #000);
   display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  padding: 0 32px 96px;
+  gap: 80px;
+  padding: 40px 32px 140px;
+}
+
+/* AURA wordmark, centered between the footer card and the bottom of
+   the shell. The marketing panel pins a dark background regardless of
+   the user's resolved theme, so we render the white-on-transparent PNG
+   directly (the global `img[data-aura-wordmark]` invert would hide it
+   on this always-dark surface). */
+.marketingFooterWordmark {
+  display: block;
+  height: 26px;
+  width: auto;
+  opacity: 0.55;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
 }
 
 .marketingFooterCard {
@@ -58,7 +76,12 @@
 
 @media (max-width: 768px) {
   .marketingFooter {
-    padding: 0 24px 72px;
+    gap: 64px;
+    padding: 32px 24px 104px;
+  }
+
+  .marketingFooterWordmark {
+    height: 22px;
   }
 
   .marketingFooterCard {
@@ -73,7 +96,12 @@
 
 @media (max-width: 480px) {
   .marketingFooter {
-    padding: 0 16px 56px;
+    gap: 52px;
+    padding: 24px 16px 80px;
+  }
+
+  .marketingFooterWordmark {
+    height: 20px;
   }
 
   .marketingFooterCard {

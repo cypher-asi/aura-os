@@ -62,10 +62,12 @@ describe("CodeView", () => {
   it("keeps the shared Download CTA footer linking to /download", () => {
     // `ChangelogPreview` is data-driven (renders nothing until its
     // React Query fetch resolves), so the always-present Download CTA
-    // is the stable footer anchor to assert here.
+    // is the stable footer anchor to assert here. Match the CTA button
+    // exactly ("Download") so it isn't confused with the footer's
+    // "Downloads" resources link.
     renderCodeView();
     expect(
-      screen.getByRole("link", { name: /DOWNLOAD/i }),
+      screen.getByRole("link", { name: "Download" }),
     ).toHaveAttribute("href", "/download");
   });
 });
