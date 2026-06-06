@@ -61,32 +61,70 @@
   list-style: none;
 }
 
-/* Floating black card: a dark glass surface lifted off the page with a
-   hairline rim + soft drop shadow. The illustration sits on top and the
-   title / description / tag are pinned to the bottom-left, echoing the
-   reference scene-card layout. */
+/* Floating frosted-glass card lifted off the page. The illustration sits
+   on top and the title / description / tag are pinned to the bottom-left,
+   echoing the reference scene-card layout.
+
+   The glass recipe (translucent `rgba(10,10,12,0.45)` fill, gradient
+   border ring via `::before`, inset top highlight, soft drop shadow, 20px
+   backdrop blur) mirrors `.changelogPreviewGrid` in
+   `ChangelogPreview.css` — the changelog card rendered right below these
+   on `/agents` — so the two surfaces read as the same glass. The top-down
+   white wash gradient is layered over the translucent fill (rather than an
+   opaque slab) so the backdrop blur and the illustration glow stay
+   visible. */
 .featurePanelItem {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   text-align: left;
   min-height: 360px;
   padding: clamp(24px, 2.4vw, 36px);
-  border-radius: 18px;
+  border-radius: 24px;
   background:
     radial-gradient(
       ellipse 120% 80% at 50% 0%,
       rgba(255, 255, 255, 0.05) 0%,
       rgba(255, 255, 255, 0) 60%
     ),
-    #0c0c0e;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+    rgba(10, 10, 12, 0.45);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.04) inset,
-    0 24px 48px -24px rgba(0, 0, 0, 0.9);
+    0 24px 60px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  backdrop-filter: blur(20px) saturate(1.2);
   transition:
     background 0.18s ease,
     border-color 0.18s ease;
+}
+
+/* Gradient glass border ring, identical to `.changelogPreviewGrid::before`,
+   so the privacy card's edge matches the changelog card's shiny rim. */
+.featurePanelItem::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.28) 0%,
+    rgba(255, 255, 255, 0.08) 40%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 1;
+  transition: opacity 0.18s ease;
+  pointer-events: none;
 }
 
 .featurePanelSceneArt,
@@ -102,6 +140,7 @@
    free space so the body footer pins to the bottom. */
 .featurePanelScene {
   position: relative;
+  z-index: 1;
   flex: 1;
   width: 100%;
   min-height: 140px;
@@ -127,6 +166,8 @@
 
 /* Bottom-left text block: title, description, then the tag pill. */
 .featurePanelItemBody {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -169,6 +210,12 @@
 .featurePanelItem:hover {
   background: #f45500;
   border-color: rgba(0, 0, 0, 0.18);
+}
+
+/* The white glass ring belongs to the dark resting state; fade it out on
+   the orange hover surface so it doesn't read as a stray light rim. */
+.featurePanelItem:hover::before {
+  opacity: 0;
 }
 
 .featurePanelItem:hover .featurePanelSceneArt,
