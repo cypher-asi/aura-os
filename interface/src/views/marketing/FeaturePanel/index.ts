@@ -1,5 +1,8 @@
 export {
   FeaturePanel,
+  PrivacyScene,
+  SecureScene,
+  OpenSourceScene,
   LockIcon,
   ShieldIcon,
   CodeIcon,
