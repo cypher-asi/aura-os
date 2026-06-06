@@ -1039,9 +1039,16 @@ button.attachRing::after {
 
 /* Standalone (no "+" new-chat button) selector: drop the ModeSelector's
    own divider so the detached selector reads as separate chrome above
-   the pill, matching the `.modeBarRow .modeSelectorFlex` suppression. */
+   the pill, matching the `.modeBarRow .modeSelectorFlex` suppression.
+   `!important` because this class and ModeSelector's own `.root`
+   border-bottom share single-class specificity, so without it the
+   surviving rule depends on stylesheet load order (and the divider
+   leaks back in as a thin line above the input). */
 .modeSelectorDetached {
-  border-bottom: none;
+  border-bottom: none !important;
+  /* Detached selector floats as its own chrome above the pill, so give
+     it breathing room rather than letting it sit flush on the input. */
+  margin-bottom: 12px;
 }
 
 /* The ModeSelector ships with its own `.root` border-bottom for the

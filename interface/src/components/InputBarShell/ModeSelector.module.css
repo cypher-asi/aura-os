@@ -28,42 +28,64 @@
 }
 
 /*
- * Two-tier inset capsule. The outer capsule sits 2px outside the inner
- * one on every edge (≈4px larger overall) and stacks two rings to read
- * as a recessed bezel: a dark→light vertical gradient ring on the
- * outside (rendered with the double-background border-box technique)
- * and a hard black ring just inside it (the inset box-shadow). The
- * inner `.pills` capsule then carries its own black border plus a
- * top-heavy inner shadow so the controls look pressed into the bezel.
+ * Two-tier inset capsule. The outer capsule is a recessed well: a
+ * dark→light vertical gradient ring on the outside (the double-background
+ * border-box technique) plus a hard black ring and a top-heavy inner
+ * shadow so the surface reads as a panel that sits *underneath* the
+ * inner control. Generous padding leaves that panel visible as a margin
+ * all the way around the inner pills. The inner `.pills` capsule then
+ * floats on top of the well with its own black border and a soft drop
+ * shadow.
  */
 .outerCapsule {
-  --capsule-bg: #1b1d22;
-  --capsule-bevel-dark: #050608;
-  --capsule-bevel-light: #4a4f5a;
+  --capsule-bg-top: #16181c;
+  --capsule-bg-bottom: #2a2e36;
+  --capsule-bevel-dark: #14161a;
+  --capsule-bevel-light: #3a3f48;
   display: inline-flex;
   align-items: center;
-  padding: 2px;
+  padding: 4px;
   border-radius: 999px;
   border: 1px solid transparent;
+  /* Panel surface itself is a vertical gradient (darker at top, lighter
+     toward the bottom); the outer border ring is its own dark→light
+     gradient via the double-background border-box technique. */
   background:
-    linear-gradient(var(--capsule-bg), var(--capsule-bg)) padding-box,
+    linear-gradient(
+        to bottom,
+        var(--capsule-bg-top),
+        var(--capsule-bg-bottom)
+      )
+      padding-box,
     linear-gradient(
         to bottom,
         var(--capsule-bevel-dark),
         var(--capsule-bevel-light)
       )
       border-box;
-  box-shadow: inset 0 0 0 1px #000;
+  /* Hard black ring + soft top-heavy inner shadow = recessed panel underneath. */
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.5),
+    inset 0 2px 4px rgba(0, 0, 0, 0.3),
+    inset 0 1px 2px rgba(0, 0, 0, 0.18);
 }
 
 .pills {
-  background: color-mix(in srgb, var(--color-overlay-light) 60%, transparent);
-  padding: 2px;
+  /* Black glass: a dark translucent fill plus a backdrop blur so the
+     content behind the capsule is frosted rather than fully hidden. */
+  background: rgba(8, 10, 14, 0.55);
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  padding: 0;
   gap: 2px;
-  border: 1px solid #000;
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  /* Recessed inner capsule: inner shadow on both top and bottom edges,
+     weighted heavier on top. */
   box-shadow:
-    inset 0 2px 3px rgba(0, 0, 0, 0.55),
-    inset 0 1px 1.5px rgba(0, 0, 0, 0.35);
+    inset 0 5px 9px rgba(0, 0, 0, 0.38),
+    inset 0 2px 4px rgba(0, 0, 0, 0.26),
+    inset 0 -5px 9px rgba(0, 0, 0, 0.32),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.22);
 }
 
 /*
@@ -99,13 +121,29 @@
  * cyan/green/orange, white on blue/purple/rose) so the label stays
  * legible regardless of the user's accent choice.
  */
+/*
+ * No filled pill: selection is shown purely by the glowing neon-blue
+ * label, so the sliding indicator is hidden entirely.
+ */
 .modeIndicator {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
+  display: none;
 }
 
+/*
+ * Selected label: neon blue with layered blue halos that widen and fade
+ * outward, so the active mode reads as lit tube text.
+ */
 .modeSegment[aria-checked="true"] {
-  color: var(--color-accent-contrast);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  background: none;
+  -webkit-text-fill-color: #4db8ff;
+  color: #4db8ff;
+  text-shadow:
+    0 0 4px rgba(77, 184, 255, 0.9),
+    0 0 9px rgba(56, 169, 255, 0.7),
+    0 0 16px rgba(40, 150, 255, 0.5),
+    0 0 26px rgba(30, 130, 255, 0.35);
 }
 
 @media (max-width: 640px) {

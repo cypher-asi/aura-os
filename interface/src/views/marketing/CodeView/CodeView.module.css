@@ -19,7 +19,16 @@
   --color-text-primary: #f7f8fb;
   --color-text-secondary: #a3a3a8;
   --color-text-muted: rgba(255, 255, 255, 0.52);
-  display: contents;
+  /* Full-height flex column (instead of `display: contents`) so the
+     stacked sections can distribute leftover vertical space: the
+     `ProductCallToAction` between the changelog and footer is
+     `flex: 1` and absorbs any slack, keeping its tagline optically
+     centered in that gap and pinning the footer to the bottom on
+     short viewports. The marketing tokens above still cascade into the
+     sections because this is a normal (non-`contents`) ancestor. */
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }
 
 /*

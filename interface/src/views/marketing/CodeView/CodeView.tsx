@@ -38,7 +38,7 @@ export function CodeView(): ReactNode {
       <MarketingFirstScreen
         hero={
           <PageHero
-            headline="Ship software while you sleep."
+            headline="Code while you sleep."
             description="A frontier coding harness designed for security, automation and verifiability that is 100% open source."
             preview={null}
             centered

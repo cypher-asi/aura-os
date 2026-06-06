@@ -7,7 +7,18 @@
   align-items: center;
   justify-content: center;
   gap: 36px;
-  padding: 208px 32px;
+  /* Own the ENTIRE vertical band between the changelog and the footer
+     so the tagline + buttons sit centered in it. The footer used to
+     carry a one-sided `margin-top: 16vh` that pushed all the empty
+     space below the tagline, leaving it visually stuck near the
+     changelog; that spacing now lives here as symmetric top/bottom
+     padding instead, so `justify-content: center` actually centers the
+     content in the gap. `flex: 1` additionally lets the section absorb
+     any leftover space on short viewports (the parent marketing
+     wrapper is a `min-height: 100%` flex column — see
+     `ProductView`/`CodeView` `.module.css`). */
+  flex: 1 1 auto;
+  padding: clamp(140px, 18vh, 260px) 32px;
   text-align: center;
 }
 
@@ -72,14 +83,14 @@
 @media (max-width: 768px) {
   .productCtaSection {
     gap: 28px;
-    padding: 146px 24px;
+    padding: clamp(112px, 16vh, 200px) 24px;
   }
 }
 
 @media (max-width: 480px) {
   .productCtaSection {
     gap: 24px;
-    padding: 114px 20px;
+    padding: clamp(96px, 14vh, 160px) 20px;
   }
 
   .productCtaButton {

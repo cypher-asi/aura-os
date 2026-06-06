@@ -5,9 +5,10 @@
   align-items: center;
   justify-content: center;
   gap: 110px;
-  /* Extra top space pushes the floating footer card ~20% lower down the
-     page than its previous flush position. */
-  margin-top: 16vh;
+  /* Top spacing between the CTA and the footer card is owned by the
+     `ProductCallToAction` section's symmetric vertical padding (so its
+     tagline stays centered in the changelog→footer band). The footer
+     keeps only its own internal top padding. */
   padding: 40px 32px 110px;
 }
 
@@ -27,17 +28,43 @@
 }
 
 .marketingFooterCard {
+  position: relative;
   width: 100%;
   max-width: 960px;
   padding: 48px 56px;
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(10, 10, 12, 0.45);
   box-shadow:
     0 24px 60px rgba(0, 0, 0, 0.45),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
+}
+
+/* Gradient glass border drawn as a masked ring so it sits cleanly on the
+   rounded corners and over the backdrop blur (a plain border-color can't
+   take a gradient). The top-bright/bottom-dim ramp gives the shiny edge. */
+.marketingFooterCard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.28) 0%,
+    rgba(255, 255, 255, 0.08) 40%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
 }
 
 .marketingFooterColumns {
@@ -84,7 +111,6 @@
 @media (max-width: 768px) {
   .marketingFooter {
     gap: 84px;
-    margin-top: 12vh;
     padding: 32px 24px 84px;
   }
 
@@ -105,7 +131,6 @@
 @media (max-width: 480px) {
   .marketingFooter {
     gap: 66px;
-    margin-top: 9vh;
     padding: 24px 16px 66px;
   }
 

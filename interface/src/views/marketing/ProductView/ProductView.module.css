@@ -140,19 +140,18 @@
 /*
  * The `/agents` hero stage hosts the decorative `<AgentConsole />` (a
  * black hardware device built from the shared marketing device kit).
- * `.consoleStage` turns the stage into a full-bleed band: it breaks out
- * of the capped marketing column to span the full viewport width and
- * paints the same diagonal off-black gradient as the
- * `PersonalAgentSection` quadrants below, so the hero reads as one
- * continuous surface flowing into that section. The console centers
- * itself inside via its own `max-width` + `margin-inline: auto`.
+ * `.consoleStage` matches the `PersonalAgentSection` quadrant card
+ * below: an inset band (viewport minus a 32px gutter each side) with
+ * 24px rounded corners painting the same diagonal #202020 -> #0c0c0c
+ * gradient, so the hero reads as the same rounded surface that opens the
+ * quadrant section. The console centers itself inside via its own
+ * `max-width` + `margin-inline: auto`.
  *
- * `width: 100vw` + `margin-inline: calc(50% - 50vw)` is the standard
- * full-bleed trick: `50%` is half the stage's (column) width, so
- * `50% - 50vw` pulls each edge out to the viewport edge while the band
- * stays centered. The diagonal terminates at `#090909` (the page's
- * `--marketing-section-bg`) rather than pure black so the seam into the
- * section below is invisible.
+ * `width: calc(100vw - 64px)` + `margin-inline: calc(50% - 50vw + 32px)`
+ * breaks out of the capped marketing column and then tucks back in by the
+ * 32px gutter so the card is centered with thin side margins (mirrors the
+ * `.personalAgentGrid` inset). `overflow: hidden` clips the rounded
+ * corners cleanly.
  */
 /*
  * The console is a tall portrait device, so the band must grow with it
@@ -163,11 +162,21 @@
  * order; `container-type: normal` lets the device's height drive the band.
  */
 .consoleStage.consoleStage {
-  width: 100vw;
-  margin-inline: calc(50% - 50vw);
+  width: calc(100vw - 64px);
+  margin-inline: calc(50% - 50vw + 32px);
   padding-inline: var(--space-4, 16px);
   padding-block: clamp(28px, 6vh, 80px);
-  background: linear-gradient(135deg, #141414 0%, #0f0f0f 55%, #090909 100%);
+  background: linear-gradient(135deg, #202020 0%, #161616 55%, #0c0c0c 100%);
+  border-radius: 24px;
+  overflow: hidden;
   container-type: normal;
   height: auto;
+}
+
+/* Tighter 16px gutter on mobile, matching the quadrant card's inset. */
+@media (max-width: 768px) {
+  .consoleStage.consoleStage {
+    width: calc(100vw - 32px);
+    margin-inline: calc(50% - 50vw + 16px);
+  }
 }
