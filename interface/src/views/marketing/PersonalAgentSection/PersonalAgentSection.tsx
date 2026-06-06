@@ -48,6 +48,7 @@ export function PersonalAgentSection(): ReactNode {
       <CardSection ariaLabel="What your agent can do">
         <MetalCard
           wide
+          short
           gradient={135}
           className="paCardWide"
           media={<MockChatInputCard />}

@@ -2,8 +2,13 @@ import { type ReactNode } from "react";
 import "./CardSection.css";
 
 interface MetalCardProps {
-  /** Span both grid columns (the wide cell) and use the wide min-height. */
+  /** Span both grid columns (a full-width cell). Height is unchanged. */
   readonly wide?: boolean;
+  /**
+   * Use the shorter card height (500px) instead of the regular 626px.
+   * Independent of `wide`, so a card can be full-width at either height.
+   */
+  readonly short?: boolean;
   /** Diagonal gradient angle in degrees (default 135). */
   readonly gradient?: number;
   /**
@@ -32,6 +37,7 @@ interface MetalCardProps {
  */
 export function MetalCard({
   wide = false,
+  short = false,
   gradient = 135,
   media,
   label,
@@ -44,6 +50,7 @@ export function MetalCard({
   const cellClass = [
     "metalCard",
     wide ? "metalCardWide" : "",
+    short ? "metalCardShort" : "",
     align === "center" ? "metalCardCenter" : "",
     className,
   ]
