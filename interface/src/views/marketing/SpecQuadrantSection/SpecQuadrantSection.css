@@ -81,9 +81,24 @@
   user-select: none;
 }
 
+/* Animated WebGL brain (`<NoiseReductionBrain />`), overlaid on top of the
+   static `.nrScreenImage` fallback. Matches that image's inset box so the
+   shader's contain-mapped brain lands pixel-for-pixel over it; when WebGL is
+   unavailable the canvas stays transparent and the image shows through. */
+.nrScreenBrain {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  box-sizing: border-box;
+  padding: 26px 34px;
+  pointer-events: none;
+  user-select: none;
+}
+
 .nrScreenGloss {
   position: absolute;
   inset: 0 0 auto 0;
+  z-index: 2;
   height: 46%;
   background: linear-gradient(
     180deg,
@@ -336,7 +351,8 @@
     height: 336px;
   }
 
-  .nrScreenImage {
+  .nrScreenImage,
+  .nrScreenBrain {
     padding: 20px 26px;
   }
 

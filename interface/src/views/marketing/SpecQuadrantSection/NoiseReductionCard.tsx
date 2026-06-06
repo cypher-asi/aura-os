@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 import { Plate } from "../../../components/Plate";
+import { NoiseReductionBrain } from "../NoiseReductionBrain";
 
 /**
  * Mini-UI for the spec bento below `ExpertiseSection`: a static recreation
@@ -7,11 +8,12 @@ import { Plate } from "../../../components/Plate";
  * the shared three-ringed `Plate` (matching `ServiceDeviceCard` /
  * `SkillSeaCard`) so it reads as the same hardware family.
  *
- * Top to bottom: a single inset glossy black screen (showing a glowing
- * brain-scan visual) that flows seamlessly into the matte LCD body, a
+ * Top to bottom: a single inset glossy black screen (showing a live WebGL
+ * brain-scan animation, `<NoiseReductionBrain />`, over a static fallback
+ * image) that flows seamlessly into the matte LCD body, a
  * status row (REDUCTION 50% + ACTIVE), a large centered knob ringed by a
  * full circle of tick dots and a single pointer, and a caption panel
- * (STRENGTH / DEEP LEARNING NOISE REDUCTION). Everything is decorative
+ * (INTELLIGENCE / WITHOUT LIMITS). Everything is decorative
  * (`aria-hidden`); nothing here is a real control.
  */
 
@@ -36,6 +38,7 @@ export function NoiseReductionCard(): ReactNode {
             loading="lazy"
             decoding="async"
           />
+          <NoiseReductionBrain className="nrScreenBrain" />
           <div className="nrScreenGloss" />
         </div>
 
@@ -75,8 +78,8 @@ export function NoiseReductionCard(): ReactNode {
             </div>
 
             <div className="nrCaption">
-              <span className="nrCaptionTitle">STRENGTH</span>
-              <span className="nrCaptionSub">DEEP LEARNING NOISE REDUCTION</span>
+              <span className="nrCaptionTitle">INTELLIGENCE</span>
+              <span className="nrCaptionSub">WITHOUT LIMITS</span>
             </div>
           </div>
         </div>
