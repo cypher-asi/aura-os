@@ -106,23 +106,78 @@ float maskAt(vec2 uv) {
   return dot(c, vec3(0.299, 0.587, 0.114));
 }
 
+// Ridged fbm: folds each octave into sharp crests so the field reads as
+// raised palette-knife ridges of thick paint rather than soft clouds.
+float ridged(vec2 p) {
+  float v = 0.0;
+  float a = 0.55;
+  for (int i = 0; i < 5; i++) {
+    float n = noise(p);
+    n = 1.0 - abs(2.0 * n - 1.0);  // fold into a ridge
+    v += a * n * n;
+    p = p * 2.0 + 7.3;
+    a *= 0.5;
+  }
+  return v;
+}
+
+// Acrylic palette sampled from the reference impasto painting: deep navy ->
+// teal -> sky -> white -> yellow -> orange -> red. Wide, saturated hue
+// spread so neighbouring knife strokes read as distinct colours of paint.
+vec3 acrylicPalette(float v) {
+  vec3 cNavy   = vec3(0.05, 0.09, 0.30);
+  vec3 cTeal   = vec3(0.13, 0.69, 0.79);
+  vec3 cSky    = vec3(0.55, 0.86, 0.88);
+  vec3 cWhite  = vec3(0.98, 0.97, 0.92);
+  vec3 cYellow = vec3(1.00, 0.80, 0.18);
+  vec3 cOrange = vec3(1.00, 0.46, 0.10);
+  vec3 cRed    = vec3(0.93, 0.25, 0.15);
+
+  vec3 c = mix(cNavy, cTeal, smoothstep(0.00, 0.18, v));
+  c = mix(c, cSky, smoothstep(0.16, 0.31, v));
+  c = mix(c, cWhite, smoothstep(0.29, 0.43, v));
+  c = mix(c, cYellow, smoothstep(0.43, 0.57, v));
+  c = mix(c, cOrange, smoothstep(0.56, 0.77, v));
+  c = mix(c, cRed, smoothstep(0.77, 1.00, v));
+  return c;
+}
+
 // ===================================================================
 // FULL-SCREEN SPLIT BACKDROP
 // Fills the entire screen well behind the brain. LEFT half = rational,
 // linear coding/mathematics (scrolling code over a cool blueprint grid);
-// RIGHT half = unbounded creativity (abstract, flowing, multi-hue paint).
+// RIGHT half = unbounded creativity (thick acrylic palette-knife paint).
 // ===================================================================
 vec3 backdropAt(vec2 uvScreen, float t, float focus) {
-  // ----- RIGHT: abstract paint, unbounded creativity ------------------
-  vec2 pp = uvScreen * 3.0;
-  float p1 = fbm(pp + vec2(t * 0.12, -t * 0.08));
-  float p2 = fbm(pp * 1.7 + vec2(-t * 0.1, t * 0.13) + p1 * 2.0);
-  float paintV = clamp(0.32 + 0.6 * p1 + 0.35 * (p2 - 0.5) + 0.15 * sin(t * 0.4), 0.0, 1.0);
-  vec3 paint = palette(paintV);
-  paint *= 0.5 + 0.7 * p2;                 // swirling light/dark bands
+  // ----- RIGHT: thick acrylic palette-knife paint ---------------------
+  // Brush frame: rotate into a diagonal so the strokes sweep like the
+  // reference knife work, then stretch ALONG the stroke and squash ACROSS
+  // it so the noise smears into directional streaks instead of round blobs.
+  float ang = 0.92 + 0.05 * sin(t * 0.18);
+  vec2 dir = vec2(cos(ang), sin(ang));
+  vec2 nrm = vec2(-dir.y, dir.x);
+  vec2 q = vec2(dot(uvScreen, dir), dot(uvScreen, nrm));
+  vec2 strokeP = vec2(q.x * 2.2, q.y * 7.5);
+
+  // Domain-warp for swirling, overlapping knife strokes.
+  float w1 = fbm(strokeP + vec2(t * 0.10, 0.0));
+  float w2 = fbm(strokeP * 1.6 + vec2(-t * 0.07, t * 0.05) + w1 * 1.9);
+  float paintV = clamp(
+    0.5 + 0.55 * (w1 - 0.5) + 0.62 * (w2 - 0.5) + 0.16 * sin(q.x * 6.0 + t * 0.3),
+    0.0, 1.0);
+  vec3 paint = acrylicPalette(paintV);
+
+  // Palette-knife ridges: bright impasto crests where thick paint catches
+  // the light, with darker valleys gouged between strokes for depth.
+  float ridge = ridged(strokeP * 1.3 + w2 * 1.2);
+  float crest = smoothstep(0.55, 0.95, ridge);
+  paint += vec3(1.0, 0.99, 0.95) * crest * 0.55;       // white impasto highlight
+  float valley = smoothstep(0.30, 0.0, ridge);
+  paint *= 1.0 - 0.38 * valley;                         // gouged shadow
+  // Keep it vivid against the mono-left.
   float pl = dot(paint, vec3(0.299, 0.587, 0.114));
-  paint = clamp(mix(vec3(pl), paint, 1.45), 0.0, 1.0);  // push saturation
-  vec3 rightBg = paint * 0.9;
+  paint = clamp(mix(vec3(pl), paint, 1.2), 0.0, 1.0);
+  vec3 rightBg = paint;
 
   // ----- LEFT: rational, linear code + mathematics --------------------
   // Scrolling columns of real code/math drifting steadily upward.
