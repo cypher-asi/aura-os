@@ -8,18 +8,18 @@ import { NoiseReductionBrain } from "../NoiseReductionBrain";
  * the shared three-ringed `Plate` (matching `ServiceDeviceCard` /
  * `SkillSeaCard`) so it reads as the same hardware family.
  *
- * Top to bottom: a single inset glossy black screen (showing a live WebGL
- * brain-scan animation, `<NoiseReductionBrain />`, over a static fallback
- * image) that flows seamlessly into the matte LCD body, a
- * status row (REDUCTION 50% + ACTIVE), a large centered knob ringed by a
- * full circle of tick dots and a single pointer, and a caption panel
- * (INTELLIGENCE / WITHOUT LIMITS). Everything is decorative
+ * Top to bottom: a single inset glossy black screen showing the live WebGL
+ * `<NoiseReductionBrain />` centered, flanked by black-and-white binary code
+ * streaming out on the LEFT (the analytical side) and color photo boxes
+ * popping in on the RIGHT (the creative side); that flows seamlessly into the
+ * matte LCD body, a status row (ACTIVATION + ONLINE), a large centered knob
+ * ringed by a full circle of tick dots and a single pointer, and a caption
+ * panel (INTELLIGENCE / WITHOUT LIMITS). Everything is decorative
  * (`aria-hidden`); nothing here is a real control.
  *
  * Moving the cursor anywhere in the viewport is interactive: the cursor's
- * horizontal position across the window sweeps the knob pointer through its
- * dial arc, fills the tick ring up to that point like a level meter, and
- * steers the underlying brain animation (`<NoiseReductionBrain />`).
+ * position drives the knob pointer through its dial arc, fills the tick ring
+ * up to that point like a level meter, and steers the brain animation.
  */
 
 /** Tick-dot count for the full circular ring around the knob. */
@@ -31,14 +31,60 @@ const KNOB_TICKS = 21;
  */
 const TICK_ARC_DEG = 240;
 
+/** Placeholder color photo shown (cropped differently) in each popping box. */
+const GALLERY_PHOTO = "/noise-reduction-paint.png";
+
+/**
+ * Color photo boxes that pop up on the right half of the screen. Positions
+ * and sizes are percentages within the right-half `.nrGallery`; each shows a
+ * different crop of the same placeholder photo (`object-position`) and pops
+ * on a staggered, looping delay so the half feels alive.
+ */
+const GALLERY_BOXES = [
+  { top: "7%", left: "5%", width: "44%", height: "30%", pos: "0% 0%", delay: 0 },
+  {
+    top: "9%",
+    left: "53%",
+    width: "40%",
+    height: "27%",
+    pos: "100% 0%",
+    delay: 0.8,
+  },
+  {
+    top: "41%",
+    left: "10%",
+    width: "41%",
+    height: "31%",
+    pos: "15% 55%",
+    delay: 1.6,
+  },
+  {
+    top: "39%",
+    left: "55%",
+    width: "38%",
+    height: "35%",
+    pos: "85% 45%",
+    delay: 2.4,
+  },
+  {
+    top: "74%",
+    left: "28%",
+    width: "46%",
+    height: "23%",
+    pos: "50% 100%",
+    delay: 3.2,
+  },
+];
+
 export function NoiseReductionCard(): ReactNode {
-  // Shared, normalized (0..1) cursor position over the panel. The brain
-  // reads this every frame to steer its animation; the knob pointer rotates
-  // to match. Kept in a ref so pointer moves don't re-render the card.
+  // Shared, normalized (0..1) cursor position. The brain reads this every
+  // frame to steer its animation; the knob pointer rotates to match. Kept in
+  // a ref so pointer moves don't re-render the card.
   const pointerRef = useRef({ x: 0.5, y: 0.5 });
   const knobPointerRef = useRef<HTMLSpanElement>(null);
   const tickRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const activationRef = useRef<HTMLSpanElement>(null);
+  const binaryRef = useRef<HTMLPreElement>(null);
 
   // Live ACTIVATION readout: a number floored at 0.01 that rapidly rises and
   // falls. Updated imperatively each frame (no re-render) so the digits flicker
@@ -60,10 +106,44 @@ export function NoiseReductionCard(): ReactNode {
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  // Binary code "being written" on the left half: append one bit per tick,
+  // grouped into bytes, wrapping into a fixed window of rows that scrolls as
+  // it fills. A block cursor blinks at the write head. Driven imperatively so
+  // it never re-renders the card. Disabled under reduced-motion.
+  useEffect(() => {
+    const el = binaryRef.current;
+    if (!el) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      el.textContent = "01000001 01010101 01010010 01000001";
+      return;
+    }
+    const COLS = 24;
+    const ROWS = 16;
+    const lines: string[] = [""];
+    let count = 0;
+    const id = window.setInterval(() => {
+      let cur = lines[lines.length - 1];
+      // Space between bytes keeps the stream readable as grouped binary.
+      if (cur.length > 0 && cur.replace(/ /g, "").length % 8 === 0) cur += " ";
+      cur += Math.random() < 0.5 ? "0" : "1";
+      if (cur.length >= COLS) {
+        lines[lines.length - 1] = cur;
+        lines.push("");
+        if (lines.length > ROWS) lines.shift();
+      } else {
+        lines[lines.length - 1] = cur;
+      }
+      count++;
+      const caret = Math.floor(count / 6) % 2 === 0 ? "\u2588" : " ";
+      el.textContent = lines.join("\n") + caret;
+    }, 40);
+    return () => clearInterval(id);
+  }, []);
+
   // React to the cursor anywhere in the viewport (not just over the device):
-  // the window-wide horizontal position drives the knob, the tick meter, and
-  // the brain animation. A window listener keeps this live regardless of
-  // which element the pointer is actually over.
+  // the window-wide position drives the knob, the tick meter, and the brain
+  // animation. A window listener keeps this live regardless of which element
+  // the pointer is actually over.
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
       const w = window.innerWidth || 1;
@@ -100,20 +180,33 @@ export function NoiseReductionCard(): ReactNode {
     <Plate className="nrCard" aria-hidden="true">
       <div className="nrContent">
         <div className="nrScreen">
-          <img
-            className="nrScreenLeft"
-            src="/noise-reduction-code.png"
-            alt=""
-            loading="lazy"
-            decoding="async"
-          />
-          <img
-            className="nrScreenRight"
-            src="/noise-reduction-paint.png"
-            alt=""
-            loading="lazy"
-            decoding="async"
-          />
+          <div className="nrBinary">
+            <pre className="nrBinaryText" ref={binaryRef} />
+          </div>
+          <div className="nrGallery">
+            {GALLERY_BOXES.map((box, i) => (
+              <div
+                key={i}
+                className="nrGalleryBox"
+                style={{
+                  top: box.top,
+                  left: box.left,
+                  width: box.width,
+                  height: box.height,
+                  animationDelay: `${box.delay}s`,
+                }}
+              >
+                <img
+                  className="nrGalleryPhoto"
+                  src={GALLERY_PHOTO}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  style={{ objectPosition: box.pos }}
+                />
+              </div>
+            ))}
+          </div>
           <NoiseReductionBrain className="nrScreenBrain" pointerRef={pointerRef} />
           <div className="nrScreenGloss" />
         </div>

@@ -65,37 +65,10 @@
   overflow: hidden;
 }
 
-/* Split background imagery filling the whole screen well: the rational,
-   linear code/typography poster on the LEFT half and the abstract acrylic
-   painting on the RIGHT half. Each image covers its half (cropping as
-   needed); the animated brain glows over the seam on top. */
-.nrScreenLeft,
-.nrScreenRight {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  z-index: 0;
-  width: 50%;
-  height: 100%;
-  object-fit: cover;
-  pointer-events: none;
-  user-select: none;
-}
-
-.nrScreenLeft {
-  left: 0;
-  object-position: center;
-}
-
-.nrScreenRight {
-  right: 0;
-  object-position: center;
-}
-
-/* Animated WebGL brain (`<NoiseReductionBrain />`), overlaid on top of the
-   split background imagery. Contain-mapped within this inset box so the
-   shader's brain stays centered, bridging the left/right halves; when WebGL
-   is unavailable the canvas stays transparent and the two images show. */
+/* Animated WebGL brain (`<NoiseReductionBrain />`), centered on top of the
+   side visuals. Its canvas is full-bleed but the shader only paints the
+   brain + its glow (transparent elsewhere), so the contain-mapped brain sits
+   in the middle and the binary/photo flanks show through on the sides. */
 .nrScreenBrain {
   position: absolute;
   inset: 0;
@@ -104,6 +77,115 @@
   padding: 26px 34px;
   pointer-events: none;
   user-select: none;
+}
+
+/* LEFT side: black-and-white binary code streaming out, like a terminal
+   writing itself. Monospace, dim white on the screen's black, masked to a
+   soft top/bottom fade so the scrolling window blends into the bezel. Sits in
+   the left flank beside the centered brain. */
+.nrBinary {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  width: 34%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 22px 20px 22px 28px;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  -webkit-mask: linear-gradient(
+    180deg,
+    transparent 0%,
+    #000 14%,
+    #000 86%,
+    transparent 100%
+  );
+  mask: linear-gradient(
+    180deg,
+    transparent 0%,
+    #000 14%,
+    #000 86%,
+    transparent 100%
+  );
+}
+
+.nrBinaryText {
+  margin: 0;
+  font-family: "SFMono-Regular", "Menlo", "Consolas", monospace;
+  font-size: 13px;
+  line-height: 1.45;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.82);
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.18);
+  white-space: pre;
+}
+
+/* RIGHT side: color photo boxes that pop in on staggered loops, in the right
+   flank beside the centered brain. */
+.nrGallery {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 0;
+  width: 34%;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+}
+
+.nrGalleryBox {
+  position: absolute;
+  overflow: hidden;
+  border-radius: 7px;
+  opacity: 0;
+  transform: scale(0.6);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  animation: nrPop 4s ease-in-out infinite;
+}
+
+.nrGalleryPhoto {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@keyframes nrPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.62);
+  }
+  9% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  16% {
+    transform: scale(1);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  84% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nrGalleryBox {
+    animation: none;
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .nrScreenGloss {
@@ -415,6 +497,15 @@
 
   .nrScreenBrain {
     padding: 20px 26px;
+  }
+
+  .nrBinary {
+    padding: 16px 10px 16px 14px;
+  }
+
+  .nrBinaryText {
+    font-size: 11px;
+    letter-spacing: 0.04em;
   }
 
   .nrPanel {
