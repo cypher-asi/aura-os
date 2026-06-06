@@ -9,6 +9,10 @@ export interface FeaturePanelFeature {
   readonly illustration: ReactNode;
   readonly title: ReactNode;
   readonly description: ReactNode;
+  /** Static uppercase label shown in the bottom-left pill. */
+  readonly tag: ReactNode;
+  /** Highlights this card with the brand orange surface. */
+  readonly accent?: boolean;
 }
 
 interface FeaturePanelProps {
@@ -34,13 +38,22 @@ export function FeaturePanel({
         </header>
         <ul className="featurePanelGrid" role="list">
           {features.map((feature, index) => (
-            <li key={index} className="featurePanelItem">
+            <li
+              key={index}
+              className={
+                feature.accent
+                  ? "featurePanelItem featurePanelItemAccent"
+                  : "featurePanelItem"
+              }
+            >
               <div className="featurePanelScene" aria-hidden="true">
-                <div className="featurePanelSceneGlow" />
                 <div className="featurePanelSceneArt">{feature.illustration}</div>
               </div>
-              <h3 className="featurePanelItemTitle">{feature.title}</h3>
-              <p className="featurePanelItemDesc">{feature.description}</p>
+              <div className="featurePanelItemBody">
+                <h3 className="featurePanelItemTitle">{feature.title}</h3>
+                <p className="featurePanelItemDesc">{feature.description}</p>
+                <span className="featurePanelItemTag">{feature.tag}</span>
+              </div>
             </li>
           ))}
         </ul>
