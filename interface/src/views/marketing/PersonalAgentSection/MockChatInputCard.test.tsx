@@ -75,7 +75,7 @@ describe("MockChatInputCard", () => {
     expect(screen.getByTestId("mock-readonly")).toHaveTextContent("readonly");
 
     act(() => {
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(100);
     });
 
     expect(screen.getByTestId("mock-mode")).toHaveTextContent("plan");
@@ -106,11 +106,11 @@ describe("MockChatInputCard", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Image mode" }));
 
-    expect(screen.getByTestId("mock-mode")).toHaveTextContent("code");
+    expect(screen.getByTestId("mock-mode")).toHaveTextContent("image");
     expect(screen.getByTestId("mock-input")).toHaveTextContent("");
 
     act(() => {
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(100);
     });
 
     expect(screen.getByTestId("mock-mode")).toHaveTextContent("image");

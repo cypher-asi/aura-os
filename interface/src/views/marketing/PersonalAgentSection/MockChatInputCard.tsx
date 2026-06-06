@@ -109,8 +109,8 @@ const MOCK_EXAMPLES: readonly MockExample[] = [
 ];
 
 const TYPE_MS = 42;
-const MODE_SELECT_MS = 260;
-const MODE_SETTLE_MS = 420;
+const MODE_SELECT_MS = 80;
+const MODE_SETTLE_MS = 180;
 const HOLD_MS = 1600;
 const START_MODE: AgentMode = "code";
 const FIRST_EXAMPLE_INDEX = 1;
@@ -122,6 +122,8 @@ export function MockChatInputCard(): ReactNode {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const jumpToMode = useCallback((mode: AgentMode) => {
+    setSelectedMode(mode);
+    setText("");
     setActiveIndex((current) => nextExampleIndexForMode(mode, current + 1));
   }, []);
 
