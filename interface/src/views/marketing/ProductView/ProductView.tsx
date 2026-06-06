@@ -73,7 +73,7 @@ export function ProductView(): ReactNode {
                 <TypewriterText text={HERO_HEADLINE} speedMs={45} />
               </span>
             }
-            description="AURA agents are experts in every field, run autonomously in a secure cloud environment, and work while you sleep."
+            description="AURA agents are experts in every field and work while you sleep."
             preview={null}
             centered
             headlineCta={<CreateAgentButton source="product_hero" />}
