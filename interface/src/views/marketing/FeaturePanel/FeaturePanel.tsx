@@ -1,5 +1,4 @@
 import { type ReactNode } from "react";
-import { DeviceScreen } from "../../../components/DeviceScreen";
 import "./FeaturePanel.css";
 
 export interface FeaturePanelFeature {
@@ -13,19 +12,17 @@ export interface FeaturePanelFeature {
 }
 
 interface FeaturePanelProps {
-  readonly label: string;
   readonly headline: ReactNode;
   readonly features: readonly FeaturePanelFeature[];
 }
 
 /**
- * Labelled feature panel on the cream marketing surface. The label +
- * headline are centered across the top, with a row of cards below — each
- * card is a glowing dark `DeviceScreen` illustration tile above a title +
- * description, echoing the reference three-up scene layout.
+ * Feature panel on the dark marketing surface. The headline is centered
+ * across the top, with a row of floating black cards below — each card
+ * holds a glowing illustration scene above its title + description,
+ * echoing the reference three-up scene layout.
  */
 export function FeaturePanel({
-  label,
   headline,
   features,
 }: FeaturePanelProps): ReactNode {
@@ -33,16 +30,15 @@ export function FeaturePanel({
     <section className="featurePanel">
       <div className="featurePanelInner">
         <header className="featurePanelHeader">
-          <span className="featurePanelLabel">{label}</span>
           <h2 className="featurePanelHeadline">{headline}</h2>
         </header>
         <ul className="featurePanelGrid" role="list">
           {features.map((feature, index) => (
             <li key={index} className="featurePanelItem">
-              <DeviceScreen className="featurePanelScene" aria-hidden="true">
+              <div className="featurePanelScene" aria-hidden="true">
                 <div className="featurePanelSceneGlow" />
                 <div className="featurePanelSceneArt">{feature.illustration}</div>
-              </DeviceScreen>
+              </div>
               <h3 className="featurePanelItemTitle">{feature.title}</h3>
               <p className="featurePanelItemDesc">{feature.description}</p>
             </li>

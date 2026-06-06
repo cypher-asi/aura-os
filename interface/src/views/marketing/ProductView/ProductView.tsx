@@ -88,7 +88,6 @@ export function ProductView(): ReactNode {
       <AgentChatSection />
       <AgentOrbSection />
       <FeaturePanel
-        label="SOVEREIGN"
         headline="Private by Design."
         features={[
           {
