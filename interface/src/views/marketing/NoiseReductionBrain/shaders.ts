@@ -17,9 +17,15 @@
  *           blooming into the black glass — the abstract/art hemisphere.
  *
  * Energy pulses travel along the vessels and the whole thing breathes on
- * both sides. Alpha follows the lit vessels + aura so the screen's black
- * glass shows through the empty space — the canvas blends over the static
- * fallback img.
+ * both sides.
+ *
+ * Behind the brain, the SAME shader paints a bold full-screen split BACKDROP
+ * across the entire screen well (`backdropAt`): the LEFT half is rational,
+ * linear coding/mathematics (scrolling code over a cool blueprint grid) and
+ * the RIGHT half is unbounded creativity (abstract, flowing, multi-hue
+ * paint). The brain is contain-mapped into an inset sub-rect (`u_brainInset`)
+ * and composited over that backdrop, so the canvas emits an OPAQUE pixel that
+ * fills the glass rather than letting it show through.
  */
 
 // Full-screen triangle generated from `gl_VertexID` alone — no vertex
@@ -44,6 +50,8 @@ uniform vec2 u_mouse;          // cursor over the screen, 0..1 (bottom-origin)
 uniform sampler2D u_tex;       // brain angiography (vessel mask)
 uniform sampler2D u_code;      // generated code/math glyph texture (left bg)
 uniform vec2 u_codeResolution; // code texture natural size
+uniform vec2 u_brainInset;     // brain contain-rect inset, fraction of canvas
+uniform float u_brainReady;    // 1.0 once the brain texture has uploaded
 
 float hash(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
@@ -98,16 +106,47 @@ float maskAt(vec2 uv) {
   return dot(c, vec3(0.299, 0.587, 0.114));
 }
 
+// ===================================================================
+// FULL-SCREEN SPLIT BACKDROP
+// Fills the entire screen well behind the brain. LEFT half = rational,
+// linear coding/mathematics (scrolling code over a cool blueprint grid);
+// RIGHT half = unbounded creativity (abstract, flowing, multi-hue paint).
+// ===================================================================
+vec3 backdropAt(vec2 uvScreen, float t, float focus) {
+  // ----- RIGHT: abstract paint, unbounded creativity ------------------
+  vec2 pp = uvScreen * 3.0;
+  float p1 = fbm(pp + vec2(t * 0.12, -t * 0.08));
+  float p2 = fbm(pp * 1.7 + vec2(-t * 0.1, t * 0.13) + p1 * 2.0);
+  float paintV = clamp(0.32 + 0.6 * p1 + 0.35 * (p2 - 0.5) + 0.15 * sin(t * 0.4), 0.0, 1.0);
+  vec3 paint = palette(paintV);
+  paint *= 0.5 + 0.7 * p2;                 // swirling light/dark bands
+  float pl = dot(paint, vec3(0.299, 0.587, 0.114));
+  paint = clamp(mix(vec3(pl), paint, 1.45), 0.0, 1.0);  // push saturation
+  vec3 rightBg = paint * 0.9;
+
+  // ----- LEFT: rational, linear code + mathematics --------------------
+  // Scrolling columns of real code/math drifting steadily upward.
+  vec2 codeBgUv = vec2(uvScreen.x * 3.2, uvScreen.y * 3.2 - t * 0.08);
+  float codeBg = texture(u_code, fract(codeBgUv)).r;
+  // Faint blueprint grid for the structured, linear read.
+  vec2 g = abs(fract(uvScreen * vec2(26.0, 18.0)) - 0.5);
+  float grid = smoothstep(0.44, 0.5, max(g.x, g.y));
+  vec3 leftBg = vec3(0.05, 0.07, 0.11);                 // cool dark base
+  leftBg += vec3(0.42, 0.64, 0.92) * codeBg * 1.0;      // glowing code
+  leftBg += vec3(0.16, 0.26, 0.40) * grid * 0.6;        // blueprint grid
+
+  // ----- Split + feathered seam ---------------------------------------
+  float bgSide = smoothstep(0.47, 0.53, uvScreen.x);
+  vec3 backdrop = mix(leftBg, rightBg, bgSide);
+  float bgSeam = smoothstep(0.02, 0.0, abs(uvScreen.x - 0.5));
+  backdrop += vec3(0.8, 0.85, 1.0) * bgSeam * 0.3;
+  // Cursor sweep lifts the field it passes over.
+  backdrop += backdrop * focus * 0.55;
+  return backdrop;
+}
+
 void main() {
-  // object-fit: contain — map the canvas frag coord into the brain image's
-  // UV space, preserving the image aspect and centering it (letterbox).
   vec2 uvScreen = gl_FragCoord.xy / u_resolution;
-  float canvasAspect = u_resolution.x / u_resolution.y;
-  float imageAspect = u_texResolution.x / u_texResolution.y;
-  vec2 scale = canvasAspect > imageAspect
-    ? vec2(imageAspect / canvasAspect, 1.0)   // pillarbox
-    : vec2(1.0, canvasAspect / imageAspect);  // letterbox
-  vec2 uv = (uvScreen - 0.5) / scale + 0.5;
 
   float t = u_time;
 
@@ -116,6 +155,35 @@ void main() {
   // animation brightens and energizes as you sweep across the well.
   vec2 mouseDir = u_mouse - 0.5;
   float focus = smoothstep(0.5, 0.0, distance(uvScreen, u_mouse));
+
+  // Bold split paint/code backdrop filling the entire well.
+  vec3 backdrop = backdropAt(uvScreen, t, focus);
+
+  // The brain is contain-mapped INSIDE the inset rect (so it lands over the
+  // static fallback image) while the backdrop fills everything around it.
+  // Skip the brain composite entirely until its texture has uploaded.
+  if (u_brainReady < 0.5) {
+    fragColor = vec4(backdrop, 1.0);
+    return;
+  }
+
+  // Map this fragment into the inset brain rect (0..1). Fragments outside it
+  // show pure backdrop.
+  vec2 bScreen = (uvScreen - u_brainInset) / (1.0 - 2.0 * u_brainInset);
+  if (bScreen.x < 0.0 || bScreen.x > 1.0 || bScreen.y < 0.0 || bScreen.y > 1.0) {
+    fragColor = vec4(backdrop, 1.0);
+    return;
+  }
+
+  // object-fit: contain — map the inset rect into the brain image's UV space,
+  // preserving the image aspect and centering it (letterbox).
+  vec2 insetPx = u_resolution * (1.0 - 2.0 * u_brainInset);
+  float canvasAspect = insetPx.x / insetPx.y;
+  float imageAspect = u_texResolution.x / u_texResolution.y;
+  vec2 scale = canvasAspect > imageAspect
+    ? vec2(imageAspect / canvasAspect, 1.0)   // pillarbox
+    : vec2(1.0, canvasAspect / imageAspect);  // letterbox
+  vec2 uv = (bScreen - 0.5) / scale + 0.5;
 
   // Vessel mask from the source angiography.
   float mask = maskAt(uv);
@@ -217,10 +285,10 @@ void main() {
   // texture tiles and drifts upward like a calm matrix readout.
   vec2 codeUv = uv * vec2(2.4, 2.4) + vec2(0.0, -t * 0.03);
   float code = texture(u_code, fract(codeUv)).r;
-  float backdrop = code * (0.85 - 0.7 * clamp(aura * 1.5, 0.0, 1.0));
-  leftCol += vec3(0.62, 0.66, 0.72) * backdrop * 0.5;
+  float codeBackdrop = code * (0.85 - 0.7 * clamp(aura * 1.5, 0.0, 1.0));
+  leftCol += vec3(0.62, 0.66, 0.72) * codeBackdrop * 0.5;
 
-  float leftAlpha = clamp(mask * 1.3 + bloom * 0.7 + aura * 0.5 + backdrop * 0.4, 0.0, 1.0);
+  float leftAlpha = clamp(mask * 1.3 + bloom * 0.7 + aura * 0.5 + codeBackdrop * 0.4, 0.0, 1.0);
 
   // ----- Split + feathered seam ----------------------------------------
   // 0 = left hemisphere, 1 = right hemisphere, blended across the midline.
@@ -233,6 +301,8 @@ void main() {
   col += vec3(0.9, 0.92, 1.0) * seamGlow * 0.5;
   alpha = clamp(alpha + seamGlow * 0.4, 0.0, 1.0);
 
-  fragColor = vec4(col, alpha);
+  // Composite the brain (with its own emissive alpha) over the bold split
+  // backdrop and emit an opaque pixel — the backdrop now fills the glass.
+  fragColor = vec4(mix(backdrop, col, alpha), 1.0);
 }
 `;

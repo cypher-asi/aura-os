@@ -20,7 +20,12 @@
   --nr-accent: #5b86c9;
   --nr-knob-size: 100px;
   width: 100%;
-  max-width: 525px;
+  /* Twice the original 525px so the panel/screen read as a wide landscape
+     device. Height is unchanged (driven by the fixed screen height + controls),
+     and the knob, tick ring, and status lights keep their absolute size, so
+     only the horizontal extent doubles. The dome `--nr-seam` below is
+     regenerated for this wider plate so it stays circular around the knob. */
+  max-width: 1050px;
 }
 
 .nrContent {
@@ -46,6 +51,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Inset of the contain-mapped brain within the full screen well. The
+     WebGL canvas now fills the entire well (full-bleed); these props are
+     read by `<NoiseReductionBrain />` and uploaded as `u_brainInset` so the
+     brain stays in the same place while the split backdrop fills everything
+     around it. Mirrors the static `.nrScreenImage` fallback padding. */
+  --nr-inset-x: 34px;
+  --nr-inset-y: 26px;
   height: 415px;
   border-radius: 14px 14px 0 0;
   /* Solid black so the screen blends seamlessly with the brain artwork's
@@ -81,16 +93,16 @@
   user-select: none;
 }
 
-/* Animated WebGL brain (`<NoiseReductionBrain />`), overlaid on top of the
-   static `.nrScreenImage` fallback. Matches that image's inset box so the
-   shader's contain-mapped brain lands pixel-for-pixel over it; when WebGL is
-   unavailable the canvas stays transparent and the image shows through. */
+/* Animated WebGL scene (`<NoiseReductionBrain />`). Full-bleed over the whole
+   screen well: the shader paints a bold split backdrop (rational code/math on
+   the left, abstract paint on the right) across the entire canvas and
+   composites the contain-mapped brain on top, inset by `--nr-inset-x/y` so the
+   brain lands pixel-for-pixel over the static `.nrScreenImage`. When WebGL is
+   unavailable the canvas stays transparent and that image shows through. */
 .nrScreenBrain {
   position: absolute;
   inset: 0;
   z-index: 1;
-  box-sizing: border-box;
-  padding: 26px 34px;
   pointer-events: none;
   user-select: none;
 }
@@ -137,13 +149,16 @@
      so the lighter margin is equal on the top and the sides, then drops to
      flat shoulders. The dome-to-shoulder junctions use small rounded
      fillet arcs instead of hard 90-degree armpits. Because the plate is
-     ~517x188 (the controls width plus the ::before's 7px side bleed) and
-     `preserveAspectRatio="none"` stretches the 400x360 viewBox onto it, the
-     dome arc is an ellipse (rx 56.5 / ry 139.8) that renders as a true circle
-     in output. `gap: 23` keeps the dome large enough to contain the tick ring
-     (ticks sit at knob r + 12). Regenerate via `seam-preview.mjs` if the plate
+     ~1042x216 (the now-doubled controls width plus the ::before's 7px side
+     bleed) and `preserveAspectRatio="none"` stretches the 400x360 viewBox
+     onto it, the dome arc is an ellipse (rx 28.0 / ry 121.7) that renders as
+     a true circle in output. Doubling the device width only changes the X/rx
+     values; the dome's height and the centered knob are unchanged, so the
+     dome stays the same circular shape with longer flat shoulders. `gap: 23`
+     keeps the dome large enough to contain the tick ring (ticks sit at knob
+     r + 12). Regenerate via `seam-preview.mjs` (W 1042) if the plate
      height/width/knob position changes. (Mobile overrides this below.) */
-  --nr-seam: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 360' preserveAspectRatio='none'%3E%3Cpath d='M0 360 L0 150.0 L133.5 150.0 A10.8 23.3 0 0 0 144.3 123.3 A56.5 121.7 0 0 1 255.7 123.3 A10.8 23.3 0 0 0 266.5 150.0 L400 150.0 L400 360 Z' fill='%23000'/%3E%3C/svg%3E");
+  --nr-seam: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 360' preserveAspectRatio='none'%3E%3Cpath d='M0 360 L0 150.0 L167.0 150.0 A5.4 23.3 0 0 0 172.4 123.3 A28.0 121.7 0 0 1 227.6 123.3 A5.4 23.3 0 0 0 233.0 150.0 L400 150.0 L400 360 Z' fill='%23000'/%3E%3C/svg%3E");
   position: relative;
   isolation: isolate;
   /* Above the brain artwork so the knob, status row and waveform stay on
@@ -194,8 +209,11 @@
 .nrStatus {
   position: absolute;
   top: 61px;
-  left: 18px;
-  right: 18px;
+  /* Edge-anchored so REDUCTION / ACTIVE flank the knob at the far left/right.
+     11px (not 18) because the plate now bleeds 7px past the controls' sides,
+     keeping the same visual inset from the plate edge as before. */
+  left: 11px;
+  right: 11px;
   z-index: 1;
   display: flex;
   align-items: center;
@@ -367,11 +385,12 @@
   }
 
   .nrScreen {
+    --nr-inset-x: 26px;
+    --nr-inset-y: 20px;
     height: 336px;
   }
 
-  .nrScreenImage,
-  .nrScreenBrain {
+  .nrScreenImage {
     padding: 20px 26px;
   }
 
@@ -386,7 +405,9 @@
 
   .nrStatus {
     top: 52px;
-    left: 14px;
-    right: 14px;
+    /* 7px keeps the same visual inset from the plate edge given its 7px
+       side bleed (mirrors the desktop 11px on the narrower mobile plate). */
+    left: 7px;
+    right: 7px;
   }
 }
