@@ -6,24 +6,21 @@ vi.mock("./AgentConsole.module.css", () => ({
 }));
 
 describe("AgentConsole", () => {
-  it("renders the device label strip caption", () => {
+  it("renders the circular screen readout", () => {
     const { getByText } = render(<AgentConsole />);
-    expect(getByText("AURA AGENT COMPOSER")).toBeInTheDocument();
+    expect(getByText("AURA AGENT")).toBeInTheDocument();
+    expect(getByText("10:30")).toBeInTheDocument();
+    expect(getByText("Ready")).toBeInTheDocument();
   });
 
-  it("renders deck controls (keys + labeled buttons)", () => {
-    const { getByText } = render(<AgentConsole />);
-    // Role queries skip the aria-hidden stage, so assert on label text.
-    expect(getByText("TEMPO")).toBeInTheDocument();
-    expect(getByText("RECORD")).toBeInTheDocument();
-    expect(getByText("PLAY")).toBeInTheDocument();
+  it("renders a row of status lights", () => {
+    const { container } = render(<AgentConsole />);
+    expect(container.querySelectorAll(".light")).toHaveLength(4);
   });
 
-  it("renders the knob captions", () => {
-    const { getByText } = render(<AgentConsole />);
-    expect(getByText("VOLUME")).toBeInTheDocument();
-    expect(getByText("BPM")).toBeInTheDocument();
-    expect(getByText("METRONOME")).toBeInTheDocument();
+  it("renders the circular control button", () => {
+    const { container } = render(<AgentConsole />);
+    expect(container.querySelector(".button")).toBeInTheDocument();
   });
 
   it("marks the whole stage decorative via aria-hidden", () => {

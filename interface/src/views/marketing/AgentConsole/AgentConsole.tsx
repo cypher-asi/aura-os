@@ -1,135 +1,59 @@
 import { type ReactNode } from "react";
-import { Headphones, Mic, Shuffle } from "lucide-react";
 import { Plate } from "../../../components/Plate";
 import { DeviceScreen } from "../../../components/DeviceScreen";
-import { DeviceLabelStrip } from "../../../components/DeviceLabelStrip";
-import { DotMatrixGrille } from "../../../components/DotMatrixGrille";
-import { HardwareKey } from "../../../components/HardwareKey";
-import { Knob } from "../../../components/Knob";
 import styles from "./AgentConsole.module.css";
 
 /**
- * Decorative "agent composer" rendered as the `/agents` hero stage: a
- * tall black sampler-style device recreated from the shared marketing
- * device kit so it reads as the same hardware family as the "An agent
- * designed for you" quadrant below. Top to bottom: a recessed
- * `<DeviceScreen />`, a `<DeviceLabelStrip />`, a `<DotMatrixGrille />`
- * speaker, then a two-column control deck (a fader + square `HardwareKey`
- * grid on the left; `Knob`s + labeled `HardwareKey` button rows on the
- * right) and a pair of partial dials at the foot.
+ * Decorative "agent device" rendered as the `/agents` hero stage: a tall
+ * portrait chassis whose centerpiece is a single raised vertical pill
+ * (a mesa standing proud of the surface, ringed by a soft shadow groove).
+ * A small circular screen sits near the top of the pill carrying a minimal
+ * readout, a row of status lights runs below it, and a large circular
+ * control button sits over a split base. Built on the shared marketing
+ * device kit (`<Plate />`, `<DeviceScreen />`) so it reads as the same
+ * hardware family as the quadrant device below.
  *
  * Everything here is decorative: the whole stage is `aria-hidden` by the
- * consuming view, and the controls carry hover/press affordances only.
+ * consuming view, so the controls are static and non-interactive.
  */
 
-interface DeckKey {
-  readonly text: string;
-  readonly lit?: boolean;
-}
-
-const GRID_KEYS: readonly DeckKey[] = [
-  { text: "A" },
-  { text: "TEMPO" },
-  { text: "B", lit: true },
-  { text: "C" },
-  { text: "D" },
-  { text: "E" },
-];
-
-interface DeckButton {
-  readonly text: string;
-  readonly sub: string;
-  readonly lit?: boolean;
-}
-
-const BUTTON_ROW_ONE: readonly DeckButton[] = [
-  { text: "FX", sub: "OUTPUT" },
-  { text: "SAMPLE", sub: "CHOP", lit: true },
-  { text: "TIMING", sub: "CORRECT" },
-];
-
-const BUTTON_ROW_TWO: readonly DeckButton[] = [
-  { text: "ERASE", sub: "SYSTEM" },
-  { text: "RECORD", sub: "TAKE", lit: true },
-  { text: "PLAY", sub: "LOOP" },
-];
-
-function DeckButtonView({ button }: { button: DeckButton }): ReactNode {
-  return (
-    <div className={styles.btnCol}>
-      <HardwareKey label={button.text} lit={button.lit} className={styles.deckKey} />
-      <span className={styles.btnSub}>{button.sub}</span>
-    </div>
-  );
-}
+const LIGHTS = [false, false, true, false] as const;
 
 export function AgentConsole(): ReactNode {
   return (
     <div className={styles.console} aria-hidden="true">
-      <Plate radius="28px" className={styles.chassis}>
+      <Plate radius="38px" className={styles.chassis}>
         <div className={styles.content}>
-          <DeviceScreen className={styles.screen}>
-            <div className={styles.screenStatus}>
-              <Shuffle size={15} strokeWidth={2} />
-              <Mic size={15} strokeWidth={2} />
-              <Headphones size={15} strokeWidth={2} />
-            </div>
-          </DeviceScreen>
+          <span className={styles.logoMark} aria-hidden="true">
+            <span />
+            <span />
+          </span>
 
-          <DeviceLabelStrip
-            label="AURA AGENT COMPOSER"
-            className={styles.labelStrip}
-          />
-
-          <DotMatrixGrille height="118px" className={styles.speaker} />
-
-          <div className={styles.deck}>
-            <div className={styles.deckLeft}>
-              <div className={styles.fader}>
-                <div className={styles.faderTrack}>
-                  <div className={styles.faderKnob} />
-                </div>
-                <HardwareKey label="SHIFT" className={styles.shiftKey} />
+          <div className={styles.raised}>
+            <DeviceScreen className={styles.screen}>
+              <div className={styles.screenInner}>
+                <span className={styles.screenLabel}>AURA AGENT</span>
+                <span className={styles.screenTime}>10:30</span>
+                <span className={styles.screenStatus}>Ready</span>
               </div>
-              <div className={styles.keyGrid}>
-                {GRID_KEYS.map((key) => (
-                  <HardwareKey
-                    key={key.text}
-                    label={key.text}
-                    lit={key.lit}
-                    className={styles.gridKey}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <span className={styles.deckDivider} />
-
-            <div className={styles.deckRight}>
-              <div className={styles.knobs}>
-                <Knob label="VOLUME" variant="light" angle={-38} size="52px" />
-                <Knob label="BPM" variant="accent" angle={22} size="52px" />
-                <Knob label="METRONOME" variant="dark" angle={-12} size="52px" />
-              </div>
-              <div className={styles.btnRow}>
-                {BUTTON_ROW_ONE.map((button) => (
-                  <DeckButtonView key={button.text} button={button} />
-                ))}
-              </div>
-              <div className={styles.btnRow}>
-                {BUTTON_ROW_TWO.map((button) => (
-                  <DeckButtonView key={button.text} button={button} />
-                ))}
-              </div>
-            </div>
+            </DeviceScreen>
           </div>
 
-          <div className={styles.bottomDials}>
-            <span className={styles.bottomMark}>&#10033;</span>
-            <Knob variant="dark" angle={-30} size="74px" ticks={false} />
-            <Knob variant="dark" angle={40} size="74px" ticks={false} />
-            <span className={styles.bottomMark}>&#10033;</span>
+          <div className={styles.lights} aria-hidden="true">
+            {LIGHTS.map((lit, index) => (
+              <span
+                key={index}
+                className={styles.light}
+                data-lit={lit ? "true" : undefined}
+              />
+            ))}
           </div>
+
+          <div className={styles.button} aria-hidden="true">
+            <div className={styles.buttonFace} />
+          </div>
+
+          <div className={styles.base} aria-hidden="true" />
         </div>
       </Plate>
     </div>

@@ -1,19 +1,17 @@
 /*
- * AgentConsole — `/agents` hero device, a tall sampler-style composer.
- * The chassis (`<Plate />`), screen (`<DeviceScreen />`), control banks
- * (`<HardwareKey />`), label strip (`<DeviceLabelStrip />`), speaker
- * (`<DotMatrixGrille />`), and dials (`<Knob />`) all come from the
- * shared marketing device kit, so this file owns ONLY the console-
- * specific layout (portrait stack, two-column deck, fader) and the
- * accent that ties the device to the "An agent designed for you"
- * quadrant palette.
+ * AgentConsole — `/agents` hero device, a tall portrait chassis. The
+ * chassis (`<Plate />`) and circular screen (`<DeviceScreen />`) come from
+ * the shared marketing device kit, so this file owns ONLY the
+ * device-specific layout: a raised vertical pill "mesa" (ringed by a soft
+ * shadow groove) holding a small circular readout screen near its top, a
+ * row of status lights, a large circular control button, and a split base.
  */
 
 .console {
-  --console-accent: #e5613a;
+  --console-accent: #f45500;
   --console-status: #e5484d;
   width: 100%;
-  max-width: 400px;
+  max-width: 340px;
   margin-inline: auto;
 }
 
@@ -22,206 +20,203 @@
 }
 
 .content {
+  position: relative;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 14px;
+  align-items: center;
+  gap: 18px;
+  padding: 22px 26px 0;
   color: var(--color-text-secondary, #a3a3a8);
   font-family: "Inter Variable", "Inter", system-ui, -apple-system, sans-serif;
 }
 
-/* ----- Screen ------------------------------------------------------- */
-.screen {
-  min-height: 300px;
-  padding: 0;
+/* ----- Logo grip mark (top-left) ------------------------------------ */
+.logoMark {
+  position: absolute;
+  top: 22px;
+  left: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-/* Red status glyph row, pinned to the bottom-left of the screen glass. */
-.screenStatus {
-  position: absolute;
-  left: 18px;
-  bottom: 16px;
+.logoMark span {
+  display: block;
+  width: 16px;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* ----- Raised vertical pill (the "mesa") ---------------------------- */
+/* A stadium-shaped panel standing proud of the chassis: a lighter radial
+   fill, a top highlight + bottom dark edge for the extrusion, and an outer
+   drop shadow that reads as the recessed groove around it. */
+.raised {
+  display: flex;
+  justify-content: center;
+  width: 70%;
+  margin-top: 14px;
+  padding: 20px 0;
+  border-radius: 999px;
+  background: radial-gradient(
+    ellipse 90% 70% at 50% 22%,
+    #2b2b2c 0%,
+    #232324 55%,
+    #161617 100%
+  );
+  box-shadow:
+    inset 0 2px 1px rgba(255, 255, 255, 0.07),
+    inset 0 -10px 24px rgba(0, 0, 0, 0.6),
+    0 1px 0 rgba(255, 255, 255, 0.04),
+    0 10px 26px rgba(0, 0, 0, 0.55),
+    0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+/* ----- Circular readout screen (near top of the pill) --------------- */
+.screen {
   display: flex;
   align-items: center;
-  gap: 9px;
-  color: var(--console-status);
-  filter: drop-shadow(0 0 5px rgba(229, 72, 77, 0.5));
+  justify-content: center;
+  width: 84%;
+  aspect-ratio: 1;
+  align-self: flex-start;
+  border-radius: 50%;
 }
 
-.labelStrip {
-  margin-top: 0;
+.screenInner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
 }
 
-.speaker {
-  width: 100%;
+.screenLabel {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.5));
 }
 
-/* ----- Control deck: fader + keys | knobs + buttons ----------------- */
-.deck {
-  display: grid;
-  grid-template-columns: auto 1px 1fr;
-  gap: 14px;
-  align-items: stretch;
-  padding-top: 4px;
+.screenTime {
+  font-size: 38px;
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary, #f7f8fb);
 }
 
-.deckDivider {
-  align-self: stretch;
+.screenStatus {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.45));
+}
+
+/* ----- Status lights ------------------------------------------------ */
+.lights {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  height: 6px;
+}
+
+.light {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: inset 0 0 1px rgba(0, 0, 0, 0.6);
+}
+
+.light[data-lit="true"] {
+  background: #fff;
+  box-shadow:
+    0 0 4px rgba(255, 255, 255, 0.85),
+    0 0 8px var(--console-accent);
+}
+
+/* ----- Circular control button -------------------------------------- */
+/* Large extruded disc: top highlight + bottom dark edge + outer drop
+   shadow so it stands up out of the surface, echoing the HardwareKey
+   recipe in a circular form. */
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #303237 0%, #1b1d21 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.55),
+    0 3px 8px rgba(0, 0, 0, 0.6);
+}
+
+.buttonFace {
+  width: 70%;
+  height: 70%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse 100% 100% at 50% 30%,
+    #2a2c30 0%,
+    #1c1e22 70%,
+    #141518 100%
+  );
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.06),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.5);
+}
+
+/* ----- Split base --------------------------------------------------- */
+/* Bottom band divided by a horizontal seam and a vertical center seam. */
+.base {
+  position: relative;
+  width: calc(100% + 52px);
+  margin-inline: -26px;
+  margin-top: 22px;
+  height: 84px;
+  border-bottom-left-radius: 36px;
+  border-bottom-right-radius: 36px;
+  background: linear-gradient(180deg, #1a1a1b 0%, #141415 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.base::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 50%;
+  width: 1px;
   background: linear-gradient(
     180deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.08) 16%,
-    rgba(255, 255, 255, 0.08) 84%,
-    transparent 100%
+    rgba(0, 0, 0, 0.6) 0%,
+    rgba(255, 255, 255, 0.04) 100%
   );
-}
-
-/* ----- Left: fader column + square key grid ------------------------- */
-.deckLeft {
-  display: flex;
-  gap: 10px;
-}
-
-.fader {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-
-.faderTrack {
-  position: relative;
-  flex: 1;
-  width: 12px;
-  min-height: 120px;
-  border-radius: 8px;
-  background: #070707;
-  box-shadow:
-    inset 2px 2px 6px rgba(0, 0, 0, 0.9),
-    inset -1px -1px 3px rgba(255, 255, 255, 0.03);
-}
-
-/* Raised fader cap pinned to roughly the track mid-point. */
-.faderKnob {
-  position: absolute;
-  left: 50%;
-  top: 46%;
-  width: 30px;
-  height: 17px;
-  border-radius: 6px;
-  transform: translate(-50%, -50%);
-  background: linear-gradient(180deg, #3a3d44, #1c1e23);
-  box-shadow:
-    2px 2px 5px rgba(0, 0, 0, 0.7),
-    -1px -1px 3px rgba(255, 255, 255, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.14);
-}
-
-.shiftKey {
-  width: 100%;
-}
-
-.shiftKey button {
-  font-size: 11px;
-}
-
-.keyGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-}
-
-/* Make the grid keys read square-ish like the reference pads. */
-.gridKey button {
-  min-height: 46px;
-  font-size: 12px;
-}
-
-/* ----- Right: knob row + labeled button rows ------------------------ */
-.deckRight {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.knobs {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 6px;
-}
-
-.btnRow {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.btnCol {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 5px;
-  min-width: 0;
-}
-
-.deckKey button {
-  font-size: 10px;
-  letter-spacing: 0;
-  padding-inline: 3px;
-}
-
-.btnSub {
-  text-align: center;
-  font-size: 8px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-text-muted, rgba(255, 255, 255, 0.52));
-}
-
-/* ----- Bottom: two partial dials peeking from the foot -------------- */
-.bottomDials {
-  position: relative;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 36px;
-  height: 44px;
-  margin-top: 2px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  overflow: hidden;
-}
-
-.bottomMark {
-  position: absolute;
-  top: 10px;
-  font-size: 12px;
-  line-height: 1;
-  color: rgba(180, 184, 190, 0.6);
-}
-
-.bottomMark:first-child {
-  left: 6px;
-}
-
-.bottomMark:last-child {
-  right: 6px;
 }
 
 @media (max-width: 768px) {
   .console {
-    max-width: 340px;
+    max-width: 300px;
   }
 
-  .screen {
-    min-height: 240px;
+  .screenTime {
+    font-size: 32px;
   }
 
-  .gridKey button {
-    min-height: 40px;
-    font-size: 11px;
+  .button {
+    width: 72px;
+    height: 72px;
+  }
+
+  .base {
+    height: 72px;
   }
 }
