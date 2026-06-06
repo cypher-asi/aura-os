@@ -1,87 +1,128 @@
 /*
- * Phone device frame for the marketing page. Two visual variants
+ * Rugged device shell for the marketing page, modeled after a
+ * beveled metal phone slab (the "LORZOR PHONE PRO" reference): a
+ * near-square-cornered outer chassis with an anodized-metal feel,
+ * wrapping a deeply-rounded inset inner screen. Two visual variants
  * triggered by the parent class (`.phoneShell` / `.phoneShellHero`):
  *   - default (md) — side phone, smaller and slightly recessed
  *   - hero (lg)    — centered phone, larger and lifted forward
  *
- * Both share the same notch + screen markup so the only difference
- * is geometry: width clamp, vertical offset, and shadow depth. The
- * `aspect-ratio: 9 / 19.5` matches the iPhone 14 Pro and newer
- * physical ratio (2556 / 1179 ≈ 9 / 19.5), which is what the
- * Apple iPhone 17 reference layout uses for its 3-phone row.
+ * Both share the same chassis markup (protruding top-right button +
+ * bottom-right tick + inset screen), so the only difference is
+ * geometry: width clamp, vertical offset, and shadow depth. The
+ * `aspect-ratio` is a touch less tall than a stock phone to match the
+ * chunky rugged slab in the reference.
  */
 .phoneShell {
   flex-shrink: 0;
   width: clamp(180px, 22vw, 240px);
-  aspect-ratio: 9 / 19.5;
+  aspect-ratio: 1 / 1.9;
 }
 
 .phoneShellHero {
   width: clamp(220px, 26vw, 280px);
   /* Lift the centered phone forward so it visually overlaps the
-     two side phones, matching the Apple iPhone 17 hero layout
-     where the middle device sits in front. The translateY pulls
-     it up by ~24px and the deeper shadow underneath sells the
-     forward depth. */
+     two side phones. The translateY pulls it up by ~24px and the
+     deeper shadow underneath sells the forward depth. */
   transform: translateY(-24px);
   z-index: 1;
   position: relative;
 }
 
+/*
+ * Outer chassis — beveled metal with almost-square (near-90°)
+ * corners. The diagonal gradient reads as brushed/anodized aluminum;
+ * the inset highlight/shade pair carves a bevel (lit top edge, dark
+ * bottom edge) and the 1px chamfer ring catches a thin rim of light
+ * all the way around. The big soft drop shadow floats the slab off
+ * the card surface.
+ */
 .phoneShellFrame {
   position: relative;
   width: 100%;
   height: 100%;
-  border-radius: 44px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.06),
-    rgba(255, 255, 255, 0.01)
-  ), #0a0a0c;
-  box-shadow:
-    0 12px 32px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  padding: 8px;
+  border-radius: 22px;
+  padding: 10px;
   box-sizing: border-box;
+  background: linear-gradient(
+    150deg,
+    #2a2a2e 0%,
+    #1b1b1f 45%,
+    #0c0c0e 100%
+  );
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.6),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .phoneShellHero .phoneShellFrame {
   box-shadow:
-    0 28px 64px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 36px 80px rgba(0, 0, 0, 0.62),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.65),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07);
 }
 
 /*
- * Dynamic Island-style pill at the top of the screen. Absolutely
- * positioned over the screen rectangle so the screen content
- * underneath can paint full-bleed without leaving a notch cutout
- * gap. Width ratio (~32% of frame width) approximates the real
- * iPhone Dynamic Island proportion.
+ * Protruding top-right button/clip. Sits just past the chassis's
+ * right edge near the top (like the reference's side clip). Its own
+ * metal gradient + right-side shadow sell the raised, separate part.
  */
-.phoneShellNotch {
+.phoneShellButton {
   position: absolute;
-  top: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 32%;
-  height: 22px;
-  border-radius: 999px;
-  background: #000;
-  z-index: 2;
+  top: 12%;
+  right: -3px;
+  width: 7px;
+  height: 64px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #2e2e32 0%, #161618 100%);
+  box-shadow:
+    2px 2px 5px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+  z-index: 3;
 }
 
+/*
+ * Small tick/foot poking out of the bottom-right corner — the little
+ * nub called out in the reference. Subtle, just enough to break the
+ * silhouette.
+ */
+.phoneShellTick {
+  position: absolute;
+  bottom: -3px;
+  right: 16%;
+  width: 34px;
+  height: 6px;
+  border-radius: 0 0 5px 5px;
+  background: linear-gradient(180deg, #2a2a2e 0%, #131315 100%);
+  box-shadow:
+    0 3px 5px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  z-index: 1;
+}
+
+/*
+ * Inner shell — the inset screen, with MUCH more rounded corners
+ * than the chassis. Kept `position: relative; overflow: hidden` so
+ * the `MockMobileChat` mock (which paints `position: absolute;
+ * inset: 0`) clips to the rounded rectangle. The dark inset shadow
+ * is the seam: the panel reads as recessed below the surrounding
+ * bevel rather than flush with it.
+ */
 .phoneShellScreen {
   position: relative;
   width: 100%;
   height: 100%;
-  border-radius: 36px;
+  border-radius: 38px;
   overflow: hidden;
-  background: linear-gradient(
-    180deg,
-    #15151a 0%,
-    #0d0d10 100%
-  );
+  background: linear-gradient(180deg, #15151a 0%, #0d0d10 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.7),
+    inset 0 2px 6px rgba(0, 0, 0, 0.55);
+  z-index: 2;
 }
 
 /*

@@ -20,15 +20,16 @@
 }
 
 /*
- * Header clears the Dynamic Island pill (`.phoneShellNotch` sits
- * ~14px from the top and is ~22px tall) with extra top padding so
- * the avatar + name never tuck under the cutout.
+ * Header sits flush against the top of the inset screen. The
+ * chassis has no centered notch/cutout to clear, so this just
+ * carries normal padding (the rounded screen corners owned by
+ * `PhoneShell.css` clip the header naturally).
  */
 .header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 42px 12px 10px;
+  padding: 16px 12px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
   background: rgba(255, 255, 255, 0.02);
   flex-shrink: 0;

@@ -33,8 +33,9 @@ interface PhoneShellProps {
 /**
  * Pure presentational phone frame for the marketing page. Mounted
  * by `AgentChatSection` today and intended to back any future
- * phone-heavy themed section. Owns the bezel + notch + screen
- * geometry only — the mock interface inside is supplied by the
+ * phone-heavy themed section. Owns the beveled metal chassis +
+ * protruding button/tick + inset screen geometry only — the mock
+ * interface inside is supplied by the
  * caller via `children`, or left as a faint skeleton placeholder
  * if no children are passed.
  *
@@ -64,7 +65,8 @@ export function PhoneShell({
       aria-hidden={ariaLabel ? undefined : true}
     >
       <div className="phoneShellFrame">
-        <div className="phoneShellNotch" />
+        <span className="phoneShellButton" aria-hidden />
+        <span className="phoneShellTick" aria-hidden />
         <div className="phoneShellScreen">
           {children ?? (
             <div className="phoneShellPlaceholder">
