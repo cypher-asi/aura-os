@@ -11,8 +11,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 20px;
   text-align: center;
+  /* Match the hero text band height (`MarketingFirstScreen.heroBand`)
+     so this intro's text area is the same height as the top hero text
+     area rather than a full reserved viewport. */
+  min-height: clamp(280px, 50vh, 560px);
 }
 
 .expertiseHeadline {
