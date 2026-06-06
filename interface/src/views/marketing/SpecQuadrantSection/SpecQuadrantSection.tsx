@@ -7,9 +7,10 @@ import "./SpecQuadrantSection.css";
  * Spec bento after `ExpertiseSection` on the `/agents` page: a single
  * full-width card spanning left to right, rendered through the shared
  * `<CardSection />` / `<MetalCard />`. The media well hosts the static
- * `NoiseReductionCard` plugin mini-UI (centered via `specQuadCard`); copy
- * is placeholder for now. Height comes from `MetalCard` (regular 626px),
- * matching the quadrant cards.
+ * `NoiseReductionCard` plugin mini-UI (centered via `specQuadCard`); the
+ * card has no bottom copy block since the device carries its own caption
+ * (STRENGTH / DEEP LEARNING NOISE REDUCTION). Height comes from `MetalCard`
+ * (regular 626px), matching the quadrant cards.
  */
 export function SpecQuadrantSection(): ReactNode {
   return (
@@ -20,8 +21,6 @@ export function SpecQuadrantSection(): ReactNode {
         align="center"
         className="specQuadCard"
         media={<NoiseReductionCard />}
-        label="Feature one"
-        title="Short headline here"
       />
     </CardSection>
   );

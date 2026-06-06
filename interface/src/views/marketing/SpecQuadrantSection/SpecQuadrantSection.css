@@ -18,36 +18,67 @@
 /* Plate wrapper — capped width, centered, matching the device footprint. */
 .nrCard {
   --nr-accent: #5b86c9;
-  --nr-knob-size: 200px;
+  --nr-knob-size: 100px;
   width: 100%;
-  max-width: 420px;
+  max-width: 525px;
 }
 
 .nrContent {
+  position: relative;
   display: flex;
   flex-direction: column;
   padding: 7px;
+  /* Clip the full-bleed screen + controls plate to the device's rounded
+     interior (concentric with the Plate's 22px ring, less its 1px border)
+     so their square-ish corners can't poke past the bezel. */
+  border-radius: 21px;
+  overflow: hidden;
 }
 
 /* ----- Top screen --------------------------------------------------- */
 
-/* Inset glossy black screen, recessed below the bezel. */
+/* Inset glossy black screen, recessed below the bezel. Its bottom is square
+   and extends down far enough that the controls dome rises directly from the
+   screen's bottom edge (no matte gap between them). The knob/dome stay put
+   because `.nrControls` pulls its top margin up by the same amount. */
 .nrScreen {
   position: relative;
-  height: 150px;
-  border-radius: 14px 14px 4px 4px;
-  background: radial-gradient(
-    ellipse 120% 90% at 50% 0%,
-    #0a0a0a 0%,
-    #050505 60%,
-    #000 100%
-  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 415px;
+  border-radius: 14px 14px 0 0;
+  /* Solid black so the screen blends seamlessly with the brain artwork's
+     black background (no visible edge around the image). */
+  background: #000;
   box-shadow:
     inset 0 6px 14px rgba(0, 0, 0, 0.95),
     inset 0 3px 5px rgba(0, 0, 0, 0.9),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.85),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+    inset 1px 0 0 rgba(0, 0, 0, 0.85),
+    inset -1px 0 0 rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(0, 0, 0, 0.85);
   overflow: hidden;
+}
+
+/* Brain scan artwork, centered within the full screen. The box fills the
+   screen (width/height 100%) so `object-fit: contain` centers the brain both
+   horizontally and vertically. Explicit sizing (not `auto`) is required since
+   on a replaced <img> an auto dimension collapses to the intrinsic size and
+   anchors top-left. */
+.nrScreenImage {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  /* Inset padding shrinks the contained brain slightly while keeping it
+     centered (object-fit re-centers within the padded content box). */
+  box-sizing: border-box;
+  padding: 26px 34px;
+  object-fit: contain;
+  object-position: center;
+  pointer-events: none;
+  user-select: none;
 }
 
 .nrScreenGloss {
@@ -64,81 +95,93 @@
 
 /* ----- Bezel panel -------------------------------------------------- */
 
+/* Matte-black LCD body, fused directly to the screen above (no bezel gap)
+   so the two read as one continuous inset panel. The fill picks up where
+   the screen's gradient leaves off for a seamless transition. */
 .nrPanel {
   position: relative;
   display: flex;
   flex-direction: column;
-  padding: 16px 18px 22px;
+  margin-top: 0;
+  padding: 0 18px;
+  background: #050505;
+  box-shadow:
+    inset 1px 0 0 rgba(0, 0, 0, 0.85),
+    inset -1px 0 0 rgba(0, 0, 0, 0.85);
 }
 
-/* ----- Header ------------------------------------------------------- */
-
-.nrHeader {
+/* Bottom layer: the controls (status, knob, captions). The lighter plate
+   is painted by `::before` rather than a flat fill, so its top edge isn't
+   a straight cut: a knob-centered dome (semicircle) rises up around the
+   knob and the full-width plate extends down to the left/right, with the
+   dark audio background showing through the shoulders. `isolation` makes
+   this its own stacking context so the masked plate sits behind the
+   (unclipped) text/knob content. */
+.nrControls {
+  /* The seam (an SVG mask): a dome rises over the knob, concentric with it
+     so the lighter margin is equal on the top and the sides, then drops to
+     flat shoulders. The dome-to-shoulder junctions use small rounded
+     fillet arcs instead of hard 90-degree armpits. Because the plate is
+     ~517x188 (the controls width plus the ::before's 7px side bleed) and
+     `preserveAspectRatio="none"` stretches the 400x360 viewBox onto it, the
+     dome arc is an ellipse (rx 56.5 / ry 139.8) that renders as a true circle
+     in output. `gap: 23` keeps the dome large enough to contain the tick ring
+     (ticks sit at knob r + 12). Regenerate via `seam-preview.mjs` if the plate
+     height/width/knob position changes. (Mobile overrides this below.) */
+  --nr-seam: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 360' preserveAspectRatio='none'%3E%3Cpath d='M0 360 L0 150.0 L133.5 150.0 A10.8 23.3 0 0 0 144.3 123.3 A56.5 121.7 0 0 1 255.7 123.3 A10.8 23.3 0 0 0 266.5 150.0 L400 150.0 L400 360 Z' fill='%23000'/%3E%3C/svg%3E");
+  position: relative;
+  isolation: isolate;
+  /* Above the brain artwork so the knob, status row and waveform stay on
+     top while the brain bleeds behind the upper controls area. */
+  z-index: 2;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  /* Bleed to the sides/bottom (cancels nrPanel's 18px sides + nrContent's 7px
+     bottom padding). The NEGATIVE top margin pulls the controls up under the
+     extended screen so the knob/dome stay put while the screen bottom reaches
+     down to the dome peak. */
+  margin: -13px -18px -7px;
+  padding: 16px 18px 28px;
 }
 
-.nrBrand {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--color-text-secondary);
-}
-
-.nrMic {
-  opacity: 0.85;
-}
-
-.nrWordmark {
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.32em;
-  color: var(--color-text-primary);
-}
-
-.nrLogo {
-  font-size: 18px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: var(--color-text-secondary);
-}
-
-.nrLogo sup {
-  font-size: 0.6em;
-  margin-left: 1px;
-}
-
-/* ----- Wavelength / spectrum strip ---------------------------------- */
-
-.nrWave {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  height: 30px;
-  margin: 18px 0 14px;
-}
-
-.nrWaveBar {
-  flex: 0 0 2px;
-  min-height: 8%;
-  border-radius: 1px;
-  background: rgba(255, 255, 255, 0.16);
-}
-
-.nrWaveBarAccent {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--nr-accent) 90%, #fff 10%) 0%,
-    var(--nr-accent) 100%
+.nrControls::before {
+  content: "";
+  position: absolute;
+  /* Bleed 7px past the controls' sides (which are inset by nrContent's 7px
+     side padding) so the plate fills into the device's rounded bottom
+     corners — otherwise the dark rim shows through there. */
+  inset: 0 -7px;
+  z-index: 0;
+  border-radius: 0 0 21px 21px;
+  /* Match the underlying Plate `.inner` radial surface so the controls
+     plate reads as the same material, not a different-colored slab. */
+  background: radial-gradient(
+    ellipse 90% 120% at 50% 40%,
+    #202020 0%,
+    #1a1a1a 55%,
+    #101010 100%
   );
-  box-shadow: 0 0 6px color-mix(in srgb, var(--nr-accent) 45%, transparent);
+  -webkit-mask: var(--nr-seam) center / 100% 100% no-repeat;
+  mask: var(--nr-seam) center / 100% 100% no-repeat;
+}
+
+/* Keep the controls content above the masked plate `::before`. */
+.nrKnobWrap {
+  position: relative;
+  z-index: 1;
 }
 
 /* ----- Status row --------------------------------------------------- */
 
+/* Absolutely placed so REDUCTION / ACTIVE flank the knob just above the
+   seam line (in the dark shoulders), without affecting the knob/dome
+   layout. `top` is tuned to land just above the dome's shoulder seam. */
 .nrStatus {
+  position: absolute;
+  top: 61px;
+  left: 18px;
+  right: 18px;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -188,11 +231,41 @@
   justify-content: center;
   width: 100%;
   height: var(--nr-knob-size);
-  margin: 26px 0 18px;
+  /* Compact spacing above/below the knob so the controls plate stays a
+     single short panel between the screen and the knob. */
+  margin: 20px 0 16px;
 }
 
-/* Arc of tick dots; each dot is centered then rotated + pushed outward
-   via its inline transform (origin is the knob center). */
+/* ----- Caption ------------------------------------------------------ */
+
+/* Letter-spaced caps below the knob: a brighter STRENGTH heading over a
+   dimmer subtitle. Above the masked plate (`z-index: 1`, like the knob)
+   so it isn't clipped by the dome seam. */
+.nrCaption {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.nrCaptionTitle {
+  font-size: 14px;
+  letter-spacing: 0.22em;
+  color: var(--color-text-secondary);
+}
+
+.nrCaptionSub {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.32);
+}
+
+/* Tick dots concentric with the knob, spanning the top 240deg arc (bottom
+   third left empty); each dot is centered on the knob center, then rotated +
+   pushed outward via its inline transform. */
 .nrKnobTicks {
   position: absolute;
   top: 50%;
@@ -213,22 +286,25 @@
   transform-origin: center;
 }
 
-/* Raised neomorphic dial sunk into the bezel. */
+/* Raised neomorphic dial sunk into the bezel, with a thick gradient bezel
+   ring (light at top -> dark at bottom) wrapping a face that runs the other
+   way (dark at top -> light at bottom). The two-layer background paints the
+   face on the padding-box and the ring gradient on the (transparent) border;
+   `border-box` sizing keeps the dial's outer diameter at --nr-knob-size so
+   the tick ring stays aligned. */
 .nrKnob {
   position: relative;
+  box-sizing: border-box;
   width: var(--nr-knob-size);
   height: var(--nr-knob-size);
+  border: 9px solid transparent;
   border-radius: 50%;
   background:
-    radial-gradient(
-      ellipse 90% 90% at 50% 30%,
-      #2a2a2a 0%,
-      #1c1c1c 55%,
-      #121212 100%
-    );
+    linear-gradient(180deg, #141414 0%, #3a3a3a 100%) padding-box,
+    linear-gradient(180deg, #6f6f6f 0%, #0b0b0b 100%) border-box;
   box-shadow:
     inset 0 2px 1px rgba(255, 255, 255, 0.08),
-    inset 0 -10px 24px rgba(0, 0, 0, 0.7),
+    inset 0 -10px 24px rgba(0, 0, 0, 0.55),
     0 12px 26px rgba(0, 0, 0, 0.55),
     0 2px 4px rgba(0, 0, 0, 0.6),
     0 0 0 1px rgba(255, 255, 255, 0.03);
@@ -247,39 +323,35 @@
   box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
 }
 
-/* ----- Captions ----------------------------------------------------- */
-
-.nrCaptions {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.nrTitle {
-  font-size: 16px;
-  font-weight: 500;
-  letter-spacing: 0.22em;
-  color: var(--color-text-primary);
-}
-
-.nrSubtitle {
-  font-size: 10px;
-  letter-spacing: 0.22em;
-  color: var(--color-text-secondary);
-}
-
 @media (max-width: 768px) {
   .nrCard {
-    --nr-knob-size: 168px;
+    --nr-knob-size: 84px;
     max-width: 340px;
+    /* Recomputed concentric dome for the narrower mobile plate
+       (~332x166 incl. the ::before 7px side bleed, knob r42, gap 19). */
+    --nr-seam: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 360' preserveAspectRatio='none'%3E%3Cpath d='M0 360 L0 148.5 L113.0 148.5 A14.5 22.3 0 0 0 127.5 122.5 A73.5 113.2 0 0 1 272.5 122.5 A14.5 22.3 0 0 0 287.0 148.5 L400 148.5 L400 360 Z' fill='%23000'/%3E%3C/svg%3E");
   }
 
   .nrScreen {
-    height: 120px;
+    height: 336px;
+  }
+
+  .nrScreenImage {
+    padding: 20px 26px;
   }
 
   .nrPanel {
-    padding: 14px 14px 18px;
+    padding: 14px 14px 0;
+  }
+
+  .nrControls {
+    margin: -15px -14px -7px;
+    padding: 14px 14px 24px;
+  }
+
+  .nrStatus {
+    top: 52px;
+    left: 14px;
+    right: 14px;
   }
 }
