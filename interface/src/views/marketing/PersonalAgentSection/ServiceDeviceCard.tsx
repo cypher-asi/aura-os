@@ -1,5 +1,4 @@
 import { type ReactNode } from "react";
-import { Headphones, Mic, Shuffle } from "lucide-react";
 import { Plate } from "../../../components/Plate";
 import { SERVICE_LOGOS } from "./brand-logos";
 
@@ -14,8 +13,8 @@ import { SERVICE_LOGOS } from "./brand-logos";
  *
  * Below the screen sits the device chrome that sells the hardware
  * fiction: a hairline divider with asterisk markers and a monospace
- * "64MB SAMPLER COMPOSER" label, then a dot-matrix speaker grille.
- * Everything but the logos is decorative (`aria-hidden`).
+ * label, then a dot-matrix speaker grille. Everything but the logos is
+ * decorative (`aria-hidden`).
  */
 export function ServiceDeviceCard(): ReactNode {
   return (
@@ -38,11 +37,6 @@ export function ServiceDeviceCard(): ReactNode {
                 </svg>
               </div>
             ))}
-          </div>
-          <div className="personalAgentDeviceStatus">
-            <Shuffle size={13} strokeWidth={2} />
-            <Mic size={13} strokeWidth={2} />
-            <Headphones size={13} strokeWidth={2} />
           </div>
         </div>
 

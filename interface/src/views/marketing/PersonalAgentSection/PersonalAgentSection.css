@@ -79,10 +79,11 @@
 
 .personalAgentQuadrantWide {
   grid-column: 1 / -1;
-  /* Diagonal off-black gradient: near-black at the inner-light corner
-     fading to pure black. The two bottom quadrants share this same
-     palette (mirrored diagonals) so all three cells read as one surface. */
-  background: linear-gradient(135deg, #141414 0%, #0a0a0a 55%, #000 100%);
+  /* Diagonal gradient built from the #202020 base: lightest at the
+     inner-light corner fading to near-black. The two bottom quadrants
+     share this same palette (mirrored diagonals) so all three cells read
+     as one surface. */
+  background: linear-gradient(135deg, #202020 0%, #161616 55%, #0c0c0c 100%);
   border-radius: 0;
 }
 
@@ -90,7 +91,7 @@
    mirrored (225deg) so the light end sits at the inner-center corner
    (top-right) and fades to dark at the outer bottom-left corner. */
 .personalAgentQuadrantSkills {
-  background: linear-gradient(225deg, #141414 0%, #0a0a0a 55%, #000 100%);
+  background: linear-gradient(225deg, #202020 0%, #161616 55%, #0c0c0c 100%);
   border-radius: 0;
 }
 
@@ -98,7 +99,7 @@
    the inner-center corner (top-left, 135deg) out to the dark outer
    bottom-right, mirroring the skills cell across the vertical center. */
 .personalAgentQuadrantServices {
-  background: linear-gradient(135deg, #141414 0%, #0a0a0a 55%, #000 100%);
+  background: linear-gradient(135deg, #202020 0%, #161616 55%, #0c0c0c 100%);
   border-radius: 0;
 }
 
@@ -216,7 +217,7 @@
  * rim and the recessed black well (mirrors `.personalAgentDeviceContent`).
  */
 .personalAgentSkillPanel {
-  --skill-accent: #e5613a;
+  --skill-accent: #f45500;
   padding: 16px;
 }
 
@@ -389,8 +390,11 @@
 /* Inset screen: recessed glossy black panel. */
 .personalAgentDeviceScreen {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   border-radius: 14px;
-  padding: 26px 22px 30px;
+  padding: 28px 22px;
   background: radial-gradient(
     ellipse 120% 90% at 50% 0%,
     #0a0a0a 0%,
@@ -444,17 +448,6 @@
 .personalAgentDeviceLogo:hover {
   color: #fff;
   filter: drop-shadow(0 0 9px rgba(170, 205, 255, 0.6));
-}
-
-/* Red status glyph row, bottom-left of the screen. */
-.personalAgentDeviceStatus {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  margin-top: 24px;
-  color: #e5484d;
-  filter: drop-shadow(0 0 5px rgba(229, 72, 77, 0.5));
 }
 
 /* Label strip: hairline divider, asterisk markers + monospace label. */
@@ -529,7 +522,7 @@
   }
 
   .personalAgentDeviceScreen {
-    padding: 20px 16px 24px;
+    padding: 22px 16px;
   }
 
   .personalAgentDeviceLogoGrid {
