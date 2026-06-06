@@ -9,8 +9,8 @@ import { SkillIcon } from "../../../components/SkillShopModal/SkillIcon";
  * sections by hairline divider lines like a hardware controller. Each
  * key is an icon-only square keycap with an embossed inner circle behind
  * a real `SkillIcon` glyph (resolved from the skill id); a few featured
- * skills are "lit" with an accent fill and an LED dot, echoing the active
- * keys on the reference macro-pad device.
+ * skills are "lit" with a warm accent fill, echoing the active keys on
+ * the reference macro-pad device.
  *
  * Everything here is decorative (`aria-hidden`) — it sells the breadth
  * of skills visually rather than acting as a real control surface.
@@ -69,7 +69,6 @@ export function SkillSeaCard(): ReactNode {
                       aria-label={skill.label}
                       title={skill.label}
                     >
-                      {skill.lit && <span className="personalAgentSkillLed" />}
                       <SkillIcon name={skill.id} size={20} />
                     </button>
                   </div>

@@ -317,7 +317,7 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 64%;
+  width: 80%;
   aspect-ratio: 1;
   border-radius: 50%;
   transform: translate(-50%, -50%);
@@ -398,21 +398,6 @@
   color: #1a0e08;
   opacity: 0.95;
   filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.25));
-}
-
-/* LED indicator dot, pinned to the top-right corner of a lit keycap. */
-.personalAgentSkillLed {
-  position: absolute;
-  z-index: 2;
-  top: 6px;
-  right: 6px;
-  width: 5px;
-  height: 5px;
-  border-radius: 999px;
-  background: #ffd9c7;
-  box-shadow:
-    0 0 4px rgba(255, 255, 255, 0.8),
-    0 0 7px var(--skill-accent);
 }
 
 /* ----- Quadrant 3: service device ------------------------------ */
