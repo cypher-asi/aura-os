@@ -143,6 +143,27 @@ void main() {
   // Throb the aura so the whole field surges in and out.
   aura *= 0.8 + 0.7 * (0.5 + 0.5 * sin(t * 1.7));
 
+  // Wide outer HALO: average the mask over much larger rings so a soft glow
+  // spreads far beyond the brain into the surrounding black, wrapping the
+  // whole image in a luminous backdrop. Slower, deeper pulsation than the
+  // tight aura so it reads as an ambient field breathing behind the brain.
+  float halo = 0.0;
+  const int HALO_TAPS = 14;
+  for (int i = 0; i < HALO_TAPS; i++) {
+    float a = (float(i) / float(HALO_TAPS)) * 6.2831853;
+    vec2 dir = vec2(cos(a), sin(a));
+    halo += maskAt(uv + dir * ap * 140.0);
+    halo += maskAt(uv + dir * ap * 210.0);
+    halo += maskAt(uv + dir * ap * 300.0);
+    halo += maskAt(uv + dir * ap * 410.0);
+  }
+  halo /= float(HALO_TAPS * 4);
+  // Lift + soften so the halo reads as a broad cloud rather than rings.
+  halo = pow(clamp(halo * 2.2, 0.0, 1.0), 0.65);
+  // Deep, slow pulsation so the backdrop swells in and out.
+  float haloPulse = 0.45 + 0.55 * (0.5 + 0.5 * sin(t * 0.9));
+  float outerGlow = halo * haloPulse;
+
   // Fast, churning flow field so the vasculature looks busy and restless.
   vec2 flowP = uv * 7.0;
   float flow = fbm(flowP + vec2(-t * 0.7, t * 0.42));
@@ -200,6 +221,10 @@ void main() {
   // Wide multi-hue aura: drifting paint blooming into the black glass.
   vec3 auraCol = palette(clamp(0.55 + 0.28 * sin(t * 0.45) + 0.4 * (splat - 0.5), 0.0, 1.0));
   rightCol += auraCol * aura * 1.4;
+  // Broad pulsating outer halo: a colorful glow spreading into the black
+  // backdrop around the brain.
+  vec3 haloCol = palette(clamp(0.5 + 0.35 * sin(t * 0.6 + 1.5), 0.0, 1.0));
+  rightCol += haloCol * outerGlow * 1.2;
 
   // Final re-saturation: after all additions, pull the right firmly back
   // toward saturated color so bright peaks can't desaturate toward grey.
@@ -213,7 +238,7 @@ void main() {
   float rMax = max(rightCol.r, max(rightCol.g, rightCol.b));
   rightCol = rMax > 1.0 ? rightCol / rMax : rightCol;
 
-  float rightAlpha = clamp(mask * 1.3 + bloom * 0.7 + aura * 0.95, 0.0, 1.0);
+  float rightAlpha = clamp(mask * 1.3 + bloom * 0.7 + aura * 0.95 + outerGlow * 0.7, 0.0, 1.0);
 
   // ----- LEFT hemisphere: black & white code + mathematics --------------
   // Vessels as a near-white ink line-drawing (strictly grayscale).
@@ -228,8 +253,10 @@ void main() {
   float code = texture(u_code, fract(codeUv)).r;
   float backdrop = code * (0.85 - 0.7 * clamp(aura * 1.5, 0.0, 1.0));
   leftCol += vec3(0.62, 0.66, 0.72) * backdrop * 0.5;
+  // Broad pulsating outer halo (monochrome) glowing into the backdrop.
+  leftCol += vec3(0.74, 0.79, 0.9) * outerGlow * 0.9;
 
-  float leftAlpha = clamp(mask * 1.3 + bloom * 0.7 + aura * 0.5 + backdrop * 0.4, 0.0, 1.0);
+  float leftAlpha = clamp(mask * 1.3 + bloom * 0.7 + aura * 0.5 + backdrop * 0.4 + outerGlow * 0.6, 0.0, 1.0);
 
   // ----- Split + feathered seam ----------------------------------------
   // 0 = left hemisphere, 1 = right hemisphere, blended across the midline.
