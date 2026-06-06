@@ -37,6 +37,8 @@ export interface SlidingPillsProps<T extends string> {
   readonly value: T;
   /** Fired when the user picks a different segment. */
   readonly onChange: (next: T) => void;
+  /** Fired for every explicit segment pick, including the current segment. */
+  readonly onSelect?: (next: T) => void;
   /** Accessible name for the implicit `role="radiogroup"`. */
   readonly ariaLabel: string;
   /** Optional className appended to the root container. */
@@ -90,6 +92,7 @@ export function SlidingPills<T extends string>({
   items,
   value,
   onChange,
+  onSelect,
   ariaLabel,
   className,
   segmentClassName,
@@ -181,12 +184,13 @@ export function SlidingPills<T extends string>({
       else if (event.key === "End") nextIdx = last;
       const nextId = enabled[nextIdx].id;
       if (nextId === value) return;
+      onSelect?.(nextId);
       onChange(nextId);
       requestAnimationFrame(() => {
         itemRefs.current.get(nextId)?.focus();
       });
     },
-    [items, onChange, value],
+    [items, onChange, onSelect, value],
   );
 
   const rootClassName = [styles.root, className].filter(Boolean).join(" ");
@@ -246,7 +250,9 @@ export function SlidingPills<T extends string>({
               e.preventDefault();
             }}
             onClick={() => {
-              if (!isSelected && !item.disabled) onChange(item.id);
+              if (item.disabled) return;
+              onSelect?.(item.id);
+              if (!isSelected) onChange(item.id);
             }}
           >
             {item.label}

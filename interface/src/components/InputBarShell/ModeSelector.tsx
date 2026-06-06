@@ -10,6 +10,8 @@ import styles from "./ModeSelector.module.css";
 export interface ModeSelectorProps {
   selectedMode: AgentMode;
   onChange: (mode: AgentMode) => void;
+  /** Optional hook for demo surfaces that need active-mode re-clicks. */
+  onSelect?: (mode: AgentMode) => void;
   /** Optional className appended to the row wrapper for layout overrides. */
   className?: string;
 }
@@ -23,6 +25,7 @@ export interface ModeSelectorProps {
 export const ModeSelector = memo(function ModeSelector({
   selectedMode,
   onChange,
+  onSelect,
   className,
 }: ModeSelectorProps) {
   const items = useMemo<readonly SlidingPillItem<AgentMode>[]>(
@@ -52,6 +55,7 @@ export const ModeSelector = memo(function ModeSelector({
           items={items}
           value={selectedMode}
           onChange={onChange}
+          onSelect={onSelect}
           ariaLabel="Agent mode"
           className={styles.pills}
           segmentClassName={styles.modeSegment}

@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Plate } from "../../../components/Plate";
 import { DesktopChatInputBar } from "../../../features/chat-ui/ChatInputBar";
+import type { AgentMode } from "../../../constants/modes";
 import { AuraScreenOrb } from "../AuraScreenOrb";
 
 /**
@@ -13,22 +14,102 @@ import { AuraScreenOrb } from "../AuraScreenOrb";
  *   - `machineType="local"` with no `agentId` / `workspacePath` keeps
  *     the agent-environment + project-file hooks idle, so the bar makes
  *     no network calls on the public route.
- *   - A controlled `input` value cycles through example prompts with a
- *     lightweight typewriter effect, so the bar reads as someone asking
- *     the agent different questions.
- *   - The wrapper is `pointer-events: none` (see CSS) so nothing in the
- *     bar is clickable on the marketing surface.
+ *   - A controlled `input` value cycles through mode-specific example
+ *     prompts with a lightweight typewriter effect.
+ *   - The wrapper keeps the prompt read-only while allowing the mode
+ *     selector to be clicked; picking a mode jumps to that mode's next
+ *     example and the loop continues from there.
  */
-const PROMPTS: readonly string[] = [
-  "Plan a weekend trip to Lisbon and book the flights",
-  "Summarize my unread Slack threads from today",
-  "Refactor this React component and open a PR",
-  "Draft a birthday message for my mom",
-  "Design a logo for my coffee side-project",
+interface MockExample {
+  readonly mode: AgentMode;
+  readonly prompt: string;
+}
+
+const MOCK_EXAMPLES: readonly MockExample[] = [
+  {
+    mode: "code",
+    prompt: "Refactor this React component, update the tests, and open a PR",
+  },
+  {
+    mode: "plan",
+    prompt: "Plan a weekend trip to Lisbon and book the flights",
+  },
+  {
+    mode: "image",
+    prompt: "Generate a warm editorial photo of a tiny jungle library at dusk",
+  },
+  {
+    mode: "video",
+    prompt: "Turn these product screenshots into a 12 second launch video",
+  },
+  {
+    mode: "3d",
+    prompt: "Create a 3D model of a modular desk organizer with cable clips",
+  },
+  {
+    mode: "plan",
+    prompt: "Compare three daycares near me and schedule tours next week",
+  },
+  {
+    mode: "code",
+    prompt: "Find why this dashboard query times out and ship the fix",
+  },
+  {
+    mode: "image",
+    prompt: "Design a logo system for my neighborhood coffee side project",
+  },
+  {
+    mode: "video",
+    prompt: "Make a calm onboarding clip from this rough screen recording",
+  },
+  {
+    mode: "3d",
+    prompt: "Model a foldable travel tripod with labeled moving parts",
+  },
+  {
+    mode: "plan",
+    prompt: "Coordinate my cross-country move with movers, utilities, and flights",
+  },
+  {
+    mode: "code",
+    prompt: "Audit the auth flow for race conditions and write a migration plan",
+  },
+  {
+    mode: "image",
+    prompt: "Create campaign visuals for a luxury electric camper van in snow",
+  },
+  {
+    mode: "video",
+    prompt: "Storyboard and render a cinematic trailer for an AI music tool",
+  },
+  {
+    mode: "3d",
+    prompt: "Generate a game-ready spaceship cockpit with clean topology",
+  },
+  {
+    mode: "plan",
+    prompt: "Build a hiring plan for a five-person robotics research team",
+  },
+  {
+    mode: "code",
+    prompt: "Port this payment service to queues without dropping events",
+  },
+  {
+    mode: "image",
+    prompt: "Visualize a Mars greenhouse city for a science museum exhibit",
+  },
+  {
+    mode: "video",
+    prompt: "Create an investor demo video from this technical prototype",
+  },
+  {
+    mode: "3d",
+    prompt: "Design a manufacturable drone chassis with battery access",
+  },
 ];
 
-const TYPE_MS = 55;
-const ERASE_MS = 22;
+const TYPE_MS = 42;
+const MODE_SETTLE_MS = 420;
 const HOLD_MS = 1600;
 
 function prefersReducedMotion(): boolean {
@@ -39,53 +120,52 @@ export function MockChatInputCard(): ReactNode {
   // Seed with the first prompt when motion is reduced so the bar never
   // animates; otherwise start empty and let the effect type it in.
   const [text, setText] = useState(() =>
-    prefersReducedMotion() ? PROMPTS[0] : "",
+    prefersReducedMotion() ? MOCK_EXAMPLES[0].prompt : "",
   );
-  const promptIndex = useRef(0);
-  const charIndex = useRef(0);
-  const phase = useRef<"typing" | "holding" | "erasing">("typing");
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [selectedMode, setSelectedMode] = useState<AgentMode>(
+    MOCK_EXAMPLES[0].mode,
+  );
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const jumpToMode = useCallback((mode: AgentMode) => {
+    setActiveIndex((current) => nextExampleIndexForMode(mode, current + 1));
+  }, []);
+
   useEffect(() => {
+    const example = MOCK_EXAMPLES[activeIndex];
+    setSelectedMode(example.mode);
+
     if (prefersReducedMotion()) {
+      setText(example.prompt);
       return;
     }
 
-    const tick = () => {
-      const prompt = PROMPTS[promptIndex.current];
+    let cancelled = false;
+    let typed = 0;
 
-      if (phase.current === "typing") {
-        charIndex.current += 1;
-        setText(prompt.slice(0, charIndex.current));
-        if (charIndex.current >= prompt.length) {
-          phase.current = "holding";
-          timer.current = setTimeout(tick, HOLD_MS);
-          return;
-        }
+    const tick = () => {
+      if (cancelled) return;
+      typed += 1;
+      setText(example.prompt.slice(0, typed));
+      if (typed < example.prompt.length) {
         timer.current = setTimeout(tick, TYPE_MS);
         return;
       }
-
-      if (phase.current === "holding") {
-        phase.current = "erasing";
-        timer.current = setTimeout(tick, ERASE_MS);
-        return;
-      }
-
-      charIndex.current -= 1;
-      setText(prompt.slice(0, Math.max(0, charIndex.current)));
-      if (charIndex.current <= 0) {
-        phase.current = "typing";
-        promptIndex.current = (promptIndex.current + 1) % PROMPTS.length;
-      }
-      timer.current = setTimeout(tick, ERASE_MS);
+      timer.current = setTimeout(() => {
+        if (!cancelled) {
+          setActiveIndex((current) => (current + 1) % MOCK_EXAMPLES.length);
+        }
+      }, HOLD_MS);
     };
 
-    timer.current = setTimeout(tick, TYPE_MS);
+    setText("");
+    timer.current = setTimeout(tick, MODE_SETTLE_MS);
     return () => {
+      cancelled = true;
       if (timer.current) clearTimeout(timer.current);
     };
-  }, []);
+  }, [activeIndex]);
 
   return (
     <Plate radius="999px" className="personalAgentChatMock">
@@ -99,9 +179,20 @@ export function MockChatInputCard(): ReactNode {
           machineType="local"
           agentName="AURA"
           isStatic
+          selectedModeOverride={selectedMode}
+          onSelectedModeOverrideChange={jumpToMode}
+          inputReadOnly
           attachAccent={<AuraScreenOrb />}
         />
       </div>
     </Plate>
   );
+}
+
+function nextExampleIndexForMode(mode: AgentMode, startIndex: number): number {
+  for (let offset = 0; offset < MOCK_EXAMPLES.length; offset += 1) {
+    const index = (startIndex + offset) % MOCK_EXAMPLES.length;
+    if (MOCK_EXAMPLES[index].mode === mode) return index;
+  }
+  return 0;
 }

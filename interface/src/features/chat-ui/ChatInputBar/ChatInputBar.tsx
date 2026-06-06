@@ -201,6 +201,18 @@ export interface ChatInputBarProps {
    */
   isStatic?: boolean;
   /**
+   * Demo/static surfaces can drive the visible mode selector locally
+   * without mutating the persisted chat UI store.
+   */
+  selectedModeOverride?: AgentMode;
+  /**
+   * Paired with `selectedModeOverride`; receives every explicit mode
+   * pick, including re-clicks on the already active mode.
+   */
+  onSelectedModeOverrideChange?: (mode: AgentMode) => void;
+  /** Render the prompt as controlled display text while keeping mode clicks live. */
+  inputReadOnly?: boolean;
+  /**
    * Reserved for compact-layout tweaks (e.g. floating desktop agent
    * windows where the chat surface can be very narrow). Currently a
    * no-op now that the info-bar slash hint has been removed; kept on
@@ -303,6 +315,9 @@ export const DesktopChatInputBar = memo(
       isVisible = true,
       isCentered = false,
       isStatic = false,
+      selectedModeOverride,
+      onSelectedModeOverrideChange,
+      inputReadOnly = false,
       contextUsage,
       onFetchContextContents,
       onNewChat,
@@ -317,7 +332,7 @@ export const DesktopChatInputBar = memo(
     const chatUI = useChatUI(streamKey);
     const selectedModel = chatUI.selectedModel;
     const selectedEffort = chatUI.selectedEffort;
-    const selectedMode = chatUI.selectedMode;
+    const selectedMode = selectedModeOverride ?? chatUI.selectedMode;
     const imageQuality = chatUI.imageQuality;
     const councilCount = chatUI.councilCount;
     const councilModels = chatUI.councilModels;
@@ -337,14 +352,19 @@ export const DesktopChatInputBar = memo(
       },
       [chatUI.setImageQuality, streamKey, agentId],
     );
+    const clearGenerationCommands = useCallback(() => {
+      if (onCommandsChange && selectedCommands.some((c) => isGenerationCommand(c.id))) {
+        onCommandsChange(selectedCommands.filter((c) => !isGenerationCommand(c.id)));
+      }
+    }, [onCommandsChange, selectedCommands]);
+
     const onModeChange = useCallback(
       (mode: AgentMode) => {
+        if (selectedModeOverride != null) return;
         chatUI.setSelectedMode(streamKey, mode, adapterType, agentId);
         // Drop any conflicting generation chips so the chip row and
         // the mode selector never show contradicting intent.
-        if (onCommandsChange && selectedCommands.some((c) => isGenerationCommand(c.id))) {
-          onCommandsChange(selectedCommands.filter((c) => !isGenerationCommand(c.id)));
-        }
+        clearGenerationCommands();
         // Keep focus on the textarea so the user can immediately keep
         // typing after picking a mode. `SlidingPills` already prevents
         // the pill button from stealing focus on mousedown, so when the
@@ -358,10 +378,19 @@ export const DesktopChatInputBar = memo(
         adapterType,
         agentId,
         chatUI.setSelectedMode,
-        onCommandsChange,
-        selectedCommands,
+        clearGenerationCommands,
+        selectedModeOverride,
         streamKey,
       ],
+    );
+    const onModeSelect = useCallback(
+      (mode: AgentMode) => {
+        if (!onSelectedModeOverrideChange) return;
+        onSelectedModeOverrideChange(mode);
+        clearGenerationCommands();
+        shellRef.current?.focus();
+      },
+      [clearGenerationCommands, onSelectedModeOverrideChange],
     );
     const handleOpenContextBucket = useCallback(
       (bucketId: ContextBucketRowId) => {
@@ -1325,6 +1354,7 @@ export const DesktopChatInputBar = memo(
           <ModeSelector
             selectedMode={selectedMode}
             onChange={onModeChange}
+            onSelect={onSelectedModeOverrideChange ? onModeSelect : undefined}
             className={styles.modeSelectorFlex}
           />
         )}
@@ -1345,6 +1375,7 @@ export const DesktopChatInputBar = memo(
       <ModeSelector
         selectedMode={selectedMode}
         onChange={onModeChange}
+        onSelect={onSelectedModeOverrideChange ? onModeSelect : undefined}
         className={styles.modeSelectorDetached}
       />
     );
@@ -1406,7 +1437,11 @@ export const DesktopChatInputBar = memo(
         isPulsing={isCentered}
         isDropZone={isDragOver}
         placeholder={placeholder}
-        textareaProps={{ "data-agent-field": "chat-input" }}
+        textareaProps={{
+          "data-agent-field": "chat-input",
+          readOnly: inputReadOnly || undefined,
+          "aria-readonly": inputReadOnly ? "true" : undefined,
+        }}
         onTextareaKeyDown={handleTextareaKeyDown}
         onTextareaPaste={handlePaste}
         onContainerDragOver={handleDragOver}

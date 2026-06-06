@@ -61,6 +61,10 @@
   user-select: none;
 }
 
+.personalAgentChatMock [data-agent-surface="mode-selector"] {
+  pointer-events: auto;
+}
+
 .personalAgentChatMockContent {
   padding: 61px 39px;
 }

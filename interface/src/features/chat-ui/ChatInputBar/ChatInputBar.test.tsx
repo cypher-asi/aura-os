@@ -31,7 +31,7 @@ vi.mock("../../../hooks/use-environment-info", () => ({
 }));
 
 let mockSelectedModel: string | null = null;
-let mockSelectedMode: "code" | "plan" | "image" | "3d" = "code";
+let mockSelectedMode: "code" | "plan" | "image" | "video" | "3d" = "code";
 let mockPinnedSourceImage: {
   imageUrl: string;
   originalUrl?: string;
@@ -718,6 +718,54 @@ describe("ChatInputBar", () => {
     );
   });
 
+  it("supports locally controlled mode selection without updating the store", async () => {
+    const user = userEvent.setup();
+    const onSelectedModeOverrideChange = vi.fn();
+    render(
+      <ChatInputBar
+        {...makeProps({
+          selectedModeOverride: "plan",
+          onSelectedModeOverrideChange,
+        })}
+      />,
+    );
+
+    expect(screen.getByRole("radio", { name: "Plan mode" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+
+    await user.click(screen.getByRole("radio", { name: "Image mode" }));
+    expect(onSelectedModeOverrideChange).toHaveBeenCalledWith("image");
+    expect(mockSetSelectedMode).not.toHaveBeenCalled();
+  });
+
+  it("keeps the prompt read-only while the controlled mode selector stays active", async () => {
+    const user = userEvent.setup();
+    const onInputChange = vi.fn();
+    const onSelectedModeOverrideChange = vi.fn();
+    render(
+      <ChatInputBar
+        {...makeProps({
+          input: "Locked marketing prompt",
+          onInputChange,
+          inputReadOnly: true,
+          selectedModeOverride: "code",
+          onSelectedModeOverrideChange,
+        })}
+      />,
+    );
+
+    const textarea = screen.getByDisplayValue("Locked marketing prompt");
+    expect(textarea).toHaveAttribute("readonly");
+
+    await user.type(textarea, "!");
+    expect(onInputChange).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("radio", { name: "Plan mode" }));
+    expect(onSelectedModeOverrideChange).toHaveBeenCalledWith("plan");
+  });
+
   it("focuses the textarea after a mode pill click so the user can keep typing", async () => {
     // Reproduces the empty-state surface in the screenshot: the user
     // lands on the centered compose, taps `Image`, then expects the
@@ -939,7 +987,7 @@ describe("ChatInputBar", () => {
       />,
     );
 
-    expect(screen.getByPlaceholderText("Remote agent required")).toBeDisabled();
+    expect(screen.getByPlaceholderText(/Remote agent required/)).toBeDisabled();
     const send = screen.getByRole("button", { name: "Send" });
     expect(send).toBeDisabled();
     await user.click(send);
