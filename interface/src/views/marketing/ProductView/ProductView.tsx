@@ -3,6 +3,7 @@ import { AgentChatSection } from "../AgentChatSection";
 import { AgentConsole } from "../AgentConsole";
 import { AgentOrbSection } from "../AgentOrbSection";
 import { ChangelogPreview } from "../ChangelogPreview";
+import { ExpertiseSection } from "../ExpertiseSection";
 import {
   FeaturePanel,
   OpenSourceScene,
@@ -83,6 +84,7 @@ export function ProductView(): ReactNode {
         stageClassName={styles.consoleStage}
         stage={<AgentConsole />}
       />
+      <ExpertiseSection />
       <PersonalAgentSection />
       <OneComputerOneAgentSection />
       <AgentChatSection />

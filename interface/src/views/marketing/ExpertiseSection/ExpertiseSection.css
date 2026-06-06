@@ -1,0 +1,35 @@
+/*
+ * Internal layout for the "Expertise without ego." section directly
+ * below the `/agents` hero. The outer chrome (background tint, padding,
+ * viewport-height reservation, column cap) is owned by the shared
+ * `<Section />` shell; this file only stacks the centered headline +
+ * subhead. Type ramps match `.personalAgentHeadline` /
+ * `.personalAgentSubhead` so the marketing rows on `/agents` stay
+ * typographically aligned.
+ */
+.expertiseInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+}
+
+.expertiseHeadline {
+  margin: 0;
+  font-size: clamp(30px, 4vw, 44px);
+  font-weight: 300;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  color: var(--color-text-primary);
+  max-width: 720px;
+}
+
+.expertiseSubhead {
+  margin: 0;
+  font-size: clamp(16px, 1.6vw, 20px);
+  line-height: var(--leading-relaxed, 1.6);
+  color: var(--color-text-secondary);
+  max-width: 640px;
+  text-wrap: balance;
+}
