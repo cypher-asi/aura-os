@@ -6,6 +6,17 @@
  * per tab. Colors reuse the marketing text tokens cascaded from
  * `.productView` (`--color-text-*`).
  */
+/*
+ * Tighten the gap between the "Intelligence without limits" spec bento
+ * above and this tab slider. The shared `<Section />` shell defaults to
+ * 80px vertical padding; the two-class selector overrides only the top
+ * so the slider tucks up close under the bento while keeping its normal
+ * bottom rhythm into the personal-agent bento below.
+ */
+.section.expertiseTabsSection {
+  padding-top: clamp(8px, 1.5vh, 20px);
+}
+
 .expertiseTabs {
   display: flex;
   flex-direction: column;
@@ -17,6 +28,7 @@
 }
 
 .expertiseTabsRow {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -26,8 +38,41 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
+/*
+ * Single underline shared across all tabs. Its `left`/`top`/`width` are
+ * driven by JS (measured from the active tab) and animated here so the
+ * marker glides between tabs instead of snapping. `translateX` is used
+ * for the horizontal travel so the slide runs on the compositor.
+ */
+.expertiseTabsIndicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 2px;
+  background: var(--color-text-primary);
+  border-radius: 2px;
+  pointer-events: none;
+  /* Hidden until the first imperative measurement writes a real
+     transform / width (and opacity: 1) so the marker doesn't slide in
+     from the origin on mount. */
+  opacity: 0;
+  transform: translateX(0);
+  will-change: transform, width;
+  transition:
+    transform 320ms cubic-bezier(0.4, 0, 0.2, 1),
+    width 320ms cubic-bezier(0.4, 0, 0.2, 1),
+    top 320ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .expertiseTabsIndicator {
+    transition: none;
+  }
+}
+
 .expertiseTab {
   position: relative;
+  display: inline-grid;
   margin: 0;
   padding: 4px 2px;
   border: 0;
@@ -42,6 +87,18 @@
   transition:
     color 160ms ease,
     opacity 160ms ease;
+}
+
+/* Hidden bold-weight copy that fixes the tab's width to its selected
+   size so toggling `font-weight: 600` never reflows the row. */
+.expertiseTabGhost {
+  grid-area: 1 / 1;
+  font-weight: 600;
+  visibility: hidden;
+}
+
+.expertiseTabLabel {
+  grid-area: 1 / 1;
 }
 
 .expertiseTab:hover {
@@ -61,27 +118,26 @@
   opacity: 1;
 }
 
-/* Underline marker for the active tab, sitting on the divider line. */
-.expertiseTab[data-selected="true"]::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -17px;
-  height: 2px;
-  background: var(--color-text-primary);
-  border-radius: 2px;
+.expertiseTabsPanel {
+  display: grid;
+  width: 100%;
+  max-width: 620px;
 }
 
-.expertiseTabsPanel {
+.expertiseTabsPanelItem {
+  grid-area: 1 / 1;
   margin: 0;
-  min-height: 3.2em;
-  max-width: 620px;
-  font-size: clamp(15px, 1.5vw, 19px);
+  font-size: 15px;
   line-height: var(--leading-relaxed, 1.6);
   color: var(--color-text-secondary);
   text-align: center;
   text-wrap: balance;
+}
+
+/* Inactive blurbs stay in flow (so the grid cell keeps the tallest
+   blurb's height) but are hidden and non-interactive. */
+.expertiseTabsPanelItem[data-active="false"] {
+  visibility: hidden;
 }
 
 @media (prefers-reduced-motion: reduce) {
