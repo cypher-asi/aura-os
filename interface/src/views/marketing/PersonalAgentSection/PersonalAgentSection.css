@@ -15,141 +15,30 @@
   padding-bottom: clamp(8px, 1.5vh, 20px);
 }
 
-.section.personalAgentBentoSection {
-  padding-top: clamp(8px, 1.5vh, 20px);
-}
-
 /*
- * Bento grid: the first quadrant ("Always ready") spans both columns
- * on top; the remaining two sit side by side below. Hairline borders
- * between cells echo the dark bordered-tile marketing reference.
- */
-.personalAgentGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1px;
-  /* Inset band: span the viewport minus a 32px gutter on each side, kept
-     centered. `50% - 50vw` pulls each edge out to the viewport, and the
-     +32px offset (with width reduced by 64px) tucks it back in by the
-     gutter so the band reads as one rounded card rather than full-bleed.
-     `overflow: hidden` + `border-radius` clips the outer corners of the
-     cell rectangle (top cell rounds its top corners, the two bottom cells
-     round their bottom corners) while the 1px inner seams stay square. */
-  width: calc(100vw - 64px);
-  margin-inline: calc(50% - 50vw + 32px);
-  background: transparent;
-  border: none;
-  border-radius: 24px;
-  overflow: hidden;
-}
-
-.personalAgentQuadrant {
-  display: flex;
-  flex-direction: column;
-  gap: 35px;
-  padding: 50px;
-  background: var(--marketing-section-bg, #000);
-}
-
-.personalAgentQuadrantWide {
-  grid-column: 1 / -1;
-  /* Diagonal gradient built from the #202020 base: lightest at the
-     inner-light corner fading to near-black. The two bottom quadrants
-     share this same palette (mirrored diagonals) so all three cells read
-     as one surface. */
-  background: linear-gradient(135deg, #202020 0%, #161616 55%, #0c0c0c 100%);
-  border-radius: 0;
-}
-
-/* "Intelligent in all domains" cell (bottom-left): the diagonal is
-   mirrored (225deg) so the light end sits at the inner-center corner
-   (top-right) and fades to dark at the outer bottom-left corner. */
-.personalAgentQuadrantSkills {
-  background: linear-gradient(225deg, #202020 0%, #161616 55%, #0c0c0c 100%);
-  border-radius: 0;
-}
-
-/* "Connected to everything" cell (bottom-right): the diagonal runs from
-   the inner-center corner (top-left, 135deg) out to the dark outer
-   bottom-right, mirroring the skills cell across the vertical center. */
-.personalAgentQuadrantServices {
-  background: linear-gradient(135deg, #202020 0%, #161616 55%, #0c0c0c 100%);
-  border-radius: 0;
-}
-
-/* Give the two bottom cells extra bottom room and center their copy so
-   the pair reads balanced beneath their mini-UIs. */
-.personalAgentQuadrantSkills,
-.personalAgentQuadrantServices {
-  padding-bottom: 80px;
-}
-
-/*
- * Inset band, contained content: the grid now spans the viewport minus a
- * 32px gutter each side, but the content (mini-UIs + copy) is pulled back
- * into the pre-full-bleed centered column (~79.7vw = 1.25 x the 63.75%
- * inner column) so each element keeps its previous size and position. The
- * bottom cells hug the center seam exactly as before.
+ * The bento grid + cells now render via the shared `<CardSection />` /
+ * `<MetalCard />` (see CardSection.css). Only the personal-agent content
+ * insets remain here: the mini-UIs are pulled back into the pre-full-bleed
+ * centered column so they keep their original size + position, and the two
+ * bottom cells get extra bottom room. Desktop-only (mobile uses MetalCard's
+ * compact padding); two-class specificity overrides `.metalCard`.
  *   10.16vw = (1 - 0.796875) / 2  -> half the width the cell gained.
  *   + 43px  = the prior 75px inset less the 32px the band edge moved in.
  */
-.personalAgentQuadrantWide {
-  padding-inline: calc(10.16vw + 43px);
-}
+@media (min-width: 769px) {
+  .metalCard.paCardWide {
+    padding-inline: calc(10.16vw + 43px);
+  }
 
-.personalAgentQuadrantSkills {
-  padding-left: calc(10.16vw + 43px);
-}
+  .metalCard.paCardSkills {
+    padding-left: calc(10.16vw + 43px);
+    padding-bottom: 80px;
+  }
 
-.personalAgentQuadrantServices {
-  padding-right: calc(10.16vw + 43px);
-}
-
-.personalAgentQuadrantSkills .personalAgentCopy,
-.personalAgentQuadrantServices .personalAgentCopy {
-  align-items: center;
-  text-align: center;
-}
-
-/*
- * Media well — holds each quadrant's mini-UI. Flex-grows so the copy
- * block always lands at the bottom of the cell, keeping the three
- * titles visually aligned to their cell floors like the reference.
- */
-.personalAgentMedia {
-  position: relative;
-  flex: 1 1 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 275px;
-  overflow: hidden;
-}
-
-.personalAgentMediaChat {
-  min-height: 250px;
-}
-
-.personalAgentCopy {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.personalAgentQuadrantTitle {
-  margin: 0;
-  font-size: clamp(18px, 1.6vw, 21px);
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  color: var(--color-text-primary);
-}
-
-.personalAgentQuadrantDesc {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--color-text-secondary);
-  max-width: 46ch;
+  .metalCard.paCardServices {
+    padding-right: calc(10.16vw + 43px);
+    padding-bottom: 80px;
+  }
 }
 
 /* ----- Quadrant 1: chat input mock ----------------------------- */
@@ -509,22 +398,6 @@
 }
 
 @media (max-width: 768px) {
-  .personalAgentGrid {
-    grid-template-columns: 1fr;
-    /* Tighter 16px gutter on mobile; border-radius + overflow: hidden are
-       inherited from the base rule so the stacked card stays rounded. */
-    width: calc(100vw - 32px);
-    margin-inline: calc(50% - 50vw + 16px);
-  }
-
-  .personalAgentQuadrantWide {
-    grid-column: auto;
-  }
-
-  .personalAgentQuadrant {
-    padding: 28px;
-  }
-
   .personalAgentDeviceScreen {
     padding: 22px 16px;
   }

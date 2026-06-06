@@ -1,54 +1,25 @@
 import { type ReactNode } from "react";
-import { Section } from "../Section";
-import "./SpecQuadrantSection.css";
+import { CardSection, MetalCard } from "../CardSection";
 
 /**
- * Marketing bento that sits after `ExpertiseSection` on the `/agents`
- * page. Mirrors the product-spec reference layout: two cells on the top
- * row and one wide cell spanning the bottom row, each a diagonal-gradient
- * panel separated by hairline seams and clipped into one rounded band.
- *
- * Reuses the cell gradient / seam / rounded-band treatment from
- * `PersonalAgentSection` (the bento directly below). Each cell carries a
- * bottom-left corner label + title; the media wells are intentionally
- * empty placeholders for now (copy is placeholder too, to be filled in).
- *
- * Opts out of the shell's full-viewport reservation (`fullHeight={false}`)
- * so the bento sits directly beneath the compact `ExpertiseSection` intro
- * instead of floating centered in its own empty screen.
+ * Spec bento after `ExpertiseSection` on the `/agents` page: two cells on
+ * the top row and one wide cell spanning the bottom, rendered through the
+ * shared `<CardSection />` / `<MetalCard />`. Copy is placeholder for now
+ * and the media wells are empty until images drop in. Card heights come
+ * from `MetalCard` (regular 626px / wide 500px), matching the
+ * personal-agent quadrant cards in the next section.
  */
 export function SpecQuadrantSection(): ReactNode {
   return (
-    <Section
-      ariaLabel="Feature highlights"
-      fullHeight={false}
-      className="specQuadrantSection"
-    >
-      <div className="specQuadrantGrid">
-        <article className="specQuadrantCell specQuadrantCellA">
-          <div className="specQuadrantMedia" aria-hidden="true" />
-          <div className="specQuadrantCopy">
-            <span className="specQuadrantLabel">Feature one&mdash;</span>
-            <span className="specQuadrantTitle">Short headline here</span>
-          </div>
-        </article>
-
-        <article className="specQuadrantCell specQuadrantCellB">
-          <div className="specQuadrantMedia" aria-hidden="true" />
-          <div className="specQuadrantCopy">
-            <span className="specQuadrantLabel">Feature two&mdash;</span>
-            <span className="specQuadrantTitle">Short headline here</span>
-          </div>
-        </article>
-
-        <article className="specQuadrantCell specQuadrantCellWide">
-          <div className="specQuadrantMedia" aria-hidden="true" />
-          <div className="specQuadrantCopy">
-            <span className="specQuadrantLabel">Feature three&mdash;</span>
-            <span className="specQuadrantTitle">Short headline here</span>
-          </div>
-        </article>
-      </div>
-    </Section>
+    <CardSection ariaLabel="Feature highlights">
+      <MetalCard gradient={135} label="Feature one" title="Short headline here" />
+      <MetalCard gradient={225} label="Feature two" title="Short headline here" />
+      <MetalCard
+        wide
+        gradient={115}
+        label="Feature three"
+        title="Short headline here"
+      />
+    </CardSection>
   );
 }

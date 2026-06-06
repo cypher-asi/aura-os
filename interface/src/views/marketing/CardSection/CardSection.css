@@ -1,0 +1,116 @@
+/*
+ * Shared styling for the marketing bento: `CardSection` (the rounded
+ * full-bleed band) and its `MetalCard` cells. Extracted from the former
+ * per-section CSS (`SpecQuadrantSection` / `PersonalAgentSection`) so both
+ * bentos read as one family and share a single source of truth for the
+ * grid, seams, gradients, and card heights.
+ */
+
+/* Symmetric tight padding so an adjacent H2 TextCard intro centers
+   card-to-card between two bentos. Two-class specificity overrides the
+   shell's default 80px. */
+.section.cardSection {
+  padding-top: clamp(8px, 1.5vh, 20px);
+  padding-bottom: clamp(8px, 1.5vh, 20px);
+}
+
+/* Full-bleed band: span the viewport minus a 32px gutter each side, kept
+   centered, then clip the outer corners into one rounded card while the
+   1px inner seams stay square (the cells' own background shows the seam). */
+.cardSectionGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  width: calc(100vw - 64px);
+  margin-inline: calc(50% - 50vw + 32px);
+  background: transparent;
+  border: none;
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+/* A single metal cell. The diagonal gradient (per-card angle) is applied
+   inline by `MetalCard`; this rule owns the layout + shared heights. The
+   regular height matches the personal-agent quadrant cards. */
+.metalCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 35px;
+  min-height: 626px;
+  padding: 50px;
+}
+
+.metalCardWide {
+  grid-column: 1 / -1;
+  min-height: 500px;
+}
+
+/* Media well — flex-grows so the copy block always lands at the cell
+   floor, keeping titles aligned to their cell bottoms. */
+.metalCardMedia {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.metalCardCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.metalCardCenter .metalCardCopy {
+  align-items: center;
+  text-align: center;
+}
+
+.metalCardLabel {
+  font-size: 15px;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+  color: var(--color-text-secondary);
+}
+
+.metalCardLabel::after {
+  content: "\2014";
+}
+
+.metalCardTitle {
+  margin: 0;
+  font-size: clamp(18px, 1.6vw, 22px);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--color-text-primary);
+}
+
+.metalCardDesc {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  max-width: 46ch;
+}
+
+@media (max-width: 768px) {
+  .cardSectionGrid {
+    grid-template-columns: 1fr;
+    /* Tighter 16px gutter on mobile; rounded band is inherited. */
+    width: calc(100vw - 32px);
+    margin-inline: calc(50% - 50vw + 16px);
+  }
+
+  .metalCardWide {
+    grid-column: auto;
+    min-height: 360px;
+  }
+
+  .metalCard {
+    min-height: 420px;
+    padding: 28px;
+  }
+}

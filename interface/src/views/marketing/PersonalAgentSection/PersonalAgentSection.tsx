@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 import { Section } from "../Section";
+import { CardSection, MetalCard } from "../CardSection";
 import { TextCard } from "../TextCard";
 import { MockChatInputCard } from "./MockChatInputCard";
 import { ServiceDeviceCard } from "./ServiceDeviceCard";
@@ -44,56 +45,32 @@ export function PersonalAgentSection(): ReactNode {
         />
       </Section>
 
-      <Section
-        ariaLabel="What your agent can do"
-        fullHeight={false}
-        className="personalAgentBentoSection"
-      >
-        <div className="personalAgentGrid">
-          <article className="personalAgentQuadrant personalAgentQuadrantWide">
-            <div className="personalAgentMedia personalAgentMediaChat">
-              <MockChatInputCard />
-            </div>
-            <div className="personalAgentCopy">
-              <h3 className="personalAgentQuadrantTitle">Always on.</h3>
-              <p className="personalAgentQuadrantDesc">
-                Ask or direct your agent to do almost anything. It will
-                get to work and report back when necessary.
-              </p>
-            </div>
-          </article>
-
-          <article className="personalAgentQuadrant personalAgentQuadrantSkills">
-            <div className="personalAgentMedia">
-              <SkillSeaCard />
-            </div>
-            <div className="personalAgentCopy">
-              <h3 className="personalAgentQuadrantTitle">
-                Intelligent in all domains.
-              </h3>
-              <p className="personalAgentQuadrantDesc">
-                Your agent is a genius in all domains. It can help with
-                the simple tasks of life, to creative projects, to
-                advanced design and coding.
-              </p>
-            </div>
-          </article>
-
-          <article className="personalAgentQuadrant personalAgentQuadrantServices">
-            <div className="personalAgentMedia">
-              <ServiceDeviceCard />
-            </div>
-            <div className="personalAgentCopy">
-              <h3 className="personalAgentQuadrantTitle">Connected to everything.</h3>
-              <p className="personalAgentQuadrantDesc">
-                AURA securely connects to your services so it knows
-                everything about you. Your data never leaves your own
-                secure computer and is never trained on.
-              </p>
-            </div>
-          </article>
-        </div>
-      </Section>
+      <CardSection ariaLabel="What your agent can do">
+        <MetalCard
+          wide
+          gradient={135}
+          className="paCardWide"
+          media={<MockChatInputCard />}
+          title="Always on."
+          description="Ask or direct your agent to do almost anything. It will get to work and report back when necessary."
+        />
+        <MetalCard
+          gradient={225}
+          className="paCardSkills"
+          align="center"
+          media={<SkillSeaCard />}
+          title="Intelligent in all domains."
+          description="Your agent is a genius in all domains. It can help with the simple tasks of life, to creative projects, to advanced design and coding."
+        />
+        <MetalCard
+          gradient={135}
+          className="paCardServices"
+          align="center"
+          media={<ServiceDeviceCard />}
+          title="Connected to everything."
+          description="AURA securely connects to your services so it knows everything about you. Your data never leaves your own secure computer and is never trained on."
+        />
+      </CardSection>
     </>
   );
 }
