@@ -32,7 +32,7 @@ pub(super) async fn dispatch(
 }
 
 async fn list_icons(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, PROVIDER, args).await?;
+    let integration = resolve_org_integration(state, org_id, PROVIDER, None, args).await?;
     let url = build_icons_url(args)?;
     let headers = build_icons_headers(args, &integration.secret)?;
     let response = provider_json_request(
@@ -110,7 +110,7 @@ fn build_icons_headers(args: &Value, secret: &str) -> ApiResult<HeaderMap> {
 }
 
 async fn improve_prompt(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, PROVIDER, args).await?;
+    let integration = resolve_org_integration(state, org_id, PROVIDER, None, args).await?;
     let prompt = required_string(args, &["prompt"])?;
     let generation_type = optional_string(args, &["type"]).unwrap_or_else(|| "image".to_string());
     let mut payload = json!({

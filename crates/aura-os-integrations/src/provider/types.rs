@@ -18,6 +18,7 @@ pub enum AppProviderKind {
     Metricool,
     Mailchimp,
     Resend,
+    Google,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -59,6 +60,7 @@ impl AppProviderKind {
             AppProviderKind::Metricool => "metricool",
             AppProviderKind::Mailchimp => "mailchimp",
             AppProviderKind::Resend => "resend",
+            AppProviderKind::Google => "google",
         }
     }
 }

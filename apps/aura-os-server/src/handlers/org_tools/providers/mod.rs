@@ -10,7 +10,7 @@ use aura_os_integrations::{trusted_integration_method_by_tool, AppProviderKind};
 use serde_json::Value;
 
 use super::resolve::resolve_org_integration;
-use crate::error::ApiResult;
+use crate::error::{ApiError, ApiResult};
 use crate::handlers::trusted_runtime::execute_trusted_integration_tool;
 use crate::state::AppState;
 
@@ -30,11 +30,13 @@ pub(super) async fn dispatch_app_provider_tool(
     kind: AppProviderKind,
     state: &AppState,
     org_id: &OrgId,
+    user_id: &str,
     tool_name: &str,
     args: &Value,
 ) -> ApiResult<Value> {
     if let Some(method) = trusted_integration_method_by_tool(tool_name) {
-        let integration = resolve_org_integration(state, org_id, &method.provider, args).await?;
+        let integration =
+            resolve_org_integration(state, org_id, &method.provider, Some(user_id), args).await?;
         return execute_trusted_integration_tool(
             &state.http_client,
             kind,
@@ -58,5 +60,8 @@ pub(super) async fn dispatch_app_provider_tool(
         AppProviderKind::Metricool => metricool::dispatch(state, org_id, tool_name, args).await,
         AppProviderKind::Mailchimp => mailchimp::dispatch(state, org_id, tool_name, args).await,
         AppProviderKind::Resend => resend::dispatch(state, org_id, tool_name, args).await,
+        AppProviderKind::Google => Err(ApiError::not_found(format!(
+            "unknown trusted app tool `{tool_name}`"
+        ))),
     }
 }

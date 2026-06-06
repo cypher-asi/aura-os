@@ -165,6 +165,23 @@ impl IntegrationsClient {
         Ok(resp.get("secret").and_then(Value::as_str).map(String::from))
     }
 
+    pub async fn start_google_oauth(
+        &self,
+        org_id: &OrgId,
+        jwt: &str,
+        return_url: Option<&str>,
+    ) -> Result<Value, IntegrationsError> {
+        let mut url = reqwest::Url::parse(&format!(
+            "{}/api/orgs/{}/integrations/oauth/google/start",
+            self.base_url, org_id
+        ))
+        .map_err(|error| IntegrationsError::InvalidUrl(format!("invalid OAuth URL: {error}")))?;
+        if let Some(return_url) = return_url.filter(|value| !value.trim().is_empty()) {
+            url.query_pairs_mut().append_pair("return_url", return_url);
+        }
+        self.get_authed(url.as_str(), jwt).await
+    }
+
     // ── Internal API (X-Internal-Token) ──
 
     pub async fn get_integration_internal(

@@ -442,3 +442,55 @@ pub async fn assert_resend_actions(app: &Router, org_id: &OrgId) {
     let resend_email = response_json(resp).await;
     assert_eq!(resend_email["email"]["id"], "email-1");
 }
+
+pub async fn assert_google_read_actions(app: &Router, org_id: &OrgId) {
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/gmail_search_messages"),
+        Some(serde_json::json!({
+            "query": "newer_than:7d",
+            "max_results": 5
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let gmail_search = response_json(resp).await;
+    assert_eq!(gmail_search["messages"][0]["id"], "msg-1");
+    assert_eq!(gmail_search["result_size_estimate"], 1);
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/gmail_get_message"),
+        Some(serde_json::json!({
+            "message_id": "msg-1"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let gmail_message = response_json(resp).await;
+    assert_eq!(gmail_message["message"]["snippet"], "Read-only Gmail test");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/google_calendar_list_calendars"),
+        Some(serde_json::json!({})),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let calendars = response_json(resp).await;
+    assert_eq!(calendars["calendars"][0]["id"], "primary");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/google_calendar_list_events"),
+        Some(serde_json::json!({
+            "calendar_id": "primary",
+            "time_min": "2026-06-06T00:00:00-04:00",
+            "time_max": "2026-06-07T00:00:00-04:00"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let events = response_json(resp).await;
+    assert_eq!(events["events"][0]["id"], "event-1");
+}

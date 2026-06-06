@@ -32,7 +32,7 @@ pub(super) async fn dispatch(
 }
 
 async fn buffer_list_profiles(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, PROVIDER, args).await?;
+    let integration = resolve_org_integration(state, org_id, PROVIDER, None, args).await?;
     let url = app_provider_authenticated_url(KIND, "/profiles.json", &integration.secret)
         .map_err(ApiError::bad_request)?;
     let response = provider_json_request(
@@ -61,7 +61,7 @@ async fn buffer_list_profiles(state: &AppState, org_id: &OrgId, args: &Value) ->
 }
 
 async fn buffer_create_update(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, PROVIDER, args).await?;
+    let integration = resolve_org_integration(state, org_id, PROVIDER, None, args).await?;
     let profile_id = required_string(args, &["profile_id", "profileId"])?;
     let text = required_string(args, &["text"])?;
     let url = app_provider_authenticated_url(KIND, "/updates/create.json", &integration.secret)

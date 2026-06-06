@@ -457,4 +457,62 @@ pub fn build_provider_mock() -> Router {
                 }))
             }),
         )
+        .route(
+            "/google/gmail/v1/users/me/messages",
+            get(|| async {
+                Json(serde_json::json!({
+                    "messages": [{
+                        "id": "msg-1",
+                        "threadId": "thread-1"
+                    }],
+                    "resultSizeEstimate": 1
+                }))
+            }),
+        )
+        .route(
+            "/google/gmail/v1/users/me/messages/msg-1",
+            get(|| async {
+                Json(serde_json::json!({
+                    "id": "msg-1",
+                    "threadId": "thread-1",
+                    "snippet": "Read-only Gmail test",
+                    "labelIds": ["INBOX"],
+                    "internalDate": "1710000000000",
+                    "payload": {
+                        "headers": [{
+                            "name": "Subject",
+                            "value": "Aura read-only test"
+                        }]
+                    }
+                }))
+            }),
+        )
+        .route(
+            "/google/calendar/v3/users/me/calendarList",
+            get(|| async {
+                Json(serde_json::json!({
+                    "items": [{
+                        "id": "primary",
+                        "summary": "Primary Calendar",
+                        "timeZone": "America/New_York",
+                        "accessRole": "owner",
+                        "primary": true
+                    }]
+                }))
+            }),
+        )
+        .route(
+            "/google/calendar/v3/calendars/primary/events",
+            get(|| async {
+                Json(serde_json::json!({
+                    "items": [{
+                        "id": "event-1",
+                        "summary": "Read-only calendar event",
+                        "htmlLink": "https://calendar.google.com/event?eid=event-1",
+                        "start": { "dateTime": "2026-06-06T09:00:00-04:00" },
+                        "end": { "dateTime": "2026-06-06T09:30:00-04:00" }
+                    }]
+                }))
+            }),
+        )
 }

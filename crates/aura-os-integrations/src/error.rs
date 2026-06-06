@@ -11,6 +11,9 @@ pub enum IntegrationsError {
     #[error("Deserialization error: {0}")]
     Deserialize(String),
 
+    #[error("Invalid integrations URL: {0}")]
+    InvalidUrl(String),
+
     #[error("aura-integrations is not configured; Aura OS is using compatibility-only local integration storage")]
     NotConfigured,
 }

@@ -33,12 +33,12 @@ pub(super) async fn dispatch(
 }
 
 async fn brave_search_web(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, PROVIDER, args).await?;
+    let integration = resolve_org_integration(state, org_id, PROVIDER, None, args).await?;
     brave_search(state, &integration, args, "web").await
 }
 
 async fn brave_search_news(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, PROVIDER, args).await?;
+    let integration = resolve_org_integration(state, org_id, PROVIDER, None, args).await?;
     brave_search(state, &integration, args, "news").await
 }
 

@@ -1,4 +1,5 @@
 use super::*;
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 
 pub(super) fn trusted_http_method(method: TrustedIntegrationHttpMethod) -> reqwest::Method {
     match method {
@@ -139,6 +140,9 @@ pub(super) fn resolve_binding_value(
                 optional_positive_number_from_names(args, &binding.arg_names)
                     .map(|value| json!(value))
             }
+            TrustedIntegrationArgValueType::Boolean => {
+                optional_bool_from_names(args, &binding.arg_names).map(Value::Bool)
+            }
             TrustedIntegrationArgValueType::Json => {
                 optional_json_from_names(args, &binding.arg_names)
             }
@@ -153,6 +157,9 @@ pub(super) fn resolve_binding_value(
             TrustedIntegrationArgValueType::PositiveNumber => provider_config
                 .and_then(|config| optional_positive_number_from_names(config, &binding.arg_names))
                 .map(|value| json!(value)),
+            TrustedIntegrationArgValueType::Boolean => provider_config
+                .and_then(|config| optional_bool_from_names(config, &binding.arg_names))
+                .map(Value::Bool),
             TrustedIntegrationArgValueType::Json => provider_config
                 .and_then(|config| optional_json_from_names(config, &binding.arg_names)),
         },
@@ -403,6 +410,85 @@ pub(super) fn ensure_slack_ok(response: &Value) -> ApiResult<()> {
     }
 }
 
+pub(super) fn build_gmail_raw_message(
+    from: &str,
+    to: &[String],
+    cc: Option<&[String]>,
+    bcc: Option<&[String]>,
+    subject: &str,
+    text: Option<&str>,
+    html: Option<&str>,
+) -> ApiResult<String> {
+    let from = safe_header_value("from", from)?;
+    let subject = safe_header_value("subject", subject)?;
+    let to_header = safe_header_list("to", to)?;
+    let cc_header = cc
+        .filter(|items| !items.is_empty())
+        .map(|items| safe_header_list("cc", items))
+        .transpose()?;
+    let bcc_header = bcc
+        .filter(|items| !items.is_empty())
+        .map(|items| safe_header_list("bcc", items))
+        .transpose()?;
+    let (content_type, body) = if let Some(html) = html.filter(|value| !value.trim().is_empty()) {
+        ("text/html", html)
+    } else if let Some(text) = text.filter(|value| !value.trim().is_empty()) {
+        ("text/plain", text)
+    } else {
+        return Err(ApiError::bad_request(
+            "gmail_send_email requires non-empty `text` or `html`",
+        ));
+    };
+
+    let mut message = String::new();
+    message.push_str("MIME-Version: 1.0\r\n");
+    message.push_str(&format!("From: {from}\r\n"));
+    message.push_str(&format!("To: {to_header}\r\n"));
+    if let Some(cc_header) = cc_header {
+        message.push_str(&format!("Cc: {cc_header}\r\n"));
+    }
+    if let Some(bcc_header) = bcc_header {
+        message.push_str(&format!("Bcc: {bcc_header}\r\n"));
+    }
+    message.push_str(&format!("Subject: {subject}\r\n"));
+    message.push_str(&format!(
+        "Content-Type: {content_type}; charset=\"UTF-8\"\r\n"
+    ));
+    message.push_str("Content-Transfer-Encoding: 8bit\r\n");
+    message.push_str("\r\n");
+    message.push_str(body);
+
+    Ok(URL_SAFE_NO_PAD.encode(message.as_bytes()))
+}
+
+fn safe_header_list(name: &str, values: &[String]) -> ApiResult<String> {
+    if values.is_empty() {
+        return Err(ApiError::bad_request(format!(
+            "gmail_send_email requires at least one `{name}` recipient"
+        )));
+    }
+    values
+        .iter()
+        .map(|value| safe_header_value(name, value))
+        .collect::<ApiResult<Vec<_>>>()
+        .map(|values| values.join(", "))
+}
+
+fn safe_header_value(name: &str, value: &str) -> ApiResult<String> {
+    let value = value.trim();
+    if value.is_empty() {
+        return Err(ApiError::bad_request(format!(
+            "gmail_send_email `{name}` cannot be empty"
+        )));
+    }
+    if value.contains('\r') || value.contains('\n') {
+        return Err(ApiError::bad_request(format!(
+            "gmail_send_email `{name}` cannot contain newlines"
+        )));
+    }
+    Ok(value.to_string())
+}
+
 pub(super) fn required_string(args: &Value, keys: &[&str]) -> ApiResult<String> {
     optional_string(args, keys)
         .ok_or_else(|| ApiError::bad_request(format!("missing required field `{}`", keys[0])))
@@ -471,6 +557,66 @@ pub(super) fn optional_positive_number_from_names(args: &Value, keys: &[String])
         .find_map(|key| args.get(key).and_then(Value::as_u64))
 }
 
+pub(super) fn optional_bool_from_names(args: &Value, keys: &[String]) -> Option<bool> {
+    keys.iter().find_map(|key| {
+        let value = args.get(key)?;
+        if let Some(value) = value.as_bool() {
+            return Some(value);
+        }
+        value.as_str().and_then(|raw| match raw.trim() {
+            "true" => Some(true),
+            "false" => Some(false),
+            _ => None,
+        })
+    })
+}
+
 pub(super) fn optional_json_from_names(args: &Value, keys: &[String]) -> Option<Value> {
     keys.iter().find_map(|key| args.get(key).cloned())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+
+    #[test]
+    fn gmail_raw_message_is_base64url_encoded_mime() {
+        let encoded = build_gmail_raw_message(
+            "Aura <sender@example.com>",
+            &["to@example.com".to_string()],
+            Some(&["cc@example.com".to_string()]),
+            None,
+            "Hello",
+            Some("Plain body"),
+            None,
+        )
+        .expect("gmail raw message");
+        let decoded = String::from_utf8(URL_SAFE_NO_PAD.decode(encoded).expect("decode"))
+            .expect("utf8 message");
+
+        assert!(decoded.contains("From: Aura <sender@example.com>\r\n"));
+        assert!(decoded.contains("To: to@example.com\r\n"));
+        assert!(decoded.contains("Cc: cc@example.com\r\n"));
+        assert!(decoded.contains("Subject: Hello\r\n"));
+        assert!(decoded.contains("Content-Type: text/plain; charset=\"UTF-8\"\r\n"));
+        assert!(decoded.ends_with("Plain body"));
+    }
+
+    #[test]
+    fn gmail_raw_message_rejects_header_newlines() {
+        let err = build_gmail_raw_message(
+            "sender@example.com",
+            &["to@example.com".to_string()],
+            None,
+            None,
+            "Hello\r\nBcc: attacker@example.com",
+            Some("Plain body"),
+            None,
+        )
+        .expect_err("header injection should fail");
+
+        let api_error = (err.1).0;
+        assert!(api_error.error.contains("cannot contain newlines"));
+    }
 }

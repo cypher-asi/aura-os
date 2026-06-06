@@ -1,4 +1,15 @@
-import type { Org, OrgMember, OrgInvite, OrgBilling, OrgRole, CreditBalance, CheckoutSessionResponse, TransactionsResponse, BillingAccount, OrgIntegration } from "../types";
+import type {
+  Org,
+  OrgMember,
+  OrgInvite,
+  OrgBilling,
+  OrgRole,
+  CreditBalance,
+  CheckoutSessionResponse,
+  TransactionsResponse,
+  BillingAccount,
+  OrgIntegration,
+} from "../types";
 import { apiFetch } from "./core";
 
 export interface UpdateOrgPayload {
@@ -70,7 +81,12 @@ export const orgsApi = {
   createPortalSession: () =>
     apiFetch<{ url: string }>("/api/subscriptions/portal", { method: "POST" }),
   getSubscriptionStatus: () =>
-    apiFetch<{ plan: string; is_subscribed: boolean; monthly_credits: number; current_period_end?: string }>("/api/subscriptions/me"),
+    apiFetch<{
+      plan: string;
+      is_subscribed: boolean;
+      monthly_credits: number;
+      current_period_end?: string;
+    }>("/api/subscriptions/me"),
   listIntegrations: (orgId: string) =>
     apiFetch<OrgIntegration[]>(`/api/orgs/${orgId}/integrations`),
   createIntegration: (
@@ -102,12 +118,23 @@ export const orgsApi = {
       enabled?: boolean | null;
     },
   ) =>
-    apiFetch<OrgIntegration>(`/api/orgs/${orgId}/integrations/${integrationId}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    }),
+    apiFetch<OrgIntegration>(
+      `/api/orgs/${orgId}/integrations/${integrationId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      },
+    ),
   deleteIntegration: (orgId: string, integrationId: string) =>
     apiFetch<void>(`/api/orgs/${orgId}/integrations/${integrationId}`, {
       method: "DELETE",
     }),
+  startGoogleOAuth: (orgId: string, returnUrl?: string) => {
+    const params = new URLSearchParams();
+    if (returnUrl) params.set("return_url", returnUrl);
+    const suffix = params.toString() ? `?${params.toString()}` : "";
+    return apiFetch<{ authorization_url: string }>(
+      `/api/orgs/${orgId}/integrations/oauth/google/start${suffix}`,
+    );
+  },
 };

@@ -40,6 +40,7 @@ interface Props {
     },
   ) => Promise<OrgIntegration | null>;
   onDelete: (integrationId: string) => Promise<void>;
+  onConnectGoogle?: () => Promise<boolean | null>;
 }
 
 type IntegrationDraft = {
@@ -131,6 +132,7 @@ export function OrgSettingsIntegrations({
   onCreate,
   onUpdate,
   onDelete,
+  onConnectGoogle,
 }: Props) {
   const [drafts, setDrafts] = useState<DraftState>({});
   const [newIntegration, setNewIntegration] = useState<IntegrationDraft | null>(null);
@@ -160,6 +162,8 @@ export function OrgSettingsIntegrations({
   const newSecretPlaceholder = newIntegration ? getSecretPlaceholder(newIntegration.provider) : "Paste the API key";
   const newAuthHint = newIntegration ? providerAuthHint(newIntegration.provider) : null;
   const newConfigFields = newIntegration ? getIntegrationConfigFields(newIntegration.provider) : [];
+  const newIsGoogle = newIntegration?.provider === "google";
+  const isOAuthBusy = busyId === "google_oauth";
 
   return (
     <div>
@@ -210,28 +214,38 @@ export function OrgSettingsIntegrations({
                     <Text size="xs" variant="muted">{newAuthHint}</Text>
                   ) : null}
                 </div>
-                <div className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull}`}>
-                  <label className={styles.integrationFieldLabel} htmlFor="new-integration-name">Name</label>
-                  <Input
-                    id="new-integration-name"
-                    aria-label="New integration name"
-                    value={newIntegration.name}
-                    onChange={(e) => setNewIntegration((prev) => prev ? { ...prev, name: e.target.value } : prev)}
-                    placeholder={`e.g. ${newProvider?.label ?? "Provider"} Production`}
-                  />
-                </div>
-                <div className={`${styles.integrationFieldGroup} ${newSupportsModel || newConfigFields.length > 0 ? "" : styles.integrationFieldGroupFull}`}>
-                  <label className={styles.integrationFieldLabel} htmlFor="new-integration-key">{newSecretLabel}</label>
-                  <Input
-                    id="new-integration-key"
-                    aria-label={`New ${newSecretLabel}`}
-                    type="password"
-                    value={newIntegration.apiKey}
-                    onChange={(e) => setNewIntegration((prev) => prev ? { ...prev, apiKey: e.target.value } : prev)}
-                    placeholder={newSecretPlaceholder}
-                  />
-                </div>
-                {(newSupportsModel || newConfigFields.length > 0) && (
+                {newIsGoogle ? (
+                  <div className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull}`}>
+                    <Text size="xs" variant="muted">
+                      Connect with Google OAuth to enable Gmail and Calendar tools for this workspace.
+                    </Text>
+                  </div>
+                ) : (
+                  <>
+                    <div className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull}`}>
+                      <label className={styles.integrationFieldLabel} htmlFor="new-integration-name">Name</label>
+                      <Input
+                        id="new-integration-name"
+                        aria-label="New integration name"
+                        value={newIntegration.name}
+                        onChange={(e) => setNewIntegration((prev) => prev ? { ...prev, name: e.target.value } : prev)}
+                        placeholder={`e.g. ${newProvider?.label ?? "Provider"} Production`}
+                      />
+                    </div>
+                    <div className={`${styles.integrationFieldGroup} ${newSupportsModel || newConfigFields.length > 0 ? "" : styles.integrationFieldGroupFull}`}>
+                      <label className={styles.integrationFieldLabel} htmlFor="new-integration-key">{newSecretLabel}</label>
+                      <Input
+                        id="new-integration-key"
+                        aria-label={`New ${newSecretLabel}`}
+                        type="password"
+                        value={newIntegration.apiKey}
+                        onChange={(e) => setNewIntegration((prev) => prev ? { ...prev, apiKey: e.target.value } : prev)}
+                        placeholder={newSecretPlaceholder}
+                      />
+                    </div>
+                  </>
+                )}
+                {!newIsGoogle && (newSupportsModel || newConfigFields.length > 0) && (
                   <details className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull} ${styles.integrationAdvanced}`}>
                     <summary className={styles.integrationAdvancedSummary}>Advanced</summary>
                     <div className={styles.integrationAdvancedBody}>
@@ -272,6 +286,20 @@ export function OrgSettingsIntegrations({
                   <Button
                     variant="primary"
                     onClick={async () => {
+                      if (newIntegration.provider === "google") {
+                        if (!onConnectGoogle) return;
+                        setErrorMessage(null);
+                        try {
+                          await onConnectGoogle();
+                          setNewIntegration(null);
+                          setIsCreating(false);
+                        } catch (error) {
+                          setErrorMessage(
+                            error instanceof Error ? error.message : "Failed to connect Google",
+                          );
+                        }
+                        return;
+                      }
                       if (!newIntegration.name.trim()) return;
                       setErrorMessage(null);
                       try {
@@ -284,9 +312,11 @@ export function OrgSettingsIntegrations({
                         );
                       }
                     }}
-                    disabled={busyId === "new" || !canManage}
+                    disabled={(newIntegration.provider === "google" ? isOAuthBusy : busyId === "new") || !canManage}
                   >
-                    {busyId === "new" ? "Saving..." : "Add"}
+                    {newIntegration.provider === "google"
+                      ? isOAuthBusy ? "Connecting..." : "Connect Google"
+                      : busyId === "new" ? "Saving..." : "Add"}
                   </Button>
                 </div>
               </div>
@@ -313,6 +343,7 @@ export function OrgSettingsIntegrations({
                 const secretPlaceholder = getSecretPlaceholder(draft.provider);
                 const authHint = providerAuthHint(draft.provider);
                 const configFields = getIntegrationConfigFields(draft.provider);
+                const isGoogle = draft.provider === "google";
                 const isExpanded = expandedIntegrationId === integration.integration_id;
                 const configCount = Object.values(draft.providerConfig)
                   .filter((value) => value.trim().length > 0)
@@ -331,7 +362,13 @@ export function OrgSettingsIntegrations({
                         <div className={styles.integrationBadgeRow}>
                           <span className={styles.integrationBadge}>{getIntegrationLabel(integration.provider)}</span>
                           <span className={styles.integrationBadge}>
-                            {integration.secret_last4 ? `Key ••••${integration.secret_last4}` : "No key"}
+                            {isGoogle
+                              ? integration.provider_config?.accountEmail
+                                ? String(integration.provider_config.accountEmail)
+                                : integration.has_secret
+                                  ? "Google connected"
+                                  : "Not connected"
+                              : integration.secret_last4 ? `Key ••••${integration.secret_last4}` : "No key"}
                           </span>
                           {supportsCapabilityToggle(integration.kind) && (
                             <span className={styles.integrationBadge}>
@@ -402,22 +439,49 @@ export function OrgSettingsIntegrations({
                           </div>
                           <Text size="xs" variant="muted">{providerDescription(draft.provider)}</Text>
                         </div>
-                        <div className={`${styles.integrationFieldGroup} ${supportsModel || configFields.length > 0 ? "" : styles.integrationFieldGroupFull}`}>
-                          <label className={styles.integrationFieldLabel} htmlFor={`integration-key-${integration.integration_id}`}>{secretLabel}</label>
-                          <Input
-                            id={`integration-key-${integration.integration_id}`}
-                            aria-label={`${secretLabel} for ${integration.name}`}
-                            type="password"
-                            value={draft.apiKey}
-                            onChange={(e) => setDrafts((prev) => ({
-                              ...prev,
-                              [integration.integration_id]: { ...draft, apiKey: e.target.value },
-                            }))}
-                            placeholder={integration.has_secret ? "Leave blank to keep the existing secret" : secretPlaceholder}
-                          />
-                          {authHint && <Text size="xs" variant="muted">{authHint}</Text>}
-                        </div>
-                        {(supportsModel || configFields.length > 0) && (
+                        {isGoogle ? (
+                          <div className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull}`}>
+                            <Text size="xs" variant="muted">
+                              Connect with Google OAuth to refresh Gmail and Calendar access.
+                            </Text>
+                            <div className={styles.integrationActions}>
+                              <Button
+                                variant="primary"
+                                onClick={async () => {
+                                  if (!onConnectGoogle) return;
+                                  setErrorMessage(null);
+                                  try {
+                                    await onConnectGoogle();
+                                  } catch (error) {
+                                    setErrorMessage(
+                                      error instanceof Error ? error.message : "Failed to connect Google",
+                                    );
+                                  }
+                                }}
+                                disabled={isOAuthBusy || !canManage || !onConnectGoogle}
+                              >
+                                {isOAuthBusy ? "Connecting..." : "Reconnect Google"}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className={`${styles.integrationFieldGroup} ${supportsModel || configFields.length > 0 ? "" : styles.integrationFieldGroupFull}`}>
+                            <label className={styles.integrationFieldLabel} htmlFor={`integration-key-${integration.integration_id}`}>{secretLabel}</label>
+                            <Input
+                              id={`integration-key-${integration.integration_id}`}
+                              aria-label={`${secretLabel} for ${integration.name}`}
+                              type="password"
+                              value={draft.apiKey}
+                              onChange={(e) => setDrafts((prev) => ({
+                                ...prev,
+                                [integration.integration_id]: { ...draft, apiKey: e.target.value },
+                              }))}
+                              placeholder={integration.has_secret ? "Leave blank to keep the existing secret" : secretPlaceholder}
+                            />
+                            {authHint && <Text size="xs" variant="muted">{authHint}</Text>}
+                          </div>
+                        )}
+                        {!isGoogle && (supportsModel || configFields.length > 0) && (
                           <details className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull} ${styles.integrationAdvanced}`}>
                             <summary className={styles.integrationAdvancedSummary}>Advanced</summary>
                             <div className={styles.integrationAdvancedBody}>

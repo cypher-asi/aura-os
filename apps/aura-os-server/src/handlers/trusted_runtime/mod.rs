@@ -159,5 +159,108 @@ pub(crate) async fn execute_trusted_integration_tool(
                 }
             }))
         }
+        TrustedIntegrationRuntimeSpec::GmailSendEmail => {
+            let from = required_string(args, &["from"])?;
+            let to = required_string_list(args, &["to"])?;
+            let subject = required_string(args, &["subject"])?;
+            let text = optional_string(args, &["text"]);
+            let html = optional_string(args, &["html"]);
+            if text.is_none() && html.is_none() {
+                return Err(ApiError::bad_request(
+                    "gmail_send_email requires at least one of `text` or `html`",
+                ));
+            }
+
+            let raw = build_gmail_raw_message(
+                &from,
+                &to,
+                optional_string_list(args, &["cc"]).as_deref(),
+                optional_string_list(args, &["bcc"]).as_deref(),
+                &subject,
+                text.as_deref(),
+                html.as_deref(),
+            )?;
+            let url = format!(
+                "{}/gmail/v1/users/me/messages/send",
+                app_provider_base_url(kind)
+                    .ok_or_else(|| ApiError::internal("trusted provider base url missing"))?
+            );
+            let response = provider_json_request(
+                client,
+                reqwest::Method::POST,
+                &url,
+                app_provider_headers(kind, secret).map_err(ApiError::bad_request)?,
+                Some(json!({ "raw": raw })),
+            )
+            .await?;
+            Ok(json!({
+                "message": {
+                    "id": response.get("id").and_then(Value::as_str).unwrap_or_default(),
+                    "thread_id": response.get("threadId").and_then(Value::as_str).unwrap_or_default(),
+                    "label_ids": response.get("labelIds").cloned().unwrap_or_else(|| json!([])),
+                }
+            }))
+        }
+        TrustedIntegrationRuntimeSpec::GoogleCalendarCreateEvent => {
+            let calendar_id = required_string(args, &["calendar_id", "calendarId"])?;
+            let summary = required_string(args, &["summary"])?;
+            let start = required_string(args, &["start"])?;
+            let end = required_string(args, &["end"])?;
+            let time_zone = optional_string(args, &["time_zone", "timeZone"]);
+            let mut event = json!({
+                "summary": summary,
+                "start": { "dateTime": start },
+                "end": { "dateTime": end },
+            });
+            if let Some(time_zone) = time_zone {
+                event["start"]["timeZone"] = Value::String(time_zone.clone());
+                event["end"]["timeZone"] = Value::String(time_zone);
+            }
+            if let Some(description) = optional_string(args, &["description"]) {
+                event["description"] = Value::String(description);
+            }
+            if let Some(location) = optional_string(args, &["location"]) {
+                event["location"] = Value::String(location);
+            }
+            if let Some(attendees) = optional_string_list(args, &["attendees"]) {
+                event["attendees"] = Value::Array(
+                    attendees
+                        .into_iter()
+                        .map(|email| json!({ "email": email }))
+                        .collect(),
+                );
+            }
+
+            let mut url = app_provider_authenticated_url_with_config(
+                kind,
+                &format!("/calendar/v3/calendars/{calendar_id}/events"),
+                secret,
+                provider_config,
+            )
+            .map_err(ApiError::bad_request)?;
+            if let Some(send_updates) = optional_string(args, &["send_updates", "sendUpdates"]) {
+                url.query_pairs_mut()
+                    .append_pair("sendUpdates", &send_updates);
+            }
+            let response = provider_json_request(
+                client,
+                reqwest::Method::POST,
+                url.as_str(),
+                app_provider_headers(kind, secret).map_err(ApiError::bad_request)?,
+                Some(event),
+            )
+            .await?;
+            Ok(json!({
+                "event": {
+                    "id": response.get("id").and_then(Value::as_str).unwrap_or_default(),
+                    "summary": response.get("summary").and_then(Value::as_str).unwrap_or_default(),
+                    "html_link": response.get("htmlLink").and_then(Value::as_str),
+                    "status": response.get("status").and_then(Value::as_str),
+                    "start": response.get("start").cloned().unwrap_or(Value::Null),
+                    "end": response.get("end").cloned().unwrap_or(Value::Null),
+                    "attendees": response.get("attendees").cloned().unwrap_or_else(|| json!([])),
+                }
+            }))
+        }
     }
 }

@@ -111,6 +111,30 @@ describe("OrgSettingsIntegrations", () => {
     });
   });
 
+  it("starts Google OAuth instead of asking for an API key", async () => {
+    const user = userEvent.setup();
+    const onConnectGoogle = vi.fn().mockResolvedValue(true);
+
+    render(
+      <OrgSettingsIntegrations
+        integrations={[]}
+        busyId={null}
+        canManage
+        onCreate={vi.fn().mockResolvedValue(null)}
+        onUpdate={vi.fn().mockResolvedValue(null)}
+        onDelete={vi.fn().mockResolvedValue(undefined)}
+        onConnectGoogle={onConnectGoogle}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Add Integration" }));
+    await user.click(screen.getByRole("button", { name: "Google" }));
+
+    expect(screen.queryByLabelText("New Google Account")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Connect Google" }));
+    expect(onConnectGoogle).toHaveBeenCalledOnce();
+  });
+
   it("shows provider-specific auth guidance for tool integrations", async () => {
     const user = userEvent.setup();
 

@@ -619,6 +619,73 @@
   margin-top: var(--space-1);
 }
 
+.googleStatusPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-surface) 88%, var(--color-brand-primary) 12%);
+}
+
+.googleStatusHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.googleStatusIcon,
+.googleStatusIconConnected {
+  flex: 0 0 auto;
+  color: var(--color-text-muted);
+}
+
+.googleStatusIconConnected {
+  color: var(--color-success);
+}
+
+.googleStatusValue {
+  margin-top: 3px;
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.googleCapabilityGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.googleCapabilityItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--color-text-secondary);
+}
+
+.googleCapabilityItem svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--color-text-muted);
+}
+
+.googleCapabilityTitle {
+  color: var(--color-text-primary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.googleCapabilityBody {
+  margin-top: 2px;
+  color: var(--color-text-muted);
+  font-size: var(--text-2xs);
+  line-height: 1.35;
+}
+
 .integrationEditor {
   padding-top: var(--space-4);
   margin-top: var(--space-1);
@@ -759,6 +826,10 @@
   }
 
   .integrationAdvancedBody {
+    grid-template-columns: 1fr;
+  }
+
+  .googleCapabilityGrid {
     grid-template-columns: 1fr;
   }
 

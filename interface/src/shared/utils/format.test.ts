@@ -316,6 +316,19 @@ describe("summarizeInput", () => {
     expect(result).toBe("12345678 → done");
   });
 
+  it("returns useful summaries for Google tools", () => {
+    expect(summarizeInput("gmail_search_messages", { query: "from:alice" })).toBe("from:alice");
+    expect(summarizeInput("gmail_search_messages", { newer_than: "7d" })).toBe("newer than 7d");
+    expect(summarizeInput("gmail_get_message", { message_id: "abcdef1234567890" })).toBe("abcdef123456");
+    expect(summarizeInput("gmail_send_email", { subject: "Weekly update" })).toBe("Weekly update");
+    expect(summarizeInput("google_calendar_list_events", { calendar_id: "primary" })).toBe("primary");
+    expect(summarizeInput("google_calendar_list_events", {
+      calendar_id: "work",
+      time_min: "2026-06-06T00:00:00Z",
+    })).toBe("work from 2026-06-06T00:00:00Z");
+    expect(summarizeInput("google_calendar_create_event", { summary: "Planning" })).toBe("Planning");
+  });
+
   it("returns empty string for unknown tools", () => {
     expect(summarizeInput("unknown_tool", {})).toBe("");
   });

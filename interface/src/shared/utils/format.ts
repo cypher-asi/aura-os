@@ -186,6 +186,24 @@ export function summarizeInput(name: string, input: Record<string, unknown>): st
       return (input.spec_id as string)?.slice(0, 8) || "";
     case "transition_task":
       return `${(input.task_id as string)?.slice(0, 8)} → ${input.status}`;
+    case "gmail_search_messages": {
+      const query = (input.query as string) || (input.q as string) || "";
+      const newerThan = (input.newer_than as string) || "";
+      return query || (newerThan ? `newer than ${newerThan}` : "");
+    }
+    case "gmail_get_message":
+      return ((input.message_id as string) || "").slice(0, 12);
+    case "gmail_send_email":
+      return ((input.subject as string) || (input.to as string) || "").slice(0, 80);
+    case "google_calendar_list_calendars":
+      return "";
+    case "google_calendar_list_events": {
+      const calendar = (input.calendar_id as string) || "primary";
+      const timeMin = (input.time_min as string) || "";
+      return timeMin ? `${calendar} from ${timeMin}` : calendar;
+    }
+    case "google_calendar_create_event":
+      return ((input.summary as string) || (input.title as string) || "").slice(0, 80);
     default:
       return "";
   }
@@ -381,4 +399,3 @@ export function formatChatTime(iso: string): string {
 
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
-

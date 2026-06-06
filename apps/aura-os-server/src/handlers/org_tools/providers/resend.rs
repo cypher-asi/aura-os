@@ -34,7 +34,7 @@ pub(super) async fn dispatch(
 }
 
 async fn resend_list_domains(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, PROVIDER, args).await?;
+    let integration = resolve_org_integration(state, org_id, PROVIDER, None, args).await?;
     let base_url = app_provider_base_url(KIND)
         .ok_or_else(|| ApiError::internal("resend provider base url missing"))?;
     let response = provider_json_request(
@@ -69,7 +69,7 @@ async fn resend_list_domains(state: &AppState, org_id: &OrgId, args: &Value) -> 
 }
 
 async fn resend_send_email(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, PROVIDER, args).await?;
+    let integration = resolve_org_integration(state, org_id, PROVIDER, None, args).await?;
     let from = required_string(args, &["from"])?;
     let to = required_string_list(args, &["to"])?;
     let subject = required_string(args, &["subject"])?;

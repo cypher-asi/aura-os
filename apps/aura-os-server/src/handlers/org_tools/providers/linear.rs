@@ -29,7 +29,7 @@ pub(super) async fn dispatch(
 }
 
 async fn list_teams(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, PROVIDER, args).await?;
+    let integration = resolve_org_integration(state, org_id, PROVIDER, None, args).await?;
     let response = linear_graphql(
         &state.http_client,
         &integration.secret,
@@ -46,7 +46,7 @@ async fn list_teams(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult
 }
 
 async fn create_issue(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, PROVIDER, args).await?;
+    let integration = resolve_org_integration(state, org_id, PROVIDER, None, args).await?;
     let team_id = required_string(args, &["team_id", "teamId"])?;
     let title = required_string(args, &["title"])?;
     let description = optional_string(

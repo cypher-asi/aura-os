@@ -216,6 +216,7 @@ async fn resolve_org_integration_prefers_canonical_metadata_for_selected_id() {
         &state,
         &org_id,
         "github",
+        None,
         &serde_json::json!({ "integration_id": integration_id }),
     )
     .await
@@ -262,12 +263,62 @@ async fn resolve_org_integration_prefers_canonical_provider_list() {
         "internal-token",
     )));
 
-    let resolved = resolve_org_integration(&state, &org_id, "github", &serde_json::json!({}))
+    let resolved = resolve_org_integration(&state, &org_id, "github", None, &serde_json::json!({}))
         .await
         .expect("resolve canonical provider integration");
 
     assert_eq!(resolved.metadata, canonical);
     assert_eq!(resolved.secret, "canonical-secret");
+}
+
+#[tokio::test]
+async fn resolve_google_integration_requires_matching_owner_user() {
+    let store_dir = tempfile::tempdir().unwrap();
+    let store_path = store_dir.path().join("store");
+    let state = crate::build_app_state(&store_path).expect("build app state");
+    let org_id = OrgId::new();
+
+    let integration = state
+        .org_service
+        .upsert_integration(
+            &org_id,
+            None,
+            "Google".to_string(),
+            "google".to_string(),
+            OrgIntegrationKind::WorkspaceIntegration,
+            None,
+            Some(serde_json::json!({
+                "ownerUserId": "user-1",
+                "accountEmail": "one@example.com"
+            })),
+            Some(true),
+            IntegrationSecretUpdate::Set("google-access-token".to_string()),
+        )
+        .expect("save google integration");
+
+    let denied = resolve_org_integration(
+        &state,
+        &org_id,
+        "google",
+        Some("user-2"),
+        &serde_json::json!({ "integration_id": integration.integration_id }),
+    )
+    .await;
+    assert!(
+        denied.is_err(),
+        "other users must not resolve Google tokens"
+    );
+
+    let resolved = resolve_org_integration(
+        &state,
+        &org_id,
+        "google",
+        Some("user-1"),
+        &serde_json::json!({ "integration_id": integration.integration_id }),
+    )
+    .await
+    .expect("owner resolves google integration");
+    assert_eq!(resolved.secret, "google-access-token");
 }
 
 #[tokio::test]

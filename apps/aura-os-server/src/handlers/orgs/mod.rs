@@ -28,7 +28,8 @@ use crate::error::ApiError;
 
 pub(crate) use crud::{create_org, get_org, list_orgs, update_org};
 pub(crate) use integrations::{
-    create_integration, delete_integration, list_integrations, update_integration,
+    create_integration, delete_integration, list_integrations, start_google_oauth,
+    update_integration,
 };
 pub(crate) use invites::{accept_invite, create_invite, list_invites, revoke_invite};
 pub(crate) use members::{list_members, remove_member, update_member_role};

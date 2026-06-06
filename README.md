@@ -91,6 +91,8 @@ Edit `.env` and set:
 | `AURA_NETWORK_FEEDBACK_URL` | No | Optional Feedback-only aura-network override. Leave unset normally so Feedback shares `AURA_NETWORK_URL`; set it only when intentionally testing a different aura-network deployment for `/api/feedback/*`. |
 | `AURA_NETWORK_AUTH_TOKEN` | No | Auth token for aura-network (when using `AURA_NETWORK_URL`) |
 | `AURA_STORAGE_URL` | No | aura-storage URL for execution data (e.g. `https://your-storage-host.example.com`). Omit to disable. |
+| `AURA_INTEGRATIONS_URL` | No | aura-integrations URL for encrypted integrations and Google OAuth. Required for users to connect Google. |
+| `AURA_INTEGRATIONS_INTERNAL_TOKEN` | No | Internal token matching aura-integrations `INTERNAL_SERVICE_TOKEN`; used for service-to-service secret resolution paths. |
 | `ORBIT_BASE_URL` | No | URL of the **standalone Orbit service** (host and port). Aura connects to this service as a client; it does not run the Orbit API. Omit to disable Orbit features. |
 | `GITHUB_APP_*` | No | GitHub App ID, private key, and slug for repository linking |
 

@@ -25,7 +25,7 @@ async fn org_tool_actions_use_saved_integrations() {
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
     let listed = response_json(resp).await;
-    assert_eq!(listed["integrations"].as_array().unwrap().len(), 11);
+    assert_eq!(listed["integrations"].as_array().unwrap().len(), 12);
 
     assert_github_actions(&app, &org_id).await;
     assert_linear_actions(&app, &org_id).await;
@@ -37,6 +37,7 @@ async fn org_tool_actions_use_saved_integrations() {
     assert_metricool_actions(&app, &org_id).await;
     assert_mailchimp_actions(&app, &org_id).await;
     assert_resend_actions(&app, &org_id).await;
+    assert_google_read_actions(&app, &org_id).await;
 }
 
 #[tokio::test]
