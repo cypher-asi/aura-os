@@ -64,10 +64,15 @@
     top 320ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .expertiseTabsIndicator {
-    transition: none;
-  }
+/*
+ * Keep this short slide even when the environment reports reduced motion:
+ * the moving underline is the tab selector's primary "selection moved"
+ * affordance, and the live preview environment can report reduced motion
+ * by default. The app-level reduced-motion rule uses `!important`, so this
+ * targeted override needs to match it for this one control.
+ */
+:root[data-motion="reduced"] .expertiseTabsIndicator {
+  transition-duration: 320ms, 320ms, 320ms !important;
 }
 
 .expertiseTab {
