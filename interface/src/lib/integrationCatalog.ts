@@ -221,11 +221,11 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     label: "Google",
     kind: "workspace_integration",
     description:
-      "Gmail and Google Calendar workflows through a connected Google account.",
+      "Gmail and Google Calendar workflows through your connected Google account.",
     secretLabel: "Google Account",
-    secretPlaceholder: "Connect a Google account",
+    secretPlaceholder: "Connect your Google account",
     authHint:
-      "Connect with Google OAuth. Aura stores encrypted refresh credentials and refreshes access tokens server-side.",
+      "Connect your Google account with OAuth. Aura stores encrypted refresh credentials server-side and only exposes the tools to your Aura user.",
     docsUrl:
       "https://developers.google.com/identity/protocols/oauth2/web-server",
     supportsDefaultModel: false,

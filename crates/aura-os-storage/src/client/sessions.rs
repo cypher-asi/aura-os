@@ -38,6 +38,22 @@ impl StorageClient {
         .await
     }
 
+    pub async fn list_sessions_including_empty(
+        &self,
+        project_agent_id: &str,
+        jwt: &str,
+    ) -> Result<Vec<StorageSession>, StorageError> {
+        validate_url_id(project_agent_id, "project_agent_id")?;
+        self.get_authed(
+            &format!(
+                "{}/api/project-agents/{}/sessions?include_empty=true",
+                self.base_url, project_agent_id
+            ),
+            jwt,
+        )
+        .await
+    }
+
     /// Project-scoped session list. Backed by the indexed
     /// `idx_sessions_project_recent` partial index in aura-storage
     /// (migration 0014). Replaces aura-os-server's old per-agent

@@ -104,7 +104,8 @@ function providerAuthHint(provider: string): string | null {
   return getIntegrationDefinition(provider)?.authHint ?? null;
 }
 
-function kindLabel(kind: OrgIntegration["kind"]): string {
+function kindLabel(kind: OrgIntegration["kind"], provider?: string): string {
+  if (provider === "google") return "Connected Account";
   if (kind === "workspace_connection") return "Workspace Connection";
   if (kind === "workspace_integration") return "Workspace Integration";
   return "MCP Server";
@@ -123,6 +124,13 @@ function emptyDraft(provider: string): IntegrationDraft {
     apiKey: "",
     providerConfig: {},
   };
+}
+
+function providerCardMeta(provider: { id: string; kind: OrgIntegration["kind"] }): string {
+  if (provider.id === "google") return "Your account tools";
+  if (provider.kind === "workspace_connection") return "Shared model access";
+  if (provider.kind === "workspace_integration") return "Workspace app tools";
+  return "External MCP tools";
 }
 
 export function OrgSettingsIntegrations({
@@ -204,7 +212,9 @@ export function OrgSettingsIntegrations({
                   <div className={styles.integrationSelectionRow}>
                     <div className={styles.integrationBadgeRow}>
                       <span className={styles.integrationBadge}>{newProvider?.label ?? newIntegration.provider}</span>
-                      <span className={styles.integrationBadge}>{kindLabel(newIntegration.kind)}</span>
+                      <span className={styles.integrationBadge}>
+                        {kindLabel(newIntegration.kind, newIntegration.provider)}
+                      </span>
                     </div>
                     <Button variant="ghost" onClick={() => setNewIntegration(null)}>
                       Change
@@ -217,7 +227,7 @@ export function OrgSettingsIntegrations({
                 {newIsGoogle ? (
                   <div className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull}`}>
                     <Text size="xs" variant="muted">
-                      Connect with Google OAuth to enable Gmail and Calendar tools for this workspace.
+                      Connect your Google account to use Gmail and Calendar tools in Aura.
                     </Text>
                   </div>
                 ) : (
@@ -366,7 +376,7 @@ export function OrgSettingsIntegrations({
                               ? integration.provider_config?.accountEmail
                                 ? String(integration.provider_config.accountEmail)
                                 : integration.has_secret
-                                  ? "Google connected"
+                                  ? "Your Google account"
                                   : "Not connected"
                               : integration.secret_last4 ? `Key ••••${integration.secret_last4}` : "No key"}
                           </span>
@@ -434,7 +444,9 @@ export function OrgSettingsIntegrations({
                           <div className={styles.integrationSelectionRow}>
                             <div className={styles.integrationBadgeRow}>
                               <span className={styles.integrationBadge}>{getIntegrationLabel(draft.provider)}</span>
-                              <span className={styles.integrationBadge}>{kindLabel(integration.kind)}</span>
+                              <span className={styles.integrationBadge}>
+                                {kindLabel(integration.kind, integration.provider)}
+                              </span>
                             </div>
                           </div>
                           <Text size="xs" variant="muted">{providerDescription(draft.provider)}</Text>
@@ -442,7 +454,7 @@ export function OrgSettingsIntegrations({
                         {isGoogle ? (
                           <div className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull}`}>
                             <Text size="xs" variant="muted">
-                              Connect with Google OAuth to refresh Gmail and Calendar access.
+                              Reconnect your Google account to refresh Gmail and Calendar access for your Aura user.
                             </Text>
                             <div className={styles.integrationActions}>
                               <Button
@@ -637,11 +649,7 @@ function ProviderButtons({
               >
                 <span className={styles.providerCardTitle}>{provider.label}</span>
                 <span className={styles.providerCardMeta}>
-                  {provider.kind === "workspace_connection"
-                    ? "Shared model access"
-                    : provider.kind === "workspace_integration"
-                      ? "Workspace app tools"
-                      : "External MCP tools"}
+                  {providerCardMeta(provider)}
                 </span>
                 {!compact ? (
                   <span className={styles.providerCardBody}>{provider.description}</span>

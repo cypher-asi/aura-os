@@ -415,13 +415,16 @@ fn google_integration_visible_to_user(
     let Some(user_id) = user_id else {
         return false;
     };
-    integration
-        .provider_config
-        .as_ref()
-        .and_then(Value::as_object)
-        .and_then(|config| config.get("ownerUserId"))
-        .and_then(Value::as_str)
-        .map(str::trim)
+    google_owner_user_id(integration.provider_config.as_ref())
         .map(|owner| owner == user_id)
         .unwrap_or(false)
+}
+
+fn google_owner_user_id(provider_config: Option<&Value>) -> Option<&str> {
+    provider_config?
+        .as_object()?
+        .get("ownerUserId")?
+        .as_str()
+        .map(str::trim)
+        .filter(|owner| !owner.is_empty())
 }

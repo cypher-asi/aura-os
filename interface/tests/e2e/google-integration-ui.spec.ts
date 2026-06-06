@@ -42,12 +42,12 @@ test("Google integration setup screen has a focused OAuth flow", async ({ page }
   await page.goto("/integrations/google");
 
   await expect(page.getByRole("heading", { name: "Google" })).toBeVisible();
-  await expect(page.getByText("Google account", { exact: true })).toBeVisible();
+  await expect(page.getByText("Your Google account", { exact: true })).toBeVisible();
   await expect(page.getByText("Not connected")).toBeVisible();
   await expect(page.getByText("Gmail", { exact: true })).toBeVisible();
-  await expect(page.getByText("Search, read, and send mail")).toBeVisible();
+  await expect(page.getByText("Search, read, and send mail from your account")).toBeVisible();
   await expect(page.getByText("Calendar", { exact: true })).toBeVisible();
-  await expect(page.getByText("List calendars and manage events")).toBeVisible();
+  await expect(page.getByText("List calendars and manage events on your account")).toBeVisible();
   await expect(page.getByLabel("Integration name for Google")).toHaveCount(0);
 
   const popupPromise = page.waitForEvent("popup");
@@ -75,6 +75,7 @@ test("connected Google integration clearly shows account, capabilities, and reco
   await page.goto("/integrations/google");
 
   await expect(page.getByRole("heading", { name: "Google" })).toBeVisible();
+  await expect(page.getByText("Connected Account")).toBeVisible();
   await expect(page.getByText("google-user@example.com").first()).toBeVisible();
   await expect(page.getByText("Enabled")).toBeVisible();
   await expect(page.getByRole("button", { name: "Reconnect Google" })).toBeVisible();

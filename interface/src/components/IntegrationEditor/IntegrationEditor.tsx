@@ -84,7 +84,8 @@ function normalizeProviderConfig(
   return Object.keys(config).length > 0 ? config : null;
 }
 
-function kindLabel(kind: IntegrationKind): string {
+function kindLabel(kind: IntegrationKind, provider?: string): string {
+  if (provider === "google") return "Connected Account";
   if (kind === "workspace_connection") return "Workspace Connection";
   if (kind === "workspace_integration") return "Workspace Integration";
   return "MCP Server";
@@ -152,7 +153,7 @@ export function IntegrationEditor({
   const googleAccount = integration?.provider_config?.accountEmail
     ? String(integration.provider_config.accountEmail)
     : integration?.has_secret
-      ? "Connected"
+      ? "Your Google account is connected"
       : "Not connected";
   const busyKey = isNew ? "new" : integration?.integration_id;
   const isOAuthBusy = busyId === "google_oauth";
@@ -287,14 +288,14 @@ export function IntegrationEditor({
                     {getIntegrationLabel(integration.provider)}
                   </span>
                   <span className={styles.integrationBadge}>
-                    {kindLabel(integration.kind)}
+                    {kindLabel(integration.kind, integration.provider)}
                   </span>
                   <span className={styles.integrationBadge}>
                     {isGoogle
                       ? integration.provider_config?.accountEmail
                         ? String(integration.provider_config.accountEmail)
                         : integration.has_secret
-                          ? "Google connected"
+                          ? "Your Google account"
                           : "Not connected"
                       : integration.secret_last4
                         ? `Key ••••${integration.secret_last4}`
@@ -336,7 +337,7 @@ export function IntegrationEditor({
                       <ShieldCheck size={16} className={styles.googleStatusIcon} />
                     )}
                     <div>
-                      <div className={styles.integrationFieldLabel}>Google account</div>
+                      <div className={styles.integrationFieldLabel}>Your Google account</div>
                       <div className={styles.googleStatusValue}>{googleAccount}</div>
                     </div>
                   </div>
@@ -345,14 +346,18 @@ export function IntegrationEditor({
                       <Mail size={15} />
                       <div>
                         <div className={styles.googleCapabilityTitle}>Gmail</div>
-                        <div className={styles.googleCapabilityBody}>Search, read, and send mail</div>
+                        <div className={styles.googleCapabilityBody}>
+                          Search, read, and send mail from your account
+                        </div>
                       </div>
                     </div>
                     <div className={styles.googleCapabilityItem}>
                       <CalendarDays size={15} />
                       <div>
                         <div className={styles.googleCapabilityTitle}>Calendar</div>
-                        <div className={styles.googleCapabilityBody}>List calendars and manage events</div>
+                        <div className={styles.googleCapabilityBody}>
+                          List calendars and manage events on your account
+                        </div>
                       </div>
                     </div>
                   </div>
