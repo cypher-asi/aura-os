@@ -72,6 +72,55 @@ float fbm(vec2 p) {
   return v;
 }
 
+// 2D hash -> point inside a unit cell, used to jitter Voronoi seeds.
+vec2 hash2(vec2 p) {
+  return fract(
+    sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) *
+      43758.5453
+  );
+}
+
+// One scale of discrete "neurons firing": partition UV space into a grid of
+// cells (one neuron per cell, jittered off-center), and for the fragment's
+// nearest neuron emit a sharp ignite -> flare -> fade flash on its own
+// randomized period and phase. Only a subset of neurons are lit at any moment,
+// so the field reads as individual cells activating rather than a uniform
+// shimmer. `freq` sets neuron density; bigger = smaller, more numerous cells.
+float neuronFire(vec2 uv, float t, float freq) {
+  vec2 gp = uv * freq;
+  vec2 cell = floor(gp);
+  vec2 f = fract(gp);
+
+  float fire = 0.0;
+  // Scan the 3x3 neighborhood so a neuron's flash can spill into adjacent
+  // cells (its glow isn't clipped at the cell border).
+  for (int j = -1; j <= 1; j++) {
+    for (int i = -1; i <= 1; i++) {
+      vec2 nb = vec2(float(i), float(j));
+      vec2 seed = cell + nb;
+      vec2 jitter = hash2(seed);
+      // Neuron soma position within its cell.
+      vec2 pos = nb + jitter;
+      float d = length(f - pos);
+
+      // Per-neuron firing cycle: randomized period and phase so they fire out
+      // of sync. A short, sharp envelope = ignite, flare bright, fade.
+      float period = 1.4 + 5.0 * jitter.x;
+      float phase = jitter.y * period;
+      float cyc = fract((t + phase) / period);
+      // Fast attack, slower decay pulse (peaks just after the start of the
+      // cycle): ramp up over the first sliver, then exponentially fade.
+      float env = smoothstep(0.0, 0.04, cyc) * exp(-cyc * 6.0);
+
+      // Bright compact soma core + a thinner reach so dendrites light too.
+      float core = exp(-d * d * 26.0);
+      float reach = exp(-d * 5.0) * 0.35;
+      fire += (core + reach) * env;
+    }
+  }
+  return fire;
+}
+
 // Reference palette: warm orange -> hot coral -> magenta-pink -> vivid
 // periwinkle, topped by a saturated hot gold (NOT near-white) so even the
 // brightest pulses stay colorful instead of washing out to white.
@@ -195,6 +244,14 @@ void main() {
   energy *= breathe;
 
   // ----- RIGHT hemisphere: color, abstract paint, creativity -----------
+  // Discrete neurons firing along the vasculature. Two scales (coarse soma
+  // flashes + finer sparks) gated by the vessel mask so ignitions only happen
+  // ON the vessels, reading as individual cells activating rather than a
+  // uniform shimmer.
+  float neurons =
+    neuronFire(uv, t, 22.0) + 0.6 * neuronFire(uv + 3.7, t * 1.3, 44.0);
+  float fired = clamp((mask + bloom * 0.4) * neurons, 0.0, 4.0);
+
   // Drive the palette by a faster drift + the local pulse so hue races,
   // and add an fbm hue offset so the field reads as abstract paint splatter
   // (many hues bleeding together) rather than one smooth gradient.
@@ -208,15 +265,22 @@ void main() {
   // Hue floor: a small, pulse-independent palette term so the right vessels
   // always carry color even between pulses (they never collapse to grey/black).
   vec3 rightBase = rightCol;
-  rightCol *= energy;
+  // Damp the smooth global wash so the discrete neuron firings dominate the
+  // read instead of one continuously breathing field.
+  rightCol *= mix(energy, mask, 0.45);
   rightCol += rightBase * mask * 0.5;
+
+  // Neuron ignitions: a hot orange-gold flash where cells fire, riding on the
+  // local palette so clustered firings still bleed color like the reference.
+  vec3 fireCol = vec3(1.0, 0.62, 0.18);
+  rightCol += mix(fireCol, palette(v), 0.35) * fired * 1.6;
 
   // Crest on the brightest pulse fronts + spark flashes. A saturated hot hue
   // (NOT near-white) so peaks read as glowing color instead of washing the
   // right hemisphere out to white.
   vec3 crestCol = vec3(1.0, 0.55, 0.15);
-  rightCol += crestCol * pow(mask * pulse * travel, 2.0) * 1.3;
-  rightCol += crestCol * mask * spark * 1.0;
+  rightCol += crestCol * pow(mask * pulse * travel, 2.0) * 0.7;
+  rightCol += crestCol * mask * spark * 0.6;
 
   // Wide multi-hue aura: drifting paint blooming into the black glass.
   vec3 auraCol = palette(clamp(0.55 + 0.28 * sin(t * 0.45) + 0.4 * (splat - 0.5), 0.0, 1.0));
@@ -238,7 +302,7 @@ void main() {
   float rMax = max(rightCol.r, max(rightCol.g, rightCol.b));
   rightCol = rMax > 1.0 ? rightCol / rMax : rightCol;
 
-  float rightAlpha = clamp(mask * 1.3 + bloom * 0.7 + aura * 0.95 + outerGlow * 0.7, 0.0, 1.0);
+  float rightAlpha = clamp(mask * 1.3 + bloom * 0.7 + aura * 0.95 + outerGlow * 0.7 + fired * 0.6, 0.0, 1.0);
 
   // ----- LEFT hemisphere: black & white code + mathematics --------------
   // Vessels as a near-white ink line-drawing (strictly grayscale).
