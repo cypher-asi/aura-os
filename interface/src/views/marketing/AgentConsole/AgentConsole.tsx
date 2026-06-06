@@ -1,14 +1,16 @@
 import { type ReactNode } from "react";
 import { Plate } from "../../../components/Plate";
 import { DeviceScreen } from "../../../components/DeviceScreen";
+import { AuraScreenOrb } from "../AuraScreenOrb";
 import styles from "./AgentConsole.module.css";
 
 /**
  * Decorative "agent device" rendered as the `/agents` hero stage: a tall
  * portrait chassis whose centerpiece is a single raised vertical pill
  * (a mesa standing proud of the surface, ringed by a soft shadow groove).
- * A small circular screen sits near the top of the pill carrying a minimal
- * readout, a row of status lights runs below it, and a large circular
+ * A small circular screen sits near the top of the pill carrying a living
+ * WebGL energy field (`<AuraScreenOrb />`), a row of status lights runs
+ * below it, and a large circular
  * control button sits over a split base. Built on the shared marketing
  * device kit (`<Plate />`, `<DeviceScreen />`) so it reads as the same
  * hardware family as the quadrant device below.
@@ -31,11 +33,7 @@ export function AgentConsole(): ReactNode {
 
           <div className={styles.raised}>
             <DeviceScreen className={styles.screen}>
-              <div className={styles.screenInner}>
-                <span className={styles.screenLabel}>AURA AGENT</span>
-                <span className={styles.screenTime}>10:30</span>
-                <span className={styles.screenStatus}>Ready</span>
-              </div>
+              <AuraScreenOrb className={styles.screenOrb} />
             </DeviceScreen>
           </div>
 

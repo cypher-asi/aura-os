@@ -6,11 +6,9 @@ vi.mock("./AgentConsole.module.css", () => ({
 }));
 
 describe("AgentConsole", () => {
-  it("renders the circular screen readout", () => {
-    const { getByText } = render(<AgentConsole />);
-    expect(getByText("AURA AGENT")).toBeInTheDocument();
-    expect(getByText("10:30")).toBeInTheDocument();
-    expect(getByText("Ready")).toBeInTheDocument();
+  it("renders the living WebGL field on the circular screen", () => {
+    const { container } = render(<AgentConsole />);
+    expect(container.querySelector("canvas")).toBeInTheDocument();
   });
 
   it("renders a row of status lights", () => {

@@ -57,9 +57,11 @@
 .raised {
   display: flex;
   justify-content: center;
-  width: 70%;
+  width: 80.5%;
   margin-top: 14px;
-  padding: 20px 0;
+  /* Taller stadium: extra room above the screen plus a long empty well
+     below it, so the whole insert (screen region included) grows. */
+  padding: 60px 0 259px;
   border-radius: 999px;
   background: radial-gradient(
     ellipse 90% 70% at 50% 22%,
@@ -69,7 +71,6 @@
   );
   box-shadow:
     inset 0 2px 1px rgba(255, 255, 255, 0.07),
-    inset 0 -10px 24px rgba(0, 0, 0, 0.6),
     0 1px 0 rgba(255, 255, 255, 0.04),
     0 10px 26px rgba(0, 0, 0, 0.55),
     0 2px 6px rgba(0, 0, 0, 0.6);
@@ -86,38 +87,11 @@
   border-radius: 50%;
 }
 
-.screenInner {
-  position: relative;
+/* Living WebGL energy field filling the circular glass well. */
+.screenOrb {
+  position: absolute;
+  inset: 0;
   z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  text-align: center;
-}
-
-.screenLabel {
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--color-text-muted, rgba(255, 255, 255, 0.5));
-}
-
-.screenTime {
-  font-size: 38px;
-  font-weight: 300;
-  line-height: 1;
-  letter-spacing: -0.02em;
-  color: var(--color-text-primary, #f7f8fb);
-}
-
-.screenStatus {
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--color-text-muted, rgba(255, 255, 255, 0.45));
 }
 
 /* ----- Status lights ------------------------------------------------ */
@@ -125,15 +99,22 @@
   display: flex;
   gap: 12px;
   align-items: center;
-  height: 6px;
+  justify-content: center;
 }
 
 .light {
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.55);
   box-shadow: inset 0 0 1px rgba(0, 0, 0, 0.6);
+}
+
+/* Drop the outer dots so the row curves down at the ends, wrapping the
+   top of the button circle below. */
+.light:first-child,
+.light:last-child {
+  transform: translateY(5px);
 }
 
 .light[data-lit="true"] {
@@ -148,17 +129,37 @@
    shadow so it stands up out of the surface, echoing the HardwareKey
    recipe in a circular form. */
 .button {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 84px;
   height: 84px;
+  /* Pull the disc down so it straddles the base seam, with its lower half
+     sinking into the split base below. */
+  margin-top: 6px;
+  margin-bottom: -60px;
   border-radius: 50%;
   background: linear-gradient(180deg, #303237 0%, #1b1d21 100%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.1),
     inset 0 -2px 3px rgba(0, 0, 0, 0.55),
     0 3px 8px rgba(0, 0, 0, 0.6);
+}
+
+/* Rounded groove that hugs the circle: a recessed channel ring so the
+   surrounding surface (and the base seams) read as curving around the
+   disc rather than running through it. */
+.button::before {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 2px 3px rgba(0, 0, 0, 0.55),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.05);
+  pointer-events: none;
 }
 
 .buttonFace {
@@ -182,12 +183,14 @@
   position: relative;
   width: calc(100% + 52px);
   margin-inline: -26px;
-  margin-top: 22px;
-  height: 84px;
+  margin-top: 0;
+  height: 96px;
   border-bottom-left-radius: 36px;
   border-bottom-right-radius: 36px;
-  background: linear-gradient(180deg, #1a1a1b 0%, #141415 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  background: linear-gradient(135deg, #3c3c3e 0%, #333335 100%);
+  /* Dark top seam so the lighter base reads as a separate panel below the
+     surface rather than a highlighted lip. */
+  box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.5);
 }
 
 .base::before {
@@ -195,11 +198,8 @@
   position: absolute;
   inset: 0 auto 0 50%;
   width: 1px;
-  background: linear-gradient(
-    180deg,
-    rgba(0, 0, 0, 0.6) 0%,
-    rgba(255, 255, 255, 0.04) 100%
-  );
+  /* Darkened vertical divider running down under the button. */
+  background: rgba(0, 0, 0, 0.6);
 }
 
 @media (max-width: 768px) {
@@ -214,9 +214,10 @@
   .button {
     width: 72px;
     height: 72px;
+    margin-bottom: -52px;
   }
 
   .base {
-    height: 72px;
+    height: 84px;
   }
 }
