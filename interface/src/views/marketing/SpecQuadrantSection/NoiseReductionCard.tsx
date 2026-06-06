@@ -31,6 +31,34 @@ const KNOB_TICKS = 21;
  */
 const TICK_ARC_DEG = 240;
 
+/**
+ * Assembly instructions interleaved with the binary stream on the left flank
+ * so it reads as a live disassembly/listing being written out line by line.
+ */
+const ASM_LINES = [
+  "section .text",
+  "global _start",
+  "_start:",
+  "  mov  rax, 1",
+  "  mov  rdi, 1",
+  "  lea  rsi, [msg]",
+  "  mov  rdx, 13",
+  "  syscall",
+  "  xor  rax, rax",
+  "  push rbp",
+  "  mov  rbp, rsp",
+  "  sub  rsp, 0x20",
+  "  call 0x401130",
+  "  add  rsp, 0x20",
+  "  cmp  eax, 0x0",
+  "  jne  .loop",
+  "  test rax, rax",
+  "  lea  rdi, [rip+0x2f]",
+  "  shl  rbx, 4",
+  "  and  rcx, 0xff",
+  "  ret",
+];
+
 /** Placeholder color photo shown (cropped differently) in each popping box. */
 const GALLERY_PHOTO = "/noise-reduction-paint.png";
 
@@ -106,37 +134,56 @@ export function NoiseReductionCard(): ReactNode {
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  // Binary code "being written" on the left half: append one bit per tick,
-  // grouped into bytes, wrapping into a fixed window of rows that scrolls as
-  // it fills. A block cursor blinks at the write head. Driven imperatively so
-  // it never re-renders the card. Disabled under reduced-motion.
+  // Assembly + binary "being written" on the left flank: each line types out
+  // character by character, then commits and a new line begins — alternating
+  // between random binary bytes and assembly mnemonics, like a live listing.
+  // Older lines scroll out of a fixed window. A block cursor blinks at the
+  // write head. Driven imperatively (no re-render); disabled under
+  // reduced-motion.
   useEffect(() => {
     const el = binaryRef.current;
     if (!el) return;
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-      el.textContent = "01000001 01010101 01010010 01000001";
+      el.textContent = "_start:\n  mov  rax, 1\n01001000 01100101";
       return;
     }
-    const COLS = 24;
-    const ROWS = 16;
-    const lines: string[] = [""];
+    const ROWS = 15;
+    const makeBinary = (): string => {
+      const bytes = 1 + Math.floor(Math.random() * 2);
+      const parts: string[] = [];
+      for (let b = 0; b < bytes; b++) {
+        let s = "";
+        for (let i = 0; i < 8; i++) s += Math.random() < 0.5 ? "0" : "1";
+        parts.push(s);
+      }
+      return parts.join(" ");
+    };
+    const nextLine = (): string =>
+      Math.random() < 0.5
+        ? makeBinary()
+        : ASM_LINES[Math.floor(Math.random() * ASM_LINES.length)];
+
+    const committed: string[] = [];
+    let current = "";
+    let target = nextLine();
+    let charIndex = 0;
     let count = 0;
     const id = window.setInterval(() => {
-      let cur = lines[lines.length - 1];
-      // Space between bytes keeps the stream readable as grouped binary.
-      if (cur.length > 0 && cur.replace(/ /g, "").length % 8 === 0) cur += " ";
-      cur += Math.random() < 0.5 ? "0" : "1";
-      if (cur.length >= COLS) {
-        lines[lines.length - 1] = cur;
-        lines.push("");
-        if (lines.length > ROWS) lines.shift();
+      if (charIndex < target.length) {
+        current += target[charIndex];
+        charIndex++;
       } else {
-        lines[lines.length - 1] = cur;
+        committed.push(current);
+        if (committed.length > ROWS) committed.shift();
+        current = "";
+        target = nextLine();
+        charIndex = 0;
       }
       count++;
       const caret = Math.floor(count / 6) % 2 === 0 ? "\u2588" : " ";
-      el.textContent = lines.join("\n") + caret;
-    }, 40);
+      const head = committed.length ? committed.join("\n") + "\n" : "";
+      el.textContent = head + current + caret;
+    }, 38);
     return () => clearInterval(id);
   }, []);
 
