@@ -22,14 +22,18 @@ function build({ W, H, kr, ky, gap, endOff, soOff, filo, name }) {
   console.log(name + ":", path);
 }
 
-// Desktop: compact controls plate (no waveform). gap:23 -> dome rises around
-// the knob and contains the tick ring (ticks sit at knob r + 12). W includes
-// the ::before's -7px side bleed (controls content width 503 + 14) so the
-// plate fills the rounded bottom corners. ky (knob center from top) is
-// unchanged by the caption since it only grows the plate's bottom.
+// Desktop: compact controls plate (no waveform). The dome must enclose the
+// full 240deg tick ring. Ticks sit at knob r + 12 = 62px from center, so the
+// lowest ticks (at +/-120deg) land ~31px below the knob center. gap:23 gives
+// R=73 (~11px radial margin over the 62px ring); endOff:-34 pushes the arc
+// endpoints ~34px below center and soOff:40 drops the shoulders ~40px below
+// center so those bottom lights stay inside the lighter dome. W:1042 matches
+// the doubled plate (controls content 1028 + the ::before's -7px side bleed).
 // H = padTop16 + knobMt20 + knob100 + knobMb16 + caption36 + padBottom28
-build({ W: 517, H: 216, kr: 50, ky: 86, gap: 23, endOff: 12, soOff: 4, filo: 14, name: "desktop" });
-// Mobile: compact controls plate (knobwrap inherits 20/16, knob 84). gap:19.
-// W includes the ::before's -7px side bleed (318 + 14).
+build({ W: 1042, H: 216, kr: 50, ky: 86, gap: 23, endOff: -34, soOff: 40, filo: 14, name: "desktop" });
+// Mobile: compact controls plate (knobwrap inherits 20/16, knob 84). gap:19 ->
+// R=61 over the 54px ring (ticks at r 42 + 12); lowest ticks ~27px below
+// center, so endOff:-30 / soOff:34 wrap the shoulders below them. W includes
+// the ::before's -7px side bleed (318 + 14).
 // H = padTop14 + knobMt20 + knob84 + knobMb16 + caption36 + padBottom24
-build({ W: 332, H: 194, kr: 42, ky: 76, gap: 19, endOff: 10, soOff: 4, filo: 12, name: "mobile" });
+build({ W: 332, H: 194, kr: 42, ky: 76, gap: 19, endOff: -30, soOff: 34, filo: 12, name: "mobile" });

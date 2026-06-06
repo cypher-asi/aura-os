@@ -236,13 +236,15 @@
      ~1042x216 (the now-doubled controls width plus the ::before's 7px side
      bleed) and `preserveAspectRatio="none"` stretches the 400x360 viewBox
      onto it, the dome arc is an ellipse (rx 28.0 / ry 121.7) that renders as
-     a true circle in output. Doubling the device width only changes the X/rx
-     values; the dome's height and the centered knob are unchanged, so the
-     dome stays the same circular shape with longer flat shoulders. `gap: 23`
-     keeps the dome large enough to contain the tick ring (ticks sit at knob
-     r + 12). Regenerate via `seam-preview.mjs` (W 1042) if the plate
-     height/width/knob position changes. (Mobile overrides this below.) */
-  --nr-seam: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 360' preserveAspectRatio='none'%3E%3Cpath d='M0 360 L0 150.0 L167.0 150.0 A5.4 23.3 0 0 0 172.4 123.3 A28.0 121.7 0 0 1 227.6 123.3 A5.4 23.3 0 0 0 233.0 150.0 L400 150.0 L400 360 Z' fill='%23000'/%3E%3C/svg%3E");
+     a true circle in output. The dome wraps well below the knob center so it
+     encloses the full 240deg tick ring: ticks sit at knob r + 12 = 62px from
+     center, so the lowest ones land ~31px below center. `gap: 23` (R=73) gives
+     the ring an ~11px radial margin, and the shoulders drop to ~40px below
+     center (endpoints ~34px below) so those bottom lights stay inside the
+     lighter dome instead of spilling into the dark plate. Regenerate via
+     `seam-preview.mjs` (W 1042) if the plate height/width/knob position
+     changes. (Mobile overrides this below.) */
+  --nr-seam: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 360' preserveAspectRatio='none'%3E%3Cpath d='M0 360 L0 210.0 L169.8 210.0 A5.4 23.3 0 0 0 175.2 200.0 A28.0 121.7 0 0 1 224.8 200.0 A5.4 23.3 0 0 0 230.2 210.0 L400 210.0 L400 360 Z' fill='%23000'/%3E%3C/svg%3E");
   position: relative;
   isolation: isolate;
   /* Above the brain artwork so the knob, status row and waveform stay on
@@ -490,8 +492,11 @@
     --nr-knob-size: 84px;
     max-width: 340px;
     /* Recomputed concentric dome for the narrower mobile plate
-       (~332x166 incl. the ::before 7px side bleed, knob r42, gap 19). */
-    --nr-seam: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 360' preserveAspectRatio='none'%3E%3Cpath d='M0 360 L0 148.5 L113.0 148.5 A14.5 22.3 0 0 0 127.5 122.5 A73.5 113.2 0 0 1 272.5 122.5 A14.5 22.3 0 0 0 287.0 148.5 L400 148.5 L400 360 Z' fill='%23000'/%3E%3C/svg%3E");
+       (~332x194 incl. the ::before 7px side bleed, knob r42, gap 19). Ticks
+       sit at r 42 + 12 = 54px, so the lowest land ~27px below center; the
+       shoulders drop to ~34px below center (endpoints ~30px below) to keep
+       them inside the dome. */
+    --nr-seam: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 360' preserveAspectRatio='none'%3E%3Cpath d='M0 360 L0 204.1 L121.6 204.1 A14.5 22.3 0 0 0 136.0 196.7 A73.5 113.2 0 0 1 264.0 196.7 A14.5 22.3 0 0 0 278.4 204.1 L400 204.1 L400 360 Z' fill='%23000'/%3E%3C/svg%3E");
   }
 
   .nrScreen {
