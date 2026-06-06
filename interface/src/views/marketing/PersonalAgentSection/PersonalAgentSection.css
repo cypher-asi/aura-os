@@ -54,17 +54,19 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 1px;
-  /* Full-bleed left to right: span the entire viewport width edge to
-     edge, regardless of the section's horizontal padding or the capped
-     inner column. `50%` resolves to half the inner column width, so
-     `50% - 50vw` pulls each side out to the viewport edge while keeping
-     the grid centered. */
-  width: 100vw;
-  margin-inline: calc(50% - 50vw);
+  /* Inset band: span the viewport minus a 32px gutter on each side, kept
+     centered. `50% - 50vw` pulls each edge out to the viewport, and the
+     +32px offset (with width reduced by 64px) tucks it back in by the
+     gutter so the band reads as one rounded card rather than full-bleed.
+     `overflow: hidden` + `border-radius` clips the outer corners of the
+     cell rectangle (top cell rounds its top corners, the two bottom cells
+     round their bottom corners) while the 1px inner seams stay square. */
+  width: calc(100vw - 64px);
+  margin-inline: calc(50% - 50vw + 32px);
   background: transparent;
   border: none;
-  border-radius: 0;
-  overflow: visible;
+  border-radius: 24px;
+  overflow: hidden;
 }
 
 .personalAgentQuadrant {
@@ -77,9 +79,10 @@
 
 .personalAgentQuadrantWide {
   grid-column: 1 / -1;
-  /* Diagonal gradient using the chat capsule plate's surface greys so
-     the cell behind the shell reads from the same palette. */
-  background: linear-gradient(135deg, #242424 0%, #181818 55%, #0d0d0d 100%);
+  /* Diagonal off-black gradient: near-black at the inner-light corner
+     fading to pure black. The two bottom quadrants share this same
+     palette (mirrored diagonals) so all three cells read as one surface. */
+  background: linear-gradient(135deg, #141414 0%, #0a0a0a 55%, #000 100%);
   border-radius: 0;
 }
 
@@ -87,7 +90,7 @@
    mirrored (225deg) so the light end sits at the inner-center corner
    (top-right) and fades to dark at the outer bottom-left corner. */
 .personalAgentQuadrantSkills {
-  background: linear-gradient(225deg, #242424 0%, #181818 55%, #0d0d0d 100%);
+  background: linear-gradient(225deg, #141414 0%, #0a0a0a 55%, #000 100%);
   border-radius: 0;
 }
 
@@ -95,7 +98,7 @@
    the inner-center corner (top-left, 135deg) out to the dark outer
    bottom-right, mirroring the skills cell across the vertical center. */
 .personalAgentQuadrantServices {
-  background: linear-gradient(135deg, #242424 0%, #181818 55%, #0d0d0d 100%);
+  background: linear-gradient(135deg, #141414 0%, #0a0a0a 55%, #000 100%);
   border-radius: 0;
 }
 
@@ -107,24 +110,24 @@
 }
 
 /*
- * Full-bleed band, contained content: the grid now spans 100vw, but the
- * content (mini-UIs + copy) is pulled back into the pre-full-bleed
- * centered column (~79.7vw = 1.25 x the 63.75% inner column) so each
- * element keeps its previous size and position. The bottom cells hug the
- * center seam exactly as before.
+ * Inset band, contained content: the grid now spans the viewport minus a
+ * 32px gutter each side, but the content (mini-UIs + copy) is pulled back
+ * into the pre-full-bleed centered column (~79.7vw = 1.25 x the 63.75%
+ * inner column) so each element keeps its previous size and position. The
+ * bottom cells hug the center seam exactly as before.
  *   10.16vw = (1 - 0.796875) / 2  -> half the width the cell gained.
- *   + 75px  = the section gutter (~25.5px) plus the cell's own 50px inset.
+ *   + 43px  = the prior 75px inset less the 32px the band edge moved in.
  */
 .personalAgentQuadrantWide {
-  padding-inline: calc(10.16vw + 75px);
+  padding-inline: calc(10.16vw + 43px);
 }
 
 .personalAgentQuadrantSkills {
-  padding-left: calc(10.16vw + 75px);
+  padding-left: calc(10.16vw + 43px);
 }
 
 .personalAgentQuadrantServices {
-  padding-right: calc(10.16vw + 75px);
+  padding-right: calc(10.16vw + 43px);
 }
 
 .personalAgentQuadrantSkills .personalAgentCopy,
@@ -511,8 +514,10 @@
 
   .personalAgentGrid {
     grid-template-columns: 1fr;
-    /* Keep the full-bleed band on mobile too (inherits width: 100vw +
-       margin-inline from the base rule); just stack the cells. */
+    /* Tighter 16px gutter on mobile; border-radius + overflow: hidden are
+       inherited from the base rule so the stacked card stays rounded. */
+    width: calc(100vw - 32px);
+    margin-inline: calc(50% - 50vw + 16px);
   }
 
   .personalAgentQuadrantWide {
