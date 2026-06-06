@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Plate } from "../../../components/Plate";
 import { DesktopChatInputBar } from "../../../features/chat-ui/ChatInputBar";
+import { AuraScreenOrb } from "../AuraScreenOrb";
 
 /**
  * Mini-UI for the "Always ready" quadrant. Reuses the REAL authenticated
@@ -98,6 +99,7 @@ export function MockChatInputCard(): ReactNode {
           machineType="local"
           agentName="AURA"
           isStatic
+          attachAccent={<AuraScreenOrb />}
         />
       </div>
     </Plate>

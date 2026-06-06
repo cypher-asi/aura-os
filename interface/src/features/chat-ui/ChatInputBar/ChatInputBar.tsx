@@ -7,6 +7,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  type ReactNode,
 } from "react";
 import {
   Plus,
@@ -227,6 +228,15 @@ export interface ChatInputBarProps {
    * routing all reset intent through the "+" / new-chat path.
    */
   onNewChat?: () => void;
+  /**
+   * Optional decorative node rendered behind the "+" glyph of the
+   * bottom-left attach button, turning the chrome disc into a circular,
+   * inset WebGL well (the `<AuraScreenOrb />` field) with the "+" centered
+   * on top. Opt-in so only the marketing mock LLM input on `/agents`
+   * pays for an animated canvas; every real chat input leaves it unset
+   * and keeps the standard `attachRing` chrome.
+   */
+  attachAccent?: ReactNode;
 }
 
 function AttachmentPreviews({
@@ -296,6 +306,7 @@ export const DesktopChatInputBar = memo(
       contextUsage,
       onFetchContextContents,
       onNewChat,
+      attachAccent,
       sendDisabled = false,
       sendDisabledReason,
     },
@@ -1001,11 +1012,18 @@ export const DesktopChatInputBar = memo(
       ) : (
         <button
           type="button"
-          className={`${inputBarShellStyles.attachButton} ${styles.attachRing}`}
+          className={`${inputBarShellStyles.attachButton} ${
+            attachAccent ? styles.attachOrb : styles.attachRing
+          }`}
           onClick={() => fileInputRef.current?.click()}
           disabled={!canAddMore || sendDisabled}
           aria-label="Attach file"
         >
+          {attachAccent ? (
+            <span className={styles.attachOrbField} aria-hidden="true">
+              {attachAccent}
+            </span>
+          ) : null}
           <Plus size={23} strokeWidth={1} />
         </button>
       );

@@ -1033,6 +1033,67 @@ button.attachRing::after {
   }
 }
 
+/* Marketing-only variant of the bottom-left "+" attach button: instead of
+   the chrome `attachRing` disc, the button becomes a circular, inset glass
+   well carrying the same WebGL energy field as the AgentConsole hero pill
+   (`AuraScreenOrb`), with the "+" glyph centered on top. Opt-in via the
+   `attachAccent` prop so only the `/agents` mock LLM input mounts a canvas. */
+button.attachOrb {
+  border-radius: 50%;
+  overflow: hidden;
+  /* Dark glass behind the field so its transparent rim reads as a screen
+     sunk into the pill (matches AgentConsole `.screen`). */
+  background: #0c0c0d;
+  /* Glyph reads white over the bright field rather than the muted chrome
+     secondary used by the default disc. */
+  color: #fff;
+}
+
+/* Keep the shared hover plate circular so it matches the well. */
+button.attachOrb::before {
+  border-radius: 50%;
+}
+
+/* Living WebGL field filling the circular well, clipped to the disc and
+   pinned below the "+" glyph (which the shared `.attachButton > *` rule
+   raises to z-index 1). Two-class specificity beats that shared rule so the
+   field stays behind the glyph. */
+.attachOrb .attachOrbField {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.attachOrb .attachOrbField > * {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Keep the "+" legible over the animated field. */
+.attachOrb > svg {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+}
+
+/* Recessed bezel drawn over the field (mirrors AgentConsole `.screen::after`)
+   so the well reads as glass sunk below the pill surface. Shadow-only, so it
+   sits above the "+" without obscuring it. */
+button.attachOrb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.7),
+    inset 0 4px 12px rgba(0, 0, 0, 0.8),
+    inset 0 -3px 8px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
 .modeSelectorFlex {
   min-width: 0;
 }
