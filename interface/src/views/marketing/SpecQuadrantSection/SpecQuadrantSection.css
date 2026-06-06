@@ -251,8 +251,12 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #2fd07a;
-  box-shadow: 0 0 8px rgba(47, 208, 122, 0.7);
+  /* Theme green-cyan accent, with a stronger layered glow. */
+  background: var(--color-accent);
+  box-shadow:
+    0 0 6px var(--color-accent),
+    0 0 12px var(--color-accent),
+    0 0 20px color-mix(in srgb, var(--color-accent) 55%, transparent);
 }
 
 /* ----- Knob --------------------------------------------------------- */

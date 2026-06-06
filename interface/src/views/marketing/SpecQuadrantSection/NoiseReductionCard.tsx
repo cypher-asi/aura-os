@@ -38,6 +38,27 @@ export function NoiseReductionCard(): ReactNode {
   const pointerRef = useRef({ x: 0.5, y: 0.5 });
   const knobPointerRef = useRef<HTMLSpanElement>(null);
   const tickRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const activationRef = useRef<HTMLSpanElement>(null);
+
+  // Live ACTIVATION readout: a number floored at 0.01 that rapidly rises and
+  // falls. Updated imperatively each frame (no re-render) so the digits flicker
+  // like a busy live meter.
+  useEffect(() => {
+    let raf = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = (now - start) / 1000;
+      const wave = 0.5 + 0.5 * Math.sin(t * 5.0) * Math.sin(t * 1.7 + 0.6);
+      const jitter = Math.sin(t * 37.0) * 0.06;
+      const value = Math.max(0.01, wave * 2.4 + jitter);
+      if (activationRef.current) {
+        activationRef.current.textContent = value.toFixed(2);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   // React to the cursor anywhere in the viewport (not just over the device):
   // the window-wide horizontal position drives the knob, the tick meter, and
@@ -94,12 +115,14 @@ export function NoiseReductionCard(): ReactNode {
           <div className="nrControls">
             <div className="nrStatus">
               <span className="nrReduction">
-                <span className="nrReductionLabel">REDUCTION</span>
-                <span className="nrReductionValue">50%</span>
+                <span className="nrReductionLabel">ACTIVATION</span>
+                <span className="nrReductionValue" ref={activationRef}>
+                  0.01
+                </span>
               </span>
               <span className="nrActive">
                 <span className="nrActiveDot" />
-                ACTIVE
+                ONLINE
               </span>
             </div>
 
