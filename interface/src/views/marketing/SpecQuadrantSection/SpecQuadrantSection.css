@@ -79,36 +79,54 @@
   user-select: none;
 }
 
-/* LEFT side: black-and-white binary code streaming out, like a terminal
-   writing itself. Monospace, dim white on the screen's black, masked to a
-   soft top/bottom fade so the scrolling window blends into the bezel. Sits in
-   the left flank beside the centered brain. */
-.nrBinary {
+/* LEFT side: many small asm-then-binary code snippets that type themselves
+   out and pop in/out at desynced positions, like lots of instances doing
+   intense rational work. Sits in the left flank beside the centered brain,
+   masked to a soft top/bottom fade so cards blend into the bezel. */
+.nrCodeField {
   position: absolute;
   top: 0;
   left: 0;
   z-index: 0;
-  width: 34%;
+  width: 40%;
   height: 100%;
-  box-sizing: border-box;
-  padding: 22px 20px 22px 28px;
-  overflow: hidden;
   pointer-events: none;
   user-select: none;
   -webkit-mask: linear-gradient(
     180deg,
     transparent 0%,
-    #000 14%,
-    #000 86%,
+    #000 12%,
+    #000 88%,
     transparent 100%
   );
   mask: linear-gradient(
     180deg,
     transparent 0%,
-    #000 14%,
-    #000 86%,
+    #000 12%,
+    #000 88%,
     transparent 100%
   );
+}
+
+/* One snippet card: a faint framed block whose `<pre>` types out asm then
+   binary. Position/size set per-slot inline; opacity/transform drive the
+   pop in (entering) and pop out (leaving) via the transition. */
+.nrCodeSnippet {
+  position: absolute;
+  box-sizing: border-box;
+  padding: 6px 9px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  opacity: 0;
+  transform: translateY(6px) scale(0.96);
+  transition:
+    opacity 0.32s ease,
+    transform 0.32s ease;
 }
 
 .nrBinaryText {
@@ -185,6 +203,12 @@
     animation: none;
     opacity: 1;
     transform: scale(1);
+  }
+
+  .nrCodeSnippet {
+    transition: none;
+    opacity: 1;
+    transform: none;
   }
 }
 
@@ -499,8 +523,12 @@
     padding: 20px 26px;
   }
 
-  .nrBinary {
-    padding: 16px 10px 16px 14px;
+  .nrCodeField {
+    width: 44%;
+  }
+
+  .nrCodeSnippet {
+    padding: 5px 7px;
   }
 
   .nrBinaryText {
