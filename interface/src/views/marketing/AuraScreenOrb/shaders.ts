@@ -20,7 +20,7 @@ void main() {
 }
 `;
 
-export const FRAGMENT_SHADER = `#version 300 es
+export const SCREEN_FRAGMENT_SHADER = `#version 300 es
 precision highp float;
 
 out vec4 fragColor;
@@ -136,6 +136,108 @@ void main() {
 
   // Feather only the last ~1.5px under the bezel; CSS clips the same pill.
   float alpha = smoothstep(1.5, -1.5, sd);
+
+  fragColor = vec4(col, alpha);
+}
+`;
+
+/**
+ * Radial variant for the tiny circular "+" attach-button well on the
+ * marketing mock LLM input. The shared SCREEN shader's domain-warped fbm
+ * is far too fine-grained to read at ~24px, so this one works in polar
+ * space: a few big, slow flowing bands ripple outward from the center,
+ * a bright rim makes the disc edge glow, and a radial vignette darkens
+ * the core so the well reads as inset into the page. Reuses the same warm
+ * palette as the screen shader for visual continuity.
+ */
+export const RADIAL_FRAGMENT_SHADER = `#version 300 es
+precision highp float;
+
+out vec4 fragColor;
+
+uniform vec2 u_resolution;
+uniform float u_time;
+
+float hash(vec2 p) {
+  p = fract(p * vec2(123.34, 456.21));
+  p += dot(p, p + 45.32);
+  return fract(p.x * p.y);
+}
+
+float noise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  float a = hash(i);
+  float b = hash(i + vec2(1.0, 0.0));
+  float c = hash(i + vec2(0.0, 1.0));
+  float d = hash(i + vec2(1.0, 1.0));
+  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
+// Coarse fbm: only 3 octaves so folds stay large and legible at small size.
+float fbm(vec2 p) {
+  float v = 0.0;
+  float a = 0.5;
+  for (int i = 0; i < 3; i++) {
+    v += a * noise(p);
+    p *= 2.0;
+    a *= 0.5;
+  }
+  return v;
+}
+
+vec3 palette(float v) {
+  vec3 cA = vec3(0.98, 0.46, 0.14);  // warm orange
+  vec3 cB = vec3(1.00, 0.50, 0.40);  // coral / salmon
+  vec3 cC = vec3(0.80, 0.56, 0.66);  // dusty mauve
+  vec3 cD = vec3(0.66, 0.71, 0.94);  // soft lavender / periwinkle
+  vec3 cHot = vec3(1.00, 0.93, 0.82); // near-white crest
+
+  vec3 col = mix(cA, cB, smoothstep(0.0, 0.35, v));
+  col = mix(col, cC, smoothstep(0.30, 0.62, v));
+  col = mix(col, cD, smoothstep(0.58, 0.86, v));
+  col = mix(col, cHot, smoothstep(0.86, 1.0, v));
+  return col;
+}
+
+void main() {
+  // Normalize so the disc radius is ~1.0 regardless of pixel size.
+  vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / (0.5 * min(u_resolution.x, u_resolution.y));
+  float t = u_time;
+
+  float r = length(uv);
+  float angle = atan(uv.y, uv.x);
+
+  // Polar domain: low frequency along the angle (broad lobes) and along
+  // the radius (a few concentric bands), so the whole pattern is built
+  // from big shapes rather than tiny speckle.
+  vec2 polar = vec2(angle * 1.4, r * 2.2);
+
+  // Two cheap warp layers that swirl the bands and drift them outward
+  // from the center, so the field flows radially.
+  vec2 q = vec2(
+    fbm(polar + vec2(0.0, -t * 0.30)),
+    fbm(polar + vec2(3.7, 1.2) + vec2(t * 0.12, -t * 0.22))
+  );
+  float flow = fbm(polar + 2.0 * q + vec2(0.6 * sin(t * 0.25), -t * 0.18));
+
+  float v = clamp(flow * 1.35 + 0.12 * sin(t * 0.4 + r * 3.0), 0.0, 1.0);
+  vec3 col = palette(v);
+
+  // Glowing rim: a bright ring that peaks near the disc edge so the
+  // circle reads as an emissive, edge-lit well.
+  float rim = smoothstep(0.55, 0.98, r) * (0.7 + 0.3 * sin(t * 1.1 + angle * 2.0));
+  col += vec3(1.0, 0.86, 0.72) * rim * 0.55;
+
+  // Radial vignette: darken toward the core and lift toward the rim so
+  // the well looks sunk into the surface (inset), then a soft emissive
+  // breathing so the whole field shimmers as it flows.
+  col *= mix(0.42, 1.05, smoothstep(0.0, 0.85, r));
+  col *= 0.85 + 0.4 * flow;
+
+  // Feather alpha to 0 at the disc edge; CSS also clips to the circle.
+  float alpha = smoothstep(1.0, 0.86, r);
 
   fragColor = vec4(col, alpha);
 }

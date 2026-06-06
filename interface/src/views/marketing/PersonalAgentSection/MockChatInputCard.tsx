@@ -184,7 +184,7 @@ export function MockChatInputCard(): ReactNode {
           selectedModeOverride={selectedMode}
           onSelectedModeOverrideChange={jumpToMode}
           inputReadOnly
-          attachAccent={<AuraScreenOrb />}
+          attachAccent={<AuraScreenOrb variant="radial" />}
         />
       </div>
     </Plate>

@@ -1,5 +1,20 @@
 import { type ReactNode, useEffect, useRef } from "react";
-import { FRAGMENT_SHADER, VERTEX_SHADER } from "./shaders";
+import {
+  RADIAL_FRAGMENT_SHADER,
+  SCREEN_FRAGMENT_SHADER,
+  VERTEX_SHADER,
+} from "./shaders";
+
+/**
+ * Which fragment shader the orb paints:
+ *   - "screen" (default): the domain-warped marbled plasma used on the
+ *     large AgentConsole device pill.
+ *   - "radial": coarse, polar bands flowing outward from the center with
+ *     a glowing inset rim — tuned for the tiny circular "+" attach well
+ *     on the marketing mock LLM input, where the fine "screen" detail is
+ *     illegible.
+ */
+type AuraScreenOrbVariant = "screen" | "radial";
 
 interface AuraScreenOrbProps {
   /**
@@ -7,6 +22,8 @@ interface AuraScreenOrbProps {
    * to fill its host (the circular `<DeviceScreen />` well).
    */
   className?: string;
+  /** Selects the fragment shader. Defaults to "screen". */
+  variant?: AuraScreenOrbVariant;
 }
 
 function compileShader(
@@ -25,9 +42,12 @@ function compileShader(
   return shader;
 }
 
-function createProgram(gl: WebGL2RenderingContext): WebGLProgram | null {
+function createProgram(
+  gl: WebGL2RenderingContext,
+  fragmentSource: string,
+): WebGLProgram | null {
   const vertex = compileShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER);
-  const fragment = compileShader(gl, gl.FRAGMENT_SHADER, FRAGMENT_SHADER);
+  const fragment = compileShader(gl, gl.FRAGMENT_SHADER, fragmentSource);
   if (!vertex || !fragment) return null;
 
   const program = gl.createProgram();
@@ -58,7 +78,10 @@ function createProgram(gl: WebGL2RenderingContext): WebGLProgram | null {
  * tests, or unsupported browsers), letting the black glass well show
  * through.
  */
-export function AuraScreenOrb({ className }: AuraScreenOrbProps): ReactNode {
+export function AuraScreenOrb({
+  className,
+  variant = "screen",
+}: AuraScreenOrbProps): ReactNode {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -72,7 +95,9 @@ export function AuraScreenOrb({ className }: AuraScreenOrbProps): ReactNode {
     });
     if (!gl) return;
 
-    const program = createProgram(gl);
+    const fragmentSource =
+      variant === "radial" ? RADIAL_FRAGMENT_SHADER : SCREEN_FRAGMENT_SHADER;
+    const program = createProgram(gl, fragmentSource);
     if (!program) return;
 
     // No VAO/attributes needed — the vertex shader synthesizes a
@@ -137,7 +162,7 @@ export function AuraScreenOrb({ className }: AuraScreenOrbProps): ReactNode {
       gl.deleteProgram(program);
       gl.getExtension("WEBGL_lose_context")?.loseContext();
     };
-  }, []);
+  }, [variant]);
 
   return (
     <div className={className} aria-hidden="true">
