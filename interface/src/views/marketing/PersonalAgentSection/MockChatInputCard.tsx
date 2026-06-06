@@ -109,23 +109,20 @@ const MOCK_EXAMPLES: readonly MockExample[] = [
 ];
 
 const TYPE_MS = 42;
+const MODE_SELECT_MS = 260;
 const MODE_SETTLE_MS = 420;
 const HOLD_MS = 1600;
+const START_MODE: AgentMode = "code";
+const FIRST_EXAMPLE_INDEX = 1;
 
 function prefersReducedMotion(): boolean {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 }
 
 export function MockChatInputCard(): ReactNode {
-  // Seed with the first prompt when motion is reduced so the bar never
-  // animates; otherwise start empty and let the effect type it in.
-  const [text, setText] = useState(() =>
-    prefersReducedMotion() ? MOCK_EXAMPLES[0].prompt : "",
-  );
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [selectedMode, setSelectedMode] = useState<AgentMode>(
-    MOCK_EXAMPLES[0].mode,
-  );
+  const [text, setText] = useState("");
+  const [activeIndex, setActiveIndex] = useState(FIRST_EXAMPLE_INDEX);
+  const [selectedMode, setSelectedMode] = useState<AgentMode>(START_MODE);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const jumpToMode = useCallback((mode: AgentMode) => {
@@ -134,33 +131,38 @@ export function MockChatInputCard(): ReactNode {
 
   useEffect(() => {
     const example = MOCK_EXAMPLES[activeIndex];
-    setSelectedMode(example.mode);
-
-    if (prefersReducedMotion()) {
-      setText(example.prompt);
-      return;
-    }
-
+    const reduceMotion = prefersReducedMotion();
     let cancelled = false;
     let typed = 0;
 
+    const advance = () => {
+      if (!cancelled) {
+        setActiveIndex((current) => (current + 1) % MOCK_EXAMPLES.length);
+      }
+    };
+
     const tick = () => {
       if (cancelled) return;
+      if (reduceMotion) {
+        setText(example.prompt);
+        timer.current = setTimeout(advance, HOLD_MS);
+        return;
+      }
       typed += 1;
       setText(example.prompt.slice(0, typed));
       if (typed < example.prompt.length) {
         timer.current = setTimeout(tick, TYPE_MS);
         return;
       }
-      timer.current = setTimeout(() => {
-        if (!cancelled) {
-          setActiveIndex((current) => (current + 1) % MOCK_EXAMPLES.length);
-        }
-      }, HOLD_MS);
+      timer.current = setTimeout(advance, HOLD_MS);
     };
 
     setText("");
-    timer.current = setTimeout(tick, MODE_SETTLE_MS);
+    timer.current = setTimeout(() => {
+      if (cancelled) return;
+      setSelectedMode(example.mode);
+      timer.current = setTimeout(tick, MODE_SETTLE_MS);
+    }, MODE_SELECT_MS);
     return () => {
       cancelled = true;
       if (timer.current) clearTimeout(timer.current);

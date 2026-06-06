@@ -75,11 +75,18 @@ describe("MockChatInputCard", () => {
     expect(screen.getByTestId("mock-readonly")).toHaveTextContent("readonly");
 
     act(() => {
-      vi.advanceTimersByTime(4000);
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(screen.getByTestId("mock-mode")).toHaveTextContent("plan");
+    expect(screen.getByTestId("mock-input")).toHaveTextContent("");
+
+    act(() => {
+      vi.advanceTimersByTime(3000);
     });
 
     expect(screen.getByTestId("mock-input")).toHaveTextContent(
-      "Refactor this React component, update the tests, and open a PR",
+      "Plan a weekend trip to Lisbon and book the flights",
     );
   });
 
@@ -88,6 +95,13 @@ describe("MockChatInputCard", () => {
     render(<MockChatInputCard />);
 
     fireEvent.click(screen.getByRole("button", { name: "Image mode" }));
+
+    expect(screen.getByTestId("mock-mode")).toHaveTextContent("code");
+    expect(screen.getByTestId("mock-input")).toHaveTextContent("");
+
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
 
     expect(screen.getByTestId("mock-mode")).toHaveTextContent("image");
     expect(screen.getByTestId("mock-input")).toHaveTextContent("");
