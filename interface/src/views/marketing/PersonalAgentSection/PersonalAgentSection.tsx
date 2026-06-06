@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 import { Section } from "../Section";
+import { TextCard } from "../TextCard";
 import { MockChatInputCard } from "./MockChatInputCard";
 import { ServiceDeviceCard } from "./ServiceDeviceCard";
 import { SkillSeaCard } from "./SkillSeaCard";
@@ -25,15 +26,12 @@ export function PersonalAgentSection(): ReactNode {
   return (
     <Section ariaLabelledBy={HEADLINE_ID}>
       <div className="personalAgentInner">
-        <header className="personalAgentHead">
-          <h2 id={HEADLINE_ID} className="personalAgentHeadline">
-            An agent designed for you.
-          </h2>
-          <p className="personalAgentSubhead">
-            AURA is your own personal agent that supports you with
-            everything from light tasks to deep work.
-          </p>
-        </header>
+        <TextCard
+          level="h2"
+          id={HEADLINE_ID}
+          headline="An agent designed for you."
+          subhead="AURA is your own personal agent that supports you with everything from light tasks to deep work."
+        />
 
         <div className="personalAgentGrid">
           <article className="personalAgentQuadrant personalAgentQuadrantWide">

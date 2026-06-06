@@ -13,37 +13,8 @@
   width: 100%;
 }
 
-.personalAgentHead {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  text-align: center;
-}
-
-/*
- * Headline type ramp matches `.agentChatSectionHeadline` /
- * `.oneComputerOneAgentHeadline` so the marketing rows on `/agents`
- * stay typographically aligned.
- */
-.personalAgentHeadline {
-  margin: 0;
-  font-size: clamp(30px, 4vw, 44px);
-  font-weight: 300;
-  line-height: 1.08;
-  letter-spacing: -0.03em;
-  color: var(--color-text-primary);
-  max-width: 720px;
-}
-
-.personalAgentSubhead {
-  margin: 0;
-  font-size: clamp(16px, 1.6vw, 20px);
-  line-height: var(--leading-relaxed, 1.6);
-  color: var(--color-text-secondary);
-  max-width: 640px;
-  text-wrap: balance;
-}
+/* The section header (headline + subhead) now renders via the shared
+   `<TextCard level="h2" />`; its band + typography live in TextCard.css. */
 
 /*
  * Bento grid: the first quadrant ("Always ready") spans both columns
