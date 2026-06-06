@@ -135,7 +135,6 @@
 .featurePanelItemDesc {
   margin: 0;
   max-width: 34ch;
-  font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.55;
   color: var(--color-text-secondary, #a3a3a8);
