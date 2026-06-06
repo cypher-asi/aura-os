@@ -307,9 +307,10 @@
     color 140ms ease;
 }
 
-/* Recessed pill "screen" the icon sits on: a centered stadium-shaped
-   inset reading as a small dark display sunk into the keycap — deep inner
-   shadow + hairline rim to recess it, with a faint glassy top sheen. */
+/* Recessed pill carved into the keycap: a centered stadium-shaped well
+   that shares the button's surface tone but is darkened at the top (the
+   shadowed upper wall) and catches a thin light lip along the bottom, so
+   it reads as part of the button rather than a separate dark screen. */
 .personalAgentSkillBtn::before {
   content: "";
   position: absolute;
@@ -319,26 +320,22 @@
   height: 48%;
   border-radius: 999px;
   transform: translate(-50%, -50%);
-  background:
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.07) 0%,
-      rgba(255, 255, 255, 0) 38%
-    ),
-    linear-gradient(180deg, #0b0d12 0%, #050609 100%);
+  background: linear-gradient(180deg, #15171b 0%, #1f2228 100%);
   box-shadow:
-    inset 0 2px 5px rgba(0, 0, 0, 0.85),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    inset 0 2px 4px rgba(0, 0, 0, 0.7),
+    inset 0 3px 7px rgba(0, 0, 0, 0.4),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.07);
   transition: box-shadow 140ms ease;
 }
 
+/* Off-white glyph (kept muted, not pure white) raised above the recess.
+   Lit keys override this with a dark glyph against the orange fill. */
 .personalAgentSkillBtn svg {
   position: relative;
   z-index: 1;
   flex: 0 0 auto;
-  color: #f7f8fb;
-  opacity: 0.92;
+  color: #b9bec7;
+  opacity: 1;
   filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.5));
 }
 
@@ -353,7 +350,7 @@
 }
 
 .personalAgentSkillBtn:hover svg {
-  opacity: 1;
+  color: #e6e9ee;
 }
 
 .personalAgentSkillBtn:active {
@@ -382,25 +379,18 @@
     0 0 14px color-mix(in srgb, var(--skill-accent) 45%, transparent);
 }
 
-/* Lit screen inset: the recessed pill glows with the accent, like a lit
-   display behind the glyph. */
+/* Lit key: the same carved pill recess, tinted with the accent so the
+   well glows warm behind the dark glyph. */
 .personalAgentSkillBtn[data-lit="true"]::before {
-  background:
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.18) 0%,
-      rgba(255, 255, 255, 0) 42%
-    ),
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--skill-accent) 78%, #000 22%) 0%,
-      color-mix(in srgb, var(--skill-accent) 90%, #000 10%) 100%
-    );
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--skill-accent) 80%, #000 20%) 0%,
+    color-mix(in srgb, var(--skill-accent) 96%, #fff 4%) 100%
+  );
   box-shadow:
-    inset 0 2px 5px rgba(0, 0, 0, 0.45),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    inset 0 0 8px color-mix(in srgb, var(--skill-accent) 60%, transparent);
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 3px 7px rgba(0, 0, 0, 0.22),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.25);
 }
 
 .personalAgentSkillBtn[data-lit="true"] svg {
