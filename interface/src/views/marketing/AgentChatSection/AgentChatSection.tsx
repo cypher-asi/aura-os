@@ -32,7 +32,7 @@ export function AgentChatSection(): ReactNode {
   const [leftChat, centerChat, rightChat] = MOBILE_CONVERSATIONS;
 
   return (
-    <Section ariaLabelledBy={HEADLINE_ID}>
+    <Section ariaLabelledBy={HEADLINE_ID} className="agentChatSection">
       <div className="agentChatSectionInner">
         <TextCard
           level="h2"

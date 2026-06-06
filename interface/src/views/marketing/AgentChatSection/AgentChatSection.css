@@ -5,6 +5,16 @@
  * controls how the headline / phones / description stack inside
  * that shell.
  */
+/*
+ * Anchor this section's content to the TOP of its full-height band
+ * instead of vertically centering it (the shared `<Section />` shell
+ * centers full-height content by default). This puts the h2 headline
+ * at the top of the section rather than floating mid-viewport.
+ */
+.agentChatSection[data-full-height="true"] {
+  align-items: flex-start;
+}
+
 .agentChatSectionInner {
   display: flex;
   flex-direction: column;
