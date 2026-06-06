@@ -1,0 +1,1 @@
+export { TextCard } from "./TextCard";

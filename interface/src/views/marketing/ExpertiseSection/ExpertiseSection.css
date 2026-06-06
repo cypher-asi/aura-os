@@ -1,13 +1,10 @@
 /*
  * Internal layout for the "Expertise without ego." section directly
- * below the `/agents` hero. The outer chrome (background tint, padding,
- * viewport-height reservation, column cap) is owned by the shared
- * `<Section />` shell; this file only stacks the centered headline +
- * subhead. Type ramps match `.personalAgentHeadline` /
- * `.personalAgentSubhead` so the marketing rows on `/agents` stay
- * typographically aligned.
- */
-/*
+ * below the `/agents` hero. The outer chrome (background tint, viewport
+ * reservation, column cap) is owned by the shared `<Section />` shell,
+ * and the centered headline + subhead band is owned by `<TextCard />`.
+ * This file only tweaks the section's bottom padding.
+ *
  * Tighten the gap to the spec bento below: mirror the hero's small
  * `heroBand -> stage` gap (`clamp(8px, 1.5vh, 20px)`) instead of the
  * shell's default 80px bottom padding, so the cards begin right where
@@ -15,36 +12,4 @@
  */
 .section.expertiseSection {
   padding-bottom: clamp(8px, 1.5vh, 20px);
-}
-
-.expertiseInner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-  text-align: center;
-  /* A comfortable intro band (echoing the hero text band) without the
-     full hero height, so the spec bento below follows closely rather
-     than sitting far beneath a tall centered void. */
-  min-height: clamp(220px, 34vh, 380px);
-}
-
-.expertiseHeadline {
-  margin: 0;
-  font-size: clamp(30px, 4vw, 44px);
-  font-weight: 300;
-  line-height: 1.08;
-  letter-spacing: -0.03em;
-  color: var(--color-text-primary);
-  max-width: 720px;
-}
-
-.expertiseSubhead {
-  margin: 0;
-  font-size: clamp(16px, 1.6vw, 20px);
-  line-height: var(--leading-relaxed, 1.6);
-  color: var(--color-text-secondary);
-  max-width: 640px;
-  text-wrap: balance;
 }

@@ -1,0 +1,45 @@
+/*
+ * Reusable marketing text card — a vertically-centered band holding a
+ * heading + optional subhead. Only the band height varies by level:
+ *   - `.textCardH1` matches the hero text band height.
+ *   - `.textCardH2` is 25% shorter (75% of the h1 height).
+ * Typography (the marketing headline / subhead ramps) is shared so the
+ * two cards read as one family.
+ */
+.textCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  text-align: center;
+}
+
+/* H1 card: same height as `MarketingFirstScreen.heroBand`. */
+.textCardH1 {
+  min-height: clamp(280px, 50vh, 560px);
+}
+
+/* H2 card: 25% less tall than the H1 card (75% of each clamp stop). */
+.textCardH2 {
+  min-height: clamp(210px, 37.5vh, 420px);
+}
+
+.textCardHeadline {
+  margin: 0;
+  font-size: clamp(30px, 4vw, 44px);
+  font-weight: 300;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  color: var(--color-text-primary);
+  max-width: 720px;
+}
+
+.textCardSubhead {
+  margin: 0;
+  font-size: clamp(16px, 1.6vw, 20px);
+  line-height: var(--leading-relaxed, 1.6);
+  color: var(--color-text-secondary);
+  max-width: 640px;
+  text-wrap: balance;
+}
