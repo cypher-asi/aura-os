@@ -141,6 +141,155 @@
     }
   },
   {
+    "id": "project-agent-command-forwarding-chat",
+    "suite": "chat-core",
+    "kind": "agent_chat_core_loop",
+    "title": "Project agent chat forwards selected slash commands",
+    "devices": ["eval-chat-core-desktop"],
+    "project": {
+      "projectId": "proj-chat-core-command",
+      "orgId": "org-chat-core",
+      "name": "Command Forwarding Fixture",
+      "description": "Fixture project for deterministic command forwarding evals."
+    },
+    "agent": {
+      "agentId": "agent-command-forwarding",
+      "agentInstanceId": "agent-inst-command-forwarding",
+      "name": "Command Forwarding Agent",
+      "role": "Platform Engineer",
+      "personality": "Direct and contract-focused",
+      "systemPrompt": "Answer with deterministic fixture evidence after honoring selected commands.",
+      "machineType": "remote",
+      "adapterType": "aura_harness",
+      "defaultModel": "aura-gpt-5-4"
+    },
+    "initialHistory": [],
+    "turn": {
+      "input": "Inspect package metadata with the selected command.",
+      "expectedAction": null,
+      "expectedModel": "aura-gpt-5-4",
+      "slashCommands": [
+        {
+          "id": "run_command",
+          "query": "run",
+          "label": "Run Command"
+        }
+      ],
+      "expectedCommands": ["run_command"],
+      "streamEvents": [
+        {
+          "event": "progress",
+          "data": { "stage": "queued" }
+        },
+        {
+          "event": "text_delta",
+          "data": { "text": "Command forwarding is healthy." }
+        },
+        {
+          "event": "tool_use_start",
+          "data": { "id": "tool-command-1", "name": "run_command" }
+        },
+        {
+          "event": "tool_call",
+          "data": {
+            "id": "tool-command-1",
+            "name": "run_command",
+            "input": { "cmd": "node -p require('./package.json').name" }
+          }
+        },
+        {
+          "event": "tool_result",
+          "data": {
+            "id": "tool-command-1",
+            "name": "run_command",
+            "result": "{\"stdout\":\"aura-interface\",\"exit_code\":0}",
+            "is_error": false
+          }
+        },
+        {
+          "event": "token_usage",
+          "data": { "input_tokens": 101, "output_tokens": 45 }
+        },
+        {
+          "event": "assistant_message_end",
+          "data": {
+            "message_id": "msg-assistant-command-forwarding",
+            "stop_reason": "end_turn",
+            "usage": {
+              "input_tokens": 101,
+              "output_tokens": 45,
+              "context_utilization": 0.16,
+              "estimated_context_tokens": 146
+            }
+          }
+        },
+        {
+          "event": "message_end",
+          "data": {
+            "message_id": "msg-assistant-command-forwarding",
+            "event": {
+              "event_id": "evt-assistant-command-forwarding",
+              "agent_instance_id": "agent-inst-command-forwarding",
+              "project_id": "proj-chat-core-command",
+              "role": "assistant",
+              "content": "Command forwarding is healthy.",
+              "content_blocks": [],
+              "thinking": null,
+              "thinking_duration_ms": 0,
+              "created_at": "2026-06-05T00:00:00.000Z"
+            }
+          }
+        },
+        {
+          "event": "done",
+          "data": { "message_id": "msg-assistant-command-forwarding" }
+        }
+      ],
+      "persistedHistory": [
+        {
+          "event_id": "evt-user-command-forwarding",
+          "agent_instance_id": "agent-inst-command-forwarding",
+          "project_id": "proj-chat-core-command",
+          "role": "user",
+          "content": "Inspect package metadata with the selected command.",
+          "content_blocks": [],
+          "created_at": "2026-06-05T00:00:00.000Z"
+        },
+        {
+          "event_id": "evt-assistant-command-forwarding",
+          "agent_instance_id": "agent-inst-command-forwarding",
+          "project_id": "proj-chat-core-command",
+          "role": "assistant",
+          "content": "Command forwarding is healthy.",
+          "content_blocks": [],
+          "thinking": null,
+          "thinking_duration_ms": 0,
+          "created_at": "2026-06-05T00:00:01.000Z"
+        }
+      ]
+    },
+    "verification": {
+      "visibleTexts": [
+        "Inspect package metadata with the selected command.",
+        "Command forwarding is healthy."
+      ],
+      "expectedStreamEventTypes": [
+        "progress",
+        "text_delta",
+        "tool_use_start",
+        "tool_call",
+        "tool_result",
+        "token_usage",
+        "assistant_message_end",
+        "message_end",
+        "done"
+      ],
+      "expectedStreamRequestCount": 1,
+      "expectedHistoryRequestMinimum": 1,
+      "expectedContextUtilization": 0.16
+    }
+  },
+  {
     "id": "project-agent-attach-existing-chat",
     "suite": "chat-core",
     "kind": "agent_chat_core_loop",

@@ -65,12 +65,6 @@ function compareScenario(candidate, baseline) {
       blocking.push(`stream events dropped from ${baseline.counts.streamEvents} to ${candidate.counts.streamEvents}`);
     }
 
-    if ((candidate.counts.historyRequests ?? 0) < (baseline.counts.historyRequests ?? 0)) {
-      blocking.push(
-        `history requests dropped from ${baseline.counts.historyRequests} to ${candidate.counts.historyRequests}`,
-      );
-    }
-
     if ((candidate.counts.persistedEvents ?? 0) < (baseline.counts.persistedEvents ?? 0)) {
       blocking.push(
         `persisted events dropped from ${baseline.counts.persistedEvents} to ${candidate.counts.persistedEvents}`,

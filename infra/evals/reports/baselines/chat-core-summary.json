@@ -1,5 +1,47 @@
 {
-  "generatedAt": "2026-06-05T14:56:08.682Z",
+  "generatedAt": "2026-06-06T02:30:56.377Z",
+  "totals": {
+    "scenarios": 7,
+    "passed": 7,
+    "failed": 0,
+    "durationMs": 6776,
+    "tokens": 1015,
+    "inputTokens": 659,
+    "outputTokens": 356,
+    "cacheCreationInputTokens": 0,
+    "cacheReadInputTokens": 0,
+    "promptInputFootprintTokens": 0,
+    "costUsd": 0,
+    "richUsageTurns": 0,
+    "fallbackUsageTurns": 0,
+    "maxEstimatedContextTokens": 0,
+    "maxContextUtilization": 0.21
+  },
+  "suites": {
+    "chat-core": {
+      "scenarios": 7,
+      "passed": 7,
+      "failed": 0,
+      "durationMs": 6776,
+      "tokens": 1015,
+      "inputTokens": 659,
+      "outputTokens": 356,
+      "cacheCreationInputTokens": 0,
+      "cacheReadInputTokens": 0,
+      "promptInputFootprintTokens": 0,
+      "costUsd": 0,
+      "buildSteps": 0,
+      "testSteps": 0,
+      "failedTasks": 0,
+      "richUsageTurns": 0,
+      "fallbackUsageTurns": 0,
+      "maxEstimatedContextTokens": 0,
+      "maxContextUtilization": 0.21,
+      "avgDurationMs": 968,
+      "avgTokens": 145,
+      "avgCostUsd": 0
+    }
+  },
   "scenarios": [
     {
       "scenarioId": "project-agent-attach-existing-chat-attach-flow",
@@ -26,7 +68,7 @@
         "unhandledApiRequests": 0
       },
       "metrics": {
-        "totalDurationMs": 1054,
+        "totalDurationMs": 1077,
         "totalSteps": 6,
         "totalTokens": 137,
         "totalInputTokens": 88,
@@ -71,7 +113,7 @@
         "unhandledApiRequests": 0
       },
       "metrics": {
-        "totalDurationMs": 767,
+        "totalDurationMs": 832,
         "totalSteps": 5,
         "totalTokens": 148,
         "totalInputTokens": 96,
@@ -90,51 +132,6 @@
         "totalTimeSeconds": 0
       },
       "source": "test-results/evals-chat-core-Attach-exi-eb76e-t-agent-then-chat-chat-core-eval-chat-core-mobile/project-agent-attach-existing-chat.json"
-    },
-    {
-      "scenarioId": "project-agent-chat-core-turn",
-      "title": "Project agent chat core turn persists and renders",
-      "suite": "chat-core",
-      "kind": "agent_chat_core_loop",
-      "device": "eval-chat-core-desktop",
-      "bundleId": "chat-core-fixture-v1",
-      "success": true,
-      "counts": {
-        "specs": 0,
-        "tasks": 0,
-        "doneTasks": 0,
-        "failedTasks": 0,
-        "artifactChecks": 0,
-        "streamRequests": 1,
-        "streamEvents": 9,
-        "historyRequests": 2,
-        "persistedEvents": 2,
-        "agentAttachRequests": 0,
-        "attachedAgents": 0,
-        "agentCreateRequests": 0,
-        "remoteAgentStateRequests": 0,
-        "unhandledApiRequests": 0
-      },
-      "metrics": {
-        "totalDurationMs": 1195,
-        "totalSteps": 5,
-        "totalTokens": 148,
-        "totalInputTokens": 96,
-        "totalOutputTokens": 52,
-        "totalCacheCreationInputTokens": 0,
-        "totalCacheReadInputTokens": 0,
-        "promptInputFootprintTokens": 0,
-        "maxEstimatedContextTokens": 0,
-        "maxContextUtilization": 0.18,
-        "richUsageTurns": 0,
-        "fallbackUsageTurns": 0,
-        "estimatedCostUsd": 0,
-        "buildSteps": 0,
-        "testSteps": 0,
-        "completionPercentage": 0,
-        "totalTimeSeconds": 0
-      },
-      "source": "test-results/evals-chat-core-Project-ag-a6c60-sists-and-renders-chat-core-eval-chat-core-desktop/project-agent-chat-core-turn.json"
     },
     {
       "scenarioId": "project-agent-create-remote-chat-create-flow",
@@ -161,7 +158,7 @@
         "unhandledApiRequests": 0
       },
       "metrics": {
-        "totalDurationMs": 1053,
+        "totalDurationMs": 1066,
         "totalSteps": 6,
         "totalTokens": 138,
         "totalInputTokens": 91,
@@ -197,7 +194,7 @@
         "artifactChecks": 0,
         "streamRequests": 1,
         "streamEvents": 9,
-        "historyRequests": 2,
+        "historyRequests": 3,
         "persistedEvents": 2,
         "agentAttachRequests": 0,
         "attachedAgents": 0,
@@ -206,7 +203,7 @@
         "unhandledApiRequests": 0
       },
       "metrics": {
-        "totalDurationMs": 637,
+        "totalDurationMs": 778,
         "totalSteps": 5,
         "totalTokens": 148,
         "totalInputTokens": 96,
@@ -225,6 +222,96 @@
         "totalTimeSeconds": 0
       },
       "source": "test-results/evals-chat-core-Create-rem-70d52-t-agent-then-chat-chat-core-eval-chat-core-mobile/project-agent-create-remote-chat.json"
+    },
+    {
+      "scenarioId": "project-agent-chat-core-turn",
+      "title": "Project agent chat core turn persists and renders",
+      "suite": "chat-core",
+      "kind": "agent_chat_core_loop",
+      "device": "eval-chat-core-desktop",
+      "bundleId": "chat-core-fixture-v1",
+      "success": true,
+      "counts": {
+        "specs": 0,
+        "tasks": 0,
+        "doneTasks": 0,
+        "failedTasks": 0,
+        "artifactChecks": 0,
+        "streamRequests": 1,
+        "streamEvents": 9,
+        "historyRequests": 2,
+        "persistedEvents": 2,
+        "agentAttachRequests": 0,
+        "attachedAgents": 0,
+        "agentCreateRequests": 0,
+        "remoteAgentStateRequests": 0,
+        "unhandledApiRequests": 0
+      },
+      "metrics": {
+        "totalDurationMs": 1121,
+        "totalSteps": 5,
+        "totalTokens": 148,
+        "totalInputTokens": 96,
+        "totalOutputTokens": 52,
+        "totalCacheCreationInputTokens": 0,
+        "totalCacheReadInputTokens": 0,
+        "promptInputFootprintTokens": 0,
+        "maxEstimatedContextTokens": 0,
+        "maxContextUtilization": 0.18,
+        "richUsageTurns": 0,
+        "fallbackUsageTurns": 0,
+        "estimatedCostUsd": 0,
+        "buildSteps": 0,
+        "testSteps": 0,
+        "completionPercentage": 0,
+        "totalTimeSeconds": 0
+      },
+      "source": "test-results/evals-chat-core-Project-ag-a6c60-sists-and-renders-chat-core-eval-chat-core-desktop/project-agent-chat-core-turn.json"
+    },
+    {
+      "scenarioId": "project-agent-command-forwarding-chat",
+      "title": "Project agent chat forwards selected slash commands",
+      "suite": "chat-core",
+      "kind": "agent_chat_core_loop",
+      "device": "eval-chat-core-desktop",
+      "bundleId": "chat-core-fixture-v1",
+      "success": true,
+      "counts": {
+        "specs": 0,
+        "tasks": 0,
+        "doneTasks": 0,
+        "failedTasks": 0,
+        "artifactChecks": 0,
+        "streamRequests": 1,
+        "streamEvents": 9,
+        "historyRequests": 2,
+        "persistedEvents": 2,
+        "agentAttachRequests": 0,
+        "attachedAgents": 0,
+        "agentCreateRequests": 0,
+        "remoteAgentStateRequests": 0,
+        "unhandledApiRequests": 0
+      },
+      "metrics": {
+        "totalDurationMs": 911,
+        "totalSteps": 5,
+        "totalTokens": 148,
+        "totalInputTokens": 96,
+        "totalOutputTokens": 52,
+        "totalCacheCreationInputTokens": 0,
+        "totalCacheReadInputTokens": 0,
+        "promptInputFootprintTokens": 0,
+        "maxEstimatedContextTokens": 0,
+        "maxContextUtilization": 0.16,
+        "richUsageTurns": 0,
+        "fallbackUsageTurns": 0,
+        "estimatedCostUsd": 0,
+        "buildSteps": 0,
+        "testSteps": 0,
+        "completionPercentage": 0,
+        "totalTimeSeconds": 0
+      },
+      "source": "test-results/evals-chat-core-Project-ag-6cdf2-ed-slash-commands-chat-core-eval-chat-core-desktop/project-agent-command-forwarding-chat.json"
     },
     {
       "scenarioId": "project-agent-rich-tool-retry-chat",
@@ -251,7 +338,7 @@
         "unhandledApiRequests": 0
       },
       "metrics": {
-        "totalDurationMs": 776,
+        "totalDurationMs": 991,
         "totalSteps": 5,
         "totalTokens": 148,
         "totalInputTokens": 96,

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import {
   loadChatCoreScenarios,
@@ -11,6 +11,18 @@ test.use({ serviceWorkers: "block" });
 test.describe.configure({ mode: "serial" });
 
 const scenarios = await loadChatCoreScenarios();
+
+async function selectConfiguredSlashCommands(page: Page, scenario: (typeof scenarios)[number]) {
+  const input = page.locator('[data-agent-field="chat-input"]');
+  for (const command of scenario.turn.slashCommands ?? []) {
+    await input.fill(`/${command.query}`);
+    await expect(page.getByRole("button", { name: new RegExp(command.label) })).toBeVisible();
+    await input.press("Enter");
+    await expect(page.locator('[data-agent-surface="command-chips-stacked"]')).toContainText(
+      `/${command.label}`,
+    );
+  }
+}
 
 for (const scenario of scenarios) {
   test(`${scenario.title} @chat-core`, async ({ page }, testInfo) => {
@@ -39,6 +51,7 @@ for (const scenario of scenarios) {
 
     await timed("send_chat_turn", async () => {
       const input = page.locator('[data-agent-field="chat-input"]');
+      await selectConfiguredSlashCommands(page, scenario);
       await input.fill(scenario.turn.input);
       if (testInfo.project.name.includes("mobile")) {
         await input.press("Enter");
@@ -63,6 +76,9 @@ for (const scenario of scenarios) {
       expect(request.content).toBe(scenario.turn.input);
       expect(request.action).toBe(scenario.turn.expectedAction);
       expect(request.model).toBe(scenario.turn.expectedModel);
+      if (scenario.turn.expectedCommands) {
+        expect(request.commands).toEqual(scenario.turn.expectedCommands);
+      }
       expect(harness.getHistorySnapshot()).toHaveLength(scenario.turn.persistedHistory.length);
       expect(harness.unhandledApiRequests).toEqual([]);
     });
@@ -167,6 +183,9 @@ test("Attach existing project agent and chat @chat-core", async ({ page }, testI
     expect(harness.agentAttachRequests[0]?.agentId).toBe(scenario.agent.agentId);
     expect(harness.getAttachedAgentsSnapshot()).toHaveLength(1);
     expect(harness.streamRequests).toHaveLength(scenario.verification.expectedStreamRequestCount);
+    expect(harness.historyRequests.length).toBeGreaterThanOrEqual(
+      scenario.verification.expectedHistoryRequestMinimum,
+    );
     expect(harness.streamEventTypes).toEqual(scenario.verification.expectedStreamEventTypes);
     expect(harness.streamRequests[0]?.content).toBe(scenario.turn.input);
     expect(harness.streamRequests[0]?.model).toBe(scenario.turn.expectedModel);
@@ -279,6 +298,9 @@ test("Create remote project agent and chat @chat-core", async ({ page }, testInf
     expect(harness.agentAttachRequests[0]?.agentId).toBe(scenario.agent.agentId);
     expect(harness.getAttachedAgentsSnapshot()).toHaveLength(1);
     expect(harness.streamRequests).toHaveLength(scenario.verification.expectedStreamRequestCount);
+    expect(harness.historyRequests.length).toBeGreaterThanOrEqual(
+      scenario.verification.expectedHistoryRequestMinimum,
+    );
     expect(harness.streamEventTypes).toEqual(scenario.verification.expectedStreamEventTypes);
     expect(harness.streamRequests[0]?.content).toBe(scenario.turn.input);
     expect(harness.streamRequests[0]?.model).toBe(scenario.turn.expectedModel);

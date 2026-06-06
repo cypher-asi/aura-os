@@ -125,6 +125,12 @@ export interface ChatCoreScenario {
     input: string;
     expectedAction: string | null;
     expectedModel: string;
+    slashCommands?: Array<{
+      id: string;
+      query: string;
+      label: string;
+    }>;
+    expectedCommands?: string[];
     streamEvents: ChatCoreSseEvent[];
     persistedHistory: Array<Record<string, unknown>>;
   };
