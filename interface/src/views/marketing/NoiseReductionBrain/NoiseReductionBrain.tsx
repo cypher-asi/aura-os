@@ -13,6 +13,59 @@ interface NoiseReductionBrainProps {
 /** Source angiography used as the vessel luminance mask. */
 const BRAIN_SRC = "/noise-reduction-brain.png";
 
+/**
+ * Lines of code + mathematics drawn into the offscreen glyph texture that
+ * backs the brain's LEFT (analytical) hemisphere. Kept terse and monospace
+ * so they tile into a faint "matrix readout" behind the mono vessels.
+ */
+const CODE_LINES = [
+  "for (let i = 0; i < n; i++)",
+  "const grad = ∇f(x);",
+  "∑ wᵢ·xᵢ + b",
+  "P(A|B) = P(B|A)P(A)/P(B)",
+  "λ = eig(A);",
+  "∫ f(x) dx = F(b) − F(a)",
+  "return softmax(logits);",
+  "θ ← θ − η·∇L(θ)",
+  "if (x ≡ y mod p) {",
+  "matrix M[i][j] = Σ aᵢ·bⱼ",
+  "lim x→∞  1/x = 0",
+  "assert(isPrime(n));",
+  "dy/dx = cos(x²)·2x",
+  "while (!converged) {",
+  "O(n log n)",
+  "x = (-b ± √(b²−4ac)) / 2a",
+];
+
+/**
+ * Render the code/math lines to an offscreen canvas (white on transparent)
+ * for use as a tiling WebGL texture. Returns null when 2D canvas is
+ * unavailable (e.g. JSDOM), in which case the left backdrop is simply empty.
+ */
+function createCodeCanvas(): HTMLCanvasElement | null {
+  const canvas = document.createElement("canvas");
+  const size = 512;
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  ctx.clearRect(0, 0, size, size);
+  ctx.fillStyle = "#ffffff";
+  ctx.textBaseline = "top";
+  ctx.font =
+    '15px "SFMono-Regular", "Menlo", "Consolas", "Liberation Mono", monospace';
+
+  const lineHeight = size / CODE_LINES.length;
+  CODE_LINES.forEach((line, i) => {
+    // Stagger the indent so the columns don't read as a rigid grid.
+    const indent = 6 + (i % 4) * 14;
+    ctx.fillText(line, indent, i * lineHeight + (lineHeight - 15) / 2);
+  });
+
+  return canvas;
+}
+
 function compileShader(
   gl: WebGL2RenderingContext,
   type: number,
@@ -53,11 +106,15 @@ function createProgram(gl: WebGL2RenderingContext): WebGLProgram | null {
 }
 
 /**
- * Animated WebGL2 brain for the NoiseReductionCard "screen" (the spec bento
- * below "Expertise without ego." on `/agents`). Samples the existing
- * `/noise-reduction-brain.png` angiography as a vessel mask and animates it:
- * energy pulses travel along the vessels, the brain breathes, and the color
- * drifts through the reference palette. Blends over the black glass via
+ * Animated WebGL2 SPLIT brain for the NoiseReductionCard "screen" (the spec
+ * bento below "Expertise without ego. ... from coding to science to
+ * creativity." on `/agents`). Samples the existing
+ * `/noise-reduction-brain.png` angiography as a vessel mask, then splits it
+ * down the midline: the LEFT hemisphere renders as black-and-white code and
+ * mathematics over monochrome ink vessels (the analytical side), while the
+ * RIGHT hemisphere drifts through a saturated, abstract paint-splatter
+ * palette (the creative side). Energy pulses travel along the vessels and
+ * the whole brain breathes. Blends over the black glass via
  * premultiplied-off alpha so the screen shows through the empty space.
  *
  * Falls back to a no-op when WebGL2 is unavailable (e.g. JSDOM in tests, or
@@ -97,6 +154,11 @@ export function NoiseReductionBrain({
     const texResolutionLoc = gl.getUniformLocation(program, "u_texResolution");
     const timeLoc = gl.getUniformLocation(program, "u_time");
     const texLoc = gl.getUniformLocation(program, "u_tex");
+    const codeLoc = gl.getUniformLocation(program, "u_code");
+    const codeResolutionLoc = gl.getUniformLocation(
+      program,
+      "u_codeResolution",
+    );
 
     // Texture for the brain angiography. Seed with a 1x1 transparent pixel
     // so the program is renderable before the image finishes loading.
@@ -115,6 +177,46 @@ export function NoiseReductionBrain({
     );
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+    // Code/math glyph texture for the left hemisphere backdrop. Drawn once to
+    // an offscreen 2D canvas; tiled + scrolled in the shader. WRAP set to
+    // REPEAT so `fract(uv)` sampling tiles seamlessly. Falls back to a 1x1
+    // transparent texture when 2D canvas is unavailable.
+    const codeCanvas = createCodeCanvas();
+    let codeWidth = 1;
+    let codeHeight = 1;
+    const codeTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, codeTexture);
+    if (codeCanvas) {
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        codeCanvas,
+      );
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      codeWidth = codeCanvas.width;
+      codeHeight = codeCanvas.height;
+    } else {
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA,
+        1,
+        1,
+        0,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        new Uint8Array([0, 0, 0, 0]),
+      );
+    }
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
@@ -175,8 +277,12 @@ export function NoiseReductionBrain({
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, texture);
       gl.uniform1i(texLoc, 0);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, codeTexture);
+      gl.uniform1i(codeLoc, 1);
       gl.uniform2f(resolutionLoc, width, height);
       gl.uniform2f(texResolutionLoc, texWidth, texHeight);
+      gl.uniform2f(codeResolutionLoc, codeWidth, codeHeight);
       gl.uniform1f(timeLoc, timeSeconds);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
@@ -195,6 +301,7 @@ export function NoiseReductionBrain({
       observer.disconnect();
       image.onload = null;
       gl.deleteTexture(texture);
+      gl.deleteTexture(codeTexture);
       gl.deleteVertexArray(vao);
       gl.deleteProgram(program);
       gl.getExtension("WEBGL_lose_context")?.loseContext();

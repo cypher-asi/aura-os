@@ -1,15 +1,25 @@
 /*
- * GLSL ES 3.00 source for the WebGL2 animated brain that lives in the
- * NoiseReductionCard's top "screen" (the DELE deep-learning noise-reduction
- * plugin mini-UI in the spec bento below "Expertise without ego.").
+ * GLSL ES 3.00 source for the WebGL2 animated SPLIT brain that lives in the
+ * NoiseReductionCard's top "screen" (the spec bento below "Expertise without
+ * ego. ... from coding to science to creativity.").
  *
  * Rather than draw a brain from scratch, this samples the existing
  * `/noise-reduction-brain.png` angiography as a luminance MASK (bright =
- * vessel, black = background) and brings it to life: energy pulses travel
- * along the vessels, the whole thing breathes, and the color slowly drifts
- * through the reference palette (warm orange -> coral -> mauve -> soft
- * lavender). Alpha follows the mask so the screen's black glass shows
- * through the empty space — the canvas blends over the static fallback img.
+ * vessel, black = background) and brings it to life, then splits it down the
+ * anatomical midline (image UV x = 0.5, softly feathered):
+ *
+ *   LEFT  — black & white. Monochrome vessels read like an ink/blueprint
+ *           line-drawing over a faint, slowly scrolling backdrop of real
+ *           code and mathematics (sampled from `u_code`). This is the
+ *           analytical "coding to science" hemisphere.
+ *   RIGHT — color & creativity. The vessels drift through a saturated,
+ *           multi-hue paint-splatter palette with a wide colorful aura
+ *           blooming into the black glass — the abstract/art hemisphere.
+ *
+ * Energy pulses travel along the vessels and the whole thing breathes on
+ * both sides. Alpha follows the lit vessels + aura so the screen's black
+ * glass shows through the empty space — the canvas blends over the static
+ * fallback img.
  */
 
 // Full-screen triangle generated from `gl_VertexID` alone — no vertex
@@ -30,7 +40,9 @@ out vec4 fragColor;
 uniform vec2 u_resolution;     // canvas size in device px
 uniform vec2 u_texResolution;  // brain image natural size
 uniform float u_time;
-uniform sampler2D u_tex;
+uniform sampler2D u_tex;       // brain angiography (vessel mask)
+uniform sampler2D u_code;      // generated code/math glyph texture (left bg)
+uniform vec2 u_codeResolution; // code texture natural size
 
 float hash(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
@@ -101,8 +113,8 @@ void main() {
   // Vessel mask from the source angiography.
   float mask = maskAt(uv);
 
-  // A soft bloom of the mask (sample a few neighbors) so glow leaks just
-  // past the vessels, giving them an emissive halo on the black glass.
+  // Tight bloom (close neighbors) so the vessels themselves read as
+  // emissive rather than flat lines.
   vec2 px = 1.5 / u_texResolution;
   float bloom = mask;
   bloom += maskAt(uv + vec2(px.x, 0.0));
@@ -113,35 +125,103 @@ void main() {
   bloom += maskAt(uv - px * 2.0);
   bloom /= 7.0;
 
-  // Energy traveling along the vessels: a flowing noise field scrolled over
-  // time, gated by the mask so it only lights up where there is vasculature.
-  vec2 flowP = uv * 6.0;
-  float flow = fbm(flowP + vec2(-t * 0.35, t * 0.18));
-  flow = fbm(flowP + 3.0 * vec2(flow, fbm(flowP - t * 0.12)));
+  // Wide soft AURA: average the mask over expanding rings so the glow
+  // blooms far beyond the vessels into the black glass, wrapping the whole
+  // brain in a luminous energy field.
+  vec2 ap = 1.0 / u_texResolution;
+  float aura = 0.0;
+  const int AURA_TAPS = 10;
+  for (int i = 0; i < AURA_TAPS; i++) {
+    float a = (float(i) / float(AURA_TAPS)) * 6.2831853;
+    vec2 dir = vec2(cos(a), sin(a));
+    aura += maskAt(uv + dir * ap * 16.0);
+    aura += maskAt(uv + dir * ap * 38.0);
+    aura += maskAt(uv + dir * ap * 66.0);
+    aura += maskAt(uv + dir * ap * 100.0);
+  }
+  aura /= float(AURA_TAPS * 4);
+  // Throb the aura so the whole field surges in and out.
+  aura *= 0.8 + 0.7 * (0.5 + 0.5 * sin(t * 1.7));
 
-  // Sharp moving crests = the bright pulse fronts running through vessels.
-  float pulse = pow(clamp(flow * 1.2, 0.0, 1.0), 2.2);
-  float travel = 0.5 + 0.5 * sin((uv.x + uv.y) * 14.0 - t * 2.0 + flow * 6.2831);
+  // Fast, churning flow field so the vasculature looks busy and restless.
+  vec2 flowP = uv * 7.0;
+  float flow = fbm(flowP + vec2(-t * 0.7, t * 0.42));
+  flow = fbm(flowP + 3.5 * vec2(flow, fbm(flowP - t * 0.34)));
 
-  // Slow global breathing of the whole brain.
-  float breathe = 0.85 + 0.15 * sin(t * 0.9);
+  // Sharp moving crests = bright pulse fronts running through vessels.
+  float pulse = pow(clamp(flow * 1.45, 0.0, 1.0), 1.7);
 
-  // Drive the palette by a slow drift + the local pulse so hue travels.
-  float v = clamp(0.30 + 0.45 * flow + 0.20 * sin(t * 0.25) + 0.25 * pulse, 0.0, 1.0);
-  vec3 col = palette(v);
+  // Several overlapping pulse trains in different directions/speeds so the
+  // brain fires everywhere at once instead of a single sweeping wave.
+  float travel = 0.0;
+  travel += sin((uv.x + uv.y) * 24.0 - t * 5.5 + flow * 9.0);
+  travel += sin((uv.x - uv.y) * 19.0 - t * 3.7 + flow * 7.0);
+  travel += sin(length(uv - 0.5) * 34.0 - t * 6.5);
+  travel = 0.5 + 0.5 * (travel / 3.0);
 
-  // Intensity: base vessels lit, pulse fronts blowing out toward white.
-  float energy = mask * (0.55 + 0.75 * pulse * travel);
-  energy += bloom * 0.35;            // emissive halo around vessels
+  // High-frequency firing sparkles igniting along the vessels.
+  float spark = fbm(uv * 46.0 + vec2(t * 2.6, -t * 1.9));
+  spark = pow(clamp(spark, 0.0, 1.0), 5.0);
+
+  // Faster, deeper global breathing (shared by both hemispheres).
+  float breathe = 0.9 + 0.28 * sin(t * 1.3);
+
+  // Shared vessel intensity: hotter base, pulse fronts and sparks blowing
+  // out to white. Drives both the colorful right and the mono left.
+  float energy = mask * (0.85 + 1.5 * pulse * travel);
+  energy += mask * spark * 2.2;       // firing sparkles
+  energy += bloom * 0.6;              // emissive vessels
   energy *= breathe;
-  col *= energy;
 
-  // Hot crest on the brightest pulse fronts so they read as electric.
-  col += vec3(1.0, 0.9, 0.78) * pow(mask * pulse * travel, 2.0) * 0.9;
+  // ----- RIGHT hemisphere: color, abstract paint, creativity -----------
+  // Drive the palette by a faster drift + the local pulse so hue races,
+  // and add an fbm hue offset so the field reads as abstract paint splatter
+  // (many hues bleeding together) rather than one smooth gradient.
+  float splat = fbm(uv * 4.0 + vec2(t * 0.15, -t * 0.1));
+  float v = clamp(0.30 + 0.5 * flow + 0.22 * sin(t * 0.5) + 0.3 * pulse, 0.0, 1.0);
+  v = clamp(v + 0.45 * (splat - 0.5), 0.0, 1.0);
+  vec3 rightCol = palette(v);
+  // Push saturation so the right reads vivid against the mono left.
+  float rLum = dot(rightCol, vec3(0.299, 0.587, 0.114));
+  rightCol = clamp(mix(vec3(rLum), rightCol, 1.35), 0.0, 1.0);
+  rightCol *= energy;
 
-  // Alpha follows the lit vessels (+ a faint halo) so the black background
-  // stays transparent and the screen's glass shows through.
-  float alpha = clamp(mask * 1.2 + bloom * 0.5, 0.0, 1.0);
+  // Hot crest on the brightest pulse fronts + spark flashes.
+  rightCol += vec3(1.0, 0.92, 0.8) * pow(mask * pulse * travel, 2.0) * 1.7;
+  rightCol += vec3(1.0, 0.95, 0.86) * mask * spark * 1.3;
+
+  // Wide multi-hue aura: drifting paint blooming into the black glass.
+  vec3 auraCol = palette(clamp(0.55 + 0.28 * sin(t * 0.45) + 0.4 * (splat - 0.5), 0.0, 1.0));
+  rightCol += auraCol * aura * 1.4;
+
+  float rightAlpha = clamp(mask * 1.3 + bloom * 0.7 + aura * 0.95, 0.0, 1.0);
+
+  // ----- LEFT hemisphere: black & white code + mathematics --------------
+  // Vessels as a near-white ink line-drawing (strictly grayscale).
+  float mono = clamp(energy, 0.0, 1.6);
+  vec3 leftCol = vec3(0.94, 0.96, 1.0) * mono;
+  leftCol += vec3(1.0) * pow(mask * pulse * travel, 2.0) * 1.2;  // mono crest
+
+  // Faint, slowly scrolling backdrop of real code/math, concentrated in the
+  // empty space so the vessel line-art stays the dominant read. The code
+  // texture tiles and drifts upward like a calm matrix readout.
+  vec2 codeUv = uv * vec2(2.4, 2.4) + vec2(0.0, -t * 0.03);
+  float code = texture(u_code, fract(codeUv)).r;
+  float backdrop = code * (0.85 - 0.7 * clamp(aura * 1.5, 0.0, 1.0));
+  leftCol += vec3(0.62, 0.66, 0.72) * backdrop * 0.5;
+
+  float leftAlpha = clamp(mask * 1.3 + bloom * 0.7 + aura * 0.5 + backdrop * 0.4, 0.0, 1.0);
+
+  // ----- Split + feathered seam ----------------------------------------
+  // 0 = left hemisphere, 1 = right hemisphere, blended across the midline.
+  float side = smoothstep(0.46, 0.54, uv.x);
+  vec3 col = mix(leftCol, rightCol, side);
+  float alpha = mix(leftAlpha, rightAlpha, side);
+
+  // Soft luminous divider down the midline where the two worlds meet.
+  float seamGlow = smoothstep(0.03, 0.0, abs(uv.x - 0.5)) * (mask * 1.2 + aura);
+  col += vec3(0.9, 0.92, 1.0) * seamGlow * 0.5;
+  alpha = clamp(alpha + seamGlow * 0.4, 0.0, 1.0);
 
   fragColor = vec4(col, alpha);
 }
