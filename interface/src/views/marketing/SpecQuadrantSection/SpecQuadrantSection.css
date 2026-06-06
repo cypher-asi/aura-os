@@ -299,6 +299,18 @@
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.55);
   transform-origin: center;
+  transition:
+    background 0.1s ease-out,
+    box-shadow 0.1s ease-out;
+}
+
+/* Lit meter segment: ticks from the start of the arc up to the knob pointer
+   glow with the accent color, filling in real time as the cursor sweeps. */
+.nrKnobTickLit {
+  background: #eaf1ff;
+  box-shadow:
+    0 0 4px var(--nr-accent),
+    0 0 7px var(--nr-accent);
 }
 
 /* Raised neomorphic dial sunk into the bezel, with a thick gradient bezel

@@ -17,9 +17,10 @@ import { NoiseReductionBrain } from "../NoiseReductionBrain";
  * (`aria-hidden`); nothing here is a real control.
  *
  * Moving the cursor anywhere across the device panel is interactive: the
- * horizontal position sweeps the knob pointer through its dial arc and
- * steers the underlying brain animation (`<NoiseReductionBrain />`). The
- * last position is held when the cursor leaves.
+ * horizontal position sweeps the knob pointer through its dial arc, fills
+ * the tick ring up to that point like a level meter, and steers the
+ * underlying brain animation (`<NoiseReductionBrain />`). The last position
+ * is held when the cursor leaves.
  */
 
 /** Tick-dot count for the full circular ring around the knob. */
@@ -37,6 +38,7 @@ export function NoiseReductionCard(): ReactNode {
   // to match. Kept in a ref so pointer moves don't re-render the card.
   const pointerRef = useRef({ x: 0.5, y: 0.5 });
   const knobPointerRef = useRef<HTMLSpanElement>(null);
+  const tickRefs = useRef<(HTMLSpanElement | null)[]>([]);
 
   const handlePointerMove = useCallback((e: PointerEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -47,7 +49,18 @@ export function NoiseReductionCard(): ReactNode {
     // Sweep the pointer through the dial's arc: left = min, right = max.
     const angle = (x - 0.5) * TICK_ARC_DEG;
     knobPointerRef.current?.style.setProperty("--nr-knob-angle", `${angle}deg`);
+    // Light every tick from the start of the arc up to the pointer, like a
+    // level meter filling in real time. Tick `i` sits at `i/(N-1)` of the
+    // arc, so it's lit once that fraction is <= the cursor's x position.
+    const litThreshold = x * (KNOB_TICKS - 1);
+    for (let i = 0; i < tickRefs.current.length; i++) {
+      tickRefs.current[i]?.classList.toggle("nrKnobTickLit", i <= litThreshold);
+    }
   }, []);
+
+  // Default fill matches the rest pointer (straight up = cursor centered):
+  // ticks in the left half plus the top tick start lit.
+  const defaultLitMax = (KNOB_TICKS - 1) / 2;
 
   return (
     <Plate className="nrCard" aria-hidden="true">
@@ -86,7 +99,14 @@ export function NoiseReductionCard(): ReactNode {
                   return (
                     <span
                       key={i}
-                      className="nrKnobTick"
+                      ref={(el) => {
+                        tickRefs.current[i] = el;
+                      }}
+                      className={
+                        i <= defaultLitMax
+                          ? "nrKnobTick nrKnobTickLit"
+                          : "nrKnobTick"
+                      }
                       style={{
                         transform: `rotate(${angle}deg) translateY(calc(var(--nr-knob-size) / -2 - 12px))`,
                       }}
