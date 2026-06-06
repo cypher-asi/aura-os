@@ -1,0 +1,91 @@
+/*
+ * Tab slider beneath the "Expertise without ego." headline. Mirrors the
+ * Apple feature-tab pattern: a centered row of discipline labels above a
+ * thin divider, with the active label brought to full opacity and marked
+ * by an underline, and a single description paragraph below that swaps
+ * per tab. Colors reuse the marketing text tokens cascaded from
+ * `.productView` (`--color-text-*`).
+ */
+.expertiseTabs {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  max-width: 820px;
+  margin-inline: auto;
+}
+
+.expertiseTabsRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 28px;
+  width: 100%;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.expertiseTab {
+  position: relative;
+  margin: 0;
+  padding: 4px 2px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: clamp(13px, 1.2vw, 16px);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+  transition:
+    color 160ms ease,
+    opacity 160ms ease;
+}
+
+.expertiseTab:hover {
+  color: var(--color-text-primary);
+  opacity: 1;
+}
+
+.expertiseTab:focus-visible {
+  outline: 2px solid var(--color-text-primary);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.expertiseTab[data-selected="true"] {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  opacity: 1;
+}
+
+/* Underline marker for the active tab, sitting on the divider line. */
+.expertiseTab[data-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -17px;
+  height: 2px;
+  background: var(--color-text-primary);
+  border-radius: 2px;
+}
+
+.expertiseTabsPanel {
+  margin: 0;
+  min-height: 3.2em;
+  max-width: 620px;
+  font-size: clamp(15px, 1.5vw, 19px);
+  line-height: var(--leading-relaxed, 1.6);
+  color: var(--color-text-secondary);
+  text-align: center;
+  text-wrap: balance;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .expertiseTab {
+    transition: none;
+  }
+}
