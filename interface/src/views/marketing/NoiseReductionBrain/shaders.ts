@@ -74,6 +74,36 @@ float fbm(vec2 p) {
   return v;
 }
 
+// Localized, bursty pulsation. The hemisphere is split into soft regions
+// (a noise-warped grid so the boundaries aren't a rigid lattice); each region
+// runs its own randomized cycle and flashes a short, fast burst, then goes
+// dark for the rest of its cycle. The narrow duty cycle keeps only roughly a
+// quarter of the regions lit at any instant, and the per-region random period
+// + phase make the firing read as unpredictable rather than one global loop.
+float burstField(vec2 uv, float t) {
+  // Warp the sampling grid by low-frequency noise so region boundaries don't
+  // read as a regular lattice.
+  vec2 w = uv + 0.18 * vec2(noise(uv * 3.0 + 11.0), noise(uv * 3.0 - 7.0));
+  vec2 gp = w * 5.5;
+  vec2 cell = floor(gp);
+  vec2 f = fract(gp) - 0.5;
+
+  float r1 = hash(cell);
+  float r2 = hash(cell + 19.7);
+  float period = 1.4 + 2.6 * r1;          // each region its own rhythm
+  float phase = r2 * period;
+  float cyc = fract((t + phase) / period);
+
+  // Short, fast burst: snap up, quick fall, then off for the remainder of the
+  // cycle. The narrow active window (~a fifth of the cycle) makes each flash
+  // brief, so the field never reads as a sustained glow.
+  float burst = smoothstep(0.0, 0.05, cyc) * (1.0 - smoothstep(0.10, 0.26, cyc));
+  // Soft radial blob so each region flares as a patch that blends into its
+  // neighbors instead of filling a hard-edged cell.
+  float blob = smoothstep(0.72, 0.0, length(f));
+  return burst * blob;
+}
+
 // Luminance of the brain texture at a given UV, clamped to the image so
 // "contain" letterbox bands read as background (0).
 float maskAt(vec2 uv) {
@@ -180,11 +210,12 @@ void main() {
   energy *= breathe;
 
   // ----- RIGHT hemisphere: orange neon structure + purple matter --------
-  // Base look (stays put, gently pulsates): glowing orange neon lines are the
-  // brain's inner structure (the vessels), set over purple "matter" filling
-  // the regions around and between them. This base layer only breathes -- the
-  // motion comes from the communication signals layered on top.
-  float basePulse = 0.82 + 0.18 * sin(t * 1.2 + length(uv - 0.5) * 5.0);
+  // Base look: glowing orange neon lines are the brain's inner structure (the
+  // vessels), set over purple "matter" filling the regions. A dim always-on
+  // level keeps the structure visible; on top of that, localized bursts flash
+  // ~a quarter of the regions at a time in fast, unpredictable spurts (no
+  // global continuous loop). Travelling signals are layered on after.
+  float basePulse = 0.55 + 1.15 * burstField(uv, t);
 
   vec3 neonOrange = vec3(1.0, 0.46, 0.12);
   vec3 matterPurple = vec3(0.46, 0.20, 0.80);
