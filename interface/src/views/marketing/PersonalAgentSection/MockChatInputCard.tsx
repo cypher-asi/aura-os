@@ -115,10 +115,6 @@ const HOLD_MS = 1600;
 const START_MODE: AgentMode = "code";
 const FIRST_EXAMPLE_INDEX = 1;
 
-function prefersReducedMotion(): boolean {
-  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-}
-
 export function MockChatInputCard(): ReactNode {
   const [text, setText] = useState("");
   const [activeIndex, setActiveIndex] = useState(FIRST_EXAMPLE_INDEX);
@@ -131,7 +127,6 @@ export function MockChatInputCard(): ReactNode {
 
   useEffect(() => {
     const example = MOCK_EXAMPLES[activeIndex];
-    const reduceMotion = prefersReducedMotion();
     let cancelled = false;
     let typed = 0;
 
@@ -143,11 +138,6 @@ export function MockChatInputCard(): ReactNode {
 
     const tick = () => {
       if (cancelled) return;
-      if (reduceMotion) {
-        setText(example.prompt);
-        timer.current = setTimeout(advance, HOLD_MS);
-        return;
-      }
       typed += 1;
       setText(example.prompt.slice(0, typed));
       if (typed < example.prompt.length) {

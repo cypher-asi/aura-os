@@ -82,7 +82,17 @@ describe("MockChatInputCard", () => {
     expect(screen.getByTestId("mock-input")).toHaveTextContent("");
 
     act(() => {
-      vi.advanceTimersByTime(3000);
+      vi.advanceTimersByTime(500);
+    });
+
+    const midTypeText = screen.getByTestId("mock-input").textContent ?? "";
+    expect(midTypeText.length).toBeGreaterThan(0);
+    expect(midTypeText.length).toBeLessThan(
+      "Plan a weekend trip to Lisbon and book the flights".length,
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(2500);
     });
 
     expect(screen.getByTestId("mock-input")).toHaveTextContent(
