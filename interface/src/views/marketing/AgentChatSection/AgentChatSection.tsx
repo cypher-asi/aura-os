@@ -3,6 +3,7 @@ import { PhoneShell } from "../PhoneShell";
 import { Section } from "../Section";
 import { MockMobileChat, MOBILE_CONVERSATIONS } from "../MockMobileChat";
 import { AGENTS } from "../MockMobileChat/mobile-chat-script";
+import { TextCard } from "../TextCard";
 import "./AgentChatSection.css";
 
 const HEADLINE_ID = "agentChatSectionHeadline";
@@ -33,11 +34,18 @@ export function AgentChatSection(): ReactNode {
   return (
     <Section ariaLabelledBy={HEADLINE_ID}>
       <div className="agentChatSectionInner">
-        <h2 id={HEADLINE_ID} className="agentChatSectionHeadline">
-          Chat with your agents.
-          <br />
-          From anywhere.
-        </h2>
+        <TextCard
+          level="h2"
+          id={HEADLINE_ID}
+          className="agentChatSectionHeadlineCard"
+          headline={
+            <>
+              Chat with your agents.
+              <br />
+              From anywhere.
+            </>
+          }
+        />
         <div className="agentChatSectionPhones">
           <PhoneShell
             size="md"

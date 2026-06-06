@@ -14,22 +14,14 @@
 }
 
 /*
- * Headline type ramp matches `.productScreenSectionHeadline` in
- * `interface/src/views/marketing/ProductScreenSection/ProductScreenSection.css`
- * so the marketing rows on `/product` stay typographically aligned
- * even though they sit in different section components. When the
- * other rows are migrated onto the shared `<Section />` shell the
- * shared type can hoist into a single rule; for now we duplicate it
- * intentionally and keep the values in sync by convention.
+ * The headline is rendered via the shared `<TextCard level="h2" />`
+ * component (typography lives in `TextCard.css`). Here we only neutralize
+ * the TextCard's tall band: this title sits inside the section stack above
+ * the phones, so it should read as a tight title rather than reserving the
+ * full standalone h2 band height.
  */
-.agentChatSectionHeadline {
-  margin: 0;
-  font-size: clamp(30px, 4vw, 44px);
-  font-weight: 300;
-  line-height: 1.08;
-  letter-spacing: -0.03em;
-  color: var(--color-text-primary);
-  max-width: 720px;
+.agentChatSectionHeadlineCard {
+  min-height: auto;
 }
 
 /*
