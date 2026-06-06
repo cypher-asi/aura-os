@@ -307,26 +307,29 @@
     color 140ms ease;
 }
 
-/* Embossed inner circle the icon sits on: a recessed disc with a top
-   highlight + bottom shadow, set behind the glyph. */
+/* Recessed pill "screen" the icon sits on: a centered stadium-shaped
+   inset reading as a small dark display sunk into the keycap — deep inner
+   shadow + hairline rim to recess it, with a faint glassy top sheen. */
 .personalAgentSkillBtn::before {
   content: "";
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 62%;
-  height: 62%;
-  border-radius: 50%;
+  width: 76%;
+  height: 48%;
+  border-radius: 999px;
   transform: translate(-50%, -50%);
-  background: radial-gradient(
-    circle at 50% 38%,
-    #1c1f25 0%,
-    #121419 70%,
-    #0c0d11 100%
-  );
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.07) 0%,
+      rgba(255, 255, 255, 0) 38%
+    ),
+    linear-gradient(180deg, #0b0d12 0%, #050609 100%);
   box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.1),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.55);
+    inset 0 2px 5px rgba(0, 0, 0, 0.85),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
   transition: box-shadow 140ms ease;
 }
 
@@ -379,16 +382,25 @@
     0 0 14px color-mix(in srgb, var(--skill-accent) 45%, transparent);
 }
 
-/* Inner circle tinted to match the accent fill on lit keys. */
+/* Lit screen inset: the recessed pill glows with the accent, like a lit
+   display behind the glyph. */
 .personalAgentSkillBtn[data-lit="true"]::before {
-  background: radial-gradient(
-    circle at 50% 38%,
-    color-mix(in srgb, var(--skill-accent) 70%, #000 30%) 0%,
-    color-mix(in srgb, var(--skill-accent) 82%, #000 18%) 100%
-  );
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.18) 0%,
+      rgba(255, 255, 255, 0) 42%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--skill-accent) 78%, #000 22%) 0%,
+      color-mix(in srgb, var(--skill-accent) 90%, #000 10%) 100%
+    );
   box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.22),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.4);
+    inset 0 2px 5px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 0 8px color-mix(in srgb, var(--skill-accent) 60%, transparent);
 }
 
 .personalAgentSkillBtn[data-lit="true"] svg {
