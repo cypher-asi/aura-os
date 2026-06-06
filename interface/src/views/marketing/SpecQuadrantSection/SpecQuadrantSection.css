@@ -198,20 +198,6 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .nrGalleryBox {
-    animation: none;
-    opacity: 1;
-    transform: scale(1);
-  }
-
-  .nrCodeSnippet {
-    transition: none;
-    opacity: 1;
-    transform: none;
-  }
-}
-
 .nrScreenGloss {
   position: absolute;
   inset: 0 0 auto 0;

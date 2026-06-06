@@ -184,23 +184,12 @@ export function NoiseReductionCard(): ReactNode {
   // Left flank: many small snippet cards, each running an independent
   // enter -> type (asm then binary) -> hold -> exit -> wait loop. Slots and
   // start offsets are randomized so they desync, reading like lots of separate
-  // instances working at once. Driven imperatively (no re-render); reduced to
-  // a couple of static cards under reduced-motion.
+  // instances working at once. Driven imperatively (no re-render); animates
+  // unconditionally to match the always-on brain + ACTIVATION readout.
   useEffect(() => {
     const cards = snippetCardRefs.current;
     const pres = snippetPreRefs.current;
     if (!cards.length) return;
-
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-      cards.forEach((card, i) => {
-        const pre = pres[i];
-        if (!card || !pre) return;
-        applySlot(card, CODE_SLOTS[i % CODE_SLOTS.length]);
-        card.style.opacity = "1";
-        pre.textContent = makeSnippet();
-      });
-      return;
-    }
 
     const occupied = new Set<number>();
     const pickSlot = (): number => {
@@ -286,7 +275,7 @@ export function NoiseReductionCard(): ReactNode {
   // on its own randomized duration/phase so they drift apart. On every cycle
   // (`animationiteration`, fired while the box is invisible) the box re-rolls
   // its image, position, size, and crop for an unpredictable, creative feel.
-  // Reduced-motion just lays out a static, randomized set.
+  // Animates unconditionally to match the always-on brain + ACTIVATION readout.
   useEffect(() => {
     const boxes = galleryBoxRefs.current;
     const imgs = galleryImgRefs.current;
@@ -294,8 +283,6 @@ export function NoiseReductionCard(): ReactNode {
       const img = imgs[i];
       if (box && img) randomizeBox(box, img);
     });
-
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
 
     const cleanups: Array<() => void> = [];
     boxes.forEach((box, i) => {
