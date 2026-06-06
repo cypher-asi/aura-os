@@ -101,8 +101,15 @@ export function NoiseReductionCard(): ReactNode {
       <div className="nrContent">
         <div className="nrScreen">
           <img
-            className="nrScreenImage"
-            src="/noise-reduction-brain.png"
+            className="nrScreenLeft"
+            src="/noise-reduction-code.png"
+            alt=""
+            loading="lazy"
+            decoding="async"
+          />
+          <img
+            className="nrScreenRight"
+            src="/noise-reduction-paint.png"
             alt=""
             loading="lazy"
             decoding="async"

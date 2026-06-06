@@ -121,13 +121,8 @@ function createProgram(gl: WebGL2RenderingContext): WebGLProgram | null {
  * mathematics over monochrome ink vessels (the analytical side), while the
  * RIGHT hemisphere drifts through a saturated, abstract paint-splatter
  * palette (the creative side). Energy pulses travel along the vessels and
- * the whole brain breathes.
- *
- * The full-bleed canvas also paints a bold split BACKDROP across the entire
- * screen well behind the brain (left: rational code/math; right: abstract
- * paint) and composites the contain-mapped brain on top, emitting an opaque
- * pixel. The brain's inset within the well is read from the CSS
- * `--nr-inset-x/y` props and uploaded as `u_brainInset`.
+ * the whole brain breathes. Blends over the black glass via
+ * premultiplied-off alpha so the screen shows through the empty space.
  *
  * Falls back to a no-op when WebGL2 is unavailable (e.g. JSDOM in tests, or
  * unsupported browsers) or the image fails to load, leaving the static
@@ -177,8 +172,6 @@ export function NoiseReductionBrain({
       program,
       "u_codeResolution",
     );
-    const brainInsetLoc = gl.getUniformLocation(program, "u_brainInset");
-    const brainReadyLoc = gl.getUniformLocation(program, "u_brainReady");
 
     // Texture for the brain angiography. Seed with a 1x1 transparent pixel
     // so the program is renderable before the image finishes loading.
@@ -265,23 +258,10 @@ export function NoiseReductionBrain({
 
     let width = 0;
     let height = 0;
-    // Brain inset as a fraction of the (now full-bleed) canvas. The canvas
-    // fills the whole screen well; the brain is contain-mapped inside this
-    // inset rect so it lands over the static `.nrScreenImage`, while the
-    // split backdrop fills everything around it. Read from the CSS
-    // `--nr-inset-x/y` props so the responsive (desktop/mobile) inset stays
-    // the single source of truth without breakpoint logic here.
-    let insetX = 0;
-    let insetY = 0;
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const clientW = Math.max(1, canvas.clientWidth);
-      const clientH = Math.max(1, canvas.clientHeight);
-      const styles = getComputedStyle(canvas);
-      insetX = (parseFloat(styles.getPropertyValue("--nr-inset-x")) || 0) / clientW;
-      insetY = (parseFloat(styles.getPropertyValue("--nr-inset-y")) || 0) / clientH;
-      const w = Math.max(1, Math.round(clientW * dpr));
-      const h = Math.max(1, Math.round(clientH * dpr));
+      const w = Math.max(1, Math.round(canvas.clientWidth * dpr));
+      const h = Math.max(1, Math.round(canvas.clientHeight * dpr));
       if (w === width && h === height) return;
       width = w;
       height = h;
@@ -309,6 +289,9 @@ export function NoiseReductionBrain({
     const draw = (timeSeconds: number) => {
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
+      // Hold off drawing the brain until its texture is uploaded so we never
+      // flash the seed pixel; the static fallback img shows through until then.
+      if (!imageLoaded) return;
       gl.useProgram(program);
       gl.bindVertexArray(vao);
       gl.activeTexture(gl.TEXTURE0);
@@ -327,11 +310,6 @@ export function NoiseReductionBrain({
       gl.uniform2f(codeResolutionLoc, codeWidth, codeHeight);
       gl.uniform1f(timeLoc, timeSeconds);
       gl.uniform2f(mouseLoc, mouseX, 1.0 - mouseY);
-      gl.uniform2f(brainInsetLoc, insetX, insetY);
-      // The backdrop renders immediately; the brain is held off until its
-      // texture is uploaded so we never composite the seed pixel over the
-      // split paint/code field.
-      gl.uniform1f(brainReadyLoc, imageLoaded ? 1.0 : 0.0);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
 

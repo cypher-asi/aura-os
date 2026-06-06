@@ -51,13 +51,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Inset of the contain-mapped brain within the full screen well. The
-     WebGL canvas now fills the entire well (full-bleed); these props are
-     read by `<NoiseReductionBrain />` and uploaded as `u_brainInset` so the
-     brain stays in the same place while the split backdrop fills everything
-     around it. Mirrors the static `.nrScreenImage` fallback padding. */
-  --nr-inset-x: 34px;
-  --nr-inset-y: 26px;
   height: 415px;
   border-radius: 14px 14px 0 0;
   /* Solid black so the screen blends seamlessly with the brain artwork's
@@ -72,37 +65,43 @@
   overflow: hidden;
 }
 
-/* Brain scan artwork, centered within the full screen. The box fills the
-   screen (width/height 100%) so `object-fit: contain` centers the brain both
-   horizontally and vertically. Explicit sizing (not `auto`) is required since
-   on a replaced <img> an auto dimension collapses to the intrinsic size and
-   anchors top-left. */
-.nrScreenImage {
+/* Split background imagery filling the whole screen well: the rational,
+   linear code/typography poster on the LEFT half and the abstract acrylic
+   painting on the RIGHT half. Each image covers its half (cropping as
+   needed); the animated brain glows over the seam on top. */
+.nrScreenLeft,
+.nrScreenRight {
   position: absolute;
-  inset: 0;
+  top: 0;
+  bottom: 0;
   z-index: 0;
-  width: 100%;
+  width: 50%;
   height: 100%;
-  /* Inset padding shrinks the contained brain slightly while keeping it
-     centered (object-fit re-centers within the padded content box). */
-  box-sizing: border-box;
-  padding: 26px 34px;
-  object-fit: contain;
-  object-position: center;
+  object-fit: cover;
   pointer-events: none;
   user-select: none;
 }
 
-/* Animated WebGL scene (`<NoiseReductionBrain />`). Full-bleed over the whole
-   screen well: the shader paints a bold split backdrop (rational code/math on
-   the left, abstract paint on the right) across the entire canvas and
-   composites the contain-mapped brain on top, inset by `--nr-inset-x/y` so the
-   brain lands pixel-for-pixel over the static `.nrScreenImage`. When WebGL is
-   unavailable the canvas stays transparent and that image shows through. */
+.nrScreenLeft {
+  left: 0;
+  object-position: center;
+}
+
+.nrScreenRight {
+  right: 0;
+  object-position: center;
+}
+
+/* Animated WebGL brain (`<NoiseReductionBrain />`), overlaid on top of the
+   split background imagery. Contain-mapped within this inset box so the
+   shader's brain stays centered, bridging the left/right halves; when WebGL
+   is unavailable the canvas stays transparent and the two images show. */
 .nrScreenBrain {
   position: absolute;
   inset: 0;
   z-index: 1;
+  box-sizing: border-box;
+  padding: 26px 34px;
   pointer-events: none;
   user-select: none;
 }
@@ -251,12 +250,34 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  /* Theme green-cyan accent, with a stronger layered glow. */
+  /* Theme green-cyan accent, with a pulsating layered glow. */
   background: var(--color-accent);
-  box-shadow:
-    0 0 6px var(--color-accent),
-    0 0 12px var(--color-accent),
-    0 0 20px color-mix(in srgb, var(--color-accent) 55%, transparent);
+  animation: nrActiveDotPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes nrActiveDotPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 4px var(--color-accent),
+      0 0 8px color-mix(in srgb, var(--color-accent) 45%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 8px var(--color-accent),
+      0 0 16px var(--color-accent),
+      0 0 26px color-mix(in srgb, var(--color-accent) 60%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nrActiveDot {
+    animation: none;
+    box-shadow:
+      0 0 6px var(--color-accent),
+      0 0 12px var(--color-accent),
+      0 0 20px color-mix(in srgb, var(--color-accent) 55%, transparent);
+  }
 }
 
 /* ----- Knob --------------------------------------------------------- */
@@ -389,12 +410,10 @@
   }
 
   .nrScreen {
-    --nr-inset-x: 26px;
-    --nr-inset-y: 20px;
     height: 336px;
   }
 
-  .nrScreenImage {
+  .nrScreenBrain {
     padding: 20px 26px;
   }
 
