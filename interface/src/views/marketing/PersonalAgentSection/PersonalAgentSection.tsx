@@ -15,24 +15,40 @@ const HEADLINE_ID = "personalAgentHeadline";
  * the `/agents` page. Built on the shared `<Section />` shell so its
  * outer rhythm matches every other themed marketing section.
  *
- * Centered headline + subhead, then a three-quadrant bento grid: one
- * full-width quadrant on top and two below, each pairing a live mini-UI
- * with a title + description:
- *   1. "Always ready"            -> the real chat input (mocked / static)
+ * Mirrors the `ExpertiseSection` + `SpecQuadrantSection` pairing: a
+ * compact H2 `<TextCard />` intro section, then a separate bento section
+ * holding the three-quadrant grid. Splitting them (rather than stacking
+ * both in one full-height section with a large gap) keeps the H2 block
+ * the exact same height as the other H2 intros and lets it center
+ * card-to-card between the bento above and the bento below.
+ *
+ * Bento quadrants — one full-width on top and two below, each pairing a
+ * live mini-UI with a title + description:
+ *   1. "Always on"               -> the real chat input (mocked / static)
  *   2. "Intelligent in all domains" -> a sea of skills
- *   3. "Designed for you"        -> the services it connects to
+ *   3. "Connected to everything" -> the services it connects to
  */
 export function PersonalAgentSection(): ReactNode {
   return (
-    <Section ariaLabelledBy={HEADLINE_ID}>
-      <div className="personalAgentInner">
+    <>
+      <Section
+        ariaLabelledBy={HEADLINE_ID}
+        fullHeight={false}
+        className="personalAgentIntro"
+      >
         <TextCard
           level="h2"
           id={HEADLINE_ID}
           headline="An agent designed for you."
           subhead="AURA is your own personal agent that supports you with everything from light tasks to deep work."
         />
+      </Section>
 
+      <Section
+        ariaLabel="What your agent can do"
+        fullHeight={false}
+        className="personalAgentBentoSection"
+      >
         <div className="personalAgentGrid">
           <article className="personalAgentQuadrant personalAgentQuadrantWide">
             <div className="personalAgentMedia personalAgentMediaChat">
@@ -77,7 +93,7 @@ export function PersonalAgentSection(): ReactNode {
             </div>
           </article>
         </div>
-      </div>
-    </Section>
+      </Section>
+    </>
   );
 }

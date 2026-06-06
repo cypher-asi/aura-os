@@ -11,13 +11,16 @@
  */
 
 /*
- * Sit the bento right under the compact `ExpertiseSection` intro: drop
- * the shell's default 80px top padding to the hero's small
- * `heroBand -> stage` gap so the cards follow the intro closely. Two-class
- * specificity overrides `.section`.
+ * Tight, symmetric padding so the bento sits close under the compact
+ * `ExpertiseSection` intro above AND lets the `PersonalAgentSection`
+ * H2 intro below center card-to-card between this bento and the personal
+ * -agent bento (both intros + bentos share the same tight padding, so
+ * the intro band lands exactly midway). Two-class specificity overrides
+ * the shell's default 80px.
  */
 .section.specQuadrantSection {
   padding-top: clamp(8px, 1.5vh, 20px);
+  padding-bottom: clamp(8px, 1.5vh, 20px);
 }
 
 .specQuadrantGrid {

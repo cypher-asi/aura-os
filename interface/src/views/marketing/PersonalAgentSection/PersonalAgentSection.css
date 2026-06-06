@@ -1,20 +1,23 @@
 /*
- * Internal layout for the "An agent for work, love, play." section.
- * The outer chrome (background tint, padding, viewport-height
- * reservation, column cap) is owned by the shared `<Section />` shell;
- * this file only controls the centered head + the three-quadrant bento
- * grid and its three mini-UIs.
+ * The "An agent designed for you." block is split into two `<Section />`s
+ * (mirroring ExpertiseSection + SpecQuadrantSection): a compact H2
+ * `<TextCard />` intro and the three-quadrant bento grid below.
+ *
+ * Both the intro and the bento carry the SAME symmetric, tight padding
+ * (`clamp(8px, 1.5vh, 20px)`). With the bento above (SpecQuadrantSection)
+ * also tightened to the same symmetric padding, the intro's band — and
+ * thus its centered text — lands exactly midway between the bento above
+ * and the bento below, regardless of viewport. Two-class specificity
+ * overrides the shell's default 80px.
  */
-.personalAgentInner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 125px;
-  width: 100%;
+.section.personalAgentIntro {
+  padding-top: clamp(8px, 1.5vh, 20px);
+  padding-bottom: clamp(8px, 1.5vh, 20px);
 }
 
-/* The section header (headline + subhead) now renders via the shared
-   `<TextCard level="h2" />`; its band + typography live in TextCard.css. */
+.section.personalAgentBentoSection {
+  padding-top: clamp(8px, 1.5vh, 20px);
+}
 
 /*
  * Bento grid: the first quadrant ("Always ready") spans both columns
@@ -506,10 +509,6 @@
 }
 
 @media (max-width: 768px) {
-  .personalAgentInner {
-    gap: 83px;
-  }
-
   .personalAgentGrid {
     grid-template-columns: 1fr;
     /* Tighter 16px gutter on mobile; border-radius + overflow: hidden are
