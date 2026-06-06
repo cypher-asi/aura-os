@@ -194,15 +194,27 @@ void main() {
   // Push saturation so the right reads vivid against the mono left.
   float rLum = dot(rightCol, vec3(0.299, 0.587, 0.114));
   rightCol = clamp(mix(vec3(rLum), rightCol, 1.35), 0.0, 1.0);
+  // Hue floor: a small, pulse-independent palette term so the right vessels
+  // always carry color even between pulses (they never collapse to grey/black).
+  vec3 rightBase = rightCol;
   rightCol *= energy;
+  rightCol += rightBase * mask * 0.5;
 
-  // Hot crest on the brightest pulse fronts + spark flashes.
-  rightCol += vec3(1.0, 0.92, 0.8) * pow(mask * pulse * travel, 2.0) * 1.7;
-  rightCol += vec3(1.0, 0.95, 0.86) * mask * spark * 1.3;
+  // Crest on the brightest pulse fronts + spark flashes. Tinted with a
+  // saturated hot hue (not near-white) so peaks read as glowing color
+  // instead of washing the right hemisphere out to black & white.
+  vec3 crestCol = palette(clamp(v + 0.25, 0.0, 1.0));
+  rightCol += crestCol * pow(mask * pulse * travel, 2.0) * 1.7;
+  rightCol += crestCol * mask * spark * 1.3;
 
   // Wide multi-hue aura: drifting paint blooming into the black glass.
   vec3 auraCol = palette(clamp(0.55 + 0.28 * sin(t * 0.45) + 0.4 * (splat - 0.5), 0.0, 1.0));
   rightCol += auraCol * aura * 1.4;
+
+  // Final re-saturation: after all additions, pull the right firmly back
+  // toward saturated color so bright peaks can never desaturate to white/grey.
+  float rLum2 = dot(rightCol, vec3(0.299, 0.587, 0.114));
+  rightCol = max(mix(vec3(rLum2), rightCol, 1.4), 0.0);
 
   float rightAlpha = clamp(mask * 1.3 + bloom * 0.7 + aura * 0.95, 0.0, 1.0);
 
