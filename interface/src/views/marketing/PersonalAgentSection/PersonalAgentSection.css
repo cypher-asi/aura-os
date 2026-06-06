@@ -247,11 +247,11 @@
   );
 }
 
-/* Equal-width columns (flex-basis 0) so the dividers sit centered in
-   even gaps between same-width button stacks. */
+/* Each group is a compact grid of square keycaps so the three groups
+   (separated by dividers) read as one wide macro-pad. */
 .personalAgentSkillSection {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
   flex: 1 1 0;
   min-width: 0;
@@ -259,12 +259,14 @@
 
 /*
  * Per-key black "hole": a near-black recess sunk into the Plate via
- * top-heavy inset shadows + a hairline rim. The raised skeuomorphic key
- * sits inside it (revealed through the socket's padding) so each key
- * reads as emerging from its own black hole.
+ * top-heavy inset shadows + a hairline rim. The raised keycap sits inside
+ * it (revealed through the socket's padding) so each key reads as
+ * emerging from its own black hole. Square so the keycap is square too.
  */
 .personalAgentSkillSocket {
-  border-radius: 13px;
+  display: flex;
+  aspect-ratio: 1;
+  border-radius: 14px;
   padding: 4px;
   background: radial-gradient(
     ellipse 120% 90% at 50% 0%,
@@ -279,56 +281,86 @@
 }
 
 /*
- * Raised skeuomorphic key: top light highlight + bottom dark edge + an
- * outer drop shadow so it extrudes up out of its black socket.
+ * Raised icon-only keycap: a darker black/gray body with a bright white
+ * top bevel, a deep bottom edge, and an outer drop shadow so it extrudes
+ * up out of its black socket.
  */
 .personalAgentSkillBtn {
   position: relative;
   display: flex;
   width: 100%;
   align-items: center;
-  gap: 8px;
-  padding: 9px 12px;
+  justify-content: center;
   border: none;
-  border-radius: 9px;
-  background: linear-gradient(180deg, #2c2f36 0%, #1c1e23 100%);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #202329 0%, #0d0e11 100%);
   color: var(--color-text-secondary);
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
   cursor: default;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.09),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.5),
-    0 2px 4px rgba(0, 0, 0, 0.55);
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -2px 2px rgba(0, 0, 0, 0.6),
+    0 3px 6px rgba(0, 0, 0, 0.6),
+    0 1px 2px rgba(0, 0, 0, 0.5);
   transition:
     transform 140ms ease,
     box-shadow 140ms ease,
     color 140ms ease;
 }
 
-.personalAgentSkillBtn svg {
-  flex: 0 0 auto;
-  color: var(--color-text-primary);
-  opacity: 0.8;
+/* Embossed inner circle the icon sits on: a recessed disc with a top
+   highlight + bottom shadow, set behind the glyph. */
+.personalAgentSkillBtn::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 62%;
+  height: 62%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    circle at 50% 38%,
+    #1c1f25 0%,
+    #121419 70%,
+    #0c0d11 100%
+  );
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.1),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.55);
+  transition: box-shadow 140ms ease;
 }
 
-.personalAgentSkillBtnLabel {
-  overflow: hidden;
-  text-overflow: ellipsis;
+.personalAgentSkillBtn svg {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  color: #f7f8fb;
+  opacity: 0.92;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.5));
 }
 
 .personalAgentSkillBtn:hover {
   color: var(--color-text-primary);
   transform: translateY(-1px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.5),
-    0 4px 8px rgba(0, 0, 0, 0.6);
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -2px 2px rgba(0, 0, 0, 0.6),
+    0 5px 10px rgba(0, 0, 0, 0.65),
+    0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .personalAgentSkillBtn:hover svg {
   opacity: 1;
+}
+
+.personalAgentSkillBtn:active {
+  transform: translateY(0);
+}
+
+.personalAgentSkillBtn:active::before {
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.6),
+    inset 0 1px 1px rgba(0, 0, 0, 0.5);
 }
 
 /* Lit / active key: warm accent fill + soft glow, matching the
@@ -341,22 +373,36 @@
   );
   color: #1a0e08;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.3),
-    0 2px 5px rgba(0, 0, 0, 0.5),
-    0 0 12px color-mix(in srgb, var(--skill-accent) 45%, transparent);
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.32),
+    inset 0 -2px 2px rgba(0, 0, 0, 0.3),
+    0 3px 6px rgba(0, 0, 0, 0.55),
+    0 0 14px color-mix(in srgb, var(--skill-accent) 45%, transparent);
+}
+
+/* Inner circle tinted to match the accent fill on lit keys. */
+.personalAgentSkillBtn[data-lit="true"]::before {
+  background: radial-gradient(
+    circle at 50% 38%,
+    color-mix(in srgb, var(--skill-accent) 70%, #000 30%) 0%,
+    color-mix(in srgb, var(--skill-accent) 82%, #000 18%) 100%
+  );
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.22),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.4);
 }
 
 .personalAgentSkillBtn[data-lit="true"] svg {
   color: #1a0e08;
   opacity: 0.95;
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.25));
 }
 
-/* LED indicator dot, pinned to the top-right of a lit key. */
+/* LED indicator dot, pinned to the top-right corner of a lit keycap. */
 .personalAgentSkillLed {
   position: absolute;
+  z-index: 2;
   top: 6px;
-  right: 7px;
+  right: 6px;
   width: 5px;
   height: 5px;
   border-radius: 999px;

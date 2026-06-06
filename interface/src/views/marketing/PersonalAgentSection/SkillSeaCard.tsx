@@ -5,11 +5,12 @@ import { SkillIcon } from "../../../components/SkillShopModal/SkillIcon";
 /**
  * Mini-UI for the "Intelligent in all domains" quadrant: the shared
  * three-ringed `Plate` panel (matching the chat capsule and service
- * device) holding the skills as raised neomorphic buttons, grouped into
+ * device) holding the skills as raised neomorphic keycaps, grouped into
  * sections by hairline divider lines like a hardware controller. Each
- * button pairs a real `SkillIcon` glyph (resolved from the skill id)
- * with a short label; a few featured skills are "lit" with an accent
- * fill and an LED dot, echoing the active keys on the reference device.
+ * key is an icon-only square keycap with an embossed inner circle behind
+ * a real `SkillIcon` glyph (resolved from the skill id); a few featured
+ * skills are "lit" with an accent fill and an LED dot, echoing the active
+ * keys on the reference macro-pad device.
  *
  * Everything here is decorative (`aria-hidden`) — it sells the breadth
  * of skills visually rather than acting as a real control surface.
@@ -65,12 +66,11 @@ export function SkillSeaCard(): ReactNode {
                       tabIndex={-1}
                       className="personalAgentSkillBtn"
                       data-lit={skill.lit ? "true" : undefined}
+                      aria-label={skill.label}
+                      title={skill.label}
                     >
                       {skill.lit && <span className="personalAgentSkillLed" />}
-                      <SkillIcon name={skill.id} size={16} />
-                      <span className="personalAgentSkillBtnLabel">
-                        {skill.label}
-                      </span>
+                      <SkillIcon name={skill.id} size={20} />
                     </button>
                   </div>
                 ))}
