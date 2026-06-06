@@ -8,9 +8,9 @@ import styles from "./AgentConsole.module.css";
  * Decorative "agent device" rendered as the `/agents` hero stage: a tall
  * portrait chassis whose centerpiece is a single raised vertical pill
  * (a mesa standing proud of the surface, ringed by a soft shadow groove).
- * A small circular screen sits near the top of the pill carrying a living
- * WebGL energy field (`<AuraScreenOrb />`), a row of status lights runs
- * below it, and a large circular
+ * A tall pill-shaped screen is inset into the center of the mesa carrying
+ * a living WebGL energy field (`<AuraScreenOrb />`), a row of status
+ * lights runs below it, and a large circular
  * control button sits over a split base. Built on the shared marketing
  * device kit (`<Plate />`, `<DeviceScreen />`) so it reads as the same
  * hardware family as the quadrant device below.

@@ -73,11 +73,19 @@ vec3 palette(float v) {
   return col;
 }
 
+// Signed distance to a rounded box (negative inside, 0 on the outline).
+// With radius = min(halfW, halfH) the rounded box collapses into an exact
+// stadium/pill, so the vignette and edge feather hug the very same shape
+// CSS clips the screen to — no squared-off corners at the rounded ends.
+float sdRoundBox(vec2 p, vec2 b, float r) {
+  vec2 q = abs(p) - b + r;
+  return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r;
+}
+
 void main() {
   // Aspect-correct, y-normalized coordinates centered on the screen.
   vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
   float t = u_time;
-  float r = length(uv);
 
   // Domain warping: fold the coordinate space through layers of flowing
   // noise so the pattern marbles and churns across the whole disc rather
@@ -113,12 +121,21 @@ void main() {
   // black glass, modulated by the flow so it shimmers as it moves.
   col *= 0.78 + 0.55 * flow + 0.18 * pulse;
 
-  // Circular disc mask: fully opaque across the interior, feathering to
-  // transparent at the rim so it melts into the black glass well instead
-  // of showing a hard canvas square. A faint inner brightening keeps the
-  // edge from looking flat.
-  float alpha = smoothstep(0.98, 0.74, r);
-  col *= mix(0.85, 1.0, smoothstep(0.95, 0.55, r));
+  // Vignette + edge feather that follow the pill outline (not a square),
+  // so the inner dark band hugs the rounded ends and the bright field
+  // never gets cut off in the corners. sdRoundBox gives the stadium SDF
+  // in pixel space; we darken toward the bezel and feather the last pixel.
+  vec2 fragP = gl_FragCoord.xy - 0.5 * u_resolution;
+  vec2 halfRes = 0.5 * u_resolution;
+  float radius = min(halfRes.x, halfRes.y);
+  float sd = sdRoundBox(fragP, halfRes, radius);
+
+  // -sd/radius is 0 at the edge and 1 at the deepest interior point.
+  float inset = clamp(-sd / radius, 0.0, 1.0);
+  col *= mix(0.48, 1.0, smoothstep(0.0, 0.5, inset));
+
+  // Feather only the last ~1.5px under the bezel; CSS clips the same pill.
+  float alpha = smoothstep(1.5, -1.5, sd);
 
   fragColor = vec4(col, alpha);
 }
