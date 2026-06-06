@@ -9,7 +9,7 @@ interface NoiseReductionBrainProps {
    */
   className?: string;
   /**
-   * Normalized (0..1) cursor position over the screen, updated by the host
+   * Normalized (0..1) cursor position over the host panel, updated by the
    * card on `pointermove`. Read every frame (never triggers a re-render) and
    * eased into the `u_mouse` uniform so the cursor steers the animation. When
    * omitted, the brain animates around screen center (0.5, 0.5).

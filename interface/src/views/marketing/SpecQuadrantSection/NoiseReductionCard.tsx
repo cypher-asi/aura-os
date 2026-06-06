@@ -16,10 +16,10 @@ import { NoiseReductionBrain } from "../NoiseReductionBrain";
  * (INTELLIGENCE / WITHOUT LIMITS). Everything is decorative
  * (`aria-hidden`); nothing here is a real control.
  *
- * Moving the cursor across the screen is interactive: the horizontal
- * position sweeps the knob pointer through its dial arc and steers the
- * underlying brain animation (`<NoiseReductionBrain />`). The last position
- * is held when the cursor leaves.
+ * Moving the cursor anywhere across the device panel is interactive: the
+ * horizontal position sweeps the knob pointer through its dial arc and
+ * steers the underlying brain animation (`<NoiseReductionBrain />`). The
+ * last position is held when the cursor leaves.
  */
 
 /** Tick-dot count for the full circular ring around the knob. */
@@ -32,7 +32,7 @@ const KNOB_TICKS = 21;
 const TICK_ARC_DEG = 240;
 
 export function NoiseReductionCard(): ReactNode {
-  // Shared, normalized (0..1) cursor position over the screen. The brain
+  // Shared, normalized (0..1) cursor position over the panel. The brain
   // reads this every frame to steer its animation; the knob pointer rotates
   // to match. Kept in a ref so pointer moves don't re-render the card.
   const pointerRef = useRef({ x: 0.5, y: 0.5 });
@@ -51,8 +51,8 @@ export function NoiseReductionCard(): ReactNode {
 
   return (
     <Plate className="nrCard" aria-hidden="true">
-      <div className="nrContent">
-        <div className="nrScreen" onPointerMove={handlePointerMove}>
+      <div className="nrContent" onPointerMove={handlePointerMove}>
+        <div className="nrScreen">
           <img
             className="nrScreenImage"
             src="/noise-reduction-brain.png"
